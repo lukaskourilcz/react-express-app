@@ -7,7 +7,7 @@
 // sides after the friend's first Learn level. Nothing here names an amount,
 // and an invitation never changes access, XP, scores, streaks or ranks.
 
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch, ApiError } from './api';
 import { isReferralCode } from '../../../shared/rewards';
 
@@ -131,13 +131,14 @@ export interface ReferralSummary {
 
 export const referralKey = ['rewards', 'referral'] as const;
 
+export const referralQuery = queryOptions({
+  queryKey: referralKey,
+  queryFn: ({ signal }) => apiFetch<ReferralSummary>('/api/user/referral', { signal }),
+  staleTime: 60_000,
+});
+
 export function useReferral(enabled: boolean) {
-  return useQuery({
-    queryKey: referralKey,
-    enabled,
-    queryFn: ({ signal }) => apiFetch<ReferralSummary>('/api/user/referral', { signal }),
-    staleTime: 60_000,
-  });
+  return useQuery({ ...referralQuery, enabled });
 }
 
 /** The link a learner shares. */

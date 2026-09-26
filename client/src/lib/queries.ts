@@ -4,22 +4,42 @@
 // revalidation and built-in cancellation for free — replacing the bespoke
 // useEffect + AbortController + loading/error state each screen used to carry.
 
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchRoadmapStructure } from './roadmap';
+import { useAuth } from './auth';
+import { entitlementQuery } from './entitlement';
+import { readOnce, settled, useFirstData } from './routeData';
 import { fetchLeaderboard, type LeaderboardPeriod } from './play';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from './supabase';
 import { listFlashcards } from './flashcards';
 import { getChallengeLeaderboard } from './challengeApi';
 import { useSubject } from './subjects';
 
+/** The roadmap level/checkpoint map, as one set of options the hook and a
+ * page's first-data prefetch share. */
+export const roadmapStructureQuery = queryOptions({
+  queryKey: ['roadmap', 'structure'],
+  // React Query supplies an AbortSignal that fetchRoadmapStructure forwards to fetch.
+  queryFn: ({ signal }) => fetchRoadmapStructure(signal),
+  staleTime: 5 * 60_000, // the structure only changes when questions are edited in /dev
+});
+
 /** The roadmap level/checkpoint map. Shared by the Learn path and the roadmap tree. */
 export function useRoadmapStructure() {
-  return useQuery({
-    queryKey: ['roadmap', 'structure'],
-    // React Query supplies an AbortSignal that fetchRoadmapStructure forwards to fetch.
-    queryFn: ({ signal }) => fetchRoadmapStructure(signal),
-    staleTime: 5 * 60_000, // the structure only changes when questions are edited in /dev
-  });
+  return useQuery(roadmapStructureQuery);
+}
+
+/** Hold a page drawn from the roadmap structure until the structure (and,
+ * with `plan`, a signed-in account's plan, which decides the Premium marks) is
+ * in the cache, so it draws its path once instead of a skeleton first. */
+export function useRoadmapStructureFirst({ plan }: { plan: boolean }) {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const account = plan ? user : null;
+  useFirstData(`structure ${account?.id ?? ''}`, () => settled([
+    readOnce(queryClient, roadmapStructureQuery),
+    account ? readOnce(queryClient, entitlementQuery(account.id)) : null,
+  ]));
 }
 
 /** What one board needs from the server. The 30-day board is the default. */

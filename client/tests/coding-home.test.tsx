@@ -1,6 +1,7 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingHome } from '../src/components/coding/CodingSection';
 import type { CodingProgressResponse } from '../../shared/coding-api';
@@ -40,7 +41,9 @@ vi.mock('../src/coding/practice', () => ({
 vi.mock('../src/components/coding/ChallengeRunPlanner', () => ({ ChallengeRunPlanner: () => null, taskHref: (id: string) => `/coding/javascript/${id}` }));
 vi.mock('../src/coding/CodingWorkbench', () => ({ CodingWorkbench: () => null }));
 
-const mount = () => render(<MemoryRouter><LanguageProvider><CodingHome /></LanguageProvider></MemoryRouter>);
+const client = new QueryClient();
+const tree = () => <QueryClientProvider client={client}><MemoryRouter><LanguageProvider><CodingHome /></LanguageProvider></MemoryRouter></QueryClientProvider>;
+const mount = () => render(tree());
 const card = () => screen.getByRole('region', { name: 'Your next challenge' });
 const passedDigitSum = { tasks: { 'js-digit-sum': { status: 'passed' } }, due: [], javascriptLevelsCleared: 0 } as unknown as CodingProgressResponse;
 
@@ -62,7 +65,7 @@ it('names no challenge while a signed-in learner’s progress loads, then names 
   expect(screen.queryByText(/Sign in to keep your progress/)).toBeNull();
 
   state.progress = { data: passedDigitSum, isLoading: false, isError: false, refetch: () => {} };
-  view.rerender(<MemoryRouter><LanguageProvider><CodingHome /></LanguageProvider></MemoryRouter>);
+  view.rerender(tree());
   expect(card()).not.toHaveAttribute('aria-busy');
   expect(within(card()).queryByText('Digit sum')).toBeNull();
   expect(within(card()).getByText('Count multiples')).toBeInTheDocument();
@@ -77,7 +80,7 @@ it('waits for the account before choosing, and offers the first challenge to a v
   expect(screen.queryByText(/Sign in to keep your progress/)).toBeNull();
 
   state.auth = { isAuthenticated: false, isLoading: false };
-  view.rerender(<MemoryRouter><LanguageProvider><CodingHome /></LanguageProvider></MemoryRouter>);
+  view.rerender(tree());
   expect(within(card()).getByText('Digit sum')).toBeInTheDocument();
   expect(within(card()).getByRole('button', { name: 'Continue' })).toBeEnabled();
   expect(screen.getByText(/Sign in to keep your progress/)).toBeInTheDocument();
@@ -114,7 +117,7 @@ it('waits for a free account’s plan, then names a challenge the free plan open
   expect(within(card()).getByRole('button', { name: 'Continue' })).toBeDisabled();
 
   state.plan = { tier: 'free', loading: false };
-  view.rerender(<MemoryRouter><LanguageProvider><CodingHome /></LanguageProvider></MemoryRouter>);
+  view.rerender(tree());
   expect(card()).not.toHaveAttribute('aria-busy');
   const title = card().querySelector('.cd-next__title')?.textContent ?? '';
   const named = CODING_INDEX.find((task) => task.title.en === title);

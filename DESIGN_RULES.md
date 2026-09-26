@@ -146,6 +146,16 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   translated status, one polite live region. `QuoteLoader` is the study-mode
   variation using the same fin. Never invent an unlabelled spinner or fake
   percentage for an unknown duration.
+- A navigation never blanks the page. The route `Suspense` boundary in
+  `App.tsx` sits outside the keyed route box, so the current page stays until
+  the next one can draw whole; the nav marks the destination at once and the
+  waiting page fades back (`aria-busy`) only after 200ms. The route loader is
+  for the first page of a visit. Links preload their page on hover, focus and
+  first touch (`lib/routePreload.ts`), and a page whose first render depends
+  on account or structure data holds it with `useFirstData`
+  (`lib/routeData.ts`, capped at 1.2s) instead of drawing defaults and
+  redrawing. Never mount a route's `Suspense` boundary inside an element keyed
+  by the path: a fresh boundary shows its fallback even in a transition.
 - In-place mutations keep their control visible, disable duplicate actions,
   and use a translated action/status label. Do not replace a whole editor
   with a page loader during submission or draft saving.

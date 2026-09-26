@@ -31,7 +31,7 @@ import {
   passedLevelCount,
   syncProgressWithServer,
 } from '../lib/roadmap';
-import { useRoadmapStructure } from '../lib/queries';
+import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER } from '../lib/tracks';
 import { getCategoryHexColor } from '../lib/categories';
 import { useSubject } from '../lib/subjects';
@@ -108,6 +108,7 @@ function pct(passed: number, total: number): number {
 }
 
 export default function CareerRoadmap() {
+  useRoadmapStructureFirst({ plan: false });
   const t = useT();
   const navigate = useNavigate();
   const progress = useRoadmapProgress();

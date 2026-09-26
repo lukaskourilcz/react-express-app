@@ -5,7 +5,7 @@
 // saved list. None of it grants anything — the eligibility rules are applied
 // server-side when a task is issued, exactly as they are for any other route.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import type {
   CodingBookmarkRequest,
@@ -46,13 +46,14 @@ export const advancePracticeSession = (body: PracticeSessionAdvanceRequest): Pro
 
 /** The learner's saved challenges and collections. Signed out there are none:
  * saving is an account feature, and the UI says so rather than pretending. */
+export const bookmarksQuery = queryOptions({
+  queryKey: practiceKeys.bookmarks(),
+  queryFn: ({ signal }) => fetchBookmarks(signal),
+  staleTime: 60_000,
+});
+
 export function useBookmarks(enabled: boolean) {
-  return useQuery({
-    queryKey: practiceKeys.bookmarks(),
-    enabled,
-    queryFn: ({ signal }) => fetchBookmarks(signal),
-    staleTime: 60_000,
-  });
+  return useQuery({ ...bookmarksQuery, enabled });
 }
 
 export function useSaveChallenge() {
@@ -63,13 +64,16 @@ export function useSaveChallenge() {
   });
 }
 
+/** The learner's open challenge run, as one set of options the hook and a
+ * page's first-data prefetch share. */
+export const practiceSessionQuery = queryOptions({
+  queryKey: practiceKeys.session(),
+  queryFn: ({ signal }) => fetchPracticeSession(signal),
+  staleTime: 15_000,
+});
+
 export function usePracticeSession(enabled: boolean) {
-  return useQuery({
-    queryKey: practiceKeys.session(),
-    enabled,
-    queryFn: ({ signal }) => fetchPracticeSession(signal),
-    staleTime: 15_000,
-  });
+  return useQuery({ ...practiceSessionQuery, enabled });
 }
 
 export function useStartSession() {

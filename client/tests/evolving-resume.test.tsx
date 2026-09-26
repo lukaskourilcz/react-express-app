@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { beforeEach, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
+import { preloadPath } from '../src/lib/routePreload';
 import { CodingTaskScreen } from '../src/components/coding/CodingSection';
 import type { CodingWorkbenchProps } from '../src/coding/CodingWorkbench';
 import { EVOLVING_CHALLENGES, evolvingTaskTrack } from '../../shared/evolving';
@@ -45,6 +46,9 @@ function mount(id: string) {
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={[`/coding/${evolvingTaskTrack(id)}/${id}`]}><LanguageProvider><Routes><Route path="/coding/:track/:taskId" element={<CodingTaskScreen />} /></Routes></LanguageProvider></MemoryRouter></QueryClientProvider>);
   return client;
 }
+// The task screen loads its editor beside the task; load it once up front
+// so each screen draws the (mocked) workbench on its first render.
+beforeAll(() => preloadPath('/coding/javascript/js-digit-sum'));
 beforeEach(() => { mocks.drafts = {}; mocks.save.mockClear(); });
 
 it.each(EVOLVING_CHALLENGES.map(project => [project.id, project] as const))('finishes every stage of %s without losing the draft', (_id, project) => {

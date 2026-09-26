@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -21,6 +21,9 @@ function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return <QueryClientProvider client={client}><MemoryRouter><LanguageProvider>{children}</LanguageProvider></MemoryRouter></QueryClientProvider>;
 }
+// The page holds its first render for its data (lib/routeData.ts); a render
+// that suspends has to start inside an awaited act.
+const mountShop = () => act(async () => render(<Shop />, { wrapper }));
 
 const unconfigured = (sku: ShopItem['sku'], variants: readonly string[] = []): ShopItem => ({
   sku, variants, availability: 'unconfigured', price: null, variantStock: [],
@@ -157,7 +160,7 @@ describe('the Rewards merchandise section', () => {
   it('shows no shop link or promotion while client/product-catalog.ts has no URL', async () => {
     auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false };
     routes();
-    render(<Shop />, { wrapper });
+    await mountShop();
     await screen.findByRole('heading', { level: 3, name: 'Hoodie' });
     expect(screen.queryByRole('link', { name: /devShark shop/ })).toBeNull();
     expect(screen.queryByRole('note')).toBeNull();
@@ -167,7 +170,7 @@ describe('the Rewards merchandise section', () => {
   it('takes the learner to the address form, says where the address goes, and comes back on cancel', async () => {
     auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false };
     routes();
-    render(<Shop />, { wrapper });
+    await mountShop();
     await screen.findByText('12,000');
     const redeem = screen.getAllByRole('button', { name: 'Redeem' }).find((one) => !(one as HTMLButtonElement).disabled)!;
     await waitFor(() => expect(redeem).toBeEnabled());
@@ -185,7 +188,7 @@ describe('the Rewards merchandise section', () => {
   it('calls a claimed learning-path package claimed, not awaiting payment', async () => {
     auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false };
     routes();
-    render(<Shop />, { wrapper });
+    await mountShop();
     expect(await screen.findByText('Claimed, waiting to be sent')).toBeInTheDocument();
     expect(screen.queryByText('Awaiting payment')).toBeNull();
   });

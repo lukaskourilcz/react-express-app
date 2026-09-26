@@ -1478,6 +1478,8 @@ The proof ends by dropping its scratch databases. Production runs 17.6. 046 uses
 
 4. Optional: sign up a throwaway account, delete it from the Profile, and confirm the request answers 200.
 
+Applied on 2026-09-26, after `8a045a5` (containing `6c3ec0b`) was production (`dpl_J4DZYmf9XdGCcErxyvdjLBS9BLy7`): before the file, production held the four routines, `delete_user_data` hashed to `2358b9e7c57afb3eafc4af76e9e0c9f4` and nothing else named them; the file ran in one transaction through the Supabase connector; the check above returned `0 | 2358b9e7c57afb3eafc4af76e9e0c9f4 | t`; the security advisor lists INFO notices only (RLS on without a policy, on the service-role-only tables). Step 4 was not run: it needs a throwaway Google account.
+
 ### The retired support settings
 
 `normalizeSettings` builds its result from the fields it knows, so it drops a stored row's `support` key on read, and `saveGameSettings` writes that result, so the next save from `/dev` stores the row without it. A `/dev` tab opened before the deploy runs the old form, which reads `settings.support` and fails until it is reloaded.
@@ -1543,6 +1545,132 @@ All on `f9fe47b`, which adds documentation only to `1f459f9`; this record change
 `origin/main` moved to `2e6b8ba` during the step (a CI change to two browser specs this branch does not touch); `git merge-tree` merges the branch into it without a conflict. Not run: `npm run check:responsive` and the browser suites. The one screen that changed is `/dev` → Settings, which the responsive sweep would render signed out, without the form; `client/tests/dev-settings.test.tsx` renders it.
 
 Not verified here: production (this step may not write to it), PostgREST 12.2.12 itself (the fallbacks stand-in answers a missing routine as it does), Upstash's sliding window (the checks ran the in-memory bucket), a real classroom on one school network, and the Vercel project's environment (whether `SUPPORT_ENABLED` is still set there).
+
+## 2026-09-26 — a click draws the next page once (GLITCH)
+
+The owner reported that clicking Coding "always" showed a glitch and then rerendered, and asked for the same check on the other sections.
+
+What a click did, measured frame by frame in Chromium on devshark.app at `4f93988` as a signed-out visitor, and on a local build of the same commit with a signed-in Premium account simulated by a fake session and API fixtures answering after 250ms:
+
+1. 30 to 60ms after the click the page went empty and the footer rose into view.
+2. 200ms later the route loader appeared.
+3. The next page drew no sooner than about 330ms after the click, even with every chunk in the HTTP cache, and 400 to 900ms from a cold cache.
+4. Signed in, Coding then drew a second time: the new-run form became the run card, "0 of 222 passed" became "2 of 222 passed", the next-challenge placeholder became a title, and the page lost 255px. Today, Learn, Roadmap and Rewards redrew the same way once their data arrived.
+
+Causes:
+
+- In `client/src/App.tsx` the route `Suspense` boundary sat inside the `m.div` keyed by `location.pathname` (lines 640 to 651 at `4f93988`). Each navigation mounted a fresh boundary, and React shows a fresh boundary's fallback at once, even inside the router's transition. `RouteLoader` drew nothing for 200ms and then the loader, and the empty route box kept `flex: 1 0 auto`, which pulled the footer up. After a fallback, React reveals the content no sooner than 300ms later: the floor under step 3.
+- `/coding` waited longest because `CodingSection.tsx` imported the task workbench (CodeMirror and the test runner) statically: 32 chunks, 259KB gzipped, against 115KB for Learn, the next heaviest section.
+- Pages drew defaults before their data. `ChallengeRunPlanner` shows the form while the open run loads, the Coding counts read zero until progress arrives, `CodingTrackScreen` and Roadmap show a full loader until the plan or the structure loads, Today and Learn show skeletons, and on Rewards the test-mode notice arrived after the page and pushed the wallet down 64px (a layout shift of 0.03).
+- The Coding paths list measured its five rows after paint: it drew at its 460px fallback, then grew to 591px (927px at 390px wide).
+- `/collection` opens on a lazily loaded Flashcards inside its own boundary, so once navigation stopped blanking the page it showed a loader in its body for a beat.
+
+| Commit | What |
+| --- | --- |
+| `99fdf58` | The route boundary moves outside the keyed route box, so the router's transition keeps the current page until the next one can render; the fallback shows only for the first page of a visit. The nav marks the destination at once, the waiting page carries `aria-busy` and fades to 0.55 opacity after 200ms (in one step with reduced motion), and each new path opens at the top of `<main>` |
+| `d8f239c` | `lib/routePreload.ts`: every lazy route has one loader, registered with its paths; a mouse resting on a link for 65ms, a focus, a touch or a press starts it |
+| `2810215` | `lib/routeData.ts`: `useFirstData` holds a page's first render until the named reads are cached, for 1.2s at most and not at all offline; `readOnce` answers from the cache and fetches a missing read once, without the retry delay. The Coding home, track list and FullStack use it, and the paths list measures before paint |
+| `5419ea2` | Today, Learn, Roadmap and Rewards hold their first render for the structure, the plan, the catalogue and the account's coins, orders and invite |
+| `fb98724` | The workbench loads beside the task instead of with the section: `/coding` now waits for 14 chunks, 43KB gzipped. The lists fetch it when the browser is idle, a task link preloads it, and a failed load shows the existing error with Try again |
+| `38aeb7c` | `tests/browser/navigation.spec.ts` holds every chunk back for 600ms and records each frame of eight section visits and a phone drawer visit; it fails on `4f93988` and passes here. CI runs it |
+| `cd56c46` | Merge of `origin/main` at `2e6b8ba`; the one conflict, in `quality.yml`, keeps both browser specs |
+| `6d59a96` | Collection imports Flashcards (2KB gzipped) directly |
+| `4dfec56`, `0402391` | This record and the navigation rule in `DESIGN_RULES.md` §8 |
+| `7ee97e5` | The Rewards and merchandise tests take the render result from `act` itself; `npm run typecheck:tooling`, which covers the tests, had failed on their helper with TS2322 twice |
+| `938c29c` | Merge of `origin/main` at `47a7ee2` (the three `[owner:ai]` items); the one conflict, at the end of this file, keeps both sections |
+
+The loader, the empty page and the footer jump were the same on every section, so the measurements below are medians of the first visit to each section in a fresh page load, at 1280 and 390px, light and dark (signed in: light only). "Empty frames" count animation frames whose route box held nothing; "content states" count the distinct texts the new page showed in the 3 seconds after the click. The last column is when the new page first drew: before, after the empty beat and the loader; after, when the old page gave way to the complete new one.
+
+Production, `4f93988`, signed out, cold cache (the section's chunks from the network):
+
+| Section | Empty frames | Loader frames | Footer in view on an empty page (frames) | Roots drawn | Content states | New page drawn (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/coding` | 13 | 36 | 48 | 2 | 1 | 860 |
+| `/today` | 13 | 11 | 25 | 2 | 2 | 439 |
+| `/quiz` | 13 | 23 | 36 | 2 | 1 | 642 |
+| `/learn` | 13 | 26 | 39 | 2 | 2 | 715 |
+| `/challenge` | 13 | 17 | 30 | 2 | 2 | 550 |
+| `/play` | 13 | 16 | 29 | 2 | 1 | 511 |
+| `/collection` | 12 | 11 | 23 | 2 | 2 | 403 |
+| `/roadmap` | 13 | 40 | 52 | 3 | 2 | 920 |
+| `/leaderboard` | 13 | 11 | 24 | 2 | 2 | 437 |
+| `/premium` | 13 | 14 | 27 | 2 | 1 | 478 |
+| `/shop` | 13 | 11 | 24 | 2 | 2 | 445 |
+| `/` | 12 | 6 | 18 | 2 | 1 | 327 |
+
+With the chunks in the HTTP cache the pattern held: 12 or 13 empty frames, 5 or 6 loader frames and the new page at 328 to 383ms on every section. A second visit in the same page load, with the chunk already loaded, drew at once with no empty frame: only first visits glitched.
+
+Local build, signed out, before → after (the API forwarded to devshark.app, so the data waits include that round trip):
+
+| Section | Empty frames | Loader frames | Footer in view on an empty page | Roots drawn | Content states | New page drawn (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/coding` | 13 → 0 | 5 → 0 | 18 → 0 | 2 → 1 | 1 → 1 | 375 → 117 |
+| `/today` | 12 → 0 | 6 → 0 | 18 → 0 | 2 → 1 | 2 → 1 | 330 → 152 |
+| `/quiz` | 13 → 0 | 6 → 0 | 18 → 0 | 2 → 1 | 1 → 1 | 343 → 103 |
+| `/learn` | 13 → 0 | 6 → 0 | 18 → 0 | 2 → 1 | 2 → 1 | 343 → 367 |
+| `/challenge` | 13 → 0 | 6 → 0 | 18 → 0 | 2 → 1 | 2 → 2 | 348 → 114 |
+| `/play` | 13 → 0 | 6 → 0 | 19 → 0 | 2 → 1 | 1 → 1 | 332 → 90 |
+| `/collection` | 13 → 0 | 6 → 0 | 19 → 0 | 2 → 1 | 1 → 1 | 337 → 102 |
+| `/roadmap` | 12 → 0 | 12 → 0 | 25 → 0 | 3 → 1 | 2 → 2 | 471 → 210 |
+| `/leaderboard` | 12 → 0 | 6 → 0 | 18 → 0 | 2 → 1 | 2 → 2 | 342 → 63 |
+| `/premium` | 13 → 0 | 6 → 0 | 19 → 0 | 2 → 1 | 1 → 1 | 349 → 99 |
+| `/shop` | 13 → 0 | 6 → 0 | 19 → 0 | 2 → 1 | 2 → 1 | 350 → 734 |
+| `/` | 12 → 0 | 6 → 0 | 18 → 0 | 2 → 1 | 1 → 1 | 326 → 134 |
+
+Local build, signed in with Premium (fixtures after 250ms), before → after:
+
+| Section | Empty frames | Loader frames | Footer in view on an empty page | Roots drawn | Content states | New page drawn (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/coding` | 12 → 0 | 5 → 0 | 17 → 0 | 2 → 1 | 2 → 1 | 437 → 470 |
+| `/today` | 13 → 0 | 6 → 0 | 19 → 0 | 2 → 1 | 3 → 2 | 343 → 615 |
+| `/quiz` | 13 → 0 | 6 → 0 | 19 → 0 | 2 → 1 | 1 → 1 | 354 → 177 |
+| `/learn` | 13 → 0 | 5 → 0 | 18 → 0 | 2 → 1 | 2 → 1 | 350 → 475 |
+| `/challenge` | 13 → 0 | 6 → 0 | 18 → 0 | 2 → 1 | 2 → 2 | 339 → 98 |
+| `/play` | 13 → 0 | 6 → 0 | 19 → 0 | 2 → 1 | 1 → 1 | 350 → 126 |
+| `/collection` | 13 → 0 | 6 → 0 | 18 → 0 | 2 → 1 | 2 → 2 | 366 → 104 |
+| `/roadmap` | 13 → 0 | 25 → 0 | 38 → 0 | 3 → 1 | 2 → 2 | 684 → 598 |
+| `/leaderboard` | 13 → 0 | 6 → 0 | 19 → 0 | 2 → 1 | 2 → 2 | 351 → 90 |
+| `/premium` | 13 → 0 | 6 → 0 | 19 → 0 | 2 → 1 | 2 → 3 | 370 → 135 |
+| `/shop` | 13 → 0 | 5 → 0 | 18 → 0 | 2 → 1 | 4 → 1 | 357 → 1139 |
+| `/` | 13 → 0 | 5 → 0 | 18 → 0 | 2 → 1 | 1 → 1 | 327 → 181 |
+
+The pages that now wait for their data draw later than their first paint used to, and finish no later: the signed-in Coding page used to be complete 710 to 770ms after the click, after two draws, and now at 470ms, after one. Rewards waits longest here because its catalogue came from devshark.app through a slow proxy; the wait never passes 1.2s. While a page waits, its predecessor stays, marked busy, and fades back after 200ms.
+
+Still drawn in two steps after this change, each a page's own loading state rather than the navigation:
+
+- `/leaderboard`: the skeleton, then the board once it loads.
+- `/challenge`: the best-effort leaderboard line fills in; no layout shift.
+- `/roadmap`: the optional-paths section (a lazy `PathDiscovery`) arrives below the fold.
+- `/today`, signed in: the concept, run, due-coding and path sections load under the plan.
+- `/premium`, signed in with Premium: the plan arrives after the page and adds "Your plan" above the plans; the page redraws twice and grows 180px. Its tests (`premium-page`, `voucher`) would need an awaited mount to hold it with `useFirstData`.
+- `/collection`, signed in: the saved cards. The fixtures did not answer the flashcards read, so this one is not measured.
+- The route box still fades in from opacity 0 over 140ms, with each page's `ss-pop` on top, so the first frame after the swap is almost empty. That entrance is the existing design.
+- A chunk that fails to load still replaces the whole app with the root error screen. It happened once on devshark.app during the measurements, when the proxy aborted `objectWithoutPropertiesLoose-*.js`.
+
+Checks on `938c29c`, the second merge, covering every step of `quality.yml` that needs no secret:
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 and exit 0. The tooling typecheck failed on `4dfec56` with two TS2322 in the Shop test helper that `5419ea2` added; `7ee97e5` fixes it |
+| `npm run test:launch` | exit 0; the twelve-function budget holds |
+| `test:coding-auth`, `test:grading-integrity`, `test:coding`, `test:paths`, `test:billing`, `test:fallbacks` | exit 0 each |
+| `npm run test:client` | exit 0; 24 files, 238 tests, 10 of them new in `route-loading.test.tsx` |
+| `npm run check:unused`, `npm run check:security` | exit 0 and exit 0 |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build`, then `check:public` and `check:bundle` | exit 0 three times; 13 public URLs; 221,847 of 243,000 gzip bytes (`4f93988` built the same way: 221,047) |
+| `npm audit --omit=dev`, root and client | exit 0 twice; 0 vulnerabilities |
+| Browser specs `navigation`, `public`, `evolving`, `segmented`, `on-accent` against `vite preview` | exit 0 each; 2, 5, 2, 4 and 12 passed |
+| `npm run check:responsive` with CI's routes and widths, light, then dark with `RESPONSIVE_LOCALE=cs` | exit 0 twice; 28 and 6 probes, no issues |
+| `npm run check:responsive -- --routes` the twelve sections plus `/coding/javascript`, `/coding/javascript/js-double-numbers` and `/coding/fullstack` `--widths 360,390,768,1280 --block-external`, light and dark | exit 0 twice; 60 probes each, no issues |
+| `npm run test:harness` | exit 0; 196 assertions in Chromium |
+| `npm run audit:performance` with `CHROME_PATH` set to the local Chromium | exit 0; performance 0.58 on the phone profile and 0.98 on desktop, lab numbers that swing with the first-load shift below |
+| `git diff --check`, the worktree and `origin/main` against `HEAD` | exit 0 twice |
+| Each of the six commits before the first merge, checked out alone: client `tsc -b` and `vitest run` | exit 0 each; 220, 225, 230, 230, 230 and 230 tests. `tsc -b` leaves the tests out, so it missed the helper's typing |
+
+Not run: the Storybook build and its spec. No story imports a module this change touches.
+
+Lighthouse found a layout shift on the first load of the landing page that predates this change: the whole `<main>` moves by almost a viewport. Against `vite preview`, `origin/main` at `2e6b8ba` scored a CLS of 0.979 in two of three desktop runs and 0.959 in all three phone runs. This branch (`7ee97e5`, then `938c29c`) scored 0.979 in two of five desktop runs and 0.959 in one of five phone runs; every other run stayed at 0.066 or below. Its cause is untraced. It happens before any navigation, so this change does not address it.
+
+Not verified: this change on devshark.app (not deployed), a real Supabase session (the signed-in runs used a fake session and fixtures), and physical phones. The measurement harness stayed out of the repository; `tests/browser/navigation.spec.ts` is the regression check that remains.
 
 ## 2026-09-26 — Supabase on demand (BUNDLE)
 

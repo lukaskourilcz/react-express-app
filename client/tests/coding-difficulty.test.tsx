@@ -1,9 +1,10 @@
 import type { ReactNode } from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
+import { preloadPath } from '../src/lib/routePreload';
 import { CodingTaskScreen, CodingTrackScreen } from '../src/components/coding/CodingSection';
 import { CodingDueSection } from '../src/components/coding/CodingDueSection';
 import Collection from '../src/components/Collection';
@@ -15,6 +16,9 @@ import { EVOLVING_CHALLENGES, evolvingStage } from '../../shared/evolving';
 // The lists and labels come from the generated index alone, which is what
 // the browser really reads.
 const state = vi.hoisted(() => ({ signedIn: false, saved: [] as string[], due: [] as string[] }));
+// The task screen loads its editor beside the task; load it once up front
+// so each screen draws the (mocked) workbench on its first render.
+beforeAll(() => preloadPath('/coding/javascript/js-digit-sum'));
 beforeEach(() => { state.signedIn = false; state.saved = []; state.due = []; });
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: state.signedIn, signInWithGoogle: vi.fn() }) }));
 vi.mock('../src/coding/practice', () => ({

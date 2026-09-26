@@ -1,7 +1,7 @@
 // Typed wrappers over the coding API resources plus the TanStack Query hooks
 // the section screens use. Query keys live under ['coding', …] so a submit
 // can invalidate exactly the progress it changed.
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
@@ -70,14 +70,17 @@ export function disconnectGithub(): Promise<{ ok: boolean }> {
   return apiFetch<{ ok: boolean }>(`${USER}?op=github-disconnect`, { method: 'POST', body: '{}' });
 }
 
+/** The signed-in learner's coding progress, as one set of options the hook
+ * and a page's first-data prefetch share. */
+export const codingProgressQuery = queryOptions({
+  queryKey: codingKeys.progress(),
+  queryFn: ({ signal }) => fetchCodingProgress(signal),
+  staleTime: 30_000,
+});
+
 /** The signed-in learner's coding progress; `enabled` false for anonymous visitors. */
 export function useCodingProgress(enabled: boolean) {
-  return useQuery({
-    queryKey: codingKeys.progress(),
-    enabled,
-    queryFn: ({ signal }) => fetchCodingProgress(signal),
-    staleTime: 30_000,
-  });
+  return useQuery({ ...codingProgressQuery, enabled });
 }
 
 /** Curated approaches for a task the learner has passed. The server decides;

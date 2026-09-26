@@ -6,7 +6,7 @@
 // to was fine when it bought a coloured ring and is not fine when it can buy a
 // T-shirt. The client asks; the server decides and records.
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import type { CoinSettings, MerchAvailability, MerchSku, ShippingAddress, SocialPlatform } from '../../../shared/rewards';
 
@@ -148,31 +148,22 @@ export const wearCrown = (equipped: boolean): Promise<{ equipped: boolean }> =>
     body: JSON.stringify({ id: 'crown', op: equipped ? 'equip' : 'unequip' }),
   });
 
+// One set of options per read, shared by the hooks and a page's first-data
+// prefetch (lib/routeData.ts).
+export const walletQuery = queryOptions({ queryKey: rewardKeys.wallet(), queryFn: ({ signal }) => fetchWallet(signal), staleTime: 30_000 });
+export const shopQuery = queryOptions({ queryKey: rewardKeys.shop(), queryFn: ({ signal }) => fetchShop(signal), staleTime: 5 * 60_000 });
+export const ordersQuery = queryOptions({ queryKey: rewardKeys.orders(), queryFn: ({ signal }) => fetchOrders(signal), staleTime: 30_000 });
+
 export function useWallet(enabled: boolean) {
-  return useQuery({
-    queryKey: rewardKeys.wallet(),
-    enabled,
-    queryFn: ({ signal }) => fetchWallet(signal),
-    staleTime: 30_000,
-  });
+  return useQuery({ ...walletQuery, enabled });
 }
 
 export function useShop(enabled = true) {
-  return useQuery({
-    queryKey: rewardKeys.shop(),
-    enabled,
-    queryFn: ({ signal }) => fetchShop(signal),
-    staleTime: 5 * 60_000,
-  });
+  return useQuery({ ...shopQuery, enabled });
 }
 
 export function useOrders(enabled: boolean) {
-  return useQuery({
-    queryKey: rewardKeys.orders(),
-    enabled,
-    queryFn: ({ signal }) => fetchOrders(signal),
-    staleTime: 30_000,
-  });
+  return useQuery({ ...ordersQuery, enabled });
 }
 
 export function useSocialVisitMutation() {
