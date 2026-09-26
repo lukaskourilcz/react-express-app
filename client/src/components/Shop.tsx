@@ -22,6 +22,7 @@
 // what a learner may open, is sold on /premium and never for coins.
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -40,18 +41,23 @@ import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { friendlyError } from '../lib/api';
-import { useEntitlement } from '../lib/entitlement';
+import { entitlementQuery, useEntitlement } from '../lib/entitlement';
 import { useGameConfig } from '../lib/gameConfig';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { categoryLabelKey } from '../lib/categories';
+import { referralQuery } from '../lib/referral';
+import { readOnce, settled, useFirstData } from '../lib/routeData';
 import {
   formatMoney,
+  ordersQuery,
+  shopQuery,
   useCosmeticMutation,
   useOrderMutation,
   useOrders,
   useShop,
   useProtectionMutation,
   useWallet,
+  walletQuery,
   type EarnSummary,
   type ShopItem,
   type WalletEntry,
@@ -487,7 +493,23 @@ function ShieldGlyph({ size = 40 }: { size?: number }) {
   );
 }
 
+/** The catalogue, and a signed-in account's coins, orders, plan and invite, in
+ * the cache before the first render: the test-mode notice and the items used
+ * to arrive after the page and push the wallet down. */
+function useRewardsFirstData() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  useFirstData(`rewards ${user?.id ?? ''}`, () => settled([
+    readOnce(queryClient, shopQuery),
+    user ? readOnce(queryClient, walletQuery) : null,
+    user ? readOnce(queryClient, ordersQuery) : null,
+    user ? readOnce(queryClient, entitlementQuery(user.id)) : null,
+    user ? readOnce(queryClient, referralQuery) : null,
+  ]));
+}
+
 function Shop() {
+  useRewardsFirstData();
   const t = useT();
   const { lang } = useLanguage();
   const { isAuthenticated } = useAuth();

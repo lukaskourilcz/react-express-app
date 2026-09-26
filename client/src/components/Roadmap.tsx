@@ -63,7 +63,7 @@ import {
 } from '../../../shared/mastery';
 import { ROADMAP_MAX_HEARTS } from '../../../shared/assessment';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
-import { useRoadmapStructure } from '../lib/queries';
+import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
 import { awardLearningOutcome, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
@@ -293,6 +293,7 @@ function nextAfter(a: Active, ranges: PartRange[]): Active | null {
 }
 
 function Roadmap() {
+  useRoadmapStructureFirst({ plan: true });
   const { lang, t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const progress = useRoadmapProgress();

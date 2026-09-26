@@ -13,7 +13,7 @@ import { useRoadmapProgress, useExtraUnlocks, type RoadmapProgress,
   availabilityOf,
   type StepAvailability,
 } from '../lib/roadmap';
-import { useRoadmapStructure } from '../lib/queries';
+import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { ApiError } from '../lib/api';
 import { buildToday, type TodayItem, type TodayKind } from '../lib/today';
 import { masteryDayKey, type LevelMasteryEntry } from '../../../shared/mastery';
@@ -108,6 +108,7 @@ function doneToday(progress: RoadmapProgress, subject: SubjectId, target: number
 }
 
 export default function Today() {
+  useRoadmapStructureFirst({ plan: true });
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const [subject] = useSubject();

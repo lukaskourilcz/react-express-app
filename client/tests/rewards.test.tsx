@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -88,6 +88,13 @@ function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return <QueryClientProvider client={client}><MemoryRouter><LanguageProvider>{children}</LanguageProvider></MemoryRouter></QueryClientProvider>;
 }
+// The page holds its first render for its data (lib/routeData.ts); a render
+// that suspends has to start inside an awaited act.
+async function mountShop() {
+  let view: ReturnType<typeof render> | null = null;
+  await act(async () => { view = render(<Shop />, { wrapper }); });
+  return view as unknown as ReturnType<typeof render>;
+}
 const tHook = () => renderHook(() => useT(), { wrapper }).result.current;
 
 describe('How to earn', () => {
@@ -138,7 +145,7 @@ describe('the Rewards screen', () => {
   it('shows a free account the merchandise with the upgrade sheet, never an address form', async () => {
     signIn();
     routes({ plan: FREE });
-    render(<Shop />, { wrapper });
+    await mountShop();
     expect(screen.getByRole('heading', { level: 1, name: 'Rewards' })).toBeInTheDocument();
     await screen.findByText('1,240');
     expect(screen.getByRole('heading', { name: 'How to earn' })).toBeInTheDocument();
@@ -154,7 +161,7 @@ describe('the Rewards screen', () => {
   it('keeps the sections in the order of the handoff', async () => {
     signIn();
     routes({ plan: PREMIUM, wallet: wallet({ earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } }) });
-    render(<Shop />, { wrapper });
+    await mountShop();
     await screen.findByText('1,240');
     await screen.findByRole('heading', { name: 'Crown and streak protection' });
     const headings = screen.getAllByRole('heading', { level: 2 }).map((one) => one.textContent);
@@ -166,13 +173,13 @@ describe('the Rewards screen', () => {
     signIn();
     const premiumWallet = (balance: number) => wallet({ balance, earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } });
     routes({ plan: PREMIUM, shop: pricedShop, wallet: premiumWallet(264) });
-    const first = render(<Shop />, { wrapper });
+    const first = await mountShop();
     const short = await screen.findByRole('button', { name: 'Redeem' });
     await screen.findByText('Not enough coins');
     expect(short).toBeDisabled();
     first.unmount();
     routes({ plan: PREMIUM, shop: pricedShop, wallet: premiumWallet(7000) });
-    render(<Shop />, { wrapper });
+    await mountShop();
     await screen.findByText('7,000');
     const redeem = await screen.findByRole('button', { name: 'Redeem' });
     await waitFor(() => expect(redeem).toBeEnabled());
@@ -187,7 +194,7 @@ describe('the Rewards screen', () => {
       eventId: `xp:quiz:q${i}`, amount: 10 + i, reason: 'verified-xp', reference: `quiz:q${i}`, createdAt: '2026-09-21T10:00:00Z',
     }));
     routes({ wallet: wallet({ entries }) });
-    render(<Shop />, { wrapper });
+    await mountShop();
     const toggle = await screen.findByRole('button', { name: 'Show all 7' });
     const list = document.getElementById('rw-ledger')!;
     expect(within(list).getAllByRole('listitem')).toHaveLength(5);
@@ -199,7 +206,7 @@ describe('the Rewards screen', () => {
   it('asks a signed-out visitor to sign in and still explains how to earn', async () => {
     signOut();
     routes();
-    render(<Shop />, { wrapper });
+    await mountShop();
     expect(screen.getByText(/Sign in to see your coins/)).toBeInTheDocument();
     expect(screen.getByText('Streak 7 days')).toBeInTheDocument();
   });
@@ -207,7 +214,7 @@ describe('the Rewards screen', () => {
   it('offers a retry when the coins cannot load', async () => {
     signIn();
     routes({ wallet: { error: { code: 'db_error' } }, walletStatus: 500 });
-    render(<Shop />, { wrapper });
+    await mountShop();
     expect(await screen.findByText('Your coins could not load.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Retry' })).toBeInTheDocument();
   });
