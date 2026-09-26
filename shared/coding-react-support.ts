@@ -37,6 +37,18 @@ export const FIXTURE_PRODUCTS = [
   { id: 3, title: 'Desk', price: 200, category: 'furniture' },
 ];
 
+/** Seven photos, served three to a page (`/api/photos?page=N`), so the preview
+ * of the load-more challenge has two full pages and a short last one. */
+export const FIXTURE_PHOTOS = [
+  { id: 1, title: 'Harbour at dawn' },
+  { id: 2, title: 'Rain on the tram' },
+  { id: 3, title: 'Market stalls' },
+  { id: 4, title: 'Bridge in fog' },
+  { id: 5, title: 'Night bus' },
+  { id: 6, title: 'Garden steps' },
+  { id: 7, title: 'Last ferry' },
+];
+
 const asSource = (value: unknown) => JSON.stringify(value, null, 2);
 
 export const FETCH_STUB_SOURCE = `// Installed by the test runner. The preview still uses the real training API.
@@ -46,6 +58,7 @@ const FIXTURES = {
   todos: ${asSource(FIXTURE_TODOS)},
   comments: ${asSource(FIXTURE_COMMENTS)},
   products: ${asSource(FIXTURE_PRODUCTS)},
+  photos: ${asSource(FIXTURE_PHOTOS)},
 };
 
 const respond = data => ({
@@ -64,7 +77,7 @@ const resolveBody = (url, options) => {
   const params = new URLSearchParams(query || '');
   const segments = path.replace(/\\/+$/, '').split('/');
   const last = segments[segments.length - 1];
-  const collection = ['users', 'posts', 'todos', 'comments', 'products'].includes(last)
+  const collection = ['users', 'posts', 'todos', 'comments', 'products', 'photos'].includes(last)
     ? last
     : segments[segments.length - 2];
   const list = FIXTURES[collection];
@@ -77,6 +90,11 @@ const resolveBody = (url, options) => {
   }
 
   if (last !== collection) return byId(list, last);
+  // Photos come three to a page, the way the load-more challenge asks for them.
+  if (collection === 'photos' && params.has('page')) {
+    const page = Math.max(1, Number(params.get('page')) || 1);
+    return list.slice((page - 1) * 3, page * 3);
+  }
 
   let items = list;
   for (const key of ['userId', 'postId']) {

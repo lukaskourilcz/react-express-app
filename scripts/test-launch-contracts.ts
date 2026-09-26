@@ -1586,6 +1586,31 @@ async function main() {
     appSource: "const App = () => { useEffect(() => { Promise.reject(new Error('left unhandled')); }, []); return null; };",
   });
   assert.equal(reactRejected.failed, 0, 'an unhandled rejection in the component does not end the React runner');
+  // The preview runs a solution against the fetch stub, not a suite's fake
+  // fetch. The stub answered /api/photos with its weather object, so the
+  // load-more solution threw "next is not iterable" in every preview and the
+  // browser harness failed. Photos now come three to a page.
+  const loadMore = solutionFor('react-mh-load-more')?.solution;
+  assert.ok(loadMore, 'the load-more challenge has a reference solution');
+  const previewRun = await runReactSuite({
+    suite: [
+      "import './fetchStub';",
+      "import React from 'react';",
+      "import { render, screen, fireEvent, waitFor } from '@testing-library/react';",
+      "import App from './App';",
+      "test('the stub pages the photos', async () => {",
+      '  render(<App />);',
+      "  await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(3));",
+      "  fireEvent.click(screen.getByRole('button', { name: 'Load more' }));",
+      "  await waitFor(() => expect(screen.getAllByRole('listitem')).toHaveLength(6));",
+      "  fireEvent.click(screen.getByRole('button', { name: 'Load more' }));",
+      "  await waitFor(() => expect(screen.getByText('That’s everything')).toBeTruthy());",
+      "  expect(screen.getAllByRole('listitem')).toHaveLength(7);",
+      '});',
+    ].join('\n'),
+    appSource: loadMore!,
+  });
+  assert.equal(previewRun.failed, 0, `the load-more preview pages through the stub's photos (${previewRun.cases.map((one) => one.error).filter(Boolean).join('; ')})`);
 
   const qualityIssues = inspectQuestionQuality([{
     ...reviewQuestions[0],
