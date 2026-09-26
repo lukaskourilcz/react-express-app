@@ -11,6 +11,7 @@ import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
+import { FieldLabel, FieldStatus } from '@astryxdesign/core/Field';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import ErrorRetry from '../ErrorRetry';
@@ -98,7 +99,7 @@ function CreateVoucher({ onCreated }: { onCreated: (created: CreatedVoucher) => 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [failure, setFailure] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const ids = { days: useId(), until: useId(), untilHint: useId(), untilError: useId() };
+  const ids = { days: useId(), daysLabel: useId(), daysHint: useId(), until: useId(), untilHint: useId(), untilError: useId() };
   const today = new Date();
   const last = new Date(today);
   last.setFullYear(last.getFullYear() + 5);
@@ -148,11 +149,24 @@ function CreateVoucher({ onCreated }: { onCreated: (created: CreatedVoucher) => 
         />
         <div className="dev-voucher-form__row">
           <div className="dev-voucher-field">
-            <span className="dev-voucher-label" id={ids.days}>{t('dev.vouchers.days')}</span>
-            <SegmentedControl value={days} onChange={(value) => setDays(value as DayChoice)} label={t('dev.vouchers.days')} aria-describedby={`${ids.days}-hint`}>
+            <FieldLabel
+              isGroupLabel
+              label={t('dev.vouchers.days')}
+              inputID={ids.days}
+              labelID={ids.daysLabel}
+              description={t('dev.vouchers.daysHint')}
+              descriptionID={ids.daysHint}
+            />
+            <SegmentedControl
+              id={ids.days}
+              value={days}
+              onChange={(value) => setDays(value as DayChoice)}
+              label={t('dev.vouchers.days')}
+              aria-labelledby={ids.daysLabel}
+              aria-describedby={ids.daysHint}
+            >
               {DAY_CHOICES.map((choice) => <SegmentedControlItem key={choice.value} value={choice.value} label={t(choice.key)} />)}
             </SegmentedControl>
-            <span className="dev-voucher-hint" id={`${ids.days}-hint`}>{t('dev.vouchers.daysHint')}</span>
           </div>
           <TextInput
             label={t('dev.vouchers.uses')}
@@ -165,8 +179,7 @@ function CreateVoucher({ onCreated }: { onCreated: (created: CreatedVoucher) => 
         </div>
         <div className="dev-voucher-form__row">
           <div className="dev-voucher-field">
-            <label className="dev-voucher-label" htmlFor={ids.until}>{t('dev.vouchers.until')}</label>
-            <span className="dev-voucher-hint" id={ids.untilHint}>{t('dev.vouchers.untilHint')}</span>
+            <FieldLabel label={t('dev.vouchers.until')} inputID={ids.until} description={t('dev.vouchers.untilHint')} descriptionID={ids.untilHint} isOptional />
             <input
               id={ids.until}
               className="ss-input dev-voucher-date"
@@ -178,11 +191,12 @@ function CreateVoucher({ onCreated }: { onCreated: (created: CreatedVoucher) => 
               aria-describedby={errors.until ? `${ids.untilHint} ${ids.untilError}` : ids.untilHint}
               aria-invalid={errors.until ? true : undefined}
             />
-            {errors.until && <span className="dev-voucher-error" id={ids.untilError} role="alert">{t(errors.until)}</span>}
+            {errors.until && <FieldStatus id={ids.untilError} type="error" message={t(errors.until)} />}
           </div>
           <TextInput
             label={t('dev.vouchers.custom')}
             description={t('dev.vouchers.customHint')}
+            isOptional
             value={code}
             onChange={(value) => { setCode(value.slice(0, 64)); if (errors.code) setErrors({ ...errors, code: undefined }); }}
             status={status('code')}
@@ -228,7 +242,7 @@ function CreatedCode({ created, onDone }: { created: CreatedVoucher; onDone: () 
     <section className="dev-voucher-created" aria-labelledby={`${fieldId}-title`}>
       <h3 ref={heading} id={`${fieldId}-title`} tabIndex={-1}>{t('dev.vouchers.createdTitle')}</h3>
       <p>{t('dev.vouchers.createdOnce')}</p>
-      <label className="dev-voucher-label" htmlFor={fieldId}>{t('dev.vouchers.codeLabel')}</label>
+      <FieldLabel label={t('dev.vouchers.codeLabel')} inputID={fieldId} />
       <div className="dev-voucher-created__field">
         <input
           ref={field}
