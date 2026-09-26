@@ -599,7 +599,7 @@ async function tierContracts() {
   }
 
   // The handlers themselves, where they can run without a database: a signed-in
-  // account with no grant is free, a guest keeps the previews it had.
+  // account with no grant is free, and a guest holds the free tier.
   if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
     const signedIn = (query: Record<string, string>) => ({
       method: 'GET', headers: { authorization: 'Bearer contract' }, query: { ...query, user_id: 'contract-free-account' },
@@ -649,6 +649,24 @@ async function tierContracts() {
     const guestFreeLevel = mockResponse();
     await roadmapHandler(guest({ topic: 'react', level: '12', lang: 'en' }) as never, guestFreeLevel as never);
     assert.notEqual(guestFreeLevel.statusCode, 402, 'a free Learn level stays open to a guest');
+    // Grading and the solution follow the same rule. A guest's session for a
+    // Premium task, or for a coding task inside a Premium Learn level, is
+    // refused before anything is graded or revealed.
+    const post = (resource: string, body: Record<string, unknown>) => ({ method: 'POST', headers: {}, query: { resource }, body });
+    const levelTask = CODING_TASKS.find((task) => task.topic === 'typescript' && task.level > 0)!;
+    assert.ok(levelTask, 'a coding task inside a TypeScript Learn level exists');
+    for (const [label, session] of [
+      ['a Premium task', encodeCodingSession({ taskId: lockedTask.id, track: lockedTask.track, userId: null })],
+      ['a Premium Learn level', encodeCodingSession({ taskId: levelTask.id, track: levelTask.track, userId: null, roadmapAttemptId: 'guest-attempt-0123456789' })],
+    ] as const) {
+      const submitted = mockResponse();
+      await roadmapHandler(post('coding-submit', { session, code: 'function solve() { return 1; }', lang: 'en' }) as never, submitted as never);
+      assert.equal(submitted.statusCode, 402, `a guest submit for ${label} is refused`);
+      const revealed = mockResponse();
+      await roadmapHandler(post('coding-reveal', { session, hintsUsed: 20 }) as never, revealed as never);
+      assert.equal(revealed.statusCode, 402, `a guest reveal for ${label} is refused`);
+      assert.equal(JSON.stringify(revealed.body ?? {}).includes('solution'), false, 'nothing of the solution comes back');
+    }
 
     // A deploy that lands before migration 039, against a PostgREST that has
     // none of its routines: the plan reads free instead of failing, and the
