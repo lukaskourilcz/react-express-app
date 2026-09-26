@@ -1,8 +1,11 @@
-import { supabase } from './supabase';
+import { loadedSupabase } from './supabaseClient';
 
 // Thin wrapper around Supabase Realtime broadcast channels for live matches.
 // Falls back to a no-op subscription if Supabase isn't configured so callers
-// still work locally — they will just not receive live events.
+// still work locally — they will just not receive live events. Only a
+// signed-in player opens a match channel, and restoring or starting that
+// session loaded the client (lib/supabaseClient.ts), so it is read
+// synchronously here.
 
 type Listener<T = unknown> = (payload: T) => void;
 
@@ -16,7 +19,8 @@ export interface RealtimeChannel {
 const noop = () => undefined;
 
 export function joinMatchChannel(code: string): RealtimeChannel {
-  if (!supabase) {
+  const client = loadedSupabase();
+  if (!client) {
     return {
       send: async () => undefined,
       subscribe: () => noop,
@@ -28,7 +32,6 @@ export function joinMatchChannel(code: string): RealtimeChannel {
     };
   }
 
-  const client = supabase;
   const channel = client.channel(`match:${code}`, {
     config: { broadcast: { self: true } },
   });

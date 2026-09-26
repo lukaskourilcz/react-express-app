@@ -25,7 +25,14 @@ jobs:
       - run: npm run typecheck:api && npm run typecheck:tooling --prefix client
       - run: npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:coding && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:client
       - run: npm run check:unused && npm run check:security
-      - run: npm run build && npm run check:public && npm run check:bundle
+      - run: |
+          # The browser checks below run against this build, so it signs in the
+          # way production does: with the placeholder Supabase project that
+          # check:bundle measures with. tests/browser/lazy-auth.spec.ts needs it.
+          VITE_SUPABASE_URL=$(node -p "require('./docs/quality/bundle-budget.json').measuredBuild.env.VITE_SUPABASE_URL")
+          VITE_SUPABASE_ANON_KEY=$(node -p "require('./docs/quality/bundle-budget.json').measuredBuild.env.VITE_SUPABASE_ANON_KEY")
+          export VITE_SUPABASE_URL VITE_SUPABASE_ANON_KEY
+          npm run build && npm run check:public && npm run check:bundle
         id: build
         env:
           VITE_PRODUCT: devshark
@@ -41,6 +48,7 @@ jobs:
           npm run test:browser -- tests/browser/segmented.spec.ts
           npm run test:browser -- tests/browser/on-accent.spec.ts
           npm run test:browser -- tests/browser/navigation.spec.ts
+          npm run test:browser -- tests/browser/lazy-auth.spec.ts
           npm run test:browser -- tests/browser/route-errors.spec.ts
           export CHROME_BIN=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")
           TOPIC=javascript-closures

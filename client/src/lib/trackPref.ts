@@ -14,7 +14,7 @@
 // that saved while its enrollment failed is a state the learner has to see.
 
 import type { User } from '@supabase/supabase-js';
-import { supabase } from './supabaseClient';
+import { isSupabaseConfigured, supabaseForSession } from './supabaseClient';
 import { readJSON, writeJSON } from './storage';
 import { saveLearningPreference as savePreferenceToAccount } from './learningPaths';
 import { CURRENT_PRODUCT } from './products';
@@ -122,7 +122,7 @@ export async function saveLearningPreference(
   answers: ProfileAnswers = {},
 ): Promise<SaveOutcome> {
   writeCachedPreference(userId, preference);
-  if (!supabase || !userId) {
+  if (!isSupabaseConfigured || !userId) {
     return { ok: false, reason: 'not_signed_in', message: 'not_signed_in' };
   }
   try {
@@ -136,8 +136,10 @@ export async function saveLearningPreference(
     });
     // The local `user` object caches user_metadata, so refresh the session to
     // pick up what the server just wrote. A failed refresh is not a failed
-    // save: the write already landed, and the next sign-in will see it.
-    await supabase.auth.refreshSession().catch(() => null);
+    // save: the write already landed, and the next sign-in will see it. A
+    // signed-in learner already has the client, so this downloads nothing.
+    const client = await supabaseForSession();
+    await client?.auth.refreshSession().catch(() => null);
     return { ok: true, preference };
   } catch (error) {
     const status = (error as { status?: number } | null)?.status;
