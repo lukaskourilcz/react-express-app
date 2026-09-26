@@ -43,12 +43,17 @@ const hasClassRule = (css: string, name: string) => new RegExp(`\\.${name}(?![\\
 // StyleX class names appear as literal strings in the bundle, which is what
 // makes this safe; keyframes/font-faces/CSS variables are kept wholesale.
 function purgeAstryxCss(): Plugin {
+  // The resolved output directory, so a build with --outDir (the bundle
+  // budget's production-shaped build) is purged like the deployed one.
+  let outDir = path.resolve(__dirname, 'dist');
   return {
     name: 'purge-astryx-css',
     apply: 'build',
     enforce: 'post',
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
     async closeBundle() {
-      const outDir = path.resolve(__dirname, 'dist');
       const assetsDir = path.join(outDir, 'assets');
       const files = await readdir(assetsDir);
       const cssFiles = files.filter((f) => f.endsWith('.css'));
@@ -127,9 +132,13 @@ function productMetadata(env: Record<string, string>): Plugin {
     .split('__PRODUCT_TITLE__').join(title)
     .split('__PRODUCT_DESCRIPTION__').join(description);
 
+  let outDir = path.resolve(__dirname, 'dist');
   return {
     name: 'product-metadata',
     transformIndexHtml: renderHtml,
+    configResolved(config) {
+      outDir = path.resolve(config.root, config.build.outDir);
+    },
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
         if (req.url?.split('?')[0] !== '/manifest.webmanifest') return next();
@@ -154,7 +163,6 @@ function productMetadata(env: Record<string, string>): Plugin {
       if (asset?.type === 'asset') asset.source = manifest;
     },
     async writeBundle() {
-      const outDir = path.resolve(__dirname, 'dist');
       await writeFile(path.join(outDir, 'manifest.webmanifest'), manifest);
 
       const indexHtml = await readFile(path.join(outDir, 'index.html'), 'utf8');

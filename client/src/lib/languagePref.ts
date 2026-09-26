@@ -4,7 +4,7 @@
 // in the LanguageContext; this module only handles the account-synced default.
 
 import type { User } from '@supabase/supabase-js';
-import { supabase } from './supabaseClient';
+import { supabaseForSession } from './supabaseClient';
 import type { Lang } from '../i18n/LanguageContext';
 
 const META_KEY = 'devquiz_lang';
@@ -15,11 +15,13 @@ export function preferredLanguageOf(user: User | null): Lang | null {
   return value === 'en' || value === 'cs' ? value : null;
 }
 
-/** Persist the preferred language to the account (best-effort). */
+/** Persist the preferred language to the account (best-effort). Without a
+ * session there is no account to write to, and supabase-js is not loaded. */
 export async function savePreferredLanguage(lang: Lang): Promise<void> {
-  if (!supabase) return;
+  const client = await supabaseForSession();
+  if (!client) return;
   try {
-    await supabase.auth.updateUser({ data: { [META_KEY]: lang } });
+    await client.auth.updateUser({ data: { [META_KEY]: lang } });
   } catch {
     // Best-effort — the live language already changed locally.
   }

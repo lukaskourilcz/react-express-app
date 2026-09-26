@@ -1671,3 +1671,67 @@ Not run: the Storybook build and its spec. No story imports a module this change
 Lighthouse found a layout shift on the first load of the landing page that predates this change: the whole `<main>` moves by almost a viewport. Against `vite preview`, `origin/main` at `2e6b8ba` scored a CLS of 0.979 in two of three desktop runs and 0.959 in all three phone runs. This branch (`7ee97e5`, then `938c29c`) scored 0.979 in two of five desktop runs and 0.959 in one of five phone runs; every other run stayed at 0.066 or below. Its cause is untraced. It happens before any navigation, so this change does not address it.
 
 Not verified: this change on devshark.app (not deployed), a real Supabase session (the signed-in runs used a fake session and fixtures), and physical phones. The measurement harness stayed out of the repository; `tests/browser/navigation.spec.ts` is the regression check that remains.
+
+## 2026-09-26 — Supabase on demand (BUNDLE)
+
+What changed: a first visit no longer downloads `@supabase/supabase-js`. `client/src/lib/supabaseClient.ts` imports the library once, the first time one of these holds: a session is stored under supabase-js's default key (`sb-<first label of the project host>-auth-token`), the URL carries an OAuth return (`access_token`, `error`, `error_description` or `error_code`, or a PKCE `code` whose verifier this browser stored), the visitor starts a sign-in, or another tab signs in. A stored session and an OAuth return start the download while the module evaluates, before React renders. A visitor with none of those is signed out from the first render and downloads nothing: `AuthProvider` starts with `isLoading` false, `apiFetch` sends no token, and the language and track writers and the match channel skip the account. The key stays supabase-js's default, so every stored session still restores. No server file changed; twelve handlers remain.
+
+| Commit | What |
+| --- | --- |
+| `b0f9abe` | `lib/supabaseClient.ts` loads the client on demand; `auth.tsx`, `api.ts`, `trackPref.ts`, `languagePref.ts`, `realtime.ts` and `supabase.ts` use it. The boot deadline (8 s) and the token timeout (4 s) now include the download. `AuthProvider` reports a `SIGNED_IN` only after `INITIAL_SESSION`: supabase-js announces a restored session as `SIGNED_IN` while it initializes, the eager client did so before the provider subscribed, and a client loaded on demand can attach the provider first |
+| `0bf926e` | `client/tests/supabase-lazy.test.tsx` (19 tests) and `client/tests/supabase-session-key.test.ts` (6, against the real supabase-js 2.110) |
+| `4c27225` | `tests/browser/lazy-auth.spec.ts`; the Product quality workflow builds with the placeholder Supabase project from `docs/quality/bundle-budget.json`, as `check:bundle` does, and runs the spec in the browser checks |
+| `f528b7d` | `docs/quality/bundle-budget.json` and `docs/quality/README.md` record the measurement and say who downloads the library; the comment in `scripts/check-bundle.mjs` follows |
+
+This record is the last commit and changes documentation only.
+
+### The first visit
+
+`npm run check:bundle` (the production-shaped build), gzip bytes of each initial request of `index.html`:
+
+| Request | `332ce69` | `f528b7d` |
+| --- | --- | --- |
+| entry script | 110,788 | 111,447 |
+| `react` | 56,849 | 56,849 |
+| `supabase` (the library) | 54,881 | not requested |
+| stylesheet | 25,056 | 25,056 |
+| `router` | 18,064 | 18,064 |
+| `tanstack` | 12,139 | 12,139 |
+| Total | 277,777 in 6 files, 34,777 over the 243,000 budget | 223,555 in 5 files, 19,445 under |
+
+The library is now a lazy chunk (`supabase-B5YuwSPF.js`, 55,304 gzip bytes); the built `index.html` names no `supabase-*` file. A dynamically imported chunk keeps all of supabase-js's exports, 423 bytes more than the static chunk, and the loader adds 659 bytes to the entry, so a signed-in visitor downloads 1,082 bytes more than before, and the library arrives one fetch after the entry instead of beside it. A second chunk also starts with `supabase-`: the app's own `lib/supabase.ts` API calls, about 400 gzip bytes, which `/learn` and `/quiz` load before and after this change. The browser spec tells the two apart by the `GoTrueClient` string in the library's body.
+
+### Evidence
+
+| Check | On `332ce69`'s code | On `f528b7d` |
+| --- | --- | --- |
+| The two new client test files, copied into a checkout of `332ce69`, each test run alone | 17 failed, 8 passed. The signed-out and sign-in cases fail because the first render is `loading` and supabase-js loads at module evaluation; the three tests that hold the download time out, because the old static import waits for the library before anything runs; a failed download fails the whole module; the key tests fail because `sessionKeyFor` does not exist. The 8 that pass are the stored-session restore, its token, sign-out, the preference refresh, the match channel, the OAuth error return and PKCE, which must behave the same before and after. Run as one file, 22 fail, because a timed-out test's import resolves during the next test | 25 passed, alone and as files |
+| `tests/browser/lazy-auth.spec.ts` against `vite preview`, both builds with the placeholder Supabase project, Chromium 141 | 3 failed, 2 passed: `/`, `/learn` and the sign-in click each find `supabase-BEHl1rMg.js` requested at page load; the stored session and the OAuth return pass | 5 passed |
+
+The browser spec plants a well-formed fake session through `addInitScript` and answers `**/auth/v1/**` locally, so nothing reaches Supabase. A signed-out visit to `/` or `/learn` requests no library chunk, contacts no Supabase host and never shows the account skeleton. With the stored session the chunk is requested, the account menu appears, and no sign-in is reported. The sign-in click downloads the chunk and leaves for `/auth/v1/authorize?provider=google`. The OAuth return makes supabase-js call `GET /auth/v1/user`, store the session under the default key, clear the fragment, and `/api/user/authevent` receives one report with the token.
+
+I broke each rule in `lib/supabaseClient.ts` and `AuthProvider` on purpose, one at a time, and `supabase-lazy.test.tsx` failed every time: reporting every `SIGNED_IN` (2 tests failed), ignoring the stored session (8), starting the provider in `loading` (3), loading on any `?code=` (1), letting the token path load without a session (1), dropping the other-tab watch (1), attaching waiting subscribers 50 ms after the client is created (2), and dropping the import at module evaluation (2).
+
+### Release contract on the final head
+
+All on `f528b7d`; this record changes documentation only. I ran every command below, and each exit code is its own.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:launch`, `npm run test:fallbacks` | exit 0 each |
+| `npm run test:client` | exit 0; 25 files, 253 tests (25 new) |
+| `npm run check:unused`, `npm run check:security` | exit 0 each; knip reports no new finding |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build`, then `npm run check:public` | exit 0 each; the build emits the library as a lazy chunk |
+| The workflow's build step as committed: the Supabase placeholders from `docs/quality/bundle-budget.json`, then `npm run build && npm run check:public && npm run check:bundle` | exit 0; 223,555 of 243,000 gzip bytes |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0 each; 0 vulnerabilities |
+| `public.spec.ts`, `evolving.spec.ts`, `segmented.spec.ts`, `on-accent.spec.ts`, `lazy-auth.spec.ts` against `vite preview` of that build on :4473, `CHROME_BIN=/opt/pw-browsers/chromium` | exit 0 each; 5, 2, 4, 12 and 5 passed |
+| `npm run check:responsive -- --routes /,/quiz,/learn,/today,/roadmap,/profile --widths 360,390,768,1280 --block-external`, light, then with `RESPONSIVE_THEME=dark` | exit 0 each; 24 probes, 0 with issues, 0 unprobed |
+| `git diff --check origin/main..HEAD`, `git diff --check 332ce69..HEAD` | clean |
+| Each commit on its own | the worktree detached at `b0f9abe`, `0bf926e`, `4c27225` and `f528b7d` in order: `npm run typecheck:api`, `npm run typecheck:tooling --prefix client`, `npm run test:launch`, `npm run test:fallbacks` and `npm run test:client` exit 0 at every one (228 client tests at `b0f9abe`, 253 after) |
+
+`origin/main` moved to `b74d7ae` (GLITCH) during the step. `git merge-tree` finds one conflict, in `.github/workflows/quality.yml`, where both sides add a spec after `on-accent.spec.ts`; keep both lines. This record will meet GLITCH's record at the end of this file the same way. A scratch copy of `b74d7ae` with this branch's changes applied and both lines kept passed `npm run typecheck:api`, `npm run typecheck:tooling --prefix client`, `npm run test:launch`, `npm run test:client` (26 files, 263 tests) and the workflow's build step (224,479 of 243,000 gzip bytes), and the six browser specs of the merged workflow, `navigation.spec.ts` among them, passed against its preview.
+
+One report changes on purpose. With the eager client, a signed-out tab that stayed open while the learner signed in elsewhere heard that tab's broadcast and posted its own `/api/user/authevent`. That tab now has no client; it restores the session from storage through the `storage` event and posts nothing, and the tab that signed in still reports.
+
+Not verified here: a real Google sign-in and a real Supabase project (the OAuth return and the stored session ran against supabase-js 2.110 with Auth answered locally); a token refresh near expiry, which stays supabase-js's own; two real browser tabs (the cross-tab sign-in ran in the client test with a dispatched `storage` event); production and Lighthouse.
