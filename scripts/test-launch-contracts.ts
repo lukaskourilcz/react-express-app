@@ -26,10 +26,11 @@ import {
   createChallengeRun,
   stableAttemptId,
 } from '../lib/quiz-tokens';
-import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS } from '../lib/rate-limit';
+import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, parseScheduledFor } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
+import settingsHandler from '../api/settings';
 import roadmapHandler from '../api/quiz/roadmap';
 import { selectPersonalizedReview, selectDueItems, DUE_SHARE } from '../lib/review-selection';
 import { defaultDeploymentCategories, validateCategoryScope } from '../lib/product-scope';
@@ -98,7 +99,7 @@ import {
   tokensForVerifiedXp,
   validateAddress,
 } from '../shared/rewards';
-import { normalizeSettings } from '../lib/settings-store';
+import { DEFAULT_SETTINGS, normalizeSettings } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
 import { STREAK_PROTECTION_CAP } from '../shared/rewards';
 import {
@@ -191,6 +192,16 @@ function mockResponse() {
     end() { return this; },
     headers,
   };
+}
+
+/** Every script and source file under `dir` (relative to the repository),
+ * node_modules left out. */
+function codeFiles(dir: string): string[] {
+  return readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap((entry) => {
+    const path = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : codeFiles(path);
+    return /\.(ts|tsx|mjs|js)$/.test(entry.name) ? [path] : [];
+  });
 }
 
 /** Corrupt a sealed token in a way that always changes its authentication tag,
@@ -808,6 +819,46 @@ function publicCopyContracts() {
   assert.doesNotMatch(read('client/src/components/LegalPages.tsx'), /ec\.europa\.eu\/consumers\/odr/, 'no link to the closed ODR platform');
 }
 
+/* ── the retired support settings (#222, #230) ────────────────────────────
+ *
+ * The voluntary-support page and the quiz prompt are gone, and so are the
+ * settings behind them: the SUPPORT_ENABLED flag, the `support` block of the
+ * game settings and its fields in /dev → Settings. Rows saved before
+ * 2026-09-26 may still carry the block, so reading one drops it and a save
+ * from /dev writes the row without it. */
+async function retiredSupportContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const legacy = {
+    enabled: true, kofiUrl: 'https://ko-fi.com/devshark', githubSponsorsUrl: 'https://github.com/sponsors/devshark',
+    monthlyTarget: 40, amountCovered: 12, lastUpdatedAt: '2026-09-01', costBreakdown: [{ label: 'Hosting', amount: 20 }],
+    publicThanksEnabled: true,
+  };
+  assert.equal('support' in DEFAULT_SETTINGS, false, 'the game settings have no support block');
+  const stored = normalizeSettings({ ...DEFAULT_SETTINGS, support: legacy });
+  assert.equal('support' in stored, false, 'a stored support block is dropped when the row is read');
+  assert.deepEqual(stored, normalizeSettings(DEFAULT_SETTINGS), 'a row with the old block reads exactly like one without it');
+  assert.deepEqual(normalizeSettings({ ...stored, support: legacy }), stored, 'a save that still sends the block stores the row without it');
+
+  const publicSettings = mockResponse();
+  await settingsHandler({ method: 'GET', headers: {}, query: {} } as never, publicSettings as never);
+  assert.equal(publicSettings.statusCode, 200);
+  assert.equal('support' in (publicSettings.body as Record<string, unknown>), false, '/api/settings answers without a support block');
+
+  // The files that held the flag, the block and the /dev fields keep none of them.
+  for (const file of ['api/settings.ts', 'lib/settings-store.ts', 'client/src/lib/gameConfig.ts', 'client/src/lib/devApi.ts',
+                      'client/src/components/dev/DevSettings.tsx', 'client/.env.example', 'README.md']) {
+    const source = read(file);
+    assert.doesNotMatch(source, /SUPPORT_ENABLED/, `${file} still names SUPPORT_ENABLED`);
+    assert.doesNotMatch(source, /^\s*support\s*[:?]/m, `${file} still declares a support block`);
+    assert.doesNotMatch(source, /kofi|githubSponsors|publicThanks|costBreakdown|monthlyTarget|amountCovered/i, `${file} still has a support field`);
+    assert.doesNotMatch(source, /Enable public support links|Voluntary support \(disabled by default\)/, `${file} still shows the /dev support fields`);
+  }
+  // And no other server or client source reads the switch.
+  for (const file of ['api', 'lib', 'shared', 'client/src'].flatMap(codeFiles)) {
+    assert.doesNotMatch(read(file), /SUPPORT_ENABLED|\bsupportEnabled\b|\.support\.enabled/, `${file} reads the retired support switch`);
+  }
+}
+
 /** Coins (#227, handoff section 7). Replays credit nothing, only
  * service-role routines credit, Premium doubles at credit time, and the
  * four streak-protection bounds still hold. The behaviour against a real
@@ -1332,7 +1383,7 @@ async function voucherContracts() {
   assert.ok(erasure045.startsWith(erasure044.slice(0, erasure044.lastIndexOf('END;'))), "045 restates 044's delete_user_data unchanged before its own lines");
   assert.match(erasure045, /DELETE FROM public\.premium_voucher_redemptions WHERE user_id = p_user_id;/, 'erasure removes the redemptions');
   assert.match(erasure045, /UPDATE public\.premium_vouchers SET created_by = 'deleted-account' WHERE created_by = p_user_id;/, "and anonymises a voucher's creator");
-  assert.match(sql, /grant_id\s+UUID NOT NULL UNIQUE REFERENCES public\.entitlement_grants \(id\) ON DELETE CASCADE/, "039's delete_entitlement_data can still delete a voucher's grant");
+  assert.match(sql, /grant_id\s+UUID NOT NULL UNIQUE REFERENCES public\.entitlement_grants \(id\) ON DELETE CASCADE/, "erasing an account's grants also removes the voucher redemptions that opened them");
 
   // 2. The code: Crockford base32, twelve characters, normalised the same way
   // everywhere, and stored only as its SHA-256.
@@ -1639,16 +1690,70 @@ function erasureContracts() {
   assert.match(migration044, /IF NOT EXISTS \([\s\S]*?conname = 'question_edits_importance_check'/, 'the importance check is guarded');
   assert.match(migration044, /ADD CONSTRAINT question_edits_importance_check\s+CHECK \(importance IS NULL OR importance BETWEEN 1 AND 10\)/);
 
-  // The API: delete_user_data first, then the four routines 044 folded in,
-  // each tolerated when missing, until 044 is in production.
-  const userOps = read('api/user/[op].ts');
-  const deletion = userOps.slice(userOps.indexOf('async function deleteAccount('));
-  assert.ok(deletion.indexOf('endBillingForDeletedAccount') < deletion.indexOf("rpc('delete_user_data'"), 'billing ends before the data goes');
-  assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('of LATER_ERASURE_ROUTINES'), 'delete_user_data runs first');
-  for (const routine of ['delete_user_activity_days', 'delete_entitlement_data', 'delete_coin_data', 'delete_referral_data']) {
-    assert.match(userOps, new RegExp(`LATER_ERASURE_ROUTINES = \\[[^\\]]*'${routine}'`), `${routine} still runs until 044 is applied`);
+  // The four routines 039 to 042 shipped do nothing the newest
+  // delete_user_data does not: each of their statements is in its body, word
+  // for word. So the API calls delete_user_data alone, and 046 drops the four.
+  const FOLDED_FROM: Array<[string, string]> = [
+    ['delete_entitlement_data', '039'], ['delete_user_activity_days', '040'], ['delete_coin_data', '041'], ['delete_referral_data', '042'],
+  ];
+  const FOLDED = FOLDED_FROM.map(([name]) => name);
+  const squash = (sql: string) => sql.replace(/--[^\n]*/g, '').replace(/\s+/g, ' ').trim();
+  const flatBody = squash(body);
+  const foldedTables = new Set<string>();
+  for (const [name, number] of FOLDED_FROM) {
+    const file = `supabase/supabase-schema-${number}.sql`;
+    const sql = read(file);
+    const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(p_user_id TEXT)`);
+    assert.ok(start >= 0, `${file} defines ${name}`);
+    const routineBody = sql.slice(sql.indexOf('BEGIN', start), sql.indexOf('$$;', start));
+    const statements = squash(routineBody).split(';').map((one) => one.trim().replace(/^BEGIN /, ''))
+      .filter((one) => /^(DELETE|UPDATE)\b/.test(one));
+    assert.ok(statements.length > 0, `${name} erases something`);
+    for (const statement of statements) {
+      assert.ok(flatBody.includes(`${statement};`), `${latest}'s delete_user_data does what ${name} did: ${statement}`);
+      for (const match of statement.matchAll(/\bpublic\.([a-z_]+)\b/g)) foldedTables.add(match[1]);
+    }
   }
-  assert.match(deletion, /if \(erased\.error && !routineMissing\(erased\.error\)\)/, 'a routine that is not installed has nothing to erase');
+  assert.deepEqual([...foldedTables].sort(), ['billing_checkout_consents', 'billing_customers', 'entitlement_grants', 'referral_codes',
+    'referrals', 'token_month_settlements', 'token_xp_credits', 'user_activity_days'], 'the tables the four routines touched');
+
+  // The API ends billing first, then calls delete_user_data and nothing else.
+  const userOps = read('api/user/[op].ts');
+  const deletionStart = userOps.indexOf('async function deleteAccount(');
+  const deletion = userOps.slice(deletionStart, userOps.indexOf('\nasync function ', deletionStart + 1));
+  assert.ok(deletion.includes('supabase!.auth.admin.deleteUser(auth.sub)'), 'the deleteAccount slice reaches the sign-in identity');
+  assert.ok(deletion.indexOf('endBillingForDeletedAccount') < deletion.indexOf("rpc('delete_user_data'"), 'billing ends before the data goes');
+  assert.deepEqual([...deletion.matchAll(/\.rpc\(\s*([^,)]+)/g)].map((match) => match[1]), ["'delete_user_data'"],
+    'deleting an account calls delete_user_data and no other routine');
+  assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('auth.admin.deleteUser'), 'the sign-in identity goes last');
+  // No code calls a dropped routine.
+  for (const file of ['api', 'lib', 'shared', 'client/src'].flatMap(codeFiles)) {
+    const source = read(file);
+    for (const name of FOLDED) assert.doesNotMatch(source, new RegExp(`\\b${name}\\b`), `${file} still names ${name}, which 046 drops`);
+  }
+
+  // Migration 046 drops the four, and refuses to until 045's delete_user_data
+  // erases every table they touched and nothing else calls them.
+  const migration046 = read('supabase/supabase-schema-046.sql');
+  const guard046 = migration046.slice(0, migration046.indexOf('DROP FUNCTION'));
+  for (const name of FOLDED) {
+    assert.match(migration046, new RegExp(`\\nDROP FUNCTION IF EXISTS public\\.${name}\\(TEXT\\);`), `046 drops ${name}`);
+    assert.doesNotMatch(guard046, new RegExp(`DROP FUNCTION[^;]*${name}`), `046 drops ${name} only after its guard`);
+  }
+  assert.doesNotMatch(migration046, /\bCASCADE\b/, '046 drops nothing that depends on a routine');
+  assert.doesNotMatch(migration046, /CREATE OR REPLACE FUNCTION public\.delete_user_data/, '046 keeps 045\'s delete_user_data');
+  assert.match(guard046, /RAISE EXCEPTION 'migration 046 needs 045 first; missing: %'/, 'the guard names the migration it needs');
+  for (const table of [...foldedTables, 'premium_voucher_redemptions']) {
+    assert.ok(guard046.includes(`'${table}'`), `046 checks that delete_user_data erases ${table} before it drops anything`);
+  }
+  for (const table of ['premium_vouchers', 'premium_voucher_redemptions']) assert.ok(guard046.includes(`'${table}'`), `046 checks that 045 created ${table}`);
+  assert.match(guard046, /WHERE p\.prosrc ~ v_pattern/, '046 refuses while another routine names one of the four');
+  assert.match(guard046, /FROM cron\.job WHERE command ~ \$1/, '046 refuses while a cron job names one of the four');
+  for (const name of migrations.filter((one) => one > 'supabase-schema-046.sql')) {
+    for (const routine of FOLDED) {
+      assert.doesNotMatch(read(`supabase/${name}`), new RegExp(`FUNCTION public\\.${routine}\\(`), `${name} brings back ${routine}`);
+    }
+  }
 }
 
 async function main() {
@@ -2341,6 +2446,114 @@ async function main() {
   assert.equal(rateRes.statusCode, 429);
   assert.ok(rateRes.headers.has('retry-after'));
   assert.equal(isDistributedRateLimitEnabled(), false, 'test environment exercises the safe local fallback');
+
+  // A classroom round is thirty pupils joining one room from one school
+  // address. Every `play` bucket used to be keyed by address alone and sized
+  // for one person, so the feature 429'd its own participants. These are the
+  // five assertions of fa884b7, ported onto this tree's `user:<id>` identities.
+  {
+    const stamp = Date.now();
+    const playSource = readFileSync(join(process.cwd(), 'api/play/[action].ts'), 'utf8');
+    const playClient = readFileSync(join(process.cwd(), 'client/src/components/Play.tsx'), 'utf8');
+    const perMinute = (ms: string | undefined) => 60_000 / Number(ms);
+    const statePollsPerSeat = perMinute(/const POLL_FALLBACK_MS = (\d+);/.exec(playClient)?.[1]);
+    const presenterPolls = perMinute(/window\.setInterval\(load, (\d+)\)/.exec(playClient)?.[1]);
+    assert.ok(statePollsPerSeat > 0 && presenterPolls > 0, 'Play.tsx still names its state and distribution polls');
+
+    // 1. Two people behind one address do not share a budget, and an identity
+    //    is still bounded once its own budget is spent.
+    const sharedAddress = { headers: { 'x-forwarded-for': `class-${stamp}` }, socket: {} } as never;
+    const perUser = { key: `class-user-${stamp}`, capacity: 1, refillPerSecond: 0.0001 };
+    assert.equal(checkRateLimit(sharedAddress, mockResponse() as never, perUser, 'user:pupil-a'), true);
+    assert.equal(checkRateLimit(sharedAddress, mockResponse() as never, perUser, 'user:pupil-b'), true,
+      'a second identity on the same address must have its own budget, or one NAT breaks a class');
+    const spent = mockResponse();
+    assert.equal(checkRateLimit(sharedAddress, spent as never, perUser, 'user:pupil-a'), false,
+      'an identity must still be bounded once its own budget is spent');
+    assert.equal(spent.statusCode, 429);
+
+    // 2. An account's bucket and an address's never meet, even when the
+    //    address header reads like an account; and every identity a handler
+    //    passes is `user:` and a verified id.
+    const collide = { key: `class-ns-${stamp}`, capacity: 1, refillPerSecond: 0.0001 };
+    const asAddress = { headers: { 'x-forwarded-for': 'user:pupil-c' }, socket: {} } as never;
+    assert.equal(checkRateLimit(asAddress, mockResponse() as never, collide), true);
+    assert.equal(checkRateLimit(asAddress, mockResponse() as never, collide, 'user:pupil-c'), true,
+      'the identity and address namespaces must not collide');
+    for (const file of ['api', 'lib'].flatMap(codeFiles)) {
+      const source = readFileSync(join(process.cwd(), file), 'utf8');
+      for (const call of source.matchAll(/enforceRateLimit\(\s*req,\s*res,\s*RATE_LIMITS\.\w+,\s*([^)]+?)\s*\)/g)) {
+        assert.match(call[1], /^`user:\$\{[\w.]+\}`$/, `${file} passes ${call[1]} as an identity; an identity is user:<verified id>`);
+      }
+    }
+
+    // 3. No individual gained anything from the wider address buckets: each
+    //    per-identity limit is what its address bucket carried before the
+    //    split, and a signed-out `state` caller keeps that address rate.
+    const preSplit = { playCreatePerUser: 5, playJoinPerUser: 12, playStatePerUser: 60, playMutationPerUser: 30, playStateAnonymous: 60 } as const;
+    for (const [key, perMinuteBefore] of Object.entries(preSplit) as Array<[keyof typeof preSplit, number]>) {
+      assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
+      assert.equal(RATE_LIMITS[key].capacity, perMinuteBefore, `${key} holds the pre-split ${perMinuteBefore} a minute`);
+      assert.equal(RATE_LIMITS[key].refillPerSecond, perMinuteBefore / 60, `${key} refills at the pre-split rate`);
+    }
+    // The presenter's distribution poll had no limit; its bucket holds two
+    // presenter windows and is not shared with the host's state reads.
+    assert.ok(RATE_LIMITS.playDistributionPerUser.capacity >= 2 * presenterPolls, 'two presenter windows fit the distribution bucket');
+    assert.notEqual(RATE_LIMITS.playDistributionPerUser.key, RATE_LIMITS.playStatePerUser.key, 'distribution polls do not spend the host\'s state budget');
+
+    // 4. A whole class fits in the address buckets.
+    assert.ok(RATE_LIMITS.playJoin.capacity >= SHARED_NETWORK_SEATS, 'every seat must be able to join inside one window');
+    assert.ok(RATE_LIMITS.playState.capacity >= SHARED_NETWORK_SEATS * statePollsPerSeat,
+      'every seat must survive the Realtime fallback poll in Play.tsx');
+    assert.ok(RATE_LIMITS.playMutation.capacity >= SHARED_NETWORK_SEATS, 'every seat must be able to answer one question');
+    // Run it: a class behind one address joins, polls state for a minute and
+    // answers, through both tiers as the handler takes them.
+    const classroom = { headers: { 'x-forwarded-for': `classroom-${stamp}` }, socket: {} } as never;
+    const seat = (n: number) => `user:seat-${stamp}-${n}`;
+    const through = (address: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS], account: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS], n: number) =>
+      checkRateLimit(classroom, mockResponse() as never, address) && checkRateLimit(classroom, mockResponse() as never, account, seat(n));
+    for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+      assert.ok(through(RATE_LIMITS.playJoin, RATE_LIMITS.playJoinPerUser, n), `seat ${n + 1} of ${SHARED_NETWORK_SEATS} joins`);
+    }
+    for (let poll = 0; poll < statePollsPerSeat; poll += 1) {
+      for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+        assert.ok(through(RATE_LIMITS.playState, RATE_LIMITS.playStatePerUser, n), `seat ${n + 1} reads state, poll ${poll + 1}`);
+      }
+    }
+    for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+      assert.ok(through(RATE_LIMITS.playMutation, RATE_LIMITS.playMutationPerUser, n), `seat ${n + 1} answers`);
+    }
+    // One pupil retrying a join is stopped by the account bucket, while the
+    // address still has room for the class.
+    for (let retry = 1; retry < RATE_LIMITS.playJoinPerUser.capacity; retry += 1) {
+      assert.ok(through(RATE_LIMITS.playJoin, RATE_LIMITS.playJoinPerUser, 0), `seat 1 joins again, try ${retry + 1}`);
+    }
+    const stopped = mockResponse();
+    assert.equal(checkRateLimit(classroom, mockResponse() as never, RATE_LIMITS.playJoin), true, 'the address bucket still has room');
+    assert.equal(checkRateLimit(classroom, stopped as never, RATE_LIMITS.playJoinPerUser, seat(0)), false, 'one account is bounded at 12 joins a minute');
+    assert.equal(stopped.statusCode, 429);
+
+    // 5. The handler takes each per-account token with a verified subject,
+    //    after verifying it and before any database read.
+    for (const [cfg, subject] of [['playCreatePerUser', 'hostSub'], ['playJoinPerUser', 'sub'], ['playStatePerUser', 'sub'],
+                                  ['playMutationPerUser', 'sub'], ['playDistributionPerUser', 'sub']] as const) {
+      assert.ok(playSource.includes(`RATE_LIMITS.${cfg}, \`user:\${${subject}}\``), `play must consume ${cfg} keyed by a verified ${subject}`);
+    }
+    assert.match(playSource, /RATE_LIMITS\.playStateAnonymous\)/, 'the anonymous state branch must keep its own address bucket');
+    for (const [fn, cfg, verify] of [['create', 'playCreatePerUser', 'requireAuthSub'], ['join', 'playJoinPerUser', 'requireAuthSub'],
+                                     ['state', 'playStatePerUser', 'tryAuth'], ['state', 'playStateAnonymous', 'tryAuth'],
+                                     ['control', 'playMutationPerUser', 'requireAuthSub'], ['answer', 'playMutationPerUser', 'requireAuthSub'],
+                                     ['distribution', 'playDistributionPerUser', 'requireAuthSub'], ['heartbeat', 'playMutationPerUser', 'requireAuthSub']] as const) {
+      const start = playSource.indexOf(`async function ${fn}(`);
+      const end = playSource.indexOf('\nasync function ', start + 1);
+      const body = playSource.slice(start, end < 0 ? undefined : end);
+      const reads = ['supabase!', 'getGameSettings(', 'getEffectiveQuestions('].map((needle) => body.indexOf(needle)).filter((at) => at >= 0);
+      const verified = body.indexOf(`await ${verify}(req`);
+      const limited = body.indexOf(`RATE_LIMITS.${cfg}`);
+      assert.ok(start >= 0 && verified >= 0 && verified < limited && limited < Math.min(...reads),
+        `${fn} takes its ${cfg} token after ${verify} and before it reads the database`);
+    }
+  }
 
   const healthRes = mockResponse();
   await healthHandler({ method: 'POST', headers: {}, query: {} } as never, healthRes as never);
@@ -3138,6 +3351,7 @@ async function main() {
   await tierContracts();
   billingContracts();
   publicCopyContracts();
+  await retiredSupportContracts();
   coinsContracts();
   await referralContracts();
   await merchContracts();
@@ -3145,7 +3359,7 @@ async function main() {
   await voucherContracts();
   await webdevBankContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, and the webdev-bank contract BoardlessAI imports.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, and the webdev-bank contract BoardlessAI imports.');
 }
 
 void main().catch((error) => {

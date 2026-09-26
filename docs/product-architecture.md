@@ -263,9 +263,10 @@ Status on 2026-09-25: the tiers (issue #220, step D1), billing (issue #221,
 step D2) and the public copy, `/premium` and the legal pages (issue #222, step
 D3) are built. Billing stays off until the owner's Stripe account, Prices
 and environment exist (`NEEDED.md`); until then Premium opens through a manual
-grant or a voucher (below). Migrations 039 to 044 reached production on
-2026-09-26; the voucher migration, 045, is proven on a local Postgres and waits
-for production.
+grant or a voucher (below). Migrations 039 to 045 reached production on
+2026-09-26. Migration 046 drops four erasure routines that nothing calls any
+more; it goes to production after the deploy that stopped calling them
+("Account erasure" below).
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
   and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
@@ -337,8 +338,8 @@ for production.
   `billing_events`, which has none. The routines (`is_premium`, `entitlement_summary`,
   `link_billing_customer`, `upsert_provider_entitlement`,
   `grant_manual_entitlement`, `revoke_manual_entitlement`,
-  `record_billing_event`, `finish_billing_event`, `delete_entitlement_data`,
-  and from D2 `release_billing_event`, `billing_account`,
+  `record_billing_event`, `finish_billing_event`, `delete_entitlement_data`
+  until migration 046 drops it, and from D2 `release_billing_event`, `billing_account`,
   `billing_customer_owner` and `record_checkout_consent` for the fourth table,
   `billing_checkout_consents`, and from the review of 2026-09-26
   `claim_voluntary_refund` and the four routines of the fifth table,
@@ -620,14 +621,15 @@ voucher redemptions. A few rows stay without the person: a merchandise order
 already with Spreadshop and its package claim (the claim's account part becomes
 `deleted-account:<order id>`), a settled month's ranks, a referral the account
 made (`deleted-account`), and a voucher the account created as an admin, which
-keeps its counts (`created_by` becomes `deleted-account`). Until 044
-is in production the handler also calls the four routines those migrations
-shipped (`delete_user_activity_days`, `delete_entitlement_data`,
-`delete_coin_data`, `delete_referral_data`); after 044 they delete nothing,
-and a routine that is not installed yet is skipped. The Auth identity goes
-last. `erasureContracts()` in `scripts/test-launch-contracts.ts` fails when a
-migration creates a table with an account column that the newest
-`delete_user_data` does not erase.
+keeps its counts (`created_by` becomes `deleted-account`). The handler calls
+no other routine. The four that 039 to 042 shipped
+(`delete_entitlement_data`, `delete_user_activity_days`, `delete_coin_data`,
+`delete_referral_data`) deleted nothing once 044 held their statements, and
+migration 046 drops them; production runs it after the code that stopped
+calling them is deployed. The Auth identity goes last. `erasureContracts()` in
+`scripts/test-launch-contracts.ts` fails when a migration creates a table with
+an account column that the newest `delete_user_data` does not erase, or when
+that body loses a statement of the four routines.
 
 ## Deployment
 

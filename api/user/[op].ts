@@ -26,7 +26,7 @@ import { CODING_SUMMARIES } from '../../lib/coding/active';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
-import { routineMissing, settleMilestones } from '../../lib/rewards/coins';
+import { settleMilestones } from '../../lib/rewards/coins';
 import { handleReferral } from '../../lib/rewards/referral';
 import { creditVerifiedXp, handleCosmetic, handleStreakProtection, handleFulfilment, handleOrders, handlePaymentWebhook, handleShopCatalogue, handleWallet } from '../../lib/rewards/handlers';
 import {
@@ -116,10 +116,6 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
   return withRequestContext(req, res, () => routeHandler(req, res));
 }
 
-/** The erasure routines of migrations 040, 039, 041 and 042, which 044 folds
- * into delete_user_data. */
-const LATER_ERASURE_ROUTINES = ['delete_user_activity_days', 'delete_entitlement_data', 'delete_coin_data', 'delete_referral_data'] as const;
-
 async function deleteAccount(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'DELETE') {
     res.setHeader('Allow', 'DELETE');
@@ -139,6 +135,9 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
+    // One routine erases every table that holds an account id: 044 folded in
+    // the four routines 039 to 042 shipped, and 045 restated it with the
+    // voucher redemptions. Migration 046 drops those four routines.
     const cleanup = await withTimeout(
       supabase!.rpc('delete_user_data', { p_user_id: auth.sub }),
       8000,
@@ -149,19 +148,6 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
       }
       logEvent('delete-account', { status: 500, reason: 'cleanup_failed', error: cleanup.error.message });
       return jsonError(res, 500, 'db_error', 'Could not delete account data');
-    }
-    // Migrations 039 to 042 each shipped their own erasure routine, and 044
-    // folds all four into delete_user_data. Until 044 is in production a
-    // database may hold those tables without it, so they are still called;
-    // after 044 each deletes nothing. A routine that is not installed yet has
-    // no table to erase: PostgREST answers PGRST202 for it. Remove this loop
-    // once 044 is applied.
-    for (const routine of LATER_ERASURE_ROUTINES) {
-      const erased = await withTimeout(supabase!.rpc(routine, { p_user_id: auth.sub }), 8000);
-      if (erased.error && !routineMissing(erased.error)) {
-        logEvent('delete-account', { status: 500, reason: 'cleanup_failed', routine, error: erased.error.message });
-        return jsonError(res, 500, 'db_error', 'Could not delete account data');
-      }
     }
 
     const { error } = await withTimeout(supabase!.auth.admin.deleteUser(auth.sub), 8000);

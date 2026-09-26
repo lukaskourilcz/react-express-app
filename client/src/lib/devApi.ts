@@ -118,16 +118,6 @@ export interface GameSettings {
   features: { dailyChallenge: boolean; multiplayer: boolean; leaderboard: boolean; flashcards: boolean };
   leveling: { rankThresholds: number[] };
   shop: { prices: Record<string, number>; pathUnlockPrice: number };
-  support: {
-    enabled: boolean;
-    kofiUrl: string;
-    githubSponsorsUrl: string;
-    monthlyTarget: number;
-    amountCovered: number;
-    lastUpdatedAt: string;
-    costBreakdown: Array<{ label: string; amount: number }>;
-    publicThanksEnabled: boolean;
-  };
   /** One-liner dev tips shown on the loading screen (empty = none). */
   devTips: string[];
   ownerEmail: string;

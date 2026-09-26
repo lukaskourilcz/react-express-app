@@ -25,16 +25,6 @@ export interface GameConfig {
   leveling: { rankThresholds: number[] };
   /** Token prices for the shop — per-product overrides + the path-unlock price. */
   shop: { prices: Record<string, number>; pathUnlockPrice: number };
-  support: {
-    enabled: boolean;
-    kofiUrl: string;
-    githubSponsorsUrl: string;
-    monthlyTarget: number;
-    amountCovered: number;
-    lastUpdatedAt: string;
-    costBreakdown: Array<{ label: string; amount: number }>;
-    publicThanksEnabled: boolean;
-  };
   /** One-liner dev tips shown on the full-page loading screen; empty = none. */
   devTips: string[];
   /** Billing (#221): whether checkout sells Premium, and whether the
@@ -124,16 +114,6 @@ export const DEFAULT_CONFIG: GameConfig = {
   features: { dailyChallenge: true, multiplayer: true, leaderboard: true, flashcards: true },
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
   shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
-  support: {
-    enabled: false,
-    kofiUrl: '',
-    githubSponsorsUrl: '',
-    monthlyTarget: 0,
-    amountCovered: 0,
-    lastUpdatedAt: '',
-    costBreakdown: [],
-    publicThanksEnabled: false,
-  },
   devTips: [...DEFAULT_DEV_TIPS],
   billing: { enabled: false, cancellable: false, cancelByEmail: false, seller: null },
   coins: DEFAULT_COIN_SETTINGS,
@@ -151,7 +131,6 @@ async function fetchConfig(): Promise<GameConfig> {
     ...DEFAULT_CONFIG,
     ...c,
     shop: c.shop ?? DEFAULT_CONFIG.shop,
-    support: c.support ?? DEFAULT_CONFIG.support,
     billing: c.billing ?? DEFAULT_CONFIG.billing,
     coins: c.coins ?? DEFAULT_CONFIG.coins,
   };
