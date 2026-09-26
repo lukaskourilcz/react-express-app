@@ -106,9 +106,10 @@ boards carry code alone; the content contract executes the stripped text and
 asserts none of it still holds a comment.
 
 The section lists four tracks. Three of them — `javascript`, `typescript` and
-`react` — are also Learn topics. The fourth, `algorithms`, is forty-five
+`react` — are also Learn topics. The fourth, `algorithms`, is sixty
 interview problems in plain JavaScript, twenty of them the Easy warm-ups of
-#226, plus two short paths: an ordinary graded track with the same
+#226 and fifteen its first Medium and Hard wave, plus two short paths: an
+ordinary graded track with the same
 XP, review ladder and one-award-per-task ledger, but a topic of its own, so
 none of its challenges can be drawn into a Learn level's quota. Its `level` is
 an ordering key rather than a Learn level, which `hasLearnLevel` is what the
@@ -280,7 +281,7 @@ tests remain cumulative, and each stage lists its own checks first so Results
 opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 745 tasks, and every
+routes, unlocks and progress. The full catalogue contains 770 tasks, and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass.
 
