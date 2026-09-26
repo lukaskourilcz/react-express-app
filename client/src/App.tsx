@@ -1,5 +1,5 @@
 import { NOINDEX_PATHS, PUBLIC_ORIGIN, premiumSchema, publicPage, topicFromPath, topicSchema } from './lib/publicMetadata';
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
 import { AppToast } from './components/ui/AppToast';
@@ -81,6 +81,13 @@ const ROUTE_ANIM = {
 } as const;
 const ROUTE_TRANSITION = { duration: 0.14, ease: 'easeOut' } as const;
 
+// The route box. flex-basis auto (not 0): the box must GROW with tall pages so
+// the wrapper's bottom reserve lands below the content. With basis 0 the box
+// stayed viewport-sized, tall cards overflowed straight through every padding,
+// and page ends slid under the waterline overlay. The first-load fallback gets
+// the same box, so the footer sits where a page will put it.
+const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' } as const;
+
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
   '/quiz': 'title.quiz',
@@ -160,6 +167,8 @@ const NAV_ITEMS: {
   { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
 ];
 
+// Shown only while the first page of a visit loads: a navigation keeps the
+// current page until the next one can render (see the route Suspense below).
 const RouteLoader = () => {
   const { t, lang } = useLanguage();
   const config = useGameConfig();
@@ -210,6 +219,38 @@ function App() {
   // Remember the learner's current rank on load so we don't re-celebrate a
   // rank-up earned in a previous session.
   useEffect(() => primeRankMarker(), []);
+
+  // A click pushes the new address at once, while the router renders the next
+  // page in a transition that keeps this one on screen until the next can
+  // render whole. While the address is ahead of the page, the nav already marks
+  // where the learner is going and the page is busy (app-shell.css fades it
+  // back if the wait outlasts a beat). The listener runs after the router's own
+  // click handling, so the address it reads is the new one.
+  const [clickedPath, setClickedPath] = useState(() => window.location.pathname);
+  useEffect(() => {
+    const sync = () => setClickedPath(window.location.pathname);
+    document.addEventListener('click', sync);
+    window.addEventListener('popstate', sync);
+    return () => {
+      document.removeEventListener('click', sync);
+      window.removeEventListener('popstate', sync);
+    };
+  }, []);
+  const navigating = clickedPath !== location.pathname && clickedPath === window.location.pathname;
+  const navPath = navigating ? clickedPath : location.pathname;
+
+  // Every page opens at its top. The scroll container is <main>, which the
+  // browser never resets; the page used to blank while the next one loaded,
+  // which reset it by accident on a first visit and never on a return.
+  const firstPathname = useRef(true);
+  useLayoutEffect(() => {
+    if (firstPathname.current) {
+      firstPathname.current = false;
+      return;
+    }
+    const main = document.getElementById('main-content');
+    if (main) main.scrollTop = 0;
+  }, [location.pathname]);
 
   // The drawer is modal while open: focus moves in, Tab cycles inside, Escape
   // closes, and focus returns to whatever opened it (the hamburger). Every
@@ -482,7 +523,7 @@ function App() {
                   key={item.to}
                   to={item.to}
                   className="ss-navlink"
-                  data-active={item.isActive(location.pathname)}
+                  data-active={item.isActive(navPath)}
                   aria-current={item.isActive(location.pathname) ? 'page' : undefined}
                 >
                   {t(item.key)}
@@ -570,7 +611,7 @@ function App() {
                     key={item.to}
                     to={item.to}
                     className="ss-drawer-link"
-                    data-active={item.isActive(location.pathname)}
+                    data-active={item.isActive(navPath)}
                     aria-current={item.isActive(location.pathname) ? 'page' : undefined}
                   >
                     {t(item.key)}
@@ -636,19 +677,26 @@ function App() {
         >
           {/* Route transition: the new view fades in over a stable backdrop —
               no exit phase, so navigation never shows a blank beat. Reduced
-              motion still gets the (movement-free) fade. */}
-          <m.div
-            key={location.pathname}
-            // flex-basis auto (not 0): the route box must GROW with tall pages
-            // so the wrapper's bottom reserve lands below the content. With
-            // basis 0 the box stayed viewport-sized, tall cards overflowed
-            // straight through every padding, and page ends slid under the
-            // waterline overlay.
-            style={{ flex: '1 0 auto', minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' }}
-            {...ROUTE_ANIM}
-            transition={ROUTE_TRANSITION}
-          >
-            <Suspense fallback={<RouteLoader />}>
+              motion still gets the (movement-free) fade.
+              The Suspense boundary sits OUTSIDE the keyed route box on
+              purpose. Inside it, every pathname mounted a fresh boundary, and
+              React shows a fresh boundary's fallback at once even in a
+              transition: each first visit to a section blanked the page, pulled
+              the footer up into view, flashed the loader for at least React's
+              300ms reveal throttle and only then drew the page. Outside it, the
+              boundary has already revealed content, so the router's transition
+              keeps the current page until the next one can render whole. The
+              fallback remains for the first page of a visit. */}
+          <Suspense fallback={<div style={ROUTE_BOX_STYLE}><RouteLoader /></div>}>
+            <m.div
+              key={location.pathname}
+              className="ss-route"
+              // The page waiting for its successor (see `navigating` above).
+              aria-busy={navigating || undefined}
+              style={ROUTE_BOX_STYLE}
+              {...ROUTE_ANIM}
+              transition={ROUTE_TRANSITION}
+            >
               <Routes location={location}>
                 <Route path="/" element={<Home />} />
                 <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
@@ -692,8 +740,8 @@ function App() {
                 <Route path="/dev" element={<DevPage />} />
                 <Route path="*" element={<NotFoundPage />} />
               </Routes>
-            </Suspense>
-          </m.div>
+            </m.div>
+          </Suspense>
           {showChrome && <BrandFooter />}
         </div>
       </main>

@@ -186,6 +186,19 @@
   outline-offset: -4px;
 }
 
+/* A navigation waiting for the next page's code keeps the current page on
+   screen (App.tsx) and marks it busy. Most waits end before this delay, so
+   nothing changes; a longer one fades the page back so the click visibly took.
+   !important because the route box's entrance fade writes an inline opacity.
+   Reduced motion keeps the delay and drops the fade. */
+.ss-route[aria-busy='true'] {
+  opacity: 0.55 !important;
+  transition: opacity var(--ss-motion-feedback) ease-out 200ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ss-route[aria-busy='true'] { transition-duration: 0s; }
+}
+
 /* Drawer brand header. */
 .ss-drawer-brand {
   display: flex;
