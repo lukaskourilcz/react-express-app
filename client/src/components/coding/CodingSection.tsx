@@ -47,6 +47,7 @@ import { isBarred, useLocks, type LockState } from '../../lib/locks';
 import { entitlementQuery } from '../../lib/entitlement';
 import { readOnce, settled, useFirstData } from '../../lib/routeData';
 import { routeChunk } from '../../lib/routePreload';
+import { RELOAD_GRACE_MS, isChunkLoadError, reloadOnPress } from '../../lib/routeRecovery';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { codingContent, gatedRef } from '../../../../shared/tiers';
 import '../../coding/Coding.css';
@@ -75,20 +76,35 @@ const loadWorkbench = routeChunk(
   }),
 );
 
-/** The workbench once its code is in (null while it loads), and whether the
- * load failed. `attempt` asks again after a failure. */
+/** The workbench once its code is in (null while it loads), whether the load
+ * failed, and whether a retry is reloading the page. `attempt` counts the
+ * learner's Try again presses, each of which asks again in place. When a press
+ * meets the same chunk failure, as in a browser that remembers failed module
+ * fetches, it reloads the page (reloadOnPress in lib/routeRecovery.ts). The
+ * first load and the idle warm-up never reload. */
 function useWorkbench(needed: boolean, attempt: number) {
   const [View, setView] = useState(() => workbenchView);
   const [failed, setFailed] = useState(false);
+  const [reloading, setReloading] = useState(false);
   useEffect(() => {
     if (!needed || View) return;
     let live = true;
+    let grace = 0;
     loadWorkbench().then((module) => {
       if (live) { setFailed(false); setView(() => module.CodingWorkbench); }
-    }, () => { if (live) setFailed(true); });
-    return () => { live = false; };
+    }, async (error: unknown) => {
+      if (live && attempt > 0 && isChunkLoadError(error)) {
+        setReloading(true);
+        // Busy until the new document arrives; a refused reload (the
+        // leave-page prompt) gives the button back.
+        if (await reloadOnPress()) await new Promise((resolve) => { grace = window.setTimeout(resolve, RELOAD_GRACE_MS); });
+        if (live) setReloading(false);
+      }
+      if (live) setFailed(true);
+    });
+    return () => { live = false; window.clearTimeout(grace); };
   }, [needed, View, attempt]);
-  return { View, failed };
+  return { View, failed, reloading };
 }
 
 /** Fetch the workbench's code when the browser has nothing else to do, so a
@@ -736,9 +752,10 @@ export function CodingTaskScreen() {
   }, [queryClient, taskId, activeRun, runIndex, advanceRun]);
 
   const onRetry = useCallback(() => {
+    if (workbench.reloading) return;
     void task.refetch();
     setAttempt((n) => n + 1);
-  }, [task]);
+  }, [task, workbench.reloading]);
 
   if (retired && track) return <RetiredTrackNotice track={track} />;
   if (!track || !taskId) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p></div>;
@@ -770,7 +787,8 @@ export function CodingTaskScreen() {
       <div className="cd-page">
         <p className="cd-note cd-note--error" role="alert">{t('coding.loadError')}</p>
         <div className="cd-actions">
-          <button type="button" className="cd-btn cd-btn--primary" onClick={onRetry}>{t('coding.retry')}</button>
+          {/* Busy but focusable while the press reloads the page. */}
+          <button type="button" className="cd-btn cd-btn--primary" onClick={onRetry} aria-busy={workbench.reloading || undefined} aria-disabled={workbench.reloading || undefined}>{t('coding.retry')}</button>
           <Link className="cd-btn" to={`/coding/${track}`}>{t('coding.verdict.back')}</Link>
         </div>
       </div>

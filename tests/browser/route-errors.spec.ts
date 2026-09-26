@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 
 // A page whose code does not load used to replace the whole app with the root
 // error screen: on devshark.app a dropped request for one chunk took the
@@ -98,6 +99,35 @@ for (const { name, pattern } of [
     test.info().annotations.push({ type: 'recovery', description: documents.length > 1 ? 'reloaded the address' : 'drew the page in place' });
   });
 }
+
+test('the Coding workbench that fails to load comes back through the task screen’s own Try again', async ({ page }) => {
+  const { documents } = await prepare(page);
+  // The task itself answers; its editor, the workbench chunk, is dropped.
+  const TASK = 'js-double-numbers';
+  await page.route((url) => url.pathname === '/api/quiz/roadmap' && url.searchParams.get('resource') === 'coding-task', (route) => {
+    const task = CODING_TASKS.find((one) => one.id === TASK);
+    if (!task) throw new Error(`no coding task ${TASK}`);
+    return route.fulfill({ json: { task: playable(task), session: task.id, locked: null, progress: null, draft: null, signedIn: false } });
+  });
+  const workbench = await dropChunk(page, /\/assets\/CodingWorkbench-[\w-]+\.js$/);
+
+  await page.goto(`/coding/javascript/${TASK}`);
+  const failure = page.getByText('Could not load this task.');
+  await expect(failure).toBeVisible();
+  expect(workbench.dropped).toBeGreaterThan(0);
+  await expectShell(page);
+
+  // The connection is back. Chromium before 156 answers the next import from
+  // memory, so the press reloads the task's address; a browser that forgets
+  // the failure draws the workbench in place.
+  workbench.failing = false;
+  await page.getByRole('button', { name: 'Try again' }).click();
+  await expect(page.locator('.cm-content')).toBeVisible();
+  await expect(failure).toHaveCount(0);
+  expect(workbench.served).toBeGreaterThan(0);
+  await expect(page).toHaveURL(new RegExp(`/coding/javascript/${TASK}$`));
+  test.info().annotations.push({ type: 'recovery', description: documents.length > 2 ? 'reloaded the address' : 'drew the workbench in place' });
+});
 
 test('a preload that fails on hover neither reloads nor shows an error', async ({ page }) => {
   const { documents } = await prepare(page);
