@@ -1403,3 +1403,143 @@ Each commit on its own: the worktree was detached at each of the ten commits fro
    An empty `voucher` column means the code already existed; run it again. On a local database with 039 to 045 it returned `K156-F7BT-06EM` and the voucher's row; that code, typed as `k156 f7bt–06em` with spaces around it and put through `normalizeVoucherCode` and `voucherHash`, redeemed a 30-day promo grant noted "Voucher K156".
 
 Not verified here: production (this step may not write to it), PostgREST 12.2.12 itself (the stand-in answers a missing routine as it does), Upstash's sliding window (the checks ran the in-memory bucket; production maps five and ten tries onto a 3,600-second window), and a real Google sign-in. The NEEDED.md item "Check a voucher end to end on production after 045" runs the real stack, sign-in included.
+
+## 2026-09-26 — three `[owner:ai]` items: the erasure loop and migration 046, the retired support settings, Classroom rate limits
+
+What changed: account deletion calls `delete_user_data` alone, and migration 046 drops the four erasure routines that 044 folded into it; the `SUPPORT_ENABLED` flag, the `support` block of the game settings and its `/dev` fields are gone; and the Classroom rate-limit fix of `fa884b7` (`claude/elegant-cori-h9cdgb`) now runs on this tree's `user:<id>` identities, ported by hand. Twelve handlers remain. This step applied no migration outside local scratch databases.
+
+| Commit | What |
+| --- | --- |
+| `6c3ec0b` | `deleteAccount` calls `delete_user_data` alone. The launch-contract lines that asserted the loop become stricter ones: every statement of the four routines is in the newest `delete_user_data`, the deletion makes one RPC call, and no file under `api/`, `lib/`, `shared/` or `client/src/` names the four |
+| `f555ccc` | Migration 046 and its guard; `erasureContracts()` holds 046 to that shape; `test:fallbacks` deletes an account through the real handler while the four answer PGRST202 |
+| `a4bf1fd` | `docs/product-architecture.md`: account erasure is one routine, and 046 follows the deploy |
+| `84f1407` | The retired support settings removed, with `retiredSupportContracts()` and `client/tests/dev-settings.test.tsx` |
+| `d9b40d4` | Classroom rate limits, ported from `fa884b7`, with its five contract assertions adapted |
+| `a7315f1` | `NEEDED.md`: the three items ticked, the owner step for 046, a follow-up for the Classroom state reads |
+| `1f459f9` | `test:fallbacks` checks the deletion's order: `delete_user_data`, then the sign-in identity, nothing else |
+| `f9fe47b` | README and `docs/launch-runbook.md` name migrations through 046; a wording fix in `NEEDED.md` |
+
+This record is the last commit and changes documentation only.
+
+### The four routines inside 045's `delete_user_data`
+
+045's `delete_user_data` (`supabase/supabase-schema-045.sql:321`) holds every statement of the four routines word for word:
+
+| Routine | Its statements | The same statements in 045's `delete_user_data` |
+| --- | --- | --- |
+| `delete_entitlement_data` | `039:514–516`: `entitlement_grants`, `billing_customers`, `billing_checkout_consents` | `045:402–404` |
+| `delete_user_activity_days` | `040:810`: `user_activity_days` | `045:407` |
+| `delete_coin_data` | `041:649`: `token_xp_credits`; `041:650–659`: the settled month's `deleted-account` rewrite | `045:411`, `045:412–421` |
+| `delete_referral_data` | `042:318–320`: `referral_codes`, the account's own `referrals` row, `deleted-account` as the inviter | `045:425–427` |
+
+044 held the same lines (`044:163–188`), and 045 restated 044's body unchanged before adding the voucher lines. No later migration redefines any of the four. Run inside `delete_user_data` or after it, they leave the same rows, and after it they find nothing to delete or rewrite; the rolled-back exercise below checks that. `erasureContracts()` now reads the four bodies out of 039 to 042 and fails when one of their statements is missing from the newest `delete_user_data`.
+
+In the migrations the four names appear only in their own definitions and grants, in comments of 040 and 044, and in 046. In code only `scripts/test-launch-contracts.ts` names them, to check them; nothing under `api/`, `lib/`, `shared/` or `client/src/` does after `6c3ec0b`.
+
+### Migration 046 proof (local Postgres 16.13, template `rea_base` = the Supabase shim with Supabase's default privileges + 001–038)
+
+`supabase/supabase-schema-046.sql`, md5 `566a74a85a6dec85ef63d946e2b0ceb1`, every file run with `ON_ERROR_STOP=1` on fresh scratch databases.
+
+| Check | Result |
+| --- | --- |
+| A: 039, 040, 041, 042, 043, 044, 045 in order | exit 0 each. `delete_user_data` hashes `2358b9e7c57afb3eafc4af76e9e0c9f4`, the value the production check for 045 expects |
+| A, before 046: what else names or depends on the four | no other routine's source names one, `pg_depend` holds nothing on them, and no policy, view or column default names them |
+| A, before 046, rolled back: an account seeded across the eight tables the four touch and the voucher tables, `delete_user_data`, then the four routines | exit 0, 4 PASS: `delete_user_activity_days` deletes 0 rows, and the four together change no row of the ten tables |
+| A: 046, then 046 again | exit 0 both times; the second run prints four "does not exist, skipping" notices. The four are gone. `delete_user_data`, the other 107 public routines (definitions and grants), every table (columns, constraints, grants, RLS) and every policy fingerprint the same before 046, after it and after the second run |
+| A, after 046, rolled back: accounts A, B and C (a friend A invited) seeded, then `delete_user_data(A)` | exit 0, 28 PASS, 0 FAIL. Each of the four answers `undefined_function` (42883). A's three grants (manual, provider, the voucher's promo), billing link, consent, dated rows, XP credit, invite code and own referral row are gone; the settled month keeps A's rank as `deleted-account` in its place; the friend A invited keeps the referral under `deleted-account`; A's redemption is gone and the voucher keeps its count of 2 without A as its creator; B's rows are unchanged; no text column in the public schema holds A's id; nothing left after the rollback |
+| B: 039 to 044 without 045, then 046 | exit 3, "migration 046 needs 045 first; missing: premium_vouchers, premium_voucher_redemptions, delete_user_data erasing premium_voucher_redemptions". The four stay and the catalog fingerprint is unchanged |
+| C1: 039 to 045, then 044 again (the body loses 045's line), then 046 | exit 3, "missing: delete_user_data erasing premium_voucher_redemptions"; the four stay |
+| C2: 045 again, plus a routine that calls `delete_coin_data`, then 046 | exit 3, "migration 046 drops routines that proof_caller(text) still call"; the four stay |
+| C3: a `cron.job` table whose job names `delete_referral_data`, then 046 | exit 3, "migration 046 drops routines that the cron jobs proof-referrals still call"; the four stay |
+| C4: that job removed and an unrelated one kept, then 046 twice | exit 0 both times; the four are gone |
+| `test:fallbacks`, after 046's shape (the four answer PGRST202, `delete_user_data` answers) | the real handler answers 200 after two calls and no others: `delete_user_data`, then the Auth deletion of the sign-in identity. The handler before `6c3ec0b` fails that check, and so does one that deletes the identity first. The old handler still answers 200 there, because it skips a routine PostgREST reports missing, so a 046 run before the deploy would not break a deletion; the order below does not rely on that |
+
+The proof ends by dropping its scratch databases. Production runs 17.6. 046 uses a `DO` block, catalog reads, `to_regclass`, `to_regprocedure`, a regular expression and `DROP FUNCTION IF EXISTS`, and when 045 went to production its objects, `delete_user_data` among them, matched this local chain by fingerprint (`NEEDED.md`).
+
+### Production order for 046
+
+1. Merge, and wait until Vercel shows the deployment that contains `6c3ec0b` ("Stop calling the four erasure routines after delete_user_data") as production. Until then the deployed code calls the four routines on every account deletion.
+2. In the Supabase SQL editor, run `supabase/supabase-schema-046.sql` (md5 `566a74a85a6dec85ef63d946e2b0ceb1`). A refusal changes nothing: "needs 045 first" means 045's tables or its `delete_user_data` are missing, and "still call" names the routine or cron job to fix first.
+3. Run this check. It returns one row, `0`, `2358b9e7c57afb3eafc4af76e9e0c9f4`, `t`, as a local database with 039 to 046 does. Then open the security advisor.
+
+   ```sql
+   SELECT (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public'
+              AND p.proname IN ('delete_entitlement_data', 'delete_user_activity_days',
+                                'delete_coin_data', 'delete_referral_data')) AS dropped_routines_left,
+          md5(pg_get_functiondef('public.delete_user_data(text)'::regprocedure)) AS delete_user_data_md5,
+          (SELECT p.prosecdef
+                  AND p.proconfig = ARRAY['search_path=""']
+                  AND has_function_privilege('service_role', p.oid, 'EXECUTE')
+                  AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                  AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE')
+             FROM pg_proc p WHERE p.oid = 'public.delete_user_data(text)'::regprocedure) AS delete_user_data_service_role_only;
+   ```
+
+4. Optional: sign up a throwaway account, delete it from the Profile, and confirm the request answers 200.
+
+### The retired support settings
+
+`normalizeSettings` builds its result from the fields it knows, so it drops a stored row's `support` key on read, and `saveGameSettings` writes that result, so the next save from `/dev` stores the row without it. A `/dev` tab opened before the deploy runs the old form, which reads `settings.support` and fails until it is reloaded.
+
+| Check | Result |
+| --- | --- |
+| `retiredSupportContracts()` in `npm run test:launch` | a row with the old block reads the same as one without it and saves without it; the real `/api/settings` handler answers without `support`; the seven files that held the flag, the block or the fields keep none of them; no file under `api/`, `lib/`, `shared/` or `client/src/` reads the switch |
+| `client/tests/dev-settings.test.tsx` | `/dev` → Settings loads current settings, and settings that still carry the block, shows no support field, and saves every section except `support` |
+| Mutations (each file restored from `01fdfc9` in turn, or a stray read planted) | all 8 fail: the old `lib/settings-store.ts`, `api/settings.ts`, `DevSettings.tsx` (contract, and the client test, where the old form throws on the new response), `client/.env.example`, `README.md` and `gameConfig.ts`, and a `process.env.SUPPORT_ENABLED` read added to `lib/billing/config.ts` |
+
+### Classroom rate limits (ported from `fa884b7`)
+
+| Play action | Before, per address | After |
+| --- | --- | --- |
+| create | 5 a minute | 20 per address, then 5 per account |
+| join | 12 | 48 per address, then 12 per account |
+| state | 60 | 600 per address, then 60 per account, or 60 per address signed out |
+| control, answer, heartbeat | 30 | 200 per address, then 30 per account |
+| distribution (the classroom host's) | no limit | 90 per account |
+
+The other 31 entries of `RATE_LIMITS` are unchanged, compared entry by entry with `01fdfc9`'s.
+
+Reconciled with this tree: identities keep D2's scheme, `${key}:${identity ?? ip}` with `user:<id>`, so no existing bucket key changes. `fa884b7` kept the namespaces apart with `u:` and `ip:` prefixes; here `clientIp` moves an address that starts with `user:` (a client-set header where no proxy overwrites it) to `ip:user:…`, which keeps the same guarantee. One deliberate difference: `fa884b7` charged the host's distribution reads to the 60-a-minute state bucket. The presenter polls distribution every 1.5 s beside its own state reads, and a simulated round through the real limiter (30 pupils and the host on one address, Realtime up, ten questions 30 s apart) refused 40.3 % of the host's state reads and 15.0 % of its distribution polls that way; with distribution in its own bucket, none.
+
+The five assertions of `fa884b7`, adapted, run as eleven groups; a scratch harness ran each on its own against the unported files and the port:
+
+| Group | Unported (`01fdfc9`) | Port | Targeted mutation run through `npm run test:launch`, caught by this group |
+| --- | --- | --- | --- |
+| 1a two accounts on one address keep separate budgets | pass: D2 already keys by identity | pass | address-only keys, as before D2 |
+| 1b an account is bounded once its budget is spent | pass, same reason | pass | identity buckets that never run dry |
+| 2a namespaces never meet, even for a `user:` header | fail | pass | `clientIp` without the `ip:` move |
+| 2b every identity passed anywhere is `user:<verified id>` | pass: the old handler passes none | pass | a bare `sub` in `join` |
+| 3 account limits equal the pre-split values; distribution has its own bucket, sized from `Play.tsx`'s poll | fail | pass | `playJoinPerUser` at 13; distribution on the state key; a 500 ms presenter poll |
+| 4a the address buckets hold 32 seats (capacity) | fail | pass | `playState` at 400 |
+| 4b a class of 32 joins, polls a minute and answers through both tiers | fail at seat 13 | pass | none needed |
+| 4c one account stops at 12 joins while the address has room | fail | pass | none needed |
+| 5a each action takes its account token with `user:<verified subject>` | fail | pass | the identity unwired from `state` |
+| 5b the signed-out `state` branch keeps its own address bucket | fail | pass | the branch removed |
+| 5c each action takes its token after verifying the caller and before any read | fail | pass | `join`'s token moved after its match read |
+
+The unported pair of files, run through `npm run test:launch` as a whole, stops at the bundle: `lib/rate-limit.ts` exports no `SHARED_NETWORK_SEATS`. `fa884b7`'s own two negative tests, loosening `playJoinPerUser` and unwiring the identity argument, both fail the ported contract.
+
+Classroom answers still outrun the state bucket while Realtime is up. Every answer broadcasts `match_updated` on a channel with `broadcast.self = true`, and every client reads state once per broadcast, about 930 reads per question for a class of 30. The same simulation refused 6,134 of the class's 9,610 state reads (63.8 %) at the 600-a-minute address bucket, against 9,252 (96.3 %) with the unported limits; with Realtime down and every client on the 4 s poll, the case `fa884b7` sized for, it refused none of 2,635. `NEEDED.md` has the follow-up: coalesce those reads in `Play.tsx`.
+
+### Release contract on the final head
+
+All on `f9fe47b`, which adds documentation only to `1f459f9`; this record changes documentation only. I ran every command below, and each exit code is its own.
+
+| Check | Result |
+| --- | --- |
+| The same list on `01fdfc9` (`origin/main` when the step began), before any change | exit 0 each, 13 of 13; 22 client test files, 226 tests; 221,068 of 243,000 gzip bytes |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:launch` | exit 0. New here: the erasure lines of `6c3ec0b` and `f555ccc`, `retiredSupportContracts()`, and the eleven Classroom groups |
+| `npm run test:fallbacks` | exit 0. New here: after 046, a deletion calls `delete_user_data` alone |
+| `npm run test:client` | exit 0; 23 files, 228 tests (2 new in `dev-settings.test.tsx`) |
+| `npm run test:billing` | exit 0; 30 checks |
+| `npm run check:unused`, `npm run check:security` | exit 0 each; knip reports no new finding |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build`, `npm run check:bundle` | exit 0 each; 220,965 of 243,000 gzip bytes, 103 fewer than on `01fdfc9`; the existing warning about chunks over 500 kB |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0 each; 0 vulnerabilities |
+| `git diff --check origin/main..HEAD`, `git diff --check 01fdfc9..HEAD` | clean |
+| Each commit on its own | the worktree detached at each commit from `6c3ec0b` to `a7315f1` in order: `npm run typecheck:api`, `npm run test:launch`, `npm run test:fallbacks`, `npm run typecheck:tooling --prefix client` and `npm run test:client` exit 0 at every one. At `1f459f9`, `npm run test:fallbacks` and `npm run typecheck:api` exit 0; `f9fe47b` is the head above |
+
+`origin/main` moved to `2e6b8ba` during the step (a CI change to two browser specs this branch does not touch); `git merge-tree` merges the branch into it without a conflict. Not run: `npm run check:responsive` and the browser suites. The one screen that changed is `/dev` → Settings, which the responsive sweep would render signed out, without the form; `client/tests/dev-settings.test.tsx` renders it.
+
+Not verified here: production (this step may not write to it), PostgREST 12.2.12 itself (the fallbacks stand-in answers a missing routine as it does), Upstash's sliding window (the checks ran the in-memory bucket), a real classroom on one school network, and the Vercel project's environment (whether `SUPPORT_ENABLED` is still set there).
