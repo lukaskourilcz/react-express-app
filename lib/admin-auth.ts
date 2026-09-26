@@ -67,12 +67,18 @@ function hasAdminRole(payload: Record<string, unknown>): boolean {
   return !!email && ADMIN_EMAILS.has(email);
 }
 
+/** The admin account each request passed `requireAdmin` with. */
+const verifiedAdmins = new WeakMap<VercelRequest, string>();
+
 /** Verify a Supabase admin identity, with an explicitly enabled legacy-password
  * fallback for controlled migrations. Authorization never trusts user_metadata. */
 export async function requireAdmin(req: VercelRequest, res: VercelResponse): Promise<boolean> {
   try {
     const auth = await requireAuth(req);
-    if (hasAdminRole(auth.payload)) return true;
+    if (hasAdminRole(auth.payload)) {
+      verifiedAdmins.set(req, auth.sub);
+      return true;
+    }
   } catch {
     // A missing/invalid session may still use the explicitly enabled legacy gate.
   }
@@ -80,4 +86,11 @@ export async function requireAdmin(req: VercelRequest, res: VercelResponse): Pro
   if (ALLOW_LEGACY_PASSWORD && RAW_DEV_PASSWORD) return requireDevPassword(req, res);
   jsonError(res, 403, 'forbidden', 'Administrative access required');
   return false;
+}
+
+/** The verified account that passed `requireAdmin` for this request, or null
+ * when the legacy password did (it names nobody). Recorded with what the admin
+ * creates, such as a Premium voucher's `created_by`. */
+export function adminSubject(req: VercelRequest): string | null {
+  return verifiedAdmins.get(req) ?? null;
 }

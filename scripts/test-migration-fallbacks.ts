@@ -12,7 +12,11 @@
  * tier gate of `lib/access.ts` against a local stand-in that answers the way
  * PostgREST 12.2.12 answered on a database holding 001 to 038, production's
  * shape before 039: every routine of 039 to 044 is PGRST202, and the older
- * routines the fallbacks call are there. Sign-in is answered by the same
+ * routines the fallbacks call are there. Then it installs the two plan
+ * routines of 039, production's shape after 044 and before 045, and runs the
+ * real `api/user/[op].ts` and `api/admin/[op].ts`: a voucher redemption answers
+ * 503 `voucher_unavailable`, the owner's list names the missing migration, and
+ * the plan and the tier gate work as before. Sign-in is answered by the same
  * stand-in. Nothing leaves the machine. */
 
 import assert from 'node:assert/strict';
@@ -27,6 +31,8 @@ const INSTALLED: Record<string, unknown> = {
 
 const USER = { id: '0b5e7c1e-2f7a-4c3d-9a61-5d2f0c9e8a41', email: 'fallback@example.invalid' };
 const TOKEN = 'fallback-contract-token';
+const ADMIN = { id: '7c1f3a2e-5b6d-4e8f-9a0b-1c2d3e4f5a6b', email: 'owner@example.invalid' };
+const ADMIN_TOKEN = 'fallback-contract-admin-token';
 
 interface Call { name: string; args: Record<string, unknown> }
 
@@ -42,12 +48,13 @@ async function startStandIn(calls: Call[]) {
     res.setHeader('content-type', 'application/json');
     if (url.pathname === '/auth/v1/user') {
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
-      if (token !== TOKEN) {
+      if (token !== TOKEN && token !== ADMIN_TOKEN) {
         res.statusCode = 401;
         res.end(JSON.stringify({ message: 'invalid token' }));
         return;
       }
-      res.end(JSON.stringify({ ...USER, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }));
+      const admin = token === ADMIN_TOKEN;
+      res.end(JSON.stringify({ ...(admin ? ADMIN : USER), aud: 'authenticated', role: 'authenticated', app_metadata: admin ? { role: 'admin' } : {}, user_metadata: {} }));
       return;
     }
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname);
@@ -168,10 +175,46 @@ async function main() {
     assert.equal(await access.refuseLocked(locked as never, USER.id, level, { cleared: async () => false }), true);
     assert.equal(locked.statusCode, 402, 'a Premium level answers 402 before 039, not 503');
     assert.equal(locked.body?.error?.code, 'premium_required');
+
+    // After 044 and before 045: the plan routines of 039 answer, the voucher
+    // routines of 045 do not.
+    INSTALLED.is_premium = false;
+    INSTALLED.entitlement_summary = { premium: false, billingAccount: false, subscriptionLive: false };
+    const [{ default: userOps }, { default: adminOps }] = await Promise.all([
+      import('../api/user/[op]'),
+      import('../api/admin/[op]'),
+    ]);
+    calls.length = 0;
+    const redeem = mockResponse();
+    await userOps({
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.3' },
+      query: { op: 'voucher' },
+      url: '/api/user/voucher',
+      body: { code: 'K7Q2-ABCD-1234' },
+    } as never, redeem as never);
+    assert.equal(redeem.statusCode, 503, `a redemption before 045 answers 503 (${JSON.stringify(redeem.body)})`);
+    assert.equal(redeem.body?.error?.code, 'voucher_unavailable');
+    assert.ok(calls.some((call) => call.name === 'redeem_premium_voucher' && call.args.p_user_id === USER.id), 'the handler asked for the 045 routine');
+    assert.ok(!JSON.stringify(calls).includes('K7Q2'), 'with the hash of the code, never the code');
+    const plan = mockResponse();
+    await userOps({ method: 'GET', headers: { authorization: `Bearer ${TOKEN}` }, query: { op: 'entitlement' }, url: '/api/user/entitlement' } as never, plan as never);
+    assert.equal(plan.statusCode, 200, 'the plan still loads before 045');
+    assert.equal(plan.body?.tier, 'free');
+    const list = mockResponse();
+    await adminOps({ method: 'GET', headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'x-forwarded-for': '10.20.0.4' }, query: { op: 'vouchers' }, url: '/api/admin/vouchers' } as never, list as never);
+    assert.equal(list.statusCode, 503, `the owner's voucher list before 045 answers 503 (${JSON.stringify(list.body)})`);
+    assert.equal(list.body?.error?.code, 'migration_required');
+    const grants = mockResponse();
+    await adminOps({ method: 'GET', headers: { authorization: `Bearer ${ADMIN_TOKEN}`, 'x-forwarded-for': '10.20.0.4' }, query: { op: 'learning-paths' }, url: '/api/admin/learning-paths' } as never, grants as never);
+    assert.equal(grants.statusCode, 200, 'the other admin ops still answer');
+    const stillLocked = mockResponse();
+    assert.equal(await access.refuseLocked(stillLocked as never, USER.id, level, { cleared: async () => false }), true);
+    assert.equal(stillLocked.statusCode, 402, 'the tier gate reads is_premium and still answers 402');
   } finally {
     server.close();
   }
-  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free, against a stand-in that answers PGRST202 as PostgREST 12 does.');
+  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; against a stand-in that answers PGRST202 as PostgREST 12 does.');
 }
 
 main().catch((error) => {

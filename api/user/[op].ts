@@ -39,6 +39,7 @@ import {
 import { handleGithub } from '../../lib/github-handlers';
 import { handleFriends } from '../../lib/friends-handlers';
 import { handleEntitlement } from '../../lib/entitlements';
+import { handleVoucherRedeem } from '../../lib/vouchers';
 import {
   endBillingForDeletedAccount,
   handleBillingCancel,
@@ -101,6 +102,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'learning-path-draft') return handlePathDraft(req, res, supabase);
   if (op === 'learning-path-reward') return handlePathReward(req, res, supabase);
   if (op === 'entitlement') return handleEntitlement(req, res, supabase);
+  if (op === 'voucher') return handleVoucherRedeem(req, res, supabase);
   if (op === 'billing-checkout') return handleBillingCheckout(req, res, supabase);
   if (op === 'billing-portal') return handleBillingPortal(req, res, supabase);
   if (op === 'billing-webhook') return handleBillingWebhook(req, res, supabase);

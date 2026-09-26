@@ -17,6 +17,7 @@ import { getGameSettings, saveGameSettings } from '../../lib/settings-store';
 import { inspectQuestionQuality } from '../../lib/question-quality';
 import { allReadiness, pathEnabledInEnv } from '../../lib/learning-paths/catalog';
 import { handleAdminEntitlements } from '../../lib/entitlements';
+import { handleAdminVouchers } from '../../lib/vouchers';
 
 const log = createLogger('admin');
 const supabase = createServiceClient();
@@ -64,6 +65,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         return await learningPathsOp(req, res);
       case 'entitlements':
         return await handleAdminEntitlements(req, res, supabase);
+      case 'vouchers':
+        return await handleAdminVouchers(req, res, supabase);
       default:
         return jsonError(res, 404, 'unknown_op', `Unknown admin op: ${op}`);
     }

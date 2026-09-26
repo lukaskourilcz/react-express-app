@@ -169,6 +169,9 @@ import { REFERRAL_SIGNUP_WINDOW_HOURS, isReferralCode } from '../shared/rewards'
 import { accountCreatedAt, handleReferral } from '../lib/rewards/referral';
 import { getMerchPromo, parseSpreadshopPromotion, resetMerchPromoCache, spreadshopConfig } from '../lib/rewards/spreadshop';
 import { MERCH_CATALOGUE, SHIRT_SIZES } from '../shared/rewards';
+import { generateVoucherCode, handleAdminVouchers, handleVoucherRedeem, parseVoucherForm, toAdminVoucher, voucherHash } from '../lib/vouchers';
+import { VOUCHER_ALPHABET, formatVoucherCode, normalizeVoucherCode, voucherHint, voucherState } from '../shared/vouchers';
+import adminHandler from '../api/admin/[op]';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -1260,6 +1263,309 @@ async function merchContracts() {
   const fulfilment = handlers.slice(handlers.indexOf('export async function handleFulfilment('));
   assert.match(fulfilment.slice(0, 200), /if \(!\(await requireAdmin\(req, res\)\)\) return;/, 'op=fulfilment checks the admin first');
   assert.match(fulfilment, /supabase\.rpc\('set_merch_stock'/, 'the cap is written by the 043 routine');
+}
+
+/* ── Premium vouchers (migration 045) ────────────────────────────────────
+ *
+ * A signed-in learner redeems a code the owner created, and Premium opens as
+ * a promo grant. The migration itself is proven against a real Postgres (the
+ * VOUCHER section of docs/release-acceptance.md); these are the structural
+ * rules, the code format and the handlers against a stand-in database. */
+async function voucherContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const listFiles = (dir: string): string[] => readdirSync(dir).flatMap((name) => {
+    const path = join(dir, name);
+    return statSync(path).isDirectory() ? listFiles(path) : [path];
+  });
+  const sha256 = (text: string) => createHash('sha256').update(text, 'utf8').digest('hex');
+
+  // 1. Migration 045: service-role routines, both tables closed to browsers,
+  // no plain code anywhere, and nothing but entitlements touched.
+  const sql = read('supabase/supabase-schema-045.sql');
+  const code = sql.replace(/--[^\n]*/g, '');
+  const routine = (name: string) => {
+    const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`);
+    assert.ok(start >= 0, `migration 045 defines ${name}`);
+    return sql.slice(start, sql.indexOf('$$;', sql.indexOf('AS $$', start)));
+  };
+  for (const name of ['premium_voucher_json', 'create_premium_voucher', 'list_premium_vouchers', 'revoke_premium_voucher', 'redeem_premium_voucher', 'delete_user_data']) {
+    assert.match(routine(name), /SECURITY DEFINER\s+SET search_path = ''/, `${name} is a definer routine with an empty search_path`);
+    assert.match(sql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\([^;]*\\) FROM PUBLIC, anon, authenticated;`), `${name} is revoked from browsers`);
+    assert.match(sql, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\([^;]*\\) TO service_role;`), `${name} runs as the service role`);
+  }
+  for (const table of ['premium_vouchers', 'premium_voucher_redemptions']) {
+    assert.match(sql, new RegExp(`ALTER TABLE public\\.${table}\\s+ENABLE ROW LEVEL SECURITY;`), `${table} has RLS`);
+    assert.match(sql, new RegExp(`REVOKE ALL ON public\\.${table}\\s+FROM PUBLIC, anon, authenticated;`), `${table} revokes browser privileges`);
+  }
+  assert.doesNotMatch(code, /CREATE POLICY/, 'no browser policy reads a voucher or a redemption');
+  assert.doesNotMatch(code, /GRANT [A-Z, ]+ ON (TABLE )?public\.premium_/, 'no browser grant on the voucher tables');
+  assert.doesNotMatch(code, /TO (anon|authenticated)\b/, 'anon and authenticated hold nothing');
+  const table = sql.slice(sql.indexOf('CREATE TABLE IF NOT EXISTS public.premium_vouchers ('), sql.indexOf('\n);', sql.indexOf('CREATE TABLE IF NOT EXISTS public.premium_vouchers (')));
+  assert.match(table, /code_hash\s+TEXT NOT NULL UNIQUE CHECK \(code_hash ~ '\^\[0-9a-f\]\{64\}\$'\)/, 'only a SHA-256 in hex fits code_hash');
+  assert.match(table, /code_hint\s+TEXT NOT NULL CHECK \(code_hint ~ '\^\[0-9A-Z\]\{4\}\$'\)/, 'the hint is four characters');
+  assert.doesNotMatch(table.replace(/--[^\n]*/g, '').replace(/code_(hash|hint)/g, ''), /\bcode\b/, 'no column holds the plain code');
+  // The redemption: the row is locked, "already" is told apart, and the grant
+  // is a promo grant named by the hint.
+  const redeem = routine('redeem_premium_voucher');
+  assert.match(redeem, /WHERE code_hash = p_code_hash\s+FOR UPDATE;/, 'the voucher row is locked before its count is read');
+  assert.ok(redeem.indexOf("'already'") < redeem.indexOf('v_voucher.redeemed_count >= v_voucher.max_redemptions'), 'an account that redeemed the voucher hears so first');
+  assert.match(redeem, /NOT v_voucher\.active\s+OR \(v_voucher\.redeemable_until IS NOT NULL AND v_voucher\.redeemable_until <= NOW\(\)\)\s+OR v_voucher\.redeemed_count >= v_voucher\.max_redemptions THEN\s+RETURN jsonb_build_object\('status', 'invalid'\);/,
+    'inactive, expired and used-up codes get the answer an unknown code gets');
+  assert.match(redeem, /VALUES \(p_user_id, 'promo', 'active', v_valid_until, 'Voucher ' \|\| v_voucher\.code_hint\)/, 'a promo grant, noted by the hint');
+  const writes = (body: string) => [...new Set([...body.matchAll(/(?:INSERT INTO|UPDATE|DELETE FROM)\s+public\.([a-z_]+)/g)].map((m) => m[1]))].sort();
+  assert.deepEqual(writes(redeem), ['entitlement_grants', 'premium_voucher_redemptions', 'premium_vouchers'], 'a redemption writes the grant, the count and its row, nothing else');
+  assert.deepEqual(writes(routine('create_premium_voucher')), ['premium_vouchers']);
+  assert.deepEqual(writes(routine('revoke_premium_voucher')), ['premium_vouchers']);
+  // Premium changes which content a learner may start and nothing else: from
+  // the tables to the redemption, nothing names a learning, score, streak or
+  // wallet table (the guard before them only checks that tables exist, and
+  // the erasure after them deletes the account's rows).
+  const vouchersPart = code.slice(code.indexOf('CREATE TABLE IF NOT EXISTS public.premium_vouchers ('), code.indexOf('CREATE OR REPLACE FUNCTION public.delete_user_data('));
+  for (const learning of ['user_xp', 'user_stats', 'user_category_stats', 'user_streak', 'roadmap_progress', 'coding_progress', 'token_ledger', 'token_balances', 'user_activity_days']) {
+    assert.ok(!vouchersPart.includes(learning), `migration 045 must not touch ${learning}`);
+  }
+  // One erasure routine: 044's body word for word, then the redemptions, and
+  // a voucher an erased admin created loses the person.
+  const body044 = read('supabase/supabase-schema-044.sql');
+  const erasure044 = body044.slice(body044.indexOf('AS $$', body044.indexOf('FUNCTION public.delete_user_data(')), body044.indexOf('$$;', body044.indexOf('FUNCTION public.delete_user_data(')));
+  const erasure045 = routine('delete_user_data').slice(routine('delete_user_data').indexOf('AS $$'));
+  assert.ok(erasure045.startsWith(erasure044.slice(0, erasure044.lastIndexOf('END;'))), "045 restates 044's delete_user_data unchanged before its own lines");
+  assert.match(erasure045, /DELETE FROM public\.premium_voucher_redemptions WHERE user_id = p_user_id;/, 'erasure removes the redemptions');
+  assert.match(erasure045, /UPDATE public\.premium_vouchers SET created_by = 'deleted-account' WHERE created_by = p_user_id;/, "and anonymises a voucher's creator");
+  assert.match(sql, /grant_id\s+UUID NOT NULL UNIQUE REFERENCES public\.entitlement_grants \(id\) ON DELETE CASCADE/, "039's delete_entitlement_data can still delete a voucher's grant");
+
+  // 2. The code: Crockford base32, twelve characters, normalised the same way
+  // everywhere, and stored only as its SHA-256.
+  assert.equal(VOUCHER_ALPHABET, '0123456789ABCDEFGHJKMNPQRSTVWXYZ');
+  assert.equal(normalizeVoucherCode(' k7q2-abcd 1234 '), 'K7Q2ABCD1234', 'upper case, no spaces or hyphens');
+  assert.equal(normalizeVoucherCode('K7Q2\u2013ABCD\u00a01234'), 'K7Q2ABCD1234', 'an en dash and a no-break space from a copy');
+  assert.equal(normalizeVoucherCode('ＫＹＱ２ＡＢＣＤ１２３４'), 'KYQ2ABCD1234', 'full-width characters fold to ASCII');
+  assert.equal(normalizeVoucherCode('devshark-2026'), 'DEVSHARK2026', 'a custom campaign code');
+  for (const bad of ['abc12', 'x'.repeat(33), 'K7Q2!ABCD', 'K7Q2_ABCD', 'čau-2026', '', '      ', 42, null, 'a'.repeat(65)]) {
+    assert.equal(normalizeVoucherCode(bad), null, `${JSON.stringify(bad)} is not a code`);
+  }
+  assert.equal(formatVoucherCode('K7Q2ABCD1234'), 'K7Q2-ABCD-1234');
+  assert.equal(voucherHint('K7Q2ABCD1234'), 'K7Q2');
+  assert.equal(voucherHash('K7Q2ABCD1234'), '60d3dfedc46956b067ee7e73187990ace1b714c43e5550a5151315ac6cb35e05', "the SHA-256 Postgres's sha256() gives (release acceptance, VOUCHER)");
+  const generated = Array.from({ length: 2000 }, () => generateVoucherCode());
+  assert.equal(new Set(generated).size, generated.length, 'two thousand generated codes are all different');
+  const counts = new Map<string, number>();
+  for (const one of generated) {
+    assert.match(one, /^[0-9A-HJKMNP-TV-Z]{12}$/, `${one} is twelve Crockford characters`);
+    assert.equal(normalizeVoucherCode(formatVoucherCode(one)), one, 'a formatted code normalises back to itself');
+    for (const char of one) counts.set(char, (counts.get(char) ?? 0) + 1);
+  }
+  assert.equal(counts.size, 32, 'every character of the alphabet occurs');
+  assert.ok(Math.max(...counts.values()) / Math.min(...counts.values()) < 1.35, 'and about equally often');
+  const now = Date.parse('2026-09-26T12:00:00Z');
+  const base = { active: true, redeemedCount: 0, maxRedemptions: 1, redeemableUntil: null };
+  assert.equal(voucherState(base, now), 'open');
+  assert.equal(voucherState({ ...base, redeemedCount: 1 }, now), 'used');
+  assert.equal(voucherState({ ...base, redeemableUntil: '2026-09-26T12:00:00Z' }, now), 'expired');
+  assert.equal(voucherState({ ...base, active: false, redeemedCount: 1 }, now), 'revoked', 'revoked wins');
+  assert.equal(toAdminVoucher({ id: 'x', hint: 'K7Q2', codeHash: 'leak', maxRedemptions: 1, redeemedCount: 0, active: true }, now)!.state, 'open');
+  assert.equal('codeHash' in toAdminVoucher({ id: 'x', hint: 'K7Q2', codeHash: 'leak' }, now)!, false, 'the admin shape drops anything else');
+  const form = (extra: Record<string, unknown>) => parseVoucherForm({ note: 'For Pavel', ...extra }, now);
+  assert.deepEqual(form({}), { ok: true, value: { note: 'For Pavel', premiumDays: null, maxRedemptions: 1, redeemableUntil: null, code: null } }, 'no days means no end; one use by default');
+  assert.equal(form({ premiumDays: 30, maxRedemptions: 25, code: 'shark-camp-2026' }).ok, true);
+  for (const bad of [{ note: '' }, { note: 'x'.repeat(501) }, { premiumDays: 0 }, { premiumDays: 1831 }, { premiumDays: '30' }, { maxRedemptions: 0 }, { maxRedemptions: 10001 },
+    { redeemableUntil: '2026-09-25' }, { redeemableUntil: '2040-01-01' }, { code: 'abc' }, { code: 'no_underscores' }]) {
+    assert.equal(form(bad).ok, false, `${JSON.stringify(bad)} is refused`);
+  }
+
+  // 3. The routes: a branch of each existing handler, the admin one behind
+  // the admin check, and the browser sends the typed code and nothing else.
+  const userOps = read('api/user/[op].ts');
+  assert.match(userOps, /if \(op === 'voucher'\) return handleVoucherRedeem\(req, res, supabase\);/, 'op=voucher is a branch of api/user/[op].ts');
+  const adminOps = read('api/admin/[op].ts');
+  assert.ok(adminOps.indexOf('await requireAdmin(req, res)') < adminOps.indexOf("case 'vouchers':"), 'op=vouchers sits behind requireAdmin');
+  assert.match(adminOps, /case 'vouchers':\s+return await handleAdminVouchers\(req, res, supabase\);/);
+  for (const file of listFiles(join(process.cwd(), 'client/src')).filter((path) => /\.tsx?$/.test(path))) {
+    assert.doesNotMatch(read(file.slice(process.cwd().length + 1)), /redeem_premium_voucher|create_premium_voucher|list_premium_vouchers|revoke_premium_voucher/, `${file} calls no voucher routine`);
+  }
+
+  if (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) return;
+
+  // 4. The redemption against a stand-in database. Log lines are captured to
+  // prove that no code, hash or hint is ever written to them.
+  const logged: string[] = [];
+  const realLog = console.log;
+  console.log = (...args: unknown[]) => { logged.push(args.map(String).join(' ')); };
+  try {
+    const calls: { fn: string; args: Record<string, unknown> }[] = [];
+    const answers = new Map<string, unknown>([
+      [voucherHash('K7Q2ABCD1234'), { status: 'redeemed', grantId: '05443e8e-0bd9-4ee3-8674-312a1d317ca0', validUntil: '2026-10-26T13:43:28.520132+00:00', redeemedAt: '2026-09-26T13:43:28.520132+00:00' }],
+      [voucherHash('OPENOPEN0001'), { status: 'redeemed', grantId: '15443e8e-0bd9-4ee3-8674-312a1d317ca0', validUntil: null, redeemedAt: '2026-09-26T13:43:28.520132+00:00' }],
+      [voucherHash('AGAINAGAIN01'), { status: 'already' }],
+      [voucherHash('USEDUSEDUSED'), { status: 'invalid' }],
+    ]);
+    const db = {
+      rpc: async (fn: string, args: Record<string, unknown>) => {
+        calls.push({ fn, args });
+        if (fn !== 'redeem_premium_voucher') return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${fn} in the schema cache` } };
+        return { data: answers.get(String(args.p_code_hash)) ?? { status: 'invalid' }, error: null };
+      },
+    };
+    let account = 0;
+    const redeemAs = async (codeText: unknown, options: { user?: string | null; ip?: string; method?: string; database?: unknown } = {}) => {
+      const user = options.user === undefined ? `contract-voucher-${++account}` : options.user;
+      const res = mockResponse();
+      await handleVoucherRedeem({
+        method: options.method ?? 'POST',
+        headers: { 'x-forwarded-for': options.ip ?? `10.45.${account % 250}.${(account * 7) % 250}` },
+        query: { op: 'voucher', ...(user ? { user_id: user } : {}) },
+        body: { code: codeText, ...(user ? { user_id: user } : {}) },
+      } as never, res as never, (options.database ?? db) as never);
+      return res;
+    };
+    const envelope = (res: ReturnType<typeof mockResponse>) => ({ status: res.statusCode, body: res.body });
+
+    const get = await redeemAs('K7Q2ABCD1234', { method: 'GET' });
+    assert.equal(get.statusCode, 405, 'redeeming is POST only');
+    const guest = await redeemAs('K7Q2ABCD1234', { user: null });
+    assert.equal(guest.statusCode, 401, 'a guest must sign in first');
+
+    calls.length = 0;
+    const ok = await redeemAs(' k7q2-abcd 1234 ', { user: 'contract-voucher-owner' });
+    assert.equal(ok.statusCode, 200);
+    assert.deepEqual(ok.body, { status: 'redeemed', validUntil: '2026-10-26T13:43:28.520Z' }, 'the answer names the end and nothing else');
+    assert.equal(ok.headers.get('cache-control'), 'private, no-store');
+    assert.deepEqual(calls, [{ fn: 'redeem_premium_voucher', args: { p_user_id: 'contract-voucher-owner', p_code_hash: sha256('K7Q2ABCD1234') } }],
+      'the routine gets the account and the hash of the normalised code, never the code');
+    assert.deepEqual((await redeemAs('OPENOPEN0001')).body, { status: 'redeemed', validUntil: null }, 'a voucher with no end says so');
+
+    const already = await redeemAs('AGAINAGAIN01');
+    assert.equal(already.statusCode, 409);
+    assert.equal((already.body as { error: { code: string } }).error.code, 'voucher_already_redeemed', '"already redeemed" is the one answer told apart');
+
+    const unknown = envelope(await redeemAs('NOSUCHCODE01'));
+    const usedUp = envelope(await redeemAs('USEDUSEDUSED'));
+    calls.length = 0;
+    const malformed = envelope(await redeemAs('K7Q2!'));
+    assert.equal(calls.length, 0, 'a code that cannot exist reaches no routine');
+    assert.equal(unknown.status, 400);
+    assert.deepEqual(unknown.body, { error: { code: 'voucher_invalid', message: 'This code does not open Premium. Check it and try again.' } });
+    assert.deepEqual(usedUp, unknown, 'a used-up code (and an expired or revoked one, which the routine answers alike) gets the answer an unknown code gets');
+    assert.deepEqual(malformed, unknown, 'and so does a code that cannot exist');
+    const missing = await redeemAs('K7Q2ABCD1234', { database: { rpc: async (fn: string) => ({ data: null, error: { code: 'PGRST202', message: `Could not find the function public.${fn} in the schema cache` } }) } });
+    assert.equal(missing.statusCode, 503);
+    assert.equal((missing.body as { error: { code: string } }).error.code, 'voucher_unavailable', 'before migration 045 a redemption says vouchers are unavailable');
+    const failing = await redeemAs('K7Q2ABCD1234', { database: { rpc: async () => ({ data: null, error: { code: '23514', message: 'check violation' } }) } });
+    assert.equal(failing.statusCode, 500, 'a database error is a 500, not a refusal');
+
+    // Five attempts an hour per account, a success included, and ten per address.
+    const limited = 'contract-voucher-limited';
+    for (let attempt = 1; attempt <= 5; attempt++) {
+      assert.equal((await redeemAs('NOSUCHCODE01', { user: limited, ip: `10.46.0.${attempt}` })).statusCode, 400, `attempt ${attempt} is answered`);
+    }
+    const sixth = await redeemAs('K7Q2ABCD1234', { user: limited, ip: '10.46.0.6' });
+    assert.equal(sixth.statusCode, 429, 'the sixth attempt of one account in an hour is refused, even with a good code');
+    assert.ok(Number(sixth.headers.get('retry-after')) > 0, 'with Retry-After');
+    for (let attempt = 1; attempt <= 10; attempt++) {
+      assert.equal((await redeemAs('NOSUCHCODE01', { ip: '10.46.1.1' })).statusCode, 400, `address attempt ${attempt} is answered`);
+    }
+    assert.equal((await redeemAs('K7Q2ABCD1234', { ip: '10.46.1.1' })).statusCode, 429, 'the eleventh attempt from one address in an hour is refused, whichever account');
+    assert.equal((await redeemAs('K7Q2ABCD1234', { ip: '10.46.1.2' })).statusCode, 200, 'another address is not');
+
+    // 5. The owner's routes: created codes are random, shown once and stored
+    // as a hash; a taken custom code is refused; the list carries no hash.
+    const adminCalls: { fn: string; args: Record<string, unknown> }[] = [];
+    let conflicts = 0;
+    const row = (hint: string, extra: Record<string, unknown> = {}) => ({
+      id: '5d6a8a4e-1f59-4d6a-9f56-0f7b6c1e2a3b', hint, note: 'For Pavel', premiumDays: 30, maxRedemptions: 1, redeemedCount: 0,
+      redeemableUntil: null, active: true, createdAt: '2026-09-26T12:00:00+00:00', revokedAt: null, ...extra,
+    });
+    const adminDb = {
+      rpc: async (fn: string, args: Record<string, unknown>) => {
+        adminCalls.push({ fn, args });
+        if (fn === 'create_premium_voucher') {
+          if (conflicts > 0) { conflicts -= 1; return { data: null, error: null }; }
+          return { data: row(String(args.p_code_hint)), error: null };
+        }
+        if (fn === 'list_premium_vouchers') return { data: [row('K7Q2', { codeHash: 'leak' }), row('OPEN', { active: false, revokedAt: '2026-09-26T12:30:00+00:00' })], error: null };
+        if (fn === 'revoke_premium_voucher') return { data: args.p_voucher_id === '5d6a8a4e-1f59-4d6a-9f56-0f7b6c1e2a3b' ? row('K7Q2', { active: false, revokedAt: '2026-09-26T12:30:00+00:00' }) : null, error: null };
+        return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${fn} in the schema cache` } };
+      },
+    };
+    const admin = async (method: string, body?: Record<string, unknown>, database: unknown = adminDb) => {
+      const res = mockResponse();
+      await handleAdminVouchers({ method, headers: {}, query: { op: 'vouchers' }, body } as never, res as never, database as never);
+      return res;
+    };
+    const created = await admin('POST', { action: 'create', note: 'For Pavel', premiumDays: 30, maxRedemptions: 1 });
+    assert.equal(created.statusCode, 200);
+    const shown = (created.body as { code: string }).code;
+    assert.match(shown, /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/, 'a generated code is XXXX-XXXX-XXXX in Crockford base32');
+    const plain = normalizeVoucherCode(shown)!;
+    const createArgs = adminCalls.find((call) => call.fn === 'create_premium_voucher')!.args;
+    assert.equal(createArgs.p_code_hash, sha256(plain), 'the routine stores the SHA-256 of the code');
+    assert.equal(createArgs.p_code_hint, plain.slice(0, 4));
+    assert.ok(!JSON.stringify(createArgs).includes(plain), 'and never receives the code');
+    assert.deepEqual({ ...createArgs, p_code_hash: 'hash', p_code_hint: 'hint' }, {
+      p_code_hash: 'hash', p_code_hint: 'hint', p_note: 'For Pavel', p_premium_days: 30, p_max_redemptions: 1, p_redeemable_until: null, p_created_by: null,
+    }, 'a request that passed with the legacy password records no creator');
+    assert.equal(JSON.stringify(created.body).split(shown).length - 1, 1, 'the answer carries the code once');
+    assert.ok(!JSON.stringify(created.body).includes(plain) && !JSON.stringify(created.body).includes(sha256(plain)), 'and neither its bare form nor its hash');
+    assert.equal(created.headers.get('cache-control'), 'no-store');
+
+    adminCalls.length = 0;
+    const custom = await admin('POST', { action: 'create', note: 'Camp', premiumDays: null, maxRedemptions: 40, code: 'shark-camp-2026' });
+    assert.equal((custom.body as { code: string }).code, 'SHAR-KCAM-P202-6', 'a custom code comes back normalised');
+    assert.equal(adminCalls[0].args.p_code_hash, sha256('SHARKCAMP2026'));
+    conflicts = 1;
+    const taken = await admin('POST', { action: 'create', note: 'Camp', code: 'shark-camp-2026' });
+    assert.equal(taken.statusCode, 409, 'a custom code in use is refused');
+    assert.equal((taken.body as { error: { code: string } }).error.code, 'voucher_exists');
+    conflicts = 2;
+    adminCalls.length = 0;
+    assert.equal((await admin('POST', { action: 'create', note: 'Retry' })).statusCode, 200, 'a generated code that is taken is replaced');
+    assert.equal(adminCalls.length, 3);
+    assert.equal(new Set(adminCalls.map((call) => call.args.p_code_hash)).size, 3, 'by a fresh one each time');
+    conflicts = 3;
+    assert.equal((await admin('POST', { action: 'create', note: 'Retry' })).statusCode, 500, 'three taken codes in a row stop');
+    conflicts = 0;
+    assert.equal((await admin('POST', { action: 'create', note: '' })).statusCode, 400);
+    assert.equal((await admin('POST', { action: 'create', note: 'x', code: 'no' })).statusCode, 400);
+
+    const list = await admin('GET');
+    assert.equal(list.statusCode, 200);
+    const vouchers = (list.body as { vouchers: Record<string, unknown>[] }).vouchers;
+    assert.deepEqual(vouchers.map((one) => [one.hint, one.state]), [['K7Q2', 'open'], ['OPEN', 'revoked']]);
+    assert.ok(vouchers.every((one) => !('codeHash' in one)), 'the list carries no hash');
+    assert.equal((await admin('POST', { action: 'revoke', voucherId: 'nope' })).statusCode, 400);
+    assert.equal((await admin('POST', { action: 'revoke', voucherId: '00000000-0000-4000-8000-000000000000' })).statusCode, 404);
+    const revoked = await admin('POST', { action: 'revoke', voucherId: '5d6a8a4e-1f59-4d6a-9f56-0f7b6c1e2a3b' });
+    assert.equal((revoked.body as { voucher: { state: string } }).voucher.state, 'revoked');
+    assert.equal((await admin('POST', { action: 'burn' })).statusCode, 400);
+    assert.equal((await admin('DELETE')).statusCode, 405);
+    const before045 = { rpc: async (fn: string) => ({ data: null, error: { code: 'PGRST202', message: `Could not find the function public.${fn} in the schema cache` } }) };
+    for (const [method, body] of [['GET', undefined], ['POST', { action: 'create', note: 'x' }], ['POST', { action: 'revoke', voucherId: '5d6a8a4e-1f59-4d6a-9f56-0f7b6c1e2a3b' }]] as const) {
+      const res = await admin(method, body as Record<string, unknown> | undefined, before045);
+      assert.equal(res.statusCode, 503, `${method} ${body?.action ?? 'list'} before 045`);
+      assert.equal((res.body as { error: { code: string } }).error.code, 'migration_required');
+    }
+
+    // Only an admin reaches op=vouchers: a signed-in learner is refused
+    // before any database call.
+    for (const method of ['GET', 'POST']) {
+      const res = mockResponse();
+      await adminHandler({
+        method, url: '/api/admin/vouchers', headers: { 'x-forwarded-for': `10.47.0.${method.length}` },
+        query: { op: 'vouchers', user_id: 'contract-learner' }, body: { action: 'create', note: 'x', user_id: 'contract-learner' },
+      } as never, res as never);
+      assert.ok([401, 403].includes(res.statusCode), `a learner's ${method} to op=vouchers is refused (${res.statusCode})`);
+    }
+
+    // No log line carries a code, its hash or its hint.
+    const secrets = [plain, shown, sha256(plain), 'K7Q2ABCD1234', sha256('K7Q2ABCD1234'), 'SHARKCAMP2026', 'SHAR-KCAM-P202-6', sha256('SHARKCAMP2026'), 'NOSUCHCODE01', 'USEDUSEDUSED', 'AGAINAGAIN01'];
+    assert.ok(logged.length > 10, 'the handlers logged their outcomes');
+    for (const line of logged) {
+      for (const secret of secrets) assert.ok(!line.includes(secret), `a log line carries ${secret}: ${line}`);
+      assert.doesNotMatch(line, /"(hint|code|codeHash)"/, `a log line names a code field: ${line}`);
+    }
+  } finally {
+    console.log = realLog;
+  }
 }
 
 /* ── one erasure routine (migration 044) ──────────────────────────────────
@@ -2820,9 +3126,10 @@ async function main() {
   await referralContracts();
   await merchContracts();
   erasureContracts();
+  await voucherContracts();
   await webdevBankContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, and the webdev-bank contract BoardlessAI imports.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, and the webdev-bank contract BoardlessAI imports.');
 }
 
 void main().catch((error) => {

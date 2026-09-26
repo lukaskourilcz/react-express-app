@@ -80,6 +80,11 @@ export const RATE_LIMITS = {
   billingCancelLink: { key: 'billing_cancel_link', capacity: 10, refillPerSecond: 10 / 3600 },
   // An invite code is bound once, at sign-up (#228); keyed by account.
   referralClaim: { key: 'referral_claim', capacity: 5, refillPerSecond: 5 / 3600 },
+  // Premium vouchers (migration 045). A code can be guessed, so every attempt
+  // counts, a success included: five an hour per account, and ten an hour per
+  // address, so two people behind one router each keep their five.
+  voucherRedeem: { key: 'voucher_redeem', capacity: 5, refillPerSecond: 5 / 3600 },
+  voucherRedeemAddress: { key: 'voucher_redeem_address', capacity: 10, refillPerSecond: 10 / 3600 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
