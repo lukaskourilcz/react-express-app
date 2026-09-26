@@ -45,13 +45,13 @@ const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
   req.on('end', () => resolve(text));
 });
 
-async function startStandIn(calls: Call[], deletedUsers: string[]) {
+async function startStandIn(calls: Call[]) {
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://stand-in');
     res.setHeader('content-type', 'application/json');
     const adminUser = /^\/auth\/v1\/admin\/users\/([^/]+)$/.exec(url.pathname);
     if (adminUser && req.method === 'DELETE') {
-      deletedUsers.push(decodeURIComponent(adminUser[1]));
+      calls.push({ name: 'auth.admin.deleteUser', args: { id: decodeURIComponent(adminUser[1]) } });
       res.end(JSON.stringify({ ...USER, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }));
       return;
     }
@@ -124,8 +124,7 @@ function mockResponse() {
 
 async function main() {
   const calls: Call[] = [];
-  const deletedUsers: string[] = [];
-  const server = await startStandIn(calls, deletedUsers);
+  const server = await startStandIn(calls);
   try {
     const [{ default: leaderboard }, { default: challenge }, tokens, access] = await Promise.all([
       import('../api/leaderboard'),
@@ -238,9 +237,10 @@ async function main() {
     } as never, erased as never);
     assert.equal(erased.statusCode, 200, `an account deletion after 046 answers 200 (${JSON.stringify(erased.body)})`);
     assert.deepEqual(erased.body, { ok: true });
-    assert.deepEqual(calls.map((call) => call.name), ['delete_user_data'], 'the deletion asks for delete_user_data and no dropped routine');
+    assert.deepEqual(calls.map((call) => call.name), ['delete_user_data', 'auth.admin.deleteUser'],
+      'the deletion asks for delete_user_data and no dropped routine, then deletes the sign-in identity');
     assert.equal(calls[0].args.p_user_id, USER.id);
-    assert.deepEqual(deletedUsers, [USER.id], 'the sign-in identity goes last');
+    assert.equal(calls[1].args.id, USER.id);
   } finally {
     server.close();
   }
