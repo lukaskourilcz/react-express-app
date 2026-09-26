@@ -1734,7 +1734,9 @@ All on `f528b7d`; this record changes documentation only. I ran every command be
 
 One report changes on purpose. With the eager client, a signed-out tab that stayed open while the learner signed in elsewhere heard that tab's broadcast and posted its own `/api/user/authevent`. That tab now has no client; it restores the session from storage through the `storage` event and posts nothing, and the tab that signed in still reports.
 
-Not verified here: a real Google sign-in and a real Supabase project (the OAuth return and the stored session ran against supabase-js 2.110 with Auth answered locally); a token refresh near expiry, which stays supabase-js's own; two real browser tabs (the cross-tab sign-in ran in the client test with a dispatched `storage` event); production and Lighthouse.
+On main and in production: the merge commit `7b4bc8f` passed every step of the Product quality workflow, locally and in CI (run 61), and `check:bundle` read 224,479 of 243,000 gzip bytes in five requests in both. Vercel deployed that commit to devshark.app (`dpl_2dNcA8f6ugbUbybWikA8tk2zgjUS`). Measured the way `check:bundle` measures, the `/assets/` requests that `index.html` starts, each gzipped with Node's `gzipSync`, devshark.app then served 224,511 gzip bytes in five requests; before the deploy it served 278,773 in six, supabase-js among them. The 32 bytes between CI and production are all in the entry script (112,347 against 112,315), which carries production's real Supabase, Sentry and PostHog values where the check has placeholders of the same length. The library chunk `supabase-B5YuwSPF.js` answers 200 for the visitors who need it.
+
+Not verified here: a real Google sign-in and a real Supabase project (the OAuth return and the stored session ran against supabase-js 2.110 with Auth answered locally); a token refresh near expiry, which stays supabase-js's own; two real browser tabs (the cross-tab sign-in ran in the client test with a dispatched `storage` event); Lighthouse.
 
 ## 2026-09-26 — a page that fails to load keeps the shell (ERRBOUND)
 
