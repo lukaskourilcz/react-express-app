@@ -1700,7 +1700,7 @@ export const en = {
   'legal.privacy.merch.shop': 'sprd.net AG, Gießerstraße 27, 04229 Leipzig, Germany, prints and ships devShark merchandise through Spreadshop. When you buy in the devShark shop, sprd.net AG collects your order data as an independent controller under its own privacy policy, and devShark and sprd.net AG are joint controllers for the data collected in the shop.',
   'legal.privacy.merch.redeem': 'When you redeem coins or earn a reward package, devShark stores the name and postal address you enter only to ship the item, and passes them to sprd.net AG, which prints and delivers it. Deleting your account deletes them.',
   'legal.privacy.email.title': 'Email',
-  'legal.privacy.email.body': 'When email is switched on for this site, Resend sends the confirmation of a cancellation or a withdrawal to the address on the subscription. Stripe sends receipts and invoices itself.',
+  'legal.privacy.email.body': 'When email is switched on for this site, Resend sends two emails for the cancellation page: the single-use link that confirms a request, to the address typed on the page, and the confirmation of a cancellation or a withdrawal, to the address on the subscription. devShark keeps the typed address with its request, and deletes both with the first request made on the page once the link has been expired for a day. Stripe sends receipts and invoices itself.',
   'legal.privacy.providers.title': 'Other service providers',
   'legal.privacy.providers.body': 'Supabase provides sign-in and the database. Vercel hosts the site and its API. PostHog analytics and Sentry error monitoring run only when this site has their keys configured.',
   'legal.privacy.analytics.title': 'Analytics and local storage',

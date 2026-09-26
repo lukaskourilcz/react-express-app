@@ -759,6 +759,12 @@ function publicCopyContracts() {
   // policy must not say people wrote them by hand (review finding product-8).
   assert.doesNotMatch(ENGLISH['legal.privacy.ai.body'], /by hand|people write/i);
   assert.match(ENGLISH['legal.privacy.ai.body'], /no AI feature/);
+  // The cancellation page stores the address typed there with its request,
+  // and the privacy policy says how long (review finding integrity-1): the
+  // next request purges every row a day past its expiry.
+  assert.match(ENGLISH['legal.privacy.email.body'], /single-use link that confirms a request, to the address typed on the page/);
+  assert.match(ENGLISH['legal.privacy.email.body'], /deletes both with the first request made on the page once the link has been expired for a day/);
+  assert.match(read('supabase/supabase-schema-039.sql'), /DELETE FROM public\.billing_cancel_requests WHERE expires_at < NOW\(\) - INTERVAL '1 day';/, 'the purge the privacy policy promises');
   // No urgency, countdowns or fake scarcity on the pages that sell.
   for (const [key, value] of Object.entries(ENGLISH)) {
     if (!/^(premium\.|landing\.compare\.|landing\.founder\.|home\.pledge|billing\.checkout\.)/.test(key)) continue;
