@@ -593,6 +593,8 @@ async function tierContracts() {
     { code: 'PGRST203', message: 'Could not choose the best candidate function between: public.x(a => text), public.x(a => integer)' },
     { code: '42P01', message: 'relation "public.entitlement_grants" does not exist' },
     { code: 'PGRST205', message: "Could not find the table 'public.entitlement_grants' in the schema cache" },
+    // Same code as a missing function, but a bug inside an installed routine.
+    { code: '42883', message: 'operator does not exist: text = uuid' },
     null,
   ]) {
     assert.equal(isRpcMissing(other), false, `${other?.code ?? 'no error'} is not a missing routine`);

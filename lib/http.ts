@@ -182,11 +182,15 @@ export function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
  * a routine missing from its schema cache as PGRST202 ("Could not find the
  * function public.x(...) in the schema cache"). Postgres itself says
  * "function … does not exist" (42883), which is what arrives when an installed
- * routine calls one that is not. Both mean the same thing to a caller. */
+ * routine calls one that is not. Both mean the same thing to a caller. 42883
+ * is also Postgres's code for "operator does not exist", a bug in an installed
+ * routine rather than a missing one, so that code counts only with the word
+ * "function" in its message. */
 export function isRpcMissing(error: { code?: string; message?: string } | null | undefined): boolean {
   if (!error) return false;
-  if (error.code === 'PGRST202' || error.code === '42883') return true;
   const message = error.message ?? '';
+  if (error.code === 'PGRST202') return true;
+  if (error.code === '42883') return /\bfunction\b/i.test(message);
   return /could not find the function/i.test(message) || /function .* does not exist/i.test(message);
 }
 
