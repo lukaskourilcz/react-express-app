@@ -30,10 +30,30 @@
 -- ---------------------------------------------------------------------------
 -- 1. One more ledger reason: 'referral'. Keeps 041's 'milestone' and 'social'.
 -- ---------------------------------------------------------------------------
-ALTER TABLE public.token_ledger DROP CONSTRAINT IF EXISTS token_ledger_reason_check;
-ALTER TABLE public.token_ledger
-  ADD CONSTRAINT token_ledger_reason_check
-  CHECK (reason IN ('signup', 'verified-xp', 'purchase', 'refund', 'adjustment', 'milestone', 'social', 'referral'));
+-- Additive, as in 041: the check is rebuilt from the reasons it already allows
+-- plus these, so no order of re-running 041 and 042 narrows it.
+DO $$
+DECLARE
+  v_reasons TEXT[] := ARRAY['signup', 'verified-xp', 'purchase', 'refund', 'adjustment', 'milestone', 'social', 'referral'];
+  v_current TEXT;
+  v_reason  TEXT;
+BEGIN
+  SELECT pg_get_constraintdef(c.oid) INTO v_current
+    FROM pg_constraint c
+   WHERE c.conrelid = 'public.token_ledger'::regclass
+     AND c.conname = 'token_ledger_reason_check';
+  FOR v_reason IN SELECT (regexp_matches(COALESCE(v_current, ''), '''([^'']+)''', 'g'))[1] LOOP
+    IF NOT v_reason = ANY (v_reasons) THEN
+      v_reasons := v_reasons || v_reason;
+    END IF;
+  END LOOP;
+  ALTER TABLE public.token_ledger DROP CONSTRAINT IF EXISTS token_ledger_reason_check;
+  EXECUTE format(
+    'ALTER TABLE public.token_ledger ADD CONSTRAINT token_ledger_reason_check CHECK (reason IN (%s))',
+    (SELECT string_agg(quote_literal(r), ', ' ORDER BY o) FROM unnest(v_reasons) WITH ORDINALITY AS t(r, o))
+  );
+END;
+$$;
 
 -- ---------------------------------------------------------------------------
 -- 2. Tables.

@@ -917,8 +917,17 @@ async function referralContracts() {
     assert.ok(start >= 0, `migration 042 defines ${name}`);
     return migration.slice(start, migration.indexOf('$$;', start));
   };
-  assert.match(migration, /CHECK \(reason IN \('signup', 'verified-xp', 'purchase', 'refund', 'adjustment', 'milestone', 'social', 'referral'\)\)/,
-    '042 adds referral and keeps milestone and social');
+  // The reason check is rebuilt from what it already allows plus 042's list,
+  // so no order of re-running 041 and 042 narrows it (review finding data-3).
+  for (const [file, reasons] of [
+    ['supabase/supabase-schema-041.sql', "'signup', 'verified-xp', 'purchase', 'refund', 'adjustment', 'milestone', 'social'"],
+    ['supabase/supabase-schema-042.sql', "'signup', 'verified-xp', 'purchase', 'refund', 'adjustment', 'milestone', 'social', 'referral'"],
+  ] as const) {
+    const source = read(file);
+    assert.ok(source.includes(`v_reasons TEXT[] := ARRAY[${reasons}];`), `${file} names its reasons`);
+    assert.match(source, /SELECT pg_get_constraintdef\(c\.oid\) INTO v_current[\s\S]*?regexp_matches\(COALESCE\(v_current, ''\)/, `${file} keeps the reasons the check already allows`);
+    assert.doesNotMatch(source, /ADD CONSTRAINT token_ledger_reason_check\s+CHECK \(reason IN \('/, `${file} never restates the check from a fixed list alone`);
+  }
   for (const name of ['referral_summary', 'record_referral', 'credit_referral', 'delete_referral_data']) {
     assert.match(migration, new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\([^;]*\\) FROM PUBLIC, anon, authenticated;`), `${name} is revoked from browsers`);
     assert.match(migration, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\([^;]*\\) TO service_role;`), `${name} is service-role only`);
