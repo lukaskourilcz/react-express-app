@@ -1478,6 +1478,8 @@ The proof ends by dropping its scratch databases. Production runs 17.6. 046 uses
 
 4. Optional: sign up a throwaway account, delete it from the Profile, and confirm the request answers 200.
 
+Applied on 2026-09-26, after `8a045a5` (containing `6c3ec0b`) was production (`dpl_J4DZYmf9XdGCcErxyvdjLBS9BLy7`): before the file, production held the four routines, `delete_user_data` hashed to `2358b9e7c57afb3eafc4af76e9e0c9f4` and nothing else named them; the file ran in one transaction through the Supabase connector; the check above returned `0 | 2358b9e7c57afb3eafc4af76e9e0c9f4 | t`; the security advisor lists INFO notices only (RLS on without a policy, on the service-role-only tables). Step 4 was not run: it needs a throwaway Google account.
+
 ### The retired support settings
 
 `normalizeSettings` builds its result from the fields it knows, so it drops a stored row's `support` key on read, and `saveGameSettings` writes that result, so the next save from `/dev` stores the row without it. A `/dev` tab opened before the deploy runs the old form, which reads `settings.support` and fails until it is reloaded.
