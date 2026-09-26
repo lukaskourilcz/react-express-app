@@ -1176,3 +1176,97 @@ Local evidence:
 | `git diff --check` | clean, for the tree and for `214c2f4..HEAD` |
 
 Not run: `npm run test:react-isolation` (needs Vercel Sandbox credentials; the two slowest new React suites have an owner check in `NEEDED.md`), `npm run build:curation-registry` (`CODING_TASKS_AUDITED` is false), `npm run check:responsive` and `npm run test:browser` (no layout, component or story changed), and the dependency audits (no dependency changed).
+
+## 2026-09-26 — the review's fixes (FIX, #219 to #235)
+
+What changed: three reviewers read `origin/main...HEAD` for integrity, data and product defects, verifiers kept 24 findings, and this step fixed each one. A container restart stopped the first run after twelve commits (`5c7cc5f` to `5d95c77`); the resumed run checked each of them against its finding and test, then did the rest. Every code finding has a test; each test this run added was checked to fail without its fix.
+
+| Finding | What was wrong | Fixed in | Proven by |
+| --- | --- | --- | --- |
+| integrity-1 (high) | the public cancel endpoint refunded, cancelled and revoked for anyone who knew a subscriber's email | `fce0b21`, `f2b3370`, `eea07fd` | `test:billing` (anonymous request makes no Stripe call and answers the same either way; the emailed link acts once, expires, survives an outage; three links an hour; a signed-in owner acts at once); client tests of the page; the SQL exercise below; the privacy policy names what the page keeps |
+| integrity-2 (high) | the 14-day refund was measured per subscription, so withdrawing and subscribing again restarted it | `fce0b21` | `test:billing` "the voluntary refund is taken once per account"; SQL exercise |
+| integrity-3 (medium) | a refund, dispute or withdrawal kept milestone coins, doubled coins and unsent redemptions | `fce0b21`; the retroactive payout is an owner decision (`2f5b530`) | `test:billing` (refund, dispute, fraud warning, withdrawal; a failing routine is retried); SQL exercise |
+| integrity-4 (high) | a request without a token skipped every Premium gate | `5d95c77`, `bace111` | `test:launch` (a guest gets 402 for a Premium level, part test, topic, task, stage two, and for coding-submit and coding-reveal with a guest session) |
+| integrity-5 (medium) | replaying a passed Learn level added unlimited correct answers to the 30-day board | `ba86a6e` | `test:launch`; SQL exercise |
+| integrity-6 (low) | two accounts could invite each other at the same moment | `ab83766` | two-session race below |
+| integrity-7 (low) | any subscription on a linked customer opened Premium | `fce0b21` | `test:billing` "only a subscription that bills a devShark Premium price opens Premium" |
+| data-1 (high), data-2 (medium) | PostgREST's PGRST202 did not read as a missing routine, so no fallback before 039 and 040 fired | `5c7cc5f`, `f2bcc09`, `8475898` | `test:launch`, `test:billing`, and the new `test:fallbacks` (the real leaderboard, challenge and tier gate against a PGRST202 stand-in; fails with the old matcher) |
+| data-3 (medium) | re-running 041 after 042 dropped the `referral` ledger reason | `78fb5e5` | `test:launch`; 041 and 042 re-applied below |
+| data-4 (low) | 044 applied early broke every deletion, and 040 without 044 left erased accounts' dated answers | `6418441`, `2f5b530` | `test:launch`; the production-shape run below |
+| product-1 (high) | merging locked the owner out, and NEEDED.md's two escapes did not work | `2f5b530` | the first item of NEEDED.md's D1 block |
+| product-3 (medium) | the grace window counted from a period end Stripe has already moved on | `fce0b21`, `1a6e5d4` | `test:billing` "past_due keeps Premium for seven days from the failed renewal"; SQL exercise |
+| product-4 (medium) | deleting a paid account did not say it ends Premium without a refund | `325d053` | client test |
+| product-5 (medium) | the withdrawal page promised an immediate end it gives only within 14 days | `f2b3370` | client test |
+| product-6 (medium) | Premium was sold with merchandise that ships closed | `555f203` | `test:launch` |
+| product-7 (medium) | the docs understated what a guest could use | `5d95c77` | `test:launch`, client tests |
+| product-8 (medium) | the privacy policy said people wrote the hints by hand | `555f203` | `test:launch` |
+| product-9, product-11 (low) | owner checks and the Stripe setup left steps out | `2f5b530` | NEEDED.md |
+| product-10 (low) | Manage billing only for a winning provider grant | `fce0b21`, `bf7319d` | client tests; SQL exercise |
+| product-12 (low) | the success page kept promising checks after the last one | `bd9d2ba` | client test |
+| product-13 (low) | a loading plan marked every coding row Premium | `5d95c77` | client test |
+| product-14 (low) | "Change the email" dropped focus to the body | `f2b3370`, `e4c782d` | client test |
+
+Also: `about-project.md` uses "## Tech stack" and "## Third-party libraries" like the other repositories (`ec3f594`); NEEDED.md asks for the Vercel plan decision before `BILLING_ENABLED=true` (`2f5b530`); the architecture, README, runbook and UX audit describe the new billing behaviour (`1a6e5d4`, `0373b40`); CI now runs `test:billing` and `test:fallbacks` (`f2bcc09`); the React timer item of #226 is done (`d53f4ce`, `a7befdc`); `isRpcMissing` counts Postgres's 42883 only when it names a function (`8475898`); the cancel page's client test waits for its focus move (`e4c782d`); and the preview's fetch stub serves the photos the load-more challenge asks for (`705cff7`).
+
+### Migration proof (local Postgres 16, template `rea_base` = the Supabase shim + 001–038)
+
+The restart had also reset the local cluster, so `rea_base` was rebuilt first: the shim, Supabase's default privileges for `anon`, `authenticated` and `service_role`, then 001 to 038 with `ON_ERROR_STOP=1`, exit 0 each.
+
+| Check | Result |
+| --- | --- |
+| A: 039, 040, 041, 042, 043, 044 applied in order, the six again, then 041, 042 and 041 once more | exit 0, all 15 |
+| Rolled-back exercise on A (`BEGIN … ROLLBACK`, one script) | exit 0, 61 PASS lines, nothing left after rollback. past_due counts from `past_due_since` (8 days: free although the period ends in 25; 3 days: Premium, `inGrace`; a later retry and an unknown start keep the first value; a paid renewal clears it; the four- and seven-argument drafts are gone). The summary's `billingAccount` and `subscriptionLive` under a longer complimentary grant and after a subscription ended. The refund taken once per account. Cancellation links: only the hash, the typed address, the action and the times stored; three an hour per address, case-insensitive; review uses nothing; a link is used once; handed back after an outage; expired and unknown links do nothing; rows a day past expiry purged. `revoke_premium_benefits`: nothing while the grant is live; after the revoke, the redemption placed while Premium is refunded in coins and the older one stays; 100 milestone and 20 doubled coins debited once; nothing while another grant keeps Premium; coins already spent stay spent and the debit stops at 0. Learn answers: none dated on a passed level; one per question and UTC day across attempts; yesterday's answer does not block today; a guest's never. All eight ledger reasons after the re-runs, and a `referral` line accepted. Twelve new or restated routines are SECURITY DEFINER with an empty `search_path` and `service_role`-only execute; `billing_cancel_requests` has RLS, no policy, no browser grant and no account or token column |
+| B, production's shape (014's check dropped): 040, then 044 | 040 exit 0; 044 exit 3, "migration 044 needs 035 and 039 to 042 first; missing: entitlement_grants, billing_customers, billing_checkout_consents, token_xp_credits, token_month_settlements, referral_codes, referrals", and `delete_user_data` is still 033's |
+| B: then 039, 040, 041, 042, 043, 044 | exit 0 each; one `question_edits_importance_check` |
+| B: a dated answer of an erased account and of a live one, then 044 twice | the orphan's row deleted, the live account's kept; the second run changes nothing |
+| C: two sessions offering each other's invite code at once (committed scratch database) | "recorded" and "self", one row. The same race on the 042 before `ab83766`: "recorded" twice, two rows |
+| `test:billing`'s 30 checks against Postgres holding 039–044 twice, through a PostgREST/Auth stand-in that runs each call as SQL | passed; 8 links (2 used) and 2 voluntary refunds recorded by the real routines |
+
+The scratch databases were dropped. No PostgREST binary was on the machine after the restart, so the 30-check run used the harness stand-in of D1 and D2 instead of PostgREST 12.2.12.
+
+### The React timer checks (#226)
+
+| Check | Result |
+| --- | --- |
+| Stress probe (blocks the event loop for a random 0–N ms every 40 ms), suites before the change | autosave and countdown at 70 ms: 5 failing cases in 90 runs; countdown alone at 120 ms: 14 in 120 (correct solutions read -1); every timer-using React suite at 70 ms, 1,215 runs: 2 (autosave, search); search, notices, carousel and export at 120 ms: 26 in 60 |
+| Same probe, the six converted suites | 0 failing cases in 90 runs at 70 ms and 0 in 90 at 120 ms |
+| A wrong solution for each converted check | caught, 7 of 7 (a wait that does not restart, an interval kept to the end, one that never stops, no debounce, a click that does not restart the slide, the next question after 50 ms, index keys) |
+| `CODING_ONLY` run of the six tasks (reference, junior and senior against visible and hidden cases; starters still fail) | exit 0 |
+| Five consecutive full `npm run test:coding` runs on `d53f4ce` | exit 0 each; 217, 215, 219, 216 and 216 s; 770 tasks |
+
+### Release contract on the final head
+
+All on `705cff7`, the last code commit; the commit that records this section changes documentation only. Every command below was run, and the exit code is its own.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:launch` | exit 0. New here: a guest's coding-submit and coding-reveal refused with 402; the privacy policy's sentences on the cancellation page and the purge behind them; an operator error is not a missing routine; the load-more solution pages to the end through the preview's fetch stub |
+| `npm run test:coding-auth`, `npm run test:grading-integrity`, `npm run test:paths` | exit 0 each |
+| `npm run test:coding` | exit 0; 770 tasks (JavaScript 316, TypeScript 156, React 183, system design 45, Algorithms 70; Easy 462, Medium 199, Hard 109), 216 s. With the five runs on `d53f4ce` and one on `0373b40` (217 s), seven full runs in a row passed |
+| `npm run test:billing` | exit 0; 30 checks |
+| `npm run test:fallbacks` (new) | exit 0 |
+| `npm run test:client` | exit 0; 19 files, 193 tests |
+| `npm run check:unused`, `npm run check:security` | exit 0 each; knip reports no new finding |
+| `npm run build` (with CI's `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev`), `npm run check:public`, `npm run check:bundle` | exit 0 each; 13 public URLs; 219,540 of 243,000 gzip bytes; the existing warning about chunks over 500 kB |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0 each; 0 vulnerabilities |
+| `git diff --check`, and `git diff --check 5ebdad7..HEAD` | clean |
+| `npm run check:responsive -- --block-external` against `vite preview` on :4173, `CHROME_BIN` = Chromium 141 from `/opt/pw-browsers/chromium-1228` | exit 0 on the build of `705cff7` (and on `0373b40`'s): 238 probes (34 routes × 7 widths, 360 to 1440), 0 with issues, 0 unprobed |
+| The same with `RESPONSIVE_THEME=dark` over `/premium/cancel`, `/premium/success`, `/premium`, `/profile`, `/privacy`, `/terms`, `/coding`, `/coding/javascript`, `/coding/react`, `/learn`, `/roadmap` and `/today` at 360, 390, 768 and 1280 | exit 0: 48 probes, 0 with issues, 0 unprobed |
+| `npm run test:harness` (every React suite in the built sandbox in Chromium, as CI's browser step runs it) | exit 1 on `0373b40`: `react-mh-load-more`'s preview threw "next is not iterable", because the fetch stub answered `/api/photos` with its weather object (a defect of the #226 wave, not of this step; fixed in `705cff7`). exit 0 on `705cff7`: 196 assertions, which include the five visible suites that now run on the hand-moved clock |
+| `npm run test:browser` for `public.spec.ts`, `evolving.spec.ts` and `segmented.spec.ts` against the same preview (`CHROME_BIN` as above) | exit 0 each; 5, 2 and 4 passed |
+
+### Production order for 039 to 044
+
+In one sitting, before the branch reaches `main`, in the Supabase SQL editor:
+
+1. `supabase-schema-039.sql` — entitlements and billing, with the review's section 6.
+2. `supabase-schema-040.sql` — the 30-day board. It needs nothing from 039.
+3. `supabase-schema-041.sql` — coins. It calls 039's `is_premium` and must come before 042.
+4. `supabase-schema-042.sql` — invitations. It uses 041's `token_account_key`.
+5. `supabase-schema-043.sql` — merchandise caps and the hoodie. It needs only 028 and 035.
+6. `supabase-schema-044.sql` — one erasure routine and 014's importance check. It refuses to run until 035 and 039 to 042 exist, and deletes dated answers that deletions left behind in the meantime.
+
+Then give the owner's account an open-ended manual grant (`select public.grant_manual_entitlement(...)`, NEEDED.md), and only then merge. Re-running any file is safe: each was applied twice above, and 041 and 042 only add ledger reasons.
+
+Not verified here: production (the steps may not write to it), anything against Stripe or Resend, the lawyer's review of the emailed confirmation under § 312k BGB, and PostgREST 12.2.12 itself after the restart. Each has an owner item in `NEEDED.md` or is listed under "freemium checks that could not run here".
