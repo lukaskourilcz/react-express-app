@@ -1270,3 +1270,136 @@ In one sitting, before the branch reaches `main`, in the Supabase SQL editor:
 Then give the owner's account an open-ended manual grant (`select public.grant_manual_entitlement(...)`, NEEDED.md), and only then merge. Re-running any file is safe: each was applied twice above, and 041 and 042 only add ledger reasons.
 
 Not verified here: production (the steps may not write to it), anything against Stripe or Resend, the lawyer's review of the emailed confirmation under § 312k BGB, and PostgREST 12.2.12 itself after the restart. Each has an owner item in `NEEDED.md` or is listed under "freemium checks that could not run here".
+
+## 2026-09-26 — Premium vouchers (VOUCHER)
+
+What changed: Stripe stays off (`BILLING_ENABLED` unset), and a signed-in learner can now enter a voucher code on `/premium` that opens Premium for the account. The owner creates the codes in `/dev` → Vouchers. Migration 045 holds the codes as SHA-256 hashes with their first four characters, the redemptions, and five service-role routines; a redemption writes a `promo` grant that 039's `is_premium` already counts. Twelve handlers remain: `op=voucher` is a branch of `api/user/[op].ts` and `op=vouchers` of `api/admin/[op].ts`.
+
+| Commit | What |
+| --- | --- |
+| `e95ac9d` | Migration 045: `premium_vouchers`, `premium_voucher_redemptions`, the four routines and their private JSON helper, `delete_user_data` restated (044's body, then the redemptions and an erased admin's vouchers); the erasure contract reads the guard of whichever migration restates the routine last |
+| `4d6c6e1` | `op=voucher` (signed in, five attempts an hour per account and ten per address, one answer for every refused code, 409 only for "already redeemed", 503 `voucher_unavailable` before 045) and `op=vouchers` (admin only: create with a random or custom code shown once, list, revoke); launch contracts and `test:fallbacks` |
+| `f0e5a63` | The plan line names a voucher grant: "Premium from a voucher, until …" |
+| `ca81301` | "Have a voucher?" on `/premium`, first while checkout is off, with every state and a client test |
+| `1b00d59` | The upgrade sheet offers "Redeem a voucher" while checkout is off |
+| `cc01e33` | `/dev` → Vouchers: the form, the code once with a copy button, the list with revoke |
+| `8bdb1d3` | The Terms and the privacy policy: how a voucher works, what a redemption stores |
+| `daad647` | The voucher form uses Astryx's own field labels (found in the browser check below) |
+| `47bd47b` | Astryx's `--color-on-accent` follows the theme's `--brand-on-accent`, so an Astryx primary button in dark mode reads at 6.69:1 instead of 2.77:1, on every screen (found by the axe pass below) |
+| `5bb53d8` | The architecture, `shared/tiers.ts`, the README and the UX audit describe vouchers |
+
+This record and the VOUCHER block of `NEEDED.md` are the last commit and change documentation only.
+
+### Migration 045 proof (local Postgres 16, template `rea_base` = the Supabase shim with Supabase's default privileges + 001–038)
+
+Before the proof, the local 039–044 chain was compared with production by read-only queries: the definitions of `delete_user_data`, `is_premium` and `entitlement_summary` hash the same (`00d58b4b…`, `44223388…`, `75141b52…`), and so does a fingerprint of the columns, defaults, constraints, policies and RLS flags of the tables 045 touches or erases (`e52b75f2…`). Production's default privileges grant EXECUTE on new functions to `anon` and `authenticated`, as the template does, so the revokes below are tested against the grants they remove. Production runs Postgres 17.6 and the proof ran on 16.13: the three definitions above hash the same on both, and 045 uses only plain DDL, PL/pgSQL, a row lock and core functions.
+
+| Check | Result |
+| --- | --- |
+| 045 alone on 001–038 | exit 3, "migration 045 needs 035 and 039 to 042 first; missing: entitlement_grants, …", and nothing created |
+| 039, 040, 041, 042, 043, 044, 045 in order, then 045 again | exit 0 each; the catalog fingerprint of the voucher objects (routine definitions and ACLs, columns, constraints, indexes, table ACLs, RLS) is the same before and after the second run |
+| Hash cross-check | `sha256sum` and Postgres's `sha256()` agree on `K7Q2ABCD1234`; `test:launch` pins the same value for `voucherHash` |
+| Rolled-back exercise (`BEGIN … ROLLBACK`, one script) | exit 0, 100 PASS, 0 FAIL, nothing left after the rollback. A 30-day redemption opens Premium (`is_premium` true, `entitlement_summary` source `promo` with the same end), one active promo grant noted "Voucher K7Q2", one redemption row, count 1. The same account again: "already", no grant and no use added; the table's key refuses a second row. Unknown, expired (moved past its date, and at its exact date), used-up and revoked codes answer the same "invalid". An open-ended voucher: no end, three uses hold at three, the table refuses a count above the maximum. A revoke keeps its first time, stops new redemptions and leaves the Premium already opened. The grant past its `valid_until` opens nothing. The list carries no hash. `delete_user_data` removes the redemption and the grant and keeps the voucher's count, anonymises an erased admin's vouchers, and 039's `delete_entitlement_data` still works through the cascade. `anon`, `authenticated` and a role holding only PUBLIC's rights are refused every routine and every read or write of both tables; `service_role` runs them. All six routines are SECURITY DEFINER with an empty `search_path` and `service_role`-only EXECUTE; both tables have RLS, no policy and no browser grant |
+| R1: the last use, two accounts (committed scratch database) | session A redeems and holds its transaction for 2 s; session B, started 0.5 s later, waited 1,507 ms on A's row lock and was refused; 1 of 1 used, 1 redemption, 1 grant |
+| R2: one account, two sessions at the same instant | "redeemed" and "already"; 1 use, 1 grant |
+| R3: twelve accounts at the same instant, three uses | 3 redeemed, 9 refused; 3 of 3 used, 3 redemptions, 3 promo grants, 3 accounts Premium |
+
+### The real handlers against Postgres
+
+A scratch PostgREST/Auth stand-in ran the calls as SQL against a database holding 001–045; it answers a missing routine the way PostgREST 12 does (PGRST202, "Could not find the function … in the schema cache").
+
+| Check | Result |
+| --- | --- |
+| End to end through `api/admin/[op].ts`, `api/user/[op].ts` and `api/quiz/roadmap.ts` | 36 checks passed, on `daad647` and again on `5bb53d8`. The admin creates a code; the database holds its SHA-256 and the admin's id, and a full `pg_dump` contains the code nowhere. A free learner gets 402 on a Premium challenge, redeems the code typed in lower case with spaced dashes, reads Premium from a promo grant with the right end, and opens the challenge without a restart. Again: 409. Another learner: 400 `voucher_invalid`, word for word the answer to an unknown or malformed code; a guest: 401. A custom campaign code is normalised, a duplicate refused with 409, an open-ended redemption reads no end, the list shows no hash, a revoke refuses the next learner and keeps the earlier one Premium. A learner is refused the admin route (403). The sixth attempt in an hour answers 429. Deleting the account erases the redemption and the grant and keeps the voucher's count. 49 log lines and 28 database requests, none carrying a code |
+| The client build signed in, Chromium 141, light and dark at 360, 390, 768 and 1280 px | 88 cells: signed out, the form with focus, a refused code, a redemption (the plan line above updates in place), the Profile's plan line, too many attempts, the upgrade sheet from a Premium challenge, the landing on `/premium#voucher` with the caret in the field, and `/dev` → Vouchers (form, new code, list with long notes). No horizontal overflow, every control of the section at least 44 px on touch, no page or console error. The screenshots were reviewed; the form's hand-made labels were heavier than Astryx's, fixed in `daad647` and checked again. Run again on `5bb53d8`: 88 cells, 0 with an issue |
+| axe-core 4.13 (WCAG 2.1 A and AA) over the same states, light and dark at 390 and 1280 px | 44 cells. On `daad647`, 17 had a finding, each `color-contrast` on an Astryx primary button in dark mode: white on the `#4caf50` accent, 2.77:1. `/premium/cancel` showed the same failure before this branch, so the fix went into the theme (`47bd47b`) rather than the voucher form. On `5bb53d8`: 0 with a finding |
+
+### Release contract on the final head
+
+All on `5bb53d8`, the last commit before this record; the record changes documentation only. Every command below was run, and the exit code is its own.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:launch` | exit 0. New here: 045's tables, grants and routines, no column for the plain code, the redeem routine's lock and order, and 045's `delete_user_data` starting with 044's body; the code format, the generator's spread and a pinned hash; both handlers against a fake database (one answer for every refused code, 409 only for a second redemption, 429 on the sixth try per account and the eleventh per address, 503 before 045); the real admin route's 401 and 403; no log line with a code; the client's request and copy; the legal sentences |
+| `npm run test:coding-auth`, `npm run test:grading-integrity`, `npm run test:paths` | exit 0 each |
+| `npm run test:coding` | exit 0; 770 tasks, 218 s |
+| `npm run test:billing` | exit 0; 30 checks |
+| `npm run test:fallbacks` | exit 0. New here: before 045 a redemption answers 503 `voucher_unavailable`, `/dev` → Vouchers answers 503 `migration_required`, and the plan, the learning paths and the tier gate keep answering |
+| `npm run test:client` | exit 0; 21 files, 220 tests (27 new: 19 in `voucher.test.tsx`, 8 in `dev-vouchers.test.tsx`) |
+| `npm run check:unused`, `npm run check:security` | exit 0 each; knip reports no new finding |
+| `npm run build` (with CI's `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev`), `npm run check:public`, `npm run check:bundle` | exit 0 each; 13 public URLs; 221,047 of 243,000 gzip bytes; the existing warning about chunks over 500 kB |
+| `npm audit --omit=dev`, `npm audit --omit=dev --prefix client` | exit 0 each; 0 vulnerabilities |
+| `git diff --check 4022afd..HEAD` | clean |
+| `npm run check:responsive -- --block-external` against `vite preview` on :4173, `CHROME_BIN` = Chromium 141 from `/opt/pw-browsers/chromium-1228`, over `/premium`, `/profile`, `/dev`, `/terms`, `/privacy`, `/premium/cancel`, `/premium/success`, a coding challenge and `/learn` | exit 0: 63 probes (9 routes × 7 widths, 360 to 1440), 0 with issues, 0 unprobed |
+| The same with `RESPONSIVE_THEME=dark` at 360, 390, 768 and 1280 | exit 0: 36 probes, 0 with issues, 0 unprobed |
+| CI's two sweeps: `/`, `/quiz`, `/topics/javascript-closures` and `/cs/topics/javascript-closures` at 360 to 1440, then `RESPONSIVE_THEME=dark RESPONSIVE_LOCALE=cs` over `/` and `/cs/topics/javascript-closures` at 390, 768 and 1280 | exit 0 each: 28 and 6 probes, 0 with issues |
+| `npm run test:browser` for `public.spec.ts`, `evolving.spec.ts` and `segmented.spec.ts` | exit 0 each; 5, 2 and 4 passed |
+| `npm run test:harness` | exit 0; 196 assertions |
+| `npm run audit:performance` (Lighthouse on `/`, lab values, not field data) | exit 0; mobile: performance 0.85, accessibility 1, best practices 0.96, SEO 1; desktop: 0.99, 1, 0.96, 1 |
+| `npm run build:storybook`, then `storybook.spec.ts` against the Storybook dev server, as CI's last step runs them | exit 0 each; 6 passed |
+| The end-to-end run, the 88-cell sweep and the axe pass above | exit 0 each |
+
+Each commit on its own: the worktree was detached at each of the ten commits from `e95ac9d` to `5bb53d8` in order, and `npm run typecheck:api`, `npm run typecheck:tooling --prefix client`, `npm run test:launch`, `npm run test:fallbacks` and `npm run test:client` exited 0 at every one.
+
+### Production order for 045
+
+1. In the Supabase SQL editor, run `supabase/supabase-schema-045.sql` (md5 `9e5750618d6586ba153bb31f6b7bbec9`). It needs 039 to 044, which production has had since 2026-09-26, and running it twice changes nothing.
+2. Run this check. It returns one row: `t`, `t`, `5`, `t`, `t`, `0`, `t`, then `2358b9e7c57afb3eafc4af76e9e0c9f4`, `2a82520c9cd0e3845839b7703924444e` and `dc95d11afc6d30267f577cf5e359de48`, the hashes a local database with 039 to 045 gives. Then open the security advisor.
+
+   ```sql
+   SELECT to_regclass('public.premium_vouchers') IS NOT NULL AS vouchers_table,
+          to_regclass('public.premium_voucher_redemptions') IS NOT NULL AS redemptions_table,
+          (SELECT count(*) FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public'
+              AND p.proname IN ('premium_voucher_json', 'create_premium_voucher', 'list_premium_vouchers',
+                                'revoke_premium_voucher', 'redeem_premium_voucher')) AS voucher_routines,
+          (SELECT bool_and(p.prosecdef
+                           AND p.proconfig = ARRAY['search_path=""']
+                           AND has_function_privilege('service_role', p.oid, 'EXECUTE')
+                           AND NOT has_function_privilege('anon', p.oid, 'EXECUTE')
+                           AND NOT has_function_privilege('authenticated', p.oid, 'EXECUTE'))
+             FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+            WHERE n.nspname = 'public'
+              AND p.proname IN ('premium_voucher_json', 'create_premium_voucher', 'list_premium_vouchers',
+                                'revoke_premium_voucher', 'redeem_premium_voucher', 'delete_user_data')) AS routines_service_role_only,
+          (SELECT bool_and(c.relrowsecurity) FROM pg_class c
+            WHERE c.oid IN ('public.premium_vouchers'::regclass, 'public.premium_voucher_redemptions'::regclass)) AS rls_on,
+          (SELECT count(*) FROM pg_policies
+            WHERE schemaname = 'public' AND tablename IN ('premium_vouchers', 'premium_voucher_redemptions')) AS policies,
+          (SELECT bool_and(NOT has_table_privilege(r, t, 'SELECT') AND NOT has_table_privilege(r, t, 'INSERT')
+                           AND NOT has_table_privilege(r, t, 'UPDATE') AND NOT has_table_privilege(r, t, 'DELETE'))
+             FROM unnest(ARRAY['anon', 'authenticated']) AS r,
+                  unnest(ARRAY['public.premium_vouchers', 'public.premium_voucher_redemptions']) AS t) AS no_browser_grant,
+          md5(pg_get_functiondef('public.delete_user_data(text)'::regprocedure)) AS delete_user_data_md5,
+          md5(pg_get_functiondef('public.redeem_premium_voucher(text,text)'::regprocedure)) AS redeem_md5,
+          md5(pg_get_functiondef('public.create_premium_voucher(text,text,text,integer,integer,timestamptz,text)'::regprocedure)) AS create_md5;
+   ```
+
+3. Merge. Until the deploy, nothing calls the new routines; after it, `/premium` and `/dev` → Vouchers use them.
+4. Create vouchers in `/dev` → Vouchers (NEEDED.md). A voucher needed before the deploy can come from the SQL editor instead: this statement draws a random twelve-character code, stores only its hash and first four characters, and shows the code once, in its own result. Edit the note, the days (`NULL` for no end) and the uses first.
+
+   ```sql
+   WITH c AS (
+     SELECT string_agg(
+              substr('0123456789ABCDEFGHJKMNPQRSTVWXYZ', 1 + (get_byte(r.b, i) & 31), 1),
+              '' ORDER BY i) AS code
+     FROM (SELECT sha256(convert_to(gen_random_uuid()::text, 'UTF8')) AS b) AS r,
+          generate_series(0, 11) AS i
+   )
+   SELECT substr(c.code, 1, 4) || '-' || substr(c.code, 5, 4) || '-' || substr(c.code, 9, 4) AS code_shown_once,
+          public.create_premium_voucher(
+            encode(sha256(convert_to(c.code, 'UTF8')), 'hex'),
+            left(c.code, 4),
+            'First voucher: <who it is for>',
+            30,    -- Premium days, counted from the redemption; NULL = no end
+            1,     -- how many accounts may redeem it
+            NULL,  -- last moment it can be redeemed, or NULL
+            NULL)  -- created_by: NULL, or the admin's account id
+          AS voucher
+   FROM c;
+   ```
+
+   An empty `voucher` column means the code already existed; run it again. On a local database with 039 to 045 it returned `K156-F7BT-06EM` and the voucher's row; that code, typed as `k156 f7bt–06em` with spaces around it and put through `normalizeVoucherCode` and `voucherHash`, redeemed a 30-day promo grant noted "Voucher K156".
+
+Not verified here: production (this step may not write to it), PostgREST 12.2.12 itself (the stand-in answers a missing routine as it does), Upstash's sliding window (the checks ran the in-memory bucket; production maps five and ten tries onto a 3,600-second window), and a real Google sign-in. The NEEDED.md item "Check a voucher end to end on production after 045" runs the real stack, sign-in included.
