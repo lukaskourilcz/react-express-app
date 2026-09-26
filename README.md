@@ -80,7 +80,7 @@ lib/billing/                 Stripe checkout, portal, webhook, subscription sync
 lib/rewards/                 coins, invitations, merchandise orders, the Spreadshop promotion
 lib/github-app.ts            GitHub App JWT, installation tokens, garden commits
 shared/                      product and subject registry, coding catalogue types and browser index
-supabase/supabase-schema*.sql         baseline plus migrations through 044
+supabase/supabase-schema*.sql         baseline plus migrations through 046
 docs/                        launch, architecture, backup, growth, content sources, coding integration plan
 scripts/test-launch-contracts.ts
 scripts/test-coding-content.ts        content contract: solutions proven, payloads answer-free, difficulty labels, Easy-band coverage matrix
@@ -125,7 +125,7 @@ Production requires:
 - `VITE_PRODUCT=devshark`, `VITE_LOCK_SUBJECT=webdev`, `PRODUCT_ID=devshark` and `PRODUCT_SUBJECT=webdev` (or leave them unset; they may not name anything else).
 - `ADMIN_EMAILS` or Supabase `app_metadata.role=admin` for `/dev`.
 - Google OAuth origins and callback URLs for every production domain.
-- All migrations through **`supabase/supabase-schema-044.sql`**, in numeric order.
+- All migrations through **`supabase/supabase-schema-046.sql`**, in numeric order.
 
 Strongly recommended for a public deployment:
 
@@ -158,7 +158,7 @@ The twelve physical handlers multiplex related operations to stay within the dep
 
 ## Database and operations
 
-Apply `supabase/supabase-schema.sql`, then numbered migrations in order through 044 (each file's header says what it adds; `docs/release-acceptance.md` records how each was verified). Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and a hint cache — additively and idempotently. Migration 025 adds coding progress, attempts, drafts, the per-level coding gate, and the GitHub garden connection and commit queue, with the service-only `record_coding_verdict` and `record_coding_reveal` functions.
+Apply `supabase/supabase-schema.sql`, then numbered migrations in order through 046 (each file's header says what it adds; `docs/release-acceptance.md` records how each was verified). Migration 023 adds the one-time submission ledger, subject-scopes multiplayer and flashcards, hardens service-only functions and leaderboard identity, makes roadmap answer recording atomic, enforces complete attempts/prerequisites, adds retention helpers, and adds production indexes. Migration 024 adds the daily-habit backing — spaced-mastery pass tracking inside verified roadmap completion, freeze-aware streaks, server-synced badges, Shark Cards, and a hint cache — additively and idempotently. Migration 025 adds coding progress, attempts, drafts, the per-level coding gate, and the GitHub garden connection and commit queue, with the service-only `record_coding_verdict` and `record_coding_reveal` functions.
 
 `npm run test:harness` drives the built React sandbox in headless Chromium and asserts the postMessage contract the workbench depends on: one `ready`, one `done` per run, tokens that keep a superseded run from settling, compile and render errors reported as such, and the fetch stub answering in place of the network. It needs an existing client build and a Chromium (set `CHROME_BIN` if it is not on a usual path); with no browser available it prints a notice and exits 0.
 

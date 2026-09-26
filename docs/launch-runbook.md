@@ -91,11 +91,12 @@ for dependency snapshot preparation, isolation checks, resource limits and rollb
    owning a row is not a reason to read it. The other four learning-path
    tables need both the owner policy and the matching `GRANT SELECT`.
 9. Apply `supabase/supabase-schema-027.sql` through
-   `supabase/supabase-schema-044.sql` in numeric order if the environment does
+   `supabase/supabase-schema-046.sql` in numeric order if the environment does
    not already contain them; each file's header says what it adds and needs.
-   Production has 027–036 (2026-09-09), 037 (2026-09-18) and 038
-   (2026-09-21). 039 to 044 are the freemium migrations; `NEEDED.md` carries
-   applying them as owner items.
+   Production has 027–036 (2026-09-09), 037 (2026-09-18), 038 (2026-09-21)
+   and 039–045 (2026-09-26). 046 drops four erasure routines the code no
+   longer calls, so it runs only after the deploy that stopped calling them;
+   `NEEDED.md` carries it as an owner item.
 
 Migrations 021–023 are idempotent. Legacy daily/challenge rows are assigned
 to `webdev`; no existing progress is deleted. Do not casually restore removed browser write
