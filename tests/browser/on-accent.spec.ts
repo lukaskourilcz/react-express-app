@@ -60,6 +60,15 @@ const measuredContrast = (page: Page, selector: string) => page.locator(selector
 
 async function expectReadable(page: Page, selector: string) {
   await expect(page.locator(selector).first()).toBeVisible();
+  // Let any finite fade or transition on the element or its ancestors finish,
+  // so neither check reads colours blended mid-animation.
+  await page.locator(selector).first().evaluate(async (element) => {
+    for (let node: Element | null = element; node; node = node.parentElement) {
+      await Promise.all(node.getAnimations()
+        .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+        .map((animation) => animation.finished.catch(() => undefined)));
+    }
+  });
   expect(await measuredContrast(page, selector)).toBeGreaterThanOrEqual(4.5);
   const contrast = await new AxeBuilder({ page }).include(selector).withRules(['color-contrast']).analyze();
   expect(contrast.violations).toEqual([]);

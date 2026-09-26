@@ -24,10 +24,13 @@ for (const route of ['/roadmap', '/leaderboard']) for (const theme of ['light', 
       .map((element) => getComputedStyle(element).backgroundColor));
     expect(rest.length).toBeGreaterThan(0);
     expect(rest).toEqual(rest.map(() => 'rgba(0, 0, 0, 0)'));
-    // Astryx's hover wash still wins over the shared rule.
+    // Astryx's hover wash still wins over the shared rule. The segment fades
+    // its background over 175 ms (reduced motion does not turn that off), so a
+    // read in the same instant as the hover can still see the resting
+    // transparent value; poll until the wash has painted.
     const unselected = page.locator('.astryx-segmented-control-item[aria-checked="false"]').first();
     await unselected.hover();
-    expect(await unselected.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
+    await expect.poll(() => unselected.evaluate((element) => getComputedStyle(element).backgroundColor)).not.toBe('rgba(0, 0, 0, 0)');
     await page.mouse.move(0, 0);
     const contrast = await new AxeBuilder({ page }).include('.astryx-segmented-control-item').withRules(['color-contrast']).analyze();
     expect(contrast.violations).toEqual([]);
