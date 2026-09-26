@@ -23,11 +23,7 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 // The page holds its first render for its data (lib/routeData.ts); a render
 // that suspends has to start inside an awaited act.
-async function mountShop() {
-  let view: ReturnType<typeof render> | null = null;
-  await act(async () => { view = render(<Shop />, { wrapper }); });
-  return view as unknown as ReturnType<typeof render>;
-}
+const mountShop = () => act(async () => render(<Shop />, { wrapper }));
 
 const unconfigured = (sku: ShopItem['sku'], variants: readonly string[] = []): ShopItem => ({
   sku, variants, availability: 'unconfigured', price: null, variantStock: [],
