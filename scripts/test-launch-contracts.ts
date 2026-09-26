@@ -1383,6 +1383,14 @@ async function voucherContracts() {
   for (const file of listFiles(join(process.cwd(), 'client/src')).filter((path) => /\.tsx?$/.test(path))) {
     assert.doesNotMatch(read(file.slice(process.cwd().length + 1)), /redeem_premium_voucher|create_premium_voucher|list_premium_vouchers|revoke_premium_voucher/, `${file} calls no voucher routine`);
   }
+  assert.match(read('client/src/lib/voucher.ts'), /body: JSON\.stringify\(\{ code \}\)/, 'the browser sends the code and nothing else');
+  // While checkout is off, /premium leads with the voucher (#voucher).
+  assert.match(read('client/src/components/PremiumPage.tsx'), /const voucherLeads = !billing\.enabled;/);
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    if (!key.startsWith('premium.voucher.')) continue;
+    assert.doesNotMatch(value, /\b(hurry|limited time|ends soon|last chance|act now|today only)\b/i, `${key} uses urgency copy`);
+  }
+  assert.equal(ENGLISH['premium.voucher.invalid'], 'This code does not open Premium. Check it and try again.', 'the page says what the server says, once, for every refused code');
 
   if (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) return;
 

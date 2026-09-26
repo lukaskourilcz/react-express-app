@@ -6,8 +6,13 @@
 //   paying subscriber    "Your plan" with the plan line and Manage billing; no
 //                        second checkout
 //   complimentary grant  "Your plan" says so; buying stays possible
-//   billing switched off one "Premium opens soon" line instead of buttons
+//   billing switched off one "Premium opens soon" line instead of buttons,
+//                        and the page leads with "Have a voucher?"
 //   settings unreachable one line that says so, with "Try again"
+//
+// "Have a voucher?" (PremiumVoucher.tsx, migration 045) is how Premium opens
+// while Stripe is off, so it comes first then, after "Your plan" when the
+// account holds Premium already. With billing on it follows the plans.
 //
 // No urgency copy, no countdowns and no scarcity. The price always carries
 // "VAT included", and the renewal, the waiver sentence and the refund sit next
@@ -26,6 +31,7 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { Page } from './PublicInfoPages';
 import PlanLine from './PlanLine';
 import PremiumCheckoutButton from './PremiumCheckoutButton';
+import PremiumVoucher from './PremiumVoucher';
 import ComparisonTable from './landing/ComparisonTable';
 import { PremiumIncludes, PremiumSmallPrint, premiumVars, type RenderLink } from './PremiumFacts';
 import './DeepEndScreens.css';
@@ -83,6 +89,8 @@ export default function PremiumPage() {
   // Offline or the API is down: the buttons cannot know what to do, so the
   // page says so rather than spinning.
   const unreachable = billing.failed;
+  // Until checkout is known to be on, the voucher is the way in.
+  const voucherLeads = !billing.enabled;
 
   return (
     <Page kicker={t('billing.kicker')} title={t('premium.page.title', vars)} lead={t('premium.page.lead')}>
@@ -93,6 +101,8 @@ export default function PremiumPage() {
             <PlanLine />
           </section>
         )}
+
+        {voucherLeads && <PremiumVoucher billingClosed={closed} />}
 
         <section className="ss-premium-plans" aria-labelledby={ids.plans}>
           <h2 id={ids.plans} className="ss-premium-section-title">{t('premium.page.plansTitle')}</h2>
@@ -110,6 +120,8 @@ export default function PremiumPage() {
           {!closed && !unreachable && !authLoading && !isAuthenticated && <p className="ss-premium-note">{t('premium.page.signedOut')}</p>}
           <PremiumSmallPrint t={t} link={routerLink} headingId={ids.smallPrint} />
         </section>
+
+        {!voucherLeads && <PremiumVoucher billingClosed={false} />}
 
         <PremiumIncludes t={t} headingId={ids.includes} />
 
