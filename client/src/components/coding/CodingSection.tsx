@@ -1,6 +1,6 @@
 // The Coding section: home, one track, one task, and the review queue.
 // devShark-only routes; the App gates them like /roadmap and /typing.
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
@@ -11,8 +11,8 @@ import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
 import { CodingWorkbench } from '../../coding/CodingWorkbench';
 import { DesignRunner } from '../../coding/DesignRunner';
-import { codingKeys, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
-import { useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
+import { codingKeys, codingProgressQuery, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
+import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
 import { ChallengeRunPlanner, taskHref } from './ChallengeRunPlanner';
 import { CODING_INDEX } from '../../../../shared/coding-index';
 import { evolvingResume, evolvingStage, evolvingTaskTrack, evolvingPassed, evolvingUnlocked, listedChallenges, type EvolvingCategory } from '../../../../shared/evolving';
@@ -44,6 +44,8 @@ import type { CodingProgressResponse, CodingTaskProgress, CodingVerdictResponse 
 import { Badge } from '@astryxdesign/core/Badge';
 import { isPremiumRequired } from '../../lib/api';
 import { isBarred, useLocks, type LockState } from '../../lib/locks';
+import { entitlementQuery } from '../../lib/entitlement';
+import { readOnce, settled, useFirstData } from '../../lib/routeData';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { codingContent, gatedRef } from '../../../../shared/tiers';
 import '../../coding/Coding.css';
@@ -113,6 +115,22 @@ function useStatuses(progress: CodingProgressResponse | undefined) {
     return row.status;
   }, [unlocked, due, progress, premiumOf]);
   return { passed, due, statusOf, unlocked, lockReason, premiumOf, planLoading, planFailed: signedIn && planFailed, retryPlan };
+}
+
+/** A signed-in account's plan and progress (and, where the screen shows them,
+ * the open run or the saved stars), in the cache before the screen's first
+ * render, so it draws once instead of drawing zeros and a blank run first. */
+function useCodingFirstData(extra: 'session' | 'bookmarks' | null) {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  useFirstData(user ? `${user.id} ${extra ?? ''}` : null, () => settled(user
+    ? [
+        readOnce(queryClient, entitlementQuery(user.id)),
+        readOnce(queryClient, codingProgressQuery),
+        extra === 'session' ? readOnce(queryClient, practiceSessionQuery) : null,
+        extra === 'bookmarks' ? readOnce(queryClient, bookmarksQuery) : null,
+      ]
+    : []));
 }
 
 const nextOpenTask = (tasks: readonly CodingTaskSummary[], statusOf: (t: CodingTaskSummary) => Status, after?: string): CodingTaskSummary | null => {
@@ -203,7 +221,9 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
   const titleId = `${track ? `${track}-paths` : category ?? 'evolving'}-title`;
   const titleKey = track ? 'coding.evolving.paths' : category === 'fullstack' ? 'coding.evolving.fullstack' : category === 'debugging' ? 'coding.evolving.debugging' : 'coding.evolving.title';
   const bodyKey = track ? 'coding.evolving.pathsBody' : category === 'fullstack' ? 'coding.evolving.fullstackBody' : category === 'debugging' ? 'coding.evolving.debuggingBody' : 'coding.evolving.body';
-  useEffect(() => {
+  // Before paint: measured after it, the list first drew at the fallback height
+  // and then jumped to five rows.
+  useLayoutEffect(() => {
     const list = listRef.current;
     if (!list || !scrollable) return;
     const rows = Array.from(list.children).slice(0, 5);
@@ -272,6 +292,7 @@ function NextChallenge({ next, state, onRetry }: { next: CodingTaskSummary | nul
 }
 
 export function CodingHome() {
+  useCodingFirstData('session');
   const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
@@ -354,6 +375,7 @@ export function CodingHome() {
 }
 
 export function FullStackScreen() {
+  useCodingFirstData(null);
   const { t } = useLanguage();
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
@@ -369,6 +391,7 @@ export function FullStackScreen() {
 
 /* ── /coding/:track ──────────────────────────────────────────────────── */
 export function CodingTrackScreen() {
+  useCodingFirstData('bookmarks');
   const { t, lang } = useLanguage();
   const { track: trackParam } = useParams();
   const [params, setParams] = useSearchParams();

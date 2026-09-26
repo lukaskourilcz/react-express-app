@@ -1,7 +1,13 @@
+import { Suspense, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { QueryClient, queryOptions } from '@tanstack/react-query';
 import { installIntentPreloading, preloadPath, routeChunk } from '../src/lib/routePreload';
+import { FIRST_DATA_WAIT_MS, readOnce, settled, useFirstData } from '../src/lib/routeData';
 
-// A navigation that draws once starts the next page's code on intent.
+// The two halves of a navigation that draws once: the next page's code starts
+// loading on intent, and a page can hold its first render for its data.
 
 describe('route chunks', () => {
   it('imports a page once, however many links and routes ask for it', async () => {
@@ -99,5 +105,92 @@ describe('intent preloading', () => {
     routeChunk((path) => path === window.location.pathname, here);
     link(window.location.pathname).dispatchEvent(new Event('pointerdown', { bubbles: true }));
     expect(here).not.toHaveBeenCalled();
+  });
+});
+
+describe('first data', () => {
+  afterEach(() => vi.useRealTimers());
+
+  function Page({ dataKey, load, label }: { dataKey: string | null; load: () => Promise<unknown>; label: string }) {
+    useFirstData(dataKey, load);
+    return <p>{label}</p>;
+  }
+  const tree = (page: ReactNode, entry = '/page') => (
+    <MemoryRouter initialEntries={[entry]}>
+      <Suspense fallback={<p>fallback</p>}>{page}</Suspense>
+    </MemoryRouter>
+  );
+  // A suspending render has to happen inside an awaited act.
+  const mount = async (page: ReactNode, entry = '/page') => {
+    let view: ReturnType<typeof render> | null = null;
+    await act(async () => { view = render(tree(page, entry)); });
+    return view as unknown as ReturnType<typeof render>;
+  };
+
+  it('reads what the cache holds, stale or not, and fetches the rest once', async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: 3, retryDelay: 1000 } } });
+    const cachedFn = vi.fn(async () => 'fresh');
+    const cached = queryOptions({ queryKey: ['cached'], queryFn: cachedFn, staleTime: 0 });
+    client.setQueryData(cached.queryKey, 'stale');
+    await expect(readOnce(client, cached)).resolves.toBe('stale');
+    expect(cachedFn).not.toHaveBeenCalled();
+
+    const failing = vi.fn(async () => { throw new Error('502'); });
+    const started = Date.now();
+    await expect(readOnce(client, queryOptions({ queryKey: ['failing'], queryFn: failing }))).rejects.toThrow('502');
+    expect(failing).toHaveBeenCalledTimes(1);
+    expect(Date.now() - started).toBeLessThan(500);
+  });
+
+  it('waits for every read and keeps none of the failures', async () => {
+    let late: () => void = () => undefined;
+    const slow = new Promise<void>((resolve) => { late = resolve; });
+    let done = false;
+    const all = settled([Promise.reject(new Error('offline')), null, slow]).then(() => { done = true; });
+    await Promise.resolve();
+    expect(done).toBe(false);
+    late();
+    await all;
+    expect(done).toBe(true);
+  });
+
+  it('renders at once when there is nothing to wait for', async () => {
+    const load = vi.fn(async () => undefined);
+    await mount(<Page dataKey={null} load={load} label="page" />);
+    expect(screen.getByText('page')).toBeInTheDocument();
+    expect(load).not.toHaveBeenCalled();
+  });
+
+  it('holds the first render until the data is in, then never again', async () => {
+    let answer: () => void = () => undefined;
+    const load = vi.fn(() => new Promise<void>((resolve) => { answer = resolve; }));
+    const view = await mount(<Page dataKey="account-1" load={load} label="with data" />);
+    expect(screen.getByText('fallback')).toBeInTheDocument();
+    expect(screen.queryByText('with data')).toBeNull();
+    await act(async () => answer());
+    // React reveals a boundary that showed its fallback no sooner than 300ms
+    // after it did; in the app the fallback never shows during a navigation.
+    expect(await screen.findByText('with data')).toBeInTheDocument();
+    expect(load).toHaveBeenCalledTimes(1);
+
+    // A later change (another account, a refetch) redraws in place.
+    view.rerender(tree(<Page dataKey="account-2" load={load} label="redrawn" />));
+    expect(screen.getByText('redrawn')).toBeInTheDocument();
+    expect(load).toHaveBeenCalledTimes(1);
+  });
+
+  it('gives up waiting after the cap, and a failed load does not block the page', async () => {
+    vi.useFakeTimers();
+    await mount(<Page dataKey="slow" load={() => new Promise(() => undefined)} label="own loading state" />, '/slow');
+    expect(screen.getByText('fallback')).toBeInTheDocument();
+    await act(async () => { vi.advanceTimersByTime(FIRST_DATA_WAIT_MS - 1); });
+    expect(screen.queryByText('own loading state')).toBeNull();
+    // The cap, then React's reveal throttle.
+    await act(async () => { vi.advanceTimersByTime(1 + 400); });
+    expect(screen.getByText('own loading state')).toBeInTheDocument();
+
+    vi.useRealTimers();
+    await mount(<Page dataKey="failing" load={() => Promise.reject(new Error('offline'))} label="own error state" />, '/failing');
+    expect(await screen.findByText('own error state')).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@
 // the plan live in `./locks`, which carries the coding index, so screens that
 // only need the plan line (the Profile) do not load it.
 import { useCallback } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import { useAuth } from './auth';
 import type { EntitlementResponse, Tier } from '../../../shared/tiers';
@@ -32,13 +32,19 @@ export interface EntitlementState {
   refetch: () => void;
 }
 
+/** One account's plan, as one set of options the hook and a page's first-data
+ * prefetch share. */
+export const entitlementQuery = (userId: string) => queryOptions({
+  queryKey: entitlementKeys.user(userId),
+  queryFn: ({ signal }) => fetchEntitlement(signal),
+  staleTime: 60_000,
+});
+
 export function useEntitlement(): EntitlementState {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const query = useQuery({
-    queryKey: entitlementKeys.user(user?.id ?? 'signed-out'),
-    queryFn: ({ signal }) => fetchEntitlement(signal),
+    ...entitlementQuery(user?.id ?? 'signed-out'),
     enabled: isAuthenticated && Boolean(user),
-    staleTime: 60_000,
     refetchOnWindowFocus: true,
   });
   const data = isAuthenticated ? query.data ?? null : null;
