@@ -634,6 +634,7 @@ export const en = {
   'profile.deleteDescription': 'Permanently remove your sign-in identity and stored learning data. This cannot be undone.',
   'profile.deleteConfirm': 'This permanently deletes your profile, progress, statistics, flashcards, challenge entries and multiplayer records. This action cannot be undone.',
   'profile.deleteAction': 'Delete my account',
+  'profile.deletePremium': 'Your Premium subscription ends at once and is not refunded. Within 14 days of your first payment, withdraw on the cancellation page first to get that payment back.',
   'common.remove': 'Remove',
 
   // Learning track

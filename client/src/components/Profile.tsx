@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useId, useState, type ReactNode } from 'react';
 import { Kicker } from './landing/LandingKit';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Grid } from '@astryxdesign/core/Grid';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -40,6 +40,7 @@ import { FlameIcon, BoltIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOn
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
+import { useEntitlement } from '../lib/entitlement';
 import { SocialProfiles } from './SocialProfiles';
 import './DeepEndScreens.css';
 
@@ -806,17 +807,22 @@ function clearDeletedAccountState() {
   try { clear(sessionStorage); } catch { /* storage may be disabled */ }
 }
 
-function AccountDeletionCard() {
+export function AccountDeletionCard() {
   const t = useT();
   const { signOut } = useAuth();
   const navigate = useNavigate();
+  const plan = useEntitlement();
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  // Deleting the account ends a paid subscription at once and refunds nothing,
+  // so the card and the dialog say so, with the way to a refund while it
+  // still exists (review finding product-4).
+  const paying = plan.data?.subscriptionLive === true || (plan.tier === 'premium' && plan.data?.source === 'provider');
 
   const requestDeletion = () => {
     setConfirm({
       title: t('profile.deleteTitle'),
-      description: t('profile.deleteConfirm'),
+      description: paying ? `${t('profile.deleteConfirm')} ${t('profile.deletePremium')}` : t('profile.deleteConfirm'),
       actionLabel: t('profile.deleteAction'),
       destructive: true,
       onConfirm: async () => {
@@ -844,6 +850,12 @@ function AccountDeletionCard() {
             <SectionLabel>{t('profile.account')}</SectionLabel>
             <Text weight="semibold">{t('profile.deleteTitle')}</Text>
             <Text type="supporting" size="xsm" color="secondary">{t('profile.deleteDescription')}</Text>
+            {paying && (
+              <Text type="supporting" size="xsm">
+                {t('profile.deletePremium')}{' '}
+                <Link to="/premium/cancel?action=withdraw">{t('legal.link.cancel')}</Link>
+              </Text>
+            )}
             <HStack justify="end">
               <Button variant="destructive" size="sm" label={t('profile.deleteAction')} onClick={requestDeletion} />
             </HStack>
