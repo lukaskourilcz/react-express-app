@@ -1751,6 +1751,8 @@ On `b74d7ae` and on `7b4bc8f`, a chunk that failed:
 
 `curl -sS -o /dev/null -w '%{http_code} %{content_type}\n' https://devshark.app/assets/does-not-exist-0000.js` prints `200 text/html; charset=utf-8`. The catch-all rewrite in `vercel.json` does not exclude `assets/`, so a missing hashed file gets `index.html`, and the `/assets/(.*)` header rule adds `cache-control: public, max-age=31536000, immutable` and `x-content-type-options: nosniff` to it. A module script refuses `text/html`, so after a deploy a stale chunk fails the way a dropped request does. The browser may keep that HTML under the chunk's URL for a year, so no retry in place can fetch the file; a reload works, because the new `index.html` names new files. `vite preview` also answers a missing asset with `200 text/html`, which the browser spec relies on. This step leaves `vercel.json` alone (see the hand-off below).
 
+A deploy during this step showed the case live. At 20:45 UTC devshark.app served the entry `main-Ctu2GPhq.js`; after `7b4bc8f` went out it served `main-sb7BNA-6.js`, and the previous build's `main-Ctu2GPhq.js` and `CodingSection-DVDpGXcJ.js` then answered `200 text/html`. `objectWithoutPropertiesLoose-Cv5OCJ0e.js`, unchanged between the two builds, still answered JavaScript. A tab still running the earlier build would get the root screen on its first click on Coding; the spec shows that failure on local builds of `b74d7ae` and `7b4bc8f`.
+
 ### Does a second `import()` ask the network again?
 
 Measured in Chromium 141.0.7390.37, the Chromium in `/opt/pw-browsers`, with a local server that fails one module request once and counts every request (a scratch harness, not committed). In every row the first `import()` rejected with `TypeError: Failed to fetch dynamically imported module:` and the page chunk's URL, also when the chunk it imports failed.
@@ -1805,7 +1807,9 @@ The panel is the root screen's card (`ErrorPanel`), announced as an alert, with 
 | `8ea86c3` | `tests/browser/route-errors.spec.ts`; the "Browser checks" step runs it after `navigation.spec.ts` |
 | `f496fe1` | Merge of `origin/main` at `7b4bc8f` (Supabase on demand). The one conflict, in `quality.yml`, keeps both specs, `lazy-auth.spec.ts` first |
 | `b7358e2` | The browser spec drops the supabase-js chunk on a sign-in click |
-| this commit | This record, a rule in `DESIGN_RULES.md` §8 and P1.9 in `docs/design/product-ux-audit.md` |
+| `4b99f11` | This record, a rule in `DESIGN_RULES.md` §8 and P1.9 in `docs/design/product-ux-audit.md` |
+| `10c9e3e` | Merge of `origin/main` at `d2d9085` (documentation only: the bundle record for `7b4bc8f`). The one conflict, at the end of this file, keeps main's lines first, then this section |
+| this commit | The live stale deploy above, and the checks on the second merge |
 
 ### Evidence
 
@@ -1820,7 +1824,7 @@ The panel is the root screen's card (`ErrorPanel`), announced as an alert, with 
 
 ### Release contract on the final head
 
-The code is that of `b7358e2`; this record changes documentation only. I ran every command below, and each exit code is its own. Browser runs used `CHROME_BIN=/opt/pw-browsers/chromium` and `vite preview` on port 4511.
+The code is that of `b7358e2`; the commits after it change documentation only. I ran every command below, and each exit code is its own. Browser runs used `CHROME_BIN=/opt/pw-browsers/chromium` and `vite preview` on port 4511. After the second merge (`10c9e3e`, which brings a new `docs/quality/bundle-budget.json`), `npm run check:bundle` ran again: exit 0, 226,027 gzip bytes.
 
 | Check | Result |
 | --- | --- |
