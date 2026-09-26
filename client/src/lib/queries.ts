@@ -13,7 +13,7 @@ import { fetchLeaderboard, type LeaderboardPeriod } from './play';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from './supabase';
 import { listFlashcards } from './flashcards';
 import { getChallengeLeaderboard } from './challengeApi';
-import { useSubject } from './subjects';
+import { useSubject, type SubjectId } from './subjects';
 
 /** The roadmap level/checkpoint map, as one set of options the hook and a
  * page's first-data prefetch share. */
@@ -110,12 +110,16 @@ export function useFlashcards(enabled: boolean) {
   });
 }
 
+/** The Biggest Shark Challenge leaderboard of a subject, as one set of
+ * options the hook and the page's first-data prefetch share. */
+export const challengeLeaderboardQuery = (subject: SubjectId) => queryOptions({
+  queryKey: ['challenge', 'leaderboard', subject],
+  queryFn: getChallengeLeaderboard,
+  staleTime: 30_000,
+});
+
 /** The Biggest Shark Challenge leaderboard (best-effort; never throws to the UI). */
 export function useChallengeLeaderboard() {
   const [subject] = useSubject();
-  return useQuery({
-    queryKey: ['challenge', 'leaderboard', subject],
-    queryFn: getChallengeLeaderboard,
-    staleTime: 30_000,
-  });
+  return useQuery(challengeLeaderboardQuery(subject));
 }
