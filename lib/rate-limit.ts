@@ -10,11 +10,12 @@
 //
 //   2. In-memory token bucket (`checkRateLimit`) — the fallback used when
 //      Upstash isn't configured, or if a Redis call fails so we never hard-fail
-//      a request on the limiter. Buckets are keyed per (endpoint, client IP)
-//      and live in the module's Map, which persists across warm invocations of
-//      the same instance. Not distributed, but enough to blunt the
-//      "one script hammering one endpoint" abuse the app cares about
-//      (leaderboard spam, report spam, admin-password guessing).
+//      a request on the limiter. Buckets are keyed per (endpoint, caller): the
+//      identity a handler passes, always `user:<verified id>`, or the client
+//      IP when it passes none. They live in the module's Map, which persists
+//      across warm invocations of the same instance. Not distributed, but
+//      enough to blunt the "one script hammering one endpoint" abuse the app
+//      cares about (leaderboard spam, report spam, admin-password guessing).
 //
 // Callers should prefer `await enforceRateLimit(...)`; `checkRateLimit()` stays
 // exported for the fallback path and any sync call site.
@@ -37,6 +38,20 @@ export interface RateLimitConfig {
   key: string;
 }
 
+/**
+ * How many people may legitimately share one public address inside one room.
+ *
+ * This is a statement about networks, not a product cap. A school class is
+ * about thirty pupils and a school NATs all of them onto one address, so every
+ * `play` bucket below that is keyed by address has to hold a whole class, or
+ * a classroom round 429s its own participants. Thirty pupils, the teacher,
+ * and one spare.
+ *
+ * The per-person limits are enforced separately, per verified account, so
+ * raising these does not widen what any one learner may do.
+ */
+export const SHARED_NETWORK_SEATS = 32;
+
 export const RATE_LIMITS = {
   admin: { key: 'admin_gate', capacity: 5, refillPerSecond: 1 },
   quizSession: { key: 'quiz_session', capacity: 20, refillPerSecond: 20 / 60 },
@@ -52,10 +67,40 @@ export const RATE_LIMITS = {
   roadmapMutation: { key: 'roadmap_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   roadmapAnswer: { key: 'roadmap_answer', capacity: 80, refillPerSecond: 80 / 60 },
   roadmapComplete: { key: 'roadmap_complete', capacity: 12, refillPerSecond: 12 / 60 },
-  playCreate: { key: 'play_create', capacity: 5, refillPerSecond: 5 / 60 },
-  playJoin: { key: 'play_join', capacity: 12, refillPerSecond: 12 / 60 },
-  playState: { key: 'play_state', capacity: 60, refillPerSecond: 60 / 60 },
-  playMutation: { key: 'play_mutation', capacity: 30, refillPerSecond: 30 / 60 },
+  // Play has two tiers (ported by hand from fa884b7). The address buckets
+  // hold a whole class behind one NAT; each is paired with a bucket keyed by
+  // the caller's verified account (`user:<id>`) at the rate the address bucket
+  // used to carry, which is what bounds one learner.
+  //
+  // A host opens one room per round, but several teachers in one school share
+  // one address, so the address bucket holds a handful of concurrent rooms.
+  playCreate: { key: 'play_create', capacity: 20, refillPerSecond: 20 / 60 },
+  // A class arrives at once: one join each, plus retries on a bad code.
+  playJoin: { key: 'play_join', capacity: SHARED_NETWORK_SEATS + 16, refillPerSecond: (SHARED_NETWORK_SEATS + 16) / 60 },
+  // Every seat on the 4 s Realtime fallback poll in `Play.tsx`, 15 reads a
+  // minute each. With Realtime up, each answer's broadcast makes every client
+  // read state again, and a full class outruns this bucket; coalescing those
+  // reads in `Play.tsx` is the fix for that, not a larger bucket.
+  playState: { key: 'play_state', capacity: SHARED_NETWORK_SEATS * 15 + 120, refillPerSecond: (SHARED_NETWORK_SEATS * 15 + 120) / 60 },
+  // One answer per seat per question, a brisk round being a few questions a
+  // minute, plus the host's heartbeat and controls.
+  playMutation: { key: 'play_mutation', capacity: SHARED_NETWORK_SEATS * 5 + 40, refillPerSecond: (SHARED_NETWORK_SEATS * 5 + 40) / 60 },
+  // Per verified account: the values the address buckets carried before the
+  // split, so no individual may do more than before.
+  playCreatePerUser: { key: 'play_create_user', capacity: 5, refillPerSecond: 5 / 60 },
+  playJoinPerUser: { key: 'play_join_user', capacity: 12, refillPerSecond: 12 / 60 },
+  playStatePerUser: { key: 'play_state_user', capacity: 60, refillPerSecond: 60 / 60 },
+  playMutationPerUser: { key: 'play_mutation_user', capacity: 30, refillPerSecond: 30 / 60 },
+  // A classroom host's answer distribution. The presenter view polls it every
+  // 1.5 s (`Play.tsx`), 40 reads a minute, beside its own state reads, so it
+  // does not share `playStatePerUser` (fa884b7 charged it there). It had no
+  // limit before the split; this holds two presenter windows.
+  playDistributionPerUser: { key: 'play_distribution_user', capacity: 90, refillPerSecond: 90 / 60 },
+  // `state` is the one play action a caller without an account may complete:
+  // anyone holding the six-character code can read it. Signed out, it keeps
+  // the address rate it had before the split, so the class-sized `playState`
+  // buys an anonymous caller nothing.
+  playStateAnonymous: { key: 'play_state_anon', capacity: 60, refillPerSecond: 60 / 60 },
   accountDelete: { key: 'account_delete', capacity: 2, refillPerSecond: 2 / 3600 },
   aiExplanation: { key: 'ai_explanation', capacity: 3, refillPerSecond: 5 / 3600 },
   codingRun: { key: 'coding_run', capacity: 30, refillPerSecond: 30 / 600 },
@@ -108,6 +153,15 @@ function maybeCleanup(now: number): void {
  * for legit users behind a shared proxy.
  */
 function clientIp(req: VercelRequest): string {
+  const address = forwardedAddress(req);
+  // An account's bucket is `user:<id>`. No address starts that way, but the
+  // header is whatever the client sent where no proxy overwrites it, so such
+  // a value is moved out of that namespace rather than reach an account's
+  // bucket.
+  return address.startsWith('user:') ? `ip:${address}` : address;
+}
+
+function forwardedAddress(req: VercelRequest): string {
   const xff = req.headers['x-forwarded-for'];
   if (typeof xff === 'string' && xff.length > 0) return xff.split(',')[0].trim();
   if (Array.isArray(xff) && xff.length > 0) return String(xff[0]).split(',')[0].trim();
@@ -117,8 +171,14 @@ function clientIp(req: VercelRequest): string {
 }
 
 /**
- * Consume one token from the (endpoint, IP) bucket. Returns true if allowed,
- * or false + writes a 429 response with a Retry-After header.
+ * Consume one token from the (endpoint, caller) bucket. Returns true if
+ * allowed, or false + writes a 429 response with a Retry-After header.
+ *
+ * Pass `identity`, `user:<id>` built from a verified token, to bucket per
+ * account instead of per address: a classroom round has thirty callers behind
+ * one address. The `user:` prefix keeps it apart from every address
+ * (`clientIp` never returns one that starts so), so one handler can hold an
+ * address bucket and an account bucket at once.
  */
 export function checkRateLimit(
   req: VercelRequest,

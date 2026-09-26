@@ -26,7 +26,7 @@ import {
   createChallengeRun,
   stableAttemptId,
 } from '../lib/quiz-tokens';
-import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS } from '../lib/rate-limit';
+import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, parseScheduledFor } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
@@ -2446,6 +2446,114 @@ async function main() {
   assert.equal(rateRes.statusCode, 429);
   assert.ok(rateRes.headers.has('retry-after'));
   assert.equal(isDistributedRateLimitEnabled(), false, 'test environment exercises the safe local fallback');
+
+  // A classroom round is thirty pupils joining one room from one school
+  // address. Every `play` bucket used to be keyed by address alone and sized
+  // for one person, so the feature 429'd its own participants. These are the
+  // five assertions of fa884b7, ported onto this tree's `user:<id>` identities.
+  {
+    const stamp = Date.now();
+    const playSource = readFileSync(join(process.cwd(), 'api/play/[action].ts'), 'utf8');
+    const playClient = readFileSync(join(process.cwd(), 'client/src/components/Play.tsx'), 'utf8');
+    const perMinute = (ms: string | undefined) => 60_000 / Number(ms);
+    const statePollsPerSeat = perMinute(/const POLL_FALLBACK_MS = (\d+);/.exec(playClient)?.[1]);
+    const presenterPolls = perMinute(/window\.setInterval\(load, (\d+)\)/.exec(playClient)?.[1]);
+    assert.ok(statePollsPerSeat > 0 && presenterPolls > 0, 'Play.tsx still names its state and distribution polls');
+
+    // 1. Two people behind one address do not share a budget, and an identity
+    //    is still bounded once its own budget is spent.
+    const sharedAddress = { headers: { 'x-forwarded-for': `class-${stamp}` }, socket: {} } as never;
+    const perUser = { key: `class-user-${stamp}`, capacity: 1, refillPerSecond: 0.0001 };
+    assert.equal(checkRateLimit(sharedAddress, mockResponse() as never, perUser, 'user:pupil-a'), true);
+    assert.equal(checkRateLimit(sharedAddress, mockResponse() as never, perUser, 'user:pupil-b'), true,
+      'a second identity on the same address must have its own budget, or one NAT breaks a class');
+    const spent = mockResponse();
+    assert.equal(checkRateLimit(sharedAddress, spent as never, perUser, 'user:pupil-a'), false,
+      'an identity must still be bounded once its own budget is spent');
+    assert.equal(spent.statusCode, 429);
+
+    // 2. An account's bucket and an address's never meet, even when the
+    //    address header reads like an account; and every identity a handler
+    //    passes is `user:` and a verified id.
+    const collide = { key: `class-ns-${stamp}`, capacity: 1, refillPerSecond: 0.0001 };
+    const asAddress = { headers: { 'x-forwarded-for': 'user:pupil-c' }, socket: {} } as never;
+    assert.equal(checkRateLimit(asAddress, mockResponse() as never, collide), true);
+    assert.equal(checkRateLimit(asAddress, mockResponse() as never, collide, 'user:pupil-c'), true,
+      'the identity and address namespaces must not collide');
+    for (const file of ['api', 'lib'].flatMap(codeFiles)) {
+      const source = readFileSync(join(process.cwd(), file), 'utf8');
+      for (const call of source.matchAll(/enforceRateLimit\(\s*req,\s*res,\s*RATE_LIMITS\.\w+,\s*([^)]+?)\s*\)/g)) {
+        assert.match(call[1], /^`user:\$\{[\w.]+\}`$/, `${file} passes ${call[1]} as an identity; an identity is user:<verified id>`);
+      }
+    }
+
+    // 3. No individual gained anything from the wider address buckets: each
+    //    per-identity limit is what its address bucket carried before the
+    //    split, and a signed-out `state` caller keeps that address rate.
+    const preSplit = { playCreatePerUser: 5, playJoinPerUser: 12, playStatePerUser: 60, playMutationPerUser: 30, playStateAnonymous: 60 } as const;
+    for (const [key, perMinuteBefore] of Object.entries(preSplit) as Array<[keyof typeof preSplit, number]>) {
+      assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
+      assert.equal(RATE_LIMITS[key].capacity, perMinuteBefore, `${key} holds the pre-split ${perMinuteBefore} a minute`);
+      assert.equal(RATE_LIMITS[key].refillPerSecond, perMinuteBefore / 60, `${key} refills at the pre-split rate`);
+    }
+    // The presenter's distribution poll had no limit; its bucket holds two
+    // presenter windows and is not shared with the host's state reads.
+    assert.ok(RATE_LIMITS.playDistributionPerUser.capacity >= 2 * presenterPolls, 'two presenter windows fit the distribution bucket');
+    assert.notEqual(RATE_LIMITS.playDistributionPerUser.key, RATE_LIMITS.playStatePerUser.key, 'distribution polls do not spend the host\'s state budget');
+
+    // 4. A whole class fits in the address buckets.
+    assert.ok(RATE_LIMITS.playJoin.capacity >= SHARED_NETWORK_SEATS, 'every seat must be able to join inside one window');
+    assert.ok(RATE_LIMITS.playState.capacity >= SHARED_NETWORK_SEATS * statePollsPerSeat,
+      'every seat must survive the Realtime fallback poll in Play.tsx');
+    assert.ok(RATE_LIMITS.playMutation.capacity >= SHARED_NETWORK_SEATS, 'every seat must be able to answer one question');
+    // Run it: a class behind one address joins, polls state for a minute and
+    // answers, through both tiers as the handler takes them.
+    const classroom = { headers: { 'x-forwarded-for': `classroom-${stamp}` }, socket: {} } as never;
+    const seat = (n: number) => `user:seat-${stamp}-${n}`;
+    const through = (address: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS], account: (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS], n: number) =>
+      checkRateLimit(classroom, mockResponse() as never, address) && checkRateLimit(classroom, mockResponse() as never, account, seat(n));
+    for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+      assert.ok(through(RATE_LIMITS.playJoin, RATE_LIMITS.playJoinPerUser, n), `seat ${n + 1} of ${SHARED_NETWORK_SEATS} joins`);
+    }
+    for (let poll = 0; poll < statePollsPerSeat; poll += 1) {
+      for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+        assert.ok(through(RATE_LIMITS.playState, RATE_LIMITS.playStatePerUser, n), `seat ${n + 1} reads state, poll ${poll + 1}`);
+      }
+    }
+    for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+      assert.ok(through(RATE_LIMITS.playMutation, RATE_LIMITS.playMutationPerUser, n), `seat ${n + 1} answers`);
+    }
+    // One pupil retrying a join is stopped by the account bucket, while the
+    // address still has room for the class.
+    for (let retry = 1; retry < RATE_LIMITS.playJoinPerUser.capacity; retry += 1) {
+      assert.ok(through(RATE_LIMITS.playJoin, RATE_LIMITS.playJoinPerUser, 0), `seat 1 joins again, try ${retry + 1}`);
+    }
+    const stopped = mockResponse();
+    assert.equal(checkRateLimit(classroom, mockResponse() as never, RATE_LIMITS.playJoin), true, 'the address bucket still has room');
+    assert.equal(checkRateLimit(classroom, stopped as never, RATE_LIMITS.playJoinPerUser, seat(0)), false, 'one account is bounded at 12 joins a minute');
+    assert.equal(stopped.statusCode, 429);
+
+    // 5. The handler takes each per-account token with a verified subject,
+    //    after verifying it and before any database read.
+    for (const [cfg, subject] of [['playCreatePerUser', 'hostSub'], ['playJoinPerUser', 'sub'], ['playStatePerUser', 'sub'],
+                                  ['playMutationPerUser', 'sub'], ['playDistributionPerUser', 'sub']] as const) {
+      assert.ok(playSource.includes(`RATE_LIMITS.${cfg}, \`user:\${${subject}}\``), `play must consume ${cfg} keyed by a verified ${subject}`);
+    }
+    assert.match(playSource, /RATE_LIMITS\.playStateAnonymous\)/, 'the anonymous state branch must keep its own address bucket');
+    for (const [fn, cfg, verify] of [['create', 'playCreatePerUser', 'requireAuthSub'], ['join', 'playJoinPerUser', 'requireAuthSub'],
+                                     ['state', 'playStatePerUser', 'tryAuth'], ['state', 'playStateAnonymous', 'tryAuth'],
+                                     ['control', 'playMutationPerUser', 'requireAuthSub'], ['answer', 'playMutationPerUser', 'requireAuthSub'],
+                                     ['distribution', 'playDistributionPerUser', 'requireAuthSub'], ['heartbeat', 'playMutationPerUser', 'requireAuthSub']] as const) {
+      const start = playSource.indexOf(`async function ${fn}(`);
+      const end = playSource.indexOf('\nasync function ', start + 1);
+      const body = playSource.slice(start, end < 0 ? undefined : end);
+      const reads = ['supabase!', 'getGameSettings(', 'getEffectiveQuestions('].map((needle) => body.indexOf(needle)).filter((at) => at >= 0);
+      const verified = body.indexOf(`await ${verify}(req`);
+      const limited = body.indexOf(`RATE_LIMITS.${cfg}`);
+      assert.ok(start >= 0 && verified >= 0 && verified < limited && limited < Math.min(...reads),
+        `${fn} takes its ${cfg} token after ${verify} and before it reads the database`);
+    }
+  }
 
   const healthRes = mockResponse();
   await healthHandler({ method: 'POST', headers: {}, query: {} } as never, healthRes as never);
