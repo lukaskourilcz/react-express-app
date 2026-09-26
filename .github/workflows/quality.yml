@@ -39,6 +39,7 @@ jobs:
           npm run test:browser -- tests/browser/public.spec.ts
           npm run test:browser -- tests/browser/evolving.spec.ts
           npm run test:browser -- tests/browser/segmented.spec.ts
+          npm run test:browser -- tests/browser/on-accent.spec.ts
           export CHROME_BIN=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")
           TOPIC=javascript-closures
           npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/cs/topics/$TOPIC --widths 360,390,430,768,1024,1280,1440
