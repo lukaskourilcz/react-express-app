@@ -1,7 +1,7 @@
 // The pages whose first render now waits for what used to arrive after it:
-// the Challenge's board line and Today's signed-in sections. Each check reads
-// the document at the moment the page's heading first appeared
-// (./firstDraw.ts), which an awaited act cannot.
+// the Challenge's board line, Today's signed-in sections and the roadmap's
+// optional paths. Each check reads the document at the moment the page's
+// heading first appeared (./firstDraw.ts), which an awaited act cannot.
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -11,6 +11,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Challenge from '../src/components/Challenge';
 import Today from '../src/components/Today';
+import CareerRoadmap from '../src/components/CareerRoadmap';
 import { server } from './mocks/server';
 import { firstDraw, headings } from './firstDraw';
 
@@ -27,6 +28,7 @@ beforeAll(() => Promise.all([
   import('../src/components/coding/ChallengeRunSection'),
   import('../src/components/coding/CodingDueSection'),
   import('../src/components/paths/PathResumeSection'),
+  import('../src/components/paths/PathDiscovery'),
 ]));
 
 // A page that holds its first render has to start inside an awaited act. Each
@@ -67,7 +69,7 @@ const CATALOG = {
 const ENROLLMENT = { enrollmentId: 'enr-1', pathId: 'dsa-foundations', curriculumVersion: 1, status: 'active', baseTrackAtEnrollment: null, startedAt: '2026-09-20T10:00:00Z', updatedAt: '2026-09-25T10:00:00Z' };
 const RUN = { session: { sessionId: 'run-1', minutes: 20, topic: 'javascript', queue: ['js-digit-sum'], position: 0, status: 'active', estimatedMinutes: 20, order: 'sequential', count: 1, scheduledFor: null } };
 
-/** Every read the two pages make; returns the account reads it answered. */
+/** Every read the three pages make; returns the account reads it answered. */
 function answer() {
   const accountReads: string[] = [];
   server.use(
@@ -131,5 +133,23 @@ describe('/today', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Today' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: /Due for review|Challenge run|Focused skill path/ })).toBeNull();
     expect(accountReads).toEqual([]);
+  });
+});
+
+describe('/roadmap', () => {
+  it('draws the optional paths with the page', async () => {
+    answer();
+    const drawn = firstDraw('h1', () => document.querySelector('section[aria-label="Modules"]')?.textContent ?? null);
+    await mountAt('/roadmap', <CareerRoadmap />);
+    expect(drawn()).toContain('DSA Foundations');
+  });
+
+  it('draws a signed-in learner’s enrolled path as one to continue', async () => {
+    signIn();
+    const accountReads = answer();
+    const drawn = firstDraw('h1', () => document.querySelector('section[aria-label="Modules"]')?.textContent ?? null);
+    await mountAt('/roadmap', <CareerRoadmap />);
+    expect(drawn()).toContain('Continue');
+    expect(accountReads).toContain('learning-path-enrollment');
   });
 });
