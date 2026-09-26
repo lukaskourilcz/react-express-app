@@ -101,6 +101,7 @@ const PRIVACY: Section[] = [
       },
     ],
   },
+  { id: 'vouchers', title: 'legal.privacy.voucher.title', blocks: [p('legal.privacy.voucher.body')] },
   { id: 'merchandise', title: 'legal.privacy.merch.title', blocks: [p('legal.privacy.merch.shop'), p('legal.privacy.merch.redeem')] },
   { id: 'email', title: 'legal.privacy.email.title', blocks: [p('legal.privacy.email.body')] },
   { id: 'providers', title: 'legal.privacy.providers.title', blocks: [p('legal.privacy.providers.body')] },

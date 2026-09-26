@@ -1,5 +1,6 @@
 // Premium vouchers (migration 045): "Have a voucher?" on /premium, the upgrade
-// sheet while checkout is off, and the plan line of a promo grant.
+// sheet while checkout is off, the plan line of a promo grant, and what the
+// Terms and the privacy policy say about them.
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
@@ -8,6 +9,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import PremiumPage from '../src/components/PremiumPage';
+import { PrivacyPage, TermsPage } from '../src/components/LegalPages';
 import PlanLine from '../src/components/PlanLine';
 import UpgradeSheet from '../src/components/UpgradeSheet';
 import { closeUpgradeSheet } from '../src/lib/upgradeSheet';
@@ -258,5 +260,21 @@ describe('the plan line', () => {
     serve({ billing: ON, plans: [{ ...VOUCHER_PLAN, source: 'manual', validUntil: null }] });
     renderAt('/profile', <PlanLine />);
     expect(await screen.findByText('Premium, complimentary')).toBeInTheDocument();
+  });
+});
+
+describe('the Terms and the privacy policy', () => {
+  it('say what a voucher opens and what a redemption stores', async () => {
+    serve();
+    const terms = renderAt('/terms', <TermsPage />);
+    const grants = screen.getByRole('heading', { level: 2, name: 'Premium without payment' }).closest('section')!;
+    expect(grants).toHaveTextContent('through a voucher code you redeem on the Premium page while signed in');
+    expect(grants).toHaveTextContent('counted from the day you redeem it, or with no end date, and an account can redeem each voucher once');
+    terms.unmount();
+    renderAt('/privacy', <PrivacyPage />);
+    const vouchers = screen.getByRole('heading', { level: 2, name: 'Vouchers' }).closest('section')!;
+    expect(vouchers).toHaveTextContent('devShark stores your account identifier, the voucher you redeemed and the time you redeemed it');
+    expect(vouchers).toHaveTextContent('It does not store the code you type.');
+    expect(screen.getByRole('heading', { level: 2, name: 'Deletion and retention' }).closest('section')).toHaveTextContent('your voucher redemptions');
   });
 });

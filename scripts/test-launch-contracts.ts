@@ -1391,6 +1391,14 @@ async function voucherContracts() {
     assert.doesNotMatch(value, /\b(hurry|limited time|ends soon|last chance|act now|today only)\b/i, `${key} uses urgency copy`);
   }
   assert.equal(ENGLISH['premium.voucher.invalid'], 'This code does not open Premium. Check it and try again.', 'the page says what the server says, once, for every refused code');
+  // The Terms name vouchers among the grants without payment; the privacy
+  // policy says what a redemption stores, and that erasure deletes it.
+  assert.match(ENGLISH['legal.terms.grants.body'], /through a voucher code you redeem on the Premium page/);
+  assert.match(ENGLISH['legal.terms.grants.body'], /counted from the day you redeem it, or with no end date, and an account can redeem each voucher once/);
+  assert.match(ENGLISH['legal.privacy.voucher.body'], /stores your account identifier, the voucher you redeemed and the time you redeemed it/);
+  assert.match(ENGLISH['legal.privacy.voucher.body'], /does not store the code you type/);
+  assert.match(ENGLISH['legal.privacy.deletion.body'], /your voucher redemptions/);
+  assert.match(read('client/src/components/LegalPages.tsx'), /id: 'vouchers', title: 'legal\.privacy\.voucher\.title'/);
 
   if (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) return;
 
