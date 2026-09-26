@@ -39,9 +39,11 @@ export interface GameConfig {
   devTips: string[];
   /** Billing (#221): whether checkout sells Premium, and whether the
    * cancellation page can reach Stripe. Both false until the server says so.
+   * `cancelByEmail`: the cancellation page can email its confirmation link, so
+   * nobody has to sign in to cancel; absent from an older server.
    * `seller` (#222) names the seller of record for the Terms: Stripe as Link
    * under Managed Payments, or the trader; null or absent means unsaid. */
-  billing: { enabled: boolean; cancellable: boolean; seller?: 'link' | 'trader' | null };
+  billing: { enabled: boolean; cancellable: boolean; cancelByEmail?: boolean; seller?: 'link' | 'trader' | null };
   /** What earns coins (#227): the rates, milestones and the social grant. */
   coins: CoinSettings;
   /** Spreadshop's own promotion in the devShark shop this month (#229), or
@@ -133,7 +135,7 @@ export const DEFAULT_CONFIG: GameConfig = {
     publicThanksEnabled: false,
   },
   devTips: [...DEFAULT_DEV_TIPS],
-  billing: { enabled: false, cancellable: false, seller: null },
+  billing: { enabled: false, cancellable: false, cancelByEmail: false, seller: null },
   coins: DEFAULT_COIN_SETTINGS,
   merchPromo: null,
 };

@@ -5,12 +5,15 @@
 //                     to apply the session itself, so nobody waits on it.
 //   /premium/cancel   the public cancellation and withdrawal page (§ 312k BGB,
 //                     the EU withdrawal button): no sign-in, the email of the
-//                     subscription, then one confirmation button.
+//                     subscription, then one confirmation button. The server
+//                     acts once the address is proven: at once for a signed-in
+//                     owner of it, otherwise when the link it emails there is
+//                     opened, which lands back here with #confirm=<token>.
 //
 // Neither page changes a plan by itself. The server does, from the signed
-// webhook or its own lookup of the session.
+// webhook, its own lookup of the session, or a proven cancellation request.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
@@ -22,11 +25,17 @@ import { ApiError, friendlyError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { entitlementKeys, useEntitlement } from '../lib/entitlement';
 import {
+  cancelLinkToken,
+  confirmCancelLink,
+  isCancelReceipt,
   lookupCheckout,
   looksLikeEmail,
   requestCancellation,
+  reviewCancelLink,
   useBilling,
   type CancelAction,
+  type CancelLink,
+  type CancelPending,
   type CancelReceipt,
 } from '../lib/billing';
 import { PREMIUM_PRICE, type EntitlementResponse } from '../../../shared/tiers';
@@ -176,12 +185,20 @@ export function PremiumSuccessPage() {
 type CancelStep =
   | { kind: 'form' }
   | { kind: 'confirm' }
+  | { kind: 'sent'; answer: Extract<CancelPending, { confirmBy: 'email' }> }
+  | { kind: 'signin' }
+  | { kind: 'link-loading' }
+  | { kind: 'link'; link: CancelLink }
+  | { kind: 'link-expired' }
+  | { kind: 'link-error'; message: string }
   | { kind: 'done'; receipt: CancelReceipt };
 
 export function PremiumCancelPage() {
   const { t, lang } = useLanguage();
   const [params] = useSearchParams();
+  const location = useLocation();
   const navigate = useNavigate();
+  const { user, isAuthenticated, signInWithGoogle } = useAuth();
   // Until the settings arrive the form stays usable and the server decides;
   // it is closed only when the server says billing is not set up.
   const billing = useBilling();
@@ -191,16 +208,52 @@ export function PremiumCancelPage() {
   const [emailError, setEmailError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [step, setStep] = useState<CancelStep>({ kind: 'form' });
+  // The emailed link lands here with #confirm=<token>. It is read once.
+  const [token] = useState(() => cancelLinkToken(location.hash));
+  const [step, setStep] = useState<CancelStep>(token ? { kind: 'link-loading' } : { kind: 'form' });
   const stepRef = useRef<HTMLElement>(null);
+  const firstStep = useRef(true);
 
-  // Each step replaces the last, so move focus to its heading.
+  // Each step replaces the last, so move focus to its heading. Back on the
+  // form, focus goes to the email field, not to the top of the document. The
+  // page's first view keeps the focus the router gave it.
   useEffect(() => {
-    if (step.kind === 'form') return;
-    stepRef.current?.querySelector<HTMLElement>('h2')?.focus();
+    if (firstStep.current) {
+      firstStep.current = false;
+      if (step.kind === 'form') return;
+    }
+    const target = step.kind === 'form'
+      ? stepRef.current?.querySelector<HTMLElement>('input[type="email"]')
+      : stepRef.current?.querySelector<HTMLElement>('h2');
+    target?.focus();
   }, [step.kind]);
 
+  // Take the token out of the address bar at once, so it stays out of the
+  // history, a screenshot and every analytics event, then ask what it is for.
+  useEffect(() => {
+    if (!token) return;
+    navigate({ pathname: location.pathname, search: location.search }, { replace: true });
+    let live = true;
+    reviewCancelLink(token)
+      .then((link) => {
+        if (!live) return;
+        setAction(link.action);
+        setEmail(link.email);
+        setStep({ kind: 'link', link });
+      })
+      .catch((err) => {
+        if (!live) return;
+        setStep(err instanceof ApiError && (err.status === 410 || err.status === 400)
+          ? { kind: 'link-expired' }
+          : { kind: 'link-error', message: friendlyError(err) });
+      });
+    return () => { live = false; };
+    // Once per token: the navigation above changes the location, not the token.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token]);
+
   const withdraw = action === 'withdraw';
+  const owner = isAuthenticated && typeof user?.email === 'string' && user.email.toLowerCase() === email.trim().toLowerCase();
 
   const submitForm = async () => {
     setError(null);
@@ -225,8 +278,10 @@ export function PremiumCancelPage() {
     setError(null);
     setBusy(true);
     try {
-      const receipt = await requestCancellation(email.trim(), action, 'confirm');
-      setStep({ kind: 'done', receipt });
+      const answer = await requestCancellation(email.trim(), action, 'confirm');
+      if (isCancelReceipt(answer)) setStep({ kind: 'done', receipt: answer });
+      else if (answer.confirmBy === 'email') setStep({ kind: 'sent', answer });
+      else setStep({ kind: 'signin' });
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -234,8 +289,26 @@ export function PremiumCancelPage() {
     }
   };
 
+  const confirmLink = async () => {
+    if (!token) return;
+    setError(null);
+    setBusy(true);
+    try {
+      setStep({ kind: 'done', receipt: await confirmCancelLink(token) });
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 410) setStep({ kind: 'link-expired' });
+      else setError(friendlyError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const startAgain = () => { setError(null); setStep({ kind: 'form' }); };
   const dateTime = (iso: string) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : lang, { dateStyle: 'long', timeStyle: 'short' }).format(new Date(iso));
   const date = (iso: string) => new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : lang, { dateStyle: 'long' }).format(new Date(iso));
+  const effect = withdraw
+    ? t('billing.cancel.confirmWithdrawBody', { email: email.trim() })
+    : t('billing.cancel.confirmBody', { email: email.trim() });
 
   return (
     <Page kicker={t('billing.kicker')} title={t('billing.cancel.title')} lead={t('billing.cancel.lead')}>
@@ -277,7 +350,14 @@ export function PremiumCancelPage() {
         {step.kind === 'confirm' && (
           <div className="ss-billing-confirm">
             <h2 tabIndex={-1}>{withdraw ? t('billing.cancel.confirmWithdrawTitle') : t('billing.cancel.confirmTitle')}</h2>
-            <p>{withdraw ? t('billing.cancel.confirmWithdrawBody', { email: email.trim() }) : t('billing.cancel.confirmBody', { email: email.trim() })}</p>
+            <p>{effect}</p>
+            <p className="ss-info-note">
+              {owner
+                ? t('billing.cancel.confirmOwner')
+                : billing.known && !billing.cancelByEmail
+                  ? t('billing.cancel.confirmSignIn')
+                  : t('billing.cancel.confirmByEmail', { email: email.trim() })}
+            </p>
             {error && <Banner status="error" title={error} />}
             <div className="ss-info-actions">
               <Button
@@ -287,7 +367,86 @@ export function PremiumCancelPage() {
                 isLoading={busy}
                 isDisabled={busy}
               />
-              <Button variant="secondary" label={t('billing.cancel.back')} onClick={() => { setError(null); setStep({ kind: 'form' }); }} isDisabled={busy} />
+              <Button variant="secondary" label={t('billing.cancel.back')} onClick={startAgain} isDisabled={busy} />
+            </div>
+          </div>
+        )}
+
+        {step.kind === 'sent' && (
+          <div className="ss-billing-confirm">
+            <h2 tabIndex={-1}>{t('billing.cancel.sentTitle')}</h2>
+            <p role="status">{t('billing.cancel.sentBody', { email: step.answer.email, minutes: step.answer.expiresInMinutes })}</p>
+            <p>{t('billing.cancel.receivedAt', { date: dateTime(step.answer.receivedAt), email: step.answer.email })}</p>
+            <p className="ss-info-note">{t('billing.cancel.sentNote')}</p>
+            <p className="ss-info-note">{t('billing.cancel.keep')}</p>
+            <div className="ss-info-actions">
+              <Button variant="secondary" label={t('billing.cancel.back')} onClick={startAgain} />
+            </div>
+          </div>
+        )}
+
+        {step.kind === 'signin' && (
+          <div className="ss-billing-confirm">
+            <h2 tabIndex={-1}>{t('billing.cancel.signInTitle')}</h2>
+            <p>{t('billing.cancel.signInBody', { email: email.trim() })}</p>
+            {error && <Banner status="error" title={error} />}
+            <div className="ss-info-actions">
+              <Button
+                variant="primary"
+                label={t('auth.logIn')}
+                onClick={() => {
+                  setError(null);
+                  void signInWithGoogle(`/premium/cancel?action=${action}`).catch((err) => setError(friendlyError(err)));
+                }}
+              />
+              <Button variant="secondary" label={t('billing.cancel.back')} onClick={startAgain} />
+            </div>
+          </div>
+        )}
+
+        {step.kind === 'link-loading' && (
+          <div className="ss-billing-confirm" role="status" aria-live="polite">
+            <h2 tabIndex={-1}>{t('billing.cancel.linkLoading')}</h2>
+            <Skeleton width={220} height={14} radius={2} />
+          </div>
+        )}
+
+        {step.kind === 'link' && (
+          <div className="ss-billing-confirm">
+            <h2 tabIndex={-1}>{withdraw ? t('billing.cancel.confirmWithdrawTitle') : t('billing.cancel.confirmTitle')}</h2>
+            <p>{t('billing.cancel.linkRequested', { date: dateTime(step.link.requestedAt), email: step.link.email })}</p>
+            <p>{effect}</p>
+            {error && <Banner status="error" title={error} />}
+            <div className="ss-info-actions">
+              <Button
+                variant="destructive"
+                label={withdraw ? t('billing.cancel.confirmWithdraw') : t('billing.cancel.confirmCancel')}
+                onClick={() => void confirmLink()}
+                isLoading={busy}
+                isDisabled={busy}
+              />
+              <Button variant="secondary" label={t('billing.cancel.keepSubscription')} onClick={() => navigate('/')} isDisabled={busy} />
+            </div>
+          </div>
+        )}
+
+        {step.kind === 'link-expired' && (
+          <div className="ss-billing-confirm">
+            <h2 tabIndex={-1}>{t('billing.cancel.linkExpiredTitle')}</h2>
+            <p>{t('billing.cancel.linkExpiredBody')}</p>
+            <div className="ss-info-actions">
+              <Button variant="primary" label={t('billing.cancel.startAgain')} onClick={startAgain} />
+            </div>
+          </div>
+        )}
+
+        {step.kind === 'link-error' && (
+          <div className="ss-billing-confirm">
+            <h2 tabIndex={-1}>{t('billing.cancel.linkErrorTitle')}</h2>
+            <Banner status="error" title={step.message} />
+            <div className="ss-info-actions">
+              <Button variant="primary" label={t('billing.cancel.tryAgain')} onClick={() => window.location.reload()} />
+              <Button variant="secondary" label={t('billing.cancel.startAgain')} onClick={startAgain} />
             </div>
           </div>
         )}
@@ -296,7 +455,7 @@ export function PremiumCancelPage() {
           <div className="ss-billing-confirm">
             <h2 tabIndex={-1}>{withdraw ? t('billing.cancel.doneWithdrawTitle') : t('billing.cancel.doneTitle')}</h2>
             <p>{t('billing.cancel.receivedAt', { date: dateTime(step.receipt.receivedAt), email: step.receipt.email })}</p>
-            <CancelOutcome receipt={step.receipt} withdraw={withdraw} date={date} />
+            <CancelOutcome receipt={step.receipt} date={date} />
             <p className="ss-info-note">{t('billing.cancel.keep')}</p>
             <div className="ss-info-actions">
               <Button variant="secondary" label={t('billing.cancel.home')} onClick={() => navigate('/')} />
@@ -308,26 +467,22 @@ export function PremiumCancelPage() {
   );
 }
 
-function CancelOutcome({ receipt, withdraw, date }: { receipt: CancelReceipt; withdraw: boolean; date: (iso: string) => string }) {
+/** What changed, once the address was proven. */
+function CancelOutcome({ receipt, date }: { receipt: CancelReceipt; date: (iso: string) => string }) {
   const { t } = useLanguage();
-  // A signed-in owner of the address sees exactly what happened.
-  if (receipt.details) {
-    if (receipt.details.length === 0) return <p>{t('billing.cancel.doneNone')}</p>;
-    // Two subscriptions that end the same way read as one line.
-    const lines = [...new Set(receipt.details.map((detail) => (detail.withdrawn
-      ? t(detail.refunded ? 'billing.cancel.doneWithdrawn' : 'billing.cancel.doneWithdrawnUnpaid')
-      : detail.endsAt
-        ? t('billing.cancel.doneEndsAt', { date: date(detail.endsAt) })
-        : t('billing.cancel.doneGeneric'))))];
-    return lines.length === 1
-      ? <p>{lines[0]}</p>
-      : <ul className="ss-billing-outcomes">{lines.map((line) => <li key={line}>{line}</li>)}</ul>;
-  }
-  // Anyone else learns nothing about whether the address has a subscription.
+  if (receipt.details.length === 0) return <p>{t('billing.cancel.doneNone')}</p>;
+  // Two subscriptions that end the same way read as one line.
+  const lines = [...new Set(receipt.details.map((detail) => (detail.withdrawn
+    ? t(detail.refunded ? 'billing.cancel.doneWithdrawn' : 'billing.cancel.doneWithdrawnUnpaid')
+    : detail.endsAt
+      ? t('billing.cancel.doneEndsAt', { date: date(detail.endsAt) })
+      : t('billing.cancel.doneGeneric'))))];
   return (
     <>
-      <p>{withdraw ? t('billing.cancel.doneGenericWithdraw') : t('billing.cancel.doneGeneric')}</p>
-      <p>{receipt.emailed ? t('billing.cancel.doneEmailed') : t('billing.cancel.doneNotEmailed')}</p>
+      {lines.length === 1
+        ? <p>{lines[0]}</p>
+        : <ul className="ss-billing-outcomes">{lines.map((line) => <li key={line}>{line}</li>)}</ul>}
+      {receipt.emailed && <p>{t('billing.cancel.doneEmailed')}</p>}
     </>
   );
 }

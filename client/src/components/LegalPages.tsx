@@ -19,7 +19,7 @@ import { Page } from './PublicInfoPages';
 import './LegalPages.css';
 
 /** The date of the current wording. Change it with the words. */
-export const LEGAL_UPDATED = '2026-09-25';
+export const LEGAL_UPDATED = '2026-09-26';
 
 const ADR_URL = 'https://coi.gov.cz/en/information-about-adr/';
 const STRIPE_PRIVACY_URL = 'https://stripe.com/privacy';
@@ -63,7 +63,7 @@ const TERMS: Section[] = [
   {
     id: 'refund',
     title: 'legal.terms.refund.title',
-    blocks: [p('legal.terms.refund.body'), { kind: 'links', links: [{ to: '/premium/cancel?action=withdraw', label: 'legal.link.cancel' }] }],
+    blocks: [p('legal.terms.refund.body'), p('legal.terms.refund.takeBack'), { kind: 'links', links: [{ to: '/premium/cancel?action=withdraw', label: 'legal.link.cancel' }] }],
   },
   { id: 'how-to-withdraw', title: 'legal.terms.howTo.title', blocks: [p('legal.terms.howTo.body'), { kind: 'form' }] },
   { id: 'grants', title: 'legal.terms.grants.title', blocks: [p('legal.terms.grants.body')] },

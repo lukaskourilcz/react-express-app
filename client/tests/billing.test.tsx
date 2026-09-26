@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { isStripeHostedUrl, looksLikeEmail } from '../src/lib/billing';
 import { PremiumCancelPage, PremiumSuccessPage } from '../src/components/PremiumBillingPages';
@@ -33,12 +33,17 @@ function serve({ plan = FREE, billing = { enabled: true, cancellable: true } }: 
   );
 }
 
+/** Shows the router's current hash, so a test can see the link's token leave it. */
+function HashProbe() {
+  return <output data-testid="hash">{useLocation().hash}</output>;
+}
+
 function renderAt(path: string, node: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[path]}>
-        <LanguageProvider>{node}</LanguageProvider>
+        <LanguageProvider>{node}<HashProbe /></LanguageProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
@@ -120,16 +125,22 @@ describe('/premium/success', () => {
 });
 
 describe('/premium/cancel', () => {
-  it('takes two steps and never says whether the address has a subscription', async () => {
-    serve();
+  const TOKEN = 'T'.repeat(43);
+  const cancelApi = (answer: (body: Record<string, unknown>) => Response | Promise<Response>) => {
     const bodies: Array<Record<string, unknown>> = [];
     server.use(http.post('*/api/user/billing-cancel', async ({ request }) => {
       const body = await request.json() as Record<string, unknown>;
       bodies.push(body);
-      return body.step === 'request'
-        ? HttpResponse.json({ step: 'confirm', action: body.action, email: body.email })
-        : HttpResponse.json({ received: true, action: body.action, email: body.email, receivedAt: '2026-09-25T14:32:00.000Z', emailed: false });
+      return answer(body);
     }));
+    return bodies;
+  };
+
+  it('takes two steps, then asks the address to confirm, and says nothing about a subscription', async () => {
+    serve({ billing: { enabled: true, cancellable: true, cancelByEmail: true } });
+    const bodies = cancelApi((body) => body.step === 'request'
+      ? HttpResponse.json({ step: 'confirm', action: body.action, email: body.email })
+      : HttpResponse.json({ received: true, confirmBy: 'email', action: body.action, email: body.email, receivedAt: '2026-09-25T14:32:00.000Z', expiresInMinutes: 60 }));
     renderAt('/premium/cancel', <PremiumCancelPage />);
     const email = await screen.findByLabelText(/Email address of your subscription/);
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -138,32 +149,84 @@ describe('/premium/cancel', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     const confirm = await screen.findByRole('button', { name: 'Cancel my subscription now' });
     expect(screen.getByRole('heading', { level: 2, name: 'Confirm your cancellation' })).toHaveFocus();
-    expect(screen.getByText(/subscription of payer@example\.com/)).toBeInTheDocument();
+    expect(screen.getByText(/subscription of payer@example\.com\?/)).toBeInTheDocument();
+    expect(screen.getByText('We will email a link to payer@example.com. Nothing changes until you open it.')).toBeInTheDocument();
     fireEvent.click(confirm);
-    expect(await screen.findByRole('heading', { level: 2, name: 'We received your cancellation' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 2, name: 'Check your email' })).toHaveFocus();
+    expect(screen.getByText('We sent a confirmation link to payer@example.com. Open it within 60 minutes to finish. Until you do, nothing changes.')).toBeInTheDocument();
     expect(screen.getByText(/Received on 25 September 2026 at .* for payer@example\.com\./)).toBeInTheDocument();
-    expect(screen.getByText(/If a devShark Premium subscription uses this address, it will not renew/)).toBeInTheDocument();
+    expect(screen.queryByText(/will not renew|refunded/)).toBeNull();
     expect(bodies.map((body) => body.step)).toEqual(['request', 'confirm']);
     expect(bodies.every((body) => body.action === 'cancel')).toBe(true);
   });
 
-  it('offers the withdrawal variant and shows an owner exactly what happened', async () => {
+  it('takes focus back to the email field when the address changes', async () => {
     serve();
-    server.use(http.post('*/api/user/billing-cancel', async ({ request }) => {
-      const body = await request.json() as Record<string, unknown>;
-      return body.step === 'request'
-        ? HttpResponse.json({ step: 'confirm' })
-        : HttpResponse.json({
-          received: true, action: body.action, email: body.email, receivedAt: '2026-09-25T14:32:00.000Z', emailed: true,
-          details: [{ withdrawn: true, refunded: true, endsAt: '2026-09-25T14:32:00.000Z' }],
-        });
-    }));
+    cancelApi((body) => HttpResponse.json({ step: 'confirm', action: body.action, email: body.email }));
+    renderAt('/premium/cancel', <PremiumCancelPage />);
+    fireEvent.change(await screen.findByLabelText(/Email address of your subscription/), { target: { value: 'payer@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Change the email' }));
+    await waitFor(() => expect(screen.getByLabelText(/Email address of your subscription/)).toHaveFocus());
+  });
+
+  it('asks for the sign-in when the site cannot email a link', async () => {
+    serve({ billing: { enabled: true, cancellable: true, cancelByEmail: false } });
+    cancelApi((body) => body.step === 'request'
+      ? HttpResponse.json({ step: 'confirm' })
+      : HttpResponse.json({ received: false, confirmBy: 'sign-in', action: body.action, email: body.email }));
+    renderAt('/premium/cancel', <PremiumCancelPage />);
+    fireEvent.change(await screen.findByLabelText(/Email address of your subscription/), { target: { value: 'payer@example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(await screen.findByText(/This site cannot send the confirmation email yet\. To act on this address, sign in/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel my subscription now' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Sign in to finish' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+  });
+
+  it('shows a signed-in owner exactly what happened, withdrawal included', async () => {
+    serve();
+    cancelApi((body) => body.step === 'request'
+      ? HttpResponse.json({ step: 'confirm' })
+      : HttpResponse.json({
+        received: true, confirmed: true, action: body.action, email: body.email, receivedAt: '2026-09-25T14:32:00.000Z', emailed: true,
+        details: [{ withdrawn: true, refunded: true, endsAt: '2026-09-25T14:32:00.000Z' }],
+      }));
     renderAt('/premium/cancel?action=withdraw', <PremiumCancelPage />);
     fireEvent.change(await screen.findByLabelText(/Email address of your subscription/), { target: { value: 'payer@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Withdraw from the contract' }));
+    expect(await screen.findByText(/If your first payment was less than 14 days ago, the subscription ends now and we refund it in full, once per account\. Otherwise it stops renewing/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw from the contract' }));
     expect(await screen.findByRole('heading', { level: 2, name: 'We received your withdrawal' })).toBeInTheDocument();
     expect(screen.getByText(/refunded your payment in full/)).toBeInTheDocument();
+    expect(screen.getByText('We also sent these details to the address on the subscription.')).toBeInTheDocument();
+  });
+
+  it('opens the emailed link, takes the token out of the address and confirms once', async () => {
+    serve();
+    const bodies = cancelApi((body) => body.step === 'review'
+      ? HttpResponse.json({ action: 'withdraw', email: 'payer@example.com', requestedAt: '2026-09-25T14:32:00.000Z', expiresAt: '2026-09-25T15:32:00.000Z' })
+      : HttpResponse.json({
+        received: true, confirmed: true, action: 'withdraw', email: 'payer@example.com', receivedAt: '2026-09-25T14:32:00.000Z', emailed: false,
+        details: [{ withdrawn: false, refunded: false, endsAt: '2026-10-25T10:00:00.000Z' }],
+      }));
+    renderAt(`/premium/cancel#confirm=${TOKEN}`, <PremiumCancelPage />);
+    expect(await screen.findByRole('heading', { level: 2, name: 'Confirm your withdrawal' })).toBeInTheDocument();
+    expect(screen.getByTestId('hash')).toHaveTextContent('');
+    expect(screen.getByText(/Requested on 25 September 2026 at .* for payer@example\.com\./)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Withdraw from the contract' }));
+    expect(await screen.findByRole('heading', { level: 2, name: 'We received your withdrawal' })).toBeInTheDocument();
+    expect(screen.getByText('Premium stays open until 25 October 2026. You will not be charged again.')).toBeInTheDocument();
+    expect(bodies).toEqual([{ step: 'review', token: TOKEN }, { step: 'execute', token: TOKEN }]);
+  });
+
+  it('says so when a link has expired, and starts again', async () => {
+    serve();
+    cancelApi(() => HttpResponse.json({ error: { code: 'link_expired', message: 'This link has expired or was used already.' } }, { status: 410 }));
+    renderAt(`/premium/cancel#confirm=${TOKEN}`, <PremiumCancelPage />);
+    expect(await screen.findByRole('heading', { level: 2, name: 'This link no longer works' })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Start again' }));
+    await waitFor(() => expect(screen.getByLabelText(/Email address of your subscription/)).toHaveFocus());
   });
 
   it('says so when billing is not set up', async () => {
