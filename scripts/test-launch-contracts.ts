@@ -1332,7 +1332,7 @@ async function voucherContracts() {
   assert.ok(erasure045.startsWith(erasure044.slice(0, erasure044.lastIndexOf('END;'))), "045 restates 044's delete_user_data unchanged before its own lines");
   assert.match(erasure045, /DELETE FROM public\.premium_voucher_redemptions WHERE user_id = p_user_id;/, 'erasure removes the redemptions');
   assert.match(erasure045, /UPDATE public\.premium_vouchers SET created_by = 'deleted-account' WHERE created_by = p_user_id;/, "and anonymises a voucher's creator");
-  assert.match(sql, /grant_id\s+UUID NOT NULL UNIQUE REFERENCES public\.entitlement_grants \(id\) ON DELETE CASCADE/, "039's delete_entitlement_data can still delete a voucher's grant");
+  assert.match(sql, /grant_id\s+UUID NOT NULL UNIQUE REFERENCES public\.entitlement_grants \(id\) ON DELETE CASCADE/, "erasing an account's grants also removes the voucher redemptions that opened them");
 
   // 2. The code: Crockford base32, twelve characters, normalised the same way
   // everywhere, and stored only as its SHA-256.
@@ -1639,16 +1639,52 @@ function erasureContracts() {
   assert.match(migration044, /IF NOT EXISTS \([\s\S]*?conname = 'question_edits_importance_check'/, 'the importance check is guarded');
   assert.match(migration044, /ADD CONSTRAINT question_edits_importance_check\s+CHECK \(importance IS NULL OR importance BETWEEN 1 AND 10\)/);
 
-  // The API: delete_user_data first, then the four routines 044 folded in,
-  // each tolerated when missing, until 044 is in production.
-  const userOps = read('api/user/[op].ts');
-  const deletion = userOps.slice(userOps.indexOf('async function deleteAccount('));
-  assert.ok(deletion.indexOf('endBillingForDeletedAccount') < deletion.indexOf("rpc('delete_user_data'"), 'billing ends before the data goes');
-  assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('of LATER_ERASURE_ROUTINES'), 'delete_user_data runs first');
-  for (const routine of ['delete_user_activity_days', 'delete_entitlement_data', 'delete_coin_data', 'delete_referral_data']) {
-    assert.match(userOps, new RegExp(`LATER_ERASURE_ROUTINES = \\[[^\\]]*'${routine}'`), `${routine} still runs until 044 is applied`);
+  // The four routines 039 to 042 shipped do nothing the newest
+  // delete_user_data does not: each of their statements is in its body, word
+  // for word. So the API calls delete_user_data alone.
+  const FOLDED_FROM: Array<[string, string]> = [
+    ['delete_entitlement_data', '039'], ['delete_user_activity_days', '040'], ['delete_coin_data', '041'], ['delete_referral_data', '042'],
+  ];
+  const FOLDED = FOLDED_FROM.map(([name]) => name);
+  const squash = (sql: string) => sql.replace(/--[^\n]*/g, '').replace(/\s+/g, ' ').trim();
+  const flatBody = squash(body);
+  const foldedTables = new Set<string>();
+  for (const [name, number] of FOLDED_FROM) {
+    const file = `supabase/supabase-schema-${number}.sql`;
+    const sql = read(file);
+    const start = sql.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(p_user_id TEXT)`);
+    assert.ok(start >= 0, `${file} defines ${name}`);
+    const routineBody = sql.slice(sql.indexOf('BEGIN', start), sql.indexOf('$$;', start));
+    const statements = squash(routineBody).split(';').map((one) => one.trim().replace(/^BEGIN /, ''))
+      .filter((one) => /^(DELETE|UPDATE)\b/.test(one));
+    assert.ok(statements.length > 0, `${name} erases something`);
+    for (const statement of statements) {
+      assert.ok(flatBody.includes(`${statement};`), `${latest}'s delete_user_data does what ${name} did: ${statement}`);
+      for (const match of statement.matchAll(/\bpublic\.([a-z_]+)\b/g)) foldedTables.add(match[1]);
+    }
   }
-  assert.match(deletion, /if \(erased\.error && !routineMissing\(erased\.error\)\)/, 'a routine that is not installed has nothing to erase');
+  assert.deepEqual([...foldedTables].sort(), ['billing_checkout_consents', 'billing_customers', 'entitlement_grants', 'referral_codes',
+    'referrals', 'token_month_settlements', 'token_xp_credits', 'user_activity_days'], 'the tables the four routines touched');
+
+  // The API ends billing first, then calls delete_user_data and nothing else.
+  const userOps = read('api/user/[op].ts');
+  const deletionStart = userOps.indexOf('async function deleteAccount(');
+  const deletion = userOps.slice(deletionStart, userOps.indexOf('\nasync function ', deletionStart + 1));
+  assert.ok(deletion.includes('supabase!.auth.admin.deleteUser(auth.sub)'), 'the deleteAccount slice reaches the sign-in identity');
+  assert.ok(deletion.indexOf('endBillingForDeletedAccount') < deletion.indexOf("rpc('delete_user_data'"), 'billing ends before the data goes');
+  assert.deepEqual([...deletion.matchAll(/\.rpc\(\s*([^,)]+)/g)].map((match) => match[1]), ["'delete_user_data'"],
+    'deleting an account calls delete_user_data and no other routine');
+  assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('auth.admin.deleteUser'), 'the sign-in identity goes last');
+  // No code calls one of the four.
+  const sourceFiles = (dir: string): string[] => readdirSync(join(process.cwd(), dir), { withFileTypes: true }).flatMap((entry) => {
+    const path = `${dir}/${entry.name}`;
+    if (entry.isDirectory()) return entry.name === 'node_modules' ? [] : sourceFiles(path);
+    return /\.(ts|tsx|mjs|js)$/.test(entry.name) ? [path] : [];
+  });
+  for (const file of ['api', 'lib', 'shared', 'client/src'].flatMap(sourceFiles)) {
+    const source = read(file);
+    for (const name of FOLDED) assert.doesNotMatch(source, new RegExp(`\\b${name}\\b`), `${file} still names ${name}, which delete_user_data replaced`);
+  }
 }
 
 async function main() {
