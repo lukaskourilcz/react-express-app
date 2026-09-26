@@ -73,7 +73,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { friendlyError, isPremiumRequired } from '../lib/api';
-import { useLocks } from '../lib/locks';
+import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
 import { reportQuestion } from '../lib/supabase';
@@ -486,7 +486,7 @@ function Roadmap() {
     a.kind === 'level' ? { kind: 'learn-level', topic, level: a.ref } : { kind: 'learn-part-test', topic, part: a.ref };
   const openOrUpgrade = (a: Active) => {
     const content = stepContent(a);
-    if (lockOf(content) === 'locked') openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) });
+    if (isBarred(lockOf(content))) openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) });
     else open(a);
   };
 
@@ -574,7 +574,7 @@ function Roadmap() {
         const passed = isPartTestPassed(progress, topic, node.part);
         const unavailable = availability.unavailableCheckpoints?.has(node.part) ?? false;
         const unlocked = !unavailable && isPartTestUnlocked(progress, topic, node.range, availability);
-        const premium = !passed && !unavailable && lockOf({ kind: 'learn-part-test', topic, part: node.part }) === 'locked';
+        const premium = !passed && !unavailable && isBarred(lockOf({ kind: 'learn-part-test', topic, part: node.part }));
         return {
           i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 25,
           accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, part: node.part, range: node.range,
@@ -588,7 +588,7 @@ function Roadmap() {
       const passed = isLevelPassed(progress, topic, meta.level);
       const unavailable = meta.unavailable === true;
       const unlocked = !unavailable && isPartLevelUnlocked(progress, topic, nodeRange, meta.level, availability);
-      const premium = !passed && !unavailable && lockOf({ kind: 'learn-level', topic, level: meta.level }) === 'locked';
+      const premium = !passed && !unavailable && isBarred(lockOf({ kind: 'learn-level', topic, level: meta.level }));
       const isCurrent = unlocked && !passed && !premium;
       // Spaced mastery reads the stored level entry (migration-024 fields are
       // additive; older/guest rows without passDays resolve to "cleared").

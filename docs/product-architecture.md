@@ -280,8 +280,13 @@ a local Postgres and waits for production.
   friends and the token shop stay open (`QUIZ_FREE_CATEGORIES = 'all'`).
   `contentTier` and `isOpenTo` take a `GatedContent` value and pure index
   data. The module imports nothing from `lib/`, so the browser draws its locks
-  and the server refuses with the same function. Signed-out visitors keep the
-  landing sample question, "Try one, no signup" and stage one of a project.
+  and the server refuses with the same function. A signed-out visitor holds
+  the free tier, unsaved: the landing sample question ("Try one, no signup")
+  runs in the browser, stage one of every project and path is free, and every
+  Premium level, part test, challenge and stage is refused to a guest with the
+  same 402 as to a free account. Before the review of 2026-09-26 a request
+  without a token skipped every gate, so signing out opened all of Premium
+  except saving.
 - **`lib/access.ts`** resolves the tier once per request (`resolveTier`, one
   `is_premium` call, only when the content is Premium), and `assertOpen`
   throws `PremiumRequiredError` for locked content; `refuseLocked` is the
@@ -306,12 +311,15 @@ a local Postgres and waits for production.
 - **The browser** mirrors the server. `useEntitlement()`
   (`client/src/lib/entitlement.ts`) reads the plan; `useLocks()`
   (`client/src/lib/locks.ts`) draws locks from `contentTier` in four states:
-  open, locked (a signed-in free account), preview (a signed-out visitor, who
-  keeps today's previews) and unknown (plan loading or offline, drawn as open
-  so the server decides). A Premium level, part test, coding row or evolving
-  stage stays focusable with `aria-disabled`, reads "Premium" in text and opens
-  the one `UpgradeSheet`. Today leaves Premium levels out, and the Profile
-  shows the plan line.
+  open, locked (a signed-in free account), preview (a signed-out visitor on
+  Premium content, refused like locked) and unknown (plan loading or offline,
+  drawn as open so the server decides). `isBarred` is true for locked and
+  preview, and every screen asks it: a barred level, part test, coding row or
+  evolving stage stays focusable with `aria-disabled`, reads "Premium" in
+  text and opens the one `UpgradeSheet`, which leads a guest to sign-in and
+  checkout. An unknown row carries no Premium mark, and the coding track page
+  waits for the plan and says when it could not load. Today leaves barred
+  levels out, and the Profile shows the plan line.
 - **The billing tables** in `supabase/supabase-schema-039.sql`:
   `billing_customers` (one Stripe customer per user), `entitlement_grants`
   (provider, manual and promo grants; the webhook never touches a manual or

@@ -7,8 +7,14 @@
  * stage, a learning path.
  *
  * Three rules hold for every call site:
- *   * Signed-out visitors are not gated here. They keep the previews they had
- *     before the tiers existed, and a preview never records anything.
+ *   * A signed-out visitor holds the free tier and nothing more, and a guest
+ *     never records anything. Premium content is refused to a guest with the
+ *     same 402, which the browser answers with the upgrade sheet and its way
+ *     to sign in (review finding integrity-4: otherwise signing out, or
+ *     leaving the token off a request, opened every Premium level and
+ *     challenge with grading and explanations). The guest previews the
+ *     handoff names are free content already: stage one of every project
+ *     and path, and the landing's sample question, which never reaches here.
  *   * Free content never costs a query. The tier is resolved only when the
  *     content is Premium, and at most once per request.
  *   * Content the learner already cleared stays open, so a lapsed account can
@@ -78,11 +84,11 @@ export interface OpenOptions {
   cleared?: () => Promise<boolean>;
 }
 
-/** Throws `PremiumRequiredError` when a signed-in free account starts
- * Premium content it has not cleared. */
+/** Throws `PremiumRequiredError` when a guest, or a signed-in free account,
+ * starts Premium content it has not cleared. A guest has cleared nothing. */
 export async function assertOpen(userId: string | null, content: GatedContent, options: OpenOptions = {}): Promise<void> {
-  if (!userId) return;
   if (contentTier(content, serverContentIndex()) === 'free') return;
+  if (!userId) throw new PremiumRequiredError(content);
   if ((await resolveTier(userId)) === 'premium') return;
   if (options.cleared && (await options.cleared().catch(() => false))) return;
   throw new PremiumRequiredError(content);

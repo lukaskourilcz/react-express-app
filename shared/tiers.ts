@@ -14,9 +14,11 @@
  * already cleared are never refused, and a lapsed account keeps everything it
  * passed.
  *
- * Signed-out visitors are outside this contract. They keep the previews they
- * had before the tiers existed: the landing sample question, "Try one, no
- * signup" and stage one of a project. */
+ * A signed-out visitor holds the free tier, unsaved: the server refuses
+ * Premium content to a guest with the same 402 as a free account, and the
+ * browser draws it with the Premium mark. The landing's sample question ("Try
+ * one, no signup") runs in the browser, and stage one of every project and
+ * short path is free content. */
 
 import type { CodingTaskSummary } from './coding-catalog';
 import { EVOLVING_CHALLENGES, type EvolvingChallenge } from './evolving';

@@ -620,12 +620,35 @@ async function tierContracts() {
     const open = mockResponse();
     await roadmapHandler(signedIn({ resource: 'coding-task', id: freeTask.id }) as never, open as never);
     assert.equal(open.statusCode, 200, 'a free account opens a free task');
-    const guest = mockResponse();
-    await roadmapHandler({ method: 'GET', headers: {}, query: { resource: 'coding-task', id: lockedTask.id } } as never, guest as never);
-    assert.equal(guest.statusCode, 200, 'a guest keeps the preview it had');
+    // A guest holds the free tier and nothing more (review finding
+    // integrity-4): signing out, or leaving the token off a request, must not
+    // open Premium content.
+    const guest = (query: Record<string, string>) => ({ method: 'GET', headers: {}, query });
+    const guestTask = mockResponse();
+    await roadmapHandler(guest({ resource: 'coding-task', id: lockedTask.id }) as never, guestTask as never);
+    assert.equal(guestTask.statusCode, 402, 'a guest is refused a Premium task');
+    assert.equal((guestTask.body as { error: { kind: string } }).error.kind, 'coding-task');
+    const guestStage = mockResponse();
+    await roadmapHandler(guest({ resource: 'coding-task', id: EVOLVING_CHALLENGES[0].stages[1] }) as never, guestStage as never);
+    assert.equal(guestStage.statusCode, 402, 'a guest is refused stage two');
+    const guestStageOne = mockResponse();
+    await roadmapHandler(guest({ resource: 'coding-task', id: EVOLVING_CHALLENGES[0].stages[0] }) as never, guestStageOne as never);
+    assert.equal(guestStageOne.statusCode, 200, 'stage one of a project stays open to a guest');
+    const guestFree = mockResponse();
+    await roadmapHandler(guest({ resource: 'coding-task', id: freeTask.id }) as never, guestFree as never);
+    assert.equal(guestFree.statusCode, 200, 'a free task stays open to a guest');
     const guestLevel = mockResponse();
-    await roadmapHandler({ method: 'GET', headers: {}, query: { topic: 'react', level: '13', lang: 'en' } } as never, guestLevel as never);
-    assert.notEqual(guestLevel.statusCode, 402, 'a guest preview of a Learn level is never a 402');
+    await roadmapHandler(guest({ topic: 'react', level: '13', lang: 'en' }) as never, guestLevel as never);
+    assert.equal(guestLevel.statusCode, 402, 'a guest is refused a Premium Learn level');
+    const guestTest = mockResponse();
+    await roadmapHandler(guest({ topic: 'react', test: '2', lang: 'en' }) as never, guestTest as never);
+    assert.equal(guestTest.statusCode, 402, 'a guest is refused a Premium part test');
+    const guestTs = mockResponse();
+    await roadmapHandler(guest({ topic: 'typescript', level: '1', lang: 'en' }) as never, guestTs as never);
+    assert.equal(guestTs.statusCode, 402, 'a guest is refused a Premium topic');
+    const guestFreeLevel = mockResponse();
+    await roadmapHandler(guest({ topic: 'react', level: '12', lang: 'en' }) as never, guestFreeLevel as never);
+    assert.notEqual(guestFreeLevel.statusCode, 402, 'a free Learn level stays open to a guest');
 
     // A deploy that lands before migration 039, against a PostgREST that has
     // none of its routines: the plan reads free instead of failing, and the

@@ -202,14 +202,16 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       return jsonError(res, 500, 'db_error', 'Could not load coding progress');
     }
   } else {
-    // Anonymous visitors may open and run any task; tiers lock only what a
-    // signed-in learner could otherwise record. Everything above tier 2 is
-    // shown as locked so the ladder reads the same way for everyone.
+    // Anonymous visitors may open and run any free task without recording
+    // it; the ladder's tiers lock only what a signed-in learner could
+    // otherwise record. Everything above tier 2 is shown as locked so the
+    // ladder reads the same way for everyone.
     locked = tierLockReason({ track: task.track, tier: task.tier, progress: { passed: new Set() }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: 0 });
     if (evolvingStage(task.id)) locked = evolvingUnlocked(task.id, new Set()) ? null : 'evolving';
   }
-  // Premium opens the rest of the catalogue to a signed-in account; a task
-  // already passed stays open for review whatever the tier.
+  // Premium opens the rest of the catalogue; a guest and a free account are
+  // refused it with 402. A task already passed stays open for review whatever
+  // the tier.
   if (await refuseLocked(res, userId, codingContent(task.id), { cleared: async () => evolvingPassed(task.id, passedIds) })) return;
 
   const play = playable(task);

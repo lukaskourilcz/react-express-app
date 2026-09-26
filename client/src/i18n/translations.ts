@@ -1764,6 +1764,7 @@ export const en = {
   'coding.loading': 'Loading task…',
   'coding.loadError': 'Could not load this task.',
   'coding.retry': 'Try again',
+  'coding.planFailed': 'We could not load your plan, so no challenge here carries the Premium mark. Opening one checks your plan.',
   'coding.offline': 'You are offline. Run still works; Submit needs a connection.',
   'coding.lockedTask': 'This tier is locked for now.',
   'coding.editorLabel': 'Your code',

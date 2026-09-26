@@ -43,7 +43,7 @@ import {
 import type { CodingProgressResponse, CodingTaskProgress, CodingVerdictResponse } from '../../../../shared/coding-api';
 import { Badge } from '@astryxdesign/core/Badge';
 import { isPremiumRequired } from '../../lib/api';
-import { useLocks, type LockState } from '../../lib/locks';
+import { isBarred, useLocks, type LockState } from '../../lib/locks';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { codingContent, gatedRef } from '../../../../shared/tiers';
 import '../../coding/Coding.css';
@@ -99,20 +99,20 @@ function useStatuses(progress: CodingProgressResponse | undefined) {
   const passed = useMemo(() => new Set(Object.entries(progress?.tasks ?? {}).filter(([, p]) => p.status === 'passed').map(([id]) => id)), [progress]);
   const due = useMemo(() => new Set(progress?.due ?? []), [progress]);
   const cleared = progress?.javascriptLevelsCleared ?? 0;
-  const { lockOf, loading: planLoading } = useLocks();
+  const { lockOf, loading: planLoading, failed: planFailed, refetch: retryPlan, signedIn } = useLocks();
   /** The Premium state of a task. A task already passed stays open on any plan. */
   const premiumOf = useCallback((taskId: string): LockState => (evolvingPassed(taskId, passed) ? 'open' : lockOf(codingContent(taskId))), [lockOf, passed]);
   const unlocked = useCallback((task: CodingTaskSummary) => tierUnlocked({ track: task.track, tier: task.tier, progress: { passed }, tasks: CODING_INDEX, javascriptLevelsCleared: cleared }), [passed, cleared]);
   const lockReason = useCallback((track: CodingTrack, tier: CodingTier) => tierLockReason({ track, tier, progress: { passed }, tasks: CODING_INDEX, javascriptLevelsCleared: cleared }), [passed, cleared]);
   const statusOf = useCallback((task: CodingTaskSummary): Status => {
-    if (premiumOf(task.id) === 'locked') return 'premium';
+    if (isBarred(premiumOf(task.id))) return 'premium';
     if (!unlocked(task)) return 'locked';
     if (due.has(task.id)) return 'due';
     const row: CodingTaskProgress | undefined = progress?.tasks[task.id];
     if (!row) return 'open';
     return row.status;
   }, [unlocked, due, progress, premiumOf]);
-  return { passed, due, statusOf, unlocked, lockReason, premiumOf, planLoading };
+  return { passed, due, statusOf, unlocked, lockReason, premiumOf, planLoading, planFailed: signedIn && planFailed, retryPlan };
 }
 
 const nextOpenTask = (tasks: readonly CodingTaskSummary[], statusOf: (t: CodingTaskSummary) => Status, after?: string): CodingTaskSummary | null => {
@@ -150,7 +150,8 @@ function SaveButton({ taskId, saved, onToggle, busy, toolbar = false }: { taskId
 function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
   task: CodingTaskSummary;
   status: Status;
-  /** Anything but 'open' shows the "Premium" badge; 'locked' also refuses. */
+  /** 'locked' and 'preview' show the "Premium" badge. 'unknown' (the plan is
+   * loading or failed) shows none: the server decides when the row opens. */
   premium?: LockState;
   saved?: boolean;
   onSave?: (taskId: string, next: boolean) => void;
@@ -164,7 +165,7 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
       <span className="cd-row__meta">
         {hasLearnLevel(task) && <span>{t('coding.level', { n: task.level })}</span>}
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
-        {premium !== 'open' && status !== 'premium' && <Badge variant="neutral" label={t('premium.badge')} />}
+        {isBarred(premium) && status !== 'premium' && <Badge variant="neutral" label={t('premium.badge')} />}
       </span>
       <StatusText status={status} />
     </>
@@ -223,7 +224,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
       const resumeId = evolvingResume(challenge, passed);
       // Stage one comes with the free plan; on a free account the later stages read "Premium".
-      const laterLocked = challenge.stages.length > 1 && premiumOf(challenge.stages[1]) === 'locked';
+      const laterLocked = challenge.stages.length > 1 && isBarred(premiumOf(challenge.stages[1]));
       return <article key={challenge.id} className="cd-project">
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
         <div className="cd-project__name">
@@ -236,7 +237,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
           <p>{t(challenge.short ? 'coding.evolving.levelsProgress' : 'coding.evolving.progress', { n: completed, total: challenge.stages.length })}</p>
           {laterLocked && <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>}
         </div>
-        <SwimCta label={completed === challenge.stages.length ? t(challenge.short ? 'coding.evolving.levelsComplete' : 'coding.evolving.complete') : t('coding.continue')} onClick={() => { if (premiumOf(resumeId) === 'locked') askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
+        <SwimCta label={completed === challenge.stages.length ? t(challenge.short ? 'coding.evolving.levelsComplete' : 'coding.evolving.complete') : t('coding.continue')} onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
       </article>;
     })}</div>
   </section>;
@@ -373,7 +374,7 @@ export function CodingTrackScreen() {
   const [params, setParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
-  const { passed, statusOf, lockReason, premiumOf } = useStatuses(progress.data);
+  const { passed, statusOf, lockReason, premiumOf, planLoading, planFailed, retryPlan } = useStatuses(progress.data);
   const track = isCodingTrack(trackParam) ? trackParam : null;
   const group = params.get('group');
   const statusFilter = params.get('status') ?? 'all';
@@ -424,6 +425,9 @@ export function CodingTrackScreen() {
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
   if (track && isRetiredSectionTrack(track)) return <RetiredTrackNotice track={track} />;
   if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Link className="cd-btn" to="/coding">{t('coding.verdict.back')}</Link></div>;
+  // The plan decides which rows carry the Premium mark, so the list waits for
+  // it, as the Coding home does; a plan that cannot load says so.
+  if (planLoading) return <LoadingScreen label={t('coding.loading')} />;
   const done = tasks.filter((task) => passed.has(task.id)).length;
   // Easy, then Medium, then Hard; inside each, the tiers that fall in it, so
   // a tier's lock line stays beside the challenges it locks.
@@ -449,6 +453,11 @@ export function CodingTrackScreen() {
           <p className="cd-track__count" style={{ margin: '6px 0 0' }}>{t('coding.progress', { passed: done, total: tasks.length })}</p>
         </div>
       </header>
+      {planFailed && (
+        <p className="cd-note cd-note--error" role="alert">
+          {t('coding.planFailed')} <button type="button" className="cd-btn" onClick={retryPlan}>{t('coding.retry')}</button>
+        </p>
+      )}
       <EvolvingGallery passed={passed} premiumOf={premiumOf} track={track} />
       <div className="cd-chips" role="group" aria-label={t('coding.techniques')}>
         <button type="button" className="cd-chip" aria-pressed={!group} onClick={() => setFilter('group', null)}>{t('coding.techniques.all')}</button>
@@ -575,7 +584,7 @@ function StageNav({ stages, short, currentId, passed, premiumOf }: { stages: rea
               const label = t(short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: index + 1, total: stages.length });
               const current = id === currentId;
               // A Premium stage stays focusable and opens the upgrade sheet.
-              if (!current && premiumOf(id) === 'locked') {
+              if (!current && isBarred(premiumOf(id))) {
                 const premiumLabel = t('premium.stageLabel', { label });
                 return <button key={id} type="button" className="cd-btn" aria-disabled="true" aria-label={premiumLabel} title={premiumLabel} onClick={() => askForPremium(id)}>{index + 1}</button>;
               }
@@ -712,7 +721,7 @@ export function CodingTaskScreen() {
         {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
       </div>}
       {(bookmarks.isError || save.isError) && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')} <button className="cd-btn" onClick={() => void bookmarks.refetch()}>{t('coding.retry')}</button></p>}
-      {stage && stage.challenge.stages.length > 1 && premiumOf(stage.challenge.stages[1]) === 'locked' && (
+      {stage && stage.challenge.stages.length > 1 && isBarred(premiumOf(stage.challenge.stages[1])) && (
         <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(stage.challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>
       )}
       {stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} premiumOf={premiumOf} />}

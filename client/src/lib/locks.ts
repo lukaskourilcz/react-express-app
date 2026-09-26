@@ -8,11 +8,16 @@
 // Four lock states, because "locked" is only one of them:
 //   open     free content, or a Premium account
 //   locked   a signed-in free account on Premium content
-//   preview  a signed-out visitor on Premium content: they keep the previews
-//            they had before the tiers existed, so nothing is blocked
+//   preview  a signed-out visitor on Premium content. The server refuses it
+//            with the same 402 as a free account (a guest keeps only the free
+//            tier, unsaved), so it is drawn with the Premium mark and opens the
+//            upgrade sheet, which leads to sign-in and checkout
 //   unknown  a signed-in account whose plan has not loaded or cannot load
 //            (offline): nothing is drawn as locked, and the server's 402
 //            opens the sheet if the plan turns out to be free
+//
+// `isBarred` is the question every screen asks: is this step shown with the
+// Premium mark, and does activating it open the upgrade sheet?
 import { useCallback, useMemo } from 'react';
 import { useEntitlement } from './entitlement';
 import { CODING_INDEX } from '../../../shared/coding-index';
@@ -26,6 +31,10 @@ export function clientContentIndex(levelCounts: ContentIndex['levelCounts'] = {}
 }
 
 export type LockState = 'open' | 'locked' | 'preview' | 'unknown';
+
+/** Premium content the current visitor cannot start: a free account's lock or
+ * a guest's preview. 'unknown' is not barred; the server decides. */
+export const isBarred = (state: LockState): boolean => state === 'locked' || state === 'preview';
 
 /** `lockOf(content)` for the current account. Pass the loaded level counts
  * when part tests are involved. */

@@ -16,9 +16,9 @@ vi.mock('../src/lib/upgradeSheet', async (importOriginal) => ({
   openUpgradeSheet: sheet.open,
 }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: true, isLoading: false, signInWithGoogle: vi.fn() }) }));
-vi.mock('../src/lib/entitlement', () => ({
-  useEntitlement: () => ({ tier: 'free', signedIn: true, loading: false, failed: false, data: null, refetch: () => {} }),
-}));
+const FREE_PLAN = { tier: 'free', signedIn: true, loading: false, failed: false, data: null, refetch: () => {} };
+const plan = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
+vi.mock('../src/lib/entitlement', () => ({ useEntitlement: () => plan.value }));
 vi.mock('../src/coding/practice', () => ({
   useBookmarks: () => ({ data: { saved: [] }, isPending: false, isError: false }),
   useSaveChallenge: () => ({ mutate: vi.fn(), isPending: false, isError: false }),
@@ -48,7 +48,10 @@ function mount(path: string, element: ReactNode, route: string) {
   );
 }
 
-beforeEach(() => sheet.open.mockReset());
+beforeEach(() => {
+  sheet.open.mockReset();
+  plan.value = { ...FREE_PLAN };
+});
 
 describe('the stage list on the free plan', () => {
   const project = EVOLVING_CHALLENGES.find((one) => one.stages.length === 10 && !one.short && one.stages[0].startsWith('js-'))!;
@@ -84,5 +87,43 @@ describe('a track page on the free plan', () => {
     const rowOf = (title: string) => within(easy).getByText(title).closest('li')!;
     expect(within(rowOf(free.title.en)).queryByText('Premium')).toBeNull();
     expect(within(rowOf(premium.title.en)).getByText('Premium')).toBeInTheDocument();
+  });
+});
+
+// Review finding product-13: a plan that has not loaded, or cannot load, is
+// 'unknown', and no row may carry the Premium mark then; the page waits for
+// the plan and says when it failed. A guest is barred like a free account
+// (finding integrity-4).
+describe('a track page before the plan is known', () => {
+  const premiumTask = () => CODING_INDEX.find((task) => task.track === 'javascript' && task.difficulty === 'easy' && !task.free && task.tier === 1 && !task.id.includes('evolving') && !task.id.includes('-path-'))!;
+
+  it('waits for the plan instead of drawing rows', () => {
+    plan.value = { ...FREE_PLAN, tier: null, loading: true };
+    mount('/coding/javascript', <CodingTrackScreen />, '/coding/:track');
+    expect(screen.queryByRole('heading', { level: 2, name: 'Easy' })).toBeNull();
+  });
+
+  it('marks no row Premium when the plan cannot load, and offers to try again', () => {
+    const refetch = vi.fn();
+    plan.value = { ...FREE_PLAN, tier: null, failed: true, refetch };
+    mount('/coding/javascript', <CodingTrackScreen />, '/coding/:track');
+    const easy = screen.getByRole('heading', { level: 2, name: 'Easy' }).closest('section')!;
+    const row = within(easy).getByText(premiumTask().title.en).closest('li')!;
+    expect(within(row).queryByText('Premium')).toBeNull();
+    expect(screen.getByRole('alert')).toHaveTextContent('We could not load your plan, so no challenge here carries the Premium mark.');
+    fireEvent.click(within(screen.getByRole('alert')).getByRole('button', { name: 'Try again' }));
+    expect(refetch).toHaveBeenCalled();
+  });
+
+  it('draws a Premium row for a signed-out visitor as Premium', () => {
+    plan.value = { ...FREE_PLAN, signedIn: false };
+    mount('/coding/javascript', <CodingTrackScreen />, '/coding/:track');
+    const easy = screen.getByRole('heading', { level: 2, name: 'Easy' }).closest('section')!;
+    const row = within(easy).getByText(premiumTask().title.en).closest('li')!;
+    expect(within(row).getByText('Premium')).toBeInTheDocument();
+    const premiumRow = row.querySelector<HTMLButtonElement>('button.cd-row--premium')!;
+    expect(premiumRow).toHaveAttribute('aria-disabled', 'true');
+    fireEvent.click(premiumRow);
+    expect(sheet.open).toHaveBeenCalled();
   });
 });

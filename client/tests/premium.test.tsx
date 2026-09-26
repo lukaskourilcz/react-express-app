@@ -7,7 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { apiFetch, friendlyError, isPremiumRequired } from '../src/lib/api';
 import { closeUpgradeSheet, useUpgradeRequest } from '../src/lib/upgradeSheet';
-import { useLocks } from '../src/lib/locks';
+import { isBarred, useLocks } from '../src/lib/locks';
 import { buildToday } from '../src/lib/today';
 import UpgradeSheet from '../src/components/UpgradeSheet';
 import { server } from './mocks/server';
@@ -78,11 +78,16 @@ describe('locks mirror the server', () => {
     expect(result.current.lockOf(react13)).toBe('open');
     expect(result.current.lockOf({ kind: 'learning-path', pathId: 'fde' })).toBe('open');
   });
-  it('keeps a signed-out preview unblocked and makes no request', async () => {
+  it('bars a signed-out visitor from Premium content, as the server does, without a request', async () => {
+    // The server answers a guest's Premium request with 402 (review finding
+    // integrity-4), so the map draws it with the Premium mark.
     signOut();
     const { result } = renderHook(() => useLocks(), { wrapper });
     expect(result.current.tier).toBe('free');
     expect(result.current.lockOf(react13)).toBe('preview');
+    expect(isBarred(result.current.lockOf(react13))).toBe(true);
+    expect(isBarred(result.current.lockOf(react12))).toBe(false);
+    expect(isBarred(result.current.lockOf({ kind: 'coding-task', taskId: 'js-digit-sum' }))).toBe(false);
   });
   it('reads as unknown, not locked, when the plan cannot load', async () => {
     signIn();
@@ -90,6 +95,7 @@ describe('locks mirror the server', () => {
     const { result } = renderHook(() => useLocks(), { wrapper });
     await waitFor(() => expect(result.current.failed).toBe(true));
     expect(result.current.lockOf(react13)).toBe('unknown');
+    expect(isBarred(result.current.lockOf(react13))).toBe(false);
   });
 });
 

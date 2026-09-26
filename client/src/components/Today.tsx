@@ -21,7 +21,7 @@ import { getCategoryHexColor } from '../lib/categories';
 import { CategoryGlyph } from './ui/techIcons';
 import { SharkFin } from './SharkFin';
 import { useAuth } from '../lib/auth';
-import { useLocks } from '../lib/locks';
+import { isBarred, useLocks } from '../lib/locks';
 import type { RoadmapTopic, RoadmapStructure } from '../types/quiz';
 import './Today.css';
 import './DeepEndScreens.css';
@@ -118,7 +118,7 @@ export default function Today() {
   // The plan leaves out levels Premium opens on a free account.
   const { lockOf, loading: planLoading } = useLocks();
   const canStart = useCallback(
-    (topic: RoadmapTopic, level: number) => lockOf({ kind: 'learn-level', topic, level }) !== 'locked',
+    (topic: RoadmapTopic, level: number) => !isBarred(lockOf({ kind: 'learn-level', topic, level })),
     [lockOf],
   );
 
