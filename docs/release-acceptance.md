@@ -1735,3 +1735,117 @@ All on `f528b7d`; this record changes documentation only. I ran every command be
 One report changes on purpose. With the eager client, a signed-out tab that stayed open while the learner signed in elsewhere heard that tab's broadcast and posted its own `/api/user/authevent`. That tab now has no client; it restores the session from storage through the `storage` event and posts nothing, and the tab that signed in still reports.
 
 Not verified here: a real Google sign-in and a real Supabase project (the OAuth return and the stored session ran against supabase-js 2.110 with Auth answered locally); a token refresh near expiry, which stays supabase-js's own; two real browser tabs (the cross-tab sign-in ran in the client test with a dispatched `storage` event); production and Lighthouse.
+
+## 2026-09-26 — a page that fails to load keeps the shell (ERRBOUND)
+
+The owner reported that a page chunk that fails to load reaches the only error boundary, around the whole app in `client/src/main.tsx`: the header, the nav and the footer go, and the learner sees "Something went wrong" with Try again and Reload page. It happened on devshark.app on 2026-09-26 during the GLITCH measurements, when the proxy aborted `objectWithoutPropertiesLoose-*.js` during a first click on Coding (at `4f93988`, when Coding still imported the task workbench) and the whole app went about 1.4s after the click.
+
+On `b74d7ae` and on `7b4bc8f`, a chunk that failed:
+
+1. replaced the app with the root screen. Four of the checks in `tests/browser/route-errors.spec.ts` fail on builds of both commits, with the root screen on the page;
+2. left a Try again that could not bring the page back. React.lazy keeps a rejected load for good, so rendering the app again threw the same error without calling the loader. Only Reload page helped.
+
+### What devshark.app answers for a missing chunk
+
+`curl -sS -o /dev/null -w '%{http_code} %{content_type}\n' https://devshark.app/assets/does-not-exist-0000.js` prints `200 text/html; charset=utf-8`. The catch-all rewrite in `vercel.json` does not exclude `assets/`, so a missing hashed file gets `index.html`, and the `/assets/(.*)` header rule adds `cache-control: public, max-age=31536000, immutable` and `x-content-type-options: nosniff` to it. A module script refuses `text/html`, so after a deploy a stale chunk fails the way a dropped request does. The browser may keep that HTML under the chunk's URL for a year, so no retry in place can fetch the file; a reload works, because the new `index.html` names new files. `vite preview` also answers a missing asset with `200 text/html`, which the browser spec relies on. This step leaves `vercel.json` alone (see the hand-off below).
+
+### Does a second `import()` ask the network again?
+
+Measured in Chromium 141.0.7390.37, the Chromium in `/opt/pw-browsers`, with a local server that fails one module request once and counts every request (a scratch harness, not committed). In every row the first `import()` rejected with `TypeError: Failed to fetch dynamically imported module:` and the page chunk's URL, also when the chunk it imports failed.
+
+| The failure | The page chunk fails | A chunk the page imports fails | The same, after a `<link rel="modulepreload">` of that chunk |
+| --- | --- | --- | --- |
+| Network error: two resets in a row, a body cut short, or Playwright's `route.abort` | the second `import()` rejects at once, with no request | the same | the same |
+| HTTP 404 | the same | the same | the same |
+| `200 text/html` under `nosniff`, as devshark.app answers | the same | the same | the same |
+| After `location.reload()` | loads; both chunks requested | loads | loads |
+
+A single reset never reached the page: Chromium repeated the GET on a new connection and the import succeeded.
+
+The other browsers, from primary sources; Firefox and Safari are not installed here, and `playwright install` is off limits:
+
+- The standard: [whatwg/html#6768](https://github.com/whatwg/html/issues/6768) asked that a failed dynamic import not stay cached. [whatwg/html#10327](https://github.com/whatwg/html/pull/10327), "Don't cache HTTP errors in the module map", merged 2026-07-15, stops caching network errors, HTTP error statuses and MIME type mismatches. Parse errors stay cached, and imports running in parallel still share one fetch.
+- Chromium: [issue 534781954](https://issues.chromium.org/issues/534781954). [CL 8102202](https://chromium-review.googlesource.com/c/chromium/src/+/8102202), "Do not cache failed module imports", landed behind the `ModuleMapDoNotCacheFailedFetch` flag at main@{#1695318} on 2026-09-10, and [CL 8403905](https://chromium-review.googlesource.com/c/chromium/src/+/8403905) turned the flag on at main@{#1701404} on 2026-09-19. Chrome 155 branched at #1697595 (chromiumdash), so 155 (stable 2026-10-06) ships the flag off, and 156 (branch 2026-09-28, stable 2026-10-20) is the first with it on. The [Intent to Ship](https://groups.google.com/a/chromium.org/g/blink-dev/c/lG4iYotq5EA/m/fNtZZbo-BQAJ) named 155, and Gerrit lists no merge of the enabling CL to the 155 branch. Chrome 154, stable since 2026-09-22, keeps the failure, as Chromium 141 does above.
+- Firefox: [bug 2055211](https://bugzilla.mozilla.org/show_bug.cgi?id=2055211), fixed in Firefox 155, released 2026-09-01. Its [release notes](https://developer.mozilla.org/en-US/docs/Mozilla/Firefox/Releases/155): "A module that fails to load because of a network error or an incorrect MIME type is no longer cached as a failure, so importing the same module specifier again can succeed once the server recovers", for static and dynamic imports alike. Firefox 154, older releases and ESR keep the failure.
+- Safari: [WebKit bug 319492](https://bugs.webkit.org/show_bug.cgi?id=319492), fixed on 2026-08-19 as 319474@main ([WebKit PR 69559](https://github.com/WebKit/WebKit/pull/69559)). [Safari Technology Preview 252](https://webkit.org/blog/18304/release-notes-for-safari-technology-preview-252/) (2026-09-11) covers 319252@main to 320112@main, so it has the fix, though its notes do not mention it. [Safari 27.0](https://webkit.org/blog/18325/webkit-features-for-safari-27-0/) rewrote the module loader and says nothing about failed fetches. I found no Safari release with the change, so Safari counts as keeping the failure.
+- [MDN browser-compat-data#30304](https://github.com/mdn/browser-compat-data/issues/30304) tracks the compatibility entry.
+
+So Try again first renders the page again in place, which is enough in Firefox 155 and Chrome 156 and later, and reloads the current address when the same failure comes straight back: in Chrome up to 155, in Safari, in older Firefox, and after every stale deploy on devshark.app.
+
+### Vite's `vite:preloadError`
+
+Vite 6.4.3's preload helper (`preload()` in `client/node_modules/vite/dist/node/chunks/dep-Dm0c1Wj2.js`) dispatches `vite:preloadError` on `window` for each dependency stylesheet that fails and for the rejection of the dynamic import itself. It does not wait for a JavaScript `modulepreload` link, so that failure arrives through the import. `preventDefault()` makes the helper swallow the error, and the import resolves to `undefined`. The helper also remembers every dependency it added, so it never adds a failed stylesheet link again. The intent preloads of `lib/routePreload.ts` go through the same helper, so a pointer resting on a link during a network blip fires the event. The listener in `lib/routeRecovery.ts` therefore only remembers which errors were chunk failures. It never reloads and never calls `preventDefault()`.
+
+### How the page comes back
+
+| Situation | What happens |
+| --- | --- |
+| A page chunk, or a chunk the page imports, fails on a visit | While the current page (or, on the first page of a visit, the loader) stays on screen, `lazyPage` fetches `/` with `cache: 'no-store'` and compares its entry script with the page's. Another entry means a newer build, and the tab reloads: at most once a minute per tab (a `sessionStorage` stamp), and not at all when storage throws. Otherwise the panel shows in the route box: "Something went wrong", "Network error. Check your connection and try again.", Try again |
+| Try again | The page renders again in a transition, with a fresh lazy component, so the panel stays until the page can draw. When the same failure comes straight back and the server answers, the address reloads; the learner's press reloads even within the minute |
+| Offline (`navigator.onLine === false`) | No check and no reload; the panel waits. The `online` event renders the page again and, if that fails, reloads once, within the same budget |
+| A page's stylesheet fails | Try again and the `online` event reload, since the page would otherwise draw unstyled |
+| The nav while the panel shows | Each path mounts a fresh boundary, so another page opens without a retry; the failed page is asked for afresh on the next visit |
+| A page throws | The root screen's text and both of its buttons, inside the shell |
+| A preload on hover fails | Nothing: `routePreload` swallows it, and the listener only remembers the error |
+| supabase-js fails on a sign-in click | The button says "Sign-in failed. Please try again."; no reload, no route panel |
+
+The boundary reports each failed chunk once per page load through `reportError` (Sentry, when a DSN is set) with the component stack and `chunkLoad: true`; the message names the chunk's URL and nothing personal. A preload started by a hover never reaches it. A page that throws is reported every time, as the root boundary does.
+
+`RouteErrorBoundary` sits inside the route `Suspense` and inside the `m.div` keyed by the path, around `<Routes>`. Outside the `Suspense`, catching would unmount it, and the remounted `Suspense` would show its fallback at once: the blank beat GLITCH removed. Inside the keyed box each path mounts a fresh boundary, so leaving a failed page needs no retry, and the router's transition keeps the panel until the next page can draw. The boundary renders no element of its own, so the route box stays the wrapper's first child, which `navigation.spec.ts` samples.
+
+The panel is the root screen's card (`ErrorPanel`), announced as an alert, with `aria-busy` while it checks or reloads. A navigation still moves focus to `<main>` 230ms after the page changes, and the next Tab reaches Try again. When the page that held focus disappears without a navigation, focus moves to the card. Try again uses Astryx's interruptible loading state, so it stays enabled and keeps focus through a retry that fails. An active quiz hides the chrome, and a failure brings it back.
+
+| Commit | What |
+| --- | --- |
+| `7481302` | `ErrorPanel`: the root screen's card, shared; its buttons now wrap at a narrow width |
+| `899719d` | `lib/routeRecovery.ts`: which errors are chunk failures, the reload and its guard, the build check, `lazyPage` and `renewFailedPages`, with unit tests |
+| `08a509d` | `RouteErrorBoundary`, its place in `App.tsx`, the listener in `main.tsx`, and the boundary's unit tests (14 in `client/tests/route-errors.test.tsx`) |
+| `8ea86c3` | `tests/browser/route-errors.spec.ts`; the "Browser checks" step runs it after `navigation.spec.ts` |
+| `f496fe1` | Merge of `origin/main` at `7b4bc8f` (Supabase on demand). The one conflict, in `quality.yml`, keeps both specs, `lazy-auth.spec.ts` first |
+| `b7358e2` | The browser spec drops the supabase-js chunk on a sign-in click |
+| this commit | This record, a rule in `DESIGN_RULES.md` §8 and P1.9 in `docs/design/product-ux-audit.md` |
+
+### Evidence
+
+| Check | Result |
+| --- | --- |
+| `tests/browser/route-errors.spec.ts` against `vite preview` of this branch, built as CI builds (the placeholder Supabase project from `docs/quality/bundle-budget.json`), Chromium 141 | 6 passed. The page chunk, the imported chunk and the offline test each came back by a reload, the path Chromium 141 takes; the second sign-in click after a failed supabase-js download made no request and failed again |
+| The same spec against builds of `b74d7ae` (five tests then) and `7b4bc8f` | 4 failed on each: the page chunk, the imported chunk, offline and the newer build, each with the root screen in place of the app. The hover and supabase-js tests pass there too, because they guard against a reload that neither commit makes |
+| The hover test against a build that reloads on every `vite:preloadError`, the handler Vite's documentation suggests | fails: the hover reloads the page |
+| 13 mutations of `routeRecovery.ts` and `RouteErrorBoundary.tsx`, one at a time, against `client/tests/route-errors.test.tsx` | each fails at least one test: no renewal (5 fail), `preventDefault()` in the listener (1), a reload offline (1), no cooldown (3), an automatic reload without storage (1), a build check offline (1), no `online` listener (2), the learner's press on the cooldown (1), a reload on every visit the server answers (3), a stylesheet failure rendered again (1), no report dedupe (1), the build comparison inverted (1), no build check before the error (1) |
+| The panel at 360, 390, 768 and 1280px, light and dark, after a dropped Coding chunk | header and footer in place, no horizontal overflow; focus on `<main>`, then Tab reaches Try again; Try again 86×44 with a touch pointer and 86×32 with a mouse, the root screen's Astryx size |
+| `npm run check:bundle`, both builds made as CI makes them | 226,027 of 243,000 gzip bytes; `7b4bc8f` measures 224,479, so the recovery code adds 1,548 to the entry |
+
+### Release contract on the final head
+
+The code is that of `b7358e2`; this record changes documentation only. I ran every command below, and each exit code is its own. Browser runs used `CHROME_BIN=/opt/pw-browsers/chromium` and `vite preview` on port 4511.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:launch` | exit 0; the twelve-function budget holds |
+| `npm run test:client` | exit 0; 27 files, 277 tests (14 new in `route-errors.test.tsx`) |
+| `test:coding-auth`, `test:grading-integrity`, `test:coding`, `test:paths`, `test:billing`, `test:fallbacks` | exit 0 each |
+| `npm run check:unused`, `npm run check:security` | exit 0 each; knip reports no new finding |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` | exit 0 |
+| The workflow's build step: the Supabase placeholders, then `npm run build`, `npm run check:public`, `npm run check:bundle` | exit 0 each; 13 public URLs; 226,027 of 243,000 gzip bytes |
+| `npm audit --omit=dev`, root and client | exit 0 each; 0 vulnerabilities |
+| Browser specs `route-errors`, `navigation`, `public`, `lazy-auth`, `evolving`, `segmented`, `on-accent` against that build | exit 0 each; 6, 2, 5, 5, 2, 4 and 12 passed |
+| `npm run check:responsive -- --routes /,/coding --widths 360,390,768,1280`, light, then with `RESPONSIVE_THEME=dark` | exit 0 each; 8 probes, 0 with issues |
+| `npm run test:harness` | exit 0; 196 assertions in Chromium |
+| Each commit before the merge on its own (`7481302`, `899719d`, `08a509d`, `8ea86c3`, from `git archive`): client `tsc -b`, the tooling typecheck, `vitest run` | exit 0 at every one; 238, 243, 252 and 252 tests |
+| `git diff --check`, `git diff --check origin/main...HEAD` | clean |
+
+Not run: the Storybook build and its spec, since no story imports a module this change touches, and Lighthouse.
+
+### Hand-off
+
+Found on the way and left alone, because the request did not cover them:
+
+- `vercel.json`: the catch-all rewrite serves `index.html` for a missing `/assets/` file, and the assets header rule marks that answer `immutable` for a year. Excluding `assets/` from the rewrite would turn a missing chunk into a 404 that no cache keeps.
+- supabase-js since `7b4bc8f`: `loadSupabase()` forgets a failed download, but Chromium up to 155 keeps the failed module fetch. Measured here: after one dropped download, a second sign-in click makes no request and shows "Sign-in failed. Please try again." again, until a reload. The sign-in path needs its own fallback in those browsers; this change does not reload for it.
+- The Coding task screen's own Try again for the workbench (`useWorkbench` in `CodingSection.tsx`) calls `loadWorkbench()` again, which fails the same way in those browsers.
+- `AuthButton` in the header and `UpgradeSheet` are lazy chunks outside the route boundary, so their failure still reaches the root screen.
+- Lazy parts inside pages (Today's four sections, `PathDiscovery`, `FriendsPanel`, the code highlighter, `PathRewardClaim`, the Learn workbench) use `React.lazy`. A failure there shows the route panel, and Try again gets them back only through the reload.
+
+Not verified: Firefox and Safari, whose rows come from the sources above; the in-place path in a real browser, since Chromium 141 always takes the reload (the unit tests cover it); a real deploy (the spec fakes one by answering the chunk with `index.html` and `/` with another entry script); Sentry, which has no DSN here (the unit tests check the calls to `reportError`); devshark.app, where this is not deployed; physical phones and screen readers (the alert role and the focus order were checked through Playwright's role queries and the focused element).
