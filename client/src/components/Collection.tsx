@@ -1,5 +1,5 @@
 import { useSearchParams, Link } from 'react-router-dom';
-import { lazy, Suspense, useState } from 'react';
+import { useState } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
 import { useBookmarks, useSaveChallenge } from '../coding/practice';
@@ -7,9 +7,12 @@ import { CODING_INDEX } from '../../../shared/coding-index';
 import { difficultyOf } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from '../coding/DifficultyBadge';
 import LoadingScreen from './LoadingScreen';
+// Static, not lazy: the questions tab is what /collection opens on, and a lazy
+// Flashcards drew the page first, then a loader in its body, then the cards.
+// Its own chunk is 2KB gzipped.
+import Flashcards from './Flashcards';
 import { Kicker } from './landing/LandingKit';
 import '../coding/Coding.css';
-const Flashcards = lazy(() => import('./Flashcards'));
 
 function SavedChallenges() {
   const { t, lang } = useLanguage();
@@ -46,6 +49,6 @@ export default function Collection() {
   return <div className="cd-page ss-pop">
     <header><Kicker>{t('collection.heading')}</Kicker><h1>{t('collection.heading')}</h1><p className="cd-lead">{t('collection.subtitle')}</p></header>
     <nav className="cd-actions" aria-label={t('collection.heading')}>{tabs.map(tab => <button key={tab} type="button" className={`cd-btn${selected === tab ? ' cd-btn--primary' : ''}`} aria-current={selected === tab ? 'page' : undefined} onClick={() => setParams({ tab })}>{t(`collection.${tab}`)}</button>)}</nav>
-    <Suspense fallback={<LoadingScreen label={t('common.loading')} />}>{selected === 'questions' ? <Flashcards embedded /> : <SavedChallenges />}</Suspense>
+    {selected === 'questions' ? <Flashcards embedded /> : <SavedChallenges />}
   </div>;
 }
