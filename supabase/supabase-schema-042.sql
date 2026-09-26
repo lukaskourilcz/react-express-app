@@ -179,7 +179,12 @@ BEGIN
   SELECT user_id INTO v_referrer FROM public.referral_codes WHERE code = p_code;
   IF NOT FOUND THEN RETURN 'unknown'; END IF;
   IF v_referrer = p_invitee THEN RETURN 'self'; END IF;
-  -- Two accounts inviting each other would pay each of them twice.
+  -- Two accounts inviting each other would pay each of them twice. The pair is
+  -- locked first, in either direction, so two sessions offering each other's
+  -- code at the same moment run one after the other and the second one sees
+  -- the first one's row (review finding integrity-6).
+  PERFORM pg_advisory_xact_lock(hashtextextended(
+    'referral-pair:' || LEAST(p_invitee, v_referrer) || ':' || GREATEST(p_invitee, v_referrer), 0));
   PERFORM 1 FROM public.referrals WHERE invitee_user_id = v_referrer AND referrer_user_id = p_invitee;
   IF FOUND THEN RETURN 'self'; END IF;
   PERFORM 1 FROM public.referrals WHERE invitee_user_id = p_invitee;

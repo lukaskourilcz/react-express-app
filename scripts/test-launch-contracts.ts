@@ -954,6 +954,12 @@ async function referralContracts() {
   // Self-referral and a sign-up window are decided when the code is bound.
   const record = routine('record_referral');
   assert.match(record, /IF v_referrer = p_invitee THEN RETURN 'self';/, 'the account\'s own code binds nothing');
+  // Two accounts offering each other's code at once run one after the other
+  // (review finding integrity-6): the unordered pair is locked before the
+  // reverse-pair check.
+  const pairLock = record.indexOf("'referral-pair:' || LEAST(p_invitee, v_referrer) || ':' || GREATEST(p_invitee, v_referrer)");
+  assert.ok(pairLock > 0, 'record_referral locks the unordered pair');
+  assert.ok(pairLock < record.indexOf('WHERE invitee_user_id = v_referrer AND referrer_user_id = p_invitee'), 'the lock comes before the reverse-pair check');
   assert.match(record, /p_account_created_at < NOW\(\) - make_interval\(hours => p_window_hours\)/, 'only a new account binds a code');
 
   // 4. The server: credits ride on verified work, and the code's creation time
