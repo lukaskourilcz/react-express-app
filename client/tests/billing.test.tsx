@@ -172,11 +172,14 @@ describe('/premium/cancel', () => {
     fireEvent.change(email, { target: { value: 'payer@example.com' } });
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
     const confirm = await screen.findByRole('button', { name: 'Cancel my subscription now' });
-    expect(screen.getByRole('heading', { level: 2, name: 'Confirm your cancellation' })).toHaveFocus();
+    // The step's effect moves focus after the render that shows it, so wait
+    // for it rather than read it at the first frame the heading appears.
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Confirm your cancellation' })).toHaveFocus());
     expect(screen.getByText(/subscription of payer@example\.com\?/)).toBeInTheDocument();
     expect(screen.getByText('We will email a link to payer@example.com. Nothing changes until you open it.')).toBeInTheDocument();
     fireEvent.click(confirm);
-    expect(await screen.findByRole('heading', { level: 2, name: 'Check your email' })).toHaveFocus();
+    await screen.findByRole('heading', { level: 2, name: 'Check your email' });
+    await waitFor(() => expect(screen.getByRole('heading', { level: 2, name: 'Check your email' })).toHaveFocus());
     expect(screen.getByText('We sent a confirmation link to payer@example.com. Open it within 60 minutes to finish. Until you do, nothing changes.')).toBeInTheDocument();
     expect(screen.getByText(/Received on 25 September 2026 at .* for payer@example\.com\./)).toBeInTheDocument();
     expect(screen.queryByText(/will not renew|refunded/)).toBeNull();
