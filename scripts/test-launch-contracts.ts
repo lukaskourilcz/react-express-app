@@ -151,8 +151,8 @@ import { EVOLVING_CHALLENGES } from '../shared/evolving';
 import { techniqueGroup } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
-import { jsonPremiumRequired, PremiumRequiredError } from '../lib/http';
-import { parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
+import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError } from '../lib/http';
+import { handleAdminEntitlements, handleEntitlement, parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
 import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
 import { WAIVER_TEXT } from '../lib/billing/sync';
 import { en as ENGLISH } from '../client/src/i18n/translations';
@@ -555,6 +555,30 @@ async function tierContracts() {
   assert.equal(parseValidUntil('2040-01-01', now).ok, false, 'a grant is at most five years long');
   assert.deepEqual(parseValidUntil('2026-10-25T12:00:00Z', now), { ok: true, value: '2026-10-25T12:00:00.000Z' });
 
+  // A routine that is not installed reads as missing whichever layer says so
+  // (review finding data-1). PostgREST 12, which every .rpc() goes through,
+  // answers PGRST202; Postgres answers 42883 when an installed routine calls a
+  // missing one. The first object is PostgREST 12.2.12's body, verbatim.
+  const pgrst202 = {
+    code: 'PGRST202',
+    details: 'Searched for the function public.is_premium with parameter p_user or with a single unnamed json/jsonb parameter, but no matches were found in the schema cache.',
+    hint: null,
+    message: 'Could not find the function public.is_premium(p_user) in the schema cache',
+  };
+  assert.equal(isRpcMissing(pgrst202), true, 'PostgREST reports a missing routine as PGRST202');
+  assert.equal(isRpcMissing({ message: pgrst202.message }), true, 'the message alone is enough');
+  assert.equal(isRpcMissing({ code: '42883', message: 'function public.is_premium(text) does not exist' }), true);
+  assert.equal(isRpcMissing({ message: 'function public.window_leaderboard(integer) does not exist' }), true);
+  for (const other of [
+    { code: '42501', message: 'permission denied for function is_premium' },
+    { code: 'PGRST203', message: 'Could not choose the best candidate function between: public.x(a => text), public.x(a => integer)' },
+    { code: '42P01', message: 'relation "public.entitlement_grants" does not exist' },
+    { code: 'PGRST205', message: "Could not find the table 'public.entitlement_grants' in the schema cache" },
+    null,
+  ]) {
+    assert.equal(isRpcMissing(other), false, `${other?.code ?? 'no error'} is not a missing routine`);
+  }
+
   // The handlers themselves, where they can run without a database: a signed-in
   // account with no grant is free, a guest keeps the previews it had.
   if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
@@ -583,6 +607,26 @@ async function tierContracts() {
     const guestLevel = mockResponse();
     await roadmapHandler({ method: 'GET', headers: {}, query: { topic: 'react', level: '13', lang: 'en' } } as never, guestLevel as never);
     assert.notEqual(guestLevel.statusCode, 402, 'a guest preview of a Learn level is never a 402');
+
+    // A deploy that lands before migration 039, against a PostgREST that has
+    // none of its routines: the plan reads free instead of failing, and the
+    // admin grant names the missing migration instead of answering 500.
+    const before039 = {
+      rpc: async (fn: string) => ({ data: null, error: { code: 'PGRST202', message: `Could not find the function public.${fn} in the schema cache` } }),
+      auth: { admin: { getUserById: async (id: string) => ({ data: { user: { id } }, error: null }) } },
+    };
+    const plan = mockResponse();
+    await handleEntitlement({ method: 'GET', headers: { authorization: 'Bearer contract' }, query: { user_id: 'contract-free-account' } } as never, plan as never, before039 as never);
+    assert.equal(plan.statusCode, 200, 'op=entitlement answers before 039');
+    assert.equal((plan.body as { tier: string }).tier, 'free');
+    const grant = mockResponse();
+    await handleAdminEntitlements(
+      { method: 'POST', headers: {}, query: {}, body: { action: 'grant', userId: 'contract-owner-account', validUntil: null, note: 'contract' } } as never,
+      grant as never,
+      before039 as never,
+    );
+    assert.equal(grant.statusCode, 503);
+    assert.equal((grant.body as { error: { code: string } }).error.code, 'migration_required', 'the admin grant names the missing migration');
   }
 }
 
@@ -939,7 +983,7 @@ async function referralContracts() {
         }
         if (fn === 'record_referral') return { data: 'recorded', error: null };
         if (fn === 'credit_referral') return { data: 'waiting', error: null };
-        return { data: null, error: { message: `function public.${fn} does not exist` } };
+        return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${fn} in the schema cache` } };
       },
     };
     const request = (method: string, body?: Record<string, unknown>) => ({

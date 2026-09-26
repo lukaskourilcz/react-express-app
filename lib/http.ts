@@ -177,9 +177,17 @@ export function withTimeout<T>(p: PromiseLike<T>, ms = 5000): Promise<T> {
   });
 }
 
-/** True when a Supabase error means the RPC isn't installed yet (a schema migration is pending). */
-export function isRpcMissing(error: { message?: string } | null | undefined): boolean {
-  return !!error && /function .* does not exist/i.test(error.message ?? '');
+/** True when a Supabase error means the RPC isn't installed yet (a schema
+ * migration is pending). PostgREST, which every `.rpc()` goes through, reports
+ * a routine missing from its schema cache as PGRST202 ("Could not find the
+ * function public.x(...) in the schema cache"). Postgres itself says
+ * "function … does not exist" (42883), which is what arrives when an installed
+ * routine calls one that is not. Both mean the same thing to a caller. */
+export function isRpcMissing(error: { code?: string; message?: string } | null | undefined): boolean {
+  if (!error) return false;
+  if (error.code === 'PGRST202' || error.code === '42883') return true;
+  const message = error.message ?? '';
+  return /could not find the function/i.test(message) || /function .* does not exist/i.test(message);
 }
 
 /**

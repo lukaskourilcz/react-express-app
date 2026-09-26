@@ -130,6 +130,7 @@ export function memoryBackend(): Backend {
   };
   const ok = (data: unknown) => ({ data, error: null });
   const fail = (message: string) => ({ data: null, error: { message } });
+  const missing = (name: string) => ({ data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } });
   const routines: Record<string, (a: Record<string, any>) => { data: unknown; error: { message: string } | null }> = {
     is_premium: (a) => ok(grants.some((g) => g.user_id === a.p_user && live(g))),
     entitlement_summary: (a) => {
@@ -206,7 +207,8 @@ export function memoryBackend(): Backend {
   };
   const supabase = {
     rpc: async (name: string, args: Record<string, unknown>) =>
-      routines[name] ? routines[name](args) : fail(`function public.${name}(...) does not exist`),
+      // A routine that is not installed answers the way PostgREST 12 does.
+      routines[name] ? routines[name](args) : missing(name),
     auth: {
       admin: {
         getUserById: async (id: string) => users.has(id)
@@ -964,6 +966,28 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     await deliver(eventText('checkout.session.completed', e.ids, 'delete2'));
     stripe.failNext.set('subscriptions.list', stripeError(500, 'api_error'));
     assert.equal(await lib.endBillingForDeletedAccount(supabase, e.userId), false, 'an outage stops the deletion');
+  });
+
+  await check('before migration 039 billing names the migration, and account deletion goes ahead', async () => {
+    // PostgREST's answer for every 039 routine on a database that lacks them.
+    const before039 = {
+      rpc: async (name: string) => ({ data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } }),
+      auth: { admin: { getUserById: async (id: string) => ({ data: { user: { id, email: 'before039@example.com' } }, error: null }) } },
+    } as unknown as SupabaseClient;
+    const userId = newUserId();
+    TOKENS.set('token-Before039', { id: userId, email: 'before039@example.com' });
+    const res = mockRes();
+    await lib.handleBillingCheckout(apiReq('POST', 'billing-checkout', { token: 'token-Before039', body: { plan: 'monthly' } }) as never, res as never, before039);
+    assert.equal(res.statusCode, 503);
+    assert.equal(res.body.error.code, 'migration_required');
+    const raw = eventText('customer.subscription.created', idsFor('Before039', userId), 'before039');
+    const hook = mockRes();
+    await lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, hook as never, before039);
+    assert.equal(hook.statusCode, 503);
+    assert.equal(hook.body.error.code, 'migration_required');
+    const calls = stripe.calls;
+    assert.equal(await lib.endBillingForDeletedAccount(before039, userId), true, 'no billing tables, nothing to end');
+    assert.equal(stripe.calls, calls, 'and nothing reaches Stripe');
   });
 
   await check('settings expose the two switches and the seller, and the origin is never taken from a guess', async () => {

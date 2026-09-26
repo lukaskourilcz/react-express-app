@@ -23,11 +23,9 @@ import { tokensForVerifiedXp, type CoinSettings, type SocialPlatform } from '../
 
 const logEvent = createLogger('coins');
 
-/** Migration 041 is not installed. PostgREST reports a missing routine as
- * PGRST202 ("Could not find the function"), Postgres itself as "function …
- * does not exist"; both mean the same thing here. */
-export const routineMissing = (error: { code?: string; message?: string } | null | undefined): boolean =>
-  !!error && (isRpcMissing(error) || error.code === 'PGRST202' || /could not find the function/i.test(error.message ?? ''));
+/** Migration 041 is not installed. `isRpcMissing` reads both ways of saying
+ * so: PostgREST's PGRST202 and Postgres's "function … does not exist". */
+export const routineMissing = (error: { code?: string; message?: string } | null | undefined): boolean => isRpcMissing(error);
 
 /** The account part of a per-account event id, as `token_account_key` in 041
  * computes it: a UUID as it is, anything else hashed. */
