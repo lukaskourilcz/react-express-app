@@ -3,13 +3,13 @@
 //
 // The number has to describe what production serves, so the check builds its
 // own copy of the client with production's shape instead of reading whatever
-// client/dist holds. Code in the client is gated on build-time variables
-// (`url && key ? createClient(...) : null` in lib/supabaseClient.ts drops the
-// whole Supabase client when they are missing), and CI's main build sets only
-// VITE_PRODUCT and VITE_LOCK_SUBJECT, so measuring that build left out about
-// 55 kB that every visitor loads. docs/quality/bundle-budget.json lists the
-// variables production sets and gives each a placeholder of realistic length;
-// they apply to this measured build only, in its own output directory.
+// client/dist holds. Client code depends on build-time variables: while
+// lib/supabaseClient.ts created the Supabase client eagerly, a build without
+// VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY left out about 55 kB that every
+// visitor loaded, and CI's main build set only VITE_PRODUCT and
+// VITE_LOCK_SUBJECT. docs/quality/bundle-budget.json lists the variables
+// production sets and gives each a placeholder of realistic length; this
+// check applies them to its own build only, in its own output directory.
 //
 // The measurement follows index.html the way a browser does on a first visit:
 // the entry script, its modulepreload links and its stylesheets, each gzipped.
