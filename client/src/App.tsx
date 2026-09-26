@@ -1,5 +1,5 @@
 import { NOINDEX_PATHS, PUBLIC_ORIGIN, premiumSchema, publicPage, topicFromPath, topicSchema } from './lib/publicMetadata';
-import { lazy, Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
 import { AppToast } from './components/ui/AppToast';
@@ -244,8 +244,15 @@ function App() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const activeSubject = useActiveSubject();
-  const { user } = useAuth();
+  const { user, signInResumeFailed } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
+  // A sign-in pressed before a reload (lib/auth.tsx) failed in this document,
+  // where the button that was pressed is gone: the shell says so.
+  const [resumeFailedOpen, setResumeFailedOpen] = useState(false);
+  useEffect(() => {
+    if (signInResumeFailed) setResumeFailedOpen(true);
+  }, [signInResumeFailed]);
+  const closeResumeFailed = useCallback(() => setResumeFailedOpen(false), []);
   const mobile = useIsMobile();
   const analyticsIdentified = useRef(false);
 
@@ -848,6 +855,13 @@ function App() {
         severity="success"
         autoHideDuration={6000}
         message={t('auth.signupBonusToast', { tokens: wallet.data?.welcome?.coins ?? 0, brand: CURRENT_PRODUCT.brand })}
+      />
+      <AppToast
+        open={resumeFailedOpen}
+        onClose={closeResumeFailed}
+        severity="error"
+        autoHideDuration={8000}
+        message={t('auth.signInFailed')}
       />
     </div>
   );

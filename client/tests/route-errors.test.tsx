@@ -11,6 +11,7 @@ import {
   installChunkErrorTracking,
   isChunkLoadError,
   lazyPage,
+  reloadOnPress,
   reloadPage,
   type BuildCheck,
   type Recovery,
@@ -101,6 +102,26 @@ describe('reloading', () => {
     expect(reloadPage(false, reload)).toBe(true);
     expect(reload).toHaveBeenCalledTimes(1);
     read.mockRestore();
+  });
+});
+
+describe('reloading on a press', () => {
+  it('reloads while the server answers, whatever the automatic guard says, and never offline', async () => {
+    // An automatic reload a moment ago rations the automatic ones only.
+    window.sessionStorage.setItem(STAMP, String(Date.now()));
+    const recovery = fakeRecovery();
+    await expect(reloadOnPress(recovery)).resolves.toBe(true);
+    expect(recovery.reload).toHaveBeenCalledTimes(1);
+
+    const unreachable = fakeRecovery('unreachable');
+    await expect(reloadOnPress(unreachable)).resolves.toBe(false);
+    expect(unreachable.reload).not.toHaveBeenCalled();
+
+    online = false;
+    const offline = fakeRecovery();
+    await expect(reloadOnPress(offline)).resolves.toBe(false);
+    expect(offline.checkServedBuild).not.toHaveBeenCalled();
+    expect(offline.reload).not.toHaveBeenCalled();
   });
 });
 

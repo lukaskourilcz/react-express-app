@@ -37,6 +37,53 @@ export function clearAuthReturn(): void {
   }
 }
 
+// ── A sign-in that continues after a reload ─────────────────────────────────
+//
+// A second sign-in press after supabase-js failed to download reloads the page
+// (lib/auth.tsx), and this mark lets the next document finish that sign-in.
+// The return path above stays for it; when the sign-in does not continue, the
+// return path goes too, so it never steers a later, unrelated sign-in.
+
+const RESUME_KEY = 'devshark:auth-resume';
+/** Long enough for a slow reload, short enough that a tab reopened later never
+ * leaves for Google by itself. */
+export const RESUME_MAX_AGE_MS = 60_000;
+
+export function markSignInResume(now = Date.now()): void {
+  try {
+    sessionStorage.setItem(RESUME_KEY, String(now));
+  } catch {
+    // Without storage the next document cannot continue; the learner presses again.
+  }
+}
+
+export function clearSignInResume(): void {
+  try {
+    sessionStorage.removeItem(RESUME_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/** Whether this document should finish a sign-in the one before it started.
+ * The mark is removed as it is read; a stale one takes the return path with it. */
+export function takeSignInResume(now = Date.now()): boolean {
+  let raw: string | null = null;
+  try {
+    raw = sessionStorage.getItem(RESUME_KEY);
+    sessionStorage.removeItem(RESUME_KEY);
+  } catch {
+    return false;
+  }
+  if (!raw) return false;
+  const at = Number(raw);
+  if (!Number.isFinite(at) || now < at || now - at > RESUME_MAX_AGE_MS) {
+    clearAuthReturn();
+    return false;
+  }
+  return true;
+}
+
 /** The recorded path, removed as it is read; null when none is fresh. */
 export function takeAuthReturn(now = Date.now()): string | null {
   let raw: string | null = null;

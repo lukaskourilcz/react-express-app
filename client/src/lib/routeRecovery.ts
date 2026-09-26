@@ -137,6 +137,23 @@ export function reloadPage(automatic: boolean, reload: () => void = browserRecov
   return true;
 }
 
+/**
+ * The learner pressed something that needs code this document already failed
+ * to load: a second sign-in (lib/auth.tsx), the workbench's Try again, the
+ * shell's retry. Where the browser remembers the failed fetch, asking again in
+ * place fails at once, so the press reloads the current address, as the route
+ * boundary's Try again does: never offline, and only while the server answers,
+ * since a reload it cannot answer swaps the app for the browser's error page.
+ * Resolves whether a reload started. A started reload can still be refused
+ * (the leave-page prompt): the caller stays busy for RELOAD_GRACE_MS, then
+ * gives its control back.
+ */
+export async function reloadOnPress(recovery: Recovery = browserRecovery): Promise<boolean> {
+  if (!isOnline()) return false;
+  if ((await recovery.checkServedBuild()) === 'unreachable') return false;
+  return reloadPage(false, recovery.reload);
+}
+
 // ── Pages that can be asked for again ──────────────────────────────────────
 
 const failedPages = new Set<() => void>();

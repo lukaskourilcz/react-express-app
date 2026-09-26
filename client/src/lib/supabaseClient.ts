@@ -93,6 +93,7 @@ interface Waiting {
 
 let client: SupabaseClient | null = null;
 let loading: Promise<SupabaseClient | null> | null = null;
+let downloadFailed = false;
 // Subscribers that arrived before the client; attached when it is created.
 const waiting = new Set<Waiting>();
 let watchingOtherTabs = false;
@@ -110,8 +111,10 @@ export function mayHaveSession(): boolean {
 
 /**
  * The client, importing supabase-js on first use. Resolves null in a build
- * without credentials. Rejects when the download fails; the next call tries
- * again.
+ * without credentials. Rejects when the download fails. The next call imports
+ * again, but a browser that remembers failed module fetches (Chromium up to
+ * 155, Safari) fails it at once without a request; lib/auth.tsx reloads on a
+ * sign-in press then.
  */
 export function loadSupabase(): Promise<SupabaseClient | null> {
   if (client) return Promise.resolve(client);
@@ -136,10 +139,17 @@ export function loadSupabase(): Promise<SupabaseClient | null> {
       })
       .catch((error: unknown) => {
         loading = null;
+        downloadFailed = true;
         throw error;
       });
   }
   return loading;
+}
+
+/** Whether loading supabase-js failed earlier in this document, on a press or
+ * in the background. */
+export function supabaseLoadFailed(): boolean {
+  return downloadFailed;
 }
 
 /** The session supabase-js holds, loading the client first. Null in a build

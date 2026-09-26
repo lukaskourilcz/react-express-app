@@ -125,12 +125,11 @@ test('a supabase-js download that fails on a sign-in click neither reloads nor r
   // two chunks start with "supabase-", and the library carries GoTrueClient.
   // The build needs a Supabase project configured, as CI's has.
   const { documents } = await prepare(page);
-  let failing = true;
   let dropped = 0;
   await page.route(/\/assets\/supabase-[\w-]+\.js$/, async (route) => {
     const response = await route.fetch();
     const body = await response.text();
-    if (failing && body.includes('GoTrueClient')) {
+    if (body.includes('GoTrueClient')) {
       dropped += 1;
       return route.abort('failed');
     }
@@ -141,7 +140,9 @@ test('a supabase-js download that fails on a sign-in click neither reloads nor r
 
   const logIn = page.getByRole('button', { name: 'Log in', exact: true }).first();
   await logIn.click();
-  // The click reports the failure itself, and nothing else happens.
+  // The click reports the failure itself, and nothing else happens. A second
+  // click is lazy-auth.spec.ts's: it reloads where the browser remembers the
+  // failed download.
   await expect(page.getByText('Sign-in failed. Please try again.')).toBeVisible();
   expect(dropped).toBe(1);
   await page.waitForTimeout(600);
@@ -149,16 +150,6 @@ test('a supabase-js download that fails on a sign-in click neither reloads nor r
   await expect(page).toHaveURL(/\/$/);
   await expect(panelOf(page)).toHaveCount(0);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
-
-  // The next click asks again (loadSupabase forgets the failure). Whether the
-  // browser fetches the chunk again depends on its module map; either way the
-  // page stays.
-  failing = false;
-  await logIn.click();
-  await page.waitForTimeout(600);
-  const left = new URL(page.url()).pathname === '/auth/v1/authorize';
-  test.info().annotations.push({ type: 'second sign-in click', description: left ? 'reached the provider' : 'failed again from the module map' });
-  expect(documents.length).toBeLessThanOrEqual(left ? 2 : 1);
 });
 
 test('offline: no reload, and the page comes back with the connection, without a press', async ({ page, context }) => {

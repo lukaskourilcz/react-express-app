@@ -143,6 +143,53 @@ test('signing in downloads supabase-js on the click, then leaves for the provide
   expect(await libraryRequests(page, seen.chunks)).toHaveLength(1);
 });
 
+test('a second sign-in press after a failed download reloads, leaves for the provider, and comes back to the page that asked', async ({ page }) => {
+  await desktop(page);
+  await offlineApi(page);
+  await localAuth(page);
+  const documents: string[] = [];
+  page.on('request', (request) => {
+    if (request.resourceType() === 'document' && request.frame() === page.mainFrame()) documents.push(new URL(request.url()).pathname);
+  });
+  // The library chunk is dropped until `failing` is cleared. The app's own
+  // supabase-* chunk passes; only the library carries the auth client.
+  let failing = true;
+  const library: string[] = [];
+  await page.route(/\/assets\/supabase-[\w-]+\.js$/, async (route) => {
+    const response = await route.fetch();
+    const body = await response.text();
+    if (!body.includes(LIBRARY_MARKER)) return route.fulfill({ response, body });
+    library.push(failing ? 'dropped' : 'served');
+    return failing ? route.abort('failed') : route.fulfill({ response, body });
+  });
+
+  // The voucher's sign-in records where to come back to (/premium#voucher).
+  await page.goto('/premium');
+  const signIn = page.getByRole('button', { name: 'Sign in to redeem' });
+  await signIn.click();
+  await expect(page.getByText('Something went wrong. Please try again.')).toBeVisible();
+  expect(library).toEqual(['dropped']);
+  expect(documents).toEqual(['/premium']);
+
+  // The network is back. A browser that remembers the failed module answers
+  // the next import from memory, so this press reloads the page and the next
+  // document finishes the sign-in; one that forgets signs in from here.
+  failing = false;
+  await signIn.click();
+  await page.waitForURL((url) => url.hostname === projectUrl.hostname);
+  expect(new URL(page.url()).pathname).toBe('/auth/v1/authorize');
+  expect(library).toEqual(['dropped', 'served']);
+  const reloaded = documents.filter((path) => path === '/premium').length === 2;
+  test.info().annotations.push({ type: 'second press', description: reloaded ? 'reloaded, and the next document signed in' : 'signed in without a reload' });
+  expect(documents).toEqual(reloaded ? ['/premium', '/premium', '/auth/v1/authorize'] : ['/premium', '/auth/v1/authorize']);
+
+  // Back from the provider, the account arrives on the page that asked.
+  const session = fakeSession();
+  await page.goto(`/#access_token=${session.access_token}&expires_in=3600&expires_at=${session.expires_at}&refresh_token=fake-refresh-token&token_type=bearer&provider_token=fake`);
+  await expect(page.getByRole('button', { name: 'Account menu for Test' })).toBeVisible();
+  await expect(page).toHaveURL(/\/premium#voucher$/);
+});
+
 test('an OAuth return is read by supabase-js and reported as a sign-in', async ({ page }) => {
   await desktop(page);
   const signInReports = await offlineApi(page);

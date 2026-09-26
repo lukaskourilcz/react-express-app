@@ -6,6 +6,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { server } from './mocks/server';
+import { RELOAD_GRACE_MS, type BuildCheck, type Recovery } from '../src/lib/routeRecovery';
+import { RESUME_MAX_AGE_MS } from '../src/lib/authReturn';
 
 const PROJECT_URL = 'https://testprojectref.supabase.co';
 const ANON_KEY = 'test-anon-key';
@@ -99,7 +101,9 @@ const STORED = sb.sessionFor('stored-access-token', 'user-stored');
 
 /** The page load: fresh modules, and a supabase-js whose imports are counted.
  * `held` keeps the download pending until releaseDownload(), as a slow network
- * would; `fails` makes it fail. */
+ * would; `fails` makes it fail, every time, with the error Chromium reports.
+ * vitest wraps an error thrown by a mock factory in its own, so the failure is
+ * thrown where the library is first used, inside the same import promise. */
 function freshPageLoad(download: 'instant' | 'held' | 'fails' = 'instant') {
   vi.resetModules();
   let release = () => {};
@@ -107,7 +111,13 @@ function freshPageLoad(download: 'instant' | 'held' | 'fails' = 'instant') {
   vi.doMock('@supabase/supabase-js', async () => {
     sb.imports += 1;
     await sb.held?.promise;
-    if (download === 'fails') throw new Error('Failed to fetch dynamically imported module');
+    if (download === 'fails') {
+      return {
+        createClient: () => {
+          throw new TypeError('Failed to fetch dynamically imported module: https://devshark.app/assets/supabase-B5YuwSPF.js');
+        },
+      };
+    }
     return { createClient: sb.createClient };
   });
 }
@@ -117,7 +127,7 @@ const releaseDownload = () => act(async () => sb.held?.release());
 const settle = () => act(() => new Promise((resolve) => setTimeout(resolve, 20)));
 
 /** What the auth context said on each render, and its latest value. */
-async function mountAuth() {
+async function mountAuth(recovery?: Recovery) {
   const auth = await import('../src/lib/auth');
   const renders: string[] = [];
   let latest: ReturnType<typeof auth.useAuth> | undefined;
@@ -127,8 +137,13 @@ async function mountAuth() {
     renders.push(shown);
     return <p data-testid="auth">{shown}</p>;
   }
-  render(<auth.AuthProvider><Probe /></auth.AuthProvider>);
-  return { renders, current: () => latest! };
+  const view = render(<auth.AuthProvider recovery={recovery}><Probe /></auth.AuthProvider>);
+  return { renders, current: () => latest!, unmount: view.unmount };
+}
+
+/** The build check and the reload, recorded. The server answers unless told otherwise. */
+function fakeRecovery(check: BuildCheck = 'same') {
+  return { checkServedBuild: vi.fn(async () => check), reload: vi.fn() } satisfies Recovery;
 }
 
 /** Records every sign-in report, with its bearer token. */
@@ -389,6 +404,141 @@ describe('signing in', () => {
     expect(renders).not.toContain('loading');
     // The tab that signed in reports the sign-in; this one restored it.
     expect(reports).toEqual([]);
+  });
+});
+
+describe('signing in after a failed download', () => {
+  // Chromium up to 155 and Safari remember a failed module fetch, so every
+  // later import of supabase-js fails at once. The mocked download fails every
+  // time, as such a browser would.
+  const RETURN = 'devshark:auth-return';
+  const RESUME = 'devshark:auth-resume';
+  const returnTo = (path: string) => sessionStorage.setItem(RETURN, JSON.stringify({ path, at: Date.now() }));
+
+  it('reloads on the second press, and the next document finishes the sign-in back to the page that asked', async () => {
+    freshPageLoad('fails');
+    const recovery = fakeRecovery();
+    const first = await mountAuth(recovery);
+    await expect(first.current().signInWithGoogle('/premium')).rejects.toThrow('Failed to fetch dynamically imported module');
+    // One failure is a press that failed: the button says so, nothing reloads.
+    expect(recovery.reload).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(RETURN)).toBeNull();
+
+    // The same failure straight back: this press reloads, once the server answers.
+    void first.current().signInWithGoogle('/premium').catch(() => undefined);
+    await vi.waitFor(() => expect(recovery.reload).toHaveBeenCalledTimes(1));
+    expect(recovery.checkServedBuild).toHaveBeenCalledTimes(1);
+    // Where the learner wanted to go survives the reload, with the sign-in.
+    expect(sessionStorage.getItem(RETURN)).toContain('"/premium"');
+    expect(sessionStorage.getItem(RESUME)).not.toBeNull();
+
+    // The next document downloads the library and leaves for Google.
+    first.unmount();
+    freshPageLoad('instant');
+    const next = await mountAuth(fakeRecovery());
+    await vi.waitFor(() => expect(sb.clients[0]?.auth.signInWithOAuth).toHaveBeenCalledTimes(1));
+    expect(sb.clients[0].auth.signInWithOAuth).toHaveBeenCalledWith({ provider: 'google', options: { redirectTo: window.location.origin } });
+    expect(sessionStorage.getItem(RETURN)).toContain('"/premium"');
+    expect(sessionStorage.getItem(RESUME)).toBeNull();
+    expect(next.current().signInResumeFailed).toBe(false);
+  });
+
+  it('reloads nothing offline or while the server does not answer, and the press forgets the return', async () => {
+    freshPageLoad('fails');
+    const recovery = fakeRecovery('unreachable');
+    const { current } = await mountAuth(recovery);
+    await expect(current().signInWithGoogle('/premium')).rejects.toThrow();
+    await expect(current().signInWithGoogle('/premium')).rejects.toThrow();
+    expect(recovery.checkServedBuild).toHaveBeenCalledTimes(1);
+    expect(recovery.reload).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(RETURN)).toBeNull();
+    expect(sessionStorage.getItem(RESUME)).toBeNull();
+
+    // Offline nothing is asked at all: a reload would show the browser's offline page.
+    Object.defineProperty(window.navigator, 'onLine', { configurable: true, get: () => false });
+    try {
+      await expect(current().signInWithGoogle('/premium')).rejects.toThrow();
+    } finally {
+      delete (window.navigator as { onLine?: boolean }).onLine;
+    }
+    expect(recovery.checkServedBuild).toHaveBeenCalledTimes(1);
+    expect(recovery.reload).not.toHaveBeenCalled();
+  });
+
+  it('gives the press back when the page refuses the reload, and forgets the return', async () => {
+    freshPageLoad('fails');
+    const recovery = fakeRecovery();
+    const { current } = await mountAuth(recovery);
+    await expect(current().signInWithGoogle('/premium')).rejects.toThrow();
+    vi.useFakeTimers();
+    try {
+      const outcome = current().signInWithGoogle('/premium').then(() => 'signed in', () => 'failed');
+      await vi.waitFor(() => expect(recovery.reload).toHaveBeenCalledTimes(1));
+      expect(sessionStorage.getItem(RESUME)).not.toBeNull();
+      // The leave-page prompt kept this document: after the grace the press fails.
+      await vi.advanceTimersByTimeAsync(RELOAD_GRACE_MS);
+      expect(await outcome).toBe('failed');
+    } finally {
+      vi.useRealTimers();
+    }
+    expect(sessionStorage.getItem(RESUME)).toBeNull();
+    expect(sessionStorage.getItem(RETURN)).toBeNull();
+  });
+
+  it('never reloads for a download that failed in the background; the first press after it does', async () => {
+    // A stored session starts the download while the modules evaluate.
+    freshPageLoad('fails');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const recovery = fakeRecovery();
+    const { current } = await mountAuth(recovery);
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('signed-out'));
+    // Another tab signing in asks for the library again, in the background too.
+    act(() => {
+      window.dispatchEvent(new window.StorageEvent('storage', { key: KEY, newValue: JSON.stringify(STORED) }));
+    });
+    await settle();
+    expect(recovery.checkServedBuild).not.toHaveBeenCalled();
+    expect(recovery.reload).not.toHaveBeenCalled();
+
+    void current().signInWithGoogle().catch(() => undefined);
+    await vi.waitFor(() => expect(recovery.reload).toHaveBeenCalledTimes(1));
+    localStorage.removeItem(KEY);
+  });
+
+  it('lets a stale mark go, with the return path, and downloads nothing', async () => {
+    sessionStorage.setItem(RESUME, String(Date.now() - RESUME_MAX_AGE_MS - 1_000));
+    returnTo('/premium');
+    const { renders } = await mountAuth(fakeRecovery());
+    await settle();
+    expect(sb.imports).toBe(0);
+    expect(renders).not.toContain('loading');
+    expect(sessionStorage.getItem(RESUME)).toBeNull();
+    expect(sessionStorage.getItem(RETURN)).toBeNull();
+  });
+
+  it('takes an account already here as the sign-in: no second trip to Google, and the return path stays for it', async () => {
+    sessionStorage.setItem(RESUME, String(Date.now()));
+    returnTo('/premium');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    await mountAuth(fakeRecovery());
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    await settle();
+    expect(sb.clients[0].auth.signInWithOAuth).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(RETURN)).toContain('"/premium"');
+    localStorage.removeItem(KEY);
+  });
+
+  it('says when the sign-in it carried over fails again, reloads nothing and forgets the return', async () => {
+    freshPageLoad('fails');
+    sessionStorage.setItem(RESUME, String(Date.now()));
+    returnTo('/premium');
+    const recovery = fakeRecovery();
+    const { current } = await mountAuth(recovery);
+    await vi.waitFor(() => expect(current().signInResumeFailed).toBe(true));
+    expect(recovery.checkServedBuild).not.toHaveBeenCalled();
+    expect(recovery.reload).not.toHaveBeenCalled();
+    expect(sessionStorage.getItem(RETURN)).toBeNull();
+    expect(screen.getByTestId('auth')).toHaveTextContent('signed-out');
   });
 });
 
