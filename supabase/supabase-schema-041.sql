@@ -27,6 +27,10 @@
 --   * credit_social_visit exists for the owner's decision on the click-through
 --     grant. The amount comes from settings and defaults to zero, and a zero
 --     amount credits nothing (section 1, item 2 of the handoff).
+--   * revoke_premium_benefits (added by the review, step FIX) takes back what
+--     Premium paid while a subscription was live once that subscription is
+--     revoked: a full refund, a dispute, an early fraud warning or a
+--     withdrawal. See section 10.
 --   * record_coding_verdict is restated from 038 with one change: the XP award
 --     id names the account (`coding:<account>:<task>`). The 025 id named only
 --     the task, and verified_activity_awards is keyed by the award id alone, so
@@ -657,6 +661,102 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.delete_coin_data(TEXT) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.delete_coin_data(TEXT) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 10. A revoked subscription takes back what Premium paid (step FIX).
+-- ---------------------------------------------------------------------------
+-- The billing code calls this after it wrote a provider grant as revoked
+-- (finding integrity-3). Within the time that grant existed, from its
+-- created_at until now:
+--   1. every coin redemption of the account that still waits for fulfilment
+--      is cancelled through cancel_merch_order, which returns its coins. A
+--      claimed learning-path package and an order paid with money are left
+--      alone: the package rewards a finished path, and money is refunded by
+--      whoever took it. An order already handed to Spreadshop cannot be
+--      stopped here.
+--   2. the milestone coins (reason 'milestone', a month's top three included)
+--      and the part of each XP credit that the Premium doubling added are
+--      debited in one ledger entry, 'revoke:<grant>', as far as the balance
+--      reaches. Coins already spent on the crown or a streak protection stay
+--      spent. A milestone taken back stays in the ledger as paid, so it is
+--      never paid a second time.
+-- Nothing happens while another grant keeps the account Premium, or for a
+-- grant that is not revoked. The debit's event id makes a second call change
+-- nothing. The routine takes the account's coin lock, so no XP credit lands
+-- between the sum and the debit.
+CREATE OR REPLACE FUNCTION public.revoke_premium_benefits(
+  p_subscription_id TEXT,
+  p_subject         TEXT
+)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_grant     public.entitlement_grants%ROWTYPE;
+  v_order     TEXT;
+  v_outcome   TEXT;
+  v_cancelled INTEGER := 0;
+  v_owed      INTEGER := 0;
+  v_balance   INTEGER;
+  v_debit     INTEGER := 0;
+  v_event     TEXT;
+BEGIN
+  IF p_subscription_id IS NULL OR p_subscription_id !~ '^[A-Za-z0-9_-]{1,128}$' OR
+     p_subject NOT IN ('webdev', 'geography', 'math', 'history', 'biology', 'chess', 'poker') THEN
+    RAISE EXCEPTION 'invalid_benefit_revocation';
+  END IF;
+  SELECT * INTO v_grant FROM public.entitlement_grants WHERE provider_subscription_id = p_subscription_id;
+  IF NOT FOUND OR v_grant.status <> 'revoked' THEN
+    RETURN jsonb_build_object('skipped', 'not_revoked', 'cancelledOrders', 0, 'owed', 0, 'debited', 0);
+  END IF;
+  IF public.is_premium(v_grant.user_id) THEN
+    RETURN jsonb_build_object('skipped', 'still_premium', 'cancelledOrders', 0, 'owed', 0, 'debited', 0);
+  END IF;
+  PERFORM pg_advisory_xact_lock(hashtextextended('token-xp:' || v_grant.user_id, 0));
+
+  FOR v_order IN
+    SELECT o.order_id
+      FROM public.merch_orders o
+     WHERE o.user_id = v_grant.user_id
+       AND o.payment_kind = 'tokens'
+       AND COALESCE(o.token_total, 0) > 0
+       AND o.state IN ('paid', 'awaiting_payment')
+       AND o.created_at >= v_grant.created_at
+       AND NOT EXISTS (SELECT 1 FROM public.path_reward_claims c WHERE c.order_id = o.order_id)
+     ORDER BY o.created_at
+  LOOP
+    v_outcome := public.cancel_merch_order(v_order, v_grant.user_id, p_subject);
+    IF v_outcome IN ('refunded', 'cancelled') THEN v_cancelled := v_cancelled + 1; END IF;
+  END LOOP;
+
+  v_event := 'revoke:' || replace(v_grant.id::TEXT, '-', '');
+  PERFORM 1 FROM public.token_ledger WHERE event_id = v_event;
+  IF NOT FOUND THEN
+    SELECT COALESCE(SUM(amount), 0)::INTEGER INTO v_owed
+      FROM public.token_ledger
+     WHERE user_id = v_grant.user_id AND subject = p_subject
+       AND reason = 'milestone' AND created_at >= v_grant.created_at;
+    v_owed := v_owed + COALESCE((
+      SELECT SUM(GREATEST(0, credited - base))::INTEGER
+        FROM public.token_xp_credits
+       WHERE user_id = v_grant.user_id AND subject = p_subject
+         AND multiplier > 1 AND created_at >= v_grant.created_at), 0);
+    SELECT balance INTO v_balance
+      FROM public.token_balances
+     WHERE user_id = v_grant.user_id AND subject = p_subject;
+    v_debit := LEAST(v_owed, COALESCE(v_balance, 0));
+    IF v_debit > 0 THEN
+      PERFORM public.debit_tokens(v_grant.user_id, v_event, p_subject, v_debit, 'adjustment',
+                                  LEFT('revoke:' || p_subscription_id, 128));
+    END IF;
+  END IF;
+  RETURN jsonb_build_object('cancelledOrders', v_cancelled, 'owed', v_owed, 'debited', v_debit);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.revoke_premium_benefits(TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.revoke_premium_benefits(TEXT, TEXT) TO service_role;
 
 -- ---------------------------------------------------------------------------
 -- Rollback (manual): DROP the five routines added here and the two tables,

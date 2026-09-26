@@ -313,4 +313,11 @@ export interface EntitlementResponse {
   inGrace: boolean;
   /** The end of a manual or promo grant; null means open-ended. */
   validUntil: string | null;
+  /** The account has a billing customer, whichever grant wins the plan line,
+   * so Manage billing (card, plan, invoices) stays reachable. Absent from a
+   * server that predates it. */
+  billingAccount?: boolean;
+  /** A subscription is live, so checkout would be refused: offer Manage
+   * billing instead. */
+  subscriptionLive?: boolean;
 }

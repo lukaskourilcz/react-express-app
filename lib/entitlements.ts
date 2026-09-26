@@ -36,7 +36,8 @@ const isoOrNull = (value: unknown): string | null => {
 /** The summary routine's JSON, read defensively into the wire shape. */
 export function toEntitlementResponse(raw: unknown): EntitlementResponse {
   const row = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>;
-  if (row.premium !== true) return FREE;
+  const billing = { billingAccount: row.billingAccount === true, subscriptionLive: row.subscriptionLive === true };
+  if (row.premium !== true) return { ...FREE, ...billing };
   const source = SOURCES.includes(row.source as EntitlementSource) ? (row.source as EntitlementSource) : null;
   return {
     tier: 'premium',
@@ -45,6 +46,7 @@ export function toEntitlementResponse(raw: unknown): EntitlementResponse {
     cancelAtPeriodEnd: row.cancelAtPeriodEnd === true,
     inGrace: row.inGrace === true,
     validUntil: isoOrNull(row.validUntil),
+    ...billing,
   };
 }
 

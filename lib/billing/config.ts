@@ -5,11 +5,17 @@
  *   STRIPE_WEBHOOK_SECRET         whsec_… of the endpoint /api/user/billing-webhook
  *   STRIPE_PRICE_PREMIUM_MONTHLY  price_… (3.99 EUR, tax_behavior inclusive)
  *   STRIPE_PRICE_PREMIUM_ANNUAL   price_… (39.99 EUR, tax_behavior inclusive)
+ *   STRIPE_PRICE_PREMIUM_LEGACY   optional, comma-separated: earlier devShark
+ *                                 Premium Prices that existing subscriptions
+ *                                 still bill after a price change
  *   STRIPE_MANAGED_PAYMENTS       'true' (Stripe as merchant of record) or
  *                                 'false' (plain Stripe with Stripe Tax)
  *   PUBLIC_ORIGIN                 where Stripe sends the buyer back; defaults
  *                                 to the canonical origin below
- *   RESEND_API_KEY, RESEND_FROM   optional cancellation emails
+ *   RESEND_API_KEY, RESEND_FROM   the emails of the public cancellation page:
+ *                                 its confirmation link and its receipt.
+ *                                 Without them only a signed-in owner of the
+ *                                 address can cancel there.
  *
  * Two switches, on purpose. `checkoutEnabled` needs BILLING_ENABLED and every
  * value; it is the only thing that sells Premium. `connected` needs only the
@@ -31,6 +37,8 @@ export interface BillingConfig {
   secretKey: string | null;
   webhookSecret: string | null;
   prices: Record<BillingPlan, string | null>;
+  /** Earlier Premium Prices that live subscriptions may still bill. */
+  legacyPrices: string[];
   /** Managed Payments (merchant of record) or plain Stripe with Stripe Tax. */
   managedPayments: boolean;
   origin: string;
@@ -67,6 +75,10 @@ export function billingConfig(env: Env = process.env): BillingConfig {
     monthly: value(env, 'STRIPE_PRICE_PREMIUM_MONTHLY'),
     annual: value(env, 'STRIPE_PRICE_PREMIUM_ANNUAL'),
   };
+  const legacyPrices = (value(env, 'STRIPE_PRICE_PREMIUM_LEGACY') ?? '')
+    .split(',')
+    .map((one) => one.trim())
+    .filter((one) => /^price_[A-Za-z0-9]{1,120}$/.test(one));
   const managedRaw = value(env, 'STRIPE_MANAGED_PAYMENTS');
   const missing: string[] = [];
   if (!secretKey) missing.push('STRIPE_SECRET_KEY');
@@ -83,6 +95,7 @@ export function billingConfig(env: Env = process.env): BillingConfig {
     secretKey,
     webhookSecret,
     prices,
+    legacyPrices,
     managedPayments: managedRaw === 'true',
     origin: parseOrigin(value(env, 'PUBLIC_ORIGIN')),
     missing,
@@ -90,15 +103,24 @@ export function billingConfig(env: Env = process.env): BillingConfig {
   };
 }
 
+/** Every Price that bills devShark Premium: the two on sale and any earlier
+ * ones still billed. Empty when no Price is configured. */
+export function premiumPriceIds(config: BillingConfig): ReadonlySet<string> {
+  return new Set([config.prices.monthly, config.prices.annual, ...config.legacyPrices].filter((one): one is string => Boolean(one)));
+}
+
 /** Who sells Premium, as the Terms and the privacy policy state it: Stripe
  * as Link under Managed Payments, or the trader with plain Stripe. Null until
  * Stripe is connected and the owner has said which. */
 export type SellerOfRecord = 'link' | 'trader';
 
-/** What the browser may know, through the public settings route. */
+/** What the browser may know, through the public settings route.
+ * `cancelByEmail`: the cancellation page can email its confirmation link, so
+ * nobody has to sign in to cancel. */
 export function publicBillingSettings(env: Env = process.env): {
   enabled: boolean;
   cancellable: boolean;
+  cancelByEmail: boolean;
   seller: SellerOfRecord | null;
 } {
   const config = billingConfig(env);
@@ -106,6 +128,7 @@ export function publicBillingSettings(env: Env = process.env): {
   return {
     enabled: config.checkoutEnabled,
     cancellable: config.connected,
+    cancelByEmail: config.connected && config.email !== null,
     seller: config.connected && managedSet ? (config.managedPayments ? 'link' : 'trader') : null,
   };
 }

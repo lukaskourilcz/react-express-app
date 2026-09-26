@@ -56,7 +56,7 @@ export async function startAuthStandIn(): Promise<Server> {
     const user = TOKENS.get(token);
     res.setHeader('content-type', 'application/json');
     if (req.url?.startsWith('/auth/v1/user') && user) {
-      res.end(JSON.stringify({ id: user.id, email: user.email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }));
+      res.end(JSON.stringify({ id: user.id, email: user.email, email_confirmed_at: '2026-01-01T00:00:00Z', aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }));
       return;
     }
     res.statusCode = 401;
@@ -105,12 +105,17 @@ export interface Backend {
   grants(userId: string): Promise<GrantView[]>;
   event(id: string): Promise<{ processed: boolean; error: string | null; attempts: number } | null>;
   consent(sessionId: string): Promise<{ userId: string; subscriptionId: string | null; waiverText: string } | null>;
+  /** Expire every open cancellation link, as an hour passing would. */
+  expireCancelLinks(): Promise<void> | void;
+  /** The subscriptions whose Premium benefits were taken back, in call order;
+   * null where the backend cannot tell (the database runs the routine). */
+  benefitRevocations(): string[] | null;
 }
 
 type Row = {
   id: string; user_id: string; source: string; status: string; provider_subscription_id: string | null;
   provider_price_id: string | null; current_period_end: string | null; cancel_at_period_end: boolean;
-  valid_until: string | null; note: string | null; updated_at: number;
+  valid_until: string | null; note: string | null; updated_at: number; past_due_since: string | null;
 };
 
 /** An in-memory model of the migration 039 routines the billing code calls.
@@ -121,13 +126,19 @@ export function memoryBackend(): Backend {
   const customers = new Map<string, string>();
   const events = new Map<string, { processed_at: number | null; attempted_at: number | null; attempts: number; error: string | null }>();
   const consents = new Map<string, { user_id: string; provider_subscription_id: string | null; waiver_text: string }>();
+  const refundClaims = new Map<string, string>();
+  const cancelRequests = new Map<string, { email: string; action: string; requested_at: number; expires_at: number; used_at: number | null }>();
+  const revocations: string[] = [];
   let seq = 0;
   const live = (g: Row) => {
     const now = Date.now();
     if (g.source !== 'provider') return g.status === 'active' && (!g.valid_until || Date.parse(g.valid_until) > now);
     return g.status === 'active' || g.status === 'trialing'
-      || (g.status === 'past_due' && !!g.current_period_end && Date.parse(g.current_period_end) + 7 * 86_400_000 > now);
+      || (g.status === 'past_due' && !!g.past_due_since && Date.parse(g.past_due_since) + 7 * 86_400_000 > now);
   };
+  const requestView = (row: { email: string; action: string; requested_at: number; expires_at: number }) => ({
+    email: row.email, action: row.action, requestedAt: new Date(row.requested_at).toISOString(), expiresAt: new Date(row.expires_at).toISOString(),
+  });
   const ok = (data: unknown) => ({ data, error: null });
   const fail = (message: string) => ({ data: null, error: { message } });
   const missing = (name: string) => ({ data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } });
@@ -140,9 +151,13 @@ export function memoryBackend(): Backend {
         if (ex === null || ey === null) return ex === ey ? 0 : ex === null ? -1 : 1;
         return Date.parse(ey) - Date.parse(ex) || Number(y.source === 'provider') - Number(x.source === 'provider');
       })[0];
+      const billing = {
+        billingAccount: customers.has(a.p_user),
+        subscriptionLive: grants.some((g) => g.user_id === a.p_user && g.source === 'provider' && live(g)),
+      };
       return ok(best
-        ? { premium: true, source: best.source, status: best.status, currentPeriodEnd: best.current_period_end, cancelAtPeriodEnd: best.cancel_at_period_end, validUntil: best.valid_until, inGrace: best.source === 'provider' && best.status === 'past_due' }
-        : { premium: false });
+        ? { premium: true, source: best.source, status: best.status, currentPeriodEnd: best.current_period_end, cancelAtPeriodEnd: best.cancel_at_period_end, validUntil: best.valid_until, inGrace: best.source === 'provider' && best.status === 'past_due', ...billing }
+        : { premium: false, ...billing });
     },
     record_billing_event: (a) => {
       const now = Date.now();
@@ -177,8 +192,12 @@ export function memoryBackend(): Backend {
     upsert_provider_entitlement: (a) => {
       const existing = grants.find((g) => g.provider_subscription_id === a.p_subscription_id);
       if (existing && existing.user_id !== a.p_user_id) return fail('subscription_owner_conflict');
+      const since = a.p_status === 'past_due' ? (a.p_past_due_since ?? new Date().toISOString()) : null;
       if (existing) {
-        existing.status = existing.status === 'revoked' ? 'revoked' : a.p_status;
+        const status = existing.status === 'revoked' ? 'revoked' : a.p_status;
+        // The first failure seen stands while the grant stays past_due.
+        existing.past_due_since = status !== 'past_due' ? null : existing.status === 'past_due' && existing.past_due_since ? existing.past_due_since : since;
+        existing.status = status;
         existing.provider_price_id = a.p_price_id; existing.current_period_end = a.p_current_period_end;
         existing.cancel_at_period_end = Boolean(a.p_cancel_at_period_end); existing.note = a.p_note ?? existing.note;
         existing.updated_at = Date.now(); return ok(existing.id);
@@ -186,7 +205,7 @@ export function memoryBackend(): Backend {
       const row: Row = {
         id: `grant-${++seq}`, user_id: a.p_user_id, source: 'provider', status: a.p_status, provider_subscription_id: a.p_subscription_id,
         provider_price_id: a.p_price_id, current_period_end: a.p_current_period_end, cancel_at_period_end: Boolean(a.p_cancel_at_period_end),
-        valid_until: null, note: a.p_note ?? null, updated_at: Date.now(),
+        valid_until: null, note: a.p_note ?? null, updated_at: Date.now(), past_due_since: since,
       };
       grants.push(row); return ok(row.id);
     },
@@ -194,8 +213,42 @@ export function memoryBackend(): Backend {
       const row: Row = {
         id: `grant-${++seq}`, user_id: a.p_user_id, source: 'manual', status: 'active', provider_subscription_id: null, provider_price_id: null,
         current_period_end: null, cancel_at_period_end: false, valid_until: a.p_valid_until ?? null, note: a.p_note, updated_at: Date.now(),
+        past_due_since: null,
       };
       grants.push(row); return ok(row.id);
+    },
+    claim_voluntary_refund: (a) => {
+      if (!customers.has(a.p_user_id)) return ok(false);
+      const taken = refundClaims.get(a.p_user_id);
+      if (taken && taken !== a.p_subscription_id) return ok(false);
+      refundClaims.set(a.p_user_id, a.p_subscription_id); return ok(true);
+    },
+    create_billing_cancel_request: (a) => {
+      const now = Date.now();
+      const recent = [...cancelRequests.values()].filter((r) => r.email.toLowerCase() === String(a.p_email).toLowerCase() && r.requested_at > now - 3_600_000).length;
+      if (recent >= (a.p_max_per_hour ?? 3)) return ok(false);
+      const asked = a.p_requested_at ? Date.parse(a.p_requested_at) : NaN;
+      const requestedAt = Number.isFinite(asked) && Math.abs(asked - now) <= 300_000 ? asked : now;
+      cancelRequests.set(a.p_token_hash, { email: a.p_email, action: a.p_action, requested_at: requestedAt, expires_at: now + (a.p_ttl_minutes ?? 60) * 60_000, used_at: null });
+      return ok(true);
+    },
+    review_billing_cancel_request: (a) => {
+      const row = cancelRequests.get(a.p_token_hash);
+      return ok(row && row.used_at === null && row.expires_at > Date.now() ? requestView(row) : null);
+    },
+    consume_billing_cancel_request: (a) => {
+      const row = cancelRequests.get(a.p_token_hash);
+      if (!row || row.used_at !== null || row.expires_at <= Date.now()) return ok(null);
+      row.used_at = Date.now(); return ok(requestView(row));
+    },
+    release_billing_cancel_request: (a) => {
+      const row = cancelRequests.get(a.p_token_hash);
+      if (!row || row.used_at === null || row.expires_at <= Date.now()) return ok(false);
+      row.used_at = null; return ok(true);
+    },
+    revoke_premium_benefits: (a) => {
+      revocations.push(a.p_subscription_id);
+      return ok({ cancelledOrders: 0, owed: 0, debited: 0 });
     },
     record_checkout_consent: (a) => {
       const existing = consents.get(a.p_session_id);
@@ -232,6 +285,8 @@ export function memoryBackend(): Backend {
       const row = consents.get(sessionId);
       return row ? { userId: row.user_id, subscriptionId: row.provider_subscription_id, waiverText: row.waiver_text } : null;
     },
+    expireCancelLinks: () => { for (const row of cancelRequests.values()) row.expires_at = Date.now() - 1; },
+    benefitRevocations: () => [...revocations],
   };
 }
 
@@ -289,6 +344,8 @@ const stripeError = (statusCode: number, code: string, message = code) =>
 const DAY = 86_400;
 const nowSeconds = () => Math.floor(Date.now() / 1000);
 
+type SubShape = { status?: string; periodEnd?: number; periodStart?: number; cancel?: boolean; metadataUser?: string | null; price?: string };
+
 export class FakeStripe {
   customers = new Map<string, any>();
   subs = new Map<string, any>();
@@ -316,12 +373,16 @@ export class FakeStripe {
     return structuredClone(value);
   }
 
-  /** Seed a customer and a live subscription from the fixtures. */
-  seed(ids: Ids, email: string, sub: { status?: string; periodEnd?: number; cancel?: boolean; metadataUser?: string | null } = {}) {
-    this.customers.set(ids.cus, { id: ids.cus, object: 'customer', email, metadata: { supabase_user_id: ids.user } });
+  /** Seed a customer and a live subscription from the fixtures. A second
+   * seed with the same customer id adds a subscription to that customer. */
+  seed(ids: Ids, email: string, sub: SubShape = {}) {
+    const known = this.customers.get(ids.cus);
+    this.customers.set(ids.cus, { id: ids.cus, object: 'customer', email, metadata: { ...(known?.metadata ?? {}), supabase_user_id: ids.user } });
     this.setSub(ids, sub);
     this.sessions.set(ids.cs, fixtureObject('checkout.session.completed', ids));
-    this.invoices.set(ids.inv, fixtureObject('invoice.paid', ids));
+    const invoice = fixtureObject('invoice.paid', ids);
+    invoice.status_transitions.paid_at = nowSeconds();
+    this.invoices.set(ids.inv, invoice);
     this.charges.set(ids.ch, { ...fixtureObject('charge.refunded', ids), refunded: false, amount_refunded: 0 });
     this.invoicePayments.push({
       id: `inpay_${ids.inv.slice(3)}`, object: 'invoice_payment', amount_paid: 399, currency: 'eur', invoice: ids.inv, is_default: true,
@@ -329,11 +390,15 @@ export class FakeStripe {
       status_transitions: { canceled_at: null, paid_at: nowSeconds() },
     });
   }
-  setSub(ids: Ids, sub: { status?: string; periodEnd?: number; cancel?: boolean; metadataUser?: string | null } = {}) {
+  setSub(ids: Ids, sub: SubShape = {}) {
+    const fresh = !this.subs.has(ids.sub);
     const base = this.subs.get(ids.sub) ?? fixtureObject('customer.subscription.created', ids);
     if (sub.status) base.status = sub.status;
     if (sub.periodEnd !== undefined) base.items.data[0].current_period_end = sub.periodEnd;
-    else if (!this.subs.has(ids.sub)) base.items.data[0].current_period_end = nowSeconds() + 30 * DAY;
+    else if (fresh) base.items.data[0].current_period_end = nowSeconds() + 30 * DAY;
+    if (sub.periodStart !== undefined) base.items.data[0].current_period_start = sub.periodStart;
+    else if (fresh) base.items.data[0].current_period_start = nowSeconds() - DAY;
+    if (sub.price !== undefined) base.items.data[0].price = { ...base.items.data[0].price, id: sub.price, product: sub.price.startsWith('price_1Fixture') ? base.items.data[0].price.product : 'prod_SomethingElse' };
     if (sub.cancel !== undefined) base.cancel_at_period_end = sub.cancel;
     if (sub.metadataUser === null) base.metadata = {};
     else if (sub.metadataUser) base.metadata = { supabase_user_id: sub.metadataUser };
@@ -354,7 +419,14 @@ export class FakeStripe {
         },
         list: async (params: { email?: string }) => {
           this.call('customers.list');
-          return { object: 'list', data: [...this.customers.values()].filter((c) => c.email === params.email), has_more: false };
+          return { object: 'list', data: [...this.customers.values()].filter((c) => c.email === params.email).map((c) => structuredClone(c)), has_more: false };
+        },
+        update: async (id: string, params: { metadata?: Record<string, string> }) => {
+          this.call('customers.update');
+          const customer = this.customers.get(id);
+          if (!customer) throw stripeError(404, 'resource_missing');
+          customer.metadata = { ...(customer.metadata ?? {}), ...(params.metadata ?? {}) };
+          return structuredClone(customer);
         },
       },
       checkout: {
@@ -402,10 +474,12 @@ export class FakeStripe {
       },
       invoices: {
         retrieve: async (id: string) => { this.call('invoices.retrieve'); return this.get(this.invoices, id, 'invoice'); },
-        list: async (params: { subscription: string; status?: string }) => {
+        list: async (params: { subscription?: string; customer?: string; status?: string }) => {
           this.call('invoices.list');
           const data = [...this.invoices.values()].filter((inv) =>
-            inv.parent?.subscription_details?.subscription === params.subscription && (!params.status || inv.status === params.status));
+            (!params.subscription || inv.parent?.subscription_details?.subscription === params.subscription)
+            && (!params.customer || inv.customer === params.customer)
+            && (!params.status || inv.status === params.status));
           return { object: 'list', data: structuredClone(data), has_more: false };
         },
       },
@@ -600,22 +674,84 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     await deliver(eventText('customer.subscription.updated', a.ids, 'life1'));
     assert.equal(await premium(a.userId), true);
     assert.equal((await summary(a.userId)).cancelAtPeriodEnd, true);
+    // Whatever grant wins the line, the plan says a subscription is live and
+    // the account has a billing customer (finding product-10).
+    await supabase.rpc('grant_manual_entitlement', { p_user_id: a.userId, p_valid_until: null, p_note: 'longer than the paid period' });
+    const both = await summary(a.userId);
+    assert.deepEqual([both.source, both.billingAccount, both.subscriptionLive], ['manual', true, true]);
+    stripe.setSub(a.ids, { status: 'canceled' });
+    await deliver(eventText('customer.subscription.deleted', a.ids, 'life1end'));
+    const ended = await summary(a.userId);
+    assert.deepEqual([ended.billingAccount, ended.subscriptionLive], [true, false], 'the invoices stay reachable after the subscription ended');
   });
 
-  await check('past_due keeps Premium inside the seven-day grace and ends after it; canceled ends it', async () => {
+  await check('past_due keeps Premium for seven days from the failed renewal, not from the period end', async () => {
+    // Stripe opens the next period when it creates the renewal invoice, so a
+    // failed renewal already carries the next period's end, weeks ahead. The
+    // grace runs from the start of that unpaid period (finding product-3).
     const a = await account('Grace1');
     await deliver(eventText('customer.subscription.created', a.ids, 'grace0'));
-    stripe.setSub(a.ids, { status: 'past_due', periodEnd: nowSeconds() - 3 * DAY });
+    stripe.setSub(a.ids, { status: 'past_due', periodStart: nowSeconds() - 3 * DAY, periodEnd: nowSeconds() + 27 * DAY });
     assert.equal((await deliver(eventText('invoice.payment_failed', a.ids, 'grace1'))).statusCode, 200);
     assert.equal(await premium(a.userId), true, 'day 3 of the grace window');
     assert.equal((await summary(a.userId)).inGrace, true);
-    stripe.setSub(a.ids, { status: 'past_due', periodEnd: nowSeconds() - 8 * DAY });
-    await deliver(eventText('customer.subscription.updated', a.ids, 'grace2'));
-    assert.equal(await premium(a.userId), false, 'day 8: the grace window is over');
+    // Another retry reports the same unpaid period; a later event never moves
+    // the start of the window forward.
+    stripe.setSub(a.ids, { status: 'past_due', periodStart: nowSeconds() - DAY });
+    await deliver(eventText('customer.subscription.updated', a.ids, 'grace1b'));
+    assert.equal(await premium(a.userId), true);
+    const late = await account('Grace2');
+    await deliver(eventText('customer.subscription.created', late.ids, 'grace2a'));
+    stripe.setSub(late.ids, { status: 'past_due', periodStart: nowSeconds() - 8 * DAY, periodEnd: nowSeconds() + 22 * DAY });
+    await deliver(eventText('invoice.payment_failed', late.ids, 'grace2'));
+    assert.equal(await premium(late.userId), false, 'day 8: the grace window is over though the period runs for 22 more days');
+    // Paying opens it again, and a later failure starts a new window.
+    stripe.setSub(late.ids, { status: 'active', periodStart: nowSeconds(), periodEnd: nowSeconds() + 30 * DAY });
+    await deliver(eventText('invoice.paid', late.ids, 'grace2b'));
+    assert.equal(await premium(late.userId), true);
+    stripe.setSub(late.ids, { status: 'past_due', periodStart: nowSeconds() - DAY });
+    await deliver(eventText('customer.subscription.updated', late.ids, 'grace2c'));
+    assert.equal(await premium(late.userId), true, 'a new failure has its own seven days');
     stripe.setSub(a.ids, { status: 'canceled' });
     await deliver(eventText('customer.subscription.deleted', a.ids, 'grace3'));
     assert.equal(await premium(a.userId), false);
     assert.equal((await providerGrant(a.userId))?.status, 'canceled');
+  });
+
+  await check('only a subscription that bills a devShark Premium price opens Premium', async () => {
+    // Another product on the same Stripe account, on a customer devShark
+    // created: no Premium, and the event is recorded with the reason
+    // (finding integrity-7).
+    const other = await account('Price1', { metadataUser: null, price: 'price_1OtherProductMonthly' });
+    await supabase.rpc('link_billing_customer', { p_user_id: other.userId, p_provider_customer_id: other.ids.cus });
+    const res = await deliver(eventText('customer.subscription.created', other.ids, 'price1'));
+    assert.equal(res.statusCode, 200);
+    assert.equal(res.body.outcome, 'recorded');
+    assert.equal(res.body.reason, 'not_devshark_price');
+    assert.equal(await premium(other.userId), false);
+    assert.deepEqual(await db.grants(other.userId), []);
+    // A devShark subscription switched to another product's price ends
+    // Premium, and switching back opens it again.
+    const switched = await account('Price2');
+    await deliver(eventText('customer.subscription.created', switched.ids, 'price2a'));
+    assert.equal(await premium(switched.userId), true);
+    stripe.setSub(switched.ids, { price: 'price_1OtherProductMonthly' });
+    await deliver(eventText('customer.subscription.updated', switched.ids, 'price2b'));
+    assert.equal(await premium(switched.userId), false);
+    assert.equal((await providerGrant(switched.userId))?.status, 'canceled');
+    assert.match((await providerGrant(switched.userId))?.note ?? '', /no longer bills a devShark Premium price/);
+    stripe.setSub(switched.ids, { price: PRICES.annual });
+    await deliver(eventText('customer.subscription.updated', switched.ids, 'price2c'));
+    assert.equal(await premium(switched.userId), true);
+    // After a price change, the earlier Price keeps its subscribers Premium
+    // once it is listed as legacy.
+    const legacy = await account('Price3', { price: 'price_1OlderPremiumMonthly' });
+    await deliver(eventText('customer.subscription.created', legacy.ids, 'price3a'));
+    assert.equal(await premium(legacy.userId), false);
+    applyEnv({ STRIPE_PRICE_PREMIUM_LEGACY: 'price_1OlderPremiumMonthly' });
+    await deliver(eventText('customer.subscription.updated', legacy.ids, 'price3b'));
+    assert.equal(await premium(legacy.userId), true);
+    applyEnv({ STRIPE_PRICE_PREMIUM_LEGACY: undefined });
   });
 
   await check('deleted before created ends canceled', async () => {
@@ -882,26 +1018,111 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     return res;
   };
 
-  await check('the cancel page never says whether an email exists', async () => {
+  // The link emails go through Resend's API; this stands in for it.
+  const mail: Array<{ to: string[]; subject: string; text: string }> = [];
+  const realFetch = globalThis.fetch;
+  globalThis.fetch = (async (input: Parameters<typeof fetch>[0], init?: RequestInit) => {
+    const url = typeof input === 'string' ? input : input instanceof URL ? input.toString() : input.url;
+    if (url === 'https://api.resend.com/emails') {
+      mail.push(JSON.parse(String(init?.body ?? '{}')));
+      return new Response('{"id":"email_test"}', { status: 200 });
+    }
+    return realFetch(input, init);
+  }) as typeof fetch;
+  const withResend = { RESEND_API_KEY: 're_test_contract', RESEND_FROM: 'devShark <billing@devshark.app>' };
+  const linkIn = (text: string) => /\/premium\/cancel#confirm=([A-Za-z0-9_-]{43})/.exec(text)?.[1] ?? null;
+
+  await check('an anonymous request changes nothing and asks nothing of Stripe', async () => {
     assert.equal((await cancel({ email: 'not-an-email', action: 'cancel', step: 'request' })).body.error.code, 'bad_email');
     const calls = stripe.calls;
     const first = await cancel({ email: 'someone@example.com', action: 'cancel', step: 'request' });
     assert.deepEqual(first.body, { step: 'confirm', action: 'cancel', email: 'someone@example.com' });
     assert.equal(stripe.calls, calls, 'step one looks nothing up');
 
+    // Without an email provider nobody can prove the address is theirs: the
+    // page asks for the sign-in, and nothing changes.
     const k = await account('Cancel1');
+    const signIn = await cancel({ email: k.email, action: 'withdraw', step: 'confirm' });
+    assert.equal(signIn.statusCode, 200);
+    assert.equal(signIn.body.confirmBy, 'sign-in');
+    assert.equal(stripe.calls, calls, 'no provider call before the address is proven');
+    assert.equal(stripe.subs.get(k.ids.sub).status, 'active');
+    assert.equal(stripe.subs.get(k.ids.sub).cancel_at_period_end, false);
+    assert.equal(stripe.refunds.some((r) => r.params.payment_intent === k.ids.pi), false, 'nothing is refunded');
+
+    // With one, the address gets a link, and the answer is the same whether or
+    // not a subscription uses it.
+    applyEnv(withResend);
     const started = Date.now();
-    const unknown = await cancel({ email: 'nobody-here@example.com', action: 'cancel', step: 'confirm' });
+    const unknown = await cancel({ email: 'nobody-here@example.com', action: 'withdraw', step: 'confirm' });
     assert.ok(Date.now() - started >= 850, 'the confirm step keeps its time floor');
-    const known = await cancel({ email: k.email.toUpperCase(), action: 'cancel', step: 'confirm' });
+    const known = await cancel({ email: k.email.toUpperCase(), action: 'withdraw', step: 'confirm' });
     assert.equal(unknown.statusCode, 200);
     assert.equal(known.statusCode, 200);
-    assert.deepEqual(Object.keys(unknown.body).sort(), Object.keys(known.body).sort(), 'same answer shape either way');
+    assert.equal(known.body.confirmBy, 'email');
+    const shape = (body: Record<string, unknown>) => Object.fromEntries(Object.entries(body).filter(([key]) => !['email', 'receivedAt'].includes(key)));
+    assert.deepEqual(shape(unknown.body), shape(known.body), 'the same answer either way');
     assert.equal(known.body.details, undefined, 'an anonymous caller sees no details');
-    assert.equal(stripe.subs.get(k.ids.sub).cancel_at_period_end, true, 'the subscription ends at period end');
+    assert.equal(stripe.calls, calls, 'still no provider call');
+    assert.equal(stripe.subs.get(k.ids.sub).status, 'active', 'a request alone ends nothing');
+    assert.deepEqual(mail.at(-1)?.to, [k.email.toUpperCase()], 'the link goes to the address that was typed');
+    assert.match(mail.at(-1)?.subject ?? '', /Confirm your devShark Premium withdrawal/);
+    applyEnv({ RESEND_API_KEY: undefined, RESEND_FROM: undefined });
   });
 
-  await check('a signed-in owner sees the effective date; cancel keeps Premium to the period end', async () => {
+  await check('the emailed link acts once, and only before it expires', async () => {
+    applyEnv(withResend);
+    const k = await account('Link1');
+    await deliver(eventText('customer.subscription.created', k.ids, 'link1'));
+    const asked = await cancel({ email: k.email, action: 'cancel', step: 'confirm' });
+    assert.equal(asked.body.confirmBy, 'email');
+    assert.equal(asked.body.expiresInMinutes, 60);
+    const token = linkIn(mail.at(-1)?.text ?? '');
+    assert.ok(token, 'the email carries the link');
+    assert.equal((await cancel({ step: 'review', token: 'short' })).statusCode, 400);
+    assert.equal((await cancel({ step: 'review', token: 'A'.repeat(43) })).statusCode, 410, 'an unknown link reads as expired');
+    const review = await cancel({ step: 'review', token });
+    assert.equal(review.statusCode, 200);
+    assert.deepEqual([review.body.action, review.body.email], ['cancel', k.email]);
+    assert.equal(stripe.subs.get(k.ids.sub).cancel_at_period_end, false, 'looking at the link changes nothing');
+    const done = await cancel({ step: 'execute', token });
+    assert.equal(done.statusCode, 200);
+    assert.equal(done.body.confirmed, true);
+    assert.equal(done.body.receivedAt, asked.body.receivedAt, 'the receipt keeps the time of the request');
+    assert.deepEqual(done.body.details.map((d: { withdrawn: boolean }) => d.withdrawn), [false]);
+    assert.equal(stripe.subs.get(k.ids.sub).cancel_at_period_end, true);
+    assert.equal(await premium(k.userId), true, 'cancel keeps Premium to the period end');
+    assert.equal((await cancel({ step: 'execute', token })).statusCode, 410, 'a link works once');
+    // An outage after the link was used hands it back, so it works again.
+    const o = await account('Link2');
+    await cancel({ email: o.email, action: 'cancel', step: 'confirm' });
+    const again = linkIn(mail.at(-1)?.text ?? '')!;
+    stripe.failNext.set('customers.list', stripeError(500, 'api_error'));
+    const outage = await cancel({ step: 'execute', token: again });
+    assert.equal(outage.statusCode, 502);
+    assert.equal(outage.body.error.code, 'billing_unavailable');
+    assert.equal((await cancel({ step: 'execute', token: again })).statusCode, 200, 'the same link works after the outage');
+    // An expired link does nothing.
+    const x = await account('Link3');
+    await cancel({ email: x.email, action: 'withdraw', step: 'confirm' });
+    const stale = linkIn(mail.at(-1)?.text ?? '')!;
+    await db.expireCancelLinks();
+    assert.equal((await cancel({ step: 'execute', token: stale })).statusCode, 410);
+    assert.equal(stripe.subs.get(x.ids.sub).status, 'active');
+    applyEnv({ RESEND_API_KEY: undefined, RESEND_FROM: undefined });
+  });
+
+  await check('an address gets at most three links an hour, and the page cannot tell', async () => {
+    applyEnv(withResend);
+    const sent = mail.length;
+    const answers = [];
+    for (let i = 0; i < 4; i++) answers.push(await cancel({ email: 'flood@example.com', action: 'cancel', step: 'confirm' }));
+    assert.deepEqual(answers.map((res) => [res.statusCode, res.body.confirmBy]), Array(4).fill([200, 'email']));
+    assert.equal(mail.length - sent, 3, 'the fourth request sends nothing');
+    applyEnv({ RESEND_API_KEY: undefined, RESEND_FROM: undefined });
+  });
+
+  await check('a signed-in owner acts at once and sees the effective date; cancel keeps Premium to the period end', async () => {
     const k = await account('Cancel2');
     await deliver(eventText('customer.subscription.created', k.ids, 'cancel2'));
     const res = await cancel({ email: k.email, action: 'cancel', step: 'confirm' }, { token: k.token });
@@ -911,13 +1132,15 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(res.body.details[0].endsAt, new Date(stripe.subs.get(k.ids.sub).items.data[0].current_period_end * 1000).toISOString());
     assert.equal(await premium(k.userId), true);
     assert.equal((await summary(k.userId)).cancelAtPeriodEnd, true);
-    // A signed-in account asking about someone else's address learns nothing.
+    // A signed-in account naming someone else's address is anonymous for it.
     const other = await account('Cancel3');
     const foreign = await cancel({ email: other.email, action: 'cancel', step: 'confirm' }, { token: k.token });
     assert.equal(foreign.body.details, undefined);
+    assert.equal(foreign.body.confirmBy, 'sign-in');
+    assert.equal(stripe.subs.get(other.ids.sub).cancel_at_period_end, false, 'and changes nothing');
   });
 
-  await check('a withdrawal within 14 days refunds in full and revokes; later it only cancels', async () => {
+  await check('a withdrawal within 14 days refunds in full, revokes and takes back Premium’s coins; later it only cancels', async () => {
     const w = await account('Withdraw1');
     await deliver(eventText('customer.subscription.created', w.ids, 'withdraw1'));
     stripe.invoices.get(w.ids.inv).status_transitions.paid_at = nowSeconds() - 3 * DAY;
@@ -930,6 +1153,8 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(stripe.subs.get(w.ids.sub).status, 'canceled');
     assert.equal(await premium(w.userId), false);
     assert.equal((await providerGrant(w.userId))?.status, 'revoked');
+    const revoked = db.benefitRevocations();
+    if (revoked) assert.ok(revoked.includes(w.ids.sub), 'the revocation takes back what Premium paid (finding integrity-3)');
 
     const late = await account('Withdraw2');
     await deliver(eventText('customer.subscription.created', late.ids, 'withdraw2'));
@@ -941,17 +1166,88 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(await premium(late.userId), true);
   });
 
-  await check('the confirm step is limited to five an hour per address and survives an outage', async () => {
+  await check('the voluntary refund is taken once per account, whatever the subscription', async () => {
+    // Withdraw on day 3, subscribe again at once, withdraw again: the second
+    // subscription starts no new refund window (finding integrity-2).
+    const r = await account('Again1');
+    await deliver(eventText('customer.subscription.created', r.ids, 'again1'));
+    stripe.invoices.get(r.ids.inv).status_transitions.paid_at = nowSeconds() - 3 * DAY;
+    const first = await cancel({ email: r.email, action: 'withdraw', step: 'confirm' }, { token: r.token });
+    assert.deepEqual(first.body.details.map((d: { refunded: boolean }) => d.refunded), [true]);
+    const second = { ...idsFor('Again1b', r.userId), cus: r.ids.cus };
+    stripe.seed(second, r.email);
+    await deliver(eventText('customer.subscription.created', second, 'again1b'));
+    assert.equal(await premium(r.userId), true, 'the new subscription opens Premium');
+    const again = await cancel({ email: r.email, action: 'withdraw', step: 'confirm' }, { token: r.token });
+    assert.deepEqual(again.body.details.map((d: { withdrawn: boolean; refunded: boolean }) => [d.withdrawn, d.refunded]), [[false, false]]);
+    assert.equal(stripe.refunds.some((x) => x.params.payment_intent === second.pi), false, 'no second refund');
+    assert.equal(stripe.subs.get(second.sub).cancel_at_period_end, true, 'it ends at the end of the paid period instead');
+    assert.equal(await premium(r.userId), true);
+    // A new account on the same address finds the refund used on its Stripe
+    // customer, even with its first payment today.
+    const reborn = newUserId();
+    await db.addUser(reborn, 'again2@example.com');
+    TOKENS.set('token-Again2', { id: reborn, email: 'again2@example.com' });
+    const old = await account('Again2x');
+    stripe.customers.get(old.ids.cus).email = 'again2@example.com';
+    stripe.customers.get(old.ids.cus).metadata.devshark_voluntary_refund = 'sub_Earlier';
+    const fresh = idsFor('Again2', reborn);
+    stripe.seed(fresh, 'again2@example.com');
+    await deliver(eventText('customer.subscription.created', fresh, 'again2'));
+    const reRes = await cancel({ email: 'again2@example.com', action: 'withdraw', step: 'confirm' }, { token: 'token-Again2' });
+    assert.equal(reRes.body.details.some((d: { refunded: boolean }) => d.refunded), false);
+    assert.equal(stripe.refunds.some((x) => x.params.payment_intent === fresh.pi), false);
+  });
+
+  await check('the confirm step is limited to five an hour per address, and an owner’s request survives an outage', async () => {
     const ip = '10.99.0.1';
     for (let i = 0; i < 5; i++) {
       assert.equal((await cancel({ email: `limit${i}@example.com`, action: 'cancel', step: 'confirm' }, { ip })).statusCode, 200);
     }
     const limited = await cancel({ email: 'limit5@example.com', action: 'cancel', step: 'confirm' }, { ip });
     assert.equal(limited.statusCode, 429);
+    const k = await account('Outage1');
     stripe.failNext.set('customers.list', stripeError(500, 'api_error'));
-    const outage = await cancel({ email: 'outage@example.com', action: 'cancel', step: 'confirm' });
+    const outage = await cancel({ email: k.email, action: 'cancel', step: 'confirm' }, { token: k.token });
     assert.equal(outage.statusCode, 502);
     assert.equal(outage.body.error.code, 'billing_unavailable');
+  });
+
+  await check('a refund, a dispute and a fraud warning take back what Premium paid; a failure there is retried', async () => {
+    const d = await account('Benefit1');
+    await deliver(eventText('customer.subscription.created', d.ids, 'benefit0'));
+    assert.equal((await deliver(eventText('charge.dispute.created', d.ids, 'benefit1'))).statusCode, 200);
+    const revoked = db.benefitRevocations();
+    if (revoked) assert.equal(revoked.at(-1), d.ids.sub);
+    // The routine failing hands the event back, so Stripe delivers it again.
+    const f = await account('Benefit2');
+    await deliver(eventText('customer.subscription.created', f.ids, 'benefit2'));
+    const failing = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => name === 'revoke_premium_benefits'
+        ? { data: null, error: { code: 'XX000', message: 'boom' } }
+        : supabase.rpc(name, args),
+    } as unknown as SupabaseClient;
+    const raw = eventText('charge.dispute.created', f.ids, 'benefit3');
+    const res = mockRes();
+    await lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, res as never, failing);
+    assert.equal(res.statusCode, 500);
+    assert.equal((await db.event('evt_1FixtureChargeDisputeCreated_benefit3'))?.processed, false);
+    assert.equal((await deliver(raw)).statusCode, 200, 'the retry completes');
+    // Before migration 041 there is nothing to take back, and the revocation stands.
+    const m = await account('Benefit3');
+    await deliver(eventText('customer.subscription.created', m.ids, 'benefit4'));
+    const before041 = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => name === 'revoke_premium_benefits'
+        ? { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.revoke_premium_benefits(p_subject, p_subscription_id) in the schema cache' } }
+        : supabase.rpc(name, args),
+    } as unknown as SupabaseClient;
+    const raw2 = eventText('charge.dispute.created', m.ids, 'benefit5');
+    const res2 = mockRes();
+    await lib.handleBillingWebhook(webhookReq(raw2, sign(raw2)) as never, res2 as never, before041);
+    assert.equal(res2.statusCode, 200);
+    assert.equal((await providerGrant(m.userId))?.status, 'revoked');
   });
 
   /* Account deletion, settings, email --------------------------------------- */
@@ -991,9 +1287,11 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
   });
 
   await check('settings expose the two switches and the seller, and the origin is never taken from a guess', async () => {
-    assert.deepEqual(lib.publicBillingSettings({}), { enabled: false, cancellable: false, seller: null });
-    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV }), { enabled: true, cancellable: true, seller: 'link' });
-    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV, BILLING_ENABLED: 'false' }), { enabled: false, cancellable: true, seller: 'link' });
+    assert.deepEqual(lib.publicBillingSettings({}), { enabled: false, cancellable: false, cancelByEmail: false, seller: null });
+    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV }), { enabled: true, cancellable: true, cancelByEmail: false, seller: 'link' });
+    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV, BILLING_ENABLED: 'false' }), { enabled: false, cancellable: true, cancelByEmail: false, seller: 'link' });
+    assert.equal(lib.publicBillingSettings({ ...BASE_ENV, RESEND_API_KEY: 're_x' }).cancelByEmail, true, 'the page can email its link');
+    assert.equal(lib.publicBillingSettings({ RESEND_API_KEY: 're_x' }).cancelByEmail, false, 'not without Stripe');
     assert.equal(lib.publicBillingSettings({ ...BASE_ENV, STRIPE_MANAGED_PAYMENTS: 'false' }).seller, 'trader', 'plain Stripe: the trader sells');
     assert.equal(lib.publicBillingSettings({ ...BASE_ENV, STRIPE_MANAGED_PAYMENTS: undefined }).seller, null, 'unsaid: the Terms name no seller');
     assert.equal(lib.parseOrigin('javascript:alert(1)'), lib.DEFAULT_PUBLIC_ORIGIN);
@@ -1015,9 +1313,15 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(sent[0].url, 'https://api.resend.com/emails');
     assert.deepEqual(sent[0].body.to, ['payer@example.com']);
     assert.equal(await lib.sendCancellationEmail(lib.billingConfig({ ...BASE_ENV }), effect, '2026-09-25T14:32:00.000Z', fakeFetch), false, 'no key, no email');
+    const link = lib.cancellationLinkEmail('withdraw', 'T'.repeat(43), '2026-09-25T14:32:00.000Z', 'https://devshark.app');
+    assert.equal(link.subject, 'Confirm your devShark Premium withdrawal');
+    assert.match(link.text, /On 25 September 2026 at 14:32 UTC someone asked on devshark\.app to withdraw from the devShark Premium subscription of this email address\./);
+    assert.match(link.text, /https:\/\/devshark\.app\/premium\/cancel#confirm=T{43}/, 'the token rides after #, never in a request line');
+    assert.match(link.text, /Nothing changes until you confirm\./);
   });
 
   lib.setStripeForTests(null);
+  globalThis.fetch = realFetch;
   return checks;
 }
 

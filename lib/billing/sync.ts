@@ -13,8 +13,10 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
-import { isRpcMissing, withTimeout } from '../http';
+import { createLogger, isRpcMissing, withTimeout } from '../http';
 import { accountExists } from '../entitlements';
+import { deploymentSubjectIds } from '../product-scope';
+import { billingConfig, premiumPriceIds, type BillingConfig } from './config';
 import { stripeErrorCode, type StripeApi } from './stripe';
 
 export interface BillingDeps {
@@ -74,6 +76,27 @@ export function periodEnd(sub: Stripe.Subscription): string | null {
   let end = itemEnds.length ? Math.max(...itemEnds) : typeof legacy === 'number' ? legacy : null;
   if (typeof sub.cancel_at === 'number' && (end === null || sub.cancel_at < end)) end = sub.cancel_at;
   return iso(end);
+}
+
+/** When the current period began: for a past_due subscription, the renewal
+ * that failed. */
+export function periodStart(sub: Stripe.Subscription): string | null {
+  const itemStarts = (sub.items?.data ?? [])
+    .map((item) => item.current_period_start)
+    .filter((value): value is number => typeof value === 'number');
+  const legacy = (sub as unknown as { current_period_start?: unknown }).current_period_start;
+  return iso(itemStarts.length ? Math.max(...itemStarts) : typeof legacy === 'number' ? legacy : null);
+}
+
+/** Whether the subscription bills a devShark Premium Price. The Stripe account
+ * may sell other things, and a subscription for one of them on a customer
+ * devShark created must not open Premium (finding integrity-7). With no Price
+ * configured at all the question cannot be asked, and the checkout's metadata
+ * decides. */
+export function billsPremium(sub: Stripe.Subscription, config: BillingConfig = billingConfig()): boolean {
+  const ours = premiumPriceIds(config);
+  if (ours.size === 0) return typeof sub.metadata?.supabase_user_id === 'string' && sub.metadata.supabase_user_id.length > 0;
+  return (sub.items?.data ?? []).some((item) => ours.has(idOf(item.price) ?? ''));
 }
 
 /** Whether the subscription is set to end instead of renewing. */
@@ -154,20 +177,31 @@ export interface SyncResult {
 
 /** Mirror one subscription into its provider grant. `revoke` writes the grant
  * as revoked with that note (a full refund, a dispute, a withdrawal); a revoked
- * grant stays revoked whatever Stripe says later. */
+ * grant stays revoked whatever Stripe says later.
+ *
+ * Only a subscription that bills a devShark Premium Price opens Premium. One
+ * that devShark's checkout created and that no longer bills such a Price (a
+ * plan switched to another product) is written as canceled, so Premium ends
+ * and a switch back opens it again. Any other subscription is not devShark's:
+ * it is refused as permanent, which records the event with the reason. */
 export async function syncSubscription(
   deps: BillingDeps,
   subscriptionId: string,
   options: { userHint?: string | null; revoke?: string | null } = {},
 ): Promise<SyncResult> {
   const sub = await retrieveSubscription(deps, subscriptionId);
+  const premium = Boolean(options.revoke) || billsPremium(sub);
+  const fromCheckout = typeof sub.metadata?.supabase_user_id === 'string' && sub.metadata.supabase_user_id.length > 0;
+  if (!premium && !fromCheckout) throw new BillingPermanentError('not_devshark_price', sub.id);
   const userId = await resolveAccount(deps, sub, options.userHint ?? null);
   const customerId = idOf(sub.customer);
   if (customerId) await linkCustomer(deps, userId, customerId);
-  const status = options.revoke ? 'revoked' : sub.status;
+  const status = options.revoke ? 'revoked' : premium ? sub.status : 'canceled';
   if (status !== 'revoked' && !PROVIDER_STATUSES.has(status)) throw new BillingPermanentError('unknown_status', `${sub.id} ${status}`);
   const currentPeriodEnd = periodEnd(sub);
   const cancelAtPeriodEnd = endsInsteadOfRenewing(sub);
+  const note = options.revoke
+    ?? (premium ? null : `Ended: the subscription no longer bills a devShark Premium price (${day(Math.floor((deps.now?.() ?? Date.now()) / 1000))}).`);
   await rpc(deps, 'upsert_provider_entitlement', {
     p_user_id: userId,
     p_subscription_id: sub.id,
@@ -175,7 +209,10 @@ export async function syncSubscription(
     p_price_id: priceOf(sub),
     p_current_period_end: currentPeriodEnd,
     p_cancel_at_period_end: cancelAtPeriodEnd,
-    p_note: options.revoke ?? null,
+    p_note: note,
+    // The grace window of a failed renewal runs from the start of the unpaid
+    // period; the database keeps the first value it sees (finding product-3).
+    p_past_due_since: status === 'past_due' ? periodStart(sub) : null,
   });
   return { userId, subscriptionId: sub.id, status, currentPeriodEnd, cancelAtPeriodEnd };
 }
@@ -210,9 +247,12 @@ export async function subscriptionForPayment(
   return null;
 }
 
+const log = createLogger('user/billing');
+
 /** End a subscription now and revoke its grant: a full refund, a dispute, an
  * early fraud warning or a withdrawal. Cancelling at Stripe stops further
- * charges; the grant is written revoked with the reason in its note. */
+ * charges; the grant is written revoked with the reason in its note. Then
+ * what Premium paid out while the subscription was live is taken back. */
 export async function revokeSubscription(deps: BillingDeps, subscriptionId: string, note: string): Promise<SyncResult> {
   const sub = await retrieveSubscription(deps, subscriptionId);
   if (sub.status !== 'canceled' && sub.status !== 'incomplete_expired') {
@@ -223,7 +263,37 @@ export async function revokeSubscription(deps: BillingDeps, subscriptionId: stri
       if (stripeErrorCode(error).code !== 'resource_missing') throw error;
     }
   }
-  return syncSubscription(deps, subscriptionId, { revoke: note.slice(0, 500) });
+  const result = await syncSubscription(deps, subscriptionId, { revoke: note.slice(0, 500) });
+  await takeBackPremiumBenefits(deps, result.subscriptionId);
+  return result;
+}
+
+/** A refunded, disputed or withdrawn subscription keeps nothing that only
+ * Premium paid for (finding integrity-3). Migration 041's
+ * revoke_premium_benefits cancels the coin redemptions still waiting for
+ * fulfilment that were placed while the grant was live, which returns their
+ * coins, then debits the milestone coins and the Premium doubling credited in
+ * that time. It does nothing while another grant keeps the account Premium,
+ * and a second call changes nothing. A failure is thrown, so the webhook
+ * answers 500 and Stripe delivers the event again. */
+export async function takeBackPremiumBenefits(deps: BillingDeps, subscriptionId: string): Promise<void> {
+  const subject = deploymentSubjectIds()[0] ?? 'webdev';
+  const { data, error } = await withTimeout(
+    deps.supabase.rpc('revoke_premium_benefits', { p_subscription_id: subscriptionId, p_subject: subject }),
+  );
+  if (error) {
+    // Before 041 no coin was ever doubled or paid as a milestone.
+    if (isRpcMissing(error)) return;
+    throw new Error('db_error: revoke_premium_benefits');
+  }
+  const outcome = (data ?? {}) as { cancelledOrders?: unknown; debited?: unknown; skipped?: unknown };
+  log({
+    status: 200,
+    kind: 'premium_benefits_revoked',
+    cancelled_orders: Number(outcome.cancelledOrders ?? 0),
+    debited: Number(outcome.debited ?? 0),
+    ...(typeof outcome.skipped === 'string' ? { skipped: outcome.skipped } : {}),
+  });
 }
 
 const day = (seconds: number) => new Date(seconds * 1000).toISOString().slice(0, 10);

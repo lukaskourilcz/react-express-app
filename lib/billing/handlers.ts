@@ -4,13 +4,15 @@
  *   GET  /api/user/billing-checkout?session_id=cs_…  the success page's lookup
  *   POST /api/user/billing-portal          → { url } of a Customer Portal session
  *   POST /api/user/billing-webhook         Stripe events, signed
- *   POST /api/user/billing-cancel          the public cancellation page
+ *   POST /api/user/billing-cancel          the public cancellation page and
+ *                                          the link it emails
  *
  * Checkout needs BILLING_ENABLED; the other routes need only the Stripe key,
  * so people who already pay keep the portal and the cancel page when sales
  * are switched off. Only the signed webhook and the server-side session lookup
  * change an entitlement. */
 
+import { createHash, randomBytes } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type Stripe from 'stripe';
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
@@ -30,7 +32,15 @@ import {
   WAIVER_TEXT,
   type BillingDeps,
 } from './sync';
-import { cancelByEmail, cancelForDeletedAccount, sendCancellationEmail, type CancelAction } from './cancel';
+import {
+  CANCEL_LINK_MINUTES,
+  cancelByEmail,
+  cancelForDeletedAccount,
+  sendCancellationEmail,
+  sendCancellationLinkEmail,
+  type CancelAction,
+  type CancelEffect,
+} from './cancel';
 
 const log = createLogger('user/billing');
 
@@ -295,58 +305,161 @@ export async function handleBillingWebhook(req: VercelRequest, res: VercelRespon
 /* ── The public cancellation page ───────────────────────────────────────── */
 
 const ACTIONS: readonly CancelAction[] = ['cancel', 'withdraw'];
-/** The confirm step never answers faster than this, so a found and a missing
- * email take about as long. */
+/** The confirm step never answers faster than this. A request from anyone but
+ * a signed-in owner of the address makes no provider call at all, so its time
+ * says nothing about whether the address has a subscription. */
 const CONFIRM_FLOOR_MS = 900;
+/** The link's token: 32 random bytes, base64url. Only its SHA-256 is stored. */
+const LINK_TOKEN = /^[A-Za-z0-9_-]{43}$/;
 
+const tokenHash = (token: string) => createHash('sha256').update(token, 'utf8').digest('hex');
+
+async function floor(started: number) {
+  const wait = CONFIRM_FLOOR_MS - (Date.now() - started);
+  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
+}
+
+/** A signed-in account whose verified, confirmed email is this address. */
+async function signedInOwner(req: VercelRequest, email: string): Promise<boolean> {
+  try {
+    const auth = await tryAuth(req);
+    const payload = (auth?.payload ?? {}) as { email?: unknown; email_confirmed_at?: unknown };
+    return typeof payload.email === 'string'
+      && Boolean(payload.email_confirmed_at)
+      && payload.email.toLowerCase() === email.toLowerCase();
+  } catch {
+    return false;
+  }
+}
+
+const receipt = (action: CancelAction, email: string, receivedAt: string, config: BillingConfig, effects: CancelEffect[]) => ({
+  received: true as const,
+  confirmed: true as const,
+  action,
+  email,
+  receivedAt,
+  emailed: Boolean(config.email),
+  details: effects.map(({ withdrawn, refunded, endsAt }) => ({ withdrawn, refunded, endsAt })),
+});
+
+/**
+ * The page's two steps, then the link (review finding integrity-1):
+ *
+ *   request   checks the form; nothing is looked up.
+ *   confirm   a signed-in owner of the address: acts now and shows what
+ *             changed. Anyone else: records the request and emails a
+ *             single-use link to the address; nothing changes yet, and no
+ *             provider is asked anything, so the answer is the same whether or
+ *             not the address has a subscription.
+ *   review    the link's page asks what the link is for, without using it.
+ *   execute   the link's page confirms: the link is used and the request is
+ *             carried out, with the time it was first made.
+ */
 export async function handleBillingCancel(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {
   if (req.method !== 'POST') return allow(res, 'POST');
   const started = Date.now();
-  const body = (req.body || {}) as { email?: unknown; action?: unknown; step?: unknown };
+  const body = (req.body || {}) as { email?: unknown; action?: unknown; step?: unknown; token?: unknown };
+  res.setHeader('Cache-Control', 'no-store');
+  if (body.step === 'review' || body.step === 'execute') return handleCancelLink(req, res, supabase, body.step, body.token);
+
   const email = typeof body.email === 'string' ? body.email.trim() : '';
   const action = body.action as CancelAction;
   if (!EMAIL.test(email) || email.length > 254) return jsonError(res, 400, 'bad_email', 'Enter the email address of your subscription');
   if (!ACTIONS.includes(action)) return jsonError(res, 400, 'bad_request', "action must be 'cancel' or 'withdraw'");
-  res.setHeader('Cache-Control', 'no-store');
 
   // Step one only checks the form; nothing is looked up.
   if (body.step === 'request') return res.json({ step: 'confirm', action, email });
-  if (body.step !== 'confirm') return jsonError(res, 400, 'bad_request', "step must be 'request' or 'confirm'");
+  if (body.step !== 'confirm') return jsonError(res, 400, 'bad_request', "step must be 'request', 'confirm', 'review' or 'execute'");
 
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.billingCancel))) return;
   const config = billingConfig();
   const deps = depsFor(config, supabase);
   if (!deps) return jsonError(res, 503, 'not_configured', 'Cancellation is not available on this deployment');
-
   const receivedAt = new Date().toISOString();
-  let effects;
+
+  // Signed in with this very address: the mail is theirs already.
+  if (await signedInOwner(req, email)) {
+    let effects: CancelEffect[];
+    try {
+      effects = await cancelByEmail(deps, config, email, action);
+    } catch (error) {
+      return unavailable(res, error, 'cancel');
+    }
+    for (const effect of effects) await sendCancellationEmail(config, effect, receivedAt);
+    return res.json(receipt(action, email, receivedAt, config, effects));
+  }
+
+  // Anyone else confirms through the address's mail. Without an email
+  // provider there is no way to reach it, so only a signed-in owner can
+  // cancel here; the page says so and offers the sign-in.
+  if (!config.email) {
+    await floor(started);
+    return res.json({ received: false, confirmBy: 'sign-in', action, email });
+  }
+  const token = randomBytes(32).toString('base64url');
+  const created = await withTimeout(supabase.rpc('create_billing_cancel_request', {
+    p_token_hash: tokenHash(token),
+    p_email: email,
+    p_action: action,
+    p_ttl_minutes: CANCEL_LINK_MINUTES,
+    p_requested_at: receivedAt,
+  })).catch(() => ({ data: null, error: { message: 'timeout' } }));
+  if (created.error) {
+    if (isRpcMissing(created.error)) return jsonError(res, 503, 'migration_required', 'Billing needs migration 039');
+    log({ status: 500, kind: 'cancel_request', reason: 'db_error' });
+    return jsonError(res, 500, 'db_error', 'Could not record your request. Try again in a minute.');
+  }
+  // False: this address already had three links in the hour. Nothing more is
+  // sent, and the answer is the same, so the page cannot flood an inbox.
+  if (created.data === true && !(await sendCancellationLinkEmail(config, email, action, token, receivedAt))) {
+    return jsonError(res, 502, 'email_unavailable', 'We could not send the confirmation email. Try again in a few minutes.');
+  }
+  log({ status: 200, kind: 'cancel_request', action, sent: created.data === true });
+  await floor(started);
+  return res.json({ received: true, confirmBy: 'email', action, email, receivedAt, expiresInMinutes: CANCEL_LINK_MINUTES });
+}
+
+async function handleCancelLink(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient, step: 'review' | 'execute', raw: unknown) {
+  const token = typeof raw === 'string' ? raw : '';
+  if (!LINK_TOKEN.test(token)) return jsonError(res, 400, 'bad_link', 'This link is not complete. Open it again from the email.');
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.billingCancelLink))) return;
+  const config = billingConfig();
+  const deps = depsFor(config, supabase);
+  if (!deps) return jsonError(res, 503, 'not_configured', 'Cancellation is not available on this deployment');
+  const hash = tokenHash(token);
+  const expired = () => jsonError(res, 410, 'link_expired', 'This link has expired or was used already. Start again on this page.');
+  const read = async (name: string) => {
+    const found = await withTimeout(supabase.rpc(name, { p_token_hash: hash }));
+    if (found.error) throw isRpcMissing(found.error) ? new BillingMigrationError() : new Error(`db_error: ${name}`);
+    const row = found.data as { email?: unknown; action?: unknown; requestedAt?: unknown; expiresAt?: unknown } | null;
+    return row && typeof row.email === 'string' && ACTIONS.includes(row.action as CancelAction) && typeof row.requestedAt === 'string'
+      ? { email: row.email, action: row.action as CancelAction, requestedAt: new Date(row.requestedAt).toISOString(), expiresAt: String(row.expiresAt ?? '') }
+      : null;
+  };
+
+  let request: Awaited<ReturnType<typeof read>>;
   try {
-    effects = await cancelByEmail(deps, config, email, action);
+    request = await read(step === 'review' ? 'review_billing_cancel_request' : 'consume_billing_cancel_request');
   } catch (error) {
+    if (error instanceof BillingMigrationError) return jsonError(res, 503, 'migration_required', 'Billing needs migration 039');
+    log({ status: 500, kind: `cancel_${step}`, reason: 'db_error' });
+    return jsonError(res, 500, 'db_error', 'Could not read this link. Try again in a minute.');
+  }
+  if (!request) return expired();
+  if (step === 'review') {
+    return res.json({ action: request.action, email: request.email, requestedAt: request.requestedAt, expiresAt: request.expiresAt });
+  }
+
+  let effects: CancelEffect[];
+  try {
+    effects = await cancelByEmail(deps, config, request.email, request.action);
+  } catch (error) {
+    // The provider did not answer: hand the link back so it works again.
+    await withTimeout(supabase.rpc('release_billing_cancel_request', { p_token_hash: hash })).catch(() => undefined);
     return unavailable(res, error, 'cancel');
   }
-  for (const effect of effects) await sendCancellationEmail(config, effect, receivedAt);
-
-  // A signed-in owner of this address may see what changed; nobody else
-  // learns whether the address has a subscription.
-  let owner = false;
-  try {
-    const auth = await tryAuth(req);
-    const authEmail = typeof auth?.payload.email === 'string' ? auth.payload.email.toLowerCase() : null;
-    owner = authEmail !== null && authEmail === email.toLowerCase();
-  } catch {
-    owner = false;
-  }
-  const wait = CONFIRM_FLOOR_MS - (Date.now() - started);
-  if (wait > 0) await new Promise((resolve) => setTimeout(resolve, wait));
-  return res.json({
-    received: true,
-    action,
-    email,
-    receivedAt,
-    emailed: Boolean(config.email),
-    ...(owner ? { details: effects.map(({ withdrawn, refunded, endsAt }) => ({ withdrawn, refunded, endsAt })) } : {}),
-  });
+  for (const effect of effects) await sendCancellationEmail(config, effect, request.requestedAt);
+  return res.json(receipt(request.action, request.email, request.requestedAt, config, effects));
 }
 
 /* ── Account deletion ───────────────────────────────────────────────────── */

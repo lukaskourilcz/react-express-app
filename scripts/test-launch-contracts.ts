@@ -498,6 +498,9 @@ async function tierContracts() {
     'record_billing_event', 'finish_billing_event', 'link_billing_customer', 'delete_entitlement_data',
     // Billing (step D2, #221).
     'release_billing_event', 'billing_account', 'billing_customer_owner', 'record_checkout_consent',
+    // The review's billing rules (step FIX).
+    'claim_voluntary_refund', 'create_billing_cancel_request', 'review_billing_cancel_request',
+    'consume_billing_cancel_request', 'release_billing_cancel_request',
   ]) {
     const start = migration.indexOf(`function public.${routine}(`);
     assert.ok(start >= 0, `migration 039 defines ${routine}`);
@@ -508,11 +511,16 @@ async function tierContracts() {
     assert.match(migration, new RegExp(`revoke all on function public\\.${routine}\\([^)]*\\) from public, anon, authenticated;`), `${routine} is revoked from browsers`);
   }
   assert.doesNotMatch(migration, /create or replace function public\.delete_user_data/, 'migration 039 redefines no earlier routine');
-  for (const table of ['billing_customers', 'entitlement_grants', 'billing_events', 'billing_checkout_consents']) {
+  for (const table of ['billing_customers', 'entitlement_grants', 'billing_events', 'billing_checkout_consents', 'billing_cancel_requests']) {
     assert.match(migration, new RegExp(`alter table public\\.${table}\\s+enable row level security`), `${table} has RLS`);
     assert.match(migration, new RegExp(`revoke all on public\\.${table}\\s+from public, anon, authenticated`), `${table} revokes browser privileges`);
   }
   assert.doesNotMatch(migration, /grant select on public\.billing_events/, 'billing_events is service-role only');
+  assert.doesNotMatch(migration, /grant [a-z, ]+ on public\.billing_cancel_requests/, 'the cancellation links are service-role only');
+  // The grace of a failed renewal runs from the failure, never from a period
+  // end the provider has already moved on (review finding product-3).
+  assert.match(migration, /p_past_due_since is not null\s+and p_past_due_since \+ interval '7 days' > now\(\)/);
+  assert.doesNotMatch(migration, /p_current_period_end \+ interval '7 days'/, 'no grace is counted from the period end');
   assert.doesNotMatch(migration, /to anon/, 'anon holds nothing');
 
   // Premium changes which content a learner may start and nothing else:
@@ -546,7 +554,18 @@ async function tierContracts() {
     );
     assert.equal(PREMIUM_REQUIRED, 'premium_required');
   }
-  assert.deepEqual(toEntitlementResponse(null), { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null });
+  assert.deepEqual(toEntitlementResponse(null), {
+    tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null,
+    billingAccount: false, subscriptionLive: false,
+  });
+  // A lapsed subscriber and a complimentary grant over a subscription keep
+  // Manage billing (review finding product-10).
+  assert.equal(toEntitlementResponse({ premium: false, billingAccount: true }).billingAccount, true);
+  assert.deepEqual(
+    (({ tier, source, billingAccount, subscriptionLive }) => ({ tier, source, billingAccount, subscriptionLive }))(
+      toEntitlementResponse({ premium: true, source: 'manual', validUntil: null, billingAccount: true, subscriptionLive: true })),
+    { tier: 'premium', source: 'manual', billingAccount: true, subscriptionLive: true },
+  );
   assert.equal(toEntitlementResponse({ premium: true, source: 'manual', validUntil: null }).tier, 'premium');
   assert.equal(toEntitlementResponse({ premium: 'yes' }).tier, 'free', 'only a literal true opens Premium');
   const now = Date.parse('2026-09-25T12:00:00Z');
@@ -640,7 +659,7 @@ function billingContracts() {
   });
   // Checkout is off unless the deployment says otherwise, and only the server
   // holds a Stripe key.
-  assert.deepEqual(publicBillingSettings({}), { enabled: false, cancellable: false, seller: null }, 'billing defaults to off');
+  assert.deepEqual(publicBillingSettings({}), { enabled: false, cancellable: false, cancelByEmail: false, seller: null }, 'billing defaults to off');
   assert.equal(publicBillingSettings({ BILLING_ENABLED: 'true' }).enabled, false, 'BILLING_ENABLED alone sells nothing');
   assert.equal(
     DEFAULT_PUBLIC_ORIGIN,
@@ -810,15 +829,28 @@ function coinsContracts() {
   assert.match(ledger, /ON CONFLICT \(event_id\) DO NOTHING;\s*GET DIAGNOSTICS v_applied = ROW_COUNT;\s*IF v_applied = 0 THEN RETURN FALSE;/);
 
   // 3. Only service-role routines credit, and they write no learning table.
-  for (const name of ['credit_verified_xp_tokens', 'settle_coin_milestones', 'settle_month_top3', 'credit_social_visit', 'delete_coin_data', 'record_coding_verdict']) {
+  for (const name of ['credit_verified_xp_tokens', 'settle_coin_milestones', 'settle_month_top3', 'credit_social_visit', 'delete_coin_data', 'record_coding_verdict', 'revoke_premium_benefits']) {
     assert.match(migration, new RegExp(`REVOKE ALL ON FUNCTION public\\.${name}\\([^;]*\\)\\s*FROM PUBLIC, anon, authenticated;`), `${name} is revoked from browsers`);
     assert.match(migration, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${name}\\([^;]*\\)\\s*TO service_role;`), `${name} is service-role only`);
     assert.match(routine(name), /SECURITY DEFINER\s*SET search_path = ''/, `${name} pins its search_path`);
   }
-  for (const name of ['credit_verified_xp_tokens', 'settle_coin_milestones', 'settle_month_top3', 'credit_social_visit']) {
+  for (const name of ['credit_verified_xp_tokens', 'settle_coin_milestones', 'settle_month_top3', 'credit_social_visit', 'revoke_premium_benefits']) {
     assert.doesNotMatch(routine(name), /(INSERT INTO|UPDATE|DELETE FROM) public\.(user_xp|user_stats|user_streak|roadmap_progress|coding_progress|user_category_stats|user_activity_days)/,
       `${name} reads progress and never writes it`);
   }
+  // A revoked subscription takes back only what Premium paid while it was live
+  // (review finding integrity-3): redemptions still waiting, through the
+  // routine that returns their coins, and one debit with a fixed event id.
+  const takeBack = routine('revoke_premium_benefits');
+  assert.match(takeBack, /IF NOT FOUND OR v_grant\.status <> 'revoked' THEN/, 'only a revoked grant takes anything back');
+  assert.match(takeBack, /IF public\.is_premium\(v_grant\.user_id\) THEN/, 'nothing while another grant keeps the account Premium');
+  assert.match(takeBack, /o\.created_at >= v_grant\.created_at/, 'only orders placed while the grant existed');
+  assert.match(takeBack, /public\.cancel_merch_order\(v_order, v_grant\.user_id, p_subject\)/);
+  assert.match(takeBack, /NOT EXISTS \(SELECT 1 FROM public\.path_reward_claims c WHERE c\.order_id = o\.order_id\)/, 'a path package stays');
+  assert.match(takeBack, /o\.payment_kind = 'tokens'/, 'an order paid with money stays');
+  assert.match(takeBack, /v_debit := LEAST\(v_owed, COALESCE\(v_balance, 0\)\)/, 'the debit never drives a balance below zero');
+  assert.ok(takeBack.includes("v_event := 'revoke:' || replace(v_grant.id::TEXT, '-', '');"), 'one debit per revoked grant');
+  assert.match(read('lib/billing/sync.ts'), /await takeBackPremiumBenefits\(deps, result\.subscriptionId\);/, 'every revocation takes the benefits back');
   assert.match(migration, /ALTER TABLE public\.token_xp_credits\s+ENABLE ROW LEVEL SECURITY;/);
   assert.match(migration, /REVOKE ALL ON public\.token_xp_credits\s+FROM PUBLIC, anon, authenticated;/);
   // The browser cannot post a credit: no client file names a credit routine,

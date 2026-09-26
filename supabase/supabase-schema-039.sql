@@ -21,11 +21,25 @@
 -- additive: re-running this file on a database that holds the D1 copy adds the
 -- consent table, two billing_events columns and the section 5 routines.
 --
+-- Added by the review of the freemium programme (step FIX), before 039
+-- reached production:
+--   * entitlement_grants.past_due_since: the grace window runs from the failed
+--     renewal, not from the period end. A failed renewal already carries the
+--     next period's end, so "period end + 7 days" kept Premium open for the
+--     whole unpaid period (finding product-3).
+--   * billing_customers.voluntary_refund_at and _subscription: the voluntary
+--     14-day refund is taken once per account (finding integrity-2).
+--   * billing_cancel_requests: the public cancellation page acts only on a
+--     single-use link emailed to the address, or at once for a signed-in owner
+--     of that address (finding integrity-1).
+--   * entitlement_summary also says whether the account has a billing customer
+--     and a live subscription (finding product-10).
+--
 -- is_premium() is the rule, written once:
 --   a manual or promo grant that is active and not past valid_until, or
 --   a provider grant that is active or trialing, or
---   a provider grant that is past_due while current_period_end + 7 days is
---   still ahead (the grace window that covers the provider's retries).
+--   a provider grant that is past_due for less than 7 days, counted from the
+--   failed renewal (the grace window that covers the provider's retries).
 --
 -- Premium changes which content a learner may start and nothing else. No
 -- routine here reads or writes a learning, score or streak table; the launch
@@ -38,8 +52,17 @@ CREATE TABLE IF NOT EXISTS public.billing_customers (
   user_id              TEXT PRIMARY KEY CHECK (LENGTH(user_id) BETWEEN 1 AND 128),
   provider             TEXT NOT NULL DEFAULT 'stripe' CHECK (provider IN ('stripe')),
   provider_customer_id TEXT NOT NULL UNIQUE CHECK (provider_customer_id ~ '^[A-Za-z0-9_-]{1,128}$'),
-  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  -- When the account took the owner's voluntary 14-day refund, and on which
+  -- subscription. Set once by claim_voluntary_refund; never cleared.
+  voluntary_refund_at           TIMESTAMPTZ,
+  voluntary_refund_subscription TEXT CHECK (
+    voluntary_refund_subscription IS NULL OR voluntary_refund_subscription ~ '^[A-Za-z0-9_-]{1,128}$')
 );
+-- Added by step FIX; a database that ran an earlier copy of 039 gains them here.
+ALTER TABLE public.billing_customers ADD COLUMN IF NOT EXISTS voluntary_refund_at TIMESTAMPTZ;
+ALTER TABLE public.billing_customers ADD COLUMN IF NOT EXISTS voluntary_refund_subscription TEXT CHECK (
+  voluntary_refund_subscription IS NULL OR voluntary_refund_subscription ~ '^[A-Za-z0-9_-]{1,128}$');
 
 CREATE TABLE IF NOT EXISTS public.entitlement_grants (
   id                       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -57,6 +80,9 @@ CREATE TABLE IF NOT EXISTS public.entitlement_grants (
   provider_price_id        TEXT CHECK (provider_price_id IS NULL OR provider_price_id ~ '^[A-Za-z0-9_-]{1,128}$'),
   current_period_end       TIMESTAMPTZ,
   cancel_at_period_end     BOOLEAN NOT NULL DEFAULT FALSE,
+  -- A provider grant that is past_due: when the renewal failed. The grace
+  -- window is 7 days from here. NULL in every other status.
+  past_due_since           TIMESTAMPTZ,
   -- Manual and promo grants; NULL means open-ended.
   valid_until              TIMESTAMPTZ,
   -- Who granted it and why. The account owner can read it, so write it for them.
@@ -67,6 +93,8 @@ CREATE TABLE IF NOT EXISTS public.entitlement_grants (
   CHECK ((source = 'provider') = (provider_subscription_id IS NOT NULL)),
   CHECK (source = 'provider' OR status IN ('active', 'revoked'))
 );
+-- Added by step FIX; a database that ran an earlier copy of 039 gains it here.
+ALTER TABLE public.entitlement_grants ADD COLUMN IF NOT EXISTS past_due_since TIMESTAMPTZ;
 CREATE INDEX IF NOT EXISTS entitlement_grants_user_idx
   ON public.entitlement_grants (user_id, updated_at DESC);
 -- At most one active manual grant per account; granting again extends it.
@@ -148,13 +176,22 @@ GRANT SELECT ON public.billing_checkout_consents TO authenticated;
 -- 3. The rule.
 -- ---------------------------------------------------------------------------
 
--- Whether one grant opens Premium now. Private: only the two readers below
+-- Whether one grant opens Premium now. Private: only the three readers below
 -- call it, so the rule cannot be evaluated two different ways.
+--
+-- The grace of a past_due subscription runs from the failed renewal
+-- (past_due_since). The provider opens the next period when it creates the
+-- renewal invoice, so a failed renewal already carries the next period's end,
+-- and counting from that end would keep Premium open for the whole unpaid
+-- period. An earlier draft of this routine took four arguments and counted
+-- from the period end; it is dropped so no reader can resolve to it.
+DROP FUNCTION IF EXISTS public.entitlement_grant_live(TEXT, TEXT, TIMESTAMPTZ, TIMESTAMPTZ);
 CREATE OR REPLACE FUNCTION public.entitlement_grant_live(
   p_source             TEXT,
   p_status             TEXT,
   p_valid_until        TIMESTAMPTZ,
-  p_current_period_end TIMESTAMPTZ
+  p_current_period_end TIMESTAMPTZ,
+  p_past_due_since     TIMESTAMPTZ
 )
 RETURNS BOOLEAN
 LANGUAGE sql
@@ -168,13 +205,13 @@ AS $$
     WHEN p_source = 'provider' THEN
       p_status IN ('active', 'trialing')
       OR (p_status = 'past_due'
-          AND p_current_period_end IS NOT NULL
-          AND p_current_period_end + INTERVAL '7 days' > NOW())
+          AND p_past_due_since IS NOT NULL
+          AND p_past_due_since + INTERVAL '7 days' > NOW())
     ELSE FALSE
   END;
 $$;
-REVOKE ALL ON FUNCTION public.entitlement_grant_live(TEXT, TEXT, TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.entitlement_grant_live(TEXT, TEXT, TIMESTAMPTZ, TIMESTAMPTZ) TO service_role;
+REVOKE ALL ON FUNCTION public.entitlement_grant_live(TEXT, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.entitlement_grant_live(TEXT, TEXT, TIMESTAMPTZ, TIMESTAMPTZ, TIMESTAMPTZ) TO service_role;
 
 -- The one question the server asks per request.
 CREATE OR REPLACE FUNCTION public.is_premium(p_user TEXT)
@@ -189,7 +226,7 @@ AS $$
       FROM public.entitlement_grants g
      WHERE g.user_id = p_user
        AND g.plan = 'premium'
-       AND public.entitlement_grant_live(g.source, g.status, g.valid_until, g.current_period_end)
+       AND public.entitlement_grant_live(g.source, g.status, g.valid_until, g.current_period_end, g.past_due_since)
   );
 $$;
 REVOKE ALL ON FUNCTION public.is_premium(TEXT) FROM PUBLIC, anon, authenticated;
@@ -197,7 +234,12 @@ GRANT EXECUTE ON FUNCTION public.is_premium(TEXT) TO service_role;
 
 -- What the plan line on the Profile needs: the live grant that lasts longest,
 -- or premium = false. A provider grant outranks a manual one of equal length,
--- because it is the one the learner manages.
+-- because it is the one the learner manages. Whatever wins, two facts about
+-- billing ride along (finding product-10): whether the account has a billing
+-- customer, so Manage billing and its invoices stay reachable under a longer
+-- complimentary grant and after a subscription ended, and whether a
+-- subscription is live, so /premium offers Manage billing instead of a second
+-- checkout that the server would refuse.
 CREATE OR REPLACE FUNCTION public.entitlement_summary(p_user TEXT)
 RETURNS JSONB
 LANGUAGE sql
@@ -217,13 +259,20 @@ AS $$
        FROM public.entitlement_grants g
       WHERE g.user_id = p_user
         AND g.plan = 'premium'
-        AND public.entitlement_grant_live(g.source, g.status, g.valid_until, g.current_period_end)
+        AND public.entitlement_grant_live(g.source, g.status, g.valid_until, g.current_period_end, g.past_due_since)
       ORDER BY
         CASE WHEN g.source = 'provider' THEN g.current_period_end ELSE g.valid_until END DESC NULLS FIRST,
         (g.source = 'provider') DESC,
         g.updated_at DESC
       LIMIT 1),
     jsonb_build_object('premium', FALSE)
+  ) || jsonb_build_object(
+    'billingAccount', EXISTS (SELECT 1 FROM public.billing_customers c WHERE c.user_id = p_user),
+    'subscriptionLive', EXISTS (
+      SELECT 1 FROM public.entitlement_grants g
+       WHERE g.user_id = p_user
+         AND g.source = 'provider'
+         AND public.entitlement_grant_live(g.source, g.status, g.valid_until, g.current_period_end, g.past_due_since))
   );
 $$;
 REVOKE ALL ON FUNCTION public.entitlement_summary(TEXT) FROM PUBLIC, anon, authenticated;
@@ -265,6 +314,14 @@ GRANT EXECUTE ON FUNCTION public.link_billing_customer(TEXT, TEXT) TO service_ro
 -- Mirror a subscription. Keyed by the subscription id, so events that arrive
 -- out of order converge on the live object the caller fetched. A grant that was
 -- revoked (full refund, dispute) stays revoked whatever status arrives later.
+--
+-- p_past_due_since is when the unpaid period began, as the caller read it from
+-- the subscription; NOW() when the caller does not know. The first value seen
+-- while the grant is past_due stands, so a later retry or a second failed
+-- period never moves the grace window forward. Any other status clears it.
+-- An earlier draft took seven arguments; it is dropped so a call cannot
+-- resolve to it.
+DROP FUNCTION IF EXISTS public.upsert_provider_entitlement(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, BOOLEAN, TEXT);
 CREATE OR REPLACE FUNCTION public.upsert_provider_entitlement(
   p_user_id              TEXT,
   p_subscription_id      TEXT,
@@ -272,7 +329,8 @@ CREATE OR REPLACE FUNCTION public.upsert_provider_entitlement(
   p_price_id             TEXT,
   p_current_period_end   TIMESTAMPTZ,
   p_cancel_at_period_end BOOLEAN,
-  p_note                 TEXT DEFAULT NULL
+  p_note                 TEXT DEFAULT NULL,
+  p_past_due_since       TIMESTAMPTZ DEFAULT NULL
 )
 RETURNS UUID
 LANGUAGE plpgsql
@@ -294,11 +352,12 @@ BEGIN
 
   INSERT INTO public.entitlement_grants AS g (
     user_id, source, status, provider_subscription_id, provider_price_id,
-    current_period_end, cancel_at_period_end, note
+    current_period_end, cancel_at_period_end, note, past_due_since
   )
   VALUES (
     p_user_id, 'provider', p_status, p_subscription_id, p_price_id,
-    p_current_period_end, COALESCE(p_cancel_at_period_end, FALSE), p_note
+    p_current_period_end, COALESCE(p_cancel_at_period_end, FALSE), p_note,
+    CASE WHEN p_status = 'past_due' THEN COALESCE(p_past_due_since, NOW()) END
   )
   ON CONFLICT (provider_subscription_id) DO UPDATE
     SET status               = CASE WHEN g.status = 'revoked' THEN 'revoked' ELSE EXCLUDED.status END,
@@ -306,13 +365,18 @@ BEGIN
         current_period_end   = EXCLUDED.current_period_end,
         cancel_at_period_end = EXCLUDED.cancel_at_period_end,
         note                 = COALESCE(EXCLUDED.note, g.note),
+        past_due_since       = CASE
+                                 WHEN g.status = 'revoked' OR EXCLUDED.status <> 'past_due' THEN NULL
+                                 WHEN g.status = 'past_due' AND g.past_due_since IS NOT NULL THEN g.past_due_since
+                                 ELSE EXCLUDED.past_due_since
+                               END,
         updated_at           = NOW()
   RETURNING id INTO v_id;
   RETURN v_id;
 END;
 $$;
-REVOKE ALL ON FUNCTION public.upsert_provider_entitlement(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, BOOLEAN, TEXT) FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.upsert_provider_entitlement(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, BOOLEAN, TEXT) TO service_role;
+REVOKE ALL ON FUNCTION public.upsert_provider_entitlement(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, BOOLEAN, TEXT, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.upsert_provider_entitlement(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ, BOOLEAN, TEXT, TIMESTAMPTZ) TO service_role;
 
 -- Open Premium by hand. An account holds at most one active manual grant:
 -- granting again moves its end and replaces its note instead of stacking rows.
@@ -497,7 +561,7 @@ AS $$
       SELECT 1 FROM public.entitlement_grants g
        WHERE g.user_id = p_user_id
          AND g.source = 'provider'
-         AND public.entitlement_grant_live(g.source, g.status, g.valid_until, g.current_period_end)
+         AND public.entitlement_grant_live(g.source, g.status, g.valid_until, g.current_period_end, g.past_due_since)
     )
   );
 $$;
@@ -551,3 +615,170 @@ END;
 $$;
 REVOKE ALL ON FUNCTION public.record_checkout_consent(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_checkout_consent(TEXT, TEXT, TEXT, TEXT, TIMESTAMPTZ) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 6. The review's billing rules (step FIX). All service-role only.
+-- ---------------------------------------------------------------------------
+
+-- The owner's voluntary refund of the first payment is taken once per account
+-- (finding integrity-2). TRUE when this subscription may take it: the account
+-- has not taken it, or took it for this same subscription (a withdrawal that
+-- failed part-way and is tried again). Taking it records the subscription.
+-- FALSE when another subscription took it, or when the account has no billing
+-- customer link. The row lock of the UPDATE makes two withdrawals at once take
+-- it at most once.
+CREATE OR REPLACE FUNCTION public.claim_voluntary_refund(
+  p_user_id         TEXT,
+  p_subscription_id TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  IF p_user_id IS NULL OR p_subscription_id IS NULL OR p_subscription_id !~ '^[A-Za-z0-9_-]{1,128}$' THEN
+    RAISE EXCEPTION 'invalid_refund_claim';
+  END IF;
+  UPDATE public.billing_customers
+     SET voluntary_refund_at = COALESCE(voluntary_refund_at, NOW()),
+         voluntary_refund_subscription = COALESCE(voluntary_refund_subscription, p_subscription_id)
+   WHERE user_id = p_user_id
+     AND (voluntary_refund_subscription IS NULL OR voluntary_refund_subscription = p_subscription_id);
+  RETURN FOUND;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.claim_voluntary_refund(TEXT, TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.claim_voluntary_refund(TEXT, TEXT) TO service_role;
+
+-- The public cancellation page acts on an address only after the person who
+-- typed it opened a single-use link sent to that address (finding
+-- integrity-1). A row is one request: the hash of the link's token, the
+-- address as typed, the action and when it was asked for. The token itself is
+-- never stored. The table holds no account id, and rows are purged a day after
+-- they expire, whether or not the link was used.
+CREATE TABLE IF NOT EXISTS public.billing_cancel_requests (
+  token_hash   TEXT PRIMARY KEY CHECK (token_hash ~ '^[0-9a-f]{64}$'),
+  email        TEXT NOT NULL CHECK (LENGTH(email) BETWEEN 3 AND 254),
+  action       TEXT NOT NULL CHECK (action IN ('cancel', 'withdraw')),
+  requested_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  expires_at   TIMESTAMPTZ NOT NULL,
+  used_at      TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS billing_cancel_requests_email_idx
+  ON public.billing_cancel_requests (LOWER(email), requested_at DESC);
+ALTER TABLE public.billing_cancel_requests ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON public.billing_cancel_requests FROM PUBLIC, anon, authenticated;
+
+-- Record a request. FALSE, and nothing recorded, when the address already had
+-- p_max_per_hour requests in the last hour: the caller then sends no email but
+-- answers exactly as it would otherwise, so the page cannot be used to flood
+-- someone's inbox. p_requested_at is the time the server showed the person,
+-- kept so the receipt names the same minute; a value more than five minutes
+-- from now is replaced by now.
+CREATE OR REPLACE FUNCTION public.create_billing_cancel_request(
+  p_token_hash   TEXT,
+  p_email        TEXT,
+  p_action       TEXT,
+  p_ttl_minutes  INTEGER DEFAULT 60,
+  p_max_per_hour INTEGER DEFAULT 3,
+  p_requested_at TIMESTAMPTZ DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_recent INTEGER;
+BEGIN
+  IF p_token_hash IS NULL OR p_token_hash !~ '^[0-9a-f]{64}$' OR
+     p_email IS NULL OR LENGTH(p_email) NOT BETWEEN 3 AND 254 OR
+     p_action NOT IN ('cancel', 'withdraw') OR
+     p_ttl_minutes IS NULL OR p_ttl_minutes NOT BETWEEN 5 AND 1440 OR
+     p_max_per_hour IS NULL OR p_max_per_hour NOT BETWEEN 1 AND 20 THEN
+    RAISE EXCEPTION 'invalid_cancel_request';
+  END IF;
+  -- One address at a time, so two requests at once cannot both pass the count.
+  PERFORM pg_advisory_xact_lock(hashtextextended('billing-cancel:' || LOWER(p_email), 0));
+  DELETE FROM public.billing_cancel_requests WHERE expires_at < NOW() - INTERVAL '1 day';
+  SELECT COUNT(*) INTO v_recent
+    FROM public.billing_cancel_requests
+   WHERE LOWER(email) = LOWER(p_email)
+     AND requested_at > NOW() - INTERVAL '1 hour';
+  IF v_recent >= p_max_per_hour THEN
+    RETURN FALSE;
+  END IF;
+  INSERT INTO public.billing_cancel_requests (token_hash, email, action, requested_at, expires_at)
+  VALUES (
+    p_token_hash, p_email, p_action,
+    CASE WHEN p_requested_at BETWEEN NOW() - INTERVAL '5 minutes' AND NOW() + INTERVAL '5 minutes'
+         THEN p_requested_at ELSE NOW() END,
+    NOW() + make_interval(mins => p_ttl_minutes)
+  );
+  RETURN TRUE;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.create_billing_cancel_request(TEXT, TEXT, TEXT, INTEGER, INTEGER, TIMESTAMPTZ) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.create_billing_cancel_request(TEXT, TEXT, TEXT, INTEGER, INTEGER, TIMESTAMPTZ) TO service_role;
+
+-- What an unused, unexpired link asks for, or NULL. Reading it uses nothing.
+CREATE OR REPLACE FUNCTION public.review_billing_cancel_request(p_token_hash TEXT)
+RETURNS JSONB
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT jsonb_build_object('email', r.email, 'action', r.action, 'requestedAt', r.requested_at, 'expiresAt', r.expires_at)
+    FROM public.billing_cancel_requests r
+   WHERE r.token_hash = p_token_hash
+     AND r.used_at IS NULL
+     AND r.expires_at > NOW();
+$$;
+REVOKE ALL ON FUNCTION public.review_billing_cancel_request(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.review_billing_cancel_request(TEXT) TO service_role;
+
+-- Use a link: marks it used and returns what it asks for, or NULL when it is
+-- unknown, expired or already used. Two opens at once use it once.
+CREATE OR REPLACE FUNCTION public.consume_billing_cancel_request(p_token_hash TEXT)
+RETURNS JSONB
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_row public.billing_cancel_requests%ROWTYPE;
+BEGIN
+  UPDATE public.billing_cancel_requests
+     SET used_at = NOW()
+   WHERE token_hash = p_token_hash
+     AND used_at IS NULL
+     AND expires_at > NOW()
+  RETURNING * INTO v_row;
+  IF NOT FOUND THEN RETURN NULL; END IF;
+  RETURN jsonb_build_object('email', v_row.email, 'action', v_row.action, 'requestedAt', v_row.requested_at, 'expiresAt', v_row.expires_at);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.consume_billing_cancel_request(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.consume_billing_cancel_request(TEXT) TO service_role;
+
+-- The provider could not be reached after a link was used: hand it back, so
+-- the same link works again until it expires.
+CREATE OR REPLACE FUNCTION public.release_billing_cancel_request(p_token_hash TEXT)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+BEGIN
+  UPDATE public.billing_cancel_requests
+     SET used_at = NULL
+   WHERE token_hash = p_token_hash
+     AND used_at IS NOT NULL
+     AND expires_at > NOW();
+  RETURN FOUND;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.release_billing_cancel_request(TEXT) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.release_billing_cancel_request(TEXT) TO service_role;
