@@ -10,10 +10,12 @@ import DevSettings from './DevSettings';
 import DevQuality from './DevQuality';
 import DevLearningPaths from './DevLearningPaths';
 import DevMerch from './DevMerch';
+import DevVouchers from './DevVouchers';
 import './DevConsole.css';
 import { CURRENT_PRODUCT } from '../../lib/products';
+import { translateStatic } from '../../i18n/LanguageContext';
 
-type Tab = 'questions' | 'triage' | 'quality' | 'paths' | 'flags' | 'logs' | 'merch' | 'settings';
+type Tab = 'questions' | 'triage' | 'quality' | 'paths' | 'flags' | 'logs' | 'merch' | 'vouchers' | 'settings';
 
 const NAV: { id: Tab; label: string; description: string; icon: string }[] = [
   { id: 'questions', label: 'Question bank', description: 'Create, filter and edit', icon: '◫' },
@@ -23,6 +25,7 @@ const NAV: { id: Tab; label: string; description: string; icon: string }[] = [
   { id: 'flags', label: 'Learner flags', description: 'Review reported questions', icon: '⚑' },
   { id: 'logs', label: 'Activity log', description: 'Track authentication events', icon: '≋' },
   { id: 'merch', label: 'Merchandise', description: 'Quotes, monthly caps and fulfilment', icon: '▣' },
+  { id: 'vouchers', label: translateStatic('dev.vouchers.nav'), description: translateStatic('dev.vouchers.navDescription'), icon: '◈' },
   { id: 'settings', label: 'App settings', description: 'Tune features and balance', icon: '⚙' },
 ];
 
@@ -88,7 +91,7 @@ export default function DevConsole({ onLock }: { onLock: () => void }) {
           </div>
 
           <section className="dev-workspace" aria-label={activeNav.label}>
-            {tab === 'questions' ? <DevQuestions /> : tab === 'triage' ? <DevTriage /> : tab === 'quality' ? <DevQuality /> : tab === 'paths' ? <DevLearningPaths /> : tab === 'flags' ? <DevReports /> : tab === 'logs' ? <DevLogs /> : tab === 'merch' ? <DevMerch /> : <DevSettings />}
+            {tab === 'questions' ? <DevQuestions /> : tab === 'triage' ? <DevTriage /> : tab === 'quality' ? <DevQuality /> : tab === 'paths' ? <DevLearningPaths /> : tab === 'flags' ? <DevReports /> : tab === 'logs' ? <DevLogs /> : tab === 'merch' ? <DevMerch /> : tab === 'vouchers' ? <DevVouchers /> : <DevSettings />}
           </section>
         </div>
       </section>

@@ -3,6 +3,7 @@
 // sessionStorage when that migration fallback is explicitly enabled server-side.
 
 import type { CoinSettings, MerchSettings, MerchSku } from '../../../shared/rewards';
+import type { AdminVoucher, CreatedVoucher } from '../../../shared/vouchers';
 import { apiFetch, ApiError } from './api';
 
 const PW_KEY = 'devquiz:dev-password';
@@ -314,3 +315,25 @@ export const advanceOrder = (orderId: string, op: 'submit' | 'ship' | 'cancel', 
 
 export const setMerchStock = (sku: MerchSku, variant: string, onHand: number) =>
   fulfilmentFetch<{ stock: MerchStockRow }>({ method: 'POST', body: { op: 'stock', sku, variant, onHand } });
+
+/* ── Premium vouchers (migration 045) ─────────────────────────────────── */
+
+export const listVouchers = () => adminFetch<{ vouchers: AdminVoucher[] }>('vouchers');
+
+export interface VoucherInput {
+  note: string;
+  /** Days of Premium from the redemption; null for no end. */
+  premiumDays: number | null;
+  maxRedemptions: number;
+  /** ISO time after which the code cannot be redeemed; null for none. */
+  redeemableUntil: string | null;
+  /** A custom code; null for a random one. */
+  code: string | null;
+}
+
+/** The answer carries the code, the one time it is ever shown. */
+export const createVoucher = (input: VoucherInput) =>
+  adminFetch<CreatedVoucher>('vouchers', { method: 'POST', body: { action: 'create', ...input } });
+
+export const revokeVoucher = (voucherId: string) =>
+  adminFetch<{ voucher: AdminVoucher }>('vouchers', { method: 'POST', body: { action: 'revoke', voucherId } });
