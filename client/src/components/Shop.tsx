@@ -542,7 +542,9 @@ function Shop() {
     <VStack gap={5} width="100%" maxWidth={1080}>
       <VStack gap={1}>
         <Heading level={1} type="display-3">{t('shop.title')}</Heading>
-        <Text type="large" color="secondary">{t('shop.subtitle')}</Text>
+        <Text type="large" color="secondary">
+          {t('shop.subtitle')}{merchOpen ? ` ${t('shop.subtitleMerch')}` : ''}
+        </Text>
       </VStack>
 
       {/* Test mode is for the owner's staging checks; production never shows it. */}
