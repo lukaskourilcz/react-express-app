@@ -118,3 +118,11 @@
   .ss-compare-caption { font-size: var(--ss-type-label); }
 }
 
+/* ── "Also in devShark" strip ─────────────────────────────────────────────
+   Each tile is a <button> with no border or background, so without this ring
+   a keyboard user could not see which one has focus (design audit P2.7). */
+.ss-strip-tile:focus-visible {
+  outline: 3px solid var(--ss-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-inner);
+}

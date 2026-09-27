@@ -26,6 +26,7 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import ComparisonTable from './landing/ComparisonTable';
+import './landing/landingSections.css';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
@@ -300,6 +301,7 @@ export default function Home() {
             <button
               key={item.titleKey}
               type="button"
+              className="ss-strip-tile"
               onClick={() => navigate(item.to)}
               style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 0', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
             >
