@@ -773,6 +773,12 @@ function publicCopyContracts() {
   }
   assert.match(read('client/src/components/landing/ComparisonTable.tsx'), /labelKey: 'landing\.compare\.rowCoins', free: NO, premium: \{ mark: 'yes', key: 'landing\.compare\.premiumCoins' \}/);
   assert.match(ENGLISH['legal.terms.plans.premium'], /redeem coins for devShark merchandise once redemption opens/);
+  // Design audit P0.4: grading and end states are stated, not cheered. No
+  // exclamation mark and no "Well done" in any verdict, result or end key.
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    if (!/\.(correct|wrong|verdict\.|gameOver|scoreSubmitted|finished)/.test(key)) continue;
+    assert.doesNotMatch(value, /!|Well done/i, `${key} cheers instead of stating the result`);
+  }
   // Design audit P0.1: what does not exist yet is not shown. The coin and path
   // rows render only while their switch is on, the Premium list drops the
   // merchandise line until redemption opens, and production never shows the
