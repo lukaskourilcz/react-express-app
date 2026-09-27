@@ -40,7 +40,7 @@ import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { ShellPartBoundary } from './ShellPartBoundary';
 import { lazyShellPart } from '../lib/routeRecovery';
-import { TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
+import { ShieldIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
@@ -578,7 +578,7 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
               boxShadow: 'inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 35%, transparent)',
             }}
           >
-            <TrophyIcon size={25} />
+            <TrophyIcon size={24} />
           </div>
           <VStack gap={0} width="100%">
             <Heading level={3} maxLines={1}>{title}</Heading>
@@ -611,15 +611,6 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
         </Grid>
       </VStack>
     </div>
-  );
-}
-
-function ShieldIcon({ size = 22 }: { size?: number }) {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
   );
 }
 

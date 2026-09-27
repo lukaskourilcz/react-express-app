@@ -66,7 +66,7 @@ export function ReferralInvite({ signedIn }: { signedIn: boolean }) {
       {data?.invited === 'pending' && (
         <div className="rw-premium-note rw-invite__invited">
           <p>{t('rewards.invite.invited', { n: coins })}</p>
-          <Link className="rw-btn" to="/learn">{t('rewards.invite.openLearn')}</Link>
+          <Button variant="secondary" as={Link} href="/learn" label={t('rewards.invite.openLearn')} />
         </div>
       )}
 
@@ -94,9 +94,7 @@ export function ReferralInvite({ signedIn }: { signedIn: boolean }) {
                 aria-describedby={statusId}
                 onFocus={(event) => event.currentTarget.select()}
               />
-              <button type="button" className="rw-btn rw-btn--primary" onClick={() => void onCopy()}>
-                {t('rewards.invite.copy')}
-              </button>
+              <Button variant="primary" label={t('rewards.invite.copy')} onClick={() => void onCopy()} />
             </div>
             <p id={statusId} className="rw-invite__status" role="status" aria-live="polite">
               {copy === 'copied' ? t('rewards.invite.copied') : copy === 'failed' ? t('rewards.invite.copyFailed') : ''}

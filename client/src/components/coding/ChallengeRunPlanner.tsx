@@ -9,12 +9,13 @@ import { useId, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
-import { Kicker, SwimCta, FinButton } from '../landing/LandingKit';
+import { Kicker, SwimCta } from '../landing/LandingKit';
 import { useAdvanceSession, usePracticeSession, useStartSession } from '../../coding/practice';
 import { ApiError } from '../../lib/api';
 import { CODING_INDEX } from '../../../../shared/coding-index';
 import { CODING_SECTION_TRACKS, type CodingTrack } from '../../../../shared/coding-catalog';
 import { PRACTICE_RUN_COUNTS, type PracticeOrder, type PracticeSession } from '../../../../shared/coding-api';
+import { Button } from '@astryxdesign/core/Button';
 
 const trackOf = (taskId: string): CodingTrack | null => CODING_INDEX.find((task) => task.id === taskId)?.track ?? null;
 
@@ -110,15 +111,13 @@ function RunCard({ session, onDone }: { session: PracticeSession; onDone: () => 
       )}
       <div className="cd-actions">
         {scheduled && <SwimCta size="sm" label={t('coding.run.startNow')} disabled={advance.isPending} onClick={begin} />}
-        {!scheduled && current && <Link className="cd-btn cd-btn--primary" to={taskHref(current)}>{t('coding.run.continue')}</Link>}
+        {!scheduled && current && <Button variant="primary" as={Link} href={taskHref(current)} label={t('coding.run.continue')} />}
         {scheduled && (
-          <a className="cd-btn cd-btn--quiet" href={calendarHref(session, t('coding.run.calendarTitle'))} download="devshark-challenge-run.ics">
-            {t('coding.run.calendar')}
-          </a>
+          <span className="ss-text-links" style={{ margin: 0 }}>
+            <a href={calendarHref(session, t('coding.run.calendarTitle'))} download="devshark-challenge-run.ics">{t('coding.run.calendar')}</a>
+          </span>
         )}
-        <FinButton type="button" className="cd-btn cd-btn--quiet" disabled={advance.isPending} onClick={end}>
-          {t(finished ? 'coding.run.close' : scheduled ? 'coding.run.cancel' : 'coding.run.end')}
-        </FinButton>
+        <Button variant="ghost" isDisabled={advance.isPending} onClick={end} label={t(finished ? 'coding.run.close' : scheduled ? 'coding.run.cancel' : 'coding.run.end')} />
       </div>
       {error && <p className="cd-note cd-note--error" role="alert">{error}</p>}
     </div>
@@ -191,7 +190,7 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
       {!signedIn && <p className="cd-note">{t('coding.run.signIn')}</p>}
       {signedIn && session.isError && (
         <p className="cd-note cd-note--error" role="alert">
-          {t('coding.collections.failed')} <button type="button" className="cd-btn" onClick={() => void session.refetch()}>{t('coding.retry')}</button>
+          {t('coding.collections.failed')} <Button variant="secondary" onClick={() => void session.refetch()} label={t('coding.retry')} />
         </p>
       )}
       {signedIn && open && <RunCard session={open} onDone={() => void session.refetch()} />}

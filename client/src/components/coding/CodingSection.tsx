@@ -52,6 +52,8 @@ import { RELOAD_GRACE_MS, isChunkLoadError, reloadOnPress } from '../../lib/rout
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { codingContent, gatedRef } from '../../../../shared/tiers';
 import '../../coding/Coding.css';
+import { Button } from '@astryxdesign/core/Button';
+import { LockedButton } from '../ui/LockedButton';
 
 type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'due' | 'locked' | 'premium';
 
@@ -156,9 +158,9 @@ function RetiredTrackNotice({ track }: { track: CodingTrack }) {
       </header>
       <p className="cd-note" role="status">{t('coding.retired.body')}</p>
       <div className="cd-actions">
-        <Link className="cd-btn cd-btn--primary" to="/learn?topic=system-design">{t('coding.retired.toLearn')}</Link>
-        <Link className="cd-btn" to="/roadmap/specializations/fde">{t('coding.retired.toFde')}</Link>
-        <Link className="cd-btn" to="/coding">{t('coding.retired.toCoding')}</Link>
+        <Button variant="primary" as={Link} href="/learn?topic=system-design" label={t('coding.retired.toLearn')} />
+        <Button variant="secondary" as={Link} href="/roadmap/specializations/fde" label={t('coding.retired.toFde')} />
+        <Button variant="secondary" as={Link} href="/coding" label={t('coding.retired.toCoding')} />
       </div>
     </div>
   );
@@ -348,7 +350,7 @@ function NextChallenge({ next, state, onRetry }: { next: CodingTaskSummary | nul
         {state === 'error' && <p className="cd-next__title cd-next__title--error" role="alert">{t('coding.discovery.failed')}</p>}
         {state === 'ready' && <p className="cd-next__title">{next ? next.title[lang] || next.title.en : t('coding.allDone')}</p>}
       </div>
-      {state === 'error' && <button type="button" className="cd-btn" onClick={onRetry}>{t('coding.retry')}</button>}
+      {state === 'error' && <Button variant="secondary" onClick={onRetry} label={t('coding.retry')} />}
       {/* Held disabled while loading, so the card keeps its size when the title arrives. */}
       {state !== 'error' && (state === 'loading' || next) && (
         <SwimCta label={t('coding.continue')} disabled={state === 'loading'} onClick={() => { if (next) navigate(`/coding/${next.track}/${next.id}`); }} />
@@ -453,7 +455,7 @@ export function FullStackScreen() {
   return <div className="cd-page ss-pop">
     <Link className="cd-link" to="/coding">{t('coding.title')}</Link>
     <h1>{t('coding.evolving.title')}</h1>
-    {isAuthenticated && progress.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.collections.failed')} <button className="cd-btn" onClick={()=>void progress.refetch()}>{t('coding.retry')}</button></p>}
+    {isAuthenticated && progress.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.collections.failed')} <Button variant="secondary" onClick={()=>void progress.refetch()} label={t('coding.retry')} /></p>}
     <EvolvingGallery passed={passed} premiumOf={premiumOf} category="fullstack" />
   </div>;
 }
@@ -517,7 +519,7 @@ export function CodingTrackScreen() {
     || format !== 'all' || savedOnly || statusFilter !== 'all';
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
   if (track && isRetiredSectionTrack(track)) return <RetiredTrackNotice track={track} />;
-  if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Link className="cd-btn" to="/coding">{t('coding.verdict.back')}</Link></div>;
+  if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Button variant="secondary" as={Link} href="/coding" label={t('coding.verdict.back')} /></div>;
   // The plan decides which rows carry the Premium mark, so the list waits for
   // it, as the Coding home does; a plan that cannot load says so.
   if (planLoading) return <LoadingScreen label={t('coding.loading')} />;
@@ -548,11 +550,13 @@ export function CodingTrackScreen() {
       </header>
       {planFailed && (
         <p className="cd-note cd-note--error" role="alert">
-          {t('coding.planFailed')} <button type="button" className="cd-btn" onClick={retryPlan}>{t('coding.retry')}</button>
+          {t('coding.planFailed')} <Button variant="secondary" onClick={retryPlan} label={t('coding.retry')} />
         </p>
       )}
       <EvolvingGallery passed={passed} premiumOf={premiumOf} track={track} />
-      <div className="cd-chips" role="group" aria-label={t('coding.techniques')}>
+      {/* Under 760px the technique chips fold into the filter row as one
+          select (design audit P2.3); both drive the same `group` filter. */}
+      <div className="cd-chips cd-technique-chips" role="group" aria-label={t('coding.techniques')}>
         <button type="button" className="cd-chip" aria-pressed={!group} onClick={() => setFilter('group', null)}>{t('coding.techniques.all')}</button>
         {groupsHere.map((g) => <button key={g} type="button" className="cd-chip" aria-pressed={group === g} onClick={() => setFilter('group', g)}>{t(`coding.group.${g}` as never)}</button>)}
       </div>
@@ -578,6 +582,11 @@ export function CodingTrackScreen() {
           placeholder={t('coding.filter.searchPlaceholder')}
           onChange={(event) => setFilter('q', event.target.value || null)}
         />
+        <label className="cd-visually-hidden" htmlFor={`${track}-technique`}>{t('coding.techniques')}</label>
+        <select id={`${track}-technique`} className="cd-technique-select" value={group ?? 'all'} onChange={(event) => setFilter('group', event.target.value === 'all' ? null : event.target.value)}>
+          <option value="all">{t('coding.techniques.all')}</option>
+          {groupsHere.map((g) => <option key={g} value={g}>{t(`coding.group.${g}` as never)}</option>)}
+        </select>
         <label className="cd-visually-hidden" htmlFor={`${track}-difficulty`}>{t('coding.filter.difficulty')}</label>
         <select id={`${track}-difficulty`} value={difficulty} onChange={(event) => setFilter('difficulty', event.target.value === 'all' ? null : event.target.value)}>
           <option value="all">{t('coding.filter.difficulty')}</option>
@@ -600,9 +609,7 @@ export function CodingTrackScreen() {
           <option value="debug">{t('coding.filter.formatDebug')}</option>
         </select>
         {filtersOn && (
-          <button type="button" className="cd-btn cd-btn--quiet" onClick={() => setParams(new URLSearchParams(), { replace: true })}>
-            {t('coding.filter.reset')}
-          </button>
+          <Button variant="ghost" onClick={() => setParams(new URLSearchParams(), { replace: true })} label={t('coding.filter.reset')} />
         )}
       </div>
       <p className="cd-shortcuts" role="status">{t('coding.filter.count', { shown: filtered.length, total: tasks.length })}</p>
@@ -678,11 +685,11 @@ function StageNav({ stages, short, currentId, passed, premiumOf }: { stages: rea
               // A Premium stage stays focusable and opens the upgrade sheet.
               if (!current && isBarred(premiumOf(id))) {
                 const premiumLabel = t('premium.stageLabel', { label });
-                return <button key={id} type="button" className="cd-btn" aria-disabled="true" aria-label={premiumLabel} title={premiumLabel} onClick={() => askForPremium(id)}>{index + 1}</button>;
+                return <LockedButton key={id} variant="secondary" size="sm" label={premiumLabel} tooltip={premiumLabel} onClick={() => askForPremium(id)}>{index + 1}</LockedButton>;
               }
               return evolvingUnlocked(id, passed) || current
-                ? <Link key={id} className={`cd-btn${current ? ' cd-btn--primary' : ''}`} aria-label={label} title={label} aria-current={current ? 'step' : undefined} to={`/coding/${evolvingTaskTrack(id)}/${id}`}>{evolvingPassed(id, passed) ? '✓ ' : ''}{index + 1}</Link>
-                : <button key={id} type="button" className="cd-btn" aria-label={label} title={label} disabled>{index + 1}</button>;
+                ? <Button key={id} variant={current ? 'primary' : 'secondary'} size="sm" as={Link} href={`/coding/${evolvingTaskTrack(id)}/${id}`} label={label} tooltip={label} aria-current={current ? 'step' : undefined}>{evolvingPassed(id, passed) ? '✓ ' : ''}{index + 1}</Button>
+                : <Button key={id} variant="secondary" size="sm" tooltip={label} isDisabled label={label}>{index + 1}</Button>;
             })}
           </div>
         );
@@ -775,8 +782,8 @@ export function CodingTaskScreen() {
         </header>
         <p className="cd-lead">{t('premium.taskBody')}</p>
         <div className="cd-actions">
-          <button type="button" className="cd-btn cd-btn--primary" onClick={() => askForPremium(taskId)}>{t('profile.plan.see')}</button>
-          <Link className="cd-btn" to={`/coding/${track}`}>{t('coding.verdict.back')}</Link>
+          <Button variant="primary" onClick={() => askForPremium(taskId)} label={t('profile.plan.see')} />
+          <Button variant="secondary" as={Link} href={`/coding/${track}`} label={t('coding.verdict.back')} />
         </div>
       </div>
     );
@@ -788,8 +795,8 @@ export function CodingTaskScreen() {
         <p className="cd-note cd-note--error" role="alert">{t('coding.loadError')}</p>
         <div className="cd-actions">
           {/* Busy but focusable while the press reloads the page. */}
-          <button type="button" className="cd-btn cd-btn--primary" onClick={onRetry} aria-busy={workbench.reloading || undefined} aria-disabled={workbench.reloading || undefined}>{t('coding.retry')}</button>
-          <Link className="cd-btn" to={`/coding/${track}`}>{t('coding.verdict.back')}</Link>
+          <Button variant="primary" onClick={onRetry} isLoading={workbench.reloading} isInterruptible label={t('coding.retry')} />
+          <Button variant="secondary" as={Link} href={`/coding/${track}`} label={t('coding.verdict.back')} />
         </div>
       </div>
     );
@@ -820,7 +827,7 @@ export function CodingTaskScreen() {
         {stage && <span>{stage.challenge.title[lang]} — {t(stage.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: stage.index + 1, total: stage.challenge.stages.length })}</span>}
         {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
       </div>}
-      {(bookmarks.isError || save.isError) && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')} <button className="cd-btn" onClick={() => void bookmarks.refetch()}>{t('coding.retry')}</button></p>}
+      {(bookmarks.isError || save.isError) && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
       {stage && stage.challenge.stages.length > 1 && isBarred(premiumOf(stage.challenge.stages[1])) && (
         <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(stage.challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>
       )}

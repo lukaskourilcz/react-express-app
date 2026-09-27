@@ -45,7 +45,7 @@ export async function createResultShareFile(input: ResultShareCardInput): Promis
   ctx.font = '600 27px system-ui, -apple-system, sans-serif';
   ctx.fillText(input.label, 120, 188);
 
-  ctx.fillStyle = '#17272e';
+  ctx.fillStyle = '#132019'; // --brand-ink; a canvas cannot read CSS variables
   ctx.font = '800 118px system-ui, -apple-system, sans-serif';
   ctx.fillText(`${input.score} / ${input.total}`, 120, 352);
   ctx.fillStyle = accent;

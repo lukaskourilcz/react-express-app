@@ -2585,3 +2585,21 @@ Branch `claude/brand-v9`, 2026-09-27. The owner's V9 kit sits in `client/public/
 | `git diff --check` | clean |
 
 Not run: Storybook (no story changed), `check:responsive`, the dependency audits. Not verified: real browser tabs showing the dark-theme favicon, an installed PWA, link previews on social platforms, Firefox, Safari and physical phones.
+
+## DESIGN-AUDIT-2026-09-27
+
+Branches `audit/p0`, `audit/p1`, `audit/p2` (stacked), 2026-09-27 to 28. The 25 changes in `design-audit/CLAUDE_CODE_PROMPT.md`, one issue (#240–#264) and one commit each. `docs/design/audit-2026-09-27-closeout.md` lists every ID with its commit and any deviation.
+
+| Check on the final `audit/p2` | Result |
+| --- | --- |
+| `npm run typecheck:api` | exit 0 |
+| `npm run test:client` (`--maxWorkers=2`; the default parallelism timed out under host load) | exit 0; 35 files, 337 tests |
+| `npm run test:launch` | exit 0 |
+| Build with the Supabase placeholders, `npm run check:public`, `npm run check:bundle` | exit 0 each; 13 public URLs; 229,332 of 243,000 gzip bytes |
+| `npm run check:unused` | exit 0; no new finding |
+| `npm run check:responsive` | 238 probes, 0 issues |
+| `npm audit --omit=dev`, root and client | 0 vulnerabilities each |
+| Browser specs `public`, `evolving`, `segmented`, `on-accent`, `navigation`, `lazy-auth`, `route-errors`, `first-load`, `routes-axe` against the preview on :4173 | 59 passed |
+| `git diff --check main..audit/p2` | clean |
+
+Not run: `storybook.spec.ts`. Not verified: signed-in Profile, Coins and the coding workbench against a live account, Firefox, Safari and physical phones.

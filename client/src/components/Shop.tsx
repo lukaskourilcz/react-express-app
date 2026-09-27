@@ -34,7 +34,8 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { AppToast } from './ui/AppToast';
 import { Crown } from './ui/Crown';
-import { CoinIcon } from './ui/icons';
+import { CoinIcon, ShieldIcon } from './ui/icons';
+import { LockedButton } from './ui/LockedButton';
 import { Kicker } from './landing/LandingKit';
 import { ReferralInvite } from './ReferralInvite';
 import { useLanguage, useT } from '../i18n/LanguageContext';
@@ -172,15 +173,14 @@ function Wallet({ signedIn }: { signedIn: boolean }) {
             ))}
           </ul>
           {entries.length > LEDGER_PREVIEW && (
-            <button
-              type="button"
-              className="rw-btn rw-btn--quiet rw-ledger-toggle"
+            <Button
+              variant="ghost"
+              className="rw-ledger-toggle"
               aria-expanded={showAll}
               aria-controls="rw-ledger"
               onClick={() => setShowAll((open) => !open)}
-            >
-              {showAll ? t('rewards.ledgerShowFewer') : t('rewards.ledgerShowAll', { n: entries.length })}
-            </button>
+              label={showAll ? t('rewards.ledgerShowFewer') : t('rewards.ledgerShowAll', { n: entries.length })}
+            />
           )}
         </>
       )}
@@ -294,9 +294,7 @@ function HowToEarn({ earn, welcomeReceived, premium }: { earn: EarnSummary; welc
       <div className="rw-premium-note">
         <p>{t('rewards.earn.premiumNote')}</p>
         {!premium && (
-          <button type="button" className="rw-btn" onClick={() => openUpgradeSheet({})}>
-            {t('rewards.seePremium')}
-          </button>
+          <Button variant="secondary" label={t('rewards.seePremium')} onClick={() => openUpgradeSheet({})} />
         )}
       </div>
     </section>
@@ -388,28 +386,23 @@ export function MerchCard({
 
           {premiumLocked ? (
             <div className="rw-merch-lock">
-              <button
-                type="button"
-                className="rw-btn"
-                aria-disabled="true"
+              <LockedButton
+                variant="secondary"
+                label={t('shop.order')}
                 aria-describedby="rw-merch-premium"
                 onClick={() => openUpgradeSheet({ kind: 'merch-redemption', ref: item.sku })}
-              >
-                {t('shop.order')}
-              </button>
+              />
               <span className="rw-tag">{t('premium.badge')}</span>
             </div>
           ) : (
             <>
-              <button
-                type="button"
+              <Button
+                variant="primary"
                 id={`redeem-${item.sku}`}
-                className="rw-btn rw-btn--primary"
-                disabled={!orderable || busy || short || tokenPrice === null || sizeGone}
+                label={t('shop.order')}
+                isDisabled={!orderable || busy || short || tokenPrice === null || sizeGone}
                 onClick={() => onOrder(item.sku, variant)}
-              >
-                {t('shop.order')}
-              </button>
+              />
               {short && <p className="rw-muted rw-merch__note">{t('shop.insufficient')}</p>}
             </>
           )}
@@ -434,17 +427,6 @@ export function MerchPromoNote({ promo }: { promo: MerchPromo }) {
       </p>
       <p className="rw-muted">{t('shop.promoNote')}</p>
     </div>
-  );
-}
-
-// Shield-with-check, the same mark the profile uses for a raised shield, so the
-// thing being bought and the thing it becomes look like each other.
-function ShieldGlyph({ size = 40 }: { size?: number }) {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
   );
 }
 
@@ -573,26 +555,22 @@ function Shop() {
                     <HStack gap={1} align="center" wrap="wrap">
                       {!ownsCrown && <Text weight="bold">{t('shop.tokenPrice', { n: shop.data.crown.tokenPrice.toLocaleString('en-GB') })}</Text>}
                       {ownsCrown ? (
-                        <button
-                          type="button"
-                          className="rw-btn"
-                          disabled={cosmetic.isPending}
+                        <Button
+                          variant="secondary"
+                          label={t(wearingCrown ? 'shop.crownRemove' : 'shop.crownWear')}
+                          isDisabled={cosmetic.isPending}
                           onClick={() => cosmetic.mutate({ op: wearingCrown ? 'unequip' : 'equip' })}
-                        >
-                          {t(wearingCrown ? 'shop.crownRemove' : 'shop.crownWear')}
-                        </button>
+                        />
                       ) : (
-                        <button
-                          type="button"
-                          className="rw-btn rw-btn--primary"
-                          disabled={!isAuthenticated || cosmetic.isPending || balance < shop.data.crown.tokenPrice}
+                        <Button
+                          variant="primary"
+                          label={t('shop.buy')}
+                          isDisabled={!isAuthenticated || cosmetic.isPending || balance < shop.data.crown.tokenPrice}
                           onClick={() => cosmetic.mutate({ op: 'buy' }, {
                             onSuccess: () => setToast({ msg: t('shop.crownBought'), ok: true }),
                             onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
                           })}
-                        >
-                          {t('shop.buy')}
-                        </button>
+                        />
                       )}
                     </HStack>
                   </div>
@@ -609,7 +587,7 @@ function Shop() {
               <Card variant="default" padding={3} width="100%">
                 <HStack gap={2} align="center" wrap="wrap">
                   <span aria-hidden style={{ color: 'var(--ss-warning)', display: 'inline-flex' }}>
-                    <ShieldGlyph size={40} />
+                    <ShieldIcon size={24} />
                   </span>
                   <VStack gap={0.5}>
                     <Heading level={3}>{t('shop.protectionName')}</Heading>
@@ -620,10 +598,10 @@ function Shop() {
                   <div className="rw-spend__action">
                     <HStack gap={1} align="center" wrap="wrap">
                       <Text weight="bold">{t('shop.tokenPrice', { n: shop.data.protection.tokenPrice.toLocaleString('en-GB') })}</Text>
-                      <button
-                        type="button"
-                        className="rw-btn rw-btn--primary"
-                        disabled={!isAuthenticated || protection.isPending || balance < shop.data.protection.tokenPrice}
+                      <Button
+                        variant="primary"
+                        label={t('shop.buy')}
+                        isDisabled={!isAuthenticated || protection.isPending || balance < shop.data.protection.tokenPrice}
                         onClick={() => protection.mutate(undefined, {
                           onSuccess: (result) => setToast({
                             // At the cap nothing was charged, and saying "bought"
@@ -635,9 +613,7 @@ function Shop() {
                           }),
                           onError: (error) => setToast({ msg: friendlyError(error), ok: false }),
                         })}
-                      >
-                        {t('shop.buy')}
-                      </button>
+                      />
                     </HStack>
                   </div>
                 </HStack>
@@ -667,11 +643,15 @@ function Shop() {
             <div className="rw-merch-intro">
               <p className="rw-muted">{t('shop.shopIntro')}</p>
               {MERCH_SHOP.shopUrl && (
-                <a className="rw-btn" href={MERCH_SHOP.shopUrl} target="_blank" rel="noopener noreferrer">
-                  {t('shop.visitShop')}
-                  <span aria-hidden="true">&nbsp;↗</span>
-                  <span className="rw-sr-only"> {t('rewards.social.newTab')}</span>
-                </a>
+                <Button
+                  variant="secondary"
+                  href={MERCH_SHOP.shopUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  label={`${t('shop.visitShop')} ${t('rewards.social.newTab')}`}
+                >
+                  {t('shop.visitShop')}<span aria-hidden="true">&nbsp;↗</span>
+                </Button>
               )}
             </div>
           )}
@@ -739,17 +719,11 @@ function Shop() {
           ))}
           <p className="rw-muted rw-checkout__note">{t('shop.addressNote')}</p>
           <div className="rw-checkout__actions">
-            <button type="submit" className="rw-btn rw-btn--primary" disabled={order.isPending}>
-              {t('shop.payWithTokens')}
-            </button>
+            <Button type="submit" variant="primary" label={t('shop.payWithTokens')} isDisabled={order.isPending} />
             {shop.data?.cashCheckoutEnabled && (
-              <button type="button" className="rw-btn" disabled={order.isPending} onClick={() => submitOrder('cash')}>
-                {t('shop.payWithMoney')}
-              </button>
+              <Button variant="secondary" label={t('shop.payWithMoney')} isDisabled={order.isPending} onClick={() => submitOrder('cash')} />
             )}
-            <button type="button" className="rw-btn rw-btn--quiet" onClick={closeCheckout}>
-              {t('shop.cancelCheckout')}
-            </button>
+            <Button variant="ghost" label={t('shop.cancelCheckout')} onClick={closeCheckout} />
           </div>
         </form>
       )}

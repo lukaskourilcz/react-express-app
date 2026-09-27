@@ -144,7 +144,7 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   // Quiz setup ("Deep End v2")
   'quiz.kicker': 'Sólo kvíz',
   'quiz.buildTitle': 'Sestav si kvíz.',
-  'quiz.buildSubtitle': 'Otázky vážené podle důležitosti — ty nejdůležitější se objevují častěji.',
+  'quiz.buildSubtitle': 'Vyber témata, délku a obtížnost.',
   'quiz.keysHint': 'Klávesy 1–4 pro odpověď · Enter pro pokračování',
 
   // Identita předmětů (názvy + popisky v přehledu, hero a chipech)
@@ -308,13 +308,13 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   // Difficulty modes
   'difficulty.basics': 'Základy',
   'difficulty.easy': 'Lehká',
-  'difficulty.zero-to-hero': 'Vzestupná',
+  'difficulty.zero-to-hero': 'Postupná',
   'difficulty.advanced': 'Pokročilá',
   'difficulty.mixed': 'Smíšená',
   'difficulty.basics.tip': 'Definice a základní pojmy.',
   'difficulty.easy.tip': 'Obtížnost 1–2. Vhodné pro začátečníky.',
   'difficulty.zero-to-hero.tip': 'Postupná obtížnost 1 → 5.',
-  'difficulty.advanced.tip': 'Obtížnost 3–5. Pro zkušené vývojáře.',
+  'difficulty.advanced.tip': 'Obtížnost 3–5.',
   'difficulty.mixed.tip': 'Náhodný mix napříč obtížnostmi.',
 
   // Quiz, in progress

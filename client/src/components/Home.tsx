@@ -14,17 +14,19 @@ import { useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SharkFin, Waterline } from './SharkFin';
 import { CategoryGlyph } from './ui/techIcons';
+import { TrophyIcon } from './ui/icons';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { useActiveSubject } from '../lib/subjects';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
-import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, type StatSpec } from './landing/LandingKit';
+import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import ComparisonTable from './landing/ComparisonTable';
+import './landing/landingSections.css';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
@@ -118,12 +120,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
       <PathStrip label={t('home.pathRegion', { name: topic.name })}>
         {topic.levels.map((label, i) => {
           // Each connector gets its own swell (see DESIGN_RULES §4).
-          const amp = 1.2 + ((i * 7) % 4) * 0.55;
-          const dir = i % 2 === 0 ? -1 : 1;
-          const y1 = 4 + dir * amp;
-          const wavePath = i % 3 === 0
-            ? `M0 4 Q 5 ${y1} 10 4 T 20 4 T 30 4 T 40 4`
-            : `M0 4 Q 7 ${y1} 14 4 T 28 4 T 42 4`;
+          const wavePath = pathWave(i);
           const first = i === 0;
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
@@ -143,15 +140,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
             </div>
           );
         })}
-        {/* Gold checkpoint node. */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 110, flexShrink: 0 }}>
-          <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'var(--ss-warning-soft)', color: 'var(--ss-warning)', border: '2px solid color-mix(in srgb, var(--ss-warning) 50%, transparent)' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
-            </svg>
-          </span>
-          <span style={{ fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
-        </div>
+        <CheckpointNode label={t('home.checkpoint')} />
       </PathStrip>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         <SwimCta label={t('home.startLevel1', { name: topic.name })} onClick={onStart} dir={-1} />
@@ -165,7 +154,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
 
 interface StripItem { titleKey: TranslationKey; textKey: TranslationKey; icon: ReactNode; to: string; }
 const STRIP_ICON = (path: ReactNode) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{path}</svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{path}</svg>
 );
 
 // ───────────────────────────────── Landing ────────────────────────────────
@@ -212,7 +201,7 @@ export default function Home() {
     { titleKey: 'home.stripCodingTitle', textKey: 'home.stripCodingText', to: '/coding', icon: STRIP_ICON(<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /><line x1="14" y1="4" x2="10" y2="20" /></>) },
     { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
     { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
-    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
+    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', to: '/leaderboard', icon: <TrophyIcon size={20} /> },
   ];
 
   return (
@@ -301,6 +290,7 @@ export default function Home() {
             <button
               key={item.titleKey}
               type="button"
+              className="ss-strip-tile"
               onClick={() => navigate(item.to)}
               style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 0', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
             >

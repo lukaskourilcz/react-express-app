@@ -4,8 +4,8 @@
 // playable task, its sealed session and the saved draft.
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SwimCta, FinButton } from '../components/landing/LandingKit';
+import { Button } from '@astryxdesign/core/Button';
 import { Link } from 'react-router-dom';
-import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, isPremiumRequired } from '../lib/api';
@@ -31,6 +31,10 @@ import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, ty
 import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
 import './Coding.css';
+
+/** Moves focus to a confirmation's safe choice when it appears. Module-level,
+ * so its identity is stable and it runs once per mount. */
+const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
 
 export interface CodingWorkbenchProps {
   task: PlayableCodingTask;
@@ -705,7 +709,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const renderPreview = (): ReactNode => (
     <>
       {reactRun?.previewError && <p className="cd-note cd-note--error">{t('coding.preview.error', { message: reactRun.previewError })}</p>}
-      {reactRun?.status === 'timeout' && <p className="cd-note cd-note--warn">{t('coding.preview.timeout')} <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={harness.reload}>{t('coding.preview.reload')}</FinButton></p>}
+      {reactRun?.status === 'timeout' && <p className="cd-note cd-note--warn">{t('coding.preview.timeout')} <Button variant="ghost" size="sm" onClick={harness.reload} label={t('coding.preview.reload')} /></p>}
       {!harness.ready && <p className="cd-console__empty">{t('coding.preview.starting')}</p>}
       <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className="cd-frame" />
     </>
@@ -742,9 +746,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       )}
       {verdict.verdict === 'passed' && (
         <div className="cd-verdict__actions">
-          {mode === 'lesson' && onContinue && <FinButton type="button" className="cd-btn cd-btn--primary" onClick={onContinue}>{t('coding.lesson.continue')}</FinButton>}
-          {mode === 'section' && nextHref && <Link className="cd-btn cd-btn--primary" to={nextHref}>{t('coding.verdict.next')}</Link>}
-          {mode === 'section' && backHref && <Link className="cd-btn" to={backHref}>{t('coding.verdict.back')}</Link>}
+          {mode === 'lesson' && onContinue && <SwimCta size="sm" dir={1} onClick={onContinue} label={t('coding.lesson.continue')} />}
+          {mode === 'section' && nextHref && <Button variant="primary" as={Link} href={nextHref} label={t('coding.verdict.next')} />}
+          {mode === 'section' && backHref && <Button variant="secondary" as={Link} href={backHref} label={t('coding.verdict.back')} />}
         </div>
       )}
     </section>
@@ -806,42 +810,42 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     <div className="cd-editor-actions">
       <div className="cd-actions cd-actions--commands">
         {!puzzleMode && !pendingOnDesktop && <>
-        <FinButton type="button" className="cd-btn" onClick={() => void runLocal()} disabled={busy}>
-          {phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')}
-        </FinButton>
+        <Button variant="secondary" onClick={() => void runLocal()} isDisabled={busy} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
         <SwimCta size="sm" dir={1} onClick={() => void submit()} disabled={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
-        <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => void format()} disabled={formatDisabled}>{t('coding.format')}</FinButton>
-        <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => setConfirming('reset')} disabled={resetDisabled}>{t('coding.reset')}</FinButton>
+        <Button variant="ghost" onClick={() => void format()} isDisabled={formatDisabled} label={t('coding.format')} />
+        <Button variant="ghost" onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
         </>}
 
-        <Tooltip content={hintUnavailable} placement="above" isEnabled={hintUnavailable !== ''}>
-          <FinButton type="button" className="cd-btn" onClick={takeHint} aria-disabled={hintUnavailable !== '' || undefined}>
-            {taken === 0 ? t('coding.hint') : t('coding.hintNext')}
-          </FinButton>
-        </Tooltip>
+        {/* Unavailable for a reason: focusable, with the reason as its tooltip. */}
+        <Button
+          variant="secondary"
+          onClick={takeHint}
+          isDisabled={hintUnavailable !== ''}
+          tooltip={hintUnavailable || undefined}
+          label={taken === 0 ? t('coding.hint') : t('coding.hintNext')}
+        />
         {session && !solution && !solutions && (
-          <Tooltip content={giveUpUnavailable} placement="above" isEnabled={giveUpUnavailable !== ''}>
-            <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => { if (!giveUpUnavailable) setConfirming('reveal'); }} aria-disabled={giveUpUnavailable !== '' || undefined} disabled={busy}>
-              {t('coding.giveUp')}
-            </FinButton>
-          </Tooltip>
+          <Button
+            variant="ghost"
+            onClick={() => { if (!giveUpUnavailable) setConfirming('reveal'); }}
+            isDisabled={giveUpUnavailable !== '' || busy}
+            tooltip={giveUpUnavailable || undefined}
+            label={t('coding.giveUp')}
+          />
         )}
         {signedIn && mode === 'section' && !skipResult && (
-          <FinButton type="button" className="cd-btn cd-btn--quiet" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping}>
-            {t('coding.skip.action')}
-          </FinButton>
+          <Button variant="ghost" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />
         )}
         <div className="cd-actions cd-actions--utility">
           {saveAction}
-          <FinButton
-            type="button"
-            className="cd-btn cd-btn--icon cd-btn--flag"
-            aria-label={t('coding.reportTask')}
-            title={t('coding.reportTask')}
+          <Button
+            variant="ghost"
+            isIconOnly
+            icon={<FlagIcon size={16} />}
+            label={t('coding.reportTask')}
+            tooltip={t('coding.reportTask')}
             onClick={() => setReportOpen(true)}
-          >
-            <FlagIcon size={18} />
-          </FinButton>
+          />
         </div>
       </div>
     </div>
@@ -946,10 +950,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                     </div>
                     {skipError && <p className="cd-note cd-note--error" role="alert">{skipError}</p>}
                     <div className="cd-actions cd-actions--end">
-                      <FinButton type="button" className="cd-btn cd-btn--quiet" disabled={skipSubmitting} onClick={() => setSkipping(false)}>{t('coding.skip.cancel')}</FinButton>
-                      <FinButton type="submit" className="cd-btn cd-btn--primary" disabled={skipSubmitting}>
-                        {t('coding.skip.confirm')}
-                      </FinButton>
+                      <Button variant="ghost" isDisabled={skipSubmitting} onClick={() => setSkipping(false)} label={t('coding.skip.cancel')} />
+                      <Button type="submit" variant="primary" isDisabled={skipSubmitting} label={t('coding.skip.confirm')} />
                     </div>
                   </form>
                 )}
@@ -957,7 +959,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   <div className="cd-note" role="status">
                     <p style={{ margin: '0 0 8px' }}>{t(skipResult.required ? 'coding.skip.required' : 'coding.skip.optional')}</p>
                     {skipResult.next && (
-                      <a className="cd-btn" href={`/coding/${task.track}/${skipResult.next}`}>{t('coding.skip.next')}</a>
+                      <Button variant="secondary" href={`/coding/${task.track}/${skipResult.next}`} label={t('coding.skip.next')} />
                     )}
                   </div>
                 )}
@@ -966,8 +968,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.giveUp')}>
                     <p style={{ margin: '0 0 8px' }}>{mode === 'lesson' ? t('coding.lesson.giveUpNote') : t('coding.giveUpConfirm')}</p>
                     <div className="cd-actions">
-                      <FinButton type="button" className="cd-btn cd-btn--primary" onClick={() => void reveal()}>{t('coding.giveUp')}</FinButton>
-                      <FinButton type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</FinButton>
+                      <Button variant="primary" onClick={() => void reveal()} label={t('coding.giveUp')} />
+                      <Button variant="secondary" onClick={() => setConfirming(null)} ref={focusOnMount} label={t('coding.retry')} />
                     </div>
                   </div>
                 )}
@@ -983,8 +985,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.reset')}>
                   <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
                   <div className="cd-actions">
-                    <FinButton type="button" className="cd-btn cd-btn--primary" onClick={reset}>{t('coding.reset')}</FinButton>
-                    <FinButton type="button" className="cd-btn" onClick={() => setConfirming(null)} autoFocus>{t('coding.retry')}</FinButton>
+                    <Button variant="primary" onClick={reset} label={t('coding.reset')} />
+                    <Button variant="secondary" onClick={() => setConfirming(null)} ref={focusOnMount} label={t('coding.retry')} />
                   </div>
                 </div>
               )}

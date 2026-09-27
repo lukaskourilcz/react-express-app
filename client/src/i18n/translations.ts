@@ -150,7 +150,7 @@ export const en = {
   // Quiz setup ("Deep End v2")
   'quiz.kicker': 'Solo quiz',
   'quiz.buildTitle': 'Build your quiz.',
-  'quiz.buildSubtitle': 'Importance-weighted questions — the ones that matter most surface more often.',
+  'quiz.buildSubtitle': 'Choose topics, length and difficulty.',
   'quiz.keysHint': 'Keys 1–4 to answer · Enter to continue',
 
   // Subject identity (name + blurb)
@@ -402,13 +402,13 @@ export const en = {
   // Difficulty modes
   'difficulty.basics': 'Basics',
   'difficulty.easy': 'Easy',
-  'difficulty.zero-to-hero': 'Climb',
+  'difficulty.zero-to-hero': 'Progressive',
   'difficulty.advanced': 'Advanced',
   'difficulty.mixed': 'Mixed',
   'difficulty.basics.tip': 'Definitions and basic terms.',
   'difficulty.easy.tip': 'Difficulty 1–2. Beginner-friendly.',
   'difficulty.zero-to-hero.tip': 'Progressive difficulty 1 → 5.',
-  'difficulty.advanced.tip': 'Difficulty 3–5. Experienced devs.',
+  'difficulty.advanced.tip': 'Difficulty 3–5.',
   'difficulty.mixed.tip': 'Random mix across difficulties.',
 
   // Quiz, in progress
@@ -486,12 +486,12 @@ export const en = {
 
   // Leaderboard, 30-day board (D4, #223). Ranked by correct answers, then
   // accuracy; never XP, never streak. Each tab says what it counts.
-  'leaderboard.heading': 'Who learned the most',
+  'leaderboard.heading': 'Most correct answers',
   'leaderboard.rule': 'Ranked by correct answers, then accuracy. The board opens on the last 30 days, so a new learner can reach the top.',
   'leaderboard.last30': 'Last 30 days',
   'leaderboard.last30Short': '30 days',
-  'leaderboard.scope30d': 'Counts quiz, daily challenge, Biggest Shark Challenge and Learn answers from the last 30 days. A Learn question counts once a day, and not on a level or part test you already passed. Coding challenges are not answers, so they do not count. Five answers put you on the board.',
-  'leaderboard.scopeAllTime': 'Counts every quiz and daily challenge answer since the board began. Learn answers and coding challenges do not count here. Five answers put you on the board.',
+  'leaderboard.scope30d': 'Quiz, daily challenge, Biggest Shark Challenge and Learn answers from the last 30 days. Five answers put you on the board.',
+  'leaderboard.scopeAllTime': 'Every quiz and daily challenge answer since the board began. Five answers put you on the board.',
   'leaderboard.scopeToday': 'Today’s daily challenge: most correct answers first, then the faster time.',
   'leaderboard.topic': 'Topic',
   'leaderboard.allTopics': 'All topics',

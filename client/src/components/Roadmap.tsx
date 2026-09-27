@@ -86,7 +86,7 @@ import { figuresFor } from '../../../shared/lesson-figures';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { RedFlagDialog } from './RedFlagDialog';
-import { IconTile, BoltIcon, CloseIcon, FlagIcon } from './ui/icons';
+import { IconTile, BoltIcon, CloseIcon, FlagIcon, TrophyIcon } from './ui/icons';
 import { CategoryGlyph } from './ui/techIcons';
 import { SwimCta } from './landing/LandingKit';
 import { lazyShellPart } from '../lib/routeRecovery';
@@ -211,12 +211,6 @@ const LockIcon = ({ size = 18 }: { size?: number }) => (
   <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
     <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-const TrophyIcon = ({ size = 26 }: { size?: number }) => (
-  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
-    <path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
   </svg>
 );
 // Mastered levels carry a filled star; cleared-but-due levels carry a small
@@ -1100,7 +1094,7 @@ function PartTestNode({
               fontFamily: 'inherit',
             }}
           >
-            {passed ? <CheckIcon size={30} /> : unlocked ? <TrophyIcon /> : <LockIcon size={22} />}
+            {passed ? <CheckIcon size={30} /> : unlocked ? <TrophyIcon size={26} /> : <LockIcon size={22} />}
           </button>
           </span>
         </Tooltip>

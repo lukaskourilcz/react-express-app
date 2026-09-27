@@ -15,7 +15,8 @@ import { useT } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../../shared/tiers';
 import { SUBJECT_SCOPE_CATALOG } from '../../../../shared/subject-catalog';
-import { Kicker } from './LandingKit';
+import { Button } from '@astryxdesign/core/Button';
+import { Kicker, SwimCta } from './LandingKit';
 import { anyLearningPathOpen, redemptionOpen, useGameConfig } from '../../lib/gameConfig';
 import './landingSections.css';
 
@@ -152,13 +153,9 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
       {showCta && (
         <div>
           {onStart ? (
-            <button type="button" className="ss-link-button ss-cta" onClick={onStart}>
-              {t('landing.compare.cta')}
-            </button>
+            <SwimCta label={t('landing.compare.cta')} onClick={onStart} dir={1} />
           ) : (
-            <Link to={startHref} className="ss-link-button ss-cta">
-              {t('landing.compare.cta')}
-            </Link>
+            <Button variant="primary" size="lg" as={Link} href={startHref} label={t('landing.compare.cta')} />
           )}
         </div>
       )}

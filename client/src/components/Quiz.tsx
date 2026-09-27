@@ -20,7 +20,6 @@ import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } fr
 import { visuallyHidden } from '../theme/MuiTheme';
 import {
   visibleCategoryOptionsFor,
-  onCategoryColorText,
   getCategoryHexColor,
   categoryLabelKey,
 } from '../lib/categories';
@@ -38,7 +37,7 @@ import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
 import { addFlashcard, removeFlashcard } from '../lib/flashcards';
-import { useLanguage, useT } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
@@ -54,6 +53,7 @@ import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
 import { queryClient } from '../lib/queryClient';
 import { profileStatsQueryKey } from '../lib/queries';
 import './Quiz.css';
+import { CategoryTag } from './ui/CategoryTag';
 
 type QuizMode = 'standard' | 'daily' | 'review';
 const QUIZ_MODES: readonly string[] = ['standard', 'daily', 'review'];
@@ -131,30 +131,6 @@ const iconBtnStyle = (color: string): React.CSSProperties => ({
   color,
   cursor: 'pointer',
 });
-
-// A compact category tag that keeps each subject's brand/logo colour (Astryx
-// Badge only exposes a fixed palette, so we render the exact hex tint here).
-const CategoryTag = ({ category }: { category: CategoryType }) => {
-  const t = useT();
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 26,
-        padding: '0 10px',
-        borderRadius: 'var(--radius-inner)',
-        fontSize: 'var(--ss-type-meta)',
-        fontWeight: 600,
-        lineHeight: 1,
-        backgroundColor: getCategoryHexColor(category),
-        color: onCategoryColorText(category),
-      }}
-    >
-      {t(categoryLabelKey(category))}
-    </span>
-  );
-};
 
 function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   // Its own wave from the shared bank, so the review heading does not repeat
@@ -767,7 +743,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   if (state === 'ready') {
     const labelStyle: CSSProperties = { fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: 'var(--ss-type-compact)' };
-    const linkBtn: CSSProperties = { display: 'inline-flex', alignItems: 'center', minHeight: 44, background: 'none', border: 'none', padding: '4px 2px', color: 'var(--brand-accent)', fontWeight: 600, fontSize: 'var(--ss-type-compact)', cursor: 'pointer', fontFamily: 'var(--font-family-body)' };
     const pill = (on: boolean): CSSProperties => ({
       display: 'inline-flex', alignItems: 'center', gap: 6,
       background: on ? 'var(--brand-accent-soft)' : 'var(--ss-card-bg)',
@@ -793,9 +768,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span id="quiz-categories-label" style={labelStyle}>{t('quiz.categories')}</span>
-              <button type="button" onClick={handleSelectAll} style={linkBtn}>
-                {isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
-              </button>
+              <span className="ss-text-links" style={{ margin: 0 }}>
+                <button type="button" onClick={handleSelectAll}>
+                  {isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
+                </button>
+              </span>
             </div>
             <div role="group" aria-labelledby="quiz-categories-label" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {displayedCategoryOptions.map((cat) => {
@@ -809,9 +786,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               })}
             </div>
             {hasCollapsedSubset && (
-              <button type="button" onClick={() => setShowAllCategories((v) => !v)} style={{ ...linkBtn, alignSelf: 'flex-start' }}>
-                {showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
-              </button>
+              <span className="ss-text-links" style={{ margin: 0, alignSelf: 'flex-start' }}>
+                <button type="button" onClick={() => setShowAllCategories((v) => !v)}>
+                  {showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
+                </button>
+              </span>
             )}
             <div id="categories-error" role="alert" style={{ minHeight: '1.2em', fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-error)' }}>
               {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
@@ -855,12 +834,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         </div>
 
         {/* Quick entries into the daily challenge — kept as quiet links. */}
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 16 }}>
-          <button type="button" onClick={startDailyChallenge} style={linkBtn}>{t('quiz.todaysChallenge')}</button>
+        <div className="ss-text-links" style={{ justifyContent: 'center', marginTop: 16 }}>
+          <button type="button" onClick={startDailyChallenge}>{t('quiz.todaysChallenge')}</button>
           {isAuthenticated && (
-            <button type="button" onClick={() => void startPersonalizedReview()} style={linkBtn}>{t('quiz.reviewWeakAreas')}</button>
+            <button type="button" onClick={() => void startPersonalizedReview()}>{t('quiz.reviewWeakAreas')}</button>
           )}
-          <button type="button" onClick={() => navigate('/challenge')} style={linkBtn}>{t('challenge.cta')}</button>
+          <button type="button" onClick={() => navigate('/challenge')}>{t('challenge.cta')}</button>
         </div>
 
         <AppToast

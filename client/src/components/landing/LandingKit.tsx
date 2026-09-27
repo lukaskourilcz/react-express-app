@@ -10,6 +10,7 @@ import { generateFinHover, finHoverStyle, type FinHoverAnimation } from '../../l
 import { useWaveVariant } from '../../lib/waveBank';
 import { useT } from '../../i18n/LanguageContext';
 import { useReducedMotion } from '../../lib/motion';
+import { TrophyIcon } from '../ui/icons';
 
 // The fin glyph path, base at y=18 in a 24-unit box (see DESIGN_RULES §1).
 export const FIN_PATH = 'M3 18 Q 6 6 15 3 Q 17 11 21 18 Z';
@@ -252,11 +253,9 @@ export function CheckpointNode({ label }: { label: string }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 110, flexShrink: 0 }}>
       <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'var(--ss-warning-soft)', color: 'var(--ss-warning)', border: '2px solid color-mix(in srgb, var(--ss-warning) 50%, transparent)' }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-          <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
-        </svg>
+        <TrophyIcon size={20} />
       </span>
-      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{label}</span>
     </div>
   );
 }
