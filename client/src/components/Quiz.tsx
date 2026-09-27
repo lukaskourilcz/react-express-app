@@ -20,7 +20,6 @@ import type { Question, QuizResult, QuizState, DifficultyMode, CategoryType } fr
 import { visuallyHidden } from '../theme/MuiTheme';
 import {
   visibleCategoryOptionsFor,
-  onCategoryColorText,
   getCategoryHexColor,
   categoryLabelKey,
 } from '../lib/categories';
@@ -38,7 +37,7 @@ import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
 import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
 import { addFlashcard, removeFlashcard } from '../lib/flashcards';
-import { useLanguage, useT } from '../i18n/LanguageContext';
+import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
@@ -54,6 +53,7 @@ import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
 import { queryClient } from '../lib/queryClient';
 import { profileStatsQueryKey } from '../lib/queries';
 import './Quiz.css';
+import { CategoryTag } from './ui/CategoryTag';
 
 type QuizMode = 'standard' | 'daily' | 'review';
 const QUIZ_MODES: readonly string[] = ['standard', 'daily', 'review'];
@@ -131,30 +131,6 @@ const iconBtnStyle = (color: string): React.CSSProperties => ({
   color,
   cursor: 'pointer',
 });
-
-// A compact category tag that keeps each subject's brand/logo colour (Astryx
-// Badge only exposes a fixed palette, so we render the exact hex tint here).
-const CategoryTag = ({ category }: { category: CategoryType }) => {
-  const t = useT();
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 26,
-        padding: '0 10px',
-        borderRadius: 'var(--radius-inner)',
-        fontSize: 'var(--ss-type-meta)',
-        fontWeight: 600,
-        lineHeight: 1,
-        backgroundColor: getCategoryHexColor(category),
-        color: onCategoryColorText(category),
-      }}
-    >
-      {t(categoryLabelKey(category))}
-    </span>
-  );
-};
 
 function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }) {
   // Its own wave from the shared bank, so the review heading does not repeat

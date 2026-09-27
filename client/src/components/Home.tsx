@@ -21,7 +21,7 @@ import { useAuth } from '../lib/auth';
 import { useActiveSubject } from '../lib/subjects';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
-import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, type StatSpec } from './landing/LandingKit';
+import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
@@ -120,12 +120,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
       <PathStrip label={t('home.pathRegion', { name: topic.name })}>
         {topic.levels.map((label, i) => {
           // Each connector gets its own swell (see DESIGN_RULES §4).
-          const amp = 1.2 + ((i * 7) % 4) * 0.55;
-          const dir = i % 2 === 0 ? -1 : 1;
-          const y1 = 4 + dir * amp;
-          const wavePath = i % 3 === 0
-            ? `M0 4 Q 5 ${y1} 10 4 T 20 4 T 30 4 T 40 4`
-            : `M0 4 Q 7 ${y1} 14 4 T 28 4 T 42 4`;
+          const wavePath = pathWave(i);
           const first = i === 0;
           return (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
@@ -145,13 +140,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
             </div>
           );
         })}
-        {/* Gold checkpoint node. */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 110, flexShrink: 0 }}>
-          <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'var(--ss-warning-soft)', color: 'var(--ss-warning)', border: '2px solid color-mix(in srgb, var(--ss-warning) 50%, transparent)' }}>
-            <TrophyIcon size={20} />
-          </span>
-          <span style={{ fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
-        </div>
+        <CheckpointNode label={t('home.checkpoint')} />
       </PathStrip>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         <SwimCta label={t('home.startLevel1', { name: topic.name })} onClick={onStart} dir={-1} />

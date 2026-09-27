@@ -21,13 +21,8 @@ import {
 } from '../lib/challengeApi';
 import { challengeLeaderboardQuery, useChallengeLeaderboard } from '../lib/queries';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
-import type { Question, QuizResult, CategoryType } from '../types/quiz';
-import {
-  getCategoryHexColor,
-  categoryLabelKey,
-  onCategoryColorText,
-} from '../lib/categories';
-import { useLanguage, useT } from '../i18n/LanguageContext';
+import type { Question, QuizResult } from '../types/quiz';
+import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useActiveSubject, useSubject } from '../lib/subjects';
 import { useIsMobile } from '../lib/useMediaQuery';
@@ -42,6 +37,7 @@ import { SwimCta } from './landing/LandingKit';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import './DeepEndScreens.css';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
+import { CategoryTag } from './ui/CategoryTag';
 
 // Biggest Shark Challenge: answer as many questions as you can until you
 // collect three strikes. Each question carries its own 90-second clock —
@@ -890,30 +886,6 @@ function ClockIcon() {
       <circle cx="12" cy="12" r="9" />
       <path d="M12 7v5l3 2" />
     </svg>
-  );
-}
-
-// A compact category tag that keeps each subject's brand/logo colour (Astryx
-// Badge only exposes a fixed palette, so we render the exact hex tint here).
-function CategoryTag({ category }: { category: CategoryType }) {
-  const t = useT();
-  return (
-    <span
-      style={{
-        display: 'inline-flex',
-        alignItems: 'center',
-        height: 26,
-        padding: '0 10px',
-        borderRadius: 'var(--radius-inner)',
-        fontSize: 'var(--ss-type-meta)',
-        fontWeight: 600,
-        lineHeight: 1,
-        backgroundColor: getCategoryHexColor(category),
-        color: onCategoryColorText(category),
-      }}
-    >
-      {t(categoryLabelKey(category))}
-    </span>
   );
 }
 

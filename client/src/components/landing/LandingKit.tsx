@@ -255,7 +255,7 @@ export function CheckpointNode({ label }: { label: string }) {
       <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'var(--ss-warning-soft)', color: 'var(--ss-warning)', border: '2px solid color-mix(in srgb, var(--ss-warning) 50%, transparent)' }}>
         <TrophyIcon size={20} />
       </span>
-      <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{label}</span>
     </div>
   );
 }
