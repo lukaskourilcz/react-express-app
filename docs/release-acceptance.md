@@ -2273,6 +2273,17 @@ That report does not cover a missing file under `/assets/coding-worker/` (404 wi
 
 Not verified by me: `vercel.json` on Vercel, which the lead checked on the preview; devshark.app, where this is not deployed; Firefox and Safari; a real Google sign-in (the specs answer Supabase locally, with a fake session where one is needed); Sentry, which has no DSN here; physical phones and screen readers.
 
+## Instagram profile and MarketingShark source bridge — 2026-09-27
+
+The canonical Instagram URL now points to `@devshark.app`, shared by Profile and Rewards.
+BoardlessAI owns source imports, generation, approval and credentials; this app adds no API
+handler or AI feature. See `docs/marketing-social-bridge.md` and issue #237.
+
+Node 22 validation: API type checking, launch contracts, production build and responsive
+checking passed (238 probes, zero issues or unprobed routes). Both production dependency
+audits reported zero vulnerabilities. `git diff --check` passed. Meta OAuth and professional
+account conversion remain pending; these checks do not establish a live publishing connection.
+
 ## 2026-09-27 — one state read in flight per match client (COALESCE)
 
 A Classroom answer broadcasts `match_updated` on a channel with `broadcast.self = true`, and each client read `/api/play/state` once per broadcast. With 30 learners on one address that came to about 930 reads per question against a bucket of 600 a minute (NEEDED.md). The server bucket stays as it is. Each client now keeps at most one read in flight and follows a burst with one trailing read.
