@@ -757,7 +757,7 @@ function AdvisorCard() {
       <Card variant="default" padding={3} width="100%">
         <VStack gap={2}>
           <HStack gap={1.5} align="center">
-            <div aria-hidden className="ss-tile" style={{ width: 40, height: 40, color: 'var(--brand-accent)', background: 'var(--brand-accent-soft)' }}>
+            <div aria-hidden className="ss-tile" style={{ width: 40, height: 40, color: 'var(--brand-accent-on-soft)', background: 'var(--brand-accent-soft)' }}>
               <TargetIcon size={20} />
             </div>
             <VStack gap={0}>

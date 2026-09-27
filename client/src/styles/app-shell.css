@@ -94,7 +94,9 @@
 }
 .ss-navlink:hover { background: var(--color-background-muted); color: var(--color-text-primary); }
 .ss-navlink[data-active='true'] {
-  color: var(--brand-accent);
+  /* Accent text on the accent's own tint: --brand-accent-on-soft, never the
+     plain accent. See client/src/lib/contrast.ts. */
+  color: var(--brand-accent-on-soft, var(--brand-accent));
   font-weight: 700;
   background: var(--brand-accent-soft, var(--color-background-muted));
 }
