@@ -53,6 +53,7 @@ import {
   type PartRange,
 } from '../lib/roadmap';
 import { availabilityOf } from '../lib/roadmap';
+import ReferralMoment from './ReferralMoment';
 import { useSubject, topicsForSubject, type SubjectId } from '../lib/subjects';
 import {
   masteryState,
@@ -631,6 +632,9 @@ function Roadmap() {
   }
 
   /* ──── lesson view ──────────────────────────────────────────────────── */
+  // No Learn level passed yet in any topic: a pass now is the learner's first,
+  // the moment the invite link is offered (#239).
+  const noLevelPassedYet = (TOPICS as RoadmapTopic[]).every((one) => passedLevelCount(progress, one) === 0);
   if (active !== null) {
     if (loadingLesson) {
       return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
@@ -650,6 +654,7 @@ function Roadmap() {
       <LessonRunner
         key={`${topic}-${active.kind}-${active.ref}`}
         playable={playable}
+        firstLevelPass={noLevelPassedYet}
         topicColor={topicColor}
         hasNext={!!next}
         nextLabel={nextLabel}
@@ -1204,13 +1209,19 @@ function HeartMeter({ mistakes, max, hit, t }: { mistakes: number; max: number; 
 }
 
 function LessonRunner({
-  playable, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
+  playable, firstLevelPass = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
 }: {
-  playable: RoadmapPlayable; topicColor: string; hasNext: boolean; nextLabel: string;
+  playable: RoadmapPlayable;
+  /** No Learn level was passed before this one opened (#239). */
+  firstLevelPass?: boolean;
+  topicColor: string; hasNext: boolean; nextLabel: string;
   onExit: () => void; onFinished: (pct: number) => void; onNext: () => void;
   onReplay: () => void; t: TFn; lang: string;
 }) {
   const { user } = useAuth();
+  // Fixed when the level opens: the pass itself updates the progress the
+  // parent reads, and the offer must stay on the finish screen.
+  const [firstPassMoment] = useState(() => firstLevelPass && playable.kind === 'level');
   // Read only to say whether this topic is part of the learner's own plan.
   const isMobile = useIsMobile();
   const isCheckpoint = playable.kind === 'checkpoint';
@@ -1590,6 +1601,13 @@ function LessonRunner({
             {t('roadmap.backToPath')}
           </button>
         </div>
+        {/* The learner's first passed level is the moment to offer the invite
+            link (#239): a friend who joins gets the same first win. */}
+        {passed && firstPassMoment && (
+          <div style={{ marginTop: 20, width: '100%' }}>
+            <ReferralMoment signedIn={!!user} source="learn_level" />
+          </div>
+        )}
       </div>
     );
   }

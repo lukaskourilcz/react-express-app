@@ -238,14 +238,16 @@ describe('Find devShark elsewhere', () => {
     render(<BrandFooter />, { wrapper });
     const nav = screen.getByRole('navigation', { name: 'Find devShark elsewhere' });
     expect(within(nav).getByText('News and new challenges.')).toBeInTheDocument();
-    for (const name of [/Instagram/, /Threads/]) {
+    for (const name of [/Instagram/]) {
       const link = within(nav).getByRole('link', { name });
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');
       link.addEventListener('click', (event) => event.preventDefault());
       fireEvent.click(link);
     }
+    // Not created yet (#239): a null profile leaves no icon and no gap.
     expect(within(nav).queryByRole('link', { name: /LinkedIn/ })).toBeNull();
+    expect(within(nav).queryByRole('link', { name: /Threads/ })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(posted).not.toHaveBeenCalled();
     expect(screen.queryByText(/Thanks for visiting|follow/i)).toBeNull();

@@ -1,0 +1,33 @@
+/* The invite link at a moment of success and the result card actions (#239).
+   Tokens only; the panel itself is .ss-panel. */
+.ss-share-moment {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 1rem 1.1rem;
+  text-align: left;
+}
+.ss-share-moment__title {
+  margin: 0;
+  font-family: var(--font-family-heading);
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--color-text-primary);
+}
+.ss-share-moment__body { margin: 0; max-width: 60ch; color: var(--color-text-secondary); font-size: 0.95rem; }
+.ss-share-moment__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.ss-share-moment__actions > * { min-height: 44px; }
+.ss-share-moment__link {
+  width: 100%;
+  min-width: 0;
+  font-family: var(--font-family-mono, ui-monospace, monospace);
+  font-size: 0.9rem;
+}
+.ss-share-moment__status { margin: 0; min-height: 1.4em; font-size: 0.88rem; color: var(--color-text-secondary); }
+.ss-share-result { display: flex; flex-direction: column; align-items: flex-start; gap: 0.35rem; }
+.ss-share-result--center { align-items: center; text-align: center; }
+.ss-share-result--center .ss-share-moment__actions { justify-content: center; }
+@media (max-width: 480px) {
+  .ss-share-moment__actions > * { flex: 1 1 100%; }
+}

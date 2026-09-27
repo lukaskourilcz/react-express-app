@@ -17,6 +17,7 @@ import { readJSON, writeJSON } from '../lib/storage';
 import { FlagIcon } from './ui/icons';
 import './TypingRacer.css';
 import BrandCase from './BrandCase';
+import ResultShareActions from './ResultShareActions';
 
 const GATE = 95; // accuracy % required to score (the gate)
 const STAR_T2 = 35; // WPM that earns a 2nd star
@@ -321,6 +322,19 @@ export default function TypingRacer() {
           <span style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>{t('typing.readyBody')}</span>
           {best.bestWpm > 0 && <span className="ss-typing__best">{t('typing.best', { wpm: best.bestWpm })}</span>}
         </div>
+      )}
+
+      {/* The result card (#239): WPM, accuracy and the date, nothing else. A
+          race below the accuracy gate did not score, so there is no card. */}
+      {phase === 'finished' && result?.passed && (
+        <ResultShareActions
+          kind="typing_result"
+          label={t('typing.shareLabel')}
+          headline={t('typing.shareHeadline', { wpm: result.wpm })}
+          detail={t('typing.shareDetail', { pct: result.accuracy })}
+          text={t('typing.shareText', { wpm: result.wpm, pct: result.accuracy })}
+          path="/typing"
+        />
       )}
 
       {/* Result. role=status announces the outcome when it renders. */}

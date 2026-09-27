@@ -38,6 +38,8 @@ import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import './DeepEndScreens.css';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 import { CategoryTag } from './ui/CategoryTag';
+import ResultShareActions from './ResultShareActions';
+import ReferralMoment from './ReferralMoment';
 
 // Biggest Shark Challenge: answer as many questions as you can until you
 // collect three strikes. Each question carries its own 90-second clock —
@@ -562,6 +564,16 @@ export default function Challenge() {
               </MotionPop>
             </VStack>
 
+            <ResultShareActions
+              kind="challenge_result"
+              label={t('challenge.shareLabel')}
+              headline={t('challenge.shareHeadline', { n: score })}
+              detail={t(relaxedPace ? 'challenge.shareDetailPractice' : 'challenge.shareDetail')}
+              text={t('challenge.shareText', { n: score })}
+              path="/challenge"
+              centered
+            />
+
             {relaxedPace ? (
               <Banner status="info" title={t('challenge.practiceScore')} />
             ) : !submittedScore ? (
@@ -613,6 +625,10 @@ export default function Challenge() {
               <Button variant="primary" label={t('challenge.playAgain')} onClick={() => void startRun()} />
               <Button variant="secondary" label={t('challenge.backToIntro')} onClick={() => setPhase('intro')} />
             </HStack>
+
+            {/* The invite link at the end of a run (#239); nothing while
+                signed out or while invitations are off. */}
+            <ReferralMoment signedIn={!!user} source="challenge" />
           </VStack>
         </Card>
 

@@ -15,7 +15,37 @@ export interface ResultShareCardInput {
 
 /** Browser-only, privacy-safe result artwork. It deliberately includes no
  * account identity, room code, question text, answers, or session data. */
-export async function createResultShareFile(input: ResultShareCardInput): Promise<File | null> {
+export function createResultShareFile(input: ResultShareCardInput): Promise<File | null> {
+  return createShareCardFile({
+    brand: input.brand,
+    label: input.label,
+    headline: `${input.score} / ${input.total}`,
+    detail: `${input.percentage}%`,
+    date: input.date,
+    accent: input.accent,
+    fileSuffix: 'result',
+  });
+}
+
+/** The same card for any result: a label (what was played), the headline
+ * number, one detail line and the date (#239: the Biggest Shark Challenge and
+ * the typing racer). The caller passes only numbers, dates and product words;
+ * the card has no field for a name, an e-mail, a room code or a question. */
+export interface ShareCardInput {
+  brand: string;
+  /** What was played, e.g. "Biggest Shark Challenge". */
+  label: string;
+  /** The result, e.g. "14 correct" or "62 WPM". Short: set at 118 px. */
+  headline: string;
+  /** One line under it, e.g. "97% accuracy". */
+  detail: string;
+  date: string;
+  accent: string;
+  /** The file name after the brand: devshark-<fileSuffix>.png. */
+  fileSuffix: string;
+}
+
+export async function createShareCardFile(input: ShareCardInput): Promise<File | null> {
   if (typeof document === 'undefined') return null;
   const canvas = document.createElement('canvas');
   canvas.width = 1200;
@@ -43,14 +73,14 @@ export async function createResultShareFile(input: ResultShareCardInput): Promis
   drawLogo(ctx, 120, 94, 44, accent);
   ctx.fillStyle = '#53666f';
   ctx.font = '600 27px system-ui, -apple-system, sans-serif';
-  ctx.fillText(input.label, 120, 188);
+  ctx.fillText(fit(ctx, input.label, 960), 120, 188);
 
   ctx.fillStyle = '#132019'; // --brand-ink; a canvas cannot read CSS variables
   ctx.font = '800 118px system-ui, -apple-system, sans-serif';
-  ctx.fillText(`${input.score} / ${input.total}`, 120, 352);
+  ctx.fillText(fit(ctx, input.headline, 960), 120, 352);
   ctx.fillStyle = accent;
   ctx.font = '800 42px system-ui, -apple-system, sans-serif';
-  ctx.fillText(`${input.percentage}%`, 124, 416);
+  ctx.fillText(fit(ctx, input.detail, 500), 124, 416);
   ctx.fillStyle = '#6c7d84';
   ctx.font = '500 23px system-ui, -apple-system, sans-serif';
   ctx.fillText(input.date, 120, 510);
@@ -77,9 +107,18 @@ export async function createResultShareFile(input: ResultShareCardInput): Promis
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 0.92));
   if (!blob) return null;
-  return new File([blob], `${input.brand.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-result.png`, {
+  const slug = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  return new File([blob], `${slug(input.brand)}-${slug(input.fileSuffix) || 'result'}.png`, {
     type: 'image/png',
   });
+}
+
+/** Shorten a line with an ellipsis until it fits `max` pixels in the current font. */
+function fit(ctx: CanvasRenderingContext2D, text: string, max: number): string {
+  if (typeof ctx.measureText !== 'function' || ctx.measureText(text).width <= max) return text;
+  let cut = text;
+  while (cut.length > 1 && ctx.measureText(`${cut}…`).width > max) cut = cut.slice(0, -1);
+  return `${cut.trimEnd()}…`;
 }
 
 export function downloadShareFile(file: File): void {
