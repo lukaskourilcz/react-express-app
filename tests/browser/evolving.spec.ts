@@ -44,7 +44,10 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     // later and writes its own caret into the page; right after the resize
     // that write could land after fill's select-all, and the solution went in
     // at the caret, in front of the starter, which then shadowed it.
+    // focus() does not wait for the resize to unhide the editor; the
+    // visibility check does.
     const editor=page.locator('.cm-content');
+    await expect(editor).toBeVisible();
     await editor.focus();
     await expect(page.locator('.cm-editor')).toHaveClass(/\bcm-focused\b/);
     await editor.fill(source);
