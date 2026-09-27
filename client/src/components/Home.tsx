@@ -18,7 +18,6 @@ import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { useActiveSubject } from '../lib/subjects';
-import { TRACK_ORDER } from '../lib/tracks';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
 import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, type StatSpec } from './landing/LandingKit';
@@ -26,7 +25,6 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import ComparisonTable from './landing/ComparisonTable';
-import { FREE_LEARN_TOPICS } from '../../../shared/tiers';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
@@ -115,9 +113,6 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
         <h2 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>
           {t('home.insideTopic', { name: topic.name })}
         </h2>
-        <span style={{ borderRadius: 999, padding: '3px 10px', fontWeight: 600, fontSize: '0.75rem', color: 'var(--brand-accent-on-soft)', background: 'var(--brand-accent-soft)' }}>
-          {t('home.insideChip')}
-        </span>
       </div>
       <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-text-secondary)', maxWidth: '70ch', position: 'relative' }}>{topic.blurb}</p>
       <PathStrip label={t('home.pathRegion', { name: topic.name })}>
@@ -168,7 +163,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
 
 // ─────────────────────────────── Feature strip ────────────────────────────
 
-interface StripItem { titleKey: TranslationKey; textKey: TranslationKey; color: string; icon: ReactNode; to: string; }
+interface StripItem { titleKey: TranslationKey; textKey: TranslationKey; icon: ReactNode; to: string; }
 const STRIP_ICON = (path: ReactNode) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{path}</svg>
 );
@@ -193,13 +188,10 @@ export default function Home() {
   const heroSubtitle = t('home.subtitle');
   const moreCount = subject.topics.length - featured.length;
 
-  // Stats from the registries: topic count, question count, career paths and
-  // the topics every account gets in full (shared/tiers.ts).
+  // Two stats from the registries: the topic count and the question count.
   const stats: StatSpec[] = [
-    { value: String(subject.topics.length), label: t('home.statTracks'), pos: 'right top', size: 40 },
-    { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions'), pos: 'left bottom', size: 34 },
-    { value: String(TRACK_ORDER.length), label: t('home.statPaths'), pos: 'center top', size: 32 },
-    { value: String(FREE_LEARN_TOPICS.length), label: t('home.statForever'), pos: 'right bottom', size: 38 },
+    { value: String(subject.topics.length), label: t('home.statTracks') },
+    { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions') },
   ];
 
   const handleSignIn = async () => {
@@ -215,14 +207,12 @@ export default function Home() {
   const scrollToTopics = () => topicsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const strip: StripItem[] = [
-    { titleKey: 'today.title', textKey: 'today.subtitle', color: 'var(--brand-accent)', to: '/today', icon: STRIP_ICON(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="m9 16 2 2 4-4" /></>) },
-    { titleKey: 'cards.title', textKey: 'cards.subtitle', color: 'var(--ss-warning)', to: '/collection', icon: STRIP_ICON(<><rect x="3" y="5" width="14" height="16" rx="2" /><path d="M7 5V3h12a2 2 0 0 1 2 2v14" /></>) },
-    { titleKey: 'home.stripCareerTitle', textKey: 'home.stripCareerText', color: 'var(--brand-accent)', to: '/roadmap', icon: STRIP_ICON(<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>) },
-    { titleKey: 'home.stripCodingTitle', textKey: 'home.stripCodingText', color: 'var(--ss-success)', to: '/coding', icon: STRIP_ICON(<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /><line x1="14" y1="4" x2="10" y2="20" /></>) },
-    { titleKey: 'typing.title', textKey: 'typing.subtitle', color: 'var(--ss-info)', to: '/typing', icon: STRIP_ICON(<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" /></>) },
-    { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: 'var(--brand-accent)', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
-    { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: 'var(--ss-info)', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
-    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: 'var(--ss-warning)', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
+    { titleKey: 'today.title', textKey: 'today.subtitle', to: '/today', icon: STRIP_ICON(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="m9 16 2 2 4-4" /></>) },
+    { titleKey: 'home.stripCareerTitle', textKey: 'home.stripCareerText', to: '/roadmap', icon: STRIP_ICON(<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>) },
+    { titleKey: 'home.stripCodingTitle', textKey: 'home.stripCodingText', to: '/coding', icon: STRIP_ICON(<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /><line x1="14" y1="4" x2="10" y2="20" /></>) },
+    { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
+    { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
+    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
   ];
 
   return (
@@ -235,16 +225,21 @@ export default function Home() {
             {heroTitle}
           </h1>
           <p style={{ margin: 0, fontSize: '1.125rem', color: 'var(--color-text-secondary)', maxWidth: '46ch' }}>{heroSubtitle}</p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {/* One call to action; signing in (or going on) is a text link beside it. */}
+          <div style={{ display: 'flex', gap: '8px 20px', flexWrap: 'wrap', alignItems: 'center' }}>
             <FadeFinCta label={t('home.chooseTopic')} primary onClick={scrollToTopics} finLeft="-2px" finSize={58} accent={subject.accent} />
-            {isAuthenticated ? (
-              <FadeFinCta label={t('home.ctaLearn')} onClick={() => navigate(`/learn?topic=${encodeURIComponent(selected?.id ?? '')}`)} finLeft="80%" finSize={58} accent={subject.accent} />
-            ) : (
-              <FadeFinCta disabled={signingIn} label={signingIn ? t('home.ctaSignIn') : t('home.signInGoogle')} onClick={handleSignIn} finLeft="80%" finSize={58} accent={subject.accent} />
-            )}
+            <span className="ss-text-links" style={{ margin: 0 }}>
+              {isAuthenticated ? (
+                <Link to={`/learn?topic=${encodeURIComponent(selected?.id ?? '')}`}>{t('home.ctaLearn')}</Link>
+              ) : (
+                <button type="button" disabled={signingIn} onClick={handleSignIn}>
+                  {signingIn ? t('home.ctaSignIn') : t('home.signInGoogle')}
+                </button>
+              )}
+            </span>
           </div>
           <div className="ss-hero-stats">
-            {stats.map((s) => <StatItem key={s.label} {...s} accent={subject.accent} />)}
+            {stats.map((s) => <StatItem key={s.label} {...s} />)}
           </div>
         </div>
         {selected && (
@@ -264,14 +259,8 @@ export default function Home() {
           <h2 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
             {t('home.topicsTitle')}
           </h2>
-          {/* One line, in the one place a visitor is deciding what to practise.
-              It describes the criteria applied, not a result already achieved,
-              and it does not imply a plan the visitor has not chosen. */}
-          <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)', maxWidth: '62ch' }}>
-            {t('home.curationNote')}{' '}
-            <Link to="/curation" style={{ color: 'var(--brand-accent)', textUnderlineOffset: 3 }}>
-              {t('footer.curation')}
-            </Link>
+          <p className="ss-text-links" style={{ margin: 0 }}>
+            <Link to="/curation">{t('footer.curation')}</Link>
           </p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 14 }}>
@@ -315,7 +304,7 @@ export default function Home() {
               onClick={() => navigate(item.to)}
               style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 0', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
             >
-              <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: 'var(--radius-inner)', color: item.color, background: `color-mix(in srgb, ${item.color} 8%, transparent)`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${item.color} 22%, transparent)`, flexShrink: 0 }}>
+              <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: 'var(--radius-inner)', color: 'var(--color-text-secondary)', background: 'var(--color-background-muted)', boxShadow: 'inset 0 0 0 1px var(--ss-card-line)', flexShrink: 0 }}>
                 {item.icon}
               </span>
               <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

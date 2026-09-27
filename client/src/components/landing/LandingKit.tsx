@@ -14,10 +14,6 @@ import { useReducedMotion } from '../../lib/motion';
 // The fin glyph path, base at y=18 in a 24-unit box (see DESIGN_RULES §1).
 export const FIN_PATH = 'M3 18 Q 6 6 15 3 Q 17 11 21 18 Z';
 
-/** A ghost-fin CSS background (a low-opacity fin in the accent, '#' encoded). */
-export const finBg = (hex: string, opacity: number): string =>
-  `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpath d='${FIN_PATH}' fill='${encodeURIComponent(hex)}' fill-opacity='${opacity}'/%3E%3C/svg%3E")`;
-
 /** Editorial kicker: uppercase accent label with a waterline tick beneath. */
 /**
  * The editorial kicker: a small uppercase label with its waterline tick.
@@ -72,24 +68,13 @@ export function Fin({ size, color = 'var(--brand-accent)', opacity = 1 }: { size
   );
 }
 
-export interface StatSpec { value: string; label: string; pos: string; size: number; }
+export interface StatSpec { value: string; label: string; }
 
-/** A hero stat with a ghost-fin relief + subtle lift on hover. */
-export function StatItem({ value, label, pos, size, accent }: StatSpec & { accent: string }) {
-  const [hover, setHover] = useState(false);
-  const reduce = useReducedMotion();
+/** A hero stat: a figure and what it counts. It is not interactive, so it
+ * does not answer hover (design audit P1.4). */
+export function StatItem({ value, label }: StatSpec) {
   return (
-    <div
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        display: 'flex', flexDirection: 'column', cursor: 'default',
-        transition: reduce ? 'none' : 'transform 0.35s cubic-bezier(0.16,1,0.3,1)',
-        transform: hover && !reduce ? 'translateY(-2px)' : 'none',
-        backgroundImage: hover ? finBg(accent, 0.14) : 'none',
-        backgroundRepeat: 'no-repeat', backgroundPosition: pos, backgroundSize: `${size}px ${size}px`,
-      }}
-    >
+    <div style={{ display: 'flex', flexDirection: 'column' }}>
       <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>{value}</span>
       <span style={{ fontSize: '0.75rem', fontWeight: 600, letterSpacing: '0.06em', textTransform: 'uppercase', color: 'var(--color-text-secondary)' }}>{label}</span>
     </div>
