@@ -29,12 +29,29 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     const first='react-evolving-form-1-start';
     await page.goto(`/coding/react/${first}`);
     await expect(page.getByRole('heading',{level:1})).toBeVisible();
+    // App.tsx moves the focus to <main> 230 ms after every change of path.
+    // Wait for that move, or it can take the focus from the editor or the
+    // preview in the middle of a fill.
+    const main=page.locator('#main-content');
+    await expect(main).toBeFocused();
     await expect(page.locator('.cd-editor')).toBeHidden();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:info.outputPath('mobile-pending.png')});
     await page.setViewportSize({width:1440,height:900});
     const source=solutionFor(first)!.solution;
-    await page.locator('.cm-content').fill(source);
+    // Focus the editor and wait until CodeMirror has taken the focus (the
+    // cm-focused class) before filling. CodeMirror handles a focus 10 ms
+    // later and writes its own caret into the page; right after the resize
+    // that write could land after fill's select-all, and the solution went in
+    // at the caret, in front of the starter, which then shadowed it.
+    // focus() does not wait for the resize to unhide the editor; the
+    // visibility check does.
+    const editor=page.locator('.cm-content');
+    await expect(editor).toBeVisible();
+    await editor.focus();
+    await expect(page.locator('.cm-editor')).toHaveClass(/\bcm-focused\b/);
+    await editor.fill(source);
+    await expect(editor).not.toContainText('return <main />');
     const run=page.getByRole('button',{name:lang==='en'?'Run':'Spustit',exact:true});
     await run.click();
     await expect(page.getByRole('tab',{name:/1\/1/})).toBeVisible({timeout:25_000});
@@ -43,6 +60,7 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     await expect(next).toBeVisible();
     await next.click();
     await expect(page).toHaveURL(/\/react-evolving-form-1$/);
+    await expect(main).toBeFocused();
     await expect(page.locator('.cm-content')).toContainText('useState');
     await run.click();
     await expect(page.getByRole('tab',{name:/2\/2/})).toBeVisible({timeout:25_000});
