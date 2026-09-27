@@ -2272,3 +2272,54 @@ That report does not cover a missing file under `/assets/coding-worker/` (404 wi
 - Vercel's Skew Protection ([docs](https://vercel.com/docs/skew-protection)) keeps an old deployment's files reachable for a tab still running it, through a `__vdpl` cookie, an `x-deployment-id` header or a `dpl` query; a static Vite build would need one of those wired in, and it is a project setting, so I left it alone.
 
 Not verified by me: `vercel.json` on Vercel, which the lead checked on the preview; devshark.app, where this is not deployed; Firefox and Safari; a real Google sign-in (the specs answer Supabase locally, with a fake session where one is needed); Sentry, which has no DSN here; physical phones and screen readers.
+
+## 2026-09-27 — `evolving.spec.ts` waits for the editor and the focus (SETTLE)
+
+NEEDED.md asked why `tests/browser/evolving.spec.ts` failed about one run in five on `main`, and whether a learner who types right after the editor appears can lose that text. A learner cannot. The spec raced two things a person never races: CodeMirror's own focus handling, and the route focus that `App.tsx` moves to `<main>` 230 ms after every change of path. The fix sits in the spec; the product code is unchanged.
+
+### What I measured
+
+I copied the spec into a scratch file that logged, from the page and from the sandbox frame: every `.cm-editor` added or removed (a `MutationObserver`), the editor's text every 5 ms, `selectionchange`, `beforeinput` with the selection it met, `focusin` and `focusout` in both documents, and the `/App.js` each Run posted to the harness. About 280 runs against a `vite preview` of this branch's build, Chromium 141, with other sessions holding the machine's load average between 10 and 27 on 8 CPUs.
+
+- **The editor never remounts.** Each run added `.cm-editor` once, at load, and removed nothing when the viewport went from 360 to 1440 px. `CodingWorkbench` keeps the editor pane mounted under `hidden` on a narrow screen, as its comment says.
+- **Late data resets nothing.** In the four failing runs of this kind, the harness received 896 characters: the 773-character solution, then the 90-character starter untouched after it. A reset would have left the starter alone.
+- **The typing went in at the caret.** In a passing run, `beforeinput` met a selection of 94 characters, the whole starter. In the failing runs it met a collapsed one; in the one failing run that also logged focus events, 11 ms after `.cm-content` took the focus. Playwright's `fill` focuses the element and then selects its contents with a DOM range. CodeMirror answers a focus with an update 10 ms later (`updateForFocusChange` in `@codemirror/view`) that forces its own selection, the caret at 0, into the page. On a busy main thread right after the resize, that update ran before CodeMirror read the `selectionchange`, so the solution landed in front of the starter. The harness got both `App` components, and the suite failed with "Unable to find a label with the text of: Email", which is what the starter's empty `<main />` gives.
+- **A second failure hid behind the first.** Three runs failed later, on "Email accepted" in the stage-2 preview, with the preview showing "Invalid email" over an empty field. The logs show the frame's input taking the focus, then `<main>` in the parent taking it 7 ms later, 237 ms after Next. The typed address went to the parent page and Enter submitted an empty field. That is the 230 ms route focus in `App.tsx`; the spec clicks Run, Preview and fills within it.
+
+A person does neither. A click or a key in the editor goes through CodeMirror's own handlers, which set its selection before any text arrives, and nobody types into a preview within 230 ms of pressing Next.
+
+### The spec
+
+| Commit | What |
+| --- | --- |
+| `9da8cee` | Focus `.cm-content`, wait for CodeMirror's `cm-focused` class, fill, and check that the starter's `return <main />` is gone before Run |
+| `a69d340` | Wait for `#main-content` to hold the focus after the first load and after Next |
+| `8631bc8` | Wait for the editor to be visible before `focus()`, which does not wait for the resize to unhide the pane. The first 20-repeat run of the two commits above failed once there |
+| this commit | This record and the NEEDED.md tick |
+
+### Repeat counts
+
+Each run covers the light and the dark test, so `--repeat-each=20` is 40 runs.
+
+| Spec | `--repeat-each` | Result |
+| --- | --- | --- |
+| `origin/main` (`391ca34`), the first run of the session | 20 | exit 0; 40 passed |
+| `origin/main` (`391ca34`), load average near 20 | 40 | exit 1; 3 failed, 77 passed, all three on "Email accepted" |
+| The instrumented copy, before any fix | about 200 runs over six batches | 4 failed on the editor, 2 on the preview |
+| The instrumented copy with `9da8cee` only | 73 runs | 1 failed, on the preview |
+| `9da8cee` and `a69d340` | 20 | 1 failed, 39 passed; `cm-focused` never came, fixed in `8631bc8` |
+| `8631bc8` | 20 | exit 0; 40 passed |
+| `8631bc8` | 40 | exit 0; 80 passed |
+| `8631bc8`, a second time | 40 | exit 0; 80 passed |
+
+### Checks
+
+| Check | Result |
+| --- | --- |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` with the Supabase values from `docs/quality/bundle-budget.json` | exit 0; the client code did not change after it |
+| `npm run typecheck:tooling --prefix client` | exit 0 |
+| `npm run test:client` | exit 0; 30 files, 309 tests. A first run at a load average near 20, with a browser batch beside it, hit eight 5-second timeouts; the second run, alone, passed |
+| `npm run check:unused` | exit 0; no new finding |
+| `git diff --check` | clean |
+
+Not verified by me: Firefox and Safari, CI's runner, and the route focus's 230 ms window for a keyboard user on a slow phone.
