@@ -2272,3 +2272,36 @@ That report does not cover a missing file under `/assets/coding-worker/` (404 wi
 - Vercel's Skew Protection ([docs](https://vercel.com/docs/skew-protection)) keeps an old deployment's files reachable for a tab still running it, through a `__vdpl` cookie, an `x-deployment-id` header or a `dpl` query; a static Vite build would need one of those wired in, and it is a project setting, so I left it alone.
 
 Not verified by me: `vercel.json` on Vercel, which the lead checked on the preview; devshark.app, where this is not deployed; Firefox and Safari; a real Google sign-in (the specs answer Supabase locally, with a fake session where one is needed); Sentry, which has no DSN here; physical phones and screen readers.
+
+## 2026-09-27 — one state read in flight per match client (COALESCE)
+
+A Classroom answer broadcasts `match_updated` on a channel with `broadcast.self = true`, and each client read `/api/play/state` once per broadcast. With 30 learners on one address that came to about 930 reads per question against a bucket of 600 a minute (NEEDED.md). The server bucket stays as it is. Each client now keeps at most one read in flight and follows a burst with one trailing read.
+
+`coalesceReads` in `client/src/lib/realtime.ts` wraps a read. A request with nothing in flight starts a read. A request during a read queues the trailing read, or joins it when one is already queued, and that read starts once the current one settles, so it always fetches the state after the last broadcast. A failed read still lets the trailing read start; `PlayMatch` counts the failure as before. `PlayMatch` makes one reader per match inside the Realtime effect, and every refresh goes through it: the two broadcasts, the healing and fallback polls, the submit resync and Try again. The effect's cleanup cancels the reader, so a queued trailing read never starts, and a flag stops a read still in flight for the old match from setting state after unmount or a change of match.
+
+| Commit | What |
+| --- | --- |
+| `8573b0b` | `coalesceReads` and the `PlayMatch` wiring |
+| `93d7490` | `client/tests/play-coalesce.test.tsx` |
+| this commit | This record and the NEEDED.md item |
+
+### Evidence
+
+| Check | Old `Play.tsx` | This branch |
+| --- | --- | --- |
+| `play-coalesce.test.tsx`, four `coalesceReads` tests: one request reads once, 30 requests during a read add one trailing read, a failed read keeps the trailing read, cancel stops it | pass (the helper is new) | pass |
+| The same file, `PlayMatch` with a stub channel: one broadcast reads once | pass | pass |
+| 30 broadcasts during a read: one read in flight, then one trailing read | fails: 30 reads | pass |
+| Three broadcasts, then unmount before the read settles: no trailing read | fails: 3 reads | pass |
+
+### Checks on the final head
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:client` | exit 1 three times on a machine with a load average near 30: every failure was a 5 s test timeout in files this change does not touch (1, then 17, then 31 of 316). `npm run test:client -- --maxWorkers=2`: exit 0; 31 files, 316 tests |
+| `npm run test:launch`, `npm run check:unused` | exit 0 each; knip reports no new finding |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` | exit 0 |
+| `git diff --check` | clean |
+
+Not verified: a real Supabase Realtime channel and a class-sized burst against the server bucket; the tests stub the channel and the API. No test observes a stale write after unmount directly, since React 19 does not warn about one; the guard is read from the code.
