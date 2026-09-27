@@ -241,24 +241,27 @@ function HeaderBrand() {
   );
 }
 
-// The account button's place when its code did not load: a quiet retry with
+// The account widget's place when its code did not load: a quiet retry with
 // the Log in button's size and style (44px on a touch screen, like every
-// Astryx button). Its name says what failed; the text is the app's Try again.
+// Astryx button), centred in the widget's 56px row so the header keeps its
+// height. Its name says what failed; the text is the app's Try again.
 function AccountRetry({ retry, busy }: { retry: () => void; busy: boolean }) {
   const t = useT();
   return (
-    <Button
-      variant="secondary"
-      size="md"
-      label={t('auth.accountRetry')}
-      tooltip={t('auth.accountRetry')}
-      isLoading={busy}
-      // Interruptible: busy but not disabled, so it keeps keyboard focus.
-      isInterruptible
-      onClick={retry}
-    >
-      {t('error.tryAgain')}
-    </Button>
+    <span style={{ display: 'inline-flex', alignItems: 'center', height: 56, flexShrink: 0 }}>
+      <Button
+        variant="secondary"
+        size="md"
+        label={t('auth.accountRetry')}
+        tooltip={t('auth.accountRetry')}
+        isLoading={busy}
+        // Interruptible: busy but not disabled, so it keeps keyboard focus.
+        isInterruptible
+        onClick={retry}
+      >
+        {t('error.tryAgain')}
+      </Button>
+    </span>
   );
 }
 
@@ -646,7 +649,8 @@ function App() {
                   is only for a session: under it a signed-out header stood
                   73px tall and shrank to 57px (61px on touch) when the chunk
                   landed, pulling <main> up with it. A widget whose chunk
-                  fails leaves a retry in its place, and the header stays. */}
+                  fails leaves a retry in the same 56px row, and the header
+                  stays. */}
               {user || authLoading ? (
                 <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
                   <ShellPartBoundary fallback={(retry, busy) => <AccountRetry retry={retry} busy={busy} />}>

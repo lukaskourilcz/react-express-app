@@ -1,5 +1,6 @@
 import { test, expect, type Page } from '@playwright/test';
 import { CODING_TASKS, playable } from '../../lib/coding/catalog';
+import { localAuth, storeFakeSession } from './fake-session';
 
 // A page whose code does not load used to replace the whole app with the root
 // error screen: on devshark.app a dropped request for one chunk took the
@@ -129,8 +130,11 @@ test('the Coding workbench that fails to load comes back through the task screen
   test.info().annotations.push({ type: 'recovery', description: documents.length > 2 ? 'reloaded the address' : 'drew the workbench in place' });
 });
 
-test('the account button’s code fails to load: the header keeps a retry in its place, and the press brings it back', async ({ page }) => {
-  // The header asks for the button as the first page loads.
+test('the account widget’s code fails to load: the header keeps a retry in its place and its height, and the press brings it back', async ({ page }) => {
+  // The header asks for the widget as the first page loads, for a session
+  // only: a signed-out visitor gets SignInButton, which ships with the shell.
+  await localAuth(page);
+  await storeFakeSession(page);
   const account = await dropChunk(page, /\/assets\/AuthButton-[\w-]+\.js$/);
   const { documents } = await prepare(page);
   const retry = page.getByRole('button', { name: 'Account did not load. Try again' });
@@ -140,16 +144,20 @@ test('the account button’s code fails to load: the header keeps a retry in its
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   await expect(page.getByRole('alert').filter({ hasText: 'Something went wrong' })).toHaveCount(0);
   expect(account.dropped).toBeGreaterThan(0);
+  const header = page.locator('header.ss-header');
+  const failedHeight = await header.evaluate((node) => node.getBoundingClientRect().height);
   // Nothing reloads without a press.
   await page.waitForTimeout(600);
   expect(documents).toHaveLength(1);
 
   account.failing = false;
   await retry.click();
-  await expect(page.locator('header.ss-header').getByRole('button', { name: 'Log in', exact: true })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Account menu for Test' })).toBeVisible();
   await expect(retry).toHaveCount(0);
   expect(account.served).toBeGreaterThan(0);
-  test.info().annotations.push({ type: 'recovery', description: documents.length > 1 ? 'reloaded the address' : 'drew the button in place' });
+  // The retry stood in the widget's 56px row, so the header kept its height.
+  expect(await header.evaluate((node) => node.getBoundingClientRect().height)).toBe(failedHeight);
+  test.info().annotations.push({ type: 'recovery', description: documents.length > 1 ? 'reloaded the address' : 'drew the widget in place' });
 });
 
 test('the upgrade sheet’s code fails to load: the sheet closes with a message, and the page stays', async ({ page }) => {

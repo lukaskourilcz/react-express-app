@@ -1,15 +1,11 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { fakeSession, localAuth, projectUrl, sessionKey, storeFakeSession } from './fake-session';
 
 // devShark downloads @supabase/supabase-js only for a visitor who is signed in
 // or signing in (client/src/lib/supabaseClient.ts). The preview under test must
 // be built with a Supabase project configured, as production is; CI builds with
 // the placeholder project the bundle budget measures with, and nothing here
-// ever reaches it.
-const budget = JSON.parse(readFileSync('docs/quality/bundle-budget.json', 'utf8'));
-const projectUrl = new URL(budget.measuredBuild.env.VITE_SUPABASE_URL);
-// supabase-js's default session key (sessionKeyFor in lib/supabaseClient.ts).
-const sessionKey = `sb-${projectUrl.hostname.split('.')[0]}-auth-token`;
+// ever reaches it (fake-session.ts).
 
 // Two chunks start with "supabase-": the library, named by manualChunks in
 // client/vite.config.ts, and the app's own lib/supabase.ts API helpers, which
@@ -52,38 +48,6 @@ async function offlineApi(page: Page) {
   return signInReports;
 }
 
-const fakeUser = {
-  id: '00000000-0000-4000-8000-00000000c0de',
-  aud: 'authenticated',
-  role: 'authenticated',
-  email: 'lazy-auth@example.test',
-  app_metadata: { provider: 'google', providers: ['google'] },
-  user_metadata: { full_name: 'Test Learner' },
-  created_at: '2026-09-01T00:00:00Z',
-};
-
-/** A well-formed session that no server ever issued. */
-function fakeSession() {
-  const now = Math.floor(Date.now() / 1000);
-  const part = (value: object) => Buffer.from(JSON.stringify(value)).toString('base64url');
-  const accessToken = [
-    part({ alg: 'HS256', typ: 'JWT' }),
-    part({ sub: fakeUser.id, aud: 'authenticated', role: 'authenticated', email: fakeUser.email, iat: now, exp: now + 3600 }),
-    Buffer.from('not-a-real-signature').toString('base64url'),
-  ].join('.');
-  return { access_token: accessToken, refresh_token: 'fake-refresh-token', token_type: 'bearer', expires_in: 3600, expires_at: now + 3600, user: fakeUser };
-}
-
-/** Supabase Auth, answered locally: nothing leaves the machine. */
-async function localAuth(page: Page) {
-  await page.route('**/auth/v1/**', (route) => {
-    const url = new URL(route.request().url());
-    if (url.pathname.endsWith('/auth/v1/user')) return route.fulfill({ json: fakeUser });
-    if (url.pathname.endsWith('/auth/v1/authorize')) return route.fulfill({ contentType: 'text/html', body: '<!doctype html><title>Authorize</title><p>Google sign-in would start here.</p>' });
-    return route.fulfill({ status: 401, json: { error: 'invalid_grant', error_description: 'local test' } });
-  });
-}
-
 async function desktop(page: Page) {
   await page.setViewportSize({ width: 1280, height: 900 });
   await page.emulateMedia({ reducedMotion: 'reduce' });
@@ -114,7 +78,7 @@ test('a stored session downloads supabase-js and restores the account', async ({
   await desktop(page);
   const signInReports = await offlineApi(page);
   await localAuth(page);
-  await page.addInitScript(({ key, session }) => localStorage.setItem(key, JSON.stringify(session)), { key: sessionKey, session: fakeSession() });
+  await storeFakeSession(page);
   const seen = watch(page);
   await page.goto('/');
   await expect(page.getByRole('button', { name: 'Account menu for Test' })).toBeVisible();
