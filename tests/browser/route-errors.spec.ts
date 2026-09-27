@@ -249,8 +249,8 @@ for (const reducedMotion of ['reduce', 'no-preference'] as const) test(`Motionâ€
   const opacity = () => routeBox.evaluate((node) => getComputedStyle(node).opacity);
 
   expect(motion.dropped).toBeGreaterThan(0);
-  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
   await expect.poll(opacity).toBe('1');
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
   await expectShell(page);
 
   await page.locator('nav.ss-nav-center a[href="/quiz"]').click();
