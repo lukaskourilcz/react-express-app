@@ -150,7 +150,7 @@ export const en = {
   // Quiz setup ("Deep End v2")
   'quiz.kicker': 'Solo quiz',
   'quiz.buildTitle': 'Build your quiz.',
-  'quiz.buildSubtitle': 'Importance-weighted questions — the ones that matter most surface more often.',
+  'quiz.buildSubtitle': 'Choose topics, length and difficulty.',
   'quiz.keysHint': 'Keys 1–4 to answer · Enter to continue',
 
   // Subject identity (name + blurb)
@@ -402,13 +402,13 @@ export const en = {
   // Difficulty modes
   'difficulty.basics': 'Basics',
   'difficulty.easy': 'Easy',
-  'difficulty.zero-to-hero': 'Climb',
+  'difficulty.zero-to-hero': 'Progressive',
   'difficulty.advanced': 'Advanced',
   'difficulty.mixed': 'Mixed',
   'difficulty.basics.tip': 'Definitions and basic terms.',
   'difficulty.easy.tip': 'Difficulty 1–2. Beginner-friendly.',
   'difficulty.zero-to-hero.tip': 'Progressive difficulty 1 → 5.',
-  'difficulty.advanced.tip': 'Difficulty 3–5. Experienced devs.',
+  'difficulty.advanced.tip': 'Difficulty 3–5.',
   'difficulty.mixed.tip': 'Random mix across difficulties.',
 
   // Quiz, in progress
