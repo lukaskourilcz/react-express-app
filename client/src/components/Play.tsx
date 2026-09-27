@@ -805,7 +805,7 @@ function Lobby({
       .then(({ toDataURL }) => toDataURL(shareUrl, {
         width: 220,
         margin: 1,
-        color: { dark: '#17272eff', light: '#ffffffff' },
+        color: { dark: '#132019ff', light: '#ffffffff' },
         errorCorrectionLevel: 'M',
       }))
       .then((url) => { if (active) setQrUrl(url); })

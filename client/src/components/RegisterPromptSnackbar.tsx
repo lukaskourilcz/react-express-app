@@ -126,7 +126,7 @@ function RegisterPromptSnackbar() {
               color: 'var(--color-text-primary)',
               backgroundColor: 'var(--color-background-surface)',
               borderRadius: 18,
-              boxShadow: '0 18px 48px rgba(23,39,46,.2)',
+              boxShadow: '0 18px 48px rgba(var(--ss-ink-rgb), .2)',
               border: '1px solid var(--color-border)',
               borderBottom: '3px solid var(--brand-accent)',
               padding: '20px',

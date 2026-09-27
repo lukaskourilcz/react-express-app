@@ -211,7 +211,7 @@
   height: 34px;
   border-radius: 9px;
   background: #fff;
-  box-shadow: inset 0 0 0 1px rgba(23, 39, 46, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(var(--ss-ink-rgb), 0.12);
   flex-shrink: 0;
 }
 .rm-topic-pill {
@@ -457,7 +457,7 @@
   background: var(--color-background-surface);
   border: 1.5px solid var(--ss-info);
   color: var(--ss-info);
-  box-shadow: 0 1px 3px rgba(23, 39, 46, 0.22);
+  box-shadow: 0 1px 3px rgba(var(--ss-ink-rgb), 0.22);
 }
 
 /* devShark: the level ends with coding tasks. Bottom-right so it never
@@ -474,7 +474,7 @@
   background: var(--color-background-surface);
   border: 1.5px solid var(--ss-ink, var(--color-text-primary));
   color: var(--ss-ink, var(--color-text-primary));
-  box-shadow: 0 1px 3px rgba(23, 39, 46, 0.22);
+  box-shadow: 0 1px 3px rgba(var(--ss-ink-rgb), 0.22);
 }
 
 /* ── Adaptive placement: stepping-up / stepping-down feedback banner. */

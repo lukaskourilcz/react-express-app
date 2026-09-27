@@ -78,7 +78,7 @@ export function AppToast({
               fontFamily: 'var(--font-family-body)',
               fontWeight: 700,
               fontSize: '0.9rem',
-              boxShadow: '0 14px 44px rgba(23,39,46,.2)',
+              boxShadow: '0 14px 44px rgba(var(--ss-ink-rgb), .2)',
               border: '1px solid var(--color-border)',
               borderLeft: `4px solid ${s.accent}`,
               borderBottom: `2px solid ${s.accent}`,
