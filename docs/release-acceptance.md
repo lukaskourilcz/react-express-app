@@ -2562,3 +2562,26 @@ In the worktree `ds-wt-port`, preview on :4821. I ran each command below.
 | `git diff --check` | clean |
 
 Not run: the other browser specs, `test:launch`, the audits and Storybook. Not verified: signed-in routes, Firefox, Safari and physical phones.
+
+## BRAND-V9
+
+Branch `claude/brand-v9`, 2026-09-27. The owner's V9 kit sits in `client/public/brand/v9/`; the rules are in `docs/brand/brand-guidelines.md`.
+
+- **Geometry.** `BrandLogo` in the header, rasterised at 1200 px next to `devshark-logo-compact-green.svg` in Chromium: 0 differing pixels of 95,919 inked. `SharkFin` and the share card read the same paths from `brandGeometry.ts`.
+- **Header.** At 390 px the 22 px logo keeps 16 px to the menu button, 98 px to the Log in button and 19 px above and below. The 20 px menu logo keeps 16 px padding. Both links are named "devShark home". Colour: `rgb(45, 122, 45)` light, `rgb(76, 175, 80)` dark.
+- **Spelling.** `document.body.innerText` on `/`, light and dark at 390 and 1280 px, contains no `DevShark` or `DEVSHARK`.
+- **Icons.** `/`, `/premium` and the topic pages carry `favicon.ico`, `favicon-32.png`, `favicon.svg` (light) and `favicon-white.svg` (dark), `apple-touch-icon.png`, the manifest and `og-image.png`. Every icon URL and every manifest icon answered 200. The manifest reads name `devShark`, theme `#2D7A2D`, background `#F3F6F1`.
+- **Fonts.** A first visit loads `manrope-latin-wght-normal` and `inter-latin-wght-normal` and no other font file.
+- **Screenshots** (local, git-ignored `artifacts/brand-v9/`): header light and dark at 390 and 1280 px, the menu at 390 px, the route loader, the footer ocean, the icon sheet, the share card and the logo comparison.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| Build with the Supabase placeholders, `npm run check:public`, `npm run check:bundle` | exit 0 each; 13 public URLs; 230,937 of 243,000 gzip bytes |
+| `npm run test:launch` | exit 0 |
+| `npm run test:client` | exit 0; 34 files, 336 tests |
+| `npm run check:unused` | exit 0; no new finding |
+| Browser specs `public`, `navigation`, `first-load`, `on-accent`, `routes-axe` against the preview on :4901 | exit 0 each; 5, 2, 8, 14 and 4 passed |
+| `git diff --check` | clean |
+
+Not run: Storybook (no story changed), `check:responsive`, the dependency audits. Not verified: real browser tabs showing the dark-theme favicon, an installed PWA, link previews on social platforms, Firefox, Safari and physical phones.
