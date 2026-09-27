@@ -24,6 +24,51 @@ export function redeemVoucher(code: string): Promise<VoucherRedeemResponse> {
   });
 }
 
+/* ── /premium?voucher=<code> (#239) ────────────────────────────────────── *
+ * A campaign post links to /premium?voucher=<code>. The page fills the field
+ * with the code and takes it out of the address bar at once, so the code does
+ * not stay in the history, a copied link or a Referer. Nothing is redeemed
+ * until the learner presses the button. A visitor who still has to sign in
+ * keeps the code in this tab's session storage until they come back signed
+ * in; the prefill is dropped as soon as the field shows it. */
+
+export const VOUCHER_PARAM = 'voucher';
+const PREFILL_KEY = 'devshark:voucher-prefill';
+
+/** The code a link carries, as the field shows it, or null when the link has
+ * none or carries something that cannot be a code. */
+export function voucherFromSearch(search: string): string | null {
+  const raw = new URLSearchParams(search).get(VOUCHER_PARAM);
+  if (raw === null) return null;
+  const typed = raw.trim().slice(0, 64);
+  return voucherLooksValid(typed) ? typed.toUpperCase() : null;
+}
+
+export function rememberVoucherPrefill(code: string): void {
+  try {
+    sessionStorage.setItem(PREFILL_KEY, code);
+  } catch {
+    // Storage blocked: the field is still filled on this visit.
+  }
+}
+
+export function readVoucherPrefill(): string | null {
+  try {
+    const code = sessionStorage.getItem(PREFILL_KEY);
+    return code && voucherLooksValid(code) ? code : null;
+  } catch {
+    return null;
+  }
+}
+
+export function forgetVoucherPrefill(): void {
+  try {
+    sessionStorage.removeItem(PREFILL_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 /** Why a redemption did not open Premium, in the words the page uses. */
 export type VoucherRefusal = 'empty' | 'invalid' | 'already' | 'rate-limited' | 'offline' | 'unavailable' | 'failed' | 'signed-out';
 

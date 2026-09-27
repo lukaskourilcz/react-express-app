@@ -39,13 +39,16 @@ export const TRADER: TraderIdentity = {
 
 /** devShark's own profiles (the handoff's `socialProfiles`), linked once, as
  * icons in the site footer (design audit P0.3). Each stays null until the
- * owner creates the profile (NEEDED.md), and a null profile is not shown.
- * Opening one earns nothing. Threads uses the Instagram handle, as every
- * Threads account does. No other file defines these URLs. */
+ * owner creates the profile (NEEDED.md), and a null profile is not shown: the
+ * footer renders the others and no gap. Opening one earns nothing. Threads
+ * will use the Instagram handle, as every Threads account does, but the
+ * @devshark.app Threads profile does not exist yet (checked 28 Sep 2026, #239),
+ * so it stays null until the owner creates it. No other file defines these
+ * URLs. */
 export const SOCIAL_PROFILES: Readonly<Record<'linkedin' | 'instagram' | 'threads', string | null>> = {
   linkedin: null,
   instagram: 'https://www.instagram.com/devshark.app/',
-  threads: 'https://www.threads.com/@devshark.app',
+  threads: null,
 };
 
 /** The devShark shop on Spreadshop (sprd.net AG), which prints, sells and

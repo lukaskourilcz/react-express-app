@@ -396,6 +396,13 @@ more; it goes to production after the deploy that stopped calling them
     (after "Your plan" for an account that holds Premium), the upgrade sheet
     offers "Redeem a voucher", and the Profile's plan line reads "Premium from
     a voucher, until …". With billing on, the voucher follows the plans.
+  - *Campaign links (#239).* `/premium?voucher=<code>` fills the field with
+    the code, lands on the section and takes the parameter out of the address
+    bar at once, so the code stays out of the history, copied links and
+    analytics. It redeems nothing by itself. A visitor who has to sign in
+    first keeps the code in the tab's session storage for the way back. A
+    campaign voucher's cap and last day are the ones 045 already stores
+    (`max_redemptions`, `redeemable_until`); no new migration.
 - **Stripe** Checkout, Billing and the Customer Portal take the payments, with
   Managed Payments making Stripe (as Link) the merchant of record; plain Stripe
   with Stripe Tax runs behind the same code when `STRIPE_MANAGED_PAYMENTS` is

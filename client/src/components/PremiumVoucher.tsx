@@ -15,6 +15,10 @@
 //
 // The server decides everything; a code that cannot exist is refused here
 // with the server's own answer so it costs no attempt.
+//
+// /premium?voucher=<code> (#239) fills the field and scrolls here; the code
+// leaves the address bar at once and survives a sign-in in this tab only.
+// Nothing is redeemed until the learner presses the button.
 import { useCallback, useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
@@ -27,7 +31,19 @@ import type { TranslationKey } from '../i18n/translations';
 import { friendlyError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { entitlementKeys } from '../lib/entitlement';
-import { redeemVoucher, voucherLooksValid, voucherRefusal, VOUCHER_PATH, VOUCHER_SECTION_ID, type VoucherRefusal } from '../lib/voucher';
+import {
+  forgetVoucherPrefill,
+  readVoucherPrefill,
+  redeemVoucher,
+  rememberVoucherPrefill,
+  voucherFromSearch,
+  voucherLooksValid,
+  voucherRefusal,
+  VOUCHER_PARAM,
+  VOUCHER_PATH,
+  VOUCHER_SECTION_ID,
+  type VoucherRefusal,
+} from '../lib/voucher';
 
 type Step =
   | { kind: 'form'; refusal?: VoucherRefusal }
@@ -55,7 +71,9 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
   const location = useLocation();
   const navigate = useNavigate();
   const headingId = useId();
-  const [code, setCode] = useState('');
+  // A code from /premium?voucher=<code>, read before the first paint so the
+  // field never flashes empty; kept from before a sign-in otherwise.
+  const [code, setCode] = useState(() => voucherFromSearch(location.search) ?? readVoucherPrefill() ?? '');
   const [step, setStep] = useState<Step>({ kind: 'form' });
   const [busy, setBusy] = useState(false);
   const [signInError, setSignInError] = useState<string | null>(null);
@@ -71,6 +89,27 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
     element.spellcheck = false;
     element.setAttribute('autocapitalize', 'characters');
   }, []);
+
+  // Take the code out of the address bar and land on this section. A visitor
+  // who has to sign in first keeps it for the way back.
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (!params.has(VOUCHER_PARAM)) return;
+    const fromLink = voucherFromSearch(location.search);
+    if (fromLink) {
+      setCode(fromLink);
+      rememberVoucherPrefill(fromLink);
+    }
+    params.delete(VOUCHER_PARAM);
+    const search = params.toString();
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '', hash: `#${VOUCHER_SECTION_ID}` }, { replace: true });
+  }, [location.search, location.pathname, navigate]);
+
+  // Once the field is on screen for a signed-in learner, the kept code has
+  // done its job.
+  useEffect(() => {
+    if (isAuthenticated) forgetVoucherPrefill();
+  }, [isAuthenticated]);
 
   // Arriving from the upgrade sheet (/premium#voucher), or back from sign-in:
   // bring the section into view and put the caret in the field.

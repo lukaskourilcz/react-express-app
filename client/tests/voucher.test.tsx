@@ -290,3 +290,43 @@ describe('the Terms and the privacy policy', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Deletion and retention' }).closest('section')).toHaveTextContent('your voucher redemptions');
   });
 });
+
+describe('/premium?voucher=<code> (#239)', () => {
+  afterEach(() => sessionStorage.clear());
+
+  it('fills the field, takes the code out of the address bar and redeems nothing on its own', async () => {
+    signIn();
+    serve();
+    const sent = redeemAnswers(() => HttpResponse.json({ status: 'redeemed', validUntil: null }));
+    await mountAt('/premium?voucher=spring-2026', <PremiumPage />);
+    const field = await screen.findByRole('textbox', { name: /Voucher code/ });
+    expect(field).toHaveValue('SPRING-2026');
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/premium#voucher'));
+    expect(sent).toEqual([]);
+    fireEvent.click(screen.getByRole('button', { name: 'Redeem voucher' }));
+    await waitFor(() => expect(sent).toEqual([{ code: 'SPRING-2026' }]));
+  });
+
+  it('keeps the code through sign-in in this tab only', async () => {
+    serve();
+    const first = renderAt('/premium?voucher=SPRING2026', <PremiumPage />);
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/premium#voucher'));
+    expect(within(voucherSection()).queryByRole('textbox')).toBeNull();
+    expect(sessionStorage.getItem('devshark:voucher-prefill')).toBe('SPRING2026');
+    first.unmount();
+    // Back from sign-in at /premium#voucher.
+    signIn();
+    await mountAt('/premium#voucher', <PremiumPage />);
+    expect(await screen.findByRole('textbox', { name: /Voucher code/ })).toHaveValue('SPRING2026');
+    await waitFor(() => expect(sessionStorage.getItem('devshark:voucher-prefill')).toBeNull());
+  });
+
+  it('ignores a parameter that cannot be a code but still takes it out of the address bar', async () => {
+    signIn();
+    serve();
+    await mountAt('/premium?voucher=%3Cscript%3E&utm_source=threads', <PremiumPage />);
+    expect(await screen.findByRole('textbox', { name: /Voucher code/ })).toHaveValue('');
+    await waitFor(() => expect(screen.getByTestId('where')).toHaveTextContent('/premium#voucher'));
+    expect(sessionStorage.getItem('devshark:voucher-prefill')).toBeNull();
+  });
+});
