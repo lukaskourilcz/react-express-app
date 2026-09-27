@@ -34,7 +34,7 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { AppToast } from './ui/AppToast';
 import { Crown } from './ui/Crown';
-import { CoinIcon } from './ui/icons';
+import { CoinIcon, ShieldIcon } from './ui/icons';
 import { Kicker } from './landing/LandingKit';
 import { ReferralInvite } from './ReferralInvite';
 import { useLanguage, useT } from '../i18n/LanguageContext';
@@ -437,17 +437,6 @@ export function MerchPromoNote({ promo }: { promo: MerchPromo }) {
   );
 }
 
-// Shield-with-check, the same mark the profile uses for a raised shield, so the
-// thing being bought and the thing it becomes look like each other.
-function ShieldGlyph({ size = 40 }: { size?: number }) {
-  return (
-    <svg aria-hidden viewBox="0 0 24 24" width={size} height={size} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-      <path d="M9 12l2 2 4-4" />
-    </svg>
-  );
-}
-
 /** The catalogue, and a signed-in account's coins, orders, plan and invite, in
  * the cache before the first render: the test-mode notice and the items used
  * to arrive after the page and push the wallet down. */
@@ -609,7 +598,7 @@ function Shop() {
               <Card variant="default" padding={3} width="100%">
                 <HStack gap={2} align="center" wrap="wrap">
                   <span aria-hidden style={{ color: 'var(--ss-warning)', display: 'inline-flex' }}>
-                    <ShieldGlyph size={40} />
+                    <ShieldIcon size={24} />
                   </span>
                   <VStack gap={0.5}>
                     <Heading level={3}>{t('shop.protectionName')}</Heading>

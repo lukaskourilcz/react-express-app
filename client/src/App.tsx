@@ -27,7 +27,7 @@ import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
 import { CURRENT_PRODUCT, productText } from './lib/products';
-import { CloseIcon, CoinIcon } from './components/ui/icons';
+import { CloseIcon, CoinIcon, TrophyIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import { takeAuthReturn } from './lib/authReturn';
@@ -158,13 +158,6 @@ const MenuIcon = () => (
     <line x1="3" y1="6" x2="21" y2="6" />
     <line x1="3" y1="12" x2="21" y2="12" />
     <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-);
-
-const TrophyNavIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
-    <path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
   </svg>
 );
 
@@ -623,7 +616,7 @@ function App() {
                       tooltip={t('nav.leaderboard')}
                       onClick={() => navigate('/leaderboard')}
                       data-route="/leaderboard"
-                      icon={<TrophyNavIcon />}
+                      icon={<TrophyIcon size={16} />}
                     />
                   )}
                   <AxIconButton

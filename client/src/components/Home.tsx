@@ -14,6 +14,7 @@ import { useRef, useState, type ReactNode } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { SharkFin, Waterline } from './SharkFin';
 import { CategoryGlyph } from './ui/techIcons';
+import { TrophyIcon } from './ui/icons';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
@@ -146,9 +147,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
         {/* Gold checkpoint node. */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 110, flexShrink: 0 }}>
           <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'var(--ss-warning-soft)', color: 'var(--ss-warning)', border: '2px solid color-mix(in srgb, var(--ss-warning) 50%, transparent)' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
-              <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
-            </svg>
+            <TrophyIcon size={20} />
           </span>
           <span style={{ fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
         </div>
@@ -165,7 +164,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
 
 interface StripItem { titleKey: TranslationKey; textKey: TranslationKey; icon: ReactNode; to: string; }
 const STRIP_ICON = (path: ReactNode) => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{path}</svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{path}</svg>
 );
 
 // ───────────────────────────────── Landing ────────────────────────────────
@@ -212,7 +211,7 @@ export default function Home() {
     { titleKey: 'home.stripCodingTitle', textKey: 'home.stripCodingText', to: '/coding', icon: STRIP_ICON(<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /><line x1="14" y1="4" x2="10" y2="20" /></>) },
     { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
     { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
-    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
+    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', to: '/leaderboard', icon: <TrophyIcon size={20} /> },
   ];
 
   return (
