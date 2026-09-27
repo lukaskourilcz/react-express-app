@@ -22,7 +22,6 @@ import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import ReferralBinder from './components/ReferralBinder';
 import SignInButton from './components/SignInButton';
 import { useAuth } from './lib/auth';
-import { useActiveSubject } from './lib/subjects';
 import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
@@ -225,17 +224,17 @@ const RouteLoader = () => {
 };
 
 // The header brand: the V9 compact logo (fin with its wave, then the
-// wordmark), 22px tall, in the accent. BrandLogo documents the size and
-// clear-space rules; .ss-header-brand keeps 16px free around it on phones.
+// wordmark), 22px tall, in the accent: the subject's green in light mode and
+// its bright variant in dark mode (6.05:1 on ink). BrandLogo documents the
+// size and clear-space rules; .ss-header-brand keeps 16px free around it on phones.
 function HeaderBrand() {
-  const subject = useActiveSubject();
   const t = useT();
   return (
     <Link
       to="/"
       aria-label={t('nav.home', { brand: CURRENT_PRODUCT.brand })}
       className="ss-header-brand"
-      style={{ color: subject.accent }}
+      style={{ color: 'var(--brand-accent)' }}
     >
       <BrandLogo height={22} />
     </Link>
@@ -274,7 +273,6 @@ function App() {
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
-  const activeSubject = useActiveSubject();
   const { user, isLoading: authLoading, signInResumeFailed } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
   // A sign-in pressed before a reload (lib/auth.tsx) failed in this document,
@@ -696,7 +694,7 @@ function App() {
                 to="/"
                 aria-label={t('nav.home', { brand: CURRENT_PRODUCT.brand })}
                 className="ss-drawer-brand"
-                style={{ color: activeSubject.accent }}
+                style={{ color: 'var(--brand-accent)' }}
               >
                 <BrandLogo height={20} />
               </Link>
