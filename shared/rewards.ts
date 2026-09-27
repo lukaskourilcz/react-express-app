@@ -290,7 +290,9 @@ export interface CoinSettings {
   /** Premium: ranks one to three on the board of a finished calendar month. */
   monthTop: number[];
   /**
-   * Coins for opening one of devShark's social profiles. Zero by default, and
+   * Retired by design audit P0.3: the server no longer pays for opening a
+   * social profile, whatever this says. The field stays so saved settings
+   * still parse. It was: coins for opening one of devShark's social profiles. Zero by default, and
    * zero is the recommendation: Meta's spam rules forbid "offering to provide
    * anything of monetary value in exchange for engagement", coins buy
    * merchandise, and no platform can tell anyone whether a click became a
@@ -342,8 +344,6 @@ export const REFERRAL_SIGNUP_WINDOW_HOURS = 48;
  * `client/product-catalog.ts` and nowhere else. */
 export const SOCIAL_PLATFORMS = ['linkedin', 'instagram', 'threads'] as const;
 export type SocialPlatform = (typeof SOCIAL_PLATFORMS)[number];
-export const isSocialPlatform = (value: unknown): value is SocialPlatform =>
-  typeof value === 'string' && (SOCIAL_PLATFORMS as readonly string[]).includes(value);
 
 /** What one XP award credits before the daily cap: the rate, then the Premium
  * multiplier. `credit_verified_xp_tokens` does the same sum in the database,

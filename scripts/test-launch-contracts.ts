@@ -1000,7 +1000,16 @@ function coinsContracts() {
   const rewardsHandlers = read('lib/rewards/handlers.ts');
   const walletPost = rewardsHandlers.slice(rewardsHandlers.indexOf("if (req.method === 'POST') {", rewardsHandlers.indexOf('export async function handleWallet')));
   assert.doesNotMatch(walletPost.slice(0, walletPost.indexOf('res.setHeader(\'Allow\'')), /body\.(amount|coins|tokens|xp)/, 'the wallet POST never reads an amount');
-  assert.match(read('client/src/lib/rewards.ts'), /JSON\.stringify\(\{ claim: 'social', platform \}\)/);
+  // Opening a social profile pays nothing any more (design audit P0.3): the
+  // server answers the old claim without crediting, the browser never sends
+  // it, and the profiles are linked once, from the footer.
+  assert.match(walletPost, /body\.claim === 'social'\) \{\n\s+res\.setHeader\('Cache-Control', 'private, no-store'\);\n\s+return res\.json\(\{ granted: false, coins: 0 \}\);/);
+  assert.doesNotMatch(read('lib/rewards/coins.ts'), /credit_social_visit/);
+  assert.doesNotMatch(read('client/src/lib/rewards.ts'), /claim: 'social'/);
+  assert.match(read('client/src/components/BrandFooter.tsx'), /SOCIAL_PROFILES\[platform\]/);
+  for (const screen of ['Profile.tsx', 'Shop.tsx']) {
+    assert.doesNotMatch(read(`client/src/components/${screen}`), /SocialProfiles/, `${screen} no longer lists the social profiles`);
+  }
 
   // 4. Merchandise is Premium only, and the refusal comes before the address.
   const orders = rewardsHandlers.slice(rewardsHandlers.indexOf('export async function handleOrders'));

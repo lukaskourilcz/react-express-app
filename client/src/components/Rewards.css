@@ -255,24 +255,6 @@ a.rw-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px
 .rw-checkout__note { font-size: 0.88rem; max-width: 68ch; }
 .rw-checkout__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
-/* ── find devShark elsewhere ─────────────────────────────────────────── */
-.rw-social { display: flex; flex-direction: column; gap: 0.6rem; width: 100%; min-width: 0; }
-.rw-social--card { padding: 24px; background: var(--color-background-surface); }
-.rw-social__links { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0; padding: 0; list-style: none; }
-.rw-social__link {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
-  padding: 0 16px;
-  border-radius: var(--radius-element);
-  border: 1px solid var(--color-border-strong);
-  color: var(--color-text-primary);
-  font-weight: 650;
-  text-decoration: none;
-}
-.rw-social__link:hover { border-color: var(--color-border-accent); }
-.rw-social__link:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
-
 @media (max-width: 599px) {
   .rw-wallet__rates { margin-left: 0; width: 100%; }
   .rw-earn__row { flex-direction: column; align-items: flex-start; }

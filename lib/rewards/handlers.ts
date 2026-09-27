@@ -26,11 +26,10 @@ import { requireAdmin } from '../admin-auth';
 import { deploymentSubjectIds } from '../product-scope';
 import { refuseLocked } from '../access';
 import { isScopeSubject } from '../../shared/subject-catalog';
-import { creditSocialVisit, settleFinishedMonth, settleMilestones, type MilestoneReport } from './coins';
+import { settleFinishedMonth, settleMilestones, type MilestoneReport } from './coins';
 import { creditReferral } from './referral';
 import {
   crownAvailable,
-  isSocialPlatform,
   streakProtectionAvailable,
   STREAK_PROTECTION_CAP,
   isMerchSku,
@@ -134,19 +133,17 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
     });
   }
 
-  // POST: the social click-through grant, when the owner has set one. The
-  // amount comes from settings and the event id from the account and the
-  // platform, so the request can only name which profile was opened. A body
-  // without a claim is the old sign-up claim and is answered the same way as
-  // before, from the same idempotent routine.
+  // POST: a body without a claim is the old sign-up claim and is answered the
+  // same way as before, from the same idempotent routine. Opening a social
+  // profile no longer pays (design audit P0.3): an older browser that still
+  // reports one is told nothing was granted, and the ledger keeps the reason
+  // for the credits already made.
   if (req.method === 'POST') {
     if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const body = (req.body || {}) as { claim?: unknown; platform?: unknown };
     if (body.claim === 'social') {
-      if (!isSocialPlatform(body.platform)) return jsonError(res, 400, 'bad_request', 'Unknown profile');
-      const result = await creditSocialVisit(supabase, { userId, subject, platform: body.platform });
       res.setHeader('Cache-Control', 'private, no-store');
-      return res.json(result);
+      return res.json({ granted: false, coins: 0 });
     }
     if (body.claim !== undefined) return jsonError(res, 400, 'bad_request', 'Unknown claim');
     const settings = await getGameSettings();

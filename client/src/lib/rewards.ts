@@ -8,7 +8,7 @@
 
 import { queryOptions, useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { apiFetch } from './api';
-import type { CoinSettings, MerchAvailability, MerchSku, ShippingAddress, SocialPlatform } from '../../../shared/rewards';
+import type { CoinSettings, MerchAvailability, MerchSku, ShippingAddress } from '../../../shared/rewards';
 
 const USER = '/api/user/[op]';
 
@@ -103,12 +103,6 @@ export const rewardKeys = {
 export const fetchWallet = (signal?: AbortSignal): Promise<WalletResponse> =>
   apiFetch<WalletResponse>(`${USER}?op=wallet`, { signal });
 
-/** Report that a social profile was opened. The server pays the owner's
- * `socialVisitGrant` once per platform when it is above zero, and nothing
- * otherwise; the request names only the platform. */
-export const claimSocialVisit = (platform: SocialPlatform): Promise<{ granted: boolean; coins: number }> =>
-  apiFetch(`${USER}?op=wallet`, { method: 'POST', body: JSON.stringify({ claim: 'social', platform }) });
-
 export const fetchShop = (signal?: AbortSignal): Promise<ShopResponse> =>
   apiFetch<ShopResponse>(`${USER}?op=shop`, { signal });
 
@@ -164,16 +158,6 @@ export function useShop(enabled = true) {
 
 export function useOrders(enabled: boolean) {
   return useQuery({ ...ordersQuery, enabled });
-}
-
-export function useSocialVisitMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (platform: SocialPlatform) => claimSocialVisit(platform),
-    onSuccess: (result) => {
-      if (result.granted) void queryClient.invalidateQueries({ queryKey: rewardKeys.wallet() });
-    },
-  });
 }
 
 /** Buying or wearing the crown; both invalidate the wallet, because both change

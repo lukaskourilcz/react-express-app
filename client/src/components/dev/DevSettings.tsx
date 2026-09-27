@@ -451,13 +451,6 @@ export default function DevSettings() {
           size="sm"
           style={{ flex: 1, minWidth: 220 }}
         />
-        {num('coinsSocial', 'Social visit grant')}
-        <span style={{ ...captionStyle, width: '100%', marginTop: 4 }}>
-          Social visit grant: coins for opening one of devShark&apos;s LinkedIn, Instagram or Threads profiles, once per
-          profile. Keep it at 0 unless you have decided otherwise. Meta&apos;s spam rules forbid offering anything of
-          monetary value for engagement, coins buy merchandise, and no platform tells us whether a click became a follow.
-          Above 0 the app thanks the learner for visiting and never asks anyone to follow.
-        </span>
         {num('coinsReferral', 'Invitation, coins to each side')}
         {num('coinsReferralCap', 'Friends paid per inviter')}
         <span style={{ ...captionStyle, width: '100%', marginTop: 4 }}>

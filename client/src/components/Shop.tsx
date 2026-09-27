@@ -35,7 +35,6 @@ import { Button } from '@astryxdesign/core/Button';
 import { AppToast } from './ui/AppToast';
 import { Crown } from './ui/Crown';
 import { Kicker } from './landing/LandingKit';
-import { SocialProfiles } from './SocialProfiles';
 import { ReferralInvite } from './ReferralInvite';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
@@ -830,7 +829,6 @@ function Shop() {
         </section>
       )}
 
-      <SocialProfiles />
 
       <AppToast
         open={!!toast}

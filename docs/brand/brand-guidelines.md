@@ -47,7 +47,7 @@ The app serves copies from the root of `client/public/`: `/favicon.ico`, `/favic
 | Header | `BrandLogo`, compact, 22 px | The first place a visitor meets the brand on every page. |
 | Mobile menu | `BrandLogo`, compact, 20 px | The menu covers the header, so it repeats the logo. |
 | Loader, study-mode loader | `SwimmingShark`, clean fin | A loader is an icon, and a logo animating in a loop wears thin. |
-| Footer ocean | `Waterline` with clean `SwimmingFin`s | The footer carries only legal links and settings; the fins are decoration. |
+| Footer ocean | `Waterline` with clean `SwimmingFin`s | The footer carries only legal links, devShark's own social profiles and settings; the fins are decoration. |
 | Page headers (curation, public info, GitHub settings) | `SwimmingFin`, clean fin, 26 px | An icon beside a kicker, under the header logo. |
 | Buttons, cards, progress, lives, empty states | `SharkFin`, clean fin | Icons and decoration. |
 | Result share card | Compact logo, 44 px, and a clean fin on the waterline | The card leaves the app, so the brand appears there first. |
