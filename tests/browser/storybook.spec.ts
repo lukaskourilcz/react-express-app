@@ -17,7 +17,7 @@ for (const story of ['populated', 'pinned', 'empty', 'server-error', 'offline'])
   test(`workshop leaderboard ${story}`, async ({ page }) => {
     await page.goto(`${process.env.STORYBOOK_URL}/iframe.html?id=screens-leaderboard--${story}&viewMode=story`);
     // The kicker says "Leaderboard"; the page heading says what the board ranks.
-    await expect(page.getByRole('heading', { level: 1, name: 'Who learned the most', exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Most correct answers', exact: true })).toBeVisible();
     if (story === 'populated' || story === 'pinned') await expect(page.getByText('Workshop learner', { exact: true })).toBeVisible();
     if (story === 'pinned') await expect(page.getByText('14', { exact: true }).first()).toBeVisible();
     if (story === 'server-error' || story === 'offline') await expect(page.getByRole('alert')).toBeVisible();
