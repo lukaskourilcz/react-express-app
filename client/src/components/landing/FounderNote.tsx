@@ -46,7 +46,6 @@ export default function FounderNote({ supportHref = '/premium' }: FounderNotePro
           {t('landing.founder.signoff')}
         </p>
         <div className="ss-founder__support">
-          <span>{t('landing.founder.supportNote')}</span>
           <Link to={supportHref} className="ss-link-button ss-link-button--secondary ss-cta">
             {t('landing.founder.supportCta')}
           </Link>

@@ -162,7 +162,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'quiz.kicker': 'Sólo kvíz',
   'quiz.buildTitle': 'Sestav si kvíz.',
   'quiz.buildSubtitle': 'Otázky vážené podle důležitosti — ty nejdůležitější se objevují častěji.',
-  'quiz.noPeeking': 'Odpovědi zůstávají na serveru, dokud je neodešleš — žádné nakukování.',
   'quiz.keysHint': 'Klávesy 1–4 pro odpověď · Enter pro pokračování',
 
   // Identita předmětů (názvy + popisky v přehledu, hero a chipech)
@@ -186,7 +185,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'shop.protectionSection': 'Ochrana série',
   'shop.protectionName': 'Ochrana série',
   'shop.protectionBlurb': 'Přemostí vynechaný den, takže série běží dál. Každý měsíc dostaneš {cap} zdarma; tímhle si je doplníš.',
-  'shop.protectionFair': 'Platí se tokeny, které sis vydělal učením. Mění jen počet dní — žádné XP, žádné skóre, žádný rank, a žádný zdejší žebříček se podle série neřadí.',
   'shop.protectionBought': 'Koupeno. Tenhle měsíc jich máš {n}.',
   'shop.protectionAtCap': 'Už jich máš {n} — nic se nestrhlo.',
   'shop.crownSection': 'Avatar',
@@ -246,7 +244,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'shop.reason.adjustment': 'Úprava',
   'shop.signInForWallet': 'Přihlas se a uvidíš zůstatek. Tokeny se vedou na účtu, ne na tomhle zařízení.',
   'shop.loadError': 'Obchod se nepodařilo načíst. Zkus to za chvíli.',
-  'shop.fairnessNote': 'Nic z toho nemění, co se můžeš naučit. Žádný nákup neovlivní přístup, XP, skóre, série, hodnosti ani žebříček.',
   'shop.title': 'Obchod',
   'shop.subtitle': 'Utrať získané tokeny za kosmetické doplňky. Nikdy nemění přístup, XP, skóre ani pořadí.',
   'shop.syncing': 'Synchronizujeme peněženku a kosmetické doplňky…',
@@ -831,7 +828,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'challenge.todaySet': 'dnešní sada',
   'challenge.finsStat': 'žraločí ploutve',
   'challenge.perQuestion': 'na otázku',
-  'challenge.fairRace': 'Odpovědi ověřuje server',
   'challenge.relaxedPace': 'Použít klidnější tréninkové tempo',
   'challenge.relaxedHint': '180 sekund na otázku. Výsledek zůstane soukromý a nepřidá se do hodnoceného žebříčku.',
   'challenge.practiceScore': 'Tréninkové tempo dokončeno — tento výsledek se nehodnotí.',
@@ -1233,7 +1229,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'landing.founder.title': 'Proč je devShark zdarma',
   'landing.founder.body': 'devShark jsem vytvořil proto, že dobré učení nemá být schované za placenou zdí. Každá lekce, kvíz i cesta je zdarma — bez reklam, bez zkušebních verzí, bez platební karty — v češtině i angličtině. Když ti to pomáhá a můžeš trochu přispět, podpora potěší; když ne, uč se dál — přesně o to tu jde.',
   'landing.founder.signoff': '— Tvůrce devShark',
-  'landing.founder.supportNote': 'Podpora je dobrovolná a nikdy nic neodemyká.',
   'landing.founder.supportCta': 'Jak funguje podpora',
 
   // ── Chybové hlášky (API / pád stránky) ────────────────────────────────

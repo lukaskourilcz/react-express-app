@@ -168,7 +168,6 @@ export const en = {
   'quiz.kicker': 'Solo quiz',
   'quiz.buildTitle': 'Build your quiz.',
   'quiz.buildSubtitle': 'Importance-weighted questions — the ones that matter most surface more often.',
-  'quiz.noPeeking': 'Answers stay on the server until you submit — no peeking.',
   'quiz.keysHint': 'Keys 1–4 to answer · Enter to continue',
 
   // Subject identity (name + blurb)
@@ -191,7 +190,6 @@ export const en = {
   'shop.protectionSection': 'Streak protection',
   'shop.protectionName': 'Streak protection',
   'shop.protectionBlurb': 'Bridges a missed day so your streak keeps counting. You get {cap} free every month; this tops that back up.',
-  'shop.protectionFair': 'Paid for with coins you earned by learning. It changes the day count and nothing else: no XP, no score, no rank, and no leaderboard here ranks by streak.',
   'shop.protectionBought': 'Bought. You have {n} this month.',
   'shop.protectionAtCap': 'You already have {n} — nothing was charged.',
   'shop.crownSection': 'Crown and streak protection',
@@ -251,7 +249,6 @@ export const en = {
   'shop.reason.adjustment': 'Adjustment',
   'shop.signInForWallet': 'Sign in to see your coins. They are recorded on your account, not on this device.',
   'shop.loadError': 'The shop could not load. Try again in a moment.',
-  'shop.fairnessNote': 'Nothing on this page changes what you can open, your XP, your scores or your rank. A streak protection changes only the day count of your streak, and no leaderboard ranks by streak.',
   'shop.title': 'Rewards',
   'shop.subtitle': 'Learning earns coins. Spend them on the crown or a streak protection, and with Premium, redeem them for devShark merchandise.',
   'shop.syncing': 'Syncing your wallet and cosmetics…',
@@ -307,7 +304,7 @@ export const en = {
   'rewards.ledger.protection': 'Streak protection',
   'rewards.ledger.merch': 'Merchandise',
   'rewards.earnTitle': 'How to earn',
-  'rewards.earnIntro': 'The server checks everything that pays coins. Rows marked Premium pay Premium members.',
+  'rewards.earnIntro': 'Rows marked Premium pay Premium members.',
   'rewards.earn.xp': 'Learning',
   'rewards.earn.xpDetail': '{rate}% of the XP you earn in quizzes, the daily challenge, the Biggest Shark Challenge, Learn levels and coding challenges. Premium earns {premiumRate}%. Up to {cap} coins a day.',
   'rewards.earn.xpToday': 'Today: {n} of {cap}',
@@ -966,7 +963,6 @@ export const en = {
   'challenge.todaySet': "today's set",
   'challenge.finsStat': 'shark fins',
   'challenge.perQuestion': 'per question',
-  'challenge.fairRace': 'Answers verified by the server',
   'challenge.relaxedPace': 'Use a relaxed practice pace',
   'challenge.relaxedHint': '180 seconds per question. Your result stays private and is not added to the ranked board.',
   'challenge.practiceScore': 'Practice pace complete — this result is not ranked.',
@@ -1377,7 +1373,6 @@ export const en = {
   'landing.founder.title': 'Why devShark has a Premium tier',
   'landing.founder.body': 'I built devShark so that the foundations stay free: HTML, CSS and JavaScript cost nothing and always will. Premium pays for the servers that grade your code, for new challenges and for keeping the site free of ads. If it helps you, {symbol}{monthly} a month keeps it running. If it doesn’t, cancel from your profile whenever you like.',
   'landing.founder.signoff': '— The devShark maker',
-  'landing.founder.supportNote': 'Premium opens content. It never buys XP, ranks or streaks.',
   'landing.founder.supportCta': 'See what Premium includes',
 
   // ── API / crash error copy (resolved via translateStatic) ─────────────

@@ -770,9 +770,6 @@ function Shop() {
                     <Text type="supporting" color="secondary">
                       {t('shop.protectionBlurb', { cap: shop.data.protection.cap })}
                     </Text>
-                    <Text type="supporting" size="xsm" color="secondary">
-                      {t('shop.protectionFair')}
-                    </Text>
                   </VStack>
                   <div className="rw-spend__action">
                     <HStack gap={1} align="center" wrap="wrap">
@@ -834,8 +831,6 @@ function Shop() {
       )}
 
       <SocialProfiles />
-
-      <Text type="supporting" size="xsm" color="secondary">{t('shop.fairnessNote')}</Text>
 
       <AppToast
         open={!!toast}

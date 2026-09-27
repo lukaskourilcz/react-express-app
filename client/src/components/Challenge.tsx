@@ -501,7 +501,6 @@ export default function Challenge() {
             </button>
             <HStack gap={2} align="center" wrap="wrap">
               <SwimCta label={t('challenge.startButton')} dir={-1} onClick={() => void startRun()} />
-              <span className="de-gold-pill">{t('challenge.fairRace')}</span>
             </HStack>
           </VStack>
         </section>
