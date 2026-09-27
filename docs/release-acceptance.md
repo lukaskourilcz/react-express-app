@@ -2346,3 +2346,70 @@ Not run: the other browser specs, `check:responsive`, the audits and Storybook. 
 - Safari and Firefox. Only Chromium 153 ran here. The sheet's reload rests on the same `reloadOnPress` the sign-in uses, and Safari's module-map behaviour comes from HARDEN's sources, not from a Safari run.
 - The Learn workbench and a path's reward in a browser. Their unit coverage is the shared boundary; reaching either on a page needs roadmap or enrollment data that the specs do not fake yet.
 - Motion stays off for the rest of a document after its chunk fails. Nothing retries it; the next page load does.
+
+## 2026-09-27 — the rest draws in one step (DRAW)
+
+NEEDED.md's `[owner:ai]` item "Draw the rest in one step" named three things that still moved after the first draw: `/today` and `/leaderboard` growing (0.05 or less), a signed-in desktop header re-centring its nav (0.004), and a signed-in `/collection` drawing its saved cards after the page.
+
+| What moved | Why | The change |
+| --- | --- | --- |
+| `/today`, `/leaderboard` | When a held read failed, the page's own query asked again on mount (TanStack's `retryOnMount`). The page drew its skeleton, and the same error replaced it about a second later, after the retry. The footer moved each time | `HELD_READ` in `lib/routeData.ts` (`retryOnMount: false`), spread into the page's own copy of a held read: the roadmap structure and, through `useLocks(…, { held: true })`, the plan on Today; the board on the leaderboard. The hold's attempt stands for the mount's, so the error draws with the page. Retry buttons, a changed key and the next visit's hold still ask again |
+| The signed-in desktop header | The toolbar's grid centres the nav between its side columns. The widget replaced a 56px placeholder at 224px ("Test Learner"), so every nav link moved 84px at 1350px | The widget sits in `.ss-account-slot`: at least 60px wide from 1024px (the avatar, with a ring) and 240px from 1280px (the button's `max-width`). A signed-out header has no slot |
+| `/collection`, signed in | Nothing held the page, so it drew `LoadingScreen` in its body and the cards replaced it | `useFirstData` holds the page for the open tab's read (`flashcardsQuery(subject)`, new in `lib/queries.ts`, or `bookmarksQuery`), with `HELD_READ` on both hooks. On a direct load the session is still being restored when the page mounts, so the hold waits for `getSupabaseSession()` too and reads only if a session comes back. A visitor waits for nothing |
+
+### Measured before and after
+
+A scratch Playwright script, never committed, loads each page cold in Chromium 153.0.8010.12 and adds up every `layout-shift` entry a `PerformanceObserver` reports, input-flagged ones included. "Desktop" is 1350×940 at full speed, "phone" 412×823 at a 1.75 device pixel ratio with 4× CPU throttling, the profiles of the CLS record. The API answers 503 (the CLS record's condition) or, for `/collection` and the header, fixtures 250ms late: three saved cards, a free plan and 503 for the rest. Signed in means the fake session of `tests/browser/fake-session.ts`, with Auth answered locally. Before is `aeb7da8`, this branch's base, after is `65cb2d0`, both built with the Supabase placeholders and served side by side by `vite preview` (:4782 and :4781). Two runs of each; they agreed to the fourth decimal.
+
+| Page | Visitor, API | Desktop, before → after | Phone, before → after |
+| --- | --- | --- | --- |
+| `/today` | signed out, 503 | 0.0004 → 0 | 0.0378 → 0 |
+| `/today` | signed in, 503 | 0.0054 → 0 | 0.0386 → 0 |
+| `/leaderboard` | signed out, 503 | 0.0043 → 0 | 0.0502 → 0 |
+| `/leaderboard` | signed in, 503 | 0.0105 → 0 | 0.0502 → 0 |
+| `/collection` | signed in, fixtures | 0.0052 → 0 | 0.0504 → 0 |
+| `/` | signed in, fixtures | 0.0041 → 0 | 0 → 0 |
+
+On the desktop the signed-in rows include the header's 0.0041. Before, the first nav link stood at 351.9px and moved to 268.0px when the widget arrived; after, it stands at 259.9px from the first frame. With a 29-character name it stands at 259.9px too. Signed out, it stands at the same place on both builds at each of 1024, 1100, 1279, 1280, 1350, 1440 and 1920px (347.6px at 1350px). Before, `/collection` drew two states, the loader and then the cards; after, the cards are in its first frame. A click from `/` to each page, desktop, 503 and fixtures, signed in and out, recorded 0 non-input shift after the first draw on the new build; before, the 503 visits recorded 0.0004 to 0.0064.
+
+The signed-in desktop nav now starts 8px further left at 1350px than the widget left it before (259.9 against 268.0px), because the slot reserves the widget's widest box. At 1280px with the long name the nav's `scrollWidth` equals its `clientWidth` (690px): no link is clipped.
+
+`npm run check:bundle`: 227,155 of 243,000 gzip bytes, 39 more than the base's 227,116, in the entry's script and stylesheet (the slot's rule and the plan's `held` option).
+
+### Tests
+
+`tests/browser/first-load.spec.ts` gains three cases at both of its profiles, recording each frame and every `layout-shift` entry with its chunks held 800ms as before: `/today` and `/leaderboard` with every read failing, and a signed-in `/collection` whose cards answer 400ms late. Each page must keep the route box's height from its first frame and record no entry at all; the collection must show its card in every frame of the page, and on the desktop the first nav link must not move. Against the base build 5 of the 6 cases failed; the phone's collection case passed there until the cards were made to answer late, and then failed too. On the final build all 8 cases passed, and 24 of 24 with `--repeat-each=3`.
+
+### Checks on the final head
+
+On `65cb2d0`, the code of this record's commit, in the worktree `ds-wt-onestep`. I ran every command below, and each exit code is its own.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:client` | exit 0; 32 files, 318 tests |
+| `npm run check:unused` | exit 0; knip reports no new finding |
+| The workflow's build step: the Supabase placeholders, then `npm run build`, `npm run check:public` and `npm run check:bundle` | exit 0 each; 13 public URLs; 227,155 of 243,000 gzip bytes |
+| Browser specs `first-load`, `navigation`, `route-errors`, `lazy-auth` and `public` against `vite preview` of that build on :4781 | exit 0 each; 8, 2, 14, 6 and 5 passed |
+| `npm run check:responsive -- --base-url http://localhost:4781 --routes /,/today,/leaderboard --widths 390,1280` | exit 0; 6 probes, 0 with issues |
+| `git diff --check` | clean |
+
+Not run: the other browser specs, `test:launch`, the audits and Storybook. The branch changes nothing under `api/`, `lib/` or `shared/`.
+
+### Commits
+
+| Commit | What |
+| --- | --- |
+| `76b6e6e` | `.ss-account-slot` in the header |
+| `f695976` | `HELD_READ`; Today and the leaderboard use it. It also carries `flashcardsQuery` and `useFlashcards`'s `held` option, which the next commit uses |
+| `a3b4461` | `/collection` holds for the open tab |
+| `6ad1b57` | The three cases in `first-load.spec.ts` |
+| `65cb2d0` | DESIGN_RULES §8 |
+| this commit | This record and NEEDED.md |
+
+### Hand-off
+
+- A slow read still draws twice: past the 1.2s cap the page draws its loading state, as HOLDS set up.
+- `/cards` shows the same flashcards as `/collection` and does not hold for them.
+- Today's four signed-in sections keep their own queries without `HELD_READ`, so a section whose read failed in the hold asks again on mount. The signed-in 503 runs recorded no shift from them on either build; I did not run them with data that fills a section after a retry.
+- Not verified: devshark.app (not deployed), a real Supabase session, Firefox, Safari and physical phones.
