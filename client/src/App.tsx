@@ -27,7 +27,7 @@ import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
 import { CURRENT_PRODUCT, productText } from './lib/products';
-import { CloseIcon } from './components/ui/icons';
+import { CloseIcon, CoinIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import { takeAuthReturn } from './lib/authReturn';
@@ -174,14 +174,6 @@ const PremiumNavIcon = () => (
   <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 3h12l4 6-10 12L2 9z" />
     <path d="M2 9h20M12 21 8 9l2-6M12 21l4-12-2-6" />
-  </svg>
-);
-
-const ShopNavIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z" />
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <path d="M16 10a4 4 0 0 1-8 0" />
   </svg>
 );
 
@@ -650,7 +642,7 @@ function App() {
                     tooltip={t('nav.shop')}
                     onClick={() => navigate('/shop')}
                     data-route="/shop"
-                    icon={<ShopNavIcon />}
+                    icon={<CoinIcon size={16} />}
                   />
                 </span>
               )}

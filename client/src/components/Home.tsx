@@ -18,16 +18,13 @@ import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { useActiveSubject } from '../lib/subjects';
-import { TRACK_ORDER } from '../lib/tracks';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
 import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
-import SubjectPlate from './ui/SubjectPlate';
 import ComparisonTable from './landing/ComparisonTable';
-import { FREE_LEARN_TOPICS } from '../../../shared/tiers';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
@@ -60,8 +57,8 @@ function TopicCard({
         border: `1px solid ${selected ? 'var(--brand-accent)' : 'var(--ss-card-line)'}`,
         borderBottom: '2px solid var(--ss-card-edge)',
         boxShadow: hover
-          ? `0 8px 20px light-dark(rgba(23,39,46,0.12), rgba(0,0,0,0.5))${selected ? ', inset 0 0 0 1px var(--brand-accent)' : ''}`
-          : selected ? 'inset 0 0 0 1px var(--brand-accent)' : '0 2px 10px light-dark(rgba(23,39,46,0.06), rgba(0,0,0,0.4))',
+          ? `var(--shadow-med)${selected ? ', inset 0 0 0 1px var(--brand-accent)' : ''}`
+          : selected ? 'inset 0 0 0 1px var(--brand-accent)' : 'var(--shadow-low)',
         borderRadius: 'var(--radius-container)', padding: '14px 16px 18px', cursor: 'pointer',
         transition: 'box-shadow 0.25s ease, background 0.2s ease, border-color 0.2s ease',
       }}
@@ -97,7 +94,7 @@ function TopicCard({
       </span>
       {/* The tick sits on the selected card's accent tint, so it takes the
           derived on-tint accent rather than the plain one. */}
-      <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-accent-on-soft)', opacity: selected ? 1 : 0 }}>✓</span>
+      <span style={{ marginLeft: 'auto', fontSize: 'var(--ss-type-compact)', fontWeight: 700, color: 'var(--brand-accent-on-soft)', opacity: selected ? 1 : 0 }}>✓</span>
     </button>
   );
 }
@@ -112,21 +109,12 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
       className="ss-panel"
       style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-page)' }}
     >
-      <div aria-hidden style={{ position: 'absolute', right: '-4%', bottom: '-42%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
-        <SharkFin size={420} color="currentColor" />
-      </div>
-      <div aria-hidden style={{ position: 'absolute', right: 18, top: 12, opacity: 0.18, pointerEvents: 'none' }}>
-        <SubjectPlate />
-      </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', position: 'relative' }}>
         <h2 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>
           {t('home.insideTopic', { name: topic.name })}
         </h2>
-        <span style={{ borderRadius: 999, padding: '3px 10px', fontWeight: 600, fontSize: '0.75rem', color: 'var(--brand-accent-on-soft)', background: 'var(--brand-accent-soft)' }}>
-          {t('home.insideChip')}
-        </span>
       </div>
-      <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-text-secondary)', maxWidth: '70ch', position: 'relative' }}>{topic.blurb}</p>
+      <p style={{ margin: 0, fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)', maxWidth: '70ch', position: 'relative' }}>{topic.blurb}</p>
       <PathStrip label={t('home.pathRegion', { name: topic.name })}>
         {topic.levels.map((label, i) => {
           // Each connector gets its own swell (see DESIGN_RULES §4).
@@ -145,9 +133,9 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
                   background: first ? 'var(--brand-accent)' : 'var(--brand-accent-soft)',
                   color: first ? 'var(--brand-on-accent)' : 'var(--brand-accent-on-soft)',
                   border: `2px solid ${first ? 'var(--brand-accent)' : 'transparent'}`,
-                  fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '0.95rem',
+                  fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'var(--ss-type-compact)',
                 }}>{i + 1}</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
+                <span style={{ fontSize: 'var(--ss-type-label)', fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
               </div>
               <svg aria-hidden width="40" height="8" viewBox="0 0 40 8" style={{ display: 'block', margin: '16px 2px 0', opacity: 0.3, flexShrink: 0 }}>
                 <path d={wavePath} fill="none" stroke="var(--ss-ink)" strokeWidth={1.6} strokeLinecap="round" />
@@ -162,12 +150,12 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
               <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
             </svg>
           </span>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
+          <span style={{ fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
         </div>
       </PathStrip>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         <SwimCta label={t('home.startLevel1', { name: topic.name })} onClick={onStart} dir={-1} />
-        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>{t('home.roadmapNote')}</span>
+        <span style={{ fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t('home.roadmapNote')}</span>
       </div>
     </section>
   );
@@ -175,7 +163,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
 
 // ─────────────────────────────── Feature strip ────────────────────────────
 
-interface StripItem { titleKey: TranslationKey; textKey: TranslationKey; color: string; icon: ReactNode; to: string; }
+interface StripItem { titleKey: TranslationKey; textKey: TranslationKey; icon: ReactNode; to: string; }
 const STRIP_ICON = (path: ReactNode) => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">{path}</svg>
 );
@@ -200,13 +188,10 @@ export default function Home() {
   const heroSubtitle = t('home.subtitle');
   const moreCount = subject.topics.length - featured.length;
 
-  // Stats from the registries: topic count, question count, career paths and
-  // the topics every account gets in full (shared/tiers.ts).
+  // Two stats from the registries: the topic count and the question count.
   const stats: StatSpec[] = [
-    { value: String(subject.topics.length), label: t('home.statTracks'), pos: 'right top', size: 40 },
-    { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions'), pos: 'left bottom', size: 34 },
-    { value: String(TRACK_ORDER.length), label: t('home.statPaths'), pos: 'center top', size: 32 },
-    { value: String(FREE_LEARN_TOPICS.length), label: t('home.statForever'), pos: 'right bottom', size: 38 },
+    { value: String(subject.topics.length), label: t('home.statTracks') },
+    { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions') },
   ];
 
   const handleSignIn = async () => {
@@ -222,14 +207,12 @@ export default function Home() {
   const scrollToTopics = () => topicsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
   const strip: StripItem[] = [
-    { titleKey: 'today.title', textKey: 'today.subtitle', color: 'var(--brand-accent)', to: '/today', icon: STRIP_ICON(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="m9 16 2 2 4-4" /></>) },
-    { titleKey: 'cards.title', textKey: 'cards.subtitle', color: 'var(--ss-warning)', to: '/collection', icon: STRIP_ICON(<><rect x="3" y="5" width="14" height="16" rx="2" /><path d="M7 5V3h12a2 2 0 0 1 2 2v14" /></>) },
-    { titleKey: 'home.stripCareerTitle', textKey: 'home.stripCareerText', color: 'var(--brand-accent)', to: '/roadmap', icon: STRIP_ICON(<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>) },
-    { titleKey: 'home.stripCodingTitle', textKey: 'home.stripCodingText', color: 'var(--ss-success)', to: '/coding', icon: STRIP_ICON(<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /><line x1="14" y1="4" x2="10" y2="20" /></>) },
-    { titleKey: 'typing.title', textKey: 'typing.subtitle', color: 'var(--ss-info)', to: '/typing', icon: STRIP_ICON(<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M8 14h8" /></>) },
-    { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', color: 'var(--brand-accent)', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
-    { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', color: 'var(--ss-info)', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
-    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', color: 'var(--ss-warning)', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
+    { titleKey: 'today.title', textKey: 'today.subtitle', to: '/today', icon: STRIP_ICON(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="m9 16 2 2 4-4" /></>) },
+    { titleKey: 'home.stripCareerTitle', textKey: 'home.stripCareerText', to: '/roadmap', icon: STRIP_ICON(<><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6" /><line x1="8" y1="2" x2="8" y2="18" /><line x1="16" y1="6" x2="16" y2="22" /></>) },
+    { titleKey: 'home.stripCodingTitle', textKey: 'home.stripCodingText', to: '/coding', icon: STRIP_ICON(<><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /><line x1="14" y1="4" x2="10" y2="20" /></>) },
+    { titleKey: 'home.stripDailyTitle', textKey: 'home.stripDailyText', to: '/challenge', icon: STRIP_ICON(<polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />) },
+    { titleKey: 'home.stripLiveTitle', textKey: 'home.stripLiveText', to: '/play', icon: STRIP_ICON(<><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" /></>) },
+    { titleKey: 'home.stripXpTitle', textKey: 'home.stripXpText', to: '/leaderboard', icon: STRIP_ICON(<><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" /></>) },
   ];
 
   return (
@@ -242,16 +225,21 @@ export default function Home() {
             {heroTitle}
           </h1>
           <p style={{ margin: 0, fontSize: '1.125rem', color: 'var(--color-text-secondary)', maxWidth: '46ch' }}>{heroSubtitle}</p>
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+          {/* One call to action; signing in (or going on) is a text link beside it. */}
+          <div style={{ display: 'flex', gap: '8px 20px', flexWrap: 'wrap', alignItems: 'center' }}>
             <FadeFinCta label={t('home.chooseTopic')} primary onClick={scrollToTopics} finLeft="-2px" finSize={58} accent={subject.accent} />
-            {isAuthenticated ? (
-              <FadeFinCta label={t('home.ctaLearn')} onClick={() => navigate(`/learn?topic=${encodeURIComponent(selected?.id ?? '')}`)} finLeft="80%" finSize={58} accent={subject.accent} />
-            ) : (
-              <FadeFinCta disabled={signingIn} label={signingIn ? t('home.ctaSignIn') : t('home.signInGoogle')} onClick={handleSignIn} finLeft="80%" finSize={58} accent={subject.accent} />
-            )}
+            <span className="ss-text-links" style={{ margin: 0 }}>
+              {isAuthenticated ? (
+                <Link to={`/learn?topic=${encodeURIComponent(selected?.id ?? '')}`}>{t('home.ctaLearn')}</Link>
+              ) : (
+                <button type="button" disabled={signingIn} onClick={handleSignIn}>
+                  {signingIn ? t('home.ctaSignIn') : t('home.signInGoogle')}
+                </button>
+              )}
+            </span>
           </div>
           <div className="ss-hero-stats">
-            {stats.map((s) => <StatItem key={s.label} {...s} accent={subject.accent} />)}
+            {stats.map((s) => <StatItem key={s.label} {...s} />)}
           </div>
         </div>
         {selected && (
@@ -271,14 +259,8 @@ export default function Home() {
           <h2 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
             {t('home.topicsTitle')}
           </h2>
-          {/* One line, in the one place a visitor is deciding what to practise.
-              It describes the criteria applied, not a result already achieved,
-              and it does not imply a plan the visitor has not chosen. */}
-          <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)', maxWidth: '62ch' }}>
-            {t('home.curationNote')}{' '}
-            <Link to="/curation" style={{ color: 'var(--brand-accent)', textUnderlineOffset: 3 }}>
-              {t('footer.curation')}
-            </Link>
+          <p className="ss-text-links" style={{ margin: 0 }}>
+            <Link to="/curation">{t('footer.curation')}</Link>
           </p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 14 }}>
@@ -301,7 +283,7 @@ export default function Home() {
                 <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: 'var(--brand-accent)' }}>
                   {t('home.andMore', { n: String(moreCount) })}
                 </span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>{t('home.seeAllTopics')}</span>
+                <span style={{ fontSize: 'var(--ss-type-label)', fontWeight: 500, color: 'var(--color-text-secondary)' }}>{t('home.seeAllTopics')}</span>
               </span>
             </button>
           )}
@@ -322,12 +304,12 @@ export default function Home() {
               onClick={() => navigate(item.to)}
               style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '10px 0', background: 'none', border: 'none', textAlign: 'left', cursor: 'pointer' }}
             >
-              <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: 'var(--radius-inner)', color: item.color, background: `color-mix(in srgb, ${item.color} 8%, transparent)`, boxShadow: `inset 0 0 0 1px color-mix(in srgb, ${item.color} 22%, transparent)`, flexShrink: 0 }}>
+              <span aria-hidden style={{ display: 'grid', placeItems: 'center', width: 36, height: 36, borderRadius: 'var(--radius-inner)', color: 'var(--color-text-secondary)', background: 'var(--color-background-muted)', boxShadow: 'inset 0 0 0 1px var(--ss-card-line)', flexShrink: 0 }}>
                 {item.icon}
               </span>
               <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>{t(item.titleKey)}</span>
-                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>{t(item.textKey)}</span>
+                <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-primary)' }}>{t(item.titleKey)}</span>
+                <span style={{ fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t(item.textKey)}</span>
               </span>
             </button>
           ))}

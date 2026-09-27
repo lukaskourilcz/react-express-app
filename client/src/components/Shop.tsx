@@ -34,6 +34,7 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { AppToast } from './ui/AppToast';
 import { Crown } from './ui/Crown';
+import { CoinIcon } from './ui/icons';
 import { Kicker } from './landing/LandingKit';
 import { ReferralInvite } from './ReferralInvite';
 import { useLanguage, useT } from '../i18n/LanguageContext';
@@ -69,15 +70,6 @@ import './Rewards.css';
 
 type TFn = ReturnType<typeof useT>;
 
-/** A coin: the accent disc with an inner rim. Decorative; the number beside it
- * carries the meaning. */
-const CoinIcon = ({ size = 24 }: { size?: number }) => (
-  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none">
-    <circle cx="12" cy="12" r="10" fill="var(--brand-accent)" />
-    <circle cx="12" cy="12" r="6.5" fill="none" stroke="var(--brand-on-accent)" strokeWidth="1.6" opacity="0.55" />
-  </svg>
-);
-
 const skuNameKey = (sku: MerchSku) => `shop.merch.${sku}.name` as TranslationKey;
 const skuBlurbKey = (sku: MerchSku) => `shop.merch.${sku}.blurb` as TranslationKey;
 const skuAltKey = (sku: MerchSku) => `shop.merch.${sku}.alt` as TranslationKey;
@@ -96,7 +88,6 @@ const EMPTY_ADDRESS: ShippingAddress = { name: '', line1: '', line2: '', city: '
 const LEDGER_PREVIEW = 5;
 
 const projectTitle = (id: string): string => EVOLVING_CHALLENGES.find((one) => one.id === id)?.title.en ?? id;
-const isShortPath = (id: string): boolean => EVOLVING_CHALLENGES.find((one) => one.id === id)?.short === true;
 const percent = (rate: number): string => String(Math.round(rate * 1000) / 10);
 
 function monthLabel(month: string): string {
@@ -137,7 +128,7 @@ export function ledgerLabel(entry: Pick<WalletEntry, 'reason' | 'reference'>, t:
 
 /* ── the wallet ────────────────────────────────────────────────────────── */
 
-function Wallet({ signedIn, rules }: { signedIn: boolean; rules: EarnSummary['rules'] }) {
+function Wallet({ signedIn }: { signedIn: boolean }) {
   const t = useT();
   const wallet = useWallet(signedIn);
   const [showAll, setShowAll] = useState(false);
@@ -156,10 +147,6 @@ function Wallet({ signedIn, rules }: { signedIn: boolean; rules: EarnSummary['ru
             <span>{t('shop.tokensUnit')}</span>
           </p>
         </div>
-        <ul className="rw-wallet__rates" aria-label={t('rewards.earn.xp')}>
-          <li>{t('rewards.earnRate', { rate: percent(rules.xpRate) })}</li>
-          <li>{t('rewards.earnRatePremium', { rate: percent(rules.xpRate * rules.premiumMultiplier) })}</li>
-        </ul>
       </div>
 
       {!signedIn && <p className="rw-muted">{t('shop.signInForWallet')}</p>}
@@ -207,17 +194,22 @@ interface EarnRow {
   key: string;
   label: string;
   detail?: string;
-  premium?: boolean;
   /** The right-hand figure: "+25", "Earned", "Today: 40 of 400". */
   figure?: string;
   done?: boolean;
 }
 
-/** The rows of "How to earn", from the rules and, when the server sent it,
- * the learner's progress. Pure, so the tests can read it. */
+/** The five rows of "How to earn" (design audit P1.3): learning with today's
+ * progress, the welcome coins, the streak milestones, finishing a topic or a
+ * project, and the month's top three. Pure, so the tests can read it. */
 export function earnRows(earn: EarnSummary, t: TFn, welcomeReceived: boolean): EarnRow[] {
   const { rules, progress } = earn;
   const earned = new Set(progress?.earned ?? []);
+  // "7, 30 and 100": the app ships English only.
+  const list = (values: number[]) => {
+    const words = values.map((value) => value.toLocaleString('en-GB'));
+    return words.length < 2 ? words.join('') : `${words.slice(0, -1).join(', ')} and ${words[words.length - 1]}`;
+  };
   const rows: EarnRow[] = [{
     key: 'xp',
     label: t('rewards.earn.xp'),
@@ -237,70 +229,35 @@ export function earnRows(earn: EarnSummary, t: TFn, welcomeReceived: boolean): E
       done: welcomeReceived,
     });
   }
-  for (const milestone of rules.streakMilestones) {
-    if (milestone.coins <= 0) continue;
-    const done = earned.has(`streak:${milestone.days}`);
+  const streaks = rules.streakMilestones.filter((milestone) => milestone.coins > 0);
+  if (streaks.length > 0) {
+    const next = streaks.find((milestone) => !earned.has(`streak:${milestone.days}`));
     rows.push({
-      key: `streak-${milestone.days}`,
-      label: progress && !done
-        ? t('rewards.earn.streakProgress', { days: milestone.days, n: Math.min(progress.streak, milestone.days) })
-        : t('rewards.earn.streak', { days: milestone.days }),
-      premium: true,
-      figure: done ? t('rewards.earn.done') : t('rewards.earn.coins', { n: milestone.coins }),
-      done,
+      key: 'streak',
+      label: t('rewards.earn.streaks'),
+      detail: t('rewards.earn.streaksDetail', {
+        days: list(streaks.map((milestone) => milestone.days)),
+        coins: list(streaks.map((milestone) => milestone.coins)),
+      }),
+      figure: !next
+        ? t('rewards.earn.done')
+        : progress ? t('rewards.earn.streakNext', { n: Math.min(progress.streak, next.days), days: next.days }) : undefined,
+      done: !next,
     });
   }
-  if (rules.topicComplete > 0) {
-    const open = (progress?.topics ?? [])
-      .filter((topic) => topic.passed < topic.total && !earned.has(`topic:${topic.id}`))
-      .sort((a, b) => (a.total - a.passed) - (b.total - b.passed) || a.id.localeCompare(b.id))
-      .slice(0, 3);
-    const doneTopics = [...earned].filter((ref) => ref.startsWith('topic:'));
-    for (const ref of doneTopics) {
-      rows.push({
-        key: ref, label: t('rewards.ledger.topic', { topic: t(categoryLabelKey(ref.slice(6))) }),
-        premium: true, figure: t('rewards.earn.done'), done: true,
-      });
-    }
-    if (open.length === 0) {
-      rows.push({ key: 'topic-any', label: t('rewards.earn.topicAny'), premium: true, figure: t('rewards.earn.coins', { n: rules.topicComplete }) });
-    }
-    for (const topic of open) {
-      rows.push({
-        key: `topic-${topic.id}`,
-        label: t('rewards.earn.topic', { topic: t(categoryLabelKey(topic.id)), n: topic.passed, total: topic.total }),
-        premium: true,
-        figure: t('rewards.earn.coins', { n: rules.topicComplete }),
-      });
-    }
-  }
-  const open = (progress?.projects ?? [])
-    .filter((project) => project.passed < project.total && !earned.has(`project:${project.id}`))
-    .sort((a, b) => (a.total - a.passed) - (b.total - b.passed) || a.id.localeCompare(b.id))
-    .slice(0, 2);
-  for (const ref of [...earned].filter((one) => one.startsWith('project:'))) {
+  if (rules.topicComplete + rules.projectComplete + rules.shortPathComplete > 0) {
     rows.push({
-      key: ref, label: t('rewards.ledger.project', { project: projectTitle(ref.slice(8)) }),
-      premium: true, figure: t('rewards.earn.done'), done: true,
+      key: 'finish',
+      label: t('rewards.earn.finish'),
+      detail: t('rewards.earn.finishDetail', {
+        topic: rules.topicComplete,
+        project: rules.projectComplete,
+        short: rules.shortPathComplete,
+      }),
+      figure: earned.size > 0
+        ? t('rewards.earn.finishedCount', { n: [...earned].filter((ref) => ref.startsWith('topic:') || ref.startsWith('project:')).length })
+        : undefined,
     });
-  }
-  for (const project of open) {
-    const coins = isShortPath(project.id) ? rules.shortPathComplete : rules.projectComplete;
-    if (coins <= 0) continue;
-    rows.push({
-      key: `project-${project.id}`,
-      label: t('rewards.earn.project', { project: projectTitle(project.id), n: project.passed, total: project.total }),
-      premium: true,
-      figure: t('rewards.earn.coins', { n: coins }),
-    });
-  }
-  if (open.length === 0) {
-    if (rules.projectComplete > 0) {
-      rows.push({ key: 'project-any', label: t('rewards.earn.projectAny'), premium: true, figure: t('rewards.earn.coins', { n: rules.projectComplete }) });
-    }
-    if (rules.shortPathComplete > 0) {
-      rows.push({ key: 'short-any', label: t('rewards.earn.shortPathAny'), premium: true, figure: t('rewards.earn.coins', { n: rules.shortPathComplete }) });
-    }
   }
   const [first = 0, second = 0, third = 0] = rules.monthTop;
   if (first + second + third > 0) {
@@ -308,7 +265,6 @@ export function earnRows(earn: EarnSummary, t: TFn, welcomeReceived: boolean): E
       key: 'month-top',
       label: t('rewards.earn.monthTop'),
       detail: t('rewards.earn.monthTopDetail', { first, second, third }),
-      premium: true,
     });
   }
   return rows;
@@ -320,7 +276,6 @@ function HowToEarn({ earn, welcomeReceived, premium }: { earn: EarnSummary; welc
   return (
     <section className="rw-section" aria-labelledby="rw-earn-title">
       <Kicker as="h2" id="rw-earn-title">{t('rewards.earnTitle')}</Kicker>
-      <p className="rw-muted">{t('rewards.earnIntro')}</p>
       <ul className="rw-earn">
         {rows.map((row) => (
           <li key={row.key} className={row.done ? 'rw-earn__row is-done' : 'rw-earn__row'}>
@@ -329,20 +284,21 @@ function HowToEarn({ earn, welcomeReceived, premium }: { earn: EarnSummary; welc
               {row.detail && <span className="rw-earn__detail">{row.detail}</span>}
             </div>
             <div className="rw-earn__meta">
-              {row.premium && <span className="rw-tag">{t('premium.badge')}</span>}
               {row.figure && <span className={row.done ? 'rw-earn__figure is-done' : 'rw-earn__figure'}>{row.figure}</span>}
             </div>
           </li>
         ))}
       </ul>
-      {!premium && (
-        <div className="rw-premium-note">
-          <p>{t('rewards.earn.premiumNote')}</p>
+      {/* One note says which rows pay Premium members, and the page's one
+          "See what Premium includes" sits under it. */}
+      <div className="rw-premium-note">
+        <p>{t('rewards.earn.premiumNote')}</p>
+        {!premium && (
           <button type="button" className="rw-btn" onClick={() => openUpgradeSheet({})}>
             {t('rewards.seePremium')}
           </button>
-        </div>
-      )}
+        )}
+      </div>
     </section>
   );
 }
@@ -585,9 +541,10 @@ function Shop() {
   return (
     <VStack gap={5} width="100%" maxWidth={1080}>
       <VStack gap={1}>
-        <Kicker>{t('shop.kicker')}</Kicker>
         <Heading level={1} type="display-3">{t('shop.title')}</Heading>
-        <Text type="large" color="secondary">{t('shop.subtitle')}</Text>
+        <Text type="large" color="secondary">
+          {t('shop.subtitle')}{merchOpen ? ` ${t('shop.subtitleMerch')}` : ''}
+        </Text>
       </VStack>
 
       {/* Test mode is for the owner's staging checks; production never shows it. */}
@@ -595,119 +552,9 @@ function Shop() {
 
       {/* The wallet. The recent movements sit beside the balance because a
           balance nobody can account for is what this replaced. */}
-      <Wallet signedIn={isAuthenticated} rules={earn.rules} />
+      <Wallet signedIn={isAuthenticated} />
 
       <HowToEarn earn={earn} welcomeReceived={welcomeReceived} premium={premium} />
-
-      <ReferralInvite signedIn={isAuthenticated} />
-
-      {shop.isLoading && <Text type="supporting" color="secondary" role="status">{t('common.loading')}</Text>}
-      {shop.isError && (
-        <div className="rw-inline-error" role="alert">
-          <span>{t('shop.loadError')}</span>
-          <Button variant="ghost" size="sm" label={t('quiz.retry')} onClick={() => void shop.refetch()} />
-        </div>
-      )}
-
-      {/* Merchandise. Premium members redeem coins for it. The section, its
-          intro and the redemption form exist only once redemption is open and
-          at least one item can be redeemed (design audit P0.1). */}
-      {merchOpen && (
-        <section className="rw-section" aria-labelledby="rw-merch-title">
-          <Kicker as="h2" id="rw-merch-title">{t('shop.merchSection')}</Kicker>
-          {shopLinked && (
-            <div className="rw-merch-intro">
-              <p className="rw-muted">{t('shop.shopIntro')}</p>
-              {MERCH_SHOP.shopUrl && (
-                <a className="rw-btn" href={MERCH_SHOP.shopUrl} target="_blank" rel="noopener noreferrer">
-                  {t('shop.visitShop')}
-                  <span aria-hidden="true">&nbsp;↗</span>
-                  <span className="rw-sr-only"> {t('rewards.social.newTab')}</span>
-                </a>
-              )}
-            </div>
-          )}
-          {shopLinked && config.merchPromo && <MerchPromoNote promo={config.merchPromo} />}
-          {merchLocked && (
-            <div className="rw-premium-note" id="rw-merch-premium">
-              <p>{t('rewards.merchPremium')}</p>
-              <button type="button" className="rw-btn" onClick={() => openUpgradeSheet({ kind: 'merch-redemption' })}>
-                {t('rewards.seePremium')}
-              </button>
-            </div>
-          )}
-          <Grid columns={{ minWidth: 240, max: 3 }} gap={2} width="100%">
-            {/* An item nobody has priced or switched on yet is not shown at all. */}
-            {(shop.data?.items ?? []).filter((item) => item.availability !== 'unconfigured' && item.availability !== 'shop_disabled').map((item) => (
-              <MerchCard
-                key={item.sku}
-                item={item}
-                busy={order.isPending}
-                premiumLocked={merchLocked}
-                balance={isAuthenticated && wallet.data ? balance : null}
-                onOrder={(sku, variant) => setCheckout({ sku, variant })}
-              />
-            ))}
-          </Grid>
-          {shop.data?.policyUrl && (
-            <a className="cd-link" href={shop.data.policyUrl} target="_blank" rel="noreferrer">
-              {t('shop.policyLink')}
-            </a>
-          )}
-        </section>
-      )}
-
-      {/* Redeeming. Only the fields a parcel needs, and nothing beyond them. */}
-      {merchOpen && checkout && (
-        <form
-          className="rw-checkout ss-raised"
-          aria-labelledby="rw-checkout-title"
-          onSubmit={(event) => {
-            event.preventDefault();
-            submitOrder('tokens');
-          }}
-        >
-          <h3 id="rw-checkout-title" ref={checkoutHeading} tabIndex={-1} className="rw-checkout__title">
-            {t('shop.checkoutTitle', { item: t(skuNameKey(checkout.sku)) })}
-            {checkout.variant ? ` (${checkout.variant})` : ''}
-          </h3>
-          {([
-            ['name', 'shop.address.name'],
-            ['line1', 'shop.address.line1'],
-            ['line2', 'shop.address.line2'],
-            ['city', 'shop.address.city'],
-            ['postalCode', 'shop.address.postalCode'],
-            ['country', 'shop.address.country'],
-          ] as const).map(([field, key]) => (
-            <div key={field} className="rw-checkout__field">
-              <label className="ss-field-label" htmlFor={`addr-${field}`}>{t(key)}</label>
-              <input
-                id={`addr-${field}`}
-                className="ss-input"
-                autoComplete={ADDRESS_AUTOCOMPLETE[field]}
-                required={field !== 'line2'}
-                maxLength={field === 'country' ? 2 : 120}
-                value={address[field] ?? ''}
-                onChange={(event) => setAddress((current) => ({ ...current, [field]: event.target.value }))}
-              />
-            </div>
-          ))}
-          <p className="rw-muted rw-checkout__note">{t('shop.addressNote')}</p>
-          <div className="rw-checkout__actions">
-            <button type="submit" className="rw-btn rw-btn--primary" disabled={order.isPending}>
-              {t('shop.payWithTokens')}
-            </button>
-            {shop.data?.cashCheckoutEnabled && (
-              <button type="button" className="rw-btn" disabled={order.isPending} onClick={() => submitOrder('cash')}>
-                {t('shop.payWithMoney')}
-              </button>
-            )}
-            <button type="button" className="rw-btn rw-btn--quiet" onClick={closeCheckout}>
-              {t('shop.cancelCheckout')}
-            </button>
-          </div>
-        </form>
-      )}
 
       {/* The crown and streak protection: every account, coins only. */}
       {(shop.data?.crown.available || shop.data?.protection?.available) && (
@@ -798,6 +645,113 @@ function Shop() {
             )}
           </VStack>
         </section>
+      )}
+
+      <ReferralInvite signedIn={isAuthenticated} />
+
+      {shop.isLoading && <Text type="supporting" color="secondary" role="status">{t('common.loading')}</Text>}
+      {shop.isError && (
+        <div className="rw-inline-error" role="alert">
+          <span>{t('shop.loadError')}</span>
+          <Button variant="ghost" size="sm" label={t('quiz.retry')} onClick={() => void shop.refetch()} />
+        </div>
+      )}
+
+      {/* Merchandise. Premium members redeem coins for it. The section, its
+          intro and the redemption form exist only once redemption is open and
+          at least one item can be redeemed (design audit P0.1). */}
+      {merchOpen && (
+        <section className="rw-section" aria-labelledby="rw-merch-title">
+          <Kicker as="h2" id="rw-merch-title">{t('shop.merchSection')}</Kicker>
+          {shopLinked && (
+            <div className="rw-merch-intro">
+              <p className="rw-muted">{t('shop.shopIntro')}</p>
+              {MERCH_SHOP.shopUrl && (
+                <a className="rw-btn" href={MERCH_SHOP.shopUrl} target="_blank" rel="noopener noreferrer">
+                  {t('shop.visitShop')}
+                  <span aria-hidden="true">&nbsp;↗</span>
+                  <span className="rw-sr-only"> {t('rewards.social.newTab')}</span>
+                </a>
+              )}
+            </div>
+          )}
+          {shopLinked && config.merchPromo && <MerchPromoNote promo={config.merchPromo} />}
+          {merchLocked && (
+            <div className="rw-premium-note" id="rw-merch-premium">
+              <p>{t('rewards.merchPremium')}</p>
+            </div>
+          )}
+          <Grid columns={{ minWidth: 240, max: 3 }} gap={2} width="100%">
+            {/* An item nobody has priced or switched on yet is not shown at all. */}
+            {(shop.data?.items ?? []).filter((item) => item.availability !== 'unconfigured' && item.availability !== 'shop_disabled').map((item) => (
+              <MerchCard
+                key={item.sku}
+                item={item}
+                busy={order.isPending}
+                premiumLocked={merchLocked}
+                balance={isAuthenticated && wallet.data ? balance : null}
+                onOrder={(sku, variant) => setCheckout({ sku, variant })}
+              />
+            ))}
+          </Grid>
+          {shop.data?.policyUrl && (
+            <a className="cd-link" href={shop.data.policyUrl} target="_blank" rel="noreferrer">
+              {t('shop.policyLink')}
+            </a>
+          )}
+        </section>
+      )}
+
+      {/* Redeeming. Only the fields a parcel needs, and nothing beyond them. */}
+      {merchOpen && checkout && (
+        <form
+          className="rw-checkout ss-raised"
+          aria-labelledby="rw-checkout-title"
+          onSubmit={(event) => {
+            event.preventDefault();
+            submitOrder('tokens');
+          }}
+        >
+          <h3 id="rw-checkout-title" ref={checkoutHeading} tabIndex={-1} className="rw-checkout__title">
+            {t('shop.checkoutTitle', { item: t(skuNameKey(checkout.sku)) })}
+            {checkout.variant ? ` (${checkout.variant})` : ''}
+          </h3>
+          {([
+            ['name', 'shop.address.name'],
+            ['line1', 'shop.address.line1'],
+            ['line2', 'shop.address.line2'],
+            ['city', 'shop.address.city'],
+            ['postalCode', 'shop.address.postalCode'],
+            ['country', 'shop.address.country'],
+          ] as const).map(([field, key]) => (
+            <div key={field} className="rw-checkout__field">
+              <label className="ss-field-label" htmlFor={`addr-${field}`}>{t(key)}</label>
+              <input
+                id={`addr-${field}`}
+                className="ss-input"
+                autoComplete={ADDRESS_AUTOCOMPLETE[field]}
+                required={field !== 'line2'}
+                maxLength={field === 'country' ? 2 : 120}
+                value={address[field] ?? ''}
+                onChange={(event) => setAddress((current) => ({ ...current, [field]: event.target.value }))}
+              />
+            </div>
+          ))}
+          <p className="rw-muted rw-checkout__note">{t('shop.addressNote')}</p>
+          <div className="rw-checkout__actions">
+            <button type="submit" className="rw-btn rw-btn--primary" disabled={order.isPending}>
+              {t('shop.payWithTokens')}
+            </button>
+            {shop.data?.cashCheckoutEnabled && (
+              <button type="button" className="rw-btn" disabled={order.isPending} onClick={() => submitOrder('cash')}>
+                {t('shop.payWithMoney')}
+              </button>
+            )}
+            <button type="button" className="rw-btn rw-btn--quiet" onClick={closeCheckout}>
+              {t('shop.cancelCheckout')}
+            </button>
+          </div>
+        </form>
       )}
 
       {/* Orders and claims: coin redemptions and the learning-path package. */}

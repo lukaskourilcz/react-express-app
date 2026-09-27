@@ -22,7 +22,7 @@
 /* The topic filter. A native select: it is keyboard- and screen-reader-complete
    on every platform, and the label sits beside it rather than inside it. */
 .lb-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
-.lb-filter__label { font-size: 0.9rem; font-weight: 650; color: var(--color-text-primary); }
+.lb-filter__label { font-size: var(--ss-type-compact); font-weight: 600; color: var(--color-text-primary); }
 .lb-select {
   flex: 1 1 14rem;
   max-width: 22rem;
@@ -37,7 +37,7 @@
 }
 .lb-select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
-.lb-scope { margin: 0; max-width: 46rem; font-size: 0.875rem; line-height: 1.5; color: var(--color-text-secondary); }
+.lb-scope { margin: 0; max-width: 46rem; font-size: var(--ss-type-compact); line-height: 1.5; color: var(--color-text-secondary); }
 
 /* Offline with a board to show: the board stays, and this says how old it is. */
 .lb-stale {
@@ -50,7 +50,7 @@
   border: 1px solid color-mix(in srgb, var(--ss-warning) 35%, transparent);
   background: var(--ss-warning-soft);
   color: var(--color-text-primary);
-  font-size: 0.875rem;
+  font-size: var(--ss-type-compact);
   line-height: 1.5;
 }
 .lb-stale > span { flex: 1 1 16rem; padding: 8px 0; }
@@ -70,7 +70,7 @@
   border: 1.5px solid var(--color-border-strong);
   color: var(--color-text-primary);
   font-weight: 700;
-  font-size: 0.875rem;
+  font-size: var(--ss-type-compact);
   line-height: 1;
   font-variant-numeric: tabular-nums;
 }
@@ -89,7 +89,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-weight: 650;
+  font-weight: 600;
   color: var(--color-text-primary);
 }
 /* "You" is a word, not a tint: the row's background only repeats it. */
@@ -99,14 +99,14 @@
   border-radius: 999px;
   border: 1px solid var(--ss-ink);
   color: var(--ss-ink);
-  font-size: 0.72rem;
-  font-weight: 750;
+  font-size: var(--ss-type-label);
+  font-weight: 700;
   letter-spacing: 0.04em;
   line-height: 1.5;
 }
 .lb-score {
   font-family: var(--font-family-heading);
-  font-weight: 750;
+  font-weight: 700;
   font-size: 1.05rem;
   color: var(--color-text-primary);
   font-variant-numeric: tabular-nums;
@@ -118,7 +118,7 @@
 .lb-table th {
   padding: 12px 16px;
   text-align: left;
-  font-size: 0.72rem;
+  font-size: var(--ss-type-label);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -155,20 +155,20 @@
 .lb-card__avatar { display: inline-flex; flex-shrink: 0; }
 .lb-card__main { display: flex; flex: 1; flex-direction: column; gap: 2px; min-width: 0; }
 .lb-card__name { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.lb-card__detail { font-size: 0.8rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.lb-card__detail { font-size: var(--ss-type-meta); color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 .lb-card__score { display: flex; flex-shrink: 0; flex-direction: column; align-items: flex-end; }
 /* Below 400px the avatar gives its width to the name and the line under it;
    the rank and the name still say whose row it is. */
 @media (max-width: 399.95px) {
   .lb-card__avatar { display: none; }
 }
-.lb-card__label { font-size: 0.7rem; color: var(--color-text-secondary); }
+.lb-card__label { font-size: var(--ss-type-label); color: var(--color-text-secondary); }
 
 .lb-pinned { border-top: 1px dashed var(--color-border-strong); }
 .lb-pinned__label {
   margin: 0;
   padding: 10px 14px 0;
-  font-size: 0.72rem;
+  font-size: var(--ss-type-label);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -191,7 +191,7 @@
   margin: 0;
   padding: 12px 16px;
   border-top: 1px dashed var(--color-border-strong);
-  font-size: 0.875rem;
+  font-size: var(--ss-type-compact);
   color: var(--color-text-secondary);
 }
 

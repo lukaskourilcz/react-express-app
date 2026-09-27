@@ -24,6 +24,12 @@
   --ss-type-body: clamp(1rem, 0.9583rem + 0.1852vw, 1.125rem);
   --ss-type-title: clamp(2rem, 1.6rem + 1.7778vw, 3.2rem);
   --ss-type-display: clamp(2.6rem, 2.3rem + 1.3333vw, 3.5rem);
+  /* Four fixed steps for everything smaller than body text (design audit
+     P1.8): labels, meta lines, compact controls and large lead text. */
+  --ss-type-label: .72rem;
+  --ss-type-meta: .8rem;
+  --ss-type-compact: .875rem;
+  --ss-type-large: 1.125rem;
   --ss-space-gutter: clamp(1rem, 0.6667rem + 1.4815vw, 2rem);
   --ss-space-section: clamp(2rem, 1.3333rem + 2.963vw, 4rem);
 
@@ -173,23 +179,24 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ───────────────────────── Utility classes ───────────────────────── */
 
-/* Card stock: cards read as tactile index cards — a crisp 2px bottom edge
- * (stacked paper) + one quiet ink-tinted ambient shadow. Applied via the
- * wrappers so every Astryx Card inherits the same anatomy.
+/* Card stock: one recipe for every card (design audit P1.2) — the container
+ * radius, a crisp 2px bottom edge (stacked paper) and --shadow-low. .ss-panel
+ * paints the surface as well; .ss-raised wraps an Astryx Card, which paints
+ * its own surface and 1px border, so it takes the same edge and depth only.
  * .ss-lift additionally answers hover with a subtle rise (clickable cards
- * only); .ss-raised is the static variant for read-only cards. */
+ * only). */
 .ss-lift,
 .ss-raised {
   border-radius: var(--radius-container);
   border-bottom: 2px solid var(--ss-card-edge);
-  box-shadow: 0 2px 10px light-dark(rgba(23, 39, 46, 0.06), rgba(0, 0, 0, 0.4));
+  box-shadow: var(--shadow-low);
 }
 .ss-lift {
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 .ss-lift:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px light-dark(rgba(23, 39, 46, 0.1), rgba(0, 0, 0, 0.5));
+  box-shadow: var(--shadow-med);
 }
 @media (prefers-reduced-motion: reduce) {
   .ss-lift { transition: none; }
@@ -273,7 +280,7 @@ dialog.astryx-dialog .astryx-layout-footer {
   border-radius: var(--radius-container);
   border: 1px solid var(--ss-card-line);
   border-bottom: 2px solid var(--ss-card-edge);
-  box-shadow: 0 2px 10px light-dark(rgba(23, 39, 46, 0.06), rgba(0, 0, 0, 0.4));
+  box-shadow: var(--shadow-low);
 }
 
 /* One variant, scoped to one element. Decorative only: no class here adds a

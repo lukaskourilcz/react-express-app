@@ -5,12 +5,10 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SwimCta } from './landing/LandingKit';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
-import { Badge } from '@astryxdesign/core/Badge';
-import { WaterlineProgress, SharkFin } from './SharkFin';
+import { WaterlineProgress } from './SharkFin';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Popover } from '@astryxdesign/core/Popover';
@@ -128,7 +126,7 @@ const iconBtnStyle = (color: string): React.CSSProperties => ({
   padding: 0,
   margin: 0,
   border: 'none',
-  borderRadius: 8,
+  borderRadius: 'var(--radius-inner)',
   background: 'transparent',
   color,
   cursor: 'pointer',
@@ -145,8 +143,8 @@ const CategoryTag = ({ category }: { category: CategoryType }) => {
         alignItems: 'center',
         height: 26,
         padding: '0 10px',
-        borderRadius: 8,
-        fontSize: '0.78rem',
+        borderRadius: 'var(--radius-inner)',
+        fontSize: 'var(--ss-type-meta)',
         fontWeight: 600,
         lineHeight: 1,
         backgroundColor: getCategoryHexColor(category),
@@ -768,15 +766,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   }
 
   if (state === 'ready') {
-    const labelStyle: CSSProperties = { fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '0.95rem' };
-    const linkBtn: CSSProperties = { display: 'inline-flex', alignItems: 'center', minHeight: 44, background: 'none', border: 'none', padding: '4px 2px', color: 'var(--brand-accent)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'var(--font-family-body)' };
+    const labelStyle: CSSProperties = { fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: 'var(--ss-type-compact)' };
+    const linkBtn: CSSProperties = { display: 'inline-flex', alignItems: 'center', minHeight: 44, background: 'none', border: 'none', padding: '4px 2px', color: 'var(--brand-accent)', fontWeight: 600, fontSize: 'var(--ss-type-compact)', cursor: 'pointer', fontFamily: 'var(--font-family-body)' };
     const pill = (on: boolean): CSSProperties => ({
       display: 'inline-flex', alignItems: 'center', gap: 6,
       background: on ? 'var(--brand-accent-soft)' : 'var(--ss-card-bg)',
       color: on ? 'var(--brand-accent-on-soft)' : 'var(--color-text-primary)',
       border: `1px solid ${on ? 'var(--brand-accent)' : 'var(--ss-card-line)'}`,
       borderRadius: 999, padding: '7px 14px', minHeight: 44, width: 'auto', fontFamily: 'var(--font-family-body)',
-      fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+      fontWeight: 600, fontSize: 'var(--ss-type-compact)', cursor: 'pointer',
       transition: 'border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease',
     });
     return (
@@ -787,14 +785,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <h1 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '2rem', letterSpacing: '-0.015em' }}>
             {t('quiz.buildTitle')}
           </h1>
-          <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-text-secondary)' }}>{t('quiz.buildSubtitle')}</p>
+          <p style={{ margin: 0, fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t('quiz.buildSubtitle')}</p>
         </div>
 
         <div className="ss-panel" style={{ position: 'relative', overflow: 'hidden', padding: 24, display: 'flex', flexDirection: 'column', gap: 20, borderRadius: 'var(--radius-page)' }}>
-          <div aria-hidden style={{ position: 'absolute', right: '-6%', bottom: '-38%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
-            <SharkFin size={360} color="currentColor" />
-          </div>
-
           {/* Categories as accent pills. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -819,7 +813,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 {showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
               </button>
             )}
-            <div id="categories-error" role="alert" style={{ minHeight: '1.2em', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ss-error)' }}>
+            <div id="categories-error" role="alert" style={{ minHeight: '1.2em', fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-error)' }}>
               {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
             </div>
           </div>
@@ -830,7 +824,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               <span id="quiz-count-label" style={labelStyle}>{t('quiz.questionsLegend')}</span>
               <RadioCardGroup value={questionCount} onChange={(value) => setQuestionCount(Number(value))} labelledBy="quiz-count-label" orientation="horizontal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {config.quiz.countOptions.map((count, index) => (
-                  <RadioCard key={count} value={count} index={index} label={t('quiz.countQuestionsAria', { count })} style={{ ...pill(questionCount === count), minWidth: 48, justifyContent: 'center' }}>
+                  <RadioCard key={count} value={count} index={index} label={t('quiz.countQuestionsAria', { count })} style={{ ...pill(questionCount === count), borderRadius: 'var(--radius-element)', minWidth: 48, justifyContent: 'center' }}>
                     {count}
                   </RadioCard>
                 ))}
@@ -844,7 +838,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   const tip = t(`difficulty.${value}.tip` as TranslationKey);
                   return (
                     <Tooltip key={value} content={tip} placement="above">
-                      <RadioCard value={value} index={index} label={t('quiz.difficultyAria', { label })} style={pill(difficultyMode === value)}>
+                      <RadioCard value={value} index={index} label={t('quiz.difficultyAria', { label })} style={{ ...pill(difficultyMode === value), borderRadius: 'var(--radius-element)' }}>
                         {label}
                       </RadioCard>
                     </Tooltip>
@@ -881,6 +875,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   }
 
   if (state === 'submitted' && result) {
+    // "80% · JavaScript, React · Climb": what was scored, on which topics, at
+    // which difficulty (design audit P1.7). Daily and review sets draw across
+    // levels, so they read Mixed.
+    const resultCategories = [...new Set(questions.map((question) => question.category))];
+    const resultTopics = resultCategories.length <= 3
+      ? resultCategories.map((category) => t(categoryLabelKey(category))).join(', ')
+      : t('quiz.resultTopics', { n: resultCategories.length });
+    const resultDifficulty = t(`difficulty.${mode === 'standard' ? difficultyMode : 'mixed'}` as TranslationKey);
     return (
       <>
         <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
@@ -890,9 +892,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             aria-labelledby="quiz-result-heading"
             style={{ position: 'relative', overflow: 'hidden', padding: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, borderRadius: 'var(--radius-page)' }}
           >
-            <div aria-hidden style={{ position: 'absolute', right: '-6%', bottom: '-40%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
-              <SharkFin size={340} color="currentColor" />
-            </div>
             <Kicker center style={{ position: 'relative' }}>{t('quiz.complete')}</Kicker>
             <MotionPop>
               <h1
@@ -906,8 +905,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 {result.correctAnswers} / {result.totalQuestions}
               </h1>
             </MotionPop>
-            <span style={{ position: 'relative', fontSize: '0.95rem', color: 'var(--color-text-secondary)' }}>
-              {t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })} · {result.percentage}%
+            <span style={{ position: 'relative', fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>
+              {result.percentage}% · {resultTopics} · {resultDifficulty}
             </span>
 
             {(result.voided?.length ?? 0) > 0 && (
@@ -946,7 +945,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   document.getElementById('quiz-review')?.scrollIntoView({ behavior: 'smooth' });
                 }}
               />
-              <Button variant="ghost" label={t('quiz.backHome')} onClick={() => navigate('/')} />
             </HStack>
           </div>
         </div>
@@ -965,13 +963,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               <Card variant="default" padding={3} width="100%" className="quiz-review-card">
                 <VStack gap={1.5}>
                   <HStack justify="between" align="center" wrap="wrap" gap={1}>
-                    <HStack gap={1} align="center">
-                      <Heading level={4}>{t('quiz.questionN', { n: index + 1 })}</Heading>
-                      <Badge
-                        variant={isCorrect ? 'success' : 'error'}
-                        label={isCorrect ? t('quiz.correct') : t('quiz.incorrect')}
-                      />
-                    </HStack>
+                    {/* One meta line: number, topic, verdict (glyph and word). */}
+                    <Text type="supporting" color="secondary">
+                      {index + 1} · {t(categoryLabelKey(question.category))} ·{' '}
+                      <span style={{ color: isCorrect ? 'var(--ss-success-strong)' : 'var(--ss-error)', fontWeight: 600 }}>
+                        <span aria-hidden>{isCorrect ? '✓' : '✕'}</span> {isCorrect ? t('quiz.correct') : t('quiz.incorrect')}
+                      </span>
+                    </Text>
                     <HStack gap={0.5} align="center">
                       <button
                         type="button"
@@ -998,7 +996,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       >
                         <ReportFlagIcon />
                       </button>
-                      <CategoryTag category={question.category} />
                     </HStack>
                   </HStack>
 
@@ -1023,7 +1020,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                         backgroundColor: 'var(--color-background-muted)',
                         borderRadius: 'var(--radius-element)',
                         border: '1px solid var(--color-border)',
-                        borderLeft: `4px solid ${getCategoryHexColor(question.category)}`,
                       }}
                     >
                       <Text type="body" size="sm">
@@ -1096,7 +1092,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           flexDirection: 'column',
           background: 'var(--color-background-surface)',
           border: '1px solid var(--color-border)',
-          borderRadius: 16,
+          borderRadius: 'var(--radius-container)',
           overflowY: 'auto',
           overscrollBehavior: 'contain',
         }}
@@ -1121,16 +1117,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </div>
           </HStack>
 
-          {/* Category + tags */}
+          {/* Category */}
           <HStack gap={1} align="center" wrap="wrap" style={{ flexShrink: 0, marginBottom: 12 }}>
             <CategoryTag category={currentQuestion.category} />
-            {currentQuestion.tags && currentQuestion.tags.length > 0 && (
-              <HStack gap={0.5} align="center" wrap="wrap" style={{ marginLeft: 'auto' }}>
-                {currentQuestion.tags.map((tag) => (
-                  <Badge key={tag} variant="neutral" label={`#${tag}`} />
-                ))}
-              </HStack>
-            )}
           </HStack>
 
           <fieldset
@@ -1166,7 +1155,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   domain={glossaryDomainFor(currentQuestion.category)}
                 />
                 {mode === 'review' && interleaved && currentIndex === 0 && (
-                  <p style={{ margin: '10px 0 0', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                  <p style={{ margin: '10px 0 0', fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>
                     {t('quiz.interleavedNote')}
                   </p>
                 )}
@@ -1266,11 +1255,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                           style={{
                             width: 26,
                             height: 26,
-                            borderRadius: 8,
+                            borderRadius: 'var(--radius-inner)',
                             display: 'grid',
                             placeItems: 'center',
                             flexShrink: 0,
-                            fontSize: '0.78rem',
+                            fontSize: 'var(--ss-type-meta)',
                             fontWeight: 700,
                             background: isSelected ? 'var(--color-accent-muted)' : 'var(--color-background-muted)',
                             color: isSelected ? 'var(--color-text-accent)' : 'inherit',

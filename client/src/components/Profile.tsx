@@ -27,7 +27,6 @@ import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
 import { renderQuestion } from './CodeBlock';
 import { MULTILINGUAL, useT, useLanguage } from '../i18n/LanguageContext';
 import type { Lang } from '../i18n/LanguageContext';
-import type { TranslationKey } from '../i18n/translations';
 import { useEquippedRingColor, useEquippedFlair } from '../lib/shop';
 import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
 import { savePreferredLanguage } from '../lib/languagePref';
@@ -41,53 +40,17 @@ import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import { ShellPartBoundary } from './ShellPartBoundary';
 import { lazyShellPart } from '../lib/routeRecovery';
-import { FlameIcon, BoltIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
+import { TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
 import { useEntitlement } from '../lib/entitlement';
 import './DeepEndScreens.css';
 
-// Astryx Card colour variants used for the tinted stat / streak tiles.
-type CardVariant = 'default' | 'muted' | 'blue' | 'cyan' | 'gray' | 'green' | 'orange' | 'pink' | 'purple' | 'red' | 'teal' | 'yellow';
-
 // Section opener in the brand's editorial voice: uppercase accent kicker with
 // the waterline tick beneath (the "dive marker" that starts every section).
 function SectionLabel({ children }: { children: ReactNode }) {
   return <Kicker as="h2">{children}</Kicker>;
-}
-
-// Accent-tinted rounded meta pill. `color` sets both the text and (via
-// currentColor) the soft translucent background — a playful stand-in for a
-// muted caption.
-function MetaPill({ color = 'var(--brand-accent)', children }: { color?: string; children: ReactNode }) {
-  return (
-    <span
-      style={{
-        display: 'inline-block',
-        borderRadius: 999,
-        padding: '3px 10px',
-        fontFamily: 'var(--font-family-body)',
-        fontWeight: 600,
-        fontSize: '0.75rem',
-        letterSpacing: '0.02em',
-        color,
-        background: 'color-mix(in srgb, currentColor 14%, transparent)',
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-// Raised wrapper: resting depth for flat Astryx cards. These profile cards are
-// read-only, so no hover-lift — motion is reserved for clickable surfaces.
-function Lift({ children }: { children: ReactNode }) {
-  return (
-    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
-      {children}
-    </div>
-  );
 }
 
 // Language, appearance and sound ride along in the identity banner. They are
@@ -234,9 +197,6 @@ function ProfileBody({
   const flair = useEquippedFlair();
   const { questions: bookmarkedQuestions } = useBookmarks();
   const [tab, setTab] = useState<'overview' | 'friends'>('overview');
-  // Drawn once per mount so a stats refetch or a language switch cannot swap
-  // the tip out from under someone mid-sentence.
-  const [tipKey] = useState(nextConsistencyTip);
 
   return (
     <div className="de-page" style={{ maxWidth: 1000 }}>
@@ -261,7 +221,6 @@ function ProfileBody({
                     <Avatar src={user.picture} name={user.name} alt="" size={64} />
                   </div>
                   <VStack gap={0.5}>
-                    <Kicker>{t('nav.profile')}</Kicker>
                     <Heading level={1} maxLines={1}>
                       {flair ? `${flair} ` : ''}{user.name}
                     </Heading>
@@ -328,13 +287,15 @@ function ProfileBody({
 
         {/* Keep the streak in the first scan path for both products, including
             a useful zero state. It must not be buried below track/stat cards. */}
-        <StreakCard stats={stats} tipKey={tipKey} />
+        <StreakCard stats={stats} />
 
         {/* On desktop the cards split into two columns so the profile lands close
             to one viewport instead of one long scroll. On mobile they stack. */}
         <Grid columns={{ minWidth: 360, max: 2 }} gap={2} align="start" width="100%">
           <VStack gap={2}>
-            <CareerCard />
+            <CareerCard
+              totals={{ quizzes: totalQuizzes, questions: totalQuestions, correct: totalCorrect, average: averageScore }}
+            />
 
             {/* One card owns the track: the paths card, which carries the
                 specialization and the picker as well. */}
@@ -344,35 +305,15 @@ function ProfileBody({
           </VStack>
 
           <VStack gap={2}>
-            <Lift>
-            <Card variant="default" padding={3} width="100%">
-              <VStack gap={2}>
-                <SectionLabel>{t('profile.statistics')}</SectionLabel>
-
-                <Grid columns={{ minWidth: 130, max: 2 }} gap={1.5}>
-                  <StatTile label={t('profile.quizzesCompleted')} value={totalQuizzes} variant="blue" />
-                  <StatTile label={t('profile.questionsAnswered')} value={totalQuestions} variant="purple" />
-                  <StatTile label={t('profile.correctAnswers')} value={totalCorrect} variant="green" />
-                  <StatTile
-                    label={t('profile.averageScore')}
-                    value={`${averageScore}%`}
-                    variant={averageScore >= 70 ? 'green' : 'gray'}
-                  />
-                </Grid>
-              </VStack>
-            </Card>
-            </Lift>
-
             {bookmarkedQuestions.length > 0 && (
-              <Lift>
-              <Card variant="default" padding={3} width="100%">
+              <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
                 <VStack gap={2}>
                   <SectionLabel>{t('profile.bookmarks', { count: bookmarkedQuestions.length })}</SectionLabel>
                   <VStack gap={1.5}>
                     {bookmarkedQuestions.slice(0, 20).map((q) => (
                       <Card key={q.id} variant="muted" padding={2}>
                         <VStack gap={1}>
-                          <div style={{ fontSize: '0.9rem' }}>{renderQuestion(q.question)}</div>
+                          <div style={{ fontSize: 'var(--ss-type-compact)' }}>{renderQuestion(q.question)}</div>
                           <Text type="supporting" size="xsm" color="accent">
                             {t('profile.answerLabel', { answer: q.options[q.correctIndex] ?? '-' })}
                           </Text>
@@ -394,8 +335,7 @@ function ProfileBody({
                     )}
                   </VStack>
                 </VStack>
-              </Card>
-              </Lift>
+              </div>
             )}
 
             <GithubGardenCard />
@@ -426,11 +366,9 @@ function currentStreakForDisplay(stats: UserStats | null, now = new Date()): num
 
 function StreakCard({
   stats,
-  tipKey,
   unavailable = false,
 }: {
   stats: UserStats | null;
-  tipKey?: TranslationKey;
   unavailable?: boolean;
 }) {
   const { t, lang } = useLanguage();
@@ -448,27 +386,28 @@ function StreakCard({
   };
 
   return (
-    <Lift>
-      <Card variant="default" padding={3} width="100%">
+    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
         <VStack gap={2}>
           <SectionLabel>{t('profile.streaks')}</SectionLabel>
 
           <Grid columns={{ minWidth: 150, max: 2 }} gap={2}>
             <div role="group" aria-labelledby={currentLabelId} style={{ display: 'flex', width: '100%' }}>
-              <Card variant="orange" padding={3} width="100%">
+              <Card variant="muted" padding={3} width="100%">
                 <VStack gap={0.5} align="center">
-                  <span aria-hidden style={{ color: 'var(--ss-warning)', display: 'inline-flex' }}><FlameIcon size={24} /></span>
-                  <Text
-                    size="4xl"
-                    weight="bold"
-                    aria-label={unavailable ? t('profile.streakValueUnavailable') : undefined}
-                  >
-                    {currentStreakDisplay}
-                  </Text>
+                  {/* "4 days": the number and its unit on one line. */}
+                  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+                    <Text
+                      size="4xl"
+                      weight="bold"
+                      aria-label={unavailable ? t('profile.streakValueUnavailable') : undefined}
+                    >
+                      {currentStreakDisplay}
+                    </Text>
+                    {!unavailable && <Text type="supporting" color="secondary">{dayUnit(currentStreak)}</Text>}
+                  </span>
                   <Text id={currentLabelId} type="supporting" color="primary" weight="semibold" justify="center">
                     {t('profile.currentStreak')}
                   </Text>
-                  {!unavailable && <MetaPill color="var(--ss-warning)">{dayUnit(currentStreak)}</MetaPill>}
                   {/* Protection lives inside the streak it protects. It used to
                       be a card of its own below, which read as a separate
                       feature rather than as part of this number. */}
@@ -478,42 +417,33 @@ function StreakCard({
             </div>
 
             <div role="group" aria-labelledby={longestLabelId} style={{ display: 'flex', width: '100%' }}>
-              <Card variant="cyan" padding={3} width="100%">
+              <Card variant="muted" padding={3} width="100%">
                 <VStack gap={0.5} align="center">
-                  <span aria-hidden style={{ color: 'var(--ss-info)', display: 'inline-flex' }}><BoltIcon size={24} /></span>
-                  <Text
-                    size="4xl"
-                    weight="bold"
-                    color="accent"
-                    aria-label={unavailable ? t('profile.streakValueUnavailable') : undefined}
-                  >
-                    {longestStreakDisplay}
-                  </Text>
+                  <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+                    <Text
+                      size="4xl"
+                      weight="bold"
+                      aria-label={unavailable ? t('profile.streakValueUnavailable') : undefined}
+                    >
+                      {longestStreakDisplay}
+                    </Text>
+                    {!unavailable && <Text type="supporting" color="secondary">{dayUnit(longestStreak)}</Text>}
+                  </span>
                   <Text id={longestLabelId} type="supporting" color="primary" weight="semibold" justify="center">
                     {t('profile.longestStreak')}
                   </Text>
-                  {!unavailable && <MetaPill color="var(--ss-info)">{dayUnit(longestStreak)}</MetaPill>}
                 </VStack>
               </Card>
             </div>
           </Grid>
 
-          {/* One line, in the space the "last quiz" date used to take. The date
-              was a fact nobody acts on; this is the same height and says
-              something a learner can do next. */}
-          {tipKey && !unavailable && (
-            <Text type="supporting" size="xsm" color="secondary" justify="center">
-              {t(tipKey)}
-            </Text>
-          )}
           {unavailable && (
             <Text type="supporting" size="xsm" color="secondary" justify="center">
               {t('profile.streakUnavailable')}
             </Text>
           )}
         </VStack>
-      </Card>
-    </Lift>
+      </div>
   );
 }
 
@@ -591,52 +521,11 @@ function StreakShield() {
   );
 }
 
-// Ten one-line tips. They sit inside the streak card now rather than in a card
-// of their own, so there is room for exactly one line and no more.
-const CONSISTENCY_TIPS: readonly TranslationKey[] = [
-  'profile.tip.short',
-  'profile.tip.unfinished',
-  'profile.tip.wrong',
-  'profile.tip.finish',
-  'profile.tip.tomorrow',
-  'profile.tip.recall',
-  'profile.tip.mix',
-  'profile.tip.tooEasy',
-  'profile.tip.showUp',
-  'profile.tip.readAnyway',
-];
-
-const LAST_TIP_KEY = 'devquiz:profile-tip';
-
-/**
- * A tip the learner did not see last time.
- *
- * "Always different" is the whole request, and a random draw is not that — a
- * pool of ten repeats about one visit in ten. The last one shown is remembered
- * and excluded, so the next is always new. Storage failing (private mode, a
- * fresh browser) degrades to a plain random draw rather than to nothing.
- */
-function nextConsistencyTip(): TranslationKey {
-  let previous: string | null = null;
-  try {
-    previous = localStorage.getItem(LAST_TIP_KEY);
-  } catch {
-    /* no storage — a repeat is possible and harmless */
-  }
-  const pool = CONSISTENCY_TIPS.filter((key) => key !== previous);
-  const chosen = pool[Math.floor(Math.random() * pool.length)] ?? CONSISTENCY_TIPS[0];
-  try {
-    localStorage.setItem(LAST_TIP_KEY, chosen);
-  } catch {
-    /* ignore */
-  }
-  return chosen;
-}
-
 // Career level card: the learner's rank (derived from total XP = learning XP +
-// quest XP), with a progress bar toward the next rank. Pulls account XP on mount
+// quest XP), with a progress bar toward the next rank, and the four quiz
+// figures in one neutral row (design audit P1.5). Pulls account XP on mount
 // so it stays in sync even if the user hasn't visited the learning path.
-function CareerCard() {
+function CareerCard({ totals }: { totals: { quizzes: number; questions: number; correct: number; average: number } }) {
   const t = useT();
   const progress = useRoadmapProgress();
   const questXp = useQuestXp();
@@ -671,8 +560,7 @@ function CareerCard() {
     : t('profile.xpToNext', { xp: nf(info.xpToNext), title: nextTitle ?? '' });
 
   return (
-    <Lift>
-    <Card variant="default" padding={3} width="100%">
+    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
       <VStack gap={2}>
         <SectionLabel>{t('profile.career')}</SectionLabel>
         {syncWarning && <Banner status="warning" title={t('profile.syncUnavailable')} />}
@@ -698,10 +586,10 @@ function CareerCard() {
               {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
             </Text>
           </VStack>
-          <VStack gap={0.5} align="end">
+          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
             <Text size="3xl" weight="bold" color="accent">{nf(totalXp)}</Text>
-            <MetaPill>{t('profile.xpUnit')}</MetaPill>
-          </VStack>
+            <Text type="supporting" color="secondary">{t('profile.xpUnit')}</Text>
+          </span>
         </HStack>
 
         <VStack gap={1}>
@@ -710,18 +598,19 @@ function CareerCard() {
             value={info.progressPct}
             isLabelHidden
           />
-          <HStack justify="between" align="start" gap={1} wrap="wrap">
-            <Text type="supporting" size="xsm" color="secondary">
-              {t('profile.xpBreakdown', { learn: nf(learningXp), quest: nf(questXp) })}
-            </Text>
-            <Text type="supporting" size="xsm" color="secondary" weight="semibold">
-              {nextLabel}
-            </Text>
-          </HStack>
+          <Text type="supporting" size="xsm" color="secondary" weight="semibold">
+            {nextLabel}
+          </Text>
         </VStack>
+
+        <Grid columns={{ minWidth: 110, max: 4 }} gap={1.5}>
+          <StatTile label={t('profile.quizzesCompleted')} value={nf(totals.quizzes)} />
+          <StatTile label={t('profile.questionsAnswered')} value={nf(totals.questions)} />
+          <StatTile label={t('profile.correctAnswers')} value={nf(totals.correct)} />
+          <StatTile label={t('profile.averageScore')} value={`${totals.average}%`} />
+        </Grid>
       </VStack>
-    </Card>
-    </Lift>
+    </div>
   );
 }
 
@@ -749,8 +638,7 @@ function AdvisorCard() {
   const hasData = !!advice && advice.weakAreas.length > 0;
 
   return (
-    <Lift>
-      <Card variant="default" padding={3} width="100%">
+    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
         <VStack gap={2}>
           <HStack gap={1.5} align="center">
             <div aria-hidden className="ss-tile" style={{ width: 40, height: 40, color: 'var(--brand-accent-on-soft)', background: 'var(--brand-accent-soft)' }}>
@@ -790,8 +678,7 @@ function AdvisorCard() {
             </VStack>
           )}
         </VStack>
-      </Card>
-    </Lift>
+      </div>
   );
 }
 
@@ -847,8 +734,7 @@ export function AccountDeletionCard() {
 
   return (
     <>
-      <Lift>
-        <Card variant="muted" padding={3} width="100%">
+      <div className="ss-panel" style={{ padding: 24, width: '100%', background: 'var(--color-background-muted)' }}>
           <VStack gap={1.5}>
             <SectionLabel>{t('profile.account')}</SectionLabel>
             <Text weight="semibold">{t('profile.deleteTitle')}</Text>
@@ -863,19 +749,19 @@ export function AccountDeletionCard() {
               <Button variant="destructive" size="sm" label={t('profile.deleteAction')} onClick={requestDeletion} />
             </HStack>
           </VStack>
-        </Card>
-      </Lift>
+        </div>
       <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       <AppToast open={!!message} message={message} onClose={() => setMessage(null)} severity="error" autoHideDuration={null} />
     </>
   );
 }
 
-const StatTile = ({ label, value, variant }: { label: string; value: number | string; variant: CardVariant }) => (
+// One neutral figure: every tile the same muted surface, whatever the value.
+const StatTile = ({ label, value }: { label: string; value: number | string }) => (
   <div style={{ display: 'flex', width: '100%' }}>
-    <Card variant={variant} padding={3} width="100%">
+    <Card variant="muted" padding={2} width="100%">
       <VStack gap={0.5}>
-        <Text size="4xl" weight="bold">{value}</Text>
+        <Text size="2xl" weight="bold">{value}</Text>
         <Text type="supporting" size="xsm" color="primary" weight="semibold">{label}</Text>
       </VStack>
     </Card>

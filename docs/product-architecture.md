@@ -570,9 +570,10 @@ production (issue #227, step D8).
   account with 402 `premium_required` (`kind: 'merch-redemption'`) before it
   asks for an address. `merch_stock` is a monthly cap on what the owner will
   post, not a count of goods on a shelf.
-- **Screen.** `/shop` reads Rewards in the navigation: the coins with the last
-  25 ledger lines, How to earn, merchandise, the crown and streak protection,
-  and orders and claims. devShark's own social profiles are linked once, as
+- **Screen.** `/shop` reads Coins in the navigation and in its title, with a
+  coin as its header icon: the coins with the last 25 ledger lines, How to
+  earn (five rows and one Premium note), the crown and streak protection,
+  Invite a friend, merchandise once redemption opens, and orders and claims. devShark's own social profiles are linked once, as
   icons in the site footer; the links come from `SOCIAL_PROFILES` in
   `client/product-catalog.ts` and show only once the owner records them.
 - **Invitations (step D8b, #228, migration 042).** The compliant substitute for

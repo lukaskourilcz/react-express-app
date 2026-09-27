@@ -43,10 +43,10 @@
   position: relative;
   overflow: hidden;
   border: 1px solid var(--ss-card-line, var(--color-border)) !important;
-  border-bottom: 2px solid var(--ss-card-bottom, var(--color-border)) !important;
+  border-bottom: 2px solid var(--ss-card-edge) !important;
   border-radius: var(--radius-container) !important;
   background: var(--color-background-surface) !important;
-  box-shadow: var(--ss-card-shadow, 0 2px 10px rgba(23,39,46,.06)) !important;
+  box-shadow: var(--shadow-low) !important;
 }
 .quiz-review-item.is-correct .quiz-review-card { border-top: 4px solid var(--ss-success-strong, #16803c) !important; }
 .quiz-review-item.is-incorrect .quiz-review-card { border-top: 4px solid var(--ss-error, #dc2626) !important; }

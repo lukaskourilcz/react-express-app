@@ -688,7 +688,7 @@ export default function Challenge() {
               alignItems: 'center',
               gap: 4,
               padding: '4px 11px',
-              borderRadius: 999,
+              borderRadius: 'var(--radius-element)',
               fontFamily: 'monospace',
               fontWeight: 800,
               fontVariantNumeric: 'tabular-nums',
@@ -728,7 +728,7 @@ export default function Challenge() {
           background: 'var(--color-background-surface)',
           border: '1px solid var(--color-border)',
           borderTop: `4px solid ${accent}`,
-          borderRadius: 16,
+          borderRadius: 'var(--radius-container)',
           overflow: 'auto',
         }}
       >
@@ -790,11 +790,11 @@ export default function Challenge() {
                         style={{
                           width: 26,
                           height: 26,
-                          borderRadius: 8,
+                          borderRadius: 'var(--radius-inner)',
                           display: 'grid',
                           placeItems: 'center',
                           flexShrink: 0,
-                          fontSize: '0.78rem',
+                          fontSize: 'var(--ss-type-meta)',
                           fontWeight: 700,
                           background: isSel ? 'var(--color-accent-muted)' : 'var(--color-background-muted)',
                           color: isSel ? 'var(--color-text-accent)' : 'inherit',
@@ -827,8 +827,8 @@ export default function Challenge() {
             zIndex: 5,
             maxHeight: '48vh',
             overflowY: 'auto',
-            borderRadius: 'var(--radius-element, 0.9rem)',
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
+            borderRadius: 'var(--radius-container)',
+            boxShadow: 'var(--shadow-high)',
           }}
         >
           <Banner
@@ -904,8 +904,8 @@ function CategoryTag({ category }: { category: CategoryType }) {
         alignItems: 'center',
         height: 26,
         padding: '0 10px',
-        borderRadius: 8,
-        fontSize: '0.78rem',
+        borderRadius: 'var(--radius-inner)',
+        fontSize: 'var(--ss-type-meta)',
         fontWeight: 600,
         lineHeight: 1,
         backgroundColor: getCategoryHexColor(category),
