@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:#f7f8f7; color:#132019; font-family:'Inter',system-ui,sans-serif; }
+    a { color:#2d7a2d; } a:hover { color:#236123; }
+  </style>
+</helmet>
+
+<div style="max-width:1560px;margin:0 auto;padding:28px 24px 64px;display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <a href="00 Audit overview.dc.html" style="font-size:.8rem;font-weight:600;text-decoration:none">← Audit overview</a>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#2d7a2d">Section 6 of 7 · setup → in-quiz → review · public route</span>
+      <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.02em">Quiz</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(138,87,0,.09);color:#8a5700;font-weight:700;font-size:.9rem;border:1px solid rgba(138,87,0,.25)">Verdict: needs work (light)</span>
+      <a href="05 Coding.dc.html" style="font-size:.85rem;font-weight:600;text-decoration:none">← Coding</a>
+      <a href="07 Challenge.dc.html" style="font-size:.85rem;font-weight:600;text-decoration:none">Challenge →</a>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,600px),1fr));gap:24px;align-items:start">
+    <section style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <span style="font-size:.8rem;font-weight:700;color:#4f6570">Current view · recreated from <code style="font-size:.78rem">Quiz.tsx</code> @ bc3a2e8 · setup, then the result and one review card (the in-quiz screen hides the header; it is described in the notes)</span>
+      <div style="position:relative;overflow:hidden;border:1px solid rgba(23,39,46,.14);border-radius:12px;background:light-dark(#f3f6f5,#0b141b);color:light-dark(#132019,#e8eef0);color-scheme:{{ scheme }}">
+        <dc-import name="AppShell" active="/quiz" theme="{{ theme }}" hint-size="100%,57px"></dc-import>
+        <div style="max-width:800px;margin:0 auto;padding:1rem 1.5rem 3.5rem;display:flex;flex-direction:column;gap:40px;box-sizing:border-box">
+
+          <!-- Setup -->
+          <div style="max-width:680px;margin:0 auto;width:100%">
+            <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:20px">
+              <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Solo quiz<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+              <h1 style="margin:6px 0 0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.015em">Build your quiz.</h1>
+              <p style="margin:0;font-size:.95rem;color:light-dark(#4f6570,#9db3bc)">Importance-weighted questions — the ones that matter most surface more often. <span title="Finding 1" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;vertical-align:middle">1</span></p>
+            </div>
+            <div style="position:relative;overflow:hidden;padding:24px;display:flex;flex-direction:column;gap:20px;border-radius:20px;background:light-dark(#fff,#101c24);border:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4))">
+              <img src="favicon.svg" alt="" style="position:absolute;right:-6%;bottom:-38%;width:360px;height:360px;opacity:.06;transform:rotate(-8deg);pointer-events:none;filter:grayscale(1) brightness(.3)">
+              <span title="Finding 4" style="position:absolute;right:16px;bottom:16px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">4</span>
+              <div style="display:flex;flex-direction:column;gap:10px;position:relative">
+                <div style="display:flex;justify-content:space-between;align-items:center"><span style="font-family:'Manrope',sans-serif;font-weight:700;font-size:.95rem">Categories</span><span style="min-height:44px;display:inline-flex;align-items:center;color:light-dark(#2d7a2d,#4caf50);font-weight:600;font-size:.85rem">Select all</span></div>
+                <div style="display:flex;flex-wrap:wrap;gap:8px">
+                  <sc-for list="{{ cats }}" as="c" hint-placeholder-count="8">
+                    <span style="display:inline-flex;align-items:center;gap:6px;background:{{ c.bg }};color:{{ c.fg }};border:1px solid {{ c.line }};border-radius:999px;padding:7px 14px;min-height:44px;font-weight:600;font-size:.85rem;box-sizing:border-box"><span style="width:16px;height:16px;border-radius:3px;border:1px dashed currentColor;opacity:.6"></span>{{ c.name }}</span>
+                  </sc-for>
+                </div>
+                <span style="min-height:44px;display:inline-flex;align-items:center;color:light-dark(#2d7a2d,#4caf50);font-weight:600;font-size:.85rem">Show all categories</span>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:20px;position:relative">
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <span style="font-family:'Manrope',sans-serif;font-weight:700;font-size:.95rem">Questions</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <sc-for list="{{ counts }}" as="n" hint-placeholder-count="4">
+                      <span style="display:inline-flex;align-items:center;justify-content:center;min-width:48px;background:{{ n.bg }};color:{{ n.fg }};border:1px solid {{ n.line }};border-radius:999px;padding:7px 14px;min-height:44px;font-weight:600;font-size:.85rem;box-sizing:border-box">{{ n.v }}</span>
+                    </sc-for>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:10px">
+                  <span style="font-family:'Manrope',sans-serif;font-weight:700;font-size:.95rem">Difficulty</span>
+                  <div style="display:flex;flex-wrap:wrap;gap:8px">
+                    <sc-for list="{{ diffs }}" as="d" hint-placeholder-count="5">
+                      <span style="display:inline-flex;align-items:center;gap:6px;background:{{ d.bg }};color:{{ d.fg }};border:1px solid {{ d.line }};border-radius:999px;padding:7px 14px;min-height:44px;font-weight:600;font-size:.85rem;box-sizing:border-box">{{ d.v }}<span style="display:{{ d.markerDisplay }};place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">3</span></span>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+              <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap;position:relative">
+                <span style="display:inline-flex;align-items:center;justify-content:center;background:light-dark(#2d7a2d,#4caf50);color:light-dark(#fff,#0b141b);border-radius:10px;padding:13px 26px;min-height:44px;font-weight:600;font-size:1rem;box-sizing:border-box">Start quiz</span>
+                <span style="font-size:.8rem;color:light-dark(#4f6570,#9db3bc)">Answers stay on the server until you submit — no peeking.</span>
+                <span title="Finding 2" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">2</span>
+              </div>
+            </div>
+            <div style="display:flex;gap:16px;justify-content:center;margin-top:16px;flex-wrap:wrap;font-size:.85rem;font-weight:600;color:light-dark(#2d7a2d,#4caf50)"><span style="min-height:44px;display:inline-flex;align-items:center">Today’s challenge</span><span style="min-height:44px;display:inline-flex;align-items:center">Review weak areas</span><span style="min-height:44px;display:inline-flex;align-items:center">Biggest Shark Challenge</span></div>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:12px;color:light-dark(#4f6570,#9db3bc);font-size:.75rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase"><span style="flex:1;height:1px;background:currentColor;opacity:.3"></span>after submitting<span style="flex:1;height:1px;background:currentColor;opacity:.3"></span></div>
+
+          <!-- Result -->
+          <div style="max-width:680px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:24px">
+            <div style="position:relative;overflow:hidden;padding:32px;display:flex;flex-direction:column;align-items:center;gap:12px;border-radius:20px;background:light-dark(#fff,#101c24);border:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4))">
+              <img src="favicon.svg" alt="" style="position:absolute;right:-6%;bottom:-40%;width:340px;height:340px;opacity:.06;transform:rotate(-8deg);pointer-events:none;filter:grayscale(1) brightness(.3)">
+              <span style="position:relative;text-align:center;font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Quiz complete<span style="display:block;width:46px;height:6px;margin:5px auto 0;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+              <h1 style="position:relative;margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:3rem;line-height:1;letter-spacing:-.02em;color:light-dark(#2d7a2d,#4caf50)">7 / 10</h1>
+              <span style="position:relative;font-size:.95rem;color:light-dark(#4f6570,#9db3bc)">7 out of 10 · 70% <span title="Finding 5" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;vertical-align:middle">5</span></span>
+              <div style="position:relative;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:4px;font-size:.875rem;font-weight:600">
+                <span style="display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:10px;background:light-dark(#2d7a2d,#4caf50);color:light-dark(#fff,#0b141b)">New quiz</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 14px;border-radius:10px;border:1px solid light-dark(rgba(23,39,46,.3),rgba(232,238,240,.28))"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>Share result</span>
+                <span style="display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:10px;color:light-dark(#4f6570,#9db3bc)">Review your answers ↓</span>
+                <span style="display:inline-flex;align-items:center;min-height:36px;padding:0 14px;border-radius:10px;color:light-dark(#4f6570,#9db3bc)">Back home</span>
+                <span title="Finding 6" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;align-self:center">6</span>
+              </div>
+            </div>
+            <h3 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.25rem;letter-spacing:-.015em">Review your answers (10)<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.3;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></h3>
+            <div style="padding:24px;display:flex;flex-direction:column;gap:12px;border-radius:16px;background:light-dark(#fff,#101c24);border:1px solid light-dark(rgba(23,39,46,.12),rgba(232,238,240,.1))">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+                <div style="display:flex;gap:8px;align-items:center"><span style="font-family:'Manrope',sans-serif;font-weight:700;font-size:1rem">Question 3</span><span style="font-size:.72rem;font-weight:700;padding:2px 8px;border-radius:999px;background:light-dark(rgba(220,38,38,.1),rgba(248,113,113,.15));color:light-dark(#b91c1c,#fca5a5)">Incorrect</span></div>
+                <div style="display:flex;gap:4px;align-items:center;color:light-dark(#4f6570,#9db3bc)">
+                  <span style="display:inline-grid;place-items:center;width:40px;height:40px;border-radius:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg></span>
+                  <span style="display:inline-grid;place-items:center;width:40px;height:40px;border-radius:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg></span>
+                  <span style="display:inline-flex;align-items:center;height:26px;padding:0 10px;border-radius:8px;font-size:.78rem;font-weight:600;background:#f7df1e;color:#132019">JavaScript</span>
+                  <span title="Finding 7" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">7</span>
+                </div>
+              </div>
+              <p style="margin:0;font-size:.95rem;line-height:1.5">What does <code style="font-family:ui-monospace,monospace;font-size:.9em;background:light-dark(#edf2f1,#16242d);padding:1px 5px;border-radius:4px">typeof null</code> return?</p>
+              <p style="margin:0;font-size:.875rem">Your answer: <strong>"null"</strong></p>
+              <p style="margin:0;font-size:.875rem;color:light-dark(#166534,#22c55e)">Correct answer: <strong>"object"</strong></p>
+              <div style="padding:12px 14px;background:light-dark(#edf2f1,#16242d);border-radius:10px;border:1px solid light-dark(rgba(23,39,46,.12),rgba(232,238,240,.1));border-left:4px solid #f7df1e;font-size:.875rem;line-height:1.5">A historical bug kept in the language: null is tagged as an object internally, so typeof reports "object".</div>
+            </div>
+          </div>
+        </div>
+        <div aria-hidden="true" style="position:absolute;bottom:0;left:0;right:0;height:30px;overflow:hidden;pointer-events:none">
+          <div style="position:absolute;left:0;right:0;bottom:8px;height:6px;background:currentColor;opacity:.18;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></div>
+          <img src="favicon.svg" alt="" width="20" height="20" style="position:absolute;bottom:7px;left:58%;filter:grayscale(1) brightness(.4)">
+        </div>
+      </div>
+
+      <!-- Proposed result -->
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;margin-top:14px"><span style="font-size:.8rem;font-weight:700;color:#166534">Proposed · result and review card (one of the three before/after changes)</span></div>
+      <div style="position:relative;overflow:hidden;border:1px solid rgba(23,39,46,.14);border-radius:12px;background:light-dark(#f3f6f5,#0b141b);color:light-dark(#132019,#e8eef0);color-scheme:{{ scheme }};padding:24px">
+        <div style="max-width:680px;margin:0 auto;width:100%;display:flex;flex-direction:column;gap:20px">
+          <div style="padding:28px 32px;display:flex;flex-direction:column;align-items:center;gap:10px;border-radius:16px;background:light-dark(#fff,#101c24);border:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4))">
+            <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Quiz complete</span>
+            <span style="font-family:'Manrope',sans-serif;font-weight:800;font-size:3rem;line-height:1;letter-spacing:-.02em">7 / 10</span>
+            <span style="font-size:.95rem;color:light-dark(#4f6570,#9db3bc)">70% · JavaScript, CSS · Climb</span>
+            <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin-top:6px;font-size:.875rem;font-weight:600">
+              <span style="display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:10px;background:light-dark(#2d7a2d,#4caf50);color:light-dark(#fff,#0b141b)">New quiz</span>
+              <span style="display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:10px;border:1px solid light-dark(rgba(23,39,46,.3),rgba(232,238,240,.28))">Share</span>
+              <span style="display:inline-flex;align-items:center;min-height:40px;padding:0 16px;border-radius:10px;color:light-dark(#4f6570,#9db3bc)">Review answers ↓</span>
+            </div>
+          </div>
+          <div style="padding:20px 24px;display:flex;flex-direction:column;gap:10px;border-radius:16px;background:light-dark(#fff,#101c24);border:1px solid light-dark(rgba(23,39,46,.12),rgba(232,238,240,.1))">
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap">
+              <span style="font-size:.78rem;font-weight:600;color:light-dark(#4f6570,#9db3bc);letter-spacing:.02em">3 · JavaScript · <span style="color:light-dark(#b91c1c,#fca5a5)">✕ Incorrect</span></span>
+              <div style="display:flex;gap:4px;align-items:center;color:light-dark(#4f6570,#9db3bc)">
+                <span style="display:inline-grid;place-items:center;width:40px;height:40px;border-radius:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg></span>
+                <span style="display:inline-grid;place-items:center;width:40px;height:40px;border-radius:8px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg></span>
+              </div>
+            </div>
+            <p style="margin:0;font-size:.95rem;line-height:1.5">What does <code style="font-family:ui-monospace,monospace;font-size:.9em;background:light-dark(#edf2f1,#16242d);padding:1px 5px;border-radius:4px">typeof null</code> return?</p>
+            <p style="margin:0;font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">You answered <strong style="color:light-dark(#132019,#e8eef0)">"null"</strong> · Correct: <strong style="color:light-dark(#132019,#e8eef0)">"object"</strong></p>
+            <p style="margin:0;padding:12px 14px;background:light-dark(#edf2f1,#16242d);border-radius:10px;font-size:.875rem;line-height:1.5">A historical bug kept in the language: null is tagged as an object internally, so typeof reports "object".</p>
+          </div>
+        </div>
+      </div>
+      <p style="margin:0;font-size:.75rem;color:#4f6570;line-height:1.5">Fidelity: pill geometry, panel radii, watermark, button set and copy from Quiz.tsx; Astryx Button/Badge sizes approximated; the category glyphs are placeholders for bundled devicons. The proposed card uses the same tokens with nothing added.</p>
+    </section>
+
+    <aside style="display:flex;flex-direction:column;gap:28px;min-width:0">
+      <div style="background:#fff;border:1px solid rgba(23,39,46,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">Verdict</h2>
+        <p style="margin:0;font-size:.95rem;line-height:1.55">Needs work, lightly. Setup is one panel with three clear groups and a saved configuration; the in-quiz screen hides the chrome, anchors the answers, and has keyboard shortcuts and a leave-confirmation — all right. The result and review screens carry the noise: a repeated score line, four buttons, a badge + two icons + a coloured tag per review card, an explanation box with a coloured left border, and the watermark fin twice more.</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">Findings</h2>
+        <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ findings }}" as="f" hint-placeholder-count="8">
+            <li style="display:grid;grid-template-columns:24px 1fr;gap:10px;background:#fff;border:1px solid rgba(23,39,46,.1);border-radius:10px;padding:12px 14px">
+              <span style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;margin-top:2px">{{ f.n }}</span>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:.875rem;line-height:1.5">
+                <span><strong>{{ f.what }}</strong> <span style="color:#4f6570">— {{ f.where }}</span></span>
+                <span>{{ f.why }}</span>
+                <span style="display:flex;gap:8px;align-items:flex-start"><span style="flex-shrink:0;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:{{ f.actionBg }};color:{{ f.actionFg }};margin-top:2px">{{ f.action }}</span><span>{{ f.fix }}</span></span>
+              </div>
+            </li>
+          </sc-for>
+        </ol>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">Copy table</h2>
+        <div style="overflow-x:auto;background:#fff;border:1px solid rgba(23,39,46,.12);border-radius:12px">
+          <table style="width:100%;min-width:640px;border-collapse:collapse;font-size:.82rem;line-height:1.45">
+            <thead><tr>
+              <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(23,39,46,.16);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Location (key)</th>
+              <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(23,39,46,.16);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Current text</th>
+              <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(23,39,46,.16);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Problem</th>
+              <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(23,39,46,.16);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Replacement</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ copy }}" as="c" hint-placeholder-count="8">
+                <tr>
+                  <td style="padding:10px 12px;border-bottom:1px solid rgba(23,39,46,.08);vertical-align:top;font-family:ui-monospace,monospace;font-size:.75rem;color:#4f6570;white-space:nowrap">{{ c.key }}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid rgba(23,39,46,.08);vertical-align:top">“{{ c.text }}”</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid rgba(23,39,46,.08);vertical-align:top;color:#8a5700;font-weight:600">{{ c.problem }}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid rgba(23,39,46,.08);vertical-align:top;font-weight:600">{{ c.fix }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid rgba(23,39,46,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;font-size:.875rem;line-height:1.55">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">In-quiz screen, states, mobile</h2>
+        <p style="margin:0"><strong>In-quiz (not recreated).</strong> Header and footer hide; one 600px card, 82% max height, counter + waterline progress, category tag, optional <code>#tag</code> badges, question, radio-card answers, Previous/Next/Submit. The hashtag badges (finding 8) are the only noise. The soft tone on each pick (settings.soundEffects) should default off — check the default in lib/settings.ts (not read).</p>
+        <p style="margin:0"><strong>States.</strong> Loading (QuoteLoader "Preparing your questions."), error with Retry + Back to settings, empty-set guard, restore-in-progress from sessionStorage, leave-confirm dialog, receipt replay when a stats write fails. Complete and honest ("quiz.streakWarning" when a result could not be recorded).</p>
+        <p style="margin:0"><strong>Mobile.</strong> Pills wrap at 44px height; sixteen category pills plus "Show all" is two to three rows at 360px — acceptable for a setup screen that remembers itself. The result buttons wrap to two rows; with three buttons (finding 6) they fit one.</p>
+        <p style="margin:0"><strong>Dark theme.</strong> Category tags use devicon brand hex (JavaScript #f7df1e, etc.) with computed on-colour text in both themes — verified in lib/contrast.ts by design, not in a browser. The review explanation's coloured left border is the one place a brand colour is used as decoration on a neutral box.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Recreated screen&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'dark' ? 'dark' : 'light';
+    const dark = theme === 'dark';
+    const wave = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6' viewBox='0 0 24 6'%3E%3Cpath d='M0 3 Q 6 0.4 12 3 T 24 3' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")`;
+    const pill = (on) => ({
+      bg: on ? 'rgba(45,122,45,.12)' : (dark ? '#101c24' : '#fff'),
+      fg: on ? (dark ? '#4caf50' : '#236123') : (dark ? '#e8eef0' : '#132019'),
+      line: on ? (dark ? '#4caf50' : '#2d7a2d') : (dark ? 'rgba(232,238,240,.08)' : 'rgba(23,39,46,.1)'),
+    });
+    const cats = ['JavaScript', 'TypeScript', 'React', 'Next.js', 'Node.js', 'HTML', 'CSS', 'Databases'].map((name, i) => ({ name, ...pill(i === 0 || i === 6) }));
+    const counts = [5, 10, 15, 20].map((v) => ({ v, ...pill(v === 10) }));
+    const diffs = [['Basics', false], ['Easy', false], ['Climb', true], ['Advanced', false], ['Mixed', false]].map(([v, on]) => ({ v, ...pill(on), markerDisplay: v === 'Climb' ? 'inline-grid' : 'none' }));
+    const A = { delete: ['#fee2e2', '#991b1b'], merge: ['#fef3c7', '#92400e'], move: ['#e0f2fe', '#075985'], fix: ['#e3efe1', '#236123'], keep: ['#edf2f1', '#3c4f43'] };
+    const F = (n, what, where, why, action, fix) => ({ n, what, where, why, action, fix, actionBg: A[action][0], actionFg: A[action][1] });
+    const findings = [
+      F(1, 'Subtitle explains the sampling algorithm', 'quiz.buildSubtitle "Importance-weighted questions — the ones that matter most surface more often."', 'A learner setting up a quiz wants to know what to pick, not how the server weights the bank. "The ones that matter most" is a claim the reader cannot check.', 'fix', '"Choose topics, length and difficulty."'),
+      F(2, 'Reassurance nobody asked for', 'quiz.noPeeking "Answers stay on the server until you submit — no peeking."', 'Defensive copy in a playful voice, beside the primary button. Same family as "Answers verified by the server" on the Challenge page. Say fairness once (on /premium); everywhere else, just be fair.', 'delete', 'Delete.'),
+      F(3, 'A difficulty label that needs a tooltip', 'difficulty.zero-to-hero "Climb" (tooltip: "Progressive difficulty 1 → 5.")', 'Four of five labels are self-explanatory; "Climb" is a metaphor the tooltip has to unpack. Tooltips do not exist on touch.', 'fix', '"Progressive"'),
+      F(4, 'Watermark fin, twice', 'Setup panel (360px, 4%) and result panel (340px, 4%)', 'Same decoration as the landing and profile; invisible on ink, adds nothing on paper. See design system audit.', 'delete', 'Delete both.'),
+      F(5, 'Score stated twice', 'h1 "7 / 10" then "7 out of 10 · 70%"', 'The second line repeats the heading in words before adding the one new fact (the percentage). The aria-label already reads "7 out of 10".', 'fix', 'Under the heading: "70% · JavaScript, CSS · Climb" — the percentage plus what the quiz was, which the learner will otherwise not see again.'),
+      F(6, 'Four actions on the result card', 'New quiz · Share result · Review your answers ↓ · Back home', '"Back home" duplicates the logo and the nav that just reappeared. The primary/secondary/ghost/ghost mix reads as indecision.', 'delete', 'Three: New quiz (primary) · Share · Review answers ↓ (link).'),
+      F(7, 'Review card carries five marks per question', 'Heading "Question 3" + Badge "Incorrect" + bookmark + report + brand-coloured CategoryTag; explanation box with 4px coloured left border', 'Each question is labelled three ways (number, badge, colour). The left-border explanation is a template pattern this audit was asked to remove, and it is the only place the brand hex is used as trim.', 'fix', 'One meta line: "3 · JavaScript · ✕ Incorrect". Keep bookmark and report icons. Explanation in a plain muted box (mockup at left).'),
+      F(8, 'Hashtag badges during the quiz', 'in-progress header: Badge "#{tag}" per tag', 'Tags inform nothing while answering and compete with the category tag and progress bar for the one line above the question.', 'delete', 'Delete from the in-quiz header; tags remain useful as filters elsewhere.'),
+    ];
+    const copy = [
+      ['quiz.buildSubtitle', 'Importance-weighted questions — the ones that matter most surface more often.', 'mechanism claim', 'Choose topics, length and difficulty.'],
+      ['quiz.noPeeking', 'Answers stay on the server until you submit — no peeking.', 'defensive, playful', 'delete'],
+      ['difficulty.zero-to-hero', 'Climb', 'metaphor needs tooltip', 'Progressive'],
+      ['difficulty.advanced.tip', 'Difficulty 3–5. Experienced devs.', 'fragment', 'Difficulty 3–5.'],
+      ['result second line', '{correct} out of {total} · {pct}%', 'repeats heading', '{pct}% · {topics} · {difficulty}'],
+      ['quiz.backHome', 'Back home', 'redundant with nav', 'delete'],
+      ['quiz.reviewAnswersArrow', 'Review your answers ↓', 'fine; shorten', 'Review answers ↓'],
+      ['quiz.dailyComplete', 'Today’s challenge complete, see you tomorrow.', 'fine — plain', 'keep'],
+      ['quiz.loadingQuote', 'Preparing your questions.', 'fine', 'keep'],
+    ].map(([key, text, problem, fix]) => ({ key, text, problem, fix }));
+    return { theme, scheme: theme, wave, cats, counts, diffs, findings, copy };
+  }
+}
+</script>
+</body>
+</html>

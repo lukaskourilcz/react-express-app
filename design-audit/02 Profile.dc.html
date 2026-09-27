@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:#f7f8f7; color:#132019; font-family:'Inter',system-ui,sans-serif; }
+    a { color:#2d7a2d; } a:hover { color:#236123; }
+  </style>
+</helmet>
+
+<div style="max-width:1560px;margin:0 auto;padding:28px 24px 64px;display:flex;flex-direction:column;gap:24px">
+  <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <a href="00 Audit overview.dc.html" style="font-size:.8rem;font-weight:600;text-decoration:none">← Audit overview</a>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#2d7a2d">Section 2 of 7 · signed in · not verified in the live app</span>
+      <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.02em">User profile</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(138,87,0,.09);color:#8a5700;font-weight:700;font-size:.9rem;border:1px solid rgba(138,87,0,.25)">Verdict: needs work (light)</span>
+      <a href="01 Homepage.dc.html" style="font-size:.85rem;font-weight:600;text-decoration:none">← Homepage</a>
+      <a href="03 Leaderboard.dc.html" style="font-size:.85rem;font-weight:600;text-decoration:none">Leaderboard →</a>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,600px),1fr));gap:24px;align-items:start">
+
+    <section style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <span style="font-size:.8rem;font-weight:700;color:#4f6570">Current view · recreated from <code style="font-size:.78rem">Profile.tsx</code>, <code style="font-size:.78rem">DeepEndScreens.css</code> @ bc3a2e8 — behind Google sign-in, so the live screen was not seen</span>
+      <div style="position:relative;overflow:hidden;border:1px solid rgba(23,39,46,.14);border-radius:12px;background:light-dark(#f3f6f5,#0b141b);color:light-dark(#132019,#e8eef0);color-scheme:{{ scheme }}">
+        <dc-import name="AppShell" active="/profile" signed-in="{{ true }}" theme="{{ theme }}" hint-size="100%,57px"></dc-import>
+        <div style="max-width:1000px;margin:0 auto;padding:1.5rem 1.5rem 3.5rem;display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+
+          <!-- Identity -->
+          <div style="position:relative;overflow:hidden;border-top:4px solid light-dark(#2d7a2d,#4caf50);border-radius:16px;border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4));background:light-dark(#fff,#101c24);padding:32px">
+            <img src="favicon.svg" alt="" style="position:absolute;right:-5%;bottom:-75px;width:240px;height:240px;opacity:.06;pointer-events:none;filter:grayscale(1) brightness(.3)">
+            <div style="position:relative;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+              <div style="display:flex;gap:16px;align-items:center">
+                <span style="width:64px;height:64px;border-radius:50%;background:light-dark(#d6ded3,#3c4f43);display:grid;place-items:center;font-weight:700;color:light-dark(#132019,#e8eef0);flex-shrink:0">LK</span>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Profile <span title="Finding 1" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;vertical-align:middle;letter-spacing:0">1</span><span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+                  <span style="font-family:'Manrope',sans-serif;font-weight:800;font-size:1.75rem;letter-spacing:-.02em;line-height:1.1">Lukáš Kouřil</span>
+                  <span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">lukas@example.com</span>
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;flex-shrink:0">
+                <span style="display:grid;place-items:center;width:44px;height:44px;border:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));border-radius:8px;background:light-dark(#fff,#101c24);color:light-dark(#4f6570,#9db3bc)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></span>
+                <span style="display:grid;place-items:center;width:44px;height:44px;border:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));border-radius:8px;background:light-dark(#fff,#101c24);color:light-dark(#4f6570,#9db3bc)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.5 8.5a5 5 0 0 1 0 7"></path></svg></span>
+              </div>
+            </div>
+            <div style="position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:14px;padding-top:12px;border-top:1px solid light-dark(rgba(23,39,46,.12),rgba(232,238,240,.1));font-size:.875rem"><span style="font-weight:600">Free plan</span><span style="color:light-dark(#4f6570,#9db3bc)">HTML, CSS, JavaScript and React levels 1 to 12</span><a href="#" style="color:light-dark(#2d7a2d,#4caf50)">See what Premium includes</a><span style="font-size:.72rem;color:light-dark(#4f6570,#9db3bc)">(PlanLine.tsx not read — wording approximate)</span></div>
+          </div>
+
+          <!-- Tabs -->
+          <div style="display:flex;gap:4px;border-bottom:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08))">
+            <span style="min-height:44px;padding:8px 16px;border-bottom:2px solid light-dark(#2d7a2d,#4caf50);font-weight:750;font-size:.92rem;display:inline-flex;align-items:center">Overview</span>
+            <span style="min-height:44px;padding:8px 16px;border-bottom:2px solid transparent;font-weight:650;font-size:.92rem;color:light-dark(#4f6570,#9db3bc);display:inline-flex;align-items:center">Friends</span>
+          </div>
+
+          <!-- Streaks -->
+          <div style="border-radius:16px;border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4));background:light-dark(#fff,#101c24);border-top:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));padding:24px;display:flex;flex-direction:column;gap:16px">
+            <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Streaks<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px">
+              <div style="background:light-dark(rgba(234,88,12,.1),rgba(251,146,60,.14));border-radius:12px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center">
+                <span style="color:light-dark(#8a5700,#fbbf24)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22c4-2 7-5.5 7-10 0-3-2-5-3-6-1 3-3 4-3 4s0-4-3-7c0 3-2 5-3 7-1 2-2 3-2 6 0 4.5 3 8 7 6z"></path></svg></span>
+                <span style="font-size:2.25rem;font-weight:700;line-height:1.1">4</span>
+                <span style="font-size:.875rem;font-weight:600">Current streak</span>
+                <span style="display:inline-flex;align-items:center;gap:6px"><span style="display:inline-block;border-radius:999px;padding:3px 10px;font-weight:600;font-size:.75rem;letter-spacing:.02em;color:light-dark(#8a5700,#fbbf24);background:color-mix(in srgb,currentColor 14%,transparent)">days</span><span title="Finding 2" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">2</span></span>
+                <span style="display:inline-flex;align-items:center;gap:6px;min-height:44px;margin-top:6px;padding:6px 12px;border-radius:999px;border:1px solid light-dark(#8a5700,#fbbf24);background:light-dark(#fff,#101c24);font-size:.78rem;font-weight:650"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><path d="M9 12l2 2 4-4"></path></svg>Shield the next 48 hours</span>
+                <span style="font-size:.72rem;color:light-dark(#4f6570,#9db3bc)">2 protections left this month</span>
+              </div>
+              <div style="background:light-dark(rgba(6,182,212,.1),rgba(103,232,249,.14));border-radius:12px;padding:24px;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center">
+                <span style="color:light-dark(#0e7490,#67e8f9)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg></span>
+                <span style="font-size:2.25rem;font-weight:700;line-height:1.1;color:light-dark(#2d7a2d,#4caf50)">12</span>
+                <span style="font-size:.875rem;font-weight:600">Longest streak</span>
+                <span style="display:inline-block;border-radius:999px;padding:3px 10px;font-weight:600;font-size:.75rem;letter-spacing:.02em;color:light-dark(#0e7490,#67e8f9);background:color-mix(in srgb,currentColor 14%,transparent)">days</span>
+              </div>
+            </div>
+            <p style="margin:0;text-align:center;font-size:.78rem;color:light-dark(#4f6570,#9db3bc);font-style:italic">One of ten rotating consistency tips (profile.tip.* — texts not read) <span title="Finding 3" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;vertical-align:middle;font-style:normal">3</span></p>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,360px),1fr));gap:16px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+              <!-- Career -->
+              <div style="border-radius:16px;border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4));background:light-dark(#fff,#101c24);border-top:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));padding:24px;display:flex;flex-direction:column;gap:16px">
+                <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Career<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+                <div style="display:flex;gap:16px;align-items:center">
+                  <span style="display:grid;place-items:center;width:52px;height:52px;border-radius:8px;background:rgba(45,122,45,.12);box-shadow:inset 0 0 0 1px rgba(45,122,45,.35);flex-shrink:0;color:light-dark(#2d7a2d,#4caf50)"><svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"></path><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3"></path></svg></span>
+                  <div style="display:flex;flex-direction:column;flex:1;min-width:0">
+                    <span style="font-family:'Manrope',sans-serif;font-weight:700;font-size:1.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Junior Full-Stack Developer</span>
+                    <span style="font-size:.78rem;color:light-dark(#4f6570,#9db3bc)">Level 3 of 12</span>
+                  </div>
+                  <div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+                    <span style="font-size:1.75rem;font-weight:700;color:light-dark(#2d7a2d,#4caf50);line-height:1">1,240</span>
+                    <span style="display:inline-flex;align-items:center;gap:6px"><span style="display:inline-block;border-radius:999px;padding:3px 10px;font-weight:600;font-size:.75rem;color:light-dark(#2d7a2d,#4caf50);background:color-mix(in srgb,currentColor 14%,transparent)">XP</span><span title="Finding 4" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">4</span></span>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <div style="height:8px;border-radius:999px;background:light-dark(#edf2f1,#16242d);overflow:hidden"><div style="width:62%;height:100%;background:light-dark(#2d7a2d,#4caf50)"></div></div>
+                  <div style="display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:.78rem;color:light-dark(#4f6570,#9db3bc)"><span>820 Learn · 420 Quest (profile.xpBreakdown)</span><span style="font-weight:600">760 XP to Mid-level Full-Stack Developer</span></div>
+                </div>
+              </div>
+              <!-- Learning paths (not read) -->
+              <div style="border-radius:16px;border:1px dashed light-dark(rgba(23,39,46,.25),rgba(232,238,240,.3));padding:24px;font-size:.85rem;color:light-dark(#4f6570,#9db3bc)"><strong style="color:light-dark(#132019,#e8eef0)">Learning paths card</strong> — track picker + FDE/DSA specialization. <code>LearningPathsCard.tsx</code> not read; not audited.</div>
+              <!-- Advisor -->
+              <div style="border-radius:16px;border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4));background:light-dark(#fff,#101c24);border-top:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));padding:24px;display:flex;flex-direction:column;gap:16px">
+                <div style="display:flex;gap:12px;align-items:center">
+                  <span style="display:grid;place-items:center;width:40px;height:40px;border-radius:8px;background:rgba(45,122,45,.12);color:light-dark(#236123,#4caf50)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="6"></circle><circle cx="12" cy="12" r="2"></circle></svg></span>
+                  <div style="display:flex;flex-direction:column"><span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Study advisor</span><span style="font-size:.78rem;color:light-dark(#4f6570,#9db3bc)">advisor.subtitle (not read)</span></div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="font-weight:600;font-size:.95rem">Your weakest areas</span>
+                  <sc-for list="{{ weak }}" as="w" hint-placeholder-count="3">
+                    <div>
+                      <div style="display:flex;justify-content:space-between;gap:8px;font-size:.85rem"><span style="font-weight:600">{{ w.name }}</span><span style="font-size:.78rem;color:light-dark(#4f6570,#9db3bc)">{{ w.pct }}% accuracy · {{ w.n }} answered</span></div>
+                      <div style="margin-top:4px;height:6px;border-radius:999px;background:light-dark(#edf2f1,#16242d);overflow:hidden"><div style="width:{{ w.pct }}%;height:100%;background:light-dark(#2d7a2d,#4caf50);border-radius:999px"></div></div>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+              <!-- Statistics -->
+              <div style="border-radius:16px;border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4));background:light-dark(#fff,#101c24);border-top:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));padding:24px;display:flex;flex-direction:column;gap:16px">
+                <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Statistics <span title="Finding 5" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;vertical-align:middle;letter-spacing:0">5</span><span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:12px">
+                  <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+                    <div style="background:{{ s.bg }};border-radius:12px;padding:24px;display:flex;flex-direction:column;gap:4px"><span style="font-size:2.25rem;font-weight:700;line-height:1.1">{{ s.value }}</span><span style="font-size:.78rem;font-weight:600">{{ s.label }}</span></div>
+                  </sc-for>
+                </div>
+              </div>
+              <!-- GitHub garden (not read) -->
+              <div style="border-radius:16px;border:1px dashed light-dark(rgba(23,39,46,.25),rgba(232,238,240,.3));padding:24px;font-size:.85rem;color:light-dark(#4f6570,#9db3bc)"><strong style="color:light-dark(#132019,#e8eef0)">GitHub garden card</strong> — connect a repository; every passed task is committed. <code>GithubGardenCard.tsx</code> not read; not audited.</div>
+              <!-- Social -->
+              <div style="border-radius:16px;border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4));background:light-dark(#fff,#101c24);border-top:1px solid light-dark(rgba(23,39,46,.1),rgba(232,238,240,.08));padding:24px;display:flex;flex-direction:column;gap:10px">
+                <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Find devShark elsewhere<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+                <p style="margin:0;font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">News, new challenges and the odd behind-the-scenes post.</p>
+                <p style="margin:0;font-size:.875rem;display:flex;align-items:center;gap:6px;flex-wrap:wrap">Thanks for visiting: 20 coins the first time you open each profile. <span title="Finding 6" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">6</span></p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="display:inline-flex;min-height:44px;align-items:center;padding:0 1rem;border-radius:10px;background:light-dark(#edf2f1,#16242d);border:1px solid light-dark(rgba(23,39,46,.12),rgba(232,238,240,.1));font-weight:750;font-size:.875rem">LinkedIn ↗</span><span style="display:inline-flex;min-height:44px;align-items:center;padding:0 1rem;border-radius:10px;background:light-dark(#edf2f1,#16242d);border:1px solid light-dark(rgba(23,39,46,.12),rgba(232,238,240,.1));font-weight:750;font-size:.875rem">Instagram ↗</span><span style="display:inline-flex;min-height:44px;align-items:center;padding:0 1rem;border-radius:10px;background:light-dark(#edf2f1,#16242d);border:1px solid light-dark(rgba(23,39,46,.12),rgba(232,238,240,.1));font-weight:750;font-size:.875rem">Threads ↗</span></div>
+                <span style="font-size:.72rem;color:light-dark(#4f6570,#9db3bc)">(SocialProfiles.tsx not read — layout approximate; copy from rewards.social.*)</span>
+              </div>
+              <!-- Account -->
+              <div style="border-radius:16px;border-bottom:2px solid light-dark(rgba(23,39,46,.16),rgba(0,0,0,.55));box-shadow:0 2px 10px light-dark(rgba(23,39,46,.06),rgba(0,0,0,.4));background:light-dark(#edf2f1,#16242d);padding:24px;display:flex;flex-direction:column;gap:10px">
+                <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Account<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+                <span style="font-weight:600">Delete your account</span>
+                <span style="font-size:.78rem;color:light-dark(#4f6570,#9db3bc)">profile.deleteDescription (not read)</span>
+                <div style="display:flex;justify-content:flex-end"><span style="display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:8px;background:light-dark(#dc2626,#f87171);color:light-dark(#fff,#0b141b);font-weight:600;font-size:.8rem">Delete account</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div aria-hidden="true" style="position:absolute;bottom:0;left:0;right:0;height:30px;overflow:hidden;pointer-events:none">
+          <div style="position:absolute;left:0;right:0;bottom:8px;height:6px;background:currentColor;opacity:.18;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></div>
+          <img src="favicon.svg" alt="" width="20" height="20" style="position:absolute;bottom:7px;left:38%;filter:grayscale(1) brightness(.4)">
+        </div>
+      </div>
+      <p style="margin:0;font-size:.75rem;color:#4f6570;line-height:1.5">Fidelity: card anatomy, tabs, shield control and copy keys from source; Astryx Card colour variants (orange/cyan/blue/purple/green/gray) and type sizes approximated; sample numbers invented for layout. Dashed boxes mark components whose source was not read.</p>
+    </section>
+
+    <aside style="display:flex;flex-direction:column;gap:28px;min-width:0">
+      <div style="background:#fff;border:1px solid rgba(23,39,46,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">Verdict</h2>
+        <p style="margin:0;font-size:.95rem;line-height:1.55">Needs work, lightly. The information architecture is sound (identity → streak → career/paths/advisor · stats/garden/account) and the streak shield is a good, honest control. What makes it read as a game dashboard is decoration on numbers: six tinted tiles in five hues, icons that mean nothing (a bolt for "longest streak"), units in coloured pills, and a rotating motivational line. Strip those and the same cards look like an account page. <strong>Not verified in the live app</strong> — everything here is from source.</p>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">Findings</h2>
+        <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ findings }}" as="f" hint-placeholder-count="8">
+            <li style="display:grid;grid-template-columns:24px 1fr;gap:10px;background:#fff;border:1px solid rgba(23,39,46,.1);border-radius:10px;padding:12px 14px">
+              <span style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;margin-top:2px">{{ f.n }}</span>
+              <div style="display:flex;flex-direction:column;gap:4px;font-size:.875rem;line-height:1.5">
+                <span><strong>{{ f.what }}</strong> <span style="color:#4f6570">— {{ f.where }}</span></span>
+                <span>{{ f.why }}</span>
+                <span style="display:flex;gap:8px;align-items:flex-start"><span style="flex-shrink:0;font-size:.7rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:{{ f.actionBg }};color:{{ f.actionFg }};margin-top:2px">{{ f.action }}</span><span>{{ f.fix }}</span></span>
+              </div>
+            </li>
+          </sc-for>
+        </ol>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">Copy table</h2>
+        <div style="overflow-x:auto;background:#fff;border:1px solid rgba(23,39,46,.12);border-radius:12px">
+          <table style="width:100%;min-width:640px;border-collapse:collapse;font-size:.82rem;line-height:1.45">
+            <thead><tr>
+              <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(23,39,46,.16);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Location (key)</th>
+              <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(23,39,46,.16);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Current text</th>
+              <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(23,39,46,.16);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Problem</th>
+              <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(23,39,46,.16);font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Replacement</th>
+            </tr></thead>
+            <tbody>
+              <sc-for list="{{ copy }}" as="c" hint-placeholder-count="5">
+                <tr>
+                  <td style="padding:10px 12px;border-bottom:1px solid rgba(23,39,46,.08);vertical-align:top;font-family:ui-monospace,monospace;font-size:.75rem;color:#4f6570;white-space:nowrap">{{ c.key }}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid rgba(23,39,46,.08);vertical-align:top">“{{ c.text }}”</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid rgba(23,39,46,.08);vertical-align:top;color:#8a5700;font-weight:600">{{ c.problem }}</td>
+                  <td style="padding:10px 12px;border-bottom:1px solid rgba(23,39,46,.08);vertical-align:top;font-weight:600">{{ c.fix }}</td>
+                </tr>
+              </sc-for>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div style="background:#fff;border:1px solid rgba(23,39,46,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;font-size:.875rem;line-height:1.55">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">UX, states, mobile</h2>
+        <p style="margin:0"><strong>Zero-data (new account).</strong> A first visit shows 0 · 0 streak tiles, "0 XP · Level 1 of 12", four 0 statistics, and the advisor's empty state: seven zeros before any content. Hide the Statistics card until the first quiz is recorded and let the streak card carry the one useful line ("Answer a quiz today to start a streak"). The shield control correctly renders nothing until the server confirms it.</p>
+        <p style="margin:0"><strong>Density / mobile.</strong> Eight cards stack in one column under 360px-per-column; Account deletion lands correctly last. With Statistics folded into Career (finding 5) it is seven; with Social removed (finding 6) six.</p>
+        <p style="margin:0"><strong>Navigation.</strong> The header shows no active state for /profile (it is reached from the avatar menu). Fine. The "Profile" kicker above the name is the only breadcrumb and duplicates the avatar menu label.</p>
+        <p style="margin:0"><strong>Dark theme (not verified).</strong> Astryx Card tints (orange, cyan, blue, purple) come from theme-neutral, not from the Deep End tokens, so their dark values were never tuned against #101c24. Neutral tiles (finding 5) remove the risk.</p>
+        <p style="margin:0"><strong>Accessibility.</strong> Good: roving tabs, labelled groups, 44px switches, streak values with aria-labels when unavailable. Watch the 0.72rem "2 protections left" meta line on the tinted tile: secondary text on an orange tint is below 4.5:1 in light mode by inspection of the tokens; verify.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Recreated screen&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'dark' ? 'dark' : 'light';
+    const dark = theme === 'dark';
+    const wave = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6' viewBox='0 0 24 6'%3E%3Cpath d='M0 3 Q 6 0.4 12 3 T 24 3' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")`;
+    const tint = (l, d) => dark ? d : l;
+    const stats = [
+      ['23', 'Quizzes completed', tint('rgba(37,99,235,.1)', 'rgba(96,165,250,.16)')],
+      ['412', 'Questions answered', tint('rgba(147,51,234,.1)', 'rgba(192,132,252,.16)')],
+      ['301', 'Correct answers', tint('rgba(22,163,74,.1)', 'rgba(74,222,128,.16)')],
+      ['73%', 'Average score', tint('rgba(22,163,74,.1)', 'rgba(74,222,128,.16)')],
+    ].map(([value, label, bg]) => ({ value, label, bg }));
+    const weak = [['CSS', 48, 31], ['Node.js', 55, 22], ['TypeScript', 61, 44]].map(([name, pct, n]) => ({ name, pct, n }));
+    const A = { delete: ['#fee2e2', '#991b1b'], merge: ['#fef3c7', '#92400e'], move: ['#e0f2fe', '#075985'], fix: ['#e3efe1', '#236123'], keep: ['#edf2f1', '#3c4f43'] };
+    const F = (n, what, where, why, action, fix) => ({ n, what, where, why, action, fix, actionBg: A[action][0], actionFg: A[action][1] });
+    const findings = [
+      F(1, '"Profile" kicker above the user’s name', 'Identity banner', 'The page is reached from the avatar menu labelled Profile; the h1 is the name. The kicker is a label for a label.', 'delete', 'Remove the kicker; keep the waterline tick under the name if the banner needs the mark.'),
+      F(2, 'Units in coloured pills, icons that mean nothing', 'StreakCard: MetaPill "days" ×2, FlameIcon, BoltIcon; CareerCard MetaPill "XP"', 'A flame for a streak is a convention; a bolt for "longest" is not. Wrapping the word "days" in a tinted pill turns a unit into a badge. Two tiles, two hues, two icons, two pills for two integers.', 'fix', 'Render "4 days" and "12 days" inline (number 2.25rem, unit .875rem), one neutral tile style, no icons. Keep the shield control as is.'),
+      F(3, 'Rotating motivational tip', 'CONSISTENCY_TIPS, ten profile.tip.* keys', 'It replaced a "last quiz" date that "nobody acts on"; a tip nobody asked for is not better. Developers read rotating aphorisms as filler.', 'delete', 'Delete the line and the ten keys.'),
+      F(4, 'XP breakdown line', 'profile.xpBreakdown "{learn} Learn · {quest} Quest"', 'The split between learning XP and quest XP is an implementation detail; no action follows from it. The "N XP to next rank" line beside it is the useful one.', 'delete', 'Delete the breakdown; right-align the "to next rank" line under the bar.'),
+      F(5, 'Four Astryx colour variants for four counters', 'StatTile: blue / purple / green / gray (green flips at 70%)', 'Blue for "quizzes" and purple for "questions" carry no meaning. The 70% threshold that colours the average is never stated, so the colour is a judgement the user cannot read.', 'merge', 'Fold the four numbers into the Career card as one neutral row (quizzes · answered · correct · average). One card fewer, no hues.'),
+      F(6, 'Coins for opening a social profile', 'SocialProfiles, rewards.social.thanks', 'Paying users to follow the brand is the pattern this audit was asked to remove. It also appears twice (Profile and Rewards). A skeptical developer reads it as engagement bait.', 'delete', 'Remove the coin line and the reward. Show the three links once, in the footer, not as a card on Profile. (Owner decision: the mechanic exists server-side.)'),
+      F(7, 'Two surfaces per card', '<Lift> (.ss-raised) wrapping Astryx <Card>', 'The wrapper adds a 2px bottom edge and a shadow around a component that brings its own border and radius: two borders, two radii at the corners. Not verified visually; visible in the DOM structure.', 'fix', 'Style the card once: either the Astryx Card with a variant, or the .ss-panel recipe with no Card inside. See design system audit.'),
+      F(8, 'Rank title can overflow at 360px', 'CareerCard Heading maxLines=1 "Junior Full-Stack Developer" next to a 1.75rem number', 'Heading + XP figure share one row; on a 360px phone the title truncates to "Junior Full-Sta…". Not verified in a browser.', 'fix', 'Stack the XP figure under the title on narrow widths, or drop the redundant "Level 3 of 12" subline and let the title wrap to two lines.'),
+    ];
+    const copy = [
+      ['profile.tip.* (10 keys)', 'rotating one-line tips', 'motivational filler', 'delete'],
+      ['profile.xpBreakdown', '{learn} Learn · {quest} Quest', 'no information a user acts on', 'delete'],
+      ['MetaPill units', 'days · XP', 'unit styled as badge', 'inline unit text'],
+      ['rewards.social.body', 'News, new challenges and the odd behind-the-scenes post.', 'chatty', 'News and new challenges.'],
+      ['rewards.social.thanks', 'Thanks for visiting: {n} coins the first time you open each profile.', 'engagement bait', 'delete'],
+      ['nav.profile kicker', 'Profile', 'label for a label', 'delete'],
+    ].map(([key, text, problem, fix]) => ({ key, text, problem, fix }));
+    return { theme, scheme: theme, wave, stats, weak, findings, copy };
+  }
+}
+</script>
+</body>
+</html>

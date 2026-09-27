@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:#f7f8f7; color:#132019; font-family:'Inter',system-ui,sans-serif; }
+    a { color:#2d7a2d; } a:hover { color:#236123; }
+  </style>
+</helmet>
+
+<div style="max-width:1200px;margin:0 auto;padding:36px 24px 80px;display:flex;flex-direction:column;gap:40px">
+  <header style="display:flex;flex-direction:column;gap:12px;max-width:72ch">
+    <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#2d7a2d">Pre-launch design audit · devShark · 27 Sep 2026</span>
+    <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2.4rem;letter-spacing:-.02em;line-height:1.1">What to cut, what to fix, what to leave alone</h1>
+    <p style="margin:0;font-size:1.05rem;line-height:1.6;color:#3c4f43">Scope: seven sections, both themes, desktop and mobile, as a first-time visitor and as a learner. Source of truth is <code style="font-size:.9em">lukaskourilcz/react-express-app</code> at commit <code style="font-size:.9em">bc3a2e8</code> (main, read 27 Sep 2026). Signed-in surfaces (Profile, Leaderboard, Rewards, Coding progress) sit behind Google sign-in and were <strong>not seen live</strong>; they are recreated from source and marked "not verified". No screenshots were attached. Nothing here proposes a new feature, a new page or new gamification; every item is a deletion, a merge, a move, or a wording fix.</p>
+  </header>
+
+  <!-- Section index -->
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:-.015em">Sections</h2>
+    <p style="margin:0;font-size:.9rem;color:#4f6570">Each page shows the current screen, recreated from source with numbered markers, beside the findings, a copy table and the state/mobile/theme notes.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px">
+      <sc-for list="{{ sections }}" as="s" hint-placeholder-count="7">
+        <a href="{{ s.href }}" style="display:flex;flex-direction:column;gap:8px;padding:16px 18px;background:#fff;border:1px solid rgba(23,39,46,.12);border-radius:12px;text-decoration:none;color:inherit">
+          <span style="display:flex;justify-content:space-between;gap:8px;align-items:baseline"><span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">{{ s.n }}</span><span style="font-size:.72rem;font-weight:700;padding:3px 8px;border-radius:6px;background:{{ s.bg }};color:{{ s.fg }}">{{ s.verdict }}</span></span>
+          <span style="font-family:'Manrope',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-.01em">{{ s.title }}</span>
+          <span style="font-size:.85rem;line-height:1.5;color:#3c4f43">{{ s.summary }}</span>
+        </a>
+      </sc-for>
+    </div>
+  </section>
+
+  <!-- Before / after: header -->
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:-.015em">Before / after 1 of 3 — the header for a first-time visitor</h2>
+    <p style="margin:0;font-size:.9rem;line-height:1.55;color:#3c4f43;max-width:80ch">The two other before/after pairs sit on their own pages: <a href="07 Challenge.dc.html">Challenge intro</a> and <a href="06 Quiz.dc.html">Quiz result and review card</a>. Here: <code>App.tsx NAV_ITEMS</code> shows eight text links plus three icon buttons to someone who has never signed in. Today and Collection are empty without an account; "Roadmap" beside "Learn" (rendered by <code>Roadmap.tsx</code>) sounds like the same thing; the shopping-bag icon leads to coins. Signed out, the proposal is six links and no icon buttons; signed in, Today returns and Coins takes the place of the bag.</p>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <span style="font-size:.78rem;font-weight:700;color:#8a5700">Current · 1024px and up</span>
+      <div style="overflow:hidden;border:1px solid rgba(23,39,46,.14);border-radius:12px;background:light-dark(#f3f6f5,#0b141b);color-scheme:{{ scheme }}"><dc-import name="AppShell" active="/" theme="{{ theme }}" hint-size="100%,57px"></dc-import></div>
+      <span style="font-size:.78rem;font-weight:700;color:#166534;margin-top:8px">Proposed · signed out</span>
+      <div style="overflow:hidden;border:1px solid rgba(23,39,46,.14);border-radius:12px;background:light-dark(#f3f6f5,#0b141b);color-scheme:{{ scheme }}"><dc-import name="AppShell" active="/" variant="proposed" theme="{{ theme }}" hint-size="100%,57px"></dc-import></div>
+      <span style="font-size:.78rem;font-weight:700;color:#166534;margin-top:8px">Proposed · signed in (Today first; Leaderboard and Coins move into the account menu and the drawer)</span>
+      <div style="overflow:hidden;border:1px solid rgba(23,39,46,.14);border-radius:12px;background:light-dark(#f3f6f5,#0b141b);color-scheme:{{ scheme }}"><dc-import name="AppShell" active="/today" variant="proposed" signed-in="{{ true }}" theme="{{ theme }}" hint-size="100%,57px"></dc-import></div>
+    </div>
+  </section>
+
+  <!-- Design system audit -->
+  <section style="display:flex;flex-direction:column;gap:16px">
+    <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:-.015em">Design system audit</h2>
+    <p style="margin:0;font-size:.9rem;line-height:1.55;color:#3c4f43;max-width:80ch">Read: <code>astryx-theme.css</code>, <code>app-shell.css</code>, <code>DeepEndScreens.css</code>, <code>Leaderboard.css</code>, <code>landingSections.css</code>, <code>DESIGN_RULES.md</code>, <code>docs/design/design-system.md</code>, <code>docs/brand/brand-guidelines.md</code>, and the components on the seven pages. Not read: <code>Coding.css</code>, <code>Rewards.css</code>, <code>Roadmap.css</code>, <code>LearningPaths.css</code>, Astryx internals.</p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:14px">
+      <sc-for list="{{ ds }}" as="d" hint-placeholder-count="8">
+        <article style="display:flex;flex-direction:column;gap:8px;padding:18px 20px;background:#fff;border:1px solid rgba(23,39,46,.12);border-radius:12px;font-size:.875rem;line-height:1.55">
+          <h3 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.05rem;letter-spacing:-.01em">{{ d.title }}</h3>
+          <p style="margin:0;color:#3c4f43">{{ d.found }}</p>
+          <p style="margin:0"><strong>Change:</strong> {{ d.change }}</p>
+        </article>
+      </sc-for>
+    </div>
+    <div style="padding:18px 20px;background:#e3efe1;border:1px solid rgba(45,122,45,.3);border-radius:12px;font-size:.875rem;line-height:1.55">
+      <h3 style="margin:0 0 6px;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.05rem">Strong — keep as the reference</h3>
+      <p style="margin:0"><strong>Leaderboard.css</strong> (every value a token, tabular numerals, rank as text, viewer row marked by a word) · <strong>the token layer in astryx-theme.css</strong> (light-dark() pairs, one accent variable, documented contrast ratios) · <strong>the Kicker + waterline bank</strong> (one mark, eight variants, chosen deterministically) · <strong>DESIGN_RULES §1–3</strong> (fin baseline, opacity-only reveals) · <strong>RadioCards</strong> (real radio semantics, roving focus) · <strong>the loading and failure vocabulary</strong> (LoadingScreen, no blank beats, retry that reloads only on a second press) · <strong>ComparisonTable</strong> (a real table, glyph plus word, wraps at 320px) · <strong>the premium.* copy</strong> ("Premium opens this", "Your free plan keeps …") · <strong>the 44px coarse-pointer floor</strong> in app-shell.css.</p>
+    </div>
+  </section>
+
+  <!-- Prioritised action list -->
+  <section style="display:flex;flex-direction:column;gap:14px">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap">
+      <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.4rem;letter-spacing:-.015em">Prioritised action list</h2>
+      <span style="font-size:.8rem;color:#4f6570">P0 must change before launch (looks unserious or misleading) · P1 should change before launch · P2 polish later</span>
+    </div>
+    <sc-if value="{{ showP0 }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="margin:0;font-size:.8rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#991b1b">P0 · must change before launch</h3>
+        <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ p0 }}" as="a" hint-placeholder-count="7">
+            <li style="display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:baseline;padding:10px 14px;background:#fff;border:1px solid rgba(23,39,46,.1);border-left:3px solid #b91c1c;border-radius:8px;font-size:.875rem;line-height:1.5"><span style="font-weight:800;color:#991b1b">{{ a.id }}</span><span>{{ a.text }}</span><a href="{{ a.href }}" style="font-size:.78rem;font-weight:600;white-space:nowrap;text-decoration:none">{{ a.ref }}</a></li>
+          </sc-for>
+        </ol>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showP1 }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="margin:0;font-size:.8rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#8a5700">P1 · should change before launch</h3>
+        <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ p1 }}" as="a" hint-placeholder-count="10">
+            <li style="display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:baseline;padding:10px 14px;background:#fff;border:1px solid rgba(23,39,46,.1);border-left:3px solid #8a5700;border-radius:8px;font-size:.875rem;line-height:1.5"><span style="font-weight:800;color:#8a5700">{{ a.id }}</span><span>{{ a.text }}</span><a href="{{ a.href }}" style="font-size:.78rem;font-weight:600;white-space:nowrap;text-decoration:none">{{ a.ref }}</a></li>
+          </sc-for>
+        </ol>
+      </div>
+    </sc-if>
+    <sc-if value="{{ showP2 }}" hint-placeholder-val="{{ true }}">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="margin:0;font-size:.8rem;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#3c4f43">P2 · polish later</h3>
+        <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px">
+          <sc-for list="{{ p2 }}" as="a" hint-placeholder-count="8">
+            <li style="display:grid;grid-template-columns:40px 1fr auto;gap:12px;align-items:baseline;padding:10px 14px;background:#fff;border:1px solid rgba(23,39,46,.1);border-left:3px solid #9db3bc;border-radius:8px;font-size:.875rem;line-height:1.5"><span style="font-weight:800;color:#3c4f43">{{ a.id }}</span><span>{{ a.text }}</span><a href="{{ a.href }}" style="font-size:.78rem;font-weight:600;white-space:nowrap;text-decoration:none">{{ a.ref }}</a></li>
+          </sc-for>
+        </ol>
+      </div>
+    </sc-if>
+  </section>
+
+  <section style="display:flex;flex-direction:column;gap:10px;padding:18px 20px;background:#fff;border:1px solid rgba(23,39,46,.12);border-radius:12px;font-size:.875rem;line-height:1.55;max-width:80ch">
+    <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-.015em">Leave alone</h2>
+    <p style="margin:0">The shark identity: footer ocean with drifting fins, the topic-card fin schools, the swimming-fin loader, fins as lives in the Challenge, the waterline kicker ticks, the green. Tone it down only by removing the six watermark copies and the arcade words; do not touch the marks themselves. The paper grain. The one-viewport shell with an internal scroll. Leaderboard. ComparisonTable. The Premium sheet copy. Coding hints and verdict states. Everything under "Strong" above.</p>
+  </section>
+
+  <p style="margin:0;font-size:.75rem;color:#4f6570;line-height:1.5;max-width:80ch">Not verified: every signed-in screen; the live rendering of any page in either theme; Astryx component internals; Coding.css, Rewards.css, Roadmap.css and LearningPaths.css; the English text of keys marked "(not read)" on the pages. Attach light/dark and desktop/mobile screenshots of Profile, Rewards, Leaderboard and a Coding task and those pages can be checked against the real thing.</p>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Header mockups&quot;},&quot;priority&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;all&quot;,&quot;P0&quot;,&quot;P1&quot;,&quot;P2&quot;],&quot;default&quot;:&quot;all&quot;,&quot;tsType&quot;:&quot;'all' | 'P0' | 'P1' | 'P2'&quot;,&quot;section&quot;:&quot;Action list&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'dark' ? 'dark' : 'light';
+    const filter = this.props.priority ?? 'all';
+    const V = { solid: ['rgba(22,128,60,.1)', '#166534'], work: ['rgba(138,87,0,.09)', '#8a5700'], most: ['#fee2e2', '#991b1b'] };
+    const S = (n, href, title, v, verdict, summary) => ({ n, href, title, verdict, summary, bg: V[v][0], fg: V[v][1] });
+    const sections = [
+      S('1 · public', '01 Homepage.dc.html', 'Homepage / landing', 'work', 'Needs work', 'Right structure, too much repetition: price ×4, three CTAs to one anchor, founder note and pledge restate the table. 15 findings.'),
+      S('2 · signed in', '02 Profile.dc.html', 'User profile', 'work', 'Needs work (light)', 'Sound layout; decoration on numbers (tinted tiles, unit pills, meaningless icons, rotating tip). 8 findings. Not verified live.'),
+      S('3 · signed in', '03 Leaderboard.dc.html', 'Leaderboard', 'solid', 'Ship as is', 'The reference screen. One long scope paragraph to trim, dead keys to delete.'),
+      S('4 · signed in', '04 Rewards.dc.html', 'Shop / Rewards', 'most', 'Needs work — most', 'Eight sections, test-mode banner, merchandise nobody can redeem, coin bribe for follows, joke copy, fairness disclaimer ×3. 8 findings.'),
+      S('5 · signed in', '05 Coding.dc.html', 'Coding', 'work', 'Needs work (light)', 'Home order and quantity (planner above tracks, 10 technique cards ×2 counts, unicode icons); workbench solid apart from three soft labels. 9 findings.'),
+      S('6 · public', '06 Quiz.dc.html', 'Quiz', 'work', 'Needs work (light)', 'Setup and in-quiz are right; result and review carry the noise (score twice, four buttons, five marks per card). 8 findings + mockup.'),
+      S('7 · public', '07 Challenge.dc.html', 'Biggest Shark Challenge', 'work', 'Needs work', 'Honest mechanics under arcade presentation: tagline h1, "Enter the challenge", "Game over", "Hall of Fame", four exclamation marks. 8 findings + mockup.'),
+    ];
+    const ds = [
+      { title: 'Type scale: eleven small sizes for three roles', found: 'Uppercase label: .62 / .68 / .70 / .72 / .75 / .78rem (ss-term__glyph, ss-premium-label, de-stat span, ss-kicker, ss-info-page__kicker, ss-compare-caption). Secondary text: .75 / .78 / .80 / .82 / .84 / .85 / .86 / .875 / .88 / .90 / .95rem across app-shell, Leaderboard, landingSections, inline styles. Weights 650 and 750 sit beside 600 and 700 for the same role (lb-name 650 vs Home card title 700; .ss-link-button 750 vs SwimCta 600).', change: 'Five tokens: --ss-type-label .72rem/700, --ss-type-meta .8rem, --ss-type-compact .875rem, --ss-type-body, --ss-type-large 1.125rem. Weights 500/600/700/800 only. One sweep replaces ~40 literals.' },
+      { title: 'Radius: four tokens, nine literals', found: 'Tokens: page 20 / container 16 / element 10 / inner 8. Literals: 16px (Quiz and Challenge question cards), 12px (.ss-orders, .ss-figure, popovers, .de-track-card .75rem), 10px (.ss-drawer-link, .ss-input), 8px (CategoryTag, answer index squares, iconBtn, skip link), 6px (sample-card letters, .ss-header-brand), 20px !important (dialogs). Pills (999) on 14 non-filter elements: MetaPill units, insideChip, sampleCard chip, de-gold-pill, de-stage__tag, rw-tag, lb-rank, lb-you, de-shield, de-topic-chip, quiz setup radios.', change: 'Replace literals with the four tokens. Pills only for filters/tags/segmented controls (design-system.md already says so): MetaPill, insideChip, gold pill, shield and the quiz setup radios become --radius-element.' },
+      { title: 'Shadows: three tokens defined, none used by the cards', found: '--shadow-low/med/high exist; .ss-panel, .ss-raised, .ss-lift, TopicCard and DeepEndScreens each write their own 0 2px 10px literal (four copies), .ss-lift:hover 0 6px 18px, TopicCard hover 0 8px 20px, Challenge feedback 0 10px 40px rgba(0,0,0,.35), ss-term__popover 0 12px 28px, popover 0 16px 46px, dialog 0 24px 70px. DeepEndScreens --ss-card-shadow has no dark pair; the Deep End panels cast a light-theme shadow on ink.', change: 'Cards use --shadow-low; hover uses --shadow-med; overlays --shadow-high. Delete --ss-card-shadow and the literals.' },
+      { title: 'Card stock: three recipes for one card', found: '.ss-panel (line + edge + shadow), .ss-raised (edge + shadow, no line), .de-hero-panel/.de-ladder/.de-flashcard/.de-mode-card/.de-track-card (line + --ss-card-bottom = --color-border, not --ss-card-edge). Profile wraps Astryx <Card> in .ss-raised, so two surfaces stack. Challenge grid shows a .de-hero-panel next to an .ss-panel: different edge, shadow and radius side by side.', change: 'One .ss-card recipe; .de-* surfaces adopt it; drop the Lift wrapper or the inner Card. Retire --ss-card-bottom.' },
+      { title: 'Two inks', found: 'Brand ink is #132019 (V9). Shadows, borders, --ss-hero-glow, dialog backdrop and the DeepEnd --ss-fin data-URI still use the pre-V9 ink #17272e / rgba(23,39,46,…) — 30+ occurrences. Harmless at 6–16% alpha; wrong at 100% (the watermark fill).', change: 'One --ss-ink-rgb: 19,32,25 and rgba(var(--ss-ink-rgb), α) everywhere; delete the #17272e literals.' },
+      { title: 'Watermark fin ×6, three opacities, four offsets', found: 'Home RoadmapPreview (420px, .04), FounderNote (240px, .05), Quiz setup (360px, .04), Quiz result (340px, .04), .de-hero-panel:after (360px, .04), .de-ladder:after (400px, .035), .de-profile-identity:after (240px, .035). Invisible on the dark theme (ink on ink). Not part of the brand rules table in brand-guidelines.md.', change: 'Delete all seven. If one place must keep it, make it one component with one size and one opacity.' },
+      { title: 'Icons: three systems', found: 'Bundled devicons (landing, quiz setup) · 24-grid stroke SVGs (nav, strip, checkpoint, shield, icons.tsx) · Unicode glyphs as icons (coding: JS TS ⚛ Σ; StatusText ✓ ↻ ● ◐ ◔ ○; save ★ ☆; arrows ↗ →; sample card ✓ ✕). Sizes 14 / 15 / 16 / 18 / 20 / 22 / 24 / 25 / 30. Trophy path duplicated four times (TrophyNavIcon, STRIP_ICON, CheckpointNode ×2).', change: 'Devicons for topics, one stroke set for UI at 16 / 20 / 24 only, no Unicode glyphs as icons. Move the duplicated paths into ui/icons.tsx.' },
+      { title: 'Buttons: nine implementations', found: 'Astryx Button · SwimCta (sm/md/lg, own paddings 5·8 / 10·18 / 13·26 and sizes .78 / .95 / 1rem) · FadeFinCta (12·22, 1rem) · FinButton · .ss-link-button (750 weight) · .ss-cta · .rw-btn (+primary/quiet) · .cd-btn (+primary/quiet) · Quiz inline linkBtn · .de-shield--action · .ss-figure__button · .ss-footer-settings button. Same intent, different heights, radii and weights.', change: 'Three: Astryx Button (secondary/ghost/destructive), SwimCta as the one primary, one text link style. Delete rw-btn, cd-btn, linkBtn, ss-cta.' },
+      { title: 'Component duplication', found: 'CategoryTag defined identically in Quiz.tsx and Challenge.tsx · CheckpointNode and pathWave in LandingKit and again inline in Home.tsx · ShieldIcon (Profile) = ShieldGlyph (Shop) · SocialProfiles rendered on Profile and Shop · Kicker rendered by hand in Profile SectionLabel wrapper · .de-gold-pill declared twice in DeepEndScreens.css (first is dead).', change: 'One export each; delete the copies. Run knip (already configured) on components, not only files.' },
+      { title: 'Defensive copy as a pattern', found: 'The same reassurance in eight places: quiz.noPeeking, challenge.fairRace, rewards.earnIntro, shop.protectionFair, shop.fairnessNote, landing.founder.supportNote, landing.compare.footnote, premium.sheet.fair. Plus "Well done." ×2, "— nice." ×1 and six exclamation marks in grading strings.', change: 'Fairness once: premium.sheet.fair and landing.compare.footnote stay; the other six go. Exclamation marks and "Well done" out of every verdict string. One lint rule in scripts/test-launch-contracts.ts can hold the line: no "!" in *.correct / *.wrong / *.verdict.* keys.' },
+      { title: 'Dark theme', found: 'The token layer is sound (6.05:1 accent, ink on bright fills). Risks found in source: Astryx Card colour variants (orange/cyan/blue/purple) untuned against #101c24 on Profile; feature-strip 8% tints on ink; the .de-* panels\' light-only shadow; --color-text-disabled #71838b on #101c24 ≈ 4.4:1 used for spent fins (decorative, acceptable); unicode status glyphs at .8rem in secondary colour. Not rendered.', change: 'Fixes above remove all but the disabled colour; verify the CategoryTag on-colour text for #f7df1e-style brand hexes in dark mode with the existing contrast.test.ts.' },
+    ];
+    const A = (id, text, href, ref) => ({ id, text, href, ref });
+    const p0 = [
+      A('P0.1', 'Hide everything that does not exist yet: Merchandise section, "Not on sale yet / Not priced yet" tiles, test-mode banner, the landing rows "Yes, once redemption opens" and "Yes, as each one opens", Premium sheet line 6. Show them when their switches are on.', '04 Rewards.dc.html', 'Rewards 2 · Home 13'),
+      A('P0.2', 'Remove the fairness disclaimers except premium.sheet.fair and the plan-table footnote (six keys).', '04 Rewards.dc.html', 'Rewards 4 · Quiz 2 · Challenge 3 · Home 14'),
+      A('P0.3', 'Remove the coin reward for opening social profiles, and the social card from Profile and Rewards (links go to the footer).', '02 Profile.dc.html', 'Profile 6 · Rewards 7'),
+      A('P0.4', 'Grading and end-state copy: no exclamation marks, no "nice", no "Well done", Passed/Failed not "Not yet", "Run ended" not "Game over".', '07 Challenge.dc.html', 'Challenge 5 · Coding 8 · Home 4'),
+      A('P0.5', 'Delete the founder note and the pledge section; keep one factual sentence in the table footnote. Price appears once.', '01 Homepage.dc.html', 'Home 12 · 14 · 15'),
+      A('P0.6', 'Signed-out header: Learn · Quiz · Coding · Challenge · Play · Premium. Today, Collection, Leaderboard icon and Coins only with a session. Rename "Roadmap" to "Career".', '00 Audit overview.dc.html', 'Home 1 · above'),
+      A('P0.7', 'Challenge intro: h1 "Biggest Shark Challenge", "Start", "Submit", delete the gold pill and the board hint; "Top scores" once.', '07 Challenge.dc.html', 'Challenge 1–4, 6'),
+    ];
+    const p1 = [
+      A('P1.1', 'Delete the seven watermark fins; retire .de-hero-panel:after, .de-ladder:after, .de-profile-identity:after, .ss-founder__fin.', '00 Audit overview.dc.html', 'DS · Home 8 · Quiz 4 · Challenge 7'),
+      A('P1.2', 'One card recipe (.ss-card) with --shadow-low; migrate .de-* panels; unwrap Profile Lift/Card double surface.', '00 Audit overview.dc.html', 'DS · Profile 7 · Challenge 7'),
+      A('P1.3', 'Rewards page: rename to Coins everywhere; delete wallet rate list; compress How to earn to five rows; one Premium button; move Crown & protection above Invite.', '04 Rewards.dc.html', 'Rewards 1, 3, 5, 8'),
+      A('P1.4', 'Homepage: two hero stats not four, single hero button, kicker "Topics", curation paragraph to /curation, delete insideChip, one neutral tint for strip icons, cut Typing and Collection from the strip.', '01 Homepage.dc.html', 'Home 2, 3, 5, 6, 7, 11'),
+      A('P1.5', 'Profile: inline units, no tinted tiles or icons on streaks, fold Statistics into Career, delete the rotating tip and the XP breakdown line, delete the "Profile" kicker.', '02 Profile.dc.html', 'Profile 1–5'),
+      A('P1.6', 'Coding home: planner below the tracks and collapsed; devicons instead of JS/TS/⚛/Σ; kicker "Coding"; subtitle without system design; drop tag counts; StatusText without glyphs.', '05 Coding.dc.html', 'Coding 1–4, 6, 7'),
+      A('P1.7', 'Quiz result: "70% · topics · difficulty" under the score, three buttons, one-line review meta, plain explanation box (no coloured left border), no #tag badges in-quiz.', '06 Quiz.dc.html', 'Quiz 5–8 + mockup'),
+      A('P1.8', 'Type scale tokens (five sizes, four weights) and radius literals → tokens; pills only for filters.', '00 Audit overview.dc.html', 'DS'),
+      A('P1.9', 'Dark-theme check of Astryx Card variants and strip tints, or remove them (P1.4, P1.5 do).', '00 Audit overview.dc.html', 'DS'),
+      A('P1.10', 'Delete dead CSS and copy: .de-gold-pill first rule, empty <p className="cd-shortcuts">, challenge.rule1–4/howItWorks/ctaSubtitle, eight unused leaderboard.* keys, ten profile.tip.* keys.', '03 Leaderboard.dc.html', 'Leaderboard 3 · Challenge 8 · Coding'),
+    ];
+    const p2 = [
+      A('P2.1', 'Leaderboard scope sentences to one line; optional heading "Most correct answers".', '03 Leaderboard.dc.html', 'Leaderboard 1, 2'),
+      A('P2.2', 'Quiz: subtitle "Choose topics, length and difficulty."; "Climb" → "Progressive".', '06 Quiz.dc.html', 'Quiz 1, 3'),
+      A('P2.3', 'Coding: debugging intro to one sentence; "Step by step / Idiomatic" solution labels; track-page filter row density.', '05 Coding.dc.html', 'Coding 5, 9'),
+      A('P2.4', 'Icon set consolidation (16/20/24, one stroke set, duplicated trophy path into ui/icons.tsx).', '00 Audit overview.dc.html', 'DS'),
+      A('P2.5', 'Button consolidation to Astryx Button + SwimCta + one link style; delete rw-btn, cd-btn, linkBtn, ss-cta.', '00 Audit overview.dc.html', 'DS'),
+      A('P2.6', 'Replace #17272e / rgba(23,39,46) with the brand ink RGB token.', '00 Audit overview.dc.html', 'DS'),
+      A('P2.7', 'Homepage strip: focus style for the <button> tiles; remove hover transform on stat tiles.', '01 Homepage.dc.html', 'Home a11y'),
+      A('P2.8', 'Lint rule against "!" and "Well done" in grading keys (test-launch-contracts).', '00 Audit overview.dc.html', 'DS'),
+    ];
+    return {
+      theme, scheme: theme, sections, ds, p0, p1, p2,
+      showP0: filter === 'all' || filter === 'P0', showP1: filter === 'all' || filter === 'P1', showP2: filter === 'all' || filter === 'P2',
+    };
+  }
+}
+</script>
+</body>
+</html>
