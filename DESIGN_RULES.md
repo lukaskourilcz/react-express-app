@@ -154,9 +154,11 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   first touch (`lib/routePreload.ts`), and a page whose first render depends
   on account or structure data holds it with `useFirstData`
   (`lib/routeData.ts`, capped at 1.2s, and not at all offline) instead of
-  drawing defaults and redrawing. A section that keeps a chunk of its own,
-  such as Today's signed-in sections or the roadmap's optional paths, is a
-  `lazyPart`: the page's hold loads its code with its reads, so it draws with
+  drawing defaults and redrawing. The page's own query of a held read
+  spreads `HELD_READ`, so a read that failed in the hold draws its error with
+  the page instead of a loading state first. A section that keeps a chunk of
+  its own, such as Today's signed-in sections or the roadmap's optional
+  paths, is a `lazyPart`: the page's hold loads its code with its reads, so it draws with
   the page instead of under it a beat later, and a failed part is retried
   like a page. A signed-out visitor never waits for account data. Never mount
   a route's `Suspense` boundary inside an element keyed by the path: a fresh
@@ -172,9 +174,10 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   under it when the chunk lands. The header knows at its first render whether
   a session may exist: a signed-out visitor gets `SignInButton`, which ships
   with the shell, and the lazy account widget with its 56px placeholder is for
-  a session. The footer renders inside the route `Suspense`, after the keyed
-  box, so it arrives with the first page instead of sitting under the
-  first-load loader. `tests/browser/first-load.spec.ts` holds the page's code
+  a session. On a desktop that widget sits in `.ss-account-slot`, as wide as
+  the widget can grow, so the centred nav stands still when it arrives. The
+  footer renders inside the route `Suspense`, after the keyed box, so it
+  arrives with the first page instead of sitting under the first-load loader. `tests/browser/first-load.spec.ts` holds the page's code
   back and fails when the header, `<main>` or the footer moves.
 - A shell part that fails keeps the shell too. A lazy part outside the route
   boundary (the account widget, the upgrade sheet) is a `lazyShellPart` inside
