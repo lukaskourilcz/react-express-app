@@ -33,7 +33,9 @@ const STATIC_PAGE_BODIES = {
 const STATIC_PAGE_IMAGES: Partial<Record<keyof typeof STATIC_PAGE_BODIES, string>> = { '/daily': '/og/daily.png' };
 /** Dated question-of-the-day pages with their own head and share image: the
  * last 120 days and the next 45, rebuilt on every deploy. An older or later
- * date still opens in the app, through 404.html, with the generic head. */
+ * date, like a task id the build did not write, has no file behind its
+ * rewrite, so Vercel goes on to the app's catch-all rewrite and the app opens
+ * it with the generic head (checked on a preview deployment, 28 Sep 2026). */
 const QOTD_PAST_DAYS = 120;
 const QOTD_FUTURE_DAYS = 45;
 const dailyDateLabel = (iso: string) =>
@@ -301,9 +303,6 @@ function productMetadata(env: Record<string, string>): Plugin {
         days++;
       }
       this.info(`share pages: ${CODING_INDEX.length} coding tasks, ${days} days of the question of the day, ${drawn} images drawn (the rest from cache)`);
-      // Any path the rewrites send to a page the build did not write (an old
-      // day, a retired task) still opens the app, which routes it.
-      await writeFile(path.join(outDir, '404.html'), indexHtml);
 
       const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug, 'en')}">${escape(topic.title.en)}</a></li>`).join('')}</ul></main>`;
       await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root"><noscript>${fallback}</noscript></div>`));

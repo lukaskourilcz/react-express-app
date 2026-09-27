@@ -85,7 +85,6 @@ for (const day of days) {
   assert(existsSync(`${dir}/og/daily/${day}.png`), `${day}: its image exists`);
   assert(!/ss-radio-card|correctAnswer|explanation/.test(html), `${day}: no question in the HTML`);
 }
-assert(existsSync(`${dir}/404.html`), 'a missing page still opens the app');
 assert(readFileSync(`${dir}/robots.txt`, 'utf8').includes(`Sitemap: ${urls[0].origin}/sitemap.xml`));
 assert(!existsSync(`${dir}/mockServiceWorker.js`), 'Mocks must never ship with the app');
 assert(!readdirSync(`${dir}/assets`).some(file => /storybook|mocks|\.stories\./i.test(file)));
