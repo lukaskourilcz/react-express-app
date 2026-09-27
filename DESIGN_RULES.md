@@ -186,7 +186,18 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   `reloadOnPress` (`lib/routeRecovery.ts`), and only while the browser is
   online and the server answers. The Coding workbench's Try again and a
   second sign-in press after a failed supabase-js download follow the same
-  rule.
+  rule, and so does a second press for the upgrade sheet: that reload opens
+  the sheet in the next document. A 402 nobody pressed for never reloads.
+- A part inside a page that loads its own code and is not in the page's hold
+  (the Learn workbench, the friends tab, a path's reward, the code
+  highlighter) fails alone. It is a `lazyShellPart` inside a
+  `ShellPartBoundary`, and its fallback keeps the page: `ErrorRetry` in the
+  part's place, or plain code for a code block. Nothing here uses `lazy`.
+- Motion's features chunk can fail too. `lib/motion.tsx` then marks
+  `<html data-motion="off">`, and `app-shell.css` shows every `m` element
+  (each carries `data-m`) at full opacity with no transform. So every `m`
+  element must end visible and untransformed; one that ends hidden needs a
+  rule of its own.
 - In-place mutations keep their control visible, disable duplicate actions,
   and use a translated action/status label. Do not replace a whole editor
   with a page loader during submission or draft saving.
