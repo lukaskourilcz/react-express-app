@@ -38,9 +38,21 @@
      · Subject accents stay reserved for identity moments (kickers, active
        states, progress), never washes. */
 
-  /* — Ocean-ink neutral ramp (overrides theme-neutral's grays) — */
-  --ss-ink: light-dark(#17272e, #e8eef0);
-  --color-text-primary: light-dark(#17272e, #e8eef0);
+  /* — devShark V9 brand palette (docs/brand/brand-guidelines.md) —
+     The primary green stays #2D7A2D and reaches components through
+     --brand-accent (ColorModeContext); these support it. */
+  --brand-ink: #132019;          /* brand ink: primary text, ink logo, ink backgrounds */
+  --brand-green-800: #236123;    /* hover / pressed on the green (7.48:1 on white) */
+  --brand-green-100: #E3EFE1;    /* tint: active item, selected row */
+  --brand-ink-700: #3C4F43;      /* secondary text (8.78:1 on white) */
+  --brand-ink-surface: #1B2A21;  /* cards on an ink background */
+  --brand-line: #D6DED3;         /* hairlines and dividers on light surfaces */
+
+  /* — Ocean-ink neutral ramp (overrides theme-neutral's grays) —
+     The light ink is the brand ink (16.82:1 on white, was #17272e at
+     15.37:1). */
+  --ss-ink: light-dark(var(--brand-ink), #e8eef0);
+  --color-text-primary: light-dark(var(--brand-ink), #e8eef0);
   --color-text-secondary: light-dark(#4f6570, #9db3bc);
   --color-text-disabled: light-dark(#788990, #71838b);
   --color-background-body: light-dark(#f3f6f5, #0b141b);
