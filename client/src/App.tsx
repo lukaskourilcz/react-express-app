@@ -18,6 +18,7 @@ import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import ReferralBinder from './components/ReferralBinder';
+import SignInButton from './components/SignInButton';
 import { useAuth } from './lib/auth';
 import { useActiveSubject } from './lib/subjects';
 import { useWallet } from './lib/rewards';
@@ -35,7 +36,8 @@ import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
-// (logo, nav, theme/sound toggles) paints first.
+// (logo, nav, theme/sound toggles) paints first. Only a session needs it: a
+// signed-out visitor gets SignInButton, which ships with the shell.
 const AuthButton = lazy(() => import('./components/AuthButton'));
 
 // Each page's chunk, registered with the paths that render it so a link can
@@ -118,7 +120,7 @@ const ROUTE_TRANSITION = { duration: 0.14, ease: 'easeOut' } as const;
 // the wrapper's bottom reserve lands below the content. With basis 0 the box
 // stayed viewport-sized, tall cards overflowed straight through every padding,
 // and page ends slid under the waterline overlay. The first-load fallback gets
-// the same box, so the footer sits where a page will put it.
+// the same box, so the loader has the page's room.
 const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' } as const;
 
 const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
@@ -244,7 +246,7 @@ function App() {
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
   const activeSubject = useActiveSubject();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
   const mobile = useIsMobile();
   const analyticsIdentified = useRef(false);
@@ -605,11 +607,20 @@ function App() {
                   icon={<ShopNavIcon />}
                 />
               </span>
-              {/* Fallback reserves the avatar footprint so the toolbar
-                  doesn't reflow when the chunk lands. */}
-              <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
-                <AuthButton />
-              </Suspense>
+              {/* The header draws at its final height in its first frame. A
+                  signed-out visitor, known at the first render, gets the
+                  sign-in button with the shell. The 56px placeholder, the
+                  height of the avatar row and of the widget's own skeleton,
+                  is only for a session: under it a signed-out header stood
+                  73px tall and shrank to 57px (61px on touch) when the chunk
+                  landed, pulling <main> up with it. */}
+              {user || authLoading ? (
+                <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
+                  <AuthButton />
+                </Suspense>
+              ) : (
+                <SignInButton />
+              )}
             </div>
           </div>
         </header>
@@ -736,7 +747,13 @@ function App() {
               path mounts a fresh boundary, and leaving a failed page needs no
               retry. It renders no element of its own, so the route box stays
               this wrapper's first child; the header, the nav and the footer
-              stay outside it. */}
+              stay outside it.
+              The footer sits inside this Suspense too, after the keyed box, so
+              it arrives with the first page. Under the fallback it sat at the
+              bottom of the empty box, and the landing page threw it below the
+              fold: a move longer than the viewport, which scored 0.05 of CLS on
+              a desktop and 0.15 on a phone, and 0.98 when the header settled in
+              the same frame. */}
           <Suspense fallback={<div style={ROUTE_BOX_STYLE}><RouteLoader /></div>}>
             <m.div
               key={location.pathname}
@@ -794,8 +811,8 @@ function App() {
                 </Routes>
               </RouteErrorBoundary>
             </m.div>
+            {showChrome && <BrandFooter />}
           </Suspense>
-          {showChrome && <BrandFooter />}
         </div>
       </main>
 

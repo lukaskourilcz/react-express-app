@@ -1855,3 +1855,134 @@ Found on the way and left alone, because the request did not cover them:
 - Lazy parts inside pages (Today's four sections, `PathDiscovery`, `FriendsPanel`, the code highlighter, `PathRewardClaim`, the Learn workbench) use `React.lazy`. A failure there shows the route panel, and Try again gets them back only through the reload.
 
 Not verified: Firefox and Safari, whose rows come from the sources above; the in-place path in a real browser, since Chromium 141 always takes the reload (the unit tests cover it); a real deploy (the spec fakes one by answering the chunk with `index.html` and `/` with another entry script); Sentry, which has no DSN here (the unit tests check the calls to `reportError`); devshark.app, where this is not deployed; physical phones and screen readers (the alert role and the focus order were checked through Playwright's role queries and the focused element).
+
+## 2026-09-26 — the first load of a page holds still (CLS)
+
+The owner asked me to find and remove the layout shift on devShark's first page load, and to add a check that fails if it comes back. Lighthouse named `<main id="main-content">` as the only shifting node and scored 0.979 on the desktop preset (1350×940) and 0.959 on the phone profile (412×823), in some runs and not in others. GLITCH recorded it above with its cause untraced.
+
+### What moved
+
+I recorded `layout-shift` entries with a `PerformanceObserver` (`buffered: true`) on cold loads of `/` from a `vite preview` of `7b4bc8f`, in Playwright's Chromium 141 at Lighthouse's two sizes. Each load had one entry, 0.9793 on the desktop and 0.9592 on the phone, with these sources (`previousRect` → `currentRect`, CSS pixels):
+
+| Node | Desktop, 1350×940 | Phone, 412×823 |
+| --- | --- | --- |
+| `main#main-content` | top 73, height 867 → top 57, height 883 | top 73, height 750 → top 61, height 762 |
+| `footer.ss-brand-footer` | 1000×69 at top 787 → out of view | 376×137 at top 614 → out of view |
+| The header's slots | left slot and nav up 8px, right slot down 4px and 9px wider | left slot up 6px, right slot 9px wider and 12px shorter |
+
+`<main>` moved 16px on the desktop and 12px on the phone. Two changes shared one frame:
+
+1. The header shrank from 73 to 57px (61px with a touch pointer). The account widget is a lazy chunk, and its `Suspense` placeholder was a 56px square, the height of the avatar row and of the widget's loading skeleton, so the toolbar stood 72px tall under it. A signed-out visitor's widget is the 32px "Log in" button (44px with a coarse pointer), and the toolbar settled at 56px (60px). Since `7b4bc8f` a visitor with no stored session is signed out from the first render, yet the header drew the placeholder until the chunk arrived. Before `7b4bc8f`, `AuthProvider` started in `loading`, so the placeholder and then the widget's 56px loading skeleton held the header at 73px; a build of `2e6b8ba`, where the owner first measured the shift, drops from 73 to 57px the same way.
+2. The footer fell out of view. Until the first page's chunk arrived, the route `Suspense` showed its fallback, a box that fills the content area, and the footer sat under it at the bottom of the first viewport. The landing page then pushed it from 787 to 3,417px (614 to 5,347px on the phone).
+
+A frame's score is the area that moving nodes covered before and after, as a share of the viewport, times the longest move as a share of the viewport's larger side, capped at 1. `<main>` and the header slots covered 97.9% of the desktop viewport and 95.9% of the phone's; the footer moved farther than either side is long, so the distance factor was 1. Apart, the header change scores 0.012 on the desktop (0.014 on the phone) and the footer's move 0.054 (0.152).
+
+### Why it came and went
+
+- React 19 reveals a `Suspense` boundary's content no sooner than 300ms after the boundary showed its fallback (`FALLBACK_THROTTLE_MS` in react-dom 19.2.7) and commits every retry that resolved in the meantime together. When the account widget and the landing page both arrived within that window, as they did on a quick local load, the header and the footer moved in one frame: 0.979. When the page came later, the two moves fell into separate frames, 0.012 and 0.054, which is the 0.066 of the runs that missed it. Holding every lazy chunk for 800ms split them every time.
+- Under phone emulation Chromium flagged the shift as recent input. A saved Lighthouse trace of `3a8cf13` holds a `LayoutShift` event of 0.9592 at 634ms with `had_recent_input: true` and `last_input_timestamp` at 102ms, the time of the first viewport event, which the emulation causes. Lighthouse keeps a flagged shift only within 500ms of that event, so it dropped this one and scored the run 0 while the page moved. A shift that landed a little earlier, or late enough to go unflagged, counted. Lighthouse's `--throttling-method=devtools` applies real CPU and network throttling, which moves the shifts past both windows.
+
+The same mechanism hit the first load of every page: each drew its footer under the loader, and each signed-out header shrank.
+
+### The fix
+
+| Commit | What |
+| --- | --- |
+| `2805907` | `SignInButton` holds the signed-out "Log in" button and its failure toast, and ships in the entry. The header renders it whenever `useAuth()` reports no user and nothing loading, which it knows at the first render. The lazy `AuthButton` and its 56px placeholder stay for a stored session or a sign-in in progress, where the placeholder, the skeleton and the avatar row all stand 56px tall; its own signed-out branch renders `SignInButton`. A signed-out first visit no longer requests the `AuthButton` chunk, nor the wallet read (`GET /api/user/[op]?op=wallet`) the widget sent without a session |
+| `b05c3c9` | `BrandFooter` renders inside the route `Suspense`, after the keyed route box, so it arrives with the first page and never sits under the loader. A navigation keeps both, as before |
+| `28b9ab7` | `tests/browser/first-load.spec.ts`, which the "Browser checks" step runs |
+| `a264cea` | Merge of `origin/main` at `d2d9085` (documentation only) |
+| `d902d8c` | The first-frame rule in `DESIGN_RULES.md` §8 |
+| `b4747a0` | Merge of `origin/main` at `3a8cf13` (ERRBOUND). Three conflicts, each resolved by keeping both sides, main's first: the spec list in `quality.yml`, the two rules in §8, and the comment above the route `Suspense` in `App.tsx`. The code merged without conflict: `RouteErrorBoundary` wraps the routes inside the keyed box, and the footer follows the box inside the `Suspense`, outside `RouteErrorBoundary` |
+| `6624e8a` | This record |
+| `fec41e4` | The CLS item in `NEEDED.md`, marked done |
+| `a659c59` | Merge of `origin/main` at `f4e7cbb`, which changes `scripts/test-harness.ts` only; no conflict |
+| this commit | The checks on `a659c59` |
+
+Nothing hides the page or waits for the load event. The skip link, the route focus, the loader for a slow first page, reduced motion, both themes and the waterline clearance work as before, and the final layout of `/` is identical: header 57px (61px on the phone), `<main>` from there down, footer at 3,417px (5,347px). ERRBOUND's hand-off lists a failed `AuthButton` chunk as reaching the root screen; a signed-out visitor no longer requests that chunk, and a session still does.
+
+### The regression check
+
+`tests/browser/first-load.spec.ts` loads `/` cold at Lighthouse's desktop size and its phone size (touch, 1.75 device pixel ratio). It lets the entry script and its preloads through and holds every other chunk for 800ms, so the shell draws alone before the page, whatever the machine's speed. It records each animation frame and every `layout-shift` entry, the input-flagged ones included, and checks that the header's height and `<main>`'s top never change, that no frame shows the footer without the page, that neither `<main>`, the header nor the footer is among the moved nodes, and that the entries add up to less than 0.01. The mechanism checks are soft, so a failure names each one that came back.
+
+| Build | Result |
+| --- | --- |
+| `3a8cf13`, built as CI builds it (the placeholder Supabase project) and as the owner measured | 2 failed, twice: header 73 then 57px (61px on the phone), `<main>`'s top the same, 63 to 65 frames with a footer and no page, `<main>` and the footer among the moved nodes, 0.066 and 0.166 of shift |
+| `7b4bc8f` | 2 failed, the same checks |
+| The header change alone (`2805907`, on `7b4bc8f`) | 2 failed, on the footer checks only: 45 and 54 frames, 0.054 and 0.152 of shift |
+| `b4747a0`, both builds | 2 passed each |
+| `b4747a0`, CI's build, `--repeat-each=5` | 10 passed |
+| A scratch copy of the spec that adds 4x or 6x CPU throttling, `--repeat-each=2` | `3a8cf13`: 4 failed at each rate; `b4747a0`: 4 passed at each rate |
+
+### Evidence
+
+Lighthouse 13.4.1 against `vite preview` of builds made with `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build`, `CHROME_PATH=/opt/pw-browsers/chromium`, performance category only. "Phone" is Lighthouse's default profile.
+
+| Build | Profile | CLS, run by run |
+| --- | --- | --- |
+| `3a8cf13` (`origin/main`) | desktop (`--preset=desktop`) | 0.979, 0.979, 0.979, 0.979, 0.979 |
+| `3a8cf13` | phone | 0, 0, 0, 0, 0. A sixth run, saved with its trace, is the one described above: the shift happened and Lighthouse dropped it |
+| `3a8cf13`, again with the container quieter | desktop; phone | 0.979, 0.979, 0.979, 0.979, 0.979; 0, 0.959, 0, 0, 0.959 |
+| `3a8cf13` | phone, `--throttling-method=devtools` | 0.152, 0.152, 0.166, 0.152, 0.152 |
+| `b4747a0` | desktop | 0, 0, 0, 0, 0 |
+| `b4747a0` | phone | 0, 0, 0, 0, 0 |
+| `b4747a0` | phone, `--throttling-method=devtools` | 0, 0, 0, 0, 0 |
+| `a659c59`, the final head | desktop; phone; phone with `--throttling-method=devtools` | 0, 0, 0, 0, 0; 0, 0, 0, 0, 0; 0, 0, 0, 0, 0 |
+| `7b4bc8f`, before either merge | desktop; phone | 0.979, 0.979, 0.979; 0, 0, 0.959 |
+| `b05c3c9`, before either merge | desktop; phone | 0, 0; 0, 0 |
+
+No "after" run lists a node in Lighthouse's `layout-shifts` audit. `origin/main` moved to `f4e7cbb` during the step; it changes only `scripts/test-harness.ts`, and its build is byte for byte that of `3a8cf13` (`diff -rq` of the two `dist` folders), so the `3a8cf13` rows are also its numbers.
+
+The first load of other pages, from CI's builds of both commits, every `layout-shift` entry counted (input-flagged ones too), the API answering 503, one cold load each in Playwright's Chromium 141, the desktop at full speed and the phone with 4x CPU throttling:
+
+| Page | `3a8cf13` desktop | `3a8cf13` phone | `b4747a0` desktop | `b4747a0` phone |
+| --- | --- | --- | --- | --- |
+| `/` | 0.979 | 0.959 | 0 | 0 |
+| `/learn` | 0.013 | 0.119 | 0.001 | 0 |
+| `/quiz` | 0.057 | 0.600 | 0 | 0 |
+| `/today` | 0.012 | 0.052 | 0.0004 | 0.038 |
+| `/coding` | 0.979 | 0.959 | 0 | 0 |
+| `/leaderboard` | 0.053 | 0.422 | 0.004 | 0.050 |
+| `/premium` | 0.980 | 0.959 | 0.0004 | 0 |
+| `/topics/javascript-closures` | 0.823 | 0.959 | 0 | 0 |
+
+What remains on `/today` and `/leaderboard` is the footer moving as the page grows after its first draw; GLITCH lists both among the pages that draw in two steps.
+
+A signed-in visitor on CI's builds, with a well-formed fake session planted and Auth answered locally, every entry counted:
+
+| Build | Desktop | Desktop, chunks held 800ms | Phone | Phone, chunks held 800ms |
+| --- | --- | --- | --- | --- |
+| `3a8cf13` | 0.088 | 0.059 | 0.152 | 0.152 |
+| `b4747a0` | 0.004 | 0.004 | 0 | 0 |
+
+The header stood 73px in every frame for a session, before and after. The 0.004 left on the desktop is the nav re-centring when the account widget, wider than the 56px placeholder, replaces it.
+
+`npm run check:bundle`: 226,027 gzip bytes on `3a8cf13` and 226,147 on `b4747a0`, 120 more, all in the entry script, which now carries `SignInButton`. Before the ERRBOUND merge the same change measured 106 bytes (224,479 on `7b4bc8f`, 224,585 on `a264cea`).
+
+### Release contract on the final head
+
+I ran every command below on `a659c59`, and each exit code is its own. Its two builds, the owner's and CI's, are byte for byte those of `b4747a0`, where the other measurements above ran. Browser runs used `CHROME_BIN=/opt/pw-browsers/chromium` and `vite preview` on ports 4541 to 4549.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:launch` | exit 0; the twelve-function budget holds |
+| `npm run test:client` | exit 0; 27 files, 277 tests |
+| `test:coding-auth`, `test:grading-integrity`, `test:coding`, `test:paths`, `test:billing`, `test:fallbacks` | exit 0 each |
+| `npm run check:unused`, `npm run check:security` | exit 0 each; knip reports no new finding |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` | exit 0 |
+| The workflow's build step: the Supabase placeholders, then `npm run build` and `npm run check:public`; `npm run check:bundle` | exit 0 each; 13 public URLs; 226,147 of 243,000 gzip bytes |
+| `npm audit --omit=dev`, root and client | exit 0 each; 0 vulnerabilities |
+| Browser specs `first-load`, `navigation`, `public`, `lazy-auth`, `route-errors`, `evolving`, `segmented`, `on-accent` against CI's build | exit 0 each; 2, 2, 5, 5, 6, 2, 4 and 12 passed |
+| `first-load.spec.ts` with `--repeat-each=5` against CI's build, and once against the owner's build | exit 0 each; 10 and 2 passed |
+| `npm run check:responsive` on CI's routes (`/`, `/quiz`, `/topics/javascript-closures`, `/cs/topics/javascript-closures`) at 360, 390, 430, 768, 1024, 1280 and 1440, light, then with `RESPONSIVE_THEME=dark`; then CI's dark Czech sweep | exit 0 each; 28, 28 and 6 probes, 0 with issues |
+| `npm run check:responsive` on `/` and twelve section routes at 360, 390, 768 and 1280, light and dark | exit 0 each; 52 probes, 0 with issues |
+| `npm run test:harness`, as `f4e7cbb` changed it | exit 0; 196 assertions in Chromium |
+| Each commit of this branch on its own (`2805907`, `b05c3c9`, `28b9ab7`, `d902d8c`): client `tsc -b`, the tooling typecheck, `vitest run` | exit 0 at every one; 263 tests each |
+| `git diff --check`, `git diff --check origin/main...HEAD` | clean |
+
+On `a264cea`, before the ERRBOUND merge, `evolving.spec.ts` failed once, in its dark run: the React test ran and reported 0 of 1 passing ("Unable to find a label with the text of: Email"). It passed 2 of 2 on `b4747a0`, and 8 of 8 on each of `3a8cf13` and `b4747a0` with `--repeat-each=4`, so I could not reproduce it. The spec exercises the coding workbench, which this change does not touch.
+
+Not run: the Storybook build and its spec; no story imports a module this change touches.
+
+Not verified: devshark.app, where this is not deployed; Firefox and Safari; physical phones; a real Supabase session (the signed-in runs planted a fake one). Lighthouse ran on a container that other sessions shared, so its timings varied; CLS does not depend on them beyond the timing windows described above.
