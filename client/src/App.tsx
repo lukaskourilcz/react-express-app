@@ -430,7 +430,10 @@ function App() {
   }, [welcomeGranted]);
 
   // Nav items for features that are currently enabled in /dev → Settings.
-  const signedIn = !!user;
+  // A stored session is still being restored on the first render: treat it
+  // as signed in, as the account slot does, so the nav does not draw the
+  // signed-out row and then jump when the session lands.
+  const signedIn = !!user || authLoading;
   const navItems = NAV_ITEMS.filter((item) => (!item.feature || config.features[item.feature]) && (!item.signedIn || signedIn));
   // Leaderboard, Premium & Shop aren't learning surfaces, so with a session
   // they get compact icon buttons in the right slot instead of crowding the
