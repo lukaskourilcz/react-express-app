@@ -24,6 +24,12 @@
   --ss-type-body: clamp(1rem, 0.9583rem + 0.1852vw, 1.125rem);
   --ss-type-title: clamp(2rem, 1.6rem + 1.7778vw, 3.2rem);
   --ss-type-display: clamp(2.6rem, 2.3rem + 1.3333vw, 3.5rem);
+  /* Four fixed steps for everything smaller than body text (design audit
+     P1.8): labels, meta lines, compact controls and large lead text. */
+  --ss-type-label: .72rem;
+  --ss-type-meta: .8rem;
+  --ss-type-compact: .875rem;
+  --ss-type-large: 1.125rem;
   --ss-space-gutter: clamp(1rem, 0.6667rem + 1.4815vw, 2rem);
   --ss-space-section: clamp(2rem, 1.3333rem + 2.963vw, 4rem);
 

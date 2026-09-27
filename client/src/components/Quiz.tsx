@@ -126,7 +126,7 @@ const iconBtnStyle = (color: string): React.CSSProperties => ({
   padding: 0,
   margin: 0,
   border: 'none',
-  borderRadius: 8,
+  borderRadius: 'var(--radius-inner)',
   background: 'transparent',
   color,
   cursor: 'pointer',
@@ -143,8 +143,8 @@ const CategoryTag = ({ category }: { category: CategoryType }) => {
         alignItems: 'center',
         height: 26,
         padding: '0 10px',
-        borderRadius: 8,
-        fontSize: '0.78rem',
+        borderRadius: 'var(--radius-inner)',
+        fontSize: 'var(--ss-type-meta)',
         fontWeight: 600,
         lineHeight: 1,
         backgroundColor: getCategoryHexColor(category),
@@ -766,15 +766,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   }
 
   if (state === 'ready') {
-    const labelStyle: CSSProperties = { fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '0.95rem' };
-    const linkBtn: CSSProperties = { display: 'inline-flex', alignItems: 'center', minHeight: 44, background: 'none', border: 'none', padding: '4px 2px', color: 'var(--brand-accent)', fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', fontFamily: 'var(--font-family-body)' };
+    const labelStyle: CSSProperties = { fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: 'var(--ss-type-compact)' };
+    const linkBtn: CSSProperties = { display: 'inline-flex', alignItems: 'center', minHeight: 44, background: 'none', border: 'none', padding: '4px 2px', color: 'var(--brand-accent)', fontWeight: 600, fontSize: 'var(--ss-type-compact)', cursor: 'pointer', fontFamily: 'var(--font-family-body)' };
     const pill = (on: boolean): CSSProperties => ({
       display: 'inline-flex', alignItems: 'center', gap: 6,
       background: on ? 'var(--brand-accent-soft)' : 'var(--ss-card-bg)',
       color: on ? 'var(--brand-accent-on-soft)' : 'var(--color-text-primary)',
       border: `1px solid ${on ? 'var(--brand-accent)' : 'var(--ss-card-line)'}`,
       borderRadius: 999, padding: '7px 14px', minHeight: 44, width: 'auto', fontFamily: 'var(--font-family-body)',
-      fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer',
+      fontWeight: 600, fontSize: 'var(--ss-type-compact)', cursor: 'pointer',
       transition: 'border-color 0.15s ease, background-color 0.15s ease, color 0.15s ease',
     });
     return (
@@ -785,7 +785,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <h1 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '2rem', letterSpacing: '-0.015em' }}>
             {t('quiz.buildTitle')}
           </h1>
-          <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-text-secondary)' }}>{t('quiz.buildSubtitle')}</p>
+          <p style={{ margin: 0, fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t('quiz.buildSubtitle')}</p>
         </div>
 
         <div className="ss-panel" style={{ position: 'relative', overflow: 'hidden', padding: 24, display: 'flex', flexDirection: 'column', gap: 20, borderRadius: 'var(--radius-page)' }}>
@@ -813,7 +813,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 {showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
               </button>
             )}
-            <div id="categories-error" role="alert" style={{ minHeight: '1.2em', fontSize: '0.78rem', fontWeight: 600, color: 'var(--ss-error)' }}>
+            <div id="categories-error" role="alert" style={{ minHeight: '1.2em', fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-error)' }}>
               {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
             </div>
           </div>
@@ -824,7 +824,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               <span id="quiz-count-label" style={labelStyle}>{t('quiz.questionsLegend')}</span>
               <RadioCardGroup value={questionCount} onChange={(value) => setQuestionCount(Number(value))} labelledBy="quiz-count-label" orientation="horizontal" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {config.quiz.countOptions.map((count, index) => (
-                  <RadioCard key={count} value={count} index={index} label={t('quiz.countQuestionsAria', { count })} style={{ ...pill(questionCount === count), minWidth: 48, justifyContent: 'center' }}>
+                  <RadioCard key={count} value={count} index={index} label={t('quiz.countQuestionsAria', { count })} style={{ ...pill(questionCount === count), borderRadius: 'var(--radius-element)', minWidth: 48, justifyContent: 'center' }}>
                     {count}
                   </RadioCard>
                 ))}
@@ -838,7 +838,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   const tip = t(`difficulty.${value}.tip` as TranslationKey);
                   return (
                     <Tooltip key={value} content={tip} placement="above">
-                      <RadioCard value={value} index={index} label={t('quiz.difficultyAria', { label })} style={pill(difficultyMode === value)}>
+                      <RadioCard value={value} index={index} label={t('quiz.difficultyAria', { label })} style={{ ...pill(difficultyMode === value), borderRadius: 'var(--radius-element)' }}>
                         {label}
                       </RadioCard>
                     </Tooltip>
@@ -905,7 +905,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 {result.correctAnswers} / {result.totalQuestions}
               </h1>
             </MotionPop>
-            <span style={{ position: 'relative', fontSize: '0.95rem', color: 'var(--color-text-secondary)' }}>
+            <span style={{ position: 'relative', fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>
               {result.percentage}% · {resultTopics} · {resultDifficulty}
             </span>
 
@@ -1092,7 +1092,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           flexDirection: 'column',
           background: 'var(--color-background-surface)',
           border: '1px solid var(--color-border)',
-          borderRadius: 16,
+          borderRadius: 'var(--radius-container)',
           overflowY: 'auto',
           overscrollBehavior: 'contain',
         }}
@@ -1155,7 +1155,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   domain={glossaryDomainFor(currentQuestion.category)}
                 />
                 {mode === 'review' && interleaved && currentIndex === 0 && (
-                  <p style={{ margin: '10px 0 0', fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>
+                  <p style={{ margin: '10px 0 0', fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>
                     {t('quiz.interleavedNote')}
                   </p>
                 )}
@@ -1255,11 +1255,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                           style={{
                             width: 26,
                             height: 26,
-                            borderRadius: 8,
+                            borderRadius: 'var(--radius-inner)',
                             display: 'grid',
                             placeItems: 'center',
                             flexShrink: 0,
-                            fontSize: '0.78rem',
+                            fontSize: 'var(--ss-type-meta)',
                             fontWeight: 700,
                             background: isSelected ? 'var(--color-accent-muted)' : 'var(--color-background-muted)',
                             color: isSelected ? 'var(--color-text-accent)' : 'inherit',

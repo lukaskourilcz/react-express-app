@@ -94,7 +94,7 @@ function TopicCard({
       </span>
       {/* The tick sits on the selected card's accent tint, so it takes the
           derived on-tint accent rather than the plain one. */}
-      <span style={{ marginLeft: 'auto', fontSize: '0.9rem', fontWeight: 700, color: 'var(--brand-accent-on-soft)', opacity: selected ? 1 : 0 }}>✓</span>
+      <span style={{ marginLeft: 'auto', fontSize: 'var(--ss-type-compact)', fontWeight: 700, color: 'var(--brand-accent-on-soft)', opacity: selected ? 1 : 0 }}>✓</span>
     </button>
   );
 }
@@ -114,7 +114,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
           {t('home.insideTopic', { name: topic.name })}
         </h2>
       </div>
-      <p style={{ margin: 0, fontSize: '0.95rem', color: 'var(--color-text-secondary)', maxWidth: '70ch', position: 'relative' }}>{topic.blurb}</p>
+      <p style={{ margin: 0, fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)', maxWidth: '70ch', position: 'relative' }}>{topic.blurb}</p>
       <PathStrip label={t('home.pathRegion', { name: topic.name })}>
         {topic.levels.map((label, i) => {
           // Each connector gets its own swell (see DESIGN_RULES §4).
@@ -133,9 +133,9 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
                   background: first ? 'var(--brand-accent)' : 'var(--brand-accent-soft)',
                   color: first ? 'var(--brand-on-accent)' : 'var(--brand-accent-on-soft)',
                   border: `2px solid ${first ? 'var(--brand-accent)' : 'transparent'}`,
-                  fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '0.95rem',
+                  fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'var(--ss-type-compact)',
                 }}>{i + 1}</span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
+                <span style={{ fontSize: 'var(--ss-type-label)', fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
               </div>
               <svg aria-hidden width="40" height="8" viewBox="0 0 40 8" style={{ display: 'block', margin: '16px 2px 0', opacity: 0.3, flexShrink: 0 }}>
                 <path d={wavePath} fill="none" stroke="var(--ss-ink)" strokeWidth={1.6} strokeLinecap="round" />
@@ -150,12 +150,12 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
               <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" /><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3" />
             </svg>
           </span>
-          <span style={{ fontSize: '0.8rem', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
+          <span style={{ fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{t('home.checkpoint')}</span>
         </div>
       </PathStrip>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         <SwimCta label={t('home.startLevel1', { name: topic.name })} onClick={onStart} dir={-1} />
-        <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>{t('home.roadmapNote')}</span>
+        <span style={{ fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t('home.roadmapNote')}</span>
       </div>
     </section>
   );
@@ -283,7 +283,7 @@ export default function Home() {
                 <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1rem', letterSpacing: '-0.01em', color: 'var(--brand-accent)' }}>
                   {t('home.andMore', { n: String(moreCount) })}
                 </span>
-                <span style={{ fontSize: '0.75rem', fontWeight: 500, color: 'var(--color-text-secondary)' }}>{t('home.seeAllTopics')}</span>
+                <span style={{ fontSize: 'var(--ss-type-label)', fontWeight: 500, color: 'var(--color-text-secondary)' }}>{t('home.seeAllTopics')}</span>
               </span>
             </button>
           )}
@@ -308,8 +308,8 @@ export default function Home() {
                 {item.icon}
               </span>
               <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '0.95rem', color: 'var(--color-text-primary)' }}>{t(item.titleKey)}</span>
-                <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>{t(item.textKey)}</span>
+                <span style={{ fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-primary)' }}>{t(item.titleKey)}</span>
+                <span style={{ fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t(item.textKey)}</span>
               </span>
             </button>
           ))}

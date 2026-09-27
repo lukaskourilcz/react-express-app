@@ -313,7 +313,7 @@ function ProfileBody({
                     {bookmarkedQuestions.slice(0, 20).map((q) => (
                       <Card key={q.id} variant="muted" padding={2}>
                         <VStack gap={1}>
-                          <div style={{ fontSize: '0.9rem' }}>{renderQuestion(q.question)}</div>
+                          <div style={{ fontSize: 'var(--ss-type-compact)' }}>{renderQuestion(q.question)}</div>
                           <Text type="supporting" size="xsm" color="accent">
                             {t('profile.answerLabel', { answer: q.options[q.correctIndex] ?? '-' })}
                           </Text>
