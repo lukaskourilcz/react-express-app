@@ -1638,12 +1638,12 @@ The pages that now wait for their data draw later than their first paint used to
 
 Still drawn in two steps after this change, each a page's own loading state rather than the navigation:
 
-- `/leaderboard`: the skeleton, then the board once it loads.
-- `/challenge`: the best-effort leaderboard line fills in; no layout shift.
-- `/roadmap`: the optional-paths section (a lazy `PathDiscovery`) arrives below the fold.
-- `/today`, signed in: the concept, run, due-coding and path sections load under the plan.
-- `/premium`, signed in with Premium: the plan arrives after the page and adds "Your plan" above the plans; the page redraws twice and grows 180px. Its tests (`premium-page`, `voucher`) would need an awaited mount to hold it with `useFirstData`.
-- `/collection`, signed in: the saved cards. The fixtures did not answer the flashcards read, so this one is not measured.
+- ~~`/leaderboard`: the skeleton, then the board once it loads.~~ HOLDS, below, closed it.
+- ~~`/challenge`: the best-effort leaderboard line fills in; no layout shift.~~ HOLDS, below, closed it.
+- ~~`/roadmap`: the optional-paths section (a lazy `PathDiscovery`) arrives below the fold.~~ HOLDS, below, closed it.
+- ~~`/today`, signed in: the concept, run, due-coding and path sections load under the plan.~~ HOLDS, below, closed it.
+- ~~`/premium`, signed in with Premium: the plan arrives after the page and adds "Your plan" above the plans; the page redraws twice and grows 180px. Its tests (`premium-page`, `voucher`) would need an awaited mount to hold it with `useFirstData`.~~ HOLDS, below, closed it.
+- `/collection`, signed in: the saved cards. The fixtures did not answer the flashcards read, so this one is not measured. HOLDS, below, measured it: the cards still arrive after the page.
 - The route box still fades in from opacity 0 over 140ms, with each page's `ss-pop` on top, so the first frame after the swap is almost empty. That entrance is the existing design.
 - A chunk that fails to load still replaces the whole app with the root error screen. It happened once on devshark.app during the measurements, when the proxy aborted `objectWithoutPropertiesLoose-*.js`.
 
@@ -1986,3 +1986,120 @@ On `a264cea`, before the ERRBOUND merge, `evolving.spec.ts` failed once, in its 
 Not run: the Storybook build and its spec; no story imports a module this change touches.
 
 Not verified: devshark.app, where this is not deployed; Firefox and Safari; physical phones; a real Supabase session (the signed-in runs planted a fake one). Lighthouse ran on a container that other sessions shared, so its timings varied; CLS does not depend on them beyond the timing windows described above.
+
+## 2026-09-27 — the five pages GLITCH left drawing twice (HOLDS)
+
+GLITCH ended with a list of pages that still drew in two steps after a click. The owner asked for five of them to draw once: `/premium` signed in with Premium, `/leaderboard`, `/challenge`, `/today` signed in, and `/roadmap`. Each now holds its first render with `useFirstData` for the reads that decide what it shows, at most 1.2s and not at all offline, and the sections that keep chunks of their own load inside the same hold. While a page waits, the previous page stays on screen, marked busy, as GLITCH set up.
+
+| Commit | What |
+| --- | --- |
+| `b5738f7` | `lib/routeData.ts`: `lazyPart`, a section kept out of its page's chunk whose code the page's hold can load, so it draws in the same frame as the page. A part the hold did not wait for loads on mount and draws nothing until it arrives, as `Suspense fallback={null}` did. `useFirstData` also skips the wait when the query client reports no connection, because the client pauses its reads then. `client/tests/firstDraw.ts` reads the document when a page's heading first appears |
+| `e689c25` | `/premium` holds for `entitlementQuery(user.id)` when signed in; a visitor waits for nothing. The signed-in Premium and voucher tests mount inside an awaited `act` |
+| `6233f06` | `leaderboardQuery(request)` in `lib/queries.ts` gives the hook and the prefetch one set of options, so their keys cannot drift. `/leaderboard` holds for `{ period: '30d', category: null, viewer }` |
+| `c5518f0` | `challengeLeaderboardQuery(subject)`. `/challenge` holds for its board, which is best-effort: a failed read draws the page with its own notice |
+| `063d256` | Today's four signed-in sections become `lazyPart`s. Signed in, the hold loads their code with the concepts due, the open run, the coding progress, the enrollments and, for each active enrollment, its progress and the path catalogue. The sections and the hold share `conceptDueQuery` and the learning-path query options |
+| `61dc75e` | `useLoc` moves from `ActivityViews` to `paths/localized.ts`. `PathDiscovery` imported it, and with it the editor and the test runner |
+| `72d1385` | `/roadmap` loads `PathDiscovery` as a `lazyPart` inside its hold, with the catalogue and, signed in, the enrollments |
+| `3eb32a8` | Merge of `origin/main` at `7b4bc8f` (Supabase on demand); no file changed on both sides |
+| `c9c6796` | Merge of `origin/main` at `3a8cf13` (ERRBOUND); no file changed on both sides |
+| `cce099b` | A part's fallback is ERRBOUND's `lazyPage` instead of `React.lazy`: when a part's chunk fails, the route boundary's Try again asks for it afresh, and a newer build on the server reloads before the error shows. This settles Today's sections and `PathDiscovery` in ERRBOUND's hand-off |
+| `7f251d9` | Today imports the run's and the coding progress's query options inside the hold, signed in only, so a visitor does not download them |
+| `ca7d990` | Merge of `origin/main` at `f4e7cbb` (`scripts/test-harness.ts` only); no conflict |
+| `312f910` | Merge of `origin/main` at `346a824` (CLS: the signed-out sign-in button with the shell, the footer inside the route `Suspense`); no file changed on both sides |
+| this commit | This record, the rule in `DESIGN_RULES.md` §8 and a line in `docs/design/product-ux-audit.md` |
+
+### The sections stay lazy
+
+Gzip bytes outside the initial bundle, from the measurement builds below:
+
+| Chunks | `346a824` | `312f910` |
+| --- | --- | --- |
+| `/today`, what every visitor loads | 48,059 | 48,619 |
+| Today's four sections on top, signed in only | 13,901 | 14,197 |
+| `/roadmap` | 35,142 | 35,437 |
+| `PathDiscovery` on top | 189,646 | 4,257 |
+| `/profile`, whose paths card also imported `useLoc` | 238,402 | 53,465 |
+| `/premium`, `/leaderboard`, `/challenge` | 26,581, 18,782, 33,922 | 27,233, 19,119, 34,273 |
+
+A visitor to `/today` downloads 560 bytes more, the hold and `lazyPart`, and never the sections. `PathDiscovery` used to pull the task editor and its 174,283-byte test runner through `useLoc`; now it is 802 bytes and a stylesheet, so the roadmap can wait for it. `/premium`, `/leaderboard` and `/challenge` each load `lib/routeData.ts` now, 337 to 652 bytes. `npm run check:bundle`, which measures the initial requests of a production-shaped build, reads 226,188 of 243,000 gzip bytes on `312f910` and 226,147 on `346a824`. The 41 bytes are export bindings: the entry exports four more names to the lazy chunks, and the TanStack chunk exports `onlineManager`, which `useFirstData` now reads. At `b74d7ae`, the base this work started from, the check as it stood then read 221,847, as CI did.
+
+### The offline board
+
+`/leaderboard` keeps its offline path. The screen stores the last board it loaded in `localStorage` (`devshark:leaderboard:v1:<period>:<category>`, without the learner's own line) and shows it, marked stale, when a read fails on the network or the query client pauses it. Offline, `useFirstData` does not wait. A failed prefetch leaves the screen to its own read, which lands on the same stored board. Three tests in `leaderboard.test.tsx` cover a network failure, a paused query client and an empty store. `useFirstData` asks the query client too: `navigator.onLine` stays true while the client is paused, and the screen would otherwise have waited out the whole 1.2s.
+
+### Measured before and after
+
+The GLITCH harness, copied to `.holds-evidence/` and never committed, with four changes. Every public read is fetched from devshark.app once, stored and replayed. Every API answer, signed in or not, waits 250ms. The 30-day board and the Challenge board answer populated fixtures, because production's were empty. And the two builds are served side by side on two ports and measured visit by visit, the order alternating, so load from the other sessions on this machine falls on both. Two earlier runs, on a busier machine, had put about 30ms on a signed-out `/premium` visit, which waits for nothing; its visits then ranged from 102 to 345ms, against 81 to 131ms in the run below. The signed-in account holds Premium from a voucher, an open challenge run, three concepts due, an active DSA Foundations enrollment, its own line on the 30-day board and two saved cards. Both builds are `vite build` with `VITE_SUPABASE_URL` naming their own port, so supabase-js restores the fake session from storage.
+
+Before is `origin/main` at `346a824`, after is `312f910`, the same client code as `7f251d9` with main's first-load fix merged. Each row is the first visit to the section in a fresh page load, clicked from `/` once it settled, at 1280 and 390px, in three rounds: light and dark signed out (12 visits for each build and section), light signed in (6). Times are medians; roots and content states are the most any visit showed.
+
+Signed out, before → after:
+
+| Section | Empty frames | Loader frames | Footer in view on an empty page | Roots drawn | Content states | New page drawn (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/premium` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 1 → 1 | 90 → 91 |
+| `/leaderboard` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 2 → 1 | 76 → 345 |
+| `/challenge` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 2 → 1 | 99 → 364 |
+| `/today` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 1 → 1 | 342 → 342 |
+| `/roadmap` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 2 → 1 | 398 → 408 |
+
+Signed in with Premium, before → after:
+
+| Section | Empty frames | Loader frames | Footer in view on an empty page | Roots drawn | Content states | New page drawn (ms) |
+| --- | --- | --- | --- | --- | --- | --- |
+| `/premium` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 2 → 1 | 107 → 374 |
+| `/leaderboard` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 2 → 1 | 78 → 354 |
+| `/challenge` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 2 → 1 | 103 → 364 |
+| `/today` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 4 → 1 | 376 → 655 |
+| `/roadmap` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 3 → 1 | 416 → 422 |
+| `/collection` | 0 → 0 | 0 → 0 | 0 → 0 | 1 → 1 | 2 → 2 | 86 → 93 |
+
+A page that waits draws later than its first paint used to, and is complete no later. Median time from the click to the last change in the content area, and the median layout shift after the first draw:
+
+| Section | Last change, signed out (ms) | Last change, signed in (ms) | Layout shift after the first draw, signed in |
+| --- | --- | --- | --- |
+| `/premium` | 90 → 91 | 373 → 374 | 0.066 → 0 |
+| `/leaderboard` | 351 → 345 | 351 → 354 | 0 → 0 |
+| `/challenge` | 371 → 364 | 363 → 364 | 0 → 0 |
+| `/today` | 342 → 342 | 1,178 → 655 | 0.011 → 0 |
+| `/roadmap` | 928 → 408 | 936 → 422 | 0 → 0 |
+
+Signed out, neither build shifted after the first draw. What the second draws were, at 1280px: on `/premium`, "Your plan" arrived above the plans and the page grew from 2,552 to 2,690px (3,346 to 3,502 at 390px). On `/leaderboard` the six-row skeleton became the board, 717 to 1,034px signed in. On `/challenge` the "…" beside the intro became the top five, which at 390px grew the page from 727 to 891px. Signed in, `/today` drew its plan at about 380ms, the review and run sections at about 900ms and the path at about 1,180ms, because the path's next step waits for its enrollment. On `/roadmap` the optional paths arrived at 926ms and grew the page from 2,374 to 3,113px. The roadmap now finishes about half a second sooner, since `PathDiscovery` no longer waits for the test runner.
+
+`/collection` is not one of the five. The fixtures now answer the flashcards read, so it is measured for the first time: the saved cards still arrive after the page.
+
+### Tests
+
+`npm run test:client`: 28 files, 292 tests, 15 of them new. Six are in `client/tests/page-holds.test.tsx`, for `/challenge`, `/today` and `/roadmap`; five in `route-loading.test.tsx`, for the paused query client, `lazyPart` and a failed part retried through the route boundary; two in `premium-page.test.tsx` and two in `leaderboard.test.tsx`. Each first-frame test reads the document when the page's heading first appears (`client/tests/firstDraw.ts`); an awaited `act` runs every commit before it returns, so without it a test cannot tell a page that draws once from one that redraws.
+
+A test of a page that holds mounts inside an awaited `act`, and each mount gets a history entry with a key of its own. A router inside a root that suspends mints a new random key on every retry, the hold then starts a new wait each time, and React gives up after 100 attempts. A hold that also loads code can outlast the `act`, so the page tests import the sections' modules in `beforeAll` and then await the page's heading. With the five page components put back to `origin/main`'s, the seven first-frame tests fail and the other 28 tests in those files pass. With `React.lazy` in place of `lazyPage` in `lazyPart`, the retry test fails.
+
+### Release contract on the final head
+
+All on `312f910`, the code of this record's commit. I ran every command below, and each exit code is its own. Browser runs used `CHROME_BIN=/opt/pw-browsers/chromium`.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:launch` | exit 0; the twelve-function budget holds |
+| `npm run test:client` | exit 0; 28 files, 292 tests |
+| `test:coding-auth`, `test:grading-integrity`, `test:coding`, `test:paths`, `test:billing`, `test:fallbacks` | exit 0 each |
+| `npm run check:unused`, `npm run check:security` | exit 0 each; knip reports no new finding |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` | exit 0 |
+| `npm run check:bundle` | exit 0; 226,188 of 243,000 gzip bytes (`346a824`: 226,147, exit 0) |
+| The workflow's build step: the Supabase placeholders, then `npm run build` and `npm run check:public` | exit 0 each; 13 public URLs |
+| `npm audit --omit=dev`, root and client | exit 0 each; 0 vulnerabilities |
+| Browser specs `navigation`, `public`, `segmented`, `on-accent`, `evolving`, `lazy-auth`, `route-errors` and `first-load` against `vite preview` of that build on :4523 | exit 0 each; 2, 5, 4, 12, 2, 5, 6 and 2 passed |
+| `npm run check:responsive -- --base-url http://localhost:4523 --routes /premium,/leaderboard,/challenge,/today,/roadmap --block-external`, light, then with `RESPONSIVE_THEME=dark` | exit 0 each; 35 probes, the five routes at 360, 390, 430, 768, 1024, 1280 and 1440px, 0 with issues |
+| `npm run test:harness` | exit 0; 196 assertions in Chromium |
+| `npm run build:storybook --prefix client`, then `tests/browser/storybook.spec.ts` against the static build on :4524 and against `storybook dev` on :4525, as CI runs it | exit 0 each; 6 passed each time |
+| Each code commit on its own: client `tsc -b`, `npm run typecheck:tooling --prefix client`, `vitest run` | exit 0 at every one: `b5738f7` to `72d1385` checked out in order (242, 244, 246, 248, 250, 250 and 252 tests), `cce099b` and `7f251d9` from `git archive` (292 each) |
+| `git diff --check`, `git diff --check origin/main...HEAD` | clean |
+
+Not verified: devshark.app (not deployed), a real Supabase session (the signed-in runs used a fake session and fixtures), Firefox, Safari and physical phones.
+
+### Hand-off
+
+- A direct load of a signed-in page. Since `7b4bc8f` supabase-js downloads when a session is stored, and `AuthProvider` reports no user until it has restored the session. A page that mounts before then holds for a visitor's reads and draws the account's data when it arrives, as before this change. Holding for the session restore as well would close that.
+- `/collection`, signed in: the saved cards arrive after the page.
+- The other lazy parts inside pages that ERRBOUND listed (`FriendsPanel`, the code highlighter, `PathRewardClaim`, the Learn workbench) still use `React.lazy`.

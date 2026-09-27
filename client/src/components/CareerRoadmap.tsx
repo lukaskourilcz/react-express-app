@@ -8,9 +8,10 @@
 // SegmentedControl track chooser, ProgressBars and Badges — all logic, hooks and
 // i18n preserved verbatim.
 
-import { lazy, Suspense, useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Kicker } from './landing/LandingKit';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -31,7 +32,10 @@ import {
   passedLevelCount,
   syncProgressWithServer,
 } from '../lib/roadmap';
-import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
+import { roadmapStructureQuery, useRoadmapStructure } from '../lib/queries';
+import { useAuth } from '../lib/auth';
+import { enrollmentsQuery, pathCatalogQuery } from '../lib/learningPaths';
+import { lazyPart, readOnce, settled, useFirstData } from '../lib/routeData';
 import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER } from '../lib/tracks';
 import { getCategoryHexColor } from '../lib/categories';
 import { useSubject } from '../lib/subjects';
@@ -39,12 +43,29 @@ import type { RoadmapTopic } from '../types/quiz';
 import { useTotalXp } from '../lib/xp';
 import { levelForXp, getCareerRanks } from '../lib/leveling';
 import RoadmapTree from './RoadmapTree';
-const PathDiscovery = lazy(() => import('./paths/PathDiscovery'));
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
 import './DeepEndScreens.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
+
+// The optional paths, in a chunk of their own. Their code and what they read
+// load inside the page's first-data hold, so they draw with the page instead
+// of arriving below it a beat later.
+const PathDiscovery = lazyPart(() => import('./paths/PathDiscovery').then((m) => m.default));
+
+/** The structure, the optional paths' code and catalogue and, signed in, the
+ * learner's enrollments, in the cache before the first render. */
+function useRoadmapFirstData() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  useFirstData(`roadmap ${user?.id ?? ''}`, () => settled([
+    readOnce(queryClient, roadmapStructureQuery),
+    PathDiscovery.load(),
+    readOnce(queryClient, pathCatalogQuery),
+    user ? readOnce(queryClient, enrollmentsQuery(user.id)) : null,
+  ]));
+}
 
 // Tinted Card variants cycle across the pillars so each knowledge area reads as
 // its own category — adapts to light/dark automatically. The tint alone is the
@@ -108,7 +129,7 @@ function pct(passed: number, total: number): number {
 }
 
 export default function CareerRoadmap() {
-  useRoadmapStructureFirst({ plan: false });
+  useRoadmapFirstData();
   const t = useT();
   const navigate = useNavigate();
   const progress = useRoadmapProgress();
@@ -272,9 +293,7 @@ export default function CareerRoadmap() {
         {/* Optional paths, above the pillars because they answer a different
             question: the pillars are "what is left in my track", these are
             "what else could I take on". */}
-        <Suspense fallback={null}>
-          <PathDiscovery />
-        </Suspense>
+        <PathDiscovery.Part />
 
         {/* The pillars, filtered to the chosen track (empty pillars are hidden).
             One shared CTA up top instead of repeating it under every pillar. */}

@@ -7,10 +7,12 @@
 // rerenders" of a first visit. `useFirstData` suspends the page's first render
 // until those queries are in the cache, so it draws once. The wait is capped:
 // a slow or failing request lets the page draw its own loading or error state,
-// exactly as before.
-import { use, useState } from 'react';
+// exactly as before. A part of the page that loads its own code (`lazyPart`)
+// loads inside the same wait, so it draws with the page too.
+import { createElement, Suspense, use, useState, type ComponentType } from 'react';
 import { useLocation } from 'react-router-dom';
-import type { EnsureQueryDataOptions, QueryClient, QueryKey } from '@tanstack/react-query';
+import { onlineManager, type EnsureQueryDataOptions, type QueryClient, type QueryKey } from '@tanstack/react-query';
+import { lazyPage } from './routeRecovery';
 
 /** Longest a page holds its first render for data. */
 export const FIRST_DATA_WAIT_MS = 1200;
@@ -60,7 +62,46 @@ export function useFirstData(key: string | null, load: () => Promise<unknown>): 
   const visit = useLocation().key;
   // A mount that suspends keeps no state, so the promise lives in the map by
   // visit and key: the retry finds the same one, already settled. Offline, the
-  // queries pause until the connection returns, so there is nothing to wait for.
-  const [wait] = useState(() => (key === null || navigator.onLine === false ? null : waitFor(`${visit} ${key}`, load)));
+  // queries pause until the connection returns, so there is nothing to wait
+  // for: the browser reports no connection, or the query client has paused.
+  const [wait] = useState(() => (key === null || navigator.onLine === false || !onlineManager.isOnline() ? null : waitFor(`${visit} ${key}`, load)));
   if (wait) use(wait);
+}
+
+/**
+ * A part of a page kept out of the page's own chunk: a section only a
+ * signed-in learner sees, or one below the fold. The page's first-data hold
+ * awaits `load`, so the part draws in the same frame as the page. `Part` draws
+ * a loaded part at once; one the hold did not wait for (offline, or past the
+ * cap) loads on mount and draws nothing until it arrives, as a lazy component
+ * inside `Suspense fallback={null}` did. A part whose code fails to load
+ * fails its page the way a page's own chunk does: the route error boundary
+ * shows it, and Try again asks for the part afresh (`lazyPage`).
+ */
+export function lazyPart<P extends object>(importPart: () => Promise<ComponentType<P>>): {
+  load: () => Promise<ComponentType<P>>;
+  Part: ComponentType<P>;
+} {
+  let ready: ComponentType<P> | null = null;
+  let pending: Promise<ComponentType<P>> | null = null;
+  const load = () => {
+    if (!pending) {
+      pending = importPart().then((component) => {
+        ready = component;
+        return component;
+      });
+      // A failed fetch is forgotten, so the next attempt asks the network again.
+      pending.catch(() => {
+        pending = null;
+      });
+    }
+    return pending;
+  };
+  const Lazy = lazyPage(() => load().then((component) => ({ default: component })));
+  function Part(props: P) {
+    // Decided once per mount, so a part never swaps one tree for the other.
+    const [Loaded] = useState(() => ready);
+    return Loaded ? createElement(Loaded, props) : createElement(Suspense, { fallback: null }, createElement(Lazy, props));
+  }
+  return { load, Part };
 }

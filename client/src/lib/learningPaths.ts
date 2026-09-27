@@ -6,7 +6,7 @@
 // Nothing here decides what a learner has passed. The server owns grading,
 // enrollment and completion; this module only asks and renders the answer.
 
-import { useQuery } from '@tanstack/react-query';
+import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import type {
   DraftSaveRequest,
@@ -45,15 +45,18 @@ export function fetchPathCatalog(signal?: AbortSignal): Promise<LearningPathCata
   return apiFetch<LearningPathCatalogResponse>(`${ROADMAP}?resource=learning-path-catalog`, { signal });
 }
 
+/** The published manifests, as one set of options the hook and a page's
+ * first-data prefetch share. */
+export const pathCatalogQuery = queryOptions({
+  queryKey: learningPathKeys.catalog(),
+  queryFn: ({ signal }) => fetchPathCatalog(signal),
+  staleTime: 5 * 60_000,
+});
+
 /** The published manifests. Guests get this too — the outline is previewable
  * without an account; only persisted, graded work needs one. */
 export function usePathCatalog(enabled = true) {
-  return useQuery({
-    queryKey: learningPathKeys.catalog(),
-    enabled,
-    queryFn: ({ signal }) => fetchPathCatalog(signal),
-    staleTime: 5 * 60_000,
-  });
+  return useQuery({ ...pathCatalogQuery, enabled });
 }
 
 export const entryFor = (
@@ -91,13 +94,16 @@ export function changeEnrollment(input: EnrollmentCreateRequest): Promise<Enroll
   });
 }
 
+/** An account's enrollments, as one set of options the hook and a page's
+ * first-data prefetch share. */
+export const enrollmentsQuery = (userId: string | undefined) => queryOptions({
+  queryKey: learningPathKeys.enrollments(userId),
+  queryFn: ({ signal }) => fetchEnrollments(signal),
+  staleTime: 30_000,
+});
+
 export function useEnrollments(userId: string | undefined) {
-  return useQuery({
-    queryKey: learningPathKeys.enrollments(userId),
-    enabled: Boolean(userId),
-    queryFn: ({ signal }) => fetchEnrollments(signal),
-    staleTime: 30_000,
-  });
+  return useQuery({ ...enrollmentsQuery(userId), enabled: Boolean(userId) });
 }
 
 /* ── progress ──────────────────────────────────────────────────────────── */
@@ -109,17 +115,24 @@ export function fetchPathProgress(enrollmentId: string, signal?: AbortSignal): P
   );
 }
 
+/** One enrollment's progress, as one set of options the hook and a page's
+ * first-data prefetch share. */
+export const pathProgressQuery = (
+  userId: string | undefined,
+  enrollmentId: string | undefined,
+  version: number | undefined,
+) => queryOptions({
+  queryKey: learningPathKeys.progress(userId, enrollmentId, version),
+  queryFn: ({ signal }) => fetchPathProgress(enrollmentId!, signal),
+  staleTime: 15_000,
+});
+
 export function usePathProgress(
   userId: string | undefined,
   enrollmentId: string | undefined,
   version: number | undefined,
 ) {
-  return useQuery({
-    queryKey: learningPathKeys.progress(userId, enrollmentId, version),
-    enabled: Boolean(userId && enrollmentId),
-    queryFn: ({ signal }) => fetchPathProgress(enrollmentId!, signal),
-    staleTime: 15_000,
-  });
+  return useQuery({ ...pathProgressQuery(userId, enrollmentId, version), enabled: Boolean(userId && enrollmentId) });
 }
 
 /* ── activities ────────────────────────────────────────────────────────── */

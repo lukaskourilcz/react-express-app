@@ -1,6 +1,6 @@
 # Product and UX audit
 
-Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows), and 26 September 2026 for Premium vouchers (`/premium` and `/dev` rows) and the route error panel (P1.9).
+Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows), 26 September 2026 for Premium vouchers (`/premium` and `/dev` rows) and the route error panel (P1.9), and 27 September 2026 for pages that draw once after a click (Strengths to preserve).
 
 ## Executive summary
 
@@ -83,6 +83,7 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 Se
 - One-screen shell, internal main scroll, bottom-waterline clearance, skip link, route titles and route focus.
 - Astryx primitives, `SharkFin`, `LandingKit`, technology glyphs (`CategoryGlyph`), `RadioCards`, dialogs, toast system, and query helpers.
 - Existing loading/error/empty treatment in Quiz, Flashcards, Leaderboard, Profile and much of `/dev`.
+- A click draws the next page once. The route boundary sits outside the keyed route box, links preload their page on intent (`lib/routePreload.ts`), and Coding, Today, Learn, Roadmap, Rewards, Premium, Leaderboard and the Challenge hold their first render for the reads that decide it (`lib/routeData.ts`, at most 1.2s). Today's signed-in sections and the roadmap's optional paths keep chunks of their own and load inside that hold as `lazyPart`s. See the GLITCH and HOLDS sections of `docs/release-acceptance.md`.
 - Lazy routes, lazy Prism Light languages, optional analytics and Sentry, and build-time CSS purging.
 - Realtime polling fallback and server-side match timing.
 

@@ -153,9 +153,14 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   for the first page of a visit. Links preload their page on hover, focus and
   first touch (`lib/routePreload.ts`), and a page whose first render depends
   on account or structure data holds it with `useFirstData`
-  (`lib/routeData.ts`, capped at 1.2s) instead of drawing defaults and
-  redrawing. Never mount a route's `Suspense` boundary inside an element keyed
-  by the path: a fresh boundary shows its fallback even in a transition.
+  (`lib/routeData.ts`, capped at 1.2s, and not at all offline) instead of
+  drawing defaults and redrawing. A section that keeps a chunk of its own,
+  such as Today's signed-in sections or the roadmap's optional paths, is a
+  `lazyPart`: the page's hold loads its code with its reads, so it draws with
+  the page instead of under it a beat later, and a failed part is retried
+  like a page. A signed-out visitor never waits for account data. Never mount
+  a route's `Suspense` boundary inside an element keyed by the path: a fresh
+  boundary shows its fallback even in a transition.
 - A page that fails keeps the shell. `RouteErrorBoundary` sits inside the
   route `Suspense` and inside the keyed route box; outside the `Suspense`,
   catching would remount it and bring the blank beat back. Its panel is the

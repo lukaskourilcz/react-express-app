@@ -1,10 +1,14 @@
 import { Suspense, type ReactNode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { MemoryRouter } from 'react-router-dom';
-import { QueryClient, queryOptions } from '@tanstack/react-query';
+import { QueryClient, onlineManager, queryOptions } from '@tanstack/react-query';
 import { installIntentPreloading, preloadPath, routeChunk } from '../src/lib/routePreload';
-import { FIRST_DATA_WAIT_MS, readOnce, settled, useFirstData } from '../src/lib/routeData';
+import { FIRST_DATA_WAIT_MS, lazyPart, readOnce, settled, useFirstData } from '../src/lib/routeData';
+import { firstDraw, headings } from './firstDraw';
+import { RouteErrorBoundary } from '../src/components/RouteErrorBoundary';
+import { server } from './mocks/server';
 
 // The two halves of a navigation that draws once: the next page's code starts
 // loading on intent, and a page can hold its first render for its data.
@@ -161,6 +165,27 @@ describe('first data', () => {
     expect(load).not.toHaveBeenCalled();
   });
 
+  it('renders at once offline, whether the browser or the query client says so', async () => {
+    const load = vi.fn(() => new Promise(() => undefined));
+    const online = vi.spyOn(navigator, 'onLine', 'get').mockReturnValue(false);
+    try {
+      await mount(<Page dataKey="offline-browser" load={load} label="offline page" />, '/offline-browser');
+      expect(screen.getByText('offline page')).toBeInTheDocument();
+    } finally {
+      online.mockRestore();
+    }
+    // The query client pauses its reads while it believes it is offline, so a
+    // read the page waited for would only run out the cap.
+    onlineManager.setOnline(false);
+    try {
+      await mount(<Page dataKey="offline-client" load={load} label="paused page" />, '/offline-client');
+      expect(screen.getByText('paused page')).toBeInTheDocument();
+    } finally {
+      onlineManager.setOnline(true);
+    }
+    expect(load).not.toHaveBeenCalled();
+  });
+
   it('holds the first render until the data is in, then never again', async () => {
     let answer: () => void = () => undefined;
     const load = vi.fn(() => new Promise<void>((resolve) => { answer = resolve; }));
@@ -192,5 +217,76 @@ describe('first data', () => {
     vi.useRealTimers();
     await mount(<Page dataKey="failing" load={() => Promise.reject(new Error('offline'))} label="own error state" />, '/failing');
     expect(await screen.findByText('own error state')).toBeInTheDocument();
+  });
+});
+
+describe('lazy parts', () => {
+  function Section({ label }: { label: string }) {
+    return <h2>{label}</h2>;
+  }
+  function Page({ load, part }: { load: () => Promise<unknown>; part: ReactNode }) {
+    useFirstData('parts', load);
+    return <main><h1>Page</h1>{part}</main>;
+  }
+
+  it('draws a part the hold loaded in the same frame as the page', async () => {
+    const part = lazyPart(async () => Section);
+    const drawn = firstDraw('h1', headings);
+    await act(async () => {
+      render(<MemoryRouter initialEntries={['/with-part']}><Page load={part.load} part={<part.Part label="Due today" />} /></MemoryRouter>);
+    });
+    expect(screen.getByRole('heading', { level: 2, name: 'Due today' })).toBeInTheDocument();
+    expect(drawn()).toEqual(['Page', 'Due today']);
+  });
+
+  it('loads a part nobody waited for on mount, and draws nothing until it arrives', async () => {
+    let arrive: (component: typeof Section) => void = () => undefined;
+    const importPart = vi.fn(() => new Promise<typeof Section>((resolve) => { arrive = resolve; }));
+    const part = lazyPart(importPart);
+    const drawn = firstDraw('h1', headings);
+    await act(async () => {
+      render(<MemoryRouter><main><h1>Page</h1><part.Part label="Arrives later" /></main></MemoryRouter>);
+    });
+    expect(drawn()).toEqual(['Page']);
+    expect(screen.queryByRole('heading', { level: 2 })).toBeNull();
+    await act(async () => arrive(Section));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Arrives later' })).toBeInTheDocument();
+    expect(importPart).toHaveBeenCalledTimes(1);
+  });
+
+  it('fails its page as a page chunk does, and Try again asks for it afresh', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
+    // The build check a failed chunk makes before the error shows: the same build.
+    server.use(http.get('*/', () => new HttpResponse('<!doctype html><html><head></head><body></body></html>', { headers: { 'content-type': 'text/html' } })));
+    const importPart = vi.fn()
+      .mockRejectedValueOnce(new TypeError('Failed to fetch dynamically imported module: http://localhost:3000/assets/Part.js'))
+      .mockResolvedValueOnce(Section);
+    const part = lazyPart<{ label: string }>(importPart);
+    const recovery = { checkServedBuild: vi.fn(async () => 'same' as const), reload: vi.fn() };
+    await act(async () => {
+      render(
+        <MemoryRouter>
+          <RouteErrorBoundary recovery={recovery}>
+            <main><h1>Page</h1><part.Part label="Asked again" /></main>
+          </RouteErrorBoundary>
+        </MemoryRouter>,
+      );
+    });
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Try again' })));
+    expect(await screen.findByRole('heading', { level: 2, name: 'Asked again' })).toBeInTheDocument();
+    expect(importPart).toHaveBeenCalledTimes(2);
+    expect(recovery.reload).not.toHaveBeenCalled();
+  });
+
+  it('asks the network again after a part failed to load', async () => {
+    const importPart = vi.fn()
+      .mockRejectedValueOnce(new Error('Failed to fetch dynamically imported module'))
+      .mockResolvedValueOnce(Section);
+    const part = lazyPart<{ label: string }>(importPart);
+    await expect(part.load()).rejects.toThrow('Failed to fetch');
+    await expect(part.load()).resolves.toBe(Section);
+    expect(part.load()).toBe(part.load());
+    expect(importPart).toHaveBeenCalledTimes(2);
   });
 });

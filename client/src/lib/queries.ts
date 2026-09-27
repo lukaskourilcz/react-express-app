@@ -11,9 +11,10 @@ import { entitlementQuery } from './entitlement';
 import { readOnce, settled, useFirstData } from './routeData';
 import { fetchLeaderboard, type LeaderboardPeriod } from './play';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from './supabase';
+import { apiFetch } from './api';
 import { listFlashcards } from './flashcards';
 import { getChallengeLeaderboard } from './challengeApi';
-import { useSubject } from './subjects';
+import { useSubject, type SubjectId } from './subjects';
 
 /** The roadmap level/checkpoint map, as one set of options the hook and a
  * page's first-data prefetch share. */
@@ -49,11 +50,13 @@ export type LeaderboardRequest =
   | { period: 'category'; category: string }
   | { period: 'daily'; date: string; categories: string[] };
 
-/** A leaderboard board. The key holds only the inputs that change the result,
- *  plus the viewer on the 30-day board, whose response carries their own line. */
-export function useLeaderboard(request: LeaderboardRequest) {
+/** One board, as one set of options the hook and the page's first-data
+ *  prefetch share, so the two cannot ask for different keys. The key holds only
+ *  the inputs that change the result, plus the viewer on the 30-day board,
+ *  whose response carries their own line. */
+export function leaderboardQuery(request: LeaderboardRequest) {
   const period: LeaderboardPeriod = request.period;
-  return useQuery({
+  return queryOptions({
     queryKey: [
       'leaderboard',
       period,
@@ -72,6 +75,11 @@ export function useLeaderboard(request: LeaderboardRequest) {
       }),
     staleTime: 30_000,
   });
+}
+
+/** A leaderboard board. */
+export function useLeaderboard(request: LeaderboardRequest) {
+  return useQuery(leaderboardQuery(request));
 }
 
 export const profileStatsQueryKey = (userId: string | undefined) =>
@@ -103,12 +111,32 @@ export function useFlashcards(enabled: boolean) {
   });
 }
 
+/** The Biggest Shark Challenge leaderboard of a subject, as one set of
+ * options the hook and the page's first-data prefetch share. */
+export const challengeLeaderboardQuery = (subject: SubjectId) => queryOptions({
+  queryKey: ['challenge', 'leaderboard', subject],
+  queryFn: getChallengeLeaderboard,
+  staleTime: 30_000,
+});
+
 /** The Biggest Shark Challenge leaderboard (best-effort; never throws to the UI). */
 export function useChallengeLeaderboard() {
   const [subject] = useSubject();
-  return useQuery({
-    queryKey: ['challenge', 'leaderboard', subject],
-    queryFn: getChallengeLeaderboard,
-    staleTime: 30_000,
-  });
+  return useQuery(challengeLeaderboardQuery(subject));
 }
+
+/** Concepts whose spaced review is due, for Today's review card. */
+interface ConceptDueResponse {
+  due: { conceptId: string; overdueHours: number; stage: number }[];
+  estimatedMinutes: number;
+}
+
+/** The signed-in learner's due concepts, as one set of options the Today card
+ * and Today's first-data prefetch share. A failure only hides the card, so it
+ * is not retried. */
+export const conceptDueQuery = queryOptions({
+  queryKey: ['concept-due'],
+  queryFn: () => apiFetch<ConceptDueResponse>('/api/quiz/questions?resource=due'),
+  staleTime: 60_000,
+  retry: false,
+});

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
@@ -18,7 +19,8 @@ import {
   submitChallengeScore,
   type ChallengeLeaderboard,
 } from '../lib/challengeApi';
-import { useChallengeLeaderboard } from '../lib/queries';
+import { challengeLeaderboardQuery, useChallengeLeaderboard } from '../lib/queries';
+import { readOnce, settled, useFirstData } from '../lib/routeData';
 import type { Question, QuizResult, CategoryType } from '../types/quiz';
 import {
   getCategoryHexColor,
@@ -27,7 +29,7 @@ import {
 } from '../lib/categories';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
-import { useActiveSubject } from '../lib/subjects';
+import { useActiveSubject, useSubject } from '../lib/subjects';
 import { useIsMobile } from '../lib/useMediaQuery';
 import { visuallyHidden } from '../theme/MuiTheme';
 import { MotionPop } from '../lib/motion';
@@ -84,7 +86,17 @@ interface BufferState {
   queue: Question[];
 }
 
+/** The board line beside the intro, in the cache before the first render: it
+ * used to fill in after the page. It is best-effort, so the wait is the usual
+ * capped one and a failed read draws the page with its own notice. */
+function useBoardFirstData() {
+  const queryClient = useQueryClient();
+  const [subject] = useSubject();
+  useFirstData(`challenge ${subject}`, () => settled([readOnce(queryClient, challengeLeaderboardQuery(subject))]));
+}
+
 export default function Challenge() {
+  useBoardFirstData();
   const { lang, t } = useLanguage();
   const { user } = useAuth();
   const profile = getUserProfile(user);

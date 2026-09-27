@@ -20,12 +20,14 @@
 // only reads it.
 import { useEffect, useId } from 'react';
 import { Link } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { useBilling, type BillingPlan } from '../lib/billing';
-import { useEntitlement } from '../lib/entitlement';
+import { entitlementQuery, useEntitlement } from '../lib/entitlement';
+import { readOnce, settled, useFirstData } from '../lib/routeData';
 import { capture } from '../lib/analytics';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { Page } from './PublicInfoPages';
@@ -71,7 +73,17 @@ function PlanCard({ plan, showAction }: { plan: BillingPlan; showAction: boolean
   );
 }
 
+/** A signed-in account's plan, in the cache before the first render. It used
+ * to arrive after the page and add "Your plan" above the plans, pushing
+ * everything under it down. A signed-out visitor has no plan to wait for. */
+function usePremiumFirstData() {
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  useFirstData(user ? `premium ${user.id}` : null, () => settled(user ? [readOnce(queryClient, entitlementQuery(user.id))] : []));
+}
+
 export default function PremiumPage() {
+  usePremiumFirstData();
   const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const billing = useBilling();

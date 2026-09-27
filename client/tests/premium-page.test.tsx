@@ -1,6 +1,6 @@
 // /premium, the plan table, the Terms and the privacy policy (#222).
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -12,6 +12,7 @@ import ComparisonTable from '../src/components/landing/ComparisonTable';
 import { PrivacyPage, TermsPage, traderRows } from '../src/components/LegalPages';
 import { isSafeReturnPath, rememberAuthReturn, takeAuthReturn } from '../src/lib/authReturn';
 import { server } from './mocks/server';
+import { firstDraw, headings } from './firstDraw';
 
 const signInWithGoogle = vi.fn(async (_returnTo?: string) => undefined);
 const auth = vi.hoisted(() => ({
@@ -31,16 +32,28 @@ function serve({ plan = FREE, billing = { enabled: true, cancellable: true, sell
   );
 }
 
+// Every render is a visit of its own, with a key that stays put while a held
+// first render is retried (lib/routeData.ts keys its wait by the visit).
+let visits = 0;
+function visit(path: string) {
+  const url = new URL(path, 'http://localhost');
+  return { pathname: url.pathname, search: url.search, hash: url.hash, key: `visit-${++visits}` };
+}
+
 function renderAt(path: string, node: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter initialEntries={[path]}>
+      <MemoryRouter initialEntries={[visit(path)]}>
         <LanguageProvider>{node}</LanguageProvider>
       </MemoryRouter>
     </QueryClientProvider>,
   );
 }
+// Signed in, the page holds its first render for the plan (lib/routeData.ts);
+// a render that suspends has to start inside an awaited act. Signed out it
+// draws at once, which the tests that render without act rely on.
+const mountAt = (path: string, node: ReactNode) => act(async () => renderAt(path, node));
 
 describe('/premium', () => {
   it('states the price with VAT, the renewal and the waiver before anyone pays', async () => {
@@ -74,7 +87,7 @@ describe('/premium', () => {
   it('offers both checkouts to a free account', async () => {
     signIn();
     serve();
-    renderAt('/premium', <PremiumPage />);
+    await mountAt('/premium', <PremiumPage />);
     expect(await screen.findByRole('button', { name: 'Continue with monthly' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue with yearly' })).toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Your plan' })).toBeNull();
@@ -83,11 +96,30 @@ describe('/premium', () => {
   it('shows a subscriber the plan line and Manage billing, and no second checkout', async () => {
     signIn();
     serve({ plan: PAYING });
-    renderAt('/premium', <PremiumPage />);
+    await mountAt('/premium', <PremiumPage />);
     const current = await screen.findByRole('region', { name: 'Your plan' });
     expect(await within(current).findByText('Premium, renews 12 Nov')).toBeInTheDocument();
     expect(within(current).getByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Continue with/ })).toBeNull();
+  });
+
+  it('draws a signed-in plan with the page instead of adding it above the plans', async () => {
+    signIn();
+    serve({ plan: PAYING });
+    const drawn = firstDraw('h1', headings);
+    await mountAt('/premium', <PremiumPage />);
+    expect(drawn()).toEqual(expect.arrayContaining(['Your plan', 'Choose a plan']));
+    expect(drawn()!.indexOf('Your plan')).toBeLessThan(drawn()!.indexOf('Choose a plan'));
+  });
+
+  it('never holds a signed-out visitor for a plan', () => {
+    const planReads = vi.fn();
+    serve();
+    server.use(http.get('*/api/user/*', () => { planReads(); return HttpResponse.json(FREE); }));
+    renderAt('/premium', <PremiumPage />);
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Your plan' })).toBeNull();
+    expect(planReads).not.toHaveBeenCalled();
   });
 
   it('says Premium opens soon, once, when billing is off', async () => {

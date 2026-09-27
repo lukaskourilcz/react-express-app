@@ -8,8 +8,9 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Editor } from '../../coding/Editor';
-import { useLanguage, useT } from '../../i18n/LanguageContext';
+import { useT } from '../../i18n/LanguageContext';
 import { LessonView, RichText } from './LessonBody';
+import { useLoc, useLocList } from './localized';
 import type {
   CheckQuestionPayload,
   CheckQuestionVerdict,
@@ -20,22 +21,9 @@ import type {
   StartActivityResponse,
   SubmitActivityResponse,
 } from '../../../../shared/learning-path-api';
-import type { EvidenceState, Localized, LocalizedList } from '../../../../shared/learning-paths';
+import type { EvidenceState, Localized } from '../../../../shared/learning-paths';
 
 /* ── shared bits ───────────────────────────────────────────────────────── */
-
-export function useLoc() {
-  const { lang } = useLanguage();
-  return useCallback((value: Localized | undefined) => (value ? (lang === 'cs' ? value.cs || value.en : value.en) : ''), [lang]);
-}
-
-export function useLocList() {
-  const { lang } = useLanguage();
-  return useCallback(
-    (value: LocalizedList | undefined): string[] => (value ? (lang === 'cs' && value.cs.length ? value.cs : value.en) : []),
-    [lang],
-  );
-}
 
 const STATE_GLYPH: Record<EvidenceState, string> = {
   not_started: '○',
