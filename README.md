@@ -183,6 +183,17 @@ devShark is marketed by **marketingShark**, a project inside BoardlessAI
 repository's bank and writes it up as a five-slide carousel in Czech and again in English,
 answer included, with devShark named once at the end.
 
+Brand and social rules for that work live here:
+
+- [`docs/brand/brand-guidelines.md`](docs/brand/brand-guidelines.md): the V9 kit, colours with a
+  contrast table, typography and merchandise sizes.
+- [`docs/marketing/social-skill.md`](docs/marketing/social-skill.md): carousel, square post and
+  story formats with a QA checklist, until the owner's `SKILL.md` replaces it.
+
+marketingShark in `lukaskourilcz/quorum` should adopt that skill and update its carousel
+template: the clean fin at 48 px in the corner of each slide, the full logo on the last slide
+only, and devShark named once at the end.
+
 What that means for this repository, precisely:
 
 - **Nothing here changes.** No handler, catalog, client file or migration is touched by it. The

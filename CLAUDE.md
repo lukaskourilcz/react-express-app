@@ -13,6 +13,10 @@ Read [the product architecture](docs/product-architecture.md), [the design contr
 - The app ships English only. Do not write Czech copy, add Czech keys, or author `*.cs.ts` overlays: `ENABLED_LANGS` in `client/src/i18n/LanguageContext.tsx` lists the shipped languages, and while it holds one entry no Czech reaches a browser. The existing Czech dictionaries, question translations and coding overlays stay in the repository as finished work — leave them alone rather than deleting or extending them. Keep responsive web accessibility. Native/Expo work is out of scope.
 - Public legacy `DevQuiz` copy is stale; compatibility storage keys, migrations, package names, fixtures, and history may remain.
 
+## Brand
+
+The V9 brand kit lives in `client/public/brand/v9/`, with the rules in `docs/brand/brand-guidelines.md`. Never redraw the fin: `SharkFin`, `BrandLogo`, the share card and the icons copy the kit paths from `client/src/components/brandGeometry.ts`. Spell the name `devShark`, including inside uppercase labels. Brand copy makes no AI claims.
+
 ## Implementation rules
 
 Search before creating. Reuse Astryx, existing `client/src/components/ui/`, landing primitives, Shark fins/waterlines, glyphs, hooks, dialogs, toasts, tokens, and translation keys. Deep End v2 uses ocean ink, tactile paper, editorial type, disciplined accents, restrained motion, visible focus, and purpose-built density—never glass, neon, generic AI imagery, or excessive cards/pills.
