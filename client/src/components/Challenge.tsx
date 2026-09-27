@@ -827,8 +827,8 @@ export default function Challenge() {
             zIndex: 5,
             maxHeight: '48vh',
             overflowY: 'auto',
-            borderRadius: 'var(--radius-element, 0.9rem)',
-            boxShadow: '0 10px 40px rgba(0, 0, 0, 0.35)',
+            borderRadius: 'var(--radius-container)',
+            boxShadow: 'var(--shadow-high)',
           }}
         >
           <Banner

@@ -616,7 +616,7 @@
   border-left: 3px solid var(--brand-accent);
   border-radius: var(--radius-container);
   background: var(--color-background-surface);
-  box-shadow: var(--ss-card-shadow);
+  box-shadow: var(--shadow-low);
 }
 .cd-skip-card h3 { margin: 0; font-family: var(--font-family-heading); font-size: 1.05rem; }
 .cd-skip-reasons { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; min-width: 0; margin: 0; padding: 0; border: 0; }

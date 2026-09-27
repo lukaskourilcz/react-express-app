@@ -59,8 +59,8 @@ function TopicCard({
         border: `1px solid ${selected ? 'var(--brand-accent)' : 'var(--ss-card-line)'}`,
         borderBottom: '2px solid var(--ss-card-edge)',
         boxShadow: hover
-          ? `0 8px 20px light-dark(rgba(23,39,46,0.12), rgba(0,0,0,0.5))${selected ? ', inset 0 0 0 1px var(--brand-accent)' : ''}`
-          : selected ? 'inset 0 0 0 1px var(--brand-accent)' : '0 2px 10px light-dark(rgba(23,39,46,0.06), rgba(0,0,0,0.4))',
+          ? `var(--shadow-med)${selected ? ', inset 0 0 0 1px var(--brand-accent)' : ''}`
+          : selected ? 'inset 0 0 0 1px var(--brand-accent)' : 'var(--shadow-low)',
         borderRadius: 'var(--radius-container)', padding: '14px 16px 18px', cursor: 'pointer',
         transition: 'box-shadow 0.25s ease, background 0.2s ease, border-color 0.2s ease',
       }}

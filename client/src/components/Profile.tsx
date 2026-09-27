@@ -80,16 +80,6 @@ function MetaPill({ color = 'var(--brand-accent)', children }: { color?: string;
   );
 }
 
-// Raised wrapper: resting depth for flat Astryx cards. These profile cards are
-// read-only, so no hover-lift — motion is reserved for clickable surfaces.
-function Lift({ children }: { children: ReactNode }) {
-  return (
-    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
-      {children}
-    </div>
-  );
-}
-
 // Language, appearance and sound ride along in the identity banner. They are
 // the only account-wide switches on this screen and the banner had the room, so
 // they need no card, headings or help text of their own: each button states the
@@ -344,8 +334,7 @@ function ProfileBody({
           </VStack>
 
           <VStack gap={2}>
-            <Lift>
-            <Card variant="default" padding={3} width="100%">
+            <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
               <VStack gap={2}>
                 <SectionLabel>{t('profile.statistics')}</SectionLabel>
 
@@ -360,12 +349,10 @@ function ProfileBody({
                   />
                 </Grid>
               </VStack>
-            </Card>
-            </Lift>
+            </div>
 
             {bookmarkedQuestions.length > 0 && (
-              <Lift>
-              <Card variant="default" padding={3} width="100%">
+              <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
                 <VStack gap={2}>
                   <SectionLabel>{t('profile.bookmarks', { count: bookmarkedQuestions.length })}</SectionLabel>
                   <VStack gap={1.5}>
@@ -394,8 +381,7 @@ function ProfileBody({
                     )}
                   </VStack>
                 </VStack>
-              </Card>
-              </Lift>
+              </div>
             )}
 
             <GithubGardenCard />
@@ -448,8 +434,7 @@ function StreakCard({
   };
 
   return (
-    <Lift>
-      <Card variant="default" padding={3} width="100%">
+    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
         <VStack gap={2}>
           <SectionLabel>{t('profile.streaks')}</SectionLabel>
 
@@ -512,8 +497,7 @@ function StreakCard({
             </Text>
           )}
         </VStack>
-      </Card>
-    </Lift>
+      </div>
   );
 }
 
@@ -671,8 +655,7 @@ function CareerCard() {
     : t('profile.xpToNext', { xp: nf(info.xpToNext), title: nextTitle ?? '' });
 
   return (
-    <Lift>
-    <Card variant="default" padding={3} width="100%">
+    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
       <VStack gap={2}>
         <SectionLabel>{t('profile.career')}</SectionLabel>
         {syncWarning && <Banner status="warning" title={t('profile.syncUnavailable')} />}
@@ -720,8 +703,7 @@ function CareerCard() {
           </HStack>
         </VStack>
       </VStack>
-    </Card>
-    </Lift>
+    </div>
   );
 }
 
@@ -749,8 +731,7 @@ function AdvisorCard() {
   const hasData = !!advice && advice.weakAreas.length > 0;
 
   return (
-    <Lift>
-      <Card variant="default" padding={3} width="100%">
+    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
         <VStack gap={2}>
           <HStack gap={1.5} align="center">
             <div aria-hidden className="ss-tile" style={{ width: 40, height: 40, color: 'var(--brand-accent-on-soft)', background: 'var(--brand-accent-soft)' }}>
@@ -790,8 +771,7 @@ function AdvisorCard() {
             </VStack>
           )}
         </VStack>
-      </Card>
-    </Lift>
+      </div>
   );
 }
 
@@ -847,8 +827,7 @@ export function AccountDeletionCard() {
 
   return (
     <>
-      <Lift>
-        <Card variant="muted" padding={3} width="100%">
+      <div className="ss-panel" style={{ padding: 24, width: '100%', background: 'var(--color-background-muted)' }}>
           <VStack gap={1.5}>
             <SectionLabel>{t('profile.account')}</SectionLabel>
             <Text weight="semibold">{t('profile.deleteTitle')}</Text>
@@ -863,8 +842,7 @@ export function AccountDeletionCard() {
               <Button variant="destructive" size="sm" label={t('profile.deleteAction')} onClick={requestDeletion} />
             </HStack>
           </VStack>
-        </Card>
-      </Lift>
+        </div>
       <BrandedConfirmDialog request={confirm} onClose={() => setConfirm(null)} />
       <AppToast open={!!message} message={message} onClose={() => setMessage(null)} severity="error" autoHideDuration={null} />
     </>
