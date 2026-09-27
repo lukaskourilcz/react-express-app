@@ -2103,3 +2103,172 @@ Not verified: devshark.app (not deployed), a real Supabase session (the signed-i
 - A direct load of a signed-in page. Since `7b4bc8f` supabase-js downloads when a session is stored, and `AuthProvider` reports no user until it has restored the session. A page that mounts before then holds for a visitor's reads and draws the account's data when it arrives, as before this change. Holding for the session restore as well would close that.
 - `/collection`, signed in: the saved cards arrive after the page.
 - The other lazy parts inside pages that ERRBOUND listed (`FriendsPanel`, the code highlighter, `PathRewardClaim`, the Learn workbench) still use `React.lazy`.
+
+## 2026-09-27 — the four gaps ERRBOUND left open (HARDEN)
+
+The owner asked me to close four gaps from ERRBOUND's hand-off, each with a test that fails on the old behaviour: devshark.app answered a missing chunk with `index.html` under a year-long cache; after one failed supabase-js download no sign-in press could work without a reload; the Coding workbench's own Try again hit the same wall; and the lazy parts of the shell took a failure to the root error screen.
+
+| Gap | The change | The test |
+| --- | --- | --- |
+| The SPA rewrite caught `/assets/`, and the assets header rule marked the `index.html` it served `public, max-age=31536000, immutable` | A path under `/assets/` or `/sandbox/assets/` with no file behind it answers 404 with `Cache-Control: no-store`. Only a file that exists gets the year-long cache | `vercelRoutingContracts()` in `scripts/vercel-routing-contract.ts`, which `npm run test:launch` runs |
+| Chromium up to 155 and Safari answer a second import of a failed module from memory | A second press that meets the same chunk failure reloads the page; the next document finishes that sign-in and returns to the page that asked | 7 tests in `client/tests/supabase-lazy.test.tsx` and 1 in `route-errors.test.tsx`; in `lazy-auth.spec.ts`, "a second sign-in press after a failed download reloads…" |
+| The workbench's Try again imported the failed chunk again | The press reloads when the same chunk failure comes straight back | 3 tests in `client/tests/coding-workbench-retry.test.tsx`; in `route-errors.spec.ts`, "the Coding workbench that fails to load…" |
+| `AuthButton` and `UpgradeSheet` were `React.lazy` chunks outside the route boundary | Each is a `lazyShellPart` inside a `ShellPartBoundary`. The header keeps a retry in the account widget's 56px row; a sheet that fails closes with a toast | 6 tests in `client/tests/shell-parts.test.tsx`; two tests in `route-errors.spec.ts` |
+
+### A missing file under `/assets/`
+
+I probed devshark.app with `curl` on 2026-09-26 at 22:57 UTC and on 2026-09-27 at 08:31 UTC and got the same answers both times:
+
+| Path | Status | Type | `cache-control` |
+| --- | --- | --- | --- |
+| `/assets/does-not-exist-0000.js` | 200 | `text/html` | `public, max-age=31536000, immutable`; the first probe also got `x-vercel-cache: HIT` and `age: 4798` |
+| `/assets/coding-worker/does-not-exist-0000.js` | 200 | `text/html` | the same, with the worker's CSP |
+| `/sandbox/assets/does-not-exist-0000.js` | 404 | `text/plain` | `public, max-age=31536000, immutable` |
+| `/sandbox/does-not-exist.html`, `/topics/does-not-exist-zz` | 404 | `text/plain` | `public, max-age=0, must-revalidate` |
+
+The third row settles whether Vercel's header rules reach a 404. `/sandbox/` sits outside the SPA rewrite, so that path gets Vercel's own 404, and the `/sandbox/assets/(.*)` rule still marks it immutable for a year. Vercel's CDN caches a 404 as it caches a 200, unless `Cache-Control` carries `private`, `no-cache` or `no-store` ([CDN cache, cacheable response criteria](https://vercel.com/docs/caching/cdn-cache#cacheable-response-criteria)).
+
+What Chromium 141 keeps, measured with a local server that counts requests, one fresh browser context per answer, twice with the same numbers (a scratch harness, not committed):
+
+| Answer for a chunk that is gone | Requests: first visit, after a navigation, after a reload | The file comes back, the page reloads |
+| --- | --- | --- |
+| 200 `text/html`, `nosniff`, `immutable`, as devshark.app answers today | 1, 1, 1: the browser reuses the stored HTML | fails, with no request |
+| 404, `nosniff`, `immutable`: dropping `assets/` from the rewrite alone | 1, 2, 3 | loads |
+| 404, `immutable`, no `nosniff` | 1, 1, 1 | fails, with no request |
+| 404, `nosniff`, `public, max-age=0, must-revalidate` | 1, 2, 3 | loads |
+| 404, `nosniff`, `no-store`: this change | 1, 2, 3 | loads |
+
+So a browser that met today's answer once keeps the chunk broken after a rollback brings the file back. Whether Chromium reuses a stored 404 depends on the other headers; `no-store` keeps it out of the browser and out of Vercel's CDN whatever they are.
+
+`vercel.json`'s `headers` cannot tell a missing file from one that exists. `@vercel/routing-utils` 6.6.0, the version Vercel CLI 60.1.3 bundles for `vercel build`, compiles each `headers` rule into a `continue` route ahead of `{ "handle": "filesystem" }` (`getTransformedRoutes`), which is how a rule reaches the 404. `has` and `missing` match the request only ([vercel.json, `has` and `missing`](https://vercel.com/docs/project-configuration/vercel-json#conditional-matching-with-has-and-missing)). The Build Output API splits routing into phases: routes after `{ "handle": "filesystem" }` run when the filesystem misses, and routes after `{ "handle": "hit" }` when it hits ([Build Output configuration, handler route](https://vercel.com/docs/build-output-api/configuration#handler-route)). `@vercel/next` 15.0.1 sets `/_next/static`'s immutable `cache-control` in the `hit` phase and answers a missing `/_next/static` file with 404 after a miss, and Nitro gives a missing asset a 404 with `no-store` after the filesystem check ([nitrojs/nitro#4474](https://github.com/nitrojs/nitro/pull/4474), merged 2026-09-03). `vercel.json` keeps its header rules in `routes` now:
+
+| Phase | Routes |
+| --- | --- |
+| Before the filesystem check | The app's security headers on every path but the worker and the sandbox; `triage-verdicts.json`'s day-long cache; the worker's CSP, `nosniff` and CORP; the sandbox's CSP, `nosniff`, referrer policy and CORS; CORS on `/assets/`. No year-long cache |
+| The filesystem missed | `^/(?:sandbox/)?assets/.*$` answers 404 with `Cache-Control: no-store` before any rewrite; then the ten rewrites, whose SPA fallback now leaves `assets/` alone |
+| The filesystem hit | `^/(?:sandbox/)?assets/.*$` gets `public, max-age=31536000, immutable` |
+
+A `headers` property would land after these routes, in the `hit` phase (`mergeRoutes` files each user route under the last `handle` above it), and reach existing files only. `handle` is a deprecated route property that the schema still accepts ([vercel.json, deprecated route properties](https://vercel.com/docs/project-configuration/vercel-json#deprecated-route-properties)).
+
+`routes` next to `rewrites`: `@vercel/routing-utils` up to 5.3.3 (2026-02-13) refused the pair with "If `rewrites`, `redirects`, `headers`, `cleanUrls` or `trailingSlash` are used, then `routes` cannot be present." 6.0.0 (2026-02-26) and every later release accept it, CLI 60.1.3 declares 6.6.0, and the documentation says "You can use `routes` alongside `rewrites`, `redirects`, `headers`, `cleanUrls`, and `trailingSlash`" ([vercel.json, routes](https://vercel.com/docs/project-configuration/vercel-json#routes)). The preview build of `820fb64` accepted it (below). Should an older builder ever refuse it, a routes-only variant, with the rewrites compiled into the filesystem phase after the 404 rule, passes 5.3.3 and 6.6.0 alike and merges into the same routes.
+
+`scripts/vercel-routing-contract.ts` checks: no `headers` property; the phases, in order; header-only `continue` routes before the filesystem check and after a hit; no `Cache-Control` before the filesystem check on an asset path; the 404 rule first after a miss, with `no-store` and no destination; no rewrite that catches `/assets/`, `/assets/coding-worker/` or `/sandbox/assets/`; the SPA fallback still serving `/`, `/coding`, a task, `/assets` and `/profile`; the year-long cache for hashed files only; the worker's and the sandbox's own headers. It turns each rewrite source into a pattern as routing-utils does (path-to-regexp 6), and the two agree on 11 sources and 27 paths.
+
+### Sign-in after a failed download
+
+`loadSupabase()` now remembers a failed download (`supabaseLoadFailed()`). When a press fails with a chunk error after an earlier failure in the same document, `auth.tsx` writes a mark to `sessionStorage` (`devshark:auth-resume`, valid for 60 seconds) beside the return path and reloads through `reloadOnPress`, which reloads only while the browser is online and `/` answers. The next document reads the mark once, as its modules load; with no session stored, it starts the sign-in without a press, and Google returns the learner to the page that asked.
+
+| Situation | What happens |
+| --- | --- |
+| First press, the download fails | "Sign-in failed. Please try again.", as before; nothing reloads |
+| Second press, the same failure | the page reloads, leaves for Google, and comes back to the page that asked |
+| Offline, or `/` does not answer | no reload; the press fails and forgets the return path |
+| The reload is refused (a leave-page prompt) | the press fails after 4 seconds and forgets the return path |
+| The download failed in the background (a stored session's restore) | no reload; the first press after it reloads |
+| A mark older than 60 seconds, or dated in the future | dropped with the return path; nothing downloads |
+| The carried-over sign-in fails again | the shell says "Sign-in failed. Please try again." and reloads nothing |
+
+Since `346a824` the header's "Log in" is `SignInButton`, which calls the same `signInWithGoogle`.
+
+### The workbench's Try again
+
+`useWorkbench` in `CodingSection.tsx` reloads through `reloadOnPress` when a retry fails with a chunk error. The button stays busy (`aria-busy`, `aria-disabled`) until the new document arrives, or for 4 seconds when the reload is refused, and ignores presses meanwhile. A task's first load, which nobody pressed for, never reloads. The change sits in the lazy `CodingSection` chunk.
+
+### Shell parts
+
+`lazyShellPart` in `lib/routeRecovery.ts` renews a failed part as `lazyPage` does, but never checks the build or reloads on its own: the shell loads these parts without a press. `ShellPartBoundary` sits inside the part's `Suspense`, reports a failed chunk once through `reportBoundaryError`, and draws the part's fallback. Its retry renders the part again in a transition, moves focus into the part when it draws if the retry had focus, and reloads through `reloadOnPress` when the same chunk failure comes straight back. A part that throws is rendered again and nothing more. HOLDS added a `lazyPart` to `lib/routeData.ts` for sections inside a page, which fail with their page; the shell's helper became `lazyShellPart` in the merge that followed.
+
+- The account widget. Since `346a824` the header loads it for a session only. Its retry reads "Try again", with the accessible name "Account did not load. Try again", and stands centred in the widget's 56px row. Measured with a stored session at 360, 390, 768 and 1280px, light and dark, mouse and touch: 86×32 with a mouse, 86×44 with a touch pointer; the header stays 73px with the retry and with the widget; no horizontal overflow; Shift+Tab from `<main>` reaches it, and it shows a 2px solid accent ring (rgb(45, 122, 45) light, rgb(76, 175, 80) dark).
+- The upgrade sheet. A sheet whose code fails closes, and the host says "Network error. Check your connection and try again." in a toast, or "Something went wrong. Please try again." when the sheet throws. The next request asks for the sheet again.
+
+React Query's devtools, the one other lazy component outside the route boundary, load in development only. Motion's features chunk is no component; see the hand-off.
+
+### Evidence
+
+"Old code" means builds of `3a8cf13` (ERRBOUND, this branch's base) made as CI makes them, or the unit tests with the change reverted in a copy of the branch. Chromium 141.
+
+| Check | Old code | This branch |
+| --- | --- | --- |
+| `npm run test:launch` with `3a8cf13`'s `vercel.json` | exit 1: "vercel.json keeps its header rules in `routes`…" | exit 0 |
+| `supabase-lazy.test.tsx` with `auth.tsx`, `authReturn.ts` and `supabaseClient.ts` reverted | 6 of the 7 new tests fail; the seventh guards a case the old code handled too | 26 pass |
+| `lazy-auth.spec.ts`, the second press | times out: the press sends no request and fails again | passes; annotation "reloaded, and the next document signed in" |
+| `coding-workbench-retry.test.tsx` with `CodingSection.tsx` reverted | 2 of 3 fail; the in-place retry passes on both | 3 pass |
+| `route-errors.spec.ts`, the workbench | fails: "Could not load this task." and its Try again stay | passes; reloaded the address |
+| `shell-parts.test.tsx` with `UpgradeSheetHost.tsx` reverted | the sheet's test fails; the five boundary tests cover a new component | 6 pass |
+| `route-errors.spec.ts`, the account test: signed out on `3a8cf13`, with a session on `346a824` | fails: the root screen ("Something went wrong", "The page hit an unexpected error. Reloading usually fixes it.") replaces the app | passes; reloaded the address |
+| The same test on `a13a6e1`, the merge of `346a824` before the retry got its row | fails: the header measures 57px with the retry and 73px with the widget | passes |
+| `route-errors.spec.ts`, the upgrade sheet, on `3a8cf13` | fails: the root screen replaces the app | passes |
+| The other 12 tests of `route-errors.spec.ts` and `lazy-auth.spec.ts` on `3a8cf13` | pass | pass |
+
+Eleven mutations of `vercel.json`, one at a time, each fail the contract: the old rewrite, the immutable cache before the filesystem check, no 404 rule, a 404 without `no-store`, a 404 rewritten to `index.html`, the header rules back in `headers`, the worker's CSP gone, the sandbox's CORS gone, the hashed files' cache gone, a header rule that ends routing, and `3a8cf13`'s file.
+
+`npm run check:bundle`: 226,984 of 243,000 gzip bytes on this branch, 226,188 on `origin/main` at `3e670be` and 226,027 on `3a8cf13`. The 796 bytes over `3e670be` all sit in the entry script: `reloadOnPress`, `lazyShellPart`, `ShellPartBoundary`, the account retry, the sign-in resume and the sheet's toast load with the shell they guard.
+
+### Release contract on the final head
+
+All on `820fb64`, the code of this record's commit, after merging `origin/main` at `3e670be`. I ran every command below, and each exit code is its own. Browser runs used `CHROME_BIN=/opt/pw-browsers/chromium` and `vite preview` on port 4581.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:launch` | exit 0; the twelve-function budget holds, and `api/` is unchanged since `3a8cf13` |
+| `npm run test:client` | exit 0; 30 files, 309 tests |
+| `test:coding-auth`, `test:grading-integrity`, `test:coding`, `test:paths`, `test:billing`, `test:fallbacks` | exit 0 each |
+| `npm run check:unused`, `npm run check:security` | exit 0 each; knip reports no new finding |
+| `VITE_PRODUCT=devshark VITE_LOCK_SUBJECT=webdev npm run build` | exit 0 |
+| The workflow's build step: the Supabase placeholders, then `npm run build`, `npm run check:public` and `npm run check:bundle` | exit 0 each; 13 public URLs; 226,984 of 243,000 gzip bytes |
+| `npm audit --omit=dev`, root and client | exit 0 each; 0 vulnerabilities |
+| Browser specs `public`, `evolving`, `segmented`, `on-accent`, `navigation`, `lazy-auth`, `route-errors` and `first-load` against that build | exit 0 each; 5, 2, 4, 12, 2, 6, 10 and 2 passed |
+| `npm run check:responsive` on CI's routes at 360, 390, 430, 768, 1024, 1280 and 1440, then CI's dark Czech sweep | exit 0 each; 28 and 6 probes, 0 with issues |
+| `npm run check:responsive` on `/coding`, `/premium`, `/coding/javascript/js-double-numbers`, `/today` and `/roadmap` at 360, 390, 768 and 1280, light, then with `RESPONSIVE_THEME=dark` | exit 0 each; 20 probes, 0 with issues |
+| `npm run test:harness`, from a copy that binds ports 4583 and 4584 in place of a random one | exit 0; 196 assertions in Chromium |
+| Browser specs typechecked with a scratch `tsconfig` over `tests/browser/*.ts`; the tooling typecheck does not cover them | exit 0 |
+| Each code commit on its own (`6451c61`, `1df08ee`, `0864dc5`, `10d46eb`, `1da47bd`, from `git archive`): client `tsc -b`, the tooling typecheck, `vitest run`, `test:launch` | exit 0 at every one; 277, 285, 288, 294 and 294 tests |
+| `git diff --check`, `git diff --check origin/main...HEAD` | clean |
+
+Not run: the Storybook build and its spec, since no story imports a module this change touches, and Lighthouse.
+
+### The Vercel preview
+
+`vite preview` answers a missing asset with `200 text/html`, so only a deployment shows what `vercel.json` does. The lead deployed `820fb64` as a preview on 2026-09-27 (`dpl_j3qvQV8zsLhVcYvkfAYLxSk7uzHp`, READY): Vercel built it with `routes` beside `rewrites`. Measured by the lead through a share link:
+
+| Request | Answer |
+| --- | --- |
+| An existing `/assets/main-*.js` | 200, `public, max-age=31536000, immutable` |
+| A missing `/assets/*.js`, and a missing `/assets/*.css` | 404, `no-store` |
+| `/sandbox/index.html` | 200, the sandbox's CSP, no `X-Frame-Options: DENY` |
+| A missing `/sandbox/assets/*.js` | 404, `no-store`; devshark.app sends the year-long `immutable` today |
+| An existing `/sandbox/assets/index-*.js` | 200, `immutable` |
+| `/assets/coding-worker/ts-compiler-*.js` | 200, `immutable`, the worker's CSP, `Cross-Origin-Resource-Policy: same-origin` |
+| `/` | the app's CSP and `X-Frame-Options: DENY` |
+| `/learn`, `/coding`, `/topics/javascript-closures`, `/robots.txt` | 200 |
+| `/api/health` | 200, JSON |
+| `/ingest/static/array.js` (the PostHog proxy) | 200, JavaScript |
+
+That report does not cover a missing file under `/assets/coding-worker/` (404 with `no-store` and the worker's headers, by the same rule), `/assets/` (404) and `/assets` (the SPA's `index.html`), a repeated 404 staying out of the CDN cache, `/triage-verdicts.json`'s day-long cache, or `node scripts/check-security.mjs --url=<preview URL>`.
+
+### Commits
+
+| Commit | What |
+| --- | --- |
+| `6451c61` | `vercel.json` in routing phases; `scripts/vercel-routing-contract.ts`; `check-security.mjs` and the launch contracts read the header rules from `routes`; the newer-build spec answers a removed chunk with that 404 too |
+| `1df08ee` | The second sign-in press reloads, and the next document finishes the sign-in (`auth.tsx`, `authReturn.ts`, `supabaseClient.ts`, `reloadOnPress` in `routeRecovery.ts`) |
+| `0864dc5` | The workbench's Try again reloads when the failure comes back |
+| `10d46eb` | `lazyShellPart` (then `lazyPart`), `ShellPartBoundary`, the account retry and the sheet's toast |
+| `c1008c0` | Merge of `origin/main` at `f4e7cbb`, which changes `scripts/test-harness.ts` only; no conflict |
+| `a13a6e1` | Merge of `origin/main` at `346a824` (CLS). One conflict, in `App.tsx`: main's `user \|\| authLoading` branch kept, the boundary inside its `Suspense` around `AuthButton` |
+| `1da47bd` | The account retry keeps the widget's 56px row; the account test signs in; `tests/browser/fake-session.ts` holds the session helpers both specs use |
+| `d7ad848` | The rule in `DESIGN_RULES.md` §8 |
+| `6584f1c` | Merge of `origin/main` at `3e670be` (HOLDS); no conflict |
+| `820fb64` | The shell's helper renamed `lazyShellPart`, apart from `routeData`'s `lazyPart` |
+| this commit | This record |
+
+### Hand-off
+
+- The preview rows the lead's report does not cover (see above), and devshark.app once this is deployed.
+- The upgrade sheet in a browser that remembers failed module fetches. Measured in Chromium 141: after one failed download, a second 402 in the same document asks for the sheet again, the browser answers from memory without a request, and the toast shows again; a reload opens the sheet. A 402 from a page's own read opens the sheet as often as a press does, so the host never reloads for it.
+- Motion's features chunk (`lib/motion.tsx`, `LazyMotion` in strict mode). Measured on this branch's build: with that chunk dropped, the route box stays at opacity 0 on `/` and after a navigation to `/quiz`, the header shows, and the page reports `TypeError: Failed to fetch dynamically imported module`. No boundary sees it, since nothing throws during render.
+- The lazy parts inside pages that still use `React.lazy` (HOLDS lists them).
+- Vercel's Skew Protection ([docs](https://vercel.com/docs/skew-protection)) keeps an old deployment's files reachable for a tab still running it, through a `__vdpl` cookie, an `x-deployment-id` header or a `dpl` query; a static Vite build would need one of those wired in, and it is a project setting, so I left it alone.
+
+Not verified by me: `vercel.json` on Vercel, which the lead checked on the preview; devshark.app, where this is not deployed; Firefox and Safari; a real Google sign-in (the specs answer Supabase locally, with a fake session where one is needed); Sentry, which has no DSN here; physical phones and screen readers.
