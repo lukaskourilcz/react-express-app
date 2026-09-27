@@ -2435,21 +2435,11 @@ async function main() {
     /profile\.backToQuiz/,
     'Profile is an overview and must not end with a contextless Back to quiz action',
   );
-  // The tip is one line inside the streak card now, not a card of its own. The
-  // rule that matters is that it never repeats what it said last time: a plain
-  // random draw from ten repeats about one visit in ten, which is what "always
-  // different" is not.
-  assert.match(
-    profileSource,
-    /const pool = CONSISTENCY_TIPS\.filter\(\(key\) => key !== previous\)/,
-    'the consistency tip must exclude the one shown last time',
-  );
-  assert.ok(
-    (profileSource.match(/'profile\.tip\.[a-zA-Z]+'/g) ?? []).length >= 8,
-    'the tip pool must be large enough that a learner does not recognise it',
-  );
-  // And the last-quiz date is gone: it is a fact nobody acts on, and the tip
-  // took its place.
+  // Design audit P1.5: the rotating consistency tip is gone, and the four quiz
+  // figures sit in the career card as one neutral row, not a card of their own.
+  assert.doesNotMatch(profileSource, /CONSISTENCY_TIPS|profile\.tip\.|profile\.statistics|profile\.xpBreakdown|MetaPill/);
+  assert.match(profileSource, /<StatTile label=\{t\('profile\.averageScore'\)\} value=\{`\$\{totals\.average\}%`\} \/>/);
+  // And the last-quiz date is gone: it is a fact nobody acts on.
   assert.doesNotMatch(profileSource, /profile\.lastQuiz/, 'the last-quiz date should not come back');
   assert.match(
     profileSource,
