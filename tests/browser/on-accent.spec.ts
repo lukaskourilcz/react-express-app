@@ -94,6 +94,21 @@ for (const theme of ['light', 'dark'] as const) {
     });
   }
 
+  // P1.8: the progress line under each topic on /learn's rail sat at opacity
+  // 0.72, which read 3.3:1 on the light theme's white. It now takes
+  // --color-text-secondary, so check it idle and selected. It has no fill of
+  // its own, so axe, which composites the pill behind it, does the measuring.
+  test(`${theme}: /learn's topic progress lines read idle and selected`, async ({ page }) => {
+    await open(page, theme, '/learn');
+    await expect(page.getByRole('radio').filter({ hasText: /\d+ \/ \d+ levels/ })).toHaveCount(3);
+    for (const topic of ['HTML', 'CSS']) {
+      await page.getByRole('radio', { name: topic, exact: true }).click();
+      await expect(page.getByRole('radio', { name: topic, exact: true })).toBeChecked();
+      const contrast = await new AxeBuilder({ page }).include('.rm-topic-rail').withRules(['color-contrast']).analyze();
+      expect(contrast.violations).toEqual([]);
+    }
+  });
+
   test(`${theme}: the XP toast's text token reads on its fill`, async ({ page }) => {
     await open(page, theme, '/');
     // The toast only appears after a verified award; the token pair is what it paints.
