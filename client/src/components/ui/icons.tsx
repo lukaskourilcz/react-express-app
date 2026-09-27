@@ -112,6 +112,15 @@ export const CloseIcon = ({ size = 20, style }: IconProps) => (
   </svg>
 );
 
+/** A coin: the accent disc with an inner rim. Decorative; the number or the
+ * word beside it carries the meaning. The Coins page and its header button. */
+export const CoinIcon = ({ size = 24 }: { size?: number }) => (
+  <svg aria-hidden="true" focusable="false" width={size} height={size} viewBox="0 0 24 24" fill="none">
+    <circle cx="12" cy="12" r="10" fill="var(--brand-accent)" />
+    <circle cx="12" cy="12" r="6.5" fill="none" stroke="var(--brand-on-accent)" strokeWidth="1.6" opacity="0.55" />
+  </svg>
+);
+
 // devShark's own social profiles, in the same stroke language (footer links).
 export const InstagramIcon = ({ size = 20, style }: IconProps) => (
   <svg {...base(size)} style={style}>

@@ -94,32 +94,34 @@ const mountShop = () => act(async () => render(<Shop />, { wrapper }));
 const tHook = () => renderHook(() => useT(), { wrapper }).result.current;
 
 describe('How to earn', () => {
-  it('turns progress into the live lines of the handoff', () => {
+  // Design audit P1.3: exactly five rows, no per-row Premium tag.
+  it('lists learning, welcome, streaks, finishing and the month top three', () => {
     const t = tHook();
     const rows = earnRows({ rules: DEFAULT_COIN_SETTINGS, progress: progress() }, t, true);
-    const labels = rows.map((row) => row.label);
-    expect(labels).toContain('Streak 7 days: 4 of 7');
-    expect(labels).toContain('JavaScript: 21 of 25 levels');
-    expect(labels).toContain('Expression engine: 4 of 10 stages');
-    expect(rows.find((row) => row.key === 'xp')?.figure).toBe('Today: 40 of 400');
-    expect(rows.find((row) => row.key === 'welcome')?.figure).toBe('Received');
-    // A finished topic that has not paid is not listed as in progress.
-    expect(labels.some((label) => label.startsWith('HTML:'))).toBe(false);
-    // Every milestone says Premium; the XP and welcome coins go to everyone.
-    expect(rows.filter((row) => row.key.startsWith('streak-')).every((row) => row.premium)).toBe(true);
-    expect(rows.find((row) => row.key === 'xp')?.premium).toBeFalsy();
+    expect(rows.map((row) => row.key)).toEqual(['xp', 'welcome', 'streak', 'finish', 'month-top']);
+    expect(rows.map((row) => row.label)).toEqual([
+      'Learning', 'Welcome coins', 'Streak milestones', 'Finish a topic or project', 'Top three of the month',
+    ]);
+    expect(rows[0].detail).toBe('10% of the XP you earn, up to 400 coins a day. Premium: 20%.');
+    expect(rows[0].figure).toBe('Today: 40 of 400');
+    expect(rows[1].figure).toBe('Received');
+    expect(rows[2].detail).toBe('A streak of 7, 30 and 100 days: 25, 100 and 300 coins.');
+    expect(rows[2].figure).toBe('4 of 7 days');
+    expect(rows[3].detail).toBe('Every level of a Learn topic: 100 coins. An evolving project: 150. A short path: 50.');
+    expect(rows.some((row) => 'premium' in row)).toBe(false);
   });
 
-  it('marks paid milestones as earned and shows only the rules before progress loads', () => {
+  it('marks paid milestones and shows only the rules before progress loads', () => {
     const t = tHook();
     const earned = earnRows({ rules: DEFAULT_COIN_SETTINGS, progress: progress({ streak: 9, earned: ['streak:7', 'topic:html'] }) }, t, false);
-    expect(earned.find((row) => row.key === 'streak-7')).toMatchObject({ done: true, figure: 'Earned' });
-    expect(earned.find((row) => row.key === 'topic:html')).toMatchObject({ label: 'Finished HTML', done: true });
+    expect(earned.find((row) => row.key === 'streak')?.figure).toBe('9 of 30 days');
+    expect(earned.find((row) => row.key === 'finish')?.figure).toBe('1 finished');
     expect(earned.find((row) => row.key === 'welcome')?.figure).toBe('+200');
+    const all = earnRows({ rules: DEFAULT_COIN_SETTINGS, progress: progress({ earned: ['streak:7', 'streak:30', 'streak:100'] }) }, t, false);
+    expect(all.find((row) => row.key === 'streak')).toMatchObject({ done: true, figure: 'Earned' });
     const rulesOnly = earnRows({ rules: DEFAULT_COIN_SETTINGS, progress: null }, t, false);
-    expect(rulesOnly.map((row) => row.label)).toEqual(expect.arrayContaining([
-      'Streak 7 days', 'Pass every level of a Learn topic', 'Finish an evolving project', 'Finish a short path', 'Top three of the month',
-    ]));
+    expect(rulesOnly).toHaveLength(5);
+    expect(rulesOnly.find((row) => row.key === 'streak')?.figure).toBeUndefined();
   });
 });
 
@@ -142,7 +144,7 @@ describe('the Rewards screen', () => {
     signIn();
     routes({ plan: FREE, shop: pricedShop });
     await mountShop();
-    expect(screen.getByRole('heading', { level: 1, name: 'Rewards' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Coins' })).toBeInTheDocument();
     await screen.findByText('1,240');
     expect(screen.getByRole('heading', { name: 'How to earn' })).toBeInTheDocument();
     await screen.findByText('Premium members redeem coins for merchandise.');
@@ -161,7 +163,7 @@ describe('the Rewards screen', () => {
     await screen.findByText('1,240');
     await screen.findByRole('heading', { name: 'Crown and streak protection' });
     const headings = screen.getAllByRole('heading', { level: 2 }).map((one) => one.textContent);
-    expect(headings.slice(0, 5)).toEqual(['Your coins', 'How to earn', 'Invite a friend', 'Merchandise', 'Crown and streak protection']);
+    expect(headings.slice(0, 5)).toEqual(['Your coins', 'How to earn', 'Crown and streak protection', 'Invite a friend', 'Merchandise']);
     expect(screen.queryByText('Premium members redeem coins for merchandise.')).toBeNull();
   });
 
@@ -214,7 +216,7 @@ describe('the Rewards screen', () => {
     routes();
     await mountShop();
     expect(screen.getByText(/Sign in to see your coins/)).toBeInTheDocument();
-    expect(screen.getByText('Streak 7 days')).toBeInTheDocument();
+    expect(screen.getByText('Streak milestones')).toBeInTheDocument();
   });
 
   it('offers a retry when the coins cannot load', async () => {

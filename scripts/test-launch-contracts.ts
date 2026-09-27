@@ -1050,8 +1050,10 @@ function coinsContracts() {
   assert.doesNotMatch(read('client/src/App.tsx'), /grantRegistrationBonusIfNew/);
   assert.match(rewardsHandlers, /supabase\.rpc\('grant_signup_tokens'/, 'the wallet read pays the welcome coins');
 
-  // 6. The UI says coins and Rewards; the code keeps `token`.
-  assert.equal(ENGLISH['nav.shop'], 'Rewards');
+  // 6. The UI says coins, and the page is named Coins (design audit P1.3);
+  // the code keeps `token`.
+  assert.equal(ENGLISH['nav.shop'], 'Coins');
+  assert.equal(ENGLISH['shop.title'], 'Coins');
   assert.equal(ENGLISH['shop.tokensUnit'], 'coins');
   for (const [key, value] of Object.entries(ENGLISH)) {
     if (!/^(shop\.|rewards\.|register\.|auth\.signupBonus)/.test(key) || /^shop\.item\./.test(key)) continue;
