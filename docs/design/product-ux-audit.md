@@ -1,6 +1,6 @@
 # Product and UX audit
 
-Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows), 26 September 2026 for Premium vouchers (`/premium` and `/dev` rows) and the route error panel (P1.9), and 27 September 2026 for pages that draw once after a click (Strengths to preserve).
+Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 September 2026 for the free tier and Premium (`/shop`, `/premium` and `/support` rows), 26 September 2026 for Premium vouchers (`/premium` and `/dev` rows) and the route error panel (P1.9), and 27 September 2026 for pages that draw once after a click (Strengths to preserve) and the `/learn` progress line (P1.8).
 
 ## Executive summary
 
@@ -63,7 +63,16 @@ Last reviewed: 22 July 2026. Updated 24 September 2026 for devShark alone, 25 Se
 5. The active quiz/question container can clip multiline answers on short viewports. Allow controlled internal scrolling.
 6. Fast-path auth loading and sign-in/sign-out errors can hang or disappear. Add bounded, user-readable states without exposing environment names.
 7. Multiplayer state refresh is approximately quadratic in room size. This is a documented scaling constraint; a safe fix requires a forward API/RPC design and is outside the visual-only migration.
-8. On `/learn`'s topic rail, an unselected topic's progress line ("0/6") is 0.66rem text at `opacity: 0.72`, which blends to `#809098` on the light theme's white: axe measures 3.3:1, below 4.5:1. The dark theme passes. Found on 26 September 2026 while checking P1.3; not yet fixed.
+8. ~~On `/learn`'s topic rail, an unselected topic's progress line ("0/6") is 0.66rem text at `opacity: 0.72`, which blends to `#809098` on the light theme's white: axe measures 3.3:1, below 4.5:1. The dark theme passes. Found on 26 September 2026 while checking P1.3.~~ Closed 2026-09-27. The line drops the opacity and takes `--color-text-secondary` through `.rm-topic-progress` in `Roadmap.css`; no token changed. Measured in Chromium on the production build at 1280px, with the pill behind each line composited:
+
+   | Progress line | Light before | Light after | Dark before | Dark after |
+   |---|---:|---:|---:|---:|
+   | Idle topic on the surface | 3.30:1 | 6.13:1 | 4.73:1 | 7.92:1 |
+   | Selected JavaScript | 6.05:1 | 5.94:1 | 7.01:1 | 6.46:1 |
+   | Selected HTML | not measured | 5.24:1 | not measured | 7.13:1 |
+   | Selected CSS | not measured | 5.09:1 | not measured | 7.29:1 |
+
+   Axe's `color-contrast` rule found two violations on `/learn` in light (the HTML and CSS lines) and none after; dark had none before or after. `tests/browser/on-accent.spec.ts` now runs that rule on the rail with HTML and then CSS selected, in both themes. A locked topic's pill stays at `opacity: 0.6` (its "Locked" line reads 2.46:1 in light, up from 1.86:1). WCAG 1.4.3 exempts disabled controls, and the pill is a disabled radio.
 9. ~~A page whose code failed to load replaced the whole app, header, nav and footer included, with the root error screen, whose Try again could not help because React.lazy keeps the failure.~~ Closed 2026-09-26. `RouteErrorBoundary` draws the root screen's card inside the shell, and the nav leaves the failed page without a retry. Try again renders the page again and reloads the address when the browser kept the failed fetch; a newer build on the server reloads at most once a minute; offline, the panel waits for the connection. `tests/browser/route-errors.spec.ts` checks it in Chromium, and `docs/release-acceptance.md` (ERRBOUND) records the browser support.
 
 ### P2 — consistency and performance

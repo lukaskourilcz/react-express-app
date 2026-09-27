@@ -718,7 +718,7 @@ function Roadmap() {
               </span>
               <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0 }}>
                 <span>{label}</span>
-                <span style={{ fontSize: '0.66rem', fontWeight: 600, opacity: 0.72 }}>
+                <span className="rm-topic-progress">
                   {unlocked
                     ? t('roadmap.progress', { done: passedLevelCount(progress, value), total: structure?.structure[value]?.levels.length ?? 0 })
                     : t('roadmap.locked')}
