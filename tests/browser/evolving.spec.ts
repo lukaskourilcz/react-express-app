@@ -29,6 +29,11 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     const first='react-evolving-form-1-start';
     await page.goto(`/coding/react/${first}`);
     await expect(page.getByRole('heading',{level:1})).toBeVisible();
+    // App.tsx moves the focus to <main> 230 ms after every change of path.
+    // Wait for that move, or it can take the focus from the editor or the
+    // preview in the middle of a fill.
+    const main=page.locator('#main-content');
+    await expect(main).toBeFocused();
     await expect(page.locator('.cd-editor')).toBeHidden();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:info.outputPath('mobile-pending.png')});
@@ -52,6 +57,7 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     await expect(next).toBeVisible();
     await next.click();
     await expect(page).toHaveURL(/\/react-evolving-form-1$/);
+    await expect(main).toBeFocused();
     await expect(page.locator('.cm-content')).toContainText('useState');
     await run.click();
     await expect(page.getByRole('tab',{name:/2\/2/})).toBeVisible({timeout:25_000});
