@@ -5,11 +5,9 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { SwimCta } from './landing/LandingKit';
 import { VStack } from '@astryxdesign/core/VStack';
 import { HStack } from '@astryxdesign/core/HStack';
-import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
-import { Badge } from '@astryxdesign/core/Badge';
 import { WaterlineProgress } from './SharkFin';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
@@ -877,6 +875,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   }
 
   if (state === 'submitted' && result) {
+    // "80% · JavaScript, React · Climb": what was scored, on which topics, at
+    // which difficulty (design audit P1.7). Daily and review sets draw across
+    // levels, so they read Mixed.
+    const resultCategories = [...new Set(questions.map((question) => question.category))];
+    const resultTopics = resultCategories.length <= 3
+      ? resultCategories.map((category) => t(categoryLabelKey(category))).join(', ')
+      : t('quiz.resultTopics', { n: resultCategories.length });
+    const resultDifficulty = t(`difficulty.${mode === 'standard' ? difficultyMode : 'mixed'}` as TranslationKey);
     return (
       <>
         <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
@@ -900,7 +906,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </h1>
             </MotionPop>
             <span style={{ position: 'relative', fontSize: '0.95rem', color: 'var(--color-text-secondary)' }}>
-              {t('quiz.scoreOutOf', { correct: result.correctAnswers, total: result.totalQuestions })} · {result.percentage}%
+              {result.percentage}% · {resultTopics} · {resultDifficulty}
             </span>
 
             {(result.voided?.length ?? 0) > 0 && (
@@ -939,7 +945,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                   document.getElementById('quiz-review')?.scrollIntoView({ behavior: 'smooth' });
                 }}
               />
-              <Button variant="ghost" label={t('quiz.backHome')} onClick={() => navigate('/')} />
             </HStack>
           </div>
         </div>
@@ -958,13 +963,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               <Card variant="default" padding={3} width="100%" className="quiz-review-card">
                 <VStack gap={1.5}>
                   <HStack justify="between" align="center" wrap="wrap" gap={1}>
-                    <HStack gap={1} align="center">
-                      <Heading level={4}>{t('quiz.questionN', { n: index + 1 })}</Heading>
-                      <Badge
-                        variant={isCorrect ? 'success' : 'error'}
-                        label={isCorrect ? t('quiz.correct') : t('quiz.incorrect')}
-                      />
-                    </HStack>
+                    {/* One meta line: number, topic, verdict (glyph and word). */}
+                    <Text type="supporting" color="secondary">
+                      {index + 1} · {t(categoryLabelKey(question.category))} ·{' '}
+                      <span style={{ color: isCorrect ? 'var(--ss-success-strong)' : 'var(--ss-error)', fontWeight: 600 }}>
+                        <span aria-hidden>{isCorrect ? '✓' : '✕'}</span> {isCorrect ? t('quiz.correct') : t('quiz.incorrect')}
+                      </span>
+                    </Text>
                     <HStack gap={0.5} align="center">
                       <button
                         type="button"
@@ -991,7 +996,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       >
                         <ReportFlagIcon />
                       </button>
-                      <CategoryTag category={question.category} />
                     </HStack>
                   </HStack>
 
@@ -1016,7 +1020,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                         backgroundColor: 'var(--color-background-muted)',
                         borderRadius: 'var(--radius-element)',
                         border: '1px solid var(--color-border)',
-                        borderLeft: `4px solid ${getCategoryHexColor(question.category)}`,
                       }}
                     >
                       <Text type="body" size="sm">
@@ -1114,16 +1117,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </div>
           </HStack>
 
-          {/* Category + tags */}
+          {/* Category */}
           <HStack gap={1} align="center" wrap="wrap" style={{ flexShrink: 0, marginBottom: 12 }}>
             <CategoryTag category={currentQuestion.category} />
-            {currentQuestion.tags && currentQuestion.tags.length > 0 && (
-              <HStack gap={0.5} align="center" wrap="wrap" style={{ marginLeft: 'auto' }}>
-                {currentQuestion.tags.map((tag) => (
-                  <Badge key={tag} variant="neutral" label={`#${tag}`} />
-                ))}
-              </HStack>
-            )}
           </HStack>
 
           <fieldset
