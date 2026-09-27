@@ -171,6 +171,17 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   box, so it arrives with the first page instead of sitting under the
   first-load loader. `tests/browser/first-load.spec.ts` holds the page's code
   back and fails when the header, `<main>` or the footer moves.
+- A shell part that fails keeps the shell too. A lazy part outside the route
+  boundary (the account widget, the upgrade sheet) is a `lazyPart` inside a
+  `ShellPartBoundary`, which sits inside the part's `Suspense` for the same
+  reason the route boundary does. Its fallback is quiet and keeps the part's
+  box: the account retry stands in the widget's 56px row, and a sheet that
+  fails closes with a toast. Nothing reloads unless the learner presses: a
+  press that meets the same chunk failure again reloads through
+  `reloadOnPress` (`lib/routeRecovery.ts`), and only while the browser is
+  online and the server answers. The Coding workbench's Try again and a
+  second sign-in press after a failed supabase-js download follow the same
+  rule.
 - In-place mutations keep their control visible, disable duplicate actions,
   and use a translated action/status label. Do not replace a whole editor
   with a page loader during submission or draft saving.
