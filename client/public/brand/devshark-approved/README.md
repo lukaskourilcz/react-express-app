@@ -2,6 +2,8 @@
 
 These assets were downloaded from the owner's Google Drive archive on 2026-09-27. They capture the approved **one-wave + fin cutout** revision. `manifest.json` records provenance and SHA-256 hashes. The supplied SVG files are deterministic vector artwork, with outlined Manrope ExtraBold lettering. PNG wordmarks have transparent backgrounds.
 
+**Current version: [`brand/v9`](../v9/README.md).** The owner chose V9 on 2026-09-27. It moves the fin up to the top ascender line, draws the wave as thick as the letter stems, and sets the lettering optically bolder with rounded corners. The app, favicon and app icons use the V9 files. This directory stays as the historical source of the one-wave revision; do not ship from it.
+
 ## Start here
 
 - [Green primary logo](logo-waves-green.svg) / [PNG](logo-waves-green.png)
