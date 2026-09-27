@@ -162,6 +162,15 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   root error screen's card and copy. Routed pages are `lazyPage`, not `lazy`:
   React.lazy keeps a failed load for good (`lib/routeRecovery.ts`). Do not
   reload on `vite:preloadError`: a preload started by a hover fires it too.
+- The shell's first frame has its final geometry. A placeholder takes the
+  exact box of what replaces it; a larger or smaller one moves everything
+  under it when the chunk lands. The header knows at its first render whether
+  a session may exist: a signed-out visitor gets `SignInButton`, which ships
+  with the shell, and the lazy account widget with its 56px placeholder is for
+  a session. The footer renders inside the route `Suspense`, after the keyed
+  box, so it arrives with the first page instead of sitting under the
+  first-load loader. `tests/browser/first-load.spec.ts` holds the page's code
+  back and fails when the header, `<main>` or the footer moves.
 - In-place mutations keep their control visible, disable duplicate actions,
   and use a translated action/status label. Do not replace a whole editor
   with a page loader during submission or draft saving.

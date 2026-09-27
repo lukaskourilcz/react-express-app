@@ -1,19 +1,20 @@
 // The account widget in the header: avatar, sign-in / out, and the account menu.
 //
 // Redesigned on the Astryx design system: Astryx Avatar + a level Badge for the
-// signed-in identity, Astryx Button for the signed-out call to action, and
-// Astryx Text for the name / rank. The account dropdown uses an Astryx Popover
-// (trigger = the account button, content = a column of action buttons).
+// signed-in identity and Astryx Text for the name / rank. The account dropdown
+// uses an Astryx Popover (trigger = the account button, content = a column of
+// action buttons). The signed-out call to action is SignInButton, which the
+// header draws without this chunk.
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Avatar } from '@astryxdesign/core/Avatar';
-import { Button } from '@astryxdesign/core/Button';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Text } from '@astryxdesign/core/Text';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { Popover } from '@astryxdesign/core/Popover';
 import { AppToast } from './ui/AppToast';
+import SignInButton from './SignInButton';
 import { useT } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { useQuestXp } from '../lib/xp';
@@ -41,7 +42,7 @@ function MenuAction({ label, onClick }: { label: string; onClick: () => void }) 
 }
 
 function AuthButton() {
-  const { isAuthenticated, isLoading, user, signInWithGoogle, signOut } = useAuth();
+  const { isAuthenticated, isLoading, user, signOut } = useAuth();
   const profile = getUserProfile(user);
   // Subscribe to roadmap progress once; derive total XP locally rather than
   // calling useTotalXp() (which would set up a second subscription). XP is
@@ -62,14 +63,6 @@ function AuthButton() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const open = menuOpen;
-
-  const handleLogin = async () => {
-    try {
-      await signInWithGoogle();
-    } catch {
-      setAuthError(t('auth.signInFailed'));
-    }
-  };
 
   const handleProfile = () => {
     setMenuOpen(false);
@@ -94,20 +87,10 @@ function AuthButton() {
     );
   }
 
-  if (!isAuthenticated) {
-    return (
-      <>
-        <Button variant="secondary" size="md" label={t('auth.logIn')} onClick={handleLogin} />
-        <AppToast
-          open={!!authError}
-          onClose={() => setAuthError(null)}
-          severity="error"
-          message={authError}
-          autoHideDuration={8000}
-        />
-      </>
-    );
-  }
+  // The header renders SignInButton itself for a signed-out visitor and
+  // mounts this widget only while a session loads or exists; the branch keeps
+  // the widget right on its own.
+  if (!isAuthenticated) return <SignInButton />;
 
   const displayName = profile.name?.split(' ')[0] || profile.email?.split('@')[0] || t('auth.account');
 
