@@ -15,6 +15,15 @@ for (const locale of ['en', 'cs']) for (const theme of ['light', 'dark']) {
     await article.locator('summary').first().focus();
     await page.keyboard.press('Enter');
     await expect(article.locator('details').first()).toHaveAttribute('open', '');
+    // The route box fades in even under reduced motion; axe reads colours
+    // blended with the page until that finite fade ends.
+    await article.evaluate(async (element) => {
+      for (let node: Element | null = element; node; node = node.parentElement) {
+        await Promise.all(node.getAnimations()
+          .filter((animation) => animation.effect?.getTiming().iterations !== Infinity)
+          .map((animation) => animation.finished.catch(() => undefined)));
+      }
+    });
     const findings = await new AxeBuilder({ page }).include('article.ss-topic-article').withTags(['wcag2a','wcag2aa','wcag21aa']).analyze();
     expect(findings.violations).toEqual([]);
     await page.screenshot({ path: testInfo.outputPath('guide.png'), fullPage: true });

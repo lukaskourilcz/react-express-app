@@ -2508,3 +2508,12 @@ Not run: the other browser specs, `test:launch`, the audits and Storybook. The b
 - `/cards` shows the same flashcards as `/collection` and does not hold for them.
 - Today's four signed-in sections keep their own queries without `HELD_READ`, so a section whose read failed in the hold asks again on mount. The signed-in 503 runs recorded no shift from them on either build; I did not run them with data that fills a section after a retry.
 - Not verified: devshark.app (not deployed), a real Supabase session, Firefox, Safari and physical phones.
+
+## 2026-09-27 — `public.spec.ts` waits for the route fade (FADE)
+
+The full gate failed once on `public.spec.ts`: axe read the Czech guide's "Procvičit v kvízu" button at 4.3:1, white `#fefefe` on `#438843`, where the tokens give `#ffffff` on `#2d7a2d`. A probe logged `.ss-route` mid-way through Motion's opacity entrance, between 0.08 and 0.5, in every run when axe started. Motion keeps opacity fades under reduced motion, so the page was right and the spec measured too early. The spec now waits for the finite animations on the article and its ancestors to finish, as `on-accent.spec.ts` already does.
+
+| Build | `--repeat-each` | Before | After |
+| --- | --- | --- | --- |
+| `origin/main` at `3bedbbc` | 10 | 7 of 50 failed | 50 passed |
+| This session's merged head | 10, then 20 | 5 of 50 failed | 100 passed |
