@@ -37,9 +37,10 @@ export type LockState = 'open' | 'locked' | 'preview' | 'unknown';
 export const isBarred = (state: LockState): boolean => state === 'locked' || state === 'preview';
 
 /** `lockOf(content)` for the current account. Pass the loaded level counts
- * when part tests are involved. */
-export function useLocks(levelCounts?: ContentIndex['levelCounts']) {
-  const entitlement = useEntitlement();
+ * when part tests are involved, and `held` when the page's first-data hold
+ * read the plan (useEntitlement). */
+export function useLocks(levelCounts?: ContentIndex['levelCounts'], { held = false }: { held?: boolean } = {}) {
+  const entitlement = useEntitlement({ held });
   const index = useMemo(() => clientContentIndex(levelCounts ?? {}), [levelCounts]);
   const offline = typeof navigator !== 'undefined' && navigator.onLine === false;
   const { tier, signedIn } = entitlement;

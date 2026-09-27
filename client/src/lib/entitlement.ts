@@ -40,12 +40,15 @@ export const entitlementQuery = (userId: string) => queryOptions({
   staleTime: 60_000,
 });
 
-export function useEntitlement(): EntitlementState {
+/** `held`: the page's first-data hold read the plan (lib/routeData.ts
+ * HELD_READ), so a failure it met shows as failed instead of loading again. */
+export function useEntitlement({ held = false }: { held?: boolean } = {}): EntitlementState {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const query = useQuery({
     ...entitlementQuery(user?.id ?? 'signed-out'),
     enabled: isAuthenticated && Boolean(user),
     refetchOnWindowFocus: true,
+    retryOnMount: !held,
   });
   const data = isAuthenticated ? query.data ?? null : null;
   const tier: Tier | null = authLoading ? null : !isAuthenticated ? 'free' : data?.tier ?? null;
