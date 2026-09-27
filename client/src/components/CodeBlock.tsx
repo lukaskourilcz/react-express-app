@@ -1,5 +1,7 @@
-import React, { lazy, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { useT } from '../i18n/LanguageContext';
+import { lazyShellPart } from '../lib/routeRecovery';
+import { ShellPartBoundary } from './ShellPartBoundary';
 
 // react-syntax-highlighter's `prism` build bundles every language grammar (and
 // every theme), which is ~640 KB raw. The `prism-light` build ships an empty
@@ -7,7 +9,10 @@ import { useT } from '../i18n/LanguageContext';
 // Saves ~180 KB gzip off the lazy code-block chunk.
 const SUPPORTED_LANGUAGES = ['javascript', 'typescript', 'jsx', 'tsx', 'css', 'markup', 'bash', 'json'] as const;
 
-const Highlighter = lazy(async () => {
+// A `lazyShellPart` with a boundary of its own: when the highlighter's code does
+// not load, the block stays plain text, which already reads in full, and the
+// page around it stays. No Retry button: the next code block asks again.
+const Highlighter = lazyShellPart(async () => {
   const [
     PrismLightMod,
     styleMod,
@@ -93,7 +98,9 @@ const PlainCode = ({ code, language }: { code: string; language: string }) => {
 export function CodeBlock({ code, language }: { code: string; language: string }) {
   return (
     <Suspense fallback={<PlainCode code={code} language={language} />}>
-      <Highlighter code={code} language={language} />
+      <ShellPartBoundary fallback={() => <PlainCode code={code} language={language} />}>
+        <Highlighter code={code} language={language} />
+      </ShellPartBoundary>
     </Suspense>
   );
 }

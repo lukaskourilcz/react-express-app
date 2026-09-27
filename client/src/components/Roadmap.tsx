@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { Kicker } from './landing/LandingKit';
 import { retirementOf } from '../../../shared/retired-content';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -89,12 +89,18 @@ import { RedFlagDialog } from './RedFlagDialog';
 import { IconTile, BoltIcon, CloseIcon, FlagIcon } from './ui/icons';
 import { CategoryGlyph } from './ui/techIcons';
 import { SwimCta } from './landing/LandingKit';
+import { lazyShellPart } from '../lib/routeRecovery';
+import { ShellPartBoundary } from './ShellPartBoundary';
+import ErrorRetry from './ErrorRetry';
 import './Roadmap.css';
 import './DeepEndScreens.css';
 
 // The coding workbench pulls the editor and the runner in; keep it out of the
-// Learn chunk until a devShark level actually reaches its coding phase.
-const CodingWorkbench = lazy(() => import('../coding/CodingWorkbench').then((m) => ({ default: m.CodingWorkbench })));
+// Learn chunk until a devShark level actually reaches its coding phase. A
+// `lazyShellPart` inside its own boundary: when its code does not load, the
+// level stays on screen with "Could not load this task." and a Try again that
+// asks again, or reloads when the same failure comes straight back.
+const CodingWorkbench = lazyShellPart(() => import('../coding/CodingWorkbench').then((m) => ({ default: m.CodingWorkbench })));
 const codingDraftKey = (id: string) => `devshark:coding:draft:${id}`;
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
@@ -1462,27 +1468,29 @@ function LessonRunner({
         <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>{t('coding.lesson.intro')} {t('coding.lesson.giveUpNote')}</p>
         {answerError && <div role="alert" className="cd-note cd-note--error">{answerError}</div>}
         <Suspense fallback={<div className="cd-note" role="status">{t('common.loading')}</div>}>
-          <CodingWorkbench
-            key={current.task.id}
-            task={current.task}
-            session={current.session}
-            locked={null}
-            signedIn={Boolean(user)}
-            initialCode={readString(codingDraftKey(current.task.id))}
-            mode="lesson"
-            onDraft={(code) => writeString(codingDraftKey(current.task.id), code)}
-            onVerdict={(verdict) => {
-              if (verdict.verdict === 'passed') {
-                removeStored(codingDraftKey(current.task.id));
-                setCodingPassed((prev) => (prev.includes(current.task.id) ? prev : [...prev, current.task.id]));
-              }
-            }}
-            onRevealed={() => void complete()}
-            onContinue={() => {
-              if (codingIndex < codingTasks.length - 1) setCodingIndex((i) => i + 1);
-              else void complete();
-            }}
-          />
+          <ShellPartBoundary key={current.task.id} fallback={(retry, busy) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={busy} />}>
+            <CodingWorkbench
+              key={current.task.id}
+              task={current.task}
+              session={current.session}
+              locked={null}
+              signedIn={Boolean(user)}
+              initialCode={readString(codingDraftKey(current.task.id))}
+              mode="lesson"
+              onDraft={(code) => writeString(codingDraftKey(current.task.id), code)}
+              onVerdict={(verdict) => {
+                if (verdict.verdict === 'passed') {
+                  removeStored(codingDraftKey(current.task.id));
+                  setCodingPassed((prev) => (prev.includes(current.task.id) ? prev : [...prev, current.task.id]));
+                }
+              }}
+              onRevealed={() => void complete()}
+              onContinue={() => {
+                if (codingIndex < codingTasks.length - 1) setCodingIndex((i) => i + 1);
+                else void complete();
+              }}
+            />
+          </ShellPartBoundary>
         </Suspense>
         <span className="cd-visually-hidden" aria-live="polite">{t('coding.lesson.pending', { n: codingTasks.length - codingPassed.length })}: {title}</span>
       </div>

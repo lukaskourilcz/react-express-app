@@ -20,10 +20,14 @@ interface Props {
   onRetry: () => void;
   /** Extra styles merged onto the alert. */
   sx?: SxLike;
+  /** The retry is reloading the page (ShellPartBoundary): the button shows it
+   * is busy and keeps keyboard focus. */
+  busy?: boolean;
 }
 
-/** Standard error alert with a "Retry" action, used by data-loading screens. */
-export default function ErrorRetry({ message, onRetry, sx }: Props) {
+/** Standard error alert with a "Retry" action, used by data-loading screens
+ * and by a part of a page whose code did not load. */
+export default function ErrorRetry({ message, onRetry, sx, busy }: Props) {
   const t = useT();
   return (
     <div
@@ -45,7 +49,7 @@ export default function ErrorRetry({ message, onRetry, sx }: Props) {
     >
       <ErrorGlyph />
       <span style={{ flex: '1 1 180px', padding: '8px 0' }}>{message}</span>
-      <Button size="md" variant="ghost" label={t('quiz.retry')} onClick={onRetry} />
+      <Button size="md" variant="ghost" label={t('quiz.retry')} isLoading={busy} isInterruptible={busy} onClick={onRetry} />
     </div>
   );
 }

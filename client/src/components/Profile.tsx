@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useId, useState, type ReactNode } from 'react';
+import { Suspense, useEffect, useId, useState, type ReactNode } from 'react';
 import { Kicker } from './landing/LandingKit';
 import { Link, useNavigate } from 'react-router-dom';
 import { Grid } from '@astryxdesign/core/Grid';
@@ -33,9 +33,14 @@ import { useActiveSubject, topicSetForSubject } from '../lib/subjects';
 import { savePreferredLanguage } from '../lib/languagePref';
 import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
-const FriendsPanel = lazy(() => import('./FriendsPanel'));
+// The friends tab keeps its code out of the profile until it opens, with a
+// boundary of its own: when that code does not load, the tab says so with a
+// Retry and the rest of the profile stays.
+const FriendsPanel = lazyShellPart(() => import('./FriendsPanel'));
 import LoadingScreen from './LoadingScreen';
 import ErrorRetry from './ErrorRetry';
+import { ShellPartBoundary } from './ShellPartBoundary';
+import { lazyShellPart } from '../lib/routeRecovery';
 import { FlameIcon, BoltIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, SoundOffIcon } from './ui/icons';
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
@@ -304,7 +309,9 @@ function ProfileBody({
         {tab === 'friends' && (
           <div role="tabpanel" id="profile-panel-friends" aria-labelledby="profile-tab-friends">
             <Suspense fallback={null}>
-              <FriendsPanel />
+              <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('friends.loadFailed')} onRetry={retry} busy={busy} />}>
+                <FriendsPanel />
+              </ShellPartBoundary>
             </Suspense>
           </div>
         )}

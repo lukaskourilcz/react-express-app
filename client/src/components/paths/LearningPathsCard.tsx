@@ -7,16 +7,18 @@
 // only half of it landed is the kind of quiet lie that costs a learner their
 // work later.
 
-import { lazy, Suspense, useCallback, useMemo, useState } from 'react';
+import { Suspense, useCallback, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-const PathRewardClaim = lazy(() => import('./PathRewardClaim'));
 import { Card } from '@astryxdesign/core/Card';
 import { VStack } from '@astryxdesign/core/VStack';
 import { Text } from '@astryxdesign/core/Text';
 import { useAuth } from '../../lib/auth';
 import { useT } from '../../i18n/LanguageContext';
 import { friendlyError } from '../../lib/api';
+import { lazyShellPart } from '../../lib/routeRecovery';
+import { ShellPartBoundary } from '../ShellPartBoundary';
+import ErrorRetry from '../ErrorRetry';
 import { useSubject } from '../../lib/subjects';
 import { trackLabelKey, useTrack, type Track } from '../../lib/tracks';
 import { learnerProfileOf, preferredLearningOf, profileGapsOf, saveLearningPreference } from '../../lib/trackPref';
@@ -33,6 +35,10 @@ import {
 import { useLoc } from './localized';
 import type { LearningPathId } from '../../../../shared/learning-paths';
 import './LearningPaths.css';
+
+// The reward's code stays out of the profile until a path is enrolled. Its
+// boundary keeps the card when that code does not load, with a Retry.
+const PathRewardClaim = lazyShellPart(() => import('./PathRewardClaim'));
 
 export default function LearningPathsCard() {
   const t = useT();
@@ -231,7 +237,9 @@ export default function LearningPathsCard() {
                   so a learner mid-path is not shown a prize they cannot take. */}
               {enrollment && (
                 <Suspense fallback={null}>
-                  <PathRewardClaim pathId={manifest.id} />
+                  <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('paths.rewardLoadFailed')} onRetry={retry} busy={busy} />}>
+                    <PathRewardClaim pathId={manifest.id} />
+                  </ShellPartBoundary>
                 </Suspense>
               )}
             </li>

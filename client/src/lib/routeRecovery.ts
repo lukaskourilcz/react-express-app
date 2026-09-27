@@ -233,12 +233,15 @@ export function lazyPage<T extends ComponentType<any>>(load: () => Promise<{ def
 }
 
 /**
- * `lazy()` for a part of the shell outside the route boundary (the account
- * widget, the upgrade sheet), able to try again like a page. A failure checks
- * nothing and never reloads by itself: the shell loads these parts without a
- * press, and a reload nobody asked for would throw away whatever the learner
- * has open. ShellPartBoundary renews it when the learner retries. A part
- * inside a page is `lazyPart` in lib/routeData.ts, which fails with its page.
+ * `lazy()` for a part with a boundary of its own (ShellPartBoundary), able to
+ * try again like a page: the shell's account widget and upgrade sheet, and a
+ * part inside a page that should fail alone and leave the page standing (the
+ * Learn workbench, the friends tab, a path's reward, the code highlighter). A
+ * failure checks nothing and never reloads by itself: these parts load without
+ * a press, and a reload nobody asked for would throw away whatever the learner
+ * has open. ShellPartBoundary renews it when the learner retries. A section
+ * that a page's hold loads with its reads is `lazyPart` in lib/routeData.ts,
+ * which fails with its page.
  */
 export function lazyShellPart<T extends ComponentType<any>>(load: () => Promise<{ default: T }>): ComponentType<ComponentProps<T>> {
   return renewableLazy(load);
