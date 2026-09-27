@@ -1,42 +1,27 @@
 import { useId } from 'react';
-import { FIN_BODY, FIN_MIRROR, FIN_WAVE_CUT, FIN_WAVE_LINE } from './brandGeometry';
+import {
+  FIN_BODY, FIN_MIRROR, FIN_WAVE_CUT, FIN_WAVE_LINE,
+  LOGO_FIN_PLACEMENT, LOGO_LETTERS, LOGO_LETTER_STROKE, LOGO_VIEW_BOX, LOGO_WAVE_STROKE, LOGO_WORDMARK_X,
+} from './brandGeometry';
 
 /**
  * The devShark compact logo: the fin with its wave, then the devShark
- * wordmark. Every path is copied from
- * client/public/brand/v9/recommended/devshark-logo-compact-green.svg; the
- * fill and strokes read `currentColor`, so the parent sets the colour (the
- * subject accent, or white on ink).
+ * wordmark. Every path and transform is copied from
+ * client/public/brand/v9/recommended/devshark-logo-compact-green.svg (see
+ * brandGeometry.ts). The fill and strokes read `currentColor`, so the parent
+ * sets the colour: the subject accent, or white on ink.
  *
  * Brand rules (docs/brand/brand-guidelines.md):
  * - Minimum height: 18 px for this compact logo, 24 px for the primary
  *   horizontal logo.
  * - Below 100 px of width, use the clean fin (`SharkFin`) instead of a logo.
  * - Clear space on every side equals the height of the letter d.
- * - Never redraw, stretch, recolour per letter or add effects. The spelling is
- *   always devShark.
+ * - Never redraw, stretch, recolour single letters or add effects. The
+ *   spelling is always devShark.
  */
 
-const VIEW_BOX = '0 -74.9 567.559 92.631';
-const [, , VIEW_WIDTH, VIEW_HEIGHT] = VIEW_BOX.split(' ').map(Number);
-
-// The fin sits in its own 24-unit box, scaled onto the wordmark's cap line.
-const FIN_TRANSFORM = 'translate(1.76 -62.893) scale(3.520710059171598)';
-// The kit strokes the logo's wave at 3 units of the fin box (2.7 on the
-// standalone fin) and outlines each letter with a 3-unit round stroke, which
-// gives the lettering its rounded corners.
-const LOGO_WAVE_STROKE = 3;
-const WORDMARK_TRANSFORM = 'translate(114.559 0)';
-const LETTERS: { d: string; transform?: string }[] = [
-  { d: 'M28.9 1.5 L28.9 1.5 Q21.45 1.5 15.85 -2.25 Q10.25 -6 7.125 -12.45 Q4 -18.9 4 -27 L4 -27 Q4 -35.25 7.175 -41.675 Q10.35 -48.1 16.1 -51.8 Q21.85 -55.5 29.6 -55.5 L29.6 -55.5 Q37.3 -55.5 42.55 -51.75 Q47.8 -48 50.5 -41.55 Q53.2 -35.1 53.2 -27 L53.2 -27 Q53.2 -18.9 50.475 -12.45 Q47.75 -6 42.35 -2.25 Q36.95 1.5 28.9 1.5 M31.1 -10.6 L31.1 -10.6 Q35.65 -10.6 38.375 -12.65 Q41.1 -14.7 42.3 -18.4 Q43.5 -22.1 43.5 -27 L43.5 -27 Q43.5 -31.9 42.3 -35.6 Q41.1 -39.3 38.475 -41.35 Q35.85 -43.4 31.6 -43.4 L31.6 -43.4 Q27.05 -43.4 24.125 -41.175 Q21.2 -38.95 19.8 -35.225 Q18.4 -31.5 18.4 -27 L18.4 -27 Q18.4 -22.45 19.75 -18.725 Q21.1 -15 23.9 -12.8 Q26.7 -10.6 31.1 -10.6 M55.5 0 L43.5 0 L43.5 -37 L41.8 -37 L41.8 -72 L55.5 -72 L55.5 0' },
-  { d: 'M94.6 1.5 L94.6 1.5 Q86.3 1.5 79.975 -2.075 Q73.65 -5.65 70.075 -11.925 Q66.5 -18.2 66.5 -26.3 L66.5 -26.3 Q66.5 -35.15 70 -41.7 Q73.5 -48.25 79.65 -51.875 Q85.8 -55.5 93.8 -55.5 L93.8 -55.5 Q102.3 -55.5 108.25 -51.5 Q114.2 -47.5 117.05 -40.25 Q119.9 -33 119.05 -23.2 L119.05 -23.2 L105.6 -23.2 L105.6 -28.2 Q105.6 -36.45 102.975 -40.075 Q100.35 -43.7 94.4 -43.7 L94.4 -43.7 Q87.45 -43.7 84.175 -39.475 Q80.9 -35.25 80.9 -27 L80.9 -27 Q80.9 -19.45 84.175 -15.325 Q87.45 -11.2 93.8 -11.2 L93.8 -11.2 Q97.8 -11.2 100.65 -12.95 Q103.5 -14.7 105 -18 L105 -18 L118.6 -14.1 Q115.55 -6.7 108.975 -2.6 Q102.4 1.5 94.6 1.5 M112.5 -23.2 L76.7 -23.2 L76.7 -33.3 L112.5 -33.3 L112.5 -23.2', transform: 'translate(-2 0)' },
-  { d: 'M156.5 0 L142.9 0 L123.3 -54 L136.9 -54 L149.7 -16.6 L162.5 -54 L176.1 -54 L156.5 0', transform: 'translate(-4 0)' },
-  { d: 'M212.3 1.5 L212.3 1.5 Q204.3 1.5 197.875 -1.325 Q191.45 -4.15 187.325 -9.425 Q183.2 -14.7 182.1 -22 L182.1 -22 L196.3 -24.1 Q197.8 -17.9 202.5 -14.55 Q207.2 -11.2 213.2 -11.2 L213.2 -11.2 Q216.55 -11.2 219.7 -12.25 Q222.85 -13.3 224.875 -15.35 Q226.9 -17.4 226.9 -20.4 L226.9 -20.4 Q226.9 -21.5 226.575 -22.525 Q226.25 -23.55 225.5 -24.45 Q224.75 -25.35 223.375 -26.15 Q222 -26.95 219.9 -27.6 L219.9 -27.6 L201.2 -33.1 Q199.1 -33.7 196.325 -34.8 Q193.55 -35.9 190.95 -37.95 Q188.35 -40 186.625 -43.375 Q184.9 -46.75 184.9 -51.9 L184.9 -51.9 Q184.9 -59.15 188.55 -63.95 Q192.2 -68.75 198.3 -71.1 Q204.4 -73.45 211.8 -73.4 L211.8 -73.4 Q219.25 -73.3 225.1 -70.85 Q230.95 -68.4 234.9 -63.725 Q238.85 -59.05 240.6 -52.3 L240.6 -52.3 L225.9 -49.8 Q225.1 -53.3 222.95 -55.7 Q220.8 -58.1 217.825 -59.35 Q214.85 -60.6 211.6 -60.7 L211.6 -60.7 Q208.4 -60.8 205.575 -59.825 Q202.75 -58.85 200.975 -57 Q199.2 -55.15 199.2 -52.6 L199.2 -52.6 Q199.2 -50.25 200.65 -48.775 Q202.1 -47.3 204.3 -46.4 Q206.5 -45.5 208.8 -44.9 L208.8 -44.9 L221.3 -41.5 Q224.1 -40.75 227.5 -39.525 Q230.9 -38.3 234.025 -36.125 Q237.15 -33.95 239.175 -30.4 Q241.2 -26.85 241.2 -21.4 L241.2 -21.4 Q241.2 -15.6 238.775 -11.275 Q236.35 -6.95 232.25 -4.125 Q228.15 -1.3 222.975 0.1 Q217.8 1.5 212.3 1.5', transform: 'translate(-6 0)' },
-  { d: 'M302.8 0 L289 0 L289 -25.5 Q289 -27.35 288.8 -30.225 Q288.6 -33.1 287.55 -36 Q286.5 -38.9 284.125 -40.85 Q281.75 -42.8 277.4 -42.8 L277.4 -42.8 Q275.65 -42.8 273.65 -42.25 Q271.65 -41.7 269.9 -40.125 Q268.15 -38.55 267.025 -35.5 Q265.9 -32.45 265.9 -27.4 L265.9 -27.4 L258.1 -31.1 Q258.1 -37.5 260.7 -43.1 Q263.3 -48.7 268.525 -52.15 Q273.75 -55.6 281.7 -55.6 L281.7 -55.6 Q288.05 -55.6 292.05 -53.45 Q296.05 -51.3 298.275 -48 Q300.5 -44.7 301.45 -41.125 Q302.4 -37.55 302.6 -34.6 Q302.8 -31.65 302.8 -30.3 L302.8 -30.3 L302.8 0 M265.9 0 L252.1 0 L252.1 -72 L264.2 -72 L264.2 -35 L265.9 -35 L265.9 0', transform: 'translate(-8 0)' },
-  { d: 'M330.8 1.5 L330.8 1.5 Q325 1.5 320.975 -0.725 Q316.95 -2.95 314.875 -6.675 Q312.8 -10.4 312.8 -14.9 L312.8 -14.9 Q312.8 -18.65 313.95 -21.75 Q315.1 -24.85 317.675 -27.225 Q320.25 -29.6 324.6 -31.2 L324.6 -31.2 Q327.6 -32.3 331.75 -33.15 Q335.9 -34 341.15 -34.775 Q346.4 -35.55 352.7 -36.5 L352.7 -36.5 L347.8 -33.8 Q347.8 -38.6 345.5 -40.85 Q343.2 -43.1 337.8 -43.1 L337.8 -43.1 Q334.8 -43.1 331.55 -41.65 Q328.3 -40.2 327 -36.5 L327 -36.5 L314.7 -40.4 Q316.75 -47.1 322.4 -51.3 Q328.05 -55.5 337.8 -55.5 L337.8 -55.5 Q344.95 -55.5 350.5 -53.3 Q356.05 -51.1 358.9 -45.7 L358.9 -45.7 Q360.5 -42.7 360.8 -39.7 Q361.1 -36.7 361.1 -33 L361.1 -33 L361.1 0 L349.2 0 L349.2 -11.1 L350.9 -8.8 Q346.95 -3.35 342.375 -0.925 Q337.8 1.5 330.8 1.5 M333.7 -9.2 L333.7 -9.2 Q337.45 -9.2 340.025 -10.525 Q342.6 -11.85 344.125 -13.55 Q345.65 -15.25 346.2 -16.4 L346.2 -16.4 Q347.25 -18.6 347.425 -21.525 Q347.6 -24.45 347.6 -26.4 L347.6 -26.4 L351.6 -25.4 Q345.55 -24.4 341.8 -23.725 Q338.05 -23.05 335.75 -22.5 Q333.45 -21.95 331.7 -21.3 L331.7 -21.3 Q329.7 -20.5 328.475 -19.575 Q327.25 -18.65 326.675 -17.55 Q326.1 -16.45 326.1 -15.1 L326.1 -15.1 Q326.1 -13.25 327.025 -11.925 Q327.95 -10.6 329.65 -9.9 Q331.35 -9.2 333.7 -9.2', transform: 'translate(-10 0)' },
-  { d: 'M387.8 0 L374.1 0 L374.1 -54 L386.1 -54 L386.1 -40.8 L384.8 -42.5 Q385.85 -45.3 387.6 -47.6 Q389.35 -49.9 391.9 -51.4 L391.9 -51.4 Q393.85 -52.6 396.15 -53.275 Q398.45 -53.95 400.9 -54.125 Q403.35 -54.3 405.8 -54 L405.8 -54 L405.8 -41.3 Q403.55 -42 400.575 -41.775 Q397.6 -41.55 395.2 -40.4 L395.2 -40.4 Q392.8 -39.3 391.15 -37.475 Q389.5 -35.65 388.65 -33.175 Q387.8 -30.7 387.8 -27.6 L387.8 -27.6 L387.8 0', transform: 'translate(-12 0)' },
-  { d: 'M429.1 0 L415.2 0 L415.3 -72 L429.1 -72 L429.1 -28 L447.4 -54 L464.2 -54 L444.7 -27 L465.5 0 L447.8 0 L429.1 -26 L429.1 0', transform: 'translate(-14 0)' },
-];
+const VIEW_BOX = `${LOGO_VIEW_BOX.x} ${LOGO_VIEW_BOX.y} ${LOGO_VIEW_BOX.width} ${LOGO_VIEW_BOX.height}`;
+const FIN_TRANSFORM = `translate(${LOGO_FIN_PLACEMENT.x} ${LOGO_FIN_PLACEMENT.y}) scale(${LOGO_FIN_PLACEMENT.scale})`;
 
 interface BrandLogoProps {
   /** Rendered height in px. 22 in the header, 20 in the mobile menu. */
@@ -47,7 +32,7 @@ interface BrandLogoProps {
 
 export default function BrandLogo({ height = 22, label }: BrandLogoProps) {
   const clipId = `devshark-logo-cut-${useId().replace(/:/g, '')}`;
-  const width = Math.round((height * VIEW_WIDTH / VIEW_HEIGHT) * 100) / 100;
+  const width = Math.round((height * LOGO_VIEW_BOX.width / LOGO_VIEW_BOX.height) * 100) / 100;
   const a11y = label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true };
   return (
     <svg
@@ -64,9 +49,18 @@ export default function BrandLogo({ height = 22, label }: BrandLogoProps) {
         <g clipPath={`url(#${clipId})`}><path d={FIN_BODY} transform={FIN_MIRROR} /></g>
         <path d={FIN_WAVE_LINE} fill="none" stroke="currentColor" strokeWidth={LOGO_WAVE_STROKE} strokeLinecap="round" />
       </g>
-      <g transform={WORDMARK_TRANSFORM}>
-        {LETTERS.map(({ d, transform }) => (
-          <path key={d.slice(0, 12)} d={d} transform={transform} stroke="currentColor" strokeWidth={3} strokeLinejoin="round" strokeLinecap="round" paintOrder="stroke" />
+      <g transform={`translate(${LOGO_WORDMARK_X} 0)`}>
+        {LOGO_LETTERS.map(({ d, dx }) => (
+          <path
+            key={d.slice(0, 12)}
+            d={d}
+            transform={dx ? `translate(${dx} 0)` : undefined}
+            stroke="currentColor"
+            strokeWidth={LOGO_LETTER_STROKE}
+            strokeLinejoin="round"
+            strokeLinecap="round"
+            paintOrder="stroke"
+          />
         ))}
       </g>
     </svg>

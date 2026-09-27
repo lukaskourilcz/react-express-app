@@ -1,3 +1,8 @@
+import {
+  FIN_BODY, FIN_WAVE_CUT, FIN_WAVE_LINE,
+  LOGO_FIN_PLACEMENT, LOGO_LETTERS, LOGO_LETTER_STROKE, LOGO_VIEW_BOX, LOGO_WAVE_STROKE, LOGO_WORDMARK_X,
+} from '../components/brandGeometry';
+
 export interface ResultShareCardInput {
   brand: string;
   label: string;
@@ -33,9 +38,9 @@ export async function createResultShareFile(input: ResultShareCardInput): Promis
   ctx.fill();
   ctx.stroke();
 
-  ctx.fillStyle = accent;
-  ctx.font = '800 38px system-ui, -apple-system, sans-serif';
-  ctx.fillText(input.brand, 120, 135);
+  // The brand appears first here, so the card carries the full V9 logo, not
+  // the name set in a system font.
+  drawLogo(ctx, 120, 94, 44, accent);
   ctx.fillStyle = '#53666f';
   ctx.font = '600 27px system-ui, -apple-system, sans-serif';
   ctx.fillText(input.label, 120, 188);
@@ -51,7 +56,7 @@ export async function createResultShareFile(input: ResultShareCardInput): Promis
   ctx.fillText(input.date, 120, 510);
 
   // The shared waterline/fin motif is drawn as vectors, with no network asset
-  // or platform-dependent artwork.
+  // or platform-dependent artwork. The fin is the kit's clean fin.
   const y = 454;
   ctx.strokeStyle = accent;
   ctx.lineWidth = 7;
@@ -62,12 +67,13 @@ export async function createResultShareFile(input: ResultShareCardInput): Promis
     ctx.quadraticCurveTo(x + 30, y + 11, x + 40, y);
   }
   ctx.stroke();
+  // A 72px clean fin whose base (y=18 of its 24-unit box) sits on the line.
+  ctx.save();
+  ctx.translate(880, y - 18 * 3);
+  ctx.scale(3, 3);
   ctx.fillStyle = accent;
-  ctx.beginPath();
-  ctx.moveTo(890, y - 2);
-  ctx.quadraticCurveTo(920, y - 86, 952, y - 5);
-  ctx.quadraticCurveTo(925, y - 28, 890, y - 2);
-  ctx.fill();
+  drawFinBody(ctx);
+  ctx.restore();
 
   const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, 'image/png', 0.92));
   if (!blob) return null;
@@ -83,4 +89,51 @@ export function downloadShareFile(file: File): void {
   anchor.download = file.name;
   anchor.click();
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+// The kit's fin body, mirrored with translate(24 0) scale(-1 1) so the tip
+// points left, in the current transform's 24-unit box.
+function drawFinBody(ctx: CanvasRenderingContext2D) {
+  ctx.save();
+  ctx.transform(-1, 0, 0, 1, 24, 0);
+  ctx.fill(new Path2D(FIN_BODY));
+  ctx.restore();
+}
+
+/** The compact logo from brandGeometry.ts, `height` px tall with its top-left
+ * corner at (x, y). Letters are stroked before they are filled, as the kit's
+ * paint-order: stroke does. */
+function drawLogo(ctx: CanvasRenderingContext2D, x: number, y: number, height: number, color: string) {
+  const scale = height / LOGO_VIEW_BOX.height;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  ctx.translate(-LOGO_VIEW_BOX.x, -LOGO_VIEW_BOX.y);
+  ctx.fillStyle = color;
+  ctx.strokeStyle = color;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  ctx.save();
+  ctx.translate(LOGO_FIN_PLACEMENT.x, LOGO_FIN_PLACEMENT.y);
+  ctx.scale(LOGO_FIN_PLACEMENT.scale, LOGO_FIN_PLACEMENT.scale);
+  ctx.save();
+  ctx.clip(new Path2D(FIN_WAVE_CUT));
+  drawFinBody(ctx);
+  ctx.restore();
+  ctx.lineWidth = LOGO_WAVE_STROKE;
+  ctx.stroke(new Path2D(FIN_WAVE_LINE));
+  ctx.restore();
+
+  ctx.translate(LOGO_WORDMARK_X, 0);
+  ctx.lineWidth = LOGO_LETTER_STROKE;
+  for (const { d, dx } of LOGO_LETTERS) {
+    const letter = new Path2D(d);
+    ctx.save();
+    ctx.translate(dx, 0);
+    ctx.stroke(letter);
+    ctx.fill(letter);
+    ctx.restore();
+  }
+  ctx.restore();
 }
