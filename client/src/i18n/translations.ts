@@ -153,8 +153,6 @@ export const en = {
   'home.startLevel1': 'Start {name} — Level 1',
   'home.roadmapNote': 'Each level ends in a checkpoint test. Progress syncs to your account.',
   'home.moreKicker': 'More than flashcards',
-  'home.pledge': 'HTML, CSS and JavaScript are free for every account. Premium opens every path and challenge for {symbol}{monthly} a month, VAT included. Cancel any time.',
-  'home.startFree': 'Start free',
   'home.stripCareerTitle': 'Career roadmap',
   'home.stripCareerText': "See exactly what it takes to reach senior, and track how far you've come.",
   'home.stripDailyTitle': 'Daily challenge',
@@ -1332,7 +1330,7 @@ export const en = {
 
   // ── Landing: cost-transparency comparison ─────────────────────────────
   'landing.compare.title': 'What you get, free and with Premium',
-  'landing.compare.subtitle': 'Prices include VAT. The left column is every account; the right column is Premium at {symbol}{monthly} a month or {symbol}{annual} a year.',
+  'landing.compare.subtitle': 'Prices include VAT.',
   'landing.compare.colFeature': 'What you get',
   'landing.compare.colBrand': 'Free',
   'landing.compare.colOthers': 'Premium',
@@ -1363,15 +1361,10 @@ export const en = {
   'landing.compare.othersNoAds': 'Ads unless you pay',
   'landing.compare.rowNoCard': 'Payment details',
   'landing.compare.othersNoCard': 'Never asked for',
-  'landing.compare.footnote': 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked. No ads on either plan.',
+  'landing.compare.footnote': 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked. No ads on either plan. Premium pays for the servers that grade your code and keeps the site free of ads.',
   'landing.compare.cta': 'Start free',
 
   // ── Landing: founder note ─────────────────────────────────────────────
-  'landing.founder.kicker': 'A note from the maker',
-  'landing.founder.title': 'Why devShark has a Premium tier',
-  'landing.founder.body': 'I built devShark so that the foundations stay free: HTML, CSS and JavaScript cost nothing and always will. Premium pays for the servers that grade your code, for new challenges and for keeping the site free of ads. If it helps you, {symbol}{monthly} a month keeps it running. If it doesn’t, cancel from your profile whenever you like.',
-  'landing.founder.signoff': '— The devShark maker',
-  'landing.founder.supportCta': 'See what Premium includes',
 
   // ── API / crash error copy (resolved via translateStatic) ─────────────
   'error.timeout': 'Request timed out. Please try again.',
@@ -1572,7 +1565,6 @@ export const en = {
   'title.premium': 'Premium · devShark',
   'title.premiumSuccess': 'Premium checkout · devShark',
   'title.premiumCancel': 'Cancel Premium · devShark',
-  'home.pledgeLabel': 'Plans in brief',
   'landing.compare.kicker': 'Plans',
   'landing.compare.freeCaption': 'Every account',
   'landing.compare.premiumCaption': '{symbol}{monthly} a month, VAT included',

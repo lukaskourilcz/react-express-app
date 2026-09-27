@@ -147,8 +147,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'home.startLevel1': 'Začít {name} — úroveň 1',
   'home.roadmapNote': 'Každá úroveň končí kontrolním testem. Pokrok se ukládá k tvému účtu.',
   'home.moreKicker': 'Víc než kartičky',
-  'home.pledge': 'Každá lekce, kvíz i studijní cesta je zdarma. To je celý ceník.',
-  'home.startFree': 'Začni se učit zdarma',
   'home.stripCareerTitle': 'Kariérní plán',
   'home.stripCareerText': 'Uvidíš přesně, co obnáší dostat se na seniora, a jak daleko už jsi.',
   'home.stripDailyTitle': 'Denní výzva',
@@ -1194,7 +1192,7 @@ export const cs: Partial<Record<TranslationKey, string>> = {
 
   // ── Úvodní stránka: transparentní srovnání nákladů ────────────────────
   'landing.compare.title': 'Co jinde stojí peníze, je tu zdarma',
-  'landing.compare.subtitle': 'Tady je upřímná verze ceníku: všechno vlevo je zdarma, navždy. Vpravo je, co totéž obvykle stojí jinde.',
+  'landing.compare.subtitle': 'Ceny jsou včetně DPH.',
   'landing.compare.colFeature': 'Co dostaneš',
   'landing.compare.colBrand': 'devShark',
   'landing.compare.colOthers': 'Typické placené aplikace',
@@ -1221,15 +1219,10 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'landing.compare.othersNoAds': 'Reklamy, dokud nezaplatíš',
   'landing.compare.rowNoCard': 'Žádná karta pro start',
   'landing.compare.othersNoCard': 'Pro zkušební verzi je nutná karta',
-  'landing.compare.footnote': 'Premium nikdy nemění, jak se odpověď hodnotí, kolik za ni dostaneš XP ani jak se řadí žebříčky. Reklamy nemá žádný z plánů.',
+  'landing.compare.footnote': 'Premium nikdy nemění, jak se odpověď hodnotí, kolik za ni dostaneš XP ani jak se řadí žebříčky. Reklamy nemá žádný z plánů. Premium platí servery, které hodnotí tvůj kód, a drží web bez reklam.',
   'landing.compare.cta': 'Začni se učit zdarma',
 
   // ── Úvodní stránka: slovo od tvůrce ───────────────────────────────────
-  'landing.founder.kicker': 'Slovo od tvůrce',
-  'landing.founder.title': 'Proč je devShark zdarma',
-  'landing.founder.body': 'devShark jsem vytvořil proto, že dobré učení nemá být schované za placenou zdí. Každá lekce, kvíz i cesta je zdarma — bez reklam, bez zkušebních verzí, bez platební karty — v češtině i angličtině. Když ti to pomáhá a můžeš trochu přispět, podpora potěší; když ne, uč se dál — přesně o to tu jde.',
-  'landing.founder.signoff': '— Tvůrce devShark',
-  'landing.founder.supportCta': 'Jak funguje podpora',
 
   // ── Chybové hlášky (API / pád stránky) ────────────────────────────────
   'error.timeout': 'Požadavek vypršel. Zkus to prosím znovu.',

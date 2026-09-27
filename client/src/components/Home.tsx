@@ -21,14 +21,13 @@ import { useActiveSubject } from '../lib/subjects';
 import { TRACK_ORDER } from '../lib/tracks';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
-import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, type StatSpec, WaterlineRule } from './landing/LandingKit';
+import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import SubjectPlate from './ui/SubjectPlate';
 import ComparisonTable from './landing/ComparisonTable';
-import { FREE_LEARN_TOPICS, PREMIUM_PRICE } from '../../../shared/tiers';
-import FounderNote from './landing/FounderNote';
+import { FREE_LEARN_TOPICS } from '../../../shared/tiers';
 
 // ─────────────────────────────── Topic card ───────────────────────────────
 
@@ -335,18 +334,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Free and Premium plan table + founder note ── */}
-      <ComparisonTable onStart={scrollToTopics} />
-      <FounderNote />
-
-      {/* ── Pricing pledge ── */}
-      <section aria-label={t('home.pledgeLabel')} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16, padding: '8px 0 0' }}>
-        <WaterlineRule width={84} />
-        <p style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: '1.25rem', letterSpacing: '-0.01em', textAlign: 'center', maxWidth: '34ch' }}>
-          {t('home.pledge', { symbol: PREMIUM_PRICE.symbol, monthly: PREMIUM_PRICE.monthly })}
-        </p>
-        <SwimCta label={t('home.startFree')} onClick={scrollToTopics} dir={1} />
-      </section>
+      {/* ── Free and Premium plan table. Its footnote says what Premium pays
+          for; its CTA opens Learn. ── */}
+      <ComparisonTable />
 
       <AppToast open={!!authError} onClose={() => setAuthError(null)} severity="error" message={authError} autoHideDuration={5000} />
     </div>

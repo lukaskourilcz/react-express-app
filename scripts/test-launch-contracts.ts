@@ -760,7 +760,7 @@ function publicCopyContracts() {
   // Terms quote, word for word.
   assert.equal(ENGLISH['premium.page.waiver'], WAIVER_TEXT, 'the waiver on /premium and in the Terms matches Checkout');
   // Every price the pages print says VAT included next to it.
-  for (const key of ['home.pledge', 'landing.compare.premiumCaption', 'premium.page.monthlyRenews', 'premium.page.annualRenews', 'premium.sheet.price'] as const) {
+  for (const key of ['landing.compare.premiumCaption', 'premium.page.monthlyRenews', 'premium.page.annualRenews', 'premium.sheet.price'] as const) {
     assert.match(ENGLISH[key], /VAT included/, `${key} states the price with VAT`);
   }
   // Redemption ships closed (DEFAULT_MERCH_SETTINGS.enabled is false), so
@@ -809,7 +809,7 @@ function publicCopyContracts() {
   assert.match(read('supabase/supabase-schema-039.sql'), /DELETE FROM public\.billing_cancel_requests WHERE expires_at < NOW\(\) - INTERVAL '1 day';/, 'the purge the privacy policy promises');
   // No urgency, countdowns or fake scarcity on the pages that sell.
   for (const [key, value] of Object.entries(ENGLISH)) {
-    if (!/^(premium\.|landing\.compare\.|landing\.founder\.|home\.pledge|billing\.checkout\.)/.test(key)) continue;
+    if (!/^(premium\.|landing\.compare\.|billing\.checkout\.)/.test(key)) continue;
     assert.doesNotMatch(value, /\b(hurry|only \d+ left|limited time|ends soon|last chance|act now|today only)\b/i, `${key} uses urgency copy`);
   }
   // The routes exist, the public ones have static HTML on Vercel, and the
