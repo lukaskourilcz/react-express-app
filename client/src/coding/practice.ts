@@ -52,8 +52,9 @@ export const bookmarksQuery = queryOptions({
   staleTime: 60_000,
 });
 
-export function useBookmarks(enabled: boolean) {
-  return useQuery({ ...bookmarksQuery, enabled });
+/** `held`: the page's first-data hold read them (lib/routeData.ts HELD_READ). */
+export function useBookmarks(enabled: boolean, { held = false }: { held?: boolean } = {}) {
+  return useQuery({ ...bookmarksQuery, enabled, retryOnMount: !held });
 }
 
 export function useSaveChallenge() {
