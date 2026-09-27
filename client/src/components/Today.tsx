@@ -1,5 +1,5 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
 import { Link } from 'react-router-dom';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -14,10 +14,10 @@ import { useRoadmapProgress, useExtraUnlocks, type RoadmapProgress,
   availabilityOf,
   type StepAvailability,
 } from '../lib/roadmap';
-import { conceptDueQuery, roadmapStructureQuery, useRoadmapStructure } from '../lib/queries';
+import { conceptDueQuery, roadmapStructureQuery } from '../lib/queries';
 import { entitlementQuery } from '../lib/entitlement';
 import { enrollmentsQuery, pathCatalogQuery, pathProgressQuery } from '../lib/learningPaths';
-import { lazyPart, readOnce, settled, useFirstData } from '../lib/routeData';
+import { HELD_READ, lazyPart, readOnce, settled, useFirstData } from '../lib/routeData';
 import { ApiError } from '../lib/api';
 import { buildToday, type TodayItem, type TodayKind } from '../lib/today';
 import { masteryDayKey, type LevelMasteryEntry } from '../../../shared/mastery';
@@ -152,10 +152,12 @@ export default function Today() {
   const [subject] = useSubject();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
-  const structureQuery = useRoadmapStructure();
+  // Both reads are the hold's: one that failed there draws its notice with
+  // the page, instead of the skeleton first.
+  const structureQuery = useQuery({ ...roadmapStructureQuery, ...HELD_READ });
   const structure: RoadmapStructure | null = structureQuery.data ?? null;
   // The plan leaves out levels Premium opens on a free account.
-  const { lockOf, loading: planLoading } = useLocks();
+  const { lockOf, loading: planLoading } = useLocks(undefined, { held: true });
   const canStart = useCallback(
     (topic: RoadmapTopic, level: number) => !isBarred(lockOf({ kind: 'learn-level', topic, level })),
     [lockOf],

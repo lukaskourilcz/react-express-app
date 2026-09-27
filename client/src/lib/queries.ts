@@ -8,7 +8,7 @@ import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchRoadmapStructure } from './roadmap';
 import { useAuth } from './auth';
 import { entitlementQuery } from './entitlement';
-import { readOnce, settled, useFirstData } from './routeData';
+import { HELD_READ, readOnce, settled, useFirstData } from './routeData';
 import { fetchLeaderboard, type LeaderboardPeriod } from './play';
 import { getUserStats, createOrUpdateUserStats, type UserStats } from './supabase';
 import { apiFetch } from './api';
@@ -77,9 +77,11 @@ export function leaderboardQuery(request: LeaderboardRequest) {
   });
 }
 
-/** A leaderboard board. */
+/** A leaderboard board. The screen's hold reads the board it opens on, so a
+ * failure there draws the screen's error at once (HELD_READ); a board picked
+ * later loads as before. */
 export function useLeaderboard(request: LeaderboardRequest) {
-  return useQuery(leaderboardQuery(request));
+  return useQuery({ ...leaderboardQuery(request), ...HELD_READ });
 }
 
 export const profileStatsQueryKey = (userId: string | undefined) =>
@@ -101,14 +103,18 @@ export function useProfileStats(
   });
 }
 
-/** The signed-in user's saved flashcards. */
-export function useFlashcards(enabled: boolean) {
+/** The signed-in user's saved flashcards of a subject, as one set of options
+ * the hook and /collection's first-data hold share. */
+export const flashcardsQuery = (subject: SubjectId) => queryOptions({
+  queryKey: ['flashcards', subject],
+  queryFn: listFlashcards,
+});
+
+/** The signed-in user's saved flashcards. `held`: the page's hold read them
+ * (HELD_READ). */
+export function useFlashcards(enabled: boolean, { held = false }: { held?: boolean } = {}) {
   const [subject] = useSubject();
-  return useQuery({
-    queryKey: ['flashcards', subject],
-    enabled,
-    queryFn: listFlashcards,
-  });
+  return useQuery({ ...flashcardsQuery(subject), enabled, retryOnMount: !held });
 }
 
 /** The Biggest Shark Challenge leaderboard of a subject, as one set of

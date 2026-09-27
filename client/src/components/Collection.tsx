@@ -1,8 +1,13 @@
 import { useSearchParams, Link } from 'react-router-dom';
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
-import { useBookmarks, useSaveChallenge } from '../coding/practice';
+import { getSupabaseSession } from '../lib/supabaseClient';
+import { flashcardsQuery } from '../lib/queries';
+import { readOnce, useFirstData } from '../lib/routeData';
+import { useSubject } from '../lib/subjects';
+import { bookmarksQuery, useBookmarks, useSaveChallenge } from '../coding/practice';
 import { CODING_INDEX } from '../../../shared/coding-index';
 import { difficultyOf } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from '../coding/DifficultyBadge';
@@ -17,7 +22,7 @@ import '../coding/Coding.css';
 function SavedChallenges() {
   const { t, lang } = useLanguage();
   const { isAuthenticated, signInWithGoogle } = useAuth();
-  const query = useBookmarks(isAuthenticated);
+  const query = useBookmarks(isAuthenticated, { held: true });
   const save = useSaveChallenge();
   const [authError, setAuthError] = useState(false);
   if (!isAuthenticated) return <div className="cd-note"><p>{t('coding.signInHint')}</p><button className="cd-btn" onClick={() => { void signInWithGoogle().catch(() => setAuthError(true)); }}>{t('auth.logIn')}</button>{authError && <p role="alert">{t('auth.signInFailed')}</p>}</div>;
@@ -41,11 +46,29 @@ function SavedChallenges() {
   </section>;
 }
 
+type Tab = 'questions' | 'challenges';
+
+/** The open tab's saved items, in the cache before the first render, so a
+ * signed-in learner's page draws with its cards instead of a loader that the
+ * cards replace. A visitor waits for nothing. On a direct load the session is
+ * still being restored when the page mounts (lib/auth.tsx), so the hold waits
+ * for it too and reads the cards only if there is one. The other tab loads
+ * when it is picked, as before. */
+function useCollectionFirstData(tab: Tab) {
+  const queryClient = useQueryClient();
+  const { user, isLoading } = useAuth();
+  const [subject] = useSubject();
+  const read = (): Promise<unknown> => tab === 'questions' ? readOnce(queryClient, flashcardsQuery(subject)) : readOnce(queryClient, bookmarksQuery);
+  const account = user?.id ?? (isLoading ? 'restoring' : null);
+  useFirstData(account && `collection ${tab} ${account}`, () => user ? read() : getSupabaseSession().then((session) => session ? read() : null));
+}
+
 export default function Collection() {
   const { t } = useLanguage();
   const [params, setParams] = useSearchParams();
   const tabs = ['questions', 'challenges'] as const;
-  const selected = tabs.find(tab => tab === params.get('tab')) ?? 'questions';
+  const selected: Tab = tabs.find(tab => tab === params.get('tab')) ?? 'questions';
+  useCollectionFirstData(selected);
   return <div className="cd-page ss-pop">
     <header><Kicker>{t('collection.heading')}</Kicker><h1>{t('collection.heading')}</h1><p className="cd-lead">{t('collection.subtitle')}</p></header>
     <nav className="cd-actions" aria-label={t('collection.heading')}>{tabs.map(tab => <button key={tab} type="button" className={`cd-btn${selected === tab ? ' cd-btn--primary' : ''}`} aria-current={selected === tab ? 'page' : undefined} onClick={() => setParams({ tab })}>{t(`collection.${tab}`)}</button>)}</nav>

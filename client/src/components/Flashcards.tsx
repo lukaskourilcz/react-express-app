@@ -52,7 +52,8 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
   const [actionError, setActionError] = useState<string | null>(null);
 
   const enabled = !authLoading && isAuthenticated;
-  const cardsQuery = useFlashcards(enabled);
+  // Inside /collection the page's hold read the cards (Collection.tsx).
+  const cardsQuery = useFlashcards(enabled, { held: embedded });
   const cards = cardsQuery.data ?? [];
   const loading = authLoading || (enabled && cardsQuery.isPending);
   const error = actionError ?? (cardsQuery.error ? friendlyError(cardsQuery.error) : null);

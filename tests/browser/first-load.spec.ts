@@ -1,4 +1,5 @@
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type Route } from '@playwright/test';
+import { localAuth, storeFakeSession } from './fake-session';
 
 // The first frame of a visit already has the shell's final geometry.
 //
@@ -17,10 +18,15 @@ import { test, expect, type Page } from '@playwright/test';
 // fixed time before the page arrives. Each frame is recorded, and so is every
 // layout-shift entry, flagged as input or not: the test sends no input, and a
 // phone emulation flags shifts in its first half second as input.
+//
+// The same recording covers the pages that used to grow after their first
+// draw (DRAW): /today and /leaderboard when their reads fail, a session's
+// header when the account widget arrives, and a signed-in /collection with
+// its saved cards.
 
 const HOLD_MS = 800;
 
-type Frame = { t: number; mainTop: number; header: number | null; route: boolean; footer: number | null };
+type Frame = { t: number; mainTop: number; header: number | null; route: boolean; footer: number | null; page: number | null; nav: number | null; text: string };
 type Shift = { t: number; value: number; input: boolean; sources: string[] };
 type Recorder = { __firstLoad: { frames: Frame[]; shifts: Shift[] } };
 
@@ -30,7 +36,10 @@ const PROFILES = [
   { name: 'phone', use: { viewport: { width: 412, height: 823 }, deviceScaleFactor: 1.75, isMobile: true, hasTouch: true } },
 ] as const;
 
-async function coldLoad(page: Page) {
+type Api = (route: Route, url: URL) => Promise<void> | void;
+const unavailable: Api = (route) => route.fulfill({ status: 503, json: { error: { code: 'offline', message: 'offline' } } });
+
+async function coldLoad(page: Page, path = '/', api: Api = unavailable) {
   // The entry script and its preloads load at once; everything imported later
   // (the landing page, motion's features, before the fix the account widget)
   // waits HOLD_MS.
@@ -45,7 +54,7 @@ async function coldLoad(page: Page) {
     }
     await route.continue();
   });
-  await page.route('**/api/**', (route) => route.fulfill({ status: 503, json: { error: { code: 'offline', message: 'offline' } } }));
+  await page.route('**/api/**', (route) => api(route, new URL(route.request().url())));
   await page.addInitScript(() => {
     type LayoutShiftEntry = PerformanceEntry & {
       value: number;
@@ -70,19 +79,23 @@ async function coldLoad(page: Page) {
       const main = document.getElementById('main-content');
       if (main) {
         const footer = document.querySelector('.ss-brand-footer');
+        const box = document.querySelector('.ss-route');
         state.frames.push({
           t: Math.round(performance.now()),
           mainTop: main.getBoundingClientRect().top,
           header: document.querySelector('.ss-header')?.getBoundingClientRect().height ?? null,
           route: Boolean(document.querySelector('.ss-route')),
           footer: footer ? footer.getBoundingClientRect().top : null,
+          page: box ? box.getBoundingClientRect().height : null,
+          nav: document.querySelector('nav.ss-nav-center a')?.getBoundingClientRect().left ?? null,
+          text: box?.textContent ?? '',
         });
       }
       if (performance.now() < 8000) requestAnimationFrame(sample);
     };
     requestAnimationFrame(sample);
   });
-  await page.goto('/');
+  await page.goto(path);
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
   // Late work (fonts, the sign-in nudge, idle preloads) has time to land.
   await page.waitForTimeout(1500);
@@ -113,6 +126,56 @@ for (const profile of PROFILES) {
       expect.soft(moved.filter((node) => node === 'main#main-content' || node.startsWith('header') || node.startsWith('footer')), 'shell nodes that moved').toEqual([]);
       const total = shifts.reduce((sum, shift) => sum + shift.value, 0);
       expect.soft(total, `layout shift score, all entries: ${JSON.stringify(shifts)}`).toBeLessThan(0.01);
+    });
+  });
+}
+
+// A page drew once: from its first frame on, the route box kept its height,
+// and no layout-shift entry was recorded at all, input-flagged ones included.
+function expectOneDraw({ frames, shifts }: { frames: Frame[]; shifts: Shift[] }, label: string) {
+  const drawn = frames.filter((f) => f.route && f.page !== null && f.page > 0);
+  expect(drawn.length, `${label}: frames with the page`).toBeGreaterThan(0);
+  expect.soft([...new Set(drawn.map((f) => Math.round(f.page!)))], `${label}: page height in each frame`).toHaveLength(1);
+  expect.soft(shifts, `${label}: layout-shift entries`).toEqual([]);
+}
+
+for (const profile of PROFILES) {
+  test.describe(`${profile.name}, reads that fail`, () => {
+    test.use(profile.use);
+
+    // Before, the page's own query asked again after its hold's read failed:
+    // the skeleton drew first and the error replaced it after the retry,
+    // moving the footer (0.0004 and 0.038 on /today, 0.004 and 0.050 on
+    // /leaderboard, desktop and phone).
+    for (const path of ['/today', '/leaderboard']) {
+      test(`${path} draws its error once`, async ({ page }) => {
+        expectOneDraw(await coldLoad(page, path), path);
+      });
+    }
+  });
+
+  test.describe(`${profile.name}, signed in`, () => {
+    test.use(profile.use);
+
+    // Before, a session's desktop header moved every nav link when the account
+    // widget replaced its 56px placeholder (0.004), and /collection drew a
+    // loader in its body and the saved cards a beat later.
+    test('/collection draws with its saved cards, under a header that stands still', async ({ page }) => {
+      const card = 'What does a closure capture?';
+      await storeFakeSession(page);
+      await localAuth(page);
+      // The cards answer 400ms after they are asked for, after the page's code
+      // has arrived, so a page that does not wait for them draws without them.
+      const recorded = await coldLoad(page, '/collection', async (route, url) => url.pathname === '/api/flashcards'
+        ? (await new Promise((resolve) => setTimeout(resolve, 400)), route.fulfill({ json: { cards: [{ question_id: 'q1', question: card, category: 'javascript', correct_answer: 'Its scope', explanation: null, created_at: '2026-09-01T00:00:00Z' }] } }))
+        : unavailable(route, url));
+      await expect(page.getByText(card)).toBeVisible();
+      expectOneDraw(recorded, '/collection');
+      const drawn = recorded.frames.filter((f) => f.route && f.page);
+      expect.soft(drawn.filter((f) => !f.text.includes(card)).length, 'frames of the page without the cards').toBe(0);
+      if (profile.name === 'desktop') {
+        expect.soft([...new Set(recorded.frames.map((f) => f.nav))], 'left edge of the first nav link in each frame').toHaveLength(1);
+      }
     });
   });
 }

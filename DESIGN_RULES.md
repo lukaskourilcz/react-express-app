@@ -154,9 +154,11 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   first touch (`lib/routePreload.ts`), and a page whose first render depends
   on account or structure data holds it with `useFirstData`
   (`lib/routeData.ts`, capped at 1.2s, and not at all offline) instead of
-  drawing defaults and redrawing. A section that keeps a chunk of its own,
-  such as Today's signed-in sections or the roadmap's optional paths, is a
-  `lazyPart`: the page's hold loads its code with its reads, so it draws with
+  drawing defaults and redrawing. The page's own query of a held read
+  spreads `HELD_READ`, so a read that failed in the hold draws its error with
+  the page instead of a loading state first. A section that keeps a chunk of
+  its own, such as Today's signed-in sections or the roadmap's optional
+  paths, is a `lazyPart`: the page's hold loads its code with its reads, so it draws with
   the page instead of under it a beat later, and a failed part is retried
   like a page. A signed-out visitor never waits for account data. Never mount
   a route's `Suspense` boundary inside an element keyed by the path: a fresh
@@ -172,9 +174,10 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   under it when the chunk lands. The header knows at its first render whether
   a session may exist: a signed-out visitor gets `SignInButton`, which ships
   with the shell, and the lazy account widget with its 56px placeholder is for
-  a session. The footer renders inside the route `Suspense`, after the keyed
-  box, so it arrives with the first page instead of sitting under the
-  first-load loader. `tests/browser/first-load.spec.ts` holds the page's code
+  a session. On a desktop that widget sits in `.ss-account-slot`, as wide as
+  the widget can grow, so the centred nav stands still when it arrives. The
+  footer renders inside the route `Suspense`, after the keyed box, so it
+  arrives with the first page instead of sitting under the first-load loader. `tests/browser/first-load.spec.ts` holds the page's code
   back and fails when the header, `<main>` or the footer moves.
 - A shell part that fails keeps the shell too. A lazy part outside the route
   boundary (the account widget, the upgrade sheet) is a `lazyShellPart` inside
@@ -186,7 +189,18 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   `reloadOnPress` (`lib/routeRecovery.ts`), and only while the browser is
   online and the server answers. The Coding workbench's Try again and a
   second sign-in press after a failed supabase-js download follow the same
-  rule.
+  rule, and so does a second press for the upgrade sheet: that reload opens
+  the sheet in the next document. A 402 nobody pressed for never reloads.
+- A part inside a page that loads its own code and is not in the page's hold
+  (the Learn workbench, the friends tab, a path's reward, the code
+  highlighter) fails alone. It is a `lazyShellPart` inside a
+  `ShellPartBoundary`, and its fallback keeps the page: `ErrorRetry` in the
+  part's place, or plain code for a code block. Nothing here uses `lazy`.
+- Motion's features chunk can fail too. `lib/motion.tsx` then marks
+  `<html data-motion="off">`, and `app-shell.css` shows every `m` element
+  (each carries `data-m`) at full opacity with no transform. So every `m`
+  element must end visible and untransformed; one that ends hidden needs a
+  rule of its own.
 - In-place mutations keep their control visible, disable duplicate actions,
   and use a translated action/status label. Do not replace a whole editor
   with a page loader during submission or draft saving.

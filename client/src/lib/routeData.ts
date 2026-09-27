@@ -28,6 +28,14 @@ export function readOnce<TQueryFnData, TError, TData, TQueryKey extends QueryKey
   return queryClient.ensureQueryData({ ...options, retry: false });
 }
 
+/** Spread into a page's own query of a read its hold made. The hold's attempt
+ * stands for the mount's: a read that failed in the hold draws as the page's
+ * error at once. With the default, the mount asked again, the page drew its
+ * loading state, and the same error replaced it after the retry, a second
+ * draw that moved everything under it. Retry buttons, a changed key and the
+ * next visit's hold still ask again. */
+export const HELD_READ = { retryOnMount: false } as const;
+
 /** Wait for every read and keep none of their failures: a failed read is the
  * page's to show. */
 export const settled = (reads: (Promise<unknown> | null)[]): Promise<unknown> =>

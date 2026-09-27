@@ -15,9 +15,9 @@ const CODING_PAGE = /\/assets\/CodingSection-[\w-]+\.js$/;
 const CODING_DEPENDENCY = /\/assets\/coding-catalog-[\w-]+\.js$/;
 const CODING_LINK = 'nav.ss-nav-center a[href="/coding"]';
 
-async function prepare(page: Page) {
+async function prepare(page: Page, reducedMotion: 'reduce' | 'no-preference' = 'reduce') {
   await page.setViewportSize({ width: 1280, height: 800 });
-  await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' });
+  await page.emulateMedia({ reducedMotion, colorScheme: 'light' });
   await page.addInitScript(() => {
     try { localStorage.setItem('devquiz:color-mode', 'light'); } catch { /* private mode */ }
   });
@@ -178,6 +178,88 @@ test('the upgrade sheet’s code fails to load: the sheet closes with a message,
   expect(sheet.dropped).toBeGreaterThan(0);
   await page.waitForTimeout(600);
   expect(documents).toHaveLength(2);
+});
+
+test('a second press for the upgrade sheet after its code failed asks the network again', async ({ page }) => {
+  const { documents } = await prepare(page);
+  const TASK = 'js-double-numbers';
+  await page.route((url) => url.pathname === '/api/quiz/roadmap' && url.searchParams.get('resource') === 'coding-task', (route) => route.fulfill({
+    status: 402,
+    json: { error: { code: 'premium_required', message: 'Premium opens this', kind: 'coding-task', ref: TASK } },
+  }));
+  const sheet = await dropChunk(page, /\/assets\/UpgradeSheet-[\w-]+\.js$/);
+
+  // The 402 opens the sheet, its code fails, and the page says why.
+  await page.goto(`/coding/javascript/${TASK}`);
+  await expect(page.getByRole('alert').filter({ hasText: 'Network error. Check your connection and try again.' })).toBeVisible();
+  expect(sheet.dropped).toBeGreaterThan(0);
+  const before = documents.length;
+
+  // The connection is back and the learner presses. Chromium before 156
+  // answers the import from memory, so the press reloads the address and the
+  // next document opens the sheet; a browser that forgets the failure opens
+  // it in place.
+  sheet.failing = false;
+  await page.getByRole('button', { name: 'See what Premium includes' }).click();
+  await expect(page.getByRole('dialog')).toBeVisible();
+  expect(sheet.served).toBeGreaterThan(0);
+  await expect(page).toHaveURL(new RegExp(`/coding/javascript/${TASK}$`));
+  await expectShell(page);
+  test.info().annotations.push({ type: 'recovery', description: documents.length > before ? 'reloaded the address, and the next document opened the sheet' : 'opened the sheet in place' });
+});
+
+test('the friends tab’s code fails to load: the profile stays, and Retry brings the tab back', async ({ page }) => {
+  await localAuth(page);
+  await storeFakeSession(page);
+  const { documents } = await prepare(page);
+  // A learner with no stats yet; every other read answers 503.
+  await page.route((url) => url.pathname === '/api/user/stats', (route) => route.fulfill({ json: { data: null } }));
+  const friends = await dropChunk(page, /\/assets\/FriendsPanel-[\w-]+\.js$/);
+
+  await page.goto('/profile');
+  await page.getByRole('tab', { name: 'Friends' }).click();
+  const failure = page.getByRole('alert').filter({ hasText: 'Your friends did not load.' });
+  await expect(failure).toBeVisible();
+  expect(friends.dropped).toBeGreaterThan(0);
+  await expectShell(page);
+  await expect(page.getByRole('tab', { name: 'Overview' })).toBeVisible();
+  await expect(panelOf(page)).toHaveCount(0);
+  const before = documents.length;
+  // Nothing reloads without a press.
+  await page.waitForTimeout(600);
+  expect(documents).toHaveLength(before);
+
+  friends.failing = false;
+  await failure.getByRole('button', { name: 'Retry' }).click();
+  // The API answers 503, so the panel says the tab is not available.
+  const panel = page.getByText('Friends are not available yet on this deployment.');
+  await expect.poll(async () => documents.length > before || await panel.isVisible()).toBe(true);
+  // After a reload the profile opens on its first tab.
+  if (documents.length > before) await page.getByRole('tab', { name: 'Friends' }).click();
+  await expect(panel).toBeVisible();
+  await expect(failure).toHaveCount(0);
+  expect(friends.served).toBeGreaterThan(0);
+  test.info().annotations.push({ type: 'recovery', description: documents.length > before ? 'reloaded the address' : 'drew the tab in place' });
+});
+
+for (const reducedMotion of ['reduce', 'no-preference'] as const) test(`Motion’s animation chunk fails to load (${reducedMotion} motion): the page still shows, before and after a navigation`, async ({ page }) => {
+  const motion = await dropChunk(page, /\/assets\/motion-features-[\w-]+\.js$/);
+  const { documents } = await prepare(page, reducedMotion);
+  const routeBox = page.locator('.ss-route');
+  const opacity = () => routeBox.evaluate((node) => getComputedStyle(node).opacity);
+
+  expect(motion.dropped).toBeGreaterThan(0);
+  await expect.poll(opacity).toBe('1');
+  await expect(page.locator('html')).toHaveAttribute('data-motion', 'off');
+  await expectShell(page);
+
+  await page.locator('nav.ss-nav-center a[href="/quiz"]').click();
+  await expect(page).toHaveURL(/\/quiz$/);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect.poll(opacity).toBe('1');
+  expect(await routeBox.evaluate((node) => getComputedStyle(node).transform)).toBe('none');
+  // Nothing reloads for it.
+  expect(documents).toHaveLength(1);
 });
 
 test('a preload that fails on hover neither reloads nor shows an error', async ({ page }) => {

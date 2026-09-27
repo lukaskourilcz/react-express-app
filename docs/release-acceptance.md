@@ -2356,3 +2356,144 @@ Each run covers the light and the dark test, so `--repeat-each=20` is 40 runs.
 | `git diff --check` | clean |
 
 Not verified by me: Firefox and Safari, CI's runner, and the route focus's 230 ms window for a keyboard user on a slow phone.
+
+## 2026-09-27 — a part that fails to load keeps its page (CHUNKS)
+
+HARDEN's hand-off left three gaps, and NEEDED.md carried them as one `[owner:ai]` item:
+
+1. `PathRewardClaim`, the Learn workbench, `FriendsPanel` and the code highlighter used `React.lazy` with no boundary of their own. A failed chunk sent the whole page to the route error panel, and React.lazy kept the failure.
+2. In Chromium up to 155 and in Safari, a second failure of the upgrade sheet repeated the toast without a request.
+3. When Motion's features chunk failed, the route box stayed at opacity 0 under a working header.
+
+| Gap | The change | The test |
+| --- | --- | --- |
+| The four parts | Each is a `lazyShellPart` inside a `ShellPartBoundary`, the pair HARDEN built for the account widget and the sheet. The workbench, the friends tab and the reward draw `ErrorRetry` in their place: "Could not load this task.", "Your friends did not load." or "Could not check this path's reward.", with Retry. A code block falls back to the plain `<pre>` it already drew while loading, and the next block asks again | 2 tests in `client/tests/in-page-parts.test.tsx`; in `route-errors.spec.ts`, "the friends tab's code fails to load…" |
+| The sheet's second failure | When the sheet's code fails a second time in one document on a press, the host marks `devshark:upgrade-resume` in `sessionStorage` (kind and ref, valid for 60 seconds) and reloads through `reloadOnPress`. The next document opens the sheet from the mark. A 402 from the API client carries `fromResponse` and never reloads. Offline, with `/` unanswered, or with the reload refused, the toast shows as before | 4 new tests in `client/tests/shell-parts.test.tsx`; in `route-errors.spec.ts`, "a second press for the upgrade sheet…" |
+| Motion | `loadMotionFeatures` catches the failure, sets `<html data-motion="off">`, reports it once with `chunkLoad: true`, and leaves LazyMotion's load pending. `lib/motion.tsx` gives every `m` element `data-m`, and one rule in `app-shell.css` shows those elements at opacity 1 with no transform. `:where()` keeps the rule at one attribute's weight, so the route box's busy fade still wins | 3 tests in `client/tests/motion-fallback.test.tsx`; in `route-errors.spec.ts`, two Motion cases, reduced and full motion |
+
+### Choices
+
+- I reused `lazyShellPart` and `ShellPartBoundary` rather than `lazyPart`. `lazyPart` fails with its page by design: the page's hold loads its code. These four parts load after the page draws, so they should fail alone. `ShellPartBoundary` also brings the reload on a repeated press, so the retry works in Chromium 153 too.
+- The fallbacks reuse `ErrorRetry`, which now takes `busy` so its button keeps focus while a press reloads.
+- A code block gets no Retry. The plain text shows the whole snippet, and a Retry beside every snippet on a page would be noise.
+- The reward's fallback shows on every enrolled path, finished or not, because the page cannot know which paths have a reward until the chunk loads. Its copy says the check failed and promises no reward.
+- The Motion rule depends on one fact: every `m` element in the app (the route box, three toasts, `MotionItem`, `MotionPop`) enters to full opacity and no transform. DESIGN_RULES §8 says so now.
+- The Vite build's PurgeCSS pass dropped the rule the first time, because `dataset.motion` never spells `data-motion` in the bundle. `data-motion` joins the safelist, and the build now fails if the rule goes missing.
+
+### Evidence
+
+"Old code" means a build of `origin/main` at `391ca34`, this branch's base, made as CI makes it, or the new unit tests copied onto that tree. Chromium 153.0.8010.12 (Playwright 1.63.0), which still remembers failed module fetches.
+
+| Check | Old code | This branch |
+| --- | --- | --- |
+| `route-errors.spec.ts`, the friends tab | fails: the route panel ("Something went wrong") replaces the profile | passes; annotation "reloaded the address" |
+| `route-errors.spec.ts`, the sheet's second press | fails: no dialog after the press | passes; annotation "reloaded the address, and the next document opened the sheet" |
+| `route-errors.spec.ts`, Motion, reduced and full motion | both fail: the route box's opacity stays "0" | both pass: opacity "1" on `/` and after a navigation to `/quiz`, transform `none`, no reload |
+| `in-page-parts.test.tsx` | the code-block test fails; the generic part test passes, since it builds the boundary itself | 2 pass |
+| `motion-fallback.test.tsx` | 3 fail | 3 pass |
+| `shell-parts.test.tsx`, the 4 new sheet tests | 3 fail; "never reloads for a 402 nobody pressed for" passes, since the old code never reloaded | 10 pass |
+
+In the sheet's browser case, the reloaded task page answers 402 again, so the API client opens the sheet in the next document as well as the mark. The mark's part alone is proven by the unit test, where nothing answers 402.
+
+`npm run check:bundle`: 227,116 of 243,000 gzip bytes on this branch, 226,554 on `391ca34`. The 562 extra bytes sit in the entry script and its stylesheet: the `m` wrapper, `loadMotionFeatures`, the CSS rule, and the sheet's mark and reload.
+
+### Checks on the final head
+
+All on `59ce547`, the code of this record's commit, in the worktree `ds-wt-chunks`. I ran every command below, and each exit code is its own.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:client` | exit 0; 32 files, 318 tests |
+| `npm run test:launch` | exit 0; the twelve-function budget holds |
+| `npm run check:unused` | exit 0; knip reports no new finding |
+| The workflow's build step: the Supabase placeholders, then `npm run build`, `npm run check:public` and `npm run check:bundle` | exit 0 each; 13 public URLs; 227,116 of 243,000 gzip bytes |
+| Browser specs `route-errors`, `navigation`, `lazy-auth` and `first-load` against `vite preview` of that build on :4721 | exit 0 each; 14, 2, 6 and 2 passed |
+| `git diff --check origin/main...HEAD` | clean |
+
+Not run: the other browser specs, `check:responsive`, the audits and Storybook. The branch changes nothing under `api/`, `lib/` or `shared/`, and leaves `vercel.json` alone.
+
+### Commits
+
+| Commit | What |
+| --- | --- |
+| `3f2f6f1` | The four parts become `lazyShellPart`s inside `ShellPartBoundary`; `ErrorRetry` takes `busy`; two English keys |
+| `f025478` | The sheet's second failure on a press reloads, and the next document opens the sheet |
+| `7dad4b7` | `loadMotionFeatures`, `data-m`, and the `app-shell.css` rule |
+| `fdc6f7c` | The rule survives PurgeCSS, and the build checks for it |
+| `93d89f1` | Four browser cases in `route-errors.spec.ts` |
+| `59ce547` | The Motion cases check opacity before the marker, so the old code fails on what a learner sees |
+| this commit | DESIGN_RULES §8, this record, NEEDED.md |
+
+### Hand-off
+
+- Safari and Firefox. Only Chromium 153 ran here. The sheet's reload rests on the same `reloadOnPress` the sign-in uses, and Safari's module-map behaviour comes from HARDEN's sources, not from a Safari run.
+- The Learn workbench and a path's reward in a browser. Their unit coverage is the shared boundary; reaching either on a page needs roadmap or enrollment data that the specs do not fake yet.
+- Motion stays off for the rest of a document after its chunk fails. Nothing retries it; the next page load does.
+
+## 2026-09-27 — the rest draws in one step (DRAW)
+
+NEEDED.md's `[owner:ai]` item "Draw the rest in one step" named three things that still moved after the first draw: `/today` and `/leaderboard` growing (0.05 or less), a signed-in desktop header re-centring its nav (0.004), and a signed-in `/collection` drawing its saved cards after the page.
+
+| What moved | Why | The change |
+| --- | --- | --- |
+| `/today`, `/leaderboard` | When a held read failed, the page's own query asked again on mount (TanStack's `retryOnMount`). The page drew its skeleton, and the same error replaced it about a second later, after the retry. The footer moved each time | `HELD_READ` in `lib/routeData.ts` (`retryOnMount: false`), spread into the page's own copy of a held read: the roadmap structure and, through `useLocks(…, { held: true })`, the plan on Today; the board on the leaderboard. The hold's attempt stands for the mount's, so the error draws with the page. Retry buttons, a changed key and the next visit's hold still ask again |
+| The signed-in desktop header | The toolbar's grid centres the nav between its side columns. The widget replaced a 56px placeholder at 224px ("Test Learner"), so every nav link moved 84px at 1350px | The widget sits in `.ss-account-slot`: at least 60px wide from 1024px (the avatar, with a ring) and 240px from 1280px (the button's `max-width`). A signed-out header has no slot |
+| `/collection`, signed in | Nothing held the page, so it drew `LoadingScreen` in its body and the cards replaced it | `useFirstData` holds the page for the open tab's read (`flashcardsQuery(subject)`, new in `lib/queries.ts`, or `bookmarksQuery`), with `HELD_READ` on both hooks. On a direct load the session is still being restored when the page mounts, so the hold waits for `getSupabaseSession()` too and reads only if a session comes back. A visitor waits for nothing |
+
+### Measured before and after
+
+A scratch Playwright script, never committed, loads each page cold in Chromium 153.0.8010.12 and adds up every `layout-shift` entry a `PerformanceObserver` reports, input-flagged ones included. "Desktop" is 1350×940 at full speed, "phone" 412×823 at a 1.75 device pixel ratio with 4× CPU throttling, the profiles of the CLS record. The API answers 503 (the CLS record's condition) or, for `/collection` and the header, fixtures 250ms late: three saved cards, a free plan and 503 for the rest. Signed in means the fake session of `tests/browser/fake-session.ts`, with Auth answered locally. Before is `aeb7da8`, this branch's base, after is `65cb2d0`, both built with the Supabase placeholders and served side by side by `vite preview` (:4782 and :4781). Two runs of each; they agreed to the fourth decimal.
+
+| Page | Visitor, API | Desktop, before → after | Phone, before → after |
+| --- | --- | --- | --- |
+| `/today` | signed out, 503 | 0.0004 → 0 | 0.0378 → 0 |
+| `/today` | signed in, 503 | 0.0054 → 0 | 0.0386 → 0 |
+| `/leaderboard` | signed out, 503 | 0.0043 → 0 | 0.0502 → 0 |
+| `/leaderboard` | signed in, 503 | 0.0105 → 0 | 0.0502 → 0 |
+| `/collection` | signed in, fixtures | 0.0052 → 0 | 0.0504 → 0 |
+| `/` | signed in, fixtures | 0.0041 → 0 | 0 → 0 |
+
+On the desktop the signed-in rows include the header's 0.0041. Before, the first nav link stood at 351.9px and moved to 268.0px when the widget arrived; after, it stands at 259.9px from the first frame. With a 29-character name it stands at 259.9px too. Signed out, it stands at the same place on both builds at each of 1024, 1100, 1279, 1280, 1350, 1440 and 1920px (347.6px at 1350px). Before, `/collection` drew two states, the loader and then the cards; after, the cards are in its first frame. A click from `/` to each page, desktop, 503 and fixtures, signed in and out, recorded 0 non-input shift after the first draw on the new build; before, the 503 visits recorded 0.0004 to 0.0064.
+
+The signed-in desktop nav now starts 8px further left at 1350px than the widget left it before (259.9 against 268.0px), because the slot reserves the widget's widest box. At 1280px with the long name the nav's `scrollWidth` equals its `clientWidth` (690px): no link is clipped.
+
+`npm run check:bundle`: 227,155 of 243,000 gzip bytes, 39 more than the base's 227,116, in the entry's script and stylesheet (the slot's rule and the plan's `held` option).
+
+### Tests
+
+`tests/browser/first-load.spec.ts` gains three cases at both of its profiles, recording each frame and every `layout-shift` entry with its chunks held 800ms as before: `/today` and `/leaderboard` with every read failing, and a signed-in `/collection` whose cards answer 400ms late. Each page must keep the route box's height from its first frame and record no entry at all; the collection must show its card in every frame of the page, and on the desktop the first nav link must not move. Against the base build 5 of the 6 cases failed; the phone's collection case passed there until the cards were made to answer late, and then failed too. On the final build all 8 cases passed, and 24 of 24 with `--repeat-each=3`.
+
+### Checks on the final head
+
+On `65cb2d0`, the code of this record's commit, in the worktree `ds-wt-onestep`. I ran every command below, and each exit code is its own.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:client` | exit 0; 32 files, 318 tests |
+| `npm run check:unused` | exit 0; knip reports no new finding |
+| The workflow's build step: the Supabase placeholders, then `npm run build`, `npm run check:public` and `npm run check:bundle` | exit 0 each; 13 public URLs; 227,155 of 243,000 gzip bytes |
+| Browser specs `first-load`, `navigation`, `route-errors`, `lazy-auth` and `public` against `vite preview` of that build on :4781 | exit 0 each; 8, 2, 14, 6 and 5 passed |
+| `npm run check:responsive -- --base-url http://localhost:4781 --routes /,/today,/leaderboard --widths 390,1280` | exit 0; 6 probes, 0 with issues |
+| `git diff --check` | clean |
+
+Not run: the other browser specs, `test:launch`, the audits and Storybook. The branch changes nothing under `api/`, `lib/` or `shared/`.
+
+### Commits
+
+| Commit | What |
+| --- | --- |
+| `76b6e6e` | `.ss-account-slot` in the header |
+| `f695976` | `HELD_READ`; Today and the leaderboard use it. It also carries `flashcardsQuery` and `useFlashcards`'s `held` option, which the next commit uses |
+| `a3b4461` | `/collection` holds for the open tab |
+| `6ad1b57` | The three cases in `first-load.spec.ts` |
+| `65cb2d0` | DESIGN_RULES §8 |
+| this commit | This record and NEEDED.md |
+
+### Hand-off
+
+- A slow read still draws twice: past the 1.2s cap the page draws its loading state, as HOLDS set up.
+- `/cards` shows the same flashcards as `/collection` and does not hold for them.
+- Today's four signed-in sections keep their own queries without `HELD_READ`, so a section whose read failed in the hold asks again on mount. The signed-in 503 runs recorded no shift from them on either build; I did not run them with data that fills a section after a retry.
+- Not verified: devshark.app (not deployed), a real Supabase session, Firefox, Safari and physical phones.

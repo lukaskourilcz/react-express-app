@@ -650,13 +650,18 @@ function App() {
                   73px tall and shrank to 57px (61px on touch) when the chunk
                   landed, pulling <main> up with it. A widget whose chunk
                   fails leaves a retry in the same 56px row, and the header
-                  stays. */}
+                  stays. On a desktop the account's slot is as wide as the
+                  widget can grow (.ss-account-slot), so the centred nav stands
+                  still when the placeholder, the skeleton and the name arrive
+                  one after another. */}
               {user || authLoading ? (
-                <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
-                  <ShellPartBoundary fallback={(retry, busy) => <AccountRetry retry={retry} busy={busy} />}>
-                    <AuthButton />
-                  </ShellPartBoundary>
-                </Suspense>
+                <span className="ss-account-slot">
+                  <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
+                    <ShellPartBoundary fallback={(retry, busy) => <AccountRetry retry={retry} busy={busy} />}>
+                      <AuthButton />
+                    </ShellPartBoundary>
+                  </Suspense>
+                </span>
               ) : (
                 <SignInButton />
               )}
