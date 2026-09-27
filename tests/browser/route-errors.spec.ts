@@ -129,6 +129,49 @@ test('the Coding workbench that fails to load comes back through the task screen
   test.info().annotations.push({ type: 'recovery', description: documents.length > 2 ? 'reloaded the address' : 'drew the workbench in place' });
 });
 
+test('the account button’s code fails to load: the header keeps a retry in its place, and the press brings it back', async ({ page }) => {
+  // The header asks for the button as the first page loads.
+  const account = await dropChunk(page, /\/assets\/AuthButton-[\w-]+\.js$/);
+  const { documents } = await prepare(page);
+  const retry = page.getByRole('button', { name: 'Account did not load. Try again' });
+  await expect(retry).toBeVisible();
+  await expect(retry).toHaveText('Try again');
+  await expectShell(page);
+  await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  await expect(page.getByRole('alert').filter({ hasText: 'Something went wrong' })).toHaveCount(0);
+  expect(account.dropped).toBeGreaterThan(0);
+  // Nothing reloads without a press.
+  await page.waitForTimeout(600);
+  expect(documents).toHaveLength(1);
+
+  account.failing = false;
+  await retry.click();
+  await expect(page.locator('header.ss-header').getByRole('button', { name: 'Log in', exact: true })).toBeVisible();
+  await expect(retry).toHaveCount(0);
+  expect(account.served).toBeGreaterThan(0);
+  test.info().annotations.push({ type: 'recovery', description: documents.length > 1 ? 'reloaded the address' : 'drew the button in place' });
+});
+
+test('the upgrade sheet’s code fails to load: the sheet closes with a message, and the page stays', async ({ page }) => {
+  const { documents } = await prepare(page);
+  // The server refuses the task with 402, which opens the upgrade sheet.
+  const TASK = 'js-double-numbers';
+  await page.route((url) => url.pathname === '/api/quiz/roadmap' && url.searchParams.get('resource') === 'coding-task', (route) => route.fulfill({
+    status: 402,
+    json: { error: { code: 'premium_required', message: 'Premium opens this', kind: 'coding-task', ref: TASK } },
+  }));
+  const sheet = await dropChunk(page, /\/assets\/UpgradeSheet-[\w-]+\.js$/);
+
+  await page.goto(`/coding/javascript/${TASK}`);
+  await expect(page.getByRole('alert').filter({ hasText: 'Network error. Check your connection and try again.' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'This challenge is part of Premium' })).toBeVisible();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expectShell(page);
+  expect(sheet.dropped).toBeGreaterThan(0);
+  await page.waitForTimeout(600);
+  expect(documents).toHaveLength(2);
+});
+
 test('a preload that fails on hover neither reloads nor shows an error', async ({ page }) => {
   const { documents } = await prepare(page);
   const chunk = await dropChunk(page, CODING_PAGE);

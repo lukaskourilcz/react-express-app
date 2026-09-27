@@ -183,31 +183,27 @@ export function takeBuildCheck(error: unknown): BuildCheck | undefined {
 }
 
 /**
- * `lazy()` for a routed page, able to try again. React.lazy keeps a rejection
+ * A lazy component that can be asked for again. React.lazy keeps a rejection
  * for good: render the same lazy component after a failure and it throws the
- * same error without calling its loader. So each page renders whichever lazy
+ * same error without calling its loader. So this renders whichever lazy
  * component is current, and a failed one is swapped for a fresh one when
- * `renewFailedPages()` says so (the route boundary does, once the error is on
- * screen). The loader is a `routeChunk` loader, which forgets a failed import,
- * so the fresh component asks the network again.
- *
- * Before a failure reaches the boundary the page checks the served build: a
- * navigation renders in a transition, so the current page stays on screen
- * while it asks, and a newer build reloads from there without an error screen
- * in between.
+ * `renewFailedPages()` says so (a boundary does, once the error is on screen).
+ * The fresh component calls the loader again. `beforeFailing` runs before
+ * React learns of a failure.
  *
  * `ComponentType<any>` is React.lazy's own bound; the props come back through
  * ComponentProps.
  */
-export function lazyPage<T extends ComponentType<any>>(load: () => Promise<{ default: T }>, recovery: Recovery = browserRecovery): ComponentType<ComponentProps<T>> {
+function renewableLazy<T extends ComponentType<any>>(
+  load: () => Promise<{ default: T }>,
+  beforeFailing?: (error: unknown) => Promise<void>,
+): ComponentType<ComponentProps<T>> {
   type P = ComponentProps<T>;
   let View: LazyExoticComponent<T>;
   const renew = () => {
     View = lazy(() => load().catch(async (error: unknown) => {
-      if (await reloadForNewerBuild(error, recovery)) {
-        await new Promise((resolve) => window.setTimeout(resolve, RELOAD_GRACE_MS));
-      }
-      // React learns of the failure now; from here on the page may be renewed.
+      await beforeFailing?.(error);
+      // React learns of the failure now; from here on the part may be renewed.
       failedPages.add(renew);
       throw error;
     }));
@@ -218,8 +214,38 @@ export function lazyPage<T extends ComponentType<any>>(load: () => Promise<{ def
   };
 }
 
-/** Swap every page whose load failed for a fresh lazy component. Call it only
- * while no failed page is on screen, or React would retry it straight away. */
+/**
+ * `lazy()` for a routed page, able to try again (renewableLazy). The loader is
+ * a `routeChunk` loader, which forgets a failed import, so the fresh component
+ * asks the network again.
+ *
+ * Before a failure reaches the boundary the page checks the served build: a
+ * navigation renders in a transition, so the current page stays on screen
+ * while it asks, and a newer build reloads from there without an error screen
+ * in between.
+ */
+export function lazyPage<T extends ComponentType<any>>(load: () => Promise<{ default: T }>, recovery: Recovery = browserRecovery): ComponentType<ComponentProps<T>> {
+  return renewableLazy(load, async (error) => {
+    if (await reloadForNewerBuild(error, recovery)) {
+      await new Promise((resolve) => window.setTimeout(resolve, RELOAD_GRACE_MS));
+    }
+  });
+}
+
+/**
+ * `lazy()` for a part of the shell outside the route boundary (the account
+ * button, the upgrade sheet), able to try again like a page. A failure checks
+ * nothing and never reloads by itself: the shell loads these parts without a
+ * press, and a reload nobody asked for would throw away whatever the learner
+ * has open. ShellPartBoundary renews it when the learner retries.
+ */
+export function lazyPart<T extends ComponentType<any>>(load: () => Promise<{ default: T }>): ComponentType<ComponentProps<T>> {
+  return renewableLazy(load);
+}
+
+/** Swap every page or shell part whose load failed for a fresh lazy component.
+ * Call it only while no failed one is on screen, or React would retry it
+ * straight away. */
 export function renewFailedPages(): void {
   for (const renew of failedPages) renew();
   failedPages.clear();

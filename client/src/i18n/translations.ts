@@ -400,6 +400,7 @@ export const en = {
   'auth.signupBonusToast': '+{tokens} coins · welcome to {brand}',
   'auth.profile': 'Profile',
   'auth.account': 'Account',
+  'auth.accountRetry': 'Account did not load. Try again',
   'auth.loadingAccount': 'Loading account',
   'auth.accountMenu': 'Account menu for {name}',
 

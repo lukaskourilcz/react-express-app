@@ -36,10 +36,11 @@ interface State {
 
 // One report per failed chunk per page load: a learner pressing Try again, or
 // a connection that keeps dropping, is still one failure. A preload started
-// by a hover never reaches this boundary, so it is never reported.
+// by a hover never reaches this boundary, so it is never reported. The shell's
+// own boundary (ShellPartBoundary) reports through this too.
 const reportedChunkFailures = new Set<string>();
 
-function report(error: unknown, componentStack: string | null | undefined, chunk: boolean) {
+export function reportBoundaryError(error: unknown, componentStack: string | null | undefined, chunk: boolean) {
   if (chunk) {
     const key = error instanceof Error ? `${error.name}: ${error.message}` : String(error);
     if (reportedChunkFailures.has(key)) return;
@@ -92,7 +93,7 @@ export class RouteErrorBoundary extends Component<Props, State> {
     const attempt = this.attempt;
     this.attempt = 'visit';
     const chunk = isChunkLoadError(error);
-    report(error, info.componentStack, chunk);
+    reportBoundaryError(error, info.componentStack, chunk);
     // The failed page is off screen now, so it can be asked for afresh the
     // next time it renders: a retry, or a later visit.
     renewFailedPages();

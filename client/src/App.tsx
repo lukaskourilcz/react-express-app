@@ -1,6 +1,7 @@
 import { NOINDEX_PATHS, PUBLIC_ORIGIN, premiumSchema, publicPage, topicFromPath, topicSchema } from './lib/publicMetadata';
-import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { Button } from '@astryxdesign/core/Button';
 import { IconButton as AxIconButton } from '@astryxdesign/core/IconButton';
 import { AppToast } from './components/ui/AppToast';
 import { useIsMobile } from './lib/useMediaQuery';
@@ -30,13 +31,15 @@ import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import { takeAuthReturn } from './lib/authReturn';
 import { installIntentPreloading, routeChunk } from './lib/routePreload';
-import { lazyPage } from './lib/routeRecovery';
+import { lazyPage, lazyPart } from './lib/routeRecovery';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
+import { ShellPartBoundary } from './components/ShellPartBoundary';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
-// (logo, nav, theme/sound toggles) paints first.
-const AuthButton = lazy(() => import('./components/AuthButton'));
+// (logo, nav, theme/sound toggles) paints first. `lazyPart`, not `lazy`: its
+// boundary in the header can ask for it again (lib/routeRecovery.ts).
+const AuthButton = lazyPart(() => import('./components/AuthButton'));
 
 // Each page's chunk, registered with the paths that render it so a link can
 // start loading its page before the click lands (lib/routePreload.ts). Pages
@@ -232,6 +235,27 @@ function HeaderBrand() {
       <SwimmingFin size={22} wave />
       {CURRENT_PRODUCT.brand}
     </Link>
+  );
+}
+
+// The account button's place when its code did not load: a quiet retry with
+// the Log in button's size and style (44px on a touch screen, like every
+// Astryx button). Its name says what failed; the text is the app's Try again.
+function AccountRetry({ retry, busy }: { retry: () => void; busy: boolean }) {
+  const t = useT();
+  return (
+    <Button
+      variant="secondary"
+      size="md"
+      label={t('auth.accountRetry')}
+      tooltip={t('auth.accountRetry')}
+      isLoading={busy}
+      // Interruptible: busy but not disabled, so it keeps keyboard focus.
+      isInterruptible
+      onClick={retry}
+    >
+      {t('error.tryAgain')}
+    </Button>
   );
 }
 
@@ -613,9 +637,12 @@ function App() {
                 />
               </span>
               {/* Fallback reserves the avatar footprint so the toolbar
-                  doesn't reflow when the chunk lands. */}
+                  doesn't reflow when the chunk lands. A chunk that fails
+                  leaves a retry in the button's place, and the header stays. */}
               <Suspense fallback={<span aria-hidden style={{ width: 56, height: 56, flexShrink: 0 }} />}>
-                <AuthButton />
+                <ShellPartBoundary fallback={(retry, busy) => <AccountRetry retry={retry} busy={busy} />}>
+                  <AuthButton />
+                </ShellPartBoundary>
               </Suspense>
             </div>
           </div>
