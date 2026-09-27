@@ -49,8 +49,13 @@
         root.lang = root.dataset.publicLocale || lang;
       })();
     </script>
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <!-- devShark V9 icons (client/public/brand/v9/favicon): the clean fin,
+         green on light tabs and white on dark ones. -->
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" media="(prefers-color-scheme: light)" />
+    <link rel="icon" type="image/svg+xml" href="/favicon-white.svg" media="(prefers-color-scheme: dark)" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
     <!-- Preload only the two Latin faces used in the first viewport; other
          character subsets load from the shared stylesheet when needed. -->
@@ -58,7 +63,7 @@
     <link rel="preload" as="font" type="font/woff2" crossorigin href="./node_modules/@fontsource-variable/inter/files/inter-latin-wght-normal.woff2" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="__PRODUCT_DESCRIPTION__" />
-    <meta name="theme-color" content="#2d7a2d" />
+    <meta name="theme-color" content="#2D7A2D" />
     <meta name="apple-mobile-web-app-title" content="__PRODUCT_NAME__" />
     <meta property="og:title" content="__PRODUCT_TITLE__" />
     <meta property="og:description" content="__PRODUCT_DESCRIPTION__" />

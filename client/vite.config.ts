@@ -124,8 +124,8 @@ function productMetadata(env: Record<string, string>): Plugin {
     scope: '/',
     display: 'standalone',
     orientation: 'portrait',
-    background_color: '#ffffff',
-    theme_color: '#2d7a2d',
+    background_color: '#F3F6F1',
+    theme_color: '#2D7A2D',
     icons: [
       { src: '/icon.svg', type: 'image/svg+xml', sizes: 'any', purpose: 'any' },
       { src: '/icon-192.png', type: 'image/png', sizes: '192x192', purpose: 'any maskable' },

@@ -46,4 +46,4 @@ Prefer a no-card free tier or low capped cost with clear commercial rights and c
 
 An asset is accepted only when it solves a named placement problem, has at least three meaningfully different reviewed directions, contains no text, artifacts, external logos, or factual claims, supports required crops and themes, stays outside core route bundles, has an optimized static fallback, and is recorded in `generated-media-manifest.md`.
 
-The current solid-green `client/public/og-image.png` is a temporary deterministic fallback, not accepted launch art. Replace it only when an accepted devShark variant exists and the metadata pipeline points at a real committed file.
+`client/public/og-image.png` carries the V9 horizontal logo on the pale brand background. `scripts/render-og-image.mjs` renders it from the kit; a generated share image would replace it only after passing this gate.
