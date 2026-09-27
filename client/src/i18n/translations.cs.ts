@@ -211,7 +211,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'shop.availability.shop_disabled': 'Obchod zavřený',
   'shop.availability.out_of_region': 'Do tvojí země zatím neposíláme',
   'shop.availability.out_of_stock': 'Vyprodáno',
-  'shop.merchClosed': 'Obchod s merchem zatím není otevřený. Všechno ostatní na téhle stránce funguje.',
   'shop.testMode': 'Testovací režim. Objednávky odsud nejsou skutečné a nic se neodešle.',
   'shop.policyLink': 'Doručení a vrácení',
   'shop.crownName': 'Koruna',
@@ -1223,11 +1222,10 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'landing.compare.othersBilingual': 'Druhý jazyk často jen zčásti',
   'landing.compare.rowCards': 'Sběratelské karty a odznaky',
   'landing.compare.othersCards': 'Kosmetika se prodává za peníze',
-  'landing.compare.rowNoAds': 'Nikdy žádné reklamy',
   'landing.compare.othersNoAds': 'Reklamy, dokud nezaplatíš',
   'landing.compare.rowNoCard': 'Žádná karta pro start',
   'landing.compare.othersNoCard': 'Pro zkušební verzi je nutná karta',
-  'landing.compare.footnote': 'Toto srovnání je obecné — placené aplikace se liší. Podstata platí: devShark si za nic z toho neúčtuje.',
+  'landing.compare.footnote': 'Premium nikdy nemění, jak se odpověď hodnotí, kolik za ni dostaneš XP ani jak se řadí žebříčky. Reklamy nemá žádný z plánů.',
   'landing.compare.cta': 'Začni se učit zdarma',
 
   // ── Úvodní stránka: slovo od tvůrce ───────────────────────────────────

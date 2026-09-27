@@ -545,6 +545,9 @@ function Shop() {
   // Links out to the devShark shop on Spreadshop, from client/product-catalog.ts.
   const shopLinked = Boolean(MERCH_SHOP.shopUrl) || Object.values(MERCH_SHOP.products).some(Boolean);
 
+  const merchOpen = shop.data?.enabled === true
+    && shop.data.items.some((item) => item.availability === 'available' && typeof item.price?.tokenPrice === 'number');
+
   // Merchandise is Premium only. While the plan is still loading the server
   // decides: a 402 opens the upgrade sheet on its own.
   const premium = tier === 'premium' || wallet.data?.earn?.progress?.premium === true;
@@ -588,7 +591,8 @@ function Shop() {
         <Text type="large" color="secondary">{t('shop.subtitle')}</Text>
       </VStack>
 
-      {shop.data?.testMode && <Banner status="warning" title={t('shop.testMode')} />}
+      {/* Test mode is for the owner's staging checks; production never shows it. */}
+      {!import.meta.env.PROD && shop.data?.testMode && <Banner status="warning" title={t('shop.testMode')} />}
 
       {/* The wallet. The recent movements sit beside the balance because a
           balance nobody can account for is what this replaced. */}
@@ -606,52 +610,56 @@ function Shop() {
         </div>
       )}
 
-      {/* Merchandise. Premium members redeem coins for it. */}
-      <section className="rw-section" aria-labelledby="rw-merch-title">
-        <Kicker as="h2" id="rw-merch-title">{t('shop.merchSection')}</Kicker>
-        {shopLinked && (
-          <div className="rw-merch-intro">
-            <p className="rw-muted">{t('shop.shopIntro')}</p>
-            {MERCH_SHOP.shopUrl && (
-              <a className="rw-btn" href={MERCH_SHOP.shopUrl} target="_blank" rel="noopener noreferrer">
-                {t('shop.visitShop')}
-                <span aria-hidden="true">&nbsp;↗</span>
-                <span className="rw-sr-only"> {t('rewards.social.newTab')}</span>
-              </a>
-            )}
-          </div>
-        )}
-        {shopLinked && config.merchPromo && <MerchPromoNote promo={config.merchPromo} />}
-        {!shop.data?.enabled && shop.data && <p className="rw-muted">{t('shop.merchClosed')}</p>}
-        {merchLocked && (
-          <div className="rw-premium-note" id="rw-merch-premium">
-            <p>{t('rewards.merchPremium')}</p>
-            <button type="button" className="rw-btn" onClick={() => openUpgradeSheet({ kind: 'merch-redemption' })}>
-              {t('rewards.seePremium')}
-            </button>
-          </div>
-        )}
-        <Grid columns={{ minWidth: 240, max: 3 }} gap={2} width="100%">
-          {(shop.data?.items ?? []).map((item) => (
-            <MerchCard
-              key={item.sku}
-              item={item}
-              busy={order.isPending}
-              premiumLocked={merchLocked}
-              balance={isAuthenticated && wallet.data ? balance : null}
-              onOrder={(sku, variant) => setCheckout({ sku, variant })}
-            />
-          ))}
-        </Grid>
-        {shop.data?.policyUrl && (
-          <a className="cd-link" href={shop.data.policyUrl} target="_blank" rel="noreferrer">
-            {t('shop.policyLink')}
-          </a>
-        )}
-      </section>
+      {/* Merchandise. Premium members redeem coins for it. The section, its
+          intro and the redemption form exist only once redemption is open and
+          at least one item can be redeemed (design audit P0.1). */}
+      {merchOpen && (
+        <section className="rw-section" aria-labelledby="rw-merch-title">
+          <Kicker as="h2" id="rw-merch-title">{t('shop.merchSection')}</Kicker>
+          {shopLinked && (
+            <div className="rw-merch-intro">
+              <p className="rw-muted">{t('shop.shopIntro')}</p>
+              {MERCH_SHOP.shopUrl && (
+                <a className="rw-btn" href={MERCH_SHOP.shopUrl} target="_blank" rel="noopener noreferrer">
+                  {t('shop.visitShop')}
+                  <span aria-hidden="true">&nbsp;↗</span>
+                  <span className="rw-sr-only"> {t('rewards.social.newTab')}</span>
+                </a>
+              )}
+            </div>
+          )}
+          {shopLinked && config.merchPromo && <MerchPromoNote promo={config.merchPromo} />}
+          {merchLocked && (
+            <div className="rw-premium-note" id="rw-merch-premium">
+              <p>{t('rewards.merchPremium')}</p>
+              <button type="button" className="rw-btn" onClick={() => openUpgradeSheet({ kind: 'merch-redemption' })}>
+                {t('rewards.seePremium')}
+              </button>
+            </div>
+          )}
+          <Grid columns={{ minWidth: 240, max: 3 }} gap={2} width="100%">
+            {/* An item nobody has priced or switched on yet is not shown at all. */}
+            {(shop.data?.items ?? []).filter((item) => item.availability !== 'unconfigured' && item.availability !== 'shop_disabled').map((item) => (
+              <MerchCard
+                key={item.sku}
+                item={item}
+                busy={order.isPending}
+                premiumLocked={merchLocked}
+                balance={isAuthenticated && wallet.data ? balance : null}
+                onOrder={(sku, variant) => setCheckout({ sku, variant })}
+              />
+            ))}
+          </Grid>
+          {shop.data?.policyUrl && (
+            <a className="cd-link" href={shop.data.policyUrl} target="_blank" rel="noreferrer">
+              {t('shop.policyLink')}
+            </a>
+          )}
+        </section>
+      )}
 
       {/* Redeeming. Only the fields a parcel needs, and nothing beyond them. */}
-      {checkout && (
+      {merchOpen && checkout && (
         <form
           className="rw-checkout ss-raised"
           aria-labelledby="rw-checkout-title"

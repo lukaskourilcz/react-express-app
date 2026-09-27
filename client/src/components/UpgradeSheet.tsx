@@ -15,7 +15,8 @@ import type { TranslationKey } from '../i18n/translations';
 import { closeUpgradeSheet, type UpgradeRequest } from '../lib/upgradeSheet';
 import { useBilling } from '../lib/billing';
 import { VOUCHER_PATH } from '../lib/voucher';
-import { PREMIUM_INCLUDES, premiumVars } from './PremiumFacts';
+import { premiumIncludes, premiumVars } from './PremiumFacts';
+import { redemptionOpen, useGameConfig } from '../lib/gameConfig';
 
 export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
   const t = useT();
@@ -24,6 +25,7 @@ export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
   const vars = premiumVars();
   const reason = request.kind ? t(`premium.sheet.kind.${request.kind}` as TranslationKey) : null;
   const billing = useBilling();
+  const config = useGameConfig();
   // Nobody can buy yet, so the way in is a voucher.
   const voucher = billing.known && !billing.enabled;
   return (
@@ -44,7 +46,7 @@ export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
         <div>
           <p className="ss-kicker ss-upgrade-sheet__kicker">{t('premium.sheet.includesTitle')}</p>
           <ul className="ss-upgrade-sheet__list">
-            {PREMIUM_INCLUDES.map((key) => <li key={key}>{t(key, vars)}</li>)}
+            {premiumIncludes(redemptionOpen(config)).map((key) => <li key={key}>{t(key, vars)}</li>)}
           </ul>
         </div>
         <Text type="body" weight="semibold">{t('premium.sheet.price', vars)}</Text>

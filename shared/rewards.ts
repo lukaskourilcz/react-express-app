@@ -212,6 +212,12 @@ export function merchAvailability(input: {
   return 'available';
 }
 
+/** Whether coin redemption is open: the shop is on and at least one item has
+ * a coin price. Pages that mention redeeming coins for merchandise show that
+ * line only while this holds (design audit P0.1). */
+export const merchRedemptionOpen = (settings: MerchSettings): boolean =>
+  settings.enabled && Object.values(settings.pricing).some((pricing) => typeof pricing?.tokenPrice === 'number' && pricing.tokenPrice > 0);
+
 /** Whether the crown can be bought. Cosmetic, so it needs no supplier — only
  * the wallet the price is paid from. */
 export const crownAvailable = (settings: MerchSettings): boolean => settings.crownTokenPrice > 0;

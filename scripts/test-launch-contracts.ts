@@ -94,6 +94,7 @@ import { RETIRED_TOPIC_IDS, retirementOf } from '../shared/retired-content';
 import { GLOSSARY, termsIn } from '../shared/glossary';
 import {
   DEFAULT_MERCH_SETTINGS,
+  merchRedemptionOpen,
   MERCH_SKUS,
   merchAvailability,
   merchMarginMinor,
@@ -772,6 +773,24 @@ function publicCopyContracts() {
   }
   assert.match(read('client/src/components/landing/ComparisonTable.tsx'), /labelKey: 'landing\.compare\.rowCoins', free: NO, premium: \{ mark: 'yes', key: 'landing\.compare\.premiumCoins' \}/);
   assert.match(ENGLISH['legal.terms.plans.premium'], /redeem coins for devShark merchandise once redemption opens/);
+  // Design audit P0.1: what does not exist yet is not shown. The coin and path
+  // rows render only while their switch is on, the Premium list drops the
+  // merchandise line until redemption opens, and production never shows the
+  // shop's test-mode banner.
+  {
+    const table = read('client/src/components/landing/ComparisonTable.tsx');
+    assert.match(table, /premiumCoins' \}, when: 'redemption' \}/);
+    assert.match(table, /premiumPaths' \}, when: 'paths' \}/);
+    assert.doesNotMatch(table, /rowNoAds/);
+    assert.match(ENGLISH['landing.compare.footnote'], /No ads on either plan\./);
+    assert.match(read('client/src/components/PremiumFacts.tsx'), /redemptionOpen \|\| key !== 'premium\.sheet\.include6'/);
+    assert.match(read('api/settings.ts'), /merch: \{ redemptionOpen: merchRedemptionOpen\(s\.merch\) \}/);
+    assert.equal(merchRedemptionOpen(DEFAULT_MERCH_SETTINGS), false, 'redemption ships closed');
+    const shop = read('client/src/components/Shop.tsx');
+    assert.match(shop, /!import\.meta\.env\.PROD && shop\.data\?\.testMode/);
+    assert.match(shop, /\{merchOpen && \(\n\s+<section className="rw-section" aria-labelledby="rw-merch-title">/);
+    assert.match(shop, /\{merchOpen && checkout && \(/);
+  }
   // Coding hints are authored text that nobody has reviewed yet; the privacy
   // policy must not say people wrote them by hand (review finding product-8).
   assert.doesNotMatch(ENGLISH['legal.privacy.ai.body'], /by hand|people write/i);

@@ -119,7 +119,9 @@ describe('the upgrade sheet', () => {
   it('says what Premium includes and what it costs, with VAT, and closes on Not now', async () => {
     render(<UpgradeSheet request={{ id: 1, kind: 'learn-level', ref: 'react:13' }} />, { wrapper });
     expect(screen.getByText('This level is part of Premium.')).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')).toHaveLength(6);
+    // The merchandise line waits for redemption to open (design audit P0.1).
+    expect(screen.getAllByRole('listitem')).toHaveLength(5);
+    expect(screen.queryByText(/redeem for devShark merchandise/)).not.toBeInTheDocument();
     expect(screen.getByText(/€3\.99 a month or €39\.99 a year, VAT included/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Go Premium' })).toBeInTheDocument();
     const sheet = renderHook(() => useUpgradeRequest());

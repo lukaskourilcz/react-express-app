@@ -216,7 +216,6 @@ export const en = {
   'shop.availability.shop_disabled': 'Shop closed',
   'shop.availability.out_of_region': 'Not posted to your country yet',
   'shop.availability.out_of_stock': 'Out of stock',
-  'shop.merchClosed': 'Redeeming coins for merchandise has not opened yet. Everything else on this page works.',
   'shop.testMode': 'Test mode. Orders placed here are not real orders and nothing will be posted.',
   'shop.policyLink': 'Delivery and returns',
   'shop.crownName': 'The crown',
@@ -1367,11 +1366,10 @@ export const en = {
   'landing.compare.othersBilingual': 'Second language often partial',
   'landing.compare.rowCards': 'Collectible cards & badges',
   'landing.compare.othersCards': 'Cosmetics sold for cash',
-  'landing.compare.rowNoAds': 'Ads',
   'landing.compare.othersNoAds': 'Ads unless you pay',
   'landing.compare.rowNoCard': 'Payment details',
   'landing.compare.othersNoCard': 'Never asked for',
-  'landing.compare.footnote': 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked.',
+  'landing.compare.footnote': 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked. No ads on either plan.',
   'landing.compare.cta': 'Start free',
 
   // ── Landing: founder note ─────────────────────────────────────────────
@@ -1596,7 +1594,6 @@ export const en = {
   'landing.compare.premiumPaths': 'Yes, as each one opens',
   'landing.compare.rowCoins': 'Coins for merchandise',
   'landing.compare.premiumCoins': 'Yes, once redemption opens',
-  'landing.compare.none': 'None',
   'landing.compare.premiumNoCard': 'At checkout, with Stripe',
   'premium.page.title': 'Everything in devShark for {symbol}{monthly} a month',
   'premium.page.lead': 'Premium opens every Learn topic, every coding challenge and every project stage. HTML, CSS, JavaScript and the first half of React stay free for every account.',

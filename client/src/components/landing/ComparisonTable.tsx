@@ -16,6 +16,7 @@ import type { TranslationKey } from '../../i18n/translations';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../../shared/tiers';
 import { SUBJECT_SCOPE_CATALOG } from '../../../../shared/subject-catalog';
 import { Kicker } from './LandingKit';
+import { anyLearningPathOpen, redemptionOpen, useGameConfig } from '../../lib/gameConfig';
 import './landingSections.css';
 
 type MarkKind = 'yes' | 'partial' | 'no';
@@ -41,11 +42,12 @@ function Mark({ kind }: { kind: MarkKind }) {
 }
 
 interface Cell { mark: MarkKind; key: TranslationKey }
-interface PlanRow { labelKey: TranslationKey; free: Cell; premium: Cell }
+/** A row that describes something not open yet names the switch that opens
+ * it, and renders only while that switch is on (design audit P0.1). */
+interface PlanRow { labelKey: TranslationKey; free: Cell; premium: Cell; when?: 'paths' | 'redemption' }
 
 const YES: Cell = { mark: 'yes', key: 'landing.compare.yes' };
 const NO: Cell = { mark: 'no', key: 'landing.compare.no' };
-const NONE: Cell = { mark: 'yes', key: 'landing.compare.none' };
 
 // Access first, then what both plans share, then the two rows about money.
 // The FDE and DSA paths and coins are Premium; the AI and bilingual rows of
@@ -54,13 +56,12 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   { labelKey: 'landing.compare.rowLessons', free: { mark: 'partial', key: 'landing.compare.othersLessons' }, premium: { mark: 'yes', key: 'landing.compare.premiumLessons' } },
   { labelKey: 'landing.compare.rowReact', free: { mark: 'partial', key: 'landing.compare.freeReact' }, premium: { mark: 'yes', key: 'landing.compare.premiumReact' } },
   { labelKey: 'landing.compare.rowCoding', free: { mark: 'partial', key: 'landing.compare.freeCoding' }, premium: { mark: 'yes', key: 'landing.compare.premiumCoding' } },
-  { labelKey: 'landing.compare.rowPaths', free: NO, premium: { mark: 'yes', key: 'landing.compare.premiumPaths' } },
+  { labelKey: 'landing.compare.rowPaths', free: NO, premium: { mark: 'yes', key: 'landing.compare.premiumPaths' }, when: 'paths' },
   { labelKey: 'landing.compare.rowQuizzes', free: YES, premium: YES },
   { labelKey: 'landing.compare.rowLeaderboards', free: YES, premium: YES },
   // Redemption ships closed until the owner opens it, so the claim says so,
   // as the paths row does (review finding product-6).
-  { labelKey: 'landing.compare.rowCoins', free: NO, premium: { mark: 'yes', key: 'landing.compare.premiumCoins' } },
-  { labelKey: 'landing.compare.rowNoAds', free: NONE, premium: NONE },
+  { labelKey: 'landing.compare.rowCoins', free: NO, premium: { mark: 'yes', key: 'landing.compare.premiumCoins' }, when: 'redemption' },
   { labelKey: 'landing.compare.rowNoCard', free: { mark: 'yes', key: 'landing.compare.othersNoCard' }, premium: { mark: 'partial', key: 'landing.compare.premiumNoCard' } },
 ];
 
@@ -77,6 +78,9 @@ export interface ComparisonTableProps {
 export default function ComparisonTable({ startHref = '/learn', onStart, showCta = true }: ComparisonTableProps) {
   const t = useT();
   const headingId = useId();
+  const config = useGameConfig();
+  const open = { paths: anyLearningPathOpen(config), redemption: redemptionOpen(config) };
+  const rows = PLAN_ROWS.filter((row) => !row.when || open[row.when]);
   const vars = {
     topics: SUBJECT_SCOPE_CATALOG.webdev.topics.length,
     level: FREE_LEARN_LEVELS.react ?? 0,
@@ -129,7 +133,7 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
               </tr>
             </thead>
             <tbody>
-              {PLAN_ROWS.map((row) => (
+              {rows.map((row) => (
                 <tr key={row.labelKey}>
                   <th scope="row">{t(row.labelKey)}</th>
                   <td>{cell(row.free)}</td>

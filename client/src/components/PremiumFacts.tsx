@@ -39,13 +39,19 @@ export const PREMIUM_INCLUDES = [
   'premium.sheet.include6',
 ] as const satisfies readonly TranslationKey[];
 
-export function PremiumIncludes({ t, headingId }: { t: Translate; headingId: string }) {
+/** The list as it may be stated today: the merchandise line only while coin
+ * redemption is open (design audit P0.1). The static page never knows, so it
+ * leaves the line out. */
+export const premiumIncludes = (redemptionOpen: boolean) =>
+  PREMIUM_INCLUDES.filter((key) => redemptionOpen || key !== 'premium.sheet.include6');
+
+export function PremiumIncludes({ t, headingId, redemptionOpen = false }: { t: Translate; headingId: string; redemptionOpen?: boolean }) {
   const vars = premiumVars();
   return (
     <section className="ss-premium-includes" aria-labelledby={headingId}>
       <h2 id={headingId} className="ss-premium-section-title">{t('premium.sheet.includesTitle')}</h2>
       <ul className="ss-premium-list">
-        {PREMIUM_INCLUDES.map((key) => <li key={key}>{t(key, vars)}</li>)}
+        {premiumIncludes(redemptionOpen).map((key) => <li key={key}>{t(key, vars)}</li>)}
       </ul>
     </section>
   );

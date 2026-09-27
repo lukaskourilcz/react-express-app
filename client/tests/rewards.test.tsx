@@ -140,7 +140,7 @@ describe('ledger lines', () => {
 describe('the Rewards screen', () => {
   it('shows a free account the merchandise with the upgrade sheet, never an address form', async () => {
     signIn();
-    routes({ plan: FREE });
+    routes({ plan: FREE, shop: pricedShop });
     await mountShop();
     expect(screen.getByRole('heading', { level: 1, name: 'Rewards' })).toBeInTheDocument();
     await screen.findByText('1,240');
@@ -156,13 +156,23 @@ describe('the Rewards screen', () => {
 
   it('keeps the sections in the order of the handoff', async () => {
     signIn();
-    routes({ plan: PREMIUM, wallet: wallet({ earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } }) });
+    routes({ plan: PREMIUM, shop: pricedShop, wallet: wallet({ earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } }) });
     await mountShop();
     await screen.findByText('1,240');
     await screen.findByRole('heading', { name: 'Crown and streak protection' });
     const headings = screen.getAllByRole('heading', { level: 2 }).map((one) => one.textContent);
     expect(headings.slice(0, 5)).toEqual(['Your coins', 'How to earn', 'Invite a friend', 'Merchandise', 'Crown and streak protection']);
     expect(screen.queryByText('Premium members redeem coins for merchandise.')).toBeNull();
+  });
+
+  it('leaves merchandise out while redemption is closed (design audit P0.1)', async () => {
+    signIn();
+    routes({ plan: PREMIUM, wallet: wallet({ earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } }) });
+    await mountShop();
+    await screen.findByRole('heading', { name: 'Crown and streak protection' });
+    expect(screen.queryByRole('heading', { name: 'Merchandise' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Redeem' })).toBeNull();
+    expect(screen.queryByText('Not on sale yet')).toBeNull();
   });
 
   it('lets a Premium member redeem once the coins cover the price', async () => {

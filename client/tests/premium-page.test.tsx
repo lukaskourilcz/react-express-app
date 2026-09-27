@@ -163,11 +163,27 @@ describe('the plan table', () => {
     expect(headers).toEqual(['What you get', 'FreeEvery account', 'Premium€3.99 a month, VAT included']);
     const rows = within(table).getAllByRole('rowheader').map((cell) => cell.textContent);
     expect(rows).toContain('React');
-    expect(rows).toContain('FDE and DSA learning paths');
+    // Nothing that has not opened yet (design audit P0.1), and no ads row:
+    // the footnote says it once.
+    expect(rows).not.toContain('FDE and DSA learning paths');
+    expect(rows).not.toContain('Coins for merchandise');
+    expect(rows).not.toContain('Ads');
     expect(rows.join(' ')).not.toMatch(/AI|Czech/);
+    expect(screen.getByText(/No ads on either plan\./)).toBeInTheDocument();
     expect(within(table).getByText('Levels 1 to 12')).toBeInTheDocument();
     expect(within(table).getByText('All 16')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Start free' })).toHaveAttribute('href', '/learn');
+  });
+
+  it('adds the path and coin rows once their switches are on', async () => {
+    server.use(http.get('*/api/settings', () => HttpResponse.json({
+      merch: { redemptionOpen: true },
+      learningPaths: { paths: { fde: { enabled: false }, 'dsa-foundations': { enabled: true } } },
+    })));
+    renderAt('/', <ComparisonTable />);
+    const table = screen.getByRole('table');
+    expect(await within(table).findByRole('rowheader', { name: 'FDE and DSA learning paths' })).toBeInTheDocument();
+    expect(within(table).getByRole('rowheader', { name: 'Coins for merchandise' })).toBeInTheDocument();
   });
 });
 

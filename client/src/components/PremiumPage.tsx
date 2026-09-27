@@ -36,6 +36,7 @@ import PremiumCheckoutButton from './PremiumCheckoutButton';
 import PremiumVoucher from './PremiumVoucher';
 import ComparisonTable from './landing/ComparisonTable';
 import { PremiumIncludes, PremiumSmallPrint, premiumVars, type RenderLink } from './PremiumFacts';
+import { redemptionOpen, useGameConfig } from '../lib/gameConfig';
 import './DeepEndScreens.css';
 import './PremiumPage.css';
 
@@ -87,6 +88,7 @@ export default function PremiumPage() {
   const { t } = useLanguage();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const billing = useBilling();
+  const config = useGameConfig();
   const plan = useEntitlement();
   const vars = premiumVars();
   const ids = { plans: useId(), smallPrint: useId(), includes: useId(), faq: useId(), current: useId() };
@@ -135,7 +137,7 @@ export default function PremiumPage() {
 
         {!voucherLeads && <PremiumVoucher billingClosed={false} />}
 
-        <PremiumIncludes t={t} headingId={ids.includes} />
+        <PremiumIncludes t={t} headingId={ids.includes} redemptionOpen={redemptionOpen(config)} />
 
         <ComparisonTable showCta={false} />
 

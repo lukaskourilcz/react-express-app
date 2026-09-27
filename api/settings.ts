@@ -4,6 +4,7 @@ import { getGameSettings } from '../lib/settings-store';
 import { learningPathCapability } from '../lib/learning-paths/handlers';
 import { publicBillingSettings } from '../lib/billing/config';
 import { getMerchPromo } from '../lib/rewards/spreadshop';
+import { merchRedemptionOpen } from '../shared/rewards';
 
 // Public, read-only subset of the game settings, so the client can render the
 // configured count/time options and hide disabled features. Deliberately omits
@@ -36,6 +37,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     // What earns coins (#227): the welcome grant for the sign-in prompt and
     // the social grant for "Find devShark elsewhere". Rates only, no balances.
     coins: s.coins,
+    // Whether coins can be redeemed for merchandise yet. The landing table
+    // and the Premium list mention redemption only while this is true.
+    merch: { redemptionOpen: merchRedemptionOpen(s.merch) },
     devTips: s.devTips,
     // Per path, so DSA Foundations can open while FDE content is still being
     // authored. The client reads this to decide what to show; every write is
