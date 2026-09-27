@@ -14,6 +14,7 @@ import { DesignRunner } from '../../coding/DesignRunner';
 import { codingKeys, codingProgressQuery, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
 import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
 import { ChallengeRunPlanner, taskHref } from './ChallengeRunPlanner';
+import { CategoryGlyph } from '../ui/techIcons';
 import { CODING_INDEX } from '../../../../shared/coding-index';
 import { evolvingResume, evolvingStage, evolvingTaskTrack, evolvingPassed, evolvingUnlocked, listedChallenges, type EvolvingCategory } from '../../../../shared/evolving';
 import { prepareEvolvingDraft } from '../../../../shared/coding-fullstack-support';
@@ -51,7 +52,6 @@ import { RELOAD_GRACE_MS, isChunkLoadError, reloadOnPress } from '../../lib/rout
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { codingContent, gatedRef } from '../../../../shared/tiers';
 import '../../coding/Coding.css';
-import BrandCase from '../BrandCase';
 
 type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'due' | 'locked' | 'premium';
 
@@ -208,8 +208,7 @@ const nextOpenTask = (tasks: readonly CodingTaskSummary[], statusOf: (t: CodingT
 
 function StatusText({ status }: { status: Status }) {
   const { t } = useLanguage();
-  const glyph = status === 'passed' ? '✓' : status === 'due' ? '↻' : status === 'locked' || status === 'premium' ? '●' : status === 'revealed' ? '◐' : status === 'in_progress' ? '◔' : '○';
-  return <span className={`cd-row__status cd-status--${status}`}><span aria-hidden>{glyph}</span>{t(`coding.status.${status}` as never)}</span>;
+  return <span className={`cd-row__status cd-status--${status}`}>{t(`coding.status.${status}` as never)}</span>;
 }
 
 /** A star that saves a challenge for later. Saving records interest, never
@@ -376,21 +375,20 @@ export function CodingHome() {
     <div className="cd-page cd-discovery ss-pop">
       <div className="cd-home-head">
         <header>
-          <Kicker><BrandCase text={t('coding.kicker')} /></Kicker>
+          <Kicker>{t('coding.kicker')}</Kicker>
           <h1>{t('coding.title')}</h1>
           <p className="cd-lead">{t('coding.subtitle')}</p>
         </header>
         <NextChallenge next={next} state={nextState} onRetry={() => void progress.refetch()} />
       </div>
       {!authLoading && !isAuthenticated && <p className="cd-note">{t('coding.signInHint')}</p>}
-      <ChallengeRunPlanner signedIn={isAuthenticated} />
       <section aria-label={t('coding.title')} className="cd-track-directory">
         {CODING_SECTION_TRACKS.map((track) => {
           const tasks = SECTION_INDEX.filter((task) => task.track === track);
           const done = tasks.filter((task) => passed.has(task.id)).length;
           return (
             <Link key={track} className="cd-track-entry" to={`/coding/${track}`}>
-              <span className="cd-track-entry__symbol" aria-hidden>{track === 'javascript' ? 'JS' : track === 'typescript' ? 'TS' : track === 'algorithms' ? 'Σ' : '⚛'}</span>
+              <span className="cd-track-entry__symbol" aria-hidden><CategoryGlyph category={track} color="var(--color-text-accent)" size={30} /></span>
               <div className="cd-track-entry__body">
               <div className="cd-track__title">
                 <h2>{t(`coding.track.${track}` as never)}</h2>
@@ -404,6 +402,9 @@ export function CodingHome() {
           );
         })}
       </section>
+      {/* Below the tracks and collapsed to one row until it is opened: a run
+          is a way through the tracks, not the first thing to read. */}
+      <ChallengeRunPlanner signedIn={isAuthenticated} collapsible />
       <EvolvingGallery passed={passed} premiumOf={premiumOf} category="debugging" />
       <EvolvingGallery passed={passed} premiumOf={premiumOf} />
       <Link className="cd-fullstack-feature" to="/coding/fullstack">
@@ -432,7 +433,6 @@ export function CodingHome() {
                   <span className="cd-technique__count">{t('coding.techniqueCount', { n: total })}</span>
                 </span>
                 <span className="cd-technique__blurb">{t(`coding.groupBlurb.${group}` as never)}</span>
-                <span className="cd-technique__tags">{t('coding.techniqueTags', { n: tags.length })}</span>
               </Link>
             );
           })}
@@ -462,7 +462,7 @@ export function FullStackScreen() {
 export function CodingTrackScreen() {
   useCodingFirstData('bookmarks');
   useWarmWorkbench();
-  const { t, lang } = useLanguage();
+  const { t } = useLanguage();
   const { track: trackParam } = useParams();
   const [params, setParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -538,7 +538,7 @@ export function CodingTrackScreen() {
   return (
     <div className="cd-page ss-pop">
       <header>
-        <Kicker><BrandCase text={t('coding.kicker')} /> · <Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
+        <Kicker>{t('coding.kicker')} · <Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
         <h1>{t(`coding.track.${track}` as never)}</h1>
         <p className="cd-lead">{t(`coding.trackBlurb.${track}` as never)}</p>
         <div style={{ marginTop: 12, maxWidth: 420 }}>
@@ -637,7 +637,6 @@ export function CodingTrackScreen() {
           })}
         </section>
       ))}
-      <p className="cd-shortcuts">{lang === 'cs' ? '' : ''}</p>
     </div>
   );
 }

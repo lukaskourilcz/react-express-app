@@ -56,7 +56,7 @@
 .cd-track-entry + .cd-track-entry { border-left: 1px solid var(--ss-card-line); }
 .cd-track-entry__body { flex: 1; min-width: 0; display: grid; gap: 12px; }
 .cd-track-entry .cd-track__title { align-items: flex-start; flex-direction: column; }
-.cd-track-entry__symbol { font-family: var(--cd-mono); font-weight: 750; color: var(--color-text-accent); font-size: 1.25rem; }
+.cd-track-entry__symbol { display: inline-flex; flex-shrink: 0; width: 30px; height: 30px; }
 .cd-track-entry__arrow { margin-left: auto; color: var(--color-text-accent); }
 .cd-track-entry:hover, .cd-project:hover { background: var(--color-background-muted); }
 .cd-projects { display: grid; grid-template-columns: minmax(180px, .7fr) minmax(0, 2fr); gap: 32px; align-items: start; }
@@ -562,6 +562,14 @@
 /* The challenge-run planner on the Coding home: a form the learner shapes a
    run with, or the one open run and its actions. Same paper as the panes. */
 .cd-run { gap: 16px; }
+.cd-run__body { display: contents; }
+.cd-run--collapsed { gap: 0; }
+.cd-run__toggle-heading { margin: 0; font: inherit; }
+.cd-run__toggle { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; width: 100%; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.cd-run__toggle > span:first-child { font-family: var(--font-family-heading); font-weight: 700; font-size: 1.05rem; color: var(--color-text-primary); }
+.cd-run__toggle-lead { color: var(--color-text-secondary); font-size: 0.9rem; flex: 1 1 24ch; }
+.cd-run__chevron { margin-left: auto; font-weight: 700; color: var(--color-text-accent); }
+.cd-run__toggle:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 .cd-run__head { display: grid; gap: 4px; }
 .cd-run__head .cd-lead { margin-top: 0; }
 .cd-run__form { display: grid; gap: 16px; }

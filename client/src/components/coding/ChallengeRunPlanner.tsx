@@ -5,7 +5,7 @@
 // One run at a time. While a run is open — active, or planned for later —
 // the planner shows that run instead of a form: where it stands, when it is
 // due, and the way to continue, start, cancel, or put it in a calendar.
-import { useMemo, useState, type FormEvent } from 'react';
+import { useId, useMemo, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
@@ -125,8 +125,13 @@ function RunCard({ session, onDone }: { session: PracticeSession; onDone: () => 
   );
 }
 
-export function ChallengeRunPlanner({ signedIn }: { signedIn: boolean }) {
+/** `collapsible` renders the planner as one row that opens on click (design
+ * audit P1.6). A run already open or scheduled keeps the planner open, so its
+ * card is never hidden behind the toggle. */
+export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedIn: boolean; collapsible?: boolean }) {
   const { t } = useLanguage();
+  const [expanded, setExpanded] = useState(!collapsible);
+  const bodyId = useId();
   const navigate = useNavigate();
   const session = usePracticeSession(signedIn);
   const start = useStartSession();
@@ -157,12 +162,32 @@ export function ChallengeRunPlanner({ signedIn }: { signedIn: boolean }) {
     });
   };
 
+  const showBody = expanded || !!open;
   return (
-    <section className="cd-run cd-pane" aria-labelledby="cd-run-title">
+    <section className={`cd-run cd-pane${showBody ? '' : ' cd-run--collapsed'}`} aria-labelledby="cd-run-title">
       <div className="cd-run__head">
-        <Kicker as="h2" id="cd-run-title">{t('coding.run.title')}</Kicker>
-        <p className="cd-lead">{t('coding.run.lead')}</p>
+        {collapsible && !open ? (
+          <h2 id="cd-run-title" className="cd-run__toggle-heading">
+            <button
+              type="button"
+              className="cd-run__toggle"
+              aria-expanded={showBody}
+              aria-controls={bodyId}
+              onClick={() => setExpanded((value) => !value)}
+            >
+              <span>{t('coding.run.title')}</span>
+              <span className="cd-run__toggle-lead">{t('coding.run.lead')}</span>
+              <span className="cd-run__chevron" aria-hidden>{showBody ? '−' : '+'}</span>
+            </button>
+          </h2>
+        ) : (
+          <>
+            <Kicker as="h2" id="cd-run-title">{t('coding.run.title')}</Kicker>
+            <p className="cd-lead">{t('coding.run.lead')}</p>
+          </>
+        )}
       </div>
+      {showBody && (<div id={bodyId} className="cd-run__body">
       {!signedIn && <p className="cd-note">{t('coding.run.signIn')}</p>}
       {signedIn && session.isError && (
         <p className="cd-note cd-note--error" role="alert">
@@ -221,6 +246,7 @@ export function ChallengeRunPlanner({ signedIn }: { signedIn: boolean }) {
           {error && <p className="cd-note cd-note--error" role="alert">{error}</p>}
         </form>
       )}
+      </div>)}
     </section>
   );
 }
