@@ -176,6 +176,12 @@
 }
 
 .cd-chips { display: flex; flex-wrap: wrap; gap: 8px; }
+/* Technique filter: chips from 760px up, one select in the filter row below. */
+.cd-search .cd-technique-select { display: none; }
+@media (max-width: 759px) {
+  .cd-technique-chips { display: none; }
+  .cd-search .cd-technique-select { display: block; }
+}
 .cd-chip {
   min-height: 44px;
   padding: 8px 14px;

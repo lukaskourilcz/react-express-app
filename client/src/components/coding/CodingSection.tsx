@@ -552,7 +552,9 @@ export function CodingTrackScreen() {
         </p>
       )}
       <EvolvingGallery passed={passed} premiumOf={premiumOf} track={track} />
-      <div className="cd-chips" role="group" aria-label={t('coding.techniques')}>
+      {/* Under 760px the technique chips fold into the filter row as one
+          select (design audit P2.3); both drive the same `group` filter. */}
+      <div className="cd-chips cd-technique-chips" role="group" aria-label={t('coding.techniques')}>
         <button type="button" className="cd-chip" aria-pressed={!group} onClick={() => setFilter('group', null)}>{t('coding.techniques.all')}</button>
         {groupsHere.map((g) => <button key={g} type="button" className="cd-chip" aria-pressed={group === g} onClick={() => setFilter('group', g)}>{t(`coding.group.${g}` as never)}</button>)}
       </div>
@@ -578,6 +580,11 @@ export function CodingTrackScreen() {
           placeholder={t('coding.filter.searchPlaceholder')}
           onChange={(event) => setFilter('q', event.target.value || null)}
         />
+        <label className="cd-visually-hidden" htmlFor={`${track}-technique`}>{t('coding.techniques')}</label>
+        <select id={`${track}-technique`} className="cd-technique-select" value={group ?? 'all'} onChange={(event) => setFilter('group', event.target.value === 'all' ? null : event.target.value)}>
+          <option value="all">{t('coding.techniques.all')}</option>
+          {groupsHere.map((g) => <option key={g} value={g}>{t(`coding.group.${g}` as never)}</option>)}
+        </select>
         <label className="cd-visually-hidden" htmlFor={`${track}-difficulty`}>{t('coding.filter.difficulty')}</label>
         <select id={`${track}-difficulty`} value={difficulty} onChange={(event) => setFilter('difficulty', event.target.value === 'all' ? null : event.target.value)}>
           <option value="all">{t('coding.filter.difficulty')}</option>
