@@ -186,24 +186,30 @@ const ShopNavIcon = () => (
 );
 
 // `feature` ties a nav item to a toggle in /dev → Settings; when that feature is
-// off, the item is hidden from the nav (quiz is always available).
+// off, the item is hidden from the nav (quiz is always available). `signedIn`
+// items are empty without an account, so a visitor without a session never
+// sees them. `drawerOnly` items stay out of the desktop centre row (design
+// audit P0.6): signed out it reads Learn · Quiz · Coding · Challenge · Play ·
+// Premium, signed in Today · Learn · Quiz · Coding · Challenge · Play.
 const NAV_ITEMS: {
   to: string;
   key: TranslationKey;
   isActive: (path: string) => boolean;
   feature?: keyof GameConfig['features'];
+  signedIn?: true;
+  drawerOnly?: true;
 }[] = [
-  { to: '/today', key: 'nav.today', isActive: (p) => p === '/today' },
-  { to: '/quiz', key: 'nav.quiz', isActive: (p) => p === '/quiz' },
+  { to: '/today', key: 'nav.today', isActive: (p) => p === '/today', signedIn: true },
   { to: '/learn', key: 'nav.learn', isActive: (p) => p.startsWith('/learn') },
+  { to: '/quiz', key: 'nav.quiz', isActive: (p) => p === '/quiz' },
+  { to: '/coding', key: 'nav.coding', isActive: (p) => p.startsWith('/coding') },
   { to: '/challenge', key: 'nav.challenge', isActive: (p) => p.startsWith('/challenge') },
   { to: '/play', key: 'nav.play', isActive: (p) => p.startsWith('/play'), feature: 'multiplayer' },
-  { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard' },
+  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap', drawerOnly: true },
+  { to: '/collection', key: 'nav.cards', isActive: (p) => p === '/collection' || p === '/cards', signedIn: true, drawerOnly: true },
+  { to: '/leaderboard', key: 'nav.leaderboard', isActive: (p) => p === '/leaderboard', feature: 'leaderboard', signedIn: true },
   { to: '/premium', key: 'nav.premium', isActive: (p) => p === '/premium' || p.startsWith('/premium/') },
-  { to: '/collection', key: 'nav.cards', isActive: (p) => p === '/collection' || p === '/cards' },
-  { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop' },
-  { to: '/coding', key: 'nav.coding', isActive: (p) => p.startsWith('/coding') },
-  { to: '/roadmap', key: 'nav.roadmap', isActive: (p) => p === '/roadmap' },
+  { to: '/shop', key: 'nav.shop', isActive: (p) => p === '/shop', signedIn: true },
 ];
 
 // Shown only while the first page of a visit loads: a navigation keeps the
@@ -424,12 +430,17 @@ function App() {
   }, [welcomeGranted]);
 
   // Nav items for features that are currently enabled in /dev → Settings.
-  const navItems = NAV_ITEMS.filter((item) => !item.feature || config.features[item.feature]);
-  // Leaderboard, Premium & Shop aren't learning surfaces, so they don't crowd
-  // the centre nav — they get compact icon buttons in the right slot instead
-  // (and stay in the mobile drawer via navItems).
-  const SECONDARY_ROUTES = ['/leaderboard', '/premium', '/shop'];
-  const primaryNavItems = navItems.filter((item) => !SECONDARY_ROUTES.includes(item.to));
+  // A stored session is still being restored on the first render: treat it
+  // as signed in, as the account slot does, so the nav does not draw the
+  // signed-out row and then jump when the session lands.
+  const signedIn = !!user || authLoading;
+  const navItems = NAV_ITEMS.filter((item) => (!item.feature || config.features[item.feature]) && (!item.signedIn || signedIn));
+  // Leaderboard, Premium & Shop aren't learning surfaces, so with a session
+  // they get compact icon buttons in the right slot instead of crowding the
+  // centre nav (and stay in the mobile drawer via navItems). A visitor without
+  // one gets Premium as the last text link and no icon buttons.
+  const SECONDARY_ROUTES = signedIn ? ['/leaderboard', '/premium', '/shop'] : [];
+  const primaryNavItems = navItems.filter((item) => !item.drawerOnly && !SECONDARY_ROUTES.includes(item.to));
   const showLeaderboardIcon = navItems.some((item) => item.to === '/leaderboard');
 
   useEffect(() => {
@@ -610,37 +621,39 @@ function App() {
             <div className="ss-slot ss-slot-end">
               {/* Icon links to the non-learning surfaces. Hidden below 760px —
                   the drawer covers them there. */}
-              <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 2 }}>
-                {showLeaderboardIcon && (
+              {signedIn && (
+                <span className="ss-show-desktop" style={{ alignItems: 'center', gap: 2 }}>
+                  {showLeaderboardIcon && (
+                    <AxIconButton
+                      variant="ghost"
+                      size="sm"
+                      label={t('nav.leaderboard')}
+                      tooltip={t('nav.leaderboard')}
+                      onClick={() => navigate('/leaderboard')}
+                      data-route="/leaderboard"
+                      icon={<TrophyNavIcon />}
+                    />
+                  )}
                   <AxIconButton
                     variant="ghost"
                     size="sm"
-                    label={t('nav.leaderboard')}
-                    tooltip={t('nav.leaderboard')}
-                    onClick={() => navigate('/leaderboard')}
-                    data-route="/leaderboard"
-                    icon={<TrophyNavIcon />}
+                    label={t('nav.premium')}
+                    tooltip={t('nav.premium')}
+                    onClick={() => navigate('/premium')}
+                    data-route="/premium"
+                    icon={<PremiumNavIcon />}
                   />
-                )}
-                <AxIconButton
-                  variant="ghost"
-                  size="sm"
-                  label={t('nav.premium')}
-                  tooltip={t('nav.premium')}
-                  onClick={() => navigate('/premium')}
-                  data-route="/premium"
-                  icon={<PremiumNavIcon />}
-                />
-                <AxIconButton
-                  variant="ghost"
-                  size="sm"
-                  label={t('nav.shop')}
-                  tooltip={t('nav.shop')}
-                  onClick={() => navigate('/shop')}
-                  data-route="/shop"
-                  icon={<ShopNavIcon />}
-                />
-              </span>
+                  <AxIconButton
+                    variant="ghost"
+                    size="sm"
+                    label={t('nav.shop')}
+                    tooltip={t('nav.shop')}
+                    onClick={() => navigate('/shop')}
+                    data-route="/shop"
+                    icon={<ShopNavIcon />}
+                  />
+                </span>
+              )}
               {/* The header draws at its final height in its first frame. A
                   signed-out visitor, known at the first render, gets the
                   sign-in button with the shell. The 56px placeholder, the

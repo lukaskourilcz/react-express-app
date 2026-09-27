@@ -535,8 +535,9 @@ production (issue #227, step D8).
   Learn topic with every level passed (100), an evolving project (150) or short
   path (50) with every stage passed, and the top three of a finished calendar
   month on the dated board of migration 040 (300, 200, 100). Milestones sit
-  outside the daily cap. The social click-through grant (`socialVisitGrant`)
-  defaults to 0: see the policy note on `CoinSettings`.
+  outside the daily cap. Opening a social profile pays nothing: the server
+  stopped issuing the click-through grant in design audit P0.3, and the
+  `social` ledger reason stays for the credits already made.
 - **Credits.** Every credit is a ledger event with a deterministic id, written
   by a service-role routine, so a replay credits nothing:
   `credit_verified_xp_tokens` (`xp:<award id>`, with `token_xp_credits`
@@ -571,9 +572,9 @@ production (issue #227, step D8).
   post, not a count of goods on a shelf.
 - **Screen.** `/shop` reads Rewards in the navigation: the coins with the last
   25 ledger lines, How to earn, merchandise, the crown and streak protection,
-  orders and claims, and Find devShark elsewhere, which also sits on the
-  Profile. Its links come from `SOCIAL_PROFILES` in `client/product-catalog.ts`
-  and show only once the owner records them.
+  and orders and claims. devShark's own social profiles are linked once, as
+  icons in the site footer; the links come from `SOCIAL_PROFILES` in
+  `client/product-catalog.ts` and show only once the owner records them.
 - **Invitations (step D8b, #228, migration 042).** The compliant substitute for
   paying for follows: devShark's own server verifies the event it pays for.
   Every account has an eight-letter code (`referral_codes`), and its invite link
@@ -641,7 +642,7 @@ project still configured for StudyShark from deploying this code. The
 deployment may also carry `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and
 `GITHUB_APP_PRIVATE_KEY` for the GitHub garden.
 
-The footer carries the legal links and the appearance and sound controls, and
+The footer carries the legal links, devShark's own social profiles, and the appearance and sound controls, and
 promotes no other product. The language control is gone while the app ships
 English only (`ENABLED_LANGS`).
 

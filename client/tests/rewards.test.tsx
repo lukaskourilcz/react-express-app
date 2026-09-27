@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider, useT } from '../src/i18n/LanguageContext';
 import Shop, { earnRows, ledgerLabel } from '../src/components/Shop';
-import { SocialProfiles } from '../src/components/SocialProfiles';
+import BrandFooter from '../src/components/BrandFooter';
 import { closeUpgradeSheet, useUpgradeRequest } from '../src/lib/upgradeSheet';
 import type { EarnSummary, WalletResponse } from '../src/lib/rewards';
 import { DEFAULT_COIN_SETTINGS } from '../../shared/rewards';
@@ -140,7 +140,7 @@ describe('ledger lines', () => {
 describe('the Rewards screen', () => {
   it('shows a free account the merchandise with the upgrade sheet, never an address form', async () => {
     signIn();
-    routes({ plan: FREE });
+    routes({ plan: FREE, shop: pricedShop });
     await mountShop();
     expect(screen.getByRole('heading', { level: 1, name: 'Rewards' })).toBeInTheDocument();
     await screen.findByText('1,240');
@@ -156,13 +156,23 @@ describe('the Rewards screen', () => {
 
   it('keeps the sections in the order of the handoff', async () => {
     signIn();
-    routes({ plan: PREMIUM, wallet: wallet({ earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } }) });
+    routes({ plan: PREMIUM, shop: pricedShop, wallet: wallet({ earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } }) });
     await mountShop();
     await screen.findByText('1,240');
     await screen.findByRole('heading', { name: 'Crown and streak protection' });
     const headings = screen.getAllByRole('heading', { level: 2 }).map((one) => one.textContent);
     expect(headings.slice(0, 5)).toEqual(['Your coins', 'How to earn', 'Invite a friend', 'Merchandise', 'Crown and streak protection']);
     expect(screen.queryByText('Premium members redeem coins for merchandise.')).toBeNull();
+  });
+
+  it('leaves merchandise out while redemption is closed (design audit P0.1)', async () => {
+    signIn();
+    routes({ plan: PREMIUM, wallet: wallet({ earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } }) });
+    await mountShop();
+    await screen.findByRole('heading', { name: 'Crown and streak protection' });
+    expect(screen.queryByRole('heading', { name: 'Merchandise' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Redeem' })).toBeNull();
+    expect(screen.queryByText('Not on sale yet')).toBeNull();
   });
 
   it('lets a Premium member redeem once the coins cover the price', async () => {
@@ -217,39 +227,25 @@ describe('the Rewards screen', () => {
 });
 
 describe('Find devShark elsewhere', () => {
-  it('renders nothing until the owner records a profile', () => {
-    routes();
-    const { container } = render(<SocialProfiles profiles={{ linkedin: null, instagram: null, threads: null }} />, { wrapper });
-    expect(container).toBeEmptyDOMElement();
-  });
-
-  it('links out without a reward by default', async () => {
+  // Design audit P0.3: the profiles are linked once, as icons in the footer,
+  // and opening one pays nothing.
+  it('links the recorded profiles from the footer without a reward', async () => {
     signIn();
     const posted = vi.fn();
     routes({ social: posted });
-    render(<SocialProfiles profiles={{ linkedin: 'https://www.linkedin.com/company/example', instagram: null, threads: null }} />, { wrapper });
-    const link = screen.getByRole('link', { name: /LinkedIn/ });
-    expect(link).toHaveAttribute('target', '_blank');
-    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(screen.queryByText(/Thanks for visiting/)).toBeNull();
-    expect(screen.queryByText(/follow/i)).toBeNull();
-    link.addEventListener('click', (event) => event.preventDefault());
-    fireEvent.click(link);
+    render(<BrandFooter />, { wrapper });
+    const nav = screen.getByRole('navigation', { name: 'Find devShark elsewhere' });
+    expect(within(nav).getByText('News and new challenges.')).toBeInTheDocument();
+    for (const name of [/Instagram/, /Threads/]) {
+      const link = within(nav).getByRole('link', { name });
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      link.addEventListener('click', (event) => event.preventDefault());
+      fireEvent.click(link);
+    }
+    expect(within(nav).queryByRole('link', { name: /LinkedIn/ })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(posted).not.toHaveBeenCalled();
-  });
-
-  it('thanks a signed-in visitor when the owner sets a grant, naming only the platform', async () => {
-    signIn();
-    const posted = vi.fn();
-    routes({ social: posted });
-    server.use(http.get('*/api/settings', () => HttpResponse.json({ coins: { ...DEFAULT_COIN_SETTINGS, socialVisitGrant: 5 } })));
-    render(<SocialProfiles profiles={{ linkedin: null, instagram: 'https://www.instagram.com/example', threads: null }} />, { wrapper });
-    await screen.findByText('Thanks for visiting: 5 coins the first time you open each profile.');
-    const link = screen.getByRole('link', { name: /Instagram/ });
-    link.addEventListener('click', (event) => event.preventDefault());
-    fireEvent.click(link);
-    await waitFor(() => expect(posted).toHaveBeenCalledWith({ claim: 'social', platform: 'instagram' }));
-    expect(await screen.findByText('Thanks for visiting. +5 coins.')).toBeInTheDocument();
+    expect(screen.queryByText(/Thanks for visiting|follow/i)).toBeNull();
   });
 });

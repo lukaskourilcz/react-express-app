@@ -452,8 +452,6 @@ export default function Challenge() {
 
   /* ─── render ────────────────────────────────────────────────── */
 
-  const champion = board?.champion ?? null;
-
   const livesIndicator = useMemo(
     () => (
       <div
@@ -477,8 +475,8 @@ export default function Challenge() {
         <section className="de-hero-panel">
           <VStack gap={3}>
             <VStack gap={1}>
-              <Kicker>{t('challenge.title')}</Kicker>
-              <Heading level={1} type="display-3">{t('challenge.editorialTitle')}</Heading>
+              <Kicker>{t('challenge.kicker')}</Kicker>
+              <Heading level={1} type="display-3">{t('challenge.title')}</Heading>
               <Text type="large" color="secondary">{t('challenge.description')}</Text>
             </VStack>
             <div className="de-stat-row">
@@ -501,7 +499,6 @@ export default function Challenge() {
             </button>
             <HStack gap={2} align="center" wrap="wrap">
               <SwimCta label={t('challenge.startButton')} dir={-1} onClick={() => void startRun()} />
-              <span className="de-gold-pill">{t('challenge.fairRace')}</span>
             </HStack>
           </VStack>
         </section>
@@ -520,7 +517,6 @@ export default function Challenge() {
             ) : (
               <Text type="supporting" color="secondary">{t('challenge.noChampion')}</Text>
             )}
-            <Text type="supporting" size="xsm" color="secondary">{t('challenge.boardHint')}</Text>
           </VStack>
         </aside>
       </div>
@@ -547,7 +543,6 @@ export default function Challenge() {
   }
 
   if (phase === 'gameover') {
-    const beatChampion = !!champion && score > champion.score;
     return (
       <div className="ss-pop" style={{ width: '100%', maxWidth: 640, margin: '0 auto' }}>
         <Card padding={5} width="100%">
@@ -570,8 +565,6 @@ export default function Challenge() {
                 </div>
               </MotionPop>
             </VStack>
-
-            <ChampionBadge champion={champion} loading={boardLoading} dim={beatChampion} />
 
             {relaxedPace ? (
               <Banner status="info" title={t('challenge.practiceScore')} />
@@ -614,7 +607,7 @@ export default function Challenge() {
             {board && board.top.length > 0 && (
               <VStack gap={1}>
                 <Text type="label" color="secondary">
-                  {t('challenge.hallOfFame')}
+                  {t('challenge.topScores')}
                 </Text>
                 <LeaderboardList board={board} />
               </VStack>
@@ -921,49 +914,6 @@ function CategoryTag({ category }: { category: CategoryType }) {
     >
       {t(categoryLabelKey(category))}
     </span>
-  );
-}
-
-function ChampionBadge({
-  champion,
-  loading,
-  dim,
-}: {
-  champion: { name: string; score: number } | null;
-  loading: boolean;
-  dim?: boolean;
-}) {
-  const { t } = useLanguage();
-  return (
-    <div className="ss-raised" style={{ display: 'flex', width: '100%', opacity: dim ? 0.6 : 1 }}>
-      <Card variant="muted" padding={2} width="100%">
-        <HStack gap={1.5} align="center">
-          <SharkFin size={28} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <VStack gap={0}>
-              <Text type="label" color="secondary">
-                {t('challenge.currentChampion')}
-              </Text>
-              {loading ? (
-                <Text type="body" size="sm" color="secondary">
-                  …
-                </Text>
-              ) : champion ? (
-                <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  <Text type="body" weight="bold">
-                    {champion.name} — {champion.score}
-                  </Text>
-                </span>
-              ) : (
-                <Text type="body" size="sm" color="secondary">
-                  {t('challenge.noChampion')}
-                </Text>
-              )}
-            </VStack>
-          </div>
-        </HStack>
-      </Card>
-    </div>
   );
 }
 

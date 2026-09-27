@@ -854,10 +854,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             </div>
           </div>
 
-          {/* Start — swim-through CTA + reassurance line. */}
+          {/* Start — swim-through CTA. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', position: 'relative' }}>
             <SwimCta label={t('quiz.startQuiz')} onClick={handleStart} dir={1} disabled={selectedCategories.length === 0} size="lg" />
-            <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{t('quiz.noPeeking')}</span>
           </div>
         </div>
 

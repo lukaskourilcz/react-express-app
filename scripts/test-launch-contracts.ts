@@ -94,6 +94,7 @@ import { RETIRED_TOPIC_IDS, retirementOf } from '../shared/retired-content';
 import { GLOSSARY, termsIn } from '../shared/glossary';
 import {
   DEFAULT_MERCH_SETTINGS,
+  merchRedemptionOpen,
   MERCH_SKUS,
   merchAvailability,
   merchMarginMinor,
@@ -759,7 +760,7 @@ function publicCopyContracts() {
   // Terms quote, word for word.
   assert.equal(ENGLISH['premium.page.waiver'], WAIVER_TEXT, 'the waiver on /premium and in the Terms matches Checkout');
   // Every price the pages print says VAT included next to it.
-  for (const key of ['home.pledge', 'landing.compare.premiumCaption', 'premium.page.monthlyRenews', 'premium.page.annualRenews', 'premium.sheet.price'] as const) {
+  for (const key of ['landing.compare.premiumCaption', 'premium.page.monthlyRenews', 'premium.page.annualRenews', 'premium.sheet.price'] as const) {
     assert.match(ENGLISH[key], /VAT included/, `${key} states the price with VAT`);
   }
   // Redemption ships closed (DEFAULT_MERCH_SETTINGS.enabled is false), so
@@ -772,6 +773,45 @@ function publicCopyContracts() {
   }
   assert.match(read('client/src/components/landing/ComparisonTable.tsx'), /labelKey: 'landing\.compare\.rowCoins', free: NO, premium: \{ mark: 'yes', key: 'landing\.compare\.premiumCoins' \}/);
   assert.match(ENGLISH['legal.terms.plans.premium'], /redeem coins for devShark merchandise once redemption opens/);
+  // Design audit P0.4: grading and end states are stated, not cheered. No
+  // exclamation mark and no "Well done" in any verdict, result or end key.
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    if (!/\.(correct|wrong|verdict\.|gameOver|scoreSubmitted|finished)/.test(key)) continue;
+    assert.doesNotMatch(value, /!|Well done/i, `${key} cheers instead of stating the result`);
+  }
+  // Design audit P0.6: the header a visitor without a session sees. Today,
+  // Collection, Leaderboard and Coins need an account; Premium is a text link
+  // until there is one; Roadmap reads Career.
+  {
+    const app = read('client/src/App.tsx');
+    const navBlock = app.slice(app.indexOf('const NAV_ITEMS'), app.indexOf('\n];', app.indexOf('const NAV_ITEMS')));
+    const order = [...navBlock.matchAll(/\{ to: '([^']+)'/g)].map((match) => match[1]);
+    assert.deepEqual(order.slice(0, 6), ['/today', '/learn', '/quiz', '/coding', '/challenge', '/play']);
+    for (const route of ['/today', '/collection', '/leaderboard', '/shop']) {
+      assert.match(navBlock, new RegExp(`to: '${route}'[^\\n]*signedIn: true`), `${route} needs a session`);
+    }
+    assert.match(app, /const SECONDARY_ROUTES = signedIn \? \['\/leaderboard', '\/premium', '\/shop'\] : \[\];/);
+    assert.match(app, /\{signedIn && \(\n\s+<span className="ss-show-desktop"/);
+    assert.equal(ENGLISH['nav.roadmap'], 'Career');
+  }
+  // Design audit P0.1: what does not exist yet is not shown. The coin and path
+  // rows render only while their switch is on, the Premium list drops the
+  // merchandise line until redemption opens, and production never shows the
+  // shop's test-mode banner.
+  {
+    const table = read('client/src/components/landing/ComparisonTable.tsx');
+    assert.match(table, /premiumCoins' \}, when: 'redemption' \}/);
+    assert.match(table, /premiumPaths' \}, when: 'paths' \}/);
+    assert.doesNotMatch(table, /rowNoAds/);
+    assert.match(ENGLISH['landing.compare.footnote'], /No ads on either plan\./);
+    assert.match(read('client/src/components/PremiumFacts.tsx'), /redemptionOpen \|\| key !== 'premium\.sheet\.include6'/);
+    assert.match(read('api/settings.ts'), /merch: \{ redemptionOpen: merchRedemptionOpen\(s\.merch\) \}/);
+    assert.equal(merchRedemptionOpen(DEFAULT_MERCH_SETTINGS), false, 'redemption ships closed');
+    const shop = read('client/src/components/Shop.tsx');
+    assert.match(shop, /!import\.meta\.env\.PROD && shop\.data\?\.testMode/);
+    assert.match(shop, /\{merchOpen && \(\n\s+<section className="rw-section" aria-labelledby="rw-merch-title">/);
+    assert.match(shop, /\{merchOpen && checkout && \(/);
+  }
   // Coding hints are authored text that nobody has reviewed yet; the privacy
   // policy must not say people wrote them by hand (review finding product-8).
   assert.doesNotMatch(ENGLISH['legal.privacy.ai.body'], /by hand|people write/i);
@@ -784,7 +824,7 @@ function publicCopyContracts() {
   assert.match(read('supabase/supabase-schema-039.sql'), /DELETE FROM public\.billing_cancel_requests WHERE expires_at < NOW\(\) - INTERVAL '1 day';/, 'the purge the privacy policy promises');
   // No urgency, countdowns or fake scarcity on the pages that sell.
   for (const [key, value] of Object.entries(ENGLISH)) {
-    if (!/^(premium\.|landing\.compare\.|landing\.founder\.|home\.pledge|billing\.checkout\.)/.test(key)) continue;
+    if (!/^(premium\.|landing\.compare\.|billing\.checkout\.)/.test(key)) continue;
     assert.doesNotMatch(value, /\b(hurry|only \d+ left|limited time|ends soon|last chance|act now|today only)\b/i, `${key} uses urgency copy`);
   }
   // The routes exist, the public ones have static HTML on Vercel, and the
@@ -981,7 +1021,16 @@ function coinsContracts() {
   const rewardsHandlers = read('lib/rewards/handlers.ts');
   const walletPost = rewardsHandlers.slice(rewardsHandlers.indexOf("if (req.method === 'POST') {", rewardsHandlers.indexOf('export async function handleWallet')));
   assert.doesNotMatch(walletPost.slice(0, walletPost.indexOf('res.setHeader(\'Allow\'')), /body\.(amount|coins|tokens|xp)/, 'the wallet POST never reads an amount');
-  assert.match(read('client/src/lib/rewards.ts'), /JSON\.stringify\(\{ claim: 'social', platform \}\)/);
+  // Opening a social profile pays nothing any more (design audit P0.3): the
+  // server answers the old claim without crediting, the browser never sends
+  // it, and the profiles are linked once, from the footer.
+  assert.match(walletPost, /body\.claim === 'social'\) \{\n\s+res\.setHeader\('Cache-Control', 'private, no-store'\);\n\s+return res\.json\(\{ granted: false, coins: 0 \}\);/);
+  assert.doesNotMatch(read('lib/rewards/coins.ts'), /credit_social_visit/);
+  assert.doesNotMatch(read('client/src/lib/rewards.ts'), /claim: 'social'/);
+  assert.match(read('client/src/components/BrandFooter.tsx'), /SOCIAL_PROFILES\[platform\]/);
+  for (const screen of ['Profile.tsx', 'Shop.tsx']) {
+    assert.doesNotMatch(read(`client/src/components/${screen}`), /SocialProfiles/, `${screen} no longer lists the social profiles`);
+  }
 
   // 4. Merchandise is Premium only, and the refusal comes before the address.
   const orders = rewardsHandlers.slice(rewardsHandlers.indexOf('export async function handleOrders'));

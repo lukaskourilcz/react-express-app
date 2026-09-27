@@ -19,7 +19,7 @@ import { getGameSettings } from '../settings-store';
 import { ROADMAP_TOPICS, topicLevelCount } from '../roadmap';
 import { EVOLVING_CHALLENGES } from '../../shared/evolving';
 import { learnCheckpointXp, learnLevelXp } from '../../shared/progression';
-import { tokensForVerifiedXp, type CoinSettings, type SocialPlatform } from '../../shared/rewards';
+import { tokensForVerifiedXp, type CoinSettings } from '../../shared/rewards';
 
 const logEvent = createLogger('coins');
 
@@ -216,28 +216,4 @@ export async function settleFinishedMonth(supabase: SupabaseClient, subject: str
   const result = (settled.data ?? {}) as { settled?: boolean; reason?: string; winners?: number };
   if (result.settled === true || result.reason === 'already') settledMonths.add(month);
   if (result.settled === true) logEvent({ status: 200, kind: 'month_settled', month, winners: result.winners ?? 0 });
-}
-
-/* ── the social click-through grant ────────────────────────────────────── */
-
-/** Credit the owner-set amount for opening one profile, once per platform and
- * account. At the default of zero this credits nothing and asks nothing. */
-export async function creditSocialVisit(
-  supabase: SupabaseClient,
-  input: { userId: string; subject: string; platform: SocialPlatform },
-): Promise<{ granted: boolean; coins: number }> {
-  const amount = (await coinSettings()).socialVisitGrant;
-  if (amount <= 0) return { granted: false, coins: 0 };
-  const credited = await withTimeout(
-    supabase.rpc('credit_social_visit', {
-      p_user_id: input.userId, p_subject: input.subject, p_platform: input.platform, p_amount: amount,
-    }),
-  ).catch(() => null);
-  if (!credited || credited.error) {
-    if (!routineMissing(credited?.error)) {
-      logEvent({ status: 500, kind: 'social_credit_failed', reason: credited?.error?.code ?? 'timeout' });
-    }
-    return { granted: false, coins: 0 };
-  }
-  return credited.data === true ? { granted: true, coins: amount } : { granted: false, coins: 0 };
 }

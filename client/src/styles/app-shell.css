@@ -328,7 +328,8 @@
   .devshark-tip { animation: none; }
 }
 
-/* Compact footer: the legal links and the appearance and sound controls. It
+/* Compact footer: the legal links, devShark's own social profiles and the
+   appearance and sound controls. It
    stays deliberately quiet so it never interrupts a learning flow. */
 .ss-brand-footer {
   margin-top: 3.5rem;
@@ -347,6 +348,7 @@
 .ss-brand-footer a { color: inherit; text-underline-offset: 3px; }
 .ss-brand-footer a:hover { color: var(--brand-accent); }
 .ss-brand-footer a:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; border-radius: 3px; }
+.ss-brand-footer__social a { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; }
 .ss-footer-settings { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .ss-footer-settings button {
   min-height: 32px;
@@ -630,6 +632,7 @@
   }
 
   .ss-footer-settings button,
+  .ss-brand-footer__social a,
   .ss-drawer-brand,
   .ss-skip-link {
     min-height: 44px;

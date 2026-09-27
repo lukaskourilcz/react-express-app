@@ -39,6 +39,11 @@ export interface GameConfig {
   /** Spreadshop's own promotion in the devShark shop this month (#229), or
    * null. Absent from a server that predates it. */
   merchPromo?: MerchPromo | null;
+  /** Whether coins can be redeemed for merchandise yet. Absent from an older
+   * server, which reads as closed. */
+  merch?: { redemptionOpen: boolean };
+  /** Per learning path, whether it is open (the server publishes it). */
+  learningPaths?: { paths: Record<string, { enabled: boolean }> };
 }
 
 const DEFAULT_QUIZ_CATEGORY_IDS = [
@@ -118,6 +123,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   billing: { enabled: false, cancellable: false, cancelByEmail: false, seller: null },
   coins: DEFAULT_COIN_SETTINGS,
   merchPromo: null,
+  merch: { redemptionOpen: false },
 };
 
 export const GAME_CONFIG_KEY = ['game-config'] as const;
@@ -163,6 +169,13 @@ export function useGameConfigStatus(): { config: GameConfig; fromServer: boolean
     retry: () => { void refetch(); },
   };
 }
+
+/** Whether coin redemption for merchandise is open. */
+export const redemptionOpen = (config: GameConfig): boolean => config.merch?.redemptionOpen === true;
+
+/** Whether any learning path is open. */
+export const anyLearningPathOpen = (config: GameConfig): boolean =>
+  Object.values(config.learningPaths?.paths ?? {}).some((path) => path.enabled);
 
 /** Imperative snapshot for non-React callers (e.g. shop purchase). */
 export function getGameConfig(): GameConfig {

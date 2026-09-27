@@ -11,7 +11,7 @@ Read `docs/product-architecture.md`, `client/product-catalog.ts`, `shared/subjec
 
 - devShark is a developer-learning product with one subject, `webdev`. Progress, XP, tokens, and the database stay keyed by that subject.
 - This repository builds devShark alone. `resolveCatalogProductId` throws for any other product or subject lock, so a misconfigured build fails. StudyShark moved to its own repository, `lukaskourilcz/studyshark`, on 2026-09-24. Add no other product, subject, brand, or cross-link here.
-- The footer carries the legal links and the appearance and sound controls. It promotes no other product.
+- The footer carries the legal links, devShark's own social profiles, and the appearance and sound controls. It promotes no other product.
 
 ## Protected rules
 
