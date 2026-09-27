@@ -45,7 +45,7 @@ export const TRADER: TraderIdentity = {
  * file defines these URLs. */
 export const SOCIAL_PROFILES: Readonly<Record<'linkedin' | 'instagram' | 'threads', string | null>> = {
   linkedin: null,
-  instagram: null,
+  instagram: 'https://www.instagram.com/devshark.app/',
   threads: null,
 };
 

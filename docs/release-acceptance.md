@@ -2272,3 +2272,14 @@ That report does not cover a missing file under `/assets/coding-worker/` (404 wi
 - Vercel's Skew Protection ([docs](https://vercel.com/docs/skew-protection)) keeps an old deployment's files reachable for a tab still running it, through a `__vdpl` cookie, an `x-deployment-id` header or a `dpl` query; a static Vite build would need one of those wired in, and it is a project setting, so I left it alone.
 
 Not verified by me: `vercel.json` on Vercel, which the lead checked on the preview; devshark.app, where this is not deployed; Firefox and Safari; a real Google sign-in (the specs answer Supabase locally, with a fake session where one is needed); Sentry, which has no DSN here; physical phones and screen readers.
+
+## Instagram profile and MarketingShark source bridge — 2026-09-27
+
+The canonical Instagram URL now points to `@devshark.app`, shared by Profile and Rewards.
+BoardlessAI owns source imports, generation, approval and credentials; this app adds no API
+handler or AI feature. See `docs/marketing-social-bridge.md` and issue #237.
+
+Node 22 validation: API type checking, launch contracts, production build and responsive
+checking passed (238 probes, zero issues or unprobed routes). Both production dependency
+audits reported zero vulnerabilities. `git diff --check` passed. Meta OAuth and professional
+account conversion remain pending; these checks do not establish a live publishing connection.
