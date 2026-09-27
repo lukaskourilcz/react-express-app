@@ -86,11 +86,16 @@ function purgeAstryxCss(): Plugin {
             // Attribute/state selectors composed at runtime.
             // Preserve compound hover/focus selectors: PurgeCSS otherwise drops
             // :is(...):not(:disabled) even when its classes are safelisted.
-            greedy: [/ss-fin-button/, /data-scroll-active/, /data-theme/, /data-color-mode/, /data-selected/, /data-active/, /data-tone/, /data-locked/, /data-complete/],
+            // `data-motion` is set through `dataset` (lib/motion.tsx), so the
+            // attribute's name never appears whole in the bundle.
+            greedy: [/ss-fin-button/, /data-scroll-active/, /data-theme/, /data-color-mode/, /data-selected/, /data-active/, /data-tone/, /data-locked/, /data-complete/, /data-motion/],
           },
         });
         if (result.css.includes('.ss-fin-hover__swimmer') && !/ss-fin-button[^{}]*:hover[^{}]*\{/.test(result.css)) {
           throw new Error('CSS cleanup removed the shark fin hover activation rule');
+        }
+        if (source.includes('data-motion') && !result.css.includes('data-motion')) {
+          throw new Error('CSS cleanup removed the rule that shows the page when Motion’s features chunk fails');
         }
         const purged = RUNTIME_COMPOSED_CLASSES.filter((name) => hasClassRule(source, name) && !hasClassRule(result.css, name));
         if (purged.length) {
