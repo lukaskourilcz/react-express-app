@@ -59,6 +59,15 @@
 @media (min-width: 1280px) {
   .ss-show-wide { display: flex; }
 }
+/* A session's account widget, in a slot that never changes width on a
+   desktop. The toolbar's grid centres the nav between its side columns, so a
+   56px placeholder that became the 224px widget moved every nav link 84px
+   (a 0.004 layout shift). The widget is the avatar alone below 1280px (56px,
+   60px with a ring) and at most 240px from there (its button's max-width). A
+   signed-out header has no such slot and keeps its own width. */
+.ss-account-slot { display: flex; align-items: center; justify-content: flex-end; flex-shrink: 0; }
+@media (min-width: 1024px) { .ss-account-slot { min-width: 60px; } }
+@media (min-width: 1280px) { .ss-account-slot { min-width: 240px; } }
 .ss-nav-center {
   display: none;
   justify-content: center;
