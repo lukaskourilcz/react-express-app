@@ -3,15 +3,15 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ENTITLEMENT_QUERY_ROOT, closeUpgradeSheet, useUpgradeRequest } from '../lib/upgradeSheet';
-import { isChunkLoadError, lazyPart } from '../lib/routeRecovery';
+import { isChunkLoadError, lazyShellPart } from '../lib/routeRecovery';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { ShellPartBoundary } from './ShellPartBoundary';
 import { AppToast } from './ui/AppToast';
 
-// `lazyPart`, not `lazy`: a sheet whose code failed is asked for again the
-// next time something opens it (lib/routeRecovery.ts).
-const UpgradeSheet = lazyPart(() => import('./UpgradeSheet'));
+// `lazyShellPart`, not `lazy`: a sheet whose code failed is asked for again
+// the next time something opens it (lib/routeRecovery.ts).
+const UpgradeSheet = lazyShellPart(() => import('./UpgradeSheet'));
 
 export default function UpgradeSheetHost() {
   const request = useUpgradeRequest();

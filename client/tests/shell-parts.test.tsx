@@ -8,7 +8,7 @@ import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ShellPartBoundary } from '../src/components/ShellPartBoundary';
-import { lazyPart, type BuildCheck, type Recovery } from '../src/lib/routeRecovery';
+import { lazyShellPart, type BuildCheck, type Recovery } from '../src/lib/routeRecovery';
 import { reportError } from '../src/lib/sentry';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { closeUpgradeSheet, openUpgradeSheet } from '../src/lib/upgradeSheet';
@@ -73,7 +73,7 @@ const retry = async () => {
 describe('a shell part whose code did not load', () => {
   it('keeps the shell and the page, reports once, and checks or reloads nothing by itself', async () => {
     const recovery = fakeRecovery();
-    await mountHeader(lazyPart(loads('Quiet', ['fail'])), recovery);
+    await mountHeader(lazyShellPart(loads('Quiet', ['fail'])), recovery);
     expect(await screen.findByRole('button', { name: 'Try again' })).toBeInTheDocument();
     expect(screen.getByText('the nav')).toBeInTheDocument();
     expect(screen.getByText('the page')).toBeInTheDocument();
@@ -87,7 +87,7 @@ describe('a shell part whose code did not load', () => {
   it('draws the part in place when asking again works, and focus moves into it', async () => {
     const recovery = fakeRecovery();
     const load = loads('InPlace', ['fail', 'load']);
-    await mountHeader(lazyPart(load), recovery);
+    await mountHeader(lazyShellPart(load), recovery);
     screen.getByRole('button', { name: 'Try again' }).focus();
     await retry();
     const part = await screen.findByRole('button', { name: 'InPlace part' });
@@ -99,7 +99,7 @@ describe('a shell part whose code did not load', () => {
   it('reloads on the press when the same failure comes straight back, and stays busy for it', async () => {
     const recovery = fakeRecovery();
     const load = loads('Remembered', ['fail']);
-    await mountHeader(lazyPart(load), recovery);
+    await mountHeader(lazyShellPart(load), recovery);
     await retry();
     await vi.waitFor(() => expect(recovery.reload).toHaveBeenCalledTimes(1));
     expect(load).toHaveBeenCalledTimes(2);
@@ -109,7 +109,7 @@ describe('a shell part whose code did not load', () => {
 
   it('does not reload offline or while the server does not answer', async () => {
     const unreachable = fakeRecovery('unreachable');
-    await mountHeader(lazyPart(loads('Unreachable', ['fail'])), unreachable);
+    await mountHeader(lazyShellPart(loads('Unreachable', ['fail'])), unreachable);
     await retry();
     await vi.waitFor(() => expect(unreachable.checkServedBuild).toHaveBeenCalledTimes(1));
     expect(unreachable.reload).not.toHaveBeenCalled();

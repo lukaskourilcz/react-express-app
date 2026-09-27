@@ -28,14 +28,14 @@ interface State {
 
 /**
  * A boundary for one lazy part of the shell outside the route boundary: the
- * account button, the upgrade sheet. Without it a part whose code did not
+ * account widget, the upgrade sheet. Without it a part whose code did not
  * load took the whole app to the root error screen. Place it inside the
  * part's Suspense, as App.tsx places the route boundary, so a retry renders
  * in a transition and the fallback stays until the part can draw.
  *
- * Retry renders the part again with a fresh lazy component (lazyPart). When
- * the same chunk failure comes straight back, as it does in a browser that
- * remembers failed module fetches, that press reloads the page
+ * Retry renders the part again with a fresh lazy component (lazyShellPart).
+ * When the same chunk failure comes straight back, as it does in a browser
+ * that remembers failed module fetches, that press reloads the page
  * (reloadOnPress). Nothing reloads without a press, and a part that threw is
  * only rendered again.
  */

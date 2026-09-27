@@ -32,17 +32,17 @@ import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
 import { takeAuthReturn } from './lib/authReturn';
 import { installIntentPreloading, routeChunk } from './lib/routePreload';
-import { lazyPage, lazyPart } from './lib/routeRecovery';
+import { lazyPage, lazyShellPart } from './lib/routeRecovery';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
 import { ShellPartBoundary } from './components/ShellPartBoundary';
 
 // AuthButton subscribes to multiple stores and pulls in the leveling/shop
 // modules — heavy for the initial bundle. Lazy-load it so the app shell
 // (logo, nav, theme/sound toggles) paints first. Only a session needs it: a
-// signed-out visitor gets SignInButton, which ships with the shell. `lazyPart`,
-// not `lazy`: its boundary in the header can ask for it again
+// signed-out visitor gets SignInButton, which ships with the shell.
+// `lazyShellPart`, not `lazy`: its boundary in the header can ask for it again
 // (lib/routeRecovery.ts).
-const AuthButton = lazyPart(() => import('./components/AuthButton'));
+const AuthButton = lazyShellPart(() => import('./components/AuthButton'));
 
 // Each page's chunk, registered with the paths that render it so a link can
 // start loading its page before the click lands (lib/routePreload.ts). Pages

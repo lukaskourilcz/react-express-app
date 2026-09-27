@@ -177,8 +177,8 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   first-load loader. `tests/browser/first-load.spec.ts` holds the page's code
   back and fails when the header, `<main>` or the footer moves.
 - A shell part that fails keeps the shell too. A lazy part outside the route
-  boundary (the account widget, the upgrade sheet) is a `lazyPart` inside a
-  `ShellPartBoundary`, which sits inside the part's `Suspense` for the same
+  boundary (the account widget, the upgrade sheet) is a `lazyShellPart` inside
+  a `ShellPartBoundary`, which sits inside the part's `Suspense` for the same
   reason the route boundary does. Its fallback is quiet and keeps the part's
   box: the account retry stands in the widget's 56px row, and a sheet that
   fails closes with a toast. Nothing reloads unless the learner presses: a
