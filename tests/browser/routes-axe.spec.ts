@@ -16,7 +16,9 @@ const WIDTHS = [
   { width: 1280, height: 800 },
 ];
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
-const DARK_ROUTES = ROUTES;
+// Dark mode also covers the surfaces the pre-launch design audit reworked
+// (P1.9): the homepage, Coins, Coding and the quiz setup.
+const DARK_ROUTES = ['/', '/profile', '/today', '/leaderboard', '/shop', '/coding', '/quiz', '/challenge'];
 
 /**
  * axe reads the colours a pixel has, so scanning during an entry fade measures
