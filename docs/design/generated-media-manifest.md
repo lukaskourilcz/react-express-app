@@ -11,7 +11,6 @@ No generated production media has been accepted and no external provider has bee
 | `fin-mark` | Favicon and brand mark | Owner's V9 brand kit, deterministic SVG | `client/public/brand/v9/`, `client/public/favicon.svg`, `client/public/favicon-white.svg`, `client/public/favicon.ico`, `client/src/components/SharkFin.tsx`, `client/src/components/BrandLogo.tsx` | No generation; the fin geometry is copied from the kit, never redrawn. |
 | `pwa-icons` | Install icons | V9 kit `favicon/app-icon-*.png` | `client/public/icon.svg`, `client/public/icon-192.png`, `client/public/icon-512.png`, `client/public/apple-touch-icon.png` | White clean fin on the green tile; the platform adds the corner radius. |
 | `og-share` | Product share image | `scripts/render-og-image.mjs` from the V9 horizontal logo | `client/public/og-image.png` | 1200×630, logo at 46% width on #F3F6F1; rerun the script after a kit change. |
-| `devshark-plate` | Decorative mark on the landing roadmap preview | Deterministic SVG linework | `client/src/components/ui/SubjectPlate.tsx` | Decorative and `aria-hidden`; never a factual diagram. |
 | `paper-grain` | Tactile surface | Inline deterministic SVG turbulence | `client/src/styles/astryx-theme.css` | Decorative, tiny, theme-safe. |
 
 ## Required production continuation

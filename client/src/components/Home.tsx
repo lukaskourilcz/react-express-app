@@ -25,7 +25,6 @@ import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, type Stat
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
-import SubjectPlate from './ui/SubjectPlate';
 import ComparisonTable from './landing/ComparisonTable';
 import { FREE_LEARN_TOPICS } from '../../../shared/tiers';
 
@@ -112,12 +111,6 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
       className="ss-panel"
       style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-page)' }}
     >
-      <div aria-hidden style={{ position: 'absolute', right: '-4%', bottom: '-42%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
-        <SharkFin size={420} color="currentColor" />
-      </div>
-      <div aria-hidden style={{ position: 'absolute', right: 18, top: 12, opacity: 0.18, pointerEvents: 'none' }}>
-        <SubjectPlate />
-      </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', position: 'relative' }}>
         <h2 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.5rem', letterSpacing: '-0.015em' }}>
           {t('home.insideTopic', { name: topic.name })}

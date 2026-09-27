@@ -10,7 +10,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Button } from '@astryxdesign/core/Button';
 import { Card } from '@astryxdesign/core/Card';
 import { Badge } from '@astryxdesign/core/Badge';
-import { WaterlineProgress, SharkFin } from './SharkFin';
+import { WaterlineProgress } from './SharkFin';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Popover } from '@astryxdesign/core/Popover';
@@ -791,10 +791,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         </div>
 
         <div className="ss-panel" style={{ position: 'relative', overflow: 'hidden', padding: 24, display: 'flex', flexDirection: 'column', gap: 20, borderRadius: 'var(--radius-page)' }}>
-          <div aria-hidden style={{ position: 'absolute', right: '-6%', bottom: '-38%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
-            <SharkFin size={360} color="currentColor" />
-          </div>
-
           {/* Categories as accent pills. */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -890,9 +886,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             aria-labelledby="quiz-result-heading"
             style={{ position: 'relative', overflow: 'hidden', padding: 32, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, borderRadius: 'var(--radius-page)' }}
           >
-            <div aria-hidden style={{ position: 'absolute', right: '-6%', bottom: '-40%', opacity: 0.04, transform: 'rotate(-8deg)', pointerEvents: 'none', color: 'var(--ss-ink)' }}>
-              <SharkFin size={340} color="currentColor" />
-            </div>
             <Kicker center style={{ position: 'relative' }}>{t('quiz.complete')}</Kicker>
             <MotionPop>
               <h1
