@@ -9,7 +9,9 @@ import { test, expect, type Page } from '@playwright/test';
 // is recorded.
 
 const HOLD_MS = 600;
-const SECTIONS = ['/coding', '/today', '/quiz', '/learn', '/challenge', '/play', '/collection', '/roadmap'];
+// The signed-out centre row (design audit P0.6); Today, Collection and Career
+// are not in it for a visitor without a session.
+const SECTIONS = ['/coding', '/quiz', '/learn', '/challenge', '/play', '/premium'];
 
 /** One animation frame of the content area. */
 type Frame = { t: number; route: boolean; kids: number; busy: string | null; opacity: number; h1: string | null; root: number; active: string | null; scrollTop: number };

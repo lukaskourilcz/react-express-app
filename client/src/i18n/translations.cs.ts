@@ -14,7 +14,7 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   // App shell / navigation
   'nav.quiz': 'Kvíz',
   'nav.learn': 'Učení',
-  'nav.roadmap': 'Plán',
+  'nav.roadmap': 'Kariéra',
   'nav.play': 'Hrát',
   'nav.leaderboard': 'Žebříček',
   'nav.cards': 'Sbírka',

@@ -779,6 +779,21 @@ function publicCopyContracts() {
     if (!/\.(correct|wrong|verdict\.|gameOver|scoreSubmitted|finished)/.test(key)) continue;
     assert.doesNotMatch(value, /!|Well done/i, `${key} cheers instead of stating the result`);
   }
+  // Design audit P0.6: the header a visitor without a session sees. Today,
+  // Collection, Leaderboard and Coins need an account; Premium is a text link
+  // until there is one; Roadmap reads Career.
+  {
+    const app = read('client/src/App.tsx');
+    const navBlock = app.slice(app.indexOf('const NAV_ITEMS'), app.indexOf('\n];', app.indexOf('const NAV_ITEMS')));
+    const order = [...navBlock.matchAll(/\{ to: '([^']+)'/g)].map((match) => match[1]);
+    assert.deepEqual(order.slice(0, 6), ['/today', '/learn', '/quiz', '/coding', '/challenge', '/play']);
+    for (const route of ['/today', '/collection', '/leaderboard', '/shop']) {
+      assert.match(navBlock, new RegExp(`to: '${route}'[^\\n]*signedIn: true`), `${route} needs a session`);
+    }
+    assert.match(app, /const SECONDARY_ROUTES = signedIn \? \['\/leaderboard', '\/premium', '\/shop'\] : \[\];/);
+    assert.match(app, /\{signedIn && \(\n\s+<span className="ss-show-desktop"/);
+    assert.equal(ENGLISH['nav.roadmap'], 'Career');
+  }
   // Design audit P0.1: what does not exist yet is not shown. The coin and path
   // rows render only while their switch is on, the Premium list drops the
   // merchandise line until redemption opens, and production never shows the

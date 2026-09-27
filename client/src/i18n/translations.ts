@@ -8,7 +8,7 @@ export const en = {
   // App shell / navigation
   'nav.quiz': 'Quiz',
   'nav.learn': 'Learn',
-  'nav.roadmap': 'Roadmap',
+  'nav.roadmap': 'Career',
   'nav.play': 'Play',
   'nav.leaderboard': 'Leaderboard',
   'nav.cards': 'Collection',
