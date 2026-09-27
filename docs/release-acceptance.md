@@ -2517,3 +2517,48 @@ The full gate failed once on `public.spec.ts`: axe read the Czech guide's "Procv
 | --- | --- | --- | --- |
 | `origin/main` at `3bedbbc` | 10 | 7 of 50 failed | 50 passed |
 | This session's merged head | 10, then 20 | 5 of 50 failed | 100 passed |
+
+## 2026-09-27 — accent text on its tint, a reachable levels strip, whole-route axe (PORT)
+
+Three commits from `claude/elegant-cori-h9cdgb`, ported by hand to main at `035d853`: `9abf34a`, `1751a2c` and `d0e78e1`. SubjectPicker, `Sharkira.css`, `/sprint`, the Czech key and the other subjects' accents are gone from main or out of scope, so they stay out.
+
+### Contrast
+
+`client/src/lib/contrast.ts` derives `--brand-accent-on-soft`: the accent's hue, with lightness stepped until the text clears 4.5:1 on its own 12% tint over the worst surface of the mode. `ColorModeContext` writes it and `reset.css` carries the same values for the first paint. `--brand-accent` keeps its hex.
+
+| Mode | Surface under the tint | Before, `--brand-accent` | After, `--brand-accent-on-soft` |
+| --- | --- | --- | --- |
+| light | card `#ffffff` | `#2d7a2d` 4.54:1 | `#2a712a` 5.11:1 |
+| light | body `#f3f6f5` | 4.19:1 | 4.72:1 |
+| light | muted `#edf2f1` | 4.06:1 | 4.57:1 |
+| dark | worst of four surfaces | `#4caf50` 5.14:1 | `#4caf50` unchanged, 5.14:1 |
+
+These are the unit suite's numbers (`client/tests/contrast.test.ts`, 11 tests). In the browser at 390px, the Home chip "Learn path · quizzes · flashcards" painted `rgb(42, 113, 42)` on `rgba(45, 122, 45, 0.12)` over a white panel in light mode, and `rgb(76, 175, 80)` over `#101c24` in dark mode.
+
+The token replaces the plain accent where main paints accent text or a glyph on the tint: the active nav link, Home's topic tick, chip and level nodes, the sample-question chip, the quiz pills, the Deep End mode-card icon and tick, the current stage node, the identity settings hover, the typing-racer badge, the profile advisor tile and two dev-console states. The Roadmap level node paints a per-topic colour on the tint, not the brand accent, and I left it alone.
+
+### Levels strip
+
+`PathStrip` in `LandingKit.tsx` wraps Home's roadmap-preview strip: `tabIndex={0}`, `role="region"`, and the name `home.pathRegion` ("Learn path for JavaScript" on the default topic). `.ss-scroll-strip` draws the focus ring inset. At 390px in both modes, Tab then ArrowRight scrolled the focused strip 40px and `:focus-visible` matched.
+
+### Axe over whole routes
+
+`tests/browser/routes-axe.spec.ts` scans `/profile`, `/today`, `/leaderboard` and `/challenge` unscoped, with the WCAG 2.2 AA tags, at 390 and 1280px in light and dark mode. The original held dark mode to `/profile` because of two older dark failures; on main all four routes pass in dark, so the spec scans them all. The Quality workflow runs it after `first-load.spec.ts`.
+
+With this branch's client changes reversed onto a fresh build, the spec failed 4 of 4: `scrollable-region-focusable [serious]` on `section[aria-label="Inside JavaScript"] > div:nth-child(5)` at 390px in both modes, no `--brand-accent-on-soft` on the chip, and no `.ss-scroll-strip`. axe did not flag the chip on main, because on a white card it measures 4.54:1; the failing surfaces are body and muted.
+
+### Checks on the final head
+
+In the worktree `ds-wt-port`, preview on :4821. I ran each command below.
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client` | exit 0 each |
+| `npm run test:client` | exit 0; 34 files, 336 tests |
+| `npm run check:unused` | exit 0; no new finding |
+| Build with the Supabase placeholders, then `npm run check:public` and `npm run check:bundle` | exit 0 each; 13 public URLs; 228,035 of 243,000 gzip bytes |
+| Browser specs `public`, `on-accent`, `first-load`, `routes-axe` | exit 0 each; 5, 14, 8 and 4 passed |
+| `npm run check:responsive -- --base-url http://localhost:4821 --routes / --widths 360,768,1280` | exit 0; 3 probes, 0 with issues |
+| `git diff --check` | clean |
+
+Not run: the other browser specs, `test:launch`, the audits and Storybook. Not verified: signed-in routes, Firefox, Safari and physical phones.
