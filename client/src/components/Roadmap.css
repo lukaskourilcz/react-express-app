@@ -246,6 +246,14 @@
 /* Locked topics stay listed so the breadth of the map is visible, but read as
    unavailable through three non-colour cues: dimming, a dashed edge and the
    lock glyph the pill renders inline. */
+/* The progress line under a topic's name. It takes the secondary text token
+   rather than fading the pill's colour with opacity: on the light theme's white
+   an opacity of 0.72 blended the line to #809098, 3.3:1 (P1.8). */
+.rm-topic-progress {
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+}
 .rm-topic-pill[data-locked='true'] {
   opacity: 0.6;
   cursor: not-allowed;
