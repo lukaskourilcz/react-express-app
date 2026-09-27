@@ -46,7 +46,7 @@
 .cd-next__title--error { font-family: var(--font-family-body); font-size: 0.9rem; font-weight: 600; }
 /* Where the title will be while progress loads; still, so reduced motion needs nothing. */
 .cd-next__placeholder { display: inline-block; width: 9ch; height: 0.85em; border-radius: 4px; background: var(--color-border-strong); vertical-align: -0.05em; }
-.cd-next > .ss-swim-cta, .cd-next > .cd-btn { flex: none; }
+.cd-next > .ss-swim-cta, .cd-next > .astryx-button { flex: none; }
 @media (max-width: 860px) {
   .cd-home-head { grid-template-columns: minmax(0, 1fr); }
   .cd-next { width: 100%; }
@@ -340,7 +340,7 @@
 /* Save and report sit at the far end of the row, apart from the task's own actions. */
 .cd-actions--utility { flex-wrap: nowrap; margin-left: auto; }
 @media (min-width: 1024px) {
-  .cd-actions--commands > .cd-btn { flex-shrink: 0; white-space: nowrap; }
+  .cd-actions--commands > .astryx-button { flex-shrink: 0; white-space: nowrap; }
 }
 /* Hints, confirmations and errors, under the code pane. On two columns they
    take the row below it, full width, so the results pane keeps the editor's
@@ -350,38 +350,8 @@
   .cd-pane--controls { grid-row: 2; }
 }
 @media (min-width: 1024px) and (hover: hover) and (pointer: fine) {
-  .cd-workbench .cd-btn { min-height: 32px; padding: 5px 7px; font-size: 0.78rem; line-height: 1.25; }
-  .cd-workbench .cd-btn--icon { width: 32px; padding: 0; flex-shrink: 0; }
   .cd-workbench .ss-swim-cta--sm { --swim-cta-height: 32px; }
 }
-.cd-btn {
-  min-height: 44px;
-  padding: 8px 16px;
-  border-radius: var(--radius-element);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-background-surface);
-  color: var(--color-text-primary);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  text-decoration: none;
-}
-.cd-btn:hover:not(:disabled) { border-color: var(--ss-ink); }
-.cd-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
-.cd-btn:disabled, .cd-btn[aria-disabled='true'] { opacity: 0.55; cursor: not-allowed; }
-/* A control that is unavailable for a reason stays hoverable and focusable so
-   the reason can be read; it just does nothing when pressed. */
-.cd-btn[aria-disabled='true']:hover { background: inherit; }
-.cd-btn--primary { background: var(--brand-accent); border-color: var(--brand-accent); color: var(--brand-on-accent, #fff); }
-.cd-btn--primary:hover:not(:disabled) { filter: brightness(1.05); }
-.cd-btn--quiet { border-color: transparent; background: transparent; }
-.cd-btn--quiet:hover:not(:disabled) { background: var(--color-background-muted); border-color: transparent; }
-.cd-btn--icon { width: 44px; padding: 0; justify-content: center; }
-.cd-btn--flag { color: var(--ss-error); border-color: color-mix(in srgb, var(--ss-error) 32%, transparent); }
-.cd-btn--flag:hover:not(:disabled) { color: var(--ss-error); background: var(--ss-error-soft); border-color: var(--ss-error); }
 .cd-shortcuts { margin: 0; font-size: 0.8rem; color: var(--color-text-secondary); }
 
 .cd-note { margin: 0; padding: 10px 12px; border-radius: var(--radius-inner); background: var(--ss-info-soft); font-size: 0.9rem; line-height: 1.5; }
@@ -697,7 +667,7 @@
 
 /* Keep 10–12 stage controls reachable without pushing the brief below a phone screen. */
 .cd-stage-nav { flex-wrap: nowrap; overflow-x: auto; padding: 4px 2px; }
-.cd-stage-nav .cd-btn { flex: 0 0 auto; min-width: 44px; min-height: 44px; justify-content: center; }
+.cd-stage-nav .astryx-button { flex: 0 0 auto; min-width: 44px; min-height: 44px; justify-content: center; }
 /* Stages under their difficulty: a text label opens each run of stages. */
 .cd-stage-group { display: flex; flex: 0 0 auto; align-items: center; gap: 8px; }
 .cd-stage-group + .cd-stage-group { padding-left: 10px; border-left: 1px solid var(--ss-card-line); }

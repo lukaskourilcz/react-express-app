@@ -118,12 +118,3 @@
   .ss-compare-caption { font-size: var(--ss-type-label); }
 }
 
-/* ── Shared CTA affordance (reuses .ss-link-button look, adds themed focus) ─ */
-.ss-cta {
-  border: none;
-  cursor: pointer;
-}
-.ss-cta:focus-visible {
-  outline: 3px solid var(--ss-focus);
-  outline-offset: 2px;
-}

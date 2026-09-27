@@ -20,6 +20,7 @@
 import { useCallback, useRef, useState, type KeyboardEvent } from 'react';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { PuzzleLine, PuzzleView } from '../../../shared/coding-puzzle';
+import { Button } from '@astryxdesign/core/Button';
 
 export function CodePuzzle({
   puzzle,
@@ -113,30 +114,9 @@ export function CodePuzzle({
       </ol>
 
       <div className="cd-actions">
-        <button
-          type="button"
-          className="cd-btn"
-          disabled={busy || selectedIndex <= 0}
-          onClick={() => selected && move(selected, -1)}
-        >
-          {t('coding.puzzle.up')}
-        </button>
-        <button
-          type="button"
-          className="cd-btn"
-          disabled={busy || selectedIndex < 0 || selectedIndex >= lines.length - 1}
-          onClick={() => selected && move(selected, 1)}
-        >
-          {t('coding.puzzle.down')}
-        </button>
-        <button
-          type="button"
-          className="cd-btn cd-btn--primary"
-          disabled={busy}
-          onClick={() => onSubmit(lines.map((line) => line.id))}
-        >
-          {t('coding.puzzle.check')}
-        </button>
+        <Button variant="secondary" isDisabled={busy || selectedIndex <= 0} onClick={() => selected && move(selected, -1)} label={t('coding.puzzle.up')} />
+        <Button variant="secondary" isDisabled={busy || selectedIndex < 0 || selectedIndex >= lines.length - 1} onClick={() => selected && move(selected, 1)} label={t('coding.puzzle.down')} />
+        <Button variant="primary" isDisabled={busy} onClick={() => onSubmit(lines.map((line) => line.id))} label={t('coding.puzzle.check')} />
       </div>
 
       <p className="cd-shortcuts">{t('coding.puzzle.scope')}</p>

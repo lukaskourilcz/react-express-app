@@ -20,25 +20,6 @@
   white-space: nowrap;
 }
 
-/* Buttons. The Learning Paths stylesheet is not loaded on this route, so the
-   screen carries its own, from the same tokens. */
-.rw-btn {
-  min-height: 44px;
-  padding: 10px 18px;
-  border-radius: var(--radius-element);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-background-surface);
-  color: var(--color-text-primary);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.rw-btn:hover:not(:disabled):not([aria-disabled='true']) { border-color: var(--color-border-accent); }
-.rw-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
-.rw-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.rw-btn[aria-disabled='true'] { color: var(--color-text-secondary); border-style: dashed; }
-.rw-btn--primary { background: var(--brand-accent); border-color: var(--brand-accent); color: var(--brand-on-accent); }
-.rw-btn--quiet { border-color: var(--ss-card-line); background: transparent; }
 
 /* "Premium" as text, never colour alone. */
 .rw-tag {
@@ -150,8 +131,6 @@
 .rw-spend__action { margin-left: auto; }
 
 /* ── invite a friend (#228) ──────────────────────────────────────────── */
-a.rw-btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
-a.rw-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
 .rw-invite__share { display: flex; flex-direction: column; gap: 0.4rem; min-width: 0; }
 .rw-invite__field { display: flex; flex-wrap: wrap; gap: 0.5rem; min-width: 0; }
 .rw-invite__input {
@@ -235,7 +214,7 @@ a.rw-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px
 }
 .rw-merch__price { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem 0.6rem; }
 .rw-merch__price strong { font-variant-numeric: tabular-nums; }
-.rw-merch__coins .rw-btn { align-self: flex-start; }
+.rw-merch__coins .astryx-button { align-self: flex-start; }
 .rw-merch__note { font-size: 0.88rem; }
 
 .rw-checkout {

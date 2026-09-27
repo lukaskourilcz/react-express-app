@@ -274,6 +274,10 @@ dialog.astryx-dialog .astryx-layout-footer {
   box-shadow: inset 0 0 0 1px var(--ss-ring);
 }
 
+/* A locked control (ui/LockedButton): announced as unavailable, still
+   pressable so the press can explain why. It reads as inactive. */
+.ss-locked { opacity: 0.6; }
+
 /* Soft rounded panel with the card background + card-stock anatomy. */
 .ss-panel {
   background: var(--ss-card-bg);

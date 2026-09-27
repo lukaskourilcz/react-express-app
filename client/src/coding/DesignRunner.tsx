@@ -13,6 +13,7 @@ import { difficultyOf, type Localized, type PlayableCodingTask } from '../../../
 import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingVerdictResponse, DesignAnswer } from '../../../shared/coding-api';
 import './Coding.css';
+import { Button } from '@astryxdesign/core/Button';
 
 export interface DesignRunnerProps {
   task: PlayableCodingTask;
@@ -99,10 +100,10 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
 
   const verdictActions = verdict && (
     <div className="cd-verdict__actions">
-      {verdict.verdict !== 'passed' && onRetry && <button type="button" className="cd-btn" onClick={onRetry}>{t('coding.design.tryAgain')}</button>}
-      {verdict.verdict === 'passed' && mode === 'lesson' && onContinue && <button type="button" className="cd-btn cd-btn--primary" onClick={onContinue}>{t('coding.lesson.continue')}</button>}
-      {mode === 'section' && nextHref && <Link className="cd-btn cd-btn--primary" to={nextHref}>{t('coding.verdict.next')}</Link>}
-      {mode === 'section' && backHref && <Link className="cd-btn" to={backHref}>{t('coding.verdict.back')}</Link>}
+      {verdict.verdict !== 'passed' && onRetry && <Button variant="secondary" onClick={onRetry} label={t('coding.design.tryAgain')} />}
+      {verdict.verdict === 'passed' && mode === 'lesson' && onContinue && <Button variant="primary" onClick={onContinue} label={t('coding.lesson.continue')} />}
+      {mode === 'section' && nextHref && <Button variant="primary" as={Link} href={nextHref} label={t('coding.verdict.next')} />}
+      {mode === 'section' && backHref && <Button variant="secondary" as={Link} href={backHref} label={t('coding.verdict.back')} />}
     </div>
   );
 
@@ -189,10 +190,10 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
               ))}
             </RadioCardGroup>
             <div className="cd-design__nav">
-              <button type="button" className="cd-btn" onClick={() => setStepIndex((i) => Math.max(0, i - 1))} disabled={stepIndex === 0}>{t('coding.design.previous')}</button>
+              <Button variant="secondary" onClick={() => setStepIndex((i) => Math.max(0, i - 1))} isDisabled={stepIndex === 0} label={t('coding.design.previous')} />
               {stepIndex < steps.length - 1
-                ? <button type="button" className="cd-btn cd-btn--primary" onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))} disabled={answers[stepIndex] === null}>{t('coding.design.next')}</button>
-                : <button type="button" className="cd-btn cd-btn--primary" onClick={() => void submit()} disabled={!session || submitting || answered < steps.length}>{submitting ? t('coding.submitting') : t('coding.design.submit')}</button>}
+                ? <Button variant="primary" onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))} isDisabled={answers[stepIndex] === null} label={t('coding.design.next')} />
+                : <Button variant="primary" onClick={() => void submit()} isDisabled={!session || submitting || answered < steps.length} label={submitting ? t('coding.submitting') : t('coding.design.submit')} />}
             </div>
           </div>
         )}
@@ -222,15 +223,15 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
                     <li key={original}>
                       <span className="cd-sequence__n">{position + 1}</span>
                       <span>{L(drill.steps![original])}</span>
-                      <button type="button" className="cd-btn cd-btn--quiet" onClick={() => move(position, -1)} disabled={position === 0} aria-label={`${t('coding.design.moveUp')}: ${L(drill.steps![original])}`}>↑</button>
-                      <button type="button" className="cd-btn cd-btn--quiet" onClick={() => move(position, 1)} disabled={position === order.length - 1} aria-label={`${t('coding.design.moveDown')}: ${L(drill.steps![original])}`}>↓</button>
+                      <Button variant="ghost" onClick={() => move(position, -1)} isDisabled={position === 0} label={`${t('coding.design.moveUp')}: ${L(drill.steps![original])}`}>↑</Button>
+                      <Button variant="ghost" onClick={() => move(position, 1)} isDisabled={position === order.length - 1} label={`${t('coding.design.moveDown')}: ${L(drill.steps![original])}`}>↓</Button>
                     </li>
                   ))}
                 </ol>
               </>
             )}
             <div className="cd-design__nav">
-              <button type="button" className="cd-btn cd-btn--primary" onClick={() => void submit()} disabled={!session || submitting || drillAnswer === null}>{submitting ? t('coding.submitting') : t('coding.design.submit')}</button>
+              <Button variant="primary" onClick={() => void submit()} isDisabled={!session || submitting || drillAnswer === null} label={submitting ? t('coding.submitting') : t('coding.design.submit')} />
             </div>
           </div>
         )}

@@ -767,7 +767,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   if (state === 'ready') {
     const labelStyle: CSSProperties = { fontFamily: 'var(--font-family-heading)', fontWeight: 700, fontSize: 'var(--ss-type-compact)' };
-    const linkBtn: CSSProperties = { display: 'inline-flex', alignItems: 'center', minHeight: 44, background: 'none', border: 'none', padding: '4px 2px', color: 'var(--brand-accent)', fontWeight: 600, fontSize: 'var(--ss-type-compact)', cursor: 'pointer', fontFamily: 'var(--font-family-body)' };
     const pill = (on: boolean): CSSProperties => ({
       display: 'inline-flex', alignItems: 'center', gap: 6,
       background: on ? 'var(--brand-accent-soft)' : 'var(--ss-card-bg)',
@@ -793,9 +792,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, position: 'relative' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span id="quiz-categories-label" style={labelStyle}>{t('quiz.categories')}</span>
-              <button type="button" onClick={handleSelectAll} style={linkBtn}>
-                {isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
-              </button>
+              <span className="ss-text-links" style={{ margin: 0 }}>
+                <button type="button" onClick={handleSelectAll}>
+                  {isAllSelected ? t('quiz.deselectAll') : t('quiz.selectAll')}
+                </button>
+              </span>
             </div>
             <div role="group" aria-labelledby="quiz-categories-label" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {displayedCategoryOptions.map((cat) => {
@@ -809,9 +810,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               })}
             </div>
             {hasCollapsedSubset && (
-              <button type="button" onClick={() => setShowAllCategories((v) => !v)} style={{ ...linkBtn, alignSelf: 'flex-start' }}>
-                {showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
-              </button>
+              <span className="ss-text-links" style={{ margin: 0, alignSelf: 'flex-start' }}>
+                <button type="button" onClick={() => setShowAllCategories((v) => !v)}>
+                  {showAllCategories ? t('quiz.showFewer') : t('quiz.showAllCategories')}
+                </button>
+              </span>
             )}
             <div id="categories-error" role="alert" style={{ minHeight: '1.2em', fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-error)' }}>
               {attemptedStart && selectedCategories.length === 0 ? t('quiz.selectAtLeastOne') : ''}
@@ -855,12 +858,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         </div>
 
         {/* Quick entries into the daily challenge — kept as quiet links. */}
-        <div style={{ display: 'flex', gap: 16, justifyContent: 'center', marginTop: 16 }}>
-          <button type="button" onClick={startDailyChallenge} style={linkBtn}>{t('quiz.todaysChallenge')}</button>
+        <div className="ss-text-links" style={{ justifyContent: 'center', marginTop: 16 }}>
+          <button type="button" onClick={startDailyChallenge}>{t('quiz.todaysChallenge')}</button>
           {isAuthenticated && (
-            <button type="button" onClick={() => void startPersonalizedReview()} style={linkBtn}>{t('quiz.reviewWeakAreas')}</button>
+            <button type="button" onClick={() => void startPersonalizedReview()}>{t('quiz.reviewWeakAreas')}</button>
           )}
-          <button type="button" onClick={() => navigate('/challenge')} style={linkBtn}>{t('challenge.cta')}</button>
+          <button type="button" onClick={() => navigate('/challenge')}>{t('challenge.cta')}</button>
         </div>
 
         <AppToast
