@@ -73,6 +73,8 @@ const loadGithubSettings = routeChunk(exact('/settings/github'), () => import('.
 const loadPaths = routeChunk(under('/roadmap/specializations', '/roadmap/paths'), () => import('./components/paths/LearningPathScreens'));
 const loadPremium = routeChunk(exact('/premium'), () => import('./components/PremiumPage'));
 const loadBilling = routeChunk(exact('/premium/success', '/premium/cancel'), () => import('./components/PremiumBillingPages'));
+const loadDaily = routeChunk(under('/daily'), () => import('./components/DailyQuestionPage'));
+const loadChangelog = routeChunk(exact('/changelog'), () => import('./components/ChangelogPage'));
 
 const Home = lazyPage(loadHome);
 const Quiz = lazyPage(loadQuiz);
@@ -106,6 +108,8 @@ const DsaOverview = lazyPage(() => loadPaths().then((m) => ({ default: m.DsaOver
 const DsaModule = lazyPage(() => loadPaths().then((m) => ({ default: m.DsaModule })));
 const NotFoundPage = lazyPage(() => loadPublicInfo().then((m) => ({ default: m.NotFoundPage })));
 const PremiumPage = lazyPage(loadPremium);
+const DailyQuestionPage = lazyPage(loadDaily);
+const ChangelogPage = lazyPage(loadChangelog);
 const PremiumSuccessPage = lazyPage(() => loadBilling().then((m) => ({ default: m.PremiumSuccessPage })));
 const PremiumCancelPage = lazyPage(() => loadBilling().then((m) => ({ default: m.PremiumCancelPage })));
 
@@ -149,6 +153,8 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/premium': 'title.premium',
   '/premium/success': 'title.premiumSuccess',
   '/premium/cancel': 'title.premiumCancel',
+  '/daily': 'title.daily',
+  '/changelog': 'title.changelog',
   '/classroom': 'title.classroom',
   '/dev': 'title.dev',
 };
@@ -435,6 +441,8 @@ function App() {
       ? t(titleKey)
       : location.pathname.startsWith('/play/')
         ? t('title.playMatch')
+        : location.pathname.startsWith('/daily/')
+        ? t('title.daily')
         : location.pathname.startsWith('/coding/')
           ? t('title.coding')
           : t('title.notFound');
@@ -844,6 +852,9 @@ function App() {
                   <Route path="/premium/success" element={<PremiumSuccessPage />} />
                   <Route path="/premium/cancel" element={<PremiumCancelPage />} />
                   <Route path="/curation" element={<CurationPage />} />
+                  <Route path="/daily" element={<DailyQuestionPage />} />
+                  <Route path="/daily/:date" element={<DailyQuestionPage />} />
+                  <Route path="/changelog" element={<ChangelogPage />} />
                   <Route path="/classroom" element={<ClassroomPage />} />
                   <Route path="/topics/:slug" element={<TopicLandingPage />} />
                   <Route path="/cs/topics/:slug" element={<TopicLandingPage />} />

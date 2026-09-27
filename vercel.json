@@ -109,6 +109,22 @@
       "destination": "/premium/cancel/index.html"
     },
     {
+      "source": "/daily",
+      "destination": "/daily/index.html"
+    },
+    {
+      "source": "/daily/:date",
+      "destination": "/daily/:date/index.html"
+    },
+    {
+      "source": "/changelog",
+      "destination": "/changelog/index.html"
+    },
+    {
+      "source": "/coding/:track/:taskId",
+      "destination": "/coding/:track/:taskId/index.html"
+    },
+    {
       "source": "/sitemap.xml",
       "destination": "/sitemap.xml"
     },

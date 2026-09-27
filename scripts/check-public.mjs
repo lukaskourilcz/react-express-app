@@ -5,10 +5,10 @@ import { JSDOM } from 'jsdom';
 const dir = 'client/dist';
 const sitemap = new JSDOM(readFileSync(`${dir}/sitemap.xml`, 'utf8'), { contentType: 'application/xml' });
 const urls = [...sitemap.window.document.querySelectorAll('loc')].map(node => new URL(node.textContent));
-assert.equal(urls.length, 13, 'Home, five guides in two languages, /premium and /premium/cancel');
-// The app pages with public HTML (#222). /premium/success stays out: a Stripe
-// return means nothing to anyone else, and the app marks it noindex.
-const APP_PAGES = ['/premium', '/premium/cancel'];
+assert.equal(urls.length, 15, 'Home, five guides in two languages, /premium, /premium/cancel, /daily and /changelog');
+// The app pages with public HTML (#222, #239). /premium/success stays out: a
+// Stripe return means nothing to anyone else, and the app marks it noindex.
+const APP_PAGES = ['/premium', '/premium/cancel', '/daily', '/changelog'];
 assert.deepEqual(urls.filter(url => APP_PAGES.includes(url.pathname)).map(url => url.pathname), APP_PAGES);
 assert(!urls.some(url => url.pathname.startsWith('/premium/success')), 'the checkout return page is never listed');
 const tiers = readFileSync('shared/tiers.ts', 'utf8');
@@ -36,9 +36,16 @@ for (const url of urls) {
       assert.match(text, /renews automatically/i, `${url}: auto-renewal is stated before purchase`);
       assert.match(text, /lose my 14-day right of withdrawal/, `${url}: the waiver sentence is stated before purchase`);
       assert(doc.querySelector('a[href="/terms"]') && doc.querySelector('a[href="/premium/cancel"]'), `${url}: links to the Terms and the cancellation page`);
-    } else {
+    } else if (url.pathname === '/premium/cancel') {
       assert(!doc.querySelector('#public-schema'), `${url}: no structured data`);
       assert.match(text, /Withdraw from the contract/, `${url}: both options are named without JavaScript`);
+    } else if (url.pathname === '/daily') {
+      assert.equal(doc.querySelector('meta[property="og:image"]').getAttribute('content'), 'https://devshark.app/og/daily.png');
+      assert(existsSync(`${dir}/og/daily.png`), '/daily has its share image');
+      assert(!doc.querySelector('[role="radio"], .ss-radio-card'), '/daily holds no question in its HTML');
+    } else {
+      assert.match(text, /25 September 2026/, '/changelog lists the freemium entry');
+      assert.match(text, /devShark is freemium/, '/changelog names the freemium change');
     }
     continue;
   }
@@ -54,7 +61,32 @@ for (const url of urls) {
   assert(doc.querySelector('pre code'), `${url}: the guide carries its code example`);
   assert.equal(doc.querySelector('.ss-topic-cta').getAttribute('href').startsWith('/quiz?category='), true);
 }
+// #239: every coding task and every day in the window has its own head and
+// share image, and none of those pages carries a question, an answer or a
+// solution.
+const index = readFileSync('shared/coding-index.ts', 'utf8');
+const tasks = [...index.matchAll(/\{"id":"([^"]+)","track":"([^"]+)"/g)].map(([, id, track]) => ({ id, track }));
+assert(tasks.length > 700, 'the coding index was read');
+const free = tasks.filter(({ id }) => new RegExp(`"id":"${id}"[^\n]*"free":true`).test(index)).length;
+for (const { id, track } of tasks) {
+  const file = path.join(dir, 'coding', track, id, 'index.html');
+  assert(existsSync(file), `${id} has its page head`);
+  const html = readFileSync(file, 'utf8');
+  assert(html.includes(`<meta property="og:image" content="https://devshark.app/og/coding/${id}.png" />`), `${id}: its own og:image`);
+  assert(html.includes(`${free} of ${tasks.length} coding tasks are free`), `${id}: the free count comes from the catalogue`);
+  assert(!/solution|expected|hiddenTests/i.test(html.slice(html.indexOf('<div id="root">'))), `${id}: no task body in the HTML`);
+  assert(existsSync(path.join(dir, 'og', 'coding', `${id}.png`)), `${id}: its image exists`);
+}
+const days = readdirSync(`${dir}/daily`).filter((name) => /^\d{4}-\d{2}-\d{2}$/.test(name));
+assert(days.length >= 30, 'the question of the day has dated pages');
+for (const day of days) {
+  const html = readFileSync(`${dir}/daily/${day}/index.html`, 'utf8');
+  assert(html.includes(`content="https://devshark.app/og/daily/${day}.png"`), `${day}: its own og:image`);
+  assert(existsSync(`${dir}/og/daily/${day}.png`), `${day}: its image exists`);
+  assert(!/ss-radio-card|correctAnswer|explanation/.test(html), `${day}: no question in the HTML`);
+}
+assert(existsSync(`${dir}/404.html`), 'a missing page still opens the app');
 assert(readFileSync(`${dir}/robots.txt`, 'utf8').includes(`Sitemap: ${urls[0].origin}/sitemap.xml`));
 assert(!existsSync(`${dir}/mockServiceWorker.js`), 'Mocks must never ship with the app');
 assert(!readdirSync(`${dir}/assets`).some(file => /storybook|mocks|\.stories\./i.test(file)));
-console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content and the Premium terms.`);
+console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content, the Premium terms, ${tasks.length} coding share pages and ${days.length} question-of-the-day pages.`);

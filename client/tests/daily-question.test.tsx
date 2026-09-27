@@ -1,0 +1,157 @@
+// The public question of the day (#239) and the changelog. Invented question
+// fixtures; the wire shapes are the real ones.
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { LanguageProvider } from '../src/i18n/LanguageContext';
+import DailyQuestionPage from '../src/components/DailyQuestionPage';
+import ChangelogPage from '../src/components/ChangelogPage';
+import { en } from '../src/i18n/translations';
+import { addDays, qotdTrack, utcToday } from '../../shared/daily-question';
+import { server } from './mocks/server';
+
+const analytics = vi.hoisted(() => ({ capture: vi.fn() }));
+vi.mock('../src/lib/analytics', async (importOriginal) => ({ ...(await importOriginal<object>()), capture: analytics.capture }));
+
+const today = utcToday();
+const trackName = (date: string) => en[`category.${qotdTrack(date)}` as keyof typeof en];
+const QUESTION = {
+  date: today,
+  track: qotdTrack(today),
+  sessionId: 'sealed-session',
+  question: { id: 'q-1', question: 'Which value does `typeof null` return?', options: ['"null"', '"object"', '"undefined"', '"number"'], category: qotdTrack(today), difficulty: 2 },
+};
+
+function renderAt(path: string) {
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  return render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[path]}>
+        <LanguageProvider>
+          <Routes>
+            <Route path="/daily" element={<DailyQuestionPage />} />
+            <Route path="/daily/:date" element={<DailyQuestionPage />} />
+            <Route path="/changelog" element={<ChangelogPage />} />
+          </Routes>
+        </LanguageProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
+
+const clipboard = { writeText: vi.fn(async (_text: string) => undefined) };
+beforeEach(() => {
+  Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard });
+  clipboard.writeText.mockClear();
+  analytics.capture.mockClear();
+});
+
+describe('/daily', () => {
+  it('shows the day’s question, checks one answer on the server and records nothing', async () => {
+    const asked: string[] = [];
+    const sent: unknown[] = [];
+    server.use(
+      http.get('*/api/quiz/daily', ({ request }) => {
+        asked.push(new URL(request.url).search);
+        return HttpResponse.json(QUESTION);
+      }),
+      http.post('*/api/quiz/submit', async ({ request }) => {
+        sent.push(await request.json());
+        return HttpResponse.json({
+          totalQuestions: 1, correctAnswers: 1, percentage: 100, questXp: 2,
+          results: [{ questionId: 'q-1', selectedIndex: 1, correctAnswer: 1, isCorrect: true, explanation: 'typeof null is "object", a historical quirk.' }],
+        });
+      }),
+    );
+    renderAt('/daily');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`${trackName(today)} question of the day`);
+    const options = await screen.findAllByRole('radio');
+    expect(options).toHaveLength(4);
+    expect(asked).toEqual(['?qotd=today']);
+    const check = screen.getByRole('button', { name: 'Check answer' });
+    expect(check).toBeDisabled();
+    fireEvent.click(options[1]);
+    fireEvent.click(check);
+    expect(await screen.findByText('Right answer')).toBeInTheDocument();
+    expect(screen.getByText('typeof null is "object", a historical quirk.')).toBeInTheDocument();
+    expect(sent).toEqual([{ sessionId: 'sealed-session', answers: { 'q-1': 1 }, lang: 'en' }]);
+    expect(screen.getByRole('radio', { name: /"object", correct answer/ })).toBeDisabled();
+    expect(screen.getByRole('link', { name: `Practice ${trackName(today)} questions` })).toHaveAttribute('href', `/quiz?category=${qotdTrack(today)}`);
+    expect(screen.getByText(/nothing is recorded/)).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Share this question' }));
+    await waitFor(() => expect(clipboard.writeText).toHaveBeenCalledWith(`${window.location.origin}/daily/${today}`));
+    expect(analytics.capture).toHaveBeenCalledWith('share_initiated', { kind: 'daily_question', source: 'daily', method: 'copy' });
+    expect(await screen.findByText('Link copied.')).toBeInTheDocument();
+  });
+
+  it('marks a wrong pick in words, not colour alone', async () => {
+    server.use(
+      http.get('*/api/quiz/daily', () => HttpResponse.json(QUESTION)),
+      http.post('*/api/quiz/submit', () => HttpResponse.json({
+        totalQuestions: 1, correctAnswers: 0, percentage: 0, questXp: 0,
+        results: [{ questionId: 'q-1', selectedIndex: 0, correctAnswer: 1, isCorrect: false, explanation: 'It is "object".' }],
+      })),
+    );
+    renderAt('/daily');
+    fireEvent.click((await screen.findAllByRole('radio'))[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
+    expect(await screen.findByText('Not this one')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /"null", your answer/ })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /"object", correct answer/ })).toBeInTheDocument();
+  });
+
+  it('does not ask the server for a day that has not come yet', () => {
+    const tomorrow = addDays(today, 1);
+    renderAt(`/daily/${tomorrow}`);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(`${trackName(tomorrow)} question of the day`);
+    expect(screen.getByText(/is not out yet/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Today’s question' })).toHaveAttribute('href', '/daily');
+  });
+
+  it('says there is no question for a date that is not one', () => {
+    renderAt('/daily/not-a-date');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Question of the day');
+    expect(screen.getByText('There is no question of the day for that date.')).toBeInTheDocument();
+  });
+
+  it('offers to load the question again when its session has expired', async () => {
+    let reads = 0;
+    server.use(
+      http.get('*/api/quiz/daily', () => { reads++; return HttpResponse.json(QUESTION); }),
+      http.post('*/api/quiz/submit', () => HttpResponse.json({ error: { code: 'invalid_session', message: 'Quiz session expired or invalid' } }, { status: 400 })),
+    );
+    renderAt('/daily');
+    fireEvent.click((await screen.findAllByRole('radio'))[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Load it again' }));
+    await waitFor(() => expect(reads).toBe(2));
+  });
+
+  it('shows an alert with Retry when the question cannot load', async () => {
+    let reads = 0;
+    server.use(http.get('*/api/quiz/daily', () => { reads++; return HttpResponse.json({ error: { code: 'db_error', message: 'x' } }, { status: 500 }); }));
+    renderAt('/daily');
+    // One quiet retry for a server error, then the alert.
+    expect(await screen.findByText('The question could not load. Try again in a moment.', undefined, { timeout: 5000 })).toBeInTheDocument();
+    const before = reads;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await waitFor(() => expect(reads).toBeGreaterThan(before));
+  });
+});
+
+describe('/changelog', () => {
+  it('lists dated entries, newest first, with the freemium launch', () => {
+    renderAt('/changelog');
+    expect(screen.getByRole('heading', { level: 1, name: 'What changed' })).toBeInTheDocument();
+    const days = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
+    expect(days[days.length - 1]).toBe('25 September 2026');
+    expect(days).toEqual([...days].sort((a, b) => Date.parse(b!) - Date.parse(a!)));
+    const freemium = screen.getByRole('heading', { level: 3, name: 'devShark is freemium' }).closest('li')!;
+    expect(within(freemium).getByText(/€3\.99 a month or €39\.99 a year, VAT included/)).toBeInTheDocument();
+    expect(within(freemium).getByRole('link', { name: 'See what Premium opens' })).toHaveAttribute('href', '/premium');
+    expect(screen.getByRole('heading', { level: 3, name: 'A question of the day' })).toBeInTheDocument();
+  });
+});

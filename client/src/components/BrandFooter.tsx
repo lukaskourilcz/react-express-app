@@ -40,6 +40,8 @@ export default function BrandFooter() {
           {/* The plans and prices; /support redirects here since #222. */}
           <Link to="/premium">{t('nav.premium')}</Link>
           <Link to="/curation">{t('footer.curation')}</Link>
+          {/* Dated notes on what changed (#239). */}
+          <Link to="/changelog">{t('footer.changelog')}</Link>
           <Link to="/privacy">{t('footer.privacy')}</Link>
           <Link to="/terms">{t('footer.terms')}</Link>
           {billing.known && billing.cancellable && <Link to="/premium/cancel">{t('footer.cancelPremium')}</Link>}

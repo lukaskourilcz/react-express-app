@@ -1,4 +1,4 @@
-import { readdirSync } from 'node:fs';
+import { existsSync, readdirSync } from 'node:fs';
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { defineConfig, loadEnv, type Plugin } from 'vite';
@@ -12,12 +12,32 @@ import { TopicArticle, topicPath } from './src/components/topics/TopicArticle';
 import { PUBLIC_ORIGIN, PUBLIC_PAGES, premiumSchema, topicSchema } from './src/lib/publicMetadata';
 import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 import { PremiumCancelStaticArticle, PremiumStaticArticle, type Translate } from './src/components/PremiumFacts';
-import { en } from './src/i18n/translations';
+import { en, type TranslationKey } from './src/i18n/translations';
 import { MERCH_SKUS } from '../shared/rewards';
+import { ChangelogArticle } from './src/components/ChangelogArticle';
+import { DailyStaticArticle } from './src/components/DailyStaticArticle';
+import { writeOgCard } from './src/og/ogImages';
+import { CODING_INDEX } from '../shared/coding-index';
+import { freeCodingCounts } from '../shared/tiers';
+import { addDays, qotdImagePath, qotdPath, qotdTrack, utcToday, QOTD_EPOCH } from '../shared/daily-question';
 
 /** The English dictionary for the static pages, with the app's {name} slots. */
 const translate: Translate = (key, vars) => en[key].replace(/\{(\w+)\}/g, (slot, name: string) => (vars && name in vars ? String(vars[name]) : slot));
-const STATIC_PAGE_BODIES = { '/premium': PremiumStaticArticle, '/premium/cancel': PremiumCancelStaticArticle } as const;
+const STATIC_PAGE_BODIES = {
+  '/premium': PremiumStaticArticle,
+  '/premium/cancel': PremiumCancelStaticArticle,
+  '/daily': DailyStaticArticle,
+  '/changelog': ChangelogArticle,
+} as const;
+/** Share images the build draws (src/og/ogImages.ts), by page. */
+const STATIC_PAGE_IMAGES: Partial<Record<keyof typeof STATIC_PAGE_BODIES, string>> = { '/daily': '/og/daily.png' };
+/** Dated question-of-the-day pages with their own head and share image: the
+ * last 120 days and the next 45, rebuilt on every deploy. An older or later
+ * date still opens in the app, through 404.html, with the generic head. */
+const QOTD_PAST_DAYS = 120;
+const QOTD_FUTURE_DAYS = 45;
+const dailyDateLabel = (iso: string) =>
+  new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso}T12:00:00Z`));
 
 // `ANALYZE=true npm run build` emits a treemap of the bundle to
 // dist/bundle-stats.html (open it to inspect the design-system/router/app split) plus a
@@ -159,6 +179,11 @@ function productMetadata(env: Record<string, string>): Plugin {
         const [pathname, search] = (req.url || '').split('?');
         if (/^\/(?:cs\/)?topics\/[a-z0-9-]+\/?$/.test(pathname) || /^\/premium(?:\/cancel)?\/?$/.test(pathname)) {
           req.url = `${pathname.replace(/\/$/, '')}/index.html${search ? `?${search}` : ''}`;
+        } else if (/^\/(?:daily(?:\/\d{4}-\d{2}-\d{2})?|changelog|coding\/[a-z-]+\/[a-z0-9-]+)\/?$/.test(pathname)) {
+          // #239: only when the build wrote that page, as on Vercel; any
+          // other path falls through to the app.
+          const file = `${pathname.replace(/\/$/, '')}/index.html`;
+          if (existsSync(path.join(outDir, file))) req.url = `${file}${search ? `?${search}` : ''}`;
         }
         next();
       });
@@ -175,6 +200,24 @@ function productMetadata(env: Record<string, string>): Plugin {
       const origin = PUBLIC_ORIGIN;
       const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
       const urls = [`${origin}/`];
+      /** The shell with one page's og:image (absolute) and its size and alt. */
+      const withImage = (html: string, image: string | null, alt: string) => image
+        ? html
+          .replace(/(<meta (?:property|name)="(?:og:image|twitter:image)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(image) + end)
+          .replace('</head>', `<meta property="og:image:alt" content="${escape(alt)}" /></head>`)
+        : html;
+      /** The shell with a page's own title, description, canonical URL and image. */
+      const pageHead = (html: string, page: { title: string; description: string; url: string; image: string; imageAlt: string }) =>
+        withImage(html, page.image, page.imageAlt)
+          .replace(/<title>[^<]*<\/title>/, `<title>${escape(page.title)}</title>`)
+          .replace(/(<meta (?:name|property)="(?:description|og:description|twitter:description)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(page.description) + end)
+          .replace(/(<meta (?:name|property)="(?:og:title|twitter:title)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(page.title) + end)
+          .replace('</head>', `<link rel="canonical" href="${page.url}" /><meta property="og:url" content="${page.url}" /></head>`);
+      const writePage = async (pagePath: string, html: string) => {
+        const dir = path.join(outDir, pagePath);
+        await mkdir(dir, { recursive: true });
+        await writeFile(path.join(dir, 'index.html'), html);
+      };
       for (const topic of topics) for (const locale of ['en', 'cs'] as const) {
         const topicTitle = `${topic.title[locale]} · ${product.brand}`;
         const description = topic.description[locale];
@@ -205,8 +248,10 @@ function productMetadata(env: Record<string, string>): Plugin {
         const schema = page.schema === 'premium'
           ? `<script id="public-schema" type="application/ld+json">${JSON.stringify(premiumSchema(pageTitle, description, url)).replace(/</g, '\\u003c')}</script>`
           : '';
-        const body = renderToStaticMarkup(createElement(STATIC_PAGE_BODIES[page.path], { t: translate }));
-        const html = indexHtml
+        const body = renderToStaticMarkup(createElement(STATIC_PAGE_BODIES[page.path] as (props: { t: Translate }) => ReturnType<typeof PremiumStaticArticle>, { t: translate }));
+        const image = STATIC_PAGE_IMAGES[page.path];
+        if (image) await writeOgCard(path.join(outDir, image), { kind: 'daily-home' });
+        const html = withImage(indexHtml, image ? origin + image : null, pageTitle)
           .replace(/<title>[^<]*<\/title>/, `<title>${escape(pageTitle)}</title>`)
           .replace(/(<meta (?:name|property)="(?:description|og:description|twitter:description)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(description) + end)
           .replace(/(<meta (?:name|property)="(?:og:title|twitter:title)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(pageTitle) + end)
@@ -217,6 +262,49 @@ function productMetadata(env: Record<string, string>): Plugin {
         await writeFile(path.join(pageDir, 'index.html'), html);
         urls.push(url);
       }
+      // #239: a page head and a share image for every coding task, so a shared
+      // task link previews that task. Only the head differs from the app
+      // shell; the body is the app, with a line for a visitor without
+      // JavaScript. Not in the sitemap: the pages are the app itself.
+      const coding = freeCodingCounts(CODING_INDEX.map((task) => task.id));
+      let drawn = 0;
+      for (const task of CODING_INDEX) {
+        const track = en[`coding.track.${task.track}` as TranslationKey] ?? task.track;
+        const difficulty = en[`coding.difficulty.${task.difficulty}` as TranslationKey] ?? task.difficulty;
+        const pagePath = `/coding/${task.track}/${task.id}`;
+        const image = `/og/coding/${task.id}.png`;
+        const pageTitle = `${task.title.en} · ${track} coding challenge · ${product.brand}`;
+        const description = `A ${difficulty.toLowerCase()} ${track} coding challenge on ${product.brand}, graded on the server. ${coding.free} of ${coding.total} coding tasks are free.`;
+        if ((await writeOgCard(path.join(outDir, image), {
+          kind: 'coding', title: task.title.en, track, difficulty, free: task.free === true, freeCount: coding.free, totalCount: coding.total,
+        })) === 'drawn') drawn++;
+        await writePage(pagePath, pageHead(indexHtml, { title: pageTitle, description, url: origin + pagePath, image: origin + image, imageAlt: `${task.title.en}: ${track}, ${difficulty}` })
+          .replace('<div id="root"></div>', `<div id="root"><noscript><main class="ss-public-fallback ss-info-page"><h1>${escape(task.title.en)}</h1><p>${escape(description)}</p></main></noscript></div>`));
+      }
+      // #239: the question of the day, one page head and image per day. The
+      // head names the day and its track; the question itself comes from
+      // the server when the page runs, so no question or answer is here.
+      const today = utcToday();
+      const first = [addDays(today, -QOTD_PAST_DAYS), QOTD_EPOCH].sort()[1];
+      let days = 0;
+      for (let date = first; date <= addDays(today, QOTD_FUTURE_DAYS); date = addDays(date, 1)) {
+        const track = en[`category.${qotdTrack(date)}` as TranslationKey];
+        const dateLabel = dailyDateLabel(date);
+        const pagePath = qotdPath(date);
+        const pageTitle = `${translate('daily.title', { track })}, ${dateLabel} · ${product.brand}`;
+        const description = en['daily.description'];
+        const image = qotdImagePath(date);
+        if ((await writeOgCard(path.join(outDir, image), { kind: 'daily', track, dateLabel })) === 'drawn') drawn++;
+        const body = renderToStaticMarkup(createElement(DailyStaticArticle, { t: translate, track, dateLabel, date }));
+        await writePage(pagePath, pageHead(indexHtml, { title: pageTitle, description, url: origin + pagePath, image: origin + image, imageAlt: `${track} question of the day, ${dateLabel}` })
+          .replace('<div id="root"></div>', `<div id="root"><main class="ss-public-fallback">${body}</main></div>`));
+        days++;
+      }
+      this.info(`share pages: ${CODING_INDEX.length} coding tasks, ${days} days of the question of the day, ${drawn} images drawn (the rest from cache)`);
+      // Any path the rewrites send to a page the build did not write (an old
+      // day, a retired task) still opens the app, which routes it.
+      await writeFile(path.join(outDir, '404.html'), indexHtml);
+
       const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug, 'en')}">${escape(topic.title.en)}</a></li>`).join('')}</ul></main>`;
       await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root"><noscript>${fallback}</noscript></div>`));
       await writeFile(path.join(outDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(url => `<url><loc>${url}</loc></url>`).join('')}</urlset>`);

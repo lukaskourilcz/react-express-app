@@ -1,0 +1,46 @@
+/* /daily (#239). It sits on the public info-page layout (.ss-info-page,
+   .ss-info-card, .ss-info-actions in app-shell.css). */
+.ss-daily { max-width: 760px; }
+.ss-daily__date { font-weight: 700; color: var(--color-text-primary) !important; }
+.ss-daily__card { display: flex; flex-direction: column; gap: 1rem; }
+.ss-daily__meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.ss-daily__question { font-size: 1.1rem; line-height: 1.55; overflow-wrap: anywhere; }
+.ss-daily__question pre { max-width: 100%; overflow-x: auto; }
+.ss-daily__options { display: flex; flex-direction: column; gap: 0.5rem; }
+.ss-daily__option { display: flex; align-items: center; gap: 0.75rem; min-height: 28px; text-align: left; }
+.ss-daily__option-key {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  border-radius: var(--radius-inner);
+  background: var(--color-background-muted);
+  font-size: var(--ss-type-meta);
+  font-weight: 700;
+}
+.ss-daily__option-mark {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--ss-type-meta);
+  font-weight: 700;
+}
+.ss-radio-card.ss-daily__option--wrong {
+  border-color: var(--ss-error);
+  background: var(--ss-error-soft);
+  color: var(--ss-error);
+}
+.ss-daily__result { display: flex; flex-direction: column; gap: 0.75rem; }
+.ss-daily__status { margin: 0; min-height: 1.4em; font-size: 0.9rem; color: var(--color-text-secondary); overflow-wrap: anywhere; }
+.ss-daily__note, .ss-daily__next { margin: 0; font-size: 0.9rem; color: var(--color-text-secondary); }
+.ss-daily__sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .ss-daily .ss-info-actions > * { flex: 1 1 100%; }
+}
