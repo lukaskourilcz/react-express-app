@@ -191,6 +191,14 @@
    nothing changes; a longer one fades the page back so the click visibly took.
    !important because the route box's entrance fade writes an inline opacity.
    Reduced motion keeps the delay and drops the fade. */
+/* Motion's features chunk did not load (lib/motion.tsx marks <html>): no `m`
+   element leaves its `initial` style, so each shows as its animation ends.
+   `:where()` keeps the rule at one attribute's weight, so the busy fade below
+   still wins on the route box. */
+:where(:root[data-motion='off']) [data-m] {
+  opacity: 1 !important;
+  transform: none !important;
+}
 .ss-route[aria-busy='true'] {
   opacity: 0.55 !important;
   transition: opacity var(--ss-motion-feedback) ease-out 200ms;
