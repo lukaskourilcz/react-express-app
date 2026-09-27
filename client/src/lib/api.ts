@@ -76,7 +76,7 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
       // Locked content, in one place: whatever asked, the learner sees the
       // upgrade sheet rather than an error, even from a stale client.
       if (res.status === 402 && body?.error?.code === PREMIUM_REQUIRED) {
-        openUpgradeSheet({ kind: body.error.kind, ref: body.error.ref });
+        openUpgradeSheet({ kind: body.error.kind, ref: body.error.ref, fromResponse: true });
       }
       throw new ApiError(
         body?.error?.message || res.statusText || 'Request failed',

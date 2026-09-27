@@ -11,7 +11,7 @@ import { ShellPartBoundary } from '../src/components/ShellPartBoundary';
 import { lazyShellPart, type BuildCheck, type Recovery } from '../src/lib/routeRecovery';
 import { reportError } from '../src/lib/sentry';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
-import { closeUpgradeSheet, openUpgradeSheet } from '../src/lib/upgradeSheet';
+import { closeUpgradeSheet, openUpgradeSheet, takeUpgradeResume } from '../src/lib/upgradeSheet';
 import UpgradeSheetHost from '../src/components/UpgradeSheetHost';
 
 vi.mock('../src/lib/sentry', () => ({ reportError: vi.fn(), initSentry: vi.fn() }));
@@ -136,19 +136,21 @@ describe('a shell part whose code did not load', () => {
 });
 
 describe('the upgrade sheet', () => {
-  async function mountHost() {
+  async function mountHost(recovery: Recovery = fakeRecovery()) {
+    let unmount = () => undefined as void;
     await act(async () => {
-      render(
+      ({ unmount } = render(
         <QueryClientProvider client={new QueryClient()}>
           <MemoryRouter>
             <LanguageProvider>
               <main>the page</main>
-              <UpgradeSheetHost />
+              <UpgradeSheetHost recovery={recovery} />
             </LanguageProvider>
           </MemoryRouter>
         </QueryClientProvider>,
-      );
+      ));
     });
+    return unmount;
   }
 
   it('closes when its code does not load and says so, and opens on the next request', async () => {
@@ -162,5 +164,65 @@ describe('the upgrade sheet', () => {
     sheet.fails = false;
     await act(async () => openUpgradeSheet({ kind: 'learn-level', ref: 'react:13' }));
     expect(await screen.findByRole('dialog', { name: 'Premium opens this' })).toBeInTheDocument();
+  });
+
+  // Chromium up to 155 and Safari answer a second import of a failed module
+  // from memory, so asking again in place fails at once without a request.
+  it('reloads on a press that meets the failure again, and the next document opens the sheet', async () => {
+    sheet.fails = true;
+    const recovery = fakeRecovery();
+    const unmount = await mountHost(recovery);
+    await act(async () => openUpgradeSheet({ kind: 'coding-task', ref: 'js-double-numbers' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Network error.');
+    expect(recovery.reload).not.toHaveBeenCalled();
+
+    await act(async () => openUpgradeSheet({ kind: 'coding-task', ref: 'js-double-numbers' }));
+    await vi.waitFor(() => expect(recovery.reload).toHaveBeenCalledTimes(1));
+    expect(JSON.parse(window.sessionStorage.getItem('devshark:upgrade-resume') ?? '{}')).toMatchObject({ kind: 'coding-task', ref: 'js-double-numbers' });
+
+    // The next document: the sheet's code loads, and the sheet opens by itself.
+    unmount();
+    sheet.fails = false;
+    await mountHost();
+    expect(await screen.findByRole('dialog', { name: 'Premium opens this' })).toBeInTheDocument();
+    expect(window.sessionStorage.getItem('devshark:upgrade-resume')).toBeNull();
+  });
+
+  it('never reloads for a 402 nobody pressed for', async () => {
+    sheet.fails = true;
+    const recovery = fakeRecovery();
+    await mountHost(recovery);
+    await act(async () => openUpgradeSheet({ kind: 'coding-task', ref: 'a', fromResponse: true }));
+    await screen.findByRole('alert');
+    await act(async () => openUpgradeSheet({ kind: 'coding-task', ref: 'a', fromResponse: true }));
+    await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    expect(recovery.checkServedBuild).not.toHaveBeenCalled();
+    expect(recovery.reload).not.toHaveBeenCalled();
+    expect(window.sessionStorage.getItem('devshark:upgrade-resume')).toBeNull();
+  });
+
+  it('does not reload while the server does not answer, and says why', async () => {
+    sheet.fails = true;
+    const recovery = fakeRecovery('unreachable');
+    await mountHost(recovery);
+    await act(async () => openUpgradeSheet({}));
+    await screen.findByRole('alert');
+    await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Dismiss' })));
+    await act(async () => openUpgradeSheet({}));
+    await vi.waitFor(() => expect(recovery.checkServedBuild).toHaveBeenCalledTimes(1));
+    expect(recovery.reload).not.toHaveBeenCalled();
+    expect(await screen.findByRole('alert')).toHaveTextContent('Network error.');
+    expect(window.sessionStorage.getItem('devshark:upgrade-resume')).toBeNull();
+  });
+
+  it('ignores a stale or foreign mark', async () => {
+    sheet.fails = false;
+    window.sessionStorage.setItem('devshark:upgrade-resume', JSON.stringify({ kind: 'coding-task', at: Date.now() - 61_000 }));
+    await mountHost();
+    await act(() => new Promise((resolve) => setTimeout(resolve, 20)));
+    expect(screen.queryByRole('dialog')).toBeNull();
+    expect(takeUpgradeResume()).toBeNull();
+    window.sessionStorage.setItem('devshark:upgrade-resume', JSON.stringify({ kind: 'not-a-kind', ref: 7, at: Date.now() }));
+    expect(takeUpgradeResume()).toEqual({ kind: undefined, ref: undefined });
   });
 });
