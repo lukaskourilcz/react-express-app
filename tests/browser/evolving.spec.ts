@@ -34,7 +34,16 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     await page.screenshot({path:info.outputPath('mobile-pending.png')});
     await page.setViewportSize({width:1440,height:900});
     const source=solutionFor(first)!.solution;
-    await page.locator('.cm-content').fill(source);
+    // Focus the editor and wait until CodeMirror has taken the focus (the
+    // cm-focused class) before filling. CodeMirror handles a focus 10 ms
+    // later and writes its own caret into the page; right after the resize
+    // that write could land after fill's select-all, and the solution went in
+    // at the caret, in front of the starter, which then shadowed it.
+    const editor=page.locator('.cm-content');
+    await editor.focus();
+    await expect(page.locator('.cm-editor')).toHaveClass(/\bcm-focused\b/);
+    await editor.fill(source);
+    await expect(editor).not.toContainText('return <main />');
     const run=page.getByRole('button',{name:lang==='en'?'Run':'Spustit',exact:true});
     await run.click();
     await expect(page.getByRole('tab',{name:/1\/1/})).toBeVisible({timeout:25_000});
