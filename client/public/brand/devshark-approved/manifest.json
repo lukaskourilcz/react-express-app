@@ -1,0 +1,139 @@
+{
+  "brand": "devShark",
+  "revision": "one-wave-cutout",
+  "source": "https://drive.google.com/drive/folders/1MzQq-m41ZiqW5ttw6aB7UjsTm8N7JZMt",
+  "sourceArchiveId": "1Pc34JrU5pQAiT0zU_F0_fMXanJJ16LvA",
+  "retrieved": "2026-09-27",
+  "files": [
+    {
+      "file": "favicon-16.png",
+      "bytes": 250,
+      "sha256": "51467be35afa54ea5248759e45da32bc916421734ae28a55e3619cb76bde163f"
+    },
+    {
+      "file": "favicon-180.png",
+      "bytes": 2024,
+      "sha256": "3957ec33570bc3af945a1730d188b4157fe58bd31b43dce018e1a4c76fbe444a"
+    },
+    {
+      "file": "favicon-192.png",
+      "bytes": 2117,
+      "sha256": "bb33218aba8b150a92ed8d2adea148f8550e96a0ed8e67a03402ada848796f51"
+    },
+    {
+      "file": "favicon-32.png",
+      "bytes": 418,
+      "sha256": "227918dc5d0ec796d0d2292cf4c80a02bd2f628c7b5b06e0554a7dba50aa8a32"
+    },
+    {
+      "file": "favicon-48.png",
+      "bytes": 558,
+      "sha256": "b4ba38a2a613fa4242f5ff89ee74c1f53ec99e0b4283c9793b63702f18cf9cbf"
+    },
+    {
+      "file": "favicon-512.png",
+      "bytes": 7001,
+      "sha256": "a84f1f0e77716f8410f5fd9fdd6b5e9514f5033932258bd910cac809ad3382a2"
+    },
+    {
+      "file": "favicon.ico",
+      "bytes": 1280,
+      "sha256": "c08d8ac4e15e36e7525ebaa4db2448b3b5b7405933b8f170236f19c40f12861d"
+    },
+    {
+      "file": "favicon.svg",
+      "bytes": 281,
+      "sha256": "e39176b61eb2b9632a24d71c0d07942ff8d42319ef71cf58d8d0218b63d93eeb"
+    },
+    {
+      "file": "fin-clean-green.svg",
+      "bytes": 277,
+      "sha256": "15d59fa7e9f50b4a340d5ed94552acc91b3b69c019a625fe8753e38b4674882a"
+    },
+    {
+      "file": "fin-clean-ink.svg",
+      "bytes": 277,
+      "sha256": "35c6428f629502f3d9e695d837a0a1242dc998dba8ce587cd71cd33b9705e88c"
+    },
+    {
+      "file": "fin-clean-white.svg",
+      "bytes": 277,
+      "sha256": "a589c3489e132da43d3f173e414f456ebdf442c135b63efebed731b8d99164c9"
+    },
+    {
+      "file": "fin-waves-green.svg",
+      "bytes": 583,
+      "sha256": "764e29282c11274e32a176a9702f896f91a370beaab73c6a87ea7a5a883266ce"
+    },
+    {
+      "file": "fin-waves-ink.svg",
+      "bytes": 583,
+      "sha256": "11f334c1eebaec60999db51ff5cb97ffb89afc561ffbc146efaec3af2b07b7ee"
+    },
+    {
+      "file": "fin-waves-white.svg",
+      "bytes": 583,
+      "sha256": "643752eb149a94178b72391b7232dbde38e24b0f7ac7ad47ef170dc3f6ab3463"
+    },
+    {
+      "file": "logo-clean-green.png",
+      "bytes": 49454,
+      "sha256": "23bb1f3fd4788f0b4f87ec6f219a8f9b36aa20c426b005acfbf5f2efe9fa26f5"
+    },
+    {
+      "file": "logo-clean-green.svg",
+      "bytes": 10959,
+      "sha256": "c4a6401af5ac4966fc708a1692378ad6463b602ef5a9957685cce1a1489ff20f"
+    },
+    {
+      "file": "logo-clean-ink.png",
+      "bytes": 49898,
+      "sha256": "73446b78aebf1871defe87f74c9a16ee4f3355e7325d471df82e69c64ce0a9b8"
+    },
+    {
+      "file": "logo-clean-ink.svg",
+      "bytes": 10959,
+      "sha256": "db3e9b0bea42af2a0cc347deb8409c5429f43f720a61cf4644ba5f78e5f39b2e"
+    },
+    {
+      "file": "logo-clean-white.png",
+      "bytes": 37951,
+      "sha256": "6dc0e0c6e7f2b4267ae379b599ea9467ce685911cb36a883ca8ba1344d16d1a8"
+    },
+    {
+      "file": "logo-clean-white.svg",
+      "bytes": 10959,
+      "sha256": "763240867d400c3ff1cd652314fb0fdb8c01a799379e08a90c057c283b66401e"
+    },
+    {
+      "file": "logo-waves-green.png",
+      "bytes": 55104,
+      "sha256": "36fec3e173f2bbcf75f1f01e9a8376990912b58e98f5bce8d33b00ef931a08bd"
+    },
+    {
+      "file": "logo-waves-green.svg",
+      "bytes": 11265,
+      "sha256": "2c6e7f235d7060b83f6a9bf9f2fb217118877d60b10af55e8ba909ac36608580"
+    },
+    {
+      "file": "logo-waves-ink.png",
+      "bytes": 55630,
+      "sha256": "8c890a4415a23398786310663820dd81f55943475f1cad2d1fee82354d0cf1dc"
+    },
+    {
+      "file": "logo-waves-ink.svg",
+      "bytes": 11265,
+      "sha256": "88029a2c6f16c85b9c76f2a0b5fc855b733cdc658819a2e9105955b6cf547fe0"
+    },
+    {
+      "file": "logo-waves-white.png",
+      "bytes": 42490,
+      "sha256": "1b8d791789739313e8932caaf034ca6f45fb4ed90be44ea0493508afbff5e723"
+    },
+    {
+      "file": "logo-waves-white.svg",
+      "bytes": 11265,
+      "sha256": "3841b178862f044a17845fd86aec319fdbc99e88505e457f19309cb38800082d"
+    }
+  ]
+}
