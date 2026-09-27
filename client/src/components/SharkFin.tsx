@@ -1,54 +1,55 @@
 import { useId, useState, type CSSProperties } from 'react';
 import { generateWaterline } from '../lib/waveBank';
+import { FIN_BODY, FIN_MIRROR, FIN_WAVE_CUT, FIN_WAVE_LINE, FIN_WAVE_STROKE } from './brandGeometry';
 
 // devShark branding flourish: a dorsal-fin glyph, plus an animated "swimming"
-// variant used in the header wordmark and the loading screen. Animations respect
+// variant for page headers, the footer ocean and the loading screen. The
+// header logo itself is BrandLogo. Animations respect
 // prefers-reduced-motion (they freeze for users who opt out of motion).
 
 interface FinProps {
-  /** Glyph size in px (square). */
+  /** Glyph size in px (square, a 24-unit box). */
   size?: number;
   /** Fill colour; defaults to brand green. */
   color?: string;
-  /** Cut the base into a wave, so the fin breaks the surface. Only the logo in
-   * the navigation uses it: every other fin keeps a straight base on y=18,
-   * which reads cleanly on waterlines, cards and buttons. */
+  /** Cut the base into the brand wave and draw the wave line under it
+   * (devshark-fin-wave). Every other fin is the clean fin (devshark-fin-clean),
+   * with a straight base on y=18 that reads cleanly on waterlines, cards and
+   * buttons. The wave line reaches 2.35 units past the right edge of the box,
+   * as it does in the kit, so the wave variant draws with visible overflow. */
   wave?: boolean;
 }
 
 // The swim/cruise/wake keyframes live in styles/app-shell.css (one static
 // copy) — previously each mount injected its own duplicate <style> tag.
 
-// The fin sweeps back to a hooked tip. `flat` sits on a straight base at y=18;
-// `wave` cuts the same base into a wave around that line for the logo.
-// favicon.svg repeats the logo's paths.
-const FIN_PATHS = {
-  flat: {
-    body: 'M2.4 18 C 4.5 11.4 9.5 4.1 18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Z',
-    shade: 'M18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 L 16.9 18 C 14.3 14.2 13.6 7.2 18 2.1 Z',
-  },
-  wave: {
-    body: 'M2.4 18 C 4.5 11.4 9.5 4.1 18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Q 19.25 15.5 16.9 18 T 12.2 18 T 7.5 18 T 2.4 18 Z',
-    shade: 'M18 2.1 C 15.2 6.1 15.4 12.2 21.6 18 Q 19.25 15.5 16.9 18 C 14.3 14.2 13.6 7.2 18 2.1 Z',
-  },
-} as const;
-
-/** A static dorsal shark fin. `aria-hidden` — it's decorative. */
+/**
+ * A static dorsal shark fin with the V9 geometry from the brand kit
+ * (client/public/brand/v9/recommended/devshark-fin-*.svg), copied path for
+ * path including the mirror transform: the tip points left and the fin swims
+ * right. `aria-hidden`: it's decorative.
+ */
 export function SharkFin({ size = 22, color = 'var(--brand-accent)', wave = false }: FinProps) {
-  const paths = wave ? FIN_PATHS.wave : FIN_PATHS.flat;
+  const clipId = `devshark-fin-cut-${useId().replace(/:/g, '')}`;
+  if (!wave) {
+    return (
+      <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" style={{ fill: color }}>
+        <path d={FIN_BODY} transform={FIN_MIRROR} />
+      </svg>
+    );
+  }
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true" focusable="false">
-      <path d={paths.body} style={{ fill: color }} />
-      {/* subtle inner shading down the trailing edge */}
-      <path d={paths.shade} fill="#000" opacity="0.12" />
+    <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" focusable="false" style={{ fill: color, color, overflow: 'visible' }}>
+      <defs><clipPath id={clipId}><path d={FIN_WAVE_CUT} /></clipPath></defs>
+      <g clipPath={`url(#${clipId})`}><path d={FIN_BODY} transform={FIN_MIRROR} /></g>
+      <path d={FIN_WAVE_LINE} fill="none" stroke="currentColor" strokeWidth={FIN_WAVE_STROKE} strokeLinecap="round" />
     </svg>
   );
 }
 
 /**
- * A fin that gently bobs and tilts as if cutting through water. Used inline next
- * to the wordmark. Tiny, looping, and calm so it reads as a flourish, not a
- * distraction.
+ * A fin that gently bobs and tilts as if cutting through water. Tiny, looping,
+ * and calm so it reads as a flourish, not a distraction.
  */
 export function SwimmingFin({ size = 22, color = 'var(--brand-accent)', wave = false }: FinProps) {
   return (

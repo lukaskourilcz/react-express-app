@@ -7,7 +7,8 @@ import { AppToast } from './components/ui/AppToast';
 import { useIsMobile } from './lib/useMediaQuery';
 import './styles/app-shell.css';
 import LoadingScreen from './components/LoadingScreen';
-import { SharkFin, SwimmingFin, Waterline } from './components/SharkFin';
+import { SwimmingFin, Waterline } from './components/SharkFin';
+import BrandLogo from './components/BrandLogo';
 import { useT, useLanguage } from './i18n/LanguageContext';
 import { preferredLanguageOf } from './lib/languagePref';
 import { preferredTrackOf } from './lib/trackPref';
@@ -223,8 +224,9 @@ const RouteLoader = () => {
   return <LoadingScreen label={t('common.loading')} size={28} tips={localizedDevTips(config.devTips, lang)} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
-// The header brand: the fin and the devShark wordmark, in the accent. The
-// logo is the one place the fin's base is cut into a wave.
+// The header brand: the V9 compact logo (fin with its wave, then the
+// wordmark), 22px tall, in the accent. BrandLogo documents the size and
+// clear-space rules; .ss-header-brand keeps 16px free around it on phones.
 function HeaderBrand() {
   const subject = useActiveSubject();
   const t = useT();
@@ -232,11 +234,10 @@ function HeaderBrand() {
     <Link
       to="/"
       aria-label={t('nav.home', { brand: CURRENT_PRODUCT.brand })}
-      className="ss-drawer-brand"
-      style={{ padding: 0, color: subject.accent }}
+      className="ss-header-brand"
+      style={{ color: subject.accent }}
     >
-      <SwimmingFin size={22} wave />
-      {CURRENT_PRODUCT.brand}
+      <BrandLogo height={22} />
     </Link>
   );
 }
@@ -693,11 +694,11 @@ function App() {
               </button>
               <Link
                 to="/"
+                aria-label={t('nav.home', { brand: CURRENT_PRODUCT.brand })}
                 className="ss-drawer-brand"
                 style={{ color: activeSubject.accent }}
               >
-                <SharkFin size={22} wave />
-                {CURRENT_PRODUCT.brand}
+                <BrandLogo height={20} />
               </Link>
               <div style={{ height: 1, background: 'var(--color-border)' }} />
               <div style={{ padding: 8, display: 'flex', flexDirection: 'column', gap: 2 }}>

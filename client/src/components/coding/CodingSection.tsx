@@ -51,6 +51,7 @@ import { RELOAD_GRACE_MS, isChunkLoadError, reloadOnPress } from '../../lib/rout
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { codingContent, gatedRef } from '../../../../shared/tiers';
 import '../../coding/Coding.css';
+import BrandCase from '../BrandCase';
 
 type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'due' | 'locked' | 'premium';
 
@@ -375,7 +376,7 @@ export function CodingHome() {
     <div className="cd-page cd-discovery ss-pop">
       <div className="cd-home-head">
         <header>
-          <Kicker>{t('coding.kicker')}</Kicker>
+          <Kicker><BrandCase text={t('coding.kicker')} /></Kicker>
           <h1>{t('coding.title')}</h1>
           <p className="cd-lead">{t('coding.subtitle')}</p>
         </header>
@@ -537,7 +538,7 @@ export function CodingTrackScreen() {
   return (
     <div className="cd-page ss-pop">
       <header>
-        <Kicker>{t('coding.kicker')} · <Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
+        <Kicker><BrandCase text={t('coding.kicker')} /> · <Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
         <h1>{t(`coding.track.${track}` as never)}</h1>
         <p className="cd-lead">{t(`coding.trackBlurb.${track}` as never)}</p>
         <div style={{ marginTop: 12, maxWidth: 420 }}>

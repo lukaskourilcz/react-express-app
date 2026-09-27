@@ -18,7 +18,7 @@ export function TopicArticle({ topic, locale, brand, related, onPractice }: {
       <a href={topicPath(topic.slug, 'en')} hrefLang="en" lang="en" aria-current={locale === 'en' ? 'page' : undefined}>English</a>
       <a href={topicPath(topic.slug, 'cs')} hrefLang="cs" lang="cs" aria-current={locale === 'cs' ? 'page' : undefined}>Česky</a>
     </nav>
-    <header className="ss-info-page__header"><span className="ss-info-page__kicker">{brand} · {copy.kicker}</span><h1>{topic.title[locale]}</h1><p>{topic.description[locale]}</p></header>
+    <header className="ss-info-page__header"><span className="ss-info-page__kicker"><span className="ss-brand-name">{brand}</span> · {copy.kicker}</span><h1>{topic.title[locale]}</h1><p>{topic.description[locale]}</p></header>
     {topic.explanation && <section><h2>{copy.example}</h2><p>{topic.explanation[locale]}</p>{topic.example && <pre tabIndex={0} aria-label={copy.example}><code>{topic.example}</code></pre>}{topic.reference && <a href={topic.reference}>{copy.reference}</a>}</section>}
     <section><h2>{copy.misconception}</h2><p>{topic.misconception[locale]}</p></section>
     <section><h2>{copy.practice}</h2>{topic.practice[locale].map(([question, answer], index) => <details key={question} className="topic-practice"><summary>{index + 1}. {question}</summary><p>{answer}</p></details>)}</section>

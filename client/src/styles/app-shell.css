@@ -219,16 +219,30 @@
 }
 
 /* Drawer brand header. */
+/* The logo in the mobile menu: 20px tall with 16px of clear space. */
 .ss-drawer-brand {
   display: flex;
   align-items: center;
-  gap: 6px;
   padding: 16px;
-  font-family: var(--font-family-heading);
-  font-weight: 800;
-  font-size: 1.1rem;
   text-decoration: none;
 }
+/* The header logo (BrandLogo, 22px tall). Below the nav breakpoint it sits
+   after the menu button: 4px of the button's margin plus 12px here, and 8px
+   plus the toolbar's 8px gap on the right, keep 16px free on both sides; the
+   56px toolbar leaves 17px above and below. */
+.ss-header-brand {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+  border-radius: 6px;
+}
+@media (max-width: 1023.98px) {
+  .ss-header-brand { margin-inline: 12px 8px; }
+}
+/* The product name keeps its spelling inside uppercase labels (kickers):
+   devShark, never DEVSHARK. */
+.ss-brand-name { text-transform: none; }
 
 /* Footer fin sideways drift (reduced-motion aware). */
 @keyframes ssFinDrift {

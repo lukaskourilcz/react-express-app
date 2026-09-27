@@ -29,7 +29,9 @@ export function finHoverStyle(animation: FinHoverAnimation): CSSProperties {
     '--fin-size': `${size}px`,
     '--fin-duration': `${motion === 'fade' ? Math.round(duration * 0.45) : duration}ms`,
     '--fin-position': `${swim ? 0 : position}%`,
-    '--fin-flip': direction === 1 ? -1 : 1,
+    // The V9 fin faces right (tip left, swept back), so a fin travelling
+    // right draws unmirrored and one travelling left is flipped.
+    '--fin-flip': direction,
     '--fin-from-x': swim ? (direction === 1 ? '-40%' : '115%') : motion === 'diagonal' ? `${direction * -30}%` : '0%',
     '--fin-to-x': swim ? (direction === 1 ? '45%' : '10%') : motion === 'dive' ? `${direction * 25}%` : '0%',
     '--fin-from-y': motion === 'rise' || motion === 'diagonal' ? '100%' : '0%',

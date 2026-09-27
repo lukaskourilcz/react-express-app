@@ -12,9 +12,11 @@ In ANY hover effect that reveals a shark fin — ghost-fin backgrounds,
 swim-through fins, fade-in fins — the fin's **visual base must TOUCH the bottom
 edge of its container**, never float above it.
 
-The fin glyph (a swept-back fin in a 24-unit box, from `SharkFin.tsx`) has a
-straight base on `y=18`, so **25% of the box is empty below the base**. Only the
-navigation logo cuts that base into a wave (`wave`), around the same line. To make the base ride the bottom edge, sink the fin downward by
+The fin glyph (the V9 clean fin in a 24-unit box, from `SharkFin.tsx`) has a
+straight base on `y=18`, so **25% of the box is empty below the base**. Its tip
+points left, so the fin faces right: mirror it (`scaleX(-1)`) only when it
+travels left. The wave cut belongs to the logo (`BrandLogo.tsx`) and the
+standalone `SharkFin wave` symbol. To make the base ride the bottom edge, sink the fin downward by
 `size × 0.25`:
 
 - a `58px` fin needs `bottom: -15px` (58 × 0.25 ≈ 14.5)
@@ -122,7 +124,10 @@ plain clickable cards; don't combine it with a fin-school hover.)
 
 ## 7. Reuse the brand primitives
 
-- Fin glyph / swimming fin / waterline: `client/src/components/SharkFin.tsx`.
+- Logo: `client/src/components/BrandLogo.tsx` (the V9 compact logo in
+  `currentColor`). Fin glyph / swimming fin / waterline:
+  `client/src/components/SharkFin.tsx`. Both read the kit geometry from
+  `brandGeometry.ts`; never redraw the fin. See `docs/brand/brand-guidelines.md`.
 - Kicker + waterline tick: the `<Kicker>` component (`landing/LandingKit.tsx`),
   which applies `.ss-kicker` and one of the eight waves. The rule is
   `<WaterlineRule>` from the same file.

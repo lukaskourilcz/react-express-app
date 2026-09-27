@@ -73,7 +73,8 @@ function TopicCard({
       </span>
       {/* The card's fin school gliding across the waterline. */}
       {topic.fins.map((f: FinSpec, i) => {
-        const flip = f.dir === 1 ? -1 : 1;
+        // The V9 fin faces right: mirror it only when it travels left.
+        const flip = f.dir;
         const rock = f.rock && hover ? ` rotate(${f.dir * -4}deg)` : '';
         return (
           <span
@@ -237,7 +238,7 @@ export default function Home() {
       {/* ── Hero ── */}
       <section aria-label={t('home.introAria')} className="ss-hero-grid">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>
-          <Kicker>{brand} · {t('home.freeForever')}</Kicker>
+          <Kicker><span className="ss-brand-name">{brand}</span> · {t('home.freeForever')}</Kicker>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'var(--ss-type-display)', lineHeight: 1.06, letterSpacing: '-0.02em' }}>
             {heroTitle}
           </h1>

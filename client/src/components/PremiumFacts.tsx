@@ -10,6 +10,7 @@ import type { ReactNode } from 'react';
 import type { TranslationKey } from '../i18n/translations';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../shared/tiers';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
+import BrandCase from './BrandCase';
 
 export type Translate = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 /** Renders one link: a router link in the app, a plain anchor in static HTML. */
@@ -79,7 +80,7 @@ export function PremiumStaticArticle({ t }: { t: Translate }) {
   return (
     <article className="ss-info-page ss-premium-page">
       <header className="ss-info-page__header">
-        <span className="ss-info-page__kicker">{t('billing.kicker')}</span>
+        <span className="ss-info-page__kicker"><BrandCase text={t('billing.kicker')} /></span>
         <h1>{t('premium.page.title', vars)}</h1>
         <p>{t('premium.page.lead')}</p>
       </header>
@@ -102,7 +103,7 @@ export function PremiumCancelStaticArticle({ t }: { t: Translate }) {
   return (
     <article className="ss-info-page">
       <header className="ss-info-page__header">
-        <span className="ss-info-page__kicker">{t('billing.kicker')}</span>
+        <span className="ss-info-page__kicker"><BrandCase text={t('billing.kicker')} /></span>
         <h1>{t('billing.cancel.title')}</h1>
         <p>{t('billing.cancel.lead')}</p>
       </header>

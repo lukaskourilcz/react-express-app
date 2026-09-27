@@ -16,6 +16,7 @@ import { WaterlineProgress, SwimmingShark } from './SharkFin';
 import { readJSON, writeJSON } from '../lib/storage';
 import { FlagIcon } from './ui/icons';
 import './TypingRacer.css';
+import BrandCase from './BrandCase';
 
 const GATE = 95; // accuracy % required to score (the gate)
 const STAR_T2 = 35; // WPM that earns a 2nd star
@@ -206,7 +207,7 @@ export default function TypingRacer() {
 
   const header = (
     <header style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      <Kicker>{t('typing.kicker')}</Kicker>
+      <Kicker><BrandCase text={t('typing.kicker')} /></Kicker>
       <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'clamp(1.9rem, 4vw, 2.4rem)', letterSpacing: '-0.02em' }}>
         {t('typing.title')}
       </h1>

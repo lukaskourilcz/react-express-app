@@ -6,10 +6,10 @@ devShark is a developer-learning product with one subject, `webdev`, and the onl
 
 ## Identity
 
-- Mark: a swept-back fin with a hooked tip. In the logo (the navigation brand in the header and the mobile menu) its base is cut into a wave so it sits in the water: `<SharkFin wave />`, and `client/public/favicon.svg` repeats those paths. Every other fin on the page keeps a straight base, the `SharkFin` default. `SharkFin` (`client/src/components/SharkFin.tsx`) holds both sets of paths. Use these deterministic SVG primitives; do not redraw the fin elsewhere.
+- Mark: the V9 kit in `client/public/brand/v9/` (rules in `docs/brand/brand-guidelines.md`). The header and the mobile menu show the compact logo, `BrandLogo` (`client/src/components/BrandLogo.tsx`): the fin with its wave and the outlined wordmark, in `currentColor`. Every other fin is the clean fin, `SharkFin` (`client/src/components/SharkFin.tsx`), whose `wave` prop draws the standalone fin-wave symbol. The favicon and app icons are the clean fin. All of them copy the kit paths from `brandGeometry.ts`; do not redraw the fin.
 - Neutrals: ocean ink, off-white paper, muted blue-green surfaces.
 - Surface: restrained grain, hairline edge, tactile bottom edge, quiet shadow.
-- Typography: Manrope for editorial headings, Inter for reading/UI/code metadata with system fallbacks.
+- Typography: Manrope for editorial headings, Inter for reading/UI/code metadata with system fallbacks. The logo's lettering is outlines, so it needs no font.
 - Accent: the one devShark accent, read through `var(--brand-accent)`, plus semantic feedback colors.
 - Image language: flat editorial plates, measured linework, authentic interface/data.
 

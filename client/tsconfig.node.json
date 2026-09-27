@@ -21,6 +21,7 @@
     "src/components/topics/TopicArticle.tsx",
     "src/lib/publicMetadata.ts",
     "src/components/PremiumFacts.tsx",
+    "src/components/BrandCase.tsx",
     "src/i18n/translations.ts",
     "../shared/**/*.ts"
   ]
