@@ -313,7 +313,12 @@ async function main(): Promise<void> {
     check(brokenLog.some((one) => one.type === 'compile-error' && one.token === brokenToken), 'a syntax error produced no `compile-error`');
     check(!brokenLog.some((one) => one.type === 'test'), 'a file that does not compile still ran cases');
 
-    // 6. A component that throws while rendering reports `preview-error`.
+    // 6. A component that throws while rendering reports `preview-error`. The
+    //    preview renders through createRoot after the frame has said `done`, so
+    //    the error lands a moment later (compiled > done > preview-error), and
+    //    the app keeps a run current after `done` to receive it
+    //    (useReactHarness). Wait for it the same way: reading the log the
+    //    instant `done` lands raced the render.
     await reset();
     const throwToken = 'tok-throw';
     await send({
@@ -323,9 +328,15 @@ async function main(): Promise<void> {
       preview: true,
       tests: false,
     });
-    const throwLog = await settled(throwToken);
-    check(throwLog.some((one) => one.type === 'preview-error'), 'a component that throws produced no `preview-error`');
-    check((throwLog.find((one) => one.type === 'done') as { ran: boolean } | undefined)?.ran === false, 'a preview-only run reported itself as having run tests');
+    await settled(throwToken);
+    const throwLog = await waitFor(
+      log,
+      (entries) => entries.some((one) => one.type === 'preview-error' && one.token === throwToken),
+      `preview-error for ${throwToken}`,
+      5_000,
+    ).catch(() => log());
+    check(throwLog.some((one) => one.type === 'preview-error' && one.token === throwToken), 'a component that throws produced no `preview-error`');
+    check((throwLog.find((one) => one.type === 'done' && one.token === throwToken) as { ran: boolean } | undefined)?.ran === false, 'a preview-only run reported itself as having run tests');
 
     // 7. `fetch` is the stub: the fixture answers, and no request leaves the frame.
     await reset();
