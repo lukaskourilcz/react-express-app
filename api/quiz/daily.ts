@@ -1,13 +1,13 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { encodeSession, stableAttemptId } from '../../lib/quiz-tokens';
 import { localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-runtime';
-import { createHash } from 'node:crypto';
 import { jsonError, withRequestContext } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
 import { AuthError, tryAuth } from '../../lib/auth';
+import { handleQuestionOfTheDay, seededShuffle } from '../../lib/daily-question';
 
 // Daily challenge: deterministic per-UTC-date selection (one question per
 // difficulty bucket). Same set for every user on the same day, so leaderboards
@@ -19,24 +19,14 @@ function dateString(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-// Deterministic seeded shuffle so the same date always yields the same order.
-function seededShuffle<T>(arr: T[], seed: string): T[] {
-  const out = [...arr];
-  const hash = createHash('sha256').update(seed).digest();
-  let cursor = 0;
-  for (let i = out.length - 1; i > 0; i--) {
-    if (cursor >= hash.length) cursor = 0;
-    const j = hash[cursor++] % (i + 1);
-    [out[i], out[j]] = [out[j], out[i]];
-  }
-  return out;
-}
-
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  // The public question of the day (#239) shares this function so the
+  // handler count stays at twelve: GET /api/quiz/daily?qotd=<date|today>.
+  if (req.query.qotd !== undefined) return handleQuestionOfTheDay(req, res);
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
 
   const dailyCount = (await getGameSettings()).daily.count;

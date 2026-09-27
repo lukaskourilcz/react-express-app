@@ -20,7 +20,7 @@ const fromB64url = (value: string): Buffer => Buffer.from(value, 'base64url');
 interface SessionPayload {
   kind: 'quiz-session';
   questions: { questionId: string; correctAnswer: number }[];
-  scope?: 'challenge' | 'daily' | 'roadmap' | 'assessment';
+  scope?: 'challenge' | 'daily' | 'roadmap' | 'assessment' | 'qotd';
   runId?: string;
   subject?: ScopeSubjectId;
   date?: string;
@@ -214,6 +214,9 @@ type SessionContext =
   | { subject: ScopeSubjectId }
   | { scope: 'challenge'; runId: string; subject: ScopeSubjectId; attemptId?: string }
   | { scope: 'daily'; date: string; subject: ScopeSubjectId; attemptId?: string }
+  // The public question of the day (#239): practice only, graded as if
+  // signed out, whoever sends it.
+  | { scope: 'qotd'; date: string; subject: ScopeSubjectId }
   | { scope: 'assessment'; subject: ScopeSubjectId }
   | {
       scope: 'roadmap';
@@ -229,7 +232,7 @@ type SessionContext =
 
 export interface DecodedQuizSession {
   questions: { questionId: string; correctAnswer: number }[];
-  scope?: 'challenge' | 'daily' | 'roadmap' | 'assessment';
+  scope?: 'challenge' | 'daily' | 'roadmap' | 'assessment' | 'qotd';
   runId?: string;
   subject?: ScopeSubjectId;
   date?: string;
@@ -271,6 +274,10 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
   if (payload.scope === 'daily') {
     if (!payload.subject || typeof payload.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) return null;
     return { ...base, scope: 'daily', date: payload.date };
+  }
+  if (payload.scope === 'qotd') {
+    if (!payload.subject || typeof payload.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date) || payload.questions.length !== 1) return null;
+    return { ...base, scope: 'qotd', date: payload.date };
   }
   if (payload.scope === 'assessment') {
     if (!payload.subject) return null;

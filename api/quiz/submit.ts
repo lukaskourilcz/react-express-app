@@ -156,13 +156,17 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'invalid_session', 'Quiz session belongs to another product deployment');
   }
 
-  let auth;
+  let signedIn;
   try {
-    auth = await tryAuth(req);
+    signedIn = await tryAuth(req);
   } catch (error) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
   }
+  // The public question of the day (#239) is practice: it is graded as if
+  // signed out, so it mints no receipt, XP, streak day or review record for
+  // anyone.
+  const auth = session.scope === 'qotd' ? null : signedIn;
   const canonicalAnswers = [...validated].sort((a, b) => a.questionId.localeCompare(b.questionId));
   const answerHash = createHash('sha256').update(JSON.stringify(canonicalAnswers)).digest('hex');
   const gradeKey = session.scope === 'challenge'
@@ -204,7 +208,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       correctAnswer: sessionQ?.correctAnswer ?? -1,
       isCorrect,
       explanation: q ? localizeQuestion(q, lang).explanation : '',
-      answerProof: sessionQ ? encodeAnswerProof(questionId, subject, isCorrect) : undefined,
+      answerProof: sessionQ && session.scope !== 'qotd' ? encodeAnswerProof(questionId, subject, isCorrect) : undefined,
     };
     return session.scope === 'challenge' && session.runId && sessionQ
       ? { ...result, scoreProof: encodeScoreProof(session.runId, questionId, subject, isCorrect) }

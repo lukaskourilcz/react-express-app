@@ -54,6 +54,11 @@ import { buildLiveTopic, liveAvailability, MIN_LEVEL_QUESTIONS, unavailableParts
 import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRanges } from '../shared/progression';
 import { eligibilityFrom, registryEntryConsistent, type RegistryEntry } from '../shared/curation';
 import submitHandler from '../api/quiz/submit';
+import dailyHandler from '../api/quiz/daily';
+import { pickQuestionOfTheDay } from '../lib/daily-question';
+import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
+import { CODING_INDEX } from '../shared/coding-index';
+import { freeCodingCounts } from '../shared/tiers';
 import { encodePlacementRun } from '../lib/quiz-tokens';
 import {
   itemClaim,
@@ -1808,6 +1813,66 @@ function erasureContracts() {
   }
 }
 
+/** The public question of the day (#239): a track a day from served, deep
+ * pools; the same question for the same date; no answer before a check; a
+ * check that records nothing for anyone; and no question before its day. */
+async function qotdContracts() {
+  const served = await getEffectiveQuestions('webdev', false);
+  const deliverable = new Set(deliveryCategories('webdev'));
+  for (const track of QOTD_TRACKS) {
+    assert.ok(deliverable.has(track), `${track} is served`);
+    assert.ok(served.filter((q) => q.category === track).length >= 40, `${track} has a deep enough pool for a question a day`);
+  }
+  const cycle = Array.from({ length: QOTD_TRACKS.length }, (_, day) => qotdTrack(addDays(QOTD_EPOCH, day)));
+  assert.equal(new Set(cycle).size, QOTD_TRACKS.length, 'every track comes up once per cycle');
+  assert.equal(qotdTrack(addDays(QOTD_EPOCH, QOTD_TRACKS.length)), qotdTrack(QOTD_EPOCH));
+  assert.equal(qotdAvailability(addDays(utcToday(), 1)), 'not-yet');
+  assert.equal(qotdAvailability(addDays(QOTD_EPOCH, -1)), 'before-start');
+
+  const date = addDays(QOTD_EPOCH, 3);
+  const picked = pickQuestionOfTheDay(served, date);
+  assert.ok(picked, 'a day has a question');
+  assert.deepEqual(pickQuestionOfTheDay(served, date), picked, 'the same date gives the same question and order');
+  assert.equal(picked!.track, qotdTrack(date));
+  assert.equal(picked!.question.category, picked!.track);
+  const original = served.find((q) => q.id === picked!.question.id)!;
+  assert.equal(picked!.question.options[picked!.correctAnswer], original.options[original.correctAnswer], 'the sealed index follows the shuffle');
+
+  const today = mockResponse();
+  await dailyHandler({ method: 'GET', headers: {}, query: { qotd: 'today' } } as never, today as never);
+  assert.equal(today.statusCode, 200, JSON.stringify(today.body));
+  const body = today.body as { date: string; track: string; sessionId: string; question: { id: string; options: string[] } };
+  assert.equal(body.date, utcToday());
+  const wire = JSON.stringify({ ...body, sessionId: '' });
+  assert.doesNotMatch(wire, /correctAnswer|explanation/, 'no answer or explanation before a check');
+  assert.match(today.headers.get('cache-control') ?? '', /private/, 'the sealed session stays out of shared caches');
+
+  const future = mockResponse();
+  await dailyHandler({ method: 'GET', headers: {}, query: { qotd: addDays(utcToday(), 1) } } as never, future as never);
+  assert.equal(future.statusCode, 404, 'tomorrow is not readable today');
+  const garbage = mockResponse();
+  await dailyHandler({ method: 'GET', headers: {}, query: { qotd: '2026-02-30' } } as never, garbage as never);
+  assert.equal(garbage.statusCode, 400);
+
+  // Checked by a signed-in learner, it is still practice: no receipt, no proof.
+  const check = mockResponse();
+  await submitHandler({
+    method: 'POST', headers: { authorization: 'Bearer contract' }, query: {},
+    body: { sessionId: body.sessionId, answers: { [body.question.id]: 0 }, user_id: 'qotd-contract-learner' },
+  } as never, check as never);
+  assert.equal(check.statusCode, 200, JSON.stringify(check.body));
+  const checked = check.body as { resultReceipt?: string; results: { correctAnswer: number; explanation: string; answerProof?: string }[] };
+  assert.equal(checked.resultReceipt, undefined, 'a question of the day mints no receipt, so no XP, streak or leaderboard entry');
+  assert.equal(checked.results[0].answerProof, undefined);
+  assert.ok(checked.results[0].explanation.length > 0, 'the check explains the answer');
+  assert.match(readFileSync(join(process.cwd(), 'api/quiz/submit.ts'), 'utf8'), /const auth = session\.scope === 'qotd' \? null : signedIn;/);
+
+  // The share images' count is the tier rule over the catalogue.
+  const counts = freeCodingCounts(CODING_INDEX.map((task) => task.id));
+  assert.equal(counts.total, CODING_INDEX.length);
+  assert.equal(counts.free, CODING_INDEX.filter((task) => task.free === true).length);
+}
+
 async function main() {
   assert.equal(apiFiles(join(process.cwd(), 'api')).length, 12, 'Vercel function budget must remain exactly 12');
 
@@ -3365,9 +3430,10 @@ async function main() {
   await merchContracts();
   erasureContracts();
   await voucherContracts();
+  await qotdContracts();
   await webdevBankContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, and the webdev-bank contract BoardlessAI imports.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
 }
 
 void main().catch((error) => {

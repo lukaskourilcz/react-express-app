@@ -207,6 +207,13 @@ export function isFreeCodingTask(taskId: string): boolean {
   return stage !== null && stage.stage <= FREE_EVOLVING_STAGES;
 }
 
+/** How many of these coding tasks the free tier opens, and of how many: the
+ * "116 of 770 tasks free" that share images and copy print (#239). Pass the
+ * catalogue's ids; the count is this module's rule, not a stored number. */
+export function freeCodingCounts(taskIds: readonly string[]): { free: number; total: number } {
+  return { free: taskIds.filter(isFreeCodingTask).length, total: taskIds.length };
+}
+
 const learnLevelTier = (topic: string, level: number): Tier => {
   if ((FREE_LEARN_TOPICS as readonly string[]).includes(topic)) return 'free';
   const openUpTo = FREE_LEARN_LEVELS[topic];
