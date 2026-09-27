@@ -1894,7 +1894,10 @@ The same mechanism hit the first load of every page: each drew its footer under 
 | `a264cea` | Merge of `origin/main` at `d2d9085` (documentation only) |
 | `d902d8c` | The first-frame rule in `DESIGN_RULES.md` §8 |
 | `b4747a0` | Merge of `origin/main` at `3a8cf13` (ERRBOUND). Three conflicts, each resolved by keeping both sides, main's first: the spec list in `quality.yml`, the two rules in §8, and the comment above the route `Suspense` in `App.tsx`. The code merged without conflict: `RouteErrorBoundary` wraps the routes inside the keyed box, and the footer follows the box inside the `Suspense`, outside `RouteErrorBoundary` |
-| this commit | This record |
+| `6624e8a` | This record |
+| `fec41e4` | The CLS item in `NEEDED.md`, marked done |
+| `a659c59` | Merge of `origin/main` at `f4e7cbb`, which changes `scripts/test-harness.ts` only; no conflict |
+| this commit | The checks on `a659c59` |
 
 Nothing hides the page or waits for the load event. The skip link, the route focus, the loader for a slow first page, reduced motion, both themes and the waterline clearance work as before, and the final layout of `/` is identical: header 57px (61px on the phone), `<main>` from there down, footer at 3,417px (5,347px). ERRBOUND's hand-off lists a failed `AuthButton` chunk as reaching the root screen; a signed-out visitor no longer requests that chunk, and a session still does.
 
@@ -1919,14 +1922,16 @@ Lighthouse 13.4.1 against `vite preview` of builds made with `VITE_PRODUCT=devsh
 | --- | --- | --- |
 | `3a8cf13` (`origin/main`) | desktop (`--preset=desktop`) | 0.979, 0.979, 0.979, 0.979, 0.979 |
 | `3a8cf13` | phone | 0, 0, 0, 0, 0. A sixth run, saved with its trace, is the one described above: the shift happened and Lighthouse dropped it |
+| `3a8cf13`, again with the container quieter | desktop; phone | 0.979, 0.979, 0.979, 0.979, 0.979; 0, 0.959, 0, 0, 0.959 |
 | `3a8cf13` | phone, `--throttling-method=devtools` | 0.152, 0.152, 0.166, 0.152, 0.152 |
 | `b4747a0` | desktop | 0, 0, 0, 0, 0 |
 | `b4747a0` | phone | 0, 0, 0, 0, 0 |
 | `b4747a0` | phone, `--throttling-method=devtools` | 0, 0, 0, 0, 0 |
+| `a659c59`, the final head | desktop; phone; phone with `--throttling-method=devtools` | 0, 0, 0, 0, 0; 0, 0, 0, 0, 0; 0, 0, 0, 0, 0 |
 | `7b4bc8f`, before either merge | desktop; phone | 0.979, 0.979, 0.979; 0, 0, 0.959 |
 | `b05c3c9`, before either merge | desktop; phone | 0, 0; 0, 0 |
 
-No "after" run lists a node in Lighthouse's `layout-shifts` audit.
+No "after" run lists a node in Lighthouse's `layout-shifts` audit. `origin/main` moved to `f4e7cbb` during the step; it changes only `scripts/test-harness.ts`, and its build is byte for byte that of `3a8cf13` (`diff -rq` of the two `dist` folders), so the `3a8cf13` rows are also its numbers.
 
 The first load of other pages, from CI's builds of both commits, every `layout-shift` entry counted (input-flagged ones too), the API answering 503, one cold load each in Playwright's Chromium 141, the desktop at full speed and the phone with 4x CPU throttling:
 
@@ -1956,7 +1961,7 @@ The header stood 73px in every frame for a session, before and after. The 0.004 
 
 ### Release contract on the final head
 
-The code is that of `b4747a0`; this record changes documentation only. I ran every command below, and each exit code is its own. Browser runs used `CHROME_BIN=/opt/pw-browsers/chromium` and `vite preview` on ports 4545 to 4548.
+I ran every command below on `a659c59`, and each exit code is its own. Its two builds, the owner's and CI's, are byte for byte those of `b4747a0`, where the other measurements above ran. Browser runs used `CHROME_BIN=/opt/pw-browsers/chromium` and `vite preview` on ports 4541 to 4549.
 
 | Check | Result |
 | --- | --- |
@@ -1969,9 +1974,10 @@ The code is that of `b4747a0`; this record changes documentation only. I ran eve
 | The workflow's build step: the Supabase placeholders, then `npm run build` and `npm run check:public`; `npm run check:bundle` | exit 0 each; 13 public URLs; 226,147 of 243,000 gzip bytes |
 | `npm audit --omit=dev`, root and client | exit 0 each; 0 vulnerabilities |
 | Browser specs `first-load`, `navigation`, `public`, `lazy-auth`, `route-errors`, `evolving`, `segmented`, `on-accent` against CI's build | exit 0 each; 2, 2, 5, 5, 6, 2, 4 and 12 passed |
+| `first-load.spec.ts` with `--repeat-each=5` against CI's build, and once against the owner's build | exit 0 each; 10 and 2 passed |
 | `npm run check:responsive` on CI's routes (`/`, `/quiz`, `/topics/javascript-closures`, `/cs/topics/javascript-closures`) at 360, 390, 430, 768, 1024, 1280 and 1440, light, then with `RESPONSIVE_THEME=dark`; then CI's dark Czech sweep | exit 0 each; 28, 28 and 6 probes, 0 with issues |
 | `npm run check:responsive` on `/` and twelve section routes at 360, 390, 768 and 1280, light and dark | exit 0 each; 52 probes, 0 with issues |
-| `npm run test:harness` | exit 0; 196 assertions in Chromium |
+| `npm run test:harness`, as `f4e7cbb` changed it | exit 0; 196 assertions in Chromium |
 | Each commit of this branch on its own (`2805907`, `b05c3c9`, `28b9ab7`, `d902d8c`): client `tsc -b`, the tooling typecheck, `vitest run` | exit 0 at every one; 263 tests each |
 | `git diff --check`, `git diff --check origin/main...HEAD` | clean |
 
