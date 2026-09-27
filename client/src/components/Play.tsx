@@ -30,7 +30,7 @@ import {
   type ScoreboardEntry,
   type DistributionBucket,
 } from '../lib/play';
-import { joinMatchChannel, type RealtimeChannel } from '../lib/realtime';
+import { coalesceReads, joinMatchChannel, type CoalescedRead, type RealtimeChannel } from '../lib/realtime';
 import { visibleCategoryOptionsFor } from '../lib/categories';
 import { useActiveSubject } from '../lib/subjects';
 import type { CategoryType } from '../types/quiz';
@@ -473,23 +473,33 @@ export function PlayMatch() {
 
   // Pull the latest match state. Shared by the realtime/poll loop and by
   // submitAnswer so an auto-advance is reflected immediately for the answerer.
-  const refresh = useCallback(async () => {
-    if (!code || !user?.id) return;
-    try {
-      const state = await fetchMatchState(code, user.id);
-      setMatch(state.match);
-      setParticipants(state.participants);
-      setScoreboard(state.scoreboard);
-      refreshFailures.current = 0;
-    } catch {
-      refreshFailures.current += 1;
-      setConnectionState(refreshFailures.current >= 3 ? 'stale' : 'polling');
-    }
-  }, [code, user?.id]);
+  // Every call goes through the match's coalesced reader (set up below), so a
+  // burst of broadcasts costs one read in flight and one trailing read.
+  const readerRef = useRef<CoalescedRead | null>(null);
+  const refresh = useCallback(() => readerRef.current?.request() ?? Promise.resolve(), []);
 
   // Realtime broadcast wiring.
   useEffect(() => {
     if (!code || !user?.id) return;
+    const userId = user.id;
+    // Cleared on unmount or when the match changes, so a read still in
+    // flight for this match writes nothing afterwards.
+    let active = true;
+    const reader = coalesceReads(async () => {
+      try {
+        const state = await fetchMatchState(code, userId);
+        if (!active) return;
+        setMatch(state.match);
+        setParticipants(state.participants);
+        setScoreboard(state.scoreboard);
+        refreshFailures.current = 0;
+      } catch {
+        if (!active) return;
+        refreshFailures.current += 1;
+        setConnectionState(refreshFailures.current >= 3 ? 'stale' : 'polling');
+      }
+    });
+    readerRef.current = reader;
     const channel = joinMatchChannel(code);
     channelRef.current = channel;
     let realtimeReady = false;
@@ -501,7 +511,7 @@ export function PlayMatch() {
       setConnectionState(realtimeReady ? 'live' : 'polling');
       if (realtimeReady) {
         refreshFailures.current = 0;
-        void channel.send('participant_joined', { sub: user.id });
+        void channel.send('participant_joined', { sub: userId });
       }
     });
 
@@ -513,6 +523,9 @@ export function PlayMatch() {
     }, POLL_FALLBACK_MS);
 
     return () => {
+      active = false;
+      reader.cancel();
+      if (readerRef.current === reader) readerRef.current = null;
       window.clearInterval(healing);
       window.clearInterval(fallback);
       stopStatus();

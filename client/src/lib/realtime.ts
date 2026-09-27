@@ -65,3 +65,48 @@ export function joinMatchChannel(code: string): RealtimeChannel {
     },
   };
 }
+
+export interface CoalescedRead {
+  // Ask for a read. Resolves once a read that started after this call ends.
+  request: () => Promise<void>;
+  // Stop for good: a queued trailing read never starts.
+  cancel: () => void;
+}
+
+// Every answer in a match broadcasts `match_updated` to every client, so a
+// class answering together would otherwise send one state read per answer
+// per client. This keeps at most one read in flight and folds every request
+// that lands meanwhile into a single trailing read, which starts after the
+// last broadcast and so always fetches the final state.
+export function coalesceReads(read: () => Promise<void>): CoalescedRead {
+  let inFlight: Promise<void> | null = null;
+  let trailing: Promise<void> | null = null;
+  let cancelled = false;
+
+  const start = (): Promise<void> => {
+    const current = read()
+      .catch(noop)
+      .then(() => {
+        inFlight = null;
+      });
+    inFlight = current;
+    return current;
+  };
+
+  return {
+    request: () => {
+      if (cancelled) return Promise.resolve();
+      if (!inFlight) return start();
+      if (!trailing) {
+        trailing = inFlight.then(() => {
+          trailing = null;
+          return cancelled ? undefined : start();
+        });
+      }
+      return trailing;
+    },
+    cancel: () => {
+      cancelled = true;
+    },
+  };
+}
