@@ -21,6 +21,16 @@ Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
   levels, and new material into one daily plan.
 - Solo quizzes; a daily challenge; the survival Biggest Shark Challenge; live
   multiplayer and classroom rooms; and leaderboards.
+- A public **question of the day** at `/daily`: one question a day from a
+  track that rotates by date, answered and checked on the server without an
+  account, and recorded nowhere. Each day has its own page (`/daily/<date>`)
+  and share image.
+- A public **changelog** at `/changelog`, linked from the footer, with dated
+  notes on what changed (the first: freemium since 25 September 2026).
+- Share moments: the invite link after a first passed Learn level and after a
+  Challenge run, a result card from the Challenge and the typing racer, and a
+  link-preview image per coding task (title, track, difficulty and the free
+  count from `shared/tiers.ts`).
 - **Adaptive placement** that steps difficulty up and down over short rounds.
 - Retention layer: **forgiving streaks** (two free protections a month, spent
   on a missed day or in advance as a 48-hour shield) and a read-only **study
@@ -54,7 +64,7 @@ Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
 - **React** — the learning client's interface.
 - **React Router** — the client's routes.
 - **TanStack Query** — caches the client's server data.
-- **Vite** — builds and serves the client.
+- **Vite** — builds and serves the client; at build time it also writes the public page heads and draws the share images with **Satori** and **resvg** (dev-only packages).
 - **TypeScript** — the client, the twelve API handlers and the shared code; its compiler also runs the type tests of TypeScript challenges.
 - **Vercel** — hosts the client and the twelve serverless API functions, and deploys from `main`.
 - **Astryx** — the design system (`@astryxdesign/core` 0.1.6); the product's CSS tokens live in `client/src/styles/astryx-theme.css`.

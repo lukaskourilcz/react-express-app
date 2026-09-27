@@ -59,6 +59,21 @@ effect limited to the day count of a streak. No leaderboard in this product
 ranks by streak — every one of them ranks by correct answers and accuracy — so a
 protected streak moves nobody up anything.
 
+### Question of the day (#239)
+
+`/daily` and `/daily/<date>` show one public question a day. The track is a
+pure function of the date (`shared/daily-question.ts`, fifteen served
+categories in rotation from `QOTD_EPOCH`), so the build writes each day's page
+head and share image (`client/src/og/ogImages.ts`) ahead of the day. The
+question itself comes from `GET /api/quiz/daily?qotd=<date|today>`
+(`lib/daily-question.ts`, inside the daily handler so the count stays at
+twelve): a seeded pick from that track in the served bank, options shuffled by
+the same seed, the answer sealed in a quiz session with scope `qotd`. A future
+date answers 404 `qotd_not_yet`, so tomorrow's question cannot be read today.
+`api/quiz/submit.ts` grades a `qotd` session as if signed out, whoever sends
+it: no result receipt, answer proof, XP, streak day, leaderboard entry or
+concept-review record.
+
 ## Leaderboards
 
 `/leaderboard` opens on the last 30 days, so a new learner can reach the top;
@@ -650,7 +665,7 @@ project still configured for StudyShark from deploying this code. The
 deployment may also carry `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and
 `GITHUB_APP_PRIVATE_KEY` for the GitHub garden.
 
-The footer carries the legal links, devShark's own social profiles, and the appearance and sound controls, and
+The footer carries the legal links, the changelog (`/changelog`, #239), devShark's own social profiles, and the appearance and sound controls, and
 promotes no other product. The language control is gone while the app ships
 English only (`ENABLED_LANGS`).
 
