@@ -22,20 +22,13 @@
 /* The topic filter. A native select: it is keyboard- and screen-reader-complete
    on every platform, and the label sits beside it rather than inside it. */
 .lb-filter { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
-.lb-filter__label { font-size: var(--ss-type-compact); font-weight: 600; color: var(--color-text-primary); }
-.lb-select {
-  flex: 1 1 14rem;
-  max-width: 22rem;
-  min-width: 0;
-  min-height: 44px;
-  padding: 8px 12px;
-  border-radius: var(--radius-element);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-background-surface);
-  color: var(--color-text-primary);
-  font: inherit;
+.lb-filter .ss-field-label { margin-bottom: 0; }
+/* The shared .ss-select, sized for this row. */
+.ss-select.lb-select { width: 14rem; }
+@media (max-width: 599px) {
+  .lb-filter { align-items: stretch; flex-direction: column; }
+  .ss-select.lb-select { width: 100%; }
 }
-.lb-select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
 .lb-scope { margin: 0; max-width: 46rem; font-size: var(--ss-type-compact); line-height: 1.5; color: var(--color-text-secondary); }
 

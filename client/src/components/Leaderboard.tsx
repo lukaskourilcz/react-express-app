@@ -254,10 +254,10 @@ function Leaderboard() {
         </SegmentedControl>
         {tab !== 'today' && (
           <div className="lb-filter">
-            <label className="lb-filter__label" htmlFor={selectId}>
+            <label className="ss-field-label" htmlFor={selectId}>
               {t('leaderboard.topic')}
             </label>
-            <select id={selectId} className="lb-select" value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select id={selectId} className="ss-select lb-select" value={category} onChange={(event) => setCategory(event.target.value)}>
               <option value="">{t('leaderboard.allTopics')}</option>
               {topics.map((topic) => (
                 <option key={topic.value} value={topic.value}>
