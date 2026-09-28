@@ -188,11 +188,14 @@ describe('the plan table', () => {
 });
 
 describe('the Terms and the privacy policy', () => {
-  it('says the trader details are missing rather than guessing them', () => {
+  it('shows the verified trader details and identifies the remaining missing contact', () => {
     serve();
     renderAt('/terms', <TermsPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Terms of use' })).toBeInTheDocument();
-    expect(screen.getByText(/The trader’s name, company ID, registered address and email appear here/)).toBeInTheDocument();
+    expect(screen.getAllByText('Lukáš Kouřil').length).toBeGreaterThan(0);
+    expect(screen.getByText('04713397')).toBeInTheDocument();
+    expect(screen.getAllByText('Družstevní čtvrť 3145/19, 695 01 Hodonín, Czech Republic').length).toBeGreaterThan(0);
+    expect(screen.getByText(/The remaining trader details appear here/)).toBeInTheDocument();
     expect(traderRows({ name: 'Jane Doe', companyId: null, registeredAddress: '  ', email: 'jane@example.com' }).map((row) => row.field)).toEqual(['name', 'email']);
   });
 

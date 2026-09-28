@@ -1,5 +1,5 @@
-// One-time-per-session nudge inviting guests to sign in. Fires shortly after
-// the homepage renders, only for users who:
+// One-time-per-session nudge inviting guests to sign in. Fires after their
+// first interaction with the homepage, only for users who:
 //   - aren't authenticated, and
 //   - haven't already dismissed it this session.
 //
@@ -62,8 +62,21 @@ function RegisterPromptSnackbar() {
       return;
     }
     if (readDismissed()) return;
-    const timer = setTimeout(() => setOpen(true), SHOW_DELAY_MS);
-    return () => clearTimeout(timer);
+    // Let a visitor read before asking them to register. A timed card on an
+    // untouched page also became the largest paint, pushing mobile LCP past
+    // five seconds even after the landing content had finished rendering.
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const interacted = () => {
+      if (timer !== undefined) return;
+      timer = setTimeout(() => setOpen(true), SHOW_DELAY_MS);
+    };
+    window.addEventListener('pointerdown', interacted, { once: true });
+    window.addEventListener('keydown', interacted, { once: true });
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('pointerdown', interacted);
+      window.removeEventListener('keydown', interacted);
+    };
   }, [location.pathname, isLoading, isAuthenticated]);
 
   // Auto-hide the error toast (was the Snackbar's autoHideDuration).

@@ -31,9 +31,9 @@ export interface TraderIdentity {
  * reads as missing on the Terms page, and a wrong one would be a false legal
  * statement. */
 export const TRADER: TraderIdentity = {
-  name: null,
-  companyId: null,
-  registeredAddress: null,
+  name: 'Lukáš Kouřil',
+  companyId: '04713397',
+  registeredAddress: 'Družstevní čtvrť 3145/19, 695 01 Hodonín, Czech Republic',
   email: null,
 };
 
