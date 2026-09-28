@@ -781,7 +781,8 @@ function publicCopyContracts() {
   // Design audit P0.4: grading and end states are stated, not cheered. No
   // exclamation mark and no "Well done" in any verdict, result or end key.
   for (const [key, value] of Object.entries(ENGLISH)) {
-    if (!/\.(correct|wrong|verdict\.|gameOver|scoreSubmitted|finished)/.test(key)) continue;
+    // Round two added the Learn end states (design review 2 R2-P1.13).
+    if (!/\.(correct|wrong|verdict\.|gameOver|scoreSubmitted|finished)|roadmap\.(levelComplete|levelFailed|outOfHeartsTitle|checkpointComplete|allDone)/.test(key)) continue;
     assert.doesNotMatch(value, /!|Well done/i, `${key} cheers instead of stating the result`);
   }
   // Design audit P0.6: the header a visitor without a session sees. Today,
