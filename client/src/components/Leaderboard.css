@@ -10,12 +10,6 @@
 .lb { display: flex; flex-direction: column; gap: 20px; }
 
 .lb-head { display: flex; flex-direction: column; gap: 6px; max-width: 46rem; }
-.lb-lede {
-  margin: 0;
-  font-size: var(--ss-type-body);
-  line-height: 1.55;
-  color: var(--color-text-secondary);
-}
 
 .lb-controls { display: flex; flex-direction: column; gap: 12px; }
 

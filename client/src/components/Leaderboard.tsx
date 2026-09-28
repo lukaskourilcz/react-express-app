@@ -19,7 +19,7 @@ import { Avatar } from '@astryxdesign/core/Avatar';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
-import { Kicker, SwimCta } from './landing/LandingKit';
+import { SwimCta } from './landing/LandingKit';
 import ErrorRetry from './ErrorRetry';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
@@ -232,11 +232,9 @@ function Leaderboard() {
   return (
     <div className="de-page lb">
       <header className="lb-head">
-        <Kicker>{t('leaderboard.title')}</Kicker>
         <Heading level={1} type="display-3">
-          {t('leaderboard.heading')}
+          {t('leaderboard.title')}
         </Heading>
-        <p className="lb-lede">{t('leaderboard.rule')}</p>
       </header>
 
       <div className="lb-controls">
