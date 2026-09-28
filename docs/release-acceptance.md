@@ -2640,3 +2640,16 @@ dependency audits found zero vulnerabilities. Twenty responsive probes across `/
 `/premium`, widths 360/390/768/1024/1440, light and dark, reported no overflow or footer
 occlusion. Chrome visual inspection confirmed the homepage announcement. Real payments
 remain disabled; Stripe sandbox integration is separate from production billing.
+
+### 2026-09-28 — compact homepage launch announcement
+
+Moved the homepage launch announcement directly below the Free/Premium comparison
+card, aligned to its right edge and limited to 32rem (full available width on
+narrow screens). Uses the owner's exact October heading, price and terms copy,
+with no date strip or extra CTA. The checkout window and billing gates are unchanged.
+
+Passed: API typecheck, launch contracts, existing launch-banner tests (4), production
+build, both production dependency audits (0 vulnerabilities), and diff whitespace.
+Homepage responsive checks passed all 10 probes at 360/390/768/1024/1440 in light
+and dark themes. Desktop Chrome visual review confirmed card placement and copy.
+The existing build chunk-size warning remains; no new runtime dependencies.

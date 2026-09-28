@@ -207,7 +207,6 @@ export default function Home() {
 
   return (
     <div className="ss-pop" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 56 }}>
-      <LaunchOfferBanner />
       {/* ── Hero ── */}
       <section aria-label={t('home.introAria')} className="ss-hero-grid">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>
@@ -310,7 +309,7 @@ export default function Home() {
 
       {/* ── Free and Premium plan table. Its footnote says what Premium pays
           for; its CTA opens Learn. ── */}
-      <ComparisonTable />
+      <ComparisonTable showOfferNote={false} afterTable={<LaunchOfferBanner />} />
 
       <AppToast open={!!authError} onClose={() => setAuthError(null)} severity="error" message={authError} autoHideDuration={5000} />
     </div>

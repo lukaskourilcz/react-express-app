@@ -295,7 +295,8 @@ holds the window, the percentage and the prices derived from `PREMIUM_PRICE`
 (rounded the way Stripe rounds a percentage coupon). The offer is on only
 inside the window, with `BILLING_ENABLED` and a complete Stripe setup, and
 with the coupon id in `STRIPE_COUPON_LAUNCH`. The homepage announces the future
-launch before 4 October, with both dates and the future prices. During the window,
+launch before 4 October in a compact, right-aligned note directly below the plan
+comparison card, with the October title, prices and lifetime terms. During the window,
 that banner requires the same server confirmation as the purchase surfaces; it
 disappears when checkout cannot apply the coupon or the offer has expired.
 
