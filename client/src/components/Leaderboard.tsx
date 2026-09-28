@@ -355,7 +355,7 @@ function Name({ row }: { row: Row }) {
   return (
     <>
       <span className="lb-name">{row.name}</span>
-      {row.isViewer && row.name !== you && <span className="lb-you">{you}</span>}
+      {row.isViewer && row.name !== you && <span className="ss-tag">{you}</span>}
     </>
   );
 }

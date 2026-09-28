@@ -91,18 +91,6 @@
   font-weight: 600;
   color: var(--color-text-primary);
 }
-/* "You" is a word, not a tint: the row's background only repeats it. */
-.lb-you {
-  flex-shrink: 0;
-  padding: 1px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--ss-ink);
-  color: var(--ss-ink);
-  font-size: var(--ss-type-label);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  line-height: 1.5;
-}
 .lb-score {
   font: 700 1rem/1 var(--font-family-body);
   color: var(--color-text-primary);

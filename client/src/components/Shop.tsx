@@ -361,7 +361,7 @@ export function MerchCard({
           <div className="rw-merch__price">
             <span id={coinsId} className="rw-label">{t('shop.withCoins')}</span>
             {tokenPrice !== null && <strong>{t('shop.tokenPrice', { n: tokenPrice.toLocaleString('en-GB') })}</strong>}
-            {!orderable && <span className="rw-tag">{t(`shop.availability.${item.availability}` as TranslationKey)}</span>}
+            {!orderable && <span className="ss-tag">{t(`shop.availability.${item.availability}` as TranslationKey)}</span>}
             {orderable && tokenPrice === null && <span className="rw-muted">{t('shop.noCoinPrice')}</span>}
           </div>
 
@@ -392,7 +392,7 @@ export function MerchCard({
                 aria-describedby="rw-merch-premium"
                 onClick={() => openUpgradeSheet({ kind: 'merch-redemption', ref: item.sku })}
               />
-              <span className="rw-tag">{t('premium.badge')}</span>
+              <span className="ss-tag">{t('premium.badge')}</span>
             </div>
           ) : (
             <>
