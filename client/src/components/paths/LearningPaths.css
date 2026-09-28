@@ -163,7 +163,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 .lp-profile-choice { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .lp-profile-choice__value { min-width: 0; overflow-wrap: anywhere; }
 .lp-profile-choice .lp-btn { flex: none; }
-.lp-profile-inventory { display: grid; grid-template-columns: minmax(7.5rem, auto) minmax(0, 1fr); gap: 8px 16px; min-width: 0; margin: 2px 0; padding: 14px; border-radius: var(--radius-element); background: var(--color-background-muted); font-size: 0.9rem; }
+.lp-profile-inventory { display: grid; grid-template-columns: minmax(7.5rem, 40%) minmax(0, 1fr); gap: 8px 16px; min-width: 0; margin: 2px 0; padding: 14px; border-radius: var(--radius-element); background: var(--color-background-muted); font-size: 0.9rem; }
 .lp-profile-inventory dt { min-width: 0; font-weight: 650; color: var(--color-text-secondary); }
 .lp-profile-inventory dd { min-width: 0; margin: 0; overflow-wrap: anywhere; line-height: 1.5; }
 

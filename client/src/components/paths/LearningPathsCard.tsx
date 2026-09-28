@@ -202,11 +202,11 @@ export default function LearningPathsCard() {
 
         {profile && !needsProfile && (
           <dl className="lp-profile-inventory">
-            <dt>{t('profile.picker.goalsLegend')}</dt>
+            <dt>{t('profile.inventory.goals')}</dt>
             <dd>{profile.goals.map((goal) => t(`profile.goal.${goal}` as never)).join(' · ')}</dd>
-            <dt>{t('profile.picker.experienceLegend')}</dt>
+            <dt>{t('profile.inventory.experience')}</dt>
             <dd>{t(`profile.experience.${profile.experience}` as never)}</dd>
-            <dt>{t('profile.picker.studyTimeLegend')}</dt>
+            <dt>{t('profile.inventory.studyTime')}</dt>
             <dd>{t(`profile.studyTime.${profile.studyTime}` as never)}</dd>
           </dl>
         )}
