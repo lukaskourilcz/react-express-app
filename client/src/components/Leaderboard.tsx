@@ -238,7 +238,7 @@ function Leaderboard() {
       </header>
 
       <div className="lb-controls">
-        <SegmentedControl value={tab} onChange={(value) => setTab(value as Tab)} label={t('leaderboard.period')} layout="fill">
+        <SegmentedControl value={tab} onChange={(value) => setTab(value as Tab)} label={t('leaderboard.period')} layout={isMobile ? 'fill' : undefined}>
           <SegmentedControlItem value="30d" label={narrow ? t('leaderboard.last30Short') : t('leaderboard.last30')} />
           <SegmentedControlItem value="all" label={t('leaderboard.allTime')} />
           <SegmentedControlItem value="today" label={t('leaderboard.today')} />
