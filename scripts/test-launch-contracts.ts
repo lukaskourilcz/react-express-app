@@ -1062,7 +1062,7 @@ function coinsContracts() {
   assert.equal(ENGLISH['shop.title'], 'Coins');
   assert.equal(ENGLISH['shop.tokensUnit'], 'coins');
   for (const [key, value] of Object.entries(ENGLISH)) {
-    if (!/^(shop\.|rewards\.|register\.|auth\.signupBonus)/.test(key) || /^shop\.item\./.test(key)) continue;
+    if (!/^(shop\.|rewards\.|register\.|auth\.signupBonus)/.test(key)) continue;
     assert.doesNotMatch(value.replace(/\{\w+\}/g, ''), /\btokens?\b/i, `${key} says tokens; the product says coins`);
   }
   assert.match(read('docs/product-architecture.md'), /the UI calls it \*\*Coins\*\*/, 'the naming rule is written down');
