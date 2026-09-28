@@ -394,7 +394,7 @@ function StreakCard({
         <VStack gap={2}>
           <SectionLabel>{t('profile.streaks')}</SectionLabel>
 
-          <Grid columns={{ minWidth: 150, max: 2 }} gap={2}>
+          <Grid columns={{ minWidth: 240, max: 2 }} gap={2}>
             <div role="group" aria-labelledby={currentLabelId} style={{ display: 'flex', width: '100%' }}>
               <Card variant="muted" padding={3} width="100%">
                 <VStack gap={0.5} align="center">
