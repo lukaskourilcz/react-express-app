@@ -84,14 +84,6 @@
 
 /* min-width:0 so a long row ellipsizes instead of pushing Remove off. */
 .fr-friend__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 8rem; }
-.fr-friend__handle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
 /* The flag and the crown: a friend's whole visible identity beside the avatar.
    min-height keeps the row from shifting between a friend who has both and one
    who has neither. */

@@ -43,22 +43,6 @@
   font-variant-numeric: tabular-nums;
 }
 .rw-wallet__amount span { font-weight: 700; }
-.rw-wallet__rates {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  margin: 0 0 0 auto;
-  padding: 0;
-  list-style: none;
-}
-.rw-wallet__rates li {
-  padding: 3px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--ss-card-line);
-  background: var(--color-background-surface);
-  font-size: 0.8rem;
-  font-weight: 600;
-}
 .rw-ledger-title { margin-top: 0.25rem; }
 .rw-ledger { margin-top: 0; }
 .rw-ledger li { padding: 6px 0; border-bottom: 1px solid var(--ss-card-line); font-size: 0.88rem; }
@@ -211,7 +195,6 @@
 .rw-checkout__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
 @media (max-width: 599px) {
-  .rw-wallet__rates { margin-left: 0; width: 100%; }
   .rw-earn__row { flex-direction: column; align-items: flex-start; }
   .rw-earn__meta { justify-content: flex-start; }
   .rw-spend__action { margin-left: 0; }
