@@ -798,3 +798,24 @@
 .ss-offer-note__title { margin: 0 0 0.35rem; font: 750 0.95rem var(--font-family-heading); color: var(--color-text-primary); }
 .ss-offer-note ul { margin: 0; padding-left: 1.15rem; display: grid; gap: 0.25rem; }
 .ss-offer-note--compact { margin-top: 0; padding: 0.7rem 0.9rem; font-size: 0.85rem; }
+
+/* The homepage launch announcement stays in normal flow, with no countdown. */
+.ss-launch-banner {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem 2rem;
+  padding: clamp(1rem, 3vw, 1.5rem);
+  border: 1px solid var(--ss-card-line);
+  border-left: 4px solid var(--brand-accent);
+  border-radius: var(--radius-inner);
+  background: var(--brand-accent-soft);
+  color: var(--color-text-primary);
+}
+.ss-launch-banner__copy { flex: 1 1 28rem; min-width: 0; }
+.ss-launch-banner p { margin: 0; line-height: 1.5; }
+.ss-launch-banner h2 { margin: 0.35rem 0; font: 800 clamp(1.25rem, 3vw, 1.65rem)/1.2 var(--font-family-heading); }
+.ss-launch-banner__dates { font-size: var(--ss-type-meta); font-weight: 700; }
+.ss-launch-banner .ss-launch-banner__terms { margin-top: 0.5rem; color: var(--color-text-secondary); font-size: var(--ss-type-meta); max-width: 80ch; }
+.ss-launch-banner__link { display: inline-flex; align-items: center; min-height: 44px; padding: 0.5rem 0; color: var(--color-text-primary); font-weight: 750; text-underline-offset: 0.2em; }
+.ss-launch-banner__link:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 5px; border-radius: 2px; }
