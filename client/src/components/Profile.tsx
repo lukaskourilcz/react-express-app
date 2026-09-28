@@ -569,7 +569,7 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
         <SectionLabel>{t('profile.career')}</SectionLabel>
         {syncWarning && <Banner status="warning" title={t('profile.syncUnavailable')} />}
 
-        <HStack gap={2} align="center">
+        <HStack gap={2} align="center" wrap="wrap">
           {/* The learner's earned rank icon (data, not chrome) in a quiet tile. */}
           <div
             aria-hidden
@@ -584,13 +584,16 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
           >
             <TrophyIcon size={24} />
           </div>
-          <VStack gap={0} width="100%">
-            <Heading level={3} maxLines={1}>{title}</Heading>
+          {/* The rank title takes the room it needs (at least 10rem); the XP
+              figure keeps its width and wraps under it on a narrow card, so a
+              long title never pushes it out of the card. */}
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: '1 1 10rem' }}>
+            <Heading level={3} maxLines={2}>{title}</Heading>
             <Text type="supporting" size="xsm" color="secondary">
               {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
             </Text>
-          </VStack>
-          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+          </div>
+          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
             <Text size="3xl" weight="bold" color="accent">{nf(totalXp)}</Text>
             <Text type="supporting" color="secondary">{t('profile.xpUnit')}</Text>
           </span>
