@@ -168,6 +168,9 @@ export default function LearningPathsCard() {
   });
 
   return (
+    // The same card stock as the GitHub card beside it (.ss-raised: the
+    // container radius, the 2px edge and --shadow-low).
+    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
     <Card variant="default" padding={3} width="100%">
       <VStack gap={2}>
         <VStack gap={0.5}>
@@ -263,5 +266,6 @@ export default function LearningPathsCard() {
         error={dialogError}
       />
     </Card>
+    </div>
   );
 }

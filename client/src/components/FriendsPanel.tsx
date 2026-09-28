@@ -131,7 +131,7 @@ function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged
   const countries = useMemo(() => countryOptions(lang), [lang]);
 
   return (
-    <section className="fr-card" aria-labelledby={`${inputId}-title`}>
+    <section className="fr-card ss-panel" aria-labelledby={`${inputId}-title`}>
       <h3 id={`${inputId}-title`} className="fr-card__title">{t('friends.handleTitle')}</h3>
       <p className="fr-note">{state?.handle ? t('friends.handleHelp') : t('friends.handleFirst')}</p>
       <div className="fr-row">
@@ -236,7 +236,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
   };
 
   return (
-    <section className="fr-card" aria-labelledby={`${inputId}-title`}>
+    <section className="fr-card ss-panel" aria-labelledby={`${inputId}-title`}>
       <h3 id={`${inputId}-title`} className="fr-card__title">{t('friends.findTitle')}</h3>
       <p className="fr-note">{t('friends.findHelp', { handle: ownHandle })}</p>
       <div className="fr-row">
@@ -305,7 +305,7 @@ function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChange
   const outgoing = requests.filter((one) => one.direction === 'outgoing');
 
   return (
-    <section className="fr-card" aria-labelledby={titleId}>
+    <section className="fr-card ss-panel" aria-labelledby={titleId}>
       <h3 id={titleId} className="fr-card__title">{t('friends.requestsTitle')}</h3>
       <ul className="fr-list">
         {incoming.map((one) => (
@@ -350,7 +350,7 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
   };
 
   return (
-    <section className="fr-card" aria-labelledby={titleId}>
+    <section className="fr-card ss-panel" aria-labelledby={titleId}>
       <h3 id={titleId} className="fr-card__title">{t('friends.listTitle', { n: friends.length })}</h3>
       {friends.length === 0 ? (
         <p className="fr-note">{hasHandle ? t('friends.empty') : t('friends.emptyNoHandle')}</p>
