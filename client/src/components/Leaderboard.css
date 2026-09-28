@@ -7,9 +7,9 @@
  * filled, and no rank is told apart by hue. Nothing here animates.
  */
 
-.lb { display: flex; flex-direction: column; gap: 20px; }
+.lb { display: flex; flex-direction: column; gap: 16px; }
 
-.lb-head { display: flex; flex-direction: column; gap: 6px; max-width: 46rem; }
+.lb-head { display: flex; flex-direction: column; gap: 6px; max-width: 46rem; margin-bottom: 8px; }
 
 /* The period control and the topic filter share one row that wraps; the
    scope line takes the full width under them. On a phone they stack. */
