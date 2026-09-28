@@ -38,6 +38,7 @@ import {
 } from '../lib/friends';
 import './Friends.css';
 import { Button } from '@astryxdesign/core/Button';
+import LoadingScreen from './LoadingScreen';
 
 type Load = 'loading' | 'ready' | 'unavailable';
 
@@ -68,11 +69,11 @@ export function FriendsPanel() {
   useEffect(() => { void refresh(); }, [refresh]);
 
   if (state === 'loading') {
-    return <p className="fr-note" role="status">{t('friends.loading')}</p>;
+    return <LoadingScreen label={t('friends.loading')} sx={{ minHeight: 160 }} />;
   }
   if (state === 'unavailable') {
     return (
-      <div className="fr-empty">
+      <div className="fr-empty ss-panel" style={{ padding: 24 }}>
         <p className="fr-note">{t('friends.unavailable')}</p>
         {error && <p className="fr-note fr-note--error">{error}</p>}
       </div>
