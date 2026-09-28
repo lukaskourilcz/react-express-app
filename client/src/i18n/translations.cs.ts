@@ -90,8 +90,8 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'title.default': 'devShark',
 
   // Home / landing page
-  'home.title': 'Procvič si znalosti, které využiješ při psaní kódu.',
-  'home.subtitle': 'Projdi si vedené lekce, ověř si znalosti v kvízu a vyzkoušej je na programovacích úlohách, ať už se učíš frontend, backend nebo obojí.',
+  'home.title': 'Lekce, kvízy a programovací úlohy pro webové vývojáře.',
+  'home.subtitle': 'Vedené lekce, kvízy a hodnocené programovací úlohy pro frontend i backend. HTML, CSS a JavaScript jsou zdarma pro každý účet.',
   'home.ctaSignIn': 'Přihlas se a začni',
   'home.ctaLearn': 'Přejít na studijní cestu',
   'home.pathDialogTitle': 'Vyber si svou studijní cestu',

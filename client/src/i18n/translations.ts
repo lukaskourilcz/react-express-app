@@ -94,8 +94,8 @@ export const en = {
   'title.default': 'devShark',
 
   // Home / landing page
-  'home.title': 'Build the skills you use when you write code.',
-  'home.subtitle': 'Work through guided lessons, test what you understand in a quiz, and put it into practice with coding tasks, whether you are learning frontend, backend or both.',
+  'home.title': 'Lessons, quizzes and coding tasks for web developers.',
+  'home.subtitle': 'Guided lessons, quizzes and graded coding tasks for frontend and backend. HTML, CSS and JavaScript are free for every account.',
   'home.ctaSignIn': 'Sign in to start',
   'home.ctaLearn': 'Go to learning path',
   'home.pathDialogTitle': 'Choose your learning path',
