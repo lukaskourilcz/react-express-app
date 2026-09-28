@@ -56,6 +56,12 @@
 .lb-stale > span { flex: 1 1 16rem; padding: 8px 0; }
 
 .lb-board { overflow: hidden; }
+/* The previous board, kept while the next one loads: dimmed after a short
+   beat, so a fast switch does not flicker. */
+.lb-board[aria-busy='true'] { opacity: 0.55; transition: opacity var(--ss-motion-feedback) ease-out 200ms; }
+@media (prefers-reduced-motion: reduce) {
+  .lb-board[aria-busy='true'] { transition-duration: 0s; }
+}
 
 /* ── Rank discs ───────────────────────────────────────────────────────────── */
 

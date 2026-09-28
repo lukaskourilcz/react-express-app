@@ -4,7 +4,7 @@
 // revalidation and built-in cancellation for free — replacing the bespoke
 // useEffect + AbortController + loading/error state each screen used to carry.
 
-import { queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
+import { keepPreviousData, queryOptions, useQuery, useQueryClient } from '@tanstack/react-query';
 import { fetchRoadmapStructure } from './roadmap';
 import { useAuth } from './auth';
 import { entitlementQuery } from './entitlement';
@@ -57,6 +57,9 @@ export type LeaderboardRequest =
 export function leaderboardQuery(request: LeaderboardRequest) {
   const period: LeaderboardPeriod = request.period;
   return queryOptions({
+    // A tab or topic switch keeps the board on screen, marked busy, until
+    // the next one arrives (design review 2 R2-P1.5).
+    placeholderData: keepPreviousData,
     queryKey: [
       'leaderboard',
       period,
