@@ -462,7 +462,7 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'xp.gainLearn': '+{xp} XP získáno',
   'xp.gainQuiz': '+{xp} XP získáno',
   'xp.gainPractice': '+{xp} XP · procvičování',
-  'xp.rankUpKicker': 'Postup',
+  'xp.rankUpKicker': 'Nová hodnost',
   'xp.rankUp': 'Teď jsi {title}',
 
   // Achievements
@@ -774,7 +774,7 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'challenge.perQuestion': 'na otázku',
   'challenge.relaxedPace': 'Klidné tempo',
   'challenge.relaxedHint': '180 sekund na otázku. Výsledek zůstane soukromý a nepočítá se do žebříčku.',
-  'challenge.practiceScore': 'Tréninkové tempo dokončeno — tento výsledek se nehodnotí.',
+  'challenge.practiceScore': 'Klidné tempo. Nepočítá se do žebříčku.',
   'challenge.todayBoard': 'Dnešní žebříček',
   'challenge.noChampion': 'Skóre ještě nikdo nemá. Buď první.',
   'challenge.boardUnavailable': 'Dnešní žebříček se nepodařilo načíst. Výzva je stále dostupná.',

@@ -588,7 +588,7 @@ export const en = {
   'xp.gainLearn': '+{xp} XP earned',
   'xp.gainQuiz': '+{xp} XP earned',
   'xp.gainPractice': '+{xp} XP · practice',
-  'xp.rankUpKicker': 'Level up',
+  'xp.rankUpKicker': 'New rank',
   'xp.rankUp': 'You’re now {title}',
 
   // Achievements
@@ -901,7 +901,7 @@ export const en = {
   'challenge.perQuestion': 'per question',
   'challenge.relaxedPace': 'Relaxed pace',
   'challenge.relaxedHint': '180 seconds per question. The result stays private and is not ranked.',
-  'challenge.practiceScore': 'Practice pace complete — this result is not ranked.',
+  'challenge.practiceScore': 'Relaxed pace. Not ranked.',
   'challenge.todayBoard': "Today's board",
   'challenge.noChampion': 'No one has set a score yet. Be the first.',
   'challenge.boardUnavailable': 'Today’s board could not be loaded. Your challenge is still available.',
@@ -2260,7 +2260,7 @@ export const en = {
   'challenge.shareLabel': 'Biggest Shark Challenge',
   'challenge.shareHeadline': '{n} correct',
   'challenge.shareDetail': 'before three strikes',
-  'challenge.shareDetailPractice': 'at practice pace',
+  'challenge.shareDetailPractice': 'at relaxed pace',
   'challenge.shareText': 'I got {n} right before three strikes in the devShark Biggest Shark Challenge. Can you beat it?',
   'typing.shareLabel': 'Typing racer',
   'typing.shareHeadline': '{wpm} WPM',
