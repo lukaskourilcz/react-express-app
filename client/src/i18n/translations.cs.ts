@@ -109,7 +109,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'home.sampleChip': 'Úroveň 1 — {level}',
   'home.answerCorrect': 'Správně.',
   'home.answerWrong': 'Špatně. Správná odpověď je {answer}.',
-  'home.checkpointBlurb': 'Každá úroveň končí takovýmto kontrolním bodem.',
   'home.topicsKicker': 'Témata',
   'home.topicsTitle': 'Vyber si téma.',
   'home.andMore': 'A dalších {n} →',

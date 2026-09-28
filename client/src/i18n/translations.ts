@@ -113,7 +113,6 @@ export const en = {
   'home.sampleChip': 'Level 1 — {level}',
   'home.answerCorrect': 'Correct.',
   'home.answerWrong': 'Incorrect. The answer is {answer}.',
-  'home.checkpointBlurb': 'Every level ends with a checkpoint like this.',
   'home.topicsKicker': 'Topics',
   'home.topicsTitle': 'Pick a topic.',
   'home.andMore': 'And {n} more →',
