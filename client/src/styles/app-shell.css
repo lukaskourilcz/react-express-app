@@ -384,10 +384,10 @@
 .ss-info-card h2 { margin: 0 0 0.65rem; font: 700 1.05rem var(--font-family-heading); }
 .ss-info-card p { margin: 0.5rem 0; color: var(--color-text-secondary); line-height: 1.65; }
 .ss-info-note { padding: 0.85rem 1rem; border-radius: var(--radius-inner); background: var(--color-background-muted); }
-.ss-cost-grid { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 0.75rem; margin: 0; }
+.ss-cost-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.75rem; margin: 0; }
 .ss-cost-grid div { padding: 0.75rem; border-radius: var(--radius-inner); background: var(--color-background-muted); }
 .ss-cost-grid dt { color: var(--color-text-secondary); font-size: var(--ss-type-label); }
-.ss-cost-grid dd { margin: 0.25rem 0 0; color: var(--color-text-primary); font: 700 1rem var(--font-family-heading); }
+.ss-cost-grid dd { margin: 0.25rem 0 0; min-width: 0; overflow-wrap: anywhere; color: var(--color-text-primary); font: 700 1rem var(--font-family-heading); }
 .ss-info-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; margin-top: 1rem; }
 /* A row of standalone text links (legal pages, /premium): 44px targets and a
    visible focus ring, in the accent. */
@@ -400,7 +400,7 @@
 .ss-text-links button:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 .ss-link-button { display: inline-flex; min-height: 44px; align-items: center; padding: 0 1rem; border-radius: var(--radius-element); background: var(--brand-accent); color: var(--brand-on-accent); font-weight: 700; text-decoration: none; }
 .ss-link-button--secondary { background: var(--color-background-muted); color: var(--color-text-primary); border: 1px solid var(--color-border); }
-@media (max-width: 700px) { .ss-info-sections { grid-template-columns: 1fr; } .ss-cost-grid { grid-template-columns: repeat(2, minmax(0,1fr)); } }
+@media (max-width: 700px) { .ss-info-sections { grid-template-columns: 1fr; } }
 
 /* The crown, worn. It sits on the avatar rather than beside it, tilted very
    slightly so it reads as placed rather than pasted. Decorative: the avatar

@@ -202,7 +202,7 @@ export function GithubGardenCard() {
           </div>
           <div>
             <dt>{t('github.repository')}</dt>
-            <dd>{repoUrl && data.repoFullName ? <a href={repoUrl} target="_blank" rel="noopener noreferrer">{data.repoFullName}</a> : '—'}</dd>
+            <dd style={{ fontSize: 'var(--ss-type-compact)' }}>{repoUrl && data.repoFullName ? <a href={repoUrl} target="_blank" rel="noopener noreferrer">{data.repoFullName}</a> : '—'}</dd>
           </div>
           <div>
             <dt>{t('github.lastCommit')}</dt>
