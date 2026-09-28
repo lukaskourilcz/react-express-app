@@ -131,7 +131,7 @@ test('a second sign-in press after a failed download reloads, leaves for the pro
   await page.goto('/premium');
   const signIn = page.getByRole('button', { name: 'Sign in to redeem' });
   await signIn.click();
-  await expect(page.getByText('Something went wrong. Please try again.')).toBeVisible();
+  await expect(page.getByText('Something went wrong. Try again.')).toBeVisible();
   expect(library).toEqual(['dropped']);
   expect(documents).toEqual(['/premium']);
 

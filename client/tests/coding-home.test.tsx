@@ -60,7 +60,7 @@ it('names no challenge while a signed-in learner’s progress loads, then names 
   expect(card()).toHaveAttribute('aria-busy', 'true');
   // The first challenge of the catalogue is not the learner's next one: it must never flash up.
   expect(within(card()).queryByText('Digit sum')).toBeNull();
-  expect(screen.getByText('Loading your progress…')).toHaveClass('cd-visually-hidden');
+  expect(screen.getByText('Loading progress…')).toHaveClass('cd-visually-hidden');
   expect(within(card()).getByRole('button', { name: 'Continue' })).toBeDisabled();
   expect(screen.queryByText(/Sign in to keep your progress/)).toBeNull();
 

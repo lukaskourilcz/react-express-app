@@ -115,7 +115,7 @@ describe('/premium while checkout is off', () => {
     signInWithGoogle.mockRejectedValueOnce(new Error('Sign-in is not available in this deployment.'));
     renderAt('/premium', <PremiumPage />);
     fireEvent.click(within(voucherSection()).getByRole('button', { name: 'Sign in to redeem' }));
-    expect(await within(voucherSection()).findByRole('alert')).toHaveTextContent('Something went wrong. Please try again.');
+    expect(await within(voucherSection()).findByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
   });
 
   it('waits for the sign-in state instead of flashing a prompt', () => {

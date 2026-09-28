@@ -92,7 +92,7 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
       const reason = controller.signal.reason;
       const timedOut = reason instanceof Error && reason.message === 'timeout';
       throw new ApiError(
-        timedOut ? 'Request timed out. Please try again.' : 'Request was cancelled.',
+        timedOut ? 'Request timed out. Try again.' : 'Request was cancelled.',
         0,
         timedOut ? 'timeout' : 'cancelled',
       );
