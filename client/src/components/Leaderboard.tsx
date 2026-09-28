@@ -20,7 +20,6 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
-import { SwimCta } from './landing/LandingKit';
 import ErrorRetry from './ErrorRetry';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
@@ -223,7 +222,7 @@ function Leaderboard() {
     body = (
       <div className="lb-board ss-panel lb-empty">
         <p className="lb-empty__text">{emptyText}</p>
-        <SwimCta label={tab === 'today' ? t('quiz.todaysChallenge') : t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
+        <Button variant="secondary" label={tab === 'today' ? t('quiz.todaysChallenge') : t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
       </div>
     );
   } else {
