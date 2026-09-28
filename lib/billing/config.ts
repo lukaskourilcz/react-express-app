@@ -16,6 +16,12 @@
  *                                 offer (55 % off, duration forever). Checkout
  *                                 applies it only inside the offer's window
  *                                 (shared/launch-offer.ts)
+ *   LAUNCH_OFFER_TEST_NOW         optional, test mode only: an ISO instant
+ *                                 the server uses instead of the clock when
+ *                                 it decides whether the coupon applies, so
+ *                                 the owner can try the launch Checkout on a
+ *                                 Preview before 4 October. Ignored unless
+ *                                 STRIPE_SECRET_KEY is an sk_test_ key.
  *   RESEND_API_KEY, RESEND_FROM   the emails of the public cancellation page:
  *                                 its confirmation link and its receipt.
  *                                 Without them only a signed-in owner of the
@@ -54,6 +60,8 @@ export interface BillingConfig {
   /** The launch offer's coupon id (STRIPE_COUPON_LAUNCH), whether or not the
    * window is open; `launchCoupon(config, now)` says whether it applies. */
   launchCoupon: string | null;
+  /** LAUNCH_OFFER_TEST_NOW, honoured only with a test-mode key; else null. */
+  launchTestNow: number | null;
 }
 
 type Env = Record<string, string | undefined>;
@@ -110,13 +118,23 @@ export function billingConfig(env: Env = process.env): BillingConfig {
     missing,
     email: resendKey ? { apiKey: resendKey, from: value(env, 'RESEND_FROM') ?? 'devShark <billing@devshark.app>' } : null,
     launchCoupon: launchCouponId(env[LAUNCH_COUPON_ENV]),
+    launchTestNow: testNow(env, secretKey),
   };
+}
+
+/** A test-mode clock for the launch window. A live key never reads it, so
+ * production decides by the real time whatever the variable says. */
+function testNow(env: Env, secretKey: string | null): number | null {
+  const raw = value(env, 'LAUNCH_OFFER_TEST_NOW');
+  if (!raw || !secretKey?.startsWith('sk_test_')) return null;
+  const parsed = Date.parse(raw);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 /** The coupon Checkout applies at `now`, or null: the launch offer's window
  * is open, checkout sells Premium and the coupon is set. */
 export function launchCoupon(config: BillingConfig, now: number): string | null {
-  return activeLaunchCoupon({ now, checkoutEnabled: config.checkoutEnabled, coupon: config.launchCoupon });
+  return activeLaunchCoupon({ now: config.launchTestNow ?? now, checkoutEnabled: config.checkoutEnabled, coupon: config.launchCoupon });
 }
 
 /** Every Price that bills devShark Premium: the two on sale and any earlier

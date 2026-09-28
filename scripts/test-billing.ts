@@ -976,6 +976,14 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(lib.publicBillingSettings({ ...BASE_ENV }, INSIDE).launchOffer, false);
     assert.doesNotMatch(JSON.stringify(lib.publicBillingSettings({ ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'launch55' }, INSIDE)), /launch55/, 'the coupon id stays on the server');
 
+    // The test-mode clock lets the owner try the launch Checkout before
+    // 4 October on a Preview; a live key ignores it.
+    const today = Date.parse('2026-09-28T12:00:00Z');
+    const testClock = { ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'launch55', LAUNCH_OFFER_TEST_NOW: '2026-10-10T10:00:00Z' };
+    assert.deepEqual(params(lib.billingConfig(testClock), today).discounts, [{ coupon: 'launch55' }], 'test key: the test clock decides');
+    assert.equal(params(lib.billingConfig({ ...testClock, STRIPE_SECRET_KEY: 'sk_live_devshark_never_sent' }), today).discounts, undefined, 'live key: the real clock decides');
+    assert.equal(params(lib.billingConfig({ ...testClock, LAUNCH_OFFER_TEST_NOW: 'not a date' }), today).discounts, undefined);
+
     // A discounted session closes when the offer does, within Stripe's 30 min to 24 h.
     assert.equal(params(withCoupon, INSIDE).expires_at, Math.floor(INSIDE / 1000) + 24 * 3600 - 60, 'far from the end: about 24 hours');
     const lateEvening = Date.parse('2026-11-02T20:00:00Z');
