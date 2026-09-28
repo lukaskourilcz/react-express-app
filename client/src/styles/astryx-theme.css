@@ -333,11 +333,14 @@ dialog.astryx-dialog .astryx-layout-footer {
 
 /* ─────────────────── Brand marks: kicker + waterline ─────────────────── */
 
-/* Editorial kicker: small uppercase label in the subject accent with a short
- * waterline tick beneath — the signature "dive marker" that opens major
- * sections. */
+/* Editorial kicker: small uppercase label in the subject accent with a
+ * waterline beneath, exactly as long as the label — the signature "dive
+ * marker" that opens major sections. The box shrinks to its text so the wave
+ * (100% of it) matches "Daily plan" as well as "Coding". */
 .ss-kicker {
   display: block;
+  width: fit-content;
+  max-width: 100%;
   font-family: var(--font-family-body);
   font-weight: 700;
   font-size: 0.72rem;
@@ -348,7 +351,7 @@ dialog.astryx-dialog .astryx-layout-footer {
 .ss-kicker::after {
   content: '';
   display: block;
-  width: 46px;
+  width: 100%;
   height: 6px;
   margin-top: 5px;
   background-color: var(--brand-accent);
@@ -356,8 +359,7 @@ dialog.astryx-dialog .astryx-layout-footer {
   mask: var(--ss-wave) repeat-x left center / 24px 6px;
   -webkit-mask: var(--ss-wave) repeat-x left center / 24px 6px;
 }
-.ss-kicker--center { text-align: center; }
-.ss-kicker--center::after { margin-left: auto; margin-right: auto; }
+.ss-kicker--center { text-align: center; margin-left: auto; margin-right: auto; }
 
 /* Monochrome tech logos (e.g. Next.js) flip to white on deep water. */
 :root[data-theme='dark'] .ss-tech-mono {
