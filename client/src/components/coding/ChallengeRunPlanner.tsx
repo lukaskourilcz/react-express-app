@@ -175,14 +175,12 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
               onClick={() => setExpanded((value) => !value)}
             >
               <span>{t('coding.run.title')}</span>
-              <span className="cd-run__toggle-lead">{t('coding.run.lead')}</span>
               <span className="cd-run__chevron" aria-hidden>{showBody ? '−' : '+'}</span>
             </button>
           </h2>
         ) : (
           <>
             <Kicker as="h2" id="cd-run-title">{t('coding.run.title')}</Kicker>
-            <p className="cd-lead">{t('coding.run.lead')}</p>
           </>
         )}
       </div>

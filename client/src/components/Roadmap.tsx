@@ -437,9 +437,8 @@ function Roadmap() {
       const granted = verifiedUnlocks ?? topicsFromAssessment(correct);
       const added = unlockExtraTopics(granted);
       setSkillCheckOpen(false);
-      if (added.length === 0) {
-        setUnlockSnack(t('roadmap.skillCheckNoneAdded'));
-      } else {
+      // Nothing new: the result screen already said so (roadmap.skillCheckLow).
+      if (added.length > 0) {
         const labels = added.map((c) => t(categoryLabelKey(c))).join(', ');
         setUnlockSnack(t('roadmap.skillCheckUnlocked', { topics: labels }));
       }
