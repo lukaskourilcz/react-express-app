@@ -4,7 +4,9 @@ An English developer-learning product from one React/Vite client and twelve
 serverless handlers. devShark is freemium: every account gets HTML, CSS and
 JavaScript, React levels 1 to 12 and a starter set of coding challenges, and
 Premium (3.99 EUR a month or 39.99 EUR a year, VAT included) opens the rest.
-`shared/tiers.ts` holds that split. The server owns answers, grading, scores,
+`shared/tiers.ts` holds that split. Subscriptions started between 4 October
+and 2 November 2026 keep a launch price of 1.80 EUR a month or 18.00 EUR a
+year for their lifetime (`shared/launch-offer.ts`). The server owns answers, grading, scores,
 XP and what each account may open. Until 25 September 2026 this summary said
 all learning was free. StudyShark, which shared this code, moved to its own
 repository (`lukaskourilcz/studyshark`) on 2026-09-24.

@@ -283,6 +283,49 @@ grant or a voucher (below). Migrations 039 to 045 reached production on
 more; it goes to production after the deploy that stopped calling them
 ("Account erasure" below).
 
+**Launch price (4 October to 2 November 2026).** The owner decided on
+2026-09-28 that every subscription started between Sun 4 Oct 2026 00:00 and
+Mon 2 Nov 2026 23:59:59, Prague time, pays 55 % less for its whole lifetime:
+1.80 EUR a month or 18.00 EUR a year, VAT included. `shared/launch-offer.ts`
+holds the window, the percentage and the prices derived from `PREMIUM_PRICE`
+(rounded the way Stripe rounds a percentage coupon). The offer is on only
+inside the window, with `BILLING_ENABLED` and a complete Stripe setup, and
+with the coupon id in `STRIPE_COUPON_LAUNCH`; without any of the three, every
+page and every Checkout Session is exactly what it was before.
+
+- Checkout (`checkoutSessionParams`) adds `discounts: [{ coupon }]` and
+  drops `allow_promotion_codes`, because Stripe takes one or the other. The
+  coupon is `duration: forever`, so it becomes a discount on the subscription
+  and applies to every renewal and after a portal switch between the monthly
+  and yearly Price; cancelling ends it with the subscription. Managed
+  Payments does not list `discounts` among the Checkout parameters it
+  refuses (Stripe's "Update your Checkout integration" page, read
+  2026-09-28), so the same session works on both tax paths. A discounted
+  session expires when the offer does (at least 31 minutes after it opens,
+  Stripe's minimum being 30), and the coupon's `redeem_by` (1793660399) is
+  the limit Stripe enforces; Stripe's documentation does not say whether a
+  session opened before `redeem_by` and paid after it keeps the discount.
+- The browser shows the offer when `/api/settings` says `billing.launchOffer`
+  and its own clock is inside the window (`client/src/lib/launchOffer.ts`),
+  so a cached answer or a wrong device clock cannot show it early or late.
+  `/premium`, the plan table, the upgrade sheet, the expired-checkout line
+  and the Terms print the launch price beside the regular price struck
+  through, and a note that names the regular price and the day it applies
+  from (3 Nov 2026), "kept for the lifetime of your subscription · cancel
+  anytime" and "Offer ends 2 Nov 2026". Screen readers hear one sentence per
+  price. No countdown and no scarcity copy.
+- Framing: an introductory launch price, not a reduction. Premium was never
+  sold before the offer, so the pages cite no "lowest price in the last 30
+  days"; the launch contracts refuse such a line. The wording awaits a legal
+  check (`NEEDED.md`).
+- Built at deploy time and therefore unchanged: the static HTML of `/premium`
+  that a visitor without JavaScript reads, the JSON-LD offers in
+  `client/src/lib/publicMetadata.ts`, the share images and the changelog.
+  They state the regular price.
+- `LAUNCH_OFFER_TEST_NOW` replaces the clock for the coupon decision on a
+  test-mode deployment only (an `sk_test_` key), so the owner can try the
+  Checkout before 4 October.
+
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
   and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
   stage one of every evolving project and short path (`FREE_EVOLVING_STAGES`),
