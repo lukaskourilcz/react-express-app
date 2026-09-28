@@ -217,7 +217,6 @@ export function SampleCard({ chip, question, onAnswered }: { chip: string; quest
             {right ? t('home.answerCorrect') : t('home.answerWrong', { answer: question.opts[correct] })}
           </span>
           <span style={{ fontSize: '0.85rem', color: 'var(--color-text-secondary)' }}>{question.e}</span>
-          <span style={{ fontSize: '0.8rem', color: 'var(--color-text-secondary)' }}>{t('home.checkpointBlurb')}</span>
         </div>
       )}
     </div>

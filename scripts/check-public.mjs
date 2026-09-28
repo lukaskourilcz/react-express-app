@@ -5,10 +5,10 @@ import { JSDOM } from 'jsdom';
 const dir = 'client/dist';
 const sitemap = new JSDOM(readFileSync(`${dir}/sitemap.xml`, 'utf8'), { contentType: 'application/xml' });
 const urls = [...sitemap.window.document.querySelectorAll('loc')].map(node => new URL(node.textContent));
-assert.equal(urls.length, 15, 'Home, five guides in two languages, /premium, /premium/cancel, /daily and /changelog');
+assert.equal(urls.length, 14, 'Home, five guides in two languages, /premium, /premium/cancel and /daily');
 // The app pages with public HTML (#222, #239). /premium/success stays out: a
 // Stripe return means nothing to anyone else, and the app marks it noindex.
-const APP_PAGES = ['/premium', '/premium/cancel', '/daily', '/changelog'];
+const APP_PAGES = ['/premium', '/premium/cancel', '/daily'];
 assert.deepEqual(urls.filter(url => APP_PAGES.includes(url.pathname)).map(url => url.pathname), APP_PAGES);
 assert(!urls.some(url => url.pathname.startsWith('/premium/success')), 'the checkout return page is never listed');
 const tiers = readFileSync('shared/tiers.ts', 'utf8');
@@ -43,9 +43,6 @@ for (const url of urls) {
       assert.equal(doc.querySelector('meta[property="og:image"]').getAttribute('content'), 'https://devshark.app/og/daily.png');
       assert(existsSync(`${dir}/og/daily.png`), '/daily has its share image');
       assert(!doc.querySelector('[role="radio"], .ss-radio-card'), '/daily holds no question in its HTML');
-    } else {
-      assert.match(text, /25 September 2026/, '/changelog lists the freemium entry');
-      assert.match(text, /devShark is freemium/, '/changelog names the freemium change');
     }
     continue;
   }

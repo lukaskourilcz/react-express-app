@@ -109,7 +109,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'home.sampleChip': 'Úroveň 1 — {level}',
   'home.answerCorrect': 'Správně.',
   'home.answerWrong': 'Špatně. Správná odpověď je {answer}.',
-  'home.checkpointBlurb': 'Každá úroveň končí takovýmto kontrolním bodem.',
   'home.topicsKicker': 'Témata',
   'home.topicsTitle': 'Vyber si téma.',
   'home.andMore': 'A dalších {n} →',
@@ -931,8 +930,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'landing.compare.othersLessons': 'Předplatné nebo platba za kurz',
   'landing.compare.rowQuizzes': 'Neomezené kvízy',
   'landing.compare.rowLeaderboards': 'Žebříčky a živé zápasy',
-  'landing.compare.rowNoCard': 'Žádná karta pro start',
-  'landing.compare.othersNoCard': 'Pro zkušební verzi je nutná karta',
   'landing.compare.footnote': 'Premium nikdy nemění, jak se odpověď hodnotí, kolik za ni dostaneš XP ani jak se řadí žebříčky. Platí servery, které hodnotí tvůj kód. Reklamy nemá žádný z plánů.',
   'landing.compare.cta': 'Začni se učit zdarma',
 

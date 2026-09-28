@@ -113,7 +113,6 @@ export const en = {
   'home.sampleChip': 'Level 1 — {level}',
   'home.answerCorrect': 'Correct.',
   'home.answerWrong': 'Incorrect. The answer is {answer}.',
-  'home.checkpointBlurb': 'Every level ends with a checkpoint like this.',
   'home.topicsKicker': 'Topics',
   'home.topicsTitle': 'Pick a topic.',
   'home.andMore': 'And {n} more →',
@@ -1062,13 +1061,7 @@ export const en = {
   'landing.compare.rowLessons': 'Learn topics',
   'landing.compare.othersLessons': 'HTML, CSS and JavaScript',
   'landing.compare.rowQuizzes': 'Quizzes and the daily challenge',
-  // The plan table (#222) no longer renders rowStreaks, rowAi, rowBilingual,
-  // rowCards, oftenPaid, usuallyLimited, includedLabel or the others* cells
-  // other than othersLessons and othersNoCard. They stay for the Czech parity
-  // contract; the table reads only keys it names in ComparisonTable.tsx.
   'landing.compare.rowLeaderboards': 'Leaderboards, streaks and friends',
-  'landing.compare.rowNoCard': 'Payment details',
-  'landing.compare.othersNoCard': 'Never asked for',
   'landing.compare.footnote': 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked. It pays for the servers that grade your code. No ads on either plan.',
   'landing.compare.cta': 'Start free',
 
@@ -1296,7 +1289,6 @@ export const en = {
   'landing.compare.premiumPaths': 'Yes, as each one opens',
   'landing.compare.rowCoins': 'Coins for merchandise',
   'landing.compare.premiumCoins': 'Yes, once redemption opens',
-  'landing.compare.premiumNoCard': 'At checkout, with Stripe',
   'premium.page.title': 'Everything in devShark for {symbol}{monthly} a month',
   'premium.page.titleOffer': 'Everything in devShark at the launch price of {symbol}{offerMonthly} a month',
   'premium.page.lead': 'Premium opens every Learn topic, every coding challenge and every project stage. HTML, CSS, JavaScript and the first half of React stay free for every account.',
@@ -2069,13 +2061,6 @@ export const en = {
   'daily.failed': 'The question could not load. Try again in a moment.',
   'daily.noScript': 'Turn on JavaScript to see the question and check your answer.',
   'daily.checkFailed': 'Your answer could not be checked. Try again in a moment.',
-  // Changelog, /changelog (#239)
-  'title.changelog': 'Changelog · devShark',
-  'footer.changelog': 'Changelog',
-  'changelog.kicker': 'devShark changelog',
-  'changelog.title': 'What changed',
-  'changelog.lead': 'What changed in devShark and when, newest first.',
-  'changelog.empty': 'Nothing is listed yet.',
 } as const;
 
 export type TranslationKey = keyof typeof en;

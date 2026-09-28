@@ -1,4 +1,4 @@
-// The footer links the changelog (#239), and a social profile the owner sets
+// The footer carries no changelog, and a social profile the owner sets
 // later (Threads, once @devshark.app exists) shows as one more icon with no
 // other change. Here the catalogue is replaced so both states are covered.
 import { describe, expect, it, vi } from 'vitest';
@@ -29,10 +29,11 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe('the footer', () => {
-  it('links the changelog beside the legal links', () => {
+  it('links no changelog beside the legal links', () => {
     server.use(http.get('*/api/settings', () => HttpResponse.json({})));
     render(<BrandFooter />, { wrapper });
-    expect(screen.getByRole('link', { name: 'Changelog' })).toHaveAttribute('href', '/changelog');
+    expect(screen.getByRole('link', { name: 'Terms' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'Changelog' })).toBeNull();
   });
 
   it('shows the Threads icon once its URL is recorded', () => {

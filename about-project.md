@@ -27,8 +27,6 @@ Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
   track that rotates by date, answered and checked on the server without an
   account, and recorded nowhere. Each day has its own page (`/daily/<date>`)
   and share image.
-- A public **changelog** at `/changelog`, linked from the footer, with dated
-  notes on what changed (the first: freemium since 25 September 2026).
 - Share moments: the invite link after a first passed Learn level and after a
   Challenge run, a result card from the Challenge and the typing racer, and a
   link-preview image per coding task (title, track, difficulty and the free
