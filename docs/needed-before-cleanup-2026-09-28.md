@@ -10,6 +10,8 @@ Production database migrations through `supabase/supabase-schema-046.sql` are ap
 
 ## Marketing launch, 5 November 2026 (#239)
 
+> Superseded on 28 September 2026: the marketing launch runs from 4 October to 2 November 2026 with a launch price (root `NEEDED.md`).
+
 Shipped for the plan: campaign labels on the first pageview and on the person, `/daily` and `/changelog`, a share image per coding task and per day, the invite link after a first passed level and a Challenge run, result cards for the Challenge and the typing racer, and `/premium?voucher=<code>`. No migration: the voucher cap and expiry are the ones 045 already stores.
 
 - [ ] **Check one social link in PostHog after the deploy** — open `https://devshark.app/?utm_source=threads&utm_medium=post&utm_campaign=qotd` in a private window, then in PostHog → Activity find the `$pageview` whose URL keeps the three labels and whose properties read `utm_source = threads`. Sign in once from that window and confirm the person has `utm_source`, `utm_medium` and `utm_campaign` set. [imp:4] [owner:me] [time:10m] [kind:deploy]

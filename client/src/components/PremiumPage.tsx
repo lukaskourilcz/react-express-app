@@ -14,6 +14,12 @@
 // while Stripe is off, so it comes first then, after "Your plan" when the
 // account holds Premium already. With billing on it follows the plans.
 //
+// The launch price (4 Oct to 2 Nov 2026, components/LaunchOffer.tsx) shows
+// only while useLaunchOffer() returns it: the plan prices get the regular
+// price struck through, a note says what the regular price is and from when,
+// and one question explains how long it lasts. Outside the window the page is
+// exactly as before.
+//
 // No urgency copy, no countdowns and no scarcity. The price always carries
 // "VAT included", and the renewal, the waiver sentence and the refund sit next
 // to the buttons, before anyone pays. The server decides every plan; this page
@@ -37,10 +43,18 @@ import PremiumVoucher from './PremiumVoucher';
 import ComparisonTable from './landing/ComparisonTable';
 import { PremiumIncludes, PremiumSmallPrint, premiumVars, type RenderLink } from './PremiumFacts';
 import { redemptionOpen, useGameConfig } from '../lib/gameConfig';
+import { useLaunchOffer } from '../lib/launchOffer';
+import { LaunchOfferNote, OfferAmount } from './LaunchOffer';
+import type { LaunchOfferDisplay } from '../../../shared/launch-offer';
 import './DeepEndScreens.css';
 import './PremiumPage.css';
 
-const FAQ: readonly { q: TranslationKey; a: TranslationKey; link?: { to: string; label: TranslationKey } }[] = [
+type FaqItem = { q: TranslationKey; a: TranslationKey; link?: { to: string; label: TranslationKey } };
+
+/** Asked first while the launch price is on. */
+const OFFER_FAQ: FaqItem = { q: 'premium.page.faq.offerQ', a: 'premium.page.faq.offerA' };
+
+const FAQ: readonly FaqItem[] = [
   { q: 'premium.page.faq.cancelQ', a: 'premium.page.faq.cancelA', link: { to: '/premium/cancel', label: 'legal.link.cancel' } },
   { q: 'premium.page.faq.progressQ', a: 'premium.page.faq.progressA' },
   { q: 'premium.page.faq.invoiceQ', a: 'premium.page.faq.invoiceA' },
@@ -51,7 +65,7 @@ const FAQ: readonly { q: TranslationKey; a: TranslationKey; link?: { to: string;
 
 const routerLink: RenderLink = (to, label) => <Link key={to} to={to}>{label}</Link>;
 
-function PlanCard({ plan, showAction }: { plan: BillingPlan; showAction: boolean }) {
+function PlanCard({ plan, showAction, offer }: { plan: BillingPlan; showAction: boolean; offer: LaunchOfferDisplay | null }) {
   const { t } = useLanguage();
   const id = useId();
   const vars = premiumVars();
@@ -60,7 +74,7 @@ function PlanCard({ plan, showAction }: { plan: BillingPlan; showAction: boolean
     <article className="ss-info-card ss-premium-plan" aria-labelledby={id} data-plan={plan}>
       <h3 id={id}>{t(annual ? 'premium.page.annualName' : 'premium.page.monthlyName')}</h3>
       <p className="ss-premium-plan__price">
-        <strong>{vars.symbol}{annual ? vars.annual : vars.monthly}</strong>{' '}
+        {offer ? <OfferAmount offer={offer} plan={plan} /> : <strong>{vars.symbol}{annual ? vars.annual : vars.monthly}</strong>}{' '}
         <span>{t(annual ? 'premium.page.perYear' : 'premium.page.perMonth')}</span>
       </p>
       {annual && <p className="ss-premium-plan__saving">{t('premium.page.annualSaving')}</p>}
@@ -91,6 +105,8 @@ export default function PremiumPage() {
   const config = useGameConfig();
   const plan = useEntitlement();
   const vars = premiumVars();
+  const offer = useLaunchOffer();
+  const faq = offer ? [OFFER_FAQ, ...FAQ] : FAQ;
   const ids = { plans: useId(), smallPrint: useId(), includes: useId(), faq: useId(), current: useId() };
 
   useEffect(() => capture('premium_page_viewed', { product: CURRENT_PRODUCT.id }), []);
@@ -107,7 +123,7 @@ export default function PremiumPage() {
   const voucherLeads = !billing.enabled;
 
   return (
-    <Page kicker={t('billing.kicker')} title={t('premium.page.title', vars)} lead={t('premium.page.lead')}>
+    <Page kicker={t('billing.kicker')} title={offer ? t('premium.page.titleOffer', offer) : t('premium.page.title', vars)} lead={t('premium.page.lead')}>
       <div className="ss-premium-page">
         {premium && (
           <section className="ss-info-card ss-premium-current" aria-labelledby={ids.current}>
@@ -121,9 +137,10 @@ export default function PremiumPage() {
         <section className="ss-premium-plans" aria-labelledby={ids.plans}>
           <h2 id={ids.plans} className="ss-premium-section-title">{t('premium.page.plansTitle')}</h2>
           <div className="ss-premium-plan-grid">
-            <PlanCard plan="monthly" showAction={!paying && !closed && !unreachable} />
-            <PlanCard plan="annual" showAction={!paying && !closed && !unreachable} />
+            <PlanCard plan="monthly" showAction={!paying && !closed && !unreachable} offer={offer} />
+            <PlanCard plan="annual" showAction={!paying && !closed && !unreachable} offer={offer} />
           </div>
+          {offer && <LaunchOfferNote offer={offer} />}
           {closed && <p className="ss-info-note" role="status">{t('billing.checkout.soon')}</p>}
           {unreachable && (
             <div className="ss-info-note ss-premium-unreachable" role="alert">
@@ -139,15 +156,15 @@ export default function PremiumPage() {
 
         <PremiumIncludes t={t} headingId={ids.includes} redemptionOpen={redemptionOpen(config)} />
 
-        <ComparisonTable showCta={false} />
+        <ComparisonTable showCta={false} showOfferNote={false} />
 
         <section className="ss-premium-faq" aria-labelledby={ids.faq}>
           <h2 id={ids.faq} className="ss-premium-section-title">{t('premium.page.faqTitle')}</h2>
           <div className="ss-premium-faq__list">
-            {FAQ.map((item) => (
+            {faq.map((item) => (
               <details key={item.q} className="ss-premium-faq__item">
                 <summary>{t(item.q)}</summary>
-                <p>{t(item.a)}</p>
+                <p>{t(item.a, offer ?? undefined)}</p>
                 {item.link && <p className="ss-text-links">{routerLink(item.link.to, t(item.link.label))}</p>}
               </details>
             ))}

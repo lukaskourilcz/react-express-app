@@ -10,4 +10,6 @@ devShark has been freemium since 25 September 2026: every account learns HTML, C
 | **Ads** | Low | $0–100/mo | Passive | Risky for a student audience, and the plan table promises no ads on either tier |
 | **School / classroom licenses** | Low | project-based | Larger deals | Long sales cycle; support |
 
+**Launch price (4 Oct – 2 Nov 2026):** subscriptions started in that window pay 55 % less for their whole lifetime, 1.80 EUR a month or 18.00 EUR a year (`shared/launch-offer.ts`, a forever Stripe coupon). Each launch subscriber brings in less than half of a regular one for as long as they stay, and Stripe's fixed fee takes a larger share of a 1.80 charge than of a 3.99 one; the annual plan softens both.
+
 **Recommendation:** sell Premium monthly and annually (the annual plan pays the fixed fee once a year), keep merchandise a capped retention reward, and run no ads.

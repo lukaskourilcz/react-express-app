@@ -17,6 +17,8 @@ import { useBilling } from '../lib/billing';
 import { VOUCHER_PATH } from '../lib/voucher';
 import { premiumIncludes, premiumVars } from './PremiumFacts';
 import { redemptionOpen, useGameConfig } from '../lib/gameConfig';
+import { useLaunchOffer } from '../lib/launchOffer';
+import { LaunchOfferNote, PremiumPriceSentence } from './LaunchOffer';
 
 export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
   const t = useT();
@@ -28,6 +30,8 @@ export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
   const config = useGameConfig();
   // Nobody can buy yet, so the way in is a voucher.
   const voucher = billing.known && !billing.enabled;
+  // The launch price, with its note, only while it is on (LaunchOffer.tsx).
+  const offer = useLaunchOffer();
   return (
     <Dialog
       isOpen
@@ -49,7 +53,8 @@ export default function UpgradeSheet({ request }: { request: UpgradeRequest }) {
             {premiumIncludes(redemptionOpen(config)).map((key) => <li key={key}>{t(key, vars)}</li>)}
           </ul>
         </div>
-        <Text type="body" weight="semibold">{t('premium.sheet.price', vars)}</Text>
+        <Text type="body" weight="semibold"><PremiumPriceSentence offer={offer} /></Text>
+        {offer && <LaunchOfferNote offer={offer} compact />}
         <Text type="supporting" color="secondary">{t('premium.sheet.fair')}</Text>
         {voucher && <Text type="body">{t('premium.sheet.voucherNote')}</Text>}
         <HStack gap={1.5} justify="end" width="100%" wrap="wrap">

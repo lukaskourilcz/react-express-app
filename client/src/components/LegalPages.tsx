@@ -13,13 +13,14 @@ import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useBilling } from '../lib/billing';
+import { useLaunchOffer } from '../lib/launchOffer';
 import { TRADER } from '../../product-catalog';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../shared/tiers';
 import { Page } from './PublicInfoPages';
 import './LegalPages.css';
 
 /** The date of the current wording. Change it with the words. */
-export const LEGAL_UPDATED = '2026-09-26';
+export const LEGAL_UPDATED = '2026-09-28';
 
 const ADR_URL = 'https://coi.gov.cz/en/information-about-adr/';
 const STRIPE_PRIVACY_URL = 'https://stripe.com/privacy';
@@ -33,7 +34,9 @@ type Block =
   | { kind: 'waiver' }
   | { kind: 'links'; links: LinkSpec[] }
   | { kind: 'trader' }
-  | { kind: 'form' };
+  | { kind: 'form' }
+  // The launch price paragraph: rendered only while the offer is on.
+  | { kind: 'launch' };
 interface Section { id: string; title: TranslationKey; blocks: Block[] }
 
 const p = (key: TranslationKey): Block => ({ kind: 'p', key });
@@ -46,6 +49,8 @@ const TERMS: Section[] = [
     title: 'legal.terms.price.title',
     blocks: [
       p('legal.terms.price.body'),
+      { kind: 'launch' },
+      p('legal.terms.price.discount'),
       { kind: 'seller', link: 'legal.terms.price.sellerLink', trader: 'legal.terms.price.sellerTrader', unknown: 'legal.terms.price.sellerUnknown' },
     ],
   },
@@ -195,6 +200,7 @@ function LegalDocument({ title, lead, sections }: { title: TranslationKey; lead:
   const { hash } = useLocation();
   // Until the settings arrive, the seller sentence stays neutral.
   const seller: Seller = billing.known ? billing.seller : null;
+  const offer = useLaunchOffer();
   const vars = {
     level: FREE_LEARN_LEVELS.react ?? 0,
     symbol: PREMIUM_PRICE.symbol,
@@ -218,6 +224,7 @@ function LegalDocument({ title, lead, sections }: { title: TranslationKey; lead:
       case 'links': return <LinkRow key={index} links={block.links} seller={seller} />;
       case 'trader': return <TraderDetails key={index} />;
       case 'form': return <WithdrawalForm key={index} />;
+      case 'launch': return offer ? <p key={index}>{t('legal.terms.price.launch', offer)}</p> : null;
     }
   };
 

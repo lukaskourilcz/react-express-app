@@ -64,3 +64,11 @@ it('keeps the first campaign a browser arrived with for 30 days', async () => {
   captureCampaignFromUrl('?utm_source=threads&utm_campaign=launch-2026-11', 31 * day);
   expect(firstTouchCampaign(32 * day)).toEqual({ utm_source: 'threads', utm_campaign: 'launch-2026-11' });
 });
+
+it('keeps the launch campaign label on a /premium link', async () => {
+  vi.resetModules();
+  const { campaignFrom, scrubUrl } = await import('../src/lib/analytics');
+  const link = 'https://devshark.app/premium?utm_source=instagram&utm_medium=post&utm_campaign=launch-55&voucher=X';
+  expect(campaignFrom(new URL(link).search)).toEqual({ utm_source: 'instagram', utm_medium: 'post', utm_campaign: 'launch-55' });
+  expect(scrubUrl(link, true)).toBe('https://devshark.app/premium?utm_source=instagram&utm_medium=post&utm_campaign=launch-55');
+});

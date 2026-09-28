@@ -32,8 +32,10 @@ export interface GameConfig {
    * `cancelByEmail`: the cancellation page can email its confirmation link, so
    * nobody has to sign in to cancel; absent from an older server.
    * `seller` (#222) names the seller of record for the Terms: Stripe as Link
-   * under Managed Payments, or the trader; null or absent means unsaid. */
-  billing: { enabled: boolean; cancellable: boolean; cancelByEmail?: boolean; seller?: 'link' | 'trader' | null };
+   * under Managed Payments, or the trader; null or absent means unsaid.
+   * `launchOffer`: Checkout applies the launch coupon right now (the window
+   * is open, billing is on and the coupon is set); absent means off. */
+  billing: { enabled: boolean; cancellable: boolean; cancelByEmail?: boolean; seller?: 'link' | 'trader' | null; launchOffer?: boolean };
   /** What earns coins (#227): the rates, milestones and the social grant. */
   coins: CoinSettings;
   /** Spreadshop's own promotion in the devShark shop this month (#229), or
@@ -93,7 +95,7 @@ export const DEFAULT_CONFIG: GameConfig = {
   leveling: { rankThresholds: DEFAULT_RANK_THRESHOLDS },
   shop: { prices: { ...DEFAULT_SHOP_PRICES }, pathUnlockPrice: DEFAULT_PATH_UNLOCK_PRICE },
   devTips: [...DEFAULT_DEV_TIPS],
-  billing: { enabled: false, cancellable: false, cancelByEmail: false, seller: null },
+  billing: { enabled: false, cancellable: false, cancelByEmail: false, seller: null, launchOffer: false },
   coins: DEFAULT_COIN_SETTINGS,
   merchPromo: null,
   merch: { redemptionOpen: false },
