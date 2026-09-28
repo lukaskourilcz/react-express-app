@@ -154,7 +154,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 }
 .lp-activity__title { flex: 1 1 200px; min-width: 0; font-weight: 600; }
 .lp-activity__summary { flex: 1 1 100%; margin: 0; font-size: 0.88rem; color: var(--color-text-secondary); line-height: 1.5; }
-.lp-activity__minutes { flex: none; font-size: 0.85rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
+.lp-activity__minutes { flex: 0 1 auto; min-width: 0; font-size: 0.85rem; color: var(--color-text-secondary); font-variant-numeric: tabular-nums; }
 
 /* The profile card can carry long translated goal names and the full FDE role
  * name. Keep both the current choice and saved answers inside the card at every

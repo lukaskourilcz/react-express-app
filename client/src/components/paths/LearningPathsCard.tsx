@@ -226,11 +226,13 @@ export default function LearningPathsCard() {
                 </span>
                 <span className="lp-activity__title">{loc(manifest.title)}</span>
                 <span className="lp-activity__minutes">
-                  {enrollment
-                    ? t(`paths.state.${enrollment.status === 'paused' ? 'in_progress' : 'in_progress'}` as never)
-                    : isOpen(entry.availability)
-                      ? t('paths.action.start')
-                      : t('paths.availability.content_incomplete')}
+                  {/* A short state that fits its slot: closed, resume a paused
+                      enrollment, in progress, or start. */}
+                  {!isOpen(entry.availability)
+                    ? t('roadmap.unavailable')
+                    : enrollment
+                      ? t(enrollment.status === 'paused' ? 'paths.action.resume' : 'paths.state.in_progress')
+                      : t('paths.action.start')}
                 </span>
               </Link>
               {/* Only ever visible once the server says the path is finished,
