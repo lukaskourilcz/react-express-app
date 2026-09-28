@@ -171,12 +171,12 @@
       "tiles": [
         {
           "left": 41,
-          "top": 542,
+          "top": 557,
           "width": 314
         },
         {
           "left": 41,
-          "top": 698,
+          "top": 713,
           "width": 314
         }
       ],
@@ -187,24 +187,11 @@
         "innerWidth": 400,
         "docScrollWidth": 400,
         "docSideways": false,
-        "mainScrollWidth": 468,
+        "mainScrollWidth": 396,
         "mainClientWidth": 396,
         "mainOverflowX": "hidden",
-        "mainSideways": true,
-        "pastMainRight": [
-          {
-            "tag": "SPAN",
-            "cls": "astryx-text body size-3xl accent xjse4m1 xw6l6zx x",
-            "text": "1,860",
-            "right": 446
-          },
-          {
-            "tag": "SPAN",
-            "cls": "astryx-text supporting secondary xv1l7n4 x141an7d ",
-            "text": "XP",
-            "right": 468
-          }
-        ]
+        "mainSideways": false,
+        "pastMainRight": []
       }
     },
     "answered": [
@@ -441,6 +428,93 @@
       "GET /api/user/stats",
       "GET /api/user/xp",
       "PUT /api/quiz/roadmap"
+    ],
+    "unmocked": []
+  },
+  "P2.8": {
+    "width": 390,
+    "measurements": {
+      "boardLeft": 16,
+      "boardRight": 370,
+      "rowsRendered": 45,
+      "clippedInside": [
+        {
+          "cls": "ss-sr-only",
+          "sw": 35,
+          "cw": 1
+        },
+        {
+          "cls": "ss-sr-only",
+          "sw": 35,
+          "cw": 1
+        },
+        {
+          "cls": "ss-sr-only",
+          "sw": 35,
+          "cw": 1
+        },
+        {
+          "cls": "ss-sr-only",
+          "sw": 34,
+          "cw": 1
+        },
+        {
+          "cls": "ss-sr-only",
+          "sw": 34,
+          "cw": 1
+        },
+        {
+          "cls": "ss-sr-only",
+          "sw": 34,
+          "cw": 1
+        },
+        {
+          "cls": "ss-sr-only",
+          "sw": 34,
+          "cw": 1
+        },
+        {
+          "cls": "ss-sr-only",
+          "sw": 34,
+          "cw": 1
+        }
+      ],
+      "elementsPastBoard": [],
+      "segments": [
+        {
+          "text": "30 days",
+          "sw": 115,
+          "cw": 115,
+          "w": 115
+        },
+        {
+          "text": "All time",
+          "sw": 115,
+          "cw": 115,
+          "w": 115
+        },
+        {
+          "text": "Today",
+          "sw": 115,
+          "cw": 115,
+          "w": 115
+        }
+      ],
+      "doc": {
+        "innerWidth": 390,
+        "docScrollWidth": 390,
+        "docSideways": false,
+        "mainScrollWidth": 386,
+        "mainClientWidth": 386,
+        "mainOverflowX": "hidden",
+        "mainSideways": false,
+        "pastMainRight": []
+      }
+    },
+    "answered": [
+      "GET /api/leaderboard?period=30d",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=wallet"
     ],
     "unmocked": []
   }
