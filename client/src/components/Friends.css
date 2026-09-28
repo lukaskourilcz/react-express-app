@@ -12,10 +12,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 16px 18px;
-  border-radius: var(--radius-container);
-  background: var(--color-background-surface);
-  border: 1px solid var(--ss-card-line);
+  padding: 24px;
 }
 .fr-card__title {
   margin: 0;

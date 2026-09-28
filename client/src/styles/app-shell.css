@@ -316,16 +316,10 @@
 .devshark-swim { animation: devsharkSwim 3s ease-in-out infinite; }
 .devshark-cruise { animation: devsharkCruise var(--ss-motion-ambient) var(--ss-motion-ease) infinite alternate; }
 .devshark-wake { animation: devsharkWake var(--ss-motion-ambient) var(--ss-motion-ease) infinite; }
-.devshark-tip { animation: devsharkTipIn var(--ss-motion-reveal) ease-out; }
-@keyframes devsharkTipIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
 @media (prefers-reduced-motion: reduce) {
   .devshark-swim { animation: none; }
   .devshark-cruise { animation: none; transform: translateX(-50%); }
   .devshark-wake { animation: none; }
-  .devshark-tip { animation: none; }
 }
 
 /* Compact footer: the legal links, devShark's own social profiles and the

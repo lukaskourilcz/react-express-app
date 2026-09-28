@@ -9,7 +9,6 @@
 // i18n preserved verbatim.
 
 import { useEffect, useMemo } from 'react';
-import { Kicker } from './landing/LandingKit';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -19,7 +18,6 @@ import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Card } from '@astryxdesign/core/Card';
-import { Banner } from '@astryxdesign/core/Banner';
 import { Divider } from '@astryxdesign/core/Divider';
 import { Button } from '@astryxdesign/core/Button';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
@@ -142,7 +140,6 @@ export default function CareerRoadmap() {
   const [subject] = useSubject();
   const pillars = useMemo(() => webdevPillars(t), [t]);
 
-  const kicker = t('roadmapPage.kicker');
   const pageTitle = t('roadmapPage.title');
   const headerBody = t('careerRoadmap.headerBody');
 
@@ -186,7 +183,6 @@ export default function CareerRoadmap() {
         {/* Header */}
         <div className="ss-pop" style={{ width: '100%' }}>
           <VStack gap={1}>
-            <Kicker>{kicker}</Kicker>
             <Heading level={1} type="display-3">
               {pageTitle}
             </Heading>
@@ -195,14 +191,6 @@ export default function CareerRoadmap() {
             </Text>
           </VStack>
         </div>
-
-        {/* Honesty banner about what the career framing can and cannot claim. */}
-        <Banner
-          status="info"
-          container="card"
-          title={t('careerRoadmap.honestyLead')}
-          description={t('careerRoadmap.honestyBody')}
-        />
 
         {/* Track chooser — drives the headline %, the map and the pillars below. */}
         <VStack gap={1.5} align="center">

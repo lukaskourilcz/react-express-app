@@ -168,6 +168,9 @@ export default function LearningPathsCard() {
   });
 
   return (
+    // The same card stock as the GitHub card beside it (.ss-raised: the
+    // container radius, the 2px edge and --shadow-low).
+    <div className="ss-raised" style={{ display: 'flex', width: '100%' }}>
     <Card variant="default" padding={3} width="100%">
       <VStack gap={2}>
         <VStack gap={0.5}>
@@ -199,11 +202,11 @@ export default function LearningPathsCard() {
 
         {profile && !needsProfile && (
           <dl className="lp-profile-inventory">
-            <dt>{t('profile.picker.goalsLegend')}</dt>
+            <dt>{t('profile.inventory.goals')}</dt>
             <dd>{profile.goals.map((goal) => t(`profile.goal.${goal}` as never)).join(' · ')}</dd>
-            <dt>{t('profile.picker.experienceLegend')}</dt>
+            <dt>{t('profile.inventory.experience')}</dt>
             <dd>{t(`profile.experience.${profile.experience}` as never)}</dd>
-            <dt>{t('profile.picker.studyTimeLegend')}</dt>
+            <dt>{t('profile.inventory.studyTime')}</dt>
             <dd>{t(`profile.studyTime.${profile.studyTime}` as never)}</dd>
           </dl>
         )}
@@ -226,11 +229,13 @@ export default function LearningPathsCard() {
                 </span>
                 <span className="lp-activity__title">{loc(manifest.title)}</span>
                 <span className="lp-activity__minutes">
-                  {enrollment
-                    ? t(`paths.state.${enrollment.status === 'paused' ? 'in_progress' : 'in_progress'}` as never)
-                    : isOpen(entry.availability)
-                      ? t('paths.action.start')
-                      : t('paths.availability.content_incomplete')}
+                  {/* A short state that fits its slot: closed, resume a paused
+                      enrollment, in progress, or start. */}
+                  {!isOpen(entry.availability)
+                    ? t('roadmap.unavailable')
+                    : enrollment
+                      ? t(enrollment.status === 'paused' ? 'paths.action.resume' : 'paths.state.in_progress')
+                      : t('paths.action.start')}
                 </span>
               </Link>
               {/* Only ever visible once the server says the path is finished,
@@ -261,5 +266,6 @@ export default function LearningPathsCard() {
         error={dialogError}
       />
     </Card>
+    </div>
   );
 }

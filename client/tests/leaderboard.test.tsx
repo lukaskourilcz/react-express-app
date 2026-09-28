@@ -51,7 +51,7 @@ it('opens on the 30-day board and says what it counts', async () => {
   expect(await screen.findByText('Workshop learner')).toBeVisible();
   expect(seen[0].get('period')).toBe('30d');
   expect(seen[0].get('category')).toBeNull();
-  expect(screen.getByRole('heading', { level: 1, name: 'Most correct answers' })).toBeVisible();
+  expect(screen.getByRole('heading', { level: 1, name: 'Leaderboard' })).toBeVisible();
   expect(screen.getByText(/Learn answers from the last 30 days. Five answers put you on the board./)).toBeVisible();
   // The multi-subject pill is gone.
   expect(screen.queryByText('Web Dev')).toBeNull();

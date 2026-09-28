@@ -220,14 +220,18 @@ function ProfileBody({
                   >
                     <Avatar src={user.picture} name={user.name} alt="" size={64} />
                   </div>
-                  <VStack gap={0.5}>
-                    <Heading level={1} maxLines={1}>
-                      {flair ? `${flair} ` : ''}{user.name}
-                    </Heading>
-                    <Text type="supporting" color="secondary" maxLines={1}>
-                      {user.email}
-                    </Text>
-                  </VStack>
+                  {/* min-width 0 lets a long name or email ellipsise inside
+                      the card instead of running past it. */}
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <VStack gap={0.5}>
+                      <Heading level={1} maxLines={1}>
+                        {flair ? `${flair} ` : ''}{user.name}
+                      </Heading>
+                      <Text type="supporting" color="secondary" maxLines={1}>
+                        {user.email}
+                      </Text>
+                    </VStack>
+                  </div>
                 </HStack>
                 <IdentitySettings />
               </div>
@@ -390,7 +394,7 @@ function StreakCard({
         <VStack gap={2}>
           <SectionLabel>{t('profile.streaks')}</SectionLabel>
 
-          <Grid columns={{ minWidth: 150, max: 2 }} gap={2}>
+          <Grid columns={{ minWidth: 240, max: 2 }} gap={2}>
             <div role="group" aria-labelledby={currentLabelId} style={{ display: 'flex', width: '100%' }}>
               <Card variant="muted" padding={3} width="100%">
                 <VStack gap={0.5} align="center">
@@ -565,7 +569,7 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
         <SectionLabel>{t('profile.career')}</SectionLabel>
         {syncWarning && <Banner status="warning" title={t('profile.syncUnavailable')} />}
 
-        <HStack gap={2} align="center">
+        <HStack gap={2} align="center" wrap="wrap">
           {/* The learner's earned rank icon (data, not chrome) in a quiet tile. */}
           <div
             aria-hidden
@@ -580,13 +584,16 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
           >
             <TrophyIcon size={24} />
           </div>
-          <VStack gap={0} width="100%">
-            <Heading level={3} maxLines={1}>{title}</Heading>
+          {/* The rank title takes the room it needs (at least 10rem); the XP
+              figure keeps its width and wraps under it on a narrow card, so a
+              long title never pushes it out of the card. */}
+          <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0, flex: '1 1 10rem' }}>
+            <Heading level={3} maxLines={2}>{title}</Heading>
             <Text type="supporting" size="xsm" color="secondary">
               {t('profile.careerLevelOf', { level: info.level, max: MAX_RANK })}
             </Text>
-          </VStack>
-          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6 }}>
+          </div>
+          <span style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, flexShrink: 0, whiteSpace: 'nowrap' }}>
             <Text size="3xl" weight="bold" color="accent">{nf(totalXp)}</Text>
             <Text type="supporting" color="secondary">{t('profile.xpUnit')}</Text>
           </span>
@@ -603,7 +610,9 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
           </Text>
         </VStack>
 
-        <Grid columns={{ minWidth: 110, max: 4 }} gap={1.5}>
+        {/* Two by two: the card's column is too narrow for four abreast, and
+            three plus one reads as a mistake. */}
+        <Grid columns={{ minWidth: 120, max: 2 }} gap={1.5}>
           <StatTile label={t('profile.quizzesCompleted')} value={nf(totals.quizzes)} />
           <StatTile label={t('profile.questionsAnswered')} value={nf(totals.questions)} />
           <StatTile label={t('profile.correctAnswers')} value={nf(totals.correct)} />
@@ -752,7 +761,7 @@ const StatTile = ({ label, value }: { label: string; value: number | string }) =
   <div style={{ display: 'flex', width: '100%' }}>
     <Card variant="muted" padding={2} width="100%">
       <VStack gap={0.5}>
-        <Text size="2xl" weight="bold">{value}</Text>
+        <Text size="xl" weight="bold" style={{ fontVariantNumeric: 'tabular-nums' }}>{value}</Text>
         <Text type="supporting" size="xsm" color="primary" weight="semibold">{label}</Text>
       </VStack>
     </Card>

@@ -781,7 +781,8 @@ function publicCopyContracts() {
   // Design audit P0.4: grading and end states are stated, not cheered. No
   // exclamation mark and no "Well done" in any verdict, result or end key.
   for (const [key, value] of Object.entries(ENGLISH)) {
-    if (!/\.(correct|wrong|verdict\.|gameOver|scoreSubmitted|finished)/.test(key)) continue;
+    // Round two added the Learn end states (design review 2 R2-P1.13).
+    if (!/\.(correct|wrong|verdict\.|gameOver|scoreSubmitted|finished)|roadmap\.(levelComplete|levelFailed|outOfHeartsTitle|checkpointComplete|allDone)/.test(key)) continue;
     assert.doesNotMatch(value, /!|Well done/i, `${key} cheers instead of stating the result`);
   }
   // Design audit P0.6: the header a visitor without a session sees. Today,
@@ -1061,7 +1062,7 @@ function coinsContracts() {
   assert.equal(ENGLISH['shop.title'], 'Coins');
   assert.equal(ENGLISH['shop.tokensUnit'], 'coins');
   for (const [key, value] of Object.entries(ENGLISH)) {
-    if (!/^(shop\.|rewards\.|register\.|auth\.signupBonus)/.test(key) || /^shop\.item\./.test(key)) continue;
+    if (!/^(shop\.|rewards\.|register\.|auth\.signupBonus)/.test(key)) continue;
     assert.doesNotMatch(value.replace(/\{\w+\}/g, ''), /\btokens?\b/i, `${key} says tokens; the product says coins`);
   }
   assert.match(read('docs/product-architecture.md'), /the UI calls it \*\*Coins\*\*/, 'the naming rule is written down');

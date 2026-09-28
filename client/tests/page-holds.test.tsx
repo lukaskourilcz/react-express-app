@@ -123,7 +123,7 @@ describe('/today', () => {
     answer();
     const drawn = firstDraw('h1', headings);
     await mountAt('/today', <Today />);
-    expect(drawn()).toEqual(expect.arrayContaining(['Today', 'Due for review', 'Challenge run', 'Focused skill path']));
+    expect(drawn()).toEqual(expect.arrayContaining(['Today', 'Due for review', 'Challenge run', 'Skill path']));
     expect(screen.getByText('Where you start')).toBeInTheDocument();
   });
 
@@ -131,7 +131,7 @@ describe('/today', () => {
     const accountReads = answer();
     await mountAt('/today', <Today />);
     expect(screen.getByRole('heading', { level: 1, name: 'Today' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /Due for review|Challenge run|Focused skill path/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /Due for review|Challenge run|Skill path/ })).toBeNull();
     expect(accountReads).toEqual([]);
   });
 });

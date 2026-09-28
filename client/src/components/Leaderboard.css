@@ -2,22 +2,22 @@
  *
  * Canvas, one panel, rows. The panel is the shared .ss-panel card stock; every
  * colour below is a theme token, so light and dark come from the tokens and
- * this file holds none of its own. Ranks are ink discs with the number as
- * text: the top three are filled, the rest are outlined, and no rank is told
- * apart by hue. Nothing here animates.
+ * this file holds none of its own. Ranks are outlined discs with the number
+ * as text: the top three take a heavier 2px ink ring and weight, none is
+ * filled, and no rank is told apart by hue. Nothing here animates.
  */
 
 .lb { display: flex; flex-direction: column; gap: 20px; }
 
 .lb-head { display: flex; flex-direction: column; gap: 6px; max-width: 46rem; }
-.lb-lede {
-  margin: 0;
-  font-size: var(--ss-type-body);
-  line-height: 1.55;
-  color: var(--color-text-secondary);
-}
 
-.lb-controls { display: flex; flex-direction: column; gap: 12px; }
+/* The period control and the topic filter share one row that wraps; the
+   scope line takes the full width under them. On a phone they stack. */
+.lb-controls { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; }
+.lb-controls .lb-scope { flex: 1 1 100%; }
+@media (max-width: 599px) {
+  .lb-controls { flex-direction: column; align-items: stretch; }
+}
 
 /* The topic filter. A native select: it is keyboard- and screen-reader-complete
    on every platform, and the label sits beside it rather than inside it. */
@@ -56,6 +56,12 @@
 .lb-stale > span { flex: 1 1 16rem; padding: 8px 0; }
 
 .lb-board { overflow: hidden; }
+/* The previous board, kept while the next one loads: dimmed after a short
+   beat, so a fast switch does not flicker. */
+.lb-board[aria-busy='true'] { opacity: 0.55; transition: opacity var(--ss-motion-feedback) ease-out 200ms; }
+@media (prefers-reduced-motion: reduce) {
+  .lb-board[aria-busy='true'] { transition-duration: 0s; }
+}
 
 /* ── Rank discs ───────────────────────────────────────────────────────────── */
 
@@ -75,9 +81,9 @@
   font-variant-numeric: tabular-nums;
 }
 .lb-rank--top {
-  border-color: var(--ss-ink);
-  background: var(--ss-ink);
-  color: var(--color-background-surface);
+  border: 2px solid var(--ss-ink);
+  background: transparent;
+  color: var(--color-text-primary);
   font-weight: 800;
 }
 
@@ -116,7 +122,7 @@
 
 .lb-table { width: 100%; border-collapse: collapse; }
 .lb-table th {
-  padding: 12px 16px;
+  padding: 12px 24px;
   text-align: left;
   font-size: var(--ss-type-label);
   font-weight: 700;
@@ -126,8 +132,8 @@
   border-bottom: 1px solid var(--ss-card-line);
 }
 .lb-table td {
-  height: 56px;
-  padding: 6px 16px;
+  height: 48px;
+  padding: 4px 24px;
   vertical-align: middle;
   border-top: 1px solid var(--ss-card-line);
 }
@@ -138,6 +144,10 @@
 .lb-col-num { width: 120px; }
 .lb-table tr.is-viewer { background: var(--ss-selected); }
 .lb-table tr.is-viewer td:first-child { box-shadow: inset 3px 0 0 var(--brand-accent); }
+/* Rows sit on the same 24px gutter as the other panels; 16px on a phone. */
+@media (max-width: 599px) {
+  .lb-table th, .lb-table td, .lb-skeleton { padding-left: 16px; padding-right: 16px; }
+}
 
 /* ── Phones: stacked rows ─────────────────────────────────────────────────── */
 
@@ -146,8 +156,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 64px;
-  padding: 10px 14px;
+  min-height: 56px;
+  padding: 8px 16px;
   border-top: 1px solid var(--ss-card-line);
 }
 .lb-card:first-child { border-top: 0; }
@@ -199,8 +209,8 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  min-height: 56px;
-  padding: 12px 16px;
+  min-height: 48px;
+  padding: 8px 24px;
   border-top: 1px solid var(--ss-card-line);
 }
 .lb-skeleton:nth-child(2) { border-top: 0; }

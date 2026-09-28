@@ -42,8 +42,8 @@ const STATIC_CATALOGUE: Product[] = [
   { id: 'flair-crown', kind: 'flair', price: 500, marker: 'Ⅰ' },
 ];
 
-// Each product resolves its display copy from i18n keys derived from the id:
-// `shop.item.<id>.name` and `shop.item.<id>.desc`.
+// The ring and flair ids stay so saved inventories still resolve; no screen
+// sells or names them any more, so they carry no display copy.
 export const CATALOGUE: readonly Product[] = STATIC_CATALOGUE;
 
 const byId = new Map(CATALOGUE.map((p) => [p.id, p]));

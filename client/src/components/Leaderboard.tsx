@@ -7,11 +7,11 @@
 // Nothing here ranks by XP or by streak, and nothing here computes a rank: the
 // server does, and this screen only draws what it was sent.
 //
-// A rank is always the number as text. The top three get a heavier ink disc,
-// never a medal colour, so the order reads the same without colour. Nothing
+// A rank is always the number as text. The top three get a heavier ink ring,
+// never a fill or a medal colour, so the order reads the same without colour. Nothing
 // animates, so reduced motion has nothing to switch off.
 
-import { useEffect, useId, useState, type ReactNode } from 'react';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -19,7 +19,7 @@ import { Avatar } from '@astryxdesign/core/Avatar';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
-import { Kicker, SwimCta } from './landing/LandingKit';
+import { SwimCta } from './landing/LandingKit';
 import ErrorRetry from './ErrorRetry';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
@@ -138,12 +138,21 @@ function Leaderboard() {
       : { period: 'global', categories: subjectCategories };
   const cacheKey = `${request.period}:${request.period === '30d' || request.period === 'category' ? request.category ?? '' : ''}`;
 
-  const { data, error, isLoading, fetchStatus, dataUpdatedAt, refetch } = useLeaderboard(request);
+  const { data, error, isLoading, isFetching, isPlaceholderData, fetchStatus, dataUpdatedAt, refetch } = useLeaderboard(request);
   const reload = () => void refetch();
 
+  // While the next board loads, the previous one stays on screen (a
+  // placeholder, design review 2 R2-P1.5). It is drawn with the tab it came
+  // from, because each tab's rows have their own shape, and it is never
+  // cached under the new board's key.
+  const settledTab = useRef<Tab>(tab);
+  if (data && !isPlaceholderData) settledTab.current = tab;
+  const drawTab: Tab = isPlaceholderData ? settledTab.current : tab;
+  const refreshing = isPlaceholderData || (isFetching && !!data);
+
   useEffect(() => {
-    if (data && !error) writeCachedBoard(cacheKey, data);
-  }, [data, error, cacheKey]);
+    if (data && !error && !isPlaceholderData) writeCachedBoard(cacheKey, data);
+  }, [data, error, isPlaceholderData, cacheKey]);
 
   // Until migration 040 is applied the 30-day board does not exist. Say so and
   // show the all-time board rather than an error on the default tab.
@@ -163,9 +172,9 @@ function Leaderboard() {
       : readCachedBoard(cacheKey)
     : null;
   const board: LeaderboardResponse | null = offline ? stale?.data ?? null : error ? null : data ?? null;
-  const me: LeaderboardMe | null = !error && !offline && tab === '30d' ? data?.me ?? null : null;
+  const me: LeaderboardMe | null = !error && !offline && drawTab === '30d' ? data?.me ?? null : null;
 
-  const rows = board ? toRows(tab, board, t) : [];
+  const rows = board ? toRows(drawTab, board, t) : [];
   const viewerListed = rows.some((row) => row.isViewer);
   const pinned: Row | null =
     me && me.rank !== null && !viewerListed
@@ -183,11 +192,11 @@ function Leaderboard() {
   const showNoActivity = !!me && me.rank === null && rows.length > 0;
 
   const periodLabel =
-    tab === '30d' ? t('leaderboard.last30') : tab === 'all' ? t('leaderboard.allTime') : t('leaderboard.today');
+    drawTab === '30d' ? t('leaderboard.last30') : drawTab === 'all' ? t('leaderboard.allTime') : t('leaderboard.today');
   const topicLabel = category ? t(categoryLabelKey(category)) : t('leaderboard.allTopics');
-  const caption = tab === 'today' ? periodLabel : t('leaderboard.caption', { period: periodLabel, topic: topicLabel });
+  const caption = drawTab === 'today' ? periodLabel : t('leaderboard.caption', { period: periodLabel, topic: topicLabel });
   const headers =
-    tab === 'today'
+    drawTab === 'today'
       ? [t('leaderboard.scoreHeader'), t('leaderboard.timeHeader')]
       : [t('leaderboard.correctHeader'), t('leaderboard.accuracyHeader')];
   const scope =
@@ -213,12 +222,12 @@ function Leaderboard() {
     body = (
       <div className="lb-board ss-panel lb-empty">
         <p className="lb-empty__text">{emptyText}</p>
-        <SwimCta label={t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
+        <SwimCta label={tab === 'today' ? t('quiz.todaysChallenge') : t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
       </div>
     );
   } else {
     body = (
-      <div className="lb-board ss-panel">
+      <div className="lb-board ss-panel" aria-busy={refreshing || undefined}>
         {isMobile ? (
           <MobileBoard rows={rows} pinned={pinned} caption={caption} firstLabel={headers[0]} />
         ) : (
@@ -232,15 +241,13 @@ function Leaderboard() {
   return (
     <div className="de-page lb">
       <header className="lb-head">
-        <Kicker>{t('leaderboard.title')}</Kicker>
         <Heading level={1} type="display-3">
-          {t('leaderboard.heading')}
+          {t('leaderboard.title')}
         </Heading>
-        <p className="lb-lede">{t('leaderboard.rule')}</p>
       </header>
 
       <div className="lb-controls">
-        <SegmentedControl value={tab} onChange={(value) => setTab(value as Tab)} label={t('leaderboard.period')} layout="fill">
+        <SegmentedControl value={tab} onChange={(value) => setTab(value as Tab)} label={t('leaderboard.period')} layout={isMobile ? 'fill' : undefined}>
           <SegmentedControlItem value="30d" label={narrow ? t('leaderboard.last30Short') : t('leaderboard.last30')} />
           <SegmentedControlItem value="all" label={t('leaderboard.allTime')} />
           <SegmentedControlItem value="today" label={t('leaderboard.today')} />
