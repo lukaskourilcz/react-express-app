@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:#f7f8f7; color:#132019; font-family:'Inter',system-ui,sans-serif; }
+    a { color:#2d7a2d; } a:hover { color:#236123; }
+  </style>
+</helmet>
+
+<div style="max-width:1560px;margin:0 auto;padding:28px 24px 64px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <a href="00 Overview.dc.html" style="font-size:.8rem;font-weight:600;text-decoration:none">← Round 2 overview</a>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#2d7a2d">Section 1 of 3 · /leaderboard · signed in · recreated from source @ 8722c80</span>
+      <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.02em">Leaderboard: why it still reads as a different site</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(138,87,0,.1);color:#8a5700;font-weight:700;font-size:.9rem;border:1px solid rgba(138,87,0,.3)">Verdict: structure is right, the vocabulary is not shared</span>
+      <a href="02 Account.dc.html" style="font-size:.85rem;font-weight:600;text-decoration:none">Account →</a>
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid rgba(19,32,25,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;font-size:.95rem;line-height:1.55">
+    <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">The short answer</h2>
+    <p style="margin:0">Round one judged this page on its own and found it sound. Next to Coins and Profile it is not the layout that differs, it is the parts: the header is the only one on the site whose h1 is not the page's name; the period control is a full-width three-segment bar where Profile uses underline tabs; the top-three ranks are filled ink discs, the one filled-ink element in the product; the score column is Manrope at a literal 1.05rem while every other figure on Coins is body type; rows are 56px where Coins rows are 44px; the "You" tag, the select, the offline box and the visually-hidden utility are all second recipes of things the shared CSS already has; and the loading state is a skeleton where the rest of the site uses the fin or a status line. Each of these is small. Together they are why it reads as a page from before the token pass. Every fix below is CSS or a component swap; the ranking, the data and the states stay.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,620px),1fr));gap:24px;align-items:start">
+    <section style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <span style="font-size:.8rem;font-weight:700;color:#4f6570">Current · <code style="font-size:.78rem">Leaderboard.tsx</code>, <code style="font-size:.78rem">Leaderboard.css</code> · 30-day tab, all topics, viewer at rank 14 · 1000px content width</span>
+      <div style="overflow-x:auto;border:1px solid rgba(19,32,25,.14);border-radius:12px"><div style="position:relative;overflow:hidden;width:1048px;border-radius:12px;background:light-dark(#f3f6f5,#0b141b);color:light-dark(#132019,#e8eef0);color-scheme:{{ scheme }}">
+        <dc-import name="AppShell" active="/leaderboard" theme="{{ theme }}" hint-size="100%,57px"></dc-import>
+        <div style="width:1000px;margin:0 auto;padding:.5rem 0 3.5rem;display:flex;flex-direction:column;gap:20px;box-sizing:border-box">
+          <header style="display:flex;flex-direction:column;gap:6px;max-width:46rem;position:relative">
+            <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Leaderboard<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+            <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.015em;line-height:1.1">Most correct answers <span title="Finding L1" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;vertical-align:middle">1</span></h1>
+            <p style="margin:0;font-size:1rem;line-height:1.55;color:light-dark(#4f6570,#9db3bc)">Ranked by correct answers, then accuracy. The board opens on the last 30 days, so a new learner can reach the top.</p>
+          </header>
+          <div style="display:flex;flex-direction:column;gap:12px">
+            <div style="position:relative;display:grid;grid-template-columns:repeat(3,1fr);background:light-dark(#edf2f1,#16242d);border-radius:10px;padding:3px;gap:2px;font-size:.875rem;font-weight:600">
+              <span style="text-align:center;padding:8px 12px;border-radius:8px;background:light-dark(#fff,#101c24);box-shadow:0 1px 2px rgba(0,0,0,.08)">Last 30 days</span>
+              <span style="text-align:center;padding:8px 12px;border-radius:8px;color:light-dark(#4f6570,#9db3bc)">All time</span>
+              <span style="text-align:center;padding:8px 12px;border-radius:8px;color:light-dark(#4f6570,#9db3bc)">Today</span>
+              <span title="Finding L2" style="position:absolute;right:-8px;top:-8px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">2</span>
+            </div>
+            <div style="display:flex;align-items:center;flex-wrap:wrap;gap:8px 12px">
+              <span style="font-size:.875rem;font-weight:600">Topic</span>
+              <span style="flex:1 1 14rem;max-width:22rem;min-height:44px;padding:8px 12px;border-radius:.625rem;border:1px solid light-dark(rgba(19,32,25,.3),rgba(232,238,240,.28));background:light-dark(#fff,#101c24);display:flex;align-items:center;justify-content:space-between;box-sizing:border-box">All topics <span style="font-size:.7rem">▾</span></span>
+              <span title="Finding L3" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">3</span>
+            </div>
+            <p style="margin:0;max-width:46rem;font-size:.875rem;line-height:1.5;color:light-dark(#4f6570,#9db3bc)">Quiz, daily challenge, Biggest Shark Challenge and Learn answers from the last 30 days. Five answers put you on the board.</p>
+          </div>
+          <div style="position:relative;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));box-shadow:0 1px 2px rgba(15,26,42,.05),0 4px 12px rgba(15,26,42,.06)">
+            <span title="Finding L6" style="position:absolute;right:24px;top:-26px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;z-index:1">6</span>
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="width:72px;padding:12px 16px;text-align:left;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);border-bottom:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08))">Rank</th>
+                <th style="padding:12px 16px;text-align:left;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);border-bottom:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08))">Learner</th>
+                <th style="width:120px;padding:12px 16px;text-align:right;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);border-bottom:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08))">Correct</th>
+                <th style="width:120px;padding:12px 16px;text-align:right;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);border-bottom:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08))">Accuracy</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ rows }}" as="r" hint-placeholder-count="7">
+                  <tr style="background:{{ r.bg }}">
+                    <td style="height:56px;padding:6px 16px;vertical-align:middle;border-top:{{ r.borderTop }};box-shadow:{{ r.shadow }}"><span style="display:inline-grid;place-items:center;min-width:32px;height:32px;padding:0 6px;border-radius:999px;border:1.5px solid {{ r.discBorder }};background:{{ r.discBg }};color:{{ r.discFg }};font-weight:{{ r.discWeight }};font-size:.875rem;font-variant-numeric:tabular-nums;box-sizing:border-box">{{ r.rank }}</span><span style="display:{{ r.m4 }};margin-left:6px;vertical-align:middle;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif" title="Finding L4">4</span></td>
+                    <td style="height:56px;padding:6px 16px;vertical-align:middle;border-top:{{ r.borderTop }}"><span style="display:flex;align-items:center;gap:12px;min-width:0"><span style="width:28px;height:28px;border-radius:50%;background:light-dark(#d6ded3,#3c4f43);flex-shrink:0"></span><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span><span style="display:{{ r.youDisplay }};padding:1px 8px;border-radius:999px;border:1px solid currentColor;font-size:.72rem;font-weight:700;letter-spacing:.04em;line-height:1.5">You</span><span style="display:{{ r.youDisplay }};place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif" title="Finding L7">7</span></span></td>
+                    <td style="height:56px;padding:6px 16px;vertical-align:middle;text-align:right;white-space:nowrap;border-top:{{ r.borderTop }};font-family:'Manrope',sans-serif;font-weight:700;font-size:1.05rem;font-variant-numeric:tabular-nums">{{ r.correct }}<span style="display:{{ r.m5 }};margin-left:6px;vertical-align:middle;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif" title="Finding L5">5</span></td>
+                    <td style="height:56px;padding:6px 16px;vertical-align:middle;text-align:right;white-space:nowrap;border-top:{{ r.borderTop }};font-variant-numeric:tabular-nums">{{ r.acc }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div aria-hidden="true" style="position:absolute;bottom:0;left:0;right:0;height:30px;overflow:hidden;pointer-events:none">
+          <div style="position:absolute;left:0;right:0;bottom:8px;height:6px;background:currentColor;opacity:.18;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></div>
+          <img src="favicon.svg" alt="" width="20" height="20" style="position:absolute;bottom:7px;left:63%;transform:scaleX(-1);filter:grayscale(1) brightness(.4)">
+        </div>
+      </div></div>
+      <p style="margin:0;font-size:.75rem;color:#4f6570;line-height:1.5">Fidelity: every value in Leaderboard.css is a token or a literal copied here; the Astryx SegmentedControl, Avatar and Skeleton are approximated. Names and numbers are invented. Use the theme tweak for dark.</p>
+
+      <span style="font-size:.8rem;font-weight:700;color:#4f6570;margin-top:12px">Current · the other states, same source</span>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;color-scheme:{{ scheme }};color:light-dark(#132019,#e8eef0)">
+        <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+          <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Loading · BoardSkeleton <span title="Finding L9" style="display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .65rem/1 'Inter',sans-serif;vertical-align:middle">9</span></span>
+          <div style="background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));padding:0;overflow:hidden">
+            <sc-for list="{{ skel }}" as="s" hint-placeholder-count="4">
+              <div style="display:flex;align-items:center;gap:14px;min-height:56px;padding:12px 16px;border-top:{{ s.bt }}">
+                <span style="width:32px;height:32px;border-radius:8px;background:light-dark(#edf2f1,#16242d)"></span>
+                <span style="width:32px;height:32px;border-radius:8px;background:light-dark(#edf2f1,#16242d)"></span>
+                <span style="flex:1"><span style="display:block;width:60%;height:16px;border-radius:4px;background:light-dark(#edf2f1,#16242d)"></span></span>
+                <span style="width:48px;height:20px;border-radius:4px;background:light-dark(#edf2f1,#16242d)"></span>
+              </div>
+            </sc-for>
+          </div>
+          <span style="font-size:.75rem;color:#4f6570;line-height:1.45">Six rows, fixed. On a tab switch it replaces a 50-row board, then the board comes back.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+          <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Empty · .lb-empty <span title="Finding L10" style="display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .65rem/1 'Inter',sans-serif;vertical-align:middle">10</span></span>
+          <div style="background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));display:flex;flex-direction:column;align-items:center;gap:16px;padding:32px 20px;text-align:center">
+            <p style="margin:0;max-width:32rem;line-height:1.55;color:light-dark(#4f6570,#9db3bc)">Nobody has finished today’s daily challenge yet.</p>
+            <span style="display:inline-flex;align-items:center;justify-content:center;background:light-dark(#2d7a2d,#4caf50);color:light-dark(#fff,#0b141b);border-radius:.625rem;padding:10px 18px;min-height:44px;font-weight:600;font-size:.95rem">Start a quiz</span>
+          </div>
+          <span style="font-size:.75rem;color:#4f6570;line-height:1.45">Today tab: the board counts the daily challenge; the button says quiz. Centred hero block; every other empty on the site is a left-aligned line.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+          <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Offline with a cached board · .lb-stale <span title="Finding L8" style="display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .65rem/1 'Inter',sans-serif;vertical-align:middle">8</span></span>
+          <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px 12px;padding:4px 8px 4px 16px;border-radius:.625rem;border:1px solid rgba(138,87,0,.35);background:light-dark(rgba(138,87,0,.09),rgba(251,191,36,.12));font-size:.875rem;line-height:1.5">
+            <span style="flex:1 1 12rem;padding:8px 0">You’re offline. This is the board as it was at 09:12.</span>
+            <span style="font-weight:600;padding:6px 12px;border-radius:.625rem">Retry</span>
+          </div>
+          <span style="font-size:.75rem;color:#4f6570;line-height:1.45">A hand-rolled warning box. Profile and the GitHub card use Astryx Banner for the same job.</span>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:6px;min-width:0">
+          <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Phone · .lb-card at 390px <span title="Finding L13" style="display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .65rem/1 'Inter',sans-serif;vertical-align:middle">13</span></span>
+          <div style="max-width:358px;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));overflow:hidden">
+            <sc-for list="{{ cards }}" as="c" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:12px;min-height:64px;padding:10px 14px;border-top:{{ c.bt }};background:{{ c.bg }};box-shadow:{{ c.shadow }}">
+                <span style="display:inline-grid;place-items:center;min-width:32px;height:32px;padding:0 6px;border-radius:999px;border:1.5px solid {{ c.discBorder }};background:{{ c.discBg }};color:{{ c.discFg }};font-weight:700;font-size:.875rem;box-sizing:border-box">{{ c.rank }}</span>
+                <span style="display:flex;flex:1;flex-direction:column;gap:2px;min-width:0"><span style="display:flex;align-items:center;gap:8px;min-width:0"><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ c.name }}</span><span style="display:{{ c.youDisplay }};padding:1px 8px;border-radius:999px;border:1px solid currentColor;font-size:.72rem;font-weight:700;letter-spacing:.04em;line-height:1.5">You</span></span><span style="font-size:.8rem;color:light-dark(#4f6570,#9db3bc)">{{ c.detail }}</span></span>
+                <span style="display:flex;flex-shrink:0;flex-direction:column;align-items:flex-end"><span style="font-family:'Manrope',sans-serif;font-weight:700;font-size:1.05rem">{{ c.correct }}</span><span style="font-size:.72rem;color:light-dark(#4f6570,#9db3bc)">Correct</span></span>
+              </div>
+            </sc-for>
+          </div>
+          <span style="font-size:.75rem;color:#4f6570;line-height:1.45">Under 400px the avatar is hidden (correct). "Correct" repeats under every score. Not rendered live; from CSS.</span>
+        </div>
+      </div>
+
+      <span style="font-size:.8rem;font-weight:700;color:#4f6570;margin-top:12px">Proposed · same data, shared parts only (L1, L2, L3, L4, L5, L6, L7, L11)</span>
+      <div style="position:relative;overflow:hidden;border:1px solid rgba(19,32,25,.14);border-radius:12px;background:light-dark(#f3f6f5,#0b141b);color:light-dark(#132019,#e8eef0);color-scheme:{{ scheme }}">
+        <div style="max-width:1000px;margin:0 auto;padding:1.25rem 1.5rem 2.5rem;display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+          <header style="display:flex;flex-direction:column;gap:6px;max-width:46rem;margin-bottom:8px">
+            <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.015em;line-height:1.1">Leaderboard</h1>
+          </header>
+          <div style="display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:12px 16px">
+            <div style="display:inline-grid;grid-template-columns:repeat(3,auto);background:light-dark(#edf2f1,#16242d);border-radius:.625rem;padding:3px;gap:2px;font-size:.875rem;font-weight:600">
+              <span style="text-align:center;padding:8px 14px;border-radius:8px;background:light-dark(#fff,#101c24);box-shadow:0 1px 2px rgba(0,0,0,.08)">Last 30 days</span>
+              <span style="text-align:center;padding:8px 14px;border-radius:8px;color:light-dark(#4f6570,#9db3bc)">All time</span>
+              <span style="text-align:center;padding:8px 14px;border-radius:8px;color:light-dark(#4f6570,#9db3bc)">Today</span>
+            </div>
+            <div style="display:flex;align-items:center;gap:8px 12px">
+              <span style="font-size:.8rem;font-weight:600">Topic</span>
+              <span style="width:14rem;min-height:44px;padding:0 10px;border-radius:.625rem;border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));background:light-dark(#fff,#101c24);display:flex;align-items:center;justify-content:space-between;box-sizing:border-box">All topics <span style="font-size:.7rem">▾</span></span>
+            </div>
+          </div>
+          <p style="margin:0;max-width:46rem;font-size:.875rem;line-height:1.5;color:light-dark(#4f6570,#9db3bc)">Ranked by correct answers, then accuracy: quiz, daily challenge, Biggest Shark Challenge and Learn answers from the last 30 days. Five answers put you on the board.</p>
+          <div style="overflow:hidden;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));box-shadow:0 1px 2px rgba(15,26,42,.05),0 4px 12px rgba(15,26,42,.06)">
+            <table style="width:100%;border-collapse:collapse">
+              <thead><tr>
+                <th style="width:72px;padding:12px 24px;text-align:left;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);border-bottom:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08))">Rank</th>
+                <th style="padding:12px 24px;text-align:left;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);border-bottom:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08))">Learner</th>
+                <th style="width:120px;padding:12px 24px;text-align:right;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);border-bottom:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08))">Correct</th>
+                <th style="width:120px;padding:12px 24px;text-align:right;font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);border-bottom:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08))">Accuracy</th>
+              </tr></thead>
+              <tbody>
+                <sc-for list="{{ rows2 }}" as="r" hint-placeholder-count="7">
+                  <tr style="background:{{ r.bg }}">
+                    <td style="height:48px;padding:4px 24px;vertical-align:middle;border-top:{{ r.borderTop }};box-shadow:{{ r.shadow }}"><span style="display:inline-grid;place-items:center;min-width:28px;height:28px;padding:0 6px;border-radius:999px;border:{{ r.discBorder }};font-weight:{{ r.discWeight }};font-size:.875rem;font-variant-numeric:tabular-nums;box-sizing:border-box">{{ r.rank }}</span></td>
+                    <td style="height:48px;padding:4px 24px;vertical-align:middle;border-top:{{ r.borderTop }}"><span style="display:flex;align-items:center;gap:12px;min-width:0"><span style="width:28px;height:28px;border-radius:50%;background:light-dark(#d6ded3,#3c4f43);flex-shrink:0"></span><span style="font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span><span style="display:{{ r.youDisplay }};padding:2px 8px;border-radius:999px;border:1px solid light-dark(rgba(19,32,25,.3),rgba(232,238,240,.28));font-size:.75rem;font-weight:700;letter-spacing:.02em;line-height:1.3">You</span></span></td>
+                    <td style="height:48px;padding:4px 24px;vertical-align:middle;text-align:right;white-space:nowrap;border-top:{{ r.borderTop }};font-weight:700;font-size:1rem;font-variant-numeric:tabular-nums">{{ r.correct }}</td>
+                    <td style="height:48px;padding:4px 24px;vertical-align:middle;text-align:right;white-space:nowrap;border-top:{{ r.borderTop }};font-variant-numeric:tabular-nums;color:light-dark(#4f6570,#9db3bc)">{{ r.acc }}</td>
+                  </tr>
+                </sc-for>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <p style="margin:0;font-size:.75rem;color:#4f6570;line-height:1.5">A sketch, not a spec: the point is that nothing here is new. h1 = nav label, hugging segmented control, <code>.ss-select</code>, outlined ranks (top three: 2px ink, weight 800), body-type figures, 48px rows on the 24px card gutter, <code>.ss-tag</code> for “You”, 16px page gap. Under 600px the control goes back to full width and the table to stacked rows, as today.</p>
+    </section>
+
+    <aside style="display:flex;flex-direction:column;gap:28px;min-width:0">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">Findings</h2>
+        <p style="margin:0;font-size:.85rem;color:#4f6570;line-height:1.5">Each names the selector, the value it has now, the sibling it disagrees with, and the fix. IDs match <code>CLAUDE_CODE_PROMPT.md</code>.</p>
+        <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ findings }}" as="f" hint-placeholder-count="6">
+            <li style="display:grid;grid-template-columns:24px 1fr;gap:10px;background:#fff;border:1px solid rgba(19,32,25,.1);border-radius:10px;padding:12px 14px">
+              <span style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;margin-top:2px">{{ f.n }}</span>
+              <div style="display:flex;flex-direction:column;gap:5px;font-size:.875rem;line-height:1.5;min-width:0">
+                <span style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center"><strong>{{ f.what }}</strong><span style="font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:{{ f.pBg }};color:{{ f.pFg }}">{{ f.id }}</span></span>
+                <span style="color:#4f6570;font-family:ui-monospace,monospace;font-size:.75rem;overflow-wrap:anywhere">{{ f.where }}</span>
+                <span>{{ f.why }}</span>
+                <span style="display:flex;gap:8px;align-items:flex-start"><span style="flex-shrink:0;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:#e3efe1;color:#236123;margin-top:3px">fix</span><span>{{ f.fix }}</span></span>
+                <span style="display:{{ f.nvDisplay }};gap:8px;align-items:flex-start"><span style="flex-shrink:0;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:#fef3c7;color:#92400e;margin-top:3px">not verified</span><span style="color:#4f6570">{{ f.nv }}</span></span>
+              </div>
+            </li>
+          </sc-for>
+        </ol>
+      </div>
+
+      <div style="background:#fff;border:1px solid rgba(19,32,25,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;font-size:.875rem;line-height:1.55">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">What is right and stays</h2>
+        <p style="margin:0">Canvas → one panel → rows. Rank as a number in text, never a medal colour. The viewer's row marked by a word and a 3px accent rule. Tabular numerals. The 30-day default. "Your place" pinned when the viewer is off the list. Offline shows the last board with its time. Nothing animates. Native <code>&lt;select&gt;</code> for the topic filter. Rows stack under 600px (<code>useIsMobile</code>), the avatar drops under 400px and the tab label shortens. Ranking, scope and data are untouched by every fix on this page.</p>
+        <p style="margin:0"><strong>Not re-raised from round one:</strong> P2.1 scope copy (done), the "Most correct answers" heading (done as an option — L1 argues the structure, not the words; the owner decides), P1.8 tokens in this file (done except the two literals L5 names).</p>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Recreated screen&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'dark' ? 'dark' : 'light';
+    const dark = theme === 'dark';
+    const wave = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6' viewBox='0 0 24 6'%3E%3Cpath d='M0 3 Q 6 0.4 12 3 T 24 3' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")`;
+    const ink = dark ? '#e8eef0' : '#132019', surface = dark ? '#101c24' : '#fff';
+    const line = dark ? 'rgba(232,238,240,.08)' : 'rgba(19,32,25,.1)', strong = dark ? 'rgba(232,238,240,.28)' : 'rgba(19,32,25,.3)';
+    const accent = dark ? '#4caf50' : '#2d7a2d';
+    const data = [[1, 'Marta N.', 412, '91%'], [2, 'ondrej.dev', 388, '87%'], [3, 'Priya S.', 351, '94%'], [4, 'tomas_h', 297, '82%'], [5, 'Jana K.', 240, '88%'], [6, 'kb', 233, '79%']];
+    const rows = data.map(([rank, name, correct, acc], i) => ({
+      rank, name, correct, acc, bg: 'transparent', borderTop: i === 0 ? '0' : `1px solid ${line}`, shadow: 'none', youDisplay: 'none',
+      discBorder: rank <= 3 ? ink : strong, discBg: rank <= 3 ? ink : 'transparent', discFg: rank <= 3 ? surface : ink, discWeight: rank <= 3 ? 800 : 700,
+      m4: rank === 1 ? 'inline-grid' : 'none', m5: rank === 1 ? 'inline-grid' : 'none',
+    }));
+    rows.push({ rank: 14, name: 'Maria Fernanda de los Ángeles Rodríguez', correct: 96, acc: '84%', bg: 'rgba(45,122,45,.12)', borderTop: `1px dashed ${strong}`, shadow: `inset 3px 0 0 ${accent}`, youDisplay: 'inline-grid', discBorder: strong, discBg: 'transparent', discFg: ink, discWeight: 700, m4: 'none', m5: 'none' });
+    const rows2 = data.map(([rank, name, correct, acc], i) => ({
+      rank, name, correct, acc, bg: 'transparent', borderTop: i === 0 ? '0' : `1px solid ${line}`, shadow: 'none', youDisplay: 'none',
+      discBorder: rank <= 3 ? `2px solid ${ink}` : `1.5px solid ${strong}`, discWeight: rank <= 3 ? 800 : 700,
+    }));
+    rows2.push({ rank: 14, name: 'Maria Fernanda de los Ángeles Rodríguez', correct: 96, acc: '84%', bg: 'rgba(45,122,45,.12)', borderTop: `1px dashed ${strong}`, shadow: `inset 3px 0 0 ${accent}`, youDisplay: 'inline-block', discBorder: `1.5px solid ${strong}`, discWeight: 700 });
+    const skel = [0, 1, 2, 3].map((i) => ({ bt: i === 0 ? '0' : `1px solid ${line}` }));
+    const cards = [
+      { rank: 1, name: 'Marta N.', detail: '452 answers · 91% accuracy', correct: 412, bt: '0', bg: 'transparent', shadow: 'none', youDisplay: 'none', discBorder: ink, discBg: ink, discFg: surface },
+      { rank: 2, name: 'ondrej.dev', detail: '446 answers · 87% accuracy', correct: 388, bt: `1px solid ${line}`, bg: 'transparent', shadow: 'none', youDisplay: 'none', discBorder: ink, discBg: ink, discFg: surface },
+      { rank: 14, name: 'Maria Fernanda de los Ángeles Rodríguez', detail: '114 answers · 84% accuracy', correct: 96, bt: `1px dashed ${strong}`, bg: 'rgba(45,122,45,.12)', shadow: `inset 3px 0 0 ${accent}`, youDisplay: 'inline-block', discBorder: strong, discBg: 'transparent', discFg: ink },
+    ];
+    const P = { P0: ['#fee2e2', '#991b1b'], P1: ['#fef3c7', '#92400e'], P2: ['#edf2f1', '#3c4f43'] };
+    const F = (n, id, what, where, why, fix, nv) => ({ n, id, what, where, why, fix, nv: nv || '', nvDisplay: nv ? 'flex' : 'none', pBg: P[id.split('.')[0].replace('R2-', '')][0], pFg: P[id.split('.')[0].replace('R2-', '')][1] });
+    const findings = [
+      F(1, 'R2-P1.1', 'The only page whose h1 is not its name', '.lb-head → Kicker "Leaderboard" + Heading display-3 "Most correct answers" + .lb-lede (leaderboard.rule)', 'Coins: h1 "Coins" + one line. Coding: kicker "Coding", h1 "Coding challenges". Profile: no kicker. Here the page name is demoted to a kicker, the h1 is a claim, and the lede restates the h1 ("Ranked by correct answers…") and then argues ("so a new learner can reach the top"). Three tiers of type before the first control.', 'h1 = leaderboard.title "Leaderboard"; drop the Kicker; delete leaderboard.rule; prefix the scope lines with "Ranked by correct answers, then accuracy:" (scopeToday already has it). Header becomes h1 + controls + one scope line — the operational-header pattern in design-system.md. Reverses the optional half of R1 P2.1; the owner may keep the heading, in which case delete the Kicker and the lede only.'),
+      F(2, 'R2-P1.2', 'Full-width period control', 'SegmentedControl layout="fill" in .lb-controls; three ~310px segments at 1000px', 'design-system.md reserves segmented controls for "genuinely compact" jobs. Profile, one click away, uses .de-tabs (underline). A bar this wide reads as a hero element and pushes the topic filter and scope line into two more stacked bands.', 'Drop layout="fill" at ≥600px so the control hugs its labels; make .lb-controls a wrapped row (display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px 16px) with the topic filter on the right; scope line beneath. Keep fill under 600px.'),
+      F(3, 'R2-P2.1', 'Second select recipe', '.lb-select (border --color-border-strong, padding 8px 12px, max-width 22rem) + .lb-filter__label (.875rem 600)', 'app-shell.css already ships .ss-select (--color-border, padding 0 10px, radius-element) and .ss-field-label (.8rem 600), used on Coins. Two selects, two label sizes.', 'className="ss-select" on the select (width: 14rem at ≥600px, 100% below), .ss-field-label on the label; delete .lb-select, .lb-select:focus-visible, .lb-filter__label.'),
+      F(4, 'R2-P1.3', 'Filled ink discs for the top three', '.lb-rank--top { background: var(--ss-ink); color: var(--color-background-surface) }', 'Nothing else in the product is a filled ink shape: ink is text, green is identity, tints are soft. A black coin next to a green accent reads as a third colour. In dark mode it inverts to a white coin. The number is already text, so rank does not depend on the fill.', 'All ranks outlined; top three: border: 2px solid var(--ss-ink); font-weight: 800; no fill. Order still reads without colour (number + weight + border).'),
+      F(5, 'R2-P2.2', 'Score column off the type scale', '.lb-score { font-family: var(--font-family-heading); font-size: 1.05rem; font-weight: 700 }', 'R1 P1.8 fixed four small steps and Coins draws every figure (.rw-earn__figure) in body type at 1rem 700. Manrope at a literal 1.05rem is neither token nor sibling; on a phone the same rule sizes .lb-card__score.', '.lb-score { font: 700 1rem/1 var(--font-family-body); font-variant-numeric: tabular-nums } — or var(--ss-type-large) if the figure should lead; not 1.05rem.'),
+      F(6, 'R2-P1.4', 'Row density and gutter', '.lb-table td { height: 56px; padding: 6px 16px } · th 12px 16px · .lb-card { min-height: 64px }', 'Coins rows are min-height 44px, Friends rows 8px 0. A 50-row board is 2,800px tall. The 16px cell gutter also misses the 24px content gutter every Profile card uses, so figures here sit 8px further left than the figures above and below.', 'td { height: 48px; padding: 4px 24px } th { padding: 12px 24px } at ≥600px (16px below); .lb-card { min-height: 56px }.'),
+      F(7, 'R2-P2.3', '"You" tag is a second tag recipe', '.lb-you (1px var(--ss-ink), .72rem, .04em, 1px 8px) vs .rw-tag in Rewards.css (1px --color-border-strong, .75rem, .02em, 2px 8px)', 'Same job — a word in a pill — two recipes, on two pages a learner visits in the same session.', 'Move .rw-tag to astryx-theme.css as .ss-tag; use it for "You" and for "Premium"; delete .lb-you and .rw-tag.'),
+      F(8, 'R2-P2.4', 'Hand-rolled offline banner', '.lb-stale (color-mix warning border, --ss-warning-soft, ghost Button)', 'Profile (statsRefreshFailed, syncUnavailable) and the GitHub card use Astryx Banner status="warning" with endContent for exactly this. This one has its own padding, radius and border mix.', '<Banner status="warning" title={t("leaderboard.offlineStale", …)} endContent={<Button size="sm" variant="ghost" label={t("quiz.retry")} …/>} />; delete .lb-stale.'),
+      F(9, 'R2-P1.5', 'Tab switch swaps the board for a six-row skeleton', 'Leaderboard.tsx: body = BoardSkeleton when isLoading && !board; useLeaderboard sets no placeholderData (no keepPreviousData anywhere in client/src)', 'DESIGN_RULES §8: a placeholder takes the exact box of what replaces it. Switching 30 days → All time collapses a 50-row panel to 6 rows, then grows it back; the footer moves twice. It is also the only skeleton on the site — every other page loads with the fin or a status line.', 'placeholderData: keepPreviousData in leaderboardQuery; while fetching, aria-busy on .lb-board with the .ss-route[aria-busy] rule (opacity .55 after 200ms); keep BoardSkeleton only for a cold visit with no cache.', 'lib/queries.ts not read. Screenshot: /leaderboard, switch Last 30 days → All time on a board with 40+ rows, mid-fetch.'),
+      F(10, 'R2-P2.5', 'Empty state borrows the hero', '.lb-empty { align-items: center; padding: 32px 20px; text-align: center } + SwimCta "Start a quiz" (leaderboard.emptyCta) on every tab', 'Every other empty on the site is a left-aligned line (rewards.ledgerEmpty, advisor.empty, friends.empty). SwimCta is the homepage and submit vocabulary. On the Today tab the board counts the daily challenge and the button says quiz.', 'Left-aligned row: display:flex; flex-wrap:wrap; align-items:center; gap:12px 16px; padding:16px 24px; text left; Astryx Button variant="secondary". Today tab label → quiz.todaysChallenge (route stays /quiz).'),
+      F(11, 'R2-P2.6', 'Page rhythm', '.lb { gap: 20px }', 'Coins: 40px header → first section (VStack gap 5). Profile: 16px between cards. 20px is neither.', '.lb { gap: 16px } .lb-head { margin-bottom: 8px } — header→controls 24, controls→board 16, like Profile.'),
+      F(12, 'R2-P2.7', 'Fifth copy of the visually-hidden utility', '.lb-vh · .fr-visually-hidden · .rw-sr-only · .lp-visually-hidden · .de-plan-line__sr', 'Five identical rules in five files.', 'One .ss-sr-only in astryx-theme.css; replace the five class names; delete the rules.'),
+      F(13, 'R2-P2.8', 'Phone rows repeat the column header', '.lb-card__label under every .lb-card__score; .lb-card { min-height: 64px }', '"Correct" appears once per row, fifty times. The <ol aria-label> already names the board.', 'Drop .lb-card__label (or render the header once above the list); min-height 56px to match L6.', 'Not rendered live. Screenshot: /leaderboard at 390px, 30-day tab.'),
+    ];
+    return { theme, scheme: theme, wave, rows, rows2, skel, cards, findings };
+  }
+}
+</script>
+</body>
+</html>

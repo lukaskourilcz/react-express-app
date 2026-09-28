@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:#f7f8f7; color:#132019; font-family:'Inter',system-ui,sans-serif; }
+    a { color:#2d7a2d; } a:hover { color:#236123; }
+  </style>
+</helmet>
+
+<div style="max-width:1560px;margin:0 auto;padding:28px 24px 64px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <a href="00 Overview.dc.html" style="font-size:.8rem;font-weight:600;text-decoration:none">← Round 2 overview</a>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#2d7a2d">Section 2 of 3 · /profile · signed in · recreated from source @ 8722c80</span>
+      <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.02em">Account: text that does not sit in its box</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(185,28,28,.08);color:#991b1b;font-weight:700;font-size:.9rem;border:1px solid rgba(185,28,28,.3)">Verdict: three breaks at the default width, three more on phones</span>
+      <a href="01 Leaderboard.dc.html" style="font-size:.85rem;font-weight:600;text-decoration:none">← Leaderboard</a>
+      <a href="03 Copy.dc.html" style="font-size:.85rem;font-weight:600;text-decoration:none">Copy →</a>
+    </div>
+  </div>
+
+  <div style="background:#fff;border:1px solid rgba(19,32,25,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;font-size:.95rem;line-height:1.55">
+    <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">How this was checked</h2>
+    <p style="margin:0">Every text node in Profile.tsx, PlanLine.tsx, FriendsPanel.tsx, paths/LearningPathsCard.tsx, coding/GithubGardenCard.tsx and the deletion card was walked against its box with these values: a 39-character name (Maria Fernanda de los Ángeles Rodríguez), a 73-character email, 12,480 XP and 12,480 questions answered, the rank “Junior Full-Stack Developer”, a GitHub login of 13 and a repository of 29 characters, the longest shield state, and every label at 130% of its English length for Czech. Widths: 1000px (the page's max), 600, 480, 400 and 360; both themes. The recreation below mirrors the real flex and grid rules (including the missing <code>min-width: 0</code>), so where text spills here it spills in the app. Astryx internals (HStack, VStack, Heading maxLines) were not read; where a finding depends on them it says so and names the screenshot that settles it.</p>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,620px),1fr));gap:24px;align-items:start">
+    <section style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <span style="font-size:.8rem;font-weight:700;color:#4f6570">Current · Overview tab · 1000px · long values · GitHub connected · FDE enrolled, DSA not yet open</span>
+      <div style="overflow-x:auto;border:1px solid rgba(19,32,25,.14);border-radius:12px"><div style="position:relative;width:1048px;border-radius:12px;background:light-dark(#f3f6f5,#0b141b);color:light-dark(#132019,#e8eef0);color-scheme:{{ scheme }}">
+        <dc-import name="AppShell" active="/profile" theme="{{ theme }}" hint-size="100%,57px"></dc-import>
+        <div style="width:1000px;margin:0 auto;padding:.5rem 0 3.5rem;display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+
+          <!-- identity: .ss-raised > .de-profile-identity > Card padding 4 -->
+          <div style="display:flex;width:100%;border-radius:1rem;border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));box-shadow:0 1px 2px rgba(15,26,42,.05),0 4px 12px rgba(15,26,42,.06)">
+            <div style="border-top:4px solid light-dark(#2d7a2d,#4caf50);border-radius:1rem;width:100%;position:relative;overflow:hidden;background:light-dark(#fff,#101c24);border-left:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));border-right:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));padding:32px;box-sizing:border-box">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:16px">
+                  <span style="width:64px;height:64px;border-radius:50%;background:light-dark(#d6ded3,#3c4f43);flex-shrink:0;display:grid;place-items:center;font-weight:700">MR</span>
+                  <div style="display:flex;flex-direction:column;gap:4px">
+                    <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.015em;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Maria Fernanda de los Ángeles Rodríguez <span title="Finding A1" style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;vertical-align:middle">1</span></h1>
+                    <span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">maria.fernanda.rodriguez-castellanos@students.university-of-somewhere.edu</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                  <span style="display:grid;place-items:center;width:44px;height:44px;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-radius:.5rem;background:light-dark(#fff,#101c24);color:light-dark(#4f6570,#9db3bc)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path></svg></span>
+                  <span style="display:grid;place-items:center;width:44px;height:44px;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-radius:.5rem;background:light-dark(#fff,#101c24);color:light-dark(#4f6570,#9db3bc)"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4zM19 8a5 5 0 0 1 0 8"></path></svg></span>
+                </div>
+              </div>
+              <!-- PlanLine -->
+              <div style="position:relative;display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:14px;padding-top:12px;border-top:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1))">
+                <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc)">Plan</span>
+                <span style="font-size:.875rem;font-weight:600">Free</span>
+                <span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">HTML, CSS, JavaScript, React levels 1 to 12, the first stage of every project and a starter set of challenges.</span>
+                <span style="display:inline-flex;align-items:center;min-height:32px;padding:0 10px;border-radius:.625rem;font-size:.875rem;font-weight:600;color:light-dark(#2d7a2d,#4caf50)">See what Premium includes</span>
+                <span title="Findings A2, A3" style="position:absolute;right:0;top:12px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">2·3</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- tabs -->
+          <div style="display:flex;gap:4px;border-bottom:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08))">
+            <span style="min-height:44px;padding:8px 16px;border-bottom:2px solid light-dark(#2d7a2d,#4caf50);font-size:.875rem;font-weight:700;display:inline-flex;align-items:center">Overview</span>
+            <span style="min-height:44px;padding:8px 16px;border-bottom:2px solid transparent;font-size:.875rem;font-weight:600;color:light-dark(#4f6570,#9db3bc);display:inline-flex;align-items:center">Friends</span>
+          </div>
+
+          <!-- StreakCard -->
+          <div style="position:relative;padding:24px;width:100%;box-sizing:border-box;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));box-shadow:0 1px 2px rgba(15,26,42,.05),0 4px 12px rgba(15,26,42,.06);display:flex;flex-direction:column;gap:16px">
+            <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Streaks<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:24px;border-radius:1rem;background:light-dark(#edf2f1,#16242d);border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1))">
+                <span style="display:inline-flex;align-items:baseline;gap:6px"><span style="font-size:2.25rem;font-weight:700;line-height:1.1">14</span><span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">days</span></span>
+                <span style="font-size:.875rem;font-weight:600">Current streak</span>
+                <span style="display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:6px;padding:6px 12px;border-radius:.625rem;font-size:.8rem;font-weight:600;line-height:1.3;text-align:center;border:1px solid light-dark(#16803c,#4ade80);background:light-dark(rgba(22,128,60,.08),rgba(74,222,128,.12))"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>Protected · 47 h 59 m left</span>
+              </div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:24px;border-radius:1rem;background:light-dark(#edf2f1,#16242d);border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1))">
+                <span style="display:inline-flex;align-items:baseline;gap:6px"><span style="font-size:2.25rem;font-weight:700;line-height:1.1">61</span><span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">days</span></span>
+                <span style="font-size:.875rem;font-weight:600">Longest streak</span>
+              </div>
+            </div>
+            <span title="Finding A4 (shows at 396–520px, see strip below)" style="position:absolute;right:12px;top:12px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">4</span>
+          </div>
+
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(360px,1fr));gap:16px;align-items:start">
+            <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+              <!-- CareerCard -->
+              <div style="position:relative;padding:24px;box-sizing:border-box;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));box-shadow:0 1px 2px rgba(15,26,42,.05),0 4px 12px rgba(15,26,42,.06);display:flex;flex-direction:column;gap:16px">
+                <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Career level<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+                <div style="display:flex;align-items:center;gap:16px">
+                  <span style="display:grid;place-items:center;width:52px;height:52px;border-radius:.5rem;flex-shrink:0;background:rgba(45,122,45,.12);box-shadow:inset 0 0 0 1px rgba(45,122,45,.35);color:light-dark(#2d7a2d,#4caf50)"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z"></path><path d="M5 4H3v2a3 3 0 0 0 3 3M19 4h2v2a3 3 0 0 1-3 3"></path></svg></span>
+                  <div style="display:flex;flex-direction:column;width:100%">
+                    <h3 style="margin:0;font-family:'Manrope',sans-serif;font-weight:700;font-size:1.25rem;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Junior Full-Stack Developer</h3>
+                    <span style="font-size:.75rem;color:light-dark(#4f6570,#9db3bc)">Level 4 of 12</span>
+                  </div>
+                  <span style="display:inline-flex;align-items:baseline;gap:6px"><span style="font-size:1.875rem;font-weight:700;color:light-dark(#2d7a2d,#4caf50)">12,480</span><span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">XP</span></span>
+                  <span title="Finding A5 (shows under 480px)" style="position:absolute;right:12px;top:12px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">5</span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="display:block;height:8px;border-radius:999px;background:light-dark(#edf2f1,#16242d);overflow:hidden"><span style="display:block;width:38%;height:100%;background:light-dark(#2d7a2d,#4caf50)"></span></span>
+                  <span style="font-size:.75rem;font-weight:600;color:light-dark(#4f6570,#9db3bc)">2,760 XP to Mid-Level Full-Stack Developer</span>
+                </div>
+                <div style="position:relative;display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:12px">
+                  <sc-for list="{{ stats }}" as="s" hint-placeholder-count="4">
+                    <div style="display:flex;flex-direction:column;gap:4px;padding:16px;border-radius:1rem;background:light-dark(#edf2f1,#16242d);border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));min-width:0">
+                      <span style="font-size:1.5rem;font-weight:700;line-height:1.1">{{ s.v }}</span>
+                      <span style="font-size:.75rem;font-weight:600">{{ s.l }}</span>
+                    </div>
+                  </sc-for>
+                  <span title="Finding A6" style="position:absolute;right:-6px;top:-6px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">6</span>
+                </div>
+              </div>
+
+              <!-- LearningPathsCard: bare Astryx Card -->
+              <div style="position:relative;padding:24px;box-sizing:border-box;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));display:flex;flex-direction:column;gap:16px">
+                <span title="Finding A9" style="position:absolute;right:12px;top:12px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">9</span>
+                <div style="display:flex;flex-direction:column;gap:4px">
+                  <span style="font-size:.75rem;color:light-dark(#4f6570,#9db3bc)">Track and specialization</span>
+                  <span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">The base track drives the roadmap. On devShark it can carry the Forward Deployed Engineer specialization on top.</span>
+                </div>
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;min-width:0">
+                  <span style="min-width:0;overflow-wrap:anywhere">Fullstack · Forward Deployed Engineer</span>
+                  <span style="flex:none;min-height:44px;padding:10px 18px;border-radius:.625rem;border:1px solid light-dark(rgba(19,32,25,.3),rgba(232,238,240,.28));font-weight:600;display:inline-flex;align-items:center">Choose your path</span>
+                </div>
+                <dl style="position:relative;display:grid;grid-template-columns:minmax(7.5rem,auto) minmax(0,1fr);gap:8px 16px;margin:2px 0;padding:14px;border-radius:.625rem;background:light-dark(#edf2f1,#16242d);font-size:.9rem"><span title="Finding A15" style="position:absolute;right:-6px;top:-8px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">15</span>
+                  <dt style="font-weight:600;color:light-dark(#4f6570,#9db3bc)">What are you working towards?</dt><dd style="margin:0;overflow-wrap:anywhere;line-height:1.5">Get my first developer job · Prepare for interviews · Build my own projects</dd>
+                  <dt style="font-weight:600;color:light-dark(#4f6570,#9db3bc)">How much have you built so far?</dt><dd style="margin:0;line-height:1.5">I have built a few things</dd>
+                  <dt style="font-weight:600;color:light-dark(#4f6570,#9db3bc)">On a day you study, how long do you have?</dt><dd style="margin:0;line-height:1.5">15 to 30 minutes</dd>
+                </dl>
+                <ul style="display:flex;flex-direction:column;gap:6px;margin:4px 0 0;padding:0;list-style:none">
+                  <li style="position:relative"><span style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px;border-radius:.625rem;border:1px solid transparent;background:light-dark(#edf2f1,#16242d);min-height:44px;box-sizing:border-box"><span style="flex:none;width:5.5rem;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);line-height:1.3">Role specialization</span><span style="flex:1 1 200px;min-width:0;font-weight:600">Forward Deployed Engineer</span><span style="flex:none;font-size:.85rem;color:light-dark(#4f6570,#9db3bc)">In progress</span></span><span title="Finding A7" style="position:absolute;left:96px;top:-8px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">7</span></li>
+                  <li style="position:relative"><span style="display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:10px 12px;border-radius:.625rem;border:1px solid transparent;background:light-dark(#edf2f1,#16242d);min-height:44px;box-sizing:border-box"><span style="flex:none;width:5.5rem;font-size:.78rem;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc);line-height:1.3">Focused skill path</span><span style="flex:1 1 200px;min-width:0;font-weight:600">DSA Foundations</span><span style="flex:none;font-size:.85rem;color:light-dark(#4f6570,#9db3bc)">This path is still being written. The outline shows only what already exists.</span></span><span title="Finding A8" style="position:absolute;right:-6px;top:-8px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">8</span></li>
+                </ul>
+              </div>
+
+              <!-- AdvisorCard -->
+              <div style="padding:24px;box-sizing:border-box;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));box-shadow:0 1px 2px rgba(15,26,42,.05),0 4px 12px rgba(15,26,42,.06);display:flex;flex-direction:column;gap:16px">
+                <div style="display:flex;align-items:center;gap:12px">
+                  <span style="display:grid;place-items:center;width:40px;height:40px;border-radius:.5rem;flex-shrink:0;background:rgba(45,122,45,.12);color:light-dark(#2d7a2d,#4caf50)"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="5"></circle><circle cx="12" cy="12" r="1"></circle></svg></span>
+                  <div style="display:flex;flex-direction:column">
+                    <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Study advisor<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+                    <span style="font-size:.75rem;color:light-dark(#4f6570,#9db3bc)">A quick read on your weakest areas, built from your own results — a suggestion, not a grade.</span>
+                  </div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:8px">
+                  <span style="font-weight:600">Weakest areas</span>
+                  <div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:.875rem;font-weight:600">Databases &amp; data modeling</span><span style="font-size:.75rem;color:light-dark(#4f6570,#9db3bc)">54% correct · 37 answered</span></div><div style="margin-top:4px;height:6px;border-radius:999px;background:light-dark(#edf2f1,#16242d);overflow:hidden"><div style="width:54%;height:100%;background:light-dark(#2d7a2d,#4caf50)"></div></div></div>
+                  <div><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-size:.875rem;font-weight:600">TypeScript</span><span style="font-size:.75rem;color:light-dark(#4f6570,#9db3bc)">61% correct · 88 answered</span></div><div style="margin-top:4px;height:6px;border-radius:999px;background:light-dark(#edf2f1,#16242d);overflow:hidden"><div style="width:61%;height:100%;background:light-dark(#2d7a2d,#4caf50)"></div></div></div>
+                </div>
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
+              <!-- GithubGardenCard: .ss-raised > Card padding 3 -->
+              <div style="display:flex;width:100%;border-radius:1rem;border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));box-shadow:0 1px 2px rgba(15,26,42,.05),0 4px 12px rgba(15,26,42,.06)">
+                <div style="position:relative;width:100%;padding:24px;box-sizing:border-box;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));border-bottom:0;display:flex;flex-direction:column;gap:12px">
+                  <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">GitHub garden<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+                  <span style="font-weight:600">Every passed task becomes a commit in your own repository.</span>
+                  <dl style="position:relative;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0">
+                    <div style="padding:12px;border-radius:.5rem;background:light-dark(#edf2f1,#16242d)"><dt style="color:light-dark(#4f6570,#9db3bc);font-size:.72rem">Account</dt><dd style="margin:4px 0 0;font:700 1rem 'Manrope',sans-serif">lukaskourilcz</dd></div>
+                    <div style="padding:12px;border-radius:.5rem;background:light-dark(#edf2f1,#16242d)"><dt style="color:light-dark(#4f6570,#9db3bc);font-size:.72rem">Repository</dt><dd style="margin:4px 0 0;font:700 1rem 'Manrope',sans-serif"><a href="#" style="color:light-dark(#2d7a2d,#4caf50)">lukaskourilcz/devshark-garden</a></dd></div>
+                    <div style="padding:12px;border-radius:.5rem;background:light-dark(#edf2f1,#16242d)"><dt style="color:light-dark(#4f6570,#9db3bc);font-size:.72rem">Last commit</dt><dd style="margin:4px 0 0;font:700 1rem 'Manrope',sans-serif">28 Sept 2026, 09:12</dd></div>
+                    <div style="padding:12px;border-radius:.5rem;background:light-dark(#edf2f1,#16242d)"><dt style="color:light-dark(#4f6570,#9db3bc);font-size:.72rem">Waiting to commit</dt><dd style="margin:4px 0 0;font:700 1rem 'Manrope',sans-serif">0</dd></div>
+                    <span title="Finding A10" style="position:absolute;right:-6px;top:-8px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">10</span>
+                  </dl>
+                  <span style="font-size:.75rem;color:light-dark(#4f6570,#9db3bc)">Layout: one folder per track, one file per passed task, named after the level and the task.</span>
+                  <div style="position:relative;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px">
+                    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+                      <span style="display:inline-flex;align-items:center;min-height:32px;padding:0 10px;border-radius:.625rem;font-size:.875rem;font-weight:600">Disconnect</span>
+                      <span style="display:inline-flex;align-items:center;min-height:44px;padding:0 1rem;border-radius:.625rem;background:light-dark(#edf2f1,#16242d);border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));font-weight:700;font-size:.875rem">Manage on GitHub</span>
+                    </div>
+                    <span title="Finding A11" style="position:absolute;right:-6px;top:-8px;display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif">11</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- AccountDeletionCard -->
+              <div style="padding:24px;box-sizing:border-box;background:light-dark(#edf2f1,#16242d);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));box-shadow:0 1px 2px rgba(15,26,42,.05),0 4px 12px rgba(15,26,42,.06);display:flex;flex-direction:column;gap:12px">
+                <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Account<span style="display:block;width:46px;height:6px;margin-top:5px;background:currentColor;opacity:.85;mask:{{ wave }} repeat-x left center / 24px 6px;-webkit-mask:{{ wave }} repeat-x left center / 24px 6px"></span></span>
+                <span style="font-weight:600">Delete account</span>
+                <span style="font-size:.75rem;color:light-dark(#4f6570,#9db3bc)">Permanently remove your sign-in identity and stored learning data. This cannot be undone.</span>
+                <div style="display:flex;justify-content:flex-end"><span style="display:inline-flex;align-items:center;min-height:32px;padding:0 12px;border-radius:.625rem;background:light-dark(#dc2626,#f87171);color:light-dark(#fff,#0b141b);font-size:.875rem;font-weight:600">Delete my account</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div></div>
+      <p style="margin:0;font-size:.75rem;color:#4f6570;line-height:1.5">Fidelity: Astryx Card, Heading, Text, Button and Grid are approximated (Card padding 3 = 24px, Heading 1 = 2rem, Text supporting = .875rem, xsm = .75rem, 4xl/3xl/2xl = 2.25/1.875/1.5rem, sm Button = 32px). The rank label and every name and number are invented. The frame is pinned to the app's 1000px content width and scrolls sideways in a narrow preview. Findings 7, 8, 10, 11 and 15 are visible here at 1000px; 1, 4 and 5 appear in the narrow strips below.</p>
+
+      <span style="font-size:.8rem;font-weight:700;color:#4f6570;margin-top:12px">Current · narrow widths, same rules · 360px / 400px / 360px</span>
+      <div style="display:flex;flex-wrap:wrap;gap:16px;align-items:flex-start;color-scheme:{{ scheme }};color:light-dark(#132019,#e8eef0)">
+        <div style="display:flex;flex-direction:column;gap:6px;width:360px;max-width:100%">
+          <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Identity at 360px <span title="Finding A1" style="display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .65rem/1 'Inter',sans-serif;vertical-align:middle">1</span></span>
+          <div style="padding:16px;background:light-dark(#f3f6f5,#0b141b);border:1px solid rgba(19,32,25,.14);border-radius:12px;box-sizing:border-box">
+            <div style="border-top:4px solid light-dark(#2d7a2d,#4caf50);border-radius:1rem;overflow:hidden;background:light-dark(#fff,#101c24);border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));border-top:4px solid light-dark(#2d7a2d,#4caf50);padding:32px;box-sizing:border-box">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+                <div style="display:flex;align-items:center;gap:16px">
+                  <span style="width:64px;height:64px;border-radius:50%;background:light-dark(#d6ded3,#3c4f43);flex-shrink:0"></span>
+                  <div style="display:flex;flex-direction:column;gap:4px">
+                    <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.015em;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Maria Fernanda de los Ángeles Rodríguez</h1>
+                    <span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">maria.fernanda.rodriguez-castellanos@students.university-of-somewhere.edu</span>
+                  </div>
+                </div>
+                <div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+                  <span style="width:44px;height:44px;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-radius:.5rem;display:block"></span>
+                  <span style="width:44px;height:44px;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-radius:.5rem;display:block"></span>
+                </div>
+              </div>
+              <div style="display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;margin-top:14px;padding-top:12px;border-top:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1))">
+                <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:light-dark(#4f6570,#9db3bc)">Plan</span>
+                <span style="font-size:.875rem;font-weight:600">Free</span>
+                <span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">HTML, CSS, JavaScript, React levels 1 to 12, the first stage of every project and a starter set of challenges.</span>
+                <span style="display:inline-flex;align-items:center;min-height:32px;border-radius:.625rem;font-size:.875rem;font-weight:600;color:light-dark(#2d7a2d,#4caf50)">See what Premium includes</span>
+              </div>
+            </div>
+          </div>
+          <span style="font-size:.75rem;color:#4f6570;line-height:1.45">The name is cut, not ellipsised: the HStack cannot shrink below the h1's nowrap width, so <code>.de-profile-identity { overflow:hidden }</code> clips it at the card edge. The email likewise. Under it, the plan line is four rows with a lone button.</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;width:400px;max-width:100%">
+          <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Streak tiles at 400px <span title="Finding A4" style="display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .65rem/1 'Inter',sans-serif;vertical-align:middle">4</span></span>
+          <div style="padding:16px;background:light-dark(#f3f6f5,#0b141b);border:1px solid rgba(19,32,25,.14);border-radius:12px;box-sizing:border-box">
+            <div style="padding:24px;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+              <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Streaks</span>
+              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px">
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:24px;border-radius:1rem;background:light-dark(#edf2f1,#16242d);border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));min-width:0">
+                  <span style="display:inline-flex;align-items:baseline;gap:6px"><span style="font-size:2.25rem;font-weight:700;line-height:1.1">14</span><span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">days</span></span>
+                  <span style="font-size:.875rem;font-weight:600;text-align:center">Current streak</span>
+                  <span style="display:inline-flex;align-items:center;justify-content:center;gap:6px;min-height:44px;margin-top:6px;padding:6px 12px;border-radius:.625rem;font-size:.8rem;font-weight:600;line-height:1.3;text-align:center;border:1px dashed light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));color:light-dark(#4f6570,#9db3bc)"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>No protection left this month</span>
+                </div>
+                <div style="display:flex;flex-direction:column;align-items:center;gap:4px;padding:24px;border-radius:1rem;background:light-dark(#edf2f1,#16242d);border:1px solid light-dark(rgba(19,32,25,.12),rgba(232,238,240,.1));min-width:0">
+                  <span style="display:inline-flex;align-items:baseline;gap:6px"><span style="font-size:2.25rem;font-weight:700;line-height:1.1">61</span><span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">days</span></span>
+                  <span style="font-size:.875rem;font-weight:600;text-align:center">Longest streak</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <span style="font-size:.75rem;color:#4f6570;line-height:1.45"><code>Grid minWidth 150</code> counts the tile, not its content: 150 − 48px of Card padding leaves ~100px for the shield text between 396 and ~520px. Four centred lines in a control meant to be one.</span>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:6px;width:360px;max-width:100%">
+          <span style="font-size:.72rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Career card at 360px <span title="Finding A5" style="display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .65rem/1 'Inter',sans-serif;vertical-align:middle">5</span></span>
+          <div style="padding:16px;background:light-dark(#f3f6f5,#0b141b);border:1px solid rgba(19,32,25,.14);border-radius:12px;box-sizing:border-box;overflow:visible">
+            <div style="padding:24px;background:light-dark(#fff,#101c24);border-radius:1rem;border:1px solid light-dark(rgba(19,32,25,.1),rgba(232,238,240,.08));border-bottom:2px solid light-dark(rgba(19,32,25,.16),rgba(0,0,0,.55));display:flex;flex-direction:column;gap:16px;box-sizing:border-box">
+              <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:light-dark(#2d7a2d,#4caf50)">Career level</span>
+              <div style="display:flex;align-items:center;gap:16px">
+                <span style="display:grid;place-items:center;width:52px;height:52px;border-radius:.5rem;flex-shrink:0;background:rgba(45,122,45,.12);box-shadow:inset 0 0 0 1px rgba(45,122,45,.35)"></span>
+                <div style="display:flex;flex-direction:column;width:100%">
+                  <h3 style="margin:0;font-family:'Manrope',sans-serif;font-weight:700;font-size:1.25rem;letter-spacing:-.015em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Junior Full-Stack Developer</h3>
+                  <span style="font-size:.75rem;color:light-dark(#4f6570,#9db3bc)">Level 4 of 12</span>
+                </div>
+                <span style="display:inline-flex;align-items:baseline;gap:6px"><span style="font-size:1.875rem;font-weight:700;color:light-dark(#2d7a2d,#4caf50)">12,480</span><span style="font-size:.875rem;color:light-dark(#4f6570,#9db3bc)">XP</span></span>
+              </div>
+              <span style="display:block;height:8px;border-radius:999px;background:light-dark(#edf2f1,#16242d);overflow:hidden"><span style="display:block;width:38%;height:100%;background:light-dark(#2d7a2d,#4caf50)"></span></span>
+            </div>
+          </div>
+          <span style="font-size:.75rem;color:#4f6570;line-height:1.45">The title VStack is <code>width:100%</code> with no <code>min-width:0</code>, so the nowrap title sets the row's width and the XP figure is pushed past the card, and past the page. <code>.ss-panel</code> does not clip, so this is horizontal overflow of the route.</span>
+        </div>
+      </div>
+    </section>
+
+    <aside style="display:flex;flex-direction:column;gap:28px;min-width:0">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">Findings</h2>
+        <p style="margin:0;font-size:.85rem;color:#4f6570;line-height:1.5">Element, the value that breaks it, the width or theme where it shows, the CSS fix. IDs match <code>CLAUDE_CODE_PROMPT.md</code>.</p>
+        <ol style="margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:10px">
+          <sc-for list="{{ findings }}" as="f" hint-placeholder-count="6">
+            <li style="display:grid;grid-template-columns:24px 1fr;gap:10px;background:#fff;border:1px solid rgba(19,32,25,.1);border-radius:10px;padding:12px 14px">
+              <span style="display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#b91c1c;color:#fff;font:700 .7rem/1 'Inter',sans-serif;margin-top:2px">{{ f.n }}</span>
+              <div style="display:flex;flex-direction:column;gap:5px;font-size:.875rem;line-height:1.5;min-width:0">
+                <span style="display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center"><strong>{{ f.what }}</strong><span style="font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:{{ f.pBg }};color:{{ f.pFg }}">{{ f.id }}</span><span style="font-size:.72rem;color:#4f6570">{{ f.when }}</span></span>
+                <span style="color:#4f6570;font-family:ui-monospace,monospace;font-size:.75rem;overflow-wrap:anywhere">{{ f.where }}</span>
+                <span>{{ f.why }}</span>
+                <span style="display:flex;gap:8px;align-items:flex-start"><span style="flex-shrink:0;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:#e3efe1;color:#236123;margin-top:3px">fix</span><span style="font-family:ui-monospace,monospace;font-size:.78rem;overflow-wrap:anywhere">{{ f.fix }}</span></span>
+                <span style="display:{{ f.nvDisplay }};gap:8px;align-items:flex-start"><span style="flex-shrink:0;font-size:.68rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;background:#fef3c7;color:#92400e;margin-top:3px">not verified</span><span style="color:#4f6570">{{ f.nv }}</span></span>
+              </div>
+            </li>
+          </sc-for>
+        </ol>
+      </div>
+
+      <div style="background:#fff;border:1px solid rgba(19,32,25,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;font-size:.875rem;line-height:1.55">
+        <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.2rem;letter-spacing:-.015em">Checked and fine</h2>
+        <p style="margin:0"><strong>LearningPathsCard choice row</strong> (<code>.lp-profile-choice__value { overflow-wrap:anywhere }</code>, stacks under 30rem) holds “Fullstack · Forward Deployed Engineer” at every width. <strong>AdvisorCard</strong> rows wrap (<code>HStack wrap</code>). <strong>Deletion card</strong> wraps; its button is 32px on desktop and 44px on touch, as the pointer:coarse floor intends. <strong>FriendsPanel</strong>: <code>.fr-friend__who { min-width:0; flex:1 1 8rem }</code> keeps Remove on the row at 360px; the 24-character handle input wraps under its button as designed; the 249-name country select shrinks (<code>min-width:0</code>). <strong>Identity settings</strong> are 44px and never shrink. <strong>Dark theme:</strong> every colour in these files is a token; no literal to fail.</p>
+        <p style="margin:0"><strong>Not re-raised:</strong> R1 P1.5 (stat tiles in the career card, tip removed) — A6 is the 5-digit case that P1.5's 2xl choice does not cover, not a reopening. R1 P1.2 (one card recipe) covered Profile's own cards; A9 is about the two child cards it did not reach.</p>
+      </div>
+    </aside>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;theme&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;light&quot;,&quot;dark&quot;],&quot;default&quot;:&quot;light&quot;,&quot;tsType&quot;:&quot;'light' | 'dark'&quot;,&quot;section&quot;:&quot;Recreated screen&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const theme = this.props.theme === 'dark' ? 'dark' : 'light';
+    const wave = `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='6' viewBox='0 0 24 6'%3E%3Cpath d='M0 3 Q 6 0.4 12 3 T 24 3' fill='none' stroke='black' stroke-width='1.6' stroke-linecap='round'/%3E%3C/svg%3E")`;
+    const stats = [{ v: '1,204', l: 'Quizzes completed' }, { v: '12,480', l: 'Questions answered' }, { v: '10,113', l: 'Correct answers' }, { v: '81%', l: 'Average score' }];
+    const P = { P0: ['#fee2e2', '#991b1b'], P1: ['#fef3c7', '#92400e'], P2: ['#edf2f1', '#3c4f43'] };
+    const F = (n, id, what, when, where, why, fix, nv) => { const p = id.split('.')[0].replace('R2-', ''); return { n, id, what, when, where, why, fix, nv: nv || '', nvDisplay: nv ? 'flex' : 'none', pBg: P[p][0], pFg: P[p][1] }; };
+    const findings = [
+      F(1, 'R2-P1.6', 'Name and email clip instead of ellipsising', '≤ ~600px · both themes', 'Profile.tsx identity: .de-profile-identity__row > HStack > VStack > Heading level 1 maxLines 1 / Text maxLines 1; .de-profile-identity { overflow: hidden }', 'The row wraps (settings drop below), but the HStack holding avatar + name has no min-width:0, so it cannot shrink under the h1’s nowrap width (a 39-character name ≈ 720px at 2rem). The card clips it at its edge — a hard cut, no ellipsis. Same for a 73-character email.', '.de-profile-identity__row > :first-child { min-width: 0; flex: 1 1 16rem } and a min-width:0 wrapper (or width="100%" + minWidth 0) on the name VStack; keep maxLines={1}.', 'Astryx HStack/VStack internals not read — they may already set min-width. Screenshot: /profile at 360px with a 39-character display name.'),
+      F(2, 'R2-P2.9', 'Plan skeleton is 150×14; the plan is 2–3 lines', 'loading → loaded · ≤ 600px', 'PlanLine.tsx: <Skeleton width={150} height={14}> in .de-plan-line', 'When the entitlement lands, a free account’s line grows by 40–60px (label + tier + 110-character freeBody + button) and every card below moves. DESIGN_RULES §8: a placeholder takes the exact box of what replaces it.', '.de-plan-line__loading { min-height: 2.6em } at ≥600px and 4.2em below, or Skeleton width="100%" height={40} under 600px.'),
+      F(3, 'R2-P2.10', 'Plan line reads as a sentence broken by gaps', '360–1000px', '.de-plan-line { display:flex; flex-wrap:wrap; gap:6px 12px } holding label, tier, body text and a ghost Button', 'Four flex items of different roles in one wrapped row: at 1000px the button wraps alone; at 360px it is four rows. The 12px gap between “Free” and its sentence breaks the sentence.', '.de-plan-line { display:grid; grid-template-columns: auto minmax(0,1fr); gap: 4px 12px } — label in column 1; tier + body stacked in column 2 (body wraps); the button on its own row, justify-self:start. At ≤600px one column.'),
+      F(4, 'R2-P1.7', 'Streak tiles squeeze the shield to ~100px', '396–520px viewport', 'Profile.tsx StreakCard: Grid columns={{ minWidth: 150, max: 2 }} > Card padding={3} > .de-shield', 'minWidth counts the tile, not its content. Two columns from 396px, so each tile gets 150–200px and, after 48px of Card padding, ~100–150px for “Protected · 47 h 59 m left” or “No protection left this month”: 3–4 centred lines in a 44px-minimum control; “Current streak” wraps too.', 'Grid columns={{ minWidth: 240, max: 2 }} (tiles stack until ~576px), or padding={2}. Both keep the 44px target.', 'Screenshot: /profile at 400px with a shield active.'),
+      F(5, 'R2-P1.8', 'Rank title pushes the XP figure out of the card', '≤ ~480px · 5-digit XP makes it worse', 'CareerCard: HStack gap={2} > .ss-tile 52 + VStack width="100%" (Heading level 3 maxLines 1) + XP span', 'width:100% with no min-width:0 lets the nowrap title set the row’s width. “Junior Full-Stack Developer” (~240px at 1.25rem) plus tile, gaps and “12,480 XP” (~175px) is wider than a 280px card body; the XP leaves the card. .ss-panel does not clip, so the route overflows horizontally — the one rule the brief says never to break.', 'Title VStack: min-width: 0; flex: 1 1 auto (drop width="100%"); XP span: flex-shrink: 0; white-space: nowrap. Or HStack wrap="wrap" so the figure drops to a second line.', 'Rank labels come from lib/tracks (not read); the longest may be longer still. Screenshot: /profile at 360px, rank “Junior Full-Stack Developer”, 12,480 XP.'),
+      F(6, 'R2-P1.9', 'A 5-digit stat overflows its tile', '1000px, career card in the 2-column grid', 'CareerCard: Grid columns={{ minWidth: 110, max: 4 }} > StatTile (Card padding 2, Text size 2xl)', 'The career card is ~468px wide inside the grid; four tiles leave ~70px of content each. “12,480” at 2xl is ~84px and has no break opportunity, so it crosses the tile’s padding. “Questions answered” wraps to two lines beside one-line “Average score”, so the row’s baselines disagree.', 'Grid columns={{ minWidth: 120, max: 4 }} (3-up in the column, 4-up when the card is full width) and Text size="xl" with font-variant-numeric: tabular-nums. R1 P1.5 chose 2xl for 4-digit values; this is the 5-digit case.', 'Astryx Grid’s minWidth algorithm not read. Screenshot: /profile at 1000px with 12,480 questions answered.'),
+      F(7, 'R2-P1.10', '“ROLE SPECIALIZATION” runs under the path title', '≥ 480px (below 30rem the box is auto-width)', 'LearningPathsCard: .lp-activity__kind { flex:none; width: 5.5rem; font-size:.78rem; text-transform:uppercase; letter-spacing:.06em } holding paths.kicker.role', '88px box; the word SPECIALIZATION alone is ~120px in tracked small caps and cannot break, so it overflows the box and overlaps “Forward Deployed Engineer”.', '.lp-activity__kind { width: auto; min-width: 5.5rem; flex: 0 1 auto } plus copy: paths.kicker.role → “Role”, paths.kicker.skill → “Skill path” (see Copy page).', 'Font metrics. Screenshot: /profile with the FDE path enrolled, 1000px.'),
+      F(8, 'R2-P1.11', 'A 78-character sentence in the state slot', '1000px · path not open', 'LearningPathsCard: .lp-activity__minutes { flex: none } receives paths.availability.content_incomplete; also the ternary paused ? "in_progress" : "in_progress"', 'The slot is sized for “In progress” or “Start this path”. “This path is still being written. The outline shows only what already exists.” is flex:none, so the row grows past the card. A paused enrollment also reads “In progress”.', 'Render roadmap.unavailable “Not available yet” in the slot for an unopened path; .lp-activity__minutes { flex: 0 1 auto; min-width: 0 }. Paused → paths.action.resume “Resume”.'),
+      F(9, 'R2-P1.12', 'Two child cards lack the card stock', 'all widths · both themes', 'LearningPathsCard: bare <Card variant="default" padding={3}>; FriendsPanel: .fr-card (surface + hairline, padding 16px 18px)', 'Neighbours are .ss-panel (radius, hairline, 2px bottom edge, --shadow-low, 24px padding) or .ss-raised > Card. These two have no edge and no shadow, and Friends pads 16/18 instead of 24. Four surface recipes in one column.', 'Wrap LearningPathsCard in the same Raised wrapper GithubGardenCard uses (or replace Card with a .ss-panel div at padding 24); .fr-card → className="fr-card ss-panel", delete its background/border rules, padding 24px.'),
+      F(10, 'R2-P0.1', 'GitHub login, repository and date overflow their cells', '1000px default layout · connected state', 'GithubGardenCard: <dl className="ss-cost-grid"> — repeat(4, minmax(0,1fr)) until a 700px viewport; dd { font: 700 1rem heading }, no overflow-wrap', '.ss-cost-grid was written for four short figures on the 920px /premium page. Inside the 468px profile column each cell has ~72px of content. “lukaskourilcz” (~117px) crosses into the next cell; “lukaskourilcz/devshark-garden” as a link (~240px) crosses two; “28 Sept 2026, 09:12” wraps to three lines. Text over text at the default width, for anyone who connects.', '.ss-cost-grid { grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)) } .ss-cost-grid dd { min-width: 0; overflow-wrap: anywhere } — /premium keeps 4-up (920/4 ≥ 144px); the profile card drops to 2-up. Repository dd could also use var(--ss-type-compact).', 'Font metrics. Screenshot: /profile at 1000px with GitHub connected.'),
+      F(11, 'R2-P2.11', 'Two control heights in one action row', '≥ 1024px (fine pointer)', 'GithubGardenCard: <a className="ss-link-button ss-link-button--secondary"> (min-height 44) beside Button size="sm" (32px on desktop)', 'The link-button is 12px taller than its neighbours and has a different weight (700 vs 600).', 'Button variant="secondary" size="sm" href={INSTALLATIONS_URL} target="_blank" rel="noopener noreferrer" — Shop.tsx already uses Button with href. Delete the two .ss-link-button rules if nothing else uses them.'),
+      F(12, 'R2-P2.12', 'Two more button recipes on the page', 'Friends tab · paths card', '.fr-btn / .fr-btn--primary (Friends.css) · .lp-btn / .lp-btn--primary (LearningPaths.css)', 'R1 P2.5 moved .rw-btn, .cd-btn and .ss-cta to Astryx Button; these two stayed. Different border colour (--color-border-strong vs Astryx), weight 650, hover.', 'Astryx Button (primary / secondary) in FriendsPanel.tsx and LearningPathsCard.tsx (LearningPathScreens too, if in scope); delete the CSS. Keep min-height 44px on touch via the existing pointer:coarse floor.'),
+      F(13, 'R2-P2.13', 'Friends tab loads as one grey line', 'friends tab · first open', 'FriendsPanel: state === "loading" → <p className="fr-note" role="status">; "unavailable" → two .fr-note lines with no surface', 'The tab panel is empty except a .85rem sentence at the top left; Profile itself loads with LoadingScreen. Unavailable has no panel and no way on.', 'LoadingScreen label={t("friends.loading")} sx={{ minHeight: 160 }}; unavailable inside a .ss-panel with the message (no retry — the cause is a missing migration, and the copy says so).'),
+      F(15, 'R2-P1.21', 'Picker questions as dl labels leave the answers a ribbon', '1000px, card in the 2-column grid · worse below', 'LearningPathsCard.tsx: <dl className="lp-profile-inventory"> with dt = profile.picker.goalsLegend / experienceLegend / studyTimeLegend; LearningPaths.css: grid-template-columns: minmax(7.5rem, auto) minmax(0, 1fr)', 'The dt column is auto-sized to its longest label, and the labels are the picker’s questions (“On a day you study, how long do you have?”, ~290px at .9rem). In the 468px card that leaves the dd column ~100px: “Get my first developer job · Prepare for interviews · Build my own projects” becomes a one- or two-word ribbon, and overflow-wrap:anywhere starts splitting words. Under 30rem the grid is already one column, so only the desktop layout is affected.', 'grid-template-columns: minmax(7.5rem, 40%) minmax(0, 1fr) in .lp-profile-inventory, and short dt labels — reuse profile.picker.goalsLegend etc. only in the dialog; in the card render “Goals”, “Experience”, “Study time” (three new keys, or the existing advisor.focusLabel-style short labels if the owner prefers no new keys).', 'Astryx Card padding assumed 24px. Screenshot: /profile at 1000px with a saved learner profile.'),
+      F(14, 'R2-P2.14', 'Dead CSS in the account files', '—', '.fr-friend__handle (never rendered); .rw-wallet__rates* (list removed in R1 P1.3); .de-profile-guidance*, .de-achievement-list (no renderer found in Profile.tsx)', 'Rules with no element read as intent someone may re-wire.', 'grep each class; delete the rules that have no user.', 'Only Profile.tsx, Shop.tsx and FriendsPanel.tsx were read for users; other files may still use .de-profile-guidance.'),
+    ];
+    return { theme, scheme: theme, wave, stats, findings };
+  }
+}
+</script>
+</body>
+</html>

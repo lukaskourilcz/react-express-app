@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { margin:0; background:#f7f8f7; color:#132019; font-family:'Inter',system-ui,sans-serif; }
+    a { color:#2d7a2d; } a:hover { color:#236123; }
+  </style>
+</helmet>
+
+<div style="max-width:1560px;margin:0 auto;padding:28px 24px 64px;display:flex;flex-direction:column;gap:28px">
+  <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <a href="00 Overview.dc.html" style="font-size:.8rem;font-weight:600;text-decoration:none">← Round 2 overview</a>
+      <span style="font-size:.72rem;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:#2d7a2d">Section 3 of 3 · client/src/i18n/translations.ts @ 8722c80</span>
+      <h1 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:2rem;letter-spacing:-.02em">Copy: cut and tighten</h1>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+      <span style="display:inline-flex;align-items:center;gap:8px;padding:8px 14px;border-radius:10px;background:rgba(138,87,0,.1);color:#8a5700;font-weight:700;font-size:.9rem;border:1px solid rgba(138,87,0,.3)">{{ count }} rows · {{ deletes }} deletions · {{ p0 }} P0</span>
+      <a href="02 Account.dc.html" style="font-size:.85rem;font-weight:600;text-decoration:none">← Account</a>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,420px),1fr));gap:16px">
+    <div style="background:#fff;border:1px solid rgba(19,32,25,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;font-size:.9rem;line-height:1.55">
+      <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-.015em">What was looked for</h2>
+      <p style="margin:0">Taglines and clichés (“level up”, “what it takes to make it”), lists of three for rhythm, sentences that restate the heading above them, explanations of controls the learner can see, marketing adjectives, reassurance where nobody is deciding anything, exclamation marks that escaped the R1 P0.4 contract, and the same fact said twice on one screen. Facts a learner needs stay: prices with VAT, what Premium opens, what counts on a board, why something is locked, what is stored and who receives it when they are about to hand it over.</p>
+      <p style="margin:0">Families read in full: home, landing, today, quiz, difficulty, challenge, coding, roadmap (Learn), careerRoadmap, profile, friends, advisor, github, paths, rewards, shop, premium, auth, error, and every loading line. The <code>learn.*</code> family in the brief does not exist; Learn’s copy lives under <code>roadmap.*</code>.</p>
+    </div>
+    <div style="background:#fff;border:1px solid rgba(19,32,25,.12);border-radius:12px;padding:20px 22px;display:flex;flex-direction:column;gap:10px;font-size:.9rem;line-height:1.55">
+      <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.1rem;letter-spacing:-.015em">Rules applied</h2>
+      <p style="margin:0">Replacements are plain, specific and shorter. No new features, no new claims, no AI claims, devShark spelled devShark. Grading, XP, scores, streaks, ranks and entitlement facts are quoted, never changed. Where “delete” is proposed the row says what already carries the meaning. Keys marked <em>verify</em> had no <code>t('key')</code> call in client/src in a grep; keys may be built dynamically, so grep again before deleting. Deletions go from <code>translations.ts</code> and <code>translations.cs.ts</code> both, per the R1 closeout.</p>
+      <p style="margin:0"><strong>Not re-raised:</strong> R1 P0.2 fairness (footnote + sheet kept on purpose), P0.4 end-state copy, P0.7 Challenge intro, P1.3 Rewards rows, P1.4 homepage strip, P2.1 leaderboard scope, P2.2 quiz setup. The one overlap is the footnote’s doubled “no ads” sentence, which two R1 changes wrote independently.</p>
+    </div>
+  </div>
+
+  <sc-for list="{{ groups }}" as="g" hint-placeholder-count="4">
+    <div style="display:flex;flex-direction:column;gap:10px;min-width:0">
+      <h2 style="margin:0;font-family:'Manrope',sans-serif;font-weight:800;font-size:1.15rem;letter-spacing:-.015em">{{ g.title }} <span style="font-family:'Inter',sans-serif;font-weight:500;font-size:.8rem;color:#4f6570">· {{ g.note }}</span></h2>
+      <div style="overflow-x:auto;background:#fff;border:1px solid rgba(19,32,25,.12);border-radius:12px">
+        <table style="width:100%;min-width:900px;border-collapse:collapse;font-size:.82rem;line-height:1.45;table-layout:fixed">
+          <colgroup><col style="width:18%"><col style="width:33%"><col style="width:31%"><col style="width:12%"><col style="width:6%"></colgroup>
+          <thead><tr>
+            <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(19,32,25,.16);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Key</th>
+            <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(19,32,25,.16);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Current text</th>
+            <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(19,32,25,.16);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Proposed text or delete</th>
+            <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(19,32,25,.16);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">Why</th>
+            <th style="text-align:left;padding:10px 12px;border-bottom:2px solid rgba(19,32,25,.16);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;color:#4f6570">ID</th>
+          </tr></thead>
+          <tbody>
+            <sc-for list="{{ g.rows }}" as="c" hint-placeholder-count="4">
+              <tr>
+                <td style="padding:10px 12px;border-bottom:1px solid rgba(19,32,25,.08);vertical-align:top;font-family:ui-monospace,monospace;font-size:.72rem;color:#4f6570;overflow-wrap:anywhere">{{ c.key }}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid rgba(19,32,25,.08);vertical-align:top;color:#3c4f43">{{ c.text }}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid rgba(19,32,25,.08);vertical-align:top;font-weight:600;color:{{ c.fixColor }}">{{ c.fix }}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid rgba(19,32,25,.08);vertical-align:top;color:#8a5700;font-size:.75rem;line-height:1.4">{{ c.why }}</td>
+                <td style="padding:10px 12px;border-bottom:1px solid rgba(19,32,25,.08);vertical-align:top"><span style="display:inline-block;font-size:.66rem;font-weight:700;letter-spacing:.04em;padding:2px 5px;border-radius:4px;background:{{ c.pBg }};color:{{ c.pFg }};white-space:nowrap">{{ c.p }}</span></td>
+              </tr>
+            </sc-for>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </sc-for>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const P = { P0: ['#fee2e2', '#991b1b'], P1: ['#fef3c7', '#92400e'], P2: ['#edf2f1', '#3c4f43'] };
+    const R = (key, text, fix, why, p) => ({ key, text, fix, why, p, pBg: P[p][0], pFg: P[p][1], fixColor: fix.startsWith('delete') ? '#991b1b' : '#132019' });
+    const groups = [
+      { title: 'Document titles and navigation', note: 'stale after R1 renames', rows: [
+        R('title.shop', 'Rewards · devShark', 'Coins · devShark', 'nav says Coins since R1 P1.3', 'P1'),
+        R('title.challenge', 'The Biggest Shark Challenge · devShark', 'Biggest Shark Challenge · devShark', 'R1 P0.7 dropped “The”', 'P1'),
+        R('title.roadmap', 'Roadmap · devShark', 'Career · devShark', 'nav says Career since R1 P0.6', 'P1'),
+        R('roadmapPage.title', 'What it takes to make it', 'Career roadmap (and delete roadmapPage.kicker, which says the same)', 'headline cliché; page name twice', 'P1'),
+        R('subject.webdev.blurb', 'Frontend, backend and fullstack: the languages and tools of the modern web.', 'delete — verify; no t() call found', '“modern web”; unused', 'P2'),
+      ] },
+      { title: 'home.* and landing.*', note: 'the signed-out first screen', rows: [
+        R('home.title', 'Build the skills you use when you write code.', 'Lessons, quizzes and coding tasks for web developers.', 'tagline; says nothing the subtitle does not', 'P1'),
+        R('home.subtitle', 'Work through guided lessons, test what you understand in a quiz, and put it into practice with coding tasks, whether you are learning frontend, backend or both.', 'Guided lessons, quizzes and graded coding tasks for frontend and backend. HTML, CSS and JavaScript are free for every account.', 'list of three + “whether… or both”; the free fact is what a visitor needs', 'P1'),
+        R('home.topicsTitle', 'Pick a topic — switch any time.', 'Pick a topic.', 'explains an obvious control', 'P2'),
+        R('home.pathDialogSubtitle', 'Pick the track to focus on.', 'delete — the dialog title “Choose your learning path” carries it (PathPickerDialog.tsx:182)', 'restates the heading', 'P2'),
+        R('home.pathChosenHint', 'You’re set on the {label} path. Start whenever you’re ready.', 'delete — verify; no t() call found; home.pathChosenCta says “Your path: {label}”', 'reassurance', 'P2'),
+        R('home.trackSavedSnack', 'Saved. You’re on the {label} path.', 'Saved: {label}.', 'shorter', 'P2'),
+        R('landing.compare.footnote', 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked. No ads on either plan. Premium pays for the servers that grade your code and keeps the site free of ads.', 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked. It pays for the servers that grade your code. No ads on either plan.', '“no ads” twice in one footnote (R1 P0.1 and P0.5 each added it)', 'P1'),
+        R('landing.compare.rowAi · othersAi · rowBilingual · othersBilingual · rowCards · othersCards · rowStreaks · othersStreaks · othersQuizzes · othersLeaderboards · othersNoAds · oftenPaid · usuallyLimited', '“AI study help”, “Full English & Czech”, “Ads unless you pay”, …', 'delete all thirteen — PLAN_ROWS in ComparisonTable.tsx no longer references them', 'leftovers of the competitor table; two contradict the product (no AI, English only)', 'P1'),
+      ] },
+      { title: 'today.*', note: 'Today.tsx not read; the reason lines may be built dynamically', rows: [
+        R('today.subtitle', 'Your plan for today: a little unfinished work, a little review, a little new.', 'delete — the three section headings say it', 'list of three for rhythm', 'P1'),
+        R('today.reasonUnfinished', 'You started this — finish the level.', 'delete — verify; the item sits under “Pick up where you left off”', 'restates the section heading', 'P2'),
+        R('today.reasonReview', 'A quick review keeps this locked in.', 'delete — verify; under “Due for review”', 'reassurance', 'P2'),
+        R('today.reasonNew', 'Next up on your path.', 'delete — verify; under “New material”', 'restates the heading', 'P2'),
+        R('today.dueReason', 'You practised these a while ago — about {minutes} min to come back to {n} of them.', '{n} concepts, about {minutes} min.', 'keep the two numbers, drop the narration', 'P2'),
+        R('today.codingReason', 'Due for a second pass. Solve it again from a clean file.', 'Solve it again from a clean file.', 'section says “Code to revisit”', 'P2'),
+        R('today.runDue', 'Planned for {when} — it is time', 'Due now', 'today.runPlanned already shows the time', 'P2'),
+        R('today.doneBody', 'You hit today’s target. Your card pack is ready to open.', 'delete — today.done, today.targetMet and today.packReady are on the same screen (Today.tsx:317)', 'says three things already said', 'P1'),
+        R('today.emptyBody', 'You’re all caught up. Come back tomorrow for a fresh plan, or explore the roadmap.', 'Nothing is due today. A new plan is ready tomorrow.', 'the Learn link beside it carries the “explore”', 'P2'),
+      ] },
+      { title: 'quiz.* and difficulty.*', note: '', rows: [
+        R('quiz.subtitle', 'Thousands of questions · keyboard shortcuts supported', 'delete — verify; no t() call found', 'marketing; the setup screen uses quiz.buildSubtitle', 'P2'),
+        R('quiz.keyboardTip', 'Tip: press 1–{max} to pick, ←/→ to navigate, Enter to advance.', 'Keys 1–{max} to answer · Enter to continue', 'quiz.keysHint says the same in fewer words; one form for both', 'P2'),
+        R('quiz.dailyComplete', 'Today’s challenge complete, see you tomorrow.', 'Today’s challenge complete.', 'filler', 'P2'),
+        R('quiz.voidedNote', '{n} question(s) were retired while you were answering and were left out of the score — neither for you nor against you.', '{n} questions were retired while you were answering and do not count.', 'keep the fact, drop the reassurance', 'P2'),
+        R('difficulty.easy.tip', 'Difficulty 1–2. Beginner-friendly.', 'Difficulty 1–2.', 'parallel to advanced.tip (R1 P2.2)', 'P2'),
+        R('difficulty.zero-to-hero.tip', 'Progressive difficulty 1 → 5.', 'Difficulty 1 to 5, in order.', 'parallel form', 'P2'),
+        R('difficulty.mixed.tip', 'Random mix across difficulties.', 'Difficulty 1 to 5, shuffled.', 'parallel form', 'P2'),
+      ] },
+      { title: 'challenge.*', note: 'mostly settled in R1 P0.7 / P0.4', rows: [
+        R('challenge.practiceScore', 'Practice pace complete — this result is not ranked.', 'Relaxed pace. Not ranked.', 'the mode is called “Relaxed pace” (challenge.relaxedPace); “practice pace” is a second name', 'P1'),
+        R('challenge.shareDetailPractice', 'at practice pace', 'at relaxed pace', 'same second name', 'P1'),
+        R('challenge.questionTimeout', 'Time’s up — that’s a strike.', 'Time ran out. One strike.', 'matches endedByTime “Time ran out.”', 'P2'),
+      ] },
+      { title: 'coding.*', note: '', rows: [
+        R('coding.evolving.body', 'Projects with 10–12 increasingly demanding stages. Build on your code and come back whenever you like. Sign in to save progress.', 'Projects of 10–12 stages, each building on your code. Sign in to save progress.', '“increasingly demanding”, “whenever you like”', 'P2'),
+        R('coding.evolving.pathsBody', 'Short paths of up to five levels, about ten minutes each. Every level adds one piece to the same code, and the checks from earlier levels run again. Sign in to save progress.', 'Up to five levels of about ten minutes. Each adds to the same code, and earlier checks run again. Sign in to save progress.', 'tighter', 'P2'),
+        R('coding.evolving.fullstackBody', 'Build complete apps with JavaScript logic, TypeScript contracts, React screens and fetch-based APIs. The link shortener takes five levels; the three larger apps take twelve stages each. APIs run locally in the isolated training sandbox, not on a deployed server.', 'A five-level link shortener, then three twelve-stage apps: JavaScript logic, TypeScript contracts, React screens, fetch APIs. APIs run in the local sandbox, not on a deployed server.', 'keep the sandbox fact', 'P2'),
+        R('coding.discovery.fullstack', 'Build a complete app, from JavaScript logic to a typed API and an interactive React interface. Start with a five-level link shortener, then take on three twelve-stage apps.', 'A five-level link shortener, then three twelve-stage apps.', 'repeats fullstackBody', 'P2'),
+        R('coding.discovery.build', 'Put it all together', 'FullStack', 'tagline as a heading; the CTA below says “Explore FullStack projects”', 'P2'),
+        R('coding.techniquesLead', 'What the challenges actually practise. Pick a group to filter the track that uses it most.', 'Filter a track by the technique it practises.', '“actually” + explains the control', 'P2'),
+        R('coding.run.lead', 'Pick a track, a size and an order, then start now or plan it for later.', 'delete — the three labelled controls are the sentence', 'explains visible controls', 'P2'),
+        R('coding.run.due', 'It is time — start whenever you are ready.', 'Due now.', 'reassurance', 'P2'),
+        R('coding.run.laterNote', 'It waits on Today and here until you start it.', 'Shown on Today until you start it.', 'tighter', 'P2'),
+        R('coding.run.sequentialNote · randomNote', 'One after the next, the way the track is laid out. · A random pick from what is open to you.', 'In track order. · Random, from what is open to you.', 'tighter', 'P2'),
+        R('coding.saved.lockedNote', 'Saved, but not open yet — it will start once your plan reaches it.', 'Saved. Opens when your plan reaches it.', 'tighter', 'P2'),
+        R('coding.solutionNote', 'Read it, close it, and write your own version from memory next time.', 'Read it, then write your own from memory next time.', 'list of three', 'P2'),
+      ] },
+      { title: 'roadmap.* (Learn) and careerRoadmap.*', note: 'exclamation marks the R1 P0.4 regex did not reach', rows: [
+        R('roadmap.levelComplete', 'Level complete!', 'Level complete', 'P0.4 contract: no “!” in end states', 'P1'),
+        R('roadmap.levelFailed', 'Almost there!', 'Not passed', 'cheer on a fail; parallel to checkpointFailed “Not passed yet”', 'P1'),
+        R('roadmap.outOfHeartsTitle', 'Out of hearts!', 'Out of hearts', 'no “!”', 'P1'),
+        R('roadmap.checkpointComplete', 'Part test passed!', 'Part test passed', 'no “!”', 'P1'),
+        R('roadmap.allDone', 'You’ve cleared every level here. Nice work.', 'Every level here is cleared.', '“Nice work”', 'P1'),
+        R('roadmap.incorrect', 'Not quite', 'Incorrect', 'quiz.incorrect and home.answerWrong say Incorrect', 'P1'),
+        R('roadmap.subtitle', 'Start with the basics and move toward harder decisions. Clear the levels in each part, then pass its test.', 'Clear the levels in each part, then pass its test.', 'first sentence is a tagline', 'P2'),
+        R('roadmap.skillCheckCta', 'Already experienced? Skill check', 'Skill check', 'question hook; the subtitle explains it', 'P2'),
+        R('roadmap.skillCheckLow', 'Stay with the starter paths for now. You can retake the skill check anytime.', 'No new paths opened. You can retake the skill check.', 'restates skillCheckNoneAdded', 'P2'),
+        R('roadmap.skillCheckNoneAdded', 'No new paths unlocked yet, try the starters first.', 'delete — skillCheckLow (revised) covers it; verify both render together', 'duplicate', 'P2'),
+        R('careerRoadmap.honestyLead · honestyBody', 'What the path covers: · devShark builds technical knowledge. Senior work also depends on repeated experience with production systems, code review, trade-offs, incidents, and project ownership.', 'delete both — careerRoadmap.headerBody says it at the top and beyondIntro says it at the bottom', 'same caveat three times on one page', 'P1'),
+        R('careerRoadmap.xpToSenior', '{xp} XP to devShark’s “Senior Developer” rank (a knowledge proxy, not a job title).', '{xp} XP to the Senior Developer rank.', 'parenthetical repeats the page caveat', 'P2'),
+        R('careerRoadmap.seniorReached', 'You reached the app’s Senior knowledge threshold. Keep reviewing and apply it in real projects.', 'Senior rank reached.', 'advice nobody asked for', 'P2'),
+        R('xp.rankUpKicker', 'Level up', 'New rank', 'named cliché in the brief', 'P1'),
+      ] },
+      { title: 'profile.*, friends.*, advisor.*, paths.*, github.*', note: 'the Account page', rows: [
+        R('profile.pathHelp', 'The base track drives the roadmap. On devShark it can carry the Forward Deployed Engineer specialization on top.', 'The track sets your roadmap. Forward Deployed Engineer is an optional specialization on top.', '“On devShark” self-reference', 'P2'),
+        R('profile.completePrompt', 'Two or three answers are missing, so your practice is not personalised yet.', 'A few answers are missing, so your daily plan is not sized to you yet.', 'says what is affected (plan size) instead of “personalised”', 'P2'),
+        R('profile.picker.subtitle', 'Three answers, so your plan matches what you came here for.', 'Three answers size your daily plan.', 'tighter, specific', 'P2'),
+        R('profile.picker.experienceHint', 'This changes how we explain things. It never skips a level — those open when you pass the one before.', 'Changes how things are explained. It never skips a level.', 'keep the fact', 'P2'),
+        R('profile.picker.studyTimeHint', 'Sets the size of your daily plan. Study more or less whenever you like.', 'Sets the size of your daily plan.', 'reassurance', 'P2'),
+        R('profile.picker.footnote', 'You can change any of this in your profile later.', 'Change any of this later in your profile.', 'shorter', 'P2'),
+        R('profile.deleteDescription', 'Permanently remove your sign-in identity and stored learning data. This cannot be undone.', 'Deletes your account and all learning data.', 'the dialog (deleteConfirm) lists what goes and says it cannot be undone; the card need not', 'P2'),
+        R('profile.streakUnavailable', 'Streak data is temporarily unavailable. Retry below to refresh it.', 'Streak data did not load. Retry below.', 'tighter', 'P2'),
+        R('profile.statsRefreshFailed', 'Your saved profile is visible, but the latest statistics could not be refreshed.', 'Latest statistics did not load; showing saved figures.', 'tighter', 'P2'),
+        R('paths.kicker.role · paths.kicker.skill', 'Role specialization · Focused skill path', 'Role · Skill path', 'overflows the 5.5rem kind slot (Account finding 7); “Focused” adds nothing', 'P1'),
+        R('paths.availability.content_incomplete (in the profile card slot)', 'This path is still being written. The outline shows only what already exists.', 'render roadmap.unavailable “Not available yet” in .lp-activity__minutes; keep the sentence on the path page', 'a sentence in a state slot (Account finding 8)', 'P1'),
+        R('friends.handleFirst', 'Pick a handle so friends can find you. Without one, nobody can — not even by your name or email.', 'delete — show friends.handleHelp in both states', 'two versions of one fact', 'P2'),
+        R('friends.handleHelp', 'This is how friends add you. Nothing else about your account is searchable.', 'Friends add you by this handle. Nothing else about your account is searchable.', 'keep the privacy fact (the learner is choosing a public handle)', 'P2'),
+        R('friends.findHelp', 'Type their handle exactly. There is no list to browse — yours is {handle}, so tell them that.', 'Type their handle exactly. Yours is {handle}.', 'tighter', 'P2'),
+        R('friends.discoverableHelp', 'Turn this off and no new person can add you. Friends you already have are unaffected.', 'When off, nobody new can add you. Existing friends stay.', 'tighter', 'P2'),
+        R('friends.countryHelp', 'Shown as a flag beside your avatar. Optional, and friends are the only people who see it.', 'A flag beside your avatar, visible to friends only.', 'keep who sees it', 'P2'),
+        R('advisor.subtitle', 'A quick read on your weakest areas, built from your own results — a suggestion, not a grade.', 'Your weakest areas, from your own results.', 'disclaimer duplicates advisor.disclaimer', 'P2'),
+        R('advisor.kicker · weakestTitle · suggestedWeek · suggestedWeekHint · day · focusLabel · focus.* · startFocus · allStrong · disclaimer · generatedAt · error', '“Where to focus”, “A suggested week”, “No clear weak spots — nice. Keep mixing in review.”, …', 'delete — verify; Profile.tsx renders title, subtitle, loading, empty, emptyBody, weakest, accuracy, answered only', 'dead family', 'P2'),
+        R('advisor.emptyBody', 'Answer a few more quizzes and your advisor will spot patterns to work on.', 'Answer a few more quizzes and your weakest topics appear here.', '“spot patterns” anthropomorphises a sort', 'P2'),
+        R('github.introOne', 'Connect the devShark GitHub App and pick one repository you own. Each passed coding task is committed there as a file, sorted into a folder per track, so your contribution graph grows with your practice.', 'Connect the devShark GitHub App and pick one repository you own. Each passed task is committed there as a file, one folder per track.', '“so your contribution graph grows” is the pitch; keep the mechanism', 'P2'),
+      ] },
+      { title: 'rewards.*, shop.*, register.*, auth.*', note: 'Coins', rows: [
+        R('shop.item.double-xp.name · .desc · ring-* · flair-*', '“Double XP”, “Your next quiz earns 2× XP. Stacks.”, “Emerald ring”, …', 'delete — verify; no t() call found; “earns 2× XP” contradicts CLAUDE.md (shop items never change XP)', 'dead and contrary to a protected rule', 'P1'),
+        R('shop.earnRate · section.style · stylePreview · equip · equipped · unequip · armed · purchased · alreadyOwned · unlockPath · noPriceYet · taxIncluded · taxExtra · orTokens · syncing · protectionSection', '“+10% of every XP gain”, “Your look”, “{count} armed”, …', 'delete — verify each with grep; none is rendered by Shop.tsx', 'dead keys from the earlier shop', 'P2'),
+        R('shop.signInForWallet', 'Sign in to see your coins. They are recorded on your account, not on this device.', 'Sign in to see your coins.', 'the second sentence explains nothing the learner can act on', 'P2'),
+        R('shop.protectionBlurb', 'Bridges a missed day so your streak keeps counting. You get {cap} free every month; this tops that back up.', 'Covers a missed day so the streak continues. {cap} free a month; this restores one, never beyond {cap}.', 'states the ceiling, which is the protected fact', 'P2'),
+        R('shop.merch.t-shirt.blurb', 'The fin, printed small, on a shirt you would wear without explaining it.', 'The fin, printed small on the chest.', 'marketing wit', 'P2'),
+        R('shop.merch.sticker-set.blurb', 'A sheet of devShark stickers — the fin, the waterline, and a few in-jokes.', 'A sheet of stickers: the fin and the waterline.', '“a few in-jokes”', 'P2'),
+        R('shop.orderPlaced', 'Redeemed. You will see it under your orders and claims.', 'Redeemed. Listed under Orders and claims.', 'tighter', 'P2'),
+        R('register.body', 'Sign in to keep your XP and streak. +{tokens} coins on us.', 'Sign in to keep your XP and streak. +{tokens} coins.', '“on us”', 'P2'),
+        R('auth.signupBonusToast', '+{tokens} coins · welcome to {brand}', '+{tokens} welcome coins', 'shorter', 'P2'),
+      ] },
+      { title: 'premium.*', note: 'facts stay: prices with VAT, what opens, refund window', rows: [
+        R('premium.lockHint', 'Premium opens this. Select it to see what Premium includes.', 'Premium opens this.', 'the second sentence describes the control it sits on', 'P2'),
+        R('premium.voucher.lead', 'Enter the code you were given, and Premium opens on your account.', 'delete — title “Have a voucher?” and the field label “Voucher code” carry it; keep leadClosed (it states that Premium is not on sale)', 'explains the field', 'P2'),
+        R('premium.voucher.hint', 'Letters and digits, as you were given them. Spaces and dashes do not matter.', 'Spaces and dashes are ignored.', 'the useful half', 'P2'),
+      ] },
+      { title: 'Loading, empty and error lines', note: 'one pattern each', rows: [
+        R('profile.loading · friends.loading · today.loading · advisor.loading · coding.discovery.loading · leaderboard.loading · card.loading', 'Loading your profile… · Loading your friends… · Building today’s plan… · Reading your results… · Loading your progress… · Loading the leaderboard · Loading your cards…', 'Loading profile… · Loading friends… · Loading today’s plan… · Loading results… · Loading progress… · Loading leaderboard… · Loading cards…', 'one shape, no “your”, always the ellipsis', 'P2'),
+        R('App.tsx route loader: tips={localizedDevTips(config.devTips)}', 'a random owner-configured one-liner fades in under the fin after 2.5 s on the first load', 'delete the tips prop from the route loader (R1 P1.5 removed the same device from Profile)', 'unreviewed copy shown at random; the fin and the status line are the loading state', 'P1'),
+        R('error.timeout · error.server · error.serviceUnavailable · error.generic · auth.signInFailed · card.removeFailed', '“Please try again.” / “Please try again in a moment.” / “Please try again later.”', 'drop “Please” in each: “Try again.” / “Try again in a moment.” / “Try again later.”', 'the other twelve error lines have no “please”', 'P2'),
+        R('error.rateLimited', 'You are moving a little too fast. Wait a moment and try again.', 'Too many requests. Wait a moment and try again.', 'says the cause', 'P2'),
+        R('leaderboard.rule', 'Ranked by correct answers, then accuracy. The board opens on the last 30 days, so a new learner can reach the top.', 'delete — fold “Ranked by correct answers, then accuracy:” into scope30d and scopeAllTime (scopeToday already has it)', 'restates the h1 and argues (Leaderboard finding 1)', 'P1'),
+        R('leaderboard.offline', 'You’re offline, so the board can’t load. Reconnect and try again.', 'You’re offline. Reconnect and try again.', 'tighter', 'P2'),
+        R('leaderboard.noActivity', 'Answer a few questions to appear here.', 'You need five answers to appear here.', 'the number is known', 'P2'),
+        R('leaderboard.emptyCta (Today tab)', 'Start a quiz', 'use quiz.todaysChallenge “Today’s challenge” on the Today tab; keep “Start a quiz” elsewhere', 'the Today board counts the daily challenge', 'P1'),
+      ] },
+    ];
+    const all = groups.flatMap((g) => g.rows);
+    return { groups, count: all.length, deletes: all.filter((r) => r.fix.startsWith('delete')).length, p0: all.filter((r) => r.p === 'P0').length };
+  }
+}
+</script>
+</body>
+</html>
