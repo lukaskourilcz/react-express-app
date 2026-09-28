@@ -7,17 +7,6 @@
   line-height: 1.6;
 }
 
-.quiz-result-card {
-  text-align: center;
-  padding: clamp(2rem, 5vw, 3rem) clamp(1.25rem, 4vw, 2rem);
-}
-
-.quiz-score-text {
-  font-size: clamp(2.5rem, 10vw, 3.5rem);
-  font-weight: 700;
-  margin-bottom: 0.5rem;
-}
-
 .quiz-review-header {
   font-family: var(--font-family-heading);
   font-weight: 800;

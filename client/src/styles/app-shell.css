@@ -253,11 +253,6 @@
   .ss-fin-drift { animation: none !important; }
 }
 
-/* Gentle bob + tilt for landing topic-card icons. */
-@keyframes ssFloat {
-  0%, 100% { transform: translateY(0) rotate(0deg); }
-  50% { transform: translateY(-3px) rotate(-2deg); }
-}
 @keyframes ssWaterlineDrift {
   from { transform: translateX(0); }
   to { transform: translateX(var(--ss-waterline-distance, 48px)); }
@@ -369,7 +364,6 @@
 .ss-info-page__header p { max-width: 68ch; margin: 0; color: var(--color-text-secondary); font-size: 1.05rem; }
 .ss-info-page__kicker { color: var(--brand-accent); font-weight: 800; font-size: var(--ss-type-label); letter-spacing: 0.08em; text-transform: uppercase; }
 
-.topic-landing { max-width: 780px; }
 .topic-practice { width: 100%; border: 1px solid var(--color-border); border-radius: var(--radius-element); background: var(--color-background-surface); padding: 14px 16px; }
 .topic-practice summary { cursor: pointer; font-weight: 700; }
 .topic-practice p { margin: 12px 0 0; color: var(--color-text-secondary); }
@@ -393,7 +387,6 @@
 .ss-text-links a:focus-visible,
 .ss-text-links button:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 .ss-link-button { display: inline-flex; min-height: 44px; align-items: center; padding: 0 1rem; border-radius: var(--radius-element); background: var(--brand-accent); color: var(--brand-on-accent); font-weight: 700; text-decoration: none; }
-.ss-link-button--secondary { background: var(--color-background-muted); color: var(--color-text-primary); border: 1px solid var(--color-border); }
 @media (max-width: 700px) { .ss-info-sections { grid-template-columns: 1fr; } }
 
 /* The crown, worn. It sits on the avatar rather than beside it, tilted very
