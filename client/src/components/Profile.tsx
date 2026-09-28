@@ -610,7 +610,9 @@ function CareerCard({ totals }: { totals: { quizzes: number; questions: number; 
           </Text>
         </VStack>
 
-        <Grid columns={{ minWidth: 110, max: 4 }} gap={1.5}>
+        {/* Two by two: the card's column is too narrow for four abreast, and
+            three plus one reads as a mistake. */}
+        <Grid columns={{ minWidth: 120, max: 2 }} gap={1.5}>
           <StatTile label={t('profile.quizzesCompleted')} value={nf(totals.quizzes)} />
           <StatTile label={t('profile.questionsAnswered')} value={nf(totals.questions)} />
           <StatTile label={t('profile.correctAnswers')} value={nf(totals.correct)} />
@@ -759,7 +761,7 @@ const StatTile = ({ label, value }: { label: string; value: number | string }) =
   <div style={{ display: 'flex', width: '100%' }}>
     <Card variant="muted" padding={2} width="100%">
       <VStack gap={0.5}>
-        <Text size="2xl" weight="bold">{value}</Text>
+        <Text size="xl" weight="bold" style={{ fontVariantNumeric: 'tabular-nums' }}>{value}</Text>
         <Text type="supporting" size="xsm" color="primary" weight="semibold">{label}</Text>
       </VStack>
     </Card>
