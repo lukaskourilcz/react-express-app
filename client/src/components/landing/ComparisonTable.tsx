@@ -14,6 +14,8 @@ import { Link } from 'react-router-dom';
 import { useT } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../../shared/tiers';
+import { useLaunchOffer } from '../../lib/launchOffer';
+import { LaunchOfferNote, PremiumMonthlyCaption } from '../LaunchOffer';
 import { SUBJECT_SCOPE_CATALOG } from '../../../../shared/subject-catalog';
 import { Button } from '@astryxdesign/core/Button';
 import { Kicker, SwimCta } from './LandingKit';
@@ -74,10 +76,13 @@ export interface ComparisonTableProps {
   onStart?: () => void;
   /** /premium has its own plan actions, so it leaves the CTA out. */
   showCta?: boolean;
+  /** The launch-price note under the table; /premium prints it by its plans. */
+  showOfferNote?: boolean;
 }
 
-export default function ComparisonTable({ startHref = '/learn', onStart, showCta = true }: ComparisonTableProps) {
+export default function ComparisonTable({ startHref = '/learn', onStart, showCta = true, showOfferNote = true }: ComparisonTableProps) {
   const t = useT();
+  const offer = useLaunchOffer();
   const headingId = useId();
   const config = useGameConfig();
   const open = { paths: anyLearningPathOpen(config), redemption: redemptionOpen(config) };
@@ -129,7 +134,7 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
                 </th>
                 <th scope="col" className="ss-compare__herocell">
                   {t('landing.compare.colOthers')}
-                  <span className="ss-compare-caption">{t('landing.compare.premiumCaption', vars)}</span>
+                  <span className="ss-compare-caption"><PremiumMonthlyCaption offer={offer} /></span>
                 </th>
               </tr>
             </thead>
@@ -145,6 +150,8 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
           </table>
         </div>
       </div>
+
+      {offer && showOfferNote && <LaunchOfferNote offer={offer} compact />}
 
       <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--color-text-secondary)', maxWidth: '70ch' }}>
         {t('landing.compare.footnote')}

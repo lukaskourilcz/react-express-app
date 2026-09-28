@@ -187,6 +187,112 @@ describe('the plan table', () => {
   });
 });
 
+describe('the launch price (4 Oct to 2 Nov 2026, Prague)', () => {
+  const ON = { enabled: true, cancellable: true, seller: 'link', launchOffer: true };
+  const at = (iso: string) => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(iso)); };
+  afterEach(() => { vi.useRealTimers(); });
+
+  const expectRegularPage = async () => {
+    expect(await screen.findAllByRole('button', { name: 'Sign in to continue' })).toHaveLength(2);
+    expect(screen.getByRole('heading', { level: 1, name: 'Everything in devShark for €3.99 a month' })).toBeInTheDocument();
+    const plans = screen.getByRole('region', { name: 'Choose a plan' });
+    expect(within(plans).getByText('€3.99')).toBeInTheDocument();
+    expect(within(plans).getByText('€39.99')).toBeInTheDocument();
+    expect(document.querySelector('s, [data-offer]')).toBeNull();
+    expect(screen.queryByText(/launch price/i)).toBeNull();
+    expect(screen.queryByText(/1\.80|18\.00/)).toBeNull();
+  };
+
+  it('shows the launch price, the regular price from 3 Nov, the lifetime and the end date', async () => {
+    at('2026-10-10T10:00:00Z');
+    serve({ billing: ON });
+    renderAt('/premium', <PremiumPage />);
+    expect(await screen.findByRole('heading', { level: 1, name: 'Everything in devShark at the launch price of €1.80 a month' })).toBeInTheDocument();
+    const plans = screen.getByRole('region', { name: 'Choose a plan' });
+    // Each plan: the regular price struck through beside the launch price,
+    // announced as one sentence.
+    const monthly = plans.querySelector('[data-plan="monthly"] .ss-offer-amount')!;
+    expect(monthly.querySelector('s')).toHaveTextContent('€3.99');
+    expect(monthly.querySelector('strong')).toHaveTextContent('€1.80');
+    expect(monthly.querySelector('[aria-hidden="true"]')).toContainElement(monthly.querySelector('s'));
+    expect(within(monthly as HTMLElement).getByText('€1.80 launch price; the regular price from 3 Nov 2026 is €3.99')).toHaveClass('ss-sr-only');
+    const annual = plans.querySelector('[data-plan="annual"] .ss-offer-amount')!;
+    expect(annual.querySelector('s')).toHaveTextContent('€39.99');
+    expect(annual.querySelector('strong')).toHaveTextContent('€18.00');
+    const note = within(plans).getByRole('group', { name: 'Launch price €1.80 a month · €18.00 a year' });
+    expect(note).toHaveTextContent('55% below the regular price of €3.99 a month · €39.99 a year, which applies from 3 Nov 2026');
+    expect(note).toHaveTextContent('Kept for the lifetime of your subscription · cancel anytime');
+    expect(note).toHaveTextContent('Offer ends 2 Nov 2026');
+    // Launch-price framing: no earlier price is cited, nothing counts down.
+    expect(document.body.textContent).not.toMatch(/lowest price|last 30 days|hurry|left\b/i);
+    expect(screen.getByText('How long does the launch price last?')).toBeInTheDocument();
+    expect(screen.getByText(/a subscription started from 3 November 2026 pays the regular price of €3\.99 a month or €39\.99 a year/)).toBeInTheDocument();
+    // The plan table on /premium leaves the note to the plans above it.
+    expect(screen.getAllByRole('group', { name: /^Launch price/ })).toHaveLength(1);
+    expect(within(screen.getByRole('table')).getByText('€1.80 launch price; the regular price from 3 Nov 2026 is €3.99')).toBeInTheDocument();
+  });
+
+  it('shows the regular page before 4 Oct 00:00 Prague, even when the server says on', async () => {
+    at('2026-10-03T21:59:59.999Z');
+    serve({ billing: ON });
+    renderAt('/premium', <PremiumPage />);
+    await expectRegularPage();
+  });
+
+  it('starts at 4 Oct 00:00 Prague and ends after 2 Nov 23:59:59 Prague', async () => {
+    at('2026-10-03T22:00:00Z');
+    serve({ billing: ON });
+    const first = renderAt('/premium', <PremiumPage />);
+    expect(await screen.findByRole('group', { name: /^Launch price/ })).toBeInTheDocument();
+    first.unmount();
+    at('2026-11-02T22:59:59.999Z');
+    const last = renderAt('/premium', <PremiumPage />);
+    expect(await screen.findByRole('group', { name: /^Launch price/ })).toBeInTheDocument();
+    last.unmount();
+    at('2026-11-02T23:00:00Z');
+    renderAt('/premium', <PremiumPage />);
+    await expectRegularPage();
+  });
+
+  it('shows the regular page inside the window when the coupon or billing is off', async () => {
+    at('2026-10-10T10:00:00Z');
+    serve({ billing: { ...ON, launchOffer: false } });
+    const noCoupon = renderAt('/premium', <PremiumPage />);
+    await expectRegularPage();
+    noCoupon.unmount();
+    serve({ billing: { enabled: false, cancellable: false, seller: null, launchOffer: true } });
+    renderAt('/premium', <PremiumPage />);
+    expect(await screen.findByText('Premium opens soon')).toBeInTheDocument();
+    expect(screen.queryByText(/launch price/i)).toBeNull();
+  });
+
+  it('puts the launch price and its note under the landing plan table', async () => {
+    at('2026-10-10T10:00:00Z');
+    serve({ billing: ON });
+    renderAt('/', <ComparisonTable />);
+    const table = screen.getByRole('table');
+    await waitFor(() => expect(within(table).getByText('€1.80')).toBeInTheDocument());
+    expect(within(table).getByText('€3.99').tagName).toBe('S');
+    expect(screen.getByRole('group', { name: 'Launch price €1.80 a month · €18.00 a year' })).toHaveTextContent('which applies from 3 Nov 2026');
+  });
+
+  it('adds the launch price to the Terms only while it is on', async () => {
+    at('2026-10-10T10:00:00Z');
+    serve({ billing: ON });
+    const on = renderAt('/terms', <TermsPage />);
+    expect(await screen.findByText(/Launch price: a subscription started between 4 October 2026 and 2 November 2026, Prague time, costs €1\.80 a month or €18\.00 a year, VAT included, for as long as it runs\./)).toBeInTheDocument();
+    expect(screen.getByText(/which applies to subscriptions started from 3 November 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/lasts for the lifetime of that subscription/)).toBeInTheDocument();
+    on.unmount();
+    vi.useRealTimers();
+    renderAt('/terms', <TermsPage />);
+    expect(await screen.findByText(/Stripe sells Premium to you as the seller of record/)).toBeInTheDocument();
+    expect(screen.queryByText(/Launch price:/)).toBeNull();
+    // The general rule on discounts stays: it describes no offer.
+    expect(screen.getByText(/lasts for the lifetime of that subscription/)).toBeInTheDocument();
+  });
+});
+
 describe('the Terms and the privacy policy', () => {
   it('shows the verified trader identity and working support contact', () => {
     serve();

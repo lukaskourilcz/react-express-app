@@ -778,3 +778,36 @@
   font-size: var(--ss-type-meta);
   color: var(--color-text-secondary);
 }
+
+/* Text for screen readers only. */
+.ss-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* The launch price (components/LaunchOffer.tsx): the regular price struck
+   through beside the launch price, and the note that says what both are.
+   Shown only while the offer is on; tokens only, no countdown. */
+.ss-offer-amount__regular {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  text-decoration-thickness: 0.08em;
+}
+.ss-premium-plan__price .ss-offer-amount__regular { font-size: 1.1rem; margin-right: 0.15rem; }
+.ss-offer-note {
+  margin-top: 1rem;
+  padding: 0.9rem 1.1rem;
+  border: 1px solid var(--ss-card-line);
+  border-radius: var(--radius-inner);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--color-text-secondary);
+}
+.ss-offer-note__title { margin: 0 0 0.35rem; font: 750 0.95rem var(--font-family-heading); color: var(--color-text-primary); }
+.ss-offer-note ul { margin: 0; padding-left: 1.15rem; display: grid; gap: 0.25rem; }
+.ss-offer-note--compact { margin-top: 0; padding: 0.7rem 0.9rem; font-size: 0.85rem; }

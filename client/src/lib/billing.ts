@@ -20,17 +20,21 @@ export function useBilling(): {
   cancellable: boolean;
   cancelByEmail: boolean;
   seller: 'link' | 'trader' | null;
+  /** The server applies the launch coupon at Checkout right now. The pages
+   * also check the window against the browser's clock (lib/launchOffer.ts). */
+  launchOffer: boolean;
   known: boolean;
   failed: boolean;
   retry: () => void;
 } {
   const { config, fromServer, failed, retry } = useGameConfigStatus();
-  const { enabled, cancellable, cancelByEmail, seller } = config.billing;
+  const { enabled, cancellable, cancelByEmail, seller, launchOffer } = config.billing;
   return {
     enabled,
     cancellable,
     cancelByEmail: cancelByEmail === true,
     seller: seller === 'link' || seller === 'trader' ? seller : null,
+    launchOffer: fromServer && enabled === true && launchOffer === true,
     known: fromServer,
     failed: failed && !fromServer,
     retry,

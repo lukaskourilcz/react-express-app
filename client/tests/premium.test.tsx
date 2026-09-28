@@ -128,4 +128,17 @@ describe('the upgrade sheet', () => {
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Not now' })); });
     expect(sheet.result.current).toBeNull();
   });
+  it('states the launch price with its note while the offer is on', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2026-10-20T08:00:00Z'));
+    try {
+      server.use(http.get('*/api/settings', () => HttpResponse.json({ billing: { enabled: true, cancellable: true, seller: 'link', launchOffer: true } })));
+      render(<UpgradeSheet request={{ id: 2, kind: 'coding-task', ref: 'js-x' }} />, { wrapper });
+      expect(await screen.findByRole('group', { name: 'Launch price €1.80 a month · €18.00 a year' })).toHaveTextContent('Offer ends 2 Nov 2026');
+      expect(screen.getByText('€1.80 launch price; the regular price from 3 Nov 2026 is €3.99')).toBeInTheDocument();
+      expect(screen.getByText('€18.00 launch price; the regular price from 3 Nov 2026 is €39.99')).toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });

@@ -59,6 +59,16 @@ import { pickQuestionOfTheDay } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
 import { CODING_INDEX } from '../shared/coding-index';
 import { freeCodingCounts } from '../shared/tiers';
+import {
+  LAUNCH_COUPON_ENV,
+  LAUNCH_OFFER,
+  LAUNCH_REDEEM_BY,
+  activeLaunchCoupon,
+  discountedPrice,
+  launchCouponId,
+  launchOfferDisplay,
+  launchWindowOpen,
+} from '../shared/launch-offer';
 import { encodePlacementRun } from '../lib/quiz-tokens';
 import {
   itemClaim,
@@ -723,7 +733,7 @@ function billingContracts() {
   });
   // Checkout is off unless the deployment says otherwise, and only the server
   // holds a Stripe key.
-  assert.deepEqual(publicBillingSettings({}), { enabled: false, cancellable: false, cancelByEmail: false, seller: null }, 'billing defaults to off');
+  assert.deepEqual(publicBillingSettings({}), { enabled: false, cancellable: false, cancelByEmail: false, seller: null, launchOffer: false }, 'billing defaults to off');
   assert.equal(publicBillingSettings({ BILLING_ENABLED: 'true' }).enabled, false, 'BILLING_ENABLED alone sells nothing');
   assert.equal(
     DEFAULT_PUBLIC_ORIGIN,
@@ -1871,6 +1881,82 @@ async function qotdContracts() {
   const counts = freeCodingCounts(CODING_INDEX.map((task) => task.id));
   assert.equal(counts.total, CODING_INDEX.length);
   assert.equal(counts.free, CODING_INDEX.filter((task) => task.free === true).length);
+}
+
+/** The launch price (shared/launch-offer.ts): 4 Oct 2026 00:00 to 2 Nov 2026
+ * 23:59:59 in Prague, inert without billing and the coupon. */
+function launchOfferContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const prague = (instant: number) => new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Prague', year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23', timeZoneName: 'short',
+  }).format(instant);
+  // The edges, read back in Prague time: CEST at the start, CET at the end.
+  assert.equal(prague(LAUNCH_OFFER.startsAt), '04/10/2026, 00:00:00 CEST');
+  assert.equal(prague(LAUNCH_OFFER.endsBefore - 1), '02/11/2026, 23:59:59 CET');
+  assert.equal(prague(LAUNCH_OFFER.endsBefore), '03/11/2026, 00:00:00 CET');
+  assert.equal(LAUNCH_REDEEM_BY, 1793660399, 'the coupon redeem_by: 2 Nov 2026 23:59:59 CET');
+  assert.equal(prague(LAUNCH_REDEEM_BY * 1000), '02/11/2026, 23:59:59 CET');
+  // The window, edge instants included and excluded.
+  assert.equal(launchWindowOpen(LAUNCH_OFFER.startsAt - 1), false, '3 Oct 23:59:59.999 Prague: closed');
+  assert.equal(launchWindowOpen(LAUNCH_OFFER.startsAt), true, '4 Oct 00:00 Prague: open');
+  assert.equal(launchWindowOpen(Date.parse('2026-10-03T23:59:59+02:00')), false, '3 Oct 23:59:59 Prague (UTC 21:59:59): closed');
+  assert.equal(launchWindowOpen(Date.parse('2026-10-04T01:59:59+02:00')), true, '4 Oct 01:59:59 Prague (still 3 Oct in UTC): open');
+  assert.equal(launchWindowOpen(LAUNCH_OFFER.endsBefore - 1), true, '2 Nov 23:59:59.999 Prague: open');
+  assert.equal(launchWindowOpen(LAUNCH_OFFER.endsBefore), false, '3 Nov 00:00 Prague: closed');
+  assert.equal(launchWindowOpen(Date.parse('2026-09-28T12:00:00Z')), false, 'today, 28 Sep: closed');
+  assert.equal(launchWindowOpen(Number.NaN), false);
+  // 25 Oct 2026: clocks go back from 03:00 CEST to 02:00 CET, so 02:30 happens
+  // twice. Both are inside, as are the hours around the change.
+  for (const iso of ['2026-10-25T00:30:00Z', '2026-10-25T01:30:00Z', '2026-10-24T23:59:59Z', '2026-10-25T02:00:00Z']) {
+    assert.equal(launchWindowOpen(Date.parse(iso)), true, `${iso} (${prague(Date.parse(iso))}) is inside the window`);
+  }
+  assert.equal(prague(Date.parse('2026-10-25T00:30:00Z')), '25/10/2026, 02:30:00 CEST');
+  assert.equal(prague(Date.parse('2026-10-25T01:30:00Z')), '25/10/2026, 02:30:00 CET');
+  // Inert unless billing is on and the coupon is set.
+  const inside = Date.parse('2026-10-10T10:00:00Z');
+  assert.equal(activeLaunchCoupon({ now: inside, checkoutEnabled: true, coupon: 'launch55' }), 'launch55');
+  assert.equal(activeLaunchCoupon({ now: inside, checkoutEnabled: true, coupon: null }), null, 'env missing: inactive');
+  assert.equal(activeLaunchCoupon({ now: inside, checkoutEnabled: false, coupon: 'launch55' }), null, 'billing off: inactive');
+  assert.equal(activeLaunchCoupon({ now: LAUNCH_OFFER.endsBefore, checkoutEnabled: true, coupon: 'launch55' }), null, 'after the window: inactive');
+  assert.equal(launchCouponId(undefined), null);
+  assert.equal(launchCouponId('  '), null);
+  assert.equal(launchCouponId(' launch55 '), 'launch55');
+  assert.equal(launchCouponId('launch 55'), null);
+  assert.equal(LAUNCH_COUPON_ENV, 'STRIPE_COUPON_LAUNCH');
+  assert.equal(publicBillingSettings({ BILLING_ENABLED: 'true', STRIPE_COUPON_LAUNCH: 'launch55' }, inside).launchOffer, false, 'an incomplete Stripe setup sells nothing, offer or not');
+  // The prices: 55 % off, rounded to the cent the way Stripe rounds a
+  // percentage coupon, derived from PREMIUM_PRICE.
+  assert.equal(discountedPrice('3.99'), '1.80');
+  assert.equal(discountedPrice('39.99'), '18.00');
+  assert.equal(discountedPrice('10.00', 50), '5.00');
+  assert.throws(() => discountedPrice('3.9'));
+  const display = launchOfferDisplay();
+  assert.deepEqual(
+    { percent: display.percent, symbol: display.symbol, monthly: display.monthly, annual: display.annual, offerMonthly: display.offerMonthly, offerAnnual: display.offerAnnual },
+    { percent: 55, symbol: '€', monthly: '3.99', annual: '39.99', offerMonthly: '1.80', offerAnnual: '18.00' },
+  );
+  assert.equal(display.startDate, '4 October 2026');
+  assert.equal(display.endDate, '2 November 2026');
+  assert.equal(display.endDateShort, '2 Nov 2026');
+  assert.equal(display.regularFrom, '3 Nov 2026');
+  assert.equal(display.regularFromLong, '3 November 2026');
+  // The module is pure and the copy carries no price or date of its own.
+  assert.doesNotMatch(read('shared/launch-offer.ts'), /from '\.\.\/lib\//, 'shared/launch-offer.ts imports nothing from lib/');
+  const offerKeys = Object.entries(ENGLISH).filter(([key]) => /^(premium\.offer\.|premium\.page\.titleOffer|premium\.page\.faq\.offer|landing\.compare\.premiumCaptionOffer|legal\.terms\.price\.(launch|discount))/.test(key));
+  assert.ok(offerKeys.length >= 10);
+  for (const [key, value] of offerKeys) {
+    assert.doesNotMatch(value, /\d+\.\d{2}|\b20\d\d\b|\b55\b/, `${key} reads prices, dates and the percentage from shared/launch-offer.ts`);
+    // Launch-price framing: Premium was never sold before, so no page may
+    // cite a lowest earlier price (EU Price Indication Directive art. 6a).
+    assert.doesNotMatch(value, /lowest price|last 30 days|was \{/i, `${key} cites no earlier price`);
+    assert.doesNotMatch(value, /\b(hurry|only \d+ left|limited time|ends soon|last chance|act now|today only|countdown)\b/i, `${key} uses urgency copy`);
+  }
+  for (const key of ['premium.offer.price', 'landing.compare.premiumCaptionOffer', 'legal.terms.price.launch'] as const) {
+    assert.match(ENGLISH[key], /VAT included/, `${key} states the price with VAT`);
+  }
+  // The struck regular price is always named as the regular price from 3 Nov.
+  assert.match(ENGLISH['premium.offer.regular'], /regular price of .* which applies from \{regularFrom\}/);
+  assert.match(ENGLISH['premium.offer.srPrice'], /regular price from \{regularFrom\}/);
 }
 
 async function main() {
@@ -3423,6 +3509,7 @@ async function main() {
   await auditGateContracts();
   await tierContracts();
   billingContracts();
+  launchOfferContracts();
   publicCopyContracts();
   await retiredSupportContracts();
   coinsContracts();
@@ -3433,7 +3520,7 @@ async function main() {
   await qotdContracts();
   await webdevBankContracts();
 
-  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
+  console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
 }
 
 void main().catch((error) => {

@@ -38,7 +38,9 @@ import {
   type CancelPending,
   type CancelReceipt,
 } from '../lib/billing';
-import { PREMIUM_PRICE, type EntitlementResponse } from '../../../shared/tiers';
+import type { EntitlementResponse } from '../../../shared/tiers';
+import { useLaunchOffer } from '../lib/launchOffer';
+import { LaunchOfferNote, PremiumPriceSentence } from './LaunchOffer';
 import { Page } from './PublicInfoPages';
 import PremiumCheckoutButton from './PremiumCheckoutButton';
 import { planText } from './PlanLine';
@@ -68,6 +70,8 @@ export function PremiumSuccessPage() {
   const plan = useEntitlement();
   const queryClient = useQueryClient();
   const [state, setState] = useState<SuccessState>({ kind: 'checking' });
+  // An expired checkout offers both plans again, at the launch price while it is on.
+  const offer = useLaunchOffer();
   const [signInError, setSignInError] = useState<string | null>(null);
   const rechecks = useRef(0);
   const started = useRef(false);
@@ -139,11 +143,12 @@ export function PremiumSuccessPage() {
             <span>{t(rechecks.current >= RECHECKS ? 'billing.success.pendingStopped' : 'billing.success.pendingStatus')}</span>
           )}
           {view.kind === 'expired' && (
-            <span>{t('billing.success.expiredStatus')} {t('premium.sheet.price', { symbol: PREMIUM_PRICE.symbol, monthly: PREMIUM_PRICE.monthly, annual: PREMIUM_PRICE.annual })}</span>
+            <span>{t('billing.success.expiredStatus')} <PremiumPriceSentence offer={offer} /></span>
           )}
           {view.kind === 'missing' && <span>{t('billing.success.missingStatus')}</span>}
           {view.kind === 'signin' && <span>{t('billing.success.signInStatus')}</span>}
         </div>
+        {view.kind === 'expired' && offer && <LaunchOfferNote offer={offer} compact />}
         {view.kind === 'error' && <Banner status="error" title={view.message} />}
         {signInError && <Banner status="error" title={signInError} />}
         <div className="ss-info-actions">
