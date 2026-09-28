@@ -2624,3 +2624,19 @@ Issue #239, commits `6b2f416` to `ac30c86`, PR #268 (fast-forwarded into `main`)
 | Preview deployment `dpl_HQkTK2LdszCLqNZrzi3Z78HQaDa7` | `/daily/<date>` and `/coding/<track>/<id>` serve their own heads and PNGs; an unwritten date or task id falls through to the app (200); a real answer check against the preview API graded and explained at 390 and 1280 px |
 
 Not checked here: link previews inside Threads and Instagram, and the PostHog person properties; both are owner items in `NEEDED.md` ("Marketing launch").
+
+
+## Homepage launch announcement — 28 September 2026
+
+The homepage announces the 4 October–2 November Premium launch offer, with the
+55% comparison, EUR prices, Prague dates, subscription duration and Premium link.
+It states the future start before launch, requires server-confirmed coupon availability
+during the offer, and removes itself at expiry. The shared timer reschedules waits
+longer than the browser's 24.8-day limit.
+
+Validation: API typecheck, launch contracts (including the 12-handler budget), 31
+billing checks, five targeted client tests and production build passed. Both production
+dependency audits found zero vulnerabilities. Twenty responsive probes across `/` and
+`/premium`, widths 360/390/768/1024/1440, light and dark, reported no overflow or footer
+occlusion. Chrome visual inspection confirmed the homepage announcement. Real payments
+remain disabled; Stripe sandbox integration is separate from production billing.

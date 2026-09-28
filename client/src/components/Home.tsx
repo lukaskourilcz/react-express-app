@@ -25,6 +25,7 @@ import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, Checkpoin
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
+import { LaunchOfferBanner } from './LaunchOffer';
 import ComparisonTable from './landing/ComparisonTable';
 import './landing/landingSections.css';
 
@@ -206,6 +207,7 @@ export default function Home() {
 
   return (
     <div className="ss-pop" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 56 }}>
+      <LaunchOfferBanner />
       {/* ── Hero ── */}
       <section aria-label={t('home.introAria')} className="ss-hero-grid">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>

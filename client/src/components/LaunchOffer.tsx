@@ -10,6 +10,8 @@
 //
 // No countdown and no scarcity: the end date is stated once, as a date.
 import { useId, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import { useLaunchAnnouncement } from '../lib/launchOffer';
 import { useT } from '../i18n/LanguageContext';
 import type { LaunchOfferDisplay } from '../../../shared/launch-offer';
 import { premiumVars } from './PremiumFacts';
@@ -74,5 +76,26 @@ export function LaunchOfferNote({ offer, compact = false }: { offer: LaunchOffer
         <li>{t('premium.offer.ends', offer)}</li>
       </ul>
     </div>
+  );
+}
+
+/** Announce the dates before launch; advertise a current offer only when the
+ * server confirms that Checkout applies it. Never hide the homepage behind it. */
+export function LaunchOfferBanner() {
+  const t = useT();
+  const announcement = useLaunchAnnouncement();
+  const id = useId();
+  if (!announcement) return null;
+  const { offer, upcoming } = announcement;
+  return (
+    <aside className="ss-launch-banner" aria-labelledby={id}>
+      <div className="ss-launch-banner__copy">
+        <p className="ss-launch-banner__dates">{t('home.offer.dates', offer)}</p>
+        <h2 id={id}>{t('home.offer.title', offer)}</h2>
+        <p>{t(upcoming ? 'home.offer.upcoming' : 'home.offer.active', offer)}</p>
+        <p className="ss-launch-banner__terms">{t('home.offer.terms', offer)}</p>
+      </div>
+      <Link className="ss-launch-banner__link" to="/premium">{t('home.offer.details')}</Link>
+    </aside>
   );
 }

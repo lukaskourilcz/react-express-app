@@ -294,8 +294,10 @@ Mon 2 Nov 2026 23:59:59, Prague time, pays 55 % less for its whole lifetime:
 holds the window, the percentage and the prices derived from `PREMIUM_PRICE`
 (rounded the way Stripe rounds a percentage coupon). The offer is on only
 inside the window, with `BILLING_ENABLED` and a complete Stripe setup, and
-with the coupon id in `STRIPE_COUPON_LAUNCH`; without any of the three, every
-page and every Checkout Session is exactly what it was before.
+with the coupon id in `STRIPE_COUPON_LAUNCH`. The homepage announces the future
+launch before 4 October, with both dates and the future prices. During the window,
+that banner requires the same server confirmation as the purchase surfaces; it
+disappears when checkout cannot apply the coupon or the offer has expired.
 
 - Checkout (`checkoutSessionParams`) adds `discounts: [{ coupon }]` and
   drops `allow_promotion_codes`, because Stripe takes one or the other. The
