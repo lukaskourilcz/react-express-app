@@ -324,7 +324,7 @@ page and every Checkout Session is exactly what it was before.
   check (`NEEDED.md`).
 - Built at deploy time and therefore unchanged: the static HTML of `/premium`
   that a visitor without JavaScript reads, the JSON-LD offers in
-  `client/src/lib/publicMetadata.ts`, the share images and the changelog.
+  `client/src/lib/publicMetadata.ts` and the share images.
   They state the regular price.
 - `LAUNCH_OFFER_TEST_NOW` replaces the clock for the coupon decision on a
   test-mode deployment only (an `sk_test_` key), so the owner can try the
@@ -712,7 +712,7 @@ project still configured for StudyShark from deploying this code. The
 deployment may also carry `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and
 `GITHUB_APP_PRIVATE_KEY` for the GitHub garden.
 
-The footer carries the legal links, the changelog (`/changelog`, #239), devShark's own social profiles, and the appearance and sound controls, and
+The footer carries the legal links, devShark's own social profiles, and the appearance and sound controls, and
 promotes no other product. The language control is gone while the app ships
 English only (`ENABLED_LANGS`).
 

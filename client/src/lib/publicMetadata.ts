@@ -19,9 +19,8 @@ export const PUBLIC_PAGES = [
   { path: '/premium', titleKey: 'title.premium', descriptionKey: 'premium.page.lead', schema: 'premium' },
   { path: '/premium/cancel', titleKey: 'title.premiumCancel', descriptionKey: 'billing.cancel.lead', schema: null },
   // #239: the public question of the day (its dated pages /daily/<date> have
-  // their own static heads, outside the sitemap) and the changelog.
+  // their own static heads, outside the sitemap).
   { path: '/daily', titleKey: 'title.daily', descriptionKey: 'daily.description', schema: null },
-  { path: '/changelog', titleKey: 'title.changelog', descriptionKey: 'changelog.lead', schema: null },
 ] as const;
 export type PublicPage = (typeof PUBLIC_PAGES)[number];
 export const publicPage = (pathname: string): PublicPage | null =>

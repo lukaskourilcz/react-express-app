@@ -117,10 +117,6 @@
       "destination": "/daily/:date/index.html"
     },
     {
-      "source": "/changelog",
-      "destination": "/changelog/index.html"
-    },
-    {
       "source": "/coding/:track/:taskId",
       "destination": "/coding/:track/:taskId/index.html"
     },

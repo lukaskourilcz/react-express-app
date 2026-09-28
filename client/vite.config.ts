@@ -14,7 +14,6 @@ import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 import { PremiumCancelStaticArticle, PremiumStaticArticle, type Translate } from './src/components/PremiumFacts';
 import { en, type TranslationKey } from './src/i18n/translations';
 import { MERCH_SKUS } from '../shared/rewards';
-import { ChangelogArticle } from './src/components/ChangelogArticle';
 import { DailyStaticArticle } from './src/components/DailyStaticArticle';
 import { writeOgCard } from './src/og/ogImages';
 import { CODING_INDEX } from '../shared/coding-index';
@@ -27,7 +26,6 @@ const STATIC_PAGE_BODIES = {
   '/premium': PremiumStaticArticle,
   '/premium/cancel': PremiumCancelStaticArticle,
   '/daily': DailyStaticArticle,
-  '/changelog': ChangelogArticle,
 } as const;
 /** Share images the build draws (src/og/ogImages.ts), by page. */
 const STATIC_PAGE_IMAGES: Partial<Record<keyof typeof STATIC_PAGE_BODIES, string>> = { '/daily': '/og/daily.png' };
@@ -181,7 +179,7 @@ function productMetadata(env: Record<string, string>): Plugin {
         const [pathname, search] = (req.url || '').split('?');
         if (/^\/(?:cs\/)?topics\/[a-z0-9-]+\/?$/.test(pathname) || /^\/premium(?:\/cancel)?\/?$/.test(pathname)) {
           req.url = `${pathname.replace(/\/$/, '')}/index.html${search ? `?${search}` : ''}`;
-        } else if (/^\/(?:daily(?:\/\d{4}-\d{2}-\d{2})?|changelog|coding\/[a-z-]+\/[a-z0-9-]+)\/?$/.test(pathname)) {
+        } else if (/^\/(?:daily(?:\/\d{4}-\d{2}-\d{2})?|coding\/[a-z-]+\/[a-z0-9-]+)\/?$/.test(pathname)) {
           // #239: only when the build wrote that page, as on Vercel; any
           // other path falls through to the app.
           const file = `${pathname.replace(/\/$/, '')}/index.html`;

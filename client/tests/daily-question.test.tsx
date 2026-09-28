@@ -1,4 +1,4 @@
-// The public question of the day (#239) and the changelog. Invented question
+// The public question of the day (#239). Invented question
 // fixtures; the wire shapes are the real ones.
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -7,7 +7,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import DailyQuestionPage from '../src/components/DailyQuestionPage';
-import ChangelogPage from '../src/components/ChangelogPage';
 import { en } from '../src/i18n/translations';
 import { addDays, qotdTrack, utcToday } from '../../shared/daily-question';
 import { server } from './mocks/server';
@@ -33,7 +32,6 @@ function renderAt(path: string) {
           <Routes>
             <Route path="/daily" element={<DailyQuestionPage />} />
             <Route path="/daily/:date" element={<DailyQuestionPage />} />
-            <Route path="/changelog" element={<ChangelogPage />} />
           </Routes>
         </LanguageProvider>
       </MemoryRouter>
@@ -139,19 +137,5 @@ describe('/daily', () => {
     const before = reads;
     fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
     await waitFor(() => expect(reads).toBeGreaterThan(before));
-  });
-});
-
-describe('/changelog', () => {
-  it('lists dated entries, newest first, with the freemium launch', () => {
-    renderAt('/changelog');
-    expect(screen.getByRole('heading', { level: 1, name: 'What changed' })).toBeInTheDocument();
-    const days = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
-    expect(days[days.length - 1]).toBe('25 September 2026');
-    expect(days).toEqual([...days].sort((a, b) => Date.parse(b!) - Date.parse(a!)));
-    const freemium = screen.getByRole('heading', { level: 3, name: 'devShark is freemium' }).closest('li')!;
-    expect(within(freemium).getByText(/€3\.99 a month or €39\.99 a year, VAT included/)).toBeInTheDocument();
-    expect(within(freemium).getByRole('link', { name: 'See what Premium opens' })).toHaveAttribute('href', '/premium');
-    expect(screen.getByRole('heading', { level: 3, name: 'A question of the day' })).toBeInTheDocument();
   });
 });

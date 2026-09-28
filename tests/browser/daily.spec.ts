@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
 
-// The marketing launch pages (#239): the public question of the day, the
-// changelog and the per-page share heads. The preview server has no API, so
+// The marketing launch pages (#239): the public question of the day and the
+// per-page share heads. The preview server has no API, so
 // the question and its check are answered here with invented fixtures in the
 // real wire shape.
 
@@ -48,21 +48,6 @@ for (const theme of ['light', 'dark'] as const) for (const viewport of [{ width:
     await page.screenshot({ path: info.outputPath(`daily-${theme}-${viewport.width}.png`), fullPage: true });
   });
 }
-
-test('/changelog lists the freemium entry, is linked from the footer and passes WCAG 2.2 AA', async ({ page }, info) => {
-  await page.setViewportSize({ width: 390, height: 844 });
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.goto('/');
-  await page.locator('footer.ss-brand-footer').getByRole('link', { name: 'Changelog' }).click();
-  await expect(page).toHaveURL(/\/changelog$/);
-  await expect(page.getByRole('heading', { level: 1, name: 'What changed' })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: '25 September 2026' })).toBeVisible();
-  await settled(page);
-  const findings = await new AxeBuilder({ page }).withTags(TAGS).analyze();
-  expect(findings.violations.map((v) => v.id)).toEqual([]);
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-  await page.screenshot({ path: info.outputPath('changelog.png'), fullPage: true });
-});
 
 test('each day and each coding task has its own share head, with no question or answer in it', async ({ request }) => {
   const day = await (await request.get(`/daily/${today}`)).text();

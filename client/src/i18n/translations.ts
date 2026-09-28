@@ -2061,13 +2061,6 @@ export const en = {
   'daily.failed': 'The question could not load. Try again in a moment.',
   'daily.noScript': 'Turn on JavaScript to see the question and check your answer.',
   'daily.checkFailed': 'Your answer could not be checked. Try again in a moment.',
-  // Changelog, /changelog (#239)
-  'title.changelog': 'Changelog · devShark',
-  'footer.changelog': 'Changelog',
-  'changelog.kicker': 'devShark changelog',
-  'changelog.title': 'What changed',
-  'changelog.lead': 'What changed in devShark and when, newest first.',
-  'changelog.empty': 'Nothing is listed yet.',
 } as const;
 
 export type TranslationKey = keyof typeof en;

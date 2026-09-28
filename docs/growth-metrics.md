@@ -16,7 +16,7 @@ Review pages quarterly for accuracy, search usefulness, internal links, and
 stale terminology. Add a topic only when it has a clear learner need and enough
 original teaching value to stand alone.
 
-## The question of the day and the changelog (#239)
+## The question of the day (#239)
 
 `/daily` puts one devShark question up every day, from a track that rotates by
 date (`shared/daily-question.ts`). The server picks the question from that
@@ -27,10 +27,6 @@ review record, whoever is signed in. Each day has its own page
 own share image with the track and the date, so a daily post links to a
 preview of its own. The static HTML names the day and the track and never
 holds the question or its answer.
-
-`/changelog` lists dated notes on what changed (`client/src/lib/changelog.ts`),
-newest first, and the footer links it. Add an entry in the change that ships
-something a learner can see.
 
 ## Campaign links
 
