@@ -9,7 +9,7 @@
 // narrow widths so the page body never scrolls horizontally. Status is a
 // ✓ / – / ✗ glyph PLUS a word, so it never relies on colour alone.
 
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { useT } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
@@ -77,9 +77,11 @@ export interface ComparisonTableProps {
   showCta?: boolean;
   /** The launch-price note under the table; /premium prints it by its plans. */
   showOfferNote?: boolean;
+  /** Optional homepage announcement directly below the comparison card. */
+  afterTable?: ReactNode;
 }
 
-export default function ComparisonTable({ startHref = '/learn', onStart, showCta = true, showOfferNote = true }: ComparisonTableProps) {
+export default function ComparisonTable({ startHref = '/learn', onStart, showCta = true, showOfferNote = true, afterTable }: ComparisonTableProps) {
   const t = useT();
   const offer = useLaunchOffer();
   const headingId = useId();
@@ -149,6 +151,8 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
           </table>
         </div>
       </div>
+
+      {afterTable}
 
       {offer && showOfferNote && <LaunchOfferNote offer={offer} compact />}
 

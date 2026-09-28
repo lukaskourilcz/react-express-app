@@ -1146,12 +1146,9 @@ export const en = {
   'premium.sheet.price': '{symbol}{monthly} a month or {symbol}{annual} a year, VAT included. Cancel any time.',
   // The launch offer (shared/launch-offer.ts). Shown only while it is on:
   // inside its window, with billing on and the Stripe coupon set.
-  'home.offer.dates': '{startDate} – {endDate} · Prague time',
-  'home.offer.title': 'Premium launch offer · {percent}% off',
-  'home.offer.upcoming': 'From {startDate}: {symbol}{offerMonthly} a month or {symbol}{offerAnnual} a year, VAT included.',
-  'home.offer.active': '{symbol}{offerMonthly} a month or {symbol}{offerAnnual} a year, VAT included. Join by {endDate}.',
-  'home.offer.terms': 'Compared with the regular price of {symbol}{monthly}/month or {symbol}{annual}/year from {regularFrom}. Keep your launch price while your subscription runs. Cancel anytime.',
-  'home.offer.details': 'Explore Premium',
+  'home.offer.title': 'October launch offer · {percent}% off',
+  'home.offer.price': '{symbol}{offerMonthly} a month or {symbol}{offerAnnual} a year, VAT included.',
+  'home.offer.terms': 'Compared with the regular price of {symbol}{monthly}/month or {symbol}{annual}/year from Nov 2026. Keep your launch price while your subscription runs. Cancel anytime.',
   'premium.offer.title': 'Launch price {symbol}{offerMonthly} a month · {symbol}{offerAnnual} a year',
   'premium.offer.regular': '{percent}% below the regular price of {symbol}{monthly} a month · {symbol}{annual} a year, which applies from {regularFrom}',
   'premium.offer.lifetime': 'Kept for the lifetime of your subscription · cancel anytime',
