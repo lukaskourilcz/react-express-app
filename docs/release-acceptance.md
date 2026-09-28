@@ -2612,7 +2612,7 @@ Issue #239, commits `6b2f416` to `ac30c86`, PR #268 (fast-forwarded into `main`)
 |---|---|
 | `npm run typecheck:api`, `npm run typecheck:tooling --prefix client`, `tsc -b` | pass |
 | `test:launch` (new: question-of-the-day contracts), `test:coding-auth`, `test:grading-integrity`, `test:coding`, `test:paths`, `test:billing`, `test:fallbacks` | pass |
-| `test:client` | 38 files, 363 tests pass (new: analytics UTM, voucher prefill, share moments, `/daily`, `/changelog`, footer) |
+| `test:client` | 38 files, 360 tests pass (new: analytics UTM, voucher prefill, share moments, `/daily`, `/changelog`, footer) |
 | `check:unused`, `check:security` | pass |
 | `npm run build`, `check:public` | pass: 15 sitemap URLs, 770 coding share pages, 72 question-of-the-day pages |
 | `check:bundle` | 231,106 of 243,000 gzip bytes |
