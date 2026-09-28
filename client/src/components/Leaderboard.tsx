@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Avatar } from '@astryxdesign/core/Avatar';
+import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
@@ -276,14 +277,13 @@ function Leaderboard() {
       </div>
 
       {stale && board && (
-        <div className="lb-stale" role="alert">
-          <span>
-            {t('leaderboard.offlineStale', {
-              time: new Date(stale.savedAt).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }),
-            })}
-          </span>
-          <Button size="md" variant="ghost" label={t('quiz.retry')} onClick={reload} />
-        </div>
+        <Banner
+          status="warning"
+          title={t('leaderboard.offlineStale', {
+            time: new Date(stale.savedAt).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }),
+          })}
+          endContent={<Button size="sm" variant="ghost" label={t('quiz.retry')} onClick={reload} />}
+        />
       )}
 
       {body}

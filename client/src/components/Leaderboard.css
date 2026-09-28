@@ -32,22 +32,6 @@
 
 .lb-scope { margin: 0; max-width: 46rem; font-size: var(--ss-type-compact); line-height: 1.5; color: var(--color-text-secondary); }
 
-/* Offline with a board to show: the board stays, and this says how old it is. */
-.lb-stale {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  padding: 4px 8px 4px 16px;
-  border-radius: var(--radius-element);
-  border: 1px solid color-mix(in srgb, var(--ss-warning) 35%, transparent);
-  background: var(--ss-warning-soft);
-  color: var(--color-text-primary);
-  font-size: var(--ss-type-compact);
-  line-height: 1.5;
-}
-.lb-stale > span { flex: 1 1 16rem; padding: 8px 0; }
-
 .lb-board { overflow: hidden; }
 /* The previous board, kept while the next one loads: dimmed after a short
    beat, so a fast switch does not flicker. */
