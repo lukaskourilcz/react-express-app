@@ -93,21 +93,33 @@ export default function PlanLine() {
         </span>
       ) : failed || !tier ? (
         <>
-          <Text type="supporting" color="secondary">{t('profile.plan.failed')}</Text>
-          <Button variant="ghost" size="sm" label={t('profile.plan.retry')} onClick={refetch} />
+          <span className="de-plan-line__body">
+            <Text type="supporting" color="secondary">{t('profile.plan.failed')}</Text>
+          </span>
+          <span className="de-plan-line__actions">
+            <Button variant="ghost" size="sm" label={t('profile.plan.retry')} onClick={refetch} />
+          </span>
         </>
       ) : tier === 'free' ? (
         <>
-          <Text type="supporting" weight="semibold">{t('profile.plan.free')}</Text>
-          <Text type="supporting" color="secondary">{t('profile.plan.freeBody', { level: FREE_LEARN_LEVELS.react ?? 0 })}</Text>
-          <Button variant="ghost" size="sm" label={t('profile.plan.see')} onClick={() => openUpgradeSheet()} />
-          {cancellable && data?.billingAccount === true && <ManageBilling />}
+          <span className="de-plan-line__body">
+            <Text type="supporting" weight="semibold">{t('profile.plan.free')}</Text>
+            <Text type="supporting" color="secondary">{t('profile.plan.freeBody', { level: FREE_LEARN_LEVELS.react ?? 0 })}</Text>
+          </span>
+          <span className="de-plan-line__actions">
+            <Button variant="ghost" size="sm" label={t('profile.plan.see')} onClick={() => openUpgradeSheet()} />
+            {cancellable && data?.billingAccount === true && <ManageBilling />}
+          </span>
         </>
       ) : (
         <>
-          <Text type="supporting" weight="semibold">{planText(data!, t, lang)}</Text>
-          <Text type="supporting" color="secondary">{t('profile.plan.premiumBody')}</Text>
-          {cancellable && (data?.billingAccount === true || data?.source === 'provider') && <ManageBilling />}
+          <span className="de-plan-line__body">
+            <Text type="supporting" weight="semibold">{planText(data!, t, lang)}</Text>
+            <Text type="supporting" color="secondary">{t('profile.plan.premiumBody')}</Text>
+          </span>
+          {cancellable && (data?.billingAccount === true || data?.source === 'provider') && (
+            <span className="de-plan-line__actions"><ManageBilling /></span>
+          )}
         </>
       )}
     </div>
