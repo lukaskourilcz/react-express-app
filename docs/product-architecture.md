@@ -84,7 +84,11 @@ does: `record_verified_quiz_result_v2` for quizzes and the daily challenge,
 `record_roadmap_answer_v2` for a signed-in learner's first answer to a Learn
 question, and `record_challenge_completion` for a finished Biggest Shark
 Challenge run. Each write sits behind the receipt that already makes its routine
-idempotent. A Learn answer counts only while its level or part test is not yet
+idempotent. A known limitation stays visible here: a Biggest Shark Challenge run
+submits its answer proofs from the client (`api/quiz/challenge.ts`), and without a
+server-side append-only attempt ledger a determined client may still leave out
+earlier proof batches. Do not claim the record is cryptographically complete; a
+full fix has to fit an existing typed handler and keep the twelve-function limit. A Learn answer counts only while its level or part test is not yet
 passed, and a question counts at most once per learner and UTC day: a level's
 questions never change and each answer returns the correct option, so a replayed
 level would otherwise add correct answers without limit. Coding passes are not

@@ -270,15 +270,16 @@ Run over the routes this change touched — `/`, `/quiz`, `/learn`, `/today`,
 light/English: **49 probes, 0 with issues.** No horizontal overflow, no child
 escaping its parent, nothing under the ocean footer. The wider default sweep of
 all thirty routes exceeds this container's per-command time budget at roughly
-thirty seconds a probe; the earlier full-set results are in
-`docs/DEEP_END_HANDOFF.md`.
+thirty seconds a probe; the earlier full-set results were recorded in
+`docs/DEEP_END_HANDOFF.md`, removed on 2026-09-28 and kept in Git history.
 
 A second pass in **dark theme and Czech** over the four surfaces this change
 added or altered (`/`, `/learn`, `/today`, `/curation`) reached **18 probes with
 zero issues** — every one of the four at 360, 390, 430 and 768, plus two at
 1024 — before it was stopped for time. The three desktop widths are therefore
 covered in light/English and not in dark/Czech for these routes; the earlier
-full-set dark/Czech results are in `docs/DEEP_END_HANDOFF.md`. Recorded as
+full-set dark/Czech results were recorded in `docs/DEEP_END_HANDOFF.md` (removed on
+2026-09-28, kept in Git history). Recorded as
 partial rather than rounded up.
 
 **Its limit, stated plainly: it renders signed out.** Every graded workspace,

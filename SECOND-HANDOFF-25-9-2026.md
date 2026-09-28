@@ -8,7 +8,7 @@ in `lukaskourilcz/quorum` (`SECOND-HANDOFF-25-9-2026.md`) covers the BoardlessAI
 social queue, LinkedIn, Instagram and Threads.
 
 The kickoff issues of the same morning (#217, #218, label `kickoff-25-9-2026`) still stand.
-`HANDOFF.md` (9 September) and `docs/DEEP_END_HANDOFF.md` are history; nothing here reopens them.
+`HANDOFF.md` (9 September) and `docs/DEEP_END_HANDOFF.md` are history, both since removed (they remain in Git history); nothing here reopens them.
 
 ## 0. The decision
 

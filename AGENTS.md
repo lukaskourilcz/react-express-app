@@ -20,7 +20,6 @@ Authoritative references:
 - `.claude/skills/`
 - `.claude/agents/`
 - `.claude/commands/`
-- `docs/DEEP_END_HANDOFF.md`
 - `docs/curation-claims.md` — what may be said about content review, and why
   every claim fails closed
 - `docs/practice-scheduling.md` — the spacing and interleaving policies, kept

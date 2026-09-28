@@ -233,7 +233,7 @@ Fallback: if the harness is not ready in time, `@codesandbox/sandpack-react` can
 
 Server sandbox (`lib/coding/sandbox.ts`): `quickjs-emscripten` with a 64 MB memory limit, a 2 s interrupt deadline per call, a virtual clock, no host access. Submit sends the code and a sealed coding session; the server grades visible and hidden tests, writes `coding_attempts` and `coding_progress`, and awards XP once per task. Well under the 10 s function limit; the cold-start cost of the WASM module and the compiler is measured in the implementing issue and recorded in `docs/perf/`.
 
-From the learner's side the three tracks behave the same: run, submit, verdict, XP, progress. The only difference is internal: a React verdict is stored with `verified = false` because the server did not execute the suite itself, and that flag is for audit only; no screen, badge, or XP rule reads it. The note stays in `docs/DEEP_END_HANDOFF.md` under "Known technical limitation to keep visible" until a server-side DOM runner exists.
+From the learner's side the three tracks behave the same: run, submit, verdict, XP, progress. The only difference is internal: a React verdict is stored with `verified = false` because the server did not execute the suite itself, and that flag is for audit only; no screen, badge, or XP rule reads it. It stays that way until a server-side DOM runner exists.
 
 ## 6. Why interview-prepper's Submit needs a refresh
 
