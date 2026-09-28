@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { Text } from '@astryxdesign/core/Text';
 import { SwimmingShark } from './SharkFin';
 import { sxToStyle, type SxLike } from '../lib/styleProps';
@@ -15,17 +14,7 @@ interface Props {
   size?: number;
   /** Extra styles merged onto the centering wrapper. */
   sx?: SxLike;
-  /**
-   * Optional one-liner "dev tips". When provided (and non-empty), a random tip
-   * fades in beneath the shark after a short delay so the learner has something
-   * to read on longer, full-page loads. Configurable in /dev → Settings.
-   */
-  tips?: string[];
 }
-
-// How long the shark swims alone before a tip surfaces. Long enough that quick
-// loads never flash a tip; short enough to read one on a slow load.
-const TIP_DELAY_MS = 2500;
 
 /* ──── Study-mode loading beat (shared by Quiz, Learn, Challenge, Play) ────
  * Every question-fetching moment shows the house motto with the swimming fin
@@ -57,18 +46,7 @@ export function QuoteLoader({ quote, label }: { quote: string; label: string }) 
 }
 
 /** Centered swimming-shark-fin indicator with a screen-reader-announced label. */
-export default function LoadingScreen({ label, size, sx, tips }: Props) {
-  // -1 until the delay elapses, then the index of the tip to reveal.
-  const [tipIndex, setTipIndex] = useState(-1);
-
-  useEffect(() => {
-    if (!tips || tips.length === 0) return;
-    const id = setTimeout(() => setTipIndex(Math.floor(Math.random() * tips.length)), TIP_DELAY_MS);
-    return () => clearTimeout(id);
-  }, [tips]);
-
-  const tip = tips && tipIndex >= 0 ? tips[tipIndex] : null;
-
+export default function LoadingScreen({ label, size, sx }: Props) {
   return (
     <div
       role="status"
@@ -85,25 +63,6 @@ export default function LoadingScreen({ label, size, sx, tips }: Props) {
     >
       <SwimmingShark size={size ?? 48} />
       <Text type="supporting" color="secondary">{label}</Text>
-      {tip && (
-        <div
-          // Decorative flourish — the status label above already conveys "loading",
-          // so keep the tip out of the live region to avoid talking over it.
-          aria-hidden="true"
-          className="devshark-tip"
-          style={{
-            maxWidth: 360,
-            paddingLeft: 16,
-            paddingRight: 16,
-            textAlign: 'center',
-            fontStyle: 'italic',
-          }}
-        >
-          <Text type="body" color="secondary">
-            {tip}
-          </Text>
-        </div>
-      )}
     </div>
   );
 }

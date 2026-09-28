@@ -15,7 +15,7 @@ import { preferredTrackOf } from './lib/trackPref';
 import { queryClient } from './lib/queryClient';
 import { setTrackValue } from './lib/tracks';
 import type { TranslationKey } from './i18n/translations';
-import { useGameConfig, localizedDevTips, type GameConfig } from './lib/gameConfig';
+import { useGameConfig, type GameConfig } from './lib/gameConfig';
 import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
@@ -206,8 +206,7 @@ const NAV_ITEMS: {
 // Shown only while the first page of a visit loads: a navigation keeps the
 // current page until the next one can render (see the route Suspense below).
 const RouteLoader = () => {
-  const { t, lang } = useLanguage();
-  const config = useGameConfig();
+  const { t } = useLanguage();
   // Show nothing for the first beat: most lazy chunks resolve in well under
   // 200ms (or are already cached), and flashing a spinner for that instant
   // reads as glitching. The shark only surfaces on genuinely slow loads.
@@ -217,7 +216,7 @@ const RouteLoader = () => {
     return () => window.clearTimeout(id);
   }, []);
   if (!visible) return null;
-  return <LoadingScreen label={t('common.loading')} size={28} tips={localizedDevTips(config.devTips, lang)} sx={{ minHeight: 'auto', py: 6 }} />;
+  return <LoadingScreen label={t('common.loading')} size={28} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
 // The header brand: the V9 compact logo (fin with its wave, then the
