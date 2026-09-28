@@ -722,8 +722,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'careerRoadmap.stageAhead': 'Před tebou',
   'careerRoadmap.seniorReady': 'Studijní cesta dokončena',
   'careerRoadmap.skillCheckLead': 'Něco už znáš? Ověř si dovednosti a odemkni další část.',
-  'careerRoadmap.honestyLead': 'Na rovinu:',
-  'careerRoadmap.honestyBody': 'seniorní fullstack obvykle znamená 5–8+ let dodávání skutečného softwaru. Znalosti jsou nutné, ale nestačí: potřebuješ i práci „Nad rámec devSharku“, kterou ti žádná výuková aplikace nedá. devShark upevní znalostní základ; zbytek získáš stavěním a dodáváním.',
   'careerRoadmap.chooseTrack': 'Vyber si směr',
   'careerRoadmap.progressTitle': 'Tvůj pokrok v základech',
   'careerRoadmap.progressCaption': 'Splněno {passed} / {total} úrovní studijní cesty ve směru {track}',
@@ -952,7 +950,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'today.progress': '{done}/{target} hotovo',
   'today.targetMet': 'Cíl splněn',
   'today.done': 'Dnešní plán je hotový',
-  'today.doneBody': 'Splnil jsi dnešní cíl. Balíček karet máš připravený k otevření.',
   'today.packReady': 'Balíček karet je připravený',
   'today.openPack': 'Otevřít balíček',
   'today.emptyTitle': 'Nic v plánu',
@@ -1173,7 +1170,7 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'landing.compare.othersNoAds': 'Reklamy, dokud nezaplatíš',
   'landing.compare.rowNoCard': 'Žádná karta pro start',
   'landing.compare.othersNoCard': 'Pro zkušební verzi je nutná karta',
-  'landing.compare.footnote': 'Premium nikdy nemění, jak se odpověď hodnotí, kolik za ni dostaneš XP ani jak se řadí žebříčky. Reklamy nemá žádný z plánů. Premium platí servery, které hodnotí tvůj kód, a drží web bez reklam.',
+  'landing.compare.footnote': 'Premium nikdy nemění, jak se odpověď hodnotí, kolik za ni dostaneš XP ani jak se řadí žebříčky. Platí servery, které hodnotí tvůj kód. Reklamy nemá žádný z plánů.',
   'landing.compare.cta': 'Začni se učit zdarma',
 
   // ── Úvodní stránka: slovo od tvůrce ───────────────────────────────────

@@ -849,8 +849,6 @@ export const en = {
   'careerRoadmap.stageAhead': 'Ahead',
   'careerRoadmap.seniorReady': 'Learning path complete',
   'careerRoadmap.skillCheckLead': 'Already know some of this? Take the skill check to unlock ahead.',
-  'careerRoadmap.honestyLead': 'What the path covers:',
-  'careerRoadmap.honestyBody': 'devShark builds technical knowledge. Senior work also depends on repeated experience with production systems, code review, trade-offs, incidents, and project ownership.',
   'careerRoadmap.chooseTrack': 'Choose your track',
   'careerRoadmap.progressTitle': 'Your fundamentals progress',
   'careerRoadmap.progressCaption': '{passed} / {total} learning-path levels passed on the {track} track',
@@ -1084,7 +1082,6 @@ export const en = {
   'today.progress': '{done}/{target} done',
   'today.targetMet': 'Target reached',
   'today.done': 'Today’s plan is complete',
-  'today.doneBody': 'You hit today’s target. Your card pack is ready to open.',
   'today.packReady': 'Card pack ready',
   'today.openPack': 'Open your pack',
   'today.emptyTitle': 'Nothing queued',
@@ -1309,7 +1306,7 @@ export const en = {
   'landing.compare.othersNoAds': 'Ads unless you pay',
   'landing.compare.rowNoCard': 'Payment details',
   'landing.compare.othersNoCard': 'Never asked for',
-  'landing.compare.footnote': 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked. No ads on either plan. Premium pays for the servers that grade your code and keeps the site free of ads.',
+  'landing.compare.footnote': 'Premium never changes how an answer is graded, how much XP it gives or how the boards are ranked. It pays for the servers that grade your code. No ads on either plan.',
   'landing.compare.cta': 'Start free',
 
   // ── Landing: founder note ─────────────────────────────────────────────

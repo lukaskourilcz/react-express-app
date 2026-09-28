@@ -269,9 +269,6 @@ function TodayShell({ t, children }: { t: TFn; children: ReactNode }) {
       <header className="today-heading">
         <Kicker>{t('today.kicker')}</Kicker>
         <Heading level={1}>{t('today.title')}</Heading>
-        <div style={{ marginTop: 4 }}>
-          <Text type="supporting" color="secondary">{t('today.subtitle')}</Text>
-        </div>
       </header>
       {children}
     </div>
@@ -313,9 +310,6 @@ function DonePanel({ t }: { t: TFn }) {
         <div>
           <Kicker>{t('today.targetMet')}</Kicker>
           <Heading level={2}>{t('today.done')}</Heading>
-          <div style={{ marginTop: 4 }}>
-            <Text type="supporting" color="secondary">{t('today.doneBody')}</Text>
-          </div>
         </div>
       </div>
       <div className="today-pack">
