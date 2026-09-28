@@ -34,7 +34,7 @@ export const TRADER: TraderIdentity = {
   name: 'Lukáš Kouřil',
   companyId: '04713397',
   registeredAddress: 'Družstevní čtvrť 3145/19, 695 01 Hodonín, Czech Republic',
-  email: null,
+  email: 'support@devshark.app',
 };
 
 /** devShark's own profiles (the handoff's `socialProfiles`), linked once, as
