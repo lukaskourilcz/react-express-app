@@ -6,7 +6,7 @@
 .de-track-card{flex:1 1 220px;max-width:320px}.de-stage--finish{align-items:center}.de-stage--finish .de-stage__body{padding-bottom:0}
 /* Identity banner: the avatar/name block and the three account switches share
    one row, so the banner carries the settings instead of a card of its own. */
-.de-profile-identity__row{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.de-profile-identity__row{position:relative;z-index:1;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.de-profile-identity__row>:first-child{min-width:0;flex:1 1 16rem}
 .de-identity-settings{display:flex;align-items:center;gap:8px;flex-shrink:0}
 .de-identity-settings__button{display:grid;place-items:center;width:44px;height:44px;padding:0;border:1px solid var(--ss-card-line);border-radius:var(--radius-inner);background:var(--color-background-surface);color:var(--color-text-secondary);font:700 var(--ss-type-meta)/1 var(--font-family-body);letter-spacing:.04em;cursor:pointer;transition:border-color .15s ease,background-color .15s ease,color .15s ease}
 .de-identity-settings__button:hover{border-color:var(--brand-accent);background:var(--brand-accent-soft);color:var(--brand-accent-on-soft,var(--brand-accent))}
