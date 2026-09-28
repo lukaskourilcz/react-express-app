@@ -52,7 +52,7 @@ interface PlanRow { labelKey: TranslationKey; free: Cell; premium: Cell; when?: 
 const YES: Cell = { mark: 'yes', key: 'landing.compare.yes' };
 const NO: Cell = { mark: 'no', key: 'landing.compare.no' };
 
-// Access first, then what both plans share, then the two rows about money.
+// Access first, then what both plans share, then coins once redemption opens.
 // The FDE and DSA paths and coins are Premium; the AI and bilingual rows of
 // the old table are gone, because devShark ships neither.
 export const PLAN_ROWS: readonly PlanRow[] = [
@@ -65,7 +65,6 @@ export const PLAN_ROWS: readonly PlanRow[] = [
   // Redemption ships closed until the owner opens it, so the claim says so,
   // as the paths row does (review finding product-6).
   { labelKey: 'landing.compare.rowCoins', free: NO, premium: { mark: 'yes', key: 'landing.compare.premiumCoins' }, when: 'redemption' },
-  { labelKey: 'landing.compare.rowNoCard', free: { mark: 'yes', key: 'landing.compare.othersNoCard' }, premium: { mark: 'partial', key: 'landing.compare.premiumNoCard' } },
 ];
 
 export interface ComparisonTableProps {
