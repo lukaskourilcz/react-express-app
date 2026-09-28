@@ -135,7 +135,7 @@ function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged
   return (
     <section className="fr-card ss-panel" aria-labelledby={`${inputId}-title`}>
       <h3 id={`${inputId}-title`} className="fr-card__title">{t('friends.handleTitle')}</h3>
-      <p className="fr-note">{state?.handle ? t('friends.handleHelp') : t('friends.handleFirst')}</p>
+      <p className="fr-note">{t('friends.handleHelp')}</p>
       <div className="fr-row">
         <label className="ss-sr-only" htmlFor={inputId}>{t('friends.handleTitle')}</label>
         <input
