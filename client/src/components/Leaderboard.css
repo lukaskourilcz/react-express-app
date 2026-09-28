@@ -116,7 +116,7 @@
 
 .lb-table { width: 100%; border-collapse: collapse; }
 .lb-table th {
-  padding: 12px 16px;
+  padding: 12px 24px;
   text-align: left;
   font-size: var(--ss-type-label);
   font-weight: 700;
@@ -126,8 +126,8 @@
   border-bottom: 1px solid var(--ss-card-line);
 }
 .lb-table td {
-  height: 56px;
-  padding: 6px 16px;
+  height: 48px;
+  padding: 4px 24px;
   vertical-align: middle;
   border-top: 1px solid var(--ss-card-line);
 }
@@ -138,6 +138,10 @@
 .lb-col-num { width: 120px; }
 .lb-table tr.is-viewer { background: var(--ss-selected); }
 .lb-table tr.is-viewer td:first-child { box-shadow: inset 3px 0 0 var(--brand-accent); }
+/* Rows sit on the same 24px gutter as the other panels; 16px on a phone. */
+@media (max-width: 599px) {
+  .lb-table th, .lb-table td, .lb-skeleton { padding-left: 16px; padding-right: 16px; }
+}
 
 /* ── Phones: stacked rows ─────────────────────────────────────────────────── */
 
@@ -146,8 +150,8 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-height: 64px;
-  padding: 10px 14px;
+  min-height: 56px;
+  padding: 8px 16px;
   border-top: 1px solid var(--ss-card-line);
 }
 .lb-card:first-child { border-top: 0; }
@@ -199,8 +203,8 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  min-height: 56px;
-  padding: 12px 16px;
+  min-height: 48px;
+  padding: 8px 24px;
   border-top: 1px solid var(--ss-card-line);
 }
 .lb-skeleton:nth-child(2) { border-top: 0; }
