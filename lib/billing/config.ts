@@ -12,6 +12,10 @@
  *                                 'false' (plain Stripe with Stripe Tax)
  *   PUBLIC_ORIGIN                 where Stripe sends the buyer back; defaults
  *                                 to the canonical origin below
+ *   STRIPE_COUPON_LAUNCH          optional: the Stripe coupon of the launch
+ *                                 offer (55 % off, duration forever). Checkout
+ *                                 applies it only inside the offer's window
+ *                                 (shared/launch-offer.ts)
  *   RESEND_API_KEY, RESEND_FROM   the emails of the public cancellation page:
  *                                 its confirmation link and its receipt.
  *                                 Without them only a signed-in owner of the
@@ -21,6 +25,8 @@
  * value; it is the only thing that sells Premium. `connected` needs only the
  * secret key: the portal, the webhook and the public cancellation page keep
  * working for people who already pay after the owner turns sales off. */
+
+import { activeLaunchCoupon, launchCouponId, LAUNCH_COUPON_ENV } from '../../shared/launch-offer';
 
 export const BILLING_PLANS = ['monthly', 'annual'] as const;
 export type BillingPlan = (typeof BILLING_PLANS)[number];
@@ -45,6 +51,9 @@ export interface BillingConfig {
   /** The variables checkout still needs, for the operator's log. */
   missing: string[];
   email: { apiKey: string; from: string } | null;
+  /** The launch offer's coupon id (STRIPE_COUPON_LAUNCH), whether or not the
+   * window is open; `launchCoupon(config, now)` says whether it applies. */
+  launchCoupon: string | null;
 }
 
 type Env = Record<string, string | undefined>;
@@ -100,7 +109,14 @@ export function billingConfig(env: Env = process.env): BillingConfig {
     origin: parseOrigin(value(env, 'PUBLIC_ORIGIN')),
     missing,
     email: resendKey ? { apiKey: resendKey, from: value(env, 'RESEND_FROM') ?? 'devShark <billing@devshark.app>' } : null,
+    launchCoupon: launchCouponId(env[LAUNCH_COUPON_ENV]),
   };
+}
+
+/** The coupon Checkout applies at `now`, or null: the launch offer's window
+ * is open, checkout sells Premium and the coupon is set. */
+export function launchCoupon(config: BillingConfig, now: number): string | null {
+  return activeLaunchCoupon({ now, checkoutEnabled: config.checkoutEnabled, coupon: config.launchCoupon });
 }
 
 /** Every Price that bills devShark Premium: the two on sale and any earlier
@@ -116,12 +132,14 @@ export type SellerOfRecord = 'link' | 'trader';
 
 /** What the browser may know, through the public settings route.
  * `cancelByEmail`: the cancellation page can email its confirmation link, so
- * nobody has to sign in to cancel. */
-export function publicBillingSettings(env: Env = process.env): {
+ * nobody has to sign in to cancel. `launchOffer`: Checkout applies the launch
+ * coupon right now; the coupon id itself stays on the server. */
+export function publicBillingSettings(env: Env = process.env, now: number = Date.now()): {
   enabled: boolean;
   cancellable: boolean;
   cancelByEmail: boolean;
   seller: SellerOfRecord | null;
+  launchOffer: boolean;
 } {
   const config = billingConfig(env);
   const managedSet = !config.missing.includes('STRIPE_MANAGED_PAYMENTS');
@@ -130,5 +148,6 @@ export function publicBillingSettings(env: Env = process.env): {
     cancellable: config.connected,
     cancelByEmail: config.connected && config.email !== null,
     seller: config.connected && managedSet ? (config.managedPayments ? 'link' : 'trader') : null,
+    launchOffer: launchCoupon(config, now) !== null,
   };
 }

@@ -938,6 +938,73 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     applyEnv();
   });
 
+  await check('the launch coupon rides on Checkout only inside its window, with billing on and the coupon set', async () => {
+    const INSIDE = Date.parse('2026-10-10T10:00:00Z');
+    const BEFORE = Date.parse('2026-10-03T21:59:59.999Z'); // 3 Oct 23:59:59.999 in Prague
+    const START = Date.parse('2026-10-03T22:00:00Z'); // 4 Oct 00:00 in Prague
+    const LAST = Date.parse('2026-11-02T22:59:59.999Z'); // 2 Nov 23:59:59.999 in Prague
+    const AFTER = Date.parse('2026-11-02T23:00:00Z'); // 3 Nov 00:00 in Prague
+    const withCoupon = lib.billingConfig({ ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'launch55' });
+    const params = (config: ReturnType<typeof lib.billingConfig>, now: number, plan: 'monthly' | 'annual' = 'monthly') =>
+      lib.checkoutSessionParams(config, plan, 'user-launch', 'cus_launch', now);
+
+    for (const plan of ['monthly', 'annual'] as const) {
+      const inside = params(withCoupon, INSIDE, plan);
+      assert.deepEqual(inside.discounts, [{ coupon: 'launch55' }], `${plan}: the coupon applies`);
+      assert.equal(inside.allow_promotion_codes, undefined, 'Stripe takes discounts or allow_promotion_codes, never both');
+      assert.equal(inside.subscription_data?.metadata?.offer, 'launch-55');
+      assert.equal(inside.metadata?.offer, 'launch-55');
+      assert.match(inside.custom_text?.submit?.message ?? '', /launch price, 55% below the regular price, applies to every renewal for as long as this subscription runs/);
+      assert.deepEqual(inside.managed_payments, { enabled: true }, 'Managed Payments keeps the coupon');
+    }
+    for (const [label, now, on] of [['before', BEFORE, false], ['start', START, true], ['last', LAST, true], ['after', AFTER, false]] as const) {
+      const one = params(withCoupon, now);
+      assert.equal(Boolean(one.discounts), on, `${label}: discount ${on ? 'applies' : 'does not apply'}`);
+      assert.equal(one.allow_promotion_codes, on ? undefined : true, `${label}: promotion codes ${on ? 'off' : 'on'}`);
+    }
+    // Outside the window the session is exactly today's.
+    const outside = params(withCoupon, Date.parse('2026-09-28T12:00:00Z'));
+    assert.deepEqual(outside, params(lib.billingConfig({ ...BASE_ENV }), Date.parse('2026-09-28T12:00:00Z')), 'the coupon env var alone changes nothing');
+    assert.equal(outside.expires_at, undefined);
+    assert.doesNotMatch(outside.custom_text?.submit?.message ?? '', /launch/);
+    // No coupon, a malformed coupon or billing off: no discount, even inside.
+    assert.equal(params(lib.billingConfig({ ...BASE_ENV }), INSIDE).discounts, undefined, 'env missing: inactive');
+    assert.equal(params(lib.billingConfig({ ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'bad coupon/id' }), INSIDE).discounts, undefined, 'a malformed id is unset');
+    assert.equal(lib.launchCoupon(lib.billingConfig({ ...BASE_ENV, BILLING_ENABLED: 'false', STRIPE_COUPON_LAUNCH: 'launch55' }), INSIDE), null, 'billing off: inactive');
+    assert.equal(lib.publicBillingSettings({ ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'launch55' }, INSIDE).launchOffer, true);
+    assert.equal(lib.publicBillingSettings({ ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'launch55' }, BEFORE).launchOffer, false);
+    assert.equal(lib.publicBillingSettings({ ...BASE_ENV }, INSIDE).launchOffer, false);
+    assert.doesNotMatch(JSON.stringify(lib.publicBillingSettings({ ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'launch55' }, INSIDE)), /launch55/, 'the coupon id stays on the server');
+
+    // A discounted session closes when the offer does, within Stripe's 30 min to 24 h.
+    assert.equal(params(withCoupon, INSIDE).expires_at, Math.floor(INSIDE / 1000) + 24 * 3600 - 60, 'far from the end: about 24 hours');
+    const lateEvening = Date.parse('2026-11-02T20:00:00Z');
+    assert.equal(params(withCoupon, lateEvening).expires_at, Math.floor(AFTER / 1000), 'on the last evening: closes at the end');
+    const lastMinutes = Date.parse('2026-11-02T22:50:00Z');
+    assert.equal(params(withCoupon, lastMinutes).expires_at, Math.floor(lastMinutes / 1000) + 31 * 60, 'in the last half hour: Stripe’s minimum');
+
+    // Through the handler: the coupon env var is set, and the clock decides.
+    const userId = newUserId();
+    await db.addUser(userId, 'launch@example.com');
+    TOKENS.set('token-Launch', { id: userId, email: 'launch@example.com' });
+    const realNow = Date.now;
+    try {
+      applyEnv({ STRIPE_COUPON_LAUNCH: 'launch55' });
+      Date.now = () => Date.parse('2026-09-28T12:00:00Z');
+      assert.equal((await checkout('token-Launch', { plan: 'annual' })).statusCode, 200);
+      assert.equal(stripe.createdSessions.at(-1).discounts, undefined, 'today, 28 Sep: regular price');
+      assert.equal(stripe.createdSessions.at(-1).allow_promotion_codes, true);
+      Date.now = () => INSIDE;
+      assert.equal((await checkout('token-Launch', { plan: 'annual' })).statusCode, 200);
+      assert.deepEqual(stripe.createdSessions.at(-1).discounts, [{ coupon: 'launch55' }], 'inside the window: the coupon');
+      applyEnv({ STRIPE_COUPON_LAUNCH: 'launch55', BILLING_ENABLED: 'false' });
+      assert.equal((await checkout('token-Launch', { plan: 'annual' })).statusCode, 503, 'billing off sells nothing, coupon or not');
+    } finally {
+      Date.now = realNow;
+      applyEnv();
+    }
+  });
+
   await check('a live subscription is sent to the portal, and a deleted customer is replaced', async () => {
     const live = await account('Checkout1');
     await deliver(eventText('checkout.session.completed', live.ids, 'checkout1'));
@@ -1287,9 +1354,9 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
   });
 
   await check('settings expose the two switches and the seller, and the origin is never taken from a guess', async () => {
-    assert.deepEqual(lib.publicBillingSettings({}), { enabled: false, cancellable: false, cancelByEmail: false, seller: null });
-    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV }), { enabled: true, cancellable: true, cancelByEmail: false, seller: 'link' });
-    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV, BILLING_ENABLED: 'false' }), { enabled: false, cancellable: true, cancelByEmail: false, seller: 'link' });
+    assert.deepEqual(lib.publicBillingSettings({}), { enabled: false, cancellable: false, cancelByEmail: false, seller: null, launchOffer: false });
+    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV }), { enabled: true, cancellable: true, cancelByEmail: false, seller: 'link', launchOffer: false });
+    assert.deepEqual(lib.publicBillingSettings({ ...BASE_ENV, BILLING_ENABLED: 'false' }), { enabled: false, cancellable: true, cancelByEmail: false, seller: 'link', launchOffer: false });
     assert.equal(lib.publicBillingSettings({ ...BASE_ENV, RESEND_API_KEY: 're_x' }).cancelByEmail, true, 'the page can email its link');
     assert.equal(lib.publicBillingSettings({ RESEND_API_KEY: 're_x' }).cancelByEmail, false, 'not without Stripe');
     assert.equal(lib.publicBillingSettings({ ...BASE_ENV, STRIPE_MANAGED_PAYMENTS: 'false' }).seller, 'trader', 'plain Stripe: the trader sells');

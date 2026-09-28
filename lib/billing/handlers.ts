@@ -20,7 +20,8 @@ import { createLogger, isRpcMissing, jsonError, requireAuthResult, withTimeout }
 import { tryAuth } from '../auth';
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { toEntitlementResponse } from '../entitlements';
-import { billingConfig, BILLING_PLANS, type BillingConfig, type BillingPlan } from './config';
+import { billingConfig, BILLING_PLANS, launchCoupon, type BillingConfig, type BillingPlan } from './config';
+import { LAUNCH_OFFER } from '../../shared/launch-offer';
 import { stripeErrorCode, stripeFor, verifyStripeEvent, type StripeApi } from './stripe';
 import {
   applyCheckoutSession,
@@ -74,16 +75,32 @@ function depsFor(config: BillingConfig, supabase: SupabaseClient): BillingDeps |
  * buyer's currency when Adaptive Pricing converts it, so the text names the
  * period and the terms rather than an amount. The owner's lawyer checks this
  * wording against § 1826a of the Czech Civil Code (NEEDED.md). */
-export function checkoutText(plan: BillingPlan, origin: string) {
+export function checkoutText(plan: BillingPlan, origin: string, launchOffer = false) {
   const period = plan === 'annual' ? 'year' : 'month';
   return {
     terms_of_service_acceptance: { message: `${WAIVER_TEXT} I accept the [Terms](${origin}/terms).` },
     submit: {
       message:
         `Pay starts a subscription at the price shown, VAT included, renewed every ${period} until you cancel. ` +
+        (launchOffer
+          ? `The launch price, ${LAUNCH_OFFER.percentOff}% below the regular price, applies to every renewal for as long as this subscription runs, and ends if it ends. `
+          : '') +
         `Cancel any time from your profile or at ${origin}/premium/cancel; Premium stays open until the end of the period you paid for.`,
     },
   };
+}
+
+/** Stripe keeps a Checkout Session open for 30 minutes to 24 hours. With the
+ * launch coupon applied, the session closes when the offer does, so a page
+ * opened on 2 November cannot be paid at the launch price on 4 November. A
+ * session opened in the offer's last half hour still gets Stripe's minimum,
+ * plus a minute for clock drift; the coupon's own `redeem_by` is the limit
+ * Stripe enforces. */
+export function launchSessionExpiry(now: number): number {
+  const earliest = Math.ceil(now / 1000) + 31 * 60;
+  const latest = Math.floor(now / 1000) + 24 * 60 * 60 - 60;
+  const offerEnd = Math.floor(LAUNCH_OFFER.endsBefore / 1000);
+  return Math.max(earliest, Math.min(latest, offerEnd));
 }
 
 /** The Checkout Session for one plan. Exported for the tests. */
@@ -92,21 +109,32 @@ export function checkoutSessionParams(
   plan: BillingPlan,
   userId: string,
   customerId: string,
+  now: number = Date.now(),
 ): Stripe.Checkout.SessionCreateParams {
   const price = config.prices[plan];
   if (!price) throw new Error(`price_missing:${plan}`);
+  // The launch offer (shared/launch-offer.ts): inside its window, with the
+  // coupon set, the session carries the coupon. A forever coupon becomes a
+  // discount on the subscription itself, so it stays for every renewal and
+  // across a switch between the two Prices. Stripe accepts either `discounts`
+  // or `allow_promotion_codes` on one session, never both, so the promotion
+  // code field returns when the offer ends.
+  const coupon = launchCoupon(config, now);
+  const offer: Record<string, string> = coupon ? { offer: LAUNCH_OFFER.id } : {};
   return {
     mode: 'subscription',
     customer: customerId,
     client_reference_id: userId,
     line_items: [{ price, quantity: 1 }],
-    subscription_data: { metadata: { supabase_user_id: userId, plan } },
-    metadata: { supabase_user_id: userId, plan },
+    subscription_data: { metadata: { supabase_user_id: userId, plan, ...offer } },
+    metadata: { supabase_user_id: userId, plan, ...offer },
     success_url: `${config.origin}/premium/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${config.origin}/premium`,
-    allow_promotion_codes: true,
+    ...(coupon
+      ? { discounts: [{ coupon }], expires_at: launchSessionExpiry(now) }
+      : { allow_promotion_codes: true }),
     consent_collection: { terms_of_service: 'required' },
-    custom_text: checkoutText(plan, config.origin),
+    custom_text: checkoutText(plan, config.origin, coupon !== null),
     // "Pay" is the order button that reads as an obligation to pay.
     submit_type: 'pay',
     locale: 'auto',
@@ -152,18 +180,20 @@ async function startCheckout(req: VercelRequest, res: VercelResponse, supabase: 
       return jsonError(res, 409, 'already_premium', 'Your Premium subscription is active. Manage it from your profile.');
     }
     let customerId = account.customerId ?? (await createCustomer(deps, userId, email, false));
+    // One instant decides the offer for both attempts and the log line.
+    const now = Date.now();
     let session: Stripe.Checkout.Session;
     try {
-      session = await deps.stripe.checkout.sessions.create(checkoutSessionParams(config, plan as BillingPlan, userId, customerId));
+      session = await deps.stripe.checkout.sessions.create(checkoutSessionParams(config, plan as BillingPlan, userId, customerId, now));
     } catch (error) {
       // The stored customer was deleted at Stripe (a data deletion request
       // through Link does that). Start again with a new one.
       if (stripeErrorCode(error).code !== 'resource_missing') throw error;
       customerId = await createCustomer(deps, userId, email, true);
-      session = await deps.stripe.checkout.sessions.create(checkoutSessionParams(config, plan as BillingPlan, userId, customerId));
+      session = await deps.stripe.checkout.sessions.create(checkoutSessionParams(config, plan as BillingPlan, userId, customerId, now));
     }
     if (!session.url) throw new Error('checkout_without_url');
-    log({ status: 200, kind: 'checkout', plan, managed: config.managedPayments });
+    log({ status: 200, kind: 'checkout', plan, managed: config.managedPayments, offer: launchCoupon(config, now) ? LAUNCH_OFFER.id : null });
     res.setHeader('Cache-Control', 'no-store');
     return res.json({ url: session.url });
   } catch (error) {
