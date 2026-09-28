@@ -226,7 +226,8 @@ describe('/premium with checkout on', () => {
       const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
       expect(headings.indexOf('Choose a plan')).toBeLessThan(headings.indexOf('Have a voucher?'));
     });
-    expect(within(voucherSection()).getByText('Enter the code you were given, and Premium opens on your account.')).toBeInTheDocument();
+    // With checkout open the title and the field label carry it; no lead sentence.
+    expect(within(voucherSection()).queryByText(/Enter the code you were given/)).toBeNull();
   });
 });
 

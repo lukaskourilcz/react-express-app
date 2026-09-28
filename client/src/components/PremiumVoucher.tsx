@@ -185,7 +185,9 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
         </div>
       ) : (
         <>
-          <p>{t(billingClosed ? 'premium.voucher.leadClosed' : 'premium.voucher.lead')}</p>
+          {/* The title and the field label say what a voucher is; only a
+              closed checkout needs a sentence (Premium is not on sale). */}
+          {billingClosed && <p>{t('premium.voucher.leadClosed')}</p>}
           {authLoading ? (
             <span role="status" className="ss-premium-voucher__loading">
               <Skeleton width={220} height={14} radius={2} />
