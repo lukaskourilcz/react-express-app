@@ -154,11 +154,11 @@ export default function PathPickerDialog({
               : step === 'paths' ? 'paths.picker.skillTitle'
                 : 'profile.picker.title',
         )}
-        subtitle={t(
-          step === 'track' ? 'home.pathDialogSubtitle'
-            : step === 'role' ? 'paths.picker.roleSubtitle'
-              : step === 'paths' ? 'paths.picker.skillSubtitle'
-                : 'profile.picker.subtitle',
+        // The track step's title says it all; the other steps keep a line.
+        subtitle={step === 'track' ? undefined : t(
+          step === 'role' ? 'paths.picker.roleSubtitle'
+            : step === 'paths' ? 'paths.picker.skillSubtitle'
+              : 'profile.picker.subtitle',
         )}
         onOpenChange={(next) => {
           if (!next) onClose();
@@ -180,7 +180,7 @@ export default function PathPickerDialog({
         <RadioCardGroup
           value={track}
           onChange={(value) => setTrack(value as Track)}
-          label={t('home.pathDialogSubtitle')}
+          label={t('home.pathDialogTitle')}
           style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, width: '100%' }}
         >
           {TRACK_ORDER.map((tk) => {

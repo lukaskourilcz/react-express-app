@@ -99,11 +99,8 @@ export const en = {
   'home.ctaSignIn': 'Sign in to start',
   'home.ctaLearn': 'Go to learning path',
   'home.pathDialogTitle': 'Choose your learning path',
-  'home.pathDialogSubtitle': 'Pick the track to focus on.',
   'home.pathCurrent': 'Current',
   'home.pathChosenCta': 'Your path: {label}',
-  'home.pathChosenHint': 'You’re set on the {label} path. Start whenever you’re ready.',
-  'home.trackSavedSnack': 'Saved. You’re on the {label} path.',
   'home.continueTrack': 'Continue: {track}',
 
   // Editorial landing ("Deep End v2")
@@ -349,7 +346,6 @@ export const en = {
 
   // Quiz, setup screen
   'quiz.title': 'Web Development Quiz',
-  'quiz.subtitle': 'Thousands of questions · keyboard shortcuts supported',
   'quiz.loadingQuote': 'Preparing your questions.',
   'quiz.todaysChallenge': 'Today’s challenge',
   'quiz.dailyMeta': '5 questions',
@@ -1753,7 +1749,6 @@ export const en = {
   'coding.saved.remove': 'Remove from saved',
   'coding.saved.title': 'Saved',
   'coding.saved.empty': 'Nothing saved yet. The star on any challenge keeps it here.',
-  'coding.saved.lockedNote': 'Saved, but not open yet — it will start once your plan reaches it.',
   'coding.filter.saved': 'Saved',
   'coding.filter.searchLabel': 'Search challenges',
   'coding.filter.searchPlaceholder': 'Search by name or technique',

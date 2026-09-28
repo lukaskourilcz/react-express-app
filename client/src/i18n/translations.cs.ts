@@ -95,11 +95,8 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'home.ctaSignIn': 'Přihlas se a začni',
   'home.ctaLearn': 'Přejít na studijní cestu',
   'home.pathDialogTitle': 'Vyber si svou studijní cestu',
-  'home.pathDialogSubtitle': 'Vyber si směr, na který se chceš zaměřit.',
   'home.pathCurrent': 'Aktuální',
   'home.pathChosenCta': 'Tvá cesta: {label}',
-  'home.pathChosenHint': 'Máš nastavenou cestu {label}. Pusť se do toho, až budeš chtít.',
-  'home.trackSavedSnack': 'Uloženo. Máš nastavenou cestu {label}.',
   'home.continueTrack': 'Pokračovat: {track}',
 
   // Editorial landing ("Deep End v2")
@@ -255,7 +252,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
 
   // Quiz, setup screen
   'quiz.title': 'Kvíz webového vývoje',
-  'quiz.subtitle': 'Tisíce otázek · podporovány klávesové zkratky',
   'quiz.loadingQuote': 'Připravujeme otázky.',
   'quiz.todaysChallenge': 'Dnešní výzva',
   'quiz.dailyMeta': '5 otázek',
@@ -1284,7 +1280,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'coding.saved.remove': 'Odebrat z uložených',
   'coding.saved.title': 'Uložené',
   'coding.saved.empty': 'Zatím nic uloženého. Hvězdička u úlohy ji sem přidá.',
-  'coding.saved.lockedNote': 'Uložené, ale zatím neotevřené — spustí se, až k němu tvůj plán dojde.',
   'coding.filter.saved': 'Uložené',
   'coding.filter.searchLabel': 'Hledat úlohy',
   'coding.filter.searchPlaceholder': 'Hledej podle názvu nebo techniky',
