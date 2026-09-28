@@ -4,8 +4,8 @@ This is the operational source of truth for the current web launch.
 
 ## Release contract
 
-- The repository must contain exactly 12 files below `api/` so the Vercel Hobby
-  function budget is not exceeded.
+- Preserve exactly 12 physical TypeScript handlers below `api/`. The Vercel
+  team is already on Pro (verified 2026-09-28); the handler contract remains.
 - The repository builds devShark only, with the `webdev` subject. A build or
   deployment configured for any other product fails in
   `resolveCatalogProductId`. StudyShark moved to its own repository

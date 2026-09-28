@@ -1,0 +1,27 @@
+name: Production health
+on:
+  schedule:
+    - cron: '7,22,37,52 * * * *'
+  workflow_dispatch:
+permissions: {}
+concurrency:
+  group: production-health
+  cancel-in-progress: false
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - name: Require two consecutive unhealthy probes
+        shell: bash
+        run: |
+          probe() {
+            curl --fail --silent --show-error --connect-timeout 10 --max-time 20 \
+              https://devshark.app/api/health --output /tmp/health.json &&
+              jq -e '.dependencies | .database == "ok" and .serviceRole == "ok" and .rateLimiter == "configured"' /tmp/health.json
+          }
+          if probe; then exit 0; fi
+          sleep 30
+          if probe; then exit 0; fi
+          echo '::error::devshark.app failed two consecutive health probes'
+          exit 1
