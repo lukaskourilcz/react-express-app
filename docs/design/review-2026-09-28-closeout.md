@@ -1,6 +1,6 @@
 # Design review 2 closeout (28 Sep 2026)
 
-This closes the second design review. Its 37 change IDs each have an issue (#270–#306, labelled `design-review-2` plus `P0`, `P1` or `P2`) and a commit on `main`. The bands merged in order: P0 in #309, P1 in #311, P2 in #313. Round one's record is `docs/design/audit-2026-09-27-closeout.md`. The review pages and the brief (`design-audit-2/`) are deleted in the cleanup that follows this document.
+This closes the second design review. Its 37 change IDs each have an issue (#270–#306, labelled `design-review-2` plus `P0`, `P1` or `P2`) and a commit on `main`. The bands merged in order: P0 in #309, P1 in #311, P2 in #313. Round one's record is `docs/design/audit-2026-09-27-closeout.md`. The review pages and the brief (`design-audit-2/`) were removed in the cleanup that followed and remain in Git history.
 
 ## Screenshot evidence
 
