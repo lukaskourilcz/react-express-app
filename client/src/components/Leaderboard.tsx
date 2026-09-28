@@ -7,8 +7,8 @@
 // Nothing here ranks by XP or by streak, and nothing here computes a rank: the
 // server does, and this screen only draws what it was sent.
 //
-// A rank is always the number as text. The top three get a heavier ink disc,
-// never a medal colour, so the order reads the same without colour. Nothing
+// A rank is always the number as text. The top three get a heavier ink ring,
+// never a fill or a medal colour, so the order reads the same without colour. Nothing
 // animates, so reduced motion has nothing to switch off.
 
 import { useEffect, useId, useState, type ReactNode } from 'react';

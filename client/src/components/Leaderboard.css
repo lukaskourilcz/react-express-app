@@ -2,9 +2,9 @@
  *
  * Canvas, one panel, rows. The panel is the shared .ss-panel card stock; every
  * colour below is a theme token, so light and dark come from the tokens and
- * this file holds none of its own. Ranks are ink discs with the number as
- * text: the top three are filled, the rest are outlined, and no rank is told
- * apart by hue. Nothing here animates.
+ * this file holds none of its own. Ranks are outlined discs with the number
+ * as text: the top three take a heavier 2px ink ring and weight, none is
+ * filled, and no rank is told apart by hue. Nothing here animates.
  */
 
 .lb { display: flex; flex-direction: column; gap: 20px; }
@@ -75,9 +75,9 @@
   font-variant-numeric: tabular-nums;
 }
 .lb-rank--top {
-  border-color: var(--ss-ink);
-  background: var(--ss-ink);
-  color: var(--color-background-surface);
+  border: 2px solid var(--ss-ink);
+  background: transparent;
+  color: var(--color-text-primary);
   font-weight: 800;
 }
 
