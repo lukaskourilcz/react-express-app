@@ -70,15 +70,14 @@ export const cs: Partial<Record<TranslationKey, string>> = {
   'title.home': 'devShark, kvízy a studijní cesty pro webové vývojáře',
   'title.quiz': 'Kvíz · devShark',
   'title.learn': 'Učení · devShark',
-  'title.roadmap': 'Plán · devShark',
-  'roadmapPage.kicker': 'Kariérní plán',
-  'roadmapPage.title': 'Co je potřeba, aby ses prosadil',
+  'title.roadmap': 'Kariéra · devShark',
+  'roadmapPage.title': 'Kariérní plán',
   'roadmapPage.treeTitle': 'Tvoje roadmapa',
   'roadmapPage.treeIntro': 'Vyber si Frontend, Backend nebo Fullstack a postupuj odshora dolů, nejdřív základy, nakonec produkce. Každé téma je rozdělené na 3 krátké části, které se vyplňují, jak je plníš.',
   'title.profile': 'Profil · devShark',
   'title.leaderboard': 'Žebříček · devShark',
   'title.cards': 'Kartičky · devShark',
-  'title.shop': 'Obchod · devShark',
+  'title.shop': 'Mince · devShark',
   'title.play': 'Hrát naživo · devShark',
   'title.playMatch': 'Živá hra · devShark',
   'title.challenge': 'Výzva největšího žraloka · devShark',
@@ -149,7 +148,6 @@ export const cs: Partial<Record<TranslationKey, string>> = {
 
   // Identita předmětů (názvy + popisky v přehledu, hero a chipech)
   'subject.webdev.name': 'Web Dev',
-  'subject.webdev.blurb': 'Frontend, backend a fullstack: jazyky a nástroje moderního webu.',
 
   // Tematické karty na úvodní stránce (Web Dev má home.feature*)
   'challenge.noQuestions': 'Momentálně nejsou k dispozici žádné otázky.',

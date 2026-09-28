@@ -9,7 +9,6 @@
 // i18n preserved verbatim.
 
 import { useEffect, useMemo } from 'react';
-import { Kicker } from './landing/LandingKit';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -142,7 +141,6 @@ export default function CareerRoadmap() {
   const [subject] = useSubject();
   const pillars = useMemo(() => webdevPillars(t), [t]);
 
-  const kicker = t('roadmapPage.kicker');
   const pageTitle = t('roadmapPage.title');
   const headerBody = t('careerRoadmap.headerBody');
 
@@ -186,7 +184,6 @@ export default function CareerRoadmap() {
         {/* Header */}
         <div className="ss-pop" style={{ width: '100%' }}>
           <VStack gap={1}>
-            <Kicker>{kicker}</Kicker>
             <Heading level={1} type="display-3">
               {pageTitle}
             </Heading>
