@@ -222,7 +222,7 @@ function Leaderboard() {
     body = (
       <div className="lb-board ss-panel lb-empty">
         <p className="lb-empty__text">{emptyText}</p>
-        <SwimCta label={t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
+        <SwimCta label={tab === 'today' ? t('quiz.todaysChallenge') : t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
       </div>
     );
   } else {
