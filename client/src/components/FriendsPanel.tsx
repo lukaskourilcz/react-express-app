@@ -37,6 +37,8 @@ import {
   type Friend, type FriendRequest, type HandleState, type LookupResult,
 } from '../lib/friends';
 import './Friends.css';
+import { Button } from '@astryxdesign/core/Button';
+import LoadingScreen from './LoadingScreen';
 
 type Load = 'loading' | 'ready' | 'unavailable';
 
@@ -67,11 +69,11 @@ export function FriendsPanel() {
   useEffect(() => { void refresh(); }, [refresh]);
 
   if (state === 'loading') {
-    return <p className="fr-note" role="status">{t('friends.loading')}</p>;
+    return <LoadingScreen label={t('friends.loading')} sx={{ minHeight: 160 }} />;
   }
   if (state === 'unavailable') {
     return (
-      <div className="fr-empty">
+      <div className="fr-empty ss-panel" style={{ padding: 24 }}>
         <p className="fr-note">{t('friends.unavailable')}</p>
         {error && <p className="fr-note fr-note--error">{error}</p>}
       </div>
@@ -133,9 +135,9 @@ function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged
   return (
     <section className="fr-card ss-panel" aria-labelledby={`${inputId}-title`}>
       <h3 id={`${inputId}-title`} className="fr-card__title">{t('friends.handleTitle')}</h3>
-      <p className="fr-note">{state?.handle ? t('friends.handleHelp') : t('friends.handleFirst')}</p>
+      <p className="fr-note">{t('friends.handleHelp')}</p>
       <div className="fr-row">
-        <label className="fr-visually-hidden" htmlFor={inputId}>{t('friends.handleTitle')}</label>
+        <label className="ss-sr-only" htmlFor={inputId}>{t('friends.handleTitle')}</label>
         <input
           id={inputId}
           className="fr-input"
@@ -147,14 +149,7 @@ function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged
           onChange={(event) => { setDraft(event.target.value); setSaved(false); }}
           onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void submit(); } }}
         />
-        <button
-          type="button"
-          className="fr-btn fr-btn--primary"
-          disabled={saving || draft.trim() === (state?.handle ?? '')}
-          onClick={() => void submit()}
-        >
-          {saving ? t('friends.saving') : t('friends.handleSave')}
-        </button>
+        <Button variant="primary" isDisabled={saving || draft.trim() === (state?.handle ?? '')} onClick={() => void submit()} label={saving ? t('friends.saving') : t('friends.handleSave')} />
       </div>
       {saved && <p className="fr-note fr-note--ok" role="status">{t('friends.handleSaved')}</p>}
       {error && <p className="fr-note fr-note--error" role="alert">{error}</p>}
@@ -240,7 +235,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
       <h3 id={`${inputId}-title`} className="fr-card__title">{t('friends.findTitle')}</h3>
       <p className="fr-note">{t('friends.findHelp', { handle: ownHandle })}</p>
       <div className="fr-row">
-        <label className="fr-visually-hidden" htmlFor={inputId}>{t('friends.findTitle')}</label>
+        <label className="ss-sr-only" htmlFor={inputId}>{t('friends.findTitle')}</label>
         <input
           id={inputId}
           className="fr-input"
@@ -252,9 +247,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
           onChange={(event) => { setQuery(event.target.value); setResult(null); }}
           onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void look(); } }}
         />
-        <button type="button" className="fr-btn" disabled={busy} onClick={() => void look()}>
-          {busy ? t('friends.searching') : t('friends.find')}
-        </button>
+        <Button variant="secondary" isDisabled={busy} onClick={() => void look()} label={busy ? t('friends.searching') : t('friends.find')} />
       </div>
 
       {result && !result.found && (
@@ -264,9 +257,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
         <div className="fr-result" role="status">
           <span className="fr-result__handle">{result.handle}</span>
           {result.state === 'none' && (
-            <button type="button" className="fr-btn fr-btn--primary" disabled={busy} onClick={() => void ask(result.handle!)}>
-              {t('friends.add')}
-            </button>
+            <Button variant="primary" isDisabled={busy} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
           )}
           {result.state === 'self' && <span className="fr-note">{t('friends.isYou')}</span>}
           {result.state === 'accepted' && <span className="fr-note">{t('friends.alreadyFriends')}</span>}
@@ -274,9 +265,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
           {result.state === 'pending_in' && <span className="fr-note">{t('friends.theyAsked')}</span>}
           {result.state === 'declined_out' && <span className="fr-note">{t('friends.wasDeclined')}</span>}
           {result.state === 'declined_in' && (
-            <button type="button" className="fr-btn fr-btn--primary" disabled={busy} onClick={() => void ask(result.handle!)}>
-              {t('friends.add')}
-            </button>
+            <Button variant="primary" isDisabled={busy} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
           )}
           {result.state === 'blocked' && <span className="fr-note">{t('friends.blocked')}</span>}
         </div>
@@ -312,12 +301,8 @@ function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChange
           <li key={one.handle} className="fr-item">
             <span className="fr-item__handle">{one.handle}</span>
             <span className="fr-item__actions">
-              <button type="button" className="fr-btn fr-btn--primary" disabled={busy === one.handle} onClick={() => void answer(one.handle, true)}>
-                {t('friends.accept')}
-              </button>
-              <button type="button" className="fr-btn" disabled={busy === one.handle} onClick={() => void answer(one.handle, false)}>
-                {t('friends.decline')}
-              </button>
+              <Button variant="primary" isDisabled={busy === one.handle} onClick={() => void answer(one.handle, true)} label={t('friends.accept')} />
+              <Button variant="secondary" isDisabled={busy === one.handle} onClick={() => void answer(one.handle, false)} label={t('friends.decline')} />
             </span>
           </li>
         ))}
@@ -379,15 +364,7 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
                   {friend.activeToday && <> {' · '}<span className="fr-today">{t('friends.today')}</span></>}
                 </span>
               </span>
-              <button
-                type="button"
-                className="fr-btn"
-                disabled={busy === friend.handle}
-                aria-label={t('friends.removeOne', { handle: friend.handle })}
-                onClick={() => void drop(friend.handle)}
-              >
-                {t('friends.remove')}
-              </button>
+              <Button variant="secondary" isDisabled={busy === friend.handle} aria-label={t('friends.removeOne', { handle: friend.handle })} onClick={() => void drop(friend.handle)} label={t('friends.remove')} />
             </li>
           ))}
         </ul>

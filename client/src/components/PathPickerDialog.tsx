@@ -44,6 +44,7 @@ import {
 } from '../../../shared/learning-paths';
 import type { TranslationKey } from '../i18n/translations';
 import './paths/LearningPaths.css';
+import { Button } from '@astryxdesign/core/Button';
 
 /** The second step's two answers. `none` is a real choice, not a dismissal. */
 type RoleChoice = RoleSpecializationId | 'none';
@@ -153,11 +154,11 @@ export default function PathPickerDialog({
               : step === 'paths' ? 'paths.picker.skillTitle'
                 : 'profile.picker.title',
         )}
-        subtitle={t(
-          step === 'track' ? 'home.pathDialogSubtitle'
-            : step === 'role' ? 'paths.picker.roleSubtitle'
-              : step === 'paths' ? 'paths.picker.skillSubtitle'
-                : 'profile.picker.subtitle',
+        // The track step's title says it all; the other steps keep a line.
+        subtitle={step === 'track' ? undefined : t(
+          step === 'role' ? 'paths.picker.roleSubtitle'
+            : step === 'paths' ? 'paths.picker.skillSubtitle'
+              : 'profile.picker.subtitle',
         )}
         onOpenChange={(next) => {
           if (!next) onClose();
@@ -179,7 +180,7 @@ export default function PathPickerDialog({
         <RadioCardGroup
           value={track}
           onChange={(value) => setTrack(value as Track)}
-          label={t('home.pathDialogSubtitle')}
+          label={t('home.pathDialogTitle')}
           style={{ display: 'flex', flexDirection: 'column', gap: 12, padding: 16, width: '100%' }}
         >
           {TRACK_ORDER.map((tk) => {
@@ -324,26 +325,13 @@ export default function PathPickerDialog({
 
       <div className="lp-actions" style={{ padding: '0 16px 16px' }}>
         {index > 0 && (
-          <button type="button" className="lp-btn lp-btn--quiet" onClick={() => setStep(steps[index - 1])} disabled={busy}>
-            {t('paths.picker.back')}
-          </button>
+          <Button variant="ghost" onClick={() => setStep(steps[index - 1])} isDisabled={busy} label={t('paths.picker.back')} />
         )}
-        <button type="button" className="lp-btn lp-btn--quiet" onClick={onClose} disabled={busy}>
-          {t('paths.picker.cancel')}
-        </button>
+        <Button variant="ghost" onClick={onClose} isDisabled={busy} label={t('paths.picker.cancel')} />
         {isLast ? (
-          <button
-            type="button"
-            className="lp-btn lp-btn--primary"
-            onClick={commit}
-            disabled={busy || !canCommit}
-          >
-            {busy ? t('paths.picker.saving') : t('paths.picker.save')}
-          </button>
+          <Button variant="primary" onClick={commit} isDisabled={busy || !canCommit} label={busy ? t('paths.picker.saving') : t('paths.picker.save')} />
         ) : (
-          <button type="button" className="lp-btn lp-btn--primary" onClick={() => setStep(steps[index + 1])} disabled={busy}>
-            {t('paths.picker.continue')}
-          </button>
+          <Button variant="primary" onClick={() => setStep(steps[index + 1])} isDisabled={busy} label={t('paths.picker.continue')} />
         )}
       </div>
 

@@ -161,7 +161,7 @@ export function GithubGardenCard() {
           <>
             <Text type="supporting" size="sm" color="secondary">{t('github.noRepos')}</Text>
             <HStack justify="between" wrap="wrap" gap={1}>
-              <a className="ss-link-button ss-link-button--secondary" href={INSTALLATIONS_URL} target="_blank" rel="noopener noreferrer">{t('github.manageOnGithub')}</a>
+              <Button variant="secondary" size="sm" href={INSTALLATIONS_URL} target="_blank" rel="noopener noreferrer" label={t('github.manageOnGithub')} />
               <Button variant="ghost" size="sm" label={t('github.refresh')} isDisabled={query.isFetching} onClick={() => void query.refetch()} />
             </HStack>
           </>
@@ -217,7 +217,7 @@ export function GithubGardenCard() {
         <HStack justify="between" wrap="wrap" gap={1}>
           <HStack gap={1} wrap="wrap">
             <Button variant="ghost" size="sm" label={busy === 'disconnect' ? t('github.disconnecting') : t('github.disconnect')} isDisabled={busy !== null} onClick={requestDisconnect} />
-            <a className="ss-link-button ss-link-button--secondary" href={INSTALLATIONS_URL} target="_blank" rel="noopener noreferrer">{t('github.manageOnGithub')}</a>
+            <Button variant="secondary" size="sm" href={INSTALLATIONS_URL} target="_blank" rel="noopener noreferrer" label={t('github.manageOnGithub')} />
           </HStack>
           {(data.queued > 0 || data.status === 'broken') && (
             <Button variant="secondary" size="sm" label={busy === 'sync' ? t('github.syncing') : t('github.syncNow')} isDisabled={busy !== null} onClick={() => void sync()} />

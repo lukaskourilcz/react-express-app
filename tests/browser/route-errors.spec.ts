@@ -306,7 +306,7 @@ test('a supabase-js download that fails on a sign-in click neither reloads nor r
   // The click reports the failure itself, and nothing else happens. A second
   // click is lazy-auth.spec.ts's: it reloads where the browser remembers the
   // failed download.
-  await expect(page.getByText('Sign-in failed. Please try again.')).toBeVisible();
+  await expect(page.getByText('Sign-in failed. Try again.')).toBeVisible();
   expect(dropped).toBe(1);
   await page.waitForTimeout(600);
   expect(documents).toHaveLength(1);

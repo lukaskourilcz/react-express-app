@@ -16,10 +16,10 @@ import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Avatar } from '@astryxdesign/core/Avatar';
+import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/SegmentedControl';
-import { SwimCta } from './landing/LandingKit';
 import ErrorRetry from './ErrorRetry';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
@@ -222,14 +222,14 @@ function Leaderboard() {
     body = (
       <div className="lb-board ss-panel lb-empty">
         <p className="lb-empty__text">{emptyText}</p>
-        <SwimCta label={tab === 'today' ? t('quiz.todaysChallenge') : t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
+        <Button variant="secondary" label={tab === 'today' ? t('quiz.todaysChallenge') : t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
       </div>
     );
   } else {
     body = (
       <div className="lb-board ss-panel" aria-busy={refreshing || undefined}>
         {isMobile ? (
-          <MobileBoard rows={rows} pinned={pinned} caption={caption} firstLabel={headers[0]} />
+          <MobileBoard rows={rows} pinned={pinned} caption={caption} />
         ) : (
           <TableBoard rows={rows} pinned={pinned} caption={caption} headers={headers} />
         )}
@@ -254,10 +254,10 @@ function Leaderboard() {
         </SegmentedControl>
         {tab !== 'today' && (
           <div className="lb-filter">
-            <label className="lb-filter__label" htmlFor={selectId}>
+            <label className="ss-field-label" htmlFor={selectId}>
               {t('leaderboard.topic')}
             </label>
-            <select id={selectId} className="lb-select" value={category} onChange={(event) => setCategory(event.target.value)}>
+            <select id={selectId} className="ss-select lb-select" value={category} onChange={(event) => setCategory(event.target.value)}>
               <option value="">{t('leaderboard.allTopics')}</option>
               {topics.map((topic) => (
                 <option key={topic.value} value={topic.value}>
@@ -276,14 +276,13 @@ function Leaderboard() {
       </div>
 
       {stale && board && (
-        <div className="lb-stale" role="alert">
-          <span>
-            {t('leaderboard.offlineStale', {
-              time: new Date(stale.savedAt).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }),
-            })}
-          </span>
-          <Button size="md" variant="ghost" label={t('quiz.retry')} onClick={reload} />
-        </div>
+        <Banner
+          status="warning"
+          title={t('leaderboard.offlineStale', {
+            time: new Date(stale.savedAt).toLocaleTimeString(lang, { hour: '2-digit', minute: '2-digit' }),
+          })}
+          endContent={<Button size="sm" variant="ghost" label={t('quiz.retry')} onClick={reload} />}
+        />
       )}
 
       {body}
@@ -332,7 +331,7 @@ function toRows(tab: Tab, board: LeaderboardResponse, t: ReturnType<typeof useT>
 function RankDisc({ rank, label }: { rank: number; label?: string }) {
   return (
     <span className={`lb-rank${rank <= 3 ? ' lb-rank--top' : ''}`}>
-      {label && <span className="lb-vh">{label} </span>}
+      {label && <span className="ss-sr-only">{label} </span>}
       {rank}
     </span>
   );
@@ -355,7 +354,7 @@ function Name({ row }: { row: Row }) {
   return (
     <>
       <span className="lb-name">{row.name}</span>
-      {row.isViewer && row.name !== you && <span className="lb-you">{you}</span>}
+      {row.isViewer && row.name !== you && <span className="ss-tag">{you}</span>}
     </>
   );
 }
@@ -376,7 +375,7 @@ function TableBoard({ rows, pinned, caption, headers }: { rows: Row[]; pinned: R
   );
   return (
     <table className="lb-table">
-      <caption className="lb-vh">{caption}</caption>
+      <caption className="ss-sr-only">{caption}</caption>
       <thead>
         <tr>
           <th scope="col" className="lb-col-rank">{t('leaderboard.rank')}</th>
@@ -391,7 +390,7 @@ function TableBoard({ rows, pinned, caption, headers }: { rows: Row[]; pinned: R
   );
 }
 
-function MobileBoard({ rows, pinned, caption, firstLabel }: { rows: Row[]; pinned: Row | null; caption: string; firstLabel: string }) {
+function MobileBoard({ rows, pinned, caption }: { rows: Row[]; pinned: Row | null; caption: string }) {
   const t = useT();
   const card = (row: Row) => (
     <li key={row.key} className={`lb-card${row.isViewer ? ' is-viewer' : ''}`} aria-current={row.isViewer ? 'true' : undefined}>
@@ -407,7 +406,6 @@ function MobileBoard({ rows, pinned, caption, firstLabel }: { rows: Row[]; pinne
       </span>
       <span className="lb-card__score">
         <span className="lb-score">{row.first}</span>
-        <span className="lb-card__label">{firstLabel}</span>
       </span>
     </li>
   );
@@ -429,7 +427,7 @@ function MobileBoard({ rows, pinned, caption, firstLabel }: { rows: Row[]; pinne
 function BoardSkeleton({ label }: { label: string }) {
   return (
     <div className="lb-board ss-panel" aria-busy="true">
-      <span className="lb-vh" role="status">
+      <span className="ss-sr-only" role="status">
         {label}
       </span>
       {Array.from({ length: 6 }).map((_, index) => (

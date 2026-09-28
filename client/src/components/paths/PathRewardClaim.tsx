@@ -16,6 +16,7 @@
 import { useCallback, useEffect, useId, useState } from 'react';
 import { useT } from '../../i18n/LanguageContext';
 import { apiFetch, friendlyError } from '../../lib/api';
+import { Button } from '@astryxdesign/core/Button';
 
 const SIZES = ['S', 'M', 'L', 'XL', 'XXL'] as const;
 
@@ -97,9 +98,7 @@ export function PathRewardClaim({ pathId }: { pathId: string }) {
         <span>{t('paths.rewardBlurb')}</span>
       </p>
       {!open ? (
-        <button type="button" className="lp-btn lp-btn--primary" onClick={() => setOpen(true)}>
-          {t('paths.rewardClaim')}
-        </button>
+        <Button variant="primary" onClick={() => setOpen(true)} label={t('paths.rewardClaim')} />
       ) : (
         <form
           className="lp-reward__form"
@@ -135,12 +134,8 @@ export function PathRewardClaim({ pathId }: { pathId: string }) {
             />
           </label>
           <div className="lp-reward__actions">
-            <button type="submit" className="lp-btn lp-btn--primary" disabled={busy}>
-              {busy ? t('paths.rewardSending') : t('paths.rewardSend')}
-            </button>
-            <button type="button" className="lp-btn" disabled={busy} onClick={() => setOpen(false)}>
-              {t('common.cancel')}
-            </button>
+            <Button variant="primary" type="submit" isDisabled={busy} label={busy ? t('paths.rewardSending') : t('paths.rewardSend')} />
+            <Button variant="secondary" isDisabled={busy} onClick={() => setOpen(false)} label={t('common.cancel')} />
           </div>
           {error && <p className="lp-notice lp-notice--error" role="alert">{error}</p>}
         </form>

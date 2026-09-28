@@ -543,7 +543,6 @@
 .cd-run__toggle-heading { margin: 0; font: inherit; }
 .cd-run__toggle { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 12px; width: 100%; min-height: 44px; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; cursor: pointer; }
 .cd-run__toggle > span:first-child { font-family: var(--font-family-heading); font-weight: 700; font-size: 1.05rem; color: var(--color-text-primary); }
-.cd-run__toggle-lead { color: var(--color-text-secondary); font-size: 0.9rem; flex: 1 1 24ch; }
 .cd-run__chevron { margin-left: auto; font-weight: 700; color: var(--color-text-accent); }
 .cd-run__toggle:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 .cd-run__head { display: grid; gap: 4px; }

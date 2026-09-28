@@ -57,6 +57,7 @@ import type {
 } from '../../../../shared/learning-path-api';
 import type { ActivitySummary, EvidenceState, LearningPathId, Localized, ModuleSummary } from '../../../../shared/learning-paths';
 import './LearningPaths.css';
+import { Button } from '@astryxdesign/core/Button';
 
 /* ── shared hooks ──────────────────────────────────────────────────────── */
 
@@ -274,28 +275,16 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         <div className="lp-head__actions">
           {!isAuthenticated && <span className="lp-actions__status">{t('paths.guestPreview')}</span>}
           {isAuthenticated && !enrollment && open && (
-            <button type="button" className="lp-btn lp-btn--primary" onClick={() => enrol('enroll')} disabled={enrolling}>
-              {enrolling ? t('paths.action.starting') : t('paths.action.start')}
-            </button>
+            <Button variant="primary" onClick={() => enrol('enroll')} isDisabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
           )}
           {isAuthenticated && enrollment?.status === 'paused' && (
-            <button type="button" className="lp-btn lp-btn--primary" onClick={() => enrol('resume')} disabled={enrolling}>
-              {t('paths.action.resume')}
-            </button>
+            <Button variant="primary" onClick={() => enrol('resume')} isDisabled={enrolling} label={t('paths.action.resume')} />
           )}
           {enrollment?.status === 'active' && next && nextModule && (
-            <button
-              type="button"
-              className="lp-btn lp-btn--primary"
-              onClick={() => navigate(activityHref(pathId, nextModule.id, next))}
-            >
-              {t('paths.action.continue')}
-            </button>
+            <Button variant="primary" onClick={() => navigate(activityHref(pathId, nextModule.id, next))} label={t('paths.action.continue')} />
           )}
           {enrollment?.status === 'active' && (
-            <button type="button" className="lp-btn lp-btn--quiet" onClick={() => enrol('pause')} disabled={enrolling}>
-              {t('paths.action.pause')}
-            </button>
+            <Button variant="ghost" onClick={() => enrol('pause')} isDisabled={enrolling} label={t('paths.action.pause')} />
           )}
         </div>
       </header>
@@ -648,17 +637,11 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               {activity && <p className="lp-lead">{loc(activity.summary)}</p>}
             </div>
             <div className="lp-head__actions">
-              <button
-                type="button"
-                className="lp-btn lp-btn--quiet"
-                onClick={() => {
+              <Button variant="ghost" onClick={() => {
                   const next = new URLSearchParams(search);
                   next.delete('activity');
                   setSearch(next, { replace: true });
-                }}
-              >
-                {t('paths.action.close')}
-              </button>
+                }} label={t('paths.action.close')} />
             </div>
           </div>
 
@@ -759,19 +742,13 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               <Feedback feedback={result.feedback} />
               {result.nextActivityId && (
                 <div className="lp-actions lp-actions--end">
-                  <button
-                    type="button"
-                    className="lp-btn lp-btn--primary"
-                    onClick={() => {
+                  <Button variant="primary" onClick={() => {
                       const nextModule = entry.manifest.modules.find((one) =>
                         one.activities.some((a) => a.id === result.nextActivityId),
                       );
                       if (!nextModule) return;
                       navigate(activityHref(pathId, nextModule.id, result.nextActivityId!));
-                    }}
-                  >
-                    {t('paths.action.next')}
-                  </button>
+                    }} label={t('paths.action.next')} />
                 </div>
               )}
             </section>

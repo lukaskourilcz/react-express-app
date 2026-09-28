@@ -128,7 +128,7 @@ it('pins the learner’s own line below the list when they are outside the top',
 
 it('tells a signed-in learner with no answers in the window how to appear', async () => {
   server.use(leaderboardHandlers.noActivity); await mount();
-  expect(await screen.findByText('Answer a few questions to appear here.')).toBeVisible();
+  expect(await screen.findByText('You need five answers to appear here.')).toBeVisible();
 });
 
 it('shows an empty board with a real practice action', async () => {
@@ -174,7 +174,7 @@ it('shows the cached board when the browser already reports no connection', asyn
 
 it('says so when offline with nothing cached', async () => {
   server.use(leaderboardHandlers.offline); await mount();
-  expect(await screen.findByRole('alert')).toHaveTextContent(/offline, so the board can’t load/);
+  expect(await screen.findByRole('alert')).toHaveTextContent(/You’re offline. Reconnect and try again./);
 });
 
 it('falls back to the all-time board until the 30-day board exists', async () => {

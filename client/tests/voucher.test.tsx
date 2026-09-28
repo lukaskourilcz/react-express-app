@@ -115,7 +115,7 @@ describe('/premium while checkout is off', () => {
     signInWithGoogle.mockRejectedValueOnce(new Error('Sign-in is not available in this deployment.'));
     renderAt('/premium', <PremiumPage />);
     fireEvent.click(within(voucherSection()).getByRole('button', { name: 'Sign in to redeem' }));
-    expect(await within(voucherSection()).findByRole('alert')).toHaveTextContent('Something went wrong. Please try again.');
+    expect(await within(voucherSection()).findByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
   });
 
   it('waits for the sign-in state instead of flashing a prompt', () => {
@@ -226,7 +226,8 @@ describe('/premium with checkout on', () => {
       const headings = screen.getAllByRole('heading', { level: 2 }).map((heading) => heading.textContent);
       expect(headings.indexOf('Choose a plan')).toBeLessThan(headings.indexOf('Have a voucher?'));
     });
-    expect(within(voucherSection()).getByText('Enter the code you were given, and Premium opens on your account.')).toBeInTheDocument();
+    // With checkout open the title and the field label carry it; no lead sentence.
+    expect(within(voucherSection()).queryByText(/Enter the code you were given/)).toBeNull();
   });
 });
 

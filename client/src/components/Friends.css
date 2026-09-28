@@ -60,27 +60,6 @@
 }
 .fr-select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
-.fr-btn {
-  min-height: 44px;
-  padding: 8px 16px;
-  border-radius: var(--radius-element);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-background-surface);
-  color: var(--color-text-primary);
-  font: inherit;
-  font-weight: 650;
-  cursor: pointer;
-}
-.fr-btn:hover { background: var(--color-background-muted); }
-.fr-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
-.fr-btn:disabled { opacity: 0.6; cursor: default; }
-.fr-btn--primary {
-  background: var(--brand-accent);
-  border-color: var(--brand-accent);
-  color: var(--brand-on-accent, #fff);
-}
-.fr-btn--primary:hover { background: var(--brand-accent-hover, var(--brand-accent)); }
-
 .fr-check { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 4px 0; cursor: pointer; }
 .fr-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--brand-accent); flex-shrink: 0; }
 .fr-check > span { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; font-weight: 650; }
@@ -105,14 +84,6 @@
 
 /* min-width:0 so a long row ellipsizes instead of pushing Remove off. */
 .fr-friend__who { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1 1 8rem; }
-.fr-friend__handle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-weight: 700;
-  min-width: 0;
-  overflow-wrap: anywhere;
-}
 /* The flag and the crown: a friend's whole visible identity beside the avatar.
    min-height keeps the row from shifting between a friend who has both and one
    who has neither. */
@@ -131,12 +102,3 @@
 
 .fr-empty { display: flex; flex-direction: column; gap: 6px; }
 
-.fr-visually-hidden {
-  position: absolute;
-  width: 1px; height: 1px;
-  margin: -1px; padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}

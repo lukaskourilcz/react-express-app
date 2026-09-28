@@ -22,6 +22,7 @@ import type {
   SubmitActivityResponse,
 } from '../../../../shared/learning-path-api';
 import type { EvidenceState, Localized } from '../../../../shared/learning-paths';
+import { Button } from '@astryxdesign/core/Button';
 
 /* ── shared bits ───────────────────────────────────────────────────────── */
 
@@ -60,7 +61,7 @@ export function CriteriaList({ criteria }: { criteria: CriterionResult[] }) {
           <div className="lp-criterion__body">
             <span className="lp-criterion__label">
               {loc(criterion.label)}
-              <span className="lp-visually-hidden">
+              <span className="ss-sr-only">
                 {' '}
                 — {criterion.passed ? t('paths.criterion.passed') : t('paths.criterion.failed')}
               </span>
@@ -113,9 +114,7 @@ export function LessonActivity({
       <LessonView lesson={activity.lesson} />
       <div className="lp-actions">
         <span className="lp-actions__status">{t('paths.lesson.notGated')}</span>
-        <button type="button" className="lp-btn lp-btn--primary" onClick={onAcknowledge} disabled={busy || acknowledged}>
-          {acknowledged ? t('paths.lesson.marked') : t('paths.lesson.markRead')}
-        </button>
+        <Button variant="primary" onClick={onAcknowledge} isDisabled={busy || acknowledged} label={acknowledged ? t('paths.lesson.marked') : t('paths.lesson.markRead')} />
       </div>
     </div>
   );
@@ -211,8 +210,8 @@ export function CheckActivity({
                         </span>
                       ) : null}
                       {loc(option)}
-                      {graded && isCorrect && <span className="lp-visually-hidden"> — {t('paths.check.correctAnswer')}</span>}
-                      {graded && isWrongChoice && <span className="lp-visually-hidden"> — {t('paths.check.yourAnswer')}</span>}
+                      {graded && isCorrect && <span className="ss-sr-only"> — {t('paths.check.correctAnswer')}</span>}
+                      {graded && isWrongChoice && <span className="ss-sr-only"> — {t('paths.check.yourAnswer')}</span>}
                     </span>
                   </label>
                 );
@@ -228,14 +227,7 @@ export function CheckActivity({
           <span className="lp-actions__status">
             {t('paths.check.answered', { answered, total: questions.length })}
           </span>
-          <button
-            type="button"
-            className="lp-btn lp-btn--primary"
-            disabled={busy || answered < questions.length}
-            onClick={() => onSubmit(answers.map((one) => one ?? 0))}
-          >
-            {busy ? t('paths.action.submitting') : t('paths.action.submit')}
-          </button>
+          <Button variant="primary" isDisabled={busy || answered < questions.length} onClick={() => onSubmit(answers.map((one) => one ?? 0))} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
       )}
     </div>
@@ -321,9 +313,7 @@ export function CodeActivity({
                 ))}
               </ol>
               {hintsShown < ladder.length && (
-                <button type="button" className="lp-btn lp-btn--quiet" onClick={() => setHintsShown((n) => n + 1)}>
-                  {t('paths.code.nextHint', { remaining: ladder.length - hintsShown })}
-                </button>
+                <Button variant="ghost" onClick={() => setHintsShown((n) => n + 1)} label={t('paths.code.nextHint', { remaining: ladder.length - hintsShown })} />
               )}
               {code.skeleton && hintsShown >= ladder.length && (
                 <details>
@@ -343,25 +333,11 @@ export function CodeActivity({
           <span className="lp-actions__status" aria-live="polite">
             {t(`paths.draft.${draftStatus}` as never)}
           </span>
-          <button
-            type="button"
-            className="lp-btn lp-btn--quiet"
-            onClick={() => {
+          <Button variant="ghost" onClick={() => {
               setSource(code.starter);
               queueDraft(code.starter);
-            }}
-            disabled={busy}
-          >
-            {t('paths.code.reset')}
-          </button>
-          <button
-            type="button"
-            className="lp-btn lp-btn--primary"
-            onClick={() => onSubmit(source)}
-            disabled={busy || expired || source.trim().length === 0}
-          >
-            {busy ? t('paths.action.submitting') : t('paths.action.submit')}
-          </button>
+            }} isDisabled={busy} label={t('paths.code.reset')} />
+          <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || expired || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
 
         <Editor
@@ -390,7 +366,7 @@ export function CodeActivity({
                     <code>{test.call}</code>
                     {test.label && <span>— {loc(test.label)}</span>}
                     {outcome && (
-                      <span className="lp-visually-hidden">
+                      <span className="ss-sr-only">
                         {outcome.pass ? t('paths.code.testPassed') : t('paths.code.testFailed')}
                       </span>
                     )}
@@ -524,14 +500,7 @@ export function ArtifactActivity({
           <span className="lp-actions__status" aria-live="polite">
             {t(`paths.draft.${draftStatus}` as never)}
           </span>
-          <button
-            type="button"
-            className="lp-btn lp-btn--primary"
-            onClick={() => onSubmit(shaped(values))}
-            disabled={busy}
-          >
-            {busy ? t('paths.action.submitting') : t('paths.action.submit')}
-          </button>
+          <Button variant="primary" onClick={() => onSubmit(shaped(values))} isDisabled={busy} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
 
         <div className="lp-fields">
