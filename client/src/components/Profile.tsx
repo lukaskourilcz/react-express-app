@@ -304,8 +304,6 @@ function ProfileBody({
             {/* One card owns the track: the paths card, which carries the
                 specialization and the picker as well. */}
             <LearningPathsCard />
-
-            <AdvisorCard />
           </VStack>
 
           <VStack gap={2}>
@@ -341,6 +339,10 @@ function ProfileBody({
                 </VStack>
               </div>
             )}
+
+            {/* The advisor sits in the right column, above the GitHub garden,
+                so the two columns end at about the same height. */}
+            <AdvisorCard />
 
             <GithubGardenCard />
 
