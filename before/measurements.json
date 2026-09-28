@@ -1,0 +1,559 @@
+{
+  "P2.8": {
+    "width": 390,
+    "measurements": {
+      "boardLeft": 16,
+      "boardRight": 370,
+      "rowsRendered": 45,
+      "clippedInside": [
+        {
+          "cls": "lb-vh",
+          "sw": 35,
+          "cw": 1
+        },
+        {
+          "cls": "lb-vh",
+          "sw": 35,
+          "cw": 1
+        },
+        {
+          "cls": "lb-vh",
+          "sw": 35,
+          "cw": 1
+        },
+        {
+          "cls": "lb-vh",
+          "sw": 34,
+          "cw": 1
+        },
+        {
+          "cls": "lb-vh",
+          "sw": 34,
+          "cw": 1
+        },
+        {
+          "cls": "lb-vh",
+          "sw": 34,
+          "cw": 1
+        },
+        {
+          "cls": "lb-vh",
+          "sw": 34,
+          "cw": 1
+        },
+        {
+          "cls": "lb-vh",
+          "sw": 34,
+          "cw": 1
+        }
+      ],
+      "elementsPastBoard": [],
+      "segments": [
+        {
+          "text": "30 days",
+          "sw": 115,
+          "cw": 115,
+          "w": 115
+        },
+        {
+          "text": "All time",
+          "sw": 115,
+          "cw": 115,
+          "w": 115
+        },
+        {
+          "text": "Today",
+          "sw": 115,
+          "cw": 115,
+          "w": 115
+        }
+      ],
+      "doc": {
+        "innerWidth": 390,
+        "docScrollWidth": 390,
+        "docSideways": false,
+        "mainScrollWidth": 386,
+        "mainClientWidth": 386,
+        "mainOverflowX": "hidden",
+        "mainSideways": false,
+        "pastMainRight": []
+      }
+    },
+    "answered": [
+      "GET /api/leaderboard?period=30d",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=wallet"
+    ],
+    "unmocked": []
+  },
+  "P0.1": {
+    "width": 1000,
+    "measurements": {
+      "cells": [
+        {
+          "label": "Account",
+          "value": "maximiliana-konstantinopoulou",
+          "cellLeft": 514,
+          "cellRight": 617,
+          "cellWidth": 103,
+          "textRight": 675,
+          "ddScrollWidth": 149,
+          "ddClientWidth": 79,
+          "overflowsCell": true
+        },
+        {
+          "label": "Repository",
+          "value": "maximiliana-konstantinopoulou/devshark-learning-garden",
+          "cellLeft": 629,
+          "cellRight": 731,
+          "cellWidth": 103,
+          "textRight": 872,
+          "ddScrollWidth": 231,
+          "ddClientWidth": 79,
+          "overflowsCell": true
+        },
+        {
+          "label": "Last commit",
+          "value": "27 Sept 2026, 20:42",
+          "cellLeft": 743,
+          "cellRight": 846,
+          "cellWidth": 103,
+          "textRight": 813,
+          "ddScrollWidth": 79,
+          "ddClientWidth": 79,
+          "overflowsCell": false
+        },
+        {
+          "label": "Waiting to commit",
+          "value": "3",
+          "cellLeft": 858,
+          "cellRight": 960,
+          "cellWidth": 103,
+          "textRight": 879,
+          "ddScrollWidth": 79,
+          "ddClientWidth": 79,
+          "overflowsCell": false
+        }
+      ]
+    },
+    "answered": [
+      "GET /api/quiz/roadmap?resource=learning-path-catalog",
+      "GET /api/quiz/roadmap?resource=progress",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=entitlement",
+      "GET /api/user/[op]?op=github-connection",
+      "GET /api/user/[op]?op=learning-path-enrollment",
+      "GET /api/user/[op]?op=wallet",
+      "GET /api/user/advisor",
+      "GET /api/user/freezes",
+      "GET /api/user/stats",
+      "GET /api/user/xp",
+      "PUT /api/quiz/roadmap"
+    ],
+    "unmocked": []
+  },
+  "P1.5": {
+    "width": 1280,
+    "measurements": {
+      "rows30d": 44,
+      "at300msAfterClick": {
+        "skeletonRows": 6,
+        "tableRows": 0,
+        "busy": true
+      },
+      "afterResponse": {
+        "skeletonRows": 0,
+        "tableRows": 44
+      }
+    },
+    "answered": [
+      "GET /api/leaderboard?period=30d",
+      "GET /api/leaderboard?period=global",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=wallet"
+    ],
+    "unmocked": []
+  },
+  "P1.6": {
+    "width": 360,
+    "measurements": {
+      "nameLength": 39,
+      "name": {
+        "text": "Maximiliana Konstantinopoulou-Richardso",
+        "textLeft": 104,
+        "textRight": 576,
+        "boxLeft": 104,
+        "boxRight": 576,
+        "scrollWidth": 472,
+        "clientWidth": 472,
+        "overflow": "hidden",
+        "textOverflow": "ellipsis",
+        "whiteSpace": "nowrap",
+        "lineClamp": "none"
+      },
+      "email": {
+        "text": "maximiliana.konstantinopoulou.richardson@verylongcompanydomain-example.test",
+        "textLeft": 104,
+        "textRight": 576,
+        "boxLeft": 104,
+        "boxRight": 576,
+        "scrollWidth": 472,
+        "clientWidth": 472,
+        "overflow": "hidden",
+        "textOverflow": "ellipsis",
+        "whiteSpace": "nowrap",
+        "lineClamp": "none"
+      },
+      "identityCard": {
+        "left": 16,
+        "right": 340
+      },
+      "doc": {
+        "innerWidth": 360,
+        "docScrollWidth": 360,
+        "docSideways": false,
+        "mainScrollWidth": 468,
+        "mainClientWidth": 356,
+        "mainOverflowX": "hidden",
+        "mainSideways": true,
+        "pastMainRight": [
+          {
+            "tag": "H1",
+            "cls": "astryx-heading level-1 primary x1tgivj0 xcg7oai xf",
+            "text": "Maximiliana Konstantinopoulou-Richardso",
+            "right": 576
+          },
+          {
+            "tag": "SPAN",
+            "cls": "astryx-text supporting secondary xv1l7n4 x141an7d ",
+            "text": "maximiliana.konstantinopoulou.richardson",
+            "right": 576
+          },
+          {
+            "tag": "SPAN",
+            "cls": "astryx-text body size-3xl accent xjse4m1 xw6l6zx x",
+            "text": "1,860",
+            "right": 446
+          },
+          {
+            "tag": "SPAN",
+            "cls": "astryx-text supporting secondary xv1l7n4 x141an7d ",
+            "text": "XP",
+            "right": 468
+          }
+        ]
+      }
+    },
+    "answered": [
+      "GET /api/quiz/roadmap?resource=learning-path-catalog",
+      "GET /api/quiz/roadmap?resource=progress",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=entitlement",
+      "GET /api/user/[op]?op=github-connection",
+      "GET /api/user/[op]?op=learning-path-enrollment",
+      "GET /api/user/[op]?op=wallet",
+      "GET /api/user/advisor",
+      "GET /api/user/freezes",
+      "GET /api/user/stats",
+      "GET /api/user/xp",
+      "PUT /api/quiz/roadmap"
+    ],
+    "unmocked": []
+  },
+  "P1.7": {
+    "width": 400,
+    "measurements": {
+      "shieldText": "Protected · 41 h 11 m left",
+      "shieldWidth": 129,
+      "shieldHeight": 47,
+      "tileWidth": 153,
+      "tiles": [
+        {
+          "left": 41,
+          "top": 482,
+          "width": 153
+        },
+        {
+          "left": 202,
+          "top": 482,
+          "width": 153
+        }
+      ],
+      "sideBySide": true,
+      "shieldScrollWidth": 127,
+      "shieldClientWidth": 127,
+      "doc": {
+        "innerWidth": 400,
+        "docScrollWidth": 400,
+        "docSideways": false,
+        "mainScrollWidth": 468,
+        "mainClientWidth": 396,
+        "mainOverflowX": "hidden",
+        "mainSideways": true,
+        "pastMainRight": [
+          {
+            "tag": "SPAN",
+            "cls": "astryx-text body size-3xl accent xjse4m1 xw6l6zx x",
+            "text": "1,860",
+            "right": 446
+          },
+          {
+            "tag": "SPAN",
+            "cls": "astryx-text supporting secondary xv1l7n4 x141an7d ",
+            "text": "XP",
+            "right": 468
+          }
+        ]
+      }
+    },
+    "answered": [
+      "GET /api/quiz/roadmap?resource=learning-path-catalog",
+      "GET /api/quiz/roadmap?resource=progress",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=entitlement",
+      "GET /api/user/[op]?op=github-connection",
+      "GET /api/user/[op]?op=learning-path-enrollment",
+      "GET /api/user/[op]?op=wallet",
+      "GET /api/user/advisor",
+      "GET /api/user/freezes",
+      "GET /api/user/stats",
+      "GET /api/user/xp",
+      "PUT /api/quiz/roadmap"
+    ],
+    "unmocked": []
+  },
+  "P1.8": {
+    "width": 360,
+    "measurements": {
+      "xpText": "12,480",
+      "xpLeft": 324,
+      "xpRight": 422,
+      "xpWithUnitRight": 444,
+      "panelLeft": 16,
+      "panelRight": 340,
+      "xpPastPanel": true,
+      "rankTitle": "Junior Full-Stack Developer",
+      "rankTitleWidth": 215,
+      "rankScrollWidth": 215,
+      "rankClientWidth": 215,
+      "doc": {
+        "innerWidth": 360,
+        "docScrollWidth": 360,
+        "docSideways": false,
+        "mainScrollWidth": 444,
+        "mainClientWidth": 356,
+        "mainOverflowX": "hidden",
+        "mainSideways": true,
+        "pastMainRight": [
+          {
+            "tag": "SPAN",
+            "cls": "astryx-text body size-3xl accent xjse4m1 xw6l6zx x",
+            "text": "12,480",
+            "right": 422
+          },
+          {
+            "tag": "SPAN",
+            "cls": "astryx-text supporting secondary xv1l7n4 x141an7d ",
+            "text": "XP",
+            "right": 444
+          }
+        ]
+      }
+    },
+    "answered": [
+      "GET /api/quiz/roadmap?resource=learning-path-catalog",
+      "GET /api/quiz/roadmap?resource=progress",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=entitlement",
+      "GET /api/user/[op]?op=github-connection",
+      "GET /api/user/[op]?op=learning-path-enrollment",
+      "GET /api/user/[op]?op=wallet",
+      "GET /api/user/advisor",
+      "GET /api/user/freezes",
+      "GET /api/user/stats",
+      "GET /api/user/xp",
+      "PUT /api/quiz/roadmap"
+    ],
+    "unmocked": []
+  },
+  "P1.9": {
+    "width": 1000,
+    "measurements": {
+      "tiles": [
+        {
+          "label": "Quizzes completed",
+          "value": "1,234",
+          "tileTop": 730,
+          "tileLeft": 49,
+          "tileRight": 185,
+          "tileWidth": 136,
+          "valueTextRight": 122,
+          "labelRight": 177,
+          "valueOverflows": false,
+          "valueScrollWidth": 120,
+          "valueClientWidth": 120,
+          "labelLines": 1
+        },
+        {
+          "label": "Questions answered",
+          "value": "12,480",
+          "tileTop": 730,
+          "tileLeft": 191,
+          "tileRight": 327,
+          "tileWidth": 136,
+          "valueTextRight": 281,
+          "labelRight": 319,
+          "valueOverflows": false,
+          "valueScrollWidth": 120,
+          "valueClientWidth": 120,
+          "labelLines": 1
+        },
+        {
+          "label": "Correct answers",
+          "value": "9,876",
+          "tileTop": 730,
+          "tileLeft": 333,
+          "tileRight": 469,
+          "tileWidth": 136,
+          "valueTextRight": 408,
+          "labelRight": 461,
+          "valueOverflows": false,
+          "valueScrollWidth": 120,
+          "valueClientWidth": 120,
+          "labelLines": 1
+        },
+        {
+          "label": "Average score",
+          "value": "79%",
+          "tileTop": 805,
+          "tileLeft": 49,
+          "tileRight": 185,
+          "tileWidth": 136,
+          "valueTextRight": 111,
+          "labelRight": 177,
+          "valueOverflows": false,
+          "valueScrollWidth": 120,
+          "valueClientWidth": 120,
+          "labelLines": 1
+        }
+      ],
+      "distinctRows": 2,
+      "oneRow": false
+    },
+    "answered": [
+      "GET /api/quiz/roadmap?resource=learning-path-catalog",
+      "GET /api/quiz/roadmap?resource=progress",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=entitlement",
+      "GET /api/user/[op]?op=github-connection",
+      "GET /api/user/[op]?op=learning-path-enrollment",
+      "GET /api/user/[op]?op=wallet",
+      "GET /api/user/advisor",
+      "GET /api/user/freezes",
+      "GET /api/user/stats",
+      "GET /api/user/xp",
+      "PUT /api/quiz/roadmap"
+    ],
+    "unmocked": []
+  },
+  "P1.10": {
+    "width": 1000,
+    "measurements": {
+      "activities": [
+        {
+          "kind": "Role specialization",
+          "title": "Forward Deployed Engineer",
+          "kindBoxWidth": 88,
+          "kindTextRight": 160,
+          "kindBoxRight": 137,
+          "kindLines": 2,
+          "kindScrollWidth": 111,
+          "kindClientWidth": 88,
+          "titleLeft": 149,
+          "titleTop": 475,
+          "kindBottom": 506,
+          "kindOverlapsTitle": true
+        },
+        {
+          "kind": "Focused skill path",
+          "title": "DSA Foundations",
+          "kindBoxWidth": 88,
+          "kindTextRight": 126,
+          "kindBoxRight": 137,
+          "kindLines": 2,
+          "kindScrollWidth": 88,
+          "kindClientWidth": 88,
+          "titleLeft": 149,
+          "titleTop": 540,
+          "kindBottom": 571,
+          "kindOverlapsTitle": false
+        }
+      ]
+    },
+    "answered": [
+      "GET /api/quiz/roadmap?resource=learning-path-catalog",
+      "GET /api/quiz/roadmap?resource=progress",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=entitlement",
+      "GET /api/user/[op]?op=github-connection",
+      "GET /api/user/[op]?op=learning-path-enrollment",
+      "GET /api/user/[op]?op=wallet",
+      "GET /api/user/advisor",
+      "GET /api/user/freezes",
+      "GET /api/user/learning-path-reward",
+      "GET /api/user/stats",
+      "GET /api/user/xp",
+      "PUT /api/quiz/roadmap"
+    ],
+    "unmocked": []
+  },
+  "P1.21": {
+    "width": 1000,
+    "measurements": {
+      "inventoryWidth": 446,
+      "gridTemplateColumns": "300.969px 101.031px",
+      "pairs": [
+        {
+          "label": "What are you working towards?",
+          "answer": "Get my first developer job · Prepare for interviews · Build my own projects",
+          "labelWidth": 301,
+          "labelLines": 6,
+          "answerWidth": 101,
+          "answerLines": 6
+        },
+        {
+          "label": "How much have you built so far?",
+          "answer": "I have built a few things",
+          "labelWidth": 301,
+          "labelLines": 2,
+          "answerWidth": 101,
+          "answerLines": 2
+        },
+        {
+          "label": "On a day you study, how long do you have?",
+          "answer": "30 to 60 minutes",
+          "labelWidth": 301,
+          "labelLines": 2,
+          "answerWidth": 101,
+          "answerLines": 2
+        }
+      ]
+    },
+    "answered": [
+      "GET /api/quiz/roadmap?resource=learning-path-catalog",
+      "GET /api/quiz/roadmap?resource=progress",
+      "GET /api/settings",
+      "GET /api/user/[op]?op=entitlement",
+      "GET /api/user/[op]?op=github-connection",
+      "GET /api/user/[op]?op=learning-path-enrollment",
+      "GET /api/user/[op]?op=wallet",
+      "GET /api/user/advisor",
+      "GET /api/user/freezes",
+      "GET /api/user/learning-path-reward",
+      "GET /api/user/stats",
+      "GET /api/user/xp",
+      "PUT /api/quiz/roadmap"
+    ],
+    "unmocked": []
+  }
+}
