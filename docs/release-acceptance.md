@@ -2603,3 +2603,23 @@ Branches `audit/p0`, `audit/p1`, `audit/p2` (stacked), 2026-09-27 to 28. The 25 
 | `git diff --check main..audit/p2` | clean |
 
 Not run: `storybook.spec.ts`. Not verified: signed-in Profile, Coins and the coding workbench against a live account, Firefox, Safari and physical phones.
+
+## MARKETING-LAUNCH-239 (28 September 2026)
+
+Issue #239, commits `6b2f416` to `ac30c86`, PR #268 (fast-forwarded into `main`).
+
+| Gate | Result |
+|---|---|
+| `npm run typecheck:api`, `npm run typecheck:tooling --prefix client`, `tsc -b` | pass |
+| `test:launch` (new: question-of-the-day contracts), `test:coding-auth`, `test:grading-integrity`, `test:coding`, `test:paths`, `test:billing`, `test:fallbacks` | pass |
+| `test:client` | 38 files, 363 tests pass (new: analytics UTM, voucher prefill, share moments, `/daily`, `/changelog`, footer) |
+| `check:unused`, `check:security` | pass |
+| `npm run build`, `check:public` | pass: 15 sitemap URLs, 770 coding share pages, 72 question-of-the-day pages |
+| `check:bundle` | 231,106 of 243,000 gzip bytes |
+| `npm audit --omit=dev` (root, client) | 0 vulnerabilities |
+| Browser specs incl. new `daily.spec.ts` (390 and 1280 px, light and dark, axe WCAG 2.2 AA) | pass; `navigation.spec.ts` failed once locally under load and passed on three reruns |
+| `check:responsive` with `/daily` and `/changelog`, dark Czech sweep, `test:harness`, Storybook spec | pass |
+| GitHub Actions `verify` on PR #268 | pass (run 36360052124) |
+| Preview deployment `dpl_HQkTK2LdszCLqNZrzi3Z78HQaDa7` | `/daily/<date>` and `/coding/<track>/<id>` serve their own heads and PNGs; an unwritten date or task id falls through to the app (200); a real answer check against the preview API graded and explained at 390 and 1280 px |
+
+Not checked here: link previews inside Threads and Instagram, and the PostHog person properties; both are owner items in `NEEDED.md` ("Marketing launch").
