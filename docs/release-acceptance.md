@@ -2589,7 +2589,7 @@ Not run: Storybook (no story changed), `check:responsive`, the dependency audits
 
 ## DESIGN-AUDIT-2026-09-27
 
-Branches `audit/p0`, `audit/p1`, `audit/p2` (stacked), 2026-09-27 to 28. The 25 changes in `design-audit/CLAUDE_CODE_PROMPT.md`, one issue (#240–#264) and one commit each. `docs/design/audit-2026-09-27-closeout.md` lists every ID with its commit and any deviation.
+Branches `audit/p0`, `audit/p1`, `audit/p2` (stacked), 2026-09-27 to 28. The 25 changes in the round-one design brief (`design-audit/CLAUDE_CODE_PROMPT.md`, removed on 2026-09-28 and kept in Git history), one issue (#240–#264) and one commit each. `docs/design/audit-2026-09-27-closeout.md` lists every ID with its commit and any deviation.
 
 | Check on the final `audit/p2` | Result |
 | --- | --- |

@@ -85,7 +85,7 @@ Shipped for the plan: campaign labels on the first pageview and on the person, `
 
 ## Kickoff 2026-09-25 · devShark as marketingShark's only brand
 
-`KICKOFF-25-9-2026.md` at the repository root is the order; issues #217 and #218 are the steps.
+The kickoff note `KICKOFF-25-9-2026.md` (removed on 2026-09-28; in Git history) was the order; issues #217 and #218 are the steps.
 
 - [ ] **Rename `lukaskourilcz/react-express-app` to `lukaskourilcz/devShark`** — the first of the three renames (order in quorum's kickoff), after own-dashboard #75 is live; confirm the `devShark` Vercel project still deploys from the renamed repository. #217 does the repository side. [imp:3] [owner:me] [time:15m] [kind:setup]
 

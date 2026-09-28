@@ -1,6 +1,6 @@
 # Design audit closeout (27–28 Sep 2026)
 
-This closes the pre-launch design audit in `design-audit/` (brief: `design-audit/CLAUDE_CODE_PROMPT.md`). Each of the 25 change IDs has its own GitHub issue (#240–#264, labelled `design-audit` plus `P0`, `P1` or `P2`) and its own commit. The work sits on three stacked branches, one pull request each: `audit/p0` → `main`, `audit/p1` → `audit/p0`, `audit/p2` → `audit/p1`. Merge them in that order. An issue closes when its commit reaches `main`.
+This closes the pre-launch design audit. Its review pages and brief (`design-audit/`, with `CLAUDE_CODE_PROMPT.md`) were removed in the design review 2 cleanup on 2026-09-28 and remain in Git history. Each of the 25 change IDs had its own GitHub issue (#240–#264, labelled `design-audit` plus `P0`, `P1` or `P2`) and its own commit. The work landed on three stacked branches, merged in order as #265 (`audit/p0` into `main`), #266 and #267; the issues closed as their commits reached `main`.
 
 ## Changes
 
