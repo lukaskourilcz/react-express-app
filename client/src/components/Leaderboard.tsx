@@ -229,7 +229,7 @@ function Leaderboard() {
     body = (
       <div className="lb-board ss-panel" aria-busy={refreshing || undefined}>
         {isMobile ? (
-          <MobileBoard rows={rows} pinned={pinned} caption={caption} firstLabel={headers[0]} />
+          <MobileBoard rows={rows} pinned={pinned} caption={caption} />
         ) : (
           <TableBoard rows={rows} pinned={pinned} caption={caption} headers={headers} />
         )}
@@ -390,7 +390,7 @@ function TableBoard({ rows, pinned, caption, headers }: { rows: Row[]; pinned: R
   );
 }
 
-function MobileBoard({ rows, pinned, caption, firstLabel }: { rows: Row[]; pinned: Row | null; caption: string; firstLabel: string }) {
+function MobileBoard({ rows, pinned, caption }: { rows: Row[]; pinned: Row | null; caption: string }) {
   const t = useT();
   const card = (row: Row) => (
     <li key={row.key} className={`lb-card${row.isViewer ? ' is-viewer' : ''}`} aria-current={row.isViewer ? 'true' : undefined}>
@@ -406,7 +406,6 @@ function MobileBoard({ rows, pinned, caption, firstLabel }: { rows: Row[]; pinne
       </span>
       <span className="lb-card__score">
         <span className="lb-score">{row.first}</span>
-        <span className="lb-card__label">{firstLabel}</span>
       </span>
     </li>
   );

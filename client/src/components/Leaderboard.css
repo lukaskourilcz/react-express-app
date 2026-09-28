@@ -135,7 +135,6 @@
 @media (max-width: 399.95px) {
   .lb-card__avatar { display: none; }
 }
-.lb-card__label { font-size: var(--ss-type-label); color: var(--color-text-secondary); }
 
 .lb-pinned { border-top: 1px dashed var(--color-border-strong); }
 .lb-pinned__label {
