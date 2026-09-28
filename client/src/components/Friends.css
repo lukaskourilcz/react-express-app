@@ -60,27 +60,6 @@
 }
 .fr-select:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; }
 
-.fr-btn {
-  min-height: 44px;
-  padding: 8px 16px;
-  border-radius: var(--radius-element);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-background-surface);
-  color: var(--color-text-primary);
-  font: inherit;
-  font-weight: 650;
-  cursor: pointer;
-}
-.fr-btn:hover { background: var(--color-background-muted); }
-.fr-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
-.fr-btn:disabled { opacity: 0.6; cursor: default; }
-.fr-btn--primary {
-  background: var(--brand-accent);
-  border-color: var(--brand-accent);
-  color: var(--brand-on-accent, #fff);
-}
-.fr-btn--primary:hover { background: var(--brand-accent-hover, var(--brand-accent)); }
-
 .fr-check { display: flex; align-items: flex-start; gap: 10px; min-height: 44px; padding: 4px 0; cursor: pointer; }
 .fr-check input { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--brand-accent); flex-shrink: 0; }
 .fr-check > span { display: flex; flex-direction: column; gap: 2px; font-size: 0.9rem; font-weight: 650; }

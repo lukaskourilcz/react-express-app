@@ -162,7 +162,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
  * width instead of relying on the generic path inventory list. */
 .lp-profile-choice { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; }
 .lp-profile-choice__value { min-width: 0; overflow-wrap: anywhere; }
-.lp-profile-choice .lp-btn { flex: none; }
+.lp-profile-choice .astryx-button { flex: none; }
 .lp-profile-inventory { display: grid; grid-template-columns: minmax(7.5rem, 40%) minmax(0, 1fr); gap: 8px 16px; min-width: 0; margin: 2px 0; padding: 14px; border-radius: var(--radius-element); background: var(--color-background-muted); font-size: 0.9rem; }
 .lp-profile-inventory dt { min-width: 0; font-weight: 650; color: var(--color-text-secondary); }
 .lp-profile-inventory dd { min-width: 0; margin: 0; overflow-wrap: anywhere; line-height: 1.5; }
@@ -234,27 +234,6 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   align-items: center;
   gap: 6px;
 }
-
-.lp-btn {
-  min-height: 44px;
-  padding: 10px 18px;
-  border-radius: var(--radius-element);
-  border: 1px solid var(--color-border-strong);
-  background: var(--color-background-surface);
-  color: var(--color-text-primary);
-  font: inherit;
-  font-weight: 600;
-  cursor: pointer;
-}
-.lp-btn:hover:not(:disabled) { border-color: var(--color-border-accent); }
-.lp-btn:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
-.lp-btn:disabled { opacity: 0.55; cursor: not-allowed; }
-.lp-btn--primary {
-  background: var(--brand-accent);
-  border-color: var(--brand-accent);
-  color: var(--brand-on-accent);
-}
-.lp-btn--quiet { border-color: var(--ss-card-line); background: transparent; }
 
 /* ── lesson body ───────────────────────────────────────────────────────── */
 
@@ -480,7 +459,7 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
   .lp-activity__kind { width: auto; }
   .lp-inventory { gap: 6px 14px; }
   .lp-profile-choice { align-items: stretch; flex-direction: column; }
-  .lp-profile-choice .lp-btn { width: 100%; }
+  .lp-profile-choice .astryx-button { width: 100%; }
   .lp-profile-inventory { grid-template-columns: minmax(0, 1fr); gap: 3px; }
   .lp-profile-inventory dd + dt { margin-top: 8px; }
 }

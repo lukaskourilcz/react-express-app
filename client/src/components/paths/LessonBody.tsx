@@ -14,6 +14,7 @@ import { useIsNarrowForEditor } from '../../lib/useMediaQuery';
 import { useLanguage, useT } from '../../i18n/LanguageContext';
 import type { LessonBody as LessonBodyDto, LessonSection, TraceSpec } from '../../../../shared/learning-path-api';
 import type { Localized, LocalizedList } from '../../../../shared/learning-paths';
+import { Button } from '@astryxdesign/core/Button';
 
 /** Inline `code` spans, matching how the coding workbench renders a prompt. */
 export function RichText({ text }: { text: string }) {
@@ -117,43 +118,15 @@ export function TracePlayer({ trace, caption }: { trace: TraceSpec; caption: str
       </p>
 
       <div className="lp-trace__controls">
-        <button
-          type="button"
-          className="lp-btn lp-btn--quiet"
-          onClick={() => setIndex((current) => Math.max(0, current - 1))}
-          disabled={index === 0}
-        >
-          {t('paths.trace.back')}
-        </button>
-        <button
-          type="button"
-          className="lp-btn lp-btn--quiet"
-          onClick={() => setIndex((current) => Math.min(frames.length - 1, current + 1))}
-          disabled={index >= frames.length - 1}
-        >
-          {t('paths.trace.step')}
-        </button>
+        <Button variant="ghost" onClick={() => setIndex((current) => Math.max(0, current - 1))} isDisabled={index === 0} label={t('paths.trace.back')} />
+        <Button variant="ghost" onClick={() => setIndex((current) => Math.min(frames.length - 1, current + 1))} isDisabled={index >= frames.length - 1} label={t('paths.trace.step')} />
         {!reduceMotion && (
-          <button
-            type="button"
-            className="lp-btn lp-btn--quiet"
-            onClick={() => setPlaying((current) => !current)}
-            disabled={index >= frames.length - 1 && !playing}
-          >
-            {playing ? t('paths.trace.pause') : t('paths.trace.play')}
-          </button>
+          <Button variant="ghost" onClick={() => setPlaying((current) => !current)} isDisabled={index >= frames.length - 1 && !playing} label={playing ? t('paths.trace.pause') : t('paths.trace.play')} />
         )}
-        <button
-          type="button"
-          className="lp-btn lp-btn--quiet"
-          onClick={() => {
+        <Button variant="ghost" onClick={() => {
             setPlaying(false);
             setIndex(0);
-          }}
-          disabled={index === 0 && !playing}
-        >
-          {t('paths.trace.reset')}
-        </button>
+          }} isDisabled={index === 0 && !playing} label={t('paths.trace.reset')} />
         <span className="lp-trace__step">
           {t('paths.trace.position', { current: index + 1, total: frames.length })}
         </span>
@@ -302,17 +275,8 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
         </>
       )}
       <div className="lp-example__actions">
-        <button type="button" className="lp-btn" disabled={running} onClick={() => void run()}>
-          {running ? t('paths.example.running') : t('paths.example.run')}
-        </button>
-        <button
-          type="button"
-          className="lp-btn lp-btn--quiet"
-          disabled={running || code === section.code}
-          onClick={() => { setCode(section.code); setOutput(null); setError(null); }}
-        >
-          {t('paths.example.reset')}
-        </button>
+        <Button variant="secondary" isDisabled={running} onClick={() => void run()} label={running ? t('paths.example.running') : t('paths.example.run')} />
+        <Button variant="ghost" isDisabled={running || code === section.code} onClick={() => { setCode(section.code); setOutput(null); setError(null); }} label={t('paths.example.reset')} />
       </div>
       {error && <p className="lp-notice lp-notice--error" role="alert">{error}</p>}
       {output !== null && !error && (

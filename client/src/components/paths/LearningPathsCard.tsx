@@ -35,6 +35,7 @@ import {
 import { useLoc } from './localized';
 import type { LearningPathId } from '../../../../shared/learning-paths';
 import './LearningPaths.css';
+import { Button } from '@astryxdesign/core/Button';
 
 // The reward's code stays out of the profile until a path is enrolled. Its
 // boundary keeps the card when that code does not load, with a Retry.
@@ -195,9 +196,7 @@ export default function LearningPathsCard() {
             {' · '}
             {specialization === 'fde' ? 'Forward Deployed Engineer' : t('profile.pathNone')}
           </Text>
-          <button type="button" className="lp-btn" onClick={() => setOpen(true)}>
-            {needsProfile ? t('profile.completeAction') : t('profile.pathChoose')}
-          </button>
+          <Button variant="secondary" onClick={() => setOpen(true)} label={needsProfile ? t('profile.completeAction') : t('profile.pathChoose')} />
         </div>
 
         {profile && !needsProfile && (

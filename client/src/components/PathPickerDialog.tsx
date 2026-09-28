@@ -44,6 +44,7 @@ import {
 } from '../../../shared/learning-paths';
 import type { TranslationKey } from '../i18n/translations';
 import './paths/LearningPaths.css';
+import { Button } from '@astryxdesign/core/Button';
 
 /** The second step's two answers. `none` is a real choice, not a dismissal. */
 type RoleChoice = RoleSpecializationId | 'none';
@@ -324,26 +325,13 @@ export default function PathPickerDialog({
 
       <div className="lp-actions" style={{ padding: '0 16px 16px' }}>
         {index > 0 && (
-          <button type="button" className="lp-btn lp-btn--quiet" onClick={() => setStep(steps[index - 1])} disabled={busy}>
-            {t('paths.picker.back')}
-          </button>
+          <Button variant="ghost" onClick={() => setStep(steps[index - 1])} isDisabled={busy} label={t('paths.picker.back')} />
         )}
-        <button type="button" className="lp-btn lp-btn--quiet" onClick={onClose} disabled={busy}>
-          {t('paths.picker.cancel')}
-        </button>
+        <Button variant="ghost" onClick={onClose} isDisabled={busy} label={t('paths.picker.cancel')} />
         {isLast ? (
-          <button
-            type="button"
-            className="lp-btn lp-btn--primary"
-            onClick={commit}
-            disabled={busy || !canCommit}
-          >
-            {busy ? t('paths.picker.saving') : t('paths.picker.save')}
-          </button>
+          <Button variant="primary" onClick={commit} isDisabled={busy || !canCommit} label={busy ? t('paths.picker.saving') : t('paths.picker.save')} />
         ) : (
-          <button type="button" className="lp-btn lp-btn--primary" onClick={() => setStep(steps[index + 1])} disabled={busy}>
-            {t('paths.picker.continue')}
-          </button>
+          <Button variant="primary" onClick={() => setStep(steps[index + 1])} isDisabled={busy} label={t('paths.picker.continue')} />
         )}
       </div>
 
