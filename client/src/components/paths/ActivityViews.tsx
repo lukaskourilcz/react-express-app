@@ -60,7 +60,7 @@ export function CriteriaList({ criteria }: { criteria: CriterionResult[] }) {
           <div className="lp-criterion__body">
             <span className="lp-criterion__label">
               {loc(criterion.label)}
-              <span className="lp-visually-hidden">
+              <span className="ss-sr-only">
                 {' '}
                 — {criterion.passed ? t('paths.criterion.passed') : t('paths.criterion.failed')}
               </span>
@@ -211,8 +211,8 @@ export function CheckActivity({
                         </span>
                       ) : null}
                       {loc(option)}
-                      {graded && isCorrect && <span className="lp-visually-hidden"> — {t('paths.check.correctAnswer')}</span>}
-                      {graded && isWrongChoice && <span className="lp-visually-hidden"> — {t('paths.check.yourAnswer')}</span>}
+                      {graded && isCorrect && <span className="ss-sr-only"> — {t('paths.check.correctAnswer')}</span>}
+                      {graded && isWrongChoice && <span className="ss-sr-only"> — {t('paths.check.yourAnswer')}</span>}
                     </span>
                   </label>
                 );
@@ -390,7 +390,7 @@ export function CodeActivity({
                     <code>{test.call}</code>
                     {test.label && <span>— {loc(test.label)}</span>}
                     {outcome && (
-                      <span className="lp-visually-hidden">
+                      <span className="ss-sr-only">
                         {outcome.pass ? t('paths.code.testPassed') : t('paths.code.testFailed')}
                       </span>
                     )}

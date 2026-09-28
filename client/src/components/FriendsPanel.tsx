@@ -135,7 +135,7 @@ function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged
       <h3 id={`${inputId}-title`} className="fr-card__title">{t('friends.handleTitle')}</h3>
       <p className="fr-note">{state?.handle ? t('friends.handleHelp') : t('friends.handleFirst')}</p>
       <div className="fr-row">
-        <label className="fr-visually-hidden" htmlFor={inputId}>{t('friends.handleTitle')}</label>
+        <label className="ss-sr-only" htmlFor={inputId}>{t('friends.handleTitle')}</label>
         <input
           id={inputId}
           className="fr-input"
@@ -240,7 +240,7 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
       <h3 id={`${inputId}-title`} className="fr-card__title">{t('friends.findTitle')}</h3>
       <p className="fr-note">{t('friends.findHelp', { handle: ownHandle })}</p>
       <div className="fr-row">
-        <label className="fr-visually-hidden" htmlFor={inputId}>{t('friends.findTitle')}</label>
+        <label className="ss-sr-only" htmlFor={inputId}>{t('friends.findTitle')}</label>
         <input
           id={inputId}
           className="fr-input"

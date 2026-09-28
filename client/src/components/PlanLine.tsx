@@ -89,7 +89,7 @@ export default function PlanLine() {
       {loading ? (
         <span role="status" className="de-plan-line__loading">
           <Skeleton width={150} height={14} radius={2} />
-          <span className="de-plan-line__sr">{t('profile.plan.loading')}</span>
+          <span className="ss-sr-only">{t('profile.plan.loading')}</span>
         </span>
       ) : failed || !tier ? (
         <>

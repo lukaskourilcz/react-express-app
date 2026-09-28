@@ -275,6 +275,20 @@ dialog.astryx-dialog .astryx-layout-footer {
   box-shadow: inset 0 0 0 1px var(--ss-ring);
 }
 
+/* Visually hidden, still read by assistive tech: the one copy of this rule. */
+.ss-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* A status word in a small outlined pill: "You" on the leaderboard,
    "Premium" or an availability on Coins. Text, never colour alone. */
 .ss-tag {

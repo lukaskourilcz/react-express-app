@@ -353,7 +353,7 @@ export function MerchCard({
           <a className="rw-merch__buy" href={productUrl} target="_blank" rel="noopener noreferrer">
             {t('shop.buyAtShop')}
             <span aria-hidden="true">&nbsp;↗</span>
-            <span className="rw-sr-only"> {t('rewards.social.newTab')}</span>
+            <span className="ss-sr-only"> {t('rewards.social.newTab')}</span>
           </a>
         )}
 

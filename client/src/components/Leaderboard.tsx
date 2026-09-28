@@ -331,7 +331,7 @@ function toRows(tab: Tab, board: LeaderboardResponse, t: ReturnType<typeof useT>
 function RankDisc({ rank, label }: { rank: number; label?: string }) {
   return (
     <span className={`lb-rank${rank <= 3 ? ' lb-rank--top' : ''}`}>
-      {label && <span className="lb-vh">{label} </span>}
+      {label && <span className="ss-sr-only">{label} </span>}
       {rank}
     </span>
   );
@@ -375,7 +375,7 @@ function TableBoard({ rows, pinned, caption, headers }: { rows: Row[]; pinned: R
   );
   return (
     <table className="lb-table">
-      <caption className="lb-vh">{caption}</caption>
+      <caption className="ss-sr-only">{caption}</caption>
       <thead>
         <tr>
           <th scope="col" className="lb-col-rank">{t('leaderboard.rank')}</th>
@@ -428,7 +428,7 @@ function MobileBoard({ rows, pinned, caption, firstLabel }: { rows: Row[]; pinne
 function BoardSkeleton({ label }: { label: string }) {
   return (
     <div className="lb-board ss-panel" aria-busy="true">
-      <span className="lb-vh" role="status">
+      <span className="ss-sr-only" role="status">
         {label}
       </span>
       {Array.from({ length: 6 }).map((_, index) => (

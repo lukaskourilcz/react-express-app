@@ -208,7 +208,7 @@ function Section({ section }: { section: LessonSection }) {
         <figure className="lp-figure">
           <div className="lp-table-wrap">
             <table className="lp-table">
-              <caption className="lp-visually-hidden">{loc(section.caption)}</caption>
+              <caption className="ss-sr-only">{loc(section.caption)}</caption>
               <thead>
                 <tr>
                   {headers.map((header, index) => (
@@ -290,7 +290,7 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
         <pre className="lp-code"><code>{code}</code></pre>
       ) : (
         <>
-          <label className="lp-visually-hidden" htmlFor={`${labelId}-editor`}>{loc(section.caption)}</label>
+          <label className="ss-sr-only" htmlFor={`${labelId}-editor`}>{loc(section.caption)}</label>
           <textarea
             id={`${labelId}-editor`}
             className="lp-example__editor"
