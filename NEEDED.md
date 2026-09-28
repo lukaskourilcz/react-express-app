@@ -21,9 +21,9 @@ Reviewed 2026-09-28. This is the active list. The [previous checklist](docs/need
 - Twenty stale branches archived to `archive/2026-09-28/*` tags and removed. `claude/elegant-cori-h9cdgb` is retained for unmerged work; nothing was silently discarded.
 - Business name, IČO and registered address verified against official ARES and populated in `client/product-catalog.ts`. Support email is published only after mailbox setup.
 - Daily physical Supabase backups verified through 2026-09-28 03:29:46 UTC. Recovery project already exists; timed recovery is still open.
-- New PostHog EU organization devShark / project 286767 created on the capped **Free** plan, no payment card. Production/Preview public project keys configured. Session replay, autocapture and heatmaps remain off. Event verification is recorded below until completed.
-- Mobile LCP investigation identified the delayed registration prompt as the largest paint. It now waits for visitor interaction. Production measurements must be recorded after deployment.
-- Responsive sweep: 238 probes, zero issues. API typecheck, launch contracts, build and both production dependency audits passed. Targeted Premium/leaderboard tests: 30/30 on Node 24. See release evidence for final deployment status.
+- New PostHog EU organization devShark / project 286767 created on the capped **Free** plan, no payment card. Production/Preview public project keys configured. Session replay, autocapture and heatmaps remain off. Production pageview/UTM, sample completion and signed-in identification verified; the [activation funnel](https://eu.posthog.com/project/286767/insights/yFVpwwjG) is saved. Quiz conversion still needs dedicated test-account verification.
+- Mobile LCP investigation identified the delayed registration prompt as the largest paint. It now waits for visitor interaction. The follow-up production mobile run still missed the target (LCP 6.72 s); desktop LCP was 0.65 s. Keep mobile performance open; removing the prompt is not proof of meeting the target.
+- Responsive sweep: 238 probes, zero issues. API typecheck, launch contracts, build and both production dependency audits passed. Targeted Premium/leaderboard tests: 30/30 on Node 24. See [sweep evidence](docs/launch-cleanup-2026-09-28.md) for deployment status and limitations.
 
 ## Necessary before taking payments — deferred with Stripe (#221)
 
@@ -39,12 +39,12 @@ Reviewed 2026-09-28. This is the active list. The [previous checklist](docs/need
 - [x] `support@devshark.app` created on Zoho EU Mail Free (5 GB). MX/SPF/DKIM verified by Zoho; mail to Gmail and its reply both delivered. Zoho Accounts lists `kouril.lukas@gmail.com` as the additional email usable for password recovery. Owner can now use support to create the Render account; no app hosting migration is requested.
 - [ ] Verify alert delivery for the activated external health monitor: `.github/workflows/health.yml` checks every 15 minutes and requires two consecutive failures. Manual run [36408742616](https://github.com/lukaskourilcz/react-express-app/actions/runs/36408742616) passed. GitHub Actions scheduling is best-effort; owner must enable failed-workflow notifications and verify delivery before treating it as an alert channel (#190).
 - [ ] Run a timed isolated restore and application validation; retain RPO 24h / RTO 1h objectives. Existing backup and recovery copy are not proof of RTO. See [backup procedure](docs/backup-restore.md).
-- [ ] Complete PostHog production pageview/UTM inspection and save the activation funnel from [activation.md](docs/quality/activation.md). Inspect a signed-in payload and the Sentry EU error payload for unwanted email, answer/code or tokens; Sentry dashboard access is required. Never enable recording of editors.
+- [ ] Finish end-to-end quiz conversion verification in the saved PostHog funnel with a dedicated test account, and inspect the Sentry EU error payload for unwanted email, answer/code or tokens. Observed PostHog identify uses the user UUID rather than email; GeoIP enrichment is present, so analytics must not be described as anonymous. Sentry dashboard access is required. Never enable recording of editors.
 - [ ] Complete one consolidated release session with dedicated free/Premium test accounts: locks/grants, quiz replay and rewards idempotency, invitations/vouchers, Learn hearts/debugging/progression, all coding graders (including the two slow React cases), Today/review, account erasure/non-admin denial and two-session Classroom. Preserve prior passing evidence in [release-acceptance.md](docs/release-acceptance.md); don't use owner progress or coins as disposable fixtures.
 - [ ] Physical-phone and Safari checks: focus/touch/theme cold-load, signed-in 390px reflow and offline upgrade-sheet recovery. Desktop emulation does not replace these.
 - [ ] Resolve React grader same-process integrity (#191) before treating untrusted verdicts as fully hardened. Keep #202 bot challenge deferred unless measured abuse exceeds existing distributed rate limits.
 - [ ] Review practice-session retention scheduling / overly broad grants (#236). Existing daily learning-data purge is scheduled, but `purge_practice_sessions` is not. Question-bank audit portions remain owner-deferred.
-- [ ] Remove obsolete StudyShark Auth redirects and Google OAuth origins before deleting the paused Vercel project (#214, epic #211). Console access/verification is needed to prevent leaving a reclaimable trusted origin.
+- [x] Removed both StudyShark Supabase Auth redirects and its Production/Preview environment URL, verified the actual Google client trusts only the devShark Supabase callback, and deleted the paused StudyShark Vercel project. Its old URL now returns DEPLOYMENT_NOT_FOUND; #214 and #211 are closed.
 - [ ] Remove production seed friends before public promotion after confirming their identifiers and preserving a rollback export. Do not remove real learner data.
 
 ## Firebase and old interview-prepper
@@ -56,7 +56,7 @@ The running devShark application already uses Supabase for data/auth. Firebase i
 ## Useful when marketing launches, not platform blockers (#239)
 
 - [ ] Finish desired Threads/LinkedIn profiles and Meta authorization; keep absent profiles hidden. Verify actual social link previews and PWA icon on real clients.
-- [ ] Submit sitemap in Search Console and brand Google OAuth once the support mailbox exists; keep paid custom auth domain deferred.
+- [ ] Submit sitemap in Search Console. Move devShark to a dedicated Google OAuth project/client before branding it: its current client belongs to the shared Gemini API project, whose consent screen says Own Dashboard and also serves own-dashboard/gym-plzen. Do not rename that shared consent screen. A separate empty devshark-auth project exists; credential setup and a tested Supabase provider cutover remain necessary. Keep paid custom auth domain deferred.
 - [ ] Update BoardlessAI's fact sheet to English-only/freemium/EUR and distinguish the site's daily question from its marketing snapshot before campaigns. No outbound messages sent in this sweep.
 - [ ] Create a campaign voucher only when duration/cap/expiry and campaign are decided; no speculative entitlements. Add changelog entries with actual releases.
 
