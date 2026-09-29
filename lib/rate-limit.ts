@@ -54,17 +54,26 @@ export const SHARED_NETWORK_SEATS = 32;
 
 export const RATE_LIMITS = {
   admin: { key: 'admin_gate', capacity: 5, refillPerSecond: 1 },
+  // A quiz, review or due list, the daily challenge, the question of the day,
+  // a Challenge batch and a placement start. Two tiers (`enforceClassRateLimit`):
+  // this one is the caller's own, per account, per sealed Challenge run for a
+  // guest's refill, or per address for any other guest; the address bucket
+  // below holds a class, which used to share this one budget and refused
+  // pupil twenty-one.
   quizSession: { key: 'quiz_session', capacity: 20, refillPerSecond: 20 / 60 },
+  quizSessionAddress: { key: 'quiz_session_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
   // Grading and the Challenge have two tiers, like `play` below. The address
   // buckets hold a class behind one NAT: a Challenge sends one submit per
   // question, so a class playing it at once spent the old one-person budget
-  // in seconds. Each caller is then bounded by a bucket of their own: a
+  // in seconds, and grading's address bucket holds every seat answering at
+  // its full Challenge rate (`challengeSubmitPerUser`), the fastest any
+  // caller submits. Each caller is then bounded by a bucket of their own: a
   // signed-in caller's account, or, for a Challenge played without an
   // account, the run id sealed in its session or run token (`run:<runId>`),
   // with the same budget, so a class of guests is not held to one person's
   // rate. Any other caller without an account keeps the address rate these
   // endpoints had before the split.
-  quizSubmit: { key: 'quiz_submit', capacity: SHARED_NETWORK_SEATS * 12, refillPerSecond: (SHARED_NETWORK_SEATS * 12) / 60 },
+  quizSubmit: { key: 'quiz_submit', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 60 },
   quizSubmitPerUser: { key: 'quiz_submit_user', capacity: 12, refillPerSecond: 12 / 60 },
   // One Challenge answer per submit: a quick learner answers a question every
   // few seconds, which the twelve-a-minute quiz budget cut off.
@@ -91,6 +100,13 @@ export const RATE_LIMITS = {
   roadmapMutation: { key: 'roadmap_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   roadmapAnswer: { key: 'roadmap_answer', capacity: 80, refillPerSecond: 80 / 60 },
   roadmapComplete: { key: 'roadmap_complete', capacity: 12, refillPerSecond: 12 / 60 },
+  // The four above are each a caller's own bucket (`enforceClassRateLimit`),
+  // per account, or per address for a caller without one. These are their
+  // address backstops: a class at the per-person rate.
+  flashcardMutationAddress: { key: 'flashcard_mutation_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
+  roadmapMutationAddress: { key: 'roadmap_mutation_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
+  roadmapAnswerAddress: { key: 'roadmap_answer_address', capacity: SHARED_NETWORK_SEATS * 80, refillPerSecond: (SHARED_NETWORK_SEATS * 80) / 60 },
+  roadmapCompleteAddress: { key: 'roadmap_complete_address', capacity: SHARED_NETWORK_SEATS * 12, refillPerSecond: (SHARED_NETWORK_SEATS * 12) / 60 },
   // Play has two tiers (ported by hand from fa884b7). The address buckets
   // hold a whole class behind one NAT; each is paired with a bucket keyed by
   // the caller's verified account (`user:<id>`) at the rate the address bucket
@@ -128,9 +144,16 @@ export const RATE_LIMITS = {
   accountDelete: { key: 'account_delete', capacity: 2, refillPerSecond: 2 / 3600 },
   accountDeleteAddress: { key: 'account_delete_address', capacity: SHARED_NETWORK_SEATS * 2, refillPerSecond: (SHARED_NETWORK_SEATS * 2) / 3600 },
   aiExplanation: { key: 'ai_explanation', capacity: 3, refillPerSecond: 5 / 3600 },
+  // Coding tasks, in two tiers like the Learn buckets above: the caller's own
+  // bucket, then a class-sized address backstop. A task load used to share
+  // `quizSession`. A draft save is a write to `api/user/[op].ts` and takes
+  // `userMutation`'s two tiers there.
+  codingTask: { key: 'coding_task', capacity: 20, refillPerSecond: 20 / 60 },
   codingRun: { key: 'coding_run', capacity: 30, refillPerSecond: 30 / 600 },
-  codingDraft: { key: 'coding_draft', capacity: 60, refillPerSecond: 60 / 600 },
   codingReveal: { key: 'coding_reveal', capacity: 10, refillPerSecond: 10 / 3600 },
+  codingTaskAddress: { key: 'coding_task_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
+  codingRunAddress: { key: 'coding_run_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },
+  codingRevealAddress: { key: 'coding_reveal_address', capacity: SHARED_NETWORK_SEATS * 10, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 3600 },
   githubConnect: { key: 'github_connect', capacity: 10, refillPerSecond: 10 / 3600 },
   githubSync: { key: 'github_sync', capacity: 6, refillPerSecond: 6 / 3600 },
   // Learning paths: starting an activity is cheap, submitting one runs the
@@ -352,6 +375,40 @@ export async function enforceRateLimit(
     // to the in-memory bucket so the endpoint stays available.
     return checkRateLimit(req, res, config, identity);
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* Two tiers for a class behind one address                                   */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Enforce a limit in two tiers, for a route a class uses at once. A school
+ * puts thirty pupils behind one address, so a bucket keyed by address alone
+ * and sized for one person refused pupil twenty-one.
+ *
+ * `address` is keyed by the client address and holds a class; it is taken
+ * before the credentials are read, so a flood from one address meets it
+ * first. `perCaller` is the caller's own: keyed by the verified account
+ * (`user:<id>`), or, for a caller without one, by `sealedGuest` when the
+ * handler holds an id the server sealed for it (a Challenge run,
+ * `run:<runId>`), and otherwise by address, the rate the route had before the
+ * split. No one person may do more than before, and guests without a sealed
+ * run still share their address's budget.
+ *
+ * The credentials are verified once per request (`verifiedCallerId`); the
+ * handler's own `requireAuthSub`, `requireAuthResult` or `tryAuthOnce` reads
+ * that result. Returns false after sending the 429.
+ */
+export async function enforceClassRateLimit(
+  req: VercelRequest,
+  res: VercelResponse,
+  address: RateLimitConfig,
+  perCaller: RateLimitConfig,
+  sealedGuest?: `run:${string}`,
+): Promise<boolean> {
+  if (!(await enforceRateLimit(req, res, address))) return false;
+  const callerId = await verifiedCallerId(req);
+  return enforceRateLimit(req, res, perCaller, callerId ? `user:${callerId}` : sealedGuest);
 }
 
 /* -------------------------------------------------------------------------- */

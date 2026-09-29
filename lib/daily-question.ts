@@ -21,7 +21,7 @@ import { encodeSession } from './quiz-tokens';
 import { localizeQuestion, PRIVATE_CATEGORIES } from './quiz-runtime';
 import { jsonError } from './http';
 import { getEffectiveQuestions } from './questions-store';
-import { enforceRateLimit, RATE_LIMITS } from './rate-limit';
+import { enforceClassRateLimit, RATE_LIMITS } from './rate-limit';
 import {
   isIsoDate,
   qotdAvailability,
@@ -120,7 +120,7 @@ export function pickQuestionOfTheDay(
 }
 
 export async function handleQuestionOfTheDay(req: VercelRequest, res: VercelResponse) {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.quizSessionAddress, RATE_LIMITS.quizSession))) return;
   const raw = typeof req.query.qotd === 'string' ? req.query.qotd : '';
   const today = utcToday();
   const date = raw === '' || raw === 'today' ? today : raw;
