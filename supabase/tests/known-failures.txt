@@ -1,0 +1,8 @@
+# SQL tests that fail today because of a known, tracked bug.
+#
+# One line per test file: `<file> <reason>`. `npm run test:sql` still runs each
+# listed file and reports it as an expected failure; a listed file that passes
+# fails the suite until its line is removed, so this list only shrinks.
+# Never add a line to make a new failure go away: fix the SQL instead.
+
+070-streak-protection-purchase.test.sql RANK-1/SQL-1: a second streak-protection purchase in a month at the same balance replays the first debit and is free (fixed by migration 047)

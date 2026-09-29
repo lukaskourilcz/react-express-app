@@ -9,6 +9,33 @@ concurrency:
   group: quality-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  sql:
+    # Builds the database from supabase-schema.sql and every numbered
+    # migration on Supabase's own Postgres 17 image, then runs the behaviour
+    # tests in supabase/tests (XP once, vouchers once, the 30-day board,
+    # account erasure, grants and RLS). See scripts/test-sql.mjs.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: supabase/postgres:17.6.1.171
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h 127.0.0.1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm run test:sql
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 20

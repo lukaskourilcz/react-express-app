@@ -2290,7 +2290,9 @@ async function main() {
   }
   assert.match(coding, /p_coding_task_ids JSONB DEFAULT NULL/, 'level completion must accept the sealed coding task ids');
   assert.match(coding, /DROP FUNCTION IF EXISTS public\.complete_verified_roadmap_attempt\(TEXT, TEXT\)/);
-  assert.match(coding, /'coding:' \|\| p_task_id/, 'coding XP must go through the verified-activity ledger once per task');
+  // Coding XP once per account and task is run against the built schema by
+  // supabase/tests/030-coding-xp-once.test.sql (npm run test:sql); 041
+  // replaced the award id this file used to pin here.
   assert.match(coding, /DELETE FROM public\.coding_progress WHERE user_id = p_user_id/);
   assert.match(coding, /DELETE FROM public\.github_connections WHERE user_id = p_user_id/);
   assert.doesNotMatch(coding, /access_token|refresh_token|provider_token/, 'the garden must never store a user token');
