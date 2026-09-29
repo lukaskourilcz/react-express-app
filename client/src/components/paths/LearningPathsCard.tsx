@@ -15,7 +15,9 @@ import { VStack } from '@astryxdesign/core/VStack';
 import { Text } from '@astryxdesign/core/Text';
 import { useAuth } from '../../lib/auth';
 import { useT } from '../../i18n/LanguageContext';
-import { friendlyError } from '../../lib/api';
+import { friendlyError, isPremiumRequired } from '../../lib/api';
+import { isBarred, useLocks } from '../../lib/locks';
+import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { lazyShellPart } from '../../lib/routeRecovery';
 import { ShellPartBoundary } from '../ShellPartBoundary';
 import ErrorRetry from '../ErrorRetry';
@@ -34,6 +36,7 @@ import {
 } from '../../lib/learningPaths';
 import { useLoc } from './localized';
 import type { LearningPathId } from '../../../../shared/learning-paths';
+import type { PathCatalogEntry } from '../../../../shared/learning-path-api';
 import './LearningPaths.css';
 import { Button } from '@astryxdesign/core/Button';
 
@@ -57,11 +60,11 @@ export default function LearningPathsCard() {
   const [notice, setNotice] = useState<string | null>(null);
 
   const preference = useMemo(() => preferredLearningOf(user), [user]);
-  const specialization = preference?.specialization ?? null;
   const profile = useMemo(() => learnerProfileOf(user), [user]);
   const gaps = useMemo(() => profileGapsOf(user), [user]);
   // A signed-out visitor owes nothing: there is no account to personalise yet.
   const needsProfile = isAuthenticated && gaps.length > 0;
+  const { lockOf } = useLocks();
 
   const fdeEntry = entryFor(catalog.data, 'fde');
   const dsaEntry = entryFor(catalog.data, 'dsa-foundations');
@@ -70,6 +73,18 @@ export default function LearningPathsCard() {
     (pathId: LearningPathId) => enrollments.data?.enrollments.find((one) => one.pathId === pathId),
     [enrollments.data],
   );
+  const barred = useCallback(
+    (pathId: LearningPathId) => isBarred(lockOf({ kind: 'learning-path', pathId })),
+    [lockOf],
+  );
+
+  // What the learner has chosen is the account preference or a path they are
+  // running, whichever says so: a path started from its own page is chosen
+  // here too, so saving the picker does not pause it.
+  const fdeActive = enrollmentFor('fde')?.status === 'active';
+  const dsaActive = enrollmentFor('dsa-foundations')?.status === 'active';
+  const specialization = preference?.specialization ?? (fdeActive ? 'fde' : null);
+  const dsaChosen = (profile?.skillPaths.includes('dsa-foundations') ?? false) || dsaActive;
 
   const apply = useCallback(
     async (result: PathPickerResult) => {
@@ -79,71 +94,77 @@ export default function LearningPathsCard() {
       // The local track changes first so the roadmap reflects the choice even
       // if the account save fails; the failure is then reported, not hidden.
       setTrack(result.track);
+
+      // Enrollment comes before the preference. Premium opens the paths, so a
+      // path the plan does not open is left out of the saved preference rather
+      // than recorded as the learner's role or path without the access to take
+      // it; the upgrade sheet says why once the picker closes.
+      const refused: LearningPathId[] = [];
+      const follow = async (
+        pathId: LearningPathId,
+        entry: PathCatalogEntry | undefined,
+        wants: boolean,
+        wasChosen: boolean,
+        baseTrack?: PathPickerResult['track'],
+      ) => {
+        if (!entry || !isOpen(entry.availability)) return;
+        const existing = enrollmentFor(pathId);
+        if (wants) {
+          // Running already, or paused on its own page and left chosen here:
+          // saving the picker changes neither.
+          if (existing && (existing.status === 'active' || wasChosen)) return;
+          // A choice the account already held is not asked about again.
+          if (barred(pathId)) {
+            if (!wasChosen) refused.push(pathId);
+            return;
+          }
+          try {
+            await changeEnrollment({
+              pathId,
+              curriculumVersion: entry.manifest.version,
+              ...(baseTrack ? { baseTrack } : {}),
+              action: existing ? 'resume' : 'enroll',
+            });
+          } catch (error) {
+            if (!isPremiumRequired(error)) throw error;
+            refused.push(pathId);
+          }
+        } else if (existing && existing.status === 'active') {
+          // Choosing none pauses it and keeps every result.
+          await changeEnrollment({ pathId, curriculumVersion: entry.manifest.version, action: 'pause' });
+        }
+      };
+      try {
+        await follow('fde', fdeEntry, result.specialization === 'fde', specialization === 'fde', result.track);
+        // DSA Foundations is an independent enrollment: it never touches the
+        // base track or the role.
+        await follow('dsa-foundations', dsaEntry, result.skillPaths.includes('dsa-foundations'), dsaChosen);
+        await queryClient.invalidateQueries({ queryKey: learningPathKeys.enrollments(user?.id) });
+      } catch (error) {
+        setBusy(false);
+        setDialogError(`${t('paths.picker.enrollFailed')} ${friendlyError(error)}`);
+        return;
+      }
+
+      const savedSpecialization = refused.includes('fde') ? preference?.specialization ?? null : result.specialization;
+      const keepsDsa = profile?.skillPaths.includes('dsa-foundations') ?? false;
+      const skillPaths = refused.includes('dsa-foundations')
+        ? result.skillPaths.filter((one) => one !== 'dsa-foundations' || keepsDsa)
+        : result.skillPaths;
       const saved = await saveLearningPreference(
         user?.id ?? null,
-        { schemaVersion: 1, baseTrack: result.track, specialization: result.specialization },
+        { schemaVersion: 1, baseTrack: result.track, specialization: savedSpecialization },
         {
           goals: result.goals,
           experience: result.experience,
           studyTime: result.studyTime,
-          skillPaths: result.skillPaths,
+          skillPaths,
         },
       );
       if (!saved.ok) {
         setBusy(false);
         setDialogError(saved.reason === 'not_signed_in' ? t('paths.signInToRecord') : t('paths.picker.saveFailed'));
         return;
-      }
-
-      // Enrollment is the second, separate operation. Choosing the role opens
-      // the enrollment; choosing none pauses it and keeps every result.
-      if (fdeEntry && isOpen(fdeEntry.availability)) {
-        try {
-          const existing = enrollmentFor('fde');
-          if (result.specialization === 'fde') {
-            await changeEnrollment({
-              pathId: 'fde',
-              curriculumVersion: fdeEntry.manifest.version,
-              baseTrack: result.track,
-              action: existing ? 'resume' : 'enroll',
-            });
-          } else if (existing && existing.status === 'active') {
-            await changeEnrollment({ pathId: 'fde', curriculumVersion: fdeEntry.manifest.version, action: 'pause' });
-          }
-          await queryClient.invalidateQueries({ queryKey: learningPathKeys.enrollments(user?.id) });
-        } catch (error) {
-          setBusy(false);
-          setDialogError(`${t('paths.picker.enrollFailed')} ${friendlyError(error)}`);
-          return;
-        }
-      }
-
-      // DSA Foundations is an independent enrollment: opting in enrolls or
-      // resumes it, opting out pauses it, and neither touches the base track
-      // or the role. Every result already recorded survives both.
-      if (dsaEntry && isOpen(dsaEntry.availability)) {
-        try {
-          const existing = enrollmentFor('dsa-foundations');
-          const wants = result.skillPaths.includes('dsa-foundations');
-          if (wants) {
-            await changeEnrollment({
-              pathId: 'dsa-foundations',
-              curriculumVersion: dsaEntry.manifest.version,
-              action: existing ? 'resume' : 'enroll',
-            });
-          } else if (existing && existing.status === 'active') {
-            await changeEnrollment({
-              pathId: 'dsa-foundations',
-              curriculumVersion: dsaEntry.manifest.version,
-              action: 'pause',
-            });
-          }
-          await queryClient.invalidateQueries({ queryKey: learningPathKeys.enrollments(user?.id) });
-        } catch (error) {
-          setBusy(false);
-          setDialogError(`${t('paths.picker.enrollFailed')} ${friendlyError(error)}`);
-          return;
-        }
       }
 
       // The plan changed, so anything derived from it — what is eligible, what
@@ -155,11 +176,12 @@ export default function LearningPathsCard() {
       setNotice(
         t('profile.pathSaved', {
           track: t(trackLabelKey(subject, result.track)),
-          role: result.specialization === 'fde' ? ' + Forward Deployed Engineer' : '',
+          role: savedSpecialization === 'fde' ? ' + Forward Deployed Engineer' : '',
         }),
       );
+      if (refused.length > 0) openUpgradeSheet({ kind: 'learning-path', ref: refused[0] });
     },
-    [dsaEntry, enrollmentFor, fdeEntry, queryClient, setTrack, subject, t, user?.id],
+    [barred, dsaChosen, dsaEntry, enrollmentFor, fdeEntry, preference, profile, queryClient, setTrack, specialization, subject, t, user?.id],
   );
 
   const activePaths = [fdeEntry, dsaEntry].filter(Boolean).map((entry) => {
@@ -229,12 +251,16 @@ export default function LearningPathsCard() {
                 <span className="lp-activity__title">{loc(manifest.title)}</span>
                 <span className="lp-activity__minutes">
                   {/* A short state that fits its slot: closed, resume a paused
-                      enrollment, in progress, or start. */}
+                      enrollment, in progress, or start; with the Premium mark
+                      when the plan does not open the path. */}
                   {!isOpen(entry.availability)
                     ? t('roadmap.unavailable')
                     : enrollment
                       ? t(enrollment.status === 'paused' ? 'paths.action.resume' : 'paths.state.in_progress')
                       : t('paths.action.start')}
+                  {isOpen(entry.availability) && barred(manifest.id) && (
+                    <> <span className="ss-premium-label">{t('premium.badge')}</span></>
+                  )}
                 </span>
               </Link>
               {/* Only ever visible once the server says the path is finished,
@@ -260,6 +286,9 @@ export default function LearningPathsCard() {
         current={track as Track}
         currentSpecialization={specialization}
         currentProfile={profile}
+        dsaEnrolled={dsaActive}
+        fdeLocked={barred('fde')}
+        dsaLocked={barred('dsa-foundations')}
         onChoose={(result) => void apply(result)}
         busy={busy}
         error={dialogError}

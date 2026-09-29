@@ -18,6 +18,9 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../lib/auth';
 import { useT } from '../../i18n/LanguageContext';
 import { ApiError, friendlyError } from '../../lib/api';
+import { isBarred, useLocks } from '../../lib/locks';
+import { openUpgradeSheet } from '../../lib/upgradeSheet';
+import { useTrack } from '../../lib/tracks';
 import { capturePathEvent } from '../../lib/analytics';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
@@ -189,8 +192,14 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { userId, isAuthenticated, catalog, entry, enrollment, progress } = usePathState(pathId);
+  const [track] = useTrack();
+  const { lockOf } = useLocks();
   const [enrolling, setEnrolling] = useState(false);
   const [enrollError, setEnrollError] = useState<string | null>(null);
+  // Premium opens the paths. Starting or resuming one the plan does not open
+  // asks for Premium instead, and the button carries the Premium mark.
+  const barred = isBarred(lockOf({ kind: 'learning-path', pathId }));
+  const askForPremium = useCallback(() => openUpgradeSheet({ kind: 'learning-path', ref: pathId }), [pathId]);
 
   const states = useMemo(() => statesOf(progress.data), [progress.data]);
   const completedModules = useMemo(
@@ -204,7 +213,13 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
       setEnrolling(true);
       setEnrollError(null);
       try {
-        await changeEnrollment({ pathId, curriculumVersion: entry.manifest.version, action });
+        await changeEnrollment({
+          pathId,
+          curriculumVersion: entry.manifest.version,
+          action,
+          // A role specialization records the base track it sits above.
+          ...(entry.manifest.kind === 'role_specialization' ? { baseTrack: track } : {}),
+        });
         if (action === 'enroll') {
           capturePathEvent('learning_path_enrolled', { pathId, curriculumVersion: entry.manifest.version });
         }
@@ -215,7 +230,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         setEnrolling(false);
       }
     },
-    [entry, pathId, queryClient, userId],
+    [entry, pathId, queryClient, userId, track],
   );
 
   if (catalog.isLoading) return <LoadingScreen label={t('paths.loading')} />;
@@ -233,6 +248,10 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const nextModule = next ? manifest.modules.find((one) => one.activities.some((a) => a.id === next)) : undefined;
   const requiredModules = manifest.modules.filter((one) => !one.optional);
   const optionalModules = manifest.modules.filter((one) => one.optional);
+  // Activities link only while the path is open to this learner; a closed
+  // path, or a lapsed plan, keeps its outline and evidence without dead ends.
+  const reachable = Boolean(enrollment) && open && !barred;
+  const premiumMark = <span className="ss-premium-label">{t('premium.badge')}</span>;
 
   return (
     <div className="lp-page">
@@ -277,14 +296,15 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         </div>
         <div className="lp-head__actions">
           {!isAuthenticated && <span className="lp-actions__status">{t('paths.guestPreview')}</span>}
+          {open && barred && premiumMark}
           {isAuthenticated && !enrollment && open && (
-            <Button variant="primary" onClick={() => enrol('enroll')} isDisabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
+            <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('enroll'))} isDisabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
           )}
-          {isAuthenticated && enrollment?.status === 'paused' && (
-            <Button variant="primary" onClick={() => enrol('resume')} isDisabled={enrolling} label={t('paths.action.resume')} />
+          {isAuthenticated && enrollment?.status === 'paused' && open && (
+            <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('resume'))} isDisabled={enrolling} label={t('paths.action.resume')} />
           )}
-          {enrollment?.status === 'active' && next && nextModule && (
-            <Button variant="primary" onClick={() => navigate(activityHref(pathId, nextModule.id, next))} label={t('paths.action.continue')} />
+          {enrollment?.status === 'active' && open && next && nextModule && (
+            <Button variant="primary" onClick={() => (barred ? askForPremium() : navigate(activityHref(pathId, nextModule.id, next)))} label={t('paths.action.continue')} />
           )}
           {enrollment?.status === 'active' && (
             <Button variant="ghost" onClick={() => enrol('pause')} isDisabled={enrolling} label={t('paths.action.pause')} />
@@ -401,7 +421,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               index={index + 1}
               states={states}
               completed={completedModules.has(module.id)}
-              interactive={Boolean(enrollment)}
+              interactive={reachable}
             />
           ))}
         </div>
@@ -420,7 +440,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
                 index={0}
                 states={states}
                 completed={false}
-                interactive={Boolean(enrollment)}
+                interactive={reachable}
               />
             ))}
           </div>
@@ -466,6 +486,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   const [search, setSearch] = useSearchParams();
   const queryClient = useQueryClient();
   const { userId, isAuthenticated, catalog, entry, enrollment, progress } = usePathState(pathId);
+  const { lockOf } = useLocks();
 
   const activityId = search.get('activity');
   const enrollmentId = enrollment?.enrollmentId;
@@ -689,6 +710,9 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
 
   const states = statesOf(progress.data);
   const moduleProgress = progress.data?.modules.find((one) => one.moduleId === module.id);
+  // A path that is switched off, or that the plan no longer opens, lists its
+  // activities without links: starting one would be refused.
+  const reachable = Boolean(enrollment) && isOpen(entry.availability) && !isBarred(lockOf({ kind: 'learning-path', pathId }));
   // Only the dimensions this artifact is judged against, so the learner reads
   // the criteria that apply rather than the whole rubric.
   const rubric = entry.manifest.rubric.dimensions
@@ -749,7 +773,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               moduleId={module.id}
               activity={one}
               state={states.get(one.id) ?? 'not_started'}
-              interactive={Boolean(enrollment)}
+              interactive={reachable}
             />
           ))}
         </ul>
