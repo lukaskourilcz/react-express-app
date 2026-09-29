@@ -362,15 +362,20 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
             <StateBadge state={progress.data.guidedComplete ? 'verified_pass' : 'in_progress'} />
           </div>
           {inventory.artifacts > 0 && (
-            <div className="lp-completion__line">
-              <span className="lp-completion__label">{t('paths.portfolioSelfReviewed')}</span>
-              <span className="lp-module__meta">
-                {t('paths.portfolioCount', {
-                  submitted: progress.data.artifacts.submitted,
-                  total: progress.data.artifacts.total,
-                })}
-              </span>
-            </div>
+            <>
+              <div className="lp-completion__line">
+                <span className="lp-completion__label">{t('paths.portfolioSelfReviewed')}</span>
+                <span className="lp-module__meta">
+                  {t('paths.portfolioCount', {
+                    submitted: progress.data.artifacts.submitted,
+                    total: progress.data.artifacts.total,
+                  })}
+                </span>
+              </div>
+              {/* The modules require these pieces, so completion waits for
+                  them; say so rather than implying they sit apart from it. */}
+              <p className="lp-completion__note">{t('paths.portfolioRequired', { total: progress.data.artifacts.total })}</p>
+            </>
           )}
           <p className="lp-completion__note">{t('paths.completionNote')}</p>
         </section>
@@ -834,6 +839,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               questions={open.check.questions}
               passThreshold={open.check.passThreshold}
               domains={open.activity.domains}
+              domainThreshold={open.check.domainThreshold}
               result={result}
               busy={busy}
               onSubmit={(answers) => submit({ answers })}

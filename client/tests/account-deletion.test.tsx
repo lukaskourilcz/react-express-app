@@ -11,7 +11,10 @@ import { server } from './mocks/server';
 // Deleting an account ends a paid subscription at once without a refund
 // (review finding product-4): the card and the confirmation say so.
 const auth = vi.hoisted(() => ({
-  value: { user: { id: 'user-1' } as { id: string } | null, isAuthenticated: true, isLoading: false, signOut: async () => undefined },
+  value: {
+    user: { id: 'user-1' } as { id: string } | null, isAuthenticated: true, isLoading: false,
+    signOut: vi.fn(async (_scope?: 'local' | 'global') => undefined),
+  },
 }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value, getUserProfile: () => ({}) }));
 afterEach(() => { auth.value = { ...auth.value, user: { id: 'user-1' }, isAuthenticated: true }; });
@@ -103,5 +106,27 @@ describe('deleting an account', () => {
     expect(localStorage.getItem('devquiz:color-mode')).toBe('dark');
     expect(localStorage.getItem('devquiz.lang')).toBe('en');
     sessionStorage.clear();
+  });
+});
+
+describe('signing out on every device', () => {
+  it('sits in the account area and signs out with the global scope', async () => {
+    auth.value.signOut.mockClear();
+    plan({ ...FREE, billingAccount: false, subscriptionLive: false });
+    renderCard(<AccountDeletionCard />);
+    expect(screen.getByText(/Log out in the account menu signs out only this browser\./)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out on all devices' }));
+    await waitFor(() => expect(auth.value.signOut).toHaveBeenCalledWith('global'));
+    expect(auth.value.signOut).toHaveBeenCalledTimes(1);
+  });
+
+  it('says so when the sign-out fails', async () => {
+    auth.value.signOut.mockClear();
+    auth.value.signOut.mockRejectedValueOnce(new Error('offline'));
+    plan({ ...FREE, billingAccount: false, subscriptionLive: false });
+    renderCard(<AccountDeletionCard />);
+    fireEvent.click(screen.getByRole('button', { name: 'Sign out on all devices' }));
+    expect(await screen.findByText('Sign-out failed. Check your connection and try again.')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Sign out on all devices' })).toBeEnabled();
   });
 });

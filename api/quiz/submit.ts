@@ -186,9 +186,15 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     throw error;
   }
   // A signed-in caller is bounded by their account, with room for a Challenge
-  // answer every few seconds; a caller without one keeps the address rate.
+  // answer every few seconds. A Challenge played without an account is
+  // bounded the same way by the run sealed in its session, so a class of
+  // guests behind one address each keep their own budget; the address bucket
+  // above stays in front of them. Any other caller without an account keeps
+  // the address rate.
   const withinCallerLimit = !signedIn
-    ? await enforceRateLimit(req, res, RATE_LIMITS.quizSubmitAnonymous)
+    ? session.scope === 'challenge' && session.runId
+      ? await enforceRateLimit(req, res, RATE_LIMITS.challengeSubmitPerUser, `run:${session.runId}`)
+      : await enforceRateLimit(req, res, RATE_LIMITS.quizSubmitAnonymous)
     : session.scope === 'challenge'
       ? await enforceRateLimit(req, res, RATE_LIMITS.challengeSubmitPerUser, `user:${signedIn.sub}`)
       : await enforceRateLimit(req, res, RATE_LIMITS.quizSubmitPerUser, `user:${signedIn.sub}`);

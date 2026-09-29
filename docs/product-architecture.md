@@ -176,8 +176,11 @@ System design still grades and still owns its history but has left the section
 (`CODING_SECTION_TRACKS`).
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
-three coding tasks sealed into the level session; completion requires a passed
-verdict for each. The Easy-band challenges of #226 (`EASY_BAND` in
+three coding tasks sealed into the level session; for an account, completion
+requires a passed verdict for each. A guest's coding passes are never stored,
+so a guest's level passes on its questions: the completion answers
+`codingUnverified: true`, records nothing, and the browser keeps the pass on
+that device and says coding tasks are checked and saved after sign-in. The Easy-band challenges of #226 (`EASY_BAND` in
 `lib/coding/catalog.ts`) never join that quota, and neither do its Medium and
 Hard waves (`MEDIUM_HARD_BAND`), so adding them leaves every level's coding
 tasks as they were. Coding completion is permanent: the API ignores legacy review
@@ -260,6 +263,15 @@ security-critical failure cannot be averaged away), and evidence recorded in
 and **no XP in v1**, which is what keeps a task reused from the coding
 catalogue from being rewarded twice.
 
+An objective check grades against the key sealed in its attempt. A project
+check (`purpose: 'project'`, the DSA final) deals the same questions again on a
+retry, only reshuffled, so after a failed attempt it returns only which
+questions were wrong; the correct options and the explanations come back once
+it is passed. A diagnostic or exercise check returns them after every attempt.
+A domain-gated check needs its threshold overall and a minimum in every domain:
+the same threshold for a domain of five or more questions, half for a smaller
+one.
+
 Endpoints are new `resource=`/`op=` branches on existing handlers
 (`learning-path-catalog`, `-start`, `-submit` on `api/quiz/roadmap.ts`;
 `learning-preference`, `learning-path-enrollment`, `-progress`, `-draft` on
@@ -270,9 +282,13 @@ can launch or pause without the other, and a path opens only when its switch
 is on, its content validates and the migration is installed.
 
 Completion language is deliberately narrow. The server says "FDE guided path
-completed" only after the required verified evidence, and displays "Portfolio
-self-reviewed" as a separate line. There is no certification, no rank and no
-claim about employment.
+completed" only after every required module is complete, and the FDE modules
+require three written pieces the learner reviews against the rubric themselves
+(`self_reviewed`, never counted as verified). So the path, and the merchandise
+it earns, needs all three. The overview shows them on their own line, "Written
+pieces you review yourself", with a note that all of them are required to
+complete the path. There is no certification, no rank and no claim about
+employment.
 
 ## Practice, scheduling and what the product claims about it
 
@@ -741,11 +757,16 @@ production (issue #227, step D8).
 stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
 which since migration 044 erases every table that holds an account id in one
 routine, including the ones 035 and 039 to 042 added; 045 restates it with the
-voucher redemptions. A few rows stay without the person: a merchandise order
-already with Spreadshop and its package claim (the claim's account part becomes
-`deleted-account:<order id>`), a settled month's ranks, a referral the account
-made (`deleted-account`), and a voucher the account created as an admin, which
-keeps its counts (`created_by` becomes `deleted-account`). The handler calls
+voucher redemptions, and 051 with the merchandise the account held. An order
+Spreadshop never received gives its stock reservation back (a claimed package
+reserved none): one awaiting payment is deleted, and a paid one is cancelled,
+which takes it off the fulfilment queue, and kept without the person as the
+record of what was paid. A few rows stay without the person: those cancelled
+orders, a merchandise order already with Spreadshop and its package claim (the
+claim's account part becomes `deleted-account:<order id>`), a settled month's
+ranks, a referral the account made (`deleted-account`), and a voucher the
+account created as an admin, which keeps its counts (`created_by` becomes
+`deleted-account`). The handler calls
 no other routine. The four that 039 to 042 shipped
 (`delete_entitlement_data`, `delete_user_activity_days`, `delete_coin_data`,
 `delete_referral_data`) deleted nothing once 044 held their statements, and

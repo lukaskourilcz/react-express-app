@@ -76,7 +76,6 @@ import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { useInPlan } from '../lib/eligibility';
-import SignInButton from './SignInButton';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
@@ -1330,6 +1329,9 @@ function LessonRunner({
   const [codingIndex, setCodingIndex] = useState(0);
   const [codingPassed, setCodingPassed] = useState<string[]>([]);
   const [codingPending, setCodingPending] = useState<string[]>([]);
+  // Signed out, the server passes a level on its questions and says its
+  // coding tasks went unchecked; the finish screen says when they count.
+  const [codingUnverified, setCodingUnverified] = useState(false);
   // The attempt was closed without a verdict because a question in it was
   // retired while it was open. Nothing was recorded, so the finish screen
   // offers the level again rather than a score.
@@ -1388,6 +1390,7 @@ function LessonRunner({
       }
       setCorrectCount(result.correctAnswers);
       setCodingPending(result.codingPending ?? []);
+      setCodingUnverified(result.codingUnverified === true);
       // A level that fails its coding gate is recorded as not passed even with
       // a full question score; report the percentage the server computed but
       // keep the local pass record honest.
@@ -1675,19 +1678,16 @@ function LessonRunner({
             <div style={{ color: 'var(--color-text-secondary)', marginBottom: 8 }}>
               {t('roadmap.scoreLine', { correct: correctCount, total })}
             </div>
-            {codingTasks.length > 0 && (user || codingPending.length === 0) && (
+            {codingTasks.length > 0 && !codingUnverified && (
               <div style={{ fontSize: '0.9rem', color: codingPending.length === 0 ? 'var(--ss-success-strong, var(--ss-success))' : 'var(--ss-warning)', fontWeight: 600, marginBottom: 8 }}>
                 {codingPending.length === 0 ? t('coding.lesson.allPassed') : t('coding.lesson.pending', { n: codingPending.length })}
               </div>
             )}
-            {/* Signed out, a coding task's pass is never recorded, so the level
-                always reads its tasks as pending. Say why, and how to fix it. */}
-            {codingTasks.length > 0 && !user && codingPending.length > 0 && (
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
-                  {t('coding.lesson.signedOutPending')}
-                </div>
-                <SignInButton />
+            {/* Signed out, a coding task's pass is never stored, so the level
+                passed on its questions and is kept on this device only. */}
+            {codingTasks.length > 0 && codingUnverified && (
+              <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)', marginBottom: 8 }}>
+                {t('coding.lesson.guestUnverified')}
               </div>
             )}
             {!passed && pct < playable.passPct && (

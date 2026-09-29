@@ -58,13 +58,20 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/learningPaths')>();
   const progressFor = (pathId: string) => ({
     enrollment: null, modules: [], competencies: [], recommendedBridges: [], guidedComplete: false,
-    artifacts: { submitted: 0, total: 0 }, dueActivityIds: [], nextActivityId: `${pathId}-m01-l1-read`,
+    // FDE's modules require three written pieces; DSA has none.
+    artifacts: pathId === 'fde' ? { submitted: 1, total: 3 } : { submitted: 0, total: 0 },
+    dueActivityIds: [], nextActivityId: `${pathId}-m01-l1-read`,
   });
   return {
     ...actual,
     usePathCatalog: () => ({
       isLoading: false, isError: false, refetch: () => {},
-      data: { paths: (['fde', 'dsa-foundations'] as const).map((id) => ({ manifest: pathManifest(id), availability: state.availability, inventory })), versions: {} },
+      data: {
+        paths: (['fde', 'dsa-foundations'] as const).map((id) => ({
+          manifest: pathManifest(id), availability: state.availability, inventory: { ...inventory, artifacts: id === 'fde' ? 3 : 0 },
+        })),
+        versions: {},
+      },
     }),
     useEnrollments: () => ({ data: { enrollments: state.enrollments.map((one) => ({ baseTrackAtEnrollment: null, startedAt: '', updatedAt: '', ...one })) } }),
     usePathProgress: (_user: string | undefined, enrollmentId: string | undefined) => {
@@ -161,6 +168,24 @@ describe('the path page', () => {
     expect(screen.queryByRole('button', { name: 'Continue where you left off' })).toBeNull();
     expect(screen.queryByRole('link', { name: /dsa-foundations first lesson/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Pause' })).toBeInTheDocument();
+  });
+
+  it('says the written pieces the learner reviews are required to complete the path', async () => {
+    state.enrollments = [enrolled('fde')];
+    await overview('fde');
+    const progress = screen.getByRole('heading', { name: 'Where you are' }).closest('section') as HTMLElement;
+    expect(within(progress).getByText('Written pieces you review yourself')).toBeInTheDocument();
+    expect(within(progress).getByText('1 of 3 submitted')).toBeInTheDocument();
+    expect(within(progress).getByText(/^All 3 are required to complete the path\./)).toBeInTheDocument();
+    expect(within(progress).queryByText('Portfolio self-reviewed')).toBeNull();
+  });
+
+  it('shows no written-piece line on a path without any', async () => {
+    state.enrollments = [enrolled('dsa-foundations')];
+    await overview('dsa-foundations');
+    await screen.findByRole('heading', { name: 'Where you are' });
+    expect(screen.queryByText('Written pieces you review yourself')).toBeNull();
+    expect(screen.queryByText(/are required to complete the path/)).toBeNull();
   });
 
   it('once Premium lapses, Continue asks for Premium and the activities are no longer links', async () => {

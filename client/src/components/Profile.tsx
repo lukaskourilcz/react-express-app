@@ -695,6 +695,15 @@ export function AccountDeletionCard() {
   const plan = useEntitlement();
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  // Log out in the account menu ends this browser's session only; this ends
+  // every session of the account, this one included.
+  const signOutEverywhere = () => {
+    setSigningOut(true);
+    void signOut('global')
+      .catch(() => setMessage(t('auth.signOutFailed')))
+      .finally(() => setSigningOut(false));
+  };
   // Deleting the account ends a paid subscription at once and refunds nothing,
   // so the card and the dialog say so, with the way to a refund while it
   // still exists (review finding product-4).
@@ -736,6 +745,17 @@ export function AccountDeletionCard() {
       <div className="ss-panel" style={{ padding: 24, width: '100%', background: 'var(--color-background-muted)' }}>
           <VStack gap={1.5}>
             <SectionLabel>{t('profile.account')}</SectionLabel>
+            <Text weight="semibold">{t('profile.signOutEverywhere')}</Text>
+            <Text type="supporting" size="xsm" color="secondary">{t('profile.signOutEverywhereDescription')}</Text>
+            <HStack justify="end">
+              <Button
+                variant="secondary"
+                size="sm"
+                label={t('profile.signOutEverywhere')}
+                isDisabled={!isAuthenticated || signingOut}
+                onClick={signOutEverywhere}
+              />
+            </HStack>
             <Text weight="semibold">{t('profile.deleteTitle')}</Text>
             <Text type="supporting" size="xsm" color="secondary">{t('profile.deleteDescription')}</Text>
             {paying && (
