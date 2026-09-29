@@ -163,6 +163,12 @@ export const RATE_LIMITS = {
   // address, so two people behind one router each keep their five.
   voucherRedeem: { key: 'voucher_redeem', capacity: 5, refillPerSecond: 5 / 3600 },
   voucherRedeemAddress: { key: 'voucher_redeem_address', capacity: 10, refillPerSecond: 10 / 3600 },
+  // The GitHub garden's address backstops. githubConnect and githubSync above
+  // are keyed by the verified account (`user:<id>`), so each learner keeps
+  // the budget one whole address used to share (a connect is a start and a
+  // finish, so five an hour); these hold a class connecting behind one NAT.
+  githubConnectAddress: { key: 'github_connect_address', capacity: SHARED_NETWORK_SEATS * 10, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 3600 },
+  githubSyncAddress: { key: 'github_sync_address', capacity: SHARED_NETWORK_SEATS * 6, refillPerSecond: (SHARED_NETWORK_SEATS * 6) / 3600 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
