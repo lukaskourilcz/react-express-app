@@ -1,3 +1,5 @@
+// First: clears the environment the handlers below read when imported.
+import './launch-test-env';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -633,7 +635,7 @@ async function tierContracts() {
 
   // The handlers themselves, where they can run without a database: a signed-in
   // account with no grant is free, and a guest holds the free tier.
-  if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+  {
     const signedIn = (query: Record<string, string>) => ({
       method: 'GET', headers: { authorization: 'Bearer contract' }, query: { ...query, user_id: 'contract-free-account' },
     });
@@ -1205,7 +1207,7 @@ async function referralContracts() {
   // 5. The handler, against a stand-in database: the GET sends counts and no
   // account id, the POST takes the creation time from the token and never from
   // the body, and it asks for no amount.
-  if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+  {
     const calls: { fn: string; args: Record<string, unknown> }[] = [];
     const fake = {
       rpc: async (fn: string, args: Record<string, unknown>) => {
@@ -1518,8 +1520,6 @@ async function voucherContracts() {
   assert.match(ENGLISH['legal.privacy.voucher.body'], /does not store the code you type/);
   assert.match(ENGLISH['legal.privacy.deletion.body'], /your voucher redemptions/);
   assert.match(read('client/src/components/LegalPages.tsx'), /id: 'vouchers', title: 'legal\.privacy\.voucher\.title'/);
-
-  if (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) return;
 
   // 4. The redemption against a stand-in database. Log lines are captured to
   // prove that no code, hash or hint is ever written to them.
