@@ -877,6 +877,7 @@ export const en = {
   'challenge.submitPrompt': 'Save your score:',
   'challenge.nameLabel': 'Your name',
   'challenge.nameRequired': 'Please enter a name',
+  'challenge.nextQuestionFailed': 'Could not load the next question. Your run and score are kept.',
   'challenge.submitScore': 'Submit score',
   'challenge.scoreSubmitted': 'Score recorded.',
   'challenge.playAgain': 'Play again',
