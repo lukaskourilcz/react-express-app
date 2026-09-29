@@ -610,7 +610,6 @@ async function syncOnce(): Promise<void> {
   }
   // Signed-in progress is server-authoritative. Legacy server rows are retained
   // by migration; unverified browser-only values cannot unlock account XP.
-  const mergedProgress = serverProgress;
   writeProgress(serverProgress);
 
   // Unlocks are the server's too. A guest's skill-check unlocks, or ones this
@@ -651,10 +650,7 @@ async function syncOnce(): Promise<void> {
 
     onAccountExtrasReceived({ wallets, inventories });
   }
-
-  try {
-    await pushProgressToServer(mergedProgress, accountUnlocks);
-  } catch {
-    // best-effort; local is already updated
-  }
+  // No PUT follows: the server keeps progress, unlocks and extras itself and
+  // answers a progress PUT with the same read as this GET, so sending one
+  // after every sign-in only spent the address's roadmap write budget.
 }
