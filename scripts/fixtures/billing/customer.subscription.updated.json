@@ -82,6 +82,7 @@
       "latest_invoice": "in_1FixturePremium0001",
       "livemode": false,
       "metadata": {
+        "product": "devshark",
         "supabase_user_id": "00000000-0000-4000-8000-00000000f1a1",
         "plan": "monthly"
       },

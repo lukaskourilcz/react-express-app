@@ -118,8 +118,9 @@ type Row = {
   valid_until: string | null; note: string | null; updated_at: number; past_due_since: string | null;
 };
 
-/** An in-memory model of the migration 039 routines the billing code calls.
- * The rules mirror the SQL; the Postgres run proves the SQL itself. */
+/** An in-memory model of the migration 039 routines the billing code calls,
+ * as migration 053 restates them. The rules mirror the SQL; the Postgres run
+ * and supabase/tests/16x prove the SQL itself. */
 export function memoryBackend(): Backend {
   const users = new Map<string, string>();
   const grants: Row[] = [];
@@ -136,6 +137,8 @@ export function memoryBackend(): Backend {
     return g.status === 'active' || g.status === 'trialing'
       || (g.status === 'past_due' && !!g.past_due_since && Date.parse(g.past_due_since) + 7 * 86_400_000 > now);
   };
+  // Migration 053: a subscription that can still charge, Premium or not.
+  const charging = (g: Row) => g.source === 'provider' && ['active', 'trialing', 'past_due', 'unpaid', 'paused'].includes(g.status);
   const requestView = (row: { email: string; action: string; requested_at: number; expires_at: number }) => ({
     email: row.email, action: row.action, requestedAt: new Date(row.requested_at).toISOString(), expiresAt: new Date(row.expires_at).toISOString(),
   });
@@ -153,7 +156,7 @@ export function memoryBackend(): Backend {
       })[0];
       const billing = {
         billingAccount: customers.has(a.p_user),
-        subscriptionLive: grants.some((g) => g.user_id === a.p_user && g.source === 'provider' && live(g)),
+        subscriptionLive: grants.some((g) => g.user_id === a.p_user && charging(g)),
       };
       return ok(best
         ? { premium: true, source: best.source, status: best.status, currentPeriodEnd: best.current_period_end, cancelAtPeriodEnd: best.cancel_at_period_end, validUntil: best.valid_until, inGrace: best.source === 'provider' && best.status === 'past_due', ...billing }
@@ -179,6 +182,8 @@ export function memoryBackend(): Backend {
       row.attempted_at = null; row.error = a.p_error ?? null; return ok(true);
     },
     link_billing_customer: (a) => {
+      // Migration 053: never for an account Auth does not have.
+      if (!users.has(a.p_user_id)) return fail('unknown_account');
       for (const [user, customer] of customers) {
         if (customer === a.p_provider_customer_id && user !== a.p_user_id) return fail('billing_customer_conflict');
       }
@@ -187,9 +192,11 @@ export function memoryBackend(): Backend {
     billing_customer_owner: (a) => ok([...customers].find(([, c]) => c === a.p_provider_customer_id)?.[0] ?? null),
     billing_account: (a) => ok({
       customerId: customers.get(a.p_user_id) ?? null,
-      providerLive: grants.some((g) => g.user_id === a.p_user_id && g.source === 'provider' && live(g)),
+      providerLive: grants.some((g) => g.user_id === a.p_user_id && charging(g)),
+      liveSubscriptionIds: grants.filter((g) => g.user_id === a.p_user_id && charging(g)).map((g) => g.provider_subscription_id),
     }),
     upsert_provider_entitlement: (a) => {
+      if (!users.has(a.p_user_id)) return fail('unknown_account');
       const existing = grants.find((g) => g.provider_subscription_id === a.p_subscription_id);
       if (existing && existing.user_id !== a.p_user_id) return fail('subscription_owner_conflict');
       const since = a.p_status === 'past_due' ? (a.p_past_due_since ?? new Date().toISOString()) : null;
@@ -357,6 +364,10 @@ export class FakeStripe {
   createdSessions: any[] = [];
   portalSessions: any[] = [];
   customerCreates: Array<{ params: any; key?: string }> = [];
+  cancels: Array<{ id: string; params: any }> = [];
+  /** Runs inside `checkout.sessions.expire` before the status is checked, to
+   * stand for a buyer paying in another tab at that moment. */
+  onExpire: ((session: any) => void) | null = null;
   calls = 0;
   failNext = new Map<string, unknown>();
   private seq = 0;
@@ -436,9 +447,33 @@ export class FakeStripe {
             if (!this.customers.has(params.customer)) throw stripeError(400, 'resource_missing', `No such customer: '${params.customer}'`);
             this.createdSessions.push(params);
             const id = `cs_test_created${++this.seq}Session`;
-            return { id, object: 'checkout.session', url: `https://checkout.stripe.com/c/pay/${id}` };
+            const session = {
+              id, object: 'checkout.session', url: `https://checkout.stripe.com/c/pay/${id}`, status: 'open', payment_status: 'unpaid',
+              mode: params.mode, customer: params.customer, client_reference_id: params.client_reference_id, metadata: params.metadata ?? {}, subscription: null,
+            };
+            this.sessions.set(id, session);
+            return structuredClone(session);
           },
           retrieve: async (id: string) => { this.call('checkout.sessions.retrieve'); return this.get(this.sessions, id, 'checkout.session'); },
+          list: async (params: { customer?: string; status?: string }) => {
+            this.call('checkout.sessions.list');
+            if (params.customer && !this.customers.has(params.customer)) throw stripeError(400, 'resource_missing', `No such customer: '${params.customer}'`);
+            const data = [...this.sessions.values()].filter((s) =>
+              (!params.customer || s.customer === params.customer) && (!params.status || s.status === params.status));
+            return { object: 'list', data: structuredClone(data), has_more: false };
+          },
+          expire: async (id: string) => {
+            this.call('checkout.sessions.expire');
+            const session = this.sessions.get(id);
+            if (!session) throw stripeError(404, 'resource_missing');
+            this.onExpire?.(session);
+            if (session.status !== 'open') {
+              // Stripe's answer for a session that is no longer open.
+              throw Object.assign(new Error('Only Checkout Sessions with a status in ["open"] can be expired.'), { statusCode: 400, type: 'StripeInvalidRequestError' });
+            }
+            session.status = 'expired';
+            return structuredClone(session);
+          },
         },
       },
       billingPortal: {
@@ -460,8 +495,9 @@ export class FakeStripe {
           if (params.cancel_at_period_end !== undefined) sub.cancel_at_period_end = params.cancel_at_period_end;
           return structuredClone(sub);
         },
-        cancel: async (id: string) => {
+        cancel: async (id: string, params?: any) => {
           this.call('subscriptions.cancel');
+          this.cancels.push({ id, params });
           const sub = this.subs.get(id);
           if (!sub) throw stripeError(404, 'resource_missing');
           sub.status = 'canceled'; sub.canceled_at = nowSeconds(); sub.ended_at = nowSeconds();
@@ -604,6 +640,24 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     return { userId, email, token, ids };
   };
   const providerGrant = async (userId: string) => (await db.grants(userId)).find((g) => g.source === 'provider');
+  /** The structured log lines written while `run` runs. */
+  const logged = async (run: () => Promise<unknown>) => {
+    const lines: Array<Record<string, unknown>> = [];
+    const real = console.log;
+    console.log = (...args: unknown[]) => {
+      for (const arg of args) {
+        if (typeof arg !== 'string' || !arg.startsWith('{')) continue;
+        try { lines.push(JSON.parse(arg)); } catch { /* not a log line */ }
+      }
+      real(...args);
+    };
+    try {
+      await run();
+    } finally {
+      console.log = real;
+    }
+    return lines;
+  };
 
   /* Signatures ------------------------------------------------------------ */
 
@@ -856,6 +910,45 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(stripe.refunds.filter((r) => r.params.charge === a.ids.ch).length, 1, 'a redelivery refunds nothing more');
   });
 
+  await check('a refund, a dispute or a fraud warning on another product’s subscription changes nothing at Stripe', async () => {
+    // The three events belong to the whole Stripe account (finding BILL-1).
+    // Another product: no devShark marker, another Price, a customer devShark
+    // never linked.
+    for (const kind of ['charge.refunded', 'charge.dispute.created', 'radar.early_fraud_warning.created'] as const) {
+      const tag = `Foreign${kind.replace(/\W/g, '')}`;
+      const ids = idsFor(tag, newUserId());
+      stripe.seed(ids, `${tag.toLowerCase()}@example.com`, { metadataUser: null, price: 'price_1OtherProductMonthly' });
+      stripe.customers.get(ids.cus).metadata = {};
+      if (kind === 'charge.refunded') {
+        stripe.charges.get(ids.ch).refunded = true;
+        stripe.charges.get(ids.ch).amount_refunded = 399;
+      }
+      const cancels = stripe.cancels.length;
+      const res = await deliver(eventText(kind, ids, tag.toLowerCase()));
+      assert.equal(res.statusCode, 200, kind);
+      assert.deepEqual([res.body.outcome, res.body.reason], ['recorded', 'not_devshark_price'], kind);
+      assert.equal(stripe.subs.get(ids.sub).status, 'active', `${kind}: the other product’s subscription keeps running`);
+      assert.equal(stripe.cancels.length, cancels, `${kind}: nothing is cancelled`);
+      assert.equal(stripe.refunds.some((r) => r.params.charge === ids.ch), false, `${kind}: nothing is refunded`);
+    }
+    // Another product's marker wins, even over an account id devShark knows.
+    const marked = await account('Foreign2', { price: 'price_1OtherProductMonthly' });
+    stripe.subs.get(marked.ids.sub).metadata = { product: 'otherproduct', supabase_user_id: marked.userId };
+    const disputed = await deliver(eventText('charge.dispute.created', marked.ids, 'foreign2'));
+    assert.equal(disputed.body.reason, 'not_devshark_price');
+    assert.equal(stripe.subs.get(marked.ids.sub).status, 'active');
+    assert.deepEqual(await db.grants(marked.userId), []);
+    // A devShark Price that maps to no account here: nothing is refunded or
+    // cancelled either.
+    const unowned = idsFor('Foreign3', newUserId());
+    stripe.seed(unowned, 'foreign3@example.com', { metadataUser: null });
+    stripe.customers.get(unowned.cus).metadata = {};
+    const warned = await deliver(eventText('radar.early_fraud_warning.created', unowned, 'foreign3'));
+    assert.deepEqual([warned.statusCode, warned.body.reason], [200, 'unknown_user']);
+    assert.equal(stripe.subs.get(unowned.sub).status, 'active');
+    assert.equal(stripe.refunds.some((r) => r.params.charge === unowned.ch), false, 'no refund before the account is known');
+  });
+
   await check('a manual grant survives every provider event', async () => {
     const a = await account('Manual1');
     await supabase.rpc('grant_manual_entitlement', { p_user_id: a.userId, p_valid_until: null, p_note: 'contract test' });
@@ -905,6 +998,8 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(params.client_reference_id, userId);
     assert.deepEqual(params.line_items, [{ price: PRICES.monthly, quantity: 1 }]);
     assert.equal(params.subscription_data.metadata.supabase_user_id, userId);
+    assert.equal(params.subscription_data.metadata.product, 'devshark', 'the subscription carries devShark’s own marker (finding BILL-1)');
+    assert.equal(params.metadata.product, 'devshark', 'and so does the session');
     assert.equal(params.success_url, 'https://devshark.app/premium/success?session_id={CHECKOUT_SESSION_ID}');
     assert.equal(params.cancel_url, 'https://devshark.app/premium');
     assert.deepEqual(params.consent_collection, { terms_of_service: 'required' });
@@ -1031,6 +1126,88 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(res.statusCode, 200);
     const relinked = (await supabase.rpc('billing_account', { p_user_id: gone.userId })).data as { customerId: string };
     assert.notEqual(relinked.customerId, 'cus_goneCheckout2');
+  });
+
+  await check('a subscription that can still charge sends the account to the portal, not to a second checkout', async () => {
+    // Past the 7-day grace, unpaid or paused: no Premium, but Stripe can still
+    // charge it (finding BILL-2).
+    const states: Array<[string, Parameters<FakeStripe['setSub']>[1]]> = [
+      ['Second1', { status: 'past_due', periodStart: nowSeconds() - 8 * DAY, periodEnd: nowSeconds() + 22 * DAY }],
+      ['Second2', { status: 'unpaid' }],
+      ['Second3', { status: 'paused' }],
+    ];
+    for (const [tag, shape] of states) {
+      const a = await account(tag);
+      await deliver(eventText('customer.subscription.created', a.ids, `${tag}a`));
+      stripe.setSub(a.ids, shape);
+      await deliver(eventText('customer.subscription.updated', a.ids, `${tag}b`));
+      assert.equal(await premium(a.userId), false, `${tag}: no Premium`);
+      const plan = await summary(a.userId);
+      assert.deepEqual([plan.tier, plan.subscriptionLive], ['free', true], `${tag}: the browser offers Manage billing`);
+      const sessions = stripe.createdSessions.length;
+      const res = await checkout(a.token, { plan: 'monthly' });
+      assert.equal(res.statusCode, 409, `${tag}: a second checkout is refused`);
+      assert.equal(res.body.error.code, 'already_premium');
+      assert.equal(stripe.createdSessions.length, sessions, `${tag}: no second Checkout Session`);
+    }
+
+    // Stripe knows before the webhook arrives.
+    const early = await account('Second4');
+    await supabase.rpc('link_billing_customer', { p_user_id: early.userId, p_provider_customer_id: early.ids.cus });
+    const sessions = stripe.createdSessions.length;
+    const refused = await checkout(early.token, { plan: 'annual' });
+    assert.equal(refused.statusCode, 409, 'a subscription Stripe already has blocks checkout');
+    assert.equal(stripe.createdSessions.length, sessions);
+  });
+
+  await check('only the newest Checkout Session can be paid, and one paid a moment ago blocks another', async () => {
+    const userId = newUserId();
+    await db.addUser(userId, 'twotabs@example.com');
+    TOKENS.set('token-TwoTabs', { id: userId, email: 'twotabs@example.com' });
+    const first = await checkout('token-TwoTabs', { plan: 'monthly' });
+    assert.equal(first.statusCode, 200);
+    const firstId = String(first.body.url).split('/').at(-1)!;
+    assert.equal(stripe.sessions.get(firstId).status, 'open');
+    const second = await checkout('token-TwoTabs', { plan: 'annual' });
+    assert.equal(second.statusCode, 200);
+    const secondId = String(second.body.url).split('/').at(-1)!;
+    assert.equal(stripe.sessions.get(firstId).status, 'expired', 'the first tab’s Checkout can no longer be paid');
+    assert.equal(stripe.sessions.get(secondId).status, 'open');
+    const customer = stripe.sessions.get(secondId).customer;
+    assert.equal([...stripe.sessions.values()].filter((s) => s.customer === customer && s.status === 'open').length, 1);
+
+    // The buyer pays the open session in one tab while the other starts again.
+    stripe.onExpire = (session) => { session.status = 'complete'; };
+    const sessions = stripe.createdSessions.length;
+    const third = await checkout('token-TwoTabs', { plan: 'monthly' });
+    stripe.onExpire = null;
+    assert.equal(third.statusCode, 409, 'a session paid just now blocks another');
+    assert.equal(third.body.error.code, 'already_premium');
+    assert.equal(stripe.createdSessions.length, sessions);
+  });
+
+  await check('a second subscription on one account is logged for the owner and nothing is refunded', async () => {
+    const two = await account('Second5');
+    await deliver(eventText('customer.subscription.created', two.ids, 'second5a'));
+    const again = { ...idsFor('Second5b', two.userId), cus: two.ids.cus };
+    stripe.seed(again, two.email);
+    const lines = await logged(() => deliver(eventText('customer.subscription.created', again, 'second5b')));
+    const warning = lines.find((line) => line.kind === 'second_subscription');
+    assert.ok(warning, 'the webhook warns about the second subscription');
+    assert.equal(warning.level, 'warn');
+    assert.equal(warning.subscription, again.sub);
+    assert.deepEqual(warning.others, [two.ids.sub]);
+    assert.match(String(warning.action), /Nothing was refunded/);
+    assert.equal(stripe.subs.get(two.ids.sub).status, 'active');
+    assert.equal(stripe.subs.get(again.sub).status, 'active');
+    assert.equal(stripe.refunds.some((r) => r.params.payment_intent === again.pi || r.params.charge === again.ch), false);
+    // The completed Checkout says the same.
+    const completed = await logged(() => deliver(eventText('checkout.session.completed', again, 'second5c')));
+    assert.ok(completed.some((line) => line.kind === 'second_subscription' && line.subscription === again.sub));
+    // One subscription alone is no warning.
+    const one = await account('Second6');
+    const quiet = await logged(() => deliver(eventText('checkout.session.completed', one.ids, 'second6')));
+    assert.equal(quiet.some((line) => line.kind === 'second_subscription'), false);
   });
 
   /* The success page's session lookup -------------------------------------- */
@@ -1342,6 +1519,83 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     await deliver(eventText('checkout.session.completed', e.ids, 'delete2'));
     stripe.failNext.set('subscriptions.list', stripeError(500, 'api_error'));
     assert.equal(await lib.endBillingForDeletedAccount(supabase, e.userId), false, 'an outage stops the deletion');
+  });
+
+  await check('deleting an account expires its open Checkout, so nothing can be paid for it later', async () => {
+    const userId = newUserId();
+    await db.addUser(userId, 'delete3@example.com');
+    TOKENS.set('token-Delete3', { id: userId, email: 'delete3@example.com' });
+    const opened = await checkout('token-Delete3', { plan: 'monthly' });
+    assert.equal(opened.statusCode, 200);
+    const sessionId = String(opened.body.url).split('/').at(-1)!;
+    assert.equal(await lib.endBillingForDeletedAccount(supabase, userId), true);
+    assert.equal(stripe.sessions.get(sessionId).status, 'expired', 'the Checkout opened before the deletion is closed (finding BILL-3)');
+    // An outage while listing the sessions stops the deletion.
+    const other = newUserId();
+    await db.addUser(other, 'delete4@example.com');
+    TOKENS.set('token-Delete4', { id: other, email: 'delete4@example.com' });
+    assert.equal((await checkout('token-Delete4', { plan: 'annual' })).statusCode, 200);
+    stripe.failNext.set('checkout.sessions.list', stripeError(500, 'api_error'));
+    assert.equal(await lib.endBillingForDeletedAccount(supabase, other), false);
+  });
+
+  await check('a Checkout paid after the account was deleted ends its subscription and records nothing for the id', async () => {
+    // The account opened Checkout, was deleted, and the buyer paid anyway: it
+    // is no longer in Auth (finding BILL-3).
+    const gone = idsFor('Gone1', newUserId());
+    stripe.seed(gone, 'gone1@example.com');
+    const res = await deliver(eventText('checkout.session.completed', gone, 'gone1'));
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual([res.body.outcome, res.body.reason], ['recorded', 'unknown_user']);
+    assert.equal(stripe.subs.get(gone.sub).status, 'canceled', 'the subscription is ended');
+    assert.deepEqual(stripe.cancels.filter((c) => c.id === gone.sub).map((c) => c.params), [{ invoice_now: false, prorate: false }],
+      'at once, without a final invoice or a proration');
+    assert.equal((await supabase.rpc('billing_customer_owner', { p_provider_customer_id: gone.cus })).data, null, 'no customer link for the erased id');
+    assert.equal(await db.consent(gone.cs), null, 'no consent row for the erased id');
+    assert.deepEqual(await db.grants(gone.user), []);
+    for (const type of ['customer.subscription.created', 'invoice.paid'] as const) {
+      const later = await deliver(eventText(type, gone, `gone1${type.replace(/\W/g, '')}`));
+      assert.deepEqual([later.statusCode, later.body.reason], [200, 'unknown_user'], type);
+    }
+    assert.equal(stripe.cancels.filter((c) => c.id === gone.sub).length, 1, 'cancelled once');
+
+    // An account id alone, without devShark's marker, may be another
+    // product's: it is recorded and left running.
+    const legacy = idsFor('Gone2', newUserId());
+    stripe.seed(legacy, 'gone2@example.com', { metadataUser: legacy.user });
+    const unmarked = await deliver(eventText('customer.subscription.created', legacy, 'gone2'));
+    assert.equal(unmarked.body.reason, 'unknown_user');
+    assert.equal(stripe.subs.get(legacy.sub).status, 'active');
+
+    // An Auth outage or a rejected key is not a deleted account.
+    const kept = await account('Gone3');
+    const authDown = {
+      ...supabase,
+      auth: { admin: { getUserById: async () => ({ data: { user: null }, error: { message: 'Invalid API key', status: 401 } }) } },
+    } as unknown as SupabaseClient;
+    const raw = eventText('customer.subscription.created', kept.ids, 'gone3');
+    const down = mockRes();
+    await lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, down as never, authDown);
+    assert.equal(down.statusCode, 200);
+    assert.equal(stripe.subs.get(kept.ids.sub).status, 'active', 'a subscription is never ended on an Auth error');
+  });
+
+  await check('a write that races the account deletion is recorded, not retried for three days', async () => {
+    // Migration 053 refuses a billing write for an account Auth no longer
+    // has; the webhook records that like any unknown account (finding PROF-4).
+    const a = await account('Race1');
+    const racing = {
+      ...supabase,
+      rpc: async (name: string, args: Record<string, unknown>) => ['link_billing_customer', 'upsert_provider_entitlement'].includes(name)
+        ? { data: null, error: { code: 'P0001', message: 'unknown_account' } }
+        : supabase.rpc(name, args),
+    } as unknown as SupabaseClient;
+    const raw = eventText('customer.subscription.deleted', a.ids, 'race1');
+    const res = mockRes();
+    await lib.handleBillingWebhook(webhookReq(raw, sign(raw)) as never, res as never, racing);
+    assert.equal(res.statusCode, 200);
+    assert.deepEqual([res.body.outcome, res.body.reason], ['recorded', 'unknown_user']);
+    assert.match((await db.event('evt_1FixtureSubscriptionDeleted_race1'))?.error ?? '', /^unknown_user/);
   });
 
   await check('before migration 039 billing names the migration, and account deletion goes ahead', async () => {

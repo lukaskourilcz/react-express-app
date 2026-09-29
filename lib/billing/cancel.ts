@@ -18,13 +18,15 @@
 
 import type Stripe from 'stripe';
 import { isRpcMissing, logEvent, withTimeout } from '../http';
-import { premiumPriceIds, type BillingConfig } from './config';
+import type { BillingConfig } from './config';
 import {
   BillingMigrationError,
   BillingPermanentError,
   customerOwner,
   endsInsteadOfRenewing,
+  expireOpenCheckouts,
   idOf,
+  isDevsharkSubscription,
   LIVE_SUBSCRIPTION_STATUSES,
   periodEnd,
   revokeSubscription,
@@ -56,11 +58,7 @@ const log = (event: Record<string, unknown>) => logEvent('user/billing-cancel', 
  * Prices. Anything else on a shared Stripe account is left alone. Broader than
  * `billsPremium` on purpose: a subscription our checkout made can always be
  * cancelled here, whatever it bills now. */
-function isOurs(sub: Stripe.Subscription, config: BillingConfig): boolean {
-  if (typeof sub.metadata?.supabase_user_id === 'string' && sub.metadata.supabase_user_id) return true;
-  const ours = premiumPriceIds(config);
-  return (sub.items?.data ?? []).some((item) => ours.has(idOf(item.price) ?? ''));
-}
+const isOurs = (sub: Stripe.Subscription, config: BillingConfig): boolean => isDevsharkSubscription(sub, config);
 
 /** Mirror the change now so the Profile shows it at once. The webhook that
  * follows does the same; a failure here is logged and left to it. */
@@ -206,8 +204,16 @@ export async function cancelByEmail(
 }
 
 /** Cancel every live devShark subscription of an account that is being
- * deleted, at once, so a deleted account is never charged again. */
-export async function cancelForDeletedAccount(deps: BillingDeps, config: BillingConfig, customerId: string): Promise<number> {
+ * deleted, at once, so a deleted account is never charged again. Its open
+ * Checkout Sessions are expired first, so none can start a subscription after
+ * the account is gone (finding BILL-3). One paid in that very moment is ended
+ * by the webhook, which finds no account for it. */
+export async function cancelForDeletedAccount(
+  deps: BillingDeps,
+  config: BillingConfig,
+  customerId: string,
+): Promise<{ ended: number; expired: number }> {
+  const { expired } = await expireOpenCheckouts(deps, customerId);
   const subs = await deps.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 });
   let ended = 0;
   for (const sub of subs.data) {
@@ -215,7 +221,7 @@ export async function cancelForDeletedAccount(deps: BillingDeps, config: Billing
     await deps.stripe.subscriptions.cancel(sub.id, { invoice_now: false, prorate: false });
     ended += 1;
   }
-  return ended;
+  return { ended, expired };
 }
 
 /* ── The emails (Resend) ────────────────────────────────────────────────── */
