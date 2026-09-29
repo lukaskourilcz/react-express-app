@@ -153,6 +153,29 @@ async function taskCleared(supabase: SupabaseClient | null, userId: string, task
 const readLang = (value: unknown): 'en' | 'cs' => (value === 'cs' ? 'cs' : 'en');
 const codeHash = (code: string) => createHash('sha256').update(code, 'utf8').digest('base64url').slice(0, 32);
 
+/**
+ * The verdict log's key for one graded submission.
+ *
+ * `record_coding_verdict` applies an attempt id once and reports every later
+ * call with it as a replay. A workbench keeps one session for its whole life,
+ * so the session's id alone recorded only the first Submit: fail, fix, pass
+ * and the pass was never written — no completion, no XP, no Learn level. The
+ * key is therefore the session plus what was graded, the code and the verdict
+ * it earned: a retried request for the same submission stays a replay, and a
+ * changed one is recorded. XP stays once per task and account either way; its
+ * award id names the task, not the attempt.
+ *
+ * A system-design session keeps one graded verdict. Its first verdict returns
+ * the key it was sealed with, so a second submission from the same session
+ * would be answered from that key; it is reported and never applied. A new
+ * attempt takes a new session, with the options shuffled again.
+ */
+function submissionAttemptId(session: CodingSession, verdict: CodingOutcome, code: string | null): string {
+  if (code === null) return session.attemptId;
+  const graded = createHash('sha256').update(`${verdict}\n${code}`, 'utf8').digest('base64url').slice(0, 32);
+  return `${session.attemptId}:${graded}`;
+}
+
 /* ── GET ?resource=coding-task&id=… ──────────────────────────────────── */
 
 export async function handleCodingTask(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
@@ -451,7 +474,7 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   const saved = await withTimeout(
     supabase.rpc('record_coding_verdict', {
       p_user_id: userId,
-      p_attempt_id: session.attemptId,
+      p_attempt_id: submissionAttemptId(session, input.verdict, input.code),
       p_task_id: task.id,
       p_track: task.track,
       p_outcome: input.verdict,
