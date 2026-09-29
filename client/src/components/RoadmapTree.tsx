@@ -15,6 +15,7 @@ import {
   useRoadmapProgress,
   useExtraUnlocks,
   isTopicUnlocked,
+  passedLevelCount,
   partRanges,
   pathStatus,
   PARTS_PER_TOPIC,
@@ -26,6 +27,7 @@ import { categoryLabelKey, getCategoryHexColor, onCategoryColorText } from '../l
 import { useSubject } from '../lib/subjects';
 import { useT } from '../i18n/LanguageContext';
 import { useIsMobile } from '../lib/useMediaQuery';
+import { useInPlan } from '../lib/eligibility';
 import type { TranslationKey } from '../i18n/translations';
 import './Roadmap.css';
 
@@ -37,6 +39,10 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
   const extraSet = useMemo(() => new Set(extraUnlocks), [extraUnlocks]);
+  // Signed in, the server serves nothing new outside the learner's plan; a
+  // topic with passed levels stays reachable for review.
+  const inPlan = useInPlan();
+  const reachable = (family: RoadmapTopic) => inPlan(family) || passedLevelCount(progress, family) > 0;
 
   const def = tracksForActiveSubject()[track];
   const levelCountOf = (family: RoadmapTopic): number =>
@@ -48,7 +54,7 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
     .map((stage, index) => ({
       stage,
       index,
-      topics: stage.topics.filter((family) => isTopicUnlocked(progress, family, extraSet)),
+      topics: stage.topics.filter((family) => isTopicUnlocked(progress, family, extraSet) && reachable(family)),
     }))
     .filter((entry) => entry.topics.length > 0);
   const lastVisibleIndex = visibleStages.length > 0 ? visibleStages[visibleStages.length - 1].index : -1;
@@ -102,6 +108,7 @@ export default function RoadmapTree({ structure, track }: { structure: RoadmapSt
                 levelCount={levelCountOf(family)}
                 progress={progress}
                 extraSet={extraSet}
+                inPlan={inPlan(family)}
                 t={t}
               />
             ))}
@@ -139,12 +146,14 @@ function StageConnector() {
 
 /** One topic node: colour-matched header, a detail line, and its 3 part pills. */
 function TopicCard({
-  family, levelCount, progress, extraSet, t,
+  family, levelCount, progress, extraSet, inPlan, t,
 }: {
   family: RoadmapTopic;
   levelCount: number;
   progress: RoadmapProgress;
   extraSet: Set<RoadmapTopic>;
+  /** Outside the plan, only parts with passed levels open, for review. */
+  inPlan: boolean;
   t: TFn;
 }) {
   const isMobile = useIsMobile();
@@ -193,7 +202,8 @@ function TopicCard({
 
       <div style={{ display: 'flex', gap: 4, marginTop: 'auto', paddingTop: 2 }}>
         {(ranges.length > 0 ? ranges.map((r) => r.part) : Array.from({ length: PARTS_PER_TOPIC }, (_, i) => i + 1)).map((part) => {
-          const status: PathStatus = ranges.length > 0 ? pathStatus(progress, family, ranges, part, extraSet) : 'locked';
+          const opened: PathStatus = ranges.length > 0 ? pathStatus(progress, family, ranges, part, extraSet) : 'locked';
+          const status: PathStatus = !inPlan && opened === 'available' ? 'locked' : opened;
           return <PartPill key={part} family={family} part={part} status={status} color={color} t={t} />;
         })}
       </div>

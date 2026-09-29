@@ -108,6 +108,7 @@ import {
 import { arrangePractice, arrangementProblems } from '../shared/interleave';
 import { questions } from '../lib/quiz-data';
 import { LESSON_FIGURES, figuresFor, visibleFigures, validateFigures } from '../shared/lesson-figures';
+import { LEVEL_INTROS } from '../client/src/lib/levelIntros';
 import { FAILURE_CATEGORIES, classifyFailure, failureHint } from '../shared/coding-failure';
 import { RETIRED_TOPIC_IDS, retirementOf } from '../shared/retired-content';
 import { GLOSSARY, termsIn } from '../shared/glossary';
@@ -446,6 +447,33 @@ async function auditGateContracts() {
   assert.equal(round.lastRoundSize, 1, 'the void item does not count in the round');
   assert.equal(round.lastRoundCorrect, 1);
   assert.equal(round.asked, 1, 'the run continues from what was actually graded');
+  // A round is graded once. Submitted again with other answers it would report
+  // a different score, and a few dozen replays would find every key and mint a
+  // perfect, verified placement receipt.
+  const replayRes = mockResponse();
+  await roadmapHandler({ method: 'POST', headers: {}, query: { resource: 'placement' }, body: { placementToken, answers: { [pool[0].id]: 1, 'retired-while-open': 1 } } } as never, replayRes as never);
+  assert.equal(replayRes.statusCode, 409, 'a placement round cannot be submitted twice');
+  assert.equal((replayRes.body as { error: { code: string } }).error.code, 'placement_round_used');
+  assert.equal(JSON.stringify(replayRes.body).includes('lastRoundCorrect'), false, 'the refusal reports no score');
+
+  // A Learn session lives as long as the attempt the answer routine opens for
+  // it (two hours), so a level whose coding tasks run past an hour can still
+  // be completed. Other sessions keep their hour.
+  const realNow = Date.now;
+  try {
+    const opened = realNow();
+    const learnSession = encodeSession([{ questionId: sample.id, correctAnswer: 0 }], {
+      scope: 'roadmap', subject: 'webdev', topic: 'javascript', roadmapKind: 'level', ref: 1, userId: null,
+    });
+    const quizSession = encodeSession([{ questionId: sample.id, correctAnswer: 0 }], { subject: 'webdev' });
+    Date.now = () => opened + 61 * 60_000;
+    assert.ok(decodeSession(learnSession), 'a Learn session is still open after an hour');
+    assert.equal(decodeSession(quizSession), null, 'a quiz session still ends after an hour');
+    Date.now = () => opened + 121 * 60_000;
+    assert.equal(decodeSession(learnSession), null, 'a Learn session ends after two hours');
+  } finally {
+    Date.now = realNow;
+  }
 }
 
 /* ── the free tier and Premium (#220) ─────────────────────────────────────
@@ -3862,6 +3890,20 @@ async function main() {
     for (const topic of ['html', 'css', 'javascript', 'react', 'dsa', 'databases', 'general']) {
       assert.ok(topics.has(topic), `no figure covers ${topic}`);
     }
+  }
+
+  // ── level intros ────────────────────────────────────────────────────────
+  // A level opens with the intro at its own index. When a curriculum changed
+  // its levels and the intros stayed, every level after the first change
+  // opened with another level's text (CSS "Flexbox" with the box model), so
+  // each served topic carries exactly one intro per level.
+  for (const topic of SUBJECT_SCOPE_CATALOG.webdev.topics) {
+    assert.ok(isRoadmapTopic(topic), `${topic} is a Learn topic`);
+    assert.equal(
+      LEVEL_INTROS[topic as keyof typeof LEVEL_INTROS]?.length,
+      topicLevelCount(topic),
+      `${topic}: one intro per level`,
+    );
   }
 
   await auditGateContracts();

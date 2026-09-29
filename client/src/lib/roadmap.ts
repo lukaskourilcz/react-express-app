@@ -178,7 +178,11 @@ function record(kind: 'levels' | 'checkpoints', topic: RoadmapTopic, ref: number
   const tp = topicOf(p, topic);
   const map = tp[kind];
   const prev = map[String(ref)];
+  // Keep what else the entry holds: a signed-in completion has just written
+  // the server's record here, spaced-mastery days included, and dropping them
+  // would read a mastered level as cleared and today's pass as not done.
   map[String(ref)] = {
+    ...prev,
     passed: (prev?.passed ?? false) || pct >= passPct,
     bestPct: Math.max(prev?.bestPct ?? 0, pct),
   };
@@ -565,14 +569,23 @@ export function installProgressSyncFlusher(): void {
 }
 
 // On sign-in: pull the account's progress + per-subject wallets/inventories,
-// merge each with whatever is on this device (progress: latch pass + max
-// score; unlocks: union; balances: per-subject max — tokens can only grow;
-// owned items: per-subject union; equipped items: server wins if valid,
-// otherwise local; retired doubleXp data is cleared), store the union
+// merge each with whatever is on this device (progress and unlocks: the
+// account's, as the server holds them; balances: per-subject max — tokens can
+// only grow; owned items: per-subject union; equipped items: server wins if
+// valid, otherwise local; retired doubleXp data is cleared), store the result
 // locally, and push it back so both sides agree. A legacy account blob (one
 // pre-split wallet/inventory, no per-subject maps) is attributed to the
 // active subject — the same rule the local stores use when migrating.
-export async function syncProgressWithServer(): Promise<void> {
+//
+// Sign-in, Today and the maps all ask for this; one request answers the ones
+// that ask while it is in flight.
+let syncInFlight: Promise<void> | null = null;
+export function syncProgressWithServer(): Promise<void> {
+  syncInFlight ??= syncOnce().finally(() => { syncInFlight = null; });
+  return syncInFlight;
+}
+
+async function syncOnce(): Promise<void> {
   interface ServerInventory {
     owned?: string[];
     ring?: string | null;
@@ -600,12 +613,15 @@ export async function syncProgressWithServer(): Promise<void> {
   const mergedProgress = serverProgress;
   writeProgress(serverProgress);
 
+  // Unlocks are the server's too. A guest's skill-check unlocks, or ones this
+  // device granted itself when applying a receipt failed, would draw a topic
+  // as open that the server refuses with topic_locked.
   const serverUnlocked = (serverExtras.unlocked ?? []).filter((id): id is RoadmapTopic =>
     (Object.keys(TOPIC_PREREQS) as string[]).includes(id),
   ) as RoadmapTopic[];
   const local = readExtraUnlocks();
-  const union = Array.from(new Set<RoadmapTopic>([...local, ...serverUnlocked]));
-  if (union.length !== local.length) writeExtraUnlocks(union);
+  const accountUnlocks = Array.from(new Set<RoadmapTopic>(serverUnlocked));
+  if (accountUnlocks.length !== local.length || accountUnlocks.some((id) => !local.includes(id))) writeExtraUnlocks(accountUnlocks);
 
   // Merge wallets + inventories via the registered receiver (tokens.ts + shop.ts).
   if (onAccountExtrasReceived) {
@@ -637,7 +653,7 @@ export async function syncProgressWithServer(): Promise<void> {
   }
 
   try {
-    await pushProgressToServer(mergedProgress, union);
+    await pushProgressToServer(mergedProgress, accountUnlocks);
   } catch {
     // best-effort; local is already updated
   }

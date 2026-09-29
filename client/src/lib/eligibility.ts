@@ -20,6 +20,7 @@ import { useExtraUnlocks, useRoadmapProgress } from './roadmap';
 import { getSubject } from './subjects';
 import {
   eligibleTopics as eligibleFromGraph,
+  isTopicInPlan,
   nextEligibleStep as nextFromGraph,
 } from '../../../shared/progression';
 import { missingProfileFields, type RequiredProfileField } from '../../../shared/learning-paths';
@@ -101,4 +102,22 @@ export function useEligibility(): {
     source: 'local',
     isLoading: query.isLoading,
   };
+}
+
+/**
+ * Whether a topic is part of the learner's plan, by the same rule the server
+ * applies before it serves a level (403 not_in_plan otherwise) and read from
+ * the same place: the profile on the account. Signed out, or signed in without
+ * a chosen track, there is no plan and every topic is in it.
+ *
+ * Levels already passed stay open outside the plan, so a surface that draws
+ * them should keep a topic with passed levels visible for review.
+ */
+export function useInPlan(): (topic: string) => boolean {
+  const { user } = useAuth();
+  const subject = getSubject();
+  return useMemo(() => {
+    const profile = learnerProfileOf(user);
+    return (topic: string) => isTopicInPlan(profile, subject, topic);
+  }, [user, subject]);
 }

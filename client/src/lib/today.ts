@@ -67,6 +67,9 @@ export interface TodayResult {
   completedToday: boolean;
   /** The full, uncapped bucket lists. */
   all: TodayBuckets;
+  /** The first level the plan would queue as unfinished or new if the account
+   * could start it: set when Premium holds work back, null otherwise. */
+  premiumNext: TodayItem | null;
 }
 
 export interface BuildTodayOptions {
@@ -91,6 +94,11 @@ export interface BuildTodayOptions {
    * a free account is left out of "unfinished" and "new"; reviews of levels
    * already passed stay, whatever the plan. Omitted, every level may start. */
   canStart?: (topic: RoadmapTopic, level: number) => boolean;
+  /** Whether the topic is part of the learner's plan. The server refuses a
+   * topic outside it (403 not_in_plan), so its levels are left out of
+   * "unfinished" and "new"; reviews of levels already passed stay, since the
+   * server keeps serving those. Omitted, every topic is in the plan. */
+  inPlan?: (topic: RoadmapTopic) => boolean;
 }
 
 const REASON: Record<TodayKind, TranslationKey> = {
@@ -158,10 +166,13 @@ export function buildToday(
   const unfinished: TodayItem[] = [];
   const review: TodayItem[] = [];
   const fresh: TodayItem[] = [];
+  const premiumHeld: TodayItem[] = [];
   const passedTodayLevels = new Set<string>();
+  const canStart = (topic: RoadmapTopic, level: number) => opts.canStart?.(topic, level) ?? true;
 
   for (const topic of topics) {
     const levels = progress[topic]?.levels ?? {};
+    const inPlan = opts.inPlan?.(topic) ?? true;
 
     // (1) + (2): scan existing entries for unfinished, due-review, and the
     // count of distinct levels passed today (for completedToday).
@@ -175,8 +186,8 @@ export function buildToday(
       const state = masteryState(entry);
       if (state === 'notStarted') {
         // Has an entry but was never passed → unfinished (guard: still unlocked).
-        if (isLevelUnlocked(progress, topic, level, opts.availability?.[topic]) && (opts.canStart?.(topic, level) ?? true)) {
-          unfinished.push(makeItem(topic, level, 'unfinished'));
+        if (inPlan && isLevelUnlocked(progress, topic, level, opts.availability?.[topic])) {
+          (canStart(topic, level) ? unfinished : premiumHeld).push(makeItem(topic, level, 'unfinished'));
         }
       } else if (state === 'cleared' && isDueForReview(entry, today)) {
         review.push(makeItem(topic, level, 'review'));
@@ -185,10 +196,10 @@ export function buildToday(
     }
 
     // (3): the next new level, only for topics the learner can actually open.
-    if (isTopicUnlocked(progress, topic, extra)) {
+    if (inPlan && isTopicUnlocked(progress, topic, extra)) {
       const cap = opts.levelCounts?.[topic] ?? ROADMAP_LEVELS;
       const next = nextNewLevel(progress, topic, levels, cap, opts.availability?.[topic]);
-      if (next !== null && (opts.canStart?.(topic, next) ?? true)) fresh.push(makeItem(topic, next, 'new'));
+      if (next !== null) (canStart(topic, next) ? fresh : premiumHeld).push(makeItem(topic, next, 'new'));
     }
   }
 
@@ -199,6 +210,7 @@ export function buildToday(
   unfinished.sort(cmp);
   review.sort(cmp);
   fresh.sort(cmp);
+  premiumHeld.sort(cmp);
 
   // Compose the capped headline plan: unfinished → review → new.
   const items: TodayItem[] = [];
@@ -216,5 +228,6 @@ export function buildToday(
     target: TODAY_TARGET,
     completedToday: passedTodayLevels.size >= TODAY_TARGET,
     all: { unfinished, review, new: fresh },
+    premiumNext: premiumHeld[0] ?? null,
   };
 }
