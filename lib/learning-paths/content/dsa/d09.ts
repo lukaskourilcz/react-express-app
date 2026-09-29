@@ -76,7 +76,9 @@ var __preorder = function (root) {
  * search touched. A node counts once, the first time any of `value`, `left` or
  * `right` is read on it, so the number is nodes visited rather than property
  * reads. Counting stops before the returned node is inspected, so reading the
- * answer never costs a visit. */
+ * answer never costs a visit. The proxy is the one taken before the learner's
+ * code ran (`__probe`, shared/coding-evaluate.ts), so replacing `Proxy`
+ * changes nothing. */
 const SEARCH_PROBE = `${TREE_PROBE}
 var __searchVisits = function (root, target, run) {
   var visits = 0;
@@ -85,7 +87,7 @@ var __searchVisits = function (root, target, run) {
     if (!node) return null;
     var seen = false;
     var inner = { value: node.value, left: null, right: null };
-    var proxy = new Proxy(inner, {
+    var proxy = new __probe.Proxy(inner, {
       get: function (holder, prop) {
         if (counting && !seen && (prop === 'value' || prop === 'left' || prop === 'right')) {
           seen = true;

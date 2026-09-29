@@ -26,11 +26,12 @@ import type {
   CriterionResult,
 } from '../../shared/learning-path-api';
 import type { EvidenceState, Localized, VerificationKind } from '../../shared/learning-paths';
-import type { EvaluateResult } from '../../shared/coding-evaluate';
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
 import type { CodingTask } from '../../shared/coding-catalog';
-import { runInSandbox } from '../coding/sandbox';
+import { runChecks } from '../coding/sandbox';
 import { nodeTypeScriptChecker } from '../coding/ts-check-node';
+import { checkTypes, TYPE_CHECK_STOPPED_MESSAGE } from '../coding/ts-check-pool';
+import { secureShuffle } from '../quiz-runtime';
 import { codeOutcome } from '../coding/grade';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedCallTest, type MergedCode, type PathCodeSolution } from './types';
 import { solutionFor } from './solutions';
@@ -295,34 +296,32 @@ export async function gradePathCode(
   let hiddenTypeTotal = 0;
   let source = submitted;
   if (code.language === 'typescript') {
-    const checker = nodeTypeScriptChecker();
-    check = checker.check(submitted, code.typeTests);
-    if (solution?.hiddenTypeTests?.length) {
-      const hiddenCheck = checker.check(submitted, solution.hiddenTypeTests);
+    // On a worker thread with a deadline, as in the coding section
+    // (lib/coding/ts-check-pool.ts).
+    const hiddenTypeTests = solution?.hiddenTypeTests ?? [];
+    const typed = await checkTypes(submitted, hiddenTypeTests.length ? [code.typeTests, hiddenTypeTests] : [code.typeTests]);
+    if (typed.stopped) return typeCheckStopped(code, hidden.length + hiddenTypeTests.length);
+    check = typed.results[0];
+    const hiddenCheck = typed.results[1];
+    if (hiddenCheck) {
       hiddenTypeTotal = hiddenCheck.typeTests.length;
       hiddenTypeFailures = hiddenCheck.typeTests.filter((one) => !one.pass).length;
     }
-    source = checker.toJavaScript(submitted);
+    source = nodeTypeScriptChecker().toJavaScript(submitted);
   }
 
   const runnableSource = code.harness ? `${source}\n;\n${code.harness}\n` : source;
-  const run = await runInSandbox({
+  // The visible checks run together and their console output is what the
+  // learner sees. The hidden ones run in a fresh program, shuffled for this
+  // submission, as in the coding section (runChecks): a program that counted
+  // its calls could otherwise answer them in authored order.
+  const { visible: visibleRun, hidden: hiddenRun } = await runChecks({
     code: runnableSource,
-    calls: [...visible.map((test) => test.call), ...hidden.map((test) => test.call)],
-    expectations: [...visible.map((test) => test.expected), ...hidden.map((test) => test.expected)],
-    // The console shows what the visible checks printed, never a hidden input.
-    shownCalls: visible.length,
+    visible,
+    hidden,
+    shuffle: secureShuffle,
   });
-
-  const visibleRun: EvaluateResult = {
-    results: run.results.slice(0, visible.length),
-    logs: run.logs,
-    codeError: run.codeError,
-    timedOut: run.timedOut,
-  };
-  const hiddenRun: EvaluateResult | null = hidden.length > 0
-    ? { results: run.results.slice(visible.length), logs: [], codeError: run.codeError, timedOut: run.timedOut }
-    : null;
+  const run = { logs: visibleRun.logs, codeError: visibleRun.codeError ?? hiddenRun?.codeError ?? null };
 
   let outcome = codeOutcome({ visible: visibleRun, hidden: hiddenRun, check });
   if (outcome === 'passed' && hiddenTypeFailures > 0) outcome = 'failed';
@@ -354,6 +353,25 @@ export async function gradePathCode(
       check,
       logs: run.logs,
       codeError: run.codeError,
+    },
+  };
+}
+
+/** The grade for a submission whose type check was stopped at its deadline:
+ * a timeout, with every criterion unmet. */
+function typeCheckStopped(code: MergedCode, hiddenTotal: number): PathCodeGrade {
+  const folded = foldCriteria(code, [], false);
+  return {
+    state: 'needs_revision',
+    score: folded.score,
+    criteria: folded.criteria,
+    code: {
+      outcome: 'timeout',
+      results: [],
+      hidden: hiddenTotal > 0 ? { passed: 0, total: hiddenTotal } : null,
+      check: null,
+      logs: [],
+      codeError: TYPE_CHECK_STOPPED_MESSAGE,
     },
   };
 }
