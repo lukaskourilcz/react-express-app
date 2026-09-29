@@ -104,6 +104,23 @@ export function hasStoredSession(): boolean {
 }
 
 /**
+ * Forget the session stored in this browser, and a sign-in's code verifier,
+ * without the server: what supabase-js's own local sign-out removes. For Log
+ * out when supabase-js cannot reach the server, which leaves both in place.
+ * supabase-js reads the session from storage every time, so it has none after
+ * this either.
+ */
+export function forgetStoredSession(): void {
+  if (!sessionKey) return;
+  try {
+    window.localStorage.removeItem(sessionKey);
+    window.localStorage.removeItem(`${sessionKey}-code-verifier`);
+  } catch {
+    // Blocked storage: supabase-js kept the session in memory only.
+  }
+}
+
+/**
  * Whether this page load may have a session: the client is loaded or loading,
  * a session is stored, or the URL carries an OAuth return. False means the
  * visitor is signed out and nothing needs downloading.
