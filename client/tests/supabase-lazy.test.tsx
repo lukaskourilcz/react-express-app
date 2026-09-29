@@ -360,12 +360,14 @@ describe('an OAuth return', () => {
     expect(sb.imports).toBe(1);
   });
 
-  it('imports supabase-js for a PKCE ?code= whose verifier this browser stored', async () => {
+  it('imports supabase-js for a PKCE ?code= whose verifier this browser stored, and reports the sign-in', async () => {
     localStorage.setItem(`${KEY}-code-verifier`, '"verifier"');
     window.history.replaceState(null, '', '/?code=pkce-code');
+    const reports = recordSignInReports();
     await mountAuth();
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-pkce'));
     expect(sb.imports).toBe(1);
+    await waitFor(() => expect(reports).toEqual(['Bearer pkce-pkce-code']));
   });
 });
 

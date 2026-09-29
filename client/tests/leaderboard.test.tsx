@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Leaderboard from '../src/components/Leaderboard';
 import { server } from './mocks/server';
-import { leaderboardHandlers, leaderboardData, pinnedData } from './mocks/handlers';
+import { boardFor, leaderboardHandlers, pinnedData } from './mocks/handlers';
 import { firstDraw } from './firstDraw';
 
 const auth = vi.hoisted(() => ({ value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false } }));
@@ -31,17 +31,15 @@ function mount() {
 
 const last = <T,>(items: T[]): T => items[items.length - 1];
 
-/** Records every leaderboard request's query string, answering with the populated fixtures. */
+/** Records every leaderboard request's query string, answering with the
+ * populated fixtures and an empty daily board. */
 function recordRequests(): URLSearchParams[] {
   const seen: URLSearchParams[] = [];
   server.use(http.get('*/api/leaderboard', ({ request }) => {
     const params = new URL(request.url).searchParams;
     seen.push(params);
-    const period = params.get('period');
-    if (period === '30d') return HttpResponse.json(leaderboardData);
-    return HttpResponse.json(period === 'daily'
-      ? { period: 'daily', entries: [] }
-      : { period, entries: [{ display_name: 'Long-time learner', picture: null, total_correct: 412, total_questions: 520, accuracy_pct: 79 }] });
+    const board = boardFor(request);
+    return HttpResponse.json(params.get('period') === 'daily' ? { ...board, entries: [] } : board);
   }));
   return seen;
 }

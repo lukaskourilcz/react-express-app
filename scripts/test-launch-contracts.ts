@@ -1,3 +1,5 @@
+// First: clears the environment the handlers below read when imported.
+import './launch-test-env';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -40,6 +42,7 @@ import { playable as playableCodingTask, CODING_TASKS } from '../lib/coding/cata
 import { codingTaskById, levelCodingTasks } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
+import { giveUpAfter as clientGiveUpAfter } from '../client/src/coding/hint-ladder';
 import { runInSandbox, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
@@ -135,7 +138,6 @@ import {
   isTopicInPlan,
   planTopics,
   validateProgressionGraph,
-  WEBDEV_PLAN_STAGES,
 } from '../shared/progression';
 import {
   isLearnerProfileComplete,
@@ -155,7 +157,6 @@ import {
 } from '../shared/learning-paths';
 import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack, isDifficulty } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
-import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks, roadmapEndedOnHearts, ROADMAP_MAX_HEARTS } from '../shared/assessment';
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
@@ -672,7 +673,7 @@ async function tierContracts() {
 
   // The handlers themselves, where they can run without a database: a signed-in
   // account with no grant is free, and a guest holds the free tier.
-  if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+  {
     const signedIn = (query: Record<string, string>) => ({
       method: 'GET', headers: { authorization: 'Bearer contract' }, query: { ...query, user_id: 'contract-free-account' },
     });
@@ -939,6 +940,16 @@ async function retiredSupportContracts() {
   await settingsHandler({ method: 'GET', headers: {}, query: {} } as never, publicSettings as never);
   assert.equal(publicSettings.statusCode, 200);
   assert.equal('support' in (publicSettings.body as Record<string, unknown>), false, '/api/settings answers without a support block');
+  // tests/fixtures/api-settings.json is the body the client tests and the
+  // responsive sweep answer /api/settings with: this handler's own body at
+  // default settings, except that checkout is on, as it is after launch.
+  const settingsFixture = JSON.parse(read('tests/fixtures/api-settings.json')) as Record<string, unknown>;
+  const liveSettings = publicSettings.body as Record<string, unknown>;
+  assert.deepEqual(Object.keys(settingsFixture).sort(), Object.keys(liveSettings).sort(), 'the settings fixture has the keys the handler sends');
+  for (const key of Object.keys(liveSettings).filter((one) => one !== 'billing')) {
+    assert.deepEqual(settingsFixture[key], liveSettings[key], `the settings fixture's ${key} is what the handler sends`);
+  }
+  assert.deepEqual(Object.keys(settingsFixture.billing as object).sort(), Object.keys(liveSettings.billing as object).sort(), 'the fixture\'s billing has the handler\'s keys');
 
   // The files that held the flag, the block and the /dev fields keep none of them.
   for (const file of ['api/settings.ts', 'lib/settings-store.ts', 'client/src/lib/gameConfig.ts', 'client/src/lib/devApi.ts',
@@ -1244,7 +1255,7 @@ async function referralContracts() {
   // 5. The handler, against a stand-in database: the GET sends counts and no
   // account id, the POST takes the creation time from the token and never from
   // the body, and it asks for no amount.
-  if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+  {
     const calls: { fn: string; args: Record<string, unknown> }[] = [];
     const fake = {
       rpc: async (fn: string, args: Record<string, unknown>) => {
@@ -1557,8 +1568,6 @@ async function voucherContracts() {
   assert.match(ENGLISH['legal.privacy.voucher.body'], /does not store the code you type/);
   assert.match(ENGLISH['legal.privacy.deletion.body'], /your voucher redemptions/);
   assert.match(read('client/src/components/LegalPages.tsx'), /id: 'vouchers', title: 'legal\.privacy\.voucher\.title'/);
-
-  if (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) return;
 
   // 4. The redemption against a stand-in database. Log lines are captured to
   // prove that no code, hash or hint is ever written to them.
@@ -2392,7 +2401,13 @@ async function main() {
   const preparedDrill = prepareDesign(drillTask!, (list) => [...list].reverse());
   assert.equal(gradeDesign(drillTask!, preparedDrill.key, [preparedDrill.key.order!]).outcome, 'passed', 'a sequence drill grades the shuffled order');
   assert.equal(gradeDesign(drillTask!, preparedDrill.key, [[...preparedDrill.key.order!].reverse()]).outcome, 'failed');
-  assert.equal(giveUpAfter(ladderLength(doubleTask!)), Math.min(Math.max(2, Math.ceil(ladderLength(doubleTask!) / 2)), ladderLength(doubleTask!)));
+  // The solution opens once half the ladder is spent, never before two rungs
+  // (or the whole ladder, when it is shorter). The browser shows the same number.
+  assert.equal(ladderLength(doubleTask!), 5, 'js-double-numbers offers five rungs: a hint, two approach steps, the skeleton and the docs link');
+  for (const [rungs, opensAfter] of [[1, 1], [2, 2], [3, 2], [4, 2], [5, 3], [6, 3], [7, 4], [9, 5]]) {
+    assert.equal(giveUpAfter(rungs), opensAfter, `a ${rungs}-rung ladder opens the solution after ${opensAfter}`);
+    assert.equal(clientGiveUpAfter(rungs), opensAfter, `the workbench says the same for ${rungs} rungs`);
+  }
 
   assert.ok(levelCodingTasks('javascript', 6).length >= 1, 'javascript level 6 carries a coding task');
   assert.ok(levelCodingTasks('javascript', 6).length <= 2);
@@ -2612,6 +2627,7 @@ async function main() {
     source: 'base', deleted: false,
     options: ['Always correct', 'Always correct'],
     cs: { question: '', options: [], introduction: '', explanation: '' },
+    review: { active: true, reason: 'reviewed', csApproved: false },
   }]);
   assert.ok(qualityIssues.some((issue) => issue.kind === 'weak_distractor'));
   assert.ok(qualityIssues.some((issue) => issue.kind === 'missing_translation'));
@@ -2653,7 +2669,9 @@ async function main() {
   }
   assert.match(coding, /p_coding_task_ids JSONB DEFAULT NULL/, 'level completion must accept the sealed coding task ids');
   assert.match(coding, /DROP FUNCTION IF EXISTS public\.complete_verified_roadmap_attempt\(TEXT, TEXT\)/);
-  assert.match(coding, /'coding:' \|\| p_task_id/, 'coding XP must go through the verified-activity ledger once per task');
+  // Coding XP once per account and task is run against the built schema by
+  // supabase/tests/030-coding-xp-once.test.sql (npm run test:sql); 041
+  // replaced the award id this file used to pin here.
   assert.match(coding, /DELETE FROM public\.coding_progress WHERE user_id = p_user_id/);
   assert.match(coding, /DELETE FROM public\.github_connections WHERE user_id = p_user_id/);
   assert.doesNotMatch(coding, /access_token|refresh_token|provider_token/, 'the garden must never store a user token');
@@ -3687,7 +3705,7 @@ async function main() {
       assert.equal(hours(failed), RELEARN_HOURS);
     }
     // The ladder is bounded at the top: nothing is pushed past its last rung.
-    let climbed = { ...start, stage: 0 };
+    let climbed: ReturnType<typeof nextReviewState> = { ...start, stage: 0 };
     for (let i = 0; i < 20; i++) {
       climbed = nextReviewState(climbed, { conceptId: 'js-map', correct: true, kind: 'independent', itemId: `q${i}` }, t0);
     }

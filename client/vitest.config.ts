@@ -10,5 +10,7 @@ export default defineConfig({
     'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(''),
     'import.meta.env.VITE_PUBLIC_POSTHOG_KEY': JSON.stringify(''),
   },
-  test: { environment: 'node', setupFiles: ['./tests/dom.ts', './tests/setup.ts'], sequence: { setupFiles: 'list' }, include: ['tests/**/*.test.{ts,tsx}'], restoreMocks: true },
+  // testTimeout: several screens render a whole route with lazy parts, which a
+  // loaded runner takes seconds to do; 5 s made them fail at random.
+  test: { environment: 'node', setupFiles: ['./tests/dom.ts', './tests/setup.ts'], sequence: { setupFiles: 'list' }, include: ['tests/**/*.test.{ts,tsx}'], restoreMocks: true, testTimeout: 15_000 },
 });

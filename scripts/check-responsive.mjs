@@ -5,12 +5,19 @@
 // or overlap). Captures a screenshot per (route × width) only when something
 // goes wrong, so the artifact pile stays small.
 //
+// A measurement counts only if the route rendered what it is for: the page
+// must load, the app must mount with an <h1>, the route must not land on the
+// not-found page (unless it is a /not-found-… probe), and every /api request
+// it makes must be answered by a fixture below. The preview server has no API,
+// so a route whose data has no fixture would otherwise be measured on its
+// error state and pass.
+//
 // Run:   npm run check:responsive
 // Focus: npm run check:responsive -- --routes /,/quiz --widths 390,1280
 // Env:   RESPONSIVE_ROUTES=/learn,/challenge RESPONSIVE_WIDTHS=360,768
 
 import { spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir, platform } from 'node:os';
 import path from 'node:path';
 
@@ -38,40 +45,35 @@ function resolveChrome() {
 const CHROME = resolveChrome();
 const IS_LINUX = platform() === 'linux';
 const DEFAULT_BASE = 'http://localhost:4173';
+// The routes that render their page on the preview server with the fixtures
+// below. Left out until the sweep has fixtures for their data, because
+// without them they are measured on an error or empty state:
+//   /learn, /today, /roadmap, /roadmap/paths/dsa-foundations(/dsa-v1-d01),
+//   /roadmap/specializations/fde(/fde-v1-m01), /coding/javascript/js-double-numbers,
+//   /coding/algorithms/alg-two-sum (GET /api/quiz/roadmap); /challenge
+//   (GET /api/quiz/challenge); /leaderboard (GET /api/leaderboard); /shop
+//   (GET /api/user/*); /curation (GET /api/quiz/questions); /dev
+//   (GET /api/admin/settings).
+// Also left out: /play, /play/EXPIRED and /cards, whose signed-out gate has no
+// <h1>, so the sweep cannot tell it rendered.
 const DEFAULT_ROUTES = [
   '/',
   '/quiz',
-  '/learn',
-  '/today',
-  '/challenge',
-  '/play',
-  '/play/EXPIRED',
-  '/leaderboard',
-  '/cards',
-  '/shop',
-  '/roadmap',
+  '/daily',
   '/coding',
   '/coding/javascript',
-  '/coding/javascript/js-double-numbers',
   '/coding/algorithms',
-  '/coding/algorithms/alg-two-sum',
   '/coding/system-design',
   '/coding/review',
-  '/roadmap/paths/dsa-foundations',
-  '/roadmap/paths/dsa-foundations/dsa-v1-d01',
-  '/roadmap/specializations/fde',
-  '/roadmap/specializations/fde/fde-v1-m01',
   '/settings/github',
   '/profile',
   '/premium',
-  '/curation',
   '/privacy',
   '/terms',
   '/premium/success',
   '/premium/cancel',
   '/classroom',
   '/topics/javascript-closures',
-  '/dev',
   '/not-found-responsive-check',
 ];
 const DEFAULT_VIEWPORTS = [
@@ -84,18 +86,53 @@ const DEFAULT_VIEWPORTS = [
   { label: '1440x900', width: 1440, height: 900, mobile: false },
 ];
 
+// The /api answers the sweep gives, in the wire shape of the real handlers.
+// The preview server has no API; a route that asks for anything not listed
+// here fails, because it would be measured on its error state.
+// The launched deployment's public settings, which every page reads; the same
+// body the client tests use, checked against api/settings.ts by test:launch.
+const SETTINGS = JSON.parse(readFileSync(new URL('../tests/fixtures/api-settings.json', import.meta.url), 'utf8'));
+
+const API_FIXTURES = [
+  { method: 'GET', match: (url) => url.pathname === '/api/settings', body: () => SETTINGS },
+  {
+    // GET /api/quiz/daily?qotd=<date|today>: the question of the day, as
+    // api/quiz/daily.ts sends it (the same fixture tests/browser/daily.spec.ts
+    // uses). The server names the day it answered for, never "today".
+    method: 'GET',
+    match: (url) => url.pathname === '/api/quiz/daily' && url.searchParams.has('qotd'),
+    body: (url) => ({
+      date: /^\d{4}-\d{2}-\d{2}$/.test(url.searchParams.get('qotd') ?? '')
+        ? url.searchParams.get('qotd')
+        : new Date().toISOString().slice(0, 10),
+      track: 'javascript',
+      sessionId: 'responsive-sweep-session',
+      question: { id: 'q-1', question: 'What does `typeof null` return?', options: ['"null"', '"object"', '"undefined"', '"number"'], category: 'javascript', difficulty: 2 },
+    }),
+  },
+];
+
+function apiFixture(method, url) {
+  const fixture = API_FIXTURES.find((one) => one.method === method && one.match(url));
+  return fixture ? { status: 200, body: fixture.body(url) } : null;
+}
+
+// A route under /not-found-… is there to measure the not-found page itself.
+const isNotFoundProbe = (route) => route.startsWith('/not-found-');
+
 // Offline/sandboxed runs: block the webfont hosts (see the CDP setup below).
 const BLOCK_EXTERNAL = process.argv.includes('--block-external') ||
   process.env.RESPONSIVE_BLOCK_EXTERNAL === '1';
 
-// The app reads both of these from local storage before it paints, so seeding
-// them lets one sweep cover dark mode and Czech as well as the widths.
+// The app reads the theme from local storage before it paints, so seeding it
+// lets one sweep cover dark mode as well as the widths. There is no language
+// to seed: the app ships English only (ENABLED_LANGS), so a Czech seed would
+// measure the English pages again and report them as Czech.
 const THEME = process.env.RESPONSIVE_THEME ?? '';
-const LOCALE = process.env.RESPONSIVE_LOCALE ?? '';
-const SEED = [
-  THEME ? `try { localStorage.setItem('devquiz:color-mode', ${JSON.stringify(THEME)}); } catch (e) {}` : '',
-  LOCALE ? `try { localStorage.setItem('devquiz.lang', ${JSON.stringify(LOCALE)}); } catch (e) {}` : '',
-].filter(Boolean).join('\n');
+if (process.env.RESPONSIVE_LOCALE) {
+  throw new Error('RESPONSIVE_LOCALE has no effect: the app ships English only. Remove it.');
+}
+const SEED = THEME ? `try { localStorage.setItem('devquiz:color-mode', ${JSON.stringify(THEME)}); } catch (e) {}` : '';
 
 function optionValue(name) {
   const exact = process.argv.indexOf(name);
@@ -149,8 +186,9 @@ Options:
 The same settings are available through RESPONSIVE_ROUTES,
 RESPONSIVE_WIDTHS, RESPONSIVE_BASE_URL, RESPONSIVE_OUTPUT_DIR,
 RESPONSIVE_BLOCK_EXTERNAL=1 (or --block-external) to block the webfont
-hosts on a runner without outbound network, and RESPONSIVE_THEME=dark /
-RESPONSIVE_LOCALE=cs to sweep the other theme and the other language.
+hosts on a runner without outbound network, and RESPONSIVE_THEME=dark to
+sweep the other theme. A route under /not-found-… is expected to render the
+not-found page; every other route must not.
 Failure screenshots use a temporary directory by default.`);
 }
 
@@ -361,7 +399,26 @@ const CLEARANCE = `(async () => {
   return { covered, overlays: overlays.length };
 })()`;
 
-async function probeRoute(call, baseUrl, route, vp) {
+// What the route drew: whether the app mounted, and its page headings.
+const RENDERED = `(() => ({
+  mounted: (document.getElementById('root')?.childElementCount ?? 0) > 0,
+  headings: [...document.querySelectorAll('h1')].map((h) => h.textContent.trim()).filter(Boolean),
+}))()`;
+
+function renderProblems(route, rendered, apiRequests, notFoundHeading) {
+  const problems = [];
+  if (!rendered.mounted) problems.push('the app did not mount (#root is empty)');
+  if (rendered.headings.length === 0) problems.push('no <h1>: the page did not draw its heading');
+  const notFound = rendered.headings.includes(notFoundHeading);
+  if (isNotFoundProbe(route) && !notFound) problems.push('expected the not-found page');
+  if (!isNotFoundProbe(route) && notFound) problems.push(`landed on the not-found page ("${notFoundHeading}")`);
+  const unanswered = [...new Set(apiRequests.filter((one) => !one.answered).map((one) => one.request))];
+  if (unanswered.length) problems.push(`asked the API for data with no fixture in this script: ${unanswered.join(', ')}`);
+  return problems;
+}
+
+async function probeRoute(session, baseUrl, route, vp, notFoundHeading) {
+  const { call } = session;
   await call('Emulation.setDeviceMetricsOverride', {
     width: vp.width,
     height: vp.height,
@@ -379,7 +436,9 @@ async function probeRoute(call, baseUrl, route, vp) {
   await call('Page.navigate', { url: 'about:blank' });
   await waitFor(async () => (await evaluate(call, 'document.readyState')) === 'complete', { timeout: 5000 })
     .catch(() => undefined);
-  await call('Page.navigate', { url: baseUrl + route });
+  session.apiRequests.length = 0;
+  const navigation = await call('Page.navigate', { url: baseUrl + route });
+  if (navigation.errorText) throw new Error(`could not load ${baseUrl + route}: ${navigation.errorText}`);
   // A stray pending subresource must not abort the sweep: measure at
   // `interactive` and say so, rather than losing every later route.
   let ready = true;
@@ -391,14 +450,43 @@ async function probeRoute(call, baseUrl, route, vp) {
     await waitFor(async () => (await evaluate(call, 'document.readyState')) !== 'loading', { timeout: 4000 })
       .catch(() => undefined);
   }
-  // Give Suspense + lazy chunks a beat to settle.
+  // A lazy route draws its heading late; wait for it, then give Suspense and
+  // lazy chunks a beat to settle.
+  await waitFor(async () => Boolean(await evaluate(call, "document.querySelector('h1')?.textContent.trim()")), { timeout: 8000 })
+    .catch(() => undefined);
   await new Promise((r) => setTimeout(r, 1500));
+  const rendered = await evaluate(call, RENDERED);
+  const problems = renderProblems(route, rendered, session.apiRequests, notFoundHeading);
   const data = await evaluate(call, PROBE);
   const clearance = await evaluate(call, CLEARANCE);
   if (process.env.RESPONSIVE_DEBUG === '1') {
-    console.log(`  [debug] ${route} ${vp.label}: ${clearance.overlays} bottom overlay(s), ${clearance.covered.length} covered`);
+    console.log(`  [debug] ${route} ${vp.label}: ${clearance.overlays} bottom overlay(s), ${clearance.covered.length} covered, h1 ${JSON.stringify(rendered.headings)}, api ${JSON.stringify(session.apiRequests)}`);
   }
-  return { route, viewport: vp.label, ready, covered: clearance.covered, ...data };
+  return { route, viewport: vp.label, ready, covered: clearance.covered, problems, headings: rendered.headings, ...data };
+}
+
+/** The heading of the not-found page, read from an address that cannot exist,
+ * so the sweep can tell a route that fell through to it from a real page. */
+async function notFoundReference(session, baseUrl, vp) {
+  const route = `/not-found-responsive-reference-${Date.now()}`;
+  const probe = await probeRoute(session, baseUrl, route, vp, null);
+  const heading = probe.headings[0];
+  const other = probe.problems.filter((problem) => problem !== 'expected the not-found page');
+  if (!heading || other.length) {
+    throw new Error(`The not-found page at ${route} did not render cleanly (${other.join('; ') || 'no <h1>'}), so a missing route cannot be told from a real one.`);
+  }
+  return heading;
+}
+
+/** Fail fast, and say why, when no preview server is running. */
+async function preflight(baseUrl) {
+  let response;
+  try {
+    response = await fetch(`${baseUrl}/`, { signal: AbortSignal.timeout(15000) });
+  } catch (error) {
+    throw new Error(`Nothing answered at ${baseUrl} (${error instanceof Error ? error.message : error}). Start the preview first: npm run preview --prefix client`);
+  }
+  if (!response.ok) throw new Error(`${baseUrl}/ answered HTTP ${response.status}; the sweep needs the built app.`);
 }
 
 async function screenshot(call, outDir, name) {
@@ -421,7 +509,7 @@ let browserGeneration = 0;
  * remaining route goes unmeasured. Relaunching costs a couple of seconds and
  * recovers the rest of the sweep, which is worth far more than the seconds.
  */
-async function openBrowser(seed) {
+async function openBrowser(seed, baseUrl) {
   const userData = mkdtempSync(path.join(tmpdir(), 'shark-responsive-profile-'));
   const debugPort = Number.parseInt(process.env.RESPONSIVE_DEBUG_PORT ?? '', 10)
     || 9300 + ((process.pid + browserGeneration++) % 500);
@@ -461,6 +549,26 @@ async function openBrowser(seed) {
     await call('Page.enable');
     await call('Runtime.enable');
     if (seed) await call('Page.addScriptToEvaluateOnNewDocument', { source: seed });
+    // The sweep answers /api itself (API_FIXTURES) and keeps what the page
+    // asked for, so a route measured on a request nobody answered fails.
+    const apiRequests = [];
+    ws.addEventListener('message', (event) => {
+      const msg = JSON.parse(String(event.data));
+      if (msg.method !== 'Fetch.requestPaused') return;
+      const { requestId, request } = msg.params;
+      const url = new URL(request.url);
+      const fixture = apiFixture(request.method, url);
+      apiRequests.push({ request: `${request.method} ${url.pathname}`, answered: Boolean(fixture) });
+      const { status, body } = fixture
+        ?? { status: 503, body: { error: { code: 'not_configured', message: 'The responsive sweep has no fixture for this request' } } };
+      call('Fetch.fulfillRequest', {
+        requestId,
+        responseCode: status,
+        responseHeaders: [{ name: 'Content-Type', value: 'application/json' }, { name: 'Cache-Control', value: 'no-store' }],
+        body: Buffer.from(JSON.stringify(body)).toString('base64'),
+      }).catch(() => undefined);
+    });
+    await call('Fetch.enable', { patterns: [{ urlPattern: `${new URL(baseUrl).origin}/api/*`, requestStage: 'Request' }] });
     // Sandboxed runners cannot reach the Google Fonts hosts, so every document
     // waits out its font requests and never fires `load`. Blocking them makes
     // an offline run fast and deterministic; the page then measures with the
@@ -471,7 +579,7 @@ async function openBrowser(seed) {
         urls: ['*://fonts.googleapis.com/*', '*://fonts.gstatic.com/*', '*://www.google.com/*'],
       });
     }
-    return { call, close, ws };
+    return { call, close, ws, apiRequests };
   } catch (err) {
     close();
     throw err;
@@ -494,8 +602,9 @@ async function main() {
     ? path.resolve(configuredOutput)
     : mkdtempSync(path.join(tmpdir(), 'shark-responsive-shots-'));
   mkdirSync(outDir, { recursive: true });
-  let session = await openBrowser(SEED);
-  if (SEED) console.log(`  seeded${THEME ? ` theme=${THEME}` : ''}${LOCALE ? ` locale=${LOCALE}` : ''}`);
+  await preflight(baseUrl);
+  let session = await openBrowser(SEED, baseUrl);
+  if (SEED) console.log(`  seeded theme=${THEME}`);
 
   let cleaned = false;
   const cleanup = () => {
@@ -507,6 +616,7 @@ async function main() {
   process.on('SIGINT', () => { cleanup(); process.exit(130); });
 
   try {
+    const notFoundHeading = await notFoundReference(session, baseUrl, viewports[0]);
     const results = [];
     for (const vp of viewports) {
       for (const route of routes) {
@@ -515,7 +625,7 @@ async function main() {
         // the rest of the sweep — and never passes by being unmeasured.
         let r;
         try {
-          r = await probeRoute(session.call, baseUrl, route, vp);
+          r = await probeRoute(session, baseUrl, route, vp, notFoundHeading);
         } catch (first) {
           // A timed-out command usually means the renderer has wedged, and a
           // wedged renderer answers nothing again — so every route after this
@@ -525,13 +635,13 @@ async function main() {
           process.stdout.write(`  ..... ${vp.label.padEnd(10)} ${route}  (restarting the browser)\n`);
           try {
             session.close();
-            session = await openBrowser(SEED);
-            r = await probeRoute(session.call, baseUrl, route, vp);
+            session = await openBrowser(SEED, baseUrl);
+            r = await probeRoute(session, baseUrl, route, vp, notFoundHeading);
           } catch (second) {
             const reason = second instanceof Error ? second.message : String(second);
             results.push({
               route, viewport: vp.label, error: reason, overflow: 0,
-              horizOffenders: [], parentOffenders: [], covered: [], ready: false,
+              horizOffenders: [], parentOffenders: [], covered: [], problems: [], ready: false,
               winW: vp.width, docW: vp.width,
             });
             process.stdout.write(`  ERROR ${vp.label.padEnd(10)} ${route}  (${reason})\n`);
@@ -539,7 +649,7 @@ async function main() {
           }
         }
         results.push(r);
-        const broken = r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0;
+        const broken = r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0 || r.problems.length > 0;
         const tag = broken ? 'FAIL' : 'OK';
         const slow = r.ready ? '' : '  (measured before load finished)';
         process.stdout.write(`  ${tag.padEnd(5)} ${vp.label.padEnd(10)} ${route}${slow}\n`);
@@ -552,7 +662,7 @@ async function main() {
     session.close();
 
     const errored = results.filter((r) => r.error);
-    const fails = results.filter((r) => r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0);
+    const fails = results.filter((r) => r.overflow > 0 || r.parentOffenders.length > 0 || r.covered.length > 0 || r.problems.length > 0);
     console.log(`\n${results.length} probes · ${fails.length} with issues · ${errored.length} unprobed`);
     if (errored.length) {
       console.log('\nCould not be probed:');
@@ -562,6 +672,7 @@ async function main() {
       console.log('\nDetails:');
       for (const f of fails) {
         console.log(`\n  ${f.viewport}  ${f.route}`);
+        for (const problem of f.problems) console.log(`    not measured as rendered: ${problem}`);
         console.log(`    winW=${f.winW} docW=${f.docW} overflow=${f.overflow}`);
         if (f.horizOffenders.length) {
           console.log('    horizontal offenders (top elements past viewport):');
@@ -591,7 +702,7 @@ async function main() {
       console.log(`\n${errored.length} route(s) could not be probed; the rest are clear.`);
       process.exitCode = 1;
     } else {
-      console.log('\nAll clear — no horizontal overflow, no child escaping its parent, nothing under the ocean footer.');
+      console.log('\nAll clear — every route rendered its page, with no horizontal overflow, no child escaping its parent, nothing under the ocean footer.');
       if (!configuredOutput) rmSync(outDir, { recursive: true, force: true });
     }
   } finally {

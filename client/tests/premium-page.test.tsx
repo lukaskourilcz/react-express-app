@@ -12,6 +12,7 @@ import ComparisonTable from '../src/components/landing/ComparisonTable';
 import { PrivacyPage, TermsPage, traderRows } from '../src/components/LegalPages';
 import { isSafeReturnPath, rememberAuthReturn, takeAuthReturn } from '../src/lib/authReturn';
 import { server } from './mocks/server';
+import { settingsHandler } from './mocks/handlers';
 import { firstDraw, headings } from './firstDraw';
 
 const signInWithGoogle = vi.fn(async (_returnTo?: string) => undefined);
@@ -157,6 +158,7 @@ describe('/premium', () => {
 
 describe('the plan table', () => {
   it('compares Free and Premium and drops the AI and bilingual rows', () => {
+    server.use(settingsHandler);
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
     const headers = within(table).getAllByRole('columnheader').map((cell) => cell.textContent);
