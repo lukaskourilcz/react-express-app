@@ -11,6 +11,14 @@ export const RUN_TIMEOUT_MS = 2_000;
 export const ASYNC_TIMEOUT_MS = 6_000;
 export const TIMEOUT_MESSAGE = 'Timed out. Check for an infinite loop.';
 export const MAX_LOGS = 100;
+/** Console output is capped by size as well as by line count: a line past
+ * MAX_LOG_LINE_CHARS is cut, and past MAX_LOG_CHARS in all the rest is
+ * dropped, so a print loop cannot make a response too large to send or a
+ * Console tab too long to draw. Both runners apply the same caps. */
+export const MAX_LOG_LINE_CHARS = 2_000;
+export const MAX_LOG_CHARS = 64_000;
+export const LOG_LINE_CUT = ' … (line cut)';
+export const LOG_OUTPUT_CUT = '… (output cut)';
 
 export interface CallOutcome {
   /** null when the run was not graded (the Run button). */
@@ -73,8 +81,18 @@ const errorText = (error: unknown): string =>
  */
 export async function evaluateCalls(input: { code: string; calls: string[]; expectations?: unknown[] | null }): Promise<EvaluateResult> {
   const logs: string[] = [];
+  let logChars = 0;
+  let logsCut = false;
   const emit = (line: string) => {
-    if (logs.length < MAX_LOGS) logs.push(line);
+    if (logsCut || logs.length >= MAX_LOGS) return;
+    const text = line.length > MAX_LOG_LINE_CHARS ? line.slice(0, MAX_LOG_LINE_CHARS) + LOG_LINE_CUT : line;
+    if (logChars + text.length > MAX_LOG_CHARS) {
+      logs.push(LOG_OUTPUT_CUT);
+      logsCut = true;
+      return;
+    }
+    logChars += text.length;
+    logs.push(text);
   };
   // The same console the grading sandbox gives the code, on the real clock.
   const sink = learnerConsoleFactory()(emit, formatArg, () => (typeof performance === 'undefined' ? Date.now() : performance.now()));
@@ -83,8 +101,10 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   let evaluate: (calls: string[], console: typeof sink) => Promise<{ ok: boolean; value?: unknown; error?: string }[]>;
   try {
     // Declarations from the learner's code are in scope for the direct eval of
-    // each call, so a suite sees the functions the code defines.
-    evaluate = new Function('__calls__', 'console', `${input.code}\n${[
+    // each call, so a suite sees the functions the code defines. Strict mode,
+    // as in the grading sandbox: an undeclared assignment that Run let through
+    // as a stray global would otherwise fail only on Submit.
+    evaluate = new Function('__calls__', 'console', `"use strict";\n${input.code}\n${[
       'return Promise.all(__calls__.map(async source => {',
       '  try { return { ok: true, value: await eval(source) }; }',
       '  catch (error) { return { ok: false, error: String((error && error.message) || error) }; }',

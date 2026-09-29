@@ -32,8 +32,89 @@ const show = (value: unknown): string => {
   }
 };
 
-const isNode = (value: unknown): value is { textContent: string | null; ownerDocument?: { contains(n: unknown): boolean }; getAttribute?: (n: string) => string | null } =>
+const isNode = (value: unknown): value is { textContent: string | null; ownerDocument?: { contains(n: unknown): boolean }; getAttribute?: (n: string) => string | null; isEqualNode?: (other: unknown) => boolean } =>
   Boolean(value && typeof value === 'object' && 'nodeType' in (value as object));
+
+/** The built-in kind of an object. Read from its tag rather than `instanceof`,
+ * so a value made in the suite's realm compares the same as one made here. */
+const kindOf = (value: object): string => Object.prototype.toString.call(value);
+
+const ownKeys = (value: object, strict: boolean): (string | symbol)[] => {
+  const keys: (string | symbol)[] = [
+    ...Object.keys(value),
+    ...Object.getOwnPropertySymbols(value).filter((symbol) => Object.prototype.propertyIsEnumerable.call(value, symbol)),
+  ];
+  // toEqual reads a property set to undefined as a property that is not there.
+  return strict ? keys : keys.filter((key) => (value as Record<string | symbol, unknown>)[key] !== undefined);
+};
+
+const isPlainObject = (value: object): boolean => {
+  const proto = Object.getPrototypeOf(value) as { constructor?: { name?: string } } | null;
+  return proto === null || (Object.getPrototypeOf(proto) === null && proto.constructor?.name === 'Object');
+};
+
+/**
+ * Structural equality with Jest's rules: key order never matters, `NaN`
+ * equals `NaN`, `0` and `-0` differ, Dates compare by time, RegExps by source
+ * and flags, Maps and Sets by their entries in any order, DOM nodes by
+ * `isEqualNode`, and cycles are followed once. `toEqual` ignores properties
+ * set to `undefined`, array holes and class identity; `toStrictEqual` does
+ * not.
+ */
+function structurallyEqual(a: unknown, b: unknown, strict: boolean, seen: [object, object][] = []): boolean {
+  if (Object.is(a, b)) return true;
+  if (!a || !b || typeof a !== 'object' || typeof b !== 'object') return false;
+  for (const [left, right] of seen) if (left === a || right === b) return left === a && right === b;
+  const kind = kindOf(a);
+  if (kind !== kindOf(b)) return false;
+  if (isNode(a) && isNode(b)) return typeof a.isEqualNode === 'function' && a.isEqualNode(b);
+  const pairs: [object, object][] = [...seen, [a, b]];
+  const same = (x: unknown, y: unknown) => structurallyEqual(x, y, strict, pairs);
+  switch (kind) {
+    case '[object Date]':
+      return Object.is((a as Date).getTime(), (b as Date).getTime());
+    case '[object RegExp]':
+      return String(a) === String(b);
+    case '[object Number]':
+    case '[object String]':
+    case '[object Boolean]':
+      return Object.is((a as { valueOf(): unknown }).valueOf(), (b as { valueOf(): unknown }).valueOf());
+    case '[object Error]':
+      return (a as Error).name === (b as Error).name && (a as Error).message === (b as Error).message;
+    case '[object Map]': {
+      const left = a as Map<unknown, unknown>;
+      const right = b as Map<unknown, unknown>;
+      if (left.size !== right.size) return false;
+      const rightEntries = [...right.entries()];
+      return [...left.entries()].every(([key, value]) => (right.has(key)
+        ? same(value, right.get(key))
+        : rightEntries.some(([otherKey, otherValue]) => same(key, otherKey) && same(value, otherValue))));
+    }
+    case '[object Set]': {
+      const left = a as Set<unknown>;
+      const right = b as Set<unknown>;
+      if (left.size !== right.size) return false;
+      const rightValues = [...right.values()];
+      return [...left.values()].every((value) => right.has(value) || rightValues.some((other) => same(value, other)));
+    }
+  }
+  if (strict && !(isPlainObject(a) && isPlainObject(b)) && (a as { constructor?: unknown }).constructor !== (b as { constructor?: unknown }).constructor) return false;
+  if (kind === '[object Array]') {
+    const left = a as unknown[];
+    const right = b as unknown[];
+    if (left.length !== right.length) return false;
+    for (let index = 0; index < left.length; index++) {
+      if (strict && (index in left) !== (index in right)) return false;
+      if (!same(left[index], right[index])) return false;
+    }
+  }
+  const index = (key: string | symbol) => kind === '[object Array]' && typeof key === 'string' && /^(0|[1-9][0-9]*)$/.test(key);
+  const leftKeys = ownKeys(a, strict).filter((key) => !index(key));
+  const rightKeys = ownKeys(b, strict).filter((key) => !index(key));
+  return leftKeys.length === rightKeys.length &&
+    leftKeys.every((key) => Object.prototype.hasOwnProperty.call(b, key) &&
+      same((a as Record<string | symbol, unknown>)[key], (b as Record<string | symbol, unknown>)[key]));
+}
 
 function buildExpect(actual: unknown, negated: boolean): Record<string, unknown> {
   const check = (condition: boolean, message: string) => {
@@ -41,8 +122,8 @@ function buildExpect(actual: unknown, negated: boolean): Record<string, unknown>
   };
   const matchers: Record<string, (...args: unknown[]) => void> = {
     toBe: (expected) => check(Object.is(actual, expected), `expected ${show(actual)} to be ${show(expected)}`),
-    toEqual: (expected) => check(show(actual) === show(expected), `expected ${show(actual)} to equal ${show(expected)}`),
-    toStrictEqual: (expected) => check(show(actual) === show(expected), `expected ${show(actual)} to equal ${show(expected)}`),
+    toEqual: (expected) => check(structurallyEqual(actual, expected, false), `expected ${show(actual)} to equal ${show(expected)}`),
+    toStrictEqual: (expected) => check(structurallyEqual(actual, expected, true), `expected ${show(actual)} to strictly equal ${show(expected)}`),
     toBeTruthy: () => check(Boolean(actual), `expected ${show(actual)} to be truthy`),
     toBeFalsy: () => check(!actual, `expected ${show(actual)} to be falsy`),
     toBeNull: () => check(actual === null, `expected ${show(actual)} to be null`),

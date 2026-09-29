@@ -38,7 +38,8 @@ import { playable as playableCodingTask, CODING_TASKS } from '../lib/coding/cata
 import { codingTaskById, levelCodingTasks } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
-import { runInSandbox } from '../lib/coding/sandbox';
+import { runInSandbox, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
+import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
@@ -169,7 +170,7 @@ import {
   isOpenTo,
 } from '../shared/tiers';
 import { EVOLVING_CHALLENGES } from '../shared/evolving';
-import { techniqueGroup } from '../shared/coding-catalog';
+import { techniqueGroup, CODING_SECTION_TRACKS } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
@@ -565,6 +566,9 @@ async function tierContracts() {
     'lib/learning-paths/handlers.ts', 'api/quiz/roadmap.ts',
     // Redeeming coins for shipped merchandise is Premium only (#227).
     'lib/rewards/handlers.ts',
+    // A challenge run and a skip's next suggestion offer only what the plan
+    // opens, so a free run never stops at a Premium challenge's 402.
+    'lib/coding/practice-handlers.ts',
   ]);
   const serverFiles = [...apiFiles(join(process.cwd(), 'api')), ...apiFiles(join(process.cwd(), 'lib'))]
     .map((path) => path.slice(process.cwd().length + 1));
@@ -2183,6 +2187,9 @@ function launchOfferContracts() {
 }
 
 async function main() {
+  // Code graded below runs on the grader's worker thread, built fresh from the
+  // sources under test.
+  await buildSandboxWorker();
   assert.equal(apiFiles(join(process.cwd(), 'api')).length, 12, 'Vercel function budget must remain exactly 12');
 
   // devShark is the only product this repository builds. An unset identity
@@ -2324,6 +2331,12 @@ async function main() {
   assert.ok(doubleSolution?.solution.includes('double'));
   const playableDouble = JSON.stringify(playableCodingTask(doubleTask!));
   assert.ok(!playableDouble.includes(doubleSolution!.solution.trim().slice(0, 30)), 'playable task must not carry the solution');
+  // The grader runs on a worker thread the host can stop (CODE-5). Its bundle
+  // is built with the React runner and shipped with the roadmap function; a
+  // deployment without it would fall back to running on the request thread.
+  assert.match(readFileSync(join(process.cwd(), 'scripts', 'build-react-runner.mjs'), 'utf8'), /await buildSandboxWorker\(\)/, 'the build writes the grader worker bundle');
+  const roadmapFunction = (JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as { functions: Record<string, { includeFiles?: string }> }).functions['api/quiz/roadmap.ts'];
+  assert.ok(roadmapFunction?.includeFiles?.includes('lib/coding/generated/*.cjs') && SANDBOX_WORKER_FILE.startsWith('lib/coding/generated/') && SANDBOX_WORKER_FILE.endsWith('.cjs'), 'the roadmap function ships the grader worker bundle');
   const graded = await runInSandbox({ code: doubleSolution!.solution, calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });
   assert.equal(codeOutcome({ visible: graded, hidden: null, check: null }), 'passed', 'the reference solution passes in the sandbox');
   const wrong = await runInSandbox({ code: 'const double = ns => ns;', calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });
@@ -3757,7 +3770,7 @@ async function main() {
   // trims that set; it never reaches past the tier gate, and a shuffled run
   // is a permutation of the sequential one.
   {
-    const base = { minutes: 20, topic: null, passed: new Set<string>(), due: new Set<string>() };
+    const base = { minutes: 20, topic: null, plan: 'free' as const, passed: new Set<string>(), due: new Set<string>() };
     const sequential = buildQueue({ ...base, count: 5, order: 'sequential' });
     assert.equal(sequential.length, 5, 'a run sized by count holds that many challenges');
     assert.deepEqual(buildQueue({ ...base, count: 5, order: 'sequential' }), sequential, 'sequential runs are deterministic');
@@ -3776,6 +3789,14 @@ async function main() {
     }
     assert.equal(buildQueue({ ...base, count: 200, order: 'sequential' }).length, 20, 'a count is capped');
     assert.ok(buildQueue({ ...base, order: 'sequential' }).length >= 1, 'a run sized by minutes still offers something');
+    // The plan is a gate too: a free account's run holds only what the free
+    // plan opens, or the run stops at the first Premium challenge with a 402.
+    for (const topic of [null, ...CODING_SECTION_TRACKS]) {
+      const free = buildQueue({ ...base, count: 10, topic, order: 'sequential' });
+      assert.ok(free.length > 0 && free.every(isFreeCodingTask), `a free ${topic ?? 'mixed'} run holds only free challenges: ${free.filter((id) => !isFreeCodingTask(id)).join(', ')}`);
+    }
+    const premiumRun = buildQueue({ ...base, plan: 'premium', count: 10, topic: 'algorithms', order: 'sequential' });
+    assert.ok(premiumRun.some((id) => !isFreeCodingTask(id)), 'Premium opens the rest of the catalogue to a run');
 
     const now = Date.parse('2026-09-18T12:00:00Z');
     assert.deepEqual(parseScheduledFor(undefined, now), { at: null }, 'no moment means now');
