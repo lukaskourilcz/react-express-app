@@ -422,6 +422,9 @@ async function main() {
       const starterRun = await withTimeout(evaluateCalls({ code: checker.toJavaScript(task.starter), calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, where);
       if (typesPassed(starterCheck) && allPassed(starterRun)) fail(`${where}: the untouched starter already passes`);
       starterCode = checker.toJavaScript(task.starter);
+      // Code that ends inside an unterminated template literal must not pull
+      // the type tests into it: the check reports the code instead.
+      if (typesPassed(checker.check(`${solution.solution}\ntype __Unterminated = \``, task.typeTests ?? []))) fail(`${where}: an unterminated template literal at the end of the code passes the type tests`);
     }
     for (const [name, source] of variants(solution, where)) {
       const label = `${where} (${name})`;

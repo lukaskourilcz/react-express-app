@@ -223,3 +223,28 @@ function codingDatabase() {
   }
   console.log('PASS integrity: a code-ordering puzzle submits through the session that issued it');
 }
+
+// ── the code cannot swallow its type tests (CODE-6) ──────────────────────
+// Code typed `any` throughout fails the assertion that must reject a wrong
+// argument. Ending the code inside an unterminated template literal, block
+// comment or string used to pull every type-test line into that token, so
+// the rejecting assertion "passed" and so did the task.
+{
+  const anyShipping = 'type Speed = any;\nconst shippingDays = (speed: any, weekend: any): any => (speed === "standard" ? 5 : speed === "express" ? 2 : 1) + (weekend ? 1 : 0);';
+  const anyGroupBy = 'function groupBy(items: any, keyOf: any): any { const m = new Map(); for (const i of items) { const k = keyOf(i); m.has(k) ? m.get(k).push(i) : m.set(k, [i]); } return m; }';
+  const submitTs = async (taskId: string, code: string) => {
+    const out = { statusCode: 200, body: null as null | { verdict?: string; solutions?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+    await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: encodeCodingSession({ taskId, track: 'typescript', userId: null }), code } } as never, out as never, null);
+    assert.equal(out.statusCode, 200);
+    return out.body!;
+  };
+  assert.equal((await submitTs('ts-shipping-speed', anyShipping)).verdict, 'failed', '`any` everywhere fails the rejecting type test');
+  for (const tail of ['\ntype __Z = `', '\n/*', '\nconst __z = "', '\n// @ts-ignore']) {
+    for (const [taskId, code] of [['ts-shipping-speed', anyShipping], ['ts-path-generics-1', anyGroupBy]] as const) {
+      const verdict = await submitTs(taskId, code + tail);
+      assert.notEqual(verdict.verdict, 'passed', `${taskId}: code ending in ${JSON.stringify(tail.trim())} must not pass its type tests`);
+      assert.equal(verdict.solutions, null, `${taskId}: no solutions released`);
+    }
+  }
+  console.log('PASS integrity: the code cannot swallow its type tests');
+}
