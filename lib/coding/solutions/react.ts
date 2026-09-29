@@ -3,6 +3,64 @@
 // English is the source of truth; Czech copy lives in the sibling *.cs.ts overlay.
 
 import type { CodingSolution } from '../types';
+import { FAKE_CLOCK } from '../tasks/easy-react-a';
+
+// Hidden cases (lib/coding/react-hidden.ts) for the tasks whose visible suite
+// a static page or a near miss could pass: they serve data the visible suite
+// never shows, check the URL each request goes to, move time by hand, and
+// read exact numbers. The strings below are test code, so a regular
+// expression in them avoids backslashes (a template literal would eat them).
+
+/** A fetch the case answers by hand. Every call is recorded with its URL and
+ * options and stays in flight until the case calls `respond(data, status)` or
+ * `fail(error)`, so the page can be read while it waits. The shared stub comes
+ * back when the case ends. */
+const HELD_FETCH = `const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      options,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+// The path of a request, without the host, the query or a trailing slash.
+const pathOf = url => new URL(url, 'http://localhost/').pathname.replace(/[/]+$/, '');
+const requestTo = (calls, path) => calls.find(call => pathOf(call.url).endsWith(path));
+`;
+
+/** Four users the fixture stub never serves. */
+const FRESH_USERS = `const FRESH_USERS = [
+  { id: 21, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' },
+  { id: 22, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' },
+  { id: 23, name: 'Alan Turing', username: 'alan', email: 'alan@bombe.example' },
+  { id: 24, name: 'Edsger Dijkstra', username: 'edsger', email: 'edsger@paths.example' },
+];
+const namesInItems = container => [...container.querySelectorAll('li')].map(item => item.textContent);
+`;
+
+/** A failure has to put something on the page that was not there while the
+ * request was in flight: a component that shows nothing, keeps showing its
+ * loading line, or crashes to an empty page shows no message. */
+const SHOWS_A_MESSAGE = `const showsANewMessage = (inFlight, now) => now.trim() !== '' && !inFlight.includes(now);
+`;
+
+/** Every number on the page outside the buttons, so a "+1" label on a button
+ * is not read as the count. */
+const NUMBERS_SHOWN = `const numbersShown = node => {
+  const copy = node.cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return (copy.textContent.match(/-?[0-9]+/g) || []).join(' ');
+};
+`;
 
 export const REACT_SOLUTIONS: Record<string, CodingSolution> = {
   "react-color-selector": {
@@ -87,6 +145,21 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `${NUMBERS_SHOWN}
+test('the page shows exactly one number, 0, before any click', () => {
+  const { container } = render(<App />);
+  expect(numbersShown(container)).toBe('0');
+});
+
+test('the number is exactly 1 after one click and 3 after three', () => {
+  const { container } = render(<App />);
+  const button = container.querySelector('button');
+  fireEvent.click(button);
+  expect(numbersShown(container)).toBe('1');
+  fireEvent.click(button);
+  fireEvent.click(button);
+  expect(numbersShown(container)).toBe('3');
+});`,
   },
   "react-toggle-button": {
     solution: `const App = () => {
@@ -169,6 +242,27 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `// The props React rendered a DOM node with; a controlled input carries a value prop.
+const reactProps = node => node[Object.keys(node).find(key => key.startsWith('__reactProps$'))] || {};
+
+test('the paragraph follows every change, a deletion included', () => {
+  const { container } = render(<App />);
+  const input = container.querySelector('input');
+  const paragraph = () => container.querySelector('p').textContent;
+  fireEvent.change(input, { target: { value: 'first words' } });
+  expect(paragraph()).toContain('first words');
+  fireEvent.change(input, { target: { value: 'first' } });
+  expect(paragraph()).toContain('first');
+  expect(paragraph()).not.toContain('words');
+});
+
+test('the input is controlled from the first render: its value comes from state', () => {
+  const { container } = render(<App />);
+  const input = container.querySelector('input');
+  expect(reactProps(input).value).toBe('');
+  fireEvent.change(input, { target: { value: 'kept in state' } });
+  expect(reactProps(input).value).toBe('kept in state');
+});`,
   },
   "react-data-list": {
     solution: `const people = [
@@ -597,6 +691,19 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `const numbersInTitle = () => (document.title.match(/-?[0-9]+/g) || []).join(' ');
+
+test('the title holds exactly the count: 0, then 1, then 3', () => {
+  document.title = 'Before the page';
+  const { container } = render(<App />);
+  expect(numbersInTitle()).toBe('0');
+  const button = container.querySelector('button');
+  fireEvent.click(button);
+  expect(numbersInTitle()).toBe('1');
+  fireEvent.click(button);
+  fireEvent.click(button);
+  expect(numbersInTitle()).toBe('3');
+});`,
   },
   "react-delayed-message": {
     solution: `const App = () => {
@@ -645,6 +752,38 @@ const App = () => {
     </main>
   );
 };`,
+    // On the hand-moved clock of FAKE_CLOCK, so "one second" is exact.
+    hiddenSuite: `${FAKE_CLOCK}
+test('Done! is absent until one second has passed, then shows', () => withClock(async clock => {
+  const { container } = render(<App />);
+  expect(container.textContent).toContain('Waiting');
+  expect(container.textContent).not.toContain('Done!');
+  await clock.tick(900);
+  expect(container.textContent).not.toContain('Done!');
+  await clock.tick(100);
+  expect(container.textContent).toContain('Done!');
+}));
+
+test('leaving before the second is up clears the timeout', () => withClock(async clock => {
+  const hosts = [...new Set([globalThis, window])];
+  const saved = hosts.map(host => [host.setTimeout, host.clearTimeout]);
+  const started = [];
+  const cleared = [];
+  hosts.forEach((host, index) => {
+    const [set, clear] = saved[index];
+    host.setTimeout = (callback, ms, ...rest) => { const id = set(callback, ms, ...rest); if (Number(ms) >= 500) started.push(id); return id; };
+    host.clearTimeout = id => { cleared.push(id); return clear(id); };
+  });
+  try {
+    const { unmount } = render(<App />);
+    await clock.tick(500);
+    unmount();
+  } finally {
+    hosts.forEach((host, index) => { [host.setTimeout, host.clearTimeout] = saved[index]; });
+  }
+  expect(started.length > 0).toBe(true);
+  expect(started.every(id => cleared.includes(id))).toBe(true);
+}));`,
   },
   "react-get-one-user": {
     solution: `const App = () => {
@@ -704,6 +843,16 @@ const App = () => {
   const user = useUser(1);
   return <main>{user ? <UserCard user={user} /> : <p>Loading…</p>}</main>;
 };`,
+    hiddenSuite: `${HELD_FETCH}
+test('asks for user 1 and shows the name and email of the answer', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const request = requestTo(calls, '/users/1');
+  expect(Boolean(request)).toBe(true);
+  expect(container.textContent).not.toContain('Ada Lovelace');
+  request.respond({ id: 1, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' });
+  await waitFor(() => expect(container.textContent).toContain('Ada Lovelace'));
+  expect(container.textContent).toContain('ada@engine.example');
+}));`,
   },
   "react-get-users-list": {
     solution: `const App = () => {
@@ -761,6 +910,17 @@ const App = () => {
   const users = useUsers();
   return <main><UserList users={users} /></main>;
 };`,
+    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}
+test('asks for the users list and renders one item per user of the answer', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const request = requestTo(calls, '/users');
+  expect(Boolean(request)).toBe(true);
+  expect(container.querySelectorAll('li').length).toBe(0);
+  request.respond(FRESH_USERS);
+  await waitFor(() => expect(container.querySelectorAll('li').length).toBe(4));
+  const items = namesInItems(container);
+  FRESH_USERS.forEach((user, index) => expect(items[index]).toContain(user.name));
+}));`,
   },
   "react-loading-state": {
     solution: `const App = () => {
@@ -823,6 +983,20 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}
+test('Loading stays while the request is in flight, then one item per user replaces it', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const request = requestTo(calls, '/users');
+  expect(Boolean(request)).toBe(true);
+  await new Promise(resolve => setTimeout(resolve, 30));
+  expect(container.textContent).toContain('Loading');
+  expect(container.querySelectorAll('li').length).toBe(0);
+  request.respond(FRESH_USERS);
+  await waitFor(() => expect(container.querySelectorAll('li').length).toBe(4));
+  expect(container.textContent).not.toContain('Loading');
+  const items = namesInItems(container);
+  FRESH_USERS.forEach((user, index) => expect(items[index]).toContain(user.name));
+}));`,
   },
   "react-fetch-error-state": {
     solution: `const App = () => {
@@ -895,6 +1069,25 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}${SHOWS_A_MESSAGE}
+test('a non-OK answer is a failure even when its body is a list: a message, no items', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const request = requestTo(calls, '/users');
+  expect(Boolean(request)).toBe(true);
+  const inFlight = container.textContent;
+  request.respond(FRESH_USERS, 500);
+  await waitFor(() => expect(showsANewMessage(inFlight, container.textContent)).toBe(true));
+  expect(container.querySelectorAll('li').length).toBe(0);
+  expect(container.textContent).not.toContain('Ada Lovelace');
+}));
+
+test('a request that throws shows a message and no items', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const inFlight = container.textContent;
+  calls[0].fail(new TypeError('Network down'));
+  await waitFor(() => expect(showsANewMessage(inFlight, container.textContent)).toBe(true));
+  expect(container.querySelectorAll('li').length).toBe(0);
+}));`,
   },
   "react-select-fetched-user": {
     solution: `const App = () => {
@@ -1117,6 +1310,23 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `${HELD_FETCH}
+const isOneTodo = call => /[/]todos[/][0-9]+$/.test(pathOf(call.url));
+
+test('mount and Refresh each ask for one todo, and the page shows the latest answer', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  expect(calls.length).toBe(1);
+  expect(isOneTodo(calls[0])).toBe(true);
+  calls[0].respond({ id: 7, userId: 1, title: 'Water the ferns', completed: false });
+  await waitFor(() => expect(container.textContent).toContain('Water the ferns'));
+  const refresh = [...container.querySelectorAll('button')].find(b => /refresh/i.test(b.textContent));
+  fireEvent.click(refresh);
+  expect(calls.length).toBe(2);
+  expect(isOneTodo(calls[1])).toBe(true);
+  calls[1].respond({ id: 12, userId: 1, title: 'Call the plumber', completed: true });
+  await waitFor(() => expect(container.textContent).toContain('Call the plumber'));
+  expect(container.textContent).not.toContain('Water the ferns');
+}));`,
   },
   "react-post-a-new-post": {
     solution: `const App = () => {
@@ -1342,6 +1552,20 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `${HELD_FETCH}
+test('each selection asks for that user and shows the answer', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const first = requestTo(calls, '/users/1');
+  expect(Boolean(first)).toBe(true);
+  first.respond({ id: 1, name: 'Ada Lovelace', username: 'ada', email: 'ada@engine.example' });
+  await waitFor(() => expect(container.textContent).toContain('Ada Lovelace'));
+  fireEvent.change(container.querySelector('select'), { target: { value: '2' } });
+  const second = requestTo(calls, '/users/2');
+  expect(Boolean(second)).toBe(true);
+  second.respond({ id: 2, name: 'Grace Hopper', username: 'grace', email: 'grace@cobol.example' });
+  await waitFor(() => expect(container.textContent).toContain('Grace Hopper'));
+  expect(container.textContent).not.toContain('Ada Lovelace');
+}));`,
   },
   "react-debounced-search": {
     solution: `const App = () => {
@@ -1401,6 +1625,36 @@ const App = () => {
     </main>
   );
 };`,
+    // On the hand-moved clock of FAKE_CLOCK: keystrokes 100 ms apart, then
+    // the page is read at every step up to the 500 ms the prompt names.
+    hiddenSuite: `${FAKE_CLOCK}
+test('a burst of keystrokes shows nothing until 500 ms after the last one, then only the final query', () => withClock(async clock => {
+  const { container } = render(<App />);
+  const input = container.querySelector('input');
+  for (const value of ['wom', 'womb', 'womba', 'wombat']) {
+    fireEvent.change(input, { target: { value } });
+    await clock.tick(100);
+    expect(container.textContent).not.toContain('wom');
+  }
+  await clock.tick(300);
+  expect(container.textContent).not.toContain('wom');
+  await clock.tick(100);
+  expect(container.textContent).toContain('wombat');
+}));
+
+test('a pause shorter than 500 ms keeps the earlier settled query on the page', () => withClock(async clock => {
+  const { container } = render(<App />);
+  const input = container.querySelector('input');
+  fireEvent.change(input, { target: { value: 'otter' } });
+  await clock.tick(500);
+  expect(container.textContent).toContain('otter');
+  fireEvent.change(input, { target: { value: 'heron' } });
+  await clock.tick(450);
+  expect(container.textContent).toContain('otter');
+  expect(container.textContent).not.toContain('heron');
+  await clock.tick(50);
+  expect(container.textContent).toContain('heron');
+}));`,
   },
   "react-abort-a-request": {
     solution: `const App = () => {
@@ -1879,6 +2133,42 @@ const App = () => {
   if (error) return <main><p role="alert">{error}</p></main>;
   return <main><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;
 };`,
+    hiddenSuite: `${HELD_FETCH}${FRESH_USERS}${SHOWS_A_MESSAGE}
+test('Loading while the users request is in flight, then one item per user of the answer', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const request = requestTo(calls, '/users');
+  expect(Boolean(request)).toBe(true);
+  expect(container.textContent).toContain('Loading');
+  request.respond(FRESH_USERS);
+  await waitFor(() => expect(container.querySelectorAll('li').length).toBe(4));
+  expect(container.textContent).not.toContain('Loading');
+  const items = namesInItems(container);
+  FRESH_USERS.forEach((user, index) => expect(items[index]).toContain(user.name));
+}));
+
+test('a non-OK answer is a failure even when its body is a list: a message, no items', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const inFlight = container.textContent;
+  requestTo(calls, '/users').respond(FRESH_USERS, 500);
+  await waitFor(() => expect(showsANewMessage(inFlight, container.textContent)).toBe(true));
+  expect(container.querySelectorAll('li').length).toBe(0);
+}));
+
+test('a non-OK answer with no body shows a message rather than an empty page', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const inFlight = container.textContent;
+  requestTo(calls, '/users').respond(null, 503);
+  await waitFor(() => expect(showsANewMessage(inFlight, container.textContent)).toBe(true));
+  expect(container.querySelectorAll('li').length).toBe(0);
+}));
+
+test('a request that throws shows a message and no items', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const inFlight = container.textContent;
+  requestTo(calls, '/users').fail(new TypeError('Network down'));
+  await waitFor(() => expect(showsANewMessage(inFlight, container.textContent)).toBe(true));
+  expect(container.querySelectorAll('li').length).toBe(0);
+}));`,
   },
   "react-crud-mini-app": {
     solution: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
@@ -2031,6 +2321,32 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `const buttonIn = (item, pattern) => [...item.querySelectorAll('button')].find(b => pattern.test(b.textContent));
+
+test('Edit renames only the post whose button was clicked', async () => {
+  const { container } = render(<App />);
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(7));
+  fireEvent.click(buttonIn(container.querySelectorAll('li')[1], /edit/i));
+  const items = container.querySelectorAll('li');
+  expect(items).toHaveLength(7);
+  expect(items[1].textContent).toContain('Edited');
+  expect(items[1].textContent).not.toContain('Post two');
+  expect(items[0].textContent).toContain('Post one');
+  expect(items[0].textContent).not.toContain('Edited');
+  expect(items[2].textContent).toContain('Post three');
+  expect(items[2].textContent).not.toContain('Edited');
+});
+
+test('Delete removes only the post whose button was clicked', async () => {
+  const { container } = render(<App />);
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(7));
+  fireEvent.click(buttonIn(container.querySelectorAll('li')[2], /delete|remove/i));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(6));
+  expect(container.textContent).not.toContain('Post three');
+  expect(container.textContent).toContain('Post one');
+  expect(container.textContent).toContain('Post two');
+  expect(container.textContent).toContain('Post four');
+});`,
   },
   "react-stopwatch": {
     solution: `const App = () => {
@@ -2115,6 +2431,51 @@ const App = () => {
     </main>
   );
 };`,
+    // On the hand-moved clock of FAKE_CLOCK, so each second is exact and a
+    // second interval shows as a count that runs ahead.
+    hiddenSuite: `${FAKE_CLOCK}${NUMBERS_SHOWN}
+const secondsShown = container => numbersShown(container.querySelector('p'));
+
+test('Start counts exactly one per second from 0', () => withClock(async clock => {
+  const { container } = render(<App />);
+  expect(secondsShown(container)).toBe('0');
+  fireEvent.click(control(container, 'start'));
+  await clock.tick(999);
+  expect(secondsShown(container)).toBe('0');
+  await clock.tick(1);
+  expect(secondsShown(container)).toBe('1');
+  await clock.tick(2000);
+  expect(secondsShown(container)).toBe('3');
+}));
+
+test('pressing Start twice, at once or later, still counts one per second', () => withClock(async clock => {
+  const { container } = render(<App />);
+  fireEvent.click(control(container, 'start'));
+  fireEvent.click(control(container, 'start'));
+  await clock.tick(1000);
+  expect(secondsShown(container)).toBe('1');
+  await clock.tick(500);
+  fireEvent.click(control(container, 'start'));
+  // Whether the second press is ignored or restarts the one interval, the
+  // count reads 2 a second later and 3 a second after that.
+  await clock.tick(1000);
+  expect(secondsShown(container)).toBe('2');
+  await clock.tick(1000);
+  expect(secondsShown(container)).toBe('3');
+}));
+
+test('Stop freezes the count, Reset returns exactly 0, and nothing ticks afterwards', () => withClock(async clock => {
+  const { container } = render(<App />);
+  fireEvent.click(control(container, 'start'));
+  await clock.tick(2000);
+  fireEvent.click(control(container, 'stop'));
+  await clock.tick(3000);
+  expect(secondsShown(container)).toBe('2');
+  fireEvent.click(control(container, 'reset'));
+  expect(secondsShown(container)).toBe('0');
+  await clock.tick(2000);
+  expect(secondsShown(container)).toBe('0');
+}));`,
   },
   "react-uselocalstorage-hook": {
     solution: `const useLocalStorage = (key, initial) => {
@@ -2864,6 +3225,53 @@ const App = () => {
     </main>
   );
 };`,
+    hiddenSuite: `${HELD_FETCH}
+// Five todos on the server; the answer honours _start, _end, _limit and
+// _page the way the training API does, so asking for all of them gets five.
+const SERVER_TODOS = [
+  { id: 41, userId: 1, title: 'Pack the tent', completed: true },
+  { id: 42, userId: 1, title: 'Buy stove fuel', completed: false },
+  { id: 43, userId: 1, title: 'Check the forecast', completed: true },
+  { id: 44, userId: 1, title: 'Book the campsite', completed: false },
+  { id: 45, userId: 1, title: 'Print the map', completed: true },
+];
+const answerLikeTheApi = call => {
+  const params = new URL(call.url, 'http://localhost/').searchParams;
+  const limit = params.has('_limit') ? Number(params.get('_limit')) : null;
+  const start = params.has('_start') ? Number(params.get('_start')) : params.has('_page') && limit !== null ? (Number(params.get('_page')) - 1) * limit : 0;
+  const end = params.has('_end') ? Number(params.get('_end')) : limit !== null ? start + limit : SERVER_TODOS.length;
+  call.respond(SERVER_TODOS.slice(start, end));
+};
+
+test('shows the first three todos the server holds, each with its state, and the count', () => withRequests(async calls => {
+  const { container } = render(<App />);
+  const request = requestTo(calls, '/todos');
+  expect(Boolean(request)).toBe(true);
+  answerLikeTheApi(request);
+  await waitFor(() => expect(container.querySelectorAll('li').length > 0).toBe(true));
+  const items = container.querySelectorAll('li');
+  expect(items).toHaveLength(3);
+  expect(items[0].textContent).toContain('Pack the tent');
+  expect(items[0].textContent).toContain('done');
+  expect(items[1].textContent).toContain('Buy stove fuel');
+  expect(items[1].textContent).toContain('to do');
+  expect(items[2].textContent).toContain('Check the forecast');
+  expect(items[2].textContent).toContain('done');
+  expect(container.textContent).toContain('Done: 2 of 3');
+}));
+
+test('Remove drops the todo it belongs to, not the first one', async () => {
+  const { container } = render(<App />);
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  const second = container.querySelectorAll('li')[1];
+  fireEvent.click([...second.querySelectorAll('button')].find(b => /remove/i.test(b.textContent)));
+  const items = container.querySelectorAll('li');
+  expect(items).toHaveLength(2);
+  expect(items[0].textContent).toContain('Todo one');
+  expect(items[1].textContent).toContain('Todo three');
+  expect(container.textContent).not.toContain('Todo two');
+  expect(container.textContent).toContain('Done: 0 of 2');
+});`,
   },
   "react-product-search": {
     solution: `const App = () => {
