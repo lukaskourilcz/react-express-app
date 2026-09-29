@@ -250,9 +250,13 @@ can launch or pause without the other, and a path opens only when its switch
 is on, its content validates and the migration is installed.
 
 Completion language is deliberately narrow. The server says "FDE guided path
-completed" only after the required verified evidence, and displays "Portfolio
-self-reviewed" as a separate line. There is no certification, no rank and no
-claim about employment.
+completed" only after every required module is complete, and the FDE modules
+require three written pieces the learner reviews against the rubric themselves
+(`self_reviewed`, never counted as verified). So the path, and the merchandise
+it earns, needs all three. The overview shows them on their own line, "Written
+pieces you review yourself", with a note that all of them are required to
+complete the path. There is no certification, no rank and no claim about
+employment.
 
 ## Practice, scheduling and what the product claims about it
 
