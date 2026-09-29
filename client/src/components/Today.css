@@ -42,6 +42,7 @@
 @media (prefers-reduced-motion: reduce) {
   .today-progress__fill { transition: none; }
 }
+.today-progress__note { margin-top: 8px; }
 
 /* Target reached — celebration + the day's card pack. */
 .today-done {

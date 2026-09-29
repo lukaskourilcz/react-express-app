@@ -73,11 +73,14 @@ END;
 $$;
 
 -- A shield raised now ends when tomorrow ends (UTC), so the time the Profile
--- shows as left is the time it covers.
+-- shows as left is the time it covers. A shield counts as running only while
+-- it covers today.
 DO $$
 DECLARE
   v_today   CONSTANT DATE := (NOW() AT TIME ZONE 'UTC')::DATE;
+  v_month   CONSTANT TEXT := TO_CHAR((NOW() AT TIME ZONE 'UTC')::DATE, 'YYYY-MM');
   v_user    CONSTANT TEXT := 'aaaaaaaa-0000-4000-8000-000000001111';
+  v_old     CONSTANT TEXT := 'aaaaaaaa-0000-4000-8000-000000001112';
   v_granted BOOLEAN;
   v_until   TIMESTAMPTZ;
   v_left    INTEGER;
@@ -89,6 +92,17 @@ BEGIN
     format('it runs to 00:00 UTC the day after tomorrow, got %s', v_until);
   ASSERT ((v_until - INTERVAL '48 hours') AT TIME ZONE 'UTC')::DATE = v_today,
     'and 48 hours before its end is the day it was raised';
+
+  SELECT s.granted, s.remaining INTO v_granted, v_left FROM public.activate_streak_shield(v_user) AS s;
+  ASSERT NOT v_granted AND v_left = 1, format('a second request while it runs spends nothing: %s, %s left', v_granted, v_left);
+
+  -- Raised at 23:59 two days ago the pre-048 way: its 48 hours run into today
+  -- but it covers only the two days before, so a new shield can be raised.
+  INSERT INTO public.user_streak_freezes (user_id, period, remaining, used, shield_until)
+  VALUES (v_old, v_month, 1, '[]'::jsonb, ((v_today - 2)::TIMESTAMP + INTERVAL '23 hours 59 minutes' + INTERVAL '48 hours') AT TIME ZONE 'UTC');
+  SELECT s.granted, s.shield_until, s.remaining INTO v_granted, v_until, v_left FROM public.activate_streak_shield(v_old) AS s;
+  ASSERT v_granted AND v_left = 0 AND v_until = (v_today + 2)::TIMESTAMP AT TIME ZONE 'UTC',
+    format('a shield that no longer covers today does not block a new one: %s, %s left, until %s', v_granted, v_left, v_until);
 END;
 $$;
 

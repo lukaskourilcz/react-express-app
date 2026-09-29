@@ -96,6 +96,7 @@ import { SwimCta } from './landing/LandingKit';
 import { lazyShellPart } from '../lib/routeRecovery';
 import { ShellPartBoundary } from './ShellPartBoundary';
 import ErrorRetry from './ErrorRetry';
+import { localDayChangeTime } from '../lib/utcDay';
 import './Roadmap.css';
 import './DeepEndScreens.css';
 
@@ -1041,7 +1042,7 @@ function LevelNode({
     : mastered
       ? t('mastery.masteredTooltip', { days: masteryDays })
       : passed
-        ? (due ? t('mastery.dueTooltip') : t('mastery.clearedTooltip'))
+        ? (due ? t('mastery.dueTooltip') : t('mastery.clearedTooltip', { time: localDayChangeTime() }))
         : '';
   const coding = (meta.codingTasks ?? 0) > 0;
   const label = unlocked

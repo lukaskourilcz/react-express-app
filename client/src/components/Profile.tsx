@@ -23,6 +23,7 @@ import { useAuth, getUserProfile } from '../lib/auth';
 import { apiFetch, friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { getStreakProtection, activateShield, liveStreak, shieldRemaining, type StreakProtection } from '../lib/streakFreezes';
+import { DayChangeNote } from './DayChangeNote';
 import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
 import { renderQuestion } from './CodeBlock';
 import { MULTILINGUAL, useT, useLanguage } from '../i18n/LanguageContext';
@@ -439,10 +440,19 @@ export function StreakCard({
             </div>
           </Grid>
 
-          {unavailable && (
+          {unavailable ? (
             <Text type="supporting" size="xsm" color="secondary" justify="center">
               {t('profile.streakUnavailable')}
             </Text>
+          ) : (
+            // What makes a streak day, and when a day ends here: the server
+            // counts UTC days, which rarely end at the learner's midnight.
+            <VStack gap={0.5} align="center">
+              <Text type="supporting" size="xsm" color="secondary" justify="center">
+                {t('profile.streakRule')}
+              </Text>
+              <DayChangeNote justify="center" />
+            </VStack>
           )}
         </VStack>
       </div>
@@ -450,20 +460,21 @@ export function StreakCard({
 }
 
 /**
- * The shield: spend one of the month's two protections and the streak survives
- * the next 48 hours.
+ * The shield: spend one of the month's two protections and today and tomorrow
+ * (UTC dates) count as streak days.
  *
- * Three states and nothing else. A shield is running (a countdown, in whole
- * hours and minutes, read once on load — a live clock on a two-day window is
- * decoration). A protection is available (the button). The month's two are
- * spent (a line saying when the next arrive). Everything is server-owned: the
- * budget, the spend and the expiry, so a client cannot grant itself either.
+ * Three states and nothing else. A shield is running (a countdown to the end
+ * of tomorrow, in whole hours and minutes, read once on load — a live clock on
+ * a window of up to two days is decoration). A protection is available (the
+ * button). The month's two are spent (a line saying when the next arrive).
+ * Everything is server-owned: the budget, the spend and the expiry, so a
+ * client cannot grant itself either.
  *
  * It renders nothing at all until the read lands, and nothing if the server
  * cannot offer it yet, so the streak card never shows a control that would
  * fail. The streak card reads the state once, on mount, and shares it with the
- * count: the window is 48 hours long, and re-reading it while the page sits
- * open would tell the learner nothing they cannot get by reloading.
+ * count: the window lasts at most two days, and re-reading it while the page
+ * sits open would tell the learner nothing they cannot get by reloading.
  *
  * Without a live streak there is nothing to protect, so the button is not
  * offered: it would spend one of the month's two for nothing. A shield that is

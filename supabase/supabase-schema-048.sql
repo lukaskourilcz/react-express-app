@@ -26,8 +26,9 @@
 --      right for the shields raised before this migration (NOW() + 48 hours)
 --      and for the ones raised after it: activate_streak_shield now ends the
 --      window at the start of the day after tomorrow, so the time the Profile
---      shows as left is the time the shield really covers. The old test
---      covered a third date when a shield was raised just after midnight.
+--      shows as left is the time the shield really covers, and it counts a
+--      shield as running only while it covers today. The old test covered a
+--      third date when a shield was raised just after midnight.
 --   3. record_verified_quiz_result_v2 counts a question toward the category
 --      stats, the 30-day board and the XP only the first time the learner
 --      answers it on a UTC day, as record_roadmap_answer_v2 does for Learn
@@ -154,9 +155,11 @@ COMMENT ON COLUMN public.user_stats.last_quiz_date IS
 -- ---------------------------------------------------------------------------
 -- 2. A shield ends when the day after it was raised ends (UTC).
 -- ---------------------------------------------------------------------------
--- Restated from 032; only the expiry changes. (shield_until - 48 hours) is
--- still the raise date, so every reader of the window works the same way for
--- old and new shields.
+-- Restated from 032. The expiry changes, and a shield counts as running while
+-- it still covers today, so one raised late on a day before this migration
+-- (stored as raised + 48 hours) does not block a new shield on the third day
+-- it no longer covers. (shield_until - 48 hours) is still the raise date, so
+-- every reader of the window works the same way for old and new shields.
 CREATE OR REPLACE FUNCTION public.activate_streak_shield(p_user_id TEXT)
 RETURNS TABLE (granted BOOLEAN, period TEXT, remaining INTEGER, used JSONB, shield_until TIMESTAMPTZ)
 LANGUAGE plpgsql
@@ -172,7 +175,8 @@ BEGIN
   SELECT * INTO v_row FROM public.user_streak_freezes
    WHERE user_id = p_user_id FOR UPDATE;
 
-  IF v_row.shield_until IS NOT NULL AND v_row.shield_until > NOW() THEN
+  IF v_row.shield_until IS NOT NULL AND
+     ((v_row.shield_until - INTERVAL '48 hours') AT TIME ZONE 'UTC')::DATE + 1 >= v_today THEN
     RETURN QUERY SELECT FALSE, v_row.period, v_row.remaining, v_row.used, v_row.shield_until;
     RETURN;
   END IF;
