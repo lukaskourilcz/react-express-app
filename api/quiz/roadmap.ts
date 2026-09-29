@@ -147,7 +147,7 @@ function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLang>, b
       answerKey.push({ questionId: q.id, correctAnswer: options.indexOf(correctText) });
       return {
         id: q.id,
-        tags: q.tags,
+        // No tags before grading: some name the correct option.
         introduction: q.introduction,
         question: q.question,
         options,

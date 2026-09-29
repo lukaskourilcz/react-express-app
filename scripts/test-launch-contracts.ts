@@ -55,7 +55,10 @@ import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRange
 import { eligibilityFrom, registryEntryConsistent, type RegistryEntry } from '../shared/curation';
 import submitHandler from '../api/quiz/submit';
 import dailyHandler from '../api/quiz/daily';
-import { pickQuestionOfTheDay } from '../lib/daily-question';
+import questionsHandler from '../api/quiz/questions';
+import challengeHandler from '../api/quiz/challenge';
+import { decodeSessionEnvelope } from '../lib/quiz-tokens';
+import { dailySeededShuffle, pickQuestionOfTheDay, UNBIASED_SHUFFLE_FROM } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
 import { CODING_INDEX } from '../shared/coding-index';
 import { freeCodingCounts } from '../shared/tiers';
@@ -116,7 +119,7 @@ import {
   tokensForVerifiedXp,
   validateAddress,
 } from '../shared/rewards';
-import { DEFAULT_SETTINGS, normalizeSettings } from '../lib/settings-store';
+import { DEFAULT_SETTINGS, normalizeSettings, setGameSettingsForTests } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
 import { STREAK_PROTECTION_CAP } from '../shared/rewards';
 import {
@@ -1876,12 +1879,230 @@ async function qotdContracts() {
   assert.equal(checked.resultReceipt, undefined, 'a question of the day mints no receipt, so no XP, streak or leaderboard entry');
   assert.equal(checked.results[0].answerProof, undefined);
   assert.ok(checked.results[0].explanation.length > 0, 'the check explains the answer');
-  assert.match(readFileSync(join(process.cwd(), 'api/quiz/submit.ts'), 'utf8'), /const auth = session\.scope === 'qotd' \? null : signedIn;/);
 
   // The share images' count is the tier rule over the catalogue.
   const counts = freeCodingCounts(CODING_INDEX.map((task) => task.id));
   assert.equal(counts.total, CODING_INDEX.length);
   assert.equal(counts.free, CODING_INDEX.filter((task) => task.free === true).length);
+}
+
+/** The daily challenge and the question of the day draw with a seeded shuffle
+ * that favours no position, and the days already published keep their draw. */
+function seededShuffleContracts() {
+  const ten = Array.from({ length: 10 }, (_, i) => i);
+  // Golden orders from the shuffle those days were published with.
+  assert.deepEqual(dailySeededShuffle(ten, 'qotd::2026-09-15', '2026-09-15'), [0, 8, 2, 6, 3, 7, 5, 1, 4, 9]);
+  assert.deepEqual(dailySeededShuffle(ten, '2026-09-29::3', '2026-09-29'), [2, 7, 8, 1, 3, 0, 4, 6, 5, 9]);
+
+  const pool = Array.from({ length: 571 }, (_, i) => i);
+  const once = dailySeededShuffle(pool, 'qotd::2026-12-01', '2026-12-01');
+  assert.deepEqual(once, dailySeededShuffle(pool, 'qotd::2026-12-01', '2026-12-01'), 'the same seed gives the same order');
+  assert.deepEqual([...once].sort((a, b) => a - b), pool, 'a shuffle is a permutation');
+  // The old draw took one hash byte per swap: in a 571-question pool it put a
+  // question from past position 255 first on 1 day in 2000. Uniform is 55 %.
+  let late = 0;
+  for (let day = 0; day < 2000; day++) {
+    if (dailySeededShuffle(pool, `seed-${day}`, UNBIASED_SHUFFLE_FROM)[0] >= 256) late++;
+  }
+  assert.ok(late > 2000 * 0.5 && late < 2000 * 0.6, `a question past position 255 comes first on ${late} of 2000 days`);
+}
+
+/** A caller with its own address, so the per-address limits of the quiz
+ * handlers never decide an assertion here; signed in through the development
+ * fallback when `user` is given. */
+let quizCallerSeq = 0;
+function quizRequest(method: 'GET' | 'POST', query: Record<string, string>, body?: Record<string, unknown>, user?: string) {
+  quizCallerSeq++;
+  return {
+    method,
+    headers: { 'x-forwarded-for': `198.51.100.${quizCallerSeq % 250}`, ...(user ? { authorization: 'Bearer contract' } : {}) },
+    query: { ...query, ...(user && method === 'GET' ? { user_id: user } : {}) },
+    body: body && user ? { ...body, user_id: user } : body,
+  } as never;
+}
+
+/** POST /api/quiz/submit grades only the sessions it serves, each checked
+ * through the handler that really issues it. */
+async function quizSubmitScopeContracts() {
+  const learner = 'scope-contract-learner-01';
+  const submitAll = async (sessionId: string, user?: string) => {
+    const session = decodeSessionEnvelope(sessionId)!;
+    const answers = Object.fromEntries(session.questions.map((q) => [q.questionId, q.correctAnswer]));
+    const response = mockResponse();
+    await submitHandler(quizRequest('POST', {}, { sessionId, answers }, user), response as never);
+    return { session, response, body: response.body as { resultReceipt?: string; correctAnswers?: number; error?: { code: string } } };
+  };
+
+  // A Learn level: /api/quiz/roadmap?resource=answer reveals every correct
+  // option before the level is finished, so this session must not be
+  // gradable as a quiz.
+  const level = mockResponse();
+  await roadmapHandler(quizRequest('GET', { topic: 'javascript', level: '1', lang: 'en' }), level as never);
+  assert.equal(level.statusCode, 200, JSON.stringify(level.body));
+  const learn = await submitAll((level.body as { sessionId: string }).sessionId, learner);
+  assert.equal(learn.session.scope, 'roadmap');
+  assert.equal(learn.response.statusCode, 400, 'a Learn level session is refused by the quiz grader');
+  assert.equal(learn.body.error?.code, 'invalid_session');
+  assert.equal(learn.body.resultReceipt, undefined, 'no quiz receipt, XP, streak day or board entry for a Learn level');
+
+  // A quiz (and a personalised review, which is issued the same way).
+  const quiz = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '2', difficulty: 'mixed', categories: 'javascript' }), quiz as never);
+  assert.equal(quiz.statusCode, 200, JSON.stringify(quiz.body));
+  const graded = await submitAll((quiz.body as { sessionId: string }).sessionId, learner);
+  assert.equal(graded.response.statusCode, 200, JSON.stringify(graded.body));
+  assert.equal(decodeQuizResultReceipt(graded.body.resultReceipt!)?.purpose, 'quiz');
+  // The questions say when their session stops being gradable, no later
+  // than the sealed session itself does, so a saved quiz can be dropped.
+  const quizExpiresAt = (quiz.body as { expiresAt: number }).expiresAt;
+  assert.ok(quizExpiresAt <= graded.session.issuedAt + 60 * 60_000 && quizExpiresAt > Date.now() + 59 * 60_000, `expiresAt ${quizExpiresAt}`);
+
+  // The daily challenge, fetched and submitted signed in.
+  const daily = mockResponse();
+  await dailyHandler(quizRequest('GET', {}, undefined, learner), daily as never);
+  assert.equal(daily.statusCode, 200, JSON.stringify(daily.body));
+  const dailyGraded = await submitAll((daily.body as { sessionId: string }).sessionId, learner);
+  assert.equal(dailyGraded.response.statusCode, 200, JSON.stringify(dailyGraded.body));
+  assert.ok((daily.body as { expiresAt: number }).expiresAt <= dailyGraded.session.issuedAt + 60 * 60_000);
+  assert.equal(decodeQuizResultReceipt(dailyGraded.body.resultReceipt!)?.purpose, 'daily');
+
+  // The 20-question assessment.
+  const assessment = mockResponse();
+  await challengeHandler(quizRequest('GET', { resource: 'assessment', categories: deliveryCategories('webdev').join(',') }), assessment as never);
+  assert.equal(assessment.statusCode, 200, JSON.stringify(assessment.body));
+  const assessed = await submitAll((assessment.body as { sessionId: string }).sessionId, learner);
+  assert.equal(assessed.response.statusCode, 200, JSON.stringify(assessed.body));
+  assert.equal(decodeQuizResultReceipt(assessed.body.resultReceipt!)?.purpose, 'assessment');
+
+  // A Biggest Shark Challenge batch, one answer at a time.
+  const batch = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: deliveryCategories('webdev').join(',') }), batch as never);
+  assert.equal(batch.statusCode, 200, JSON.stringify(batch.body));
+  const batchSession = decodeSessionEnvelope((batch.body as { sessionId: string }).sessionId)!;
+  const one = batchSession.questions[0];
+  const challenged = mockResponse();
+  await submitHandler(quizRequest('POST', {}, { sessionId: (batch.body as { sessionId: string }).sessionId, answers: { [one.questionId]: one.correctAnswer } }, learner), challenged as never);
+  assert.equal(challenged.statusCode, 200, JSON.stringify(challenged.body));
+  assert.equal((challenged.body as { resultReceipt?: string }).resultReceipt, undefined);
+
+  // The question of the day is graded here too, as practice.
+  const qotd = mockResponse();
+  await dailyHandler(quizRequest('GET', { qotd: 'today' }), qotd as never);
+  assert.equal(qotd.statusCode, 200, JSON.stringify(qotd.body));
+  const checked = await submitAll((qotd.body as { sessionId: string }).sessionId, learner);
+  assert.equal(checked.response.statusCode, 200, JSON.stringify(checked.body));
+  assert.equal(checked.body.resultReceipt, undefined);
+
+  // Nothing handed out before grading carries the question's tags: a dozen
+  // served questions have a tag that is their correct option (rm-db-19
+  // WHERE, rm-db-37 HAVING, rm-react-183 useCallback).
+  const payloads: [string, unknown][] = [
+    ['quiz', (quiz.body as { questions: unknown[] }).questions],
+    ['daily', (daily.body as { questions: unknown[] }).questions],
+    ['Learn level', (level.body as { questions: unknown[] }).questions],
+    ['assessment', (assessment.body as { questions: unknown[] }).questions],
+    ['challenge batch', (batch.body as { questions: unknown[] }).questions],
+    ['question of the day', [(qotd.body as { question: unknown }).question]],
+  ];
+  for (const [label, questions] of payloads) {
+    for (const question of questions as Record<string, unknown>[]) {
+      assert.equal('tags' in question, false, `${label} sends ${String(question.id)} with its tags before grading`);
+    }
+  }
+  const placement = mockResponse();
+  await roadmapHandler(quizRequest('GET', { resource: 'placement', subject: 'webdev', lang: 'en' }), placement as never);
+  assert.equal(placement.statusCode, 200, JSON.stringify(placement.body));
+  for (const question of (placement.body as { questions: Record<string, unknown>[] }).questions) {
+    assert.equal('tags' in question, false, 'a placement round sends no tags');
+  }
+}
+
+/** Advanced asked of a topic with nothing above difficulty 2 is served its
+ * hardest questions, and says so, instead of a 404 that Retry repeats. */
+async function quizDifficultyContracts() {
+  const served = await getEffectiveQuestions('webdev', false);
+  const hardestHtml = Math.max(...served.filter((q) => q.category === 'html').map((q) => q.difficulty));
+  assert.ok(hardestHtml < 3, 'this contract needs a topic with no advanced questions');
+  const html = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '5', difficulty: 'advanced', categories: 'html' }), html as never);
+  assert.equal(html.statusCode, 200, JSON.stringify(html.body));
+  const htmlBody = html.body as { questions: { difficulty: number }[]; hardestAvailable?: boolean };
+  assert.equal(htmlBody.hardestAvailable, true);
+  assert.ok(htmlBody.questions.length > 0 && htmlBody.questions.every((q) => q.difficulty === hardestHtml));
+
+  const js = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '5', difficulty: 'advanced', categories: 'javascript,html' }), js as never);
+  assert.equal(js.statusCode, 200, JSON.stringify(js.body));
+  const jsBody = js.body as { questions: { difficulty: number }[]; hardestAvailable?: boolean };
+  assert.equal(jsBody.hardestAvailable, undefined, 'a selection with advanced questions is served those');
+  assert.ok(jsBody.questions.every((q) => q.difficulty >= 3));
+}
+
+/** The /dev "Daily challenge" switch turns the challenge off on the server;
+ * the question of the day is its own feature and stays open. */
+async function dailySwitchContracts() {
+  setGameSettingsForTests({ ...DEFAULT_SETTINGS, features: { ...DEFAULT_SETTINGS.features, dailyChallenge: false } });
+  try {
+    const off = mockResponse();
+    await dailyHandler(quizRequest('GET', {}), off as never);
+    assert.equal(off.statusCode, 503, JSON.stringify(off.body));
+    assert.equal((off.body as { error: { code: string } }).error.code, 'feature_disabled');
+    const qotd = mockResponse();
+    await dailyHandler(quizRequest('GET', { qotd: 'today' }), qotd as never);
+    assert.equal(qotd.statusCode, 200, JSON.stringify(qotd.body));
+  } finally {
+    setGameSettingsForTests(null);
+  }
+  const on = mockResponse();
+  await dailyHandler(quizRequest('GET', {}), on as never);
+  assert.equal(on.statusCode, 200, JSON.stringify(on.body));
+}
+
+/** A signed-in learner has one ranked daily attempt, timed from the first
+ * time they were handed the day's questions. */
+async function dailyIntegrityContracts() {
+  const learner = 'daily-contract-learner-01';
+  const fetchDaily = async (user?: string) => {
+    const response = mockResponse();
+    await dailyHandler(quizRequest('GET', {}, undefined, user), response as never);
+    assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+    return response;
+  };
+  const submitAll = async (sessionId: string, user?: string) => {
+    const session = decodeSessionEnvelope(sessionId)!;
+    const answers = Object.fromEntries(session.questions.map((q) => [q.questionId, q.correctAnswer]));
+    const response = mockResponse();
+    await submitHandler(quizRequest('POST', {}, { sessionId, answers }, user), response as never);
+    assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+    return response.body as { resultReceipt?: string; correctAnswers: number };
+  };
+
+  const first = await fetchDaily(learner);
+  // Never cached: a response fetched signed out must not be served again
+  // once the learner signs in.
+  assert.match(first.headers.get('cache-control') ?? '', /no-store/);
+  assert.match(first.headers.get('vary') ?? '', /Authorization/i);
+
+  // Fetched signed out, the day's questions carry a random attempt id.
+  // Submitted signed in with every answer right, they are practice: no
+  // receipt, so no daily result, XP or streak day, and nothing to replace
+  // the learner's own attempt with.
+  const anonymous = await fetchDaily();
+  const practised = await submitAll((anonymous.body as { sessionId: string }).sessionId, learner);
+  assert.equal(practised.correctAnswers > 0, true);
+  assert.equal(practised.resultReceipt, undefined, 'a daily fetched signed out never ranks a signed-in learner');
+
+  // Fetching again just before submitting does not restart the clock.
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  const again = await fetchDaily(learner);
+  const firstSession = decodeSessionEnvelope((first.body as { sessionId: string }).sessionId)!;
+  const againSession = decodeSessionEnvelope((again.body as { sessionId: string }).sessionId)!;
+  assert.equal(againSession.attemptId, firstSession.attemptId, 'one attempt a day');
+  assert.equal(againSession.startedAt, firstSession.startedAt, 'the start is the first fetch of the day');
+  const ranked = await submitAll((again.body as { sessionId: string }).sessionId, learner);
+  const receipt = decodeQuizResultReceipt(ranked.resultReceipt!);
+  assert.equal(receipt?.purpose, 'daily');
+  assert.ok((receipt?.daily?.durationMs ?? 0) >= 60, `the time runs from the first fetch, got ${receipt?.daily?.durationMs} ms`);
 }
 
 /** The launch price (shared/launch-offer.ts): 4 Oct 2026 00:00 to 2 Nov 2026
@@ -3585,6 +3806,11 @@ async function main() {
   erasureContracts();
   await voucherContracts();
   await qotdContracts();
+  await quizSubmitScopeContracts();
+  await dailyIntegrityContracts();
+  seededShuffleContracts();
+  await quizDifficultyContracts();
+  await dailySwitchContracts();
   await webdevBankContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');

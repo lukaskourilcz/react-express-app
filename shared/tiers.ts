@@ -36,8 +36,6 @@ export const FREE_LEARN_LEVELS: Readonly<Partial<Record<string, number>>> = { re
 export const FREE_EVOLVING_STAGES = 1;
 /** Share of the whole coding catalogue that carries `free: true`; the launch contract asserts it. */
 export const FREE_CODING_SHARE = { target: 0.15, min: 0.12, max: 0.18 } as const;
-/** Quizzes stay open in every category. Set to 'free-topics' to tighten later. */
-export const QUIZ_FREE_CATEGORIES: 'all' | 'free-topics' = 'all';
 /** The prices shown to a learner, VAT included. Billing charges the provider's
  * Price objects (section 3.1 of the second handoff); this is the display copy
  * and must match them. */

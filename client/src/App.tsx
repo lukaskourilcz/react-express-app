@@ -20,6 +20,7 @@ import { primeRankMarker } from './lib/xp';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import ReferralBinder from './components/ReferralBinder';
+import PendingQuizResults from './components/PendingQuizResults';
 import SignInButton from './components/SignInButton';
 import { useAuth } from './lib/auth';
 import { useWallet } from './lib/rewards';
@@ -906,6 +907,7 @@ function App() {
       <UpgradeSheetHost />
       <RegisterPromptSnackbar />
       <ReferralBinder />
+      <PendingQuizResults />
       <AppToast
         open={signupBonusOpen}
         onClose={() => setSignupBonusOpen(false)}
