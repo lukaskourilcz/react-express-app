@@ -610,6 +610,8 @@ async function main() {
   }
   console.log(`Hidden checks: ${cheatTasks} tasks reject a constant answer, ${tables} of them a table of the visible answers too (${((Date.now() - cheatsStarted) / 1000).toFixed(1)} s).`);
 
+  await stagesPromisesAndSignatures({ fail, checker, ts, byId });
+
   /* ── the last hint rung ─────────────────────────────────────────────── */
   // The ladder ends on the task's first reference, or on the documentation
   // page of its first focus tag: official documentation either way.
@@ -843,6 +845,64 @@ async function main() {
 
   const byLabel = CODING_DIFFICULTIES.map((label) => `${label} ${labelCounts.get(label) ?? 0}`).join(', ');
   console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}; ${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+}
+
+/* ── staged levels ───────────────────────────────────────────────────── */
+// A staged family (an evolving project, a short path, a FullStack app) shows
+// the reference, junior and senior boards once a level is passed. None of
+// them may pass the next level or its checkpoint as they stand, or pasting
+// one back earns that level for nothing. React levels prove the reference
+// only, because their suites take far longer to run.
+type ContentTask = (typeof CODING_TASKS)[number];
+
+async function stagesPromisesAndSignatures({ fail, checker, byId }: {
+  fail: (message: string) => void;
+  checker: ReturnType<typeof createTypeScript>;
+  ts: TypeScriptApi;
+  byId: ReadonlyMap<string, ContentTask>;
+}): Promise<void> {
+  const started = Date.now();
+  // The production grader's verdict: the visible checks and, in a fresh
+  // program, the hidden ones.
+  const passesChecks = async (task: ContentTask, code: string): Promise<boolean> => {
+    const run = await withTimeout(runChecks({ code, visible: task.tests ?? [], hidden: solutionFor(task.id)?.hiddenTests ?? [], shuffle: (list) => list }), 8_000, task.id);
+    return allPassed(run.visible) && (!run.hidden || allPassed(run.hidden));
+  };
+  // The same with the type tests (visible and hidden) first for TypeScript,
+  // and the suite with its hidden cases for React.
+  const passesTask = async (task: ContentTask, source: string): Promise<boolean> => {
+    const solution = solutionFor(task.id);
+    if (task.track === 'react') {
+      const run = await withTimeout(runReactSuite({ suite: withHiddenCases(task.suite!, solution?.hiddenSuite), appSource: source }), 20_000, task.id);
+      return !run.compileError && run.failed === 0 && run.total > 0;
+    }
+    if (task.track !== 'typescript') return passesChecks(task, source);
+    if (!typesPassed(checker.check(source, task.typeTests ?? []))) return false;
+    if (solution?.hiddenTypeTests?.length && !typesPassed(checker.check(source, solution.hiddenTypeTests))) return false;
+    return passesChecks(task, checker.toJavaScript(source));
+  };
+
+  let staged = 0;
+  for (const project of EVOLVING_CHALLENGES) {
+    const milestones = project.stages.filter((id) => !id.endsWith('-start'));
+    for (const id of project.stages) {
+      if (!ONLY.test(id)) continue;
+      const earlier = milestones[milestones.indexOf(id.endsWith('-start') ? id.slice(0, -6) : id) - 1];
+      const task = byId.get(id);
+      const before = earlier ? byId.get(earlier) : undefined;
+      const shown = earlier ? solutionFor(earlier) : undefined;
+      if (!task || !before || !shown || task.verify !== 'tests' || task.track !== before.track) continue;
+      const boards: [string, string | undefined][] = task.track === 'react'
+        ? [['reference', shown.solution]]
+        : [['reference', shown.solution], ['junior', shown.junior], ['senior', shown.senior]];
+      for (const [name, source] of boards) {
+        if (!source?.trim()) continue;
+        staged += 1;
+        if (await passesTask(task, source)) fail(`${id}: the ${name} solution of ${earlier}, shown once that level is passed, already passes this one`);
+      }
+    }
+  }
+  console.log(`Staged levels: ${staged} earlier solutions fail the next level (${((Date.now() - started) / 1000).toFixed(1)} s).`);
 }
 
 void main().catch((error) => {

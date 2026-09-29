@@ -877,7 +877,12 @@ completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
 routes, unlocks and progress. The full catalogue contains 770 tasks, and every
 graded code task carries a reference, a junior and a senior solution on the
-server; the last two reach the browser only with a verified pass.
+server; the last two reach the browser only with a verified pass. A stage's
+solutions hold only what that stage asks for: the content contract grades the
+reference, junior and senior solutions of every stage against the next stage
+and its checkpoint (the reference alone for React stages, whose suites are
+slow) and fails when one passes, since a learner can read them after a pass
+and paste them into the next stage.
 
 Since 2026-09-25 the registry also holds fifteen short paths of five levels
 each, marked `short`, with no checkpoints. Twelve are listed on the page of

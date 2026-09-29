@@ -28,7 +28,7 @@ const solutions: Record<string, (stage: number) => string> = {
   'js-evolving-events': stage => `function createBus(){
     const events=new Map();
     function add(event,fn,once=false){const sub={fn,once,fired:false};const list=events.get(event)||[];list.push(sub);events.set(event,list);return ()=>{const i=list.indexOf(sub);if(i>=0)list.splice(i,1)}}
-    return {on:(e,f)=>add(e,f),${stage >= 2 ? 'once:(e,f)=>add(e,f,true),' : ''}
+    return {on:(e,f)=>${stage >= 2 ? 'add(e,f),once:(e,f)=>add(e,f,true),' : '{add(e,f)},'}
       emit(event,value){const errors=[];for(const sub of [...(events.get(event)||[])]){
         ${stage >= 2 ? `if(sub.once){if(sub.fired)continue;sub.fired=true;const list=events.get(event);const i=list.indexOf(sub);if(i>=0)list.splice(i,1)}` : ''}
         ${stage === 3 ? 'try{sub.fn(value)}catch(error){errors.push(error)}' : 'sub.fn(value);'}
@@ -38,7 +38,7 @@ const solutions: Record<string, (stage: number) => string> = {
   'js-evolving-graph': stage => `function plan(graph,options={}){
     const done=new Set(),visiting=new Set(),out=[];
     function visit(id){if(done.has(id))return;${stage >= 2 ? 'if(!Object.hasOwn(graph,id)||visiting.has(id))throw 0;' : ''}visiting.add(id);for(const dep of graph[id])visit(dep);visiting.delete(id);done.add(id);out.push(id)}
-    try{for(const id of Object.keys(graph))visit(id)}catch{return null}
+    ${stage >= 2 ? 'try{for(const id of Object.keys(graph))visit(id)}catch{return null}' : 'for(const id of Object.keys(graph))visit(id);'}
     ${stage === 3 ? `if(options.layers){const layers=[];done.clear();while(done.size<out.length){const ready=Object.keys(graph).filter(id=>!done.has(id)&&graph[id].every(dep=>done.has(dep)));layers.push(ready);ready.forEach(id=>done.add(id))}return layers}` : ''}
     return out;
   }`,
