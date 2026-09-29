@@ -73,11 +73,11 @@ export interface CoalescedRead {
   cancel: () => void;
 }
 
-// Every answer in a match broadcasts `match_updated` to every client, so a
-// class answering together would otherwise send one state read per answer
-// per client. This keeps at most one read in flight and folds every request
-// that lands meanwhile into a single trailing read, which starts after the
-// last broadcast and so always fetches the final state.
+// A burst of broadcasts (a room changing question, a class joining the lobby)
+// would otherwise send one state read per broadcast per client. This keeps at
+// most one read in flight and folds every request that lands meanwhile into a
+// single trailing read, which starts after the last broadcast and so always
+// fetches the final state.
 export function coalesceReads(read: () => Promise<void>): CoalescedRead {
   let inFlight: Promise<void> | null = null;
   let trailing: Promise<void> | null = null;
@@ -107,6 +107,36 @@ export function coalesceReads(read: () => Promise<void>): CoalescedRead {
     },
     cancel: () => {
       cancelled = true;
+    },
+  };
+}
+
+export interface TrailingThrottle {
+  /** Ask for a run: the first request of a quiet spell schedules one `waitMs`
+   * later, and the requests that land before it runs join it. */
+  request: () => void;
+  /** Stop for good: a scheduled run never starts. */
+  cancel: () => void;
+}
+
+// A class answering one question sends the host a stream of `answered`
+// events. This turns the stream into at most one run per `waitMs`, and the
+// last event is always followed by a run within `waitMs`.
+export function trailingThrottle(run: () => void, waitMs: number): TrailingThrottle {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  let cancelled = false;
+  return {
+    request: () => {
+      if (cancelled || timer !== null) return;
+      timer = setTimeout(() => {
+        timer = null;
+        if (!cancelled) run();
+      }, waitMs);
+    },
+    cancel: () => {
+      cancelled = true;
+      if (timer !== null) clearTimeout(timer);
+      timer = null;
     },
   };
 }
