@@ -49,6 +49,9 @@ export interface CheckGrade {
   domainScores: Record<string, number> | null;
   failedDomains: string[];
   verdicts: CheckQuestionVerdict[];
+  /** True when the verdicts say only which questions were wrong: a failed
+   * project check keeps its key until the learner passes it. */
+  keyWithheld: boolean;
 }
 
 /** A domain with fewer questions than this cannot carry the whole threshold on
@@ -82,6 +85,13 @@ export function domainThresholds(activity: MergedActivity): Record<string, numbe
  * A domain-gated check needs the overall threshold and, in every domain, the
  * share `domainThresholds` gives it, which is what stops a strong domain from
  * covering a missing one.
+ *
+ * A project check (`purpose: 'project'`) decides a module that counts toward
+ * finishing the path and its reward, and a retry deals the same questions
+ * again, only reshuffled. So after a failed attempt it says only which
+ * questions were wrong: the correct option and the explanation would let the
+ * next attempt be copied. Both come back once the check is passed. A
+ * diagnostic or exercise check returns them after every attempt.
  */
 export function gradeCheck(
   activity: MergedActivity,
@@ -126,12 +136,16 @@ export function gradeCheck(
   }
 
   const passed = score >= threshold && failedDomains.length === 0;
+  const keyWithheld = activity.purpose === 'project' && !passed;
   return {
     state: passed ? 'verified_pass' : 'needs_revision',
     score: Number(score.toFixed(4)),
     domainScores,
     failedDomains,
-    verdicts,
+    verdicts: keyWithheld
+      ? verdicts.map(({ questionId, correct, domain }) => ({ questionId, correct, ...(domain ? { domain } : {}) }))
+      : verdicts,
+    keyWithheld,
   };
 }
 

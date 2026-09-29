@@ -193,7 +193,12 @@ export function CheckActivity({
             <div className="lp-options">
               {question.options.map((option, optionIndex) => {
                 const chosen = answers[index] === optionIndex;
-                const isCorrect = verdict && verdict.correctIndex === optionIndex;
+                // After a failed project check the server names only the
+                // questions that were wrong, so the one option known to be
+                // right is the learner's own right answer.
+                const isCorrect = verdict && (verdict.correctIndex === undefined
+                  ? chosen && verdict.correct
+                  : verdict.correctIndex === optionIndex);
                 const isWrongChoice = verdict && chosen && !verdict.correct;
                 const className = [
                   'lp-option',
@@ -228,7 +233,10 @@ export function CheckActivity({
                 );
               })}
             </div>
-            {verdict && <p className="lp-explanation">{loc(verdict.explanation)}</p>}
+            {verdict?.explanation && <p className="lp-explanation">{loc(verdict.explanation)}</p>}
+            {verdict && !verdict.explanation && !verdict.correct && (
+              <p className="lp-explanation">{t('paths.check.answerWithheld')}</p>
+            )}
           </fieldset>
         );
       })}

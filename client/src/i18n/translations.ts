@@ -1913,6 +1913,7 @@ export const en = {
   'paths.check.answered': '{answered} of {total} answered',
   'paths.check.correctAnswer': 'the correct answer',
   'paths.check.yourAnswer': 'your answer',
+  'paths.check.answerWithheld': 'Not this one. The correct answer and its explanation appear once you pass this check.',
   'paths.criterion.critical': 'must pass',
   'paths.criterion.passed': 'passed',
   'paths.criterion.failed': 'not met',

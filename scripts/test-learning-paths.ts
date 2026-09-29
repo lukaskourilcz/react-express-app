@@ -330,6 +330,34 @@ async function main() {
       }
       const oneMissed = gradeCheck(mixed, mixedKey, mixedKey.map((correct, index) => (index < 1 ? 1 : correct)));
       if (oneMissed.state !== 'verified_pass') fail(`19/20 with one miss in a five-question domain grades ${oneMissed.state}`);
+
+      /* ── a failed project check keeps its key ───────────────────────── */
+      // A retry deals the same questions reshuffled, so a failed attempt says
+      // only which were wrong. The key and explanations come with a pass, and
+      // a practice check returns them every time.
+      if (final.purpose !== 'project') fail('dsa final: the final check is a project check');
+      const failedFinal = gradeCheck(final, key, missing(inDomain(second)));
+      if (!failedFinal.keyWithheld) fail('dsa final: a failed project check does not say it withheld its key');
+      const leaked = failedFinal.verdicts.filter((verdict) => 'correctIndex' in verdict || 'explanation' in verdict);
+      if (leaked.length > 0) fail(`dsa final: a failed project check returns the key or an explanation for ${leaked.map((one) => one.questionId).join(', ')}`);
+      const wrongIds = failedFinal.verdicts.filter((verdict) => !verdict.correct).map((verdict) => verdict.questionId);
+      const expectedWrong = inDomain(second).map((index) => final.questions![index].id);
+      if (wrongIds.join() !== expectedWrong.join()) fail(`dsa final: a failed attempt names [${wrongIds.join(', ')}] wrong, not [${expectedWrong.join(', ')}]`);
+      const passedFinal = gradeCheck(final, key, missing([inDomain(first)[0]]));
+      if (passedFinal.keyWithheld || passedFinal.verdicts.some((verdict, index) => verdict.correctIndex !== key[index] || !verdict.explanation?.en)) {
+        fail('dsa final: a passed project check does not return the key and every explanation');
+      }
+      const practice = paths.flatMap((path) => path.modules.flatMap((module) => module.activities))
+        .find((activity) => activity.kind === 'check' && activity.purpose === 'exercise' && (activity.questions?.length ?? 0) > 0);
+      if (!practice?.questions) {
+        fail('no exercise check to compare with');
+      } else {
+        const practiceKey = practice.questions.map((one) => one.correct);
+        const practiceMissed = gradeCheck(practice, practiceKey, practiceKey.map((correct) => (correct === 0 ? 1 : 0)));
+        if (practiceMissed.keyWithheld || practiceMissed.verdicts.some((verdict, index) => verdict.correctIndex !== practiceKey[index] || !verdict.explanation?.en)) {
+          fail(`${practice.id}: a failed exercise check no longer returns its key and explanations`);
+        }
+      }
     }
   }
 

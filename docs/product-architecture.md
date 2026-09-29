@@ -231,6 +231,15 @@ security-critical failure cannot be averaged away), and evidence recorded in
 and **no XP in v1**, which is what keeps a task reused from the coding
 catalogue from being rewarded twice.
 
+An objective check grades against the key sealed in its attempt. A project
+check (`purpose: 'project'`, the DSA final) deals the same questions again on a
+retry, only reshuffled, so after a failed attempt it returns only which
+questions were wrong; the correct options and the explanations come back once
+it is passed. A diagnostic or exercise check returns them after every attempt.
+A domain-gated check needs its threshold overall and a minimum in every domain:
+the same threshold for a domain of five or more questions, half for a smaller
+one.
+
 Endpoints are new `resource=`/`op=` branches on existing handlers
 (`learning-path-catalog`, `-start`, `-submit` on `api/quiz/roadmap.ts`;
 `learning-preference`, `learning-path-enrollment`, `-progress`, `-draft` on

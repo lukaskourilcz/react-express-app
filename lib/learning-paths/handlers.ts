@@ -865,7 +865,15 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
           en: 'Every area has to reach its own minimum as well as the overall score, so a strong area cannot cover an empty one. Revisit the areas listed above and try the check again.',
           cs: 'Každá oblast musí projít prahem sama, takže silná oblast nemůže zakrýt slabou. Vrať se k oblastem uvedeným výše a zkus kontrolu znovu.',
         }];
-      } else if (state !== 'verified_pass') {
+      }
+      if (graded.keyWithheld) {
+        // A retry deals the same questions, so the key waits for a pass.
+        feedback.push({
+          en: 'This check counts toward finishing the path, so the correct answers and their explanations appear once you pass it. The questions marked wrong show what to revisit before you try again.',
+          // English only ships (CLAUDE.md); no Czech is written for new copy.
+          cs: '',
+        });
+      } else if (graded.failedDomains.length === 0 && state !== 'verified_pass') {
         feedback = [{
           en: 'Read the explanation under each miss before retrying — every question says why the other options fail here, not only why the right one works.',
           cs: 'Než to zkusíš znovu, přečti si vysvětlení u každé chyby — každá otázka říká, proč tu ostatní možnosti selhávají, ne jen proč ta správná funguje.',
