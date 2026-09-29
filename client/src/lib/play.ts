@@ -20,6 +20,8 @@ export interface Match {
   current_index: number;
   questions: MatchQuestion[];
   ended_at?: string | null;
+  /** Null while the room is a lobby, and for a lobby closed before it started. */
+  started_at?: string | null;
   question_started_at?: string | null;
   question_duration_s?: number;
 }
