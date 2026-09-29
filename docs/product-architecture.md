@@ -74,6 +74,21 @@ date answers 404 `qotd_not_yet`, so tomorrow's question cannot be read today.
 it: no result receipt, answer proof, XP, streak day, leaderboard entry or
 concept-review record.
 
+### Daily challenge
+
+`GET /api/quiz/daily` gives everyone the same five questions for the UTC day.
+A signed-in learner's session carries one attempt id for the day
+(`stableAttemptId('daily', user, subject, date)`), and `api/quiz/submit.ts`
+ranks only that attempt: a daily fetched signed out and submitted signed in is
+graded as practice, with no receipt. The recorded time runs from the first time
+the learner was handed the day's questions, kept as a `daily-start:<attempt>`
+marker row in `quiz_submissions` and sealed into every later session of the
+day, so fetching again just before submitting does not shorten it. The same
+lookup tells the client the day is already played. The response is
+`private, no-store`, because the session inside it belongs to one caller.
+`api/quiz/submit.ts` grades only the sessions it serves (quiz, review, daily,
+question of the day, challenge batch, assessment); a Learn session is refused.
+
 ## Leaderboards
 
 `/leaderboard` opens on the last 30 days, so a new learner can reach the top;

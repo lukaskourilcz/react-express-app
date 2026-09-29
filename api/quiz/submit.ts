@@ -6,6 +6,8 @@ import {
   encodeScoreProof,
   encodeQuizResultReceipt,
   encodeAnswerProof,
+  dailyDurationMs,
+  stableAttemptId,
   type DecodedQuizSession,
 } from '../../lib/quiz-tokens';
 import { localizeQuestion, normalizeLang } from '../../lib/quiz-runtime';
@@ -183,8 +185,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   }
   // The public question of the day (#239) is practice: it is graded as if
   // signed out, so it mints no receipt, XP, streak day or review record for
-  // anyone.
-  const auth = session.scope === 'qotd' ? null : signedIn;
+  // anyone. So is a daily challenge a signed-in learner did not fetch as
+  // their own one attempt of the day: fetched signed out it carries a random
+  // attempt id, and ranking it would let a learner who has seen the answers
+  // refetch and replace their result.
+  const dailyPractice = session.scope === 'daily' && signedIn !== null &&
+    session.attemptId !== stableAttemptId('daily', signedIn.sub, subject, session.date ?? '');
+  const auth = session.scope === 'qotd' || dailyPractice ? null : signedIn;
   const canonicalAnswers = [...validated].sort((a, b) => a.questionId.localeCompare(b.questionId));
   const answerHash = createHash('sha256').update(JSON.stringify(canonicalAnswers)).digest('hex');
   const gradeKey = session.scope === 'challenge'
@@ -272,7 +279,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
             ? 'daily'
             : 'quiz',
         ...(session.scope === 'daily' && session.date
-          ? { daily: { date: session.date, durationMs: Math.max(0, Date.now() - session.issuedAt) } }
+          ? { daily: { date: session.date, durationMs: dailyDurationMs(session) } }
           : {}),
       })
     : undefined;

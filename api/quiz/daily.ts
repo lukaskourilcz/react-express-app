@@ -1,13 +1,15 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
+import { createHash } from 'node:crypto';
 import { encodeSession, stableAttemptId } from '../../lib/quiz-tokens';
 import { localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-runtime';
-import { jsonError, withRequestContext } from '../../lib/http';
+import { createLogger, createServiceClient, jsonError, withRequestContext, withTimeout } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
 import { AuthError, tryAuth } from '../../lib/auth';
 import { handleQuestionOfTheDay, seededShuffle } from '../../lib/daily-question';
+import type { ScopeSubjectId } from '../../shared/subject-catalog';
 
 // Daily challenge: deterministic per-UTC-date selection (one question per
 // difficulty bucket). Same set for every user on the same day, so leaderboards
@@ -15,8 +17,55 @@ import { handleQuestionOfTheDay, seededShuffle } from '../../lib/daily-question'
 
 const DAILY_DIFFICULTIES = [1, 2, 3, 4, 5];
 
+const logEvent = createLogger('quiz/daily');
+const supabase = createServiceClient();
+const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
+const localDailyStarts = new Map<string, number>();
+const DAILY_START_HASH = createHash('sha256').update('daily-start').digest('hex');
+
 function dateString(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** When a signed-in learner was first handed this day's challenge, and
+ * whether they have already submitted it. A daily result's time runs from
+ * that first sight, so fetching the same questions again just before
+ * submitting does not shorten it. Kept as a marker row beside the attempt's
+ * own one-time grading claim, under its own key, so no schema change is
+ * needed; the claim row itself says the attempt was submitted. Unknown
+ * (null) when the database cannot say, and the session's own issue time is
+ * used, as before. */
+async function dailyStart(input: { attemptId: string; userId: string; subject: ScopeSubjectId }): Promise<{ startedAt: number | null; completed: boolean }> {
+  const startKey = `daily-start:${input.attemptId}`;
+  if (!supabase) {
+    if (isProduction) return { startedAt: null, completed: false };
+    if (!localDailyStarts.has(startKey)) localDailyStarts.set(startKey, Date.now());
+    return { startedAt: localDailyStarts.get(startKey)!, completed: false };
+  }
+  try {
+    const rows = await withTimeout(
+      supabase.from('quiz_submissions').select('grade_key, created_at').in('grade_key', [startKey, input.attemptId]),
+    );
+    if (rows.error) throw new Error(rows.error.message);
+    const completed = (rows.data ?? []).some((row) => row.grade_key === input.attemptId);
+    const marker = (rows.data ?? []).find((row) => row.grade_key === startKey);
+    if (marker) {
+      const startedAt = Date.parse(String(marker.created_at));
+      return { startedAt: Number.isFinite(startedAt) ? Math.min(startedAt, Date.now()) : null, completed };
+    }
+    const claimed = await withTimeout(supabase.rpc('claim_quiz_submission', {
+      p_grade_key: startKey,
+      p_attempt_id: input.attemptId,
+      p_user_id: input.userId,
+      p_subject: input.subject,
+      p_answer_hash: DAILY_START_HASH,
+    }));
+    if (claimed.error) throw new Error(claimed.error.message);
+    return { startedAt: Date.now(), completed };
+  } catch (error) {
+    logEvent({ status: 200, reason: 'daily_start_unavailable', error: error instanceof Error ? error.message : 'unknown' });
+    return { startedAt: null, completed: false };
+  }
 }
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
@@ -35,7 +84,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {
     return jsonError(res, 400, 'bad_request', 'date must be YYYY-MM-DD');
   }
-  const isProduction = process.env.NODE_ENV === 'production' || process.env.VERCEL_ENV === 'production';
   if (isProduction && dateParam !== today) {
     return jsonError(res, 400, 'date_override_disabled', 'Daily challenge date override is disabled in production');
   }
@@ -109,23 +157,33 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     };
   });
 
+  // A signed-in learner gets one claim for this subject/day even if they
+  // refetch the deterministic questions, and quiz/submit ranks only that one.
+  // Anonymous practice stays useful but never receives a ranked receipt.
+  const attemptId = auth ? stableAttemptId('daily', auth.sub, scope.subject, dateParam) : undefined;
+  const start = auth && attemptId
+    ? await dailyStart({ attemptId, userId: auth.sub, subject: scope.subject })
+    : { startedAt: null, completed: false };
   const sessionId = encodeSession(sessionData, {
     scope: 'daily',
     date: dateParam,
     subject: scope.subject,
-    // A signed-in learner gets one claim for this subject/day even if they
-    // refetch the deterministic questions. Anonymous practice stays useful
-    // but never receives a ranked receipt in quiz/submit.
-    ...(auth ? { attemptId: stableAttemptId('daily', auth.sub, scope.subject, dateParam) } : {}),
+    ...(attemptId ? { attemptId } : {}),
+    ...(start.startedAt !== null ? { startedAt: start.startedAt } : {}),
   });
 
-  // The response embeds an opaque, authenticated session token. Keep it out of
-  // shared caches so a daily session remains bound to the requesting browser.
-  res.setHeader('Cache-Control', 'private, max-age=300');
+  // The response embeds an opaque, authenticated session token bound to the
+  // caller, signed in or not: never cached, so a response fetched signed out
+  // cannot be served again after signing in.
+  res.setHeader('Cache-Control', 'private, no-store');
+  res.setHeader('Vary', 'Authorization');
   res.json({
     date: dateParam,
     sessionId,
     questions: dailyQuestions,
+    // Already submitted today: the client shows that instead of a second run
+    // the grader would refuse.
+    ...(start.completed ? { completed: true } : {}),
   });
 }
 

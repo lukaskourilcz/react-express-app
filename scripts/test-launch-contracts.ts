@@ -1879,7 +1879,6 @@ async function qotdContracts() {
   assert.equal(checked.resultReceipt, undefined, 'a question of the day mints no receipt, so no XP, streak or leaderboard entry');
   assert.equal(checked.results[0].answerProof, undefined);
   assert.ok(checked.results[0].explanation.length > 0, 'the check explains the answer');
-  assert.match(readFileSync(join(process.cwd(), 'api/quiz/submit.ts'), 'utf8'), /const auth = session\.scope === 'qotd' \? null : signedIn;/);
 
   // The share images' count is the tier rule over the catalogue.
   const counts = freeCodingCounts(CODING_INDEX.map((task) => task.id));
@@ -1967,6 +1966,53 @@ async function quizSubmitScopeContracts() {
   const checked = await submitAll((qotd.body as { sessionId: string }).sessionId, learner);
   assert.equal(checked.response.statusCode, 200, JSON.stringify(checked.body));
   assert.equal(checked.body.resultReceipt, undefined);
+}
+
+/** A signed-in learner has one ranked daily attempt, timed from the first
+ * time they were handed the day's questions. */
+async function dailyIntegrityContracts() {
+  const learner = 'daily-contract-learner-01';
+  const fetchDaily = async (user?: string) => {
+    const response = mockResponse();
+    await dailyHandler(quizRequest('GET', {}, undefined, user), response as never);
+    assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+    return response;
+  };
+  const submitAll = async (sessionId: string, user?: string) => {
+    const session = decodeSessionEnvelope(sessionId)!;
+    const answers = Object.fromEntries(session.questions.map((q) => [q.questionId, q.correctAnswer]));
+    const response = mockResponse();
+    await submitHandler(quizRequest('POST', {}, { sessionId, answers }, user), response as never);
+    assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+    return response.body as { resultReceipt?: string; correctAnswers: number };
+  };
+
+  const first = await fetchDaily(learner);
+  // Never cached: a response fetched signed out must not be served again
+  // once the learner signs in.
+  assert.match(first.headers.get('cache-control') ?? '', /no-store/);
+  assert.match(first.headers.get('vary') ?? '', /Authorization/i);
+
+  // Fetched signed out, the day's questions carry a random attempt id.
+  // Submitted signed in with every answer right, they are practice: no
+  // receipt, so no daily result, XP or streak day, and nothing to replace
+  // the learner's own attempt with.
+  const anonymous = await fetchDaily();
+  const practised = await submitAll((anonymous.body as { sessionId: string }).sessionId, learner);
+  assert.equal(practised.correctAnswers > 0, true);
+  assert.equal(practised.resultReceipt, undefined, 'a daily fetched signed out never ranks a signed-in learner');
+
+  // Fetching again just before submitting does not restart the clock.
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  const again = await fetchDaily(learner);
+  const firstSession = decodeSessionEnvelope((first.body as { sessionId: string }).sessionId)!;
+  const againSession = decodeSessionEnvelope((again.body as { sessionId: string }).sessionId)!;
+  assert.equal(againSession.attemptId, firstSession.attemptId, 'one attempt a day');
+  assert.equal(againSession.startedAt, firstSession.startedAt, 'the start is the first fetch of the day');
+  const ranked = await submitAll((again.body as { sessionId: string }).sessionId, learner);
+  const receipt = decodeQuizResultReceipt(ranked.resultReceipt!);
+  assert.equal(receipt?.purpose, 'daily');
+  assert.ok((receipt?.daily?.durationMs ?? 0) >= 60, `the time runs from the first fetch, got ${receipt?.daily?.durationMs} ms`);
 }
 
 /** The launch price (shared/launch-offer.ts): 4 Oct 2026 00:00 to 2 Nov 2026
@@ -3605,6 +3651,7 @@ async function main() {
   await voucherContracts();
   await qotdContracts();
   await quizSubmitScopeContracts();
+  await dailyIntegrityContracts();
   await webdevBankContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');

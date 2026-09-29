@@ -10,6 +10,10 @@ if (IS_PROD && (!SECRET || SECRET.length < 32)) {
 }
 
 const TOKEN_TTL_MS = 60 * 60 * 1000;
+/** A daily result's time runs from the learner's first sight of the day's
+ * questions, which can be longer ago than one session lasts. The database
+ * accepts up to a day. */
+const DAILY_MAX_DURATION_MS = 24 * 60 * 60 * 1000;
 const CHALLENGE_TTL_MS = 3 * 60 * 60 * 1000;
 const TOKEN_AAD = Buffer.from('shark-quiz-token:v2');
 const TOKEN_KEY = createHash('sha256').update(SECRET || 'dev-only-not-for-production', 'utf8').digest();
@@ -28,6 +32,8 @@ interface SessionPayload {
   roadmapKind?: 'level' | 'checkpoint';
   ref?: number;
   attemptId?: string;
+  /** Daily challenge: when this learner was first handed today's questions. */
+  startedAt?: number;
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
   /** Learn levels with coding tasks: the ids the completion gate checks. */
@@ -213,7 +219,7 @@ function validLifetime(payload: { iat?: unknown; exp?: unknown }, maxTtl: number
 type SessionContext =
   | { subject: ScopeSubjectId }
   | { scope: 'challenge'; runId: string; subject: ScopeSubjectId; attemptId?: string }
-  | { scope: 'daily'; date: string; subject: ScopeSubjectId; attemptId?: string }
+  | { scope: 'daily'; date: string; subject: ScopeSubjectId; attemptId?: string; startedAt?: number }
   // The public question of the day (#239): practice only, graded as if
   // signed out, whoever sends it.
   | { scope: 'qotd'; date: string; subject: ScopeSubjectId }
@@ -240,6 +246,8 @@ export interface DecodedQuizSession {
   roadmapKind?: 'level' | 'checkpoint';
   ref?: number;
   attemptId?: string;
+  /** Daily challenge: when this learner was first handed the day's questions. */
+  startedAt?: number;
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
   codingTaskIds?: string[];
@@ -273,7 +281,9 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
   }
   if (payload.scope === 'daily') {
     if (!payload.subject || typeof payload.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) return null;
-    return { ...base, scope: 'daily', date: payload.date };
+    const startedAt = payload.startedAt;
+    if (startedAt !== undefined && (!Number.isInteger(startedAt) || startedAt > payload.iat || payload.iat - startedAt > DAILY_MAX_DURATION_MS)) return null;
+    return { ...base, scope: 'daily', date: payload.date, ...(startedAt !== undefined ? { startedAt } : {}) };
   }
   if (payload.scope === 'qotd') {
     if (!payload.subject || typeof payload.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date) || payload.questions.length !== 1) return null;
@@ -305,6 +315,12 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
 }
 
 export const decodeSession = (token: string) => decodeSessionEnvelope(token)?.questions ?? null;
+
+/** The time a daily result records: from the first time the learner was
+ * handed the day's questions when that is known, else from this session. */
+export function dailyDurationMs(session: Pick<DecodedQuizSession, 'startedAt' | 'issuedAt'>, now = Date.now()): number {
+  return Math.min(DAILY_MAX_DURATION_MS, Math.max(0, now - (session.startedAt ?? session.issuedAt)));
+}
 
 /** Stable opaque claim id for one server-defined attempt; never exposes the source identifiers. */
 export function stableAttemptId(...parts: string[]): string {
@@ -359,7 +375,7 @@ export function decodeQuizResultReceipt(token: string): QuizResultReceipt | null
   if (typeof payload.attemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId) || typeof payload.userId !== 'string' || payload.userId.length === 0 || payload.userId.length > 128) return null;
   if (!Number.isInteger(payload.correct) || !Number.isInteger(payload.total) || payload.total! <= 0 || payload.total! > 50 || payload.correct! < 0 || payload.correct! > payload.total!) return null;
   if (!payload.breakdown || typeof payload.breakdown !== 'object' || Array.isArray(payload.breakdown) || !Array.isArray(payload.outcomes) || payload.outcomes.length === 0 || payload.outcomes.length > 50 || !isScopeSubject(payload.subject) || !Number.isInteger(payload.questXp) || payload.questXp! < 0 || payload.questXp! > 10_000 || !['quiz', 'challenge', 'daily', 'assessment'].includes(payload.purpose ?? '')) return null;
-  if (payload.daily !== undefined && (!payload.daily || typeof payload.daily.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.daily.date) || !Number.isInteger(payload.daily.durationMs) || payload.daily.durationMs < 0 || payload.daily.durationMs > TOKEN_TTL_MS)) return null;
+  if (payload.daily !== undefined && (!payload.daily || typeof payload.daily.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.daily.date) || !Number.isInteger(payload.daily.durationMs) || payload.daily.durationMs < 0 || payload.daily.durationMs > DAILY_MAX_DURATION_MS)) return null;
   const breakdown: QuizResultReceipt['breakdown'] = {};
   for (const [category, value] of Object.entries(payload.breakdown)) {
     const item = value as { correct?: unknown; total?: unknown };
