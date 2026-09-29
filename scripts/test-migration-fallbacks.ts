@@ -20,7 +20,8 @@
  * 046: `delete_user_data` is there, the four erasure routines of 039 to 042
  * are gone, and deleting an account asks for `delete_user_data` alone. On the
  * same stand-in, the stats write is checked to store the verified sign-in's
- * name and Google picture whatever the body says. Sign-in and the deletion of
+ * name and Google picture whatever the body says, and a friend request to
+ * answer in the states the Friends screen reads. Sign-in and the deletion of
  * the sign-in identity are answered by the same stand-in. Nothing leaves the
  * machine. */
 
@@ -310,10 +311,29 @@ async function main() {
     const nameless = writes.find((write) => write.name === 'write:user_stats');
     assert.equal(nameless?.args.name, null, 'an account without a provider name stores no name, and never the email');
     assert.equal(nameless?.args.picture, null);
+
+    // request_friend answers 'pending' for a new request, a repeated one and a
+    // request a block dropped. The screen reads states from the asker's side,
+    // so each answers 'pending_out' ("Request sent"); 'accepted' passes as is.
+    for (const [answer, state] of [['pending', 'pending_out'], ['accepted', 'accepted']] as const) {
+      INSTALLED.request_friend = answer;
+      calls.length = 0;
+      const asked = mockResponse();
+      await userOps({
+        method: 'POST',
+        headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.9' },
+        query: { op: 'friends-request' },
+        url: '/api/user/friends-request',
+        body: { handle: 'harbour-reader' },
+      } as never, asked as never);
+      assert.equal(asked.statusCode, 200, `a friend request answers 200 (${JSON.stringify(asked.body)})`);
+      assert.deepEqual(asked.body, { state }, `request_friend's '${answer}' reaches the screen as '${state}'`);
+      assert.equal(calls[0]?.args.p_handle, 'harbour-reader');
+    }
   } finally {
     server.close();
   }
-  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the verified name and Google picture and ignores the body; against a stand-in that answers PGRST202 as PostgREST 12 does.');
+  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the verified name and Google picture and ignores the body; a friend request answers pending_out; against a stand-in that answers PGRST202 as PostgREST 12 does.');
 }
 
 main().catch((error) => {
