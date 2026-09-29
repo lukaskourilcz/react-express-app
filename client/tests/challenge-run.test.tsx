@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
-import { onXpToast, type XpToast } from '../src/lib/xp';
+import { onXpToast, primeRankMarker, type XpToast } from '../src/lib/xp';
 
 // The Biggest Shark Challenge against a small stand-in for the three endpoints
 // it calls: the batch (GET /api/quiz/challenge), grading (POST
@@ -503,5 +503,56 @@ describe('the ranked clock', () => {
     await settle();
     expect(api.submits.some((submit) => submit.selected === -1)).toBe(true);
     expect(screen.getByText('Time ran out. One strike.')).toBeInTheDocument();
+  });
+});
+
+describe('the Hall of Fame name', () => {
+  const JANA = { user: { id: 'learner-1', user_metadata: { full_name: 'Jana Novakova' } }, isAuthenticated: true, isLoading: false };
+
+  it('starts empty for a learner whose name is hidden on the leaderboards', async () => {
+    api.auth = JANA;
+    api.visible = false;
+    await mount();
+    await start();
+    await strikeOutNow();
+    expect((screen.getByLabelText('Your name') as HTMLInputElement).value).toBe('');
+    expect(screen.getByText('Shown publicly on the Hall of Fame.')).toBeInTheDocument();
+  });
+
+  it('holds the account name for a learner who shows it, once: a cleared box stays clear', async () => {
+    api.auth = JANA;
+    api.visible = true;
+    await mount();
+    await start();
+    await strikeOutNow();
+    const box = () => screen.getByLabelText('Your name') as HTMLInputElement;
+    await waitFor(() => expect(box().value).toBe('Jana Novakova'));
+    fireEvent.change(box(), { target: { value: '' } });
+    await settle();
+    expect(box().value).toBe('');
+    fireEvent.change(box(), { target: { value: 'Reef runner' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit score' }));
+    await waitFor(() => expect(api.scores).toEqual([{ name: 'Reef runner', runToken: 'RUN-1' }]));
+  });
+});
+
+describe('a run’s rank-up', () => {
+  it('is announced when the run’s XP crosses a rank', async () => {
+    const toasts: XpToast[] = [];
+    const stop = onXpToast((toast: XpToast) => toasts.push(toast));
+    try {
+      primeRankMarker();
+      api.auth = SIGNED_IN;
+      // The account's balance once the run is credited crosses 2000 XP.
+      api.accountXp = 2020;
+      await mount();
+      await start();
+      await answer('right');
+      await next();
+      await strikeOutNow();
+      await waitFor(() => expect(toasts.map((toast) => toast.kind)).toEqual(['gain', 'rankup']));
+    } finally {
+      stop();
+    }
   });
 });

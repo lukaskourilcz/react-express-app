@@ -162,7 +162,10 @@ the screen then shows "Learner" with the default avatar. The viewer's own
 30-day row follows the same rule, so it shows them what everybody else sees:
 a switch refetches their personal board at once, and the shared boards follow
 within the CDN's minute. The privacy policy says the same under
-"Leaderboards".
+"Leaderboards". The Biggest Shark Challenge's Hall of Fame shows the name a
+learner types when saving a score. That box starts empty: it takes the
+account's name only while this switch is on, fills it once so a cleared box
+stays clear, and says the name is shown publicly on the Hall of Fame.
 `api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
 request with a Bearer token or `me=1` also gets the learner's own line and is
 answered `Cache-Control: private, no-store`. `friend_list` orders friends by

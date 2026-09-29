@@ -24,6 +24,7 @@ import { readOnce, settled, useFirstData } from '../lib/routeData';
 import type { Question, QuizResult } from '../types/quiz';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
+import { useLeaderboardVisibility } from '../lib/leaderboardVisibility';
 import { useActiveSubject, useSubject } from '../lib/subjects';
 import { useIsMobile } from '../lib/useMediaQuery';
 import { visuallyHidden } from '../theme/MuiTheme';
@@ -204,7 +205,12 @@ export default function Challenge() {
   const [selected, setSelected] = useState<number | null>(null);
   const [lastResult, setLastResult] = useState<AnsweredQ | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [name, setName] = useState<string>(profile.name ?? '');
+  // The Hall of Fame is public. The name box starts empty, and holds the
+  // account's name only for a learner who shows their name on the
+  // leaderboards; it is filled once, so a cleared box stays clear.
+  const leaderboardVisibility = useLeaderboardVisibility();
+  const [name, setName] = useState('');
+  const namePrefilled = useRef(false);
   const [submittedScore, setSubmittedScore] = useState(false);
   const [snack, setSnack] = useState<string | null>(null);
   // The question's deadline, set when it is shown. The clock counts down to
@@ -263,8 +269,11 @@ export default function Challenge() {
     rewardSync.current = rewardSync.current.then(async () => {
       const { kept, xp } = await sendPendingRewards(userId);
       if (xp > 0) {
-        await syncXpWithServer();
+        // The gain first, then the rank it crosses, in Quiz's order. The
+        // run's XP exists only on the server until this sync, so the sync
+        // announces the rank-up; a silent one marked it seen unannounced.
         announceVerifiedQuestXp(xp);
+        await syncXpWithServer({ announceRankUp: true });
       }
       if (kept > 0) setSnack(t('challenge.rewardPending'));
     });
@@ -286,8 +295,11 @@ export default function Challenge() {
   const refreshLeaderboard = boardQuery.refetch;
 
   useEffect(() => {
-    if (profile.name && !name) setName(profile.name);
-  }, [profile.name, name]);
+    if (namePrefilled.current || leaderboardVisibility.visible !== true || !profile.name) return;
+    namePrefilled.current = true;
+    const accountName = profile.name;
+    setName((typed) => typed || accountName);
+  }, [leaderboardVisibility.visible, profile.name]);
 
   /* ─── question buffer ───────────────────────────────────────── */
 
@@ -817,6 +829,7 @@ export default function Challenge() {
                     <div style={{ flex: '1 1 auto' }}>
                       <TextInput
                         label={t('challenge.nameLabel')}
+                        description={t('challenge.namePublicHint')}
                         value={name}
                         onChange={(v) => setName(v.slice(0, 40))}
                         onEnter={() => void onSubmitScore()}
