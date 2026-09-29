@@ -72,6 +72,45 @@ export async function activateShield(): Promise<StreakProtection> {
   return normalize(await apiFetch<Partial<StreakProtection>>(URL, { method: 'POST' }));
 }
 
+const DAY_MS = 86_400_000;
+const SHIELD_MS = 48 * 3_600_000;
+const utcDay = (ms: number): number => Math.floor(ms / DAY_MS);
+
+/**
+ * The streak as it stands today: the recorded count while the streak is still
+ * alive, 0 once it has ended.
+ *
+ * This is the rule the server applies when the learner comes back
+ * (record_verified_quiz_result_v2, migration 040): a day inside the shield's
+ * window was paid for in advance; each other day missed between the last
+ * active day and today needs a protection; more than two missed days, or more
+ * than the protections left this month, end the streak. `protection` is the
+ * state `getStreakProtection` read. Without it only today and yesterday keep
+ * a streak alive. Days are UTC days, as on the server.
+ */
+export function liveStreak(
+  stats: { current_streak: number; last_quiz_date: string | null } | null,
+  protection: Pick<StreakProtection, 'remaining' | 'shieldUntil'> | null,
+  now = Date.now(),
+): number {
+  if (!stats?.last_quiz_date || stats.current_streak <= 0) return 0;
+  const last = Date.parse(stats.last_quiz_date);
+  if (!Number.isFinite(last)) return 0;
+  const lastDay = utcDay(last);
+  const today = utcDay(now);
+  if (today - lastDay <= 1) return stats.current_streak;
+
+  const until = protection?.shieldUntil ? Date.parse(protection.shieldUntil) : Number.NaN;
+  const shielded = (day: number) =>
+    Number.isFinite(until) && day >= utcDay(until - SHIELD_MS) && day <= utcDay(until);
+  let missed = 0;
+  for (let day = lastDay + 1; day < today && missed <= 2; day++) {
+    if (!shielded(day)) missed++;
+  }
+  if (missed === 0) return stats.current_streak;
+  return missed <= 2 && missed <= (protection?.remaining ?? 0) ? stats.current_streak : 0;
+}
+
 /** Whole hours and minutes left on a shield, or null once it has expired.
  * Deliberately not live: it is read on load and left alone, because a ticking
  * clock on a two-day window is decoration that costs a render a second. */

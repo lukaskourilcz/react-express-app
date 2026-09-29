@@ -22,7 +22,7 @@ import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { apiFetch, friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
-import { getStreakProtection, activateShield, shieldRemaining, type StreakProtection } from '../lib/streakFreezes';
+import { getStreakProtection, activateShield, liveStreak, shieldRemaining, type StreakProtection } from '../lib/streakFreezes';
 import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
 import { renderQuestion } from './CodeBlock';
 import { MULTILINGUAL, useT, useLanguage } from '../i18n/LanguageContext';
@@ -355,22 +355,7 @@ function ProfileBody({
   );
 }
 
-function currentStreakForDisplay(stats: UserStats | null, now = new Date()): number {
-  if (!stats?.last_quiz_date || stats.current_streak <= 0) return 0;
-  const lastQuiz = new Date(stats.last_quiz_date);
-  if (Number.isNaN(lastQuiz.getTime())) return 0;
-
-  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const lastQuizUtc = Date.UTC(
-    lastQuiz.getUTCFullYear(),
-    lastQuiz.getUTCMonth(),
-    lastQuiz.getUTCDate(),
-  );
-  const daysSinceQuiz = Math.floor((todayUtc - lastQuizUtc) / 86_400_000);
-  return daysSinceQuiz === 0 || daysSinceQuiz === 1 ? stats.current_streak : 0;
-}
-
-function StreakCard({
+export function StreakCard({
   stats,
   unavailable = false,
 }: {
@@ -380,7 +365,16 @@ function StreakCard({
   const { t, lang } = useLanguage();
   const currentLabelId = useId();
   const longestLabelId = useId();
-  const currentStreak = currentStreakForDisplay(stats);
+  // The shield and the count read one protection state, so a streak that a
+  // shield or a protection still covers shows its days rather than 0.
+  const [protection, setProtection] = useState<StreakProtection | null>(null);
+  useEffect(() => {
+    if (unavailable) return;
+    let active = true;
+    getStreakProtection().then((next) => { if (active) setProtection(next); });
+    return () => { active = false; };
+  }, [unavailable]);
+  const currentStreak = liveStreak(stats, protection);
   const longestStreak = stats?.longest_streak ?? 0;
   const currentStreakDisplay = unavailable ? '—' : currentStreak;
   const longestStreakDisplay = unavailable ? '—' : longestStreak;
@@ -417,7 +411,7 @@ function StreakCard({
                   {/* Protection lives inside the streak it protects. It used to
                       be a card of its own below, which read as a separate
                       feature rather than as part of this number. */}
-                  {!unavailable && <StreakShield />}
+                  {!unavailable && <StreakShield state={protection} streak={currentStreak} onChange={setProtection} />}
                 </VStack>
               </Card>
             </div>
@@ -465,22 +459,28 @@ function StreakCard({
  *
  * It renders nothing at all until the read lands, and nothing if the server
  * cannot offer it yet, so the streak card never shows a control that would
- * fail.
+ * fail. The streak card reads the state once, on mount, and shares it with the
+ * count: the window is 48 hours long, and re-reading it while the page sits
+ * open would tell the learner nothing they cannot get by reloading.
+ *
+ * Without a live streak there is nothing to protect, so the button is not
+ * offered: it would spend one of the month's two for nothing. A shield that is
+ * already running still shows.
  */
-function StreakShield() {
+function StreakShield({
+  state,
+  streak,
+  onChange,
+}: {
+  state: StreakProtection | null;
+  /** The live streak, as the card shows it. */
+  streak: number;
+  onChange: (next: StreakProtection) => void;
+}) {
   const t = useT();
-  const [state, setState] = useState<StreakProtection | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Read once, on mount. The window is 48 hours long; re-reading it while the
-  // page sits open would tell the learner nothing they cannot get by reloading.
   const [now] = useState(() => Date.now());
-
-  useEffect(() => {
-    let active = true;
-    getStreakProtection().then((next) => { if (active) setState(next); });
-    return () => { active = false; };
-  }, []);
 
   if (!state || !state.shieldSupported) return null;
 
@@ -503,11 +503,13 @@ function StreakShield() {
     );
   }
 
+  if (streak <= 0) return null;
+
   const spend = async () => {
     setPending(true);
     setError(null);
     try {
-      setState(await activateShield());
+      onChange(await activateShield());
     } catch (err) {
       setError(friendlyError(err));
     } finally {
