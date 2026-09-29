@@ -178,7 +178,11 @@ function record(kind: 'levels' | 'checkpoints', topic: RoadmapTopic, ref: number
   const tp = topicOf(p, topic);
   const map = tp[kind];
   const prev = map[String(ref)];
+  // Keep what else the entry holds: a signed-in completion has just written
+  // the server's record here, spaced-mastery days included, and dropping them
+  // would read a mastered level as cleared and today's pass as not done.
   map[String(ref)] = {
+    ...prev,
     passed: (prev?.passed ?? false) || pct >= passPct,
     bestPct: Math.max(prev?.bestPct ?? 0, pct),
   };
