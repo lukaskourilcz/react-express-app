@@ -4,7 +4,12 @@
  * app's private key, mints a short-lived app JWT, exchanges it for an
  * installation token, and writes one file per passed task with the Contents
  * API. No user token is ever stored: the installation id is the whole
- * connection, and the learner can revoke it from GitHub at any time. */
+ * connection, and the learner can revoke it from GitHub at any time.
+ *
+ * Connecting proves ownership once. The app requests user authorization
+ * during installation, so GitHub's redirect carries a one-time `code` beside
+ * the installation id; `checkInstallationOwner` exchanges it for a user access
+ * token, uses that token for two reads, and drops it. */
 
 import { createSign } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -18,8 +23,18 @@ const USER_AGENT = 'devShark-garden';
 const TOKEN_MARGIN_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS = 5;
 
+/** Every variable the garden needs. Without the OAuth client pair a connect
+ * could not prove who owns the installation, so the garden stays off. */
+export const GITHUB_APP_ENV = [
+  'GITHUB_APP_ID',
+  'GITHUB_APP_SLUG',
+  'GITHUB_APP_PRIVATE_KEY',
+  'GITHUB_APP_CLIENT_ID',
+  'GITHUB_APP_CLIENT_SECRET',
+] as const;
+
 export function isGithubAppConfigured(): boolean {
-  return Boolean(process.env.GITHUB_APP_ID && process.env.GITHUB_APP_SLUG && process.env.GITHUB_APP_PRIVATE_KEY);
+  return GITHUB_APP_ENV.every((key) => Boolean(process.env[key]));
 }
 
 export const githubAppSlug = (): string => process.env.GITHUB_APP_SLUG ?? '';
@@ -52,14 +67,15 @@ export class GithubError extends Error {
   }
 }
 
-async function gh<T>(path: string, init: { method?: string; token: string; body?: unknown; jwt?: boolean }): Promise<T> {
+/** `bearer` for an app JWT or a user access token, `token` for an installation token. */
+async function gh<T>(path: string, init: { method?: string; token: string; body?: unknown; bearer?: boolean }): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 8_000);
   try {
     const response = await fetch(`${API}${path}`, {
       method: init.method ?? 'GET',
       headers: {
-        Authorization: `${init.jwt ? 'Bearer' : 'token'} ${init.token}`,
+        Authorization: `${init.bearer ? 'Bearer' : 'token'} ${init.token}`,
         Accept: 'application/vnd.github+json',
         'X-GitHub-Api-Version': '2022-11-28',
         'User-Agent': USER_AGENT,
@@ -86,7 +102,7 @@ const tokenCache = new Map<number, { token: string; expiresAt: number }>();
 export async function installationToken(installationId: number): Promise<string> {
   const cached = tokenCache.get(installationId);
   if (cached && cached.expiresAt - TOKEN_MARGIN_MS > Date.now()) return cached.token;
-  const data = await gh<{ token: string; expires_at: string }>(`/app/installations/${installationId}/access_tokens`, { method: 'POST', token: appJwt(), jwt: true });
+  const data = await gh<{ token: string; expires_at: string }>(`/app/installations/${installationId}/access_tokens`, { method: 'POST', token: appJwt(), bearer: true });
   tokenCache.set(installationId, { token: data.token, expiresAt: Date.parse(data.expires_at) });
   return data.token;
 }
@@ -98,7 +114,66 @@ export interface InstallationInfo {
 }
 
 export function getInstallation(installationId: number): Promise<InstallationInfo> {
-  return gh<InstallationInfo>(`/app/installations/${installationId}`, { token: appJwt(), jwt: true });
+  return gh<InstallationInfo>(`/app/installations/${installationId}`, { token: appJwt(), bearer: true });
+}
+
+/* ── installation ownership ───────────────────────────────────────────── */
+
+const OAUTH_TOKEN_URL = 'https://github.com/login/oauth/access_token';
+const INSTALLATIONS_PER_PAGE = 100;
+/** A learner with more installations of this one app than this is not real. */
+const MAX_INSTALLATION_PAGES = 10;
+
+/** Exchanges the one-time `code` from the install redirect for a user access
+ * token. GitHub answers a used, expired or foreign code with HTTP 200 and an
+ * `error` field, which comes back as `refused`; a transport failure throws. */
+async function exchangeInstallCode(code: string): Promise<{ token: string } | { refused: string }> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8_000);
+  try {
+    const response = await fetch(OAUTH_TOKEN_URL, {
+      method: 'POST',
+      headers: { Accept: 'application/json', 'Content-Type': 'application/json', 'User-Agent': USER_AGENT },
+      body: JSON.stringify({ client_id: process.env.GITHUB_APP_CLIENT_ID, client_secret: process.env.GITHUB_APP_CLIENT_SECRET, code }),
+      signal: controller.signal,
+    });
+    if (!response.ok) throw new GithubError(response.status, 'GitHub did not answer the authorization exchange');
+    const data = (await response.json().catch(() => null)) as { access_token?: unknown; error?: unknown } | null;
+    if (typeof data?.access_token === 'string' && data.access_token) return { token: data.access_token };
+    // Only GitHub's short error name is kept, for the log: never the body.
+    const reason = typeof data?.error === 'string' && /^[a-z_]{1,64}$/.test(data.error) ? data.error : 'no_token';
+    return { refused: reason };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function userCanReachInstallation(userToken: string, installationId: number): Promise<boolean> {
+  for (let page = 1; page <= MAX_INSTALLATION_PAGES; page++) {
+    const data = await gh<{ installations?: { id: number }[] }>(`/user/installations?per_page=${INSTALLATIONS_PER_PAGE}&page=${page}`, { token: userToken, bearer: true });
+    const installations = data.installations ?? [];
+    if (installations.some((installation) => installation.id === installationId)) return true;
+    if (installations.length < INSTALLATIONS_PER_PAGE) return false;
+  }
+  return false;
+}
+
+export type InstallationOwnerCheck =
+  | { ok: true; githubUserId: number }
+  | { ok: false; reason: 'code_refused'; detail: string }
+  | { ok: false; reason: 'not_listed' };
+
+/** Who finished the install on GitHub, and whether they can reach
+ * `installationId`. The code becomes a user access token that is used for
+ * `GET /user/installations` (every page) and `GET /user`, then dropped: it is
+ * never stored, logged or returned. The caller still compares the returned
+ * GitHub user id with the installation's account. */
+export async function checkInstallationOwner(code: string, installationId: number): Promise<InstallationOwnerCheck> {
+  const exchanged = await exchangeInstallCode(code);
+  if ('refused' in exchanged) return { ok: false, reason: 'code_refused', detail: exchanged.refused };
+  if (!(await userCanReachInstallation(exchanged.token, installationId))) return { ok: false, reason: 'not_listed' };
+  const user = await gh<{ id: number }>('/user', { token: exchanged.token, bearer: true });
+  return { ok: true, githubUserId: user.id };
 }
 
 export interface RepoInfo {

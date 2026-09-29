@@ -187,11 +187,27 @@ hint rung is a documentation link from `shared/coding-docs.ts`.
 The GitHub garden is an optional GitHub App integration (`lib/github-app.ts`,
 `lib/github-handlers.ts`): the learner installs the app on one repository they
 own, and every passed task is committed there as one file per task in one
-folder per track (`gardenPathFor`). No user token is stored; installation
+folder per track (`gardenPathFor`). Connecting binds the installation to its
+owner. The app requests user authorization during installation, so GitHub
+returns the learner to the callback URL `/settings/github` with a one-time
+`code` beside `installation_id` and the sealed `state`. `github-connect-finish`
+checks the state (the devShark account that started), exchanges the code for a
+user access token, and accepts the installation only when it appears in that
+user's `GET /user/installations` (every page) and its account is the same
+GitHub user (`GET /user`), which also refuses a collaborator who can see the
+owner's installation. The user token is used for those two reads and dropped.
+A missing code, a refused code or an installation that is not the user's own
+saves nothing, and the callback page asks the learner to install and authorize
+again. A unique index on `github_connections.installation_id` (migration 050)
+keeps one installation to one devShark account; a second account gets 409
+`installation_taken`. No user token is stored; installation
 tokens are minted from the app key on demand, failed commits queue for a later
 sync, and disconnecting deletes the connection and the queue. The feature stays
-hidden until `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and `GITHUB_APP_PRIVATE_KEY`
-exist on the deployment.
+hidden, and `github-connection` answers `available: false`, until
+`GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`,
+`GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET` all exist on the
+deployment (`isGithubAppConfigured`). `npm run test:garden` runs the connect
+step against a stand-in GitHub.
 
 ## Learning paths
 
@@ -733,8 +749,9 @@ One Vercel project builds this repository for `https://devshark.app`. Set
 `PRODUCT_SUBJECT=webdev`, or leave them unset: both resolve to devShark. Any
 other value fails the build in `resolveCatalogProductId`, which is what keeps a
 project still configured for StudyShark from deploying this code. The
-deployment may also carry `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and
-`GITHUB_APP_PRIVATE_KEY` for the GitHub garden.
+deployment may also carry `GITHUB_APP_ID`, `GITHUB_APP_SLUG`,
+`GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_CLIENT_ID` and
+`GITHUB_APP_CLIENT_SECRET` for the GitHub garden, which needs all five.
 
 The footer carries the legal links, devShark's own social profiles, and the appearance and sound controls, and
 promotes no other product. The language control is gone while the app ships
