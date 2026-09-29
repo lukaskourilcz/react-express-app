@@ -756,9 +756,24 @@ function buildSenior(app: FullStackApp, stage: number): string {
   return seniorClient(app, stage, backend);
 }
 
+/** Hidden cases (lib/coding/react-hidden.ts) for the mutation stage and the
+ * stage after it, which keeps its rules: the button is disabled at zero and
+ * while its change is in flight, a success refetches the list (another
+ * client's change to a different row shows up), and a failure other than a
+ * conflict shows 'Request failed'. Two rows only, so the page of the last
+ * stage shows both. They use the visible prelude's `settle`, `endpoint`,
+ * `createApi` and `createLocalFetch`. */
+const mutationHiddenSuite = (app:FullStackApp):string => {
+ const {amount,action}=app;
+ const rows=JSON.stringify([{id:1,name:app.first,[amount]:2,version:1},{id:2,name:app.second,[amount]:0,version:1}]);
+ return `const mutationButton=name=>screen.getByRole('button',{name:'${action} '+name,exact:true});
+test('${action} is disabled at zero and while its change is in flight, and a success refetches the list',async()=>{const api=createApi(${rows}),local=createLocalFetch(api);let release=null,gets=0;render(<App fetcher={(url,opt)=>{if(opt?.method==='PATCH')return new Promise(resolve=>{release=()=>resolve(local(url,opt))});gets+=1;return local(url,opt)}}/>);await settle();expect(mutationButton('${app.second}').disabled).toBe(true);expect(mutationButton('${app.first}').disabled).toBe(false);fireEvent.click(mutationButton('${app.first}'));await waitFor(()=>expect(release).not.toBeNull());expect(mutationButton('${app.first}').disabled).toBe(true);const before=gets;api({method:'PATCH',path:endpoint+'/2',body:{version:1,${amount}:7}});release();await waitFor(()=>expect(screen.getByLabelText('${amount} ${app.second}').textContent).toBe('7'));expect(gets>before).toBe(true);expect(screen.getByLabelText('${amount} ${app.first}').textContent).toBe('1');expect(mutationButton('${app.first}').disabled).toBe(false)});
+test('a failed change that is not a conflict shows Request failed',async()=>{const local=createLocalFetch(createApi(${rows}));render(<App fetcher={(url,opt)=>opt?.method==='PATCH'?Promise.resolve({ok:false,status:500,json:async()=>({error:'server'})}):local(url,opt)}/>);await settle();fireEvent.click(mutationButton('${app.first}'));await waitFor(()=>expect(screen.getByRole('alert').textContent).toBe('Request failed'))});`;
+};
+
 export const FULLSTACK_SOLUTIONS:Record<string,CodingSolution> = Object.fromEntries(FULLSTACK_APPS.flatMap(app=>{
  const project=EVOLVING_CHALLENGES.find(p=>p.id===`fullstack-${app.slug}`)!;
- return project.stages.filter(id => !id.endsWith('-start')).map((id,i)=>[id,{solution:build(app,i+1),junior:buildJunior(app,i+1),senior:buildSenior(app,i+1),...(i<4?{hiddenTests:[
+ return project.stages.filter(id => !id.endsWith('-start')).map((id,i)=>[id,{solution:build(app,i+1),junior:buildJunior(app,i+1),senior:buildSenior(app,i+1),...(i>=6?{hiddenSuite:mutationHiddenSuite(app)}:{}),...(i<4?{hiddenTests:[
   {call:`normalizeInput({name:'x'.repeat(81),${app.amount}:1})`,expected:null},
   {call:`normalizeInput({name:'A',${app.amount}:1001})`,expected:null},
   ...(i>=2?[{call:`(()=>{const seed=${JSON.stringify(fullstackSeed(app))};const api=createApi(seed);seed[0].name='changed';const first=api({method:'GET',path:'${app.endpoint}'});first.body[0].name='mutated';return api({method:'GET',path:'${app.endpoint}'}).body[0].name})()`,expected:app.first}]:[]),
