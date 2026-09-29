@@ -2122,9 +2122,17 @@ async function quizSubmitScopeContracts() {
     ['challenge batch', (batch.body as { questions: unknown[] }).questions],
     ['question of the day', [(qotd.body as { question: unknown }).question]],
   ];
+  // An allowlist rather than one blocked key: a question handed out before
+  // grading carries what the learner needs to answer it and nothing else, so
+  // a new field (correctAnswer, explanation, tags, a hint) fails here until it
+  // is reviewed and added.
+  const PRE_GRADING_KEYS = new Set(['id', 'introduction', 'question', 'options', 'category', 'difficulty', 'review']);
   for (const [label, questions] of payloads) {
+    assert.ok((questions as unknown[]).length > 0, `${label} hands out questions`);
     for (const question of questions as Record<string, unknown>[]) {
       assert.equal('tags' in question, false, `${label} sends ${String(question.id)} with its tags before grading`);
+      const extra = Object.keys(question).filter((key) => !PRE_GRADING_KEYS.has(key));
+      assert.deepEqual(extra, [], `${label} sends ${String(question.id)} with ${extra.join(', ')} before grading`);
     }
   }
   const placement = mockResponse();
@@ -2132,6 +2140,8 @@ async function quizSubmitScopeContracts() {
   assert.equal(placement.statusCode, 200, JSON.stringify(placement.body));
   for (const question of (placement.body as { questions: Record<string, unknown>[] }).questions) {
     assert.equal('tags' in question, false, 'a placement round sends no tags');
+    const extra = Object.keys(question).filter((key) => !PRE_GRADING_KEYS.has(key));
+    assert.deepEqual(extra, [], `a placement round sends ${String(question.id)} with ${extra.join(', ')} before grading`);
   }
 }
 
