@@ -13,7 +13,9 @@
  *  - a topic granted to an account opens its levels as the progress GET
  *    reports it open;
  *  - a failed progress read answers 503 rather than refusing the level as if
- *    the learner had not earned it.
+ *    the learner had not earned it;
+ *  - a coding task whose solution was revealed in the attempt does not
+ *    complete the level.
  *
  * Nothing leaves the machine. */
 
@@ -311,6 +313,30 @@ async function main() {
     const notGranted = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OTHER.token);
     assert.equal(notGranted.body?.error?.code, 'topic_locked', 'an account without the grant is still refused');
     console.log('PASS learn: a granted topic opens its levels');
+
+    // ── A revealed coding task does not complete the level ─────────────────
+    // Every answer right, the level's coding task passed, but its solution was
+    // revealed in this attempt: the level is not passed and the task stays
+    // pending, as complete_verified_roadmap_attempt records it from 047.
+    for (const revealed of [true, false]) {
+      const level = await call('GET', { topic: 'javascript', level: '1', lang: 'en' }, OTHER.token);
+      assert.equal(level.statusCode, 200, JSON.stringify(level.body));
+      assert.ok((await answerAll(level.body.sessionId, OTHER.token)).every((status) => status === 200));
+      const attemptId = tokens.decodeSessionEnvelope(level.body.sessionId)!.attemptId;
+      const taskIds = (level.body.coding as Array<{ task: { id: string } }>).map((item) => item.task.id);
+      assert.ok(taskIds.length > 0, 'JavaScript level 1 carries a coding task');
+      for (const taskId of taskIds) tables.roadmap_attempt_coding.push({ attempt_id: attemptId, task_id: taskId, passed: true, verified: true, revealed });
+      const done = await call('POST', { resource: 'complete' }, OTHER.token, { sessionId: level.body.sessionId });
+      assert.equal(done.statusCode, 200, JSON.stringify(done.body));
+      if (revealed) {
+        assert.equal(done.body.passed, false, 'a level whose coding solution was revealed is not passed');
+        assert.deepEqual(done.body.codingPending, taskIds, 'the revealed task is still pending');
+      } else {
+        assert.equal(done.body.passed, true, 'the same level passes when the task was solved without a reveal');
+        assert.deepEqual(done.body.codingPending, []);
+      }
+    }
+    console.log('PASS learn: a revealed coding task does not complete the level');
 
     // ── A failed progress read is not a refusal ────────────────────────────
     const blip = await call('GET', { topic: 'javascript', level: '2', lang: 'en' }, BROKEN.token);

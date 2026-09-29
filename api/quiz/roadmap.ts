@@ -1209,14 +1209,19 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     totalQuestions,
   );
   if (endedOnHearts) passed = false;
-  // A level with coding tasks passes only when every one of them passed.
+  // A level with coding tasks passes only when every one of them passed in
+  // this attempt without its solution being revealed, the rule
+  // complete_verified_roadmap_attempt applies from migration 047: a reveal
+  // ends the attempt, and the task is passed again in a fresh one.
   let codingPending: string[] = [];
   if (passed && session.codingTaskIds && session.codingTaskIds.length > 0) {
     const codingRows = await withTimeout(
-      supabase.from('roadmap_attempt_coding').select('task_id,passed').eq('attempt_id', session.attemptId!),
+      supabase.from('roadmap_attempt_coding').select('task_id,passed,revealed').eq('attempt_id', session.attemptId!),
     );
     if (codingRows.error) return jsonError(res, 500, 'db_error', 'Could not grade the coding tasks');
-    const passedIds = new Set((codingRows.data ?? []).filter((row) => row.passed === true).map((row) => String(row.task_id)));
+    const passedIds = new Set((codingRows.data ?? [])
+      .filter((row) => row.passed === true && row.revealed !== true)
+      .map((row) => String(row.task_id)));
     codingPending = session.codingTaskIds.filter((id) => !passedIds.has(id));
     if (codingPending.length > 0) passed = false;
   }
