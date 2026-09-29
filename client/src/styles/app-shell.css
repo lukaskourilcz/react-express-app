@@ -731,8 +731,8 @@
   transition: transform var(--fin-duration) var(--ss-motion-ease), opacity var(--ss-motion-reveal) ease;
 }
 .ss-fin-hover svg { position: absolute; left: var(--fin-position); bottom: 0; transform: scaleX(var(--fin-flip)); }
-.ss-fin-button:hover:enabled .ss-fin-hover__swimmer,
-.ss-fin-button:focus-visible:enabled .ss-fin-hover__swimmer { opacity: 1; transform: translate(var(--fin-to-x), var(--fin-to-y, 0)) scale(1); }
+.ss-fin-button:hover:enabled:not([aria-disabled='true']) .ss-fin-hover__swimmer,
+.ss-fin-button:focus-visible:enabled:not([aria-disabled='true']) .ss-fin-hover__swimmer { opacity: 1; transform: translate(var(--fin-to-x), var(--fin-to-y, 0)) scale(1); }
 .ss-fin-button:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ss-fin-hover__swimmer { transform: none !important; transition: none; }

@@ -235,6 +235,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [settings] = useSettings();
 
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
+  const questionTextRef = useRef<HTMLDivElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
 
   const { isAuthenticated, isLoading: authLoading, user } = useAuth();
@@ -780,6 +781,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     }
   }, [state]);
 
+  // Starting unmounts the setup screen with the button that was pressed, so
+  // focus goes to the first question instead of falling to <body>.
+  useEffect(() => {
+    if (state === 'in-progress') questionTextRef.current?.focus({ preventScroll: true });
+  }, [state]);
+
   // Keyboard shortcuts during in-progress quiz
   useEffect(() => {
     if (state !== 'in-progress' || !currentQuestion) return;
@@ -956,7 +963,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
           {/* Start — swim-through CTA. */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', position: 'relative' }}>
-            <SwimCta label={t('quiz.startQuiz')} onClick={handleStart} dir={1} disabled={selectedCategories.length === 0} size="lg" />
+            {/* aria-disabled, not disabled: with no category it stays in the
+                Tab order, and pressing it names what is missing. */}
+            <SwimCta label={t('quiz.startQuiz')} onClick={handleStart} dir={1} unavailable={selectedCategories.length === 0} describedBy="categories-error" size="lg" />
           </div>
         </div>
 
@@ -1279,6 +1288,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 keep their anchored position. */}
             <div
               id={`question-text-${currentQuestion.id}`}
+              ref={questionTextRef}
+              tabIndex={-1}
               className="quiz-question-text"
               style={{ display: 'flex', alignItems: 'flex-start', gap: 4, flex: '1 1 auto', minHeight: 0, overflowY: 'auto' }}
             >

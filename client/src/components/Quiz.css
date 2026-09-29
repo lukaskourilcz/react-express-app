@@ -6,6 +6,9 @@
   font-weight: 500;
   line-height: 1.6;
 }
+/* Focused when the quiz starts (Quiz.tsx); the ring shows for the keyboard only. */
+.quiz-question-text:focus { outline: none; }
+.quiz-question-text:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
 
 .quiz-review-header {
   font-family: var(--font-family-heading);
