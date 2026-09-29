@@ -107,6 +107,12 @@ marker row in `quiz_submissions` and sealed into every later session of the
 day, so fetching again just before submitting does not shorten it. The same
 lookup tells the client the day is already played. The response is
 `private, no-store`, because the session inside it belongs to one caller.
+A daily fetched signed in also names that account (`userId` in the session).
+`api/quiz/submit.ts` refuses it with 401 `sign_in_required` when the submit
+carries no credentials and with 409 `session_owner_mismatch` when another
+account sends it, both before anything is claimed, so the day's one attempt is
+never spent as a guest's and the same answers still rank once they come back
+signed in.
 `api/quiz/submit.ts` grades only the sessions it serves (quiz, review, daily,
 question of the day, challenge batch, assessment); a Learn session is refused.
 
@@ -162,10 +168,16 @@ the screen then shows "Learner" with the default avatar. The viewer's own
 30-day row follows the same rule, so it shows them what everybody else sees:
 a switch refetches their personal board at once, and the shared boards follow
 within the CDN's minute. The privacy policy says the same under
-"Leaderboards".
+"Leaderboards". The name and picture stored for a board are the ones on the
+account's Google identity (`identity_data.full_name` or `name`, `avatar_url`
+or `picture`), read in `verifiedProfile` (`api/user/[op].ts`), never
+`user_metadata`, which the account can rewrite from the browser. An account
+without a Google identity has no name there, and the boards say "Learner".
 `api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
 request with a Bearer token or `me=1` also gets the learner's own line and is
-answered `Cache-Control: private, no-store`. `friend_list` orders friends by
+answered `Cache-Control: private, no-store`. A `limit` is served as the
+next of 10, 25, 50, 100 or 200 rows, and a read that reaches the function (the
+CDN did not answer it) takes the address read bucket below. `friend_list` orders friends by
 correct answers and accuracy, shows each friend's live streak by the rule
 above, and marks a friend active today when their last verified learning day
 is today. No board ranks by XP or by streak.
@@ -809,6 +821,39 @@ production (issue #227, step D8).
   Spreadshop's own monthly promotion on the server when `SPREADSHOP_API_KEY`
   and `SPREADSHOP_SHOP_ID` are set, and `/api/settings` returns it as
   `merchPromo`; coins never buy a discount.
+
+## Sign-in, caching and limits
+
+- **The token on a request.** `apiFetch` (`client/src/lib/api.ts`) attaches
+  the Supabase access token. When a session is stored in the browser but its
+  token cannot be read within four seconds, or supabase-js answers no session
+  while keeping the stored one (a refresh that failed offline), nothing is
+  sent: the caller gets a retryable `ApiError(0, 'auth_unavailable')`. Only a
+  browser with no stored session sends a request without a token, so a
+  signed-in learner is never graded or refused as a guest.
+- **Log out** ends this browser's session (`signOut({ scope: 'local' })`).
+  Offline or on a 5xx, supabase-js keeps the session, so `lib/auth.tsx` removes
+  the stored session and its code verifier itself, forgets the account's data
+  and signs the page out. Signing out everywhere needs the server and reports a
+  failure. `clearAccountData` moves an account epoch, and a progress sync that
+  started before it writes nothing.
+- **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
+  every answer before the handler runs; the public ones (the boards, settings,
+  the Learn map, health) set their own.
+- **Grants by address.** The admin allow-list, the owner's granted Learn paths
+  and the owner's private categories count an email only once Supabase has
+  confirmed it (`confirmedEmail` in `lib/auth.ts`), as billing does. The admin
+  role in `app_metadata` needs no email.
+- **Read limits.** The wallet, badges and a friend lookup in `api/user/[op].ts`
+  and the Learn plan, progress and steps take `limitRead`
+  (`lib/rate-limit.ts`): an address bucket that holds a class behind one NAT,
+  then the verified account's own (120 a minute). A guest has the address
+  bucket alone, which the Learn map and the leaderboard take too. The
+  fulfilment op takes the admin bucket before its gate, GET included.
+- **One-time claims.** `claimOnce` (one grade per placement round, one check
+  per design walkthrough) is held in Upstash. Where Upstash is configured, a
+  claim it cannot record is answered 503 `claim_unavailable` and nothing is
+  graded; only without Upstash does an instance's memory hold it.
 
 ## Account erasure
 
