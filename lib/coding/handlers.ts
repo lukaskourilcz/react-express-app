@@ -10,7 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError } from '../auth';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, withTimeout } from '../http';
-import { claimOnce, enforceClassRateLimit, enforceRateLimit, RATE_LIMITS } from '../rate-limit';
+import { claimOnce, enforceClassRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
@@ -776,7 +776,9 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
     return res.json(out);
   }
   if (req.method === 'POST') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingDraft))) return;
+    // Rate limited as every write to api/user/[op].ts is (`limitUserWrite`):
+    // per account, behind a class-sized address bucket. A second bucket here,
+    // keyed by address alone, held a whole class to one person's saves.
     const code = (req.body as { code?: unknown })?.code;
     if (typeof code !== 'string' || Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 400, 'bad_request', 'code is required and limited to 20 kB');
     const saved = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: id, p_code: code }));

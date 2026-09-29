@@ -146,10 +146,10 @@ export const RATE_LIMITS = {
   aiExplanation: { key: 'ai_explanation', capacity: 3, refillPerSecond: 5 / 3600 },
   // Coding tasks, in two tiers like the Learn buckets above: the caller's own
   // bucket, then a class-sized address backstop. A task load used to share
-  // `quizSession`.
+  // `quizSession`. A draft save is a write to `api/user/[op].ts` and takes
+  // `userMutation`'s two tiers there.
   codingTask: { key: 'coding_task', capacity: 20, refillPerSecond: 20 / 60 },
   codingRun: { key: 'coding_run', capacity: 30, refillPerSecond: 30 / 600 },
-  codingDraft: { key: 'coding_draft', capacity: 60, refillPerSecond: 60 / 600 },
   codingReveal: { key: 'coding_reveal', capacity: 10, refillPerSecond: 10 / 3600 },
   codingTaskAddress: { key: 'coding_task_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
   codingRunAddress: { key: 'coding_run_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },

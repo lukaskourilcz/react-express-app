@@ -66,6 +66,7 @@ import dailyHandler from '../api/quiz/daily';
 import questionsHandler from '../api/quiz/questions';
 import challengeHandler from '../api/quiz/challenge';
 import flashcardsHandler from '../api/flashcards';
+import { handleCodingDraft } from '../lib/coding/handlers';
 import { decodeSessionEnvelope } from '../lib/quiz-tokens';
 import { dailySeededShuffle, pickQuestionOfTheDay, UNBIASED_SHUFFLE_FROM } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
@@ -2035,11 +2036,12 @@ async function guestChallengeLimitContracts() {
  * CODE-8, PROF-7). Each route below charged one person's budget to the whole
  * address, so the pupil past it got 429: a quiz, the due list, the daily
  * challenge, the question of the day, a Challenge batch or answer, placement,
- * a Learn answer, completion or progress sync, a coding task, Submit or
- * reveal, a flashcard. Each now takes a class-sized address bucket, then the
- * caller's own. Run through the real handlers: thirty signed-in pupils behind
- * one address all get through, one pupil hammering is still refused while a
- * classmate is not, and guests still share their address's budget. */
+ * a Learn answer, completion or progress sync, a coding task, Submit, reveal
+ * or draft save, a flashcard. Each now takes a class-sized address bucket,
+ * then the caller's own. Run through the real handlers: thirty signed-in
+ * pupils behind one address all get through, one pupil hammering is still
+ * refused while a classmate is not, and guests still share their address's
+ * budget. */
 async function classroomLimitContracts() {
   const stamp = Date.now();
   const PUPILS = 30;
@@ -2245,6 +2247,24 @@ async function classroomLimitContracts() {
     }
     assert.deepEqual(statuses, { 200: PUPILS * perPupil }, 'every Challenge answer from a class behind one address is graded');
     assert.equal(RATE_LIMITS.quizSubmit.capacity, SHARED_NETWORK_SEATS * perPupil, 'grading\'s address bucket holds a class answering the Challenge');
+  }
+
+  // 10. A coding draft save is a write to api/user/[op].ts and takes its two
+  //     tiers there; the handler holds no bucket of its own keyed by address.
+  {
+    const saved: number[] = [];
+    const database = { rpc: async () => ({ data: null, error: null }) } as never;
+    const address = school();
+    for (let save = 0; save < 3; save += 1) {
+      for (let n = 0; n < PUPILS; n += 1) {
+        const res = mockResponse();
+        const req = { method: 'POST', headers: { 'x-forwarded-for': address }, query: { op: 'coding-draft' }, body: { user_id: `draft-${stamp}-${n}`, id: freeTask.id, code: 'let x = 1;' }, socket: {} };
+        if (await limitUserWrite(req as never, res as never, 'coding-draft')) await handleCodingDraft(req as never, res as never, database);
+        saved.push(res.statusCode);
+      }
+    }
+    assert.deepEqual(saved.filter((status) => status !== 200), [], 'thirty pupils behind one address each save their draft three times');
+    assert.equal('codingDraft' in RATE_LIMITS, false, 'codingDraft is gone: limitUserWrite bounds a draft save');
   }
 }
 
@@ -3238,7 +3258,7 @@ async function main() {
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue loader must not import the solutions');
   const pathCatalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(pathCatalogSource, /from '\.\/solutions/, 'the learning-path catalogue must not import the solutions');
-  for (const key of ['codingRun', 'codingDraft', 'codingReveal', 'githubConnect', 'githubSync',
+  for (const key of ['codingRun', 'codingReveal', 'githubConnect', 'githubSync',
                      'learningPathStart', 'learningPathSubmit', 'learningPathDraft', 'learningPathEnroll']) {
     assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
   }
