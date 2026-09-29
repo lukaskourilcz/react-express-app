@@ -42,7 +42,7 @@
 
 import { compileFunction, createContext, runInContext, type Context } from 'node:vm';
 import { transform } from 'sucrase';
-import { asRunnableModule, FETCH_STUB_SOURCE } from '../../shared/coding-react-support';
+import { asRunnableModule, FETCH_STUB_SOURCE, watchFormSubmits, type FormSubmitTarget } from '../../shared/coding-react-support';
 import { createMiniJest, type MiniJestRun } from '../../shared/coding-mini-jest';
 import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
 
@@ -237,7 +237,7 @@ export interface ReactSuiteOutcome extends MiniJestRun {
 
 /** Runs `suite` against `appSource` (a component body or a full module). */
 export async function runReactSuite(input: { suite: string; appSource: string }): Promise<ReactSuiteOutcome> {
-  const { testing, modules } = await ensureRuntime();
+  const { testing, modules, window: pageWindow } = await ensureRuntime();
   const jest = createMiniJest();
   const page = createPageRealm();
   let compileError: string | null = null;
@@ -278,7 +278,13 @@ export async function runReactSuite(input: { suite: string; appSource: string })
   let run: MiniJestRun;
   holdRejections(true);
   try {
-    run = await jest.run({ afterEach: () => testing.cleanup(), timeoutMs: REACT_SUITE_TIMEOUT_MS });
+    // A form the component lets submit fails its case, as in the browser
+    // harness: in the preview the frame would reload and lose its state.
+    run = await jest.run({
+      afterEach: () => testing.cleanup(),
+      timeoutMs: REACT_SUITE_TIMEOUT_MS,
+      watchCase: () => watchFormSubmits(pageWindow as unknown as FormSubmitTarget),
+    });
   } finally {
     holdRejections(false);
   }

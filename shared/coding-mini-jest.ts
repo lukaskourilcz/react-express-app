@@ -184,12 +184,20 @@ export function createMiniJest() {
   };
   const expect = (actual: unknown) => buildExpect(actual, false);
 
-  const run = async (options: { afterEach?: () => void | Promise<void>; timeoutMs?: number } = {}): Promise<MiniJestRun> => {
+  const run = async (options: {
+    afterEach?: () => void | Promise<void>;
+    timeoutMs?: number;
+    /** Starts watching one case; the function it returns stops watching and
+     * names what the case did wrong, if anything, which fails a case that
+     * would otherwise pass. */
+    watchCase?: () => () => string | null;
+  } = {}): Promise<MiniJestRun> => {
     const timeoutMs = options.timeoutMs ?? 5_000;
     const results: MiniJestCase[] = [];
     for (const one of cases) {
       const started = Date.now();
       let error: string | null = null;
+      const watched = options.watchCase?.();
       try {
         for (const hook of before) await hook();
         await Promise.race([
@@ -200,6 +208,8 @@ export function createMiniJest() {
       } catch (caught) {
         error = String((caught as { message?: unknown })?.message ?? caught).split('\n')[0];
       }
+      const problem = watched?.() ?? null;
+      if (error === null && problem) error = problem;
       try { await options.afterEach?.(); } catch { /* cleanup never fails a case */ }
       results.push({ name: one.name, status: error ? 'fail' : 'pass', error, durationMs: Date.now() - started });
     }
