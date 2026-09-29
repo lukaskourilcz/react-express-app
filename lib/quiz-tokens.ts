@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes }
 import { isScopeSubject, type ScopeSubjectId } from '../shared/subject-catalog';
 import { isLearningPathId, type LearningPathId } from '../shared/learning-paths';
 import { isCodingTrack, type CodingTrack } from '../shared/coding-catalog';
+import { PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
 
 const SECRET = process.env.SESSION_SECRET;
 const IS_PROD = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
@@ -498,6 +499,12 @@ export function decodeCodingSession(token: string): CodingSession | null {
     const k = payload.key as Record<string, unknown>;
     if (!k || typeof k !== 'object') return null;
     key = {};
+    if (k.puzzle !== undefined) {
+      // The authored line ids behind the presentation ids, one per line.
+      if (!Array.isArray(k.puzzle) || k.puzzle.length === 0 || k.puzzle.length > PUZZLE_MAX_LINES ||
+          !k.puzzle.every((id) => typeof id === 'string' && /^[a-z]{1,2}$/.test(id))) return null;
+      key.puzzle = k.puzzle as string[];
+    }
     if (k.steps !== undefined) { if (!isIndexList(k.steps, 10)) return null; key.steps = k.steps; }
     if (k.correct !== undefined) { if (!Number.isInteger(k.correct) || (k.correct as number) < 0 || (k.correct as number) > 25) return null; key.correct = k.correct as number; }
     if (k.order !== undefined) { if (!isIndexList(k.order, 12)) return null; key.order = k.order; }

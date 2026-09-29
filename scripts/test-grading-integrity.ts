@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import { runInSandbox } from '../lib/coding/sandbox';
-import { handleCodingSubmit } from '../lib/coding/handlers';
+import { handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
+import { puzzleFor } from '../lib/coding/puzzles';
 
 const attacks = [
   ['replace comparison', 'globalThis.__deepEqual=()=>true; function answer(){return 0}'],
@@ -166,4 +167,37 @@ function codingDatabase() {
   assert.equal(db.progress.get(`${learner}:js-double-numbers`)?.passes, 2);
   assert.equal(new Set(db.attemptIds).size, 3, 'three distinct submissions, one replay');
   console.log('PASS integrity: a fix submitted from the same session is recorded, a replay is not');
+}
+
+// ── a code-ordering puzzle round-trips through its session (CODE-7) ──────
+// The task handler seals the presentation-id translation into the session;
+// the submit handler must find it there again, or every arrangement is
+// refused as "this session did not issue a puzzle".
+{
+  type Body = { session?: string; task?: { puzzle?: { lines: { id: string; code: string }[] } }; puzzle?: { accepted?: boolean } };
+  const reply = () => ({ statusCode: 200, body: null as null | Body, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+  for (const id of ['js-sum-array', 'js-count-vowels']) {
+    const authored = puzzleFor(id)!;
+    const opened = reply();
+    await handleCodingTask({ method: 'GET', headers: {}, query: { id } } as never, opened as never, null);
+    assert.equal(opened.statusCode, 200);
+    const lines = opened.body!.task!.puzzle!.lines;
+    const byCode = new Map(lines.map((line) => [line.code, line.id]));
+    const arrange = async (authoredOrder: readonly string[]) => {
+      const order = authoredOrder.map((line) => byCode.get(authored.lines.find((one) => one.id === line)!.code)!);
+      const sent = reply();
+      await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: opened.body!.session, order } } as never, sent as never, null);
+      return sent;
+    };
+    const right = await arrange(authored.accepted[0]);
+    assert.equal(right.statusCode, 200, `${id}: ${JSON.stringify(right.body)}`);
+    assert.equal(right.body?.puzzle?.accepted, true, `${id}: an accepted order is accepted`);
+    const wrong = await arrange([...authored.accepted[0]].reverse());
+    assert.equal(wrong.statusCode, 200);
+    assert.equal(wrong.body?.puzzle?.accepted, false, `${id}: a reversed order is not`);
+    const forged = reply();
+    await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: opened.body!.session, order: lines.map((_, index) => `b${index + 2}`) } } as never, forged as never, null);
+    assert.equal(forged.statusCode, 400, `${id}: an id the session never issued is refused`);
+  }
+  console.log('PASS integrity: a code-ordering puzzle submits through the session that issued it');
 }
