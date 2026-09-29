@@ -1141,7 +1141,11 @@ const hidden: Record<string, [string, unknown][][]> = {
   'js-evolving-calculator': [
     [['calculate("17+23+0+4")',44]],
     [['calculate("20/2/2-1.5")',3.5]],
-    [['calculate("(1+2")',null],['calculate("2**3")',null],['calculate("1e2")',null],['calculate("3 / -(-2)")',1.5]],
+    [['calculate("(1+2")',null],['calculate("2**3")',null],['calculate("1e2")',null],['calculate("3 / -(-2)")',1.5],['calculate("3*+2")',6],['calculate("1.")',null]],
+    // Whole names only, numbers only (a numeric string is not a number), and
+    // every finite number, including the ones String() writes with an exponent.
+    [['calculateWithVariables("ab+a",{a:1,ab:2})',3],['calculateWithVariables("_x1*2",{_x1:3})',6],['calculateWithVariables("a",{a:"2"})',null],['calculateWithVariables("x*2",{x:1e21})',2e21]],
+    [['runProgram(["2 = 3"])',null],['runProgram(["x = 1 / 10000000", "x * 2"])',{variables:{x:1e-7},results:[1e-7,2e-7]}]],
   ],
   'js-evolving-query': [
     [['(()=>{const a=[{x:1},{x:2}];const out=query(a);out.pop();return a.length})()',2]],
