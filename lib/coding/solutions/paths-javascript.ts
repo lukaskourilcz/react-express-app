@@ -877,7 +877,8 @@ const HIDDEN: Record<string, Hidden> = {
   ],
   'js-path-lookups': [
     [['indexById([{id: "a", n: 1}]).get("a").n', 1], ['indexById([{id: 1}, {id: 2}]).get(2).id', 2]],
-    [['diffCatalog([{id: "a", runs: 1}, {id: "b", runs: 1}], [{id: "b", runs: 1}, {id: "a", runs: 2}])', { added: [], removed: [], changed: ['a'] }]],
+    // Two changed ids, listed in after order rather than before order.
+    [['diffCatalog([{id: "a", runs: 1}, {id: "b", runs: 1}], [{id: "b", runs: 1}, {id: "a", runs: 2}])', { added: [], removed: [], changed: ['a'] }], ['diffCatalog([{id: "a", runs: 1}, {id: "b", runs: 2}], [{id: "b", runs: 1}, {id: "a", runs: 2}])', { added: [], removed: [], changed: ['b', 'a'] }]],
     [['linksToGraph([["a", "b"], ["a", "c"], ["a", "b"]]).a', ['b', 'c']], ['linksToGraph([["a", "a"]])', { a: ['a'] }]],
     [['crawlOrder([["a", "a"]], "a")', ['a']], ['crawlOrder([["s", "b"], ["s", "a"], ["a", "c"], ["b", "c"]], "s")', ['s', 'b', 'a', 'c']]],
     [['crawlDepths([["a", "a"]], "a")', { a: 0 }], ['crawlDepths([["s", "x"], ["x", "y"], ["y", "z"], ["s", "z"]], "s").z', 1]],
