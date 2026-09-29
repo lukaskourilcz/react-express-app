@@ -27,6 +27,7 @@ import {
   encodeAnswerProof,
   encodeQuizResultReceipt,
   encodeSession,
+  encodeScoreProof,
   createChallengeRun,
   stableAttemptId,
 } from '../lib/quiz-tokens';
@@ -1966,6 +1967,69 @@ function quizRequest(method: 'GET' | 'POST', query: Record<string, string>, body
   } as never;
 }
 
+/** Guests playing the Challenge behind one school address. Each run is
+ * bounded by the run id sealed in its token rather than by the address, so
+ * thirteen guests (one past the old twelve) all answer, complete and post a
+ * score; one run is still bounded; and a guest's quiz keeps the address rate. */
+async function guestChallengeLimitContracts() {
+  const stamp = Date.now();
+  const school = `203.0.113.${stamp % 200}`;
+  const fromSchool = (method: 'GET' | 'POST', query: Record<string, string>, body: Record<string, unknown>) =>
+    ({ method, headers: { 'x-forwarded-for': school }, query, body, socket: {} }) as never;
+  const GUESTS = 13;
+
+  // Answers: one question from each guest's own batch, all from the school.
+  for (let n = 0; n < GUESTS; n += 1) {
+    const batch = mockResponse();
+    await challengeHandler(quizRequest('GET', { categories: deliveryCategories('webdev').join(',') }), batch as never);
+    assert.equal(batch.statusCode, 200, JSON.stringify(batch.body));
+    const sessionId = (batch.body as { sessionId: string }).sessionId;
+    const question = decodeSessionEnvelope(sessionId)!.questions[0];
+    const answered = mockResponse();
+    await submitHandler(fromSchool('POST', {}, { sessionId, answers: { [question.questionId]: question.correctAnswer } }), answered as never);
+    assert.equal(answered.statusCode, 200, `guest ${n + 1}'s Challenge answer is graded (${answered.statusCode} ${JSON.stringify(answered.body)})`);
+  }
+
+  // Completion and the Hall of Fame, a run each.
+  const strikes = (runId: string) => ['a', 'b', 'c'].map((q) => encodeScoreProof(runId, `guest-strike-${q}`, 'webdev', false));
+  const post = async (query: Record<string, string>, body: Record<string, unknown>) => {
+    const res = mockResponse();
+    await challengeHandler(fromSchool('POST', query, body), res as never);
+    return res;
+  };
+  for (let n = 0; n < GUESTS; n += 1) {
+    const run = createChallengeRun(true, 'webdev');
+    const completed = await post({ resource: 'complete' }, { runToken: run.runToken, proofs: strikes(run.runId) });
+    assert.equal(completed.statusCode, 200, `guest ${n + 1}'s run completes (${completed.statusCode} ${JSON.stringify(completed.body)})`);
+    const scored = await post({}, { name: `Guest ${n + 1}`, runToken: run.runToken, proofs: strikes(run.runId) });
+    assert.notEqual(scored.statusCode, 429, `guest ${n + 1}'s score is not refused by a bucket the class shares`);
+  }
+
+  // One guest run has the budget an account has, and no more.
+  const one = createChallengeRun(true, 'webdev');
+  const statuses: number[] = [];
+  for (let n = 0; n <= RATE_LIMITS.challengeCompletePerUser.capacity; n += 1) {
+    statuses.push((await post({ resource: 'complete' }, { runToken: one.runToken, proofs: strikes(one.runId) })).statusCode);
+  }
+  assert.deepEqual(statuses.slice(0, -1).filter((status) => status !== 200), [], 'a guest run completes within its budget');
+  assert.equal(statuses.at(-1), 429, 'one guest run is bounded like one account');
+
+  // A guest's quiz is not a Challenge: its submits share the address rate.
+  const quizStatuses: number[] = [];
+  for (let n = 0; n <= RATE_LIMITS.quizSubmitAnonymous.capacity; n += 1) {
+    const quiz = mockResponse();
+    await questionsHandler(quizRequest('GET', { count: '1', difficulty: 'mixed', categories: 'javascript' }), quiz as never);
+    assert.equal(quiz.statusCode, 200, JSON.stringify(quiz.body));
+    const sessionId = (quiz.body as { sessionId: string }).sessionId;
+    const answers = Object.fromEntries(decodeSessionEnvelope(sessionId)!.questions.map((q) => [q.questionId, q.correctAnswer]));
+    const graded = mockResponse();
+    await submitHandler(fromSchool('POST', {}, { sessionId, answers }), graded as never);
+    quizStatuses.push(graded.statusCode);
+  }
+  assert.deepEqual(quizStatuses.slice(0, -1).filter((status) => status !== 200), [], 'a guest quiz is graded within the address rate');
+  assert.equal(quizStatuses.at(-1), 429, 'guest quizzes behind one address keep sharing its rate');
+}
+
 /** POST /api/quiz/submit grades only the sessions it serves, each checked
  * through the handler that really issues it. */
 async function quizSubmitScopeContracts() {
@@ -3037,7 +3101,9 @@ async function main() {
 
     // 2. An account's bucket and an address's never meet, even when the
     //    address header reads like an account; and every identity a handler
-    //    passes is `user:` and a verified id.
+    //    passes is `user:` and a verified id, or, for a Challenge played
+    //    without an account, `run:` and the run id sealed in a token the
+    //    server signed.
     const collide = { key: `class-ns-${stamp}`, capacity: 1, refillPerSecond: 0.0001 };
     const asAddress = { headers: { 'x-forwarded-for': 'user:pupil-c' }, socket: {} } as never;
     assert.equal(checkRateLimit(asAddress, mockResponse() as never, collide), true);
@@ -3046,7 +3112,9 @@ async function main() {
     for (const file of ['api', 'lib'].flatMap(codeFiles)) {
       const source = readFileSync(join(process.cwd(), file), 'utf8');
       for (const call of source.matchAll(/enforceRateLimit\(\s*req,\s*res,\s*RATE_LIMITS\.\w+,\s*([^)]+?)\s*\)/g)) {
-        assert.match(call[1], /^`user:\$\{[\w.]+\}`$/, `${file} passes ${call[1]} as an identity; an identity is user:<verified id>`);
+        const sealedRun = /^api\/quiz\/(submit|challenge)\.ts$/.test(file) && /^`run:\$\{(session|run)\.runId\}`$/.test(call[1]);
+        assert.ok(sealedRun || /^`user:\$\{[\w.]+\}`$/.test(call[1]),
+          `${file} passes ${call[1]} as an identity; an identity is user:<verified id>, or run:<sealed run id> for a guest's Challenge`);
       }
     }
 
@@ -3123,7 +3191,9 @@ async function main() {
   // address budget in seconds and pupils 13 onwards got 429 (review PLAY-4).
   // Grading, the completion step and the Hall of Fame now have the play
   // shape: a class-sized address bucket, then the caller's own bucket, per
-  // account when signed in and per address, at the old rate, when not.
+  // account when signed in and, without an account, per run sealed in the
+  // Challenge's session or run token, at the same budget. Any other caller
+  // without an account keeps the old address rate.
   {
     const stamp = Date.now();
     const school = { headers: { 'x-forwarded-for': `challenge-class-${stamp}` }, socket: {} } as never;
@@ -3146,17 +3216,38 @@ async function main() {
     }
     assert.equal(checkRateLimit(school, mockResponse() as never, RATE_LIMITS.quizSubmit), true, 'the address bucket still has room');
     assert.equal(checkRateLimit(school, mockResponse() as never, RATE_LIMITS.challengeSubmitPerUser, pupil(0)), false, 'one account is bounded');
-    // A person's own limits are the rates the address buckets carried before
-    // the split, except the Challenge answer and completion budgets, which
-    // were the finding; a caller without an account keeps the old rates.
-    const preSplit = {
+    // A person's own limits: a quiz and the Hall of Fame keep the rates the
+    // address buckets carried before the split; the Challenge answer and
+    // completion budgets were the finding and are larger. A guest's Challenge
+    // run gets the same three budgets as an account, so no per-address
+    // Challenge bucket for guests is left, while a guest's other submits keep
+    // the old address rate.
+    const intended = {
       quizSubmitPerUser: [12, 12 / 60], quizSubmitAnonymous: [12, 12 / 60],
-      challengeScorePerUser: [3, 10 / 3600], challengeScoreAnonymous: [3, 10 / 3600],
-      challengeCompleteAnonymous: [12, 12 / 3600],
+      challengeSubmitPerUser: [30, 30 / 60],
+      challengeScorePerUser: [3, 10 / 3600],
+      challengeCompletePerUser: [30, 30 / 3600],
     } as const;
-    for (const [key, [capacity, refill]] of Object.entries(preSplit) as Array<[keyof typeof preSplit, readonly [number, number]]>) {
-      assert.equal(RATE_LIMITS[key].capacity, capacity, `${key} holds the pre-split ${capacity}`);
-      assert.equal(RATE_LIMITS[key].refillPerSecond, refill, `${key} refills at the pre-split rate`);
+    for (const [key, [capacity, refill]] of Object.entries(intended) as Array<[keyof typeof intended, readonly [number, number]]>) {
+      assert.equal(RATE_LIMITS[key].capacity, capacity, `${key} holds ${capacity}`);
+      assert.equal(RATE_LIMITS[key].refillPerSecond, refill, `${key} refills at ${refill} a second`);
+    }
+    for (const retired of ['challengeScoreAnonymous', 'challengeCompleteAnonymous']) {
+      assert.equal(retired in RATE_LIMITS, false, `${retired} is gone: a guest's Challenge is bounded per run`);
+    }
+    // Thirty-two guests behind one school address each play a run: every
+    // answer, completion and score lands, and one run is still bounded.
+    const guestRun = (n: number) => `run:guest-${stamp}-${n}`;
+    const guestThrough = (address: Limit, own: Limit, n: number) =>
+      checkRateLimit(school, mockResponse() as never, address) && checkRateLimit(school, mockResponse() as never, own, guestRun(n));
+    for (let question = 0; question < 4; question += 1) {
+      for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+        assert.ok(guestThrough(RATE_LIMITS.quizSubmit, RATE_LIMITS.challengeSubmitPerUser, n), `guest ${n + 1} answers Challenge question ${question + 1}`);
+      }
+    }
+    for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+      assert.ok(guestThrough(RATE_LIMITS.challengeComplete, RATE_LIMITS.challengeCompletePerUser, n), `guest ${n + 1} completes a run`);
+      assert.ok(guestThrough(RATE_LIMITS.challengeScore, RATE_LIMITS.challengeScorePerUser, n), `guest ${n + 1} saves a score`);
     }
     // Each handler verifies the caller, then takes the caller's token, then
     // writes: grading claims the answer, completion credits XP, the Hall of
@@ -3171,8 +3262,8 @@ async function main() {
     };
     for (const [body, verify, limits, write] of [
       [bodyOf(submitSource, 'routeHandler'), 'await tryAuth(req)', ['quizSubmitPerUser', 'challengeSubmitPerUser', 'quizSubmitAnonymous'], 'await claimSubmission('],
-      [bodyOf(challengeSource, 'handleCompleteRun'), 'await tryAuth(req)', ['challengeCompletePerUser', 'challengeCompleteAnonymous'], "rpc('record_challenge_completion'"],
-      [bodyOf(challengeSource, 'handleSubmitScore'), 'await tryAuth(req)', ['challengeScorePerUser', 'challengeScoreAnonymous'], 'await recordChallengeScore('],
+      [bodyOf(challengeSource, 'handleCompleteRun'), 'await tryAuth(req)', ['challengeCompletePerUser'], "rpc('record_challenge_completion'"],
+      [bodyOf(challengeSource, 'handleSubmitScore'), 'await tryAuth(req)', ['challengeScorePerUser'], 'await recordChallengeScore('],
     ] as const) {
       const verified = body.indexOf(verify);
       const written = body.indexOf(write);
@@ -4037,6 +4128,7 @@ async function main() {
   await voucherContracts();
   await qotdContracts();
   await quizSubmitScopeContracts();
+  await guestChallengeLimitContracts();
   await dailyIntegrityContracts();
   seededShuffleContracts();
   await quizDifficultyContracts();
