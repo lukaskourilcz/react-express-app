@@ -1,7 +1,7 @@
 // The learning-path workspace: one attempt takes one result, a check is
 // retried as a new attempt, switching activities starts clean, and a draft
 // autosave never argues with itself.
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -103,6 +103,10 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
     }),
   };
 });
+
+// The screen's code, compiled once up front rather than inside the first
+// test's time budget. Imported here, after the fixtures the mocks read.
+beforeAll(() => import('../src/components/paths/LearningPathScreens'), 60_000);
 
 beforeEach(() => {
   calls.start.length = 0;

@@ -87,11 +87,21 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
 
 const enrolled = (pathId: 'fde' | 'dsa-foundations', status = 'active') => ({ enrollmentId: `ENROLL-${pathId}-0000000000`, pathId, curriculumVersion: 1, status });
 
-beforeAll(() => {
+beforeAll(async () => {
   const proto = HTMLDialogElement.prototype as unknown as { showModal?: () => void; close?: () => void };
   proto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open', ''); };
   proto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
-});
+  // The screens' code, compiled once up front rather than inside the first
+  // test's time budget. Imported here, after the fixtures the mocks read.
+  await Promise.all([
+    import('../src/i18n/LanguageContext'),
+    import('../src/components/paths/LearningPathScreens'),
+    import('../src/components/paths/PathDiscovery'),
+    import('../src/components/paths/PathResumeSection'),
+    import('../src/components/paths/LearningPathsCard'),
+    import('../src/components/paths/PathRewardClaim'),
+  ]);
+}, 60_000);
 beforeEach(() => {
   state.tier = 'premium';
   state.availability = 'available';
