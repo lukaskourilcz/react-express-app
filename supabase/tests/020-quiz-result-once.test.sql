@@ -10,7 +10,19 @@ DO $$
 DECLARE
   v_user CONSTANT TEXT := 'aaaaaaaa-0000-4000-8000-000000000020';
   v_breakdown CONSTANT JSONB := '{"javascript":{"correct":5,"total":6},"css":{"correct":3,"total":4}}';
-  v_outcomes CONSTANT JSONB := '[{"questionId":"q1","category":"javascript","isCorrect":true},{"questionId":"q2","category":"css","isCorrect":false}]';
+  -- One outcome per graded question, as api/quiz/submit.ts mints them; from
+  -- migration 048 the category counts are built from these.
+  v_outcomes CONSTANT JSONB := '[
+    {"questionId":"q1","category":"javascript","isCorrect":true},
+    {"questionId":"q2","category":"javascript","isCorrect":true},
+    {"questionId":"q3","category":"javascript","isCorrect":true},
+    {"questionId":"q4","category":"javascript","isCorrect":true},
+    {"questionId":"q5","category":"javascript","isCorrect":true},
+    {"questionId":"q6","category":"javascript","isCorrect":false},
+    {"questionId":"q7","category":"css","isCorrect":true},
+    {"questionId":"q8","category":"css","isCorrect":true},
+    {"questionId":"q9","category":"css","isCorrect":true},
+    {"questionId":"q10","category":"css","isCorrect":false}]';
   v_applied BOOLEAN;
   v_xp BIGINT;
   v_xp_webdev BIGINT;
@@ -42,7 +54,7 @@ BEGIN
   ASSERT v_answered = 10, format('the dated answers behind the 30-day board count once: expected 10, got %s', v_answered);
 
   SELECT SUM(times_seen)::INT INTO v_seen FROM public.user_question_history WHERE user_id = v_user;
-  ASSERT v_seen = 2, format('question history counts each question once: expected 2, got %s', v_seen);
+  ASSERT v_seen = 10, format('question history counts each question once: expected 10, got %s', v_seen);
 
   -- A new attempt is new work and counts.
   v_applied := public.record_verified_quiz_result_v2(

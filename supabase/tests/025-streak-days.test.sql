@@ -1,4 +1,5 @@
--- The streak counts UTC days with a verified quiz. The next day adds one, the
+-- The streak counts UTC days with verified learning, driven here by quizzes
+-- (migration 048 adds Learn, coding and the Challenge). The next day adds one, the
 -- same day adds nothing, up to two missed days are bridged by the month's two
 -- streak protections, a raised shield covers the days it spans, and a longer
 -- gap starts the streak again at one.
