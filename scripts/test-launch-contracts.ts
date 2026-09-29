@@ -2012,6 +2012,27 @@ async function quizSubmitScopeContracts() {
   }
 }
 
+/** Advanced asked of a topic with nothing above difficulty 2 is served its
+ * hardest questions, and says so, instead of a 404 that Retry repeats. */
+async function quizDifficultyContracts() {
+  const served = await getEffectiveQuestions('webdev', false);
+  const hardestHtml = Math.max(...served.filter((q) => q.category === 'html').map((q) => q.difficulty));
+  assert.ok(hardestHtml < 3, 'this contract needs a topic with no advanced questions');
+  const html = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '5', difficulty: 'advanced', categories: 'html' }), html as never);
+  assert.equal(html.statusCode, 200, JSON.stringify(html.body));
+  const htmlBody = html.body as { questions: { difficulty: number }[]; hardestAvailable?: boolean };
+  assert.equal(htmlBody.hardestAvailable, true);
+  assert.ok(htmlBody.questions.length > 0 && htmlBody.questions.every((q) => q.difficulty === hardestHtml));
+
+  const js = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '5', difficulty: 'advanced', categories: 'javascript,html' }), js as never);
+  assert.equal(js.statusCode, 200, JSON.stringify(js.body));
+  const jsBody = js.body as { questions: { difficulty: number }[]; hardestAvailable?: boolean };
+  assert.equal(jsBody.hardestAvailable, undefined, 'a selection with advanced questions is served those');
+  assert.ok(jsBody.questions.every((q) => q.difficulty >= 3));
+}
+
 /** A signed-in learner has one ranked daily attempt, timed from the first
  * time they were handed the day's questions. */
 async function dailyIntegrityContracts() {
@@ -3697,6 +3718,7 @@ async function main() {
   await quizSubmitScopeContracts();
   await dailyIntegrityContracts();
   seededShuffleContracts();
+  await quizDifficultyContracts();
   await webdevBankContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');

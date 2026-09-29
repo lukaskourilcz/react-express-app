@@ -158,6 +158,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // is the only case the learner is told anything about it.
   let mixed = false;
   let contrasted: string[] = [];
+  let hardestAvailable = false;
 
   if (resource === 'review') {
     let auth;
@@ -245,7 +246,17 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   } else if (difficultyMode === 'easy') {
     selected = weightedSample(pool.filter((q) => q.difficulty <= 2), count, weight);
   } else if (difficultyMode === 'advanced') {
-    selected = weightedSample(pool.filter((q) => q.difficulty >= 3), count, weight);
+    const advanced = pool.filter((q) => q.difficulty >= 3);
+    if (advanced.length > 0) {
+      selected = weightedSample(advanced, count, weight);
+    } else {
+      // HTML, CSS and Algorithms have nothing above difficulty 2 yet. Refusing
+      // left the learner with an error that Retry only repeated; serve the
+      // hardest difficulty the selection has, and say so.
+      const hardest = Math.max(...pool.map((q) => q.difficulty));
+      selected = weightedSample(pool.filter((q) => q.difficulty === hardest), count, weight);
+      hardestAvailable = true;
+    }
   } else if (difficultyMode === 'basics') {
     const basics = pool.filter((q) => q.tags.includes('Terminology'));
     if (basics.length > 0) {
@@ -270,11 +281,11 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     selected = buckets.slice(0, count);
   }
 
-  // The difficulty filters above (e.g. `easy` → difficulty ≤ 2, `advanced` →
-  // difficulty ≥ 3) can empty the pool even though the category had questions —
-  // a category with only easy questions yields nothing for `advanced`. Never
-  // hand the client a 200 with zero questions (it renders a blank screen);
-  // surface it as "no questions match those filters" instead.
+  // A difficulty filter above (e.g. `easy` → difficulty ≤ 2) can empty the
+  // pool even though the category had questions — a category with only hard
+  // questions yields nothing for `easy`. Never hand the client a 200 with zero
+  // questions (it renders a blank screen); surface it as "no questions match
+  // those filters" instead.
   if (selected.length === 0) {
     logEvent({ status: 404, reason: 'empty_after_difficulty', difficulty: difficultyMode, latency_ms: Date.now() - started });
     return jsonError(res, 404, 'no_questions', 'No questions match those filters');
@@ -314,6 +325,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     questions: questionsWithShuffledOptions,
     ...(reviewPlan ? { reviewPlan } : {}),
     ...(mixed ? { interleaved: { contrasted } } : {}),
+    ...(hardestAvailable ? { hardestAvailable: true } : {}),
   });
 }
 

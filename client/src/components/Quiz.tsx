@@ -194,6 +194,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   // Set only when the session actually mixes related concepts. One line,
   // once, and never a learning-science tutorial nobody asked for.
   const [interleaved, setInterleaved] = useState(false);
+  // Advanced asked of topics with no advanced questions: the server served
+  // their hardest instead, and the first question says so.
+  const [hardestAvailable, setHardestAvailable] = useState(false);
   // The item being reported, with the version of the wording that was on
   // screen, so a fix can be matched to what the learner actually saw.
   const [reportTarget, setReportTarget] = useState<{ id: string; version?: string } | null>(null);
@@ -328,7 +331,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           categories: categories.join(','),
           lang,
         });
-        const data = await apiFetch<{ sessionId: string; questions: Question[] }>(
+        const data = await apiFetch<{ sessionId: string; questions: Question[]; hardestAvailable?: boolean }>(
           `/api/quiz/questions?${params}`,
           { signal: controller.signal },
         );
@@ -347,6 +350,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setAnswers({});
         setHintedIds([]);
         setReviewPlan([]);
+        setHardestAvailable(data.hardestAvailable === true);
         setCurrentIndex(0);
         setMode('standard');
         setState('in-progress');
@@ -1136,6 +1140,11 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 {mode === 'review' && interleaved && currentIndex === 0 && (
                   <p style={{ margin: '10px 0 0', fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>
                     {t('quiz.interleavedNote')}
+                  </p>
+                )}
+                {mode === 'standard' && hardestAvailable && currentIndex === 0 && (
+                  <p style={{ margin: '10px 0 0', fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>
+                    {t('quiz.hardestAvailableNote')}
                   </p>
                 )}
               </div>

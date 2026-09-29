@@ -348,7 +348,7 @@ export const en = {
   'difficulty.zero-to-hero': 'Progressive',
   'difficulty.advanced': 'Advanced',
   'difficulty.mixed': 'Mixed',
-  'difficulty.basics.tip': 'Definitions and basic terms.',
+  'difficulty.basics.tip': 'Only the easiest questions.',
   'difficulty.easy.tip': 'Difficulty 1–2.',
   'difficulty.zero-to-hero.tip': 'Difficulty 1 to 5, in order.',
   'difficulty.advanced.tip': 'Difficulty 3–5.',
@@ -921,6 +921,7 @@ export const en = {
   // Czech file still has them, and their values say what is true now.
   'quiz.reviewWeakAreas': 'Review weak areas',
   'quiz.interleavedNote': 'You’re comparing related ideas here, to practise choosing which one fits.',
+  'quiz.hardestAvailableNote': 'These topics have no advanced questions yet, so this quiz uses the hardest ones they have.',
   'quiz.reviewPlanTitle': 'Your focused review',
   'common.dismiss': 'Dismiss',
   'topicLanding.notFound': 'Topic not found',
