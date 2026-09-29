@@ -3447,16 +3447,410 @@ const App = () => {
 8. Finish by testing empty, loading, success, and error states.`,
   },
   "react-weather-style-dashboard": {
-    solution: `Senior-style approach for Weather-style dashboard:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: the page opens on Prague. A search for a known city loads its
+// current temperature, and every reading joins the three recent searches.
+// Data model: CITIES maps a name to coordinates. State keeps the readings
+// ({ name, temperature }, newest first), the city asked for last, loading and error.
+// API endpoints: GET api.open-meteo.com/v1/forecast?latitude&longitude&current=temperature_2m
+// Reliability and scale: an external API can be slow, down or rate-limited.
+// Check response.ok, show an error with a retry, keep the last good readings on
+// screen, give up on a request that takes too long, and back off between
+// retries. In production the page would call our own server, which caches each
+// city's reading for a few minutes, so a thousand visitors cost one request.
+
+const CITIES = [
+  { name: 'Prague', latitude: 50.08, longitude: 14.44 },
+  { name: 'Brno', latitude: 49.2, longitude: 16.61 },
+  { name: 'Ostrava', latitude: 49.83, longitude: 18.29 },
+  { name: 'Vienna', latitude: 48.21, longitude: 16.37 },
+  { name: 'Berlin', latitude: 52.52, longitude: 13.41 },
+];
+
+const MAX_RECENT = 3;
+
+const forecastUrl = city =>
+  'https://api.open-meteo.com/v1/forecast?latitude=' + city.latitude +
+  '&longitude=' + city.longitude + '&current=temperature_2m';
+
+const App = () => {
+  const [readings, setReadings] = useState([]);
+  const [lastCity, setLastCity] = useState(CITIES[0]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [name, setName] = useState('');
+  const [unknown, setUnknown] = useState('');
+
+  const loadWeather = async city => {
+    setLastCity(city);
+    setError('');
+    setLoading(true);
+    try {
+      const response = await fetch(forecastUrl(city));
+      if (!response.ok) throw new Error('Request failed');
+      const data = await response.json();
+      const reading = { name: city.name, temperature: data.current.temperature_2m };
+      setReadings(current => [reading, ...current.filter(one => one.name !== city.name)].slice(0, MAX_RECENT));
+    } catch (requestError) {
+      setError('Could not load the weather');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadWeather(CITIES[0]);
+  }, []);
+
+  const search = event => {
+    event.preventDefault();
+    const wanted = name.trim();
+    const city = CITIES.find(one => one.name.toLowerCase() === wanted.toLowerCase());
+    if (!city) {
+      setUnknown(wanted);
+      return;
+    }
+    setUnknown('');
+    loadWeather(city);
+  };
+
+  // Derived while rendering, so a city that drops off the list stops counting.
+  const temperatures = readings.map(reading => reading.temperature);
+
+  return (
+    <main>
+      <h2>Weather-style dashboard</h2>
+      <form onSubmit={search}>
+        <label>City <input value={name} onChange={event => setName(event.target.value)} /></label>
+        <button type="submit">Search</button>
+      </form>
+      {unknown && <p>Unknown city: {unknown}</p>}
+      {loading && <p>Loading…</p>}
+      {error && (
+        <div>
+          <p role="alert">{error}</p>
+          <button type="button" onClick={() => loadWeather(lastCity)}>Retry</button>
+        </div>
+      )}
+      <ul aria-label="Recent searches">
+        {readings.map(reading => <li key={reading.name}>{reading.name}: {reading.temperature} °C</li>)}
+      </ul>
+      {readings.length > 0 && (
+        <>
+          <p>Lowest: {Math.min(...temperatures)} °C</p>
+          <p>Highest: {Math.max(...temperatures)} °C</p>
+        </>
+      )}
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `import React, { useEffect, useState } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: Prague loads first. I type a city, press Search, and its
+// temperature is added to the recent searches.
+// Data model: CITIES holds the coordinates. readings is an array of
+// { name, temperature }, newest first, three at most.
+// API endpoints: GET the Open-Meteo forecast with latitude, longitude and
+// current=temperature_2m.
+// Reliability and scale: the API can fail or be slow, so I check response.ok,
+// show an error with a Retry button and keep the old readings on screen. A
+// bigger app would cache readings and stop waiting for a request that hangs.
+
+const CITIES = [
+  { name: 'Prague', latitude: 50.08, longitude: 14.44 },
+  { name: 'Brno', latitude: 49.2, longitude: 16.61 },
+  { name: 'Ostrava', latitude: 49.83, longitude: 18.29 },
+  { name: 'Vienna', latitude: 48.21, longitude: 16.37 },
+  { name: 'Berlin', latitude: 52.52, longitude: 13.41 },
+];
+
+const App = () => {
+  const [readings, setReadings] = useState([]);
+  const [lastCity, setLastCity] = useState(CITIES[0]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [cityText, setCityText] = useState('');
+  const [unknownCity, setUnknownCity] = useState('');
+
+  const findCity = (text) => {
+    const wanted = text.trim().toLowerCase();
+    for (const city of CITIES) {
+      if (city.name.toLowerCase() === wanted) {
+        return city;
+      }
+    }
+    return null;
+  };
+
+  const loadWeather = async (city) => {
+    setLastCity(city);
+    setError('');
+    setLoading(true);
+    try {
+      const url = 'https://api.open-meteo.com/v1/forecast?latitude=' + city.latitude + '&longitude=' + city.longitude + '&current=temperature_2m';
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error('Request failed');
+      }
+      const data = await response.json();
+      const newReading = { name: city.name, temperature: data.current.temperature_2m };
+      setReadings((oldReadings) => {
+        const updated = [newReading];
+        for (const reading of oldReadings) {
+          if (reading.name !== city.name && updated.length < 3) {
+            updated.push(reading);
+          }
+        }
+        return updated;
+      });
+    } catch (requestError) {
+      setError('Could not load the weather');
+    }
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadWeather(CITIES[0]);
+  }, []);
+
+  const handleCityChange = (event) => {
+    setCityText(event.target.value);
+  };
+
+  const handleSubmit = (event) => {
+    event.preventDefault();
+    const city = findCity(cityText);
+    if (city === null) {
+      setUnknownCity(cityText.trim());
+      return;
+    }
+    setUnknownCity('');
+    loadWeather(city);
+  };
+
+  const handleRetry = () => {
+    loadWeather(lastCity);
+  };
+
+  let lowest = null;
+  let highest = null;
+  for (const reading of readings) {
+    if (lowest === null || reading.temperature < lowest) {
+      lowest = reading.temperature;
+    }
+    if (highest === null || reading.temperature > highest) {
+      highest = reading.temperature;
+    }
+  }
+
+  return (
+    <main>
+      <h2>Weather-style dashboard</h2>
+      <form onSubmit={handleSubmit}>
+        <label>
+          City <input type="text" value={cityText} onChange={handleCityChange} />
+        </label>
+        <button type="submit">Search</button>
+      </form>
+      {unknownCity !== '' && <p>Unknown city: {unknownCity}</p>}
+      {loading && <p>Loading…</p>}
+      {error !== '' && (
+        <div>
+          <p role="alert">{error}</p>
+          <button type="button" onClick={handleRetry}>Retry</button>
+        </div>
+      )}
+      <ul aria-label="Recent searches">
+        {readings.map((reading) => (
+          <li key={reading.name}>{reading.name}: {reading.temperature} °C</li>
+        ))}
+      </ul>
+      {lowest !== null && <p>Lowest: {lowest} °C</p>}
+      {highest !== null && <p>Highest: {highest} °C</p>}
+    </main>
+  );
+};
+
+export default App;`,
+    senior: `import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: open on Prague, search a known city, compare the last three.
+// Data model: readings [{ name, temperature }] newest first; one request
+// record { city, status } says what is on its way and what to retry.
+// API endpoints: GET api.open-meteo.com/v1/forecast?latitude&longitude&current=temperature_2m
+// Reliability and scale: a newer request aborts the older one, so a slow answer
+// can never overwrite a fresh one. Failures keep the last good readings and
+// offer a retry of the same city; a production version would add a timeout
+// signal, exponential back-off with jitter, and a server-side cache keyed by
+// rounded coordinates so the third-party quota is spent once per city, not
+// once per visitor.
+
+const CITIES = [
+  { name: 'Prague', latitude: 50.08, longitude: 14.44 },
+  { name: 'Brno', latitude: 49.2, longitude: 16.61 },
+  { name: 'Ostrava', latitude: 49.83, longitude: 18.29 },
+  { name: 'Vienna', latitude: 48.21, longitude: 16.37 },
+  { name: 'Berlin', latitude: 52.52, longitude: 13.41 },
+];
+const MAX_RECENT = 3;
+
+const forecastUrl = ({ latitude, longitude }) =>
+  'https://api.open-meteo.com/v1/forecast?' +
+  new URLSearchParams({ latitude: String(latitude), longitude: String(longitude), current: 'temperature_2m' });
+
+const findCity = name => CITIES.find(city => city.name.toLowerCase() === name.trim().toLowerCase());
+
+const useRecentWeather = () => {
+  const [readings, setReadings] = useState([]);
+  const [request, setRequest] = useState({ city: CITIES[0], status: 'loading' });
+  const inFlight = useRef(null);
+
+  const load = useCallback(async city => {
+    inFlight.current?.abort();
+    const mine = new AbortController();
+    inFlight.current = mine;
+    setRequest({ city, status: 'loading' });
+    try {
+      const response = await fetch(forecastUrl(city), { signal: mine.signal });
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const { current } = await response.json();
+      if (mine.signal.aborted) return;
+      setReadings(list => [{ name: city.name, temperature: current.temperature_2m }, ...list.filter(one => one.name !== city.name)].slice(0, MAX_RECENT));
+      setRequest({ city, status: 'idle' });
+    } catch {
+      if (!mine.signal.aborted) setRequest({ city, status: 'error' });
+    }
+  }, []);
+
+  useEffect(() => {
+    load(CITIES[0]);
+    return () => inFlight.current?.abort();
+  }, [load]);
+
+  return { readings, request, load };
+};
+
+const App = () => {
+  const { readings, request, load } = useRecentWeather();
+  const [name, setName] = useState('');
+  const [unknown, setUnknown] = useState('');
+
+  const search = event => {
+    event.preventDefault();
+    const city = findCity(name);
+    setUnknown(city ? '' : name.trim());
+    if (city) load(city);
+  };
+
+  const range = useMemo(() => {
+    if (readings.length === 0) return null;
+    const temperatures = readings.map(reading => reading.temperature);
+    return { low: Math.min(...temperatures), high: Math.max(...temperatures) };
+  }, [readings]);
+
+  return (
+    <main>
+      <h2>Weather-style dashboard</h2>
+      <form role="search" onSubmit={search}>
+        <label htmlFor="city">City</label>
+        <input id="city" value={name} onChange={event => setName(event.target.value)} />
+        <button type="submit">Search</button>
+      </form>
+      {unknown && <p>Unknown city: {unknown}</p>}
+      {request.status === 'loading' && <p aria-live="polite">Loading…</p>}
+      {request.status === 'error' && (
+        <div>
+          <p role="alert">Could not load the weather</p>
+          <button type="button" onClick={() => load(request.city)}>Retry</button>
+        </div>
+      )}
+      <ul aria-label="Recent searches">
+        {readings.map(({ name: city, temperature }) => <li key={city}>{city}: {temperature} °C</li>)}
+      </ul>
+      {range && (
+        <>
+          <p>Lowest: {range.low} °C</p>
+          <p>Highest: {range.high} °C</p>
+        </>
+      )}
+    </main>
+  );
+};
+
+export default App;`,
+    hiddenSuite: `test('readings below zero, with decimals and at zero', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], -3.5);
+  search('Ostrava');
+  expect(asked(calls[1])).toEqual([FORECAST, 49.83, 18.29, 'temperature_2m']);
+  await answer(calls[1], -7.25);
+  search('BRNO');
+  await answer(calls[2], 0);
+  expect(recent()).toEqual(['Brno: 0 °C', 'Ostrava: -7.25 °C', 'Prague: -3.5 °C']);
+  expect(screen.getByText('Lowest: -7.25 °C')).toBeTruthy();
+  expect(screen.getByText('Highest: 0 °C')).toBeTruthy();
+}));
+
+test('three cities stay, and one that drops off stops counting', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 30);
+  search('Brno');
+  await answer(calls[1], 5);
+  search('Vienna');
+  await answer(calls[2], 6);
+  search('Berlin');
+  expect(asked(calls[3])).toEqual([FORECAST, 52.52, 13.41, 'temperature_2m']);
+  await answer(calls[3], 7);
+  expect(recent()).toEqual(['Berlin: 7 °C', 'Vienna: 6 °C', 'Brno: 5 °C']);
+  expect(screen.getByText('Lowest: 5 °C')).toBeTruthy();
+  expect(screen.getByText('Highest: 7 °C')).toBeTruthy();
+}));
+
+test('an answer that is not ok is a failure, and Retry asks for the city that failed', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search('Berlin');
+  await answer(calls[1], 99, 503);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load the weather');
+  expect(recent()).toEqual(['Prague: 12.5 °C']);
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(calls).toHaveLength(3);
+  expect(asked(calls[2])).toEqual([FORECAST, 52.52, 13.41, 'temperature_2m']);
+  expect(screen.queryByRole('alert')).toBeNull();
+  await answer(calls[2], 9);
+  expect(recent()).toEqual(['Berlin: 9 °C', 'Prague: 12.5 °C']);
+}));
+
+test('a new search clears the alert, and no reading means no lowest or highest', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(recent()).toEqual([]);
+  expect(screen.queryByText('Lowest', { exact: false })).toBeNull();
+  expect(screen.queryByText('Highest', { exact: false })).toBeNull();
+  search('vienna');
+  expect(screen.queryByRole('alert')).toBeNull();
+  await answer(calls[1], 14);
+  expect(recent()).toEqual(['Vienna: 14 °C']);
+  expect(screen.getByText('Lowest: 14 °C')).toBeTruthy();
+  expect(screen.getByText('Highest: 14 °C')).toBeTruthy();
+}));
+
+test('the next search removes the unknown-city message', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search('Gotham');
+  expect(screen.getByText('Unknown city: Gotham')).toBeTruthy();
+  expect(calls).toHaveLength(1);
+  search(' ostrava');
+  expect(screen.queryByText('Unknown city: Gotham')).toBeNull();
+  expect(asked(calls[1])).toEqual([FORECAST, 49.83, 18.29, 'temperature_2m']);
+}));`,
   },
   "react-notification-center": {
     solution: `Senior-style approach for Notification center:

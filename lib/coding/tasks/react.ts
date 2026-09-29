@@ -3261,7 +3261,7 @@ const visibleItems = items.filter(item => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Weather-style dashboard",
-    prompt: "Fetch mock data, save recent searches, derive min/max values, and handle retries. Explain external-API reliability.",
+    prompt: "A dashboard shows the current temperature in a few cities, read from Open-Meteo. `CITIES` in the starter gives each city’s latitude and longitude. To load a city, fetch `https://api.open-meteo.com/v1/forecast?latitude=<latitude>&longitude=<longitude>&current=temperature_2m`; the answer holds the reading in °C at `current.temperature_2m`. Load Prague on mount. A form with an input labelled “City” and a “Search” button loads another city: match the name against `CITIES`, ignoring case and the spaces around it. A name that is not in `CITIES` shows “Unknown city: <name>”, with the name trimmed, and asks nothing; the next search removes that message. Every reading that arrives goes to the front of a `ul` whose `aria-label` is “Recent searches”, one `li` per city such as “Brno: 8 °C”. A city searched again moves to the front with its new reading, and the list keeps three cities at most. Once the list holds a reading, show “Lowest: <n> °C” and “Highest: <n> °C” in a paragraph each, worked out from the list while rendering, so a city that drops off the list stops counting. While a request is on its way, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load the weather” in an element with `role=\"alert\"` and a “Retry” button that asks for the same city again. The alert goes as soon as the next request starts. The notes at the top are for your explanation of how a dashboard stays usable when an external API is slow or down; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3270,6 +3270,14 @@ const visibleItems = items.filter(item => {
 // API endpoints:
 // Reliability and scale:
 
+const CITIES = [
+  { name: 'Prague', latitude: 50.08, longitude: 14.44 },
+  { name: 'Brno', latitude: 49.2, longitude: 16.61 },
+  { name: 'Ostrava', latitude: 49.83, longitude: 18.29 },
+  { name: 'Vienna', latitude: 48.21, longitude: 16.37 },
+  { name: 'Berlin', latitude: 52.52, longitude: 13.41 },
+];
+
 const App = () => {
   // Build one working slice at a time with arrow functions.
   return <main><h2>Weather-style dashboard</h2></main>;
@@ -3277,46 +3285,168 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=50.08&longitude=14.44&current=temperature_2m';
-const [weather, setWeather] = useState(null);
+    skeleton: `const forecastUrl = city =>
+  'https://api.open-meteo.com/v1/forecast?latitude=' + city.latitude +
+  '&longitude=' + city.longitude + '&current=temperature_2m';
+
+const [readings, setReadings] = useState([]);       // [{ name, temperature }], newest first
+const [lastCity, setLastCity] = useState(CITIES[0]); // what Retry asks for
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 
-const loadWeather = async () => {
+const loadWeather = async city => {
+  setLastCity(city);
+  setError('');
+  setLoading(true);
   try {
-    const response = await fetch(API_URL);
+    const response = await fetch(forecastUrl(city));
     if (!response.ok) throw new Error('Request failed');
-    setWeather(await response.json());
+    const data = await response.json();
+    // the new { name: city.name, temperature: data.current.temperature_2m } first,
+    // the older reading of the same city filtered out, three at most
   } catch (requestError) {
-    setError(requestError.message);
+    setError('Could not load the weather');
   } finally {
     setLoading(false);
   }
 };
 
 useEffect(() => {
-  loadWeather();
-}, []);`,
+  loadWeather(CITIES[0]);
+}, []);
+
+const temperatures = readings.map(reading => reading.temperature);
+// Math.min(...temperatures) and Math.max(...temperatures) while rendering`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "Keep one array of readings in state and work the lowest and highest out of it while rendering. Retry has to know which city failed, so remember the city of the last request instead of always retrying Prague.",
     ],
     approach: [
-      "Put the request in one named async function so both the mount effect and a retry button can call it.",
-      "Track loading and error separately, and clear the previous error before each new attempt.",
-      "Keep recent searches in an array state, prepending each new one and capping the length instead of storing duplicates.",
-      "Derive the minimum and maximum readings from the fetched values during render, then explain external-API reliability in comments.",
+      "Write `loadWeather(city)` as one async function: clear the error, set loading, fetch the city’s URL, check `response.ok`, and save the reading. The mount effect calls it for Prague and Retry calls it for the city asked for last.",
+      "On submit, look the trimmed name up in `CITIES` with both sides lower-cased. A miss sets the unknown-city message and returns before any request.",
+      "Save a reading with the updater form: the new `{ name, temperature }` first, the older reading of that city filtered out, then `slice(0, 3)`.",
+      "Lowest and highest are `Math.min` and `Math.max` over the temperatures in that list. Then write the notes: timeouts, retries with back-off, the last good readings kept on screen, and a server-side cache in front of the API.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Data is fetched with loading and error states, and retries are handled.",
-      "Recent searches are kept and min/max values derived.",
-      "Your comments explain external-API reliability.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+// Answer a request with a temperature, or break it off, and let the page catch up.
+const answer = (call, temperature, status = 200) => act(async () => {
+  call.respond({ current: { temperature_2m: temperature } }, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+// Where a request went: the address, then the latitude, longitude and reading asked for.
+const asked = call => {
+  const url = new URL(call.url);
+  return [url.origin + url.pathname, Number(url.searchParams.get('latitude')), Number(url.searchParams.get('longitude')), url.searchParams.get('current')];
+};
+const FORECAST = 'https://api.open-meteo.com/v1/forecast';
+const search = name => {
+  fireEvent.change(screen.getByLabelText('City'), { target: { value: name } });
+  fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+};
+const recent = () => {
+  const list = screen.queryByRole('list', { name: 'Recent searches' });
+  return list ? within(list).queryAllByRole('listitem').map(item => item.textContent) : [];
+};
+
+test('Prague loads on mount from Open-Meteo', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  expect(asked(calls[0])).toEqual([FORECAST, 50.08, 14.44, 'temperature_2m']);
+  expect(screen.getByText('Loading…')).toBeTruthy();
+  await answer(calls[0], 12.5);
+  expect(recent()).toEqual(['Prague: 12.5 °C']);
+  expect(screen.queryByText('Loading…')).toBeNull();
+}));
+
+test('a search ignores case and spaces and puts the city first', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search('  bRNO ');
+  expect(calls).toHaveLength(2);
+  expect(asked(calls[1])).toEqual([FORECAST, 49.2, 16.61, 'temperature_2m']);
+  expect(screen.getByText('Loading…')).toBeTruthy();
+  await answer(calls[1], 8);
+  expect(recent()).toEqual(['Brno: 8 °C', 'Prague: 12.5 °C']);
+}));
+
+test('lowest and highest come from the recent searches', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search('Brno');
+  await answer(calls[1], 8);
+  search('Vienna');
+  await answer(calls[2], 15);
+  expect(recent()).toEqual(['Vienna: 15 °C', 'Brno: 8 °C', 'Prague: 12.5 °C']);
+  expect(screen.getByText('Lowest: 8 °C')).toBeTruthy();
+  expect(screen.getByText('Highest: 15 °C')).toBeTruthy();
+}));
+
+test('a city searched again moves to the front with its new reading', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search('Brno');
+  await answer(calls[1], 8);
+  search('prague');
+  expect(asked(calls[2])).toEqual([FORECAST, 50.08, 14.44, 'temperature_2m']);
+  await answer(calls[2], 10);
+  expect(recent()).toEqual(['Prague: 10 °C', 'Brno: 8 °C']);
+  expect(screen.getByText('Highest: 10 °C')).toBeTruthy();
+}));
+
+test('an unknown city asks nothing', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search(' Atlantis ');
+  expect(screen.getByText('Unknown city: Atlantis')).toBeTruthy();
+  expect(calls).toHaveLength(1);
+  expect(recent()).toEqual(['Prague: 12.5 °C']);
+}));
+
+test('a failed request offers Retry, which asks for the same city', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load the weather');
+  expect(screen.queryByText('Loading…')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(calls).toHaveLength(2);
+  expect(calls[1].url).toBe(calls[0].url);
+  expect(screen.queryByRole('alert')).toBeNull();
+  await answer(calls[1], 11);
+  expect(recent()).toEqual(['Prague: 11 °C']);
+}));
+`,
     api: {
       method: "GET",
       url: "https://api.open-meteo.com/v1/forecast?latitude=50.08&longitude=14.44&current=temperature_2m",
-      note: "Public Open-Meteo example for Prague. No API key is required.",
+      note: "Public Open-Meteo API, shown here for Prague. Put each city’s latitude and longitude in the query. No API key is required.",
     },
   },
   {
