@@ -21,11 +21,18 @@ export interface StreakProtection {
   period: string;
   /** ISO dates (YYYY-MM-DD) a protection has been spent on this period. */
   used: string[];
-  /** When the active shield expires, or null when none is active. */
+  /** When the latest shield expires, or null when none was raised. */
   shieldUntil: string | null;
+  /** Every UTC date (YYYY-MM-DD) a shield covered in the last 40 days
+   * (migration 052). Empty from a server before 052, which kept only the
+   * latest shield in shieldUntil. */
+  shieldDays: string[];
   /** False when the server cannot offer the shield yet — the migration that
    * adds it has not been applied. The budget still reads correctly. */
   shieldSupported: boolean;
+  /** True when the read failed: the budget and the shields are unknown, so
+   * a streak that depends on them cannot be told. */
+  failed?: true;
 }
 
 const URL = '/api/user/freezes';
@@ -37,8 +44,11 @@ const EMPTY: StreakProtection = {
   period: currentPeriod(),
   used: [],
   shieldUntil: null,
+  shieldDays: [],
   shieldSupported: false,
 };
+
+const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 function normalize(res: Partial<StreakProtection>): StreakProtection {
   const until = typeof res.shieldUntil === 'string' ? res.shieldUntil : null;
@@ -47,16 +57,20 @@ function normalize(res: Partial<StreakProtection>): StreakProtection {
     period: typeof res.period === 'string' && res.period ? res.period : currentPeriod(),
     used: Array.isArray(res.used) ? res.used.filter((d): d is string => typeof d === 'string') : [],
     shieldUntil: until && Number.isFinite(Date.parse(until)) ? until : null,
+    shieldDays: Array.isArray(res.shieldDays)
+      ? res.shieldDays.filter((d): d is string => typeof d === 'string' && ISO_DAY.test(d) && Number.isFinite(Date.parse(d)))
+      : [],
     shieldSupported: res.shieldSupported === true,
   };
 }
 
-/** Read the protection budget and any active shield. Never throws. */
+/** Read the protection budget and the shields. Never throws: a failed read
+ * comes back empty and marked `failed`. */
 export async function getStreakProtection(): Promise<StreakProtection> {
   try {
     return normalize(await apiFetch<Partial<StreakProtection>>(URL));
   } catch {
-    return { ...EMPTY };
+    return { ...EMPTY, failed: true };
   }
 }
 
@@ -66,8 +80,10 @@ export async function getStreakProtection(): Promise<StreakProtection> {
  * handler.
  *
  * Spending is the server's decision, not this function's: it refuses when the
- * budget is empty and returns the existing window unchanged when a shield is
- * already running, so a second click cannot cost a second protection.
+ * budget is empty or when a missed day still needs the protection the shield
+ * would take (409 shield_would_end_streak), and returns the existing window
+ * unchanged when a shield is already running, so a second click cannot cost a
+ * second protection.
  */
 export async function activateShield(): Promise<StreakProtection> {
   return normalize(await apiFetch<Partial<StreakProtection>>(URL, { method: 'POST' }));
@@ -82,41 +98,59 @@ const utcDay = (ms: number): number => Math.floor(ms / DAY_MS);
  * ends at 00:00 UTC the day after tomorrow (from 048). */
 const shieldRaisedDay = (shieldUntil: number): number => utcDay(shieldUntil - SHIELD_MS);
 
+/** What `liveStreak` reads from the protection state. `shieldDays` is
+ * optional so a state from a server before migration 052 still reads. */
+type ProtectionRead = Pick<StreakProtection, 'remaining' | 'shieldUntil'> & { shieldDays?: string[] };
+
 /**
- * The streak as it stands today: the recorded count while the streak is still
- * alive, 0 once it has ended.
+ * The streak as it stands today, and the days missed since the last learning
+ * day that no shield covered (each needs a protection; counting stops at 3,
+ * past what two protections bridge).
  *
  * This is the rule the server applies when the learner comes back to any
- * verified learning (advance_verified_streak, migration 048): the UTC date a
- * shield was raised and the next one were paid for in advance; each other day
- * missed between the last learning day and today needs a protection; more
- * than two missed days, or more than the protections left this month, end the
- * streak. `last_quiz_date` is that last learning day, whatever the learning
- * was. `protection` is the state `getStreakProtection` read. Without it only
- * today and yesterday keep a streak alive. Days are UTC days, as on the
- * server.
+ * verified learning (advance_verified_streak, migration 052): a day a shield
+ * covered was paid for in advance; each other day missed between the last
+ * learning day and today needs a protection; more than two missed days, or
+ * more than the protections left this month, end the streak. A shield covers
+ * the UTC date it was raised and the next one: every such date is in
+ * `shieldDays`, and `shieldUntil`'s window is read too for a server that
+ * keeps only the latest shield. `last_quiz_date` is that last learning day,
+ * whatever the learning was. `protection` is the state `getStreakProtection`
+ * read. Without it only today and yesterday keep a streak alive. Days are UTC
+ * days, as on the server.
  */
-export function liveStreak(
+export function streakState(
   stats: { current_streak: number; last_quiz_date: string | null } | null,
-  protection: Pick<StreakProtection, 'remaining' | 'shieldUntil'> | null,
+  protection: ProtectionRead | null,
   now = Date.now(),
-): number {
-  if (!stats?.last_quiz_date || stats.current_streak <= 0) return 0;
+): { streak: number; missed: number } {
+  if (!stats?.last_quiz_date || stats.current_streak <= 0) return { streak: 0, missed: 0 };
   const last = Date.parse(stats.last_quiz_date);
-  if (!Number.isFinite(last)) return 0;
+  if (!Number.isFinite(last)) return { streak: 0, missed: 0 };
   const lastDay = utcDay(last);
   const today = utcDay(now);
-  if (today - lastDay <= 1) return stats.current_streak;
+  if (today - lastDay <= 1) return { streak: stats.current_streak, missed: 0 };
 
   const until = protection?.shieldUntil ? Date.parse(protection.shieldUntil) : Number.NaN;
   const raised = Number.isFinite(until) ? shieldRaisedDay(until) : Number.NaN;
-  const shielded = (day: number) => Number.isFinite(raised) && day >= raised && day <= raised + 1;
+  const days = new Set((protection?.shieldDays ?? []).map((day) => utcDay(Date.parse(day))));
+  const shielded = (day: number) => days.has(day) || (Number.isFinite(raised) && day >= raised && day <= raised + 1);
   let missed = 0;
   for (let day = lastDay + 1; day < today && missed <= 2; day++) {
     if (!shielded(day)) missed++;
   }
-  if (missed === 0) return stats.current_streak;
-  return missed <= 2 && missed <= (protection?.remaining ?? 0) ? stats.current_streak : 0;
+  const alive = missed === 0 || (missed <= 2 && missed <= (protection?.remaining ?? 0));
+  return { streak: alive ? stats.current_streak : 0, missed };
+}
+
+/** The streak as it stands today: the recorded count while the streak is
+ * still alive, 0 once it has ended (`streakState`). */
+export function liveStreak(
+  stats: { current_streak: number; last_quiz_date: string | null } | null,
+  protection: ProtectionRead | null,
+  now = Date.now(),
+): number {
+  return streakState(stats, protection, now).streak;
 }
 
 /** Whole hours and minutes left on a shield, or null once it has expired.

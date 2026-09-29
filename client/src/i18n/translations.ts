@@ -473,6 +473,8 @@ export const en = {
   'profile.shieldActive': 'Protected · {h} h {m} m left',
   'profile.shieldNone': 'No protection left this month',
   'profile.shieldLeft': '{n} left this month',
+  // A missed day still needs the protection a shield would spend (052).
+  'profile.shieldLearnToday': 'Learn today to keep your streak',
   'friends.tabOverview': 'Overview',
   'friends.tabFriends': 'Friends',
   'friends.loading': 'Loading friends…',
