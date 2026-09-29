@@ -37,6 +37,14 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     await expect(page.locator('.cd-editor')).toBeHidden();
     expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
     await page.screenshot({path:info.outputPath('mobile-pending.png')});
+    // Waiting is the default, never a dead end: the editor, Run and Submit
+    // work at phone width without the page scrolling sideways.
+    await page.getByRole('button',{name:'Use the editor on this screen'}).click();
+    await expect(page.locator('.cd-editor')).toBeVisible();
+    await expect(page.getByRole('button',{name:'Run',exact:true})).toBeVisible();
+    await expect(page.getByRole('button',{name:'Submit',exact:true})).toBeVisible();
+    expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+    await page.screenshot({path:info.outputPath('mobile-editor.png')});
     await page.setViewportSize({width:1440,height:900});
     const source=solutionFor(first)!.solution;
     // Focus the editor and wait until CodeMirror has taken the focus (the

@@ -25,6 +25,15 @@ export function withHiddenCases(suite: string, hiddenSuite: string | undefined):
   return `${suite}\ndescribe(${JSON.stringify(HIDDEN_CASE_PREFIX)}, () => {\n${hiddenSuite}\n});\n`;
 }
 
+/** How many cases a suite declares: one per `test(` or `it(` call, wherever it
+ * stands on its line (a stage of an evolving challenge puts several on one).
+ * Suites register every case unconditionally, and the content tests check
+ * that a run of each one reports exactly this many, so the server can refuse
+ * a run that dropped or invented cases. */
+export function suiteCaseCount(suite: string | undefined): number {
+  return (suite?.match(/(?<![\w$.])(?:test|it)\s*\(/g) ?? []).length;
+}
+
 /** Split a run's cases into the visible ones, in order, and the hidden ones. */
 export function splitHiddenCases<T extends { name: string }>(cases: readonly T[]): { visible: T[]; hidden: T[] } {
   const hidden = (one: T) => one.name.startsWith(`${HIDDEN_CASE_PREFIX} `);

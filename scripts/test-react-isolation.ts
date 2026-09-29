@@ -8,13 +8,19 @@ async function main() {
     process.env.REACT_RUNNER_SNAPSHOT_ID,
     'Configure a test snapshot before this integration check',
   );
-  // Deliberately fake values, never a real account credential.
-  process.env.SHARK_ISOLATION_SENTINEL = 'must-not-enter-the-guest';
   const probes = [
     [
+      // Learner code has no `process` at all, so no environment to read.
       'credentials',
       'function App(){ return null; }',
-      `test('no application credentials',()=>{ expect(process.env.SHARK_ISOLATION_SENTINEL).toBe(undefined); expect(process.env.SUPABASE_SERVICE_ROLE_KEY).toBe(undefined); expect(process.env.VERCEL_TOKEN).toBe(undefined); });`,
+      `test('no application credentials',()=>{ expect(typeof process).toBe('undefined'); expect(typeof globalThis.process).toBe('undefined'); });`,
+    ],
+    [
+      'page realm',
+      `export const reach = () => [typeof require === 'function' && (() => { try { require('fs'); return 'fs'; } catch { return 'no fs'; } })(), ...[() => Function('return this')(), () => globalThis.constructor.constructor('return process')(), () => document.createElement.constructor('return process')()].map((run) => { try { run(); return 'reached'; } catch { return 'blocked'; } })];
+export default function App(){ return null; }`,
+      `import { reach } from './App';
+test('nothing leads to Node',()=>{ expect(reach()).toEqual(['no fs','blocked','blocked','blocked']); });`,
     ],
     [
       'network',
@@ -43,6 +49,15 @@ async function main() {
     assert.equal(result.failed, 0, `${id}: ${JSON.stringify(result)}`);
     console.log(`PASS isolated ${id}: ${result.passed} tests`);
   }
+  // The reported forgery: write the verdict file and exit before the suite
+  // runs. The component has no `process`, and the API reads no file.
+  const forged = await runIsolatedReactSuite({
+    appSource: `process.getBuiltinModule('fs').writeFileSync('/vercel/sandbox/result.json', JSON.stringify({ cases: [{ name: 'ok', status: 'pass', error: null, durationMs: 0 }], passed: 1, failed: 0, total: 1, compileError: null, timedOut: false })); process.exit(0); export default function App(){ return null }`,
+    suite: `import App from './App'; \ntest('renders nothing yet', () => { expect(typeof App).toBe('function'); });`,
+  });
+  assert.equal(forged.passed, 0, JSON.stringify(forged));
+  assert.match(forged.compileError ?? '', /process is not defined/);
+  console.log('PASS a forged result.json and early exit are not a verdict');
   const stuck = await runIsolatedReactSuite({
     appSource: 'while(true){}; export default function App(){return null}',
     suite: `import App from './App'; test('render',()=>{expect(App).toBeTruthy()});`,
