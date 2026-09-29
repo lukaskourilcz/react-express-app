@@ -24,7 +24,7 @@ import {
   isRpcMissing,
   withRequestContext,
 } from '../../lib/http';
-import { AuthError, tryAuth } from '../../lib/auth';
+import { AuthError, confirmedEmail, tryAuth } from '../../lib/auth';
 import {
   isCheckpointUnlocked as isCheckpointOpen,
   isLevelUnlocked as isLevelOpen,
@@ -409,8 +409,8 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
   const auth = await requireAuthResult(req, res);
   if (!auth) return;
   const userId = auth.sub;
-  const emailClaim = auth.payload.email;
-  const email = typeof emailClaim === 'string' ? emailClaim : null;
+  // Grants are keyed on the address, so only a confirmed one counts.
+  const email = confirmedEmail(auth.payload);
 
   // Paths granted to a named account (see lib/topic-grants.ts) are resolved
   // here rather than stored, so they stay server-owned and survive a progress
@@ -543,8 +543,8 @@ async function learnerContext(
     throw error;
   }
   if (!auth) return null;
-  const emailClaim = auth.payload.email;
-  const email = typeof emailClaim === 'string' ? emailClaim : null;
+  // Grants are keyed on the address, so only a confirmed one counts.
+  const email = confirmedEmail(auth.payload);
   const metadata = ((auth.payload as Record<string, unknown>).user_metadata ?? {}) as Record<string, unknown>;
   // The v2 profile when there is one; otherwise the plan the account already
   // chose through the v1 preference, with its required answers still missing.

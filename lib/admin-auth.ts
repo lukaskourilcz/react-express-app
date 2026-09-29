@@ -10,7 +10,7 @@
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { timingSafeEqual } from 'node:crypto';
 import { jsonError } from './http';
-import { requireAuth } from './auth';
+import { confirmedEmail, requireAuth } from './auth';
 
 const IS_PROD = process.env.VERCEL_ENV === 'production' || process.env.NODE_ENV === 'production';
 const RAW_DEV_PASSWORD = process.env.DEV_PASSWORD;
@@ -63,7 +63,8 @@ function hasAdminRole(payload: Record<string, unknown>): boolean {
   const app = (payload.app_metadata ?? {}) as Record<string, unknown>;
   if (app.admin === true || app.is_admin === true || app.role === 'admin') return true;
   if (Array.isArray(app.roles) && app.roles.includes('admin')) return true;
-  const email = typeof payload.email === 'string' ? payload.email.toLowerCase() : '';
+  // The allow-list names addresses, so only a confirmed one counts.
+  const email = confirmedEmail(payload)?.toLowerCase() ?? '';
   return !!email && ADMIN_EMAILS.has(email);
 }
 
