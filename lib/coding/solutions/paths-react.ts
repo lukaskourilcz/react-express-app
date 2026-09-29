@@ -569,7 +569,23 @@ const effectsSenior = (level: number) => lines(
 const STATE: Boards = { reference: levels(stateReference), junior: levels(stateJunior), senior: levels(stateSenior) };
 const EFFECTS: Boards = { reference: levels(effectsReference), junior: levels(effectsJunior), senior: levels(effectsSenior) };
 
+/* Hidden cases (lib/coding/react-hidden.ts) for what a level's visible checks
+ * read in one situation only. A level keeps every earlier requirement, so a
+ * case stays in every later level of its path. They use the visible suite's
+ * `soon` and `names`. */
+const EFFECTS_HIDDEN: { from: number; suite: string }[] = [
+  { from: 1, suite: `test('No users appears only after an empty answer, never while loading',async()=>{let finish;render(<App loadUsers={()=>new Promise((resolve)=>{finish=resolve;})}/>);expect(screen.queryByText('No users')).toBeNull();finish([{id:1,name:'Ada'}]);await screen.findByText('Ada',{},soon);expect(screen.queryByText('No users')).toBeNull();});` },
+  { from: 3, suite: `test('the search matches inside a name, not only its start',async()=>{render(<App loadUsers={()=>Promise.resolve([{id:1,name:'Ada'},{id:2,name:'Linus'}])}/>);await screen.findByText('Linus',{},soon);fireEvent.change(screen.getByLabelText('Search'),{target:{value:'nus'}});expect(names()).toEqual(['Linus']);});` },
+];
+
+const withHidden = (entries: [string, CodingSolution][], hidden: { from: number; suite: string }[]): [string, CodingSolution][] =>
+  entries.map(([id, solution]) => {
+    const level = Number(id.slice(id.lastIndexOf('-') + 1));
+    const cases = hidden.filter((one) => one.from <= level).map((one) => one.suite);
+    return [id, cases.length > 0 ? { ...solution, hiddenSuite: cases.join('\n') } : solution];
+  });
+
 export const REACT_PATH_SOLUTIONS: Record<string, CodingSolution> = Object.fromEntries([
   ...wholeLevels('react-path-state', STATE),
-  ...wholeLevels('react-path-effects', EFFECTS),
+  ...withHidden(wholeLevels('react-path-effects', EFFECTS), EFFECTS_HIDDEN),
 ]);
