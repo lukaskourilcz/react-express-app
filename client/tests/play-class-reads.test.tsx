@@ -12,8 +12,8 @@ import type { Match } from '../src/lib/play';
 // broadcast channel, against a stand-in for the play API that counts the
 // state reads. Every read of the class spends the one address bucket
 // (`playState` in lib/rate-limit.ts, 600 a minute). When every answer was
-// broadcast and every screen read the room for it, one question cost about
-// 960 reads, and most of a lesson's reads were refused.
+// broadcast and every screen read the room for it, this lesson cost 682
+// reads a question and 1,457 in its busiest minute; now 67 and 227.
 
 type Person = { id: string; user_metadata: Record<string, never> };
 const PUPILS = 30;
@@ -132,6 +132,10 @@ vi.mock('../src/lib/realtime', async (importOriginal) => ({
   },
 }));
 
+// Thirty-one lobbies drawing their invitation QR code cost seconds and read
+// nothing.
+vi.mock('qrcode', () => ({ toDataURL: async () => 'data:image/png;base64,' }));
+
 const { PlayMatch } = await import('../src/components/Play');
 
 afterEach(() => vi.useRealTimers());
@@ -175,10 +179,12 @@ describe('a classroom of thirty behind one address', () => {
       for (const person of PEOPLE) {
         if (!screenOf(person).queryByText(`Question number ${q + 1}?`)) lateScreens.push(`${person.id} on question ${q + 1}`);
       }
-      // The pupils answer over ten seconds, one every third of a second.
-      for (const pupil of PEOPLE.slice(1)) {
-        fireEvent.click(screenOf(pupil).getByRole('radio', { name: 'beta' }));
-        await tick(10_000 / PUPILS);
+      // The pupils answer over ten seconds, three every second. (A text query:
+      // role queries over thirty-one screens are slow in jsdom.)
+      const pupils = PEOPLE.slice(1);
+      for (let first = 0; first < pupils.length; first += 3) {
+        for (const pupil of pupils.slice(first, first + 3)) fireEvent.click(screenOf(pupil).getByText('beta'));
+        await tick(1_000);
       }
       // The teacher gives the class half a minute in all, then moves on.
       await tick(19_000);
