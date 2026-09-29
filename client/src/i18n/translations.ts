@@ -640,7 +640,10 @@ export const en = {
   'quiz.alreadyGradedTitle': 'These answers were already graded',
   'quiz.alreadyGradedBody': 'A quiz is graded once, and its answers can’t be changed afterwards.',
   'quiz.dailyDoneTitle': 'You’ve played today’s challenge',
-  'quiz.dailyDoneBody': 'Each day’s challenge counts once. A new one starts at 00:00 UTC.',
+  'quiz.dailyDoneBody': 'Each day’s challenge counts once. The next one starts at {time} your time.',
+  'quiz.dailyNext': 'The next one starts at {time} your time.',
+  // Under a signed-in result whose recorded XP is lower than the graded one.
+  'quiz.repeatXp': 'You answered some of these questions earlier today. A question counts once a day, so this quiz earned {xp} XP.',
   'quiz.dailyLeaderboard': 'See today’s leaderboard',
   'quiz.answersLocked': 'Your answers were sent for grading, so they can’t be changed now. Submit again to get your result.',
   'quiz.noQuestions': 'No questions match those settings. Try different categories or a different difficulty.',
