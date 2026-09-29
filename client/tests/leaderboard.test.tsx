@@ -7,7 +7,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Leaderboard from '../src/components/Leaderboard';
 import { server } from './mocks/server';
 import { boardFor, leaderboardData, leaderboardHandlers, pinnedData, visibilityHandler } from './mocks/handlers';
-import { firstDraw } from './firstDraw';
+import { firstDraw, stretchFirstDataWait } from './firstDraw';
 
 type TestUser = { id: string; user_metadata?: Record<string, unknown> };
 const auth = vi.hoisted(() => ({ value: { user: null as TestUser | null, isAuthenticated: false, isLoading: false } }));
@@ -59,6 +59,7 @@ it('opens on the 30-day board and says what it counts', async () => {
 });
 
 it('draws the default board in its first frame instead of a skeleton the board replaces', async () => {
+  const restore = stretchFirstDataWait();
   const seen = recordRequests();
   const drawn = firstDraw('h1', () => ({
     skeleton: document.querySelector('.lb-skeleton') !== null,
@@ -68,9 +69,11 @@ it('draws the default board in its first frame instead of a skeleton the board r
   expect(drawn()).toEqual({ skeleton: false, board: true });
   // The hold and the screen share one key, so the board is asked for once.
   expect(seen).toHaveLength(1);
+  restore();
 });
 
 it('holds a signed-in learner for the board that carries their own line', async () => {
+  const restore = stretchFirstDataWait();
   auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false };
   const seen: URLSearchParams[] = [];
   server.use(http.get('*/api/leaderboard', ({ request }) => {
@@ -83,6 +86,7 @@ it('holds a signed-in learner for the board that carries their own line', async 
   expect(seen).toHaveLength(1);
   expect(seen[0].get('period')).toBe('30d');
   expect(seen[0].get('me')).toBe('1');
+  restore();
 });
 
 it('draws every rank as a number, with a heavier disc for the top three', async () => {
