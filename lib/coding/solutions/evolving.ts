@@ -1149,14 +1149,22 @@ const hidden: Record<string, [string, unknown][][]> = {
   ],
   'js-evolving-query': [
     [['(()=>{const a=[{x:1},{x:2}];const out=query(a);out.pop();return a.length})()',2]],
-    [['(()=>{const a=[{x:2},{x:1}];query(a,{orderBy:"x"});return a})()',[{x:2},{x:1}]]],
+    // Equal values keep input order when descending too, so sorting ascending
+    // and reversing does not pass.
+    [['(()=>{const a=[{x:2},{x:1}];query(a,{orderBy:"x"});return a})()',[{x:2},{x:1}]],['query([{x:1,id:1},{x:1,id:2},{x:0,id:3}],{orderBy:"x",desc:true})',[{x:1,id:1},{x:1,id:2},{x:0,id:3}]]],
     [['query([{a:null},{a:false},{a:0},{a:null}],{select:["a"],distinct:true})',[{a:null},{a:false},{a:0}]]],
     [['groupRows([{k:"a",v:1},{k:"a",v:NaN},{k:"a",v:Infinity},{k:"a",v:-Infinity}],"k","v")',[{key:'a',count:4,sum:1}]],['(()=>{const rows=[{k:"a",v:1},{k:"b",v:2}];groupRows(rows,"k","v");return rows})()',[{k:'a',v:1},{k:'b',v:2}]]],
+    // An unmatched left row keeps its place in left order, and neither input changes.
+    [['joinRows([{id:2},{id:1}],[{fk:1}],"id","fk","left")',[{left:{id:2},right:null},{left:{id:1},right:{fk:1}}]],['(()=>{const left=[{id:1}],right=[{fk:1}];joinRows(left,right,"id","fk","left");return [left,right]})()',[[{id:1}],[{fk:1}]]]],
   ],
   'js-evolving-events': [
     [['(()=>{const b=createBus(),a=[];const fn=v=>a.push(v);b.on("e",fn);b.on("e",fn);b.emit("e",0);return a})()',[0,0]]],
     [['(()=>{const b=createBus();let n=0;const off=b.once("x",()=>n++);off();b.emit("x");return n})()',0]],
     [['(()=>{const b=createBus(),a=[];b.once("e",()=>{a.push(1);throw "oops"});b.on("e",()=>a.push(2));return [b.emit("e"),b.emit("e"),a]})()',[['oops'],[],[1,2,2]]]],
+    // A paused emit and a resume with nothing queued both return [].
+    [['(()=>{const b=createBufferedBus();b.pause();return b.emit("x",1)})()',[]],['(()=>{const b=createBufferedBus();b.pause();return [b.resume(),createBufferedBus().resume()]})()',[[],[]]]],
+    // emit returns the listeners' errors, and history is kept and cleared per event.
+    [['(()=>{const b=createReplayBus(2);b.on("x",()=>{throw "bad"});return b.emit("x",1)})()',['bad']],['(()=>{const b=createReplayBus(2),a=[];b.emit("x",1);b.emit("y",2);b.on("x",v=>a.push(v),true);return a})()',[1]],['(()=>{const b=createReplayBus(2),a=[];b.emit("x",1);b.emit("y",2);b.clear("y");b.on("x",v=>a.push(v),true);return a})()',[1]]],
   ],
   'js-evolving-graph': [
     [['plan({a:["c","c"],b:["c"],c:[]})',['c','a','b']]],
@@ -1170,17 +1178,26 @@ const hidden: Record<string, [string, unknown][][]> = {
     [['mapResult({ok:true,value:false},x=>!x)',{ok:true,value:true}]],
     [['flatMapResult({ok:false,error:"first"},()=>{throw "second"})',{ok:false,error:'first'}]],
     [['collectResults([{ok:true,value:0},{ok:false,error:"a"},{ok:false,error:"b"}])',{ok:false,error:'a'}],['traverseResults([1,2],()=>{throw "stop"})',{ok:false,error:'stop'}]],
+    [],
+    // A recovery that throws becomes a failure, and a failed step stops the
+    // sequence before the next step runs.
+    [['recoverResult({ok:false,error:"x"},()=>{throw "bad"})',{ok:false,error:'bad'}],['(()=>{const seen=[];const r=sequenceResults([()=>{seen.push(1);return {ok:false,error:"stop"}},()=>{seen.push(2);return {ok:true,value:2}}]);return [r,seen]})()',[{ok:false,error:'stop'},[1]]]],
   ],
   'ts-evolving-store': [
     [['(()=>{const s=createStore(null);s.set(null);return s.get()})()',null]],
     [['(()=>{const s=createStore(0),a=[];s.subscribe(v=>a.push(v));s.update(v=>v);return a})()',[]]],
-    [['(()=>{const s=createStore(0);s.update(x=>x+1);s.update(x=>x+1);s.undo();s.undo();s.redo();s.redo();return [s.get(),s.redo()]})()',[2,false]],['(()=>{const s=createStore(0),a=[];s.subscribe(v=>a.push(v));const done=[s.undo(),s.redo()];return [done,a]})()',[[false,false],[]]],['(()=>{const s=createStore(0);s.set(1);s.set(1);s.undo();return [s.get(),s.undo()]})()',[0,false]]],
+    [['(()=>{const s=createStore(0);s.update(x=>x+1);s.update(x=>x+1);s.undo();s.undo();s.redo();s.redo();return [s.get(),s.redo()]})()',[2,false]],['(()=>{const s=createStore(0),a=[];s.subscribe(v=>a.push(v));const done=[s.undo(),s.redo()];return [done,a]})()',[[false,false],[]]],['(()=>{const s=createStore(0);s.set(1);s.set(1);s.undo();return [s.get(),s.undo()]})()',[0,false]],['(()=>{const s=createStore(0);s.set(1);s.undo();s.redo();return [s.undo(),s.get()]})()',[true,0]]],
+    // Listeners added while the derived store notifies wait for the next change.
+    [['(()=>{const s=createStore(0),d=selectStore(s,x=>x),a=[];d.subscribe(()=>{a.push(1);d.subscribe(()=>a.push(3))});d.subscribe(()=>a.push(2));s.set(1);return a})()',[1,2]]],
   ],
   'ts-evolving-schema': [
     [['validate("number",Infinity)',['$: expected number']],['validate("boolean",false)',[]]],
     [['validate({object:{a:"string",b:"number"}},null)',['$: expected object']],['validate({object:{a:"string",b:"number"}},{})',['$.a: expected string','$.b: expected number']]],
     [['validate({array:{optional:"number"}},[undefined,0,null])',['$[2]: expected number']],['validate({array:"string"},{})',['$: expected array']]],
     [['validateRecord("number",null)',['$: expected record']],['[5,"abc",true,undefined].map(value=>validateRecord("string",value))',[['$: expected record'],['$: expected record'],['$: expected record'],['$: expected record']]]],
+    // A failed union returns the shortest branch's errors, the earlier branch
+    // on a tie; a tuple must be an array, not just something with a length.
+    [['validateUnion(["string","boolean"],2)',['$: expected string']],['validateUnion([{object:{a:"string",b:"number"}},"string"],{})',['$: expected string']],['validateTuple(["string","string"],"ab")',['$: expected tuple of length 2']]],
   ],
 };
 for (const [id, stages] of Object.entries(hidden)) {
