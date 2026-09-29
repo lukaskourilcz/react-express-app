@@ -1131,6 +1131,7 @@ export const en = {
   'error.server': 'Server error. Try again in a moment.',
   'error.serviceUnavailable': 'Learning services are temporarily unavailable. Try again later.',
   'error.signIn': 'You need to sign in to do that.',
+  'error.authUnavailable': 'We couldn’t confirm your sign-in, so nothing was saved. Check your connection and try again.',
   'error.generic': 'Something went wrong. Try again.',
   'error.tooFewQuestions': 'Not enough questions for these topics.',
   'error.stepUnavailable': 'Not enough reviewed questions are available for this step yet.',
