@@ -3226,7 +3226,7 @@ const TODOS = [
   { id: 2, userId: 1, title: 'Todo two', completed: true },
   { id: 3, userId: 2, title: 'Todo three', completed: false },
 ];
-const textBox = container => [...container.querySelectorAll('input')].find(input => input.type !== 'checkbox');
+const textBox = container => [...container.querySelectorAll('input')].find(input => input.type === 'text' || input.type === 'search');
 const boxes = container => [...container.querySelectorAll('li input[type="checkbox"]')];
 const ticked = container => boxes(container).map(box => box.checked);
 const posts = calls => calls.filter(call => call.method === 'POST');

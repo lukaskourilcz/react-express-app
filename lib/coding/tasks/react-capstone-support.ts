@@ -48,7 +48,9 @@ const gets = (calls, url) => calls.filter(call => call.method === 'GET' && addre
 const says = (container, words) => container.textContent.toLowerCase().includes(words.toLowerCase());
 const alertIn = container => container.querySelector('[role="alert"]');
 const itemTexts = container => [...container.querySelectorAll('li')].map(item => item.textContent);
-const buttonNamed = (node, name) => [...node.querySelectorAll('button')].find(button => button.textContent.toLowerCase().includes(name.toLowerCase()));
+// A button element, or an input of type submit or button, by the words on it.
+const buttonNamed = (node, name) => [...node.querySelectorAll('button, input[type="submit"], input[type="button"]')]
+  .find(button => (button.tagName === 'INPUT' ? button.value : button.textContent).toLowerCase().includes(name.toLowerCase()));
 const optionsOf = select => [...select.querySelectorAll('option')].map(option => [option.value, option.textContent.trim()]);
 // Each item holds the matching text, in order, and there are no others.
 const expectItems = (items, expected) => {
