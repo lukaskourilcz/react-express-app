@@ -216,7 +216,10 @@ recorded pass the solution opens without the warning, since it costs nothing.
 The junior and senior readings shown beside each other after a pass are
 stripped of their authoring comments in `lib/coding/solutions/index.ts`, so the
 boards carry code alone; the content contract executes the stripped text and
-asserts none of it still holds a comment.
+asserts none of it still holds a comment. The contract also holds statements
+to their promises: when a statement promises a new array, a version of the
+reference that writes its result into the array it was given and returns
+that array must fail a check.
 
 The section lists four tracks. Three of them — `javascript`, `typescript` and
 `react` — are also Learn topics. The fourth, `algorithms`, is sixty

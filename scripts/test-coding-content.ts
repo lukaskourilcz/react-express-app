@@ -847,15 +847,48 @@ async function main() {
   console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}; ${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
-/* ── staged levels ───────────────────────────────────────────────────── */
-// A staged family (an evolving project, a short path, a FullStack app) shows
-// the reference, junior and senior boards once a level is passed. None of
-// them may pass the next level or its checkpoint as they stand, or pasting
-// one back earns that level for nothing. React levels prove the reference
-// only, because their suites take far longer to run.
+/* ── staged levels and new-array promises ────────────────────────────── */
+// Ways to pass a task without doing what its statement asks.
+//  1. A staged family (an evolving project, a short path, a FullStack app)
+//     shows the reference, junior and senior boards once a level is passed.
+//     None of them may pass the next level or its checkpoint as they stand,
+//     or pasting one back earns that level for nothing. React levels prove
+//     the reference only, because their suites take far longer to run.
+//  2. A statement that promises a new array is held to it: the reference
+//     changed to write its result into the array it was given, and hand that
+//     same array back, has to fail a check.
 type ContentTask = (typeof CODING_TASKS)[number];
 
-async function stagesPromisesAndSignatures({ fail, checker, byId }: {
+/** Statements that promise the result is a new array. */
+const NEW_ARRAY = /\bnew (?:array|list)\b/i;
+
+/** The solution changed to work in place: every top-level function that a
+ * check calls with an array literal first writes its result into that array
+ * and hands the same array back, so the values still match. As a `probe` it
+ * throws there instead, which shows whether any check reaches the rewrite; as
+ * a `control` it changes nothing, which shows the wrapping itself is sound.
+ * Null when no check passes a top-level function an array literal first. */
+const inPlaceVariant = (ts: TypeScriptApi, js: string, checks: readonly Check[], mode: 'write' | 'probe' | 'control'): string | null => {
+  const names = topLevelNames(ts, js);
+  const wrapped = new Set<string>();
+  for (const check of checks) {
+    const visit = (node: import('typescript').Node): void => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && names.includes(node.expression.text) && node.arguments[0] && ts.isArrayLiteralExpression(node.arguments[0])) wrapped.add(node.expression.text);
+      ts.forEachChild(node, visit);
+    };
+    visit(ts.createSourceFile('call.ts', `(${check.call.trim().replace(/;+$/, '')}\n)`, ts.ScriptTarget.Latest, true));
+  }
+  if (wrapped.size === 0) return null;
+  const write = { write: 'args[0].length = 0; args[0].push(...out); return args[0];', probe: 'throw new Error("in place");', control: '' }[mode];
+  return [
+    `const __original = (() => {\n${js}\n;return { ${names.join(', ')} };\n})();`,
+    ...names.map((name) => wrapped.has(name)
+      ? `function ${name}(...args) { const out = __original.${name}(...args); if (Array.isArray(args[0]) && Array.isArray(out) && out !== args[0]) { ${write} } return out; }`
+      : `const ${name} = __original.${name};`),
+  ].join('\n');
+};
+
+async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
   fail: (message: string) => void;
   checker: ReturnType<typeof createTypeScript>;
   ts: TypeScriptApi;
@@ -882,6 +915,7 @@ async function stagesPromisesAndSignatures({ fail, checker, byId }: {
     return passesChecks(task, checker.toJavaScript(source));
   };
 
+  // 1. What a pass shows must not pass the next level.
   let staged = 0;
   for (const project of EVOLVING_CHALLENGES) {
     const milestones = project.stages.filter((id) => !id.endsWith('-start'));
@@ -902,7 +936,25 @@ async function stagesPromisesAndSignatures({ fail, checker, byId }: {
       }
     }
   }
-  console.log(`Staged levels: ${staged} earlier solutions fail the next level (${((Date.now() - started) / 1000).toFixed(1)} s).`);
+
+  // 2. A promised new array: an in-place version of the reference must fail.
+  let promises = 0;
+  for (const task of CODING_TASKS) {
+    if (task.verify !== 'tests' || task.track === 'react' || !task.tests || !ONLY.test(task.id) || !NEW_ARRAY.test(task.prompt.en)) continue;
+    const solution = solutionFor(task.id);
+    if (!solution) continue;
+    const js = task.track === 'typescript' ? checker.toJavaScript(solution.solution) : solution.solution;
+    const checks = [...task.tests, ...(solution.hiddenTests ?? [])];
+    const control = inPlaceVariant(ts, js, checks, 'control');
+    if (!control) continue;
+    if (!await passesChecks(task, control)) { fail(`${task.id}: the reference wrapped for the in-place check no longer passes, so that check proves nothing`); continue; }
+    // No call hands back a different array from the one it was given: the
+    // promise is about something the rewrite cannot reach.
+    if (await passesChecks(task, inPlaceVariant(ts, js, checks, 'probe')!)) continue;
+    promises += 1;
+    if (await passesChecks(task, inPlaceVariant(ts, js, checks, 'write')!)) fail(`${task.id}: the statement promises a new array, and a version that changes the array it was given and returns it passes every check`);
+  }
+  console.log(`Staged levels and promises: ${staged} earlier solutions fail the next level, ${promises} new-array promises are held by a check (${((Date.now() - started) / 1000).toFixed(1)} s).`);
 }
 
 void main().catch((error) => {
