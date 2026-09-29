@@ -165,8 +165,10 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
-  // Per-IP throttle so a script can't flood the Hall of Fame. Legit humans
-  // finish ~90s runs, so 10 posts / hour with a small burst is generous.
+  // Throttled so a script can't flood the Hall of Fame. Legit humans finish
+  // ~90s runs, so 10 posts / hour with a small burst is generous. The address
+  // bucket holds a class; the per-person limit is taken below, per account,
+  // or per address for a caller without one.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.challengeScore))) return;
 
   const body = (req.body || {}) as { name?: unknown; runToken?: unknown; proofs?: unknown };
@@ -213,6 +215,10 @@ async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
     throw error;
   }
   const userId = auth?.sub ?? null;
+  const withinCallerLimit = auth
+    ? await enforceRateLimit(req, res, RATE_LIMITS.challengeScorePerUser, `user:${auth.sub}`)
+    : await enforceRateLimit(req, res, RATE_LIMITS.challengeScoreAnonymous);
+  if (!withinCallerLimit) return;
 
   try {
     const record = await recordChallengeScore({
@@ -227,6 +233,8 @@ async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
+  // Address bucket first (a class behind one NAT); the per-person limit is
+  // taken below, once the caller is known.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.challengeComplete))) return;
   const body = (req.body || {}) as { runToken?: unknown; proofs?: unknown };
   if (typeof body.runToken !== 'string' || !Array.isArray(body.proofs) || body.proofs.length > MAX_SCORE) {
@@ -262,6 +270,10 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
   }
+  const withinCallerLimit = auth
+    ? await enforceRateLimit(req, res, RATE_LIMITS.challengeCompletePerUser, `user:${auth.sub}`)
+    : await enforceRateLimit(req, res, RATE_LIMITS.challengeCompleteAnonymous);
+  if (!withinCallerLimit) return;
   if (!auth) return res.json({ ok: true, awarded: false, score });
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account progress is not configured');
   // Only server-proven correct answers earn XP. Merely creating/ending a run

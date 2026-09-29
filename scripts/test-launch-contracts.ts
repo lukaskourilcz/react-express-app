@@ -2737,6 +2737,72 @@ async function main() {
     }
   }
 
+  // The Biggest Shark Challenge sends one grading request per answer, so a
+  // class playing it from one school address spent the old twelve-a-minute
+  // address budget in seconds and pupils 13 onwards got 429 (review PLAY-4).
+  // Grading, the completion step and the Hall of Fame now have the play
+  // shape: a class-sized address bucket, then the caller's own bucket, per
+  // account when signed in and per address, at the old rate, when not.
+  {
+    const stamp = Date.now();
+    const school = { headers: { 'x-forwarded-for': `challenge-class-${stamp}` }, socket: {} } as never;
+    const pupil = (n: number) => `user:challenge-${stamp}-${n}`;
+    type Limit = (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS];
+    const through = (address: Limit, account: Limit, n: number) =>
+      checkRateLimit(school, mockResponse() as never, address) && checkRateLimit(school, mockResponse() as never, account, pupil(n));
+    for (let question = 0; question < 4; question += 1) {
+      for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+        assert.ok(through(RATE_LIMITS.quizSubmit, RATE_LIMITS.challengeSubmitPerUser, n), `seat ${n + 1} answers Challenge question ${question + 1}`);
+      }
+    }
+    for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+      assert.ok(through(RATE_LIMITS.challengeComplete, RATE_LIMITS.challengeCompletePerUser, n), `seat ${n + 1} completes a run`);
+      assert.ok(through(RATE_LIMITS.challengeScore, RATE_LIMITS.challengeScorePerUser, n), `seat ${n + 1} saves a score`);
+    }
+    // One account is still bounded while the address has room for the class.
+    for (let answer = 4; answer < RATE_LIMITS.challengeSubmitPerUser.capacity; answer += 1) {
+      assert.ok(through(RATE_LIMITS.quizSubmit, RATE_LIMITS.challengeSubmitPerUser, 0), `seat 1 answers again, ${answer + 1}`);
+    }
+    assert.equal(checkRateLimit(school, mockResponse() as never, RATE_LIMITS.quizSubmit), true, 'the address bucket still has room');
+    assert.equal(checkRateLimit(school, mockResponse() as never, RATE_LIMITS.challengeSubmitPerUser, pupil(0)), false, 'one account is bounded');
+    // A person's own limits are the rates the address buckets carried before
+    // the split, except the Challenge answer and completion budgets, which
+    // were the finding; a caller without an account keeps the old rates.
+    const preSplit = {
+      quizSubmitPerUser: [12, 12 / 60], quizSubmitAnonymous: [12, 12 / 60],
+      challengeScorePerUser: [3, 10 / 3600], challengeScoreAnonymous: [3, 10 / 3600],
+      challengeCompleteAnonymous: [12, 12 / 3600],
+    } as const;
+    for (const [key, [capacity, refill]] of Object.entries(preSplit) as Array<[keyof typeof preSplit, readonly [number, number]]>) {
+      assert.equal(RATE_LIMITS[key].capacity, capacity, `${key} holds the pre-split ${capacity}`);
+      assert.equal(RATE_LIMITS[key].refillPerSecond, refill, `${key} refills at the pre-split rate`);
+    }
+    // Each handler verifies the caller, then takes the caller's token, then
+    // writes: grading claims the answer, completion credits XP, the Hall of
+    // Fame inserts a row.
+    const submitSource = readFileSync(join(process.cwd(), 'api/quiz/submit.ts'), 'utf8');
+    const challengeSource = readFileSync(join(process.cwd(), 'api/quiz/challenge.ts'), 'utf8');
+    const bodyOf = (source: string, fn: string) => {
+      const start = source.indexOf(`async function ${fn}(`);
+      const end = source.indexOf('\nasync function ', start + 1);
+      assert.ok(start >= 0, `${fn} exists`);
+      return source.slice(start, end < 0 ? undefined : end);
+    };
+    for (const [body, verify, limits, write] of [
+      [bodyOf(submitSource, 'routeHandler'), 'await tryAuth(req)', ['quizSubmitPerUser', 'challengeSubmitPerUser', 'quizSubmitAnonymous'], 'await claimSubmission('],
+      [bodyOf(challengeSource, 'handleCompleteRun'), 'await tryAuth(req)', ['challengeCompletePerUser', 'challengeCompleteAnonymous'], "rpc('record_challenge_completion'"],
+      [bodyOf(challengeSource, 'handleSubmitScore'), 'await tryAuth(req)', ['challengeScorePerUser', 'challengeScoreAnonymous'], 'await recordChallengeScore('],
+    ] as const) {
+      const verified = body.indexOf(verify);
+      const written = body.indexOf(write);
+      for (const limit of limits) {
+        const at = body.indexOf(`RATE_LIMITS.${limit}`);
+        assert.ok(verified >= 0 && verified < at && at < written, `${limit} is taken after the caller is verified and before the write`);
+        if (limit.endsWith('PerUser')) assert.match(body, new RegExp(`RATE_LIMITS\\.${limit}, \`user:\\$\\{\\w+\\.sub\\}\``), `${limit} is keyed by the verified account`);
+      }
+    }
+  }
+
   const healthRes = mockResponse();
   await healthHandler({ method: 'POST', headers: {}, query: {} } as never, healthRes as never);
   assert.equal(healthRes.statusCode, 405);
