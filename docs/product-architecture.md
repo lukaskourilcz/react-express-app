@@ -347,11 +347,10 @@ is on, its content validates and the migration is installed.
 A code exercise or a written piece autosaves one draft per activity, up to
 `PATH_LIMITS.draftsPerEnrollment` (60) per enrollment, which `npm run
 test:paths` keeps at or above every path's code exercises plus artifacts. A
-pass (`verified_pass` or `self_reviewed`) deletes that activity's draft
-(migration 054), and a save for a draft that no longer exists starts a new one
-at revision 1. A submitted written piece reopens with what was submitted,
-read from its evidence; a passed code exercise reopens with its starter code.
-`accept_learning_path_result` keeps a verified pass and a
+pass keeps its draft, the only copy of the learner's passed code the server
+holds, so a passed exercise reopens with what the learner wrote;
+`purge_expired_learning_data` removes drafts idle for 90 days.
+`accept_learning_path_result` (migration 054) keeps a verified pass and a
 submitted written piece against any weaker later attempt, which is still stored
 as evidence. It accepts one result per enrollment at a time and decides module
 completion from the module's requirements, which the submit handler sends, so

@@ -690,24 +690,6 @@ async function buildActivityPayload(
         content: (data.content ?? {}) as PathDraft['content'],
         updatedAt: data.updated_at as string,
       };
-    } else if (activity.kind === 'artifact') {
-      // A submitted written piece has no draft (a pass deletes it, migration
-      // 054), but the evidence holds what was submitted: it reopens with that,
-      // at revision 0, so revising it does not start from empty fields.
-      const { data: submitted } = await withTimeout(
-        supabase.from('learning_path_evidence').select('artifact,created_at')
-          .eq('enrollment_id', enrollmentId).eq('activity_id', activity.id)
-          .not('artifact', 'is', null)
-          .order('revision', { ascending: false }).limit(1).maybeSingle(),
-      );
-      if (submitted?.artifact && typeof submitted.artifact === 'object') {
-        draft = {
-          activityId: activity.id,
-          revision: 0,
-          content: { artifact: submitted.artifact as Record<string, string | string[]> },
-          updatedAt: submitted.created_at as string,
-        };
-      }
     }
   }
 

@@ -28,7 +28,7 @@ import { requestMemo, withRequestContext } from '../lib/http';
 import { encodeLearningPathSession } from '../lib/quiz-tokens';
 import { RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { LEARNER_PROFILE_META_KEY } from '../shared/learning-paths';
-import type { StartActivityResponse, SubmitActivityResponse } from '../shared/learning-path-api';
+import type { SubmitActivityResponse } from '../shared/learning-path-api';
 
 type Fail = (message: string) => void;
 
@@ -67,9 +67,6 @@ function fakeSupabase(options: {
     const chain = {
       select: () => chain,
       eq: () => chain,
-      not: () => chain,
-      order: () => chain,
-      limit: () => chain,
       maybeSingle: async () => ({ data: options.rows?.[table] ?? null, error: null }),
       then: <A>(resolve: (value: { data: unknown[]; error: null }) => A) => resolve({ data: options.lists?.[table] ?? [], error: null }),
     };
@@ -220,25 +217,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
         });
         if (res.statusCode !== 200 || sent.length !== 2 || 'p_module_requires' in (sent[1] ?? {})) {
           fail(`before migration 054 a submit answers ${res.statusCode} after ${sent.length} calls, not 200 after a second call without p_module_requires`);
-        }
-
-        // Reopened, the submitted piece comes back from its evidence, since
-        // the pass deleted its draft: at revision 0, so it is not a saved draft.
-        const submittedFields = Object.fromEntries(writeUp.artifact!.fields.map((field) => [field.id, field.kind === 'list' ? ['kept'] : 'kept']));
-        const startRes = response();
-        const startReq = request('POST', `writeup-start-${stamp}`, { user_id: learner, enrollmentId: fdeEnrollment, activityId: writeUp.id });
-        await withRequestContext(startReq, startRes as never, async () => {
-          await requestMemo(`tier:${learner}`, async () => 'premium');
-          await handleActivityStart(startReq, startRes as never, fakeSupabase({
-            rows: { learning_path_enrollments: fdeRow, learning_path_evidence: { artifact: submittedFields, created_at: '2026-09-01T00:00:00Z' } },
-            rpc: () => ({ data: { ok: true, expiresAt: '2026-09-01T03:00:00Z' } }),
-          }));
-        });
-        const reopened = (startRes.body as StartActivityResponse | undefined)?.draft;
-        if (startRes.statusCode !== 200 || reopened?.revision !== 0 || JSON.stringify(reopened?.content.artifact) !== JSON.stringify(submittedFields)) {
-          fail(`a submitted write-up reopens with ${startRes.statusCode} ${JSON.stringify(reopened)}, not its submission at revision 0`);
-        }
-      } finally {
+        }      } finally {
         if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
         else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
       }

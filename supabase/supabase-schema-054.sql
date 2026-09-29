@@ -1,15 +1,15 @@
--- Migration 054: learning-path drafts, submitted write-ups and completion.
+-- Migration 054: learning-path submitted write-ups and completion.
 -- Apply after migrations 026 and 035. Safe to re-run.
 --
--- Four routines from 026 and 035 are restated. No later migration restates
+-- Three routines from 026 and 035 are restated. No later migration restates
 -- any of them, so each body below starts from its only earlier definition.
 --
+-- Drafts are not touched. A pass keeps its draft, which is the only copy of
+-- the learner's passed code the server holds, and the retention purge
+-- removes drafts idle for 90 days. The API's cap on drafts per enrollment
+-- rises to 60 instead (PATH_LIMITS.draftsPerEnrollment).
+--
 --   * accept_learning_path_result (026)
---       - A result that passes its activity (verified_pass or self_reviewed)
---         deletes that activity's draft. A draft is the learner's unsubmitted
---         work, but nothing removed it after a pass, so every exercise a
---         learner typed into kept one, and an enrollment's 21st draft was
---         refused as too_many_drafts. The DSA path has 30 code exercises.
 --       - A submitted write-up (self_reviewed) is no longer replaced by a
 --         weaker later result (needs_revision, in_progress). A verified pass
 --         was already kept this way; a resubmission with a field left empty
@@ -25,13 +25,6 @@
 --         completed_at, and the finished path's package read as not earned.
 --         p_module_complete still counts, so the code in production, which
 --         does not send requirements, completes modules exactly as before.
---   * save_learning_path_draft (026): a save for a draft the server no longer
---     holds (deleted by a pass, or by the retention purge) starts a new draft
---     at revision 1 instead of answering conflict. Nothing newer exists to
---     protect, and a device still holding the old revision would otherwise
---     report "a newer draft was saved elsewhere" for every save after a pass.
---     A save against a draft that exists still has to name its revision. The
---     default cap becomes 60, the API's new PATH_LIMITS.draftsPerEnrollment.
 --   * path_is_complete (035): counts distinct completed modules within ONE
 --     enrollment, and, given p_curriculum_version (new, DEFAULT NULL), only
 --     the enrollment of that curriculum version. Before, it counted completed
@@ -242,13 +235,6 @@ BEGIN
          updated_at = NOW()
    WHERE enrollment_id = v_attempt.enrollment_id AND module_id = p_module_id;
 
-  -- A pass ends the draft: what it held has been submitted. A weaker result
-  -- leaves the draft for the next attempt.
-  IF p_state IN ('verified_pass', 'self_reviewed') THEN
-    DELETE FROM public.learning_path_drafts
-     WHERE enrollment_id = v_attempt.enrollment_id AND activity_id = v_attempt.activity_id;
-  END IF;
-
   UPDATE public.learning_path_enrollments
      SET updated_at = NOW()
    WHERE enrollment_id = v_attempt.enrollment_id;
@@ -264,87 +250,7 @@ GRANT EXECUTE ON FUNCTION public.accept_learning_path_result(
 ) TO service_role;
 
 -- ---------------------------------------------------------------------------
--- 2. Drafts.
--- ---------------------------------------------------------------------------
--- Optimistic revisions, as in 026: a save names the revision it edits, and a
--- stale one conflicts rather than overwrite a newer save from another device.
--- A draft that no longer exists has nothing newer to protect, so a save for
--- it starts again at revision 1 whatever revision the device held.
-CREATE OR REPLACE FUNCTION public.save_learning_path_draft(
-  p_user_id TEXT,
-  p_enrollment_id TEXT,
-  p_activity_id TEXT,
-  p_expected_revision INTEGER,
-  p_content JSONB,
-  p_max_drafts INTEGER DEFAULT 60
-)
-RETURNS JSONB
-LANGUAGE plpgsql
-SECURITY DEFINER
-SET search_path = ''
-AS $$
-DECLARE
-  v_owner TEXT;
-  v_current INTEGER;
-  v_count INTEGER;
-  v_updated TIMESTAMPTZ;
-BEGIN
-  IF p_user_id IS NULL OR char_length(p_user_id) < 8 OR char_length(p_user_id) > 128 OR
-     p_enrollment_id !~ '^[A-Za-z0-9_-]{16,64}$' OR
-     p_activity_id !~ '^[a-z0-9-]{3,96}$' OR
-     p_expected_revision < 0 OR p_expected_revision > 1000000 OR
-     p_content IS NULL OR pg_column_size(p_content) > 65536 THEN
-    RAISE EXCEPTION 'invalid_learning_path_draft';
-  END IF;
-
-  SELECT user_id INTO v_owner FROM public.learning_path_enrollments
-   WHERE enrollment_id = p_enrollment_id;
-  IF v_owner IS NULL OR v_owner <> p_user_id THEN
-    RETURN jsonb_build_object('ok', FALSE, 'reason', 'not_found');
-  END IF;
-
-  SELECT revision INTO v_current FROM public.learning_path_drafts
-   WHERE enrollment_id = p_enrollment_id AND activity_id = p_activity_id
-   FOR UPDATE;
-
-  IF v_current IS NULL THEN
-    SELECT COUNT(*) INTO v_count FROM public.learning_path_drafts
-     WHERE enrollment_id = p_enrollment_id;
-    IF v_count >= p_max_drafts THEN
-      RETURN jsonb_build_object('ok', FALSE, 'reason', 'too_many_drafts');
-    END IF;
-    -- Two first saves racing: the second waits on the key and then conflicts
-    -- with the first one's revision, as a stale save of an existing draft does.
-    INSERT INTO public.learning_path_drafts (enrollment_id, user_id, activity_id, revision, content)
-    VALUES (p_enrollment_id, p_user_id, p_activity_id, 1, p_content)
-    ON CONFLICT (enrollment_id, activity_id) DO NOTHING
-    RETURNING updated_at INTO v_updated;
-    IF v_updated IS NULL THEN
-      SELECT revision INTO v_current FROM public.learning_path_drafts
-       WHERE enrollment_id = p_enrollment_id AND activity_id = p_activity_id;
-      RETURN jsonb_build_object('ok', FALSE, 'reason', 'conflict', 'revision', COALESCE(v_current, 0));
-    END IF;
-    RETURN jsonb_build_object('ok', TRUE, 'revision', 1, 'updatedAt', v_updated);
-  END IF;
-
-  IF v_current <> p_expected_revision THEN
-    RETURN jsonb_build_object('ok', FALSE, 'reason', 'conflict', 'revision', v_current);
-  END IF;
-
-  UPDATE public.learning_path_drafts
-     SET revision = revision + 1, content = p_content, updated_at = NOW()
-   WHERE enrollment_id = p_enrollment_id AND activity_id = p_activity_id
-   RETURNING revision, updated_at INTO v_current, v_updated;
-  RETURN jsonb_build_object('ok', TRUE, 'revision', v_current, 'updatedAt', v_updated);
-END;
-$$;
-REVOKE ALL ON FUNCTION public.save_learning_path_draft(TEXT, TEXT, TEXT, INTEGER, JSONB, INTEGER)
-  FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.save_learning_path_draft(TEXT, TEXT, TEXT, INTEGER, JSONB, INTEGER)
-  TO service_role;
-
--- ---------------------------------------------------------------------------
--- 3. Whether a path is finished.
+-- 2. Whether a path is finished.
 -- ---------------------------------------------------------------------------
 -- Derived from the progress rows the graders wrote, never from anything the
 -- browser says. The modules must all be finished within one enrollment, so
@@ -377,7 +283,7 @@ REVOKE ALL ON FUNCTION public.path_is_complete(TEXT, TEXT, INTEGER, INTEGER) FRO
 GRANT EXECUTE ON FUNCTION public.path_is_complete(TEXT, TEXT, INTEGER, INTEGER) TO service_role;
 
 -- ---------------------------------------------------------------------------
--- 4. Claiming the package a finished path earns.
+-- 3. Claiming the package a finished path earns.
 -- ---------------------------------------------------------------------------
 -- 035's body, with p_curriculum_version passed to path_is_complete. The claim
 -- row's primary key is still what makes it one-time.
