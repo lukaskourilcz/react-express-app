@@ -1268,6 +1268,10 @@ export const en = {
   'error.noBillingAccount': 'This account has no billing history yet.',
   'error.badEmail': 'Enter the email address your subscription uses.',
   'error.billingConflict': 'We could not match this payment to your account. Write to the contact on the Terms page.',
+  'error.pathAttemptUsed': 'This attempt already has a result. Try again to start a new one.',
+  'error.pathAttemptExpired': 'This attempt expired. Try again to start a new one.',
+  'error.pathPaused': 'This path is paused. Resume it on the path page to carry on.',
+  'error.pathUnavailable': 'This path is not open right now. Everything you did in it is kept.',
   // ── end of Billing ──────────────────────────────────────────────────────
   // ── Premium page, plan table and legal pages (issue #222) ───────────────
   // Section 4 of the second handoff. The landing keys above keep their names
@@ -1896,7 +1900,7 @@ export const en = {
   'paths.draft.saving': 'Saving…',
   'paths.draft.saved': 'Draft saved',
   'paths.draft.error': 'Draft not saved. It is still here on this device.',
-  'paths.draft.conflict': 'A newer draft was saved on another device. Reload before saving again.',
+  'paths.draft.conflict': 'A newer draft was saved on another device, so this one was not saved. Copy anything you want to keep, then reload to see the newer one.',
   'paths.draft.offline': 'Offline. Kept on this device; it will save when you reconnect.',
   'paths.domain.complexity': 'Complexity',
   'paths.domain.structures': 'Data structures',

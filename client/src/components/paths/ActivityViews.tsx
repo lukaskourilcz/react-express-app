@@ -128,6 +128,8 @@ export function CheckActivity({
   domains,
   result,
   onSubmit,
+  onRetry,
+  retryNeeded = false,
   busy,
 }: {
   questions: CheckQuestionPayload[];
@@ -135,6 +137,11 @@ export function CheckActivity({
   domains: string[] | undefined;
   result: SubmitActivityResponse | null;
   onSubmit: (answers: number[]) => void;
+  /** Starts the check again: a new attempt deals the questions afresh. */
+  onRetry: () => void;
+  /** The attempt cannot take this submission (expired, or already graded), so
+   * the way on is a new one rather than Submit. */
+  retryNeeded?: boolean;
   busy: boolean;
 }) {
   const t = useT();
@@ -222,7 +229,13 @@ export function CheckActivity({
         );
       })}
 
-      {!graded && (
+      {graded || retryNeeded ? (
+        // A graded check is retried as a new attempt, as often as the learner
+        // likes; the threshold note above says so.
+        <div className="lp-actions">
+          <Button variant={graded ? 'secondary' : 'primary'} isDisabled={busy} onClick={onRetry} label={t('error.tryAgain')} />
+        </div>
+      ) : (
         <div className="lp-actions">
           <span className="lp-actions__status">
             {t('paths.check.answered', { answered, total: questions.length })}
@@ -247,7 +260,6 @@ export function CodeActivity({
   onDraft,
   draftStatus,
   busy,
-  expired,
 }: {
   code: PathCodePayload;
   draft: PathDraft | null;
@@ -256,7 +268,6 @@ export function CodeActivity({
   onDraft: (source: string) => void;
   draftStatus: DraftStatus;
   busy: boolean;
-  expired: boolean;
 }) {
   const t = useT();
   const loc = useLoc();
@@ -337,7 +348,7 @@ export function CodeActivity({
               setSource(code.starter);
               queueDraft(code.starter);
             }} isDisabled={busy} label={t('paths.code.reset')} />
-          <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || expired || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
+          <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
 
         <Editor

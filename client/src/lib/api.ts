@@ -129,6 +129,13 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   no_billing_account: 'error.noBillingAccount',
   bad_email: 'error.badEmail',
   billing_conflict: 'error.billingConflict',
+  // Learning paths. One attempt takes one result, and a sealed session
+  // expires; either way a new attempt is the way on.
+  idempotency_conflict: 'error.pathAttemptUsed',
+  session_expired: 'error.pathAttemptExpired',
+  attempt_expired: 'error.pathAttemptExpired',
+  enrollment_paused: 'error.pathPaused',
+  path_unavailable: 'error.pathUnavailable',
 };
 
 // not_found spans several endpoints whose English server messages are more
