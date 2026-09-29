@@ -1734,7 +1734,7 @@ export const en = {
   'coding.lesson.intro': 'The questions are done. Now write the code.',
   'coding.lesson.pending': '{n} coding tasks still to pass',
   'coding.lesson.allPassed': 'All coding tasks passed.',
-  'coding.lesson.signedOutPending': 'Coding tasks count toward a level only when you are signed in, so this level cannot pass signed out. Sign in and play it again.',
+  'coding.lesson.guestUnverified': 'Coding tasks are checked and saved when you sign in.',
   'coding.lesson.giveUpNote': 'Showing the solution ends this level attempt. You can retry the level later.',
   'coding.lesson.continue': 'Continue',
   'coding.lesson.mapGlyph': 'Includes a coding task',

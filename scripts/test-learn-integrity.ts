@@ -15,7 +15,9 @@
  *  - a failed progress read answers 503 rather than refusing the level as if
  *    the learner had not earned it;
  *  - a coding task whose solution was revealed in the attempt does not
- *    complete the level.
+ *    complete the level;
+ *  - a guest's level passes on its questions with its coding marked
+ *    unverified, while an account's still waits for a recorded coding pass.
  *
  * Nothing leaves the machine. */
 
@@ -337,6 +339,37 @@ async function main() {
       }
     }
     console.log('PASS learn: a revealed coding task does not complete the level');
+
+    // ── A guest's level passes on its questions ────────────────────────────
+    // A guest's coding passes are never stored, so requiring them failed
+    // every guest level with a coding task. The guest passes on the answers,
+    // told the coding was not verified, and nothing is recorded for them. An
+    // account without a recorded coding pass still waits for one.
+    {
+      const progressRows = tables.roadmap_progress.length;
+      const guest = await call('GET', { topic: 'javascript', level: '1', lang: 'en' });
+      assert.equal(guest.statusCode, 200, JSON.stringify(guest.body));
+      assert.ok((guest.body.coding ?? []).length > 0, 'JavaScript level 1 carries a coding task');
+      assert.ok((await answerAll(guest.body.sessionId)).every((status) => status === 200));
+      const guestDone = await call('POST', { resource: 'complete' }, undefined, { sessionId: guest.body.sessionId });
+      assert.equal(guestDone.statusCode, 200, JSON.stringify(guestDone.body));
+      assert.equal(guestDone.body.passed, true, 'a guest passes the level on its questions');
+      assert.equal(guestDone.body.codingUnverified, true, 'and is told the coding was not verified');
+      assert.deepEqual(guestDone.body.codingPending, []);
+      assert.equal(guestDone.body.progress, undefined, 'no stored progress comes back for a guest');
+      assert.equal(tables.roadmap_progress.length, progressRows, 'nothing is recorded for a guest');
+
+      const signedIn = await call('GET', { topic: 'javascript', level: '1', lang: 'en' }, LEARNER.token);
+      assert.equal(signedIn.statusCode, 200, JSON.stringify(signedIn.body));
+      assert.ok((await answerAll(signedIn.body.sessionId, LEARNER.token)).every((status) => status === 200));
+      const taskIds = (signedIn.body.coding as Array<{ task: { id: string } }>).map((item) => item.task.id);
+      const signedDone = await call('POST', { resource: 'complete' }, LEARNER.token, { sessionId: signedIn.body.sessionId });
+      assert.equal(signedDone.statusCode, 200, JSON.stringify(signedDone.body));
+      assert.equal(signedDone.body.passed, false, 'an account still needs a recorded coding pass');
+      assert.deepEqual(signedDone.body.codingPending, taskIds);
+      assert.equal(signedDone.body.codingUnverified, undefined, 'an account is never told its coding went unverified');
+    }
+    console.log('PASS learn: a guest passes a level on its questions; an account still needs its coding pass');
 
     // ── A failed progress read is not a refusal ────────────────────────────
     const blip = await call('GET', { topic: 'javascript', level: '2', lang: 'en' }, BROKEN.token);

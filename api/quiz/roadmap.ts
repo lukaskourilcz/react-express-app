@@ -1213,8 +1213,14 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // this attempt without its solution being revealed, the rule
   // complete_verified_roadmap_attempt applies from migration 047: a reveal
   // ends the attempt, and the task is passed again in a fresh one.
+  //
+  // A guest's coding passes are never stored, so for a guest that rule could
+  // only ever fail the level. A guest's level passes on its questions and the
+  // response says the coding was not verified; nothing is recorded for a
+  // guest here, and the browser keeps the pass locally until they sign in.
   let codingPending: string[] = [];
-  if (passed && session.codingTaskIds && session.codingTaskIds.length > 0) {
+  const codingUnverified = !userId && (session.codingTaskIds?.length ?? 0) > 0;
+  if (passed && !codingUnverified && session.codingTaskIds && session.codingTaskIds.length > 0) {
     const codingRows = await withTimeout(
       supabase.from('roadmap_attempt_coding').select('task_id,passed,revealed').eq('attempt_id', session.attemptId!),
     );
@@ -1326,8 +1332,12 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, outOfHearts: endedOnHearts });
-  return res.json({ correctAnswers, totalQuestions, percentage, passed, applied, codingPending, ...(progress ? { progress } : {}) });
+  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, codingUnverified, outOfHearts: endedOnHearts });
+  return res.json({
+    correctAnswers, totalQuestions, percentage, passed, applied, codingPending,
+    ...(codingUnverified ? { codingUnverified: true } : {}),
+    ...(progress ? { progress } : {}),
+  });
 }
 
 /* ──── handler ──────────────────────────────────────────────────────────── */

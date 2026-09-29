@@ -338,7 +338,24 @@ describe('a level whose session cannot be used', () => {
     expect(screen.getByRole('button', { name: 'Start the level again' })).toBeInTheDocument();
   });
 
-  it('tells a visitor that coding tasks count only when signed in', async () => {
+  it('passes a visitor’s level on its questions, keeps it on this device, and says when coding counts', async () => {
+    answer({
+      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: { en: 'Digit sum', cs: '' } }, session: 'coding-session-1' }] },
+      complete: () => HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: true, applied: true, codingPending: [], codingUnverified: true }),
+    });
+    await openLevelAndAnswer();
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish the coding task' }));
+    expect(await screen.findByRole('heading', { name: 'Level complete' })).toBeInTheDocument();
+    expect(screen.getByText('Coding tasks are checked and saved when you sign in.')).toBeInTheDocument();
+    // The coding was not checked, so the screen does not say it passed.
+    expect(screen.queryByText('All coding tasks passed.')).toBeNull();
+    expect(screen.queryByText(/still to pass/)).toBeNull();
+    expect(getRoadmapProgress().javascript?.levels['1']?.passed).toBe(true);
+  });
+
+  it('still holds a signed-in level until its coding task passes', async () => {
+    signInAs();
     answer({
       playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: { en: 'Digit sum', cs: '' } }, session: 'coding-session-1' }] },
       complete: () => HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: false, applied: true, codingPending: ['js-digit-sum'] }),
@@ -346,8 +363,8 @@ describe('a level whose session cannot be used', () => {
     await openLevelAndAnswer();
     fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Finish the coding task' }));
-    expect(await screen.findByText(/Coding tasks count toward a level only when you are signed in/)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
-    expect(screen.queryByText('1 coding tasks still to pass')).toBeNull();
+    expect(await screen.findByRole('heading', { name: 'Not passed' })).toBeInTheDocument();
+    expect(screen.getByText('1 coding tasks still to pass')).toBeInTheDocument();
+    expect(screen.queryByText('Coding tasks are checked and saved when you sign in.')).toBeNull();
   });
 });

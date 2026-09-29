@@ -163,8 +163,11 @@ System design still grades and still owns its history but has left the section
 (`CODING_SECTION_TRACKS`).
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
-three coding tasks sealed into the level session; completion requires a passed
-verdict for each. The Easy-band challenges of #226 (`EASY_BAND` in
+three coding tasks sealed into the level session; for an account, completion
+requires a passed verdict for each. A guest's coding passes are never stored,
+so a guest's level passes on its questions: the completion answers
+`codingUnverified: true`, records nothing, and the browser keeps the pass on
+that device and says coding tasks are checked and saved after sign-in. The Easy-band challenges of #226 (`EASY_BAND` in
 `lib/coding/catalog.ts`) never join that quota, and neither do its Medium and
 Hard waves (`MEDIUM_HARD_BAND`), so adding them leaves every level's coding
 tasks as they were. Coding completion is permanent: the API ignores legacy review
