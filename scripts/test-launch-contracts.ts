@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   MERCH_SHOP,
@@ -41,6 +43,7 @@ import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } fr
 import { runInSandbox } from '../lib/coding/sandbox';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
+import { GUEST_NODE_FLAGS, readGuestResult } from '../lib/coding/react-guest';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -85,7 +88,7 @@ import {
   MARKER_MAX,
   type ReviewRecord,
 } from '../shared/curation';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import {
   CONCEPT_IDS,
   areContrastable,
@@ -2243,6 +2246,103 @@ async function main() {
     appSource: loadMore!,
   });
   assert.equal(previewRun.failed, 0, `the load-more preview pages through the stub's photos (${previewRun.cases.map((one) => one.error).filter(Boolean).join('; ')})`);
+
+  // Learner code runs in a page realm with nothing in it that leads to Node.
+  // With `process` in reach, a component wrote its own verdict file, ended the
+  // grader before the hidden cases ran, and was graded a pass.
+  const pageRealm = await runReactSuite({
+    suite: [
+      "import { reach } from './App';",
+      "test('the component reaches nothing of Node, nor Testing Library', async () => { expect(await reach()).toEqual({ process: 'undefined', global: 'undefined', require: 'blocked', thisGlobal: 'blocked', constructor: 'blocked', eval: 'blocked', dynamicImport: 'blocked', testingLibrary: 'blocked' }); });",
+    ].join('\n'),
+    appSource: [
+      "const attempt = (run) => { try { run(); return 'reached'; } catch { return 'blocked'; } };",
+      'export const reach = async () => ({',
+      '  process: typeof process,',
+      '  global: typeof globalThis.global,',
+      "  require: attempt(() => require('fs')),",
+      "  thisGlobal: attempt(() => Function('return this')()),",
+      "  constructor: attempt(() => globalThis.constructor.constructor('return process')()),",
+      "  eval: attempt(() => (0, eval)('1')),",
+      "  dynamicImport: await import('fs').then(() => 'reached', () => 'blocked'),",
+      // With Testing Library, a component set asyncWrapper to skip every waitFor.
+      "  testingLibrary: attempt(() => require('@testing-library/react').configure({ asyncWrapper: async () => undefined })),",
+      '});',
+      'export default function App() { return null; }',
+    ].join('\n'),
+  });
+  assert.equal(pageRealm.compileError, null, JSON.stringify(pageRealm));
+  assert.equal(pageRealm.failed, 0, `learner code reached the host: ${pageRealm.cases.map((one) => one.error).filter(Boolean).join('; ')}`);
+  // The suite hands Testing Library, in the host realm, regular expressions
+  // and functions made in the page realm. And Node reports an unhandled
+  // rejection on `process`, which the page does not have, so it arrives on
+  // window the way a browser reports it.
+  const crossRealm = await runReactSuite({
+    suite: [
+      "import React from 'react';",
+      "import { render, screen } from '@testing-library/react';",
+      "import App from './App';",
+      "test('regex and function matchers', () => { render(<App />); expect(screen.getByText(/^Slide \\d of 4$/).tagName).toBe('P'); expect(screen.getByRole('button', { name: /^next/i })).toBeTruthy(); expect(screen.getByText((text) => text.startsWith('Slide 1')).tagName).toBe('P'); });",
+      "test('an unhandled rejection reaches window', async () => { const seen = []; const onWindow = (event) => { seen.push(event.reason && event.reason.message); event.preventDefault(); }; window.addEventListener('unhandledrejection', onWindow); try { Promise.reject(new Error('left')); await new Promise((resolve) => setTimeout(resolve, 20)); } finally { window.removeEventListener('unhandledrejection', onWindow); } expect(seen).toEqual(['left']); });",
+    ].join('\n'),
+    appSource: 'export default function App() { return <main><p>Slide 1 of 4</p><button>Next slide</button></main>; }',
+  });
+  assert.equal(crossRealm.failed, 0, `a page-realm matcher or rejection went astray: ${crossRealm.cases.map((one) => one.error).filter(Boolean).join('; ')}`);
+  // A case that threw has failed, whatever the message: a component that
+  // threw an error with an empty message passed every case that rendered it.
+  const emptyThrow = await runReactSuite({
+    suite: "import React from 'react';\nimport { render } from '@testing-library/react';\nimport App from './App';\ntest('renders', () => { render(<App />); });",
+    appSource: "export default function App() { throw new Error(''); }",
+  });
+  assert.ok(emptyThrow.passed === 0 && emptyThrow.failed === 1, JSON.stringify(emptyThrow));
+
+  // The real guest bundle, started with the flags the API passes, outside any
+  // VM. It deletes its input before learner code runs, only the stdout line
+  // with this run's nonce counts, and the case count has to match the suite.
+  execFileSync(process.execPath, ['scripts/build-react-runner.mjs'], { stdio: 'ignore' });
+  const guest = (suite: string, appSource: string) => {
+    const dir = mkdtempSync(join(tmpdir(), 'react-guest-'));
+    const input = join(dir, 'input.json');
+    const nonce = randomBytes(24).toString('hex');
+    writeFileSync(input, JSON.stringify({ suite, appSource, nonce }));
+    const command = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), input], {
+      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, NODE_ENV: 'development' },
+    });
+    const left = readdirSync(dir);
+    rmSync(dir, { recursive: true, force: true });
+    return { status: command.status, stdout: command.stdout, nonce, left };
+  };
+  const guestTask = codingTaskById('react-easy2-disclosure')!;
+  const guestSuite = withHiddenCases(guestTask.suite!, solutionFor(guestTask.id)!.hiddenSuite);
+  const honest = guest(guestSuite, solutionFor(guestTask.id)!.solution);
+  assert.equal(honest.status, 0);
+  assert.deepEqual(honest.left, [], 'the guest deletes its input before learner code runs');
+  const honestResult = readGuestResult(honest.stdout, honest.nonce, guestSuite);
+  assert.equal(honestResult.failed, 0, JSON.stringify(honestResult));
+  assert.equal(splitHiddenCases(honestResult.cases).hidden.length, 3, 'the hidden cases ran');
+  assert.throws(() => readGuestResult(honest.stdout, randomBytes(24).toString('hex'), guestSuite), /no result/, 'a line without this run\'s nonce is not a result');
+  assert.throws(() => readGuestResult(`${honest.stdout}${honest.stdout}`, honest.nonce, guestSuite), /no result/, 'two result lines are refused');
+  assert.throws(() => readGuestResult(honest.stdout, honest.nonce, guestTask.suite!), /wrong number of cases/, 'a run reporting other cases than the suite declares is refused');
+  // The reported forgery: write result.json and exit before the suite runs.
+  const forged = guest(guestSuite, [
+    "process.getBuiltinModule('fs').writeFileSync('/vercel/sandbox/result.json', JSON.stringify({ cases: [{ name: 'ok', status: 'pass', error: null, durationMs: 0 }], passed: 1, failed: 0, total: 1, compileError: null, timedOut: false }));",
+    'process.exit(0);',
+    'export default function App() { return null; }',
+  ].join('\n'));
+  assert.deepEqual(forged.left, [], 'the forged component wrote nothing');
+  const forgedResult = readGuestResult(forged.stdout, forged.nonce, guestSuite);
+  assert.ok(forgedResult.passed === 0 && /process is not defined/.test(forgedResult.compileError ?? ''), JSON.stringify(forgedResult));
+  // A host function the component can reach compiles nothing either, and a
+  // verdict line printed through the page's window.console is ignored.
+  const escape = guest(guestSuite, [
+    "window.console.log('\\n' + 'f'.repeat(48) + ' ' + JSON.stringify({ cases: [{ name: 'ok', status: 'pass', error: null, durationMs: 0 }], compileError: null, timedOut: false }));",
+    "const proc = document.createElement.constructor('return process')();",
+    "proc.getBuiltinModule('fs').writeFileSync('result.json', '{}');",
+    'export default function App() { return null; }',
+  ].join('\n'));
+  assert.deepEqual(escape.left, [], 'a host function gave the component nothing to write with');
+  const escapeResult = readGuestResult(escape.stdout, escape.nonce, guestSuite);
+  assert.ok(escapeResult.passed === 0 && /Code generation from strings disallowed/.test(escapeResult.compileError ?? ''), JSON.stringify(escapeResult));
 
   const qualityIssues = inspectQuestionQuality([{
     ...reviewQuestions[0],

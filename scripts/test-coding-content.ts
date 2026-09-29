@@ -43,7 +43,7 @@ import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/co
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
-import { HIDDEN_CASE_PREFIX, splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
+import { HIDDEN_CASE_PREFIX, splitHiddenCases, suiteCaseCount, withHiddenCases } from '../lib/coding/react-hidden';
 import { renderCodingIndex } from './build-coding-index';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
 
@@ -68,9 +68,10 @@ const nodeRequire = createRequire(import.meta.url);
 const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise<T> =>
   Promise.race([promise, new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`${label}: timed out after ${ms} ms`)), ms))]);
 
-// The cases a hidden React suite declares, counted from its source. The React
-// proofs below check the count against the cases the run registered.
-const hiddenCaseCount = (hiddenSuite: string | undefined): number => (hiddenSuite?.match(/^\s*(?:test|it)\(/gm) ?? []).length;
+// The cases a React suite declares, counted from its source the way the
+// server counts them. The React proofs below check the count against the
+// cases each run registered.
+const hiddenCaseCount = suiteCaseCount;
 
 async function main() {
   const failures: string[] = [];
@@ -474,9 +475,13 @@ async function main() {
       }
       const { hidden } = splitHiddenCases(run.cases);
       if (hidden.length !== hiddenCaseCount(solution.hiddenSuite)) fail(`${where} (${name}): the hidden suite declares ${hiddenCaseCount(solution.hiddenSuite)} case(s) and ran ${hidden.length}`);
+      // The server refuses a run whose case count differs from the suite's.
+      if (run.cases.length !== suiteCaseCount(suite)) fail(`${where} (${name}): the suite declares ${suiteCaseCount(suite)} case(s) and ran ${run.cases.length}`);
     }
     const starter = await withTimeout(runReactSuite({ suite: task.suite, appSource: task.starter }), 20_000, where);
     if (!starter.compileError && starter.failed === 0) fail(`${where}: the untouched starter already passes its suite`);
+    // A learning path runs the visible suite alone, and the server counts it too.
+    if (!starter.compileError && starter.cases.length !== suiteCaseCount(task.suite)) fail(`${where}: the visible suite declares ${suiteCaseCount(task.suite)} case(s) and ran ${starter.cases.length}`);
   }
 
   if (failures.length > 0) {
