@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Leaderboard from '../src/components/Leaderboard';
 import { server } from './mocks/server';
-import { boardFor, leaderboardHandlers, pinnedData } from './mocks/handlers';
+import { boardFor, leaderboardData, leaderboardHandlers, pinnedData } from './mocks/handlers';
 import { firstDraw } from './firstDraw';
 
 const auth = vi.hoisted(() => ({ value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false } }));
