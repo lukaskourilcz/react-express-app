@@ -219,7 +219,9 @@ boards carry code alone; the content contract executes the stripped text and
 asserts none of it still holds a comment. The contract also holds statements
 to their promises: when a statement promises a new array, a version of the
 reference that writes its result into the array it was given and returns
-that array must fail a check.
+that array must fail a check; and a TypeScript milestone's type tests must
+fail its reference with every parameter typed `any`, so the signature the
+statement gives is the one graded.
 
 The section lists four tracks. Three of them — `javascript`, `typescript` and
 `react` — are also Learn topics. The fourth, `algorithms`, is sixty

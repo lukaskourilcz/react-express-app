@@ -93,6 +93,7 @@ const typeTests: TypeTest[][] = [
     { code: '{ const draft: Draft | null = normalizeLink({}); const link: Link = { url: "https://a.io", slug: "abc", visits: 0 }; const api: (request: RequestData) => Reply = createApi([link]); }' },
     { code: '{ const link: Link = { url: "https://a.io", slug: "abc", visits: "0" }; }', rejects: true },
     { code: '{ const wrong: string = normalizeLink({}); }', rejects: true },
+    { code: '{ createApi([{ url: "https://a.io" }]); }', rejects: true },
   ],
   [
     { code: '{ const reply: Reply = createApi([])({ method: "DELETE", path: "/api/links/abc" }); }' },

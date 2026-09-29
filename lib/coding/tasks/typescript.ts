@@ -460,6 +460,7 @@ console.log(splitName("Ada Lovelace"));
         label: "two, not three",
         rejects: true,
       },
+      { code: "splitName(42);", label: "only text can be split", rejects: true },
     ],
   },
   {
@@ -679,6 +680,7 @@ console.log(first([1,2,3]));
         label: "it might be undefined, and the type says so",
         rejects: true,
       },
+      { code: "first(42);", label: "only an array goes in", rejects: true },
     ],
   },
   {
@@ -1209,6 +1211,7 @@ const onlyStrings = (values: unknown[]): string[] => {
         label: "strings come back, not numbers",
         rejects: true,
       },
+      { code: "onlyStrings(\"a, b\");", label: "only an array goes in", rejects: true },
     ],
   },
 ];

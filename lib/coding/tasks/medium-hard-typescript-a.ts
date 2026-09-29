@@ -329,6 +329,8 @@ const releaseNotes = (subjects: readonly string[]): Notes => {
       { code: 'const __fixes: string[] = releaseNotes([]).fix;', label: 'each section is a list of text' },
       { code: 'const __type: CommitType = "chore";', label: 'only the listed types', rejects: true },
       { code: 'releaseNotes([]).chore;', label: 'there is no section for other types', rejects: true },
+      { code: 'releaseNotes([1, 2]);', label: 'the subjects are text', rejects: true },
+      { code: 'isCommitType(1);', label: 'the guard reads text', rejects: true },
     ],
   },
   {
