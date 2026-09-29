@@ -5,8 +5,3 @@
 # file: it is an expected failure only while it fails with that text. Failing
 # any other way, or passing, fails the suite until the line is removed, so this
 # list only shrinks. Never add a line to make a new failure go away: fix the SQL.
-
-# RANK-1/SQL-1: migrations 024/035 key the debit by (month, protections left),
-# so a second streak-protection purchase in a month at the same balance replays
-# the first debit and is free. Remove this line when migration 047 lands.
-070-streak-protection-purchase.test.sql: the second purchase in a month is charged as well

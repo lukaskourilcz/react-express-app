@@ -2,9 +2,9 @@
 -- with enough coins who spends a protection and buys it back twice in one
 -- month is charged twice, and the reserve never rises above two.
 --
--- KNOWN FAILURE (listed in known-failures.txt): migrations 024/035 key the
--- debit by (month, protections left), so the second purchase at the same
--- balance replays the first debit and is free. Fixed by migration 047.
+-- Migrations 024/035 keyed the debit by (month, protections left), so the
+-- second purchase at the same balance replayed the first debit for free;
+-- migration 047 gives every purchase its own ledger event.
 
 SET LOCAL ROLE service_role;
 

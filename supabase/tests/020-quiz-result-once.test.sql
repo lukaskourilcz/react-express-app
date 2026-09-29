@@ -51,8 +51,9 @@ BEGIN
   SELECT quest_xp INTO v_xp FROM public.user_xp WHERE user_id = v_user;
   ASSERT v_xp = 130, format('a second attempt adds its own XP: expected 130, got %s', v_xp);
 
-  -- The daily challenge: the first result of the day pays, a better retry
-  -- only improves the daily board.
+  -- The daily challenge: the first verified result of the day pays and is
+  -- what the Today board shows; a later receipt for the same day changes
+  -- neither (migration 047).
   v_applied := public.record_verified_quiz_result_v2(
     v_user, 'dailyattempt00000001', 3, 5, NULL, NULL, 'webdev', 30,
     NULL, NULL, NULL, (NOW() AT TIME ZONE 'UTC')::DATE, 60000);
@@ -68,6 +69,6 @@ BEGIN
   ASSERT v_quizzes = 3, format('a daily retry adds no quiz to the stats: expected 3, got %s', v_quizzes);
   SELECT correct INTO v_daily_correct FROM public.daily_attempts
    WHERE user_id = v_user AND challenge_date = (NOW() AT TIME ZONE 'UTC')::DATE AND subject = 'webdev';
-  ASSERT v_daily_correct = 5, format('the better retry is what the daily board shows: expected 5, got %s', v_daily_correct);
+  ASSERT v_daily_correct = 3, format('the first result is what the daily board shows: expected 3, got %s', v_daily_correct);
 END;
 $$;
