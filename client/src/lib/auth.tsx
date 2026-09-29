@@ -63,6 +63,11 @@ let resumePending = typeof window !== 'undefined' && takeSignInResume();
 // also sends one for a guest's failed OAuth return, and a guest keeps theirs.
 let accountSignedIn = typeof window !== 'undefined' && hasStoredSession();
 
+/** How far a sign-out reaches. `local` ends this browser's session only (the
+ * header's Log out); `global` also ends every other session of the account,
+ * on every device (Profile → Account). */
+export type SignOutScope = 'local' | 'global';
+
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
@@ -71,7 +76,10 @@ interface AuthContextValue {
    * after the round trip (see lib/authReturn.ts); without it the visitor comes
    * back to the page the sign-in was pressed on. */
   signInWithGoogle: (returnTo?: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  /** Signs out this browser, or every device with `'global'`. Either way
+   * supabase-js announces SIGNED_OUT here, which forgets the account's data
+   * on this device. */
+  signOut: (scope?: SignOutScope) => Promise<void>;
   /** A sign-in pressed before a reload failed when this document finished it
    * (there is no button of that press left to say so). */
   signInResumeFailed: boolean;
@@ -214,10 +222,12 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     await startSignIn(true);
   };
 
-  const signOut = async () => {
+  // supabase-js signs out every device by default. Log out means this
+  // browser; signing out everywhere is its own, explicit action.
+  const signOut = async (scope: SignOutScope = 'local') => {
     const client = await supabaseForSession();
     if (!client) return;
-    const { error } = await client.auth.signOut();
+    const { error } = await client.auth.signOut({ scope });
     if (error) throw error;
   };
 

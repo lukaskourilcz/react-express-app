@@ -525,6 +525,8 @@ export const en = {
   'profile.answerLabel': 'Answer: {answer}',
   'profile.showingOf': 'Showing 20 of {total}',
   'profile.account': 'Account',
+  'profile.signOutEverywhere': 'Sign out on all devices',
+  'profile.signOutEverywhereDescription': 'Ends this account’s session on every browser and device it is signed in on, this one included. Log out in the account menu signs out only this browser.',
   'profile.deleteTitle': 'Delete account',
   'profile.deleteDescription': 'Deletes your account and all learning data.',
   'profile.deleteConfirm': 'This permanently deletes your profile, progress, statistics, flashcards, challenge entries and multiplayer records. This action cannot be undone.',
