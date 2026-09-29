@@ -446,9 +446,9 @@ a.lp-activity:focus-visible { outline: 3px solid var(--ss-focus); outline-offset
 /* ── completion ────────────────────────────────────────────────────────── */
 
 /*
- * Guided completion and the self-reviewed portfolio are two separate lines.
- * They are never merged into one badge, because they mean different things
- * and only one of them was checked by a machine.
+ * Guided completion and the self-reviewed written pieces are two separate
+ * lines. Completion requires the pieces, but they are never shown as one
+ * badge, because only the rest of the path was checked by a machine.
  */
 .lp-completion { display: flex; flex-direction: column; gap: 10px; }
 .lp-completion__line { display: flex; gap: 10px; align-items: baseline; }

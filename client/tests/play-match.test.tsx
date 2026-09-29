@@ -16,6 +16,7 @@ const api = vi.hoisted(() => ({
   submitMatchAnswer: vi.fn(),
   sendHeartbeat: vi.fn(async () => ({ ok: true })),
   createMatch: vi.fn(),
+  fetchDistribution: vi.fn(),
 }));
 vi.mock('../src/lib/play', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/lib/play')>(),
@@ -192,6 +193,87 @@ describe('the end of a room', () => {
     expect(await screen.findByRole('heading', { name: 'The host left' })).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Match complete' })).toBeNull();
     expect(screen.getByRole('button', { name: 'Back' })).toBeInTheDocument();
+  });
+});
+
+describe('the classroom presenter screen', () => {
+  // The teacher's screen is often projected while the class answers, so the
+  // answer key stays off it until the question closes or the teacher reveals it.
+  const KEYED = [
+    { ...QUESTIONS[0], correct_index: 1 },
+    { ...QUESTIONS[1], correct_index: 0 },
+  ];
+  const presenting = (over: Partial<Match> = {}) => {
+    const match = running({ mode: 'classroom', host_id: USER.id, questions: KEYED, ...over });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    api.fetchDistribution.mockResolvedValue({ buckets: [{ selected_idx: 0, count: 3 }, { selected_idx: 1, count: 5 }] });
+    return match;
+  };
+  const tone = (name: string) => screen.getByRole('radio', { name }).getAttribute('data-tone');
+  const histogramKey = () => document.querySelectorAll('[data-correct]');
+
+  it('keeps an untimed question’s answer hidden until the teacher reveals it', async () => {
+    presenting({ question_duration_s: 0 });
+    await mount();
+    await screen.findByText('Pick one?');
+    await waitFor(() => expect(api.fetchDistribution).toHaveBeenCalled());
+    // The counts per option are there, with nothing marked correct.
+    expect(await screen.findByText('Live answers received: 8/0')).toBeInTheDocument();
+    expect(tone('beta')).toBe('default');
+    expect(tone('alpha')).toBe('default');
+    expect(histogramKey()).toHaveLength(0);
+    expect(screen.queryByText(/^Correct answer:/)).toBeNull();
+    expect(screen.getByText('The correct answer stays hidden until you reveal it.')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Reveal answer' }));
+    expect(tone('beta')).toBe('success');
+    expect(tone('alpha')).toBe('default');
+    expect(histogramKey()).toHaveLength(1);
+    expect(histogramKey()[0]).toHaveTextContent('B');
+    expect(screen.getByText('Correct answer: B. beta')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reveal answer' })).toBeNull();
+  });
+
+  it('shows a timed question’s answer when its time is up, without the button', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    presenting({ question_started_at: new Date(Date.now() - 28_000).toISOString(), question_duration_s: 30 });
+    await mount();
+    await screen.findByText('Pick one?');
+    expect(tone('beta')).toBe('default');
+    expect(histogramKey()).toHaveLength(0);
+    expect(screen.getByText('The correct answer stays hidden until time is up or you reveal it.')).toBeInTheDocument();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_500); });
+    expect(tone('beta')).toBe('success');
+    expect(histogramKey()).toHaveLength(1);
+    expect(screen.getByText('Correct answer: B. beta')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Reveal answer' })).toBeNull();
+  });
+
+  it('hides the key again when the next question opens', async () => {
+    const match = presenting({ question_duration_s: 0 });
+    await mount();
+    await screen.findByText('Pick one?');
+    fireEvent.click(screen.getByRole('button', { name: 'Reveal answer' }));
+    expect(tone('beta')).toBe('success');
+
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1, question_started_at: new Date().toISOString() }));
+    await act(async () => { live.listeners.get('match_updated')!(); });
+    await screen.findByText('Next one?');
+    expect(tone('gamma')).toBe('default');
+    expect(histogramKey()).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Reveal answer' })).toBeInTheDocument();
+  });
+
+  it('never gives a player the key or the button', async () => {
+    const match = running({ mode: 'classroom', questions: QUESTIONS });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    await mount();
+    await screen.findByText('Pick one?');
+    expect(screen.queryByRole('button', { name: 'Reveal answer' })).toBeNull();
+    expect(api.fetchDistribution).not.toHaveBeenCalled();
   });
 });
 

@@ -5,9 +5,11 @@
  * carrying purpose `project`, are the whole of it.
  *
  * The check is gated per domain. Complexity, structures, searching, sorting
- * and trees each have two questions and each has to reach the same threshold
- * on its own, so a learner who answered every sorting question and no tree
- * question does not pass on the average.
+ * and trees each have two questions. A pass needs 80% overall, and every
+ * domain needs at least one of its two right (the small-domain rule in
+ * `domainThresholds`, grade.ts), so a learner who answered every sorting
+ * question and no tree question does not pass on the average, while one slip
+ * anywhere still passes.
  *
  * The questions are new material rather than a replay of D01–D09: new
  * snippets, new numbers, new framing for the same invariants. Two of the three
@@ -153,7 +155,7 @@ export const DSA_D10: ModuleSource = {
       verification: 'machine_verified',
       title: 'Final checks across five domains',
       summary:
-        'Ten questions you have not seen: two on growth and space, two on structures, two on searching, two on sorting and two on trees. Each domain is scored on its own and each has to reach 80% on its own, so a strong sorting score cannot cover a missing tree answer. Retry as often as you like.',
+        'Ten questions you have not seen: two on growth and space, two on structures, two on searching, two on sorting and two on trees. You need 80% overall, and each domain needs at least one of its two questions right, so a strong sorting score cannot cover two missed tree questions. Retry as often as you like.',
       competencies: ['complexity', 'arrays-strings', 'maps-sets', 'searching', 'sorting', 'trees'],
       estimatedMinutes: 30,
       passThreshold: 0.8,

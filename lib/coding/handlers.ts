@@ -10,7 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError, tryAuth } from '../auth';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
-import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
+import { claimOnce, enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
@@ -150,6 +150,9 @@ async function taskCleared(supabase: SupabaseClient | null, userId: string, task
   return evolvingPassed(taskId, passed);
 }
 
+/** How long a design session's single check is remembered: its whole life
+ * (a coding session lasts three hours, lib/quiz-tokens.ts). */
+const DESIGN_SESSION_TTL_S = 3 * 60 * 60;
 const readLang = (value: unknown): 'en' | 'cs' => (value === 'cs' ? 'cs' : 'en');
 const codeHash = (code: string) => createHash('sha256').update(code, 'utf8').digest('base64url').slice(0, 32);
 
@@ -165,10 +168,11 @@ const codeHash = (code: string) => createHash('sha256').update(code, 'utf8').dig
  * changed one is recorded. XP stays once per task and account either way; its
  * award id names the task, not the attempt.
  *
- * A system-design session keeps one graded verdict. Its first verdict returns
+ * A system-design session keeps one graded verdict. A passing verdict returns
  * the key it was sealed with, so a second submission from the same session
- * would be answered from that key; it is reported and never applied. A new
- * attempt takes a new session, with the options shuffled again.
+ * could be answered from that key; it is reported and never applied. A failed
+ * verdict returns no key (see `gradeDesign`), and a new attempt takes a new
+ * session, with the options shuffled again.
  */
 function submissionAttemptId(session: CodingSession, verdict: CodingOutcome, code: string | null): string {
   if (code === null) return session.attemptId;
@@ -298,6 +302,10 @@ interface Graded {
   /** The grader itself failed: the React runner could not start or answer.
    * That says nothing about the learner's code, so nothing is recorded. */
   infra?: boolean;
+  /** Nothing checked the code: a checklist task passes on the learner's own
+   * confirmation. Such a pass is recorded as unverified, with no XP and so no
+   * coins, links no Learn level attempt, and opens no solutions. */
+  unverified?: boolean;
 }
 
 /** The authored hint for the way this attempt failed, or null.
@@ -367,12 +375,13 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
 /**
  * React tasks: render the component and run the task's Testing Library suite
  * under jsdom. A task with no suite (`verify: 'checklist'`) has nothing to
- * assert, so the learner's own confirmation stands; everything else is decided
- * here from the code alone.
+ * assert, so the learner's own confirmation stands, marked unverified: it is
+ * recorded, and pays nothing. Everything else is decided here from the code
+ * alone.
  */
 async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
   if (task.verify === 'checklist' || !task.suite) {
-    return { verdict: 'passed', results: [], hidden: null, check: null, logs: [], codeError: null, design: null, designReference: null };
+    return { verdict: 'passed', results: [], hidden: null, check: null, logs: [], codeError: null, design: null, designReference: null, unverified: true };
   }
   let run;
   let loaded = false;
@@ -450,6 +459,7 @@ interface Recorded {
   progress: CodingTaskProgress | null;
   firstPass: boolean;
   xpAwarded: number;
+  xpForfeited: boolean;
   applied: boolean;
   codeChanged: boolean;
 }
@@ -459,13 +469,26 @@ const clampInt = (value: unknown, max: number): number | null =>
 
 async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<Recorded | null> {
   const { supabase, userId, task, session } = input;
+  // Only a verdict the server checked pays: an unverified pass (a checklist
+  // task) records the attempt and the progress row with no XP, so no coins.
+  const xp = input.verified ? CODING_TASK_XP[task.tier] : 0;
   // A coding task inside a Learn level links to the level attempt; the row
   // exists once the first question was answered. Without it the verdict is
-  // still recorded, only unlinked.
+  // still recorded, only unlinked. An unverified verdict is never linked, so
+  // it cannot complete a Learn level.
   let roadmapAttemptId: string | null = null;
-  if (session.roadmapAttemptId) {
+  if (session.roadmapAttemptId && input.verified) {
     const attempt = await withTimeout(supabase.from('roadmap_attempts').select('attempt_id').eq('attempt_id', session.roadmapAttemptId).eq('user_id', userId).maybeSingle());
     if (!attempt.error && attempt.data) roadmapAttemptId = session.roadmapAttemptId;
+  }
+  // Whether the solution was revealed before this pass, read before the pass
+  // is written. Only a pass can forfeit XP, so nothing else pays for the read.
+  let revealedBefore = false;
+  if (input.verdict === 'passed') {
+    try {
+      const before = await loadProgressRow(supabase, userId, task.id);
+      revealedBefore = before !== null && before.status !== 'passed' && before.revealCount > 0;
+    } catch { /* unknown: the verdict then claims no forfeit */ }
   }
   const saved = await withTimeout(
     supabase.rpc('record_coding_verdict', {
@@ -475,7 +498,7 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
       p_track: task.track,
       p_outcome: input.verdict,
       p_verified: input.verified,
-      p_xp: CODING_TASK_XP[task.tier],
+      p_xp: xp,
       p_subject: 'webdev',
       p_roadmap_attempt_id: roadmapAttemptId,
       p_duration_ms: clampInt(input.durationMs, 86_400_000),
@@ -495,17 +518,26 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   const data = (saved.data ?? {}) as { applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; codeChanged?: boolean };
   // Coins follow the XP the routine just awarded, under the same award id
   // (#227). The last stage of a project or short path is a Premium milestone.
-  if (data.xpAwarded === true) {
+  const xpAwarded = data.xpAwarded === true && xp > 0;
+  if (xpAwarded) {
     await creditVerifiedXp(supabase, {
-      userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp: CODING_TASK_XP[task.tier],
+      userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
     });
   }
-  if (data.firstPass === true && evolvingStage(task.id)) await settleMilestones(supabase, userId, 'webdev');
+  // From migration 048 every applied verified pass is also a streak day, which
+  // can reach a Premium streak milestone; an unverified (checklist) pass
+  // settles nothing.
+  if (data.applied === true && input.verdict === 'passed' && input.verified) await settleMilestones(supabase, userId, 'webdev');
   const progress = await loadProgressRow(supabase, userId, task.id);
   return {
     progress,
     firstPass: data.firstPass === true,
-    xpAwarded: data.xpAwarded === true ? CODING_TASK_XP[task.tier] : 0,
+    xpAwarded: xpAwarded ? xp : 0,
+    // Migration 048 pays no XP, and so no coins, for a first pass after a
+    // reveal. Before 048 the routine still pays it: xpAwarded is then true and
+    // this stays false, so the verdict never claims a forfeit that did not
+    // happen. An unverified (checklist) pass never pays, so it claims none.
+    xpForfeited: revealedBefore && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
     applied: data.applied === true,
     codeChanged: data.codeChanged === true,
   };
@@ -534,6 +566,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     progress: recorded?.progress ?? null,
     firstPass: recorded?.firstPass ?? false,
     xpAwarded: recorded?.xpAwarded ?? 0,
+    xpForfeited: recorded?.xpForfeited ?? false,
     applied: recorded?.applied ?? false,
     github,
     solutions,
@@ -598,6 +631,13 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   }
   if (task.track === 'system-design') {
     if (!Array.isArray(body.answers) || body.answers.length > 12) return jsonError(res, 400, 'bad_request', 'answers must be an array');
+    // One check per design session. A failed check names which answers were
+    // right, so sending the same session again with other answers would read
+    // the key off it step by step, and a pass would then hand over the whole
+    // walkthrough. A new attempt opens the task again, under a new shuffle.
+    if (!(await claimOnce(`design:${session.attemptId}`, DESIGN_SESSION_TTL_S))) {
+      return jsonError(res, 409, 'design_session_used', 'This walkthrough was already checked. Open it again for a new attempt.');
+    }
     graded = gradeDesignTask(task, session, body.answers);
   } else {
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
@@ -628,7 +668,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
         if (draft.error) return jsonError(res, 500, 'db_error', 'Could not save stage code');
       }
     }
-    recorded = await recordVerdict({ supabase, userId, task, session, verdict: graded.verdict, verified: true, code, runCount: body.runCount, hintsUsed: body.hintsUsed, durationMs: body.durationMs }, res);
+    recorded = await recordVerdict({ supabase, userId, task, session, verdict: graded.verdict, verified: graded.unverified !== true, code, runCount: body.runCount, hintsUsed: body.hintsUsed, durationMs: body.durationMs }, res);
     if (!recorded) return;
     if (graded.verdict === 'passed' && recorded.applied) {
       github = await afterCodingPass(supabase, {
@@ -646,8 +686,10 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   logEvent({ status: 200, kind: 'submit', track: task.track, verdict: graded.verdict, hasUser: Boolean(userId) });
   res.setHeader('Cache-Control', 'private, no-store');
   // A pass opens the two authored solutions. The grader decided the pass a
-  // moment ago in this same request, which is the only reason they are here.
-  return res.json(verdictBody(graded, recorded, github, graded.verdict === 'passed' && code !== null ? solutionPairFor(task.id) : null));
+  // moment ago in this same request, which is the only reason they are here;
+  // an unverified pass checked nothing, so it opens nothing.
+  const checkedPass = graded.verdict === 'passed' && code !== null && graded.unverified !== true;
+  return res.json(verdictBody(graded, recorded, github, checkedPass ? solutionPairFor(task.id) : null));
 }
 
 /* ── POST ?resource=coding-reveal ────────────────────────────────────── */

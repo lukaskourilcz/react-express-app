@@ -364,7 +364,9 @@ challenges to 25, none of them short: slice joins, with three Easy challenges.
 The Hard challenges add one tag no Medium one uses, optional, with three.
 
 React A (`react-mh-*`) is 9 Medium challenges, 4 Hard ones at tier 4 and 2
-capstones at tier 5, beside the track's ten checklist capstones. The Medium
+capstones at tier 5, beside the track's ten older capstones
+(`react-user-directory` and the nine after it), which were checklist tasks
+until they gained test suites on 29 September 2026. The Medium
 ones share a basket through context and a reducer, load photos page by page,
 sort a table by any column with `aria-sort`, show notices that dismiss
 themselves, turn typed text into tags, select all or some messages with an

@@ -402,6 +402,26 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const hintUnavailable = solution ? t('coding.hintTip.solutionShown') : !nextRung ? t('coding.hintExhausted') : !attemptReady ? t('coding.hintTip.locked') : '';
   const giveUpUnavailable = !canGiveUp(taken, rungs.length) ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) }) : '';
   const takeHint = () => { if (!hintUnavailable && nextRung) setHintsTaken(taken + 1); };
+  // Revealing the solution before a pass costs this task its XP and coins: the
+  // server records the reveal against the account, and a later first pass then
+  // pays nothing. After a recorded pass it costs nothing, so a section task
+  // shows the solution at once; inside a Learn level showing it still ends the
+  // level attempt, so that is asked first, without the XP line.
+  const passedAlready = verdict?.progress?.status === 'passed' || progress?.status === 'passed';
+  const revealCostsXp = signedIn && !passedAlready;
+  const revealNote = mode === 'lesson'
+    ? t(revealCostsXp ? 'coding.lesson.giveUpConfirm' : 'coding.lesson.giveUpEnds')
+    : t(revealCostsXp ? 'coding.giveUpConfirmXp' : 'coding.giveUpConfirm');
+  const askToReveal = () => {
+    if (giveUpUnavailable) return;
+    if (passedAlready && mode === 'section') void reveal();
+    else setConfirming('reveal');
+  };
+  // A pass after a reveal says why it paid nothing, instead of reading like
+  // any other pass.
+  const verdictLabel = verdict
+    ? verdict.verdict === 'passed' && verdict.xpForfeited === true ? t('coding.verdict.passedNoXp') : t(`coding.verdict.${verdict.verdict}` as never)
+    : '';
 
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -746,7 +766,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const verdictCard = verdict && (
     <section className={`cd-verdict cd-verdict--${verdict.verdict}`} ref={verdictRef} tabIndex={-1}>
       <h3 className="cd-verdict__title">
-        <span>{t(`coding.verdict.${verdict.verdict}` as never)}</span>
+        <span>{verdictLabel}</span>
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
       {verdict.verdict === 'failed' && verdict.hidden && verdict.hidden.passed < verdict.hidden.total && <p className="cd-verdict__row">{t('coding.verdict.hiddenFailed')}</p>}
@@ -785,7 +805,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const announcement = phase === 'running' || phase === 'submitting'
     ? t('coding.status.working')
     : verdict
-      ? t(`coding.verdict.${verdict.verdict}` as never)
+      ? verdictLabel
       : isReact
         ? reactRun?.status === 'done' ? t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total }) : ''
         : run ? t('coding.results.passing', { passed: run.results.filter((one) => one.pass === true).length, total: run.results.length }) : '';
@@ -852,7 +872,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {session && !solution && !solutions && (
           <Button
             variant="ghost"
-            onClick={() => { if (!giveUpUnavailable) setConfirming('reveal'); }}
+            onClick={askToReveal}
             isDisabled={giveUpUnavailable !== '' || busy}
             tooltip={giveUpUnavailable || undefined}
             label={t('coding.giveUp')}
@@ -998,7 +1018,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
                 {confirming === 'reveal' && (
                   <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.giveUp')}>
-                    <p style={{ margin: '0 0 8px' }}>{mode === 'lesson' ? t('coding.lesson.giveUpNote') : t('coding.giveUpConfirm')}</p>
+                    <p style={{ margin: '0 0 8px' }}>{revealNote}</p>
                     <div className="cd-actions">
                       <Button variant="primary" onClick={() => void reveal()} label={t('coding.giveUp')} />
                       <Button variant="secondary" onClick={() => setConfirming(null)} ref={focusOnMount} label={t('coding.retry')} />

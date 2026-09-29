@@ -39,6 +39,7 @@ import {
 import {
   codeFeedback,
   codeFromReusedTask,
+  domainThresholds,
   gradeArtifact,
   gradeCheck,
   gradePathCode,
@@ -715,12 +716,15 @@ async function buildActivityPayload(
           competencies: question.competencies,
         };
       });
+      // The share each domain needs on its own. The screen states one figure,
+      // so a check that mixed small and large domains would state the lowest.
+      const perDomain = Object.values(domainThresholds(activity));
       return {
         answerKey,
         check: {
           questions,
           passThreshold: activity.passThreshold ?? 0.8,
-          ...(activity.domains ? { domainThreshold: activity.passThreshold ?? 0.8 } : {}),
+          ...(perDomain.length ? { domainThreshold: Math.min(...perDomain) } : {}),
         },
         draft: null,
       };
@@ -858,10 +862,18 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       questions = graded.verdicts;
       if (graded.failedDomains.length > 0) {
         feedback = [{
-          en: 'Every area has to clear the threshold on its own, so a strong area cannot cover a thin one. Revisit the areas listed above and try the check again.',
+          en: 'Every area has to reach its own minimum as well as the overall score, so a strong area cannot cover an empty one. Revisit the areas listed above and try the check again.',
           cs: 'Každá oblast musí projít prahem sama, takže silná oblast nemůže zakrýt slabou. Vrať se k oblastem uvedeným výše a zkus kontrolu znovu.',
         }];
-      } else if (state !== 'verified_pass') {
+      }
+      if (graded.keyWithheld) {
+        // A retry deals the same questions, so the key waits for a pass.
+        feedback.push({
+          en: 'This check counts toward finishing the path, so the correct answers and their explanations appear once you pass it. The questions marked wrong show what to revisit before you try again.',
+          // English only ships (CLAUDE.md); no Czech is written for new copy.
+          cs: '',
+        });
+      } else if (graded.failedDomains.length === 0 && state !== 'verified_pass') {
         feedback = [{
           en: 'Read the explanation under each miss before retrying — every question says why the other options fail here, not only why the right one works.',
           cs: 'Než to zkusíš znovu, přečti si vysvětlení u každé chyby — každá otázka říká, proč tu ostatní možnosti selhávají, ne jen proč ta správná funguje.',

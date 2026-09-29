@@ -10,6 +10,7 @@ import { deploymentSubjectIds } from './product-scope';
 import { decodeGithubConnectState, encodeGithubConnectState } from './quiz-tokens';
 import {
   GithubError,
+  checkInstallationOwner,
   getInstallation,
   githubAppSlug,
   installationToken,
@@ -64,6 +65,11 @@ function describe(row: ConnectionRow | null, queued: number, repositories?: Repo
   };
 }
 
+function installationTaken(res: VercelResponse) {
+  logEvent({ status: 409, kind: 'installation_taken' });
+  return jsonError(res, 409, 'installation_taken', 'Another devShark account is already connected to this GitHub installation');
+}
+
 function gate(req: VercelRequest, res: VercelResponse): boolean {
   if (!deploymentSubjectIds().includes('webdev')) {
     jsonError(res, 404, 'not_available', 'The GitHub garden is not part of this product');
@@ -107,13 +113,34 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
 
     if (op === 'github-connect-finish') {
       if (!(await enforceRateLimit(req, res, RATE_LIMITS.githubConnect))) return;
-      const body = (req.body || {}) as { installationId?: unknown; state?: unknown };
+      const body = (req.body || {}) as { installationId?: unknown; state?: unknown; code?: unknown };
       const installationId = Number(body.installationId);
       if (!Number.isInteger(installationId) || installationId <= 0 || typeof body.state !== 'string') return jsonError(res, 400, 'bad_request', 'installationId and state are required');
       const state = decodeGithubConnectState(body.state);
       if (!state || state.userId !== userId) return jsonError(res, 400, 'invalid_state', 'The connection request expired. Start again from your profile.');
-      const installation = await getInstallation(installationId);
-      if (installation.account.type !== 'User') return jsonError(res, 400, 'organisation_not_supported', 'Install the app on your own account, not an organisation');
+      // The state proves which devShark account started the connect; only the
+      // authorization code proves which GitHub user finished it. Without it an
+      // account could name any installation of the app, someone else's too.
+      if (typeof body.code !== 'string' || !/^[A-Za-z0-9_-]{1,255}$/.test(body.code)) {
+        return jsonError(res, 400, 'authorization_missing', 'GitHub did not send an authorization. Connect again from your profile and approve the request GitHub shows.');
+      }
+      const owner = await checkInstallationOwner(body.code, installationId);
+      if (!owner.ok && owner.reason === 'code_refused') {
+        logEvent({ status: 403, kind: 'authorization_refused', reason: owner.detail });
+        return jsonError(res, 403, 'authorization_failed', 'GitHub did not confirm the authorization. Connect again from your profile.');
+      }
+      // Listed is not enough: a collaborator on the owner's repository sees the
+      // installation too. The installation's account must be the GitHub user
+      // who authorized.
+      const installation = owner.ok ? await getInstallation(installationId) : null;
+      if (installation && installation.account.type !== 'User') return jsonError(res, 400, 'organisation_not_supported', 'Install the app on your own account, not an organisation');
+      if (!owner.ok || !installation || installation.account.id !== owner.githubUserId) {
+        logEvent({ status: 403, kind: 'installation_not_owned', listed: owner.ok });
+        return jsonError(res, 403, 'installation_not_yours', 'This installation is not on the GitHub account that authorized the app');
+      }
+      const holder = await withTimeout(supabase.from('github_connections').select('user_id').eq('installation_id', installationId).neq('user_id', userId).limit(1).maybeSingle());
+      if (holder.error) return jsonError(res, 500, 'db_error', 'Could not check the installation');
+      if (holder.data) return installationTaken(res);
       const repos = (await listInstallationRepos(await installationToken(installationId))).filter((repo) => !repo.fork && repo.owner.id === installation.account.id);
       const single = repos.length === 1 ? repos[0] : null;
       const upsert = await withTimeout(supabase.from('github_connections').upsert({
@@ -128,6 +155,9 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
         connected_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' }));
+      // Two accounts finishing at once: the unique index of migration 050
+      // lets only one of them in.
+      if (upsert.error?.code === '23505') return installationTaken(res);
       if (upsert.error) return jsonError(res, 500, 'db_error', 'Could not save the connection');
       logEvent({ status: 200, kind: 'connected', repos: repos.length });
       const row = await readConnection(supabase, userId);

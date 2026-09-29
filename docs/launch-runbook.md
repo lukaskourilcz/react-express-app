@@ -40,7 +40,7 @@ Supabase URL, anon key, service-role key, a random `SESSION_SECRET` of at least
 32 characters, product identity, canonical URLs, and `ADMIN_EMAILS` (or an
 `admin` app-metadata role). Configure Upstash for distributed rate limiting.
 Never expose the service-role key, `SESSION_SECRET`, the Stripe secrets,
-`GITHUB_APP_PRIVATE_KEY`, the Upstash credentials or any other server secret
+`GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_CLIENT_SECRET`, the Upstash credentials or any other server secret
 through a `VITE_` key.
 
 Google OAuth must allow the production origin (`https://devshark.app`) and its

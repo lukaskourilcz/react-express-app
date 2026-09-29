@@ -20,7 +20,7 @@ import { Page } from './PublicInfoPages';
 import './LegalPages.css';
 
 /** The date of the current wording. Change it with the words. */
-export const LEGAL_UPDATED = '2026-09-28';
+export const LEGAL_UPDATED = '2026-09-29';
 
 const ADR_URL = 'https://coi.gov.cz/en/information-about-adr/';
 const STRIPE_PRIVACY_URL = 'https://stripe.com/privacy';
@@ -91,6 +91,7 @@ const PRIVACY: Section[] = [
     blocks: [p('legal.privacy.controller.body'), { kind: 'links', links: [{ to: '/terms#trader', label: 'legal.link.terms' }] }],
   },
   { id: 'account', title: 'legal.privacy.account.title', blocks: [p('legal.privacy.account.body')] },
+  { id: 'leaderboards', title: 'legal.privacy.leaderboards.title', blocks: [p('legal.privacy.leaderboards.body')] },
   {
     id: 'payments',
     title: 'legal.privacy.payments.title',

@@ -332,8 +332,11 @@ export function moduleComplete(
 }
 
 /** Guided completion: every required module's evidence is in place. Optional
- * placement and bridge modules never count, and artifacts that only ever reach
- * `self_reviewed` are reported separately rather than folded into this flag. */
+ * placement and bridge modules never count. A module that requires a written
+ * artifact at `self_reviewed` is not complete until it is submitted, so the
+ * FDE path, whose modules require three such pieces, cannot complete (or earn
+ * its merchandise) without them. They are still never counted as verified:
+ * `self_reviewed` satisfies only a `self_reviewed` requirement. */
 export function pathGuidedComplete(
   manifest: LearningPathManifest,
   states: ReadonlyMap<string, EvidenceState>,
@@ -343,7 +346,8 @@ export function pathGuidedComplete(
 }
 
 /** How many self-reviewed artifacts the learner has submitted, out of the
- * manifest's total. Shown beside guided completion, never merged with it. */
+ * manifest's total. Shown on its own line beside guided completion, which
+ * already requires every artifact a module lists in `requires`. */
 export function artifactTally(
   manifest: LearningPathManifest,
   states: ReadonlyMap<string, EvidenceState>,

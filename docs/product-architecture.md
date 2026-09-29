@@ -59,6 +59,27 @@ effect limited to the day count of a streak. No leaderboard in this product
 ranks by streak — every one of them ranks by correct answers and accuracy — so a
 protected streak moves nobody up anything.
 
+A streak day is a UTC day with verified learning, not only a quiz
+(`supabase/supabase-schema-048.sql`). `advance_verified_streak` is the one place
+a day is counted, and four routines call it behind the receipts that already
+make them idempotent: `record_verified_quiz_result_v2` (a quiz or daily
+result), `complete_verified_roadmap_attempt` (a Learn level or part test with
+every question answered, passed or not; a level ended by running out of hearts
+is closed by the handler and does not count), `record_coding_verdict` (any
+passing verdict, in the coding section or inside a Learn level) and
+`record_challenge_completion` (a Biggest Shark Challenge run that earned XP).
+A second source the same day adds nothing, and a replayed receipt moves
+nothing. `user_stats.last_quiz_date` keeps its name and means the last UTC day
+with verified learning; a learner with no stats row gets one with zero totals
+on their first learning day. Missed days are bridged first by the shield, then
+by the month's protections. A shield covers exactly two UTC dates, the one it
+was raised on and the next: `activate_streak_shield` ends it at 00:00 UTC the
+day after tomorrow, and every reader takes `shield_until - 48 hours` as the
+raise date, which also holds for a shield stored as "raised + 48 hours" before
+048. The server keeps UTC days; the streak card, Today's target, the daily
+challenge and the cleared-level tooltip say when the day changes on the
+learner's clock (`client/src/lib/utcDay.ts`).
+
 ### Question of the day (#239)
 
 `/daily` and `/daily/<date>` show one public question a day. The track is a
@@ -106,19 +127,48 @@ earlier proof batches. Do not claim the record is cryptographically complete; a
 full fix has to fit an existing typed handler and keep the twelve-function limit. A Learn answer counts only while its level or part test is not yet
 passed, and a question counts at most once per learner and UTC day: a level's
 questions never change and each answer returns the correct option, so a replayed
-level would otherwise add correct answers without limit. Coding passes are not
-answers and are not counted.
+level would otherwise add correct answers without limit. A quiz question
+counts the same way from migration 048: `record_verified_quiz_result_v2` builds
+its category counts (for `user_category_stats` and this board) from the
+outcomes whose question the learner had not answered earlier the same UTC day,
+read from `user_question_history` before the attempt updates it, and scales
+the quiz's XP by that share, `floor(xp × fresh ÷ total)`. The awarded XP is
+kept on the receipt row (`quiz_attempts.quest_xp`) and the stats handler
+credits coins for that amount. `total_quizzes` still counts every quiz.
+Coding passes are not answers and are not counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
-fewer answers for the same number correct, and equal results share a rank. The
-all-time board keeps its sources (`subject_leaderboard`, `category_leaderboard`
-over `user_category_stats`), so it counts quiz and daily answers and not Learn.
-Those boards and Today arrive in order without a rank, and the Leaderboard
-screen numbers them so equal results share a rank there too (Today ties only
-on the same score and the same time).
+fewer answers for the same number correct, and equal results share a rank.
+Since `supabase/supabase-schema-049.sql` the all-time boards
+(`subject_leaderboard`, `category_leaderboard`) read the same
+`user_activity_days` rows with no date window, so they count quiz, daily
+challenge, Learn and Biggest Shark Challenge answers under the same rule and
+the same five-answer minimum. `user_activity_days` starts at migration 040
+(26 September 2026). Quiz history from before it lives only in
+`user_category_stats` and is not copied in: the rows written since 040 are in
+both tables, so a copy would count them twice. Today (`daily_leaderboard_v2`)
+ranks by correct answers alone. Equal scores keep the order they were
+recorded in and share a rank; the time is shown and recorded but decides
+nothing. The all-time boards and Today arrive in order without a rank, and
+the Leaderboard screen numbers them so equal results share a rank there too.
+
+Names on the boards are opt-in. `user_stats.show_on_leaderboards` (049) is off
+for every learner, existing ones included, until they switch on "Show my name
+and photo on leaderboards" on the Profile or on the Leaderboard. Both switches
+read one query and write through `op=leaderboard-visibility` in
+`api/user/[op].ts` (GET `{ visible }`, PUT `{ visible }`; signed in only, each
+PUT charged to the account's write limit). Every board routine returns
+`display_name` and `picture` only while the flag is on and NULL otherwise, and
+the screen then shows "Learner" with the default avatar. The viewer's own
+30-day row follows the same rule, so it shows them what everybody else sees:
+a switch refetches their personal board at once, and the shared boards follow
+within the CDN's minute. The privacy policy says the same under
+"Leaderboards".
 `api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
 request with a Bearer token or `me=1` also gets the learner's own line and is
 answered `Cache-Control: private, no-store`. `friend_list` orders friends by
-correct answers and accuracy. No board ranks by XP or by streak.
+correct answers and accuracy, shows each friend's live streak by the rule
+above, and marks a friend active today when their last verified learning day
+is today. No board ranks by XP or by streak.
 
 ## Coding section
 
@@ -130,6 +180,11 @@ the host enforces by stopping the thread 1.5 s past it, and virtual timers;
 hidden checks run in a fresh program in a per-submission shuffled order;
 TypeScript type tests run through the real compiler, each in its own file; and
 system-design answers are graded against a key sealed in the coding session.
+A failed or partly right system-design submission returns, per step, only
+whether it was right and the learner's own answer (`gradeDesign`): the correct
+options, orders and ranges, the explanations (which name the right option) and
+the reference answer travel only with a pass, so a failed attempt cannot be
+read for the key and replayed under the next shuffle.
 React submissions use `lib/coding/react-isolated.ts`: a fresh Vercel Sandbox
 microVM with network denied, no application credentials, a 256 MB Node heap,
 and an externally enforced command deadline. The dependency-only snapshot is
@@ -138,13 +193,26 @@ on each run. `lib/coding/react-runner.ts` is trusted test/guest code only and
 must never evaluate learner code inside an API process. Both Coding and
 learning-path React submissions use this boundary. A React challenge can keep
 hidden test cases beside its solution; Submit runs them after the visible suite
-and returns only their count. See
+and returns only their count. The ten React capstones at tier 5 that used to be
+checklist tasks, passing any code, are graded by suites like the rest since
+29 September 2026. The grader still accepts a `verify: 'checklist'` task, but
+its pass is only the learner's word: it is recorded as unverified, with no XP
+and so no coins, no link to a Learn level attempt, and no junior and senior
+solutions. See
 [`react-grading-operations.md`](./react-grading-operations.md). The
 self-hosted `client/sandbox/` iframe stays for the preview and for the Run
 button's immediate feedback, but the verdict of record is the server's.
 Reference solutions never leave the server:
 `resource=coding-reveal` returns one only after a pass or after the authored
 hint ladder is exhausted, and a reveal ends the current Learn level attempt.
+A reveal before the task's first pass also costs that task its XP and coins:
+from migration 048 the first pass after a recorded reveal pays nothing, and the
+verdict says so with `xpForfeited` (set only when no XP was paid and the
+progress row showed a reveal before the pass, so a database without 048, which
+still pays, never reads as a forfeit). The workbench says this in the reveal
+confirmation for a signed-in learner who has not passed the task, and shows
+"Passed — no XP because the solution was revealed" on such a pass; after a
+recorded pass the solution opens without the warning, since it costs nothing.
 The junior and senior readings shown beside each other after a pass are
 stripped of their authoring comments in `lib/coding/solutions/index.ts`, so the
 boards carry code alone; the content contract executes the stripped text and
@@ -163,8 +231,11 @@ System design still grades and still owns its history but has left the section
 (`CODING_SECTION_TRACKS`).
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
-three coding tasks sealed into the level session; completion requires a passed
-verdict for each. The Easy-band challenges of #226 (`EASY_BAND` in
+three coding tasks sealed into the level session; for an account, completion
+requires a passed verdict for each. A guest's coding passes are never stored,
+so a guest's level passes on its questions: the completion answers
+`codingUnverified: true`, records nothing, and the browser keeps the pass on
+that device and says coding tasks are checked and saved after sign-in. The Easy-band challenges of #226 (`EASY_BAND` in
 `lib/coding/catalog.ts`) never join that quota, and neither do its Medium and
 Hard waves (`MEDIUM_HARD_BAND`), so adding them leaves every level's coding
 tasks as they were. Coding completion is permanent: the API ignores legacy review
@@ -187,11 +258,27 @@ hint rung is a documentation link from `shared/coding-docs.ts`.
 The GitHub garden is an optional GitHub App integration (`lib/github-app.ts`,
 `lib/github-handlers.ts`): the learner installs the app on one repository they
 own, and every passed task is committed there as one file per task in one
-folder per track (`gardenPathFor`). No user token is stored; installation
+folder per track (`gardenPathFor`). Connecting binds the installation to its
+owner. The app requests user authorization during installation, so GitHub
+returns the learner to the callback URL `/settings/github` with a one-time
+`code` beside `installation_id` and the sealed `state`. `github-connect-finish`
+checks the state (the devShark account that started), exchanges the code for a
+user access token, and accepts the installation only when it appears in that
+user's `GET /user/installations` (every page) and its account is the same
+GitHub user (`GET /user`), which also refuses a collaborator who can see the
+owner's installation. The user token is used for those two reads and dropped.
+A missing code, a refused code or an installation that is not the user's own
+saves nothing, and the callback page asks the learner to install and authorize
+again. A unique index on `github_connections.installation_id` (migration 050)
+keeps one installation to one devShark account; a second account gets 409
+`installation_taken`. No user token is stored; installation
 tokens are minted from the app key on demand, failed commits queue for a later
 sync, and disconnecting deletes the connection and the queue. The feature stays
-hidden until `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and `GITHUB_APP_PRIVATE_KEY`
-exist on the deployment.
+hidden, and `github-connection` answers `available: false`, until
+`GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`,
+`GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET` all exist on the
+deployment (`isGithubAppConfigured`). `npm run test:garden` runs the connect
+step against a stand-in GitHub.
 
 ## Learning paths
 
@@ -231,6 +318,15 @@ security-critical failure cannot be averaged away), and evidence recorded in
 and **no XP in v1**, which is what keeps a task reused from the coding
 catalogue from being rewarded twice.
 
+An objective check grades against the key sealed in its attempt. A project
+check (`purpose: 'project'`, the DSA final) deals the same questions again on a
+retry, only reshuffled, so after a failed attempt it returns only which
+questions were wrong; the correct options and the explanations come back once
+it is passed. A diagnostic or exercise check returns them after every attempt.
+A domain-gated check needs its threshold overall and a minimum in every domain:
+the same threshold for a domain of five or more questions, half for a smaller
+one.
+
 Endpoints are new `resource=`/`op=` branches on existing handlers
 (`learning-path-catalog`, `-start`, `-submit` on `api/quiz/roadmap.ts`;
 `learning-preference`, `learning-path-enrollment`, `-progress`, `-draft` on
@@ -241,9 +337,13 @@ can launch or pause without the other, and a path opens only when its switch
 is on, its content validates and the migration is installed.
 
 Completion language is deliberately narrow. The server says "FDE guided path
-completed" only after the required verified evidence, and displays "Portfolio
-self-reviewed" as a separate line. There is no certification, no rank and no
-claim about employment.
+completed" only after every required module is complete, and the FDE modules
+require three written pieces the learner reviews against the rubric themselves
+(`self_reviewed`, never counted as verified). So the path, and the merchandise
+it earns, needs all three. The overview shows them on their own line, "Written
+pieces you review yourself", with a note that all of them are required to
+complete the path. There is no certification, no rank and no claim about
+employment.
 
 ## Practice, scheduling and what the product claims about it
 
@@ -652,8 +752,12 @@ production (issue #227, step D8).
   before; a Learn level or part test passed for the first time credits
   `learn:<account>:<topic>:L<n>` (or `P<n>`) at 50 × the level's tier or 300 ×
   the part (`shared/progression.ts`); a coding challenge's first pass credits
-  `coding:<account>:<task>`, the same id its XP now uses. A verified quiz, a
-  first Learn pass and a first evolving stage pass then settle the milestones.
+  `coding:<account>:<task>`, the same id its XP now uses. A quiz's credit is
+  for the XP the routine awarded, which migration 048 can lower below the
+  receipt's. Everything that moves the streak (a verified quiz, a completed
+  Learn level or part test, an applied coding pass, an awarded Challenge run)
+  then settles the milestones, so a streak milestone reached on a Learn or
+  coding day pays at once.
   The first wallet read (`op=wallet` GET) pays the welcome coins, settles the
   month that just ended and the learner's milestones, and returns the rules and
   progress for "How to earn". Before 041 is installed the XP credit falls back
@@ -712,11 +816,16 @@ production (issue #227, step D8).
 stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
 which since migration 044 erases every table that holds an account id in one
 routine, including the ones 035 and 039 to 042 added; 045 restates it with the
-voucher redemptions. A few rows stay without the person: a merchandise order
-already with Spreadshop and its package claim (the claim's account part becomes
-`deleted-account:<order id>`), a settled month's ranks, a referral the account
-made (`deleted-account`), and a voucher the account created as an admin, which
-keeps its counts (`created_by` becomes `deleted-account`). The handler calls
+voucher redemptions, and 051 with the merchandise the account held. An order
+Spreadshop never received gives its stock reservation back (a claimed package
+reserved none): one awaiting payment is deleted, and a paid one is cancelled,
+which takes it off the fulfilment queue, and kept without the person as the
+record of what was paid. A few rows stay without the person: those cancelled
+orders, a merchandise order already with Spreadshop and its package claim (the
+claim's account part becomes `deleted-account:<order id>`), a settled month's
+ranks, a referral the account made (`deleted-account`), and a voucher the
+account created as an admin, which keeps its counts (`created_by` becomes
+`deleted-account`). The handler calls
 no other routine. The four that 039 to 042 shipped
 (`delete_entitlement_data`, `delete_user_activity_days`, `delete_coin_data`,
 `delete_referral_data`) deleted nothing once 044 held their statements, and
@@ -733,8 +842,9 @@ One Vercel project builds this repository for `https://devshark.app`. Set
 `PRODUCT_SUBJECT=webdev`, or leave them unset: both resolve to devShark. Any
 other value fails the build in `resolveCatalogProductId`, which is what keeps a
 project still configured for StudyShark from deploying this code. The
-deployment may also carry `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, and
-`GITHUB_APP_PRIVATE_KEY` for the GitHub garden.
+deployment may also carry `GITHUB_APP_ID`, `GITHUB_APP_SLUG`,
+`GITHUB_APP_PRIVATE_KEY`, `GITHUB_APP_CLIENT_ID` and
+`GITHUB_APP_CLIENT_SECRET` for the GitHub garden, which needs all five.
 
 The footer carries the legal links, devShark's own social profiles, and the appearance and sound controls, and
 promotes no other product. The language control is gone while the app ships

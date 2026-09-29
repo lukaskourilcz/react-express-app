@@ -3,6 +3,7 @@
 // can invalidate exactly the progress it changed.
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
+import { staleProfileStats } from '../lib/queryClient';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingApproachesResponse,
@@ -31,12 +32,15 @@ export function fetchCodingTask(id: string, signal?: AbortSignal): Promise<Codin
   return apiFetch<CodingTaskResponse>(`${ROADMAP}?resource=coding-task&id=${encodeURIComponent(id)}`, { signal });
 }
 
-export function submitCoding(input: CodingSubmitRequest): Promise<CodingVerdictResponse> {
-  return apiFetch<CodingVerdictResponse>(`${ROADMAP}?resource=coding-submit`, {
+export async function submitCoding(input: CodingSubmitRequest): Promise<CodingVerdictResponse> {
+  const result = await apiFetch<CodingVerdictResponse>(`${ROADMAP}?resource=coding-submit`, {
     method: 'POST',
     body: JSON.stringify({ ...input, lang: getStoredLang() }),
     timeoutMs: 50_000,
   });
+  // A recorded pass is a streak day.
+  if (result.applied && result.verdict === 'passed') staleProfileStats();
+  return result;
 }
 
 export function revealCoding(input: CodingRevealRequest): Promise<CodingRevealResponse> {
@@ -57,8 +61,10 @@ export function fetchGithubConnection(signal?: AbortSignal): Promise<GithubConne
 export function startGithubConnect(): Promise<GithubConnectStartResponse> {
   return apiFetch<GithubConnectStartResponse>(`${USER}?op=github-connect-start`, { method: 'POST', body: '{}' });
 }
-export function finishGithubConnect(installationId: string, state: string): Promise<GithubConnectionResponse> {
-  return apiFetch<GithubConnectionResponse>(`${USER}?op=github-connect-finish`, { method: 'POST', body: JSON.stringify({ installationId, state }) });
+/** `code` is GitHub's one-time user authorization from the install redirect;
+ * the server exchanges it to check the installation is the learner's own. */
+export function finishGithubConnect(installationId: string, state: string, code: string): Promise<GithubConnectionResponse> {
+  return apiFetch<GithubConnectionResponse>(`${USER}?op=github-connect-finish`, { method: 'POST', body: JSON.stringify({ installationId, state, code }) });
 }
 export function chooseGithubRepo(repoFullName: string): Promise<GithubConnectionResponse> {
   return apiFetch<GithubConnectionResponse>(`${USER}?op=github-repo`, { method: 'POST', body: JSON.stringify({ repoFullName }) });

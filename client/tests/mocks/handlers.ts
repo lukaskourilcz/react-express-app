@@ -63,6 +63,12 @@ export const leaderboardHandlers = {
       : HttpResponse.json(boardFor(request))),
 };
 
+// GET /api/user/leaderboard-visibility (op=leaderboard-visibility in
+// api/user/[op].ts): whether the public boards show the signed-in learner's
+// name and photo. Off until they switch it on.
+export const visibilityHandler = (visible = false) =>
+  http.get('*/api/user/leaderboard-visibility', () => HttpResponse.json({ visible }));
+
 // GET /api/settings as api/settings.ts sends it for a launched deployment with
 // the stored settings at their defaults: checkout on through Stripe Managed
 // Payments, no launch coupon, both learning paths switched off, merchandise

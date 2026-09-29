@@ -3,6 +3,7 @@
 // English is the source of truth; Czech copy lives in the sibling *.cs.ts overlay.
 
 import type { CodingTaskSource } from '../types';
+import { CAPSTONE_HEADER } from './react-capstone-support';
 
 export const REACT_TASKS: CodingTaskSource[] = [
   {
@@ -2871,7 +2872,7 @@ test('clearing the search brings everything back', async () => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "User directory",
-    prompt: "Fetch users, add search and city filters, show loading/error states, and render the results. In comments, explain your API, cache, and pagination plan.",
+    prompt: "Build a user directory on the training API. On mount, fetch `https://jsonplaceholder.typicode.com/users` once. While the request is on its way, show a line with the word “Loading”. If it fails, with a network error or an answer that is not `ok`, show a message in an element with `role=\"alert\"` and no users. Otherwise show each user as an `li` with their name and their city (`address.city`). A text input filters by name as you type, matching any part of the name and ignoring case. A `select` filters by city: its first option, “All cities”, has the value `\"\"` and keeps everyone; then comes each city found in the data, once, sorted A to Z, with the city as both its value and its text. The two filters apply together, and when no user matches, show “No users match.” In code comments, explain your API, cache and pagination plan.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -2887,53 +2888,127 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/users';
-const [items, setItems] = useState([]);
+    skeleton: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+const [users, setUsers] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 const [query, setQuery] = useState('');
+const [city, setCity] = useState('');
 
 useEffect(() => {
-  const loadItems = async () => {
+  const loadUsers = async () => {
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch(USERS_URL);
       if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
+      setUsers(await response.json());
     } catch (requestError) {
       setError(requestError.message);
     } finally {
       setLoading(false);
     }
   };
-
-  loadItems();
+  loadUsers();
 }, []);
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
+const cities = [...new Set(users.map(user => user.address.city))]; // then sort
+const visibleUsers = users.filter(user => {
+  // the name matches the query, and the city is '' or the chosen one
   return true;
 });
 
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+if (error) return <p role="alert">{error}</p>;`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "Only two things come from outside: the users the server sent and what the learner typed or chose. Keep those in state, and work out the city options, the visible users and the “No users match.” line from them during render.",
     ],
     approach: [
-      "Sketch the data flow in comments first, naming the API shape, the caching plan and the pagination plan you would use.",
-      "Fetch the users once in a mount effect with loading and error state, clearing loading in a finally block.",
-      "Hold the search text and the chosen city as two small state values driven by controlled inputs.",
-      "Derive the visible users during render by chaining both filters, then map the result with the user id as key.",
+      "Fetch the users once in a mount effect. Check `response.ok` before reading the body, keep the error message for a `role=\"alert\"` element, and clear the loading flag in a `finally` block.",
+      "Hold the search text and the chosen city as two small state values, each bound to its own control.",
+      "Build the city options during render: map the users to their cities, drop repeats with a `Set`, and sort.",
+      "Derive the visible users by applying both filters, then map them to `li` elements keyed by id; an empty result gets its own line.",
+      "Finish with the design notes in comments: the API shape, what you would cache and for how long, and how the list would page once it grows.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "The list renders fetched users, and the search and city filters narrow it.",
-      "Loading and error states are both visible at the right moments.",
-      "Your comments explain the API shape, caching, and pagination plan.",
-    ],
+    suite: `${CAPSTONE_HEADER}
+const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+const USERS = [
+  { id: 1, name: 'Leanne Graham', email: 'leanne@example.com', address: { city: 'Gwenborough' } },
+  { id: 2, name: 'Ervin Howell', email: 'ervin@example.com', address: { city: 'Wisokyburgh' } },
+  { id: 3, name: 'Clementine Bauch', email: 'clementine@example.com', address: { city: 'McKenziehaven' } },
+];
+const searchBox = container => container.querySelector('input');
+const citySelect = container => container.querySelector('select');
+const search = (container, value) => fireEvent.change(searchBox(container), { target: { value } });
+const chooseCity = (container, value) => fireEvent.change(citySelect(container), { target: { value } });
+// Renders the page and answers its users request with the list given.
+const loaded = async (calls, users = USERS) => {
+  const view = render(<App />);
+  const [request] = gets(calls, USERS_URL);
+  expect(Boolean(request)).toBe(true);
+  request.respond(users);
+  await waitFor(() => expect(view.container.querySelectorAll('li')).toHaveLength(users.length));
+  return view.container;
+};
+
+test('asks for the users once and shows Loading until they arrive', () => withServer(async calls => {
+  const { container } = render(<App />);
+  expect(gets(calls, USERS_URL)).toHaveLength(1);
+  expect(says(container, 'loading')).toBe(true);
+  expect(container.querySelectorAll('li')).toHaveLength(0);
+  calls[0].respond(USERS);
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  expect(says(container, 'loading')).toBe(false);
+  expect(calls).toHaveLength(1);
+}));
+
+test('each user is an item with their name and city', () => withServer(async calls => {
+  const container = await loaded(calls);
+  const items = itemTexts(container);
+  expect(items[0]).toContain('Leanne Graham');
+  expect(items[0]).toContain('Gwenborough');
+  expect(items[2]).toContain('Clementine Bauch');
+  expect(items[2]).toContain('McKenziehaven');
+}));
+
+test('the city select offers All cities, then each city once, A to Z', () => withServer(async calls => {
+  const container = await loaded(calls);
+  expect(optionsOf(citySelect(container))).toEqual([
+    ['', 'All cities'], ['Gwenborough', 'Gwenborough'], ['McKenziehaven', 'McKenziehaven'], ['Wisokyburgh', 'Wisokyburgh'],
+  ]);
+}));
+
+test('the search narrows the list by name as you type, ignoring case', () => withServer(async calls => {
+  const container = await loaded(calls);
+  search(container, 'ERVIN');
+  expectItems(itemTexts(container), ['Ervin Howell']);
+  search(container, '');
+  expect(itemTexts(container)).toHaveLength(3);
+}));
+
+test('choosing a city keeps only the users who live there', () => withServer(async calls => {
+  const container = await loaded(calls);
+  chooseCity(container, 'McKenziehaven');
+  expectItems(itemTexts(container), ['Clementine Bauch']);
+  chooseCity(container, '');
+  expect(itemTexts(container)).toHaveLength(3);
+}));
+
+test('the search and the city apply together, and no match says so', () => withServer(async calls => {
+  const container = await loaded(calls);
+  chooseCity(container, 'Wisokyburgh');
+  search(container, 'leanne');
+  expect(container.querySelectorAll('li')).toHaveLength(0);
+  expect(says(container, 'No users match')).toBe(true);
+  search(container, 'erv');
+  expectItems(itemTexts(container), ['Ervin Howell']);
+}));
+
+test('an answer that is not ok shows an alert instead of the list', () => withServer(async calls => {
+  const { container } = render(<App />);
+  calls[0].respond(null, 500);
+  await expectFailure(container);
+}));
+`,
     api: {
       method: "GET",
       url: "https://jsonplaceholder.typicode.com/users",
@@ -2949,7 +3024,7 @@ const visibleItems = items.filter(item => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Posts dashboard",
-    prompt: "Fetch posts, group them by user with reduce, and show a selected user’s posts. Explain how the feed would scale.",
+    prompt: "A dashboard of posts per author. On mount, fetch `https://jsonplaceholder.typicode.com/posts` once, showing a line with the word “Loading” until it answers; a failure, a network error or an answer that is not `ok`, shows a message in an element with `role=\"alert\"`. Group the posts by `userId` with `reduce`, into an object from each user id to that user’s posts. Show one button per user, lowest user id first, reading “User <id> (<number of posts>)”, such as “User 1 (10)”. No posts are listed until a user is chosen. Clicking a user’s button lists that user’s posts, one `li` each with the post’s title, in the order they arrived, and marks that button `aria-pressed=\"true\"` and every other one `\"false\"`. In code comments, explain how the feed would scale.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -2965,53 +3040,119 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
-const [items, setItems] = useState([]);
+    skeleton: `const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+const [posts, setPosts] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [selectedUser, setSelectedUser] = useState(null);
 
 useEffect(() => {
-  const loadItems = async () => {
+  const loadPosts = async () => {
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch(POSTS_URL);
       if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
+      setPosts(await response.json());
     } catch (requestError) {
       setError(requestError.message);
     } finally {
       setLoading(false);
     }
   };
-
-  loadItems();
+  loadPosts();
 }, []);
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
+const postsByUser = posts.reduce((groups, post) => {
+  // add the post to the array under groups[post.userId]
+  return groups;
+}, {});
+const userIds = Object.keys(postsByUser).map(Number); // lowest first
 
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
+{userIds.map(id => (
+  <button key={id} aria-pressed={id === selectedUser} onClick={() => setSelectedUser(id)}>
+    User {id} ({postsByUser[id].length})
+  </button>
 ))}`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "Keep the raw posts and the chosen user id in state, nothing else. The groups, the buttons and the list of the chosen user’s posts are all worked out from those two during render.",
     ],
     approach: [
       "Fetch the posts once with loading and error state, keeping the raw array in a single state value.",
       "Derive a grouping during render with reduce, accumulating an object that maps each user id to its posts.",
-      "Track the selected user id in state and render only the group belonging to that id, as a keyed list.",
+      "Turn the object’s keys back into numbers and sort them, so user 12 comes after user 3, and render one button per id with its post count.",
+      "Track the selected user id in state and render only the group belonging to that id, as a keyed list, with `aria-pressed` on the buttons.",
       "Finish with comments on how the feed would scale: server-side pagination, an index on the author column, and caching.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Posts are fetched and grouped per user with reduce.",
-      "Selecting a user shows only that user\\u2019s posts.",
-      "Your comments explain how the feed would scale.",
-    ],
+    suite: `${CAPSTONE_HEADER}
+const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+const POSTS = [
+  { id: 1, userId: 1, title: 'Post one', body: 'Body one' },
+  { id: 2, userId: 1, title: 'Post two', body: 'Body two' },
+  { id: 3, userId: 1, title: 'Post three', body: 'Body three' },
+  { id: 4, userId: 2, title: 'Post four', body: 'Body four' },
+  { id: 5, userId: 2, title: 'Post five', body: 'Body five' },
+  { id: 6, userId: 2, title: 'Post six', body: 'Body six' },
+  { id: 7, userId: 2, title: 'Post seven', body: 'Body seven' },
+];
+const userButtons = container => [...container.querySelectorAll('button')].filter(button => button.textContent.trim().startsWith('User '));
+const buttonTexts = container => userButtons(container).map(button => button.textContent.trim());
+const choose = (container, label) => fireEvent.click(userButtons(container).find(button => button.textContent.trim() === label));
+// Renders the page and answers its posts request with the list given.
+const loaded = async (calls, posts = POSTS) => {
+  const view = render(<App />);
+  const [request] = gets(calls, POSTS_URL);
+  expect(Boolean(request)).toBe(true);
+  request.respond(posts);
+  await waitFor(() => expect(userButtons(view.container).length > 0).toBe(true));
+  return view.container;
+};
+
+test('asks for the posts once and shows Loading until they arrive', () => withServer(async calls => {
+  const { container } = render(<App />);
+  expect(gets(calls, POSTS_URL)).toHaveLength(1);
+  expect(says(container, 'loading')).toBe(true);
+  expect(userButtons(container)).toHaveLength(0);
+  calls[0].respond(POSTS);
+  await waitFor(() => expect(userButtons(container)).toHaveLength(2));
+  expect(says(container, 'loading')).toBe(false);
+  expect(calls).toHaveLength(1);
+}));
+
+test('one button per user, lowest id first, with the number of posts, and nothing listed yet', () => withServer(async calls => {
+  const container = await loaded(calls);
+  expect(buttonTexts(container)).toEqual(['User 1 (3)', 'User 2 (4)']);
+  expect(container.querySelectorAll('li')).toHaveLength(0);
+}));
+
+test('choosing a user lists only their posts, in the order they arrived', () => withServer(async calls => {
+  const container = await loaded(calls);
+  choose(container, 'User 2 (4)');
+  expectItems(itemTexts(container), ['Post four', 'Post five', 'Post six', 'Post seven']);
+}));
+
+test('choosing another user replaces the list', () => withServer(async calls => {
+  const container = await loaded(calls);
+  choose(container, 'User 2 (4)');
+  choose(container, 'User 1 (3)');
+  expectItems(itemTexts(container), ['Post one', 'Post two', 'Post three']);
+}));
+
+test('the chosen button is marked with aria-pressed', () => withServer(async calls => {
+  const container = await loaded(calls);
+  choose(container, 'User 2 (4)');
+  const [first, second] = userButtons(container);
+  expect(second.getAttribute('aria-pressed')).toBe('true');
+  expect(first.getAttribute('aria-pressed')).toBe('false');
+}));
+
+test('an answer that is not ok shows an alert and no users', () => withServer(async calls => {
+  const { container } = render(<App />);
+  calls[0].respond(null, 500);
+  await expectFailure(container);
+  expect(userButtons(container)).toHaveLength(0);
+}));
+`,
     api: {
       method: "GET",
       url: "https://jsonplaceholder.typicode.com/posts",
@@ -3027,7 +3168,7 @@ const visibleItems = items.filter(item => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Todo client",
-    prompt: "Fetch todos, add one with POST, toggle and delete locally, and show completion stats. Explain conflict handling.",
+    prompt: "A todo list on the training API. On mount, fetch `https://jsonplaceholder.typicode.com/todos?_limit=5` once, showing a line with the word “Loading” until it answers; a failure, a network error or an answer that is not `ok`, shows a message in an element with `role=\"alert\"`. Show each todo as an `li` with a checkbox, ticked when the todo is `completed`, its title and a “Delete” button. Above the list, a line reads “Completed: <done> of <total>”, worked out from the list during render rather than kept in state of its own. A form with a text input and an “Add” button creates a todo: `POST` to `https://jsonplaceholder.typicode.com/todos` with a `Content-Type: application/json` header and the body `{ \"title\": <the text, trimmed>, \"completed\": false, \"userId\": 1 }`; once the server answers, append the todo it sends back and empty the input. Blank text sends nothing. A failed POST adds nothing and shows a message with `role=\"alert\"`. Ticking a checkbox flips that todo’s `completed` and Delete removes it, both at once and in local state only. In code comments, explain how you would handle two tabs editing the same todo.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3043,57 +3184,135 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/todos';
-const [items, setItems] = useState([]);
+    skeleton: `const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
+const [todos, setTodos] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [title, setTitle] = useState('');
 
 useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  loadItems();
+  // GET TODOS_URL + '?_limit=5', check response.ok, store the array
 }, []);
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
+const addTodo = async event => {
+  event.preventDefault();
+  const text = title.trim();
+  if (!text) return;
+  const response = await fetch(TODOS_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ title: text, completed: false, userId: 1 }),
+  });
+  // check response.ok, then append what the server sent back
+};
 
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+const toggle = id => setTodos(current => current.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo));
+const done = todos.filter(todo => todo.completed).length;`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "The list is the only state that matters here: the count of finished todos is `todos.filter(...).length` during render. Adding waits for the server; ticking and deleting do not.",
     ],
     approach: [
       "Fetch the todos into one array state with loading and error handling before adding any interaction.",
-      "Add a controlled input whose submit handler POSTs the new todo and appends the created record to the array.",
+      "Add a controlled input whose submit handler POSTs the trimmed title as JSON, checks `response.ok`, and appends the created record the server returns.",
       "Toggle by mapping to a spread copy with the completion flag inverted, and delete by filtering on the id.",
       "Derive the completion stats from that array during render, then explain conflict handling in comments: last write wins versus version numbers.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Todos are fetched, one can be added with POST, and toggling/deleting works locally.",
-      "Completion stats are derived from state rather than stored twice.",
-      "Your comments explain conflict handling.",
-    ],
+    suite: `${CAPSTONE_HEADER}
+const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
+const TODOS = [
+  { id: 1, userId: 1, title: 'Todo one', completed: false },
+  { id: 2, userId: 1, title: 'Todo two', completed: true },
+  { id: 3, userId: 2, title: 'Todo three', completed: false },
+];
+const textBox = container => [...container.querySelectorAll('input')].find(input => input.type === 'text' || input.type === 'search');
+const boxes = container => [...container.querySelectorAll('li input[type="checkbox"]')];
+const ticked = container => boxes(container).map(box => box.checked);
+const posts = calls => calls.filter(call => call.method === 'POST');
+const add = (container, value) => {
+  fireEvent.change(textBox(container), { target: { value } });
+  fireEvent.click(buttonNamed(container, 'Add'));
+};
+// Renders the page and answers its todos request with the list given.
+const loaded = async (calls, todos = TODOS) => {
+  const view = render(<App />);
+  const [request] = gets(calls, TODOS_URL);
+  expect(Boolean(request)).toBe(true);
+  request.respond(todos);
+  await waitFor(() => expect(view.container.querySelectorAll('li')).toHaveLength(todos.length));
+  return view.container;
+};
+
+test('asks for five todos once and shows Loading until they arrive', () => withServer(async calls => {
+  const { container } = render(<App />);
+  const requests = gets(calls, TODOS_URL);
+  expect(requests).toHaveLength(1);
+  expect(new URL(requests[0].url).searchParams.get('_limit')).toBe('5');
+  expect(says(container, 'loading')).toBe(true);
+  requests[0].respond(TODOS);
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  expect(says(container, 'loading')).toBe(false);
+  expect(calls).toHaveLength(1);
+}));
+
+test('each todo shows its title and a checkbox ticked when it is done, and the count', () => withServer(async calls => {
+  const container = await loaded(calls);
+  expectItems(itemTexts(container), ['Todo one', 'Todo two', 'Todo three']);
+  expect(ticked(container)).toEqual([false, true, false]);
+  expect(says(container, 'Completed: 1 of 3')).toBe(true);
+}));
+
+test('ticking a checkbox flips that todo and the count follows', () => withServer(async calls => {
+  const container = await loaded(calls);
+  fireEvent.click(boxes(container)[0]);
+  expect(ticked(container)).toEqual([true, true, false]);
+  expect(says(container, 'Completed: 2 of 3')).toBe(true);
+  fireEvent.click(boxes(container)[1]);
+  expect(ticked(container)).toEqual([true, false, false]);
+  expect(says(container, 'Completed: 1 of 3')).toBe(true);
+}));
+
+test('Delete removes that todo and the count follows', () => withServer(async calls => {
+  const container = await loaded(calls);
+  fireEvent.click(buttonNamed(container.querySelectorAll('li')[1], 'Delete'));
+  expectItems(itemTexts(container), ['Todo one', 'Todo three']);
+  expect(says(container, 'Completed: 0 of 2')).toBe(true);
+}));
+
+test('Add sends a POST and appends the todo the server sends back', () => withServer(async calls => {
+  const container = await loaded(calls);
+  add(container, '  Water the plants ');
+  const [post] = posts(calls);
+  expect(Boolean(post)).toBe(true);
+  expect(addressOf(post.url)).toBe(addressOf(TODOS_URL));
+  expect(JSON.parse(post.options.body)).toEqual({ title: 'Water the plants', completed: false, userId: 1 });
+  expect(String(new Headers(post.options.headers).get('content-type'))).toContain('application/json');
+  expect(container.querySelectorAll('li')).toHaveLength(3);
+  post.respond({ id: 201, title: 'Water the plants', completed: false, userId: 1 }, 201);
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(4));
+  expect(itemTexts(container)[3]).toContain('Water the plants');
+  expect(textBox(container).value).toBe('');
+  expect(says(container, 'Completed: 1 of 4')).toBe(true);
+}));
+
+test('blank text sends nothing and adds nothing', () => withServer(async calls => {
+  const container = await loaded(calls);
+  add(container, '   ');
+  expect(posts(calls)).toHaveLength(0);
+  expect(container.querySelectorAll('li')).toHaveLength(3);
+}));
+
+test('an answer that is not ok shows an alert and no todos', () => withServer(async calls => {
+  const { container } = render(<App />);
+  calls[0].respond(null, 500);
+  await expectFailure(container);
+}));
+`,
     api: {
       method: "GET + POST",
-      url: "https://jsonplaceholder.typicode.com/todos",
-      note: "JSONPlaceholder accepts practice writes, but it does not permanently save them.",
+      url: "https://jsonplaceholder.typicode.com/todos?_limit=5",
+      note: "JSONPlaceholder accepts practice writes, but it does not permanently save them, and it gives every new todo the id 201.",
     },
   },
   {
@@ -3105,7 +3324,7 @@ const visibleItems = items.filter(item => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Product explorer",
-    prompt: "Fetch products, filter, sort, calculate an average with reduce, and paginate. Explain search and caching.",
+    prompt: "Explore the training shop. On mount, fetch `https://dummyjson.com/products` once (the products are in the answer’s `products` array), showing a line with the word “Loading” until it answers; a failure, a network error or an answer that is not `ok`, shows a message in an element with `role=\"alert\"`. Each product is an `li` with its title and price. A text input filters by title as you type, matching any part and ignoring case. A `select` orders the matches: the value `\"\"` (“Default order”) keeps the API’s order, `\"price-asc\"` puts the cheapest first and `\"price-desc\"` the most expensive first. Show 5 products a page, with “Previous” and “Next” buttons, each disabled when there is no page that way, and a line “Page <n> of <pages>”, never fewer than 1 page. A new search or a new order goes back to page 1. A line “Average price: <x>” gives the mean price of every product that matches the search, on every page, computed with `reduce` and shown with `toFixed(2)`. When nothing matches, show “No products match.” and no average. In code comments, explain how you would index the search and cache the results.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3121,53 +3340,131 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://dummyjson.com/products';
-const [items, setItems] = useState([]);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState('');
+    skeleton: `const PRODUCTS_URL = 'https://dummyjson.com/products';
+const PAGE_SIZE = 5;
+const [products, setProducts] = useState([]);
 const [query, setQuery] = useState('');
+const [sort, setSort] = useState('');
+const [page, setPage] = useState(1);
 
 useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  loadItems();
+  // GET PRODUCTS_URL, check response.ok, then setProducts(data.products)
 }, []);
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
+const matches = products.filter(product => product.title.toLowerCase().includes(query.toLowerCase()));
+const ordered = [...matches]; // sort the copy when sort is 'price-asc' or 'price-desc'
+const pages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
+const shown = ordered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+const average = matches.reduce((sum, product) => sum + product.price, 0) / matches.length;
 
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+<input value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} />`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "Keep four values in state: the products, the query, the sort and the page. Everything else is a pipeline worked out during render: filter, sort a copy, cut the page. The average reads the filtered list, before the page is cut.",
     ],
     approach: [
       "Fetch once and remember that this API nests the records inside a products property rather than returning a bare array.",
-      "Keep the query, the sort key and the page number as three separate state values, each bound to its own control.",
+      "Keep the query, the sort key and the page number as three separate state values, each bound to its own control; a new query or sort also sets the page back to 1.",
       "Derive the pipeline during render in order: filter by query, sort a copied array, then slice the current page.",
       "Compute the average with reduce over the filtered set, and explain search indexing and caching in comments.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Products are fetched, filtered, sorted, and paginated.",
-      "An average is derived with reduce.",
-      "Your comments explain search and caching.",
-    ],
+    suite: `${CAPSTONE_HEADER}
+const PRODUCTS_URL = 'https://dummyjson.com/products';
+const PRODUCTS = [
+  { id: 1, title: 'Essence Mascara', price: 9.99 },
+  { id: 2, title: 'Eyeshadow Palette', price: 19.99 },
+  { id: 3, title: 'Powder Canister', price: 14.99 },
+  { id: 4, title: 'Red Lipstick', price: 12.99 },
+  { id: 5, title: 'Red Nail Polish', price: 8.99 },
+  { id: 6, title: 'Calvin Klein Perfume', price: 49.99 },
+  { id: 7, title: 'Chanel Perfume', price: 129.99 },
+];
+const searchBox = container => container.querySelector('input');
+const sortSelect = container => container.querySelector('select');
+const search = (container, value) => fireEvent.change(searchBox(container), { target: { value } });
+const sortBy = (container, value) => fireEvent.change(sortSelect(container), { target: { value } });
+const press = (container, name) => fireEvent.click(buttonNamed(container, name));
+// Renders the page and answers its request the way DummyJSON does.
+const loaded = async (calls, products = PRODUCTS) => {
+  const view = render(<App />);
+  const [request] = gets(calls, PRODUCTS_URL);
+  expect(Boolean(request)).toBe(true);
+  request.respond({ products, total: products.length, skip: 0, limit: 30 });
+  await waitFor(() => expect(view.container.querySelectorAll('li').length > 0).toBe(true));
+  return view.container;
+};
+
+test('asks for the products once, reads the products array, and shows Loading until it arrives', () => withServer(async calls => {
+  const { container } = render(<App />);
+  expect(gets(calls, PRODUCTS_URL)).toHaveLength(1);
+  expect(says(container, 'loading')).toBe(true);
+  calls[0].respond({ products: PRODUCTS, total: 7, skip: 0, limit: 30 });
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(5));
+  expect(says(container, 'loading')).toBe(false);
+  expect(calls).toHaveLength(1);
+}));
+
+test('each product shows its title and price', () => withServer(async calls => {
+  const container = await loaded(calls);
+  const [first] = itemTexts(container);
+  expect(first).toContain('Essence Mascara');
+  expect(first).toContain('9.99');
+}));
+
+test('five products a page, with Previous and Next disabled at the ends', () => withServer(async calls => {
+  const container = await loaded(calls);
+  expectItems(itemTexts(container), ['Essence Mascara', 'Eyeshadow Palette', 'Powder Canister', 'Red Lipstick', 'Red Nail Polish']);
+  expect(says(container, 'Page 1 of 2')).toBe(true);
+  expect(buttonNamed(container, 'Previous').disabled).toBe(true);
+  expect(buttonNamed(container, 'Next').disabled).toBe(false);
+  press(container, 'Next');
+  expectItems(itemTexts(container), ['Calvin Klein Perfume', 'Chanel Perfume']);
+  expect(says(container, 'Page 2 of 2')).toBe(true);
+  expect(buttonNamed(container, 'Next').disabled).toBe(true);
+  press(container, 'Previous');
+  expect(says(container, 'Page 1 of 2')).toBe(true);
+}));
+
+test('the average price covers every product that matches, on every page', () => withServer(async calls => {
+  const container = await loaded(calls);
+  expect(says(container, 'Average price: 35.28')).toBe(true);
+}));
+
+test('the search filters by title ignoring case, and the average and pages follow', () => withServer(async calls => {
+  const container = await loaded(calls);
+  search(container, 'RED');
+  expectItems(itemTexts(container), ['Red Lipstick', 'Red Nail Polish']);
+  expect(says(container, 'Average price: 10.99')).toBe(true);
+  expect(says(container, 'Page 1 of 1')).toBe(true);
+}));
+
+test('sorting by price orders every match before the page is cut', () => withServer(async calls => {
+  const container = await loaded(calls);
+  sortBy(container, 'price-asc');
+  expectItems(itemTexts(container), ['Red Nail Polish', 'Essence Mascara', 'Red Lipstick', 'Powder Canister', 'Eyeshadow Palette']);
+  press(container, 'Next');
+  expectItems(itemTexts(container), ['Calvin Klein Perfume', 'Chanel Perfume']);
+  sortBy(container, 'price-desc');
+  expect(says(container, 'Page 1 of 2')).toBe(true);
+  expectItems(itemTexts(container), ['Chanel Perfume', 'Calvin Klein Perfume', 'Eyeshadow Palette', 'Powder Canister', 'Red Lipstick']);
+}));
+
+test('a search with no match says so and shows no average', () => withServer(async calls => {
+  const container = await loaded(calls);
+  search(container, 'zzz');
+  expect(container.querySelectorAll('li')).toHaveLength(0);
+  expect(says(container, 'No products match')).toBe(true);
+  expect(says(container, 'Average price')).toBe(false);
+  expect(says(container, 'NaN')).toBe(false);
+}));
+
+test('an answer that is not ok shows an alert and no products', () => withServer(async calls => {
+  const { container } = render(<App />);
+  calls[0].respond(null, 500);
+  await expectFailure(container);
+}));
+`,
     api: {
       method: "GET",
       url: "https://dummyjson.com/products",
@@ -3183,7 +3480,7 @@ const visibleItems = items.filter(item => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Comments viewer",
-    prompt: "Fetch comments, select a post, filter by email, and count domains. Explain pagination and abuse protection.",
+    prompt: "Browse the comments of the training API. On mount, fetch `https://jsonplaceholder.typicode.com/comments` once, showing a line with the word “Loading” until it answers; a failure, a network error or an answer that is not `ok`, shows a message in an element with `role=\"alert\"`. List the comments in a `ul` with `aria-label=\"Comments\"`, one `li` each with the comment’s `name` and `email`. A `select` picks a post: its first option, “All posts”, has the value `\"\"`; then comes each `postId` in the data, once, lowest first, with the id as its value and “Post <id>” as its text. A text input filters by email as you type, matching any part of the address and ignoring case. The two apply together, and when no comment matches, show “No comments match.” A second `ul`, with `aria-label=\"Domains\"`, counts the email domains (the part after the `@`) of the comments shown, one `li` per domain reading “<domain>: <count>”, the most comments first and a tie in A to Z order. In code comments, explain how you would paginate the comments and protect the endpoint from abuse.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3199,53 +3496,129 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/comments';
-const [items, setItems] = useState([]);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+    skeleton: `const COMMENTS_URL = 'https://jsonplaceholder.typicode.com/comments';
+const [comments, setComments] = useState([]);
+const [postId, setPostId] = useState('');
+const [email, setEmail] = useState('');
 
 useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  loadItems();
+  // GET COMMENTS_URL once, with loading and error state
 }, []);
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
+const postIds = [...new Set(comments.map(comment => comment.postId))]; // lowest first
+const shown = comments.filter(comment => {
+  // postId is '' or matches, and the email contains the query
   return true;
 });
+const domainCounts = shown.reduce((counts, comment) => {
+  const domain = comment.email.split('@')[1];
+  // count it
+  return counts;
+}, {});
+const domains = Object.entries(domainCounts); // most first, a tie A to Z
 
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+<ul aria-label="Domains">
+  {domains.map(([domain, count]) => <li key={domain}>{domain}: {count}</li>)}
+</ul>`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "The fetched comments, the chosen post and the email text are the only state. The post options, the comments shown and the domain counts are three derivations of them, in that order, during render.",
     ],
     approach: [
       "Fetch the comments once into array state with loading and error branches.",
-      "Keep the selected post id and the email query in separate state values driven by controlled inputs.",
+      "Keep the selected post id and the email query in separate state values driven by controlled inputs; build the post options from the data with a `Set` and a numeric sort.",
       "Derive the visible comments by filtering on the post id and on a case-insensitive email substring match.",
-      "Count domains with reduce over the addresses split at the at sign, then explain pagination and abuse protection in comments.",
+      "Count domains with reduce over the addresses split at the at sign, sort the entries by count and then by name, and explain pagination and abuse protection in comments.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Comments are fetched and filtered by email.",
-      "Selecting a post narrows the list, and domains are counted.",
-      "Your comments explain pagination and abuse protection.",
-    ],
+    suite: `${CAPSTONE_HEADER}
+const COMMENTS_URL = 'https://jsonplaceholder.typicode.com/comments';
+const COMMENTS = [
+  { id: 1, postId: 1, name: 'Comment one', email: 'ana@example.com', body: 'First' },
+  { id: 2, postId: 1, name: 'Comment two', email: 'bo@example.com', body: 'Second' },
+  { id: 3, postId: 2, name: 'Comment three', email: 'ana@example.net', body: 'Third' },
+];
+// The items of the list with this aria-label, or none when it is not there.
+const entries = name => {
+  const list = screen.queryByRole('list', { name });
+  return list ? [...list.querySelectorAll('li')].map(item => item.textContent.trim()) : [];
+};
+const emailBox = container => container.querySelector('input');
+const postSelect = container => container.querySelector('select');
+const filterEmail = (container, value) => fireEvent.change(emailBox(container), { target: { value } });
+const choosePost = (container, value) => fireEvent.change(postSelect(container), { target: { value } });
+// Renders the page and answers its comments request with the list given.
+const loaded = async (calls, comments = COMMENTS) => {
+  const view = render(<App />);
+  const [request] = gets(calls, COMMENTS_URL);
+  expect(Boolean(request)).toBe(true);
+  request.respond(comments);
+  await waitFor(() => expect(entries('Comments')).toHaveLength(comments.length));
+  return view.container;
+};
+
+test('asks for the comments once and shows Loading until they arrive', () => withServer(async calls => {
+  const { container } = render(<App />);
+  expect(gets(calls, COMMENTS_URL)).toHaveLength(1);
+  expect(says(container, 'loading')).toBe(true);
+  calls[0].respond(COMMENTS);
+  await waitFor(() => expect(entries('Comments')).toHaveLength(3));
+  expect(says(container, 'loading')).toBe(false);
+  expect(calls).toHaveLength(1);
+}));
+
+test('each comment shows its name and email', () => withServer(async calls => {
+  await loaded(calls);
+  const [first, , third] = entries('Comments');
+  expect(first).toContain('Comment one');
+  expect(first).toContain('ana@example.com');
+  expect(third).toContain('Comment three');
+  expect(third).toContain('ana@example.net');
+}));
+
+test('the post select offers All posts, then each post once, lowest id first', () => withServer(async calls => {
+  const container = await loaded(calls);
+  expect(optionsOf(postSelect(container))).toEqual([['', 'All posts'], ['1', 'Post 1'], ['2', 'Post 2']]);
+}));
+
+test('choosing a post keeps only its comments', () => withServer(async calls => {
+  const container = await loaded(calls);
+  choosePost(container, '2');
+  expectItems(entries('Comments'), ['Comment three']);
+  choosePost(container, '');
+  expect(entries('Comments')).toHaveLength(3);
+}));
+
+test('the email filter matches any part of the address, ignoring case', () => withServer(async calls => {
+  const container = await loaded(calls);
+  filterEmail(container, 'ANA');
+  expectItems(entries('Comments'), ['Comment one', 'Comment three']);
+  filterEmail(container, '.net');
+  expectItems(entries('Comments'), ['Comment three']);
+}));
+
+test('the domains of the comments shown are counted, most first', () => withServer(async calls => {
+  const container = await loaded(calls);
+  expect(entries('Domains')).toEqual(['example.com: 2', 'example.net: 1']);
+  choosePost(container, '2');
+  expect(entries('Domains')).toEqual(['example.net: 1']);
+}));
+
+test('the post and the email apply together, and no match says so', () => withServer(async calls => {
+  const container = await loaded(calls);
+  choosePost(container, '2');
+  filterEmail(container, 'bo');
+  expect(entries('Comments')).toHaveLength(0);
+  expect(entries('Domains')).toHaveLength(0);
+  expect(says(container, 'No comments match')).toBe(true);
+}));
+
+test('an answer that is not ok shows an alert and no comments', () => withServer(async calls => {
+  const { container } = render(<App />);
+  calls[0].respond(null, 500);
+  await expectFailure(container);
+}));
+`,
     api: {
       method: "GET",
       url: "https://jsonplaceholder.typicode.com/comments",
@@ -3261,7 +3634,7 @@ const visibleItems = items.filter(item => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Weather-style dashboard",
-    prompt: "Fetch mock data, save recent searches, derive min/max values, and handle retries. Explain external-API reliability.",
+    prompt: "A dashboard shows the current temperature in a few cities, read from Open-Meteo. `CITIES` in the starter gives each city’s latitude and longitude. To load a city, fetch `https://api.open-meteo.com/v1/forecast?latitude=<latitude>&longitude=<longitude>&current=temperature_2m`; the answer holds the reading in °C at `current.temperature_2m`. Load Prague on mount. A form with an input labelled “City” and a “Search” button loads another city: match the name against `CITIES`, ignoring case and the spaces around it. A name that is not in `CITIES` shows “Unknown city: <name>”, with the name trimmed, and asks nothing; the next search removes that message. Every reading that arrives goes to the front of a `ul` whose `aria-label` is “Recent searches”, one `li` per city such as “Brno: 8 °C”. A city searched again moves to the front with its new reading, and the list keeps three cities at most. Once the list holds a reading, show “Lowest: <n> °C” and “Highest: <n> °C” in a paragraph each, worked out from the list while rendering, so a city that drops off the list stops counting. While a request is on its way, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load the weather” in an element with `role=\"alert\"` and a “Retry” button that asks for the same city again. The alert goes as soon as the next request starts. The notes at the top are for your explanation of how a dashboard stays usable when an external API is slow or down; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3270,6 +3643,14 @@ const visibleItems = items.filter(item => {
 // API endpoints:
 // Reliability and scale:
 
+const CITIES = [
+  { name: 'Prague', latitude: 50.08, longitude: 14.44 },
+  { name: 'Brno', latitude: 49.2, longitude: 16.61 },
+  { name: 'Ostrava', latitude: 49.83, longitude: 18.29 },
+  { name: 'Vienna', latitude: 48.21, longitude: 16.37 },
+  { name: 'Berlin', latitude: 52.52, longitude: 13.41 },
+];
+
 const App = () => {
   // Build one working slice at a time with arrow functions.
   return <main><h2>Weather-style dashboard</h2></main>;
@@ -3277,46 +3658,168 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://api.open-meteo.com/v1/forecast?latitude=50.08&longitude=14.44&current=temperature_2m';
-const [weather, setWeather] = useState(null);
+    skeleton: `const forecastUrl = city =>
+  'https://api.open-meteo.com/v1/forecast?latitude=' + city.latitude +
+  '&longitude=' + city.longitude + '&current=temperature_2m';
+
+const [readings, setReadings] = useState([]);       // [{ name, temperature }], newest first
+const [lastCity, setLastCity] = useState(CITIES[0]); // what Retry asks for
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 
-const loadWeather = async () => {
+const loadWeather = async city => {
+  setLastCity(city);
+  setError('');
+  setLoading(true);
   try {
-    const response = await fetch(API_URL);
+    const response = await fetch(forecastUrl(city));
     if (!response.ok) throw new Error('Request failed');
-    setWeather(await response.json());
+    const data = await response.json();
+    // the new { name: city.name, temperature: data.current.temperature_2m } first,
+    // the older reading of the same city filtered out, three at most
   } catch (requestError) {
-    setError(requestError.message);
+    setError('Could not load the weather');
   } finally {
     setLoading(false);
   }
 };
 
 useEffect(() => {
-  loadWeather();
-}, []);`,
+  loadWeather(CITIES[0]);
+}, []);
+
+const temperatures = readings.map(reading => reading.temperature);
+// Math.min(...temperatures) and Math.max(...temperatures) while rendering`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "Keep one array of readings in state and work the lowest and highest out of it while rendering. Retry has to know which city failed, so remember the city of the last request instead of always retrying Prague.",
     ],
     approach: [
-      "Put the request in one named async function so both the mount effect and a retry button can call it.",
-      "Track loading and error separately, and clear the previous error before each new attempt.",
-      "Keep recent searches in an array state, prepending each new one and capping the length instead of storing duplicates.",
-      "Derive the minimum and maximum readings from the fetched values during render, then explain external-API reliability in comments.",
+      "Write `loadWeather(city)` as one async function: clear the error, set loading, fetch the city’s URL, check `response.ok`, and save the reading. The mount effect calls it for Prague and Retry calls it for the city asked for last.",
+      "On submit, look the trimmed name up in `CITIES` with both sides lower-cased. A miss sets the unknown-city message and returns before any request.",
+      "Save a reading with the updater form: the new `{ name, temperature }` first, the older reading of that city filtered out, then `slice(0, 3)`.",
+      "Lowest and highest are `Math.min` and `Math.max` over the temperatures in that list. Then write the notes: timeouts, retries with back-off, the last good readings kept on screen, and a server-side cache in front of the API.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Data is fetched with loading and error states, and retries are handled.",
-      "Recent searches are kept and min/max values derived.",
-      "Your comments explain external-API reliability.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+// Answer a request with a temperature, or break it off, and let the page catch up.
+const answer = (call, temperature, status = 200) => act(async () => {
+  call.respond({ current: { temperature_2m: temperature } }, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+// Where a request went: the address, then the latitude, longitude and reading asked for.
+const asked = call => {
+  const url = new URL(call.url);
+  return [url.origin + url.pathname, Number(url.searchParams.get('latitude')), Number(url.searchParams.get('longitude')), url.searchParams.get('current')];
+};
+const FORECAST = 'https://api.open-meteo.com/v1/forecast';
+const search = name => {
+  fireEvent.change(screen.getByLabelText('City'), { target: { value: name } });
+  fireEvent.click(screen.getByRole('button', { name: 'Search' }));
+};
+const recent = () => {
+  const list = screen.queryByRole('list', { name: 'Recent searches' });
+  return list ? within(list).queryAllByRole('listitem').map(item => item.textContent) : [];
+};
+
+test('Prague loads on mount from Open-Meteo', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  expect(asked(calls[0])).toEqual([FORECAST, 50.08, 14.44, 'temperature_2m']);
+  expect(screen.getByText('Loading…')).toBeTruthy();
+  await answer(calls[0], 12.5);
+  expect(recent()).toEqual(['Prague: 12.5 °C']);
+  expect(screen.queryByText('Loading…')).toBeNull();
+}));
+
+test('a search ignores case and spaces and puts the city first', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search('  bRNO ');
+  expect(calls).toHaveLength(2);
+  expect(asked(calls[1])).toEqual([FORECAST, 49.2, 16.61, 'temperature_2m']);
+  expect(screen.getByText('Loading…')).toBeTruthy();
+  await answer(calls[1], 8);
+  expect(recent()).toEqual(['Brno: 8 °C', 'Prague: 12.5 °C']);
+}));
+
+test('lowest and highest come from the recent searches', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search('Brno');
+  await answer(calls[1], 8);
+  search('Vienna');
+  await answer(calls[2], 15);
+  expect(recent()).toEqual(['Vienna: 15 °C', 'Brno: 8 °C', 'Prague: 12.5 °C']);
+  expect(screen.getByText('Lowest: 8 °C')).toBeTruthy();
+  expect(screen.getByText('Highest: 15 °C')).toBeTruthy();
+}));
+
+test('a city searched again moves to the front with its new reading', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search('Brno');
+  await answer(calls[1], 8);
+  search('prague');
+  expect(asked(calls[2])).toEqual([FORECAST, 50.08, 14.44, 'temperature_2m']);
+  await answer(calls[2], 10);
+  expect(recent()).toEqual(['Prague: 10 °C', 'Brno: 8 °C']);
+  expect(screen.getByText('Highest: 10 °C')).toBeTruthy();
+}));
+
+test('an unknown city asks nothing', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search(' Atlantis ');
+  expect(screen.getByText('Unknown city: Atlantis')).toBeTruthy();
+  expect(calls).toHaveLength(1);
+  expect(recent()).toEqual(['Prague: 12.5 °C']);
+}));
+
+test('a failed request offers Retry, which asks for the same city', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load the weather');
+  expect(screen.queryByText('Loading…')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+  expect(calls).toHaveLength(2);
+  expect(calls[1].url).toBe(calls[0].url);
+  expect(screen.queryByRole('alert')).toBeNull();
+  await answer(calls[1], 11);
+  expect(recent()).toEqual(['Prague: 11 °C']);
+}));
+`,
     api: {
       method: "GET",
       url: "https://api.open-meteo.com/v1/forecast?latitude=50.08&longitude=14.44&current=temperature_2m",
-      note: "Public Open-Meteo example for Prague. No API key is required.",
+      note: "Public Open-Meteo API, shown here for Prague. Put each city’s latitude and longitude in the query. No API key is required.",
     },
   },
   {
@@ -3328,7 +3831,7 @@ useEffect(() => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Notification center",
-    prompt: "Fetch notifications, filter unread items, mark them read, and group by date. Explain real-time delivery and storage.",
+    prompt: "A notification center lists a user’s notifications by day. On mount, fetch `/api/notifications`; the answer is a list of `{ id, text, date, read }`, where `date` is a day such as `2026-09-28`. While it loads, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load notifications” in an element with `role=\"alert\"`. Group the notifications by date: one `section` per date, newest date first, with the date, exactly as the server sent it, in an `h3` and a `ul` of that day’s notifications in the order the server sent them. Each `li` shows the notification’s text, and an unread one also has a “Mark as read” button, which marks that one notification read in state, so its button goes. Above the groups, a line reads “Unread: <n>”. A checkbox labelled “Unread only” hides the read notifications and any day left with none. When nothing is left to show, say “No notifications”, or “No unread notifications” while the checkbox is ticked. Keep one list in state and work the count, the filter and the groups out of it while rendering. The notes at the top are for your explanation of how new notifications could reach the page in real time and how you would store them; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3344,57 +3847,165 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://dummyjson.com/todos';
-const [items, setItems] = useState([]);
+    skeleton: `const [notifications, setNotifications] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [unreadOnly, setUnreadOnly] = useState(false);
 
 useEffect(() => {
-  const loadItems = async () => {
+  const loadNotifications = async () => {
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch('/api/notifications');
       if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
+      setNotifications(await response.json());
     } catch (requestError) {
-      setError(requestError.message);
+      setError('Could not load notifications');
     } finally {
       setLoading(false);
     }
   };
-
-  loadItems();
+  loadNotifications();
 }, []);
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
+const markRead = id =>
+  setNotifications(current => current.map(one => (one.id === id ? { ...one, read: true } : one)));
 
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+const visible = notifications.filter(one => true); // apply the checkbox
+const byDate = visible.reduce((groups, one) => {
+  // add one to groups[one.date]
+  return groups;
+}, {});
+const dates = Object.keys(byDate).sort().reverse(); // newest day first`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "One array in state is the source of truth. The unread count, the Unread only filter and the day groups are all worked out from it while rendering, so marking one notification read updates all three at once.",
     ],
     approach: [
-      "Fetch the records once into a single array state, using the completion flag as the read or unread marker.",
-      "Mark one as read by mapping to a spread copy with that flag changed for the matching id only.",
-      "Keep an unread-only toggle in state and derive the visible list from it rather than storing a second array.",
-      "Group the visible items by date with reduce, then explain real-time delivery and storage in comments.",
+      "Fetch `/api/notifications` once in a mount effect into one array, with loading and error state, and treat an answer that is not ok as a failure.",
+      "Mark one read by mapping to a new array in which only the notification with that id becomes a spread copy with `read: true`.",
+      "Keep the checkbox as a boolean in state and derive the visible notifications with `filter`; count the unread ones over the whole list.",
+      "Group the visible notifications with `reduce` into an object keyed by date and render its keys sorted newest first. Then write the notes: a push channel such as WebSockets or server-sent events, a fallback to polling, and a table indexed by user and time.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Notifications are fetched, unread ones filter, and marking read updates state.",
-      "Items are grouped by date.",
-      "Your comments explain real-time delivery and storage.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const answer = (call, data, status = 200) => act(async () => {
+  call.respond(data, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+// Each day on the page: its heading, then each notification as its text and
+// whether it still has a Mark as read button.
+const groups = () => [...document.querySelectorAll('section')].map(section => [
+  section.querySelector('h3').textContent,
+  ...[...section.querySelectorAll('li')].map(item => {
+    const copy = item.cloneNode(true);
+    const buttons = [...copy.querySelectorAll('button')];
+    const unread = buttons.some(button => button.textContent === 'Mark as read');
+    buttons.forEach(button => button.remove());
+    return [copy.textContent.trim(), unread ? 'unread' : 'read'];
+  }),
+]);
+const markRead = text => {
+  const item = screen.getAllByRole('listitem').find(one => one.textContent.includes(text));
+  fireEvent.click(within(item).getByRole('button', { name: 'Mark as read' }));
+};
+const unreadOnly = () => fireEvent.click(screen.getByLabelText('Unread only'));
+const NOTIFICATIONS = [
+  { id: 1, text: 'Ana replied to your comment', date: '2026-09-28', read: false },
+  { id: 2, text: 'Your export is ready', date: '2026-09-28', read: true },
+  { id: 3, text: 'Bo started following you', date: '2026-09-27', read: false },
+  { id: 4, text: 'Weekly summary', date: '2026-09-25', read: true },
+];
+
+test('notifications load on mount, grouped by day, newest day first', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  expect(calls[0].url).toBe('/api/notifications');
+  expect(screen.getByText('Loading…')).toBeTruthy();
+  await answer(calls[0], NOTIFICATIONS);
+  expect(screen.queryByText('Loading…')).toBeNull();
+  expect(groups()).toEqual([
+    ['2026-09-28', ['Ana replied to your comment', 'unread'], ['Your export is ready', 'read']],
+    ['2026-09-27', ['Bo started following you', 'unread']],
+    ['2026-09-25', ['Weekly summary', 'read']],
+  ]);
+  expect(screen.getByText('Unread: 2')).toBeTruthy();
+}));
+
+test('Mark as read marks that one notification and lowers the count', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], NOTIFICATIONS);
+  markRead('Bo started following you');
+  expect(groups()).toEqual([
+    ['2026-09-28', ['Ana replied to your comment', 'unread'], ['Your export is ready', 'read']],
+    ['2026-09-27', ['Bo started following you', 'read']],
+    ['2026-09-25', ['Weekly summary', 'read']],
+  ]);
+  expect(screen.getByText('Unread: 1')).toBeTruthy();
+}));
+
+test('Unread only hides read notifications and the days left empty', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], NOTIFICATIONS);
+  unreadOnly();
+  expect(groups()).toEqual([
+    ['2026-09-28', ['Ana replied to your comment', 'unread']],
+    ['2026-09-27', ['Bo started following you', 'unread']],
+  ]);
+  unreadOnly();
+  expect(groups()).toHaveLength(3);
+}));
+
+test('with Unread only ticked, a notification marked read leaves the list', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], NOTIFICATIONS);
+  unreadOnly();
+  markRead('Ana replied to your comment');
+  expect(groups()).toEqual([['2026-09-27', ['Bo started following you', 'unread']]]);
+  markRead('Bo started following you');
+  expect(groups()).toEqual([]);
+  expect(screen.getByText('No unread notifications')).toBeTruthy();
+  expect(screen.getByText('Unread: 0')).toBeTruthy();
+}));
+
+test('a failed request shows an alert', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load notifications');
+  expect(screen.queryByText('Loading…')).toBeNull();
+  expect(groups()).toEqual([]);
+}));
+`,
     api: {
       method: "GET",
-      url: "https://dummyjson.com/todos",
-      note: "Use todo completion as a practice stand-in for read/unread notification state.",
+      url: "/api/notifications",
+      note: "Your own endpoint, with no public service behind it: the checks answer it with their own notifications and the preview with a few samples.",
     },
   },
   {
@@ -3406,7 +4017,7 @@ const visibleItems = items.filter(item => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Booking prototype",
-    prompt: "Render available slots, select one, submit a booking, and prevent duplicate local selection. Explain server-side double-booking prevention.",
+    prompt: "A booking page for a small studio. On mount, fetch `https://jsonplaceholder.typicode.com/todos?_limit=10` and treat each record as a time slot: its `title` names the slot and `completed: true` means it is already booked. While the slots load, show “Loading slots…”; a failed request, rejected or answered with a status that is not ok, shows “Could not load slots” in an element with `role=\"alert\"`. Show every slot as a `button` inside an `li`, reading the slot’s title, and disable the button of a booked slot. Clicking a free slot selects it: its button gets `aria-pressed=\"true\"` and the other slot buttons `aria-pressed=\"false\"`, so only one slot is selected at a time. A “Book” button stays disabled until a slot is selected. Pressing it sends `PATCH https://jsonplaceholder.typicode.com/todos/<id>` for the selected slot with the JSON body `{\"completed\":true}`, and while that request is on its way the button reads “Booking…” and is disabled, so the same booking cannot go out twice. When the answer is ok, the slot becomes booked, the selection clears, and an element with `role=\"status\"` reads “Booked: <title>”. When the server answers 409, someone else took the slot first: mark it booked, clear the selection, and show “<title> was just booked by someone else” in an alert. Any other failure shows “Could not book <title>” in an alert and leaves the slot free and selected, so Book can be pressed again. Starting a booking clears the previous status and alert. The notes at the top are for your explanation of how the server stops two people booking the same slot; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3422,57 +4033,176 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=10';
-const [items, setItems] = useState([]);
+    skeleton: `const SLOTS_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=10';
+const [slots, setSlots] = useState([]);
 const [loading, setLoading] = useState(true);
-const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [loadError, setLoadError] = useState('');
+const [selectedId, setSelectedId] = useState(null);
+const [booking, setBooking] = useState(false);
+const [status, setStatus] = useState('');
+const [problem, setProblem] = useState('');
 
-useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+// load the slots in a mount effect, as in the earlier tasks
 
-  loadItems();
-}, []);
+const markBooked = id =>
+  setSlots(current => current.map(slot => (slot.id === id ? { ...slot, completed: true } : slot)));
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
+const book = async () => {
+  const slot = slots.find(one => one.id === selectedId);
+  if (!slot || booking) return;
+  setBooking(true);
+  setStatus('');
+  setProblem('');
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos/' + slot.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: true }),
+    });
+    // 409: taken by someone else. Not ok: could not book. Ok: booked.
+  } catch (requestError) {
+    setProblem('Could not book ' + slot.title);
+  } finally {
+    setBooking(false);
+  }
+};
 
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+// <button type="button" disabled={slot.completed} aria-pressed={slot.id === selectedId}
+//   onClick={() => setSelectedId(slot.id)}>{slot.title}</button>`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "The client can stop one person sending the same booking twice: disable booked slots, and disable Book while a request is on its way. Only the server can stop two people booking at the same moment, which is why a 409 answer needs its own branch.",
     ],
     approach: [
-      "Fetch the mock slots into array state and render each one as a keyed, clickable option.",
-      "Store the selected slot id in state and mark slots already booked locally as unavailable.",
-      "On submit, move the chosen slot into a booked list and guard the handler so the same slot cannot be taken twice.",
-      "Explain in comments why the real guard is a unique constraint or a transaction on the server, not this client check.",
+      "Fetch the slots once in a mount effect into array state, with loading and error state, and render each one as a keyed `li` with a slot button disabled when `completed` is true.",
+      "Keep the selected slot’s id in state and set `aria-pressed` on each slot button by comparing ids.",
+      "Write `book()` as one async function: return early while a booking is on its way, set the booking flag, clear the old messages, send the PATCH, and branch on 409, any other failure, and success.",
+      "Mark a slot booked by mapping to a copy with `completed: true`. Then write the notes: a unique constraint or a conditional update inside a transaction on the server, answering 409 to whoever comes second.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Available slots render and one can be selected and submitted.",
-      "Duplicate local selection is prevented.",
-      "Your comments explain server-side double-booking prevention.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      method: String(options.method || 'GET').toUpperCase(),
+      body: options.body,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const answer = (call, data, status = 200) => act(async () => {
+  call.respond(data, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+// Each slot as its title and 'booked' (disabled), 'selected' (pressed) or 'free'.
+const slots = () => screen.queryAllByRole('listitem').map(item => {
+  const button = item.querySelector('button');
+  return [button.textContent, button.disabled ? 'booked' : button.getAttribute('aria-pressed') === 'true' ? 'selected' : 'free'];
+});
+const pick = title => fireEvent.click(screen.getByRole('button', { name: title }));
+const bookButton = () => screen.getByRole('button', { name: 'Book' });
+const SLOTS = [
+  { id: 1, userId: 1, title: 'Mon 09:00', completed: false },
+  { id: 2, userId: 1, title: 'Mon 10:00', completed: true },
+  { id: 3, userId: 1, title: 'Mon 11:00', completed: false },
+];
+
+test('the slots load on mount and booked ones are disabled', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  const url = new URL(calls[0].url);
+  expect([url.origin + url.pathname, url.searchParams.get('_limit')]).toEqual(['https://jsonplaceholder.typicode.com/todos', '10']);
+  expect(screen.getByText('Loading slots…')).toBeTruthy();
+  await answer(calls[0], SLOTS);
+  expect(screen.queryByText('Loading slots…')).toBeNull();
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'free']]);
+  expect(bookButton().disabled).toBe(true);
+}));
+
+test('one free slot is selected at a time', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 09:00');
+  expect(slots()).toEqual([['Mon 09:00', 'selected'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'free']]);
+  expect(bookButton().disabled).toBe(false);
+  pick('Mon 11:00');
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'selected']]);
+  pick('Mon 10:00');
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'selected']]);
+}));
+
+test('Book sends one PATCH for the selected slot and cannot send it twice', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 11:00');
+  fireEvent.click(bookButton());
+  expect(calls).toHaveLength(2);
+  expect([calls[1].url, calls[1].method, JSON.parse(calls[1].body).completed]).toEqual(['https://jsonplaceholder.typicode.com/todos/3', 'PATCH', true]);
+  const waiting = screen.getByRole('button', { name: 'Booking…' });
+  expect(waiting.disabled).toBe(true);
+  fireEvent.click(waiting);
+  expect(calls).toHaveLength(2);
+}));
+
+test('a booking that works marks the slot booked and says so', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 09:00');
+  fireEvent.click(bookButton());
+  await answer(calls[1], { ...SLOTS[0], completed: true });
+  expect(slots()).toEqual([['Mon 09:00', 'booked'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'free']]);
+  expect(screen.getByRole('status').textContent).toBe('Booked: Mon 09:00');
+  expect(bookButton().disabled).toBe(true);
+}));
+
+test('a 409 answer means someone else was first', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 11:00');
+  fireEvent.click(bookButton());
+  await answer(calls[1], { error: 'Slot already booked' }, 409);
+  expect(screen.getByRole('alert').textContent).toBe('Mon 11:00 was just booked by someone else');
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'booked']]);
+  expect(bookButton().disabled).toBe(true);
+}));
+
+test('a failed booking keeps the slot free and selected for another try', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 09:00');
+  fireEvent.click(bookButton());
+  await breakOff(calls[1]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not book Mon 09:00');
+  expect(slots()).toEqual([['Mon 09:00', 'selected'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'free']]);
+  fireEvent.click(bookButton());
+  expect(calls).toHaveLength(3);
+  expect(calls[2].url).toBe('https://jsonplaceholder.typicode.com/todos/1');
+}));
+`,
     api: {
-      method: "GET",
+      method: "GET + PATCH",
       url: "https://jsonplaceholder.typicode.com/todos?_limit=10",
-      note: "Use these records as mock slots, then model booking locally.",
+      note: "The records stand in for time slots. JSONPlaceholder accepts the PATCH but does not save it, so a reload shows every slot as it was.",
     },
   },
   {
@@ -3484,7 +4214,7 @@ const visibleItems = items.filter(item => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Analytics panel",
-    prompt: "Fetch events, aggregate totals with reduce, filter by date/type, and render summary cards. Explain write-heavy event storage.",
+    prompt: "An analytics panel sums up a product’s events. On mount, fetch `/api/events`; the answer is a list of `{ id, type, date }`, where `type` is a word such as `visit` or `signup` and `date` a day such as `2026-09-03`. While it loads, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load events” in an element with `role=\"alert\"`. Three controls filter the events: a `select` labelled “Type”, whose first option “All types” keeps every type, followed by one option per type found in the events, in alphabetical order; and two date inputs labelled “From” and “To”, both inclusive, where an empty box sets no limit. From the events that pass every filter, count each type with `reduce` and render one summary card per type: an `article` with the type in an `h3` and its count, just the number, in a `p`, in alphabetical order of type. Above the cards, a line reads “Showing <n> of <m> events”, where m counts every event loaded. When no event passes the filters, show “No events match these filters” instead of the cards. The notes at the top are for your explanation of how you would store events when many arrive every second; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3500,57 +4230,147 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
-const [items, setItems] = useState([]);
+    skeleton: `const [events, setEvents] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [type, setType] = useState('all');
+const [from, setFrom] = useState('');
+const [to, setTo] = useState('');
 
-useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+// load /api/events in a mount effect, as in the earlier tasks
 
-  loadItems();
-}, []);
+const types = [...new Set(events.map(event => event.type))].sort();
+const shown = events.filter(event =>
+  (type === 'all' || event.type === type) &&
+  (from === '' || event.date >= from) &&
+  true); // and the To box
+const counts = shown.reduce((totals, event) => {
+  // totals[event.type] goes up by one
+  return totals;
+}, {});
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
-
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+// <label>From <input type="date" value={from} onChange={event => setFrom(event.target.value)} /></label>`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "Dates written as `2026-09-03` sort the same as text and as time, so a plain string comparison with `>=` and `<=` checks a range. Filter first, then reduce over what is left, and the cards follow every filter.",
     ],
     approach: [
-      "Fetch the mock events once into array state with loading and error handling.",
-      "Keep the date range and the event type as separate state values bound to controlled inputs.",
-      "Derive the filtered events first, then aggregate the totals over that subset with reduce so the cards follow the filters.",
-      "Render one keyed summary card per aggregated total, and explain write-heavy event storage in comments.",
+      "Fetch the events once in a mount effect into array state, with loading and error state, and treat an answer that is not ok as a failure.",
+      "Keep the type and the two dates as separate state values bound to controlled inputs, with `all` and empty strings for no filter.",
+      "Derive the filtered events first, then reduce them into an object of counts by type, and render one keyed card per key of that object, sorted.",
+      "Build the type options from the full list with a `Set`. Then write the notes: append-only writes, a queue in front of the database, and totals rolled up per day instead of scanning raw events.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Events are fetched and aggregated with reduce.",
-      "Date and type filters change the summary cards.",
-      "Your comments explain write-heavy event storage.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const answer = (call, data, status = 200) => act(async () => {
+  call.respond(data, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+// Each summary card as its type and its count.
+const cards = () => [...document.querySelectorAll('article')].map(card => [card.querySelector('h3').textContent, card.querySelector('p').textContent]);
+const chooseType = text => {
+  const select = screen.getByLabelText('Type');
+  const option = [...select.options].find(one => one.textContent === text);
+  fireEvent.change(select, { target: { value: option.value } });
+};
+const setDate = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+const EVENTS = [
+  { id: 1, type: 'visit', date: '2026-09-01' },
+  { id: 2, type: 'signup', date: '2026-09-01' },
+  { id: 3, type: 'visit', date: '2026-09-02' },
+  { id: 4, type: 'purchase', date: '2026-09-03' },
+  { id: 5, type: 'visit', date: '2026-09-03' },
+  { id: 6, type: 'signup', date: '2026-09-04' },
+];
+
+test('events load on mount and one card per type counts them', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  expect(calls[0].url).toBe('/api/events');
+  expect(screen.getByText('Loading…')).toBeTruthy();
+  await answer(calls[0], EVENTS);
+  expect(screen.queryByText('Loading…')).toBeNull();
+  expect(cards()).toEqual([['purchase', '1'], ['signup', '2'], ['visit', '3']]);
+  expect(screen.getByText('Showing 6 of 6 events')).toBeTruthy();
+}));
+
+test('the type filter keeps one type, and All types brings the rest back', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], EVENTS);
+  chooseType('visit');
+  expect(cards()).toEqual([['visit', '3']]);
+  expect(screen.getByText('Showing 3 of 6 events')).toBeTruthy();
+  chooseType('All types');
+  expect(cards()).toEqual([['purchase', '1'], ['signup', '2'], ['visit', '3']]);
+}));
+
+test('From keeps that day and the days after it', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], EVENTS);
+  setDate('From', '2026-09-03');
+  expect(cards()).toEqual([['purchase', '1'], ['signup', '1'], ['visit', '1']]);
+  expect(screen.getByText('Showing 3 of 6 events')).toBeTruthy();
+}));
+
+test('To keeps that day and the days before it, and both make a range', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], EVENTS);
+  setDate('To', '2026-09-02');
+  expect(cards()).toEqual([['signup', '1'], ['visit', '2']]);
+  setDate('From', '2026-09-02');
+  expect(cards()).toEqual([['visit', '1']]);
+  expect(screen.getByText('Showing 1 of 6 events')).toBeTruthy();
+}));
+
+test('the filters combine, and nothing left says so', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], EVENTS);
+  chooseType('purchase');
+  setDate('From', '2026-09-04');
+  expect(cards()).toEqual([]);
+  expect(screen.getByText('No events match these filters')).toBeTruthy();
+  expect(screen.getByText('Showing 0 of 6 events')).toBeTruthy();
+}));
+
+test('a failed request shows an alert', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load events');
+  expect(screen.queryByText('Loading…')).toBeNull();
+  expect(cards()).toEqual([]);
+}));
+`,
     api: {
       method: "GET",
-      url: "https://jsonplaceholder.typicode.com/posts",
-      note: "Use the returned records as mock events for aggregation practice.",
+      url: "/api/events",
+      note: "Your own endpoint, with no public service behind it: the checks answer it with their own events and the preview with a few samples.",
     },
   },
   {
@@ -3562,7 +4382,7 @@ const visibleItems = items.filter(item => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Interview mini project",
-    prompt: "Build a small CRUD app using GET and POST, state, effects, mapped lists, loading, errors, filters, and derived stats. Explain the full browser-to-database flow.",
+    prompt: "Build a small posts app that reads and creates, the way an interview project would ask. On mount, fetch `https://jsonplaceholder.typicode.com/posts`; each post is `{ id, userId, title, body }`. While it loads, show “Loading posts…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load posts” in an element with `role=\"alert\"`. List the posts in a `ul`, one `li` per post holding just its title. Two filters narrow the list: an input labelled “Search” keeps the posts whose title contains its text, ignoring case, and a `select` labelled “Author”, whose first option “All authors” keeps everyone, offers one option “User <userId>” per author in the posts, in ascending order of `userId`. Two lines of stats follow: “Showing <n> of <m> posts”, where m counts every post in state, and “Authors: <k>”, the number of different authors among the posts shown. A form adds a post: an input labelled “Title” and an “Add post” button. A blank title sends nothing. Otherwise send `POST https://jsonplaceholder.typicode.com/posts` with the JSON body `{ title, body: \"\", userId: 1 }`, the title trimmed; while it is on its way the button reads “Adding…” and is disabled. The answer is the new post with its id: add it to the end of the list and empty the Title box. A failed POST shows “Could not add the post” in an alert and keeps the title in the box; the next attempt clears the alert. Work the filtered list and the stats out of the posts in state while rendering. The notes at the top are for your explanation of the whole trip from the browser to the database and back; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3578,53 +4398,167 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
-const [items, setItems] = useState([]);
+    skeleton: `const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+const [posts, setPosts] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [search, setSearch] = useState('');
+const [author, setAuthor] = useState('all');
+const [title, setTitle] = useState('');
+const [adding, setAdding] = useState(false);
+const [addError, setAddError] = useState('');
 
-useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+// load POSTS_URL in a mount effect, as in the earlier tasks
 
-  loadItems();
-}, []);
+const addPost = async event => {
+  event.preventDefault();
+  const text = title.trim();
+  if (!text || adding) return;
+  setAdding(true);
+  setAddError('');
+  try {
+    const response = await fetch(POSTS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: text, body: '', userId: 1 }),
+    });
+    if (!response.ok) throw new Error('Request failed');
+    const created = await response.json();
+    // append created with the updater form, then empty the box
+  } catch (requestError) {
+    setAddError('Could not add the post');
+  } finally {
+    setAdding(false);
+  }
+};
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
-
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+const authors = [...new Set(posts.map(post => post.userId))].sort((a, b) => a - b);
+const shown = posts.filter(post => true); // the search and the author
+const authorsShown = new Set(shown.map(post => post.userId)).size;`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "Build it in slices and keep each one working: the GET with its loading and error states, then the list, then the filters and stats worked out from the posts in state, then the POST. Nothing on screen but the posts and the form fields needs its own state.",
     ],
     approach: [
-      "Write the user flow, the data model and the endpoints in comments before writing any component code.",
+      "Write the user flow, the data model and the endpoints in the notes before writing any component code.",
       "Build the GET slice first: one array state, a mount effect, loading and error branches, and a keyed mapped list.",
-      "Add the POST slice next, appending the created record immutably and resetting the controlled input.",
-      "Layer filters and derived stats on top of the existing array, then explain the browser to REST API to database flow in comments.",
+      "Add the POST slice next: skip a blank title, send the trimmed one, disable the button while the request is out, append the answer with the updater form, and empty the box only on success.",
+      "Layer the search, the author filter and the stats on top of the same array during render, sorting the author ids as numbers. Then explain the browser to API to database trip in the notes.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "GET and POST both work, with mapped lists, loading, and error states.",
-      "Filters and derived stats come from existing state.",
-      "Your comments explain the full browser-to-database flow.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      method: String(options.method || 'GET').toUpperCase(),
+      body: options.body,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const answer = (call, data, status = 200) => act(async () => {
+  call.respond(data, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+const titles = () => screen.queryAllByRole('listitem').map(item => item.textContent);
+const typeIn = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+const chooseAuthor = text => {
+  const select = screen.getByLabelText('Author');
+  const option = [...select.options].find(one => one.textContent === text);
+  fireEvent.change(select, { target: { value: option.value } });
+};
+const POSTS = [
+  { id: 1, userId: 1, title: 'Hooks in practice', body: 'One' },
+  { id: 2, userId: 2, title: 'Testing React forms', body: 'Two' },
+  { id: 3, userId: 1, title: 'Why keys matter', body: 'Three' },
+  { id: 4, userId: 3, title: 'Practical hooks recipes', body: 'Four' },
+];
+
+test('the posts load on mount with their stats', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  expect([calls[0].url, calls[0].method]).toEqual([POSTS_URL, 'GET']);
+  expect(screen.getByText('Loading posts…')).toBeTruthy();
+  await answer(calls[0], POSTS);
+  expect(screen.queryByText('Loading posts…')).toBeNull();
+  expect(titles()).toEqual(['Hooks in practice', 'Testing React forms', 'Why keys matter', 'Practical hooks recipes']);
+  expect(screen.getByText('Showing 4 of 4 posts')).toBeTruthy();
+  expect(screen.getByText('Authors: 3')).toBeTruthy();
+}));
+
+test('Search keeps the titles that contain the text, ignoring case', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  typeIn('Search', 'HOOKS');
+  expect(titles()).toEqual(['Hooks in practice', 'Practical hooks recipes']);
+  expect(screen.getByText('Showing 2 of 4 posts')).toBeTruthy();
+  expect(screen.getByText('Authors: 2')).toBeTruthy();
+}));
+
+test('the author filter narrows the list and works with the search', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  chooseAuthor('User 1');
+  expect(titles()).toEqual(['Hooks in practice', 'Why keys matter']);
+  expect(screen.getByText('Authors: 1')).toBeTruthy();
+  typeIn('Search', 'keys');
+  expect(titles()).toEqual(['Why keys matter']);
+  expect(screen.getByText('Showing 1 of 4 posts')).toBeTruthy();
+}));
+
+test('Add post sends the trimmed title and appends the post the server returns', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  typeIn('Title', '  New idea ');
+  fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
+  expect(calls).toHaveLength(2);
+  const sent = JSON.parse(calls[1].body);
+  expect([calls[1].url, calls[1].method, sent.title, sent.body, sent.userId]).toEqual([POSTS_URL, 'POST', 'New idea', '', 1]);
+  expect(screen.getByRole('button', { name: 'Adding…' }).disabled).toBe(true);
+  await answer(calls[1], { id: 201, userId: 1, title: 'New idea', body: '' });
+  expect(titles()).toEqual(['Hooks in practice', 'Testing React forms', 'Why keys matter', 'Practical hooks recipes', 'New idea']);
+  expect(screen.getByLabelText('Title').value).toBe('');
+  expect(screen.getByText('Showing 5 of 5 posts')).toBeTruthy();
+}));
+
+test('a blank title sends nothing', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  typeIn('Title', '   ');
+  fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
+  expect(calls).toHaveLength(1);
+  expect(titles()).toHaveLength(4);
+}));
+
+test('a failed load shows an alert', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load posts');
+  expect(screen.queryByText('Loading posts…')).toBeNull();
+  expect(titles()).toEqual([]);
+}));
+`,
     api: {
       method: "GET + POST",
       url: "https://jsonplaceholder.typicode.com/posts",

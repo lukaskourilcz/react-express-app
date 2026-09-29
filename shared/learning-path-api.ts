@@ -285,9 +285,10 @@ export interface CheckQuestionVerdict {
   questionId: string;
   correct: boolean;
   /** The correct option index in the order the learner saw, revealed with the
-   * explanation once the answer is in. */
-  correctIndex: number;
-  explanation: Localized;
+   * explanation once the answer is in. Absent, with the explanation, after a
+   * failed project check: that check keeps its key until it is passed. */
+  correctIndex?: number;
+  explanation?: Localized;
   domain?: string;
 }
 

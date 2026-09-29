@@ -49,6 +49,29 @@ export const FIXTURE_PHOTOS = [
   { id: 7, title: 'Last ferry' },
 ];
 
+/** A few days of notifications, so the notification-center preview has
+ * something to group (`/api/notifications`). */
+export const FIXTURE_NOTIFICATIONS = [
+  { id: 1, text: 'Ana replied to your comment', date: '2026-09-28', read: false },
+  { id: 2, text: 'Your export is ready', date: '2026-09-28', read: true },
+  { id: 3, text: 'Bo started following you', date: '2026-09-27', read: false },
+  { id: 4, text: 'Weekly summary', date: '2026-09-25', read: true },
+  { id: 5, text: 'Cara mentioned you', date: '2026-09-25', read: false },
+];
+
+/** A week of product events for the analytics-panel preview (`/api/events`). */
+export const FIXTURE_EVENTS = [
+  { id: 1, type: 'visit', date: '2026-09-01' },
+  { id: 2, type: 'signup', date: '2026-09-01' },
+  { id: 3, type: 'visit', date: '2026-09-02' },
+  { id: 4, type: 'purchase', date: '2026-09-03' },
+  { id: 5, type: 'visit', date: '2026-09-03' },
+  { id: 6, type: 'signup', date: '2026-09-04' },
+  { id: 7, type: 'visit', date: '2026-09-05' },
+  { id: 8, type: 'purchase', date: '2026-09-06' },
+  { id: 9, type: 'visit', date: '2026-09-07' },
+];
+
 const asSource = (value: unknown) => JSON.stringify(value, null, 2);
 
 export const FETCH_STUB_SOURCE = `// Installed by the test runner. The preview still uses the real training API.
@@ -59,6 +82,8 @@ const FIXTURES = {
   comments: ${asSource(FIXTURE_COMMENTS)},
   products: ${asSource(FIXTURE_PRODUCTS)},
   photos: ${asSource(FIXTURE_PHOTOS)},
+  notifications: ${asSource(FIXTURE_NOTIFICATIONS)},
+  events: ${asSource(FIXTURE_EVENTS)},
 };
 
 const respond = data => ({
@@ -77,7 +102,7 @@ const resolveBody = (url, options) => {
   const params = new URLSearchParams(query || '');
   const segments = path.replace(/\\/+$/, '').split('/');
   const last = segments[segments.length - 1];
-  const collection = ['users', 'posts', 'todos', 'comments', 'products', 'photos'].includes(last)
+  const collection = ['users', 'posts', 'todos', 'comments', 'products', 'photos', 'notifications', 'events'].includes(last)
     ? last
     : segments[segments.length - 2];
   const list = FIXTURES[collection];

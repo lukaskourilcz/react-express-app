@@ -41,7 +41,10 @@
     "test:billing": "esbuild scripts/test-billing.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/billing.mjs --log-level=warning && node node_modules/.cache/shark/billing.mjs",
     "test:fallbacks": "esbuild scripts/test-migration-fallbacks.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/migration-fallbacks.mjs --log-level=warning && node node_modules/.cache/shark/migration-fallbacks.mjs",
     "test:grading-integrity": "esbuild scripts/test-grading-integrity.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/grading-integrity.mjs --log-level=warning && node node_modules/.cache/shark/grading-integrity.mjs && esbuild scripts/test-learn-integrity.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/learn-integrity.mjs --log-level=warning && node node_modules/.cache/shark/learn-integrity.mjs",
-    "test:sql": "node scripts/test-sql.mjs"
+    "test:sql": "node scripts/test-sql.mjs",
+    "test:garden": "esbuild scripts/test-garden-connect.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/garden-connect.mjs --log-level=warning && PRODUCT_ID=devshark node node_modules/.cache/shark/garden-connect.mjs",
+    "check:live-grading": "esbuild scripts/check-live-grading.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/live-grading.mjs --log-level=warning && node node_modules/.cache/shark/live-grading.mjs",
+    "test:live-grading": "esbuild scripts/check-live-grading.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/live-grading.mjs --log-level=warning && esbuild scripts/test-live-grading.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/live-grading-test.mjs --log-level=warning && PRODUCT_ID=devshark node node_modules/.cache/shark/live-grading-test.mjs"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

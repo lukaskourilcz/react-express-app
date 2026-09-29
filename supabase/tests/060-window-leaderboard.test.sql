@@ -27,6 +27,9 @@ BEGIN
     '{"javascript":{"correct":9,"total":20}}', NULL, 'webdev', 0, NULL, 'Nine of twenty');
   PERFORM public.record_verified_quiz_result_v2(v_four_answers, 'boardattempt00000064', 4, 4,
     '{"javascript":{"correct":4,"total":4}}', NULL, 'webdev', 0, NULL, 'Four answers');
+  -- Names show only for learners who switched them on (migration 049).
+  UPDATE public.user_stats SET show_on_leaderboards = TRUE
+   WHERE user_id IN (v_eight_ten, v_eight_twelve, v_nine_twenty, v_four_answers);
 
   SELECT string_agg(rank || ':' || display_name, ', ' ORDER BY rank, display_name) INTO v_board
     FROM public.window_leaderboard(30, 100, 'javascript', 5, NULL);
@@ -46,7 +49,8 @@ BEGIN
   -- day 31 back is not. Written as the dated rows the board reads.
   PERFORM public.add_activity_day(v_edge_inside,  v_today - 29, 'css', 10, 10);
   PERFORM public.add_activity_day(v_edge_outside, v_today - 30, 'css', 10, 10);
-  INSERT INTO public.user_stats (user_id, name) VALUES (v_edge_inside, 'Inside'), (v_edge_outside, 'Outside');
+  INSERT INTO public.user_stats (user_id, name, show_on_leaderboards)
+    VALUES (v_edge_inside, 'Inside', TRUE), (v_edge_outside, 'Outside', TRUE);
   SELECT string_agg(display_name, ', ' ORDER BY display_name) INTO v_board
     FROM public.window_leaderboard(30, 100, 'css', 5, NULL);
   ASSERT v_board = 'Inside', format('only answers inside the 30 days count, got %s', v_board);

@@ -23,6 +23,7 @@ import { useAuth, getUserProfile } from '../lib/auth';
 import { apiFetch, friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
 import { getStreakProtection, activateShield, liveStreak, shieldRemaining, type StreakProtection } from '../lib/streakFreezes';
+import { DayChangeNote } from './DayChangeNote';
 import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
 import { renderQuestion } from './CodeBlock';
 import { MULTILINGUAL, useT, useLanguage } from '../i18n/LanguageContext';
@@ -44,6 +45,7 @@ import { ShieldIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, Sou
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
+import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
 import { useEntitlement } from '../lib/entitlement';
 import { clearAccountData } from '../lib/accountData';
 import { useGithubConnection } from '../coding/api';
@@ -348,6 +350,8 @@ function ProfileBody({
 
             <GithubGardenCard />
 
+            <LeaderboardVisibilityCard />
+
             <AccountDeletionCard />
           </VStack>
         </Grid>
@@ -439,10 +443,19 @@ export function StreakCard({
             </div>
           </Grid>
 
-          {unavailable && (
+          {unavailable ? (
             <Text type="supporting" size="xsm" color="secondary" justify="center">
               {t('profile.streakUnavailable')}
             </Text>
+          ) : (
+            // What makes a streak day, and when a day ends here: the server
+            // counts UTC days, which rarely end at the learner's midnight.
+            <VStack gap={0.5} align="center">
+              <Text type="supporting" size="xsm" color="secondary" justify="center">
+                {t('profile.streakRule')}
+              </Text>
+              <DayChangeNote justify="center" />
+            </VStack>
           )}
         </VStack>
       </div>
@@ -450,20 +463,21 @@ export function StreakCard({
 }
 
 /**
- * The shield: spend one of the month's two protections and the streak survives
- * the next 48 hours.
+ * The shield: spend one of the month's two protections and today and tomorrow
+ * (UTC dates) count as streak days.
  *
- * Three states and nothing else. A shield is running (a countdown, in whole
- * hours and minutes, read once on load — a live clock on a two-day window is
- * decoration). A protection is available (the button). The month's two are
- * spent (a line saying when the next arrive). Everything is server-owned: the
- * budget, the spend and the expiry, so a client cannot grant itself either.
+ * Three states and nothing else. A shield is running (a countdown to the end
+ * of tomorrow, in whole hours and minutes, read once on load — a live clock on
+ * a window of up to two days is decoration). A protection is available (the
+ * button). The month's two are spent (a line saying when the next arrive).
+ * Everything is server-owned: the budget, the spend and the expiry, so a
+ * client cannot grant itself either.
  *
  * It renders nothing at all until the read lands, and nothing if the server
  * cannot offer it yet, so the streak card never shows a control that would
  * fail. The streak card reads the state once, on mount, and shares it with the
- * count: the window is 48 hours long, and re-reading it while the page sits
- * open would tell the learner nothing they cannot get by reloading.
+ * count: the window lasts at most two days, and re-reading it while the page
+ * sits open would tell the learner nothing they cannot get by reloading.
  *
  * Without a live streak there is nothing to protect, so the button is not
  * offered: it would spend one of the month's two for nothing. A shield that is
@@ -688,6 +702,20 @@ function AdvisorCard() {
   );
 }
 
+/** Whether the public leaderboards name this learner: the same switch the
+ *  Leaderboard shows, over the same query, so the two always agree. */
+export function LeaderboardVisibilityCard() {
+  const t = useT();
+  return (
+    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
+      <VStack gap={1.5}>
+        <SectionLabel>{t('leaderboard.title')}</SectionLabel>
+        <LeaderboardVisibilitySwitch />
+      </VStack>
+    </div>
+  );
+}
+
 export function AccountDeletionCard() {
   const t = useT();
   const { isAuthenticated, signOut } = useAuth();
@@ -695,6 +723,15 @@ export function AccountDeletionCard() {
   const plan = useEntitlement();
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [signingOut, setSigningOut] = useState(false);
+  // Log out in the account menu ends this browser's session only; this ends
+  // every session of the account, this one included.
+  const signOutEverywhere = () => {
+    setSigningOut(true);
+    void signOut('global')
+      .catch(() => setMessage(t('auth.signOutFailed')))
+      .finally(() => setSigningOut(false));
+  };
   // Deleting the account ends a paid subscription at once and refunds nothing,
   // so the card and the dialog say so, with the way to a refund while it
   // still exists (review finding product-4).
@@ -736,6 +773,17 @@ export function AccountDeletionCard() {
       <div className="ss-panel" style={{ padding: 24, width: '100%', background: 'var(--color-background-muted)' }}>
           <VStack gap={1.5}>
             <SectionLabel>{t('profile.account')}</SectionLabel>
+            <Text weight="semibold">{t('profile.signOutEverywhere')}</Text>
+            <Text type="supporting" size="xsm" color="secondary">{t('profile.signOutEverywhereDescription')}</Text>
+            <HStack justify="end">
+              <Button
+                variant="secondary"
+                size="sm"
+                label={t('profile.signOutEverywhere')}
+                isDisabled={!isAuthenticated || signingOut}
+                onClick={signOutEverywhere}
+              />
+            </HStack>
             <Text weight="semibold">{t('profile.deleteTitle')}</Text>
             <Text type="supporting" size="xsm" color="secondary">{t('profile.deleteDescription')}</Text>
             {paying && (

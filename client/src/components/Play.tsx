@@ -1087,6 +1087,13 @@ function RunningQuestion({
   const pctLeft = noLimit ? 100 : startedMs ? (remainingMs / (durationS * 1000)) * 100 : 100;
   // The clock is out: the server refuses a new answer, so none can be picked.
   const timeUp = !noLimit && remainingMs === 0;
+  // The presenter's screen is often projected while pupils answer, so the
+  // answer key stays hidden until the time is up or the teacher reveals it
+  // (an untimed question waits for the button). Keyed by the question, so the
+  // next question starts hidden again.
+  const [revealedIdx, setRevealedIdx] = useState<number | null>(null);
+  const hasKey = isPresenter && typeof q.correct_index === 'number';
+  const showKey = hasKey && (timeUp || revealedIdx === questionIdx);
 
   // Time-up auto-lock: clicking locks instantly, so this only catches a
   // keyboard user who arrow-browsed to an option but never pressed Enter.
@@ -1165,8 +1172,9 @@ function RunningQuestion({
           <VStack gap={1}>
             {q.options.map((opt, i) => {
               // Only the classroom presenter gets the answer key (the server
-              // withholds correct_index from everyone else while running).
-              const isCorrect = isPresenter && q.correct_index === i;
+              // withholds correct_index from everyone else while running), and
+              // it shows only once the question is closed or revealed.
+              const isCorrect = showKey && q.correct_index === i;
               return (
                 <RadioCard
                   key={i}
@@ -1222,7 +1230,20 @@ function RunningQuestion({
               {t('play.liveAnswers', { count: answeredCount, total: playerCount })}
             </Text>
 
-            <DistributionChart options={q.options} buckets={buckets} correctIndex={q.correct_index} />
+            {hasKey && (showKey ? (
+              <Text type="supporting" size="xsm" weight="semibold">
+                {t('play.correctAnswerIs', { letter: String.fromCharCode(65 + q.correct_index!), option: q.options[q.correct_index!] ?? '' })}
+              </Text>
+            ) : (
+              <HStack gap={1} justify="between" align="center" width="100%" wrap="wrap">
+                <Text type="supporting" size="xsm" color="secondary">
+                  {noLimit ? t('play.answerHiddenUntimed') : t('play.answerHiddenTimed')}
+                </Text>
+                <Button variant="secondary" label={t('play.revealAnswer')} onClick={() => setRevealedIdx(questionIdx)} />
+              </HStack>
+            ))}
+
+            <DistributionChart options={q.options} buckets={buckets} correctIndex={showKey ? q.correct_index : undefined} />
 
             {distributionStale && <Banner status="warning" title={t('play.distributionUnavailable')} />}
 
@@ -1323,6 +1344,7 @@ function DistributionChart({
           return (
             <HStack key={i} gap={1} align="center">
               <span
+                data-correct={isCorrect || undefined}
                 style={{
                   width: 18,
                   fontWeight: 700,

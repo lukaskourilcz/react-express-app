@@ -1,4 +1,5 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
+import type { SupabaseClient } from '@supabase/supabase-js';
 import {
   createServiceClient,
   jsonError,
@@ -66,6 +67,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const op = String(req.query.op || '').toLowerCase();
   if (!(await limitUserWrite(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
+  if (op === 'leaderboard-visibility') return handleLeaderboardVisibility(req, res, supabase);
   if (op === 'category-stats') return categoryStats(req, res);
   if (op === 'streak') return streak(req, res);
   if (op === 'xp') return xp(req, res);
@@ -360,6 +362,18 @@ function verifiedProfile(payload: Record<string, unknown>): { name: string | nul
   };
 }
 
+/** The XP record_verified_quiz_result_v2 awarded for an attempt it has just
+ * applied, as migration 048 stores it on the receipt row. Before 048 the
+ * column is missing and the routine awarded the receipt's amount in full, so
+ * that is the answer when the read fails. */
+async function awardedQuestXp(userId: string, attemptId: string, receiptXp: number): Promise<number> {
+  const stored = await withTimeout(
+    supabase!.from('quiz_attempts').select('quest_xp').eq('attempt_id', attemptId).eq('user_id', userId).maybeSingle(),
+  ).catch(() => null);
+  const value = stored && !stored.error ? (stored.data as { quest_xp?: unknown } | null)?.quest_xp : undefined;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? Math.min(value, receiptXp) : receiptXp;
+}
+
 async function stats(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
   try {
@@ -436,14 +450,17 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         }
 
         logEvent('stats', { status: 200, op: 'submit', latency_ms: Date.now() - started });
-        // Tokens follow the XP the server just verified, keyed to the attempt
-        // so a replayed submission credits nothing.
-        if (data === true && receipt.questXp > 0) {
+        // The XP the routine awarded: from migration 048 a question answered
+        // earlier the same UTC day earns none, so it can be less than the
+        // receipt's. Tokens follow that amount, keyed to the attempt so a
+        // replayed submission credits nothing.
+        const questXp = data === true ? await awardedQuestXp(user_id, receipt.attemptId, receipt.questXp) : 0;
+        if (questXp > 0) {
           await creditVerifiedXp(supabase!, {
             userId: user_id,
             awardId: `quiz:${receipt.attemptId}`,
             subject: receipt.subject,
-            xp: receipt.questXp,
+            xp: questXp,
           });
         }
         // A verified quiz moves the streak, so a Premium streak milestone may
@@ -454,7 +471,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
           withTimeout(supabase!.from('user_xp').select('quest_xp, quest_xp_by_subject').eq('user_id', user_id).maybeSingle()),
         ]);
         if (row.error || xpRow.error) return jsonError(res, 500, 'db_error', 'Result saved but account progress could not be loaded');
-        return res.json({ data: row.data, xp: xpRow.data, applied: data === true });
+        return res.json({ data: row.data, xp: xpRow.data, applied: data === true, questXp });
       }
 
       const profile = {
@@ -504,6 +521,77 @@ async function categoryStats(req: VercelRequest, res: VercelResponse) {
     'verified_result_required',
     'Category statistics are recorded only from a server-verified quiz result',
   );
+}
+
+/**
+ * Whether the public leaderboards show this learner's name and photo
+ * (user_stats.show_on_leaderboards, migration 049). It is off until the
+ * learner switches it on, and the boards list them as "Learner" meanwhile.
+ * GET answers `{ visible }`; PUT `{ visible: boolean }` sets it and answers
+ * the stored value. A PUT creates the stats row when it is missing, with the
+ * verified name, picture and email as the stats POST writes them, so the
+ * name the board shows is always the sign-in's own. The route's write limit
+ * (limitUserWrite) charges each PUT to the account.
+ */
+export async function handleLeaderboardVisibility(
+  req: VercelRequest,
+  res: VercelResponse,
+  db: SupabaseClient | null,
+) {
+  if (req.method !== 'GET' && req.method !== 'PUT') {
+    res.setHeader('Allow', 'GET, PUT');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  const auth = await requireAuthResult(req, res);
+  if (!auth) return;
+  if (!db) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
+  res.setHeader('Cache-Control', 'private, no-store');
+
+  let visible: boolean | null = null;
+  if (req.method === 'PUT') {
+    const body = req.body as { visible?: unknown } | null | undefined;
+    if (!body || typeof body !== 'object' || typeof body.visible !== 'boolean') {
+      return jsonError(res, 400, 'bad_request', 'visible must be true or false');
+    }
+    visible = body.visible;
+  }
+
+  try {
+    const result = visible === null
+      ? await withTimeout(
+          db.from('user_stats').select('show_on_leaderboards').eq('user_id', auth.sub).maybeSingle(),
+        )
+      : await withTimeout(
+          db
+            .from('user_stats')
+            .upsert(
+              {
+                user_id: auth.sub,
+                email: typeof auth.payload.email === 'string' && auth.payload.email.length <= MAX_STR ? auth.payload.email : null,
+                ...verifiedProfile(auth.payload),
+                show_on_leaderboards: visible,
+              },
+              { onConflict: 'user_id' },
+            )
+            .select('show_on_leaderboards')
+            .single(),
+        );
+    if (result.error) {
+      // 42703: the column is missing, so migration 049 is not applied yet.
+      if (result.error.code === '42703') {
+        return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-049.sql to enable leaderboard visibility');
+      }
+      logEvent('leaderboard-visibility', { status: 500, reason: visible === null ? 'select_failed' : 'upsert_failed', error: result.error.message });
+      return jsonError(res, 500, 'db_error', 'Could not load or save leaderboard visibility');
+    }
+    const row = result.data as { show_on_leaderboards?: unknown } | null;
+    if (visible !== null) logEvent('leaderboard-visibility', { status: 200, visible });
+    return res.json({ visible: row?.show_on_leaderboards === true });
+  } catch (err) {
+    const message = err instanceof Error ? err.message : 'unknown';
+    logEvent('leaderboard-visibility', { status: 500, reason: 'exception', error: message });
+    return jsonError(res, 500, 'internal_error', 'Internal error');
+  }
 }
 
 /* ──── daily habit: cards, badges, freezes, advisor ─────────────────────────── */
@@ -684,7 +772,7 @@ async function badges(req: VercelRequest, res: VercelResponse) {
 // GET  /api/user/[op]?op=freezes — the monthly protection budget and any
 //                                   active shield.
 // POST                            — spend one protection to shield the streak
-//                                   for 48 hours.
+//                                   today and tomorrow (UTC dates).
 //
 // The budget, the spend and the expiry are all the server's. A client can ask
 // for a shield; it cannot grant itself one, cannot choose the window and cannot

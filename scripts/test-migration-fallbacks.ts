@@ -21,7 +21,9 @@
  * are gone, and deleting an account asks for `delete_user_data` alone. On the
  * same stand-in, the stats write is checked to store the verified sign-in's
  * name and Google picture whatever the body says, and a friend request to
- * answer in the states the Friends screen reads. Sign-in and the deletion of
+ * answer in the states the Friends screen reads. The stats write also credits
+ * a quiz's coins for the XP migration 048 says it awarded, and for the
+ * receipt's XP before 048 adds that column. Sign-in and the deletion of
  * the sign-in identity are answered by the same stand-in. Nothing leaves the
  * machine. */
 
@@ -34,6 +36,9 @@ const INSTALLED: Record<string, unknown> = {
   record_verified_activity_xp: true,
   credit_tokens: true,
 };
+
+/** What a table read answers, by table; any other read finds nothing. */
+const TABLE_READS: Record<string, { status: number; body: unknown }> = {};
 
 const USER = { id: '0b5e7c1e-2f7a-4c3d-9a61-5d2f0c9e8a41', email: 'fallback@example.invalid' };
 const TOKEN = 'fallback-contract-token';
@@ -96,6 +101,13 @@ async function startStandIn(calls: Call[], writes: Call[]) {
       if (req.method === 'POST' || req.method === 'PATCH') {
         const raw = await readBody(req);
         writes.push({ name: `write:${url.pathname.slice('/rest/v1/'.length)}`, args: raw ? JSON.parse(raw) : {} });
+      }
+      const read = req.method === 'GET' ? TABLE_READS[url.pathname.slice('/rest/v1/'.length)] : undefined;
+      if (read) {
+        calls.push({ name: `read:${url.pathname.slice('/rest/v1/'.length)}`, args: Object.fromEntries(url.searchParams) });
+        res.statusCode = read.status;
+        res.end(JSON.stringify(read.body));
+        return;
       }
       res.end('[]');
       return;
@@ -182,6 +194,8 @@ async function main() {
     assert.ok(completion >= 0 && award > completion, `the handler tried 040's routine, then fell back (${names.join(', ')})`);
     assert.equal(calls[award].args.p_award_id, `challenge:${run.runId}`, 'the fallback keeps the award id');
     assert.equal(calls[award].args.p_user_id, USER.id);
+    // An awarded run is a streak day from 048, so it settles the milestones.
+    assert.ok(names.indexOf('settle_coin_milestones') > award, 'an awarded run settles the streak milestones');
 
     // The tier before 039: every account reads as free, so a cleared step
     // stays open and a new Premium step answers 402, never 503.
@@ -299,6 +313,49 @@ async function main() {
     assert.equal(result.args.p_name, 'Ada Lovelace', 'a quiz result stores the verified name, not the one in the body');
     assert.equal(result.args.p_picture, 'https://lh3.googleusercontent.com/a/ada=s96-c', 'and the verified Google picture');
 
+    // Migration 048 counts a question once per learner and UTC day, so the
+    // routine can award less XP than the receipt names. It keeps the amount on
+    // the attempt row, and the coins and the gain the client announces follow
+    // that amount. Before 048 the column is missing (PostgREST's 42703) and the
+    // routine awarded the receipt's XP, which the handler then uses.
+    INSTALLED.record_verified_quiz_result_v2 = true;
+    INSTALLED.credit_verified_xp_tokens = 3;
+    for (const [read, expected] of [
+      [{ status: 200, body: [{ quest_xp: 16 }] }, 16],
+      [{ status: 400, body: { code: '42703', details: null, hint: null, message: 'column quiz_attempts.quest_xp does not exist' } }, 80],
+    ] as const) {
+      TABLE_READS.quiz_attempts = read;
+      calls.length = 0;
+      const scaled = tokens.encodeQuizResultReceipt({
+        userId: USER.id,
+        correct: 10,
+        total: 10,
+        breakdown: { html: { correct: 10, total: 10 } },
+        outcomes: Array.from({ length: 10 }, (_, i) => ({ questionId: `fallback-html-${i}`, category: 'html', isCorrect: true })),
+        subject: 'webdev',
+        questXp: 80,
+        purpose: 'quiz',
+      });
+      const saved = mockResponse();
+      await userOps({
+        method: 'POST',
+        headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.7' },
+        query: { op: 'stats' },
+        url: '/api/user/stats',
+        body: { result_receipt: scaled },
+      } as never, saved as never);
+      assert.equal(saved.statusCode, 200, `the result is recorded (${JSON.stringify(saved.body)})`);
+      const attempt = calls.find((call) => call.name === 'read:quiz_attempts');
+      assert.ok(attempt, 'the handler reads the XP the routine awarded');
+      assert.equal(attempt.args.user_id, `eq.${USER.id}`, 'from the learner\'s own attempt');
+      const credit = calls.find((call) => call.name === 'credit_verified_xp_tokens');
+      assert.equal(credit?.args.p_xp, expected, `coins follow the awarded XP: ${expected}`);
+      assert.equal(saved.body?.questXp, expected, 'and the response names it for the client to announce');
+      assert.ok(calls.some((call) => call.name === 'settle_coin_milestones'), 'the streak day settles the milestones');
+    }
+    delete TABLE_READS.quiz_attempts;
+    INSTALLED.record_verified_quiz_result_v2 = false;
+
     userMetadata = {};
     writes.length = 0;
     await userOps({
@@ -333,7 +390,7 @@ async function main() {
   } finally {
     server.close();
   }
-  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the verified name and Google picture and ignores the body; a friend request answers pending_out; against a stand-in that answers PGRST202 as PostgREST 12 does.');
+  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the verified name and Google picture and ignores the body, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; against a stand-in that answers PGRST202 as PostgREST 12 does.');
 }
 
 main().catch((error) => {

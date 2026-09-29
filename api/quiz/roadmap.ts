@@ -1213,8 +1213,14 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   // this attempt without its solution being revealed, the rule
   // complete_verified_roadmap_attempt applies from migration 047: a reveal
   // ends the attempt, and the task is passed again in a fresh one.
+  //
+  // A guest's coding passes are never stored, so for a guest that rule could
+  // only ever fail the level. A guest's level passes on its questions and the
+  // response says the coding was not verified; nothing is recorded for a
+  // guest here, and the browser keeps the pass locally until they sign in.
   let codingPending: string[] = [];
-  if (passed && session.codingTaskIds && session.codingTaskIds.length > 0) {
+  const codingUnverified = !userId && (session.codingTaskIds?.length ?? 0) > 0;
+  if (passed && !codingUnverified && session.codingTaskIds && session.codingTaskIds.length > 0) {
     const codingRows = await withTimeout(
       supabase.from('roadmap_attempt_coding').select('task_id,passed,revealed').eq('attempt_id', session.attemptId!),
     );
@@ -1276,12 +1282,13 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
         kind: session.roadmapKind!,
         ref: session.ref!,
       });
-      // The last level of a topic is a Premium milestone.
-      if (session.roadmapKind === 'level') await settleMilestones(supabase, userId, session.subject!);
       // A friend's first passed Learn level pays both sides of an invitation
       // once; the routine reads the verified progress itself (#228).
       await creditReferral(supabase, userId, session.subject!);
     }
+    // A completed level or part test is a streak day from migration 048, passed
+    // or not, and the last level of a topic is a Premium milestone.
+    if (applied) await settleMilestones(supabase, userId, session.subject!);
   } else if (!attempt.completed_at) {
     await withTimeout(
       supabase.from('roadmap_attempts').update({ completed_at: new Date().toISOString() }).eq('attempt_id', session.attemptId!),
@@ -1326,8 +1333,12 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, outOfHearts: endedOnHearts });
-  return res.json({ correctAnswers, totalQuestions, percentage, passed, applied, codingPending, ...(progress ? { progress } : {}) });
+  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, codingUnverified, outOfHearts: endedOnHearts });
+  return res.json({
+    correctAnswers, totalQuestions, percentage, passed, applied, codingPending,
+    ...(codingUnverified ? { codingUnverified: true } : {}),
+    ...(progress ? { progress } : {}),
+  });
 }
 
 /* ──── handler ──────────────────────────────────────────────────────────── */

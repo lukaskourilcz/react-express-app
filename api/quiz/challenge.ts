@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { creditVerifiedXp } from '../../lib/rewards/handlers';
+import { settleMilestones } from '../../lib/rewards/coins';
 import {
   secureShuffle,
   weightedSample,
@@ -169,7 +170,7 @@ async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
   // Throttled so a script can't flood the Hall of Fame. Legit humans finish
   // ~90s runs, so 10 posts / hour with a small burst is generous. The address
   // bucket holds a class; the per-person limit is taken below, per account,
-  // or per address for a caller without one.
+  // or per sealed run for a caller without one.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.challengeScore))) return;
 
   const body = (req.body || {}) as { name?: unknown; runToken?: unknown; proofs?: unknown };
@@ -216,9 +217,11 @@ async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
     throw error;
   }
   const userId = auth?.sub ?? null;
+  // Without an account the run sealed in the token is the caller, at the
+  // same budget, so guests behind one school address do not share one.
   const withinCallerLimit = auth
     ? await enforceRateLimit(req, res, RATE_LIMITS.challengeScorePerUser, `user:${auth.sub}`)
-    : await enforceRateLimit(req, res, RATE_LIMITS.challengeScoreAnonymous);
+    : await enforceRateLimit(req, res, RATE_LIMITS.challengeScorePerUser, `run:${run.runId}`);
   if (!withinCallerLimit) return;
 
   try {
@@ -273,7 +276,7 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   }
   const withinCallerLimit = auth
     ? await enforceRateLimit(req, res, RATE_LIMITS.challengeCompletePerUser, `user:${auth.sub}`)
-    : await enforceRateLimit(req, res, RATE_LIMITS.challengeCompleteAnonymous);
+    : await enforceRateLimit(req, res, RATE_LIMITS.challengeCompletePerUser, `run:${run.runId}`);
   if (!withinCallerLimit) return;
   if (!auth) return res.json({ ok: true, awarded: false, score });
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account progress is not configured');
@@ -312,6 +315,9 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   // nothing, and a wallet that cannot be reached never fails the learning.
   if (data === true) {
     await creditVerifiedXp(supabase, { userId: auth.sub, awardId: `challenge:${run.runId}`, subject: run.subject, xp });
+    // From migration 048 an awarded run is a streak day, so a Premium streak
+    // milestone may have just been reached. Idempotent; a failure costs nothing.
+    await settleMilestones(supabase, auth.sub, run.subject);
   }
   return res.json({ ok: true, awarded: data === true, score, xp });
 }

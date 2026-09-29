@@ -59,6 +59,7 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { createResultShareFile, downloadShareFile } from '../lib/shareCard';
 import { queryClient } from '../lib/queryClient';
 import { profileStatsQueryKey } from '../lib/queries';
+import { useDayChangeTime } from '../lib/utcDay';
 import './Quiz.css';
 import { CategoryTag } from './ui/CategoryTag';
 
@@ -215,6 +216,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [attemptedStart, setAttemptedStart] = useState(false);
   const { ids: bookmarks } = useBookmarks();
   const [snack, setSnack] = useState<string | null>(null);
+  // The XP the account recorded, when it is less than the result's: from
+  // migration 048 a question answered earlier the same UTC day earns none.
+  const [repeatXp, setRepeatXp] = useState<number | null>(null);
+  const dayChange = useDayChangeTime();
   const [mode, setMode] = useState<QuizMode>('standard');
   const [reviewPlan, setReviewPlan] = useState<ReviewWeakArea[]>([]);
   // Set only when the session actually mixes related concepts. One line,
@@ -591,6 +596,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           hinted: hintedIds,
         }),
       });
+      setRepeatXp(null);
       setResult(data);
       setState('submitted');
       clearProgress();
@@ -625,9 +631,14 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             const saved = await recordQuizResult(pending.receipt, pending.profile);
             if (saved.data) queryClient.setQueryData(profileStatsQueryKey(user.id), saved.data);
             dropPendingReceipt(attemptKey);
-            // The gain first, then the rank it crosses once the account's
-            // verified balance is in.
-            if (saved.applied) announceVerifiedQuestXp(data.questXp);
+            // The gain the account recorded first, then the rank it crosses
+            // once the account's verified balance is in. A server from before
+            // migration 048 names no amount and awarded the result's.
+            const recordedXp = typeof saved.questXp === 'number' ? saved.questXp : data.questXp;
+            if (saved.applied) {
+              announceVerifiedQuestXp(recordedXp);
+              if (recordedXp < data.questXp) setRepeatXp(recordedXp);
+            }
             await syncXpWithServer({ announceRankUp: saved.applied });
           } catch (writeError) {
             console.error('Stat write failed:', writeError);
@@ -667,6 +678,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setState('ready');
     setQuestions([]);
     setResult(null);
+    setRepeatXp(null);
     setAnswers({});
     setHintedIds([]);
     setAnswersLocked(false);
@@ -821,7 +833,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
   if (state === 'error') {
     const banner = stop === 'daily-done'
-      ? { status: 'info' as const, title: t('quiz.dailyDoneTitle'), description: t('quiz.dailyDoneBody') }
+      ? { status: 'info' as const, title: t('quiz.dailyDoneTitle'), description: t('quiz.dailyDoneBody', { time: dayChange }) }
       : stop === 'expired'
         ? { status: 'error' as const, title: t('quiz.expiredTitle'), description: t('quiz.expiredBody') }
         : stop === 'graded'
@@ -1003,7 +1015,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
             {mode === 'daily' && (
               <Text type="supporting" color="secondary" justify="center">
-                {t('quiz.dailyComplete')}
+                {t('quiz.dailyComplete')} {t('quiz.dailyNext', { time: dayChange })}
+              </Text>
+            )}
+
+            {repeatXp !== null && (
+              <Text type="supporting" color="secondary" justify="center">
+                {t('quiz.repeatXp', { xp: repeatXp })}
               </Text>
             )}
 

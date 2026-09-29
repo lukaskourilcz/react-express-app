@@ -12,7 +12,7 @@ import type { ReactSuiteOutcome } from '../coding/react-runner';
  *   - assertions group into named criteria, so a critical failure cannot be
  *     averaged away by a strong score elsewhere;
  *   - objective checks grade against the key sealed in the attempt session,
- *     and a domain-gated check must clear every domain separately;
+ *     and a domain-gated check must also clear every domain separately;
  *   - written artifacts are recorded as submitted and self-reviewed. A length
  *     check can prove a field is non-empty; it cannot establish quality, and
  *     nothing here pretends otherwise.
@@ -49,6 +49,32 @@ export interface CheckGrade {
   domainScores: Record<string, number> | null;
   failedDomains: string[];
   verdicts: CheckQuestionVerdict[];
+  /** True when the verdicts say only which questions were wrong: a failed
+   * project check keeps its key until the learner passes it. */
+  keyWithheld: boolean;
+}
+
+/** A domain with fewer questions than this cannot carry the whole threshold on
+ * its own. With two questions a domain can score 0%, 50% or 100%, so an 80%
+ * gate per domain meant every question had to be right: one miss anywhere
+ * failed a check whose screen said 80%. */
+export const SMALL_DOMAIN_QUESTIONS = 5;
+/** What a small domain needs instead: at least half of its questions right,
+ * so a domain with no right answer still fails however strong the others are. */
+export const SMALL_DOMAIN_THRESHOLD = 0.5;
+
+/** The share each domain of a domain-gated check has to reach on its own. A
+ * domain with at least SMALL_DOMAIN_QUESTIONS questions keeps the check's own
+ * threshold; a smaller one needs SMALL_DOMAIN_THRESHOLD. The overall score
+ * always needs the check's threshold. */
+export function domainThresholds(activity: MergedActivity): Record<string, number> {
+  const threshold = activity.passThreshold ?? DEFAULT_CRITERION_THRESHOLD;
+  const out: Record<string, number> = {};
+  for (const domain of activity.domains ?? []) {
+    const count = (activity.questions ?? []).filter((question) => question.domain === domain).length;
+    out[domain] = count < SMALL_DOMAIN_QUESTIONS ? Math.min(threshold, SMALL_DOMAIN_THRESHOLD) : threshold;
+  }
+  return out;
 }
 
 /**
@@ -56,8 +82,16 @@ export interface CheckGrade {
  * holds the correct index *after* the per-attempt shuffle, so the browser
  * never received the answer and a replayed option order cannot be reused.
  *
- * A domain-gated check needs the threshold in every domain, which is what
- * stops a strong domain from covering a missing one.
+ * A domain-gated check needs the overall threshold and, in every domain, the
+ * share `domainThresholds` gives it, which is what stops a strong domain from
+ * covering a missing one.
+ *
+ * A project check (`purpose: 'project'`) decides a module that counts toward
+ * finishing the path and its reward, and a retry deals the same questions
+ * again, only reshuffled. So after a failed attempt it says only which
+ * questions were wrong: the correct option and the explanation would let the
+ * next attempt be copied. Both come back once the check is passed. A
+ * diagnostic or exercise check returns them after every attempt.
  */
 export function gradeCheck(
   activity: MergedActivity,
@@ -92,21 +126,26 @@ export function gradeCheck(
   const failedDomains: string[] = [];
   if (activity.domains?.length) {
     domainScores = {};
+    const needed = domainThresholds(activity);
     for (const domain of activity.domains) {
       const inDomain = verdicts.filter((verdict) => verdict.domain === domain);
       const share = inDomain.length === 0 ? 0 : inDomain.filter((verdict) => verdict.correct).length / inDomain.length;
       domainScores[domain] = Number(share.toFixed(4));
-      if (share < threshold) failedDomains.push(domain);
+      if (share < (needed[domain] ?? threshold)) failedDomains.push(domain);
     }
   }
 
   const passed = score >= threshold && failedDomains.length === 0;
+  const keyWithheld = activity.purpose === 'project' && !passed;
   return {
     state: passed ? 'verified_pass' : 'needs_revision',
     score: Number(score.toFixed(4)),
     domainScores,
     failedDomains,
-    verdicts,
+    verdicts: keyWithheld
+      ? verdicts.map(({ questionId, correct, domain }) => ({ questionId, correct, ...(domain ? { domain } : {}) }))
+      : verdicts,
+    keyWithheld,
   };
 }
 

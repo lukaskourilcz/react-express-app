@@ -1,8 +1,9 @@
 // System-design tasks have no editor. A guided walkthrough asks five
 // questions in interview order; a drill asks one, in one of four formats.
-// Answers are graded on the server against the key sealed in the session, so
-// the explanation and the correct option arrive with the verdict, never before.
-import { useCallback, useId, useMemo, useState } from 'react';
+// Answers are graded on the server against the key sealed in the session. The
+// explanations and the correct options arrive with a passing verdict, never
+// before and never with a failed one: that says only which answers were wrong.
+import { useCallback, useId, useMemo, useState, type ReactNode } from 'react';
 import { Kicker } from '../components/landing/LandingKit';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -107,28 +108,56 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
     </div>
   );
 
+  /** The learner's own answer to one step or drill, in words. */
+  const answerText = (given: DesignAnswer | null, options: readonly Localized[]): ReactNode => {
+    if (typeof given === 'number' && drill?.format === 'estimate') return `${given.toLocaleString(lang)}${drill.unit ? ` ${L(drill.unit)}` : ''}`;
+    if (typeof given === 'number') return given >= 0 && options[given] ? L(options[given]) : null;
+    if (Array.isArray(given) && drill?.steps) {
+      return <ol className="cd-review__explanation" style={{ paddingLeft: 20 }}>{given.map((position) => <li key={position}>{L(drill.steps![position])}</li>)}</ol>;
+    }
+    return null;
+  };
+
   /* ── review after grading ─────────────────────────────────────────── */
   if (verdict) {
     const correct = verdict.design?.filter((one) => one.correct).length ?? 0;
+    const passed = verdict.verdict === 'passed';
+    // A pass after a revealed solution says why it paid nothing.
+    const label = passed && verdict.xpForfeited === true ? t('coding.verdict.passedNoXp') : t(`coding.verdict.${verdict.verdict}` as never);
     return (
       <div className="cd-design">
         <section className="cd-pane">
-          <span className="cd-visually-hidden" role="status" aria-live="polite">{t(`coding.verdict.${verdict.verdict}` as never)}</span>
+          <span className="cd-visually-hidden" role="status" aria-live="polite">{label}</span>
           {header}
           <section className={`cd-verdict cd-verdict--${verdict.verdict}`}>
             <h3 className="cd-verdict__title">
-              <span>{t(`coding.verdict.${verdict.verdict}` as never)}</span>
+              <span>{label}</span>
               {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
             </h3>
             {design && <p className="cd-verdict__row">{t('coding.design.score', { correct, total: steps.length })} · {t('coding.design.passMark', { n: design.passMark, total: steps.length })}</p>}
-            {verdict.verdict === 'passed' && !verdict.progress && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
+            {!passed && <p className="cd-verdict__row">{t('coding.design.failedNote')}</p>}
+            {passed && !verdict.progress && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
             {verdictActions}
           </section>
           <div className="cd-review">
             {(verdict.design ?? []).map((one, index) => {
               const step = steps[index];
               const options = step?.options ?? drill?.options ?? [];
-              const given = design ? answers[index] : drillAnswer;
+              const given = one.given ?? (design ? answers[index] : drillAnswer);
+              // Short of a pass the server sends which steps were right and
+              // nothing of the key, so this says no more than that.
+              if (!passed) {
+                const answer = answerText(given, options);
+                return (
+                  <div key={index} className={`cd-review__step cd-review__step--${one.correct ? 'correct' : 'incorrect'}`}>
+                    {step && <p className="cd-editor-label">{L(step.title)}: {L(step.prompt)}</p>}
+                    <p className="cd-review__verdict">{one.correct ? t('coding.design.correct') : t('coding.design.incorrect')}</p>
+                    {answer !== null && (Array.isArray(given)
+                      ? <><p className="cd-review__explanation"><b>{t('coding.design.yourAnswer')}:</b></p>{answer}</>
+                      : <p className="cd-review__explanation"><b>{t('coding.design.yourAnswer')}:</b> {answer}</p>)}
+                  </div>
+                );
+              }
               return (
                 <div key={index} className={`cd-review__step cd-review__step--${one.correct ? 'correct' : 'incorrect'}`}>
                   {step && <p className="cd-editor-label">{L(step.title)}: {L(step.prompt)}</p>}
@@ -142,7 +171,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
                       {one.correctOrder.map((position) => <li key={position}>{L(drill.steps![position])}</li>)}
                     </ol>
                   )}
-                  <p className="cd-review__explanation">{L(one.explanation)}</p>
+                  {one.explanation && <p className="cd-review__explanation">{L(one.explanation)}</p>}
                 </div>
               );
             })}

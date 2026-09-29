@@ -1,0 +1,28 @@
+name: Live grading
+# Production grades React only in the Vercel Sandbox and JavaScript in a
+# QuickJS worker, and nothing else notices when either breaks. Every six hours
+# this submits the reference solution (must pass) and a wrong one (must fail)
+# to one free JavaScript and one free React task on devshark.app, anonymously,
+# so nothing is recorded. See scripts/check-live-grading.ts.
+on:
+  schedule:
+    - cron: '41 */6 * * *'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: grading-monitor
+  cancel-in-progress: false
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Grade one JavaScript and one React task on devshark.app
+        run: npm run check:live-grading

@@ -88,6 +88,19 @@ describe('difficulty labels on a track page', () => {
   });
 });
 
+describe('the format filter', () => {
+  it('offers only formats a challenge can have, and reads an old checklist link as no filter', () => {
+    mount('/coding/react?format=checklist', <CodingTrackScreen />, '/coding/:track');
+    const select = screen.getByLabelText('Any format') as HTMLSelectElement;
+    expect([...select.options].map((option) => option.value)).toEqual(['all', 'tests', 'debug']);
+    expect(select.value).toBe('all');
+    // Every React challenge is graded by tests, so none disappears.
+    const standalone = CODING_INDEX.filter((task) => task.track === 'react' && !evolvingStage(task.id));
+    expect(standalone.every((task) => task.verify === 'tests')).toBe(true);
+    expect(screen.getAllByRole('listitem').length).toBeGreaterThanOrEqual(standalone.length);
+  });
+});
+
 describe('difficulty labels on the stage list', () => {
   const project = EVOLVING_CHALLENGES.find((one) => one.stages.length === 10)!;
   const fullstack = EVOLVING_CHALLENGES.find((one) => one.stages.length === 12)!;

@@ -304,8 +304,21 @@ describe('a returning visitor with a stored session', () => {
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
     await act(() => current().signOut());
     expect(sb.clients[0].auth.signOut).toHaveBeenCalledTimes(1);
+    // Log out ends this browser's session only; supabase-js would otherwise
+    // sign the account out on every device.
+    expect(sb.clients[0].auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
     expect(screen.getByTestId('auth')).toHaveTextContent('signed-out');
     expect(sb.imports).toBe(1);
+  });
+
+  it('signs out on every device only when asked to', async () => {
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const { current } = await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    await act(() => current().signOut('global'));
+    expect(sb.clients[0].auth.signOut).toHaveBeenCalledTimes(1);
+    expect(sb.clients[0].auth.signOut).toHaveBeenCalledWith({ scope: 'global' });
+    expect(screen.getByTestId('auth')).toHaveTextContent('signed-out');
   });
 
   it('saves a preference with the token, then refreshes the session through the loaded client', async () => {
@@ -499,6 +512,18 @@ describe('signing out', () => {
     expect(kept(sessionStorage, DEVICE_SESSION)).toEqual(Object.keys(DEVICE_SESSION));
     // The page that was open when the account left no longer shows its progress.
     expect(screen.getByTestId('passed')).toHaveTextContent('none');
+  });
+
+  it('forgets the account’s data on this device when it signs out on every device too', async () => {
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    seed(localStorage, { ...ACCOUNT_LOCAL, ...DEVICE_LOCAL });
+    seed(sessionStorage, { ...ACCOUNT_SESSION, ...DEVICE_SESSION });
+    const { current } = await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    await act(() => current().signOut('global'));
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual([]);
+    expect(kept(sessionStorage, ACCOUNT_SESSION)).toEqual([]);
+    expect(kept(localStorage, DEVICE_LOCAL)).toEqual(Object.keys(DEVICE_LOCAL));
   });
 
   it('keeps a guest’s progress through a sign-in, and forgets it with the account', async () => {

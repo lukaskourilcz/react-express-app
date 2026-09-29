@@ -46,8 +46,11 @@ export interface DistributionBucket {
   correct: boolean;
 }
 
+// On every public board a learner's name and picture are null unless they
+// switched on "Show my name and photo on leaderboards" (migration 049); the
+// Leaderboard screen then shows "Learner" and the default avatar.
 export interface CategoryLeaderboardEntry {
-  display_name: string;
+  display_name: string | null;
   picture: string | null;
   total_correct: number;
   total_questions: number;
@@ -55,7 +58,7 @@ export interface CategoryLeaderboardEntry {
 }
 
 export interface LeaderboardGlobalEntry {
-  display_name: string;
+  display_name: string | null;
   picture: string | null;
   total_correct: number;
   total_quizzes: number;
@@ -64,7 +67,7 @@ export interface LeaderboardGlobalEntry {
 }
 
 export interface LeaderboardDailyEntry {
-  display_name: string;
+  display_name: string | null;
   picture: string | null;
   correct: number;
   total: number;
@@ -76,7 +79,7 @@ export interface LeaderboardDailyEntry {
  *  equal results share a rank, so `rank` is not always the row's position. */
 export interface WindowLeaderboardEntry {
   rank: number;
-  display_name: string;
+  display_name: string | null;
   picture: string | null;
   correct: number;
   answered: number;
