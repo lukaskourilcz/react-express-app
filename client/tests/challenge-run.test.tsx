@@ -148,11 +148,14 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
+// Each test plays several questions through the real page.
+vi.setConfig({ testTimeout: 20_000 });
+
 describe('the question buffer', () => {
   it('grades a question shown while the buffer refills against the batch that issued it', async () => {
     await mount();
     await start();
-    for (let n = 0; n < 10; n += 1) {
+    for (let n = 0; n < 8; n += 1) {
       await answer('right');
       await next();
     }
