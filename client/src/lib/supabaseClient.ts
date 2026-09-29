@@ -98,6 +98,11 @@ let downloadFailed = false;
 const waiting = new Set<Waiting>();
 let watchingOtherTabs = false;
 
+/** Whether supabase-js has a session stored in this browser, current or expired. */
+export function hasStoredSession(): boolean {
+  return Boolean(sessionKey && readStorage(sessionKey));
+}
+
 /**
  * Whether this page load may have a session: the client is loaded or loading,
  * a session is stored, or the URL carries an OAuth return. False means the

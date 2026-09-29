@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import {
   getSupabaseSession,
+  hasStoredSession,
   loadSupabase,
   mayHaveSession,
   onSupabaseAuthStateChange,
@@ -10,6 +11,7 @@ import {
 } from './supabaseClient';
 import { apiFetch } from './api';
 import { registerAccessTokenReader } from './roadmap';
+import { clearAccountData } from './accountData';
 import { clearAuthReturn, clearSignInResume, currentReturnPath, markSignInResume, rememberAuthReturn, takeSignInResume } from './authReturn';
 import { RELOAD_GRACE_MS, browserRecovery, isChunkLoadError, reloadOnPress, type Recovery } from './routeRecovery';
 
@@ -54,6 +56,12 @@ function clearSignInReport(): void {
 // Read once, as the modules evaluate: whether the document before this one
 // reloaded on a sign-in press and left the sign-in for this one to finish.
 let resumePending = typeof window !== 'undefined' && takeSignInResume();
+
+// Whether an account was signed in on this page: a session was stored when it
+// opened (supabase-js may still find it expired), or one arrived since. Only
+// then does a SIGNED_OUT forget the account's data on this device; supabase-js
+// also sends one for a guest's failed OAuth return, and a guest keeps theirs.
+let accountSignedIn = typeof window !== 'undefined' && hasStoredSession();
 
 interface AuthContextValue {
   user: User | null;
@@ -153,9 +161,16 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
       cachedAccessToken = session?.access_token ?? null;
       setUser(session?.user ?? null);
       setIsLoading(false);
+      if (session?.user) accountSignedIn = true;
       if (event === 'INITIAL_SESSION') initialized = true;
       if (event === 'SIGNED_IN' && initialized && session?.user) reportSignIn();
-      if (event === 'SIGNED_OUT') clearSignInReport();
+      if (event === 'SIGNED_OUT') {
+        clearSignInReport();
+        // The next person on this device starts from nothing, not from the
+        // progress, XP, coins, bookmarks and drafts of the account that left.
+        if (accountSignedIn) clearAccountData();
+        accountSignedIn = false;
+      }
     });
 
     if (!mayHaveSession()) {
@@ -177,6 +192,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
       .then((session) => {
         cachedAccessToken = session?.access_token ?? null;
         setUser(session?.user ?? null);
+        if (session?.user) accountSignedIn = true;
       })
       .catch(() => {
         cachedAccessToken = null;

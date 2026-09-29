@@ -528,6 +528,7 @@ export const en = {
   'profile.deleteDescription': 'Deletes your account and all learning data.',
   'profile.deleteConfirm': 'This permanently deletes your profile, progress, statistics, flashcards, challenge entries and multiplayer records. This action cannot be undone.',
   'profile.deleteAction': 'Delete my account',
+  'profile.deleteGithub': 'The devShark app you installed on GitHub keeps access to the repositories you gave it until you uninstall it on GitHub.',
   'profile.deletePremium': 'Your Premium subscription ends at once and is not refunded. Within 14 days of your first payment, withdraw on the cancellation page first to get that payment back.',
   'common.remove': 'Remove',
 

@@ -45,6 +45,8 @@ import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDi
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
 import { useEntitlement } from '../lib/entitlement';
+import { clearAccountData } from '../lib/accountData';
+import { useGithubConnection } from '../coding/api';
 import './DeepEndScreens.css';
 
 // Section opener in the brand's editorial voice: uppercase accent kicker with
@@ -684,24 +686,9 @@ function AdvisorCard() {
   );
 }
 
-function clearDeletedAccountState() {
-  const clear = (storage: Storage) => {
-    const keys = Array.from({ length: storage.length }, (_, i) => storage.key(i)).filter(
-      (key): key is string => Boolean(key),
-    );
-    for (const key of keys) {
-      if (key.startsWith('devquiz:') || key.startsWith('studyshark:') || key.startsWith('shark:')) {
-        storage.removeItem(key);
-      }
-    }
-  };
-  try { clear(localStorage); } catch { /* storage may be disabled */ }
-  try { clear(sessionStorage); } catch { /* storage may be disabled */ }
-}
-
 export function AccountDeletionCard() {
   const t = useT();
-  const { signOut } = useAuth();
+  const { isAuthenticated, signOut } = useAuth();
   const navigate = useNavigate();
   const plan = useEntitlement();
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
@@ -710,11 +697,19 @@ export function AccountDeletionCard() {
   // so the card and the dialog say so, with the way to a refund while it
   // still exists (review finding product-4).
   const paying = plan.data?.subscriptionLive === true || (plan.tier === 'premium' && plan.data?.source === 'provider');
+  // Deleting the account does not uninstall the GitHub app: say so to anyone
+  // who installed it. The garden card beside this one reads the same query.
+  const github = useGithubConnection(isAuthenticated).data;
+  const githubInstalled = github?.available === true && github.status !== 'not_connected';
 
   const requestDeletion = () => {
     setConfirm({
       title: t('profile.deleteTitle'),
-      description: paying ? `${t('profile.deleteConfirm')} ${t('profile.deletePremium')}` : t('profile.deleteConfirm'),
+      description: [
+        t('profile.deleteConfirm'),
+        githubInstalled ? t('profile.deleteGithub') : null,
+        paying ? t('profile.deletePremium') : null,
+      ].filter(Boolean).join(' '),
       actionLabel: t('profile.deleteAction'),
       destructive: true,
       onConfirm: async () => {
@@ -724,7 +719,7 @@ export function AccountDeletionCard() {
             body: JSON.stringify({ confirmation: 'DELETE' }),
             timeoutMs: 20_000,
           });
-          clearDeletedAccountState();
+          clearAccountData();
           await signOut().catch(() => undefined);
           navigate('/', { replace: true });
         } catch (error) {
