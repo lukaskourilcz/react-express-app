@@ -478,7 +478,10 @@ export function CodingTrackScreen() {
   const query = params.get('q') ?? '';
   const difficulty = difficultyParam(params);
   const duration = params.get('time') ?? 'all';
-  const format = params.get('format') ?? 'all';
+  // No task is graded by a checklist since 29 Sep 2026, so an old
+  // ?format=checklist link reads as no format filter rather than an empty list.
+  const formatParam = params.get('format');
+  const format = formatParam === 'tests' || formatParam === 'debug' ? formatParam : 'all';
   const savedOnly = params.get('saved') === '1';
   const bookmarks = useBookmarks(isAuthenticated);
   const savedIds = useMemo(() => new Set(bookmarks.data?.saved ?? []), [bookmarks.data]);
@@ -605,7 +608,6 @@ export function CodingTrackScreen() {
         <select id={`${track}-format`} value={format} onChange={(event) => setFilter('format', event.target.value === 'all' ? null : event.target.value)}>
           <option value="all">{t('coding.filter.format')}</option>
           <option value="tests">{t('coding.filter.formatTests')}</option>
-          <option value="checklist">{t('coding.filter.formatChecklist')}</option>
           <option value="debug">{t('coding.filter.formatDebug')}</option>
         </select>
         {filtersOn && (
