@@ -1840,9 +1840,10 @@ function erasureContracts() {
   const deletion = userOps.slice(deletionStart, userOps.indexOf('\nasync function ', deletionStart + 1));
   assert.ok(deletion.includes('supabase!.auth.admin.deleteUser(auth.sub)'), 'the deleteAccount slice reaches the sign-in identity');
   assert.ok(deletion.indexOf('endBillingForDeletedAccount') < deletion.indexOf("rpc('delete_user_data'"), 'billing ends before the data goes');
-  assert.deepEqual([...deletion.matchAll(/\.rpc\(\s*([^,)]+)/g)].map((match) => match[1]), ["'delete_user_data'"],
+  assert.deepEqual([...new Set([...deletion.matchAll(/\.rpc\(\s*([^,)]+)/g)].map((match) => match[1]))], ["'delete_user_data'"],
     'deleting an account calls delete_user_data and no other routine');
-  assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('auth.admin.deleteUser'), 'the sign-in identity goes last');
+  assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('auth.admin.deleteUser'), 'the data goes before the sign-in identity');
+  assert.ok(deletion.lastIndexOf("rpc('delete_user_data'") > deletion.indexOf('auth.admin.deleteUser'), 'and is erased once more after it (PROF-4)');
   // No code calls a dropped routine.
   for (const file of ['api', 'lib', 'shared', 'client/src'].flatMap(codeFiles)) {
     const source = read(file);
