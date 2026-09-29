@@ -19,9 +19,9 @@
  * the plan and the tier gate work as before. Last, production's shape after
  * 046: `delete_user_data` is there, the four erasure routines of 039 to 042
  * are gone, and deleting an account asks for `delete_user_data` alone. On the
- * same stand-in, the stats write is checked to store the verified sign-in's
- * name and Google picture whatever the body says, and a friend request to
- * answer in the states the Friends screen reads. The stats write also credits
+ * same stand-in, the stats write is checked to store the Google identity's
+ * name and picture whatever the body or user_metadata says, and a friend
+ * request to answer in the states the Friends screen reads. The stats write also credits
  * a quiz's coins for the XP migration 048 says it awarded, and for the
  * receipt's XP before 048 adds that column. Sign-in and the deletion of
  * the sign-in identity are answered by the same stand-in. Nothing leaves the
@@ -42,8 +42,18 @@ const TABLE_READS: Record<string, { status: number; body: unknown }> = {};
 
 const USER = { id: '0b5e7c1e-2f7a-4c3d-9a61-5d2f0c9e8a41', email: 'fallback@example.invalid' };
 const TOKEN = 'fallback-contract-token';
-/** What the sign-in provider put on USER's account: the verified profile. */
+/** What USER wrote into their own user_metadata. Any signed-in user can,
+ * from the browser (supabase.auth.updateUser), so it is never the profile. */
 let userMetadata: Record<string, unknown> = {};
+/** What Google put on USER's Google identity: the verified profile. Null for
+ * an account with no Google identity. */
+let googleProfile: Record<string, unknown> | null = null;
+/** Whether the verified user carries its identities, or the handler has to
+ * ask the admin API for them. */
+let identitiesInUser = true;
+const identitiesOf = () => (googleProfile
+  ? [{ provider: 'google', id: 'google-sub-1', user_id: USER.id, identity_data: { sub: 'google-sub-1', email: USER.email, ...googleProfile } }]
+  : [{ provider: 'email', id: USER.id, user_id: USER.id, identity_data: { sub: USER.id, email: USER.email } }]);
 const ADMIN = { id: '7c1f3a2e-5b6d-4e8f-9a0b-1c2d3e4f5a6b', email: 'owner@example.invalid' };
 const ADMIN_TOKEN = 'fallback-contract-admin-token';
 
@@ -60,6 +70,11 @@ async function startStandIn(calls: Call[], writes: Call[]) {
     const url = new URL(req.url ?? '/', 'http://stand-in');
     res.setHeader('content-type', 'application/json');
     const adminUser = /^\/auth\/v1\/admin\/users\/([^/]+)$/.exec(url.pathname);
+    if (adminUser && req.method === 'GET') {
+      calls.push({ name: 'auth.admin.getUserById', args: { id: decodeURIComponent(adminUser[1]) } });
+      res.end(JSON.stringify({ ...USER, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: userMetadata, identities: identitiesOf() }));
+      return;
+    }
     if (adminUser && req.method === 'DELETE') {
       calls.push({ name: 'auth.admin.deleteUser', args: { id: decodeURIComponent(adminUser[1]) } });
       res.end(JSON.stringify({ ...USER, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }));
@@ -73,7 +88,14 @@ async function startStandIn(calls: Call[], writes: Call[]) {
         return;
       }
       const admin = token === ADMIN_TOKEN;
-      res.end(JSON.stringify({ ...(admin ? ADMIN : USER), aud: 'authenticated', role: 'authenticated', app_metadata: admin ? { role: 'admin' } : {}, user_metadata: admin ? {} : userMetadata }));
+      res.end(JSON.stringify({
+        ...(admin ? ADMIN : USER),
+        aud: 'authenticated',
+        role: 'authenticated',
+        app_metadata: admin ? { role: 'admin' } : {},
+        user_metadata: admin ? {} : userMetadata,
+        ...(admin || identitiesInUser ? { identities: admin ? [] : identitiesOf() } : {}),
+      }));
       return;
     }
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname);
@@ -267,12 +289,14 @@ async function main() {
     assert.equal(calls[0].args.p_user_id, USER.id);
     assert.equal(calls[1].args.id, USER.id);
 
-    // The name and picture a public board shows come from the verified
-    // sign-in, never from the request body. A picture Google does not serve is
-    // dropped, and the name loses control and text-direction characters and
-    // is cut to sixty characters.
+    // The name and picture a public board shows come from the account's
+    // Google identity, never from the request body and never from
+    // user_metadata, which the account can rewrite itself. A picture Google
+    // does not serve is dropped, and the name loses control and
+    // text-direction characters and is cut to sixty characters.
     const bodyProfile = { email: 'fallback@example.invalid', name: 'Somebody Else', picture: 'https://lh3.googleusercontent.com/a/somebody-else' };
-    userMetadata = { full_name: `\u202EAda\u0007 ${'L'.repeat(100)}`, avatar_url: 'https://tracker.example/pixel.png' };
+    googleProfile = { full_name: `\u202EAda\u0007 ${'L'.repeat(100)}`, avatar_url: 'https://tracker.example/pixel.png' };
+    userMetadata = { full_name: 'Grace Hopper', avatar_url: 'https://lh3.googleusercontent.com/a/grace' };
     writes.length = 0;
     const saved = mockResponse();
     await userOps({
@@ -284,10 +308,11 @@ async function main() {
     } as never, saved as never);
     const upsert = writes.find((write) => write.name === 'write:user_stats');
     assert.ok(upsert, `the profile write reached user_stats (${saved.statusCode} ${JSON.stringify(saved.body)})`);
-    assert.equal(upsert.args.name, `Ada ${'L'.repeat(56)}`, 'the name is the verified one, cleaned and cut to 60 characters');
-    assert.equal(upsert.args.picture, null, 'a picture Google does not serve is not stored');
+    assert.equal(upsert.args.name, `Ada ${'L'.repeat(56)}`, 'the name is Google\'s, cleaned and cut to 60 characters, not the one in user_metadata');
+    assert.equal(upsert.args.picture, null, 'a picture Google does not serve is not stored, whatever user_metadata says');
 
-    userMetadata = { name: 'Ada Lovelace', picture: 'https://lh3.googleusercontent.com/a/ada=s96-c' };
+    googleProfile = { name: 'Ada Lovelace', picture: 'https://lh3.googleusercontent.com/a/ada=s96-c' };
+    userMetadata = { name: 'Edited In The Browser', picture: 'https://lh3.googleusercontent.com/a/edited' };
     calls.length = 0;
     INSTALLED.record_verified_quiz_result_v2 = false;
     const receipt = tokens.encodeQuizResultReceipt({
@@ -310,8 +335,23 @@ async function main() {
     } as never, recorded as never);
     const result = calls.find((call) => call.name === 'record_verified_quiz_result_v2');
     assert.ok(result, `the quiz result reached the routine (${recorded.statusCode} ${JSON.stringify(recorded.body)})`);
-    assert.equal(result.args.p_name, 'Ada Lovelace', 'a quiz result stores the verified name, not the one in the body');
-    assert.equal(result.args.p_picture, 'https://lh3.googleusercontent.com/a/ada=s96-c', 'and the verified Google picture');
+    assert.equal(result.args.p_name, 'Ada Lovelace', 'a quiz result stores Google\'s name, not the body\'s or user_metadata\'s');
+    assert.equal(result.args.p_picture, 'https://lh3.googleusercontent.com/a/ada=s96-c', 'and Google\'s picture');
+
+    // A verified user without its identities: the handler asks the admin API.
+    identitiesInUser = false;
+    writes.length = 0;
+    calls.length = 0;
+    await userOps({
+      method: 'POST',
+      headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.9' },
+      query: { op: 'stats' },
+      url: '/api/user/stats',
+      body: bodyProfile,
+    } as never, mockResponse() as never);
+    assert.deepEqual(calls.filter((call) => call.name === 'auth.admin.getUserById').map((call) => call.args.id), [USER.id], 'the identities are read for the verified account');
+    assert.equal(writes.find((write) => write.name === 'write:user_stats')?.args.name, 'Ada Lovelace', 'and the name is still Google\'s');
+    identitiesInUser = true;
 
     // Migration 048 counts a question once per learner and UTC day, so the
     // routine can award less XP than the receipt names. It keeps the amount on
@@ -356,7 +396,10 @@ async function main() {
     delete TABLE_READS.quiz_attempts;
     INSTALLED.record_verified_quiz_result_v2 = false;
 
-    userMetadata = {};
+    // An account without a Google identity has no verified name, whatever it
+    // wrote into its own metadata.
+    googleProfile = null;
+    userMetadata = { full_name: 'Self Named', avatar_url: 'https://lh3.googleusercontent.com/a/self' };
     writes.length = 0;
     await userOps({
       method: 'POST',
@@ -390,7 +433,7 @@ async function main() {
   } finally {
     server.close();
   }
-  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the verified name and Google picture and ignores the body, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; against a stand-in that answers PGRST202 as PostgREST 12 does.');
+  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the name and picture of the Google identity and ignores the body and user_metadata, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; against a stand-in that answers PGRST202 as PostgREST 12 does.');
 }
 
 main().catch((error) => {
