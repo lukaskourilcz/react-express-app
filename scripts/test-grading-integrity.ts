@@ -7,6 +7,9 @@ import { puzzleFor } from '../lib/coding/puzzles';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { isFreeCodingTask } from '../shared/tiers';
 import { evolvingStage } from '../shared/evolving';
+import { createMiniJest } from '../shared/coding-mini-jest';
+import { runReactSuite } from '../lib/coding/react-runner';
+import { withHiddenCases } from '../lib/coding/react-hidden';
 
 const attacks = [
   ['replace comparison', 'globalThis.__deepEqual=()=>true; function answer(){return 0}'],
@@ -247,4 +250,51 @@ function codingDatabase() {
     }
   }
   console.log('PASS integrity: the code cannot swallow its type tests');
+}
+
+// ── React suites compare values the way Jest does (CODE-12) ──────────────
+// toEqual compared JSON text: key order failed correct answers, any two Maps
+// or Sets were equal, and NaN equalled null.
+{
+  const jest = createMiniJest();
+  const { test, expect } = jest.globals as unknown as {
+    test: (name: string, body: () => void) => void;
+    expect: (value: unknown) => Record<string, (...args: unknown[]) => void> & { not: Record<string, (...args: unknown[]) => void> };
+  };
+  class Point { constructor(public x: number) {} }
+  const cyclic: { self?: unknown; n: number } = { n: 1 };
+  cyclic.self = cyclic;
+  const cyclicToo: { self?: unknown; n: number } = { n: 1 };
+  cyclicToo.self = cyclicToo;
+  const expectations: [string, () => void][] = [
+    ['key order does not matter', () => expect([{ id: 7, type: 'toggled' }]).toEqual([{ type: 'toggled', id: 7 }])],
+    ['different Maps differ', () => expect(new Map([['a', 1]])).not.toEqual(new Map())],
+    ['Maps compare entries', () => expect(new Map<unknown, unknown>([['a', 1], [{ k: 1 }, [2]]])).toEqual(new Map<unknown, unknown>([[{ k: 1 }, [2]], ['a', 1]]))],
+    ['different Sets differ', () => expect(new Set([1, 2])).not.toEqual(new Set([3]))],
+    ['Sets compare members', () => expect(new Set([1, { a: 2 }])).toEqual(new Set([{ a: 2 }, 1]))],
+    ['NaN is not null', () => expect([NaN]).not.toEqual([null])],
+    ['NaN equals NaN', () => expect({ v: NaN }).toEqual({ v: NaN })],
+    ['0 and -0 differ', () => expect(0).not.toEqual(-0)],
+    ['Dates compare by time', () => expect(new Date(5)).toEqual(new Date(5))],
+    ['different Dates differ', () => expect(new Date(5)).not.toEqual(new Date(6))],
+    ['an undefined property is ignored', () => expect({ a: 1, b: undefined }).toEqual({ a: 1 })],
+    ['but not by toStrictEqual', () => expect({ a: 1, b: undefined }).not.toStrictEqual({ a: 1 })],
+    ['toStrictEqual checks the class', () => expect(new Point(1)).not.toStrictEqual({ x: 1 })],
+    ['toEqual does not', () => expect(new Point(1)).toEqual({ x: 1 })],
+    ['arrays keep their order', () => expect([1, 2]).not.toEqual([2, 1])],
+    ['an array is not an object', () => expect([1]).not.toEqual({ 0: 1 })],
+    ['cycles are followed', () => expect(cyclic).toEqual(cyclicToo)],
+  ];
+  for (const [name, body] of expectations) test(name, body);
+  const run = await jest.run();
+  assert.deepEqual(run.cases.filter((one) => one.status === 'fail').map((one) => `${one.name}: ${one.error}`), [], 'mini-jest equality follows Jest');
+
+  // A correct answer that builds its action with the keys in another order.
+  const dispatchTask = CODING_TASKS.find((task) => task.id === 'react-easy3-dispatch-through-context')!;
+  const dispatchSolution = solutionFor(dispatchTask.id)!;
+  const reordered = dispatchSolution.solution.replace("dispatch({ type: 'toggled', id: task.id })", "dispatch({ id: task.id, type: 'toggled' })");
+  assert.notEqual(reordered, dispatchSolution.solution);
+  const reorderedRun = await runReactSuite({ suite: withHiddenCases(dispatchTask.suite!, dispatchSolution.hiddenSuite), appSource: reordered });
+  assert.equal(reorderedRun.failed, 0, `key order passes the suite: ${reorderedRun.cases.filter((one) => one.status === 'fail').map((one) => one.error).join('; ')}`);
+  console.log('PASS integrity: React suites compare values the way Jest does');
 }
