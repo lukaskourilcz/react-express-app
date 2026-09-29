@@ -262,10 +262,13 @@ async function main() {
     } as never, erased as never);
     assert.equal(erased.statusCode, 200, `an account deletion after 046 answers 200 (${JSON.stringify(erased.body)})`);
     assert.deepEqual(erased.body, { ok: true });
-    assert.deepEqual(calls.map((call) => call.name), ['delete_user_data', 'auth.admin.deleteUser'],
-      'the deletion asks for delete_user_data and no dropped routine, then deletes the sign-in identity');
+    // Then it erases once more, for rows a billing webhook wrote meanwhile
+    // (finding PROF-4).
+    assert.deepEqual(calls.map((call) => call.name), ['delete_user_data', 'auth.admin.deleteUser', 'delete_user_data'],
+      'the deletion asks for delete_user_data and no dropped routine, deletes the sign-in identity, then erases once more');
     assert.equal(calls[0].args.p_user_id, USER.id);
     assert.equal(calls[1].args.id, USER.id);
+    assert.equal(calls[2].args.p_user_id, USER.id);
 
     // The name and picture a public board shows come from the verified
     // sign-in, never from the request body. A picture Google does not serve is

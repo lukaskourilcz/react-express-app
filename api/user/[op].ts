@@ -174,6 +174,15 @@ async function deleteAccount(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 500, 'auth_delete_failed', 'Account data was removed, but the sign-in identity could not be deleted');
     }
 
+    // The Stripe webhook that the cancellation above set off can write billing
+    // rows between the erasure and the identity's deletion (finding PROF-4).
+    // Erase once more: delete_user_data is idempotent, and with the identity
+    // gone migration 053 refuses any later billing write. The account is
+    // deleted either way, so a failure here is logged, not answered.
+    const again = await withTimeout(supabase!.rpc('delete_user_data', { p_user_id: auth.sub }), 8000)
+      .catch((err: unknown) => ({ error: { message: err instanceof Error ? err.message : 'timeout' } }));
+    if (again.error) logEvent('delete-account', { status: 200, reason: 'second_cleanup_failed', error: again.error.message });
+
     logEvent('delete-account', { status: 200, user_id: auth.sub });
     return res.json({ ok: true });
   } catch (err) {
