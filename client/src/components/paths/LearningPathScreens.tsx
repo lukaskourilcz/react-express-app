@@ -834,6 +834,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               questions={open.check.questions}
               passThreshold={open.check.passThreshold}
               domains={open.activity.domains}
+              domainThreshold={open.check.domainThreshold}
               result={result}
               busy={busy}
               onSubmit={(answers) => submit({ answers })}

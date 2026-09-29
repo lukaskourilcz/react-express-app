@@ -126,6 +126,7 @@ export function CheckActivity({
   questions,
   passThreshold,
   domains,
+  domainThreshold,
   result,
   onSubmit,
   onRetry,
@@ -135,6 +136,9 @@ export function CheckActivity({
   questions: CheckQuestionPayload[];
   passThreshold: number;
   domains: string[] | undefined;
+  /** The share each domain needs on its own, which the server lowers for a
+   * domain with only a few questions. */
+  domainThreshold?: number;
   result: SubmitActivityResponse | null;
   onSubmit: (answers: number[]) => void;
   /** Starts the check again: a new attempt deals the questions afresh. */
@@ -170,7 +174,7 @@ export function CheckActivity({
         </span>
         <span>
           {t('paths.check.threshold', { percent: Math.round(passThreshold * 100) })}
-          {domains?.length ? ` ${t('paths.check.domainGate', { percent: Math.round(passThreshold * 100) })}` : ''}
+          {domains?.length ? ` ${t('paths.check.domainGate', { percent: Math.round((domainThreshold ?? passThreshold) * 100) })}` : ''}
         </span>
       </div>
 

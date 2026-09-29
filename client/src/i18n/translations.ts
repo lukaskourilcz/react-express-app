@@ -1908,7 +1908,7 @@ export const en = {
   'paths.trace.role.settled': 'settled',
   'paths.trace.role.excluded': 'ruled out',
   'paths.check.threshold': 'You need {percent}% of these right to pass. You can retry as often as you like.',
-  'paths.check.domainGate': 'Each area also needs {percent}% on its own, so a strong area cannot cover a thin one.',
+  'paths.check.domainGate': 'Each area also needs at least {percent}% of its own questions right, so a strong area cannot cover an empty one.',
   'paths.check.questionNumber': 'Question {current} of {total}',
   'paths.check.answered': '{answered} of {total} answered',
   'paths.check.correctAnswer': 'the correct answer',

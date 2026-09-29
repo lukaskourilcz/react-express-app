@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { LEARNING_PATHS, activitySummary, publicManifest, readinessFor } from '../lib/learning-paths/catalog';
-import { codeFeedback, gradeCheck, gradePathCode, codeFromReusedTask } from '../lib/learning-paths/grade';
+import { codeFeedback, domainThresholds, gradeCheck, gradePathCode, codeFromReusedTask } from '../lib/learning-paths/grade';
 import { solutionFor, solutionIds } from '../lib/learning-paths/solutions';
 import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
@@ -272,6 +272,64 @@ async function main() {
     );
     for (const id of solutionIds()) {
       if (!known.has(id)) fail(`solutions: ${id} does not match any activity`);
+    }
+  }
+
+  /* ── the DSA final's pass rule ─────────────────────────────────────── */
+  // Ten questions, two per domain. An 80% gate per domain meant both of a
+  // domain's questions, so one slip anywhere failed a check whose screen said
+  // 80%. The rule is 80% overall and at least one of each domain's two.
+  {
+    const dsa = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations');
+    const final = dsa?.modules.flatMap((module) => module.activities).find((activity) => activity.id === 'dsa-v1-d10-final-checks');
+    if (!final?.questions || !final.domains) {
+      fail('dsa-foundations: the final check dsa-v1-d10-final-checks is missing');
+    } else {
+      const key = final.questions.map((question) => question.correct);
+      const missing = (indexes: number[]) => key.map((correct, index) => (indexes.includes(index) ? (correct === 0 ? 1 : 0) : correct));
+      const inDomain = (domain: string) =>
+        final.questions!.flatMap((question, index) => (question.domain === domain ? [index] : []));
+      const [first, second, third] = final.domains;
+      const cases: Array<[string, number[], 'verified_pass' | 'needs_revision', string[]]> = [
+        ['9/10 with one miss', [inDomain(first)[0]], 'verified_pass', []],
+        ['8/10 with one miss in each of two domains', [inDomain(first)[0], inDomain(second)[0]], 'verified_pass', []],
+        ['8/10 with both misses in one domain', inDomain(second), 'needs_revision', [second]],
+        ['7/10 with one miss in each of three domains', [inDomain(first)[0], inDomain(second)[0], inDomain(third)[0]], 'needs_revision', []],
+      ];
+      for (const [label, misses, state, failedDomains] of cases) {
+        const graded = gradeCheck(final, key, missing(misses));
+        if (graded.state !== state) fail(`dsa final: ${label} grades ${graded.state}, not ${state}`);
+        if (JSON.stringify(graded.failedDomains) !== JSON.stringify(failedDomains)) {
+          fail(`dsa final: ${label} fails the domains [${graded.failedDomains.join(', ')}], not [${failedDomains.join(', ')}]`);
+        }
+      }
+      if (Object.values(domainThresholds(final)).some((share) => share !== 0.5)) {
+        fail('dsa final: a two-question domain needs 50% on its own');
+      }
+
+      // A domain with five or more questions keeps the check's own 80%. With
+      // five in one domain and fifteen in another, 18 of 20 clears the overall
+      // threshold, so only the five-question domain's own gate can refuse two
+      // misses there, and it does; one miss there passes.
+      const question = final.questions[0];
+      const mixed = {
+        ...final,
+        domains: ['five', 'fifteen'],
+        questions: Array.from({ length: 20 }, (_, index) => ({
+          ...question, id: `mixed-q${index}`, correct: 0, domain: index < 5 ? 'five' : 'fifteen',
+        })),
+      };
+      const thresholds = domainThresholds(mixed);
+      if (thresholds.five !== 0.8 || thresholds.fifteen !== 0.8) {
+        fail(`domains of five and fifteen questions keep the 80% gate, not ${JSON.stringify(thresholds)}`);
+      }
+      const mixedKey = mixed.questions.map(() => 0);
+      const twoMissed = gradeCheck(mixed, mixedKey, mixedKey.map((correct, index) => (index < 2 ? 1 : correct)));
+      if (twoMissed.state !== 'needs_revision' || twoMissed.failedDomains.join() !== 'five') {
+        fail(`18/20 with two of a five-question domain missed grades ${twoMissed.state} [${twoMissed.failedDomains.join(', ')}], not a fail on that domain`);
+      }
+      const oneMissed = gradeCheck(mixed, mixedKey, mixedKey.map((correct, index) => (index < 1 ? 1 : correct)));
+      if (oneMissed.state !== 'verified_pass') fail(`19/20 with one miss in a five-question domain grades ${oneMissed.state}`);
     }
   }
 

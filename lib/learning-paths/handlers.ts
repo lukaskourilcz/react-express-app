@@ -39,6 +39,7 @@ import {
 import {
   codeFeedback,
   codeFromReusedTask,
+  domainThresholds,
   gradeArtifact,
   gradeCheck,
   gradePathCode,
@@ -715,12 +716,15 @@ async function buildActivityPayload(
           competencies: question.competencies,
         };
       });
+      // The share each domain needs on its own. The screen states one figure,
+      // so a check that mixed small and large domains would state the lowest.
+      const perDomain = Object.values(domainThresholds(activity));
       return {
         answerKey,
         check: {
           questions,
           passThreshold: activity.passThreshold ?? 0.8,
-          ...(activity.domains ? { domainThreshold: activity.passThreshold ?? 0.8 } : {}),
+          ...(perDomain.length ? { domainThreshold: Math.min(...perDomain) } : {}),
         },
         draft: null,
       };
@@ -858,7 +862,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       questions = graded.verdicts;
       if (graded.failedDomains.length > 0) {
         feedback = [{
-          en: 'Every area has to clear the threshold on its own, so a strong area cannot cover a thin one. Revisit the areas listed above and try the check again.',
+          en: 'Every area has to reach its own minimum as well as the overall score, so a strong area cannot cover an empty one. Revisit the areas listed above and try the check again.',
           cs: 'Každá oblast musí projít prahem sama, takže silná oblast nemůže zakrýt slabou. Vrať se k oblastem uvedeným výše a zkus kontrolu znovu.',
         }];
       } else if (state !== 'verified_pass') {
