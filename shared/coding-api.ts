@@ -92,6 +92,11 @@ export interface CodingVerdictResponse {
   progress: CodingTaskProgress | null;
   firstPass: boolean;
   xpAwarded: number;
+  /** True when this was the task's first pass, it earned no XP, and the
+   * learner had revealed the solution before it: a pass after a reveal earns
+   * no XP and no coins. False whenever XP was paid, so a database that still
+   * pays for such a pass never makes the verdict claim otherwise. */
+  xpForfeited: boolean;
   applied: boolean;
   github: CodingGardenStatus | null;
   /** The junior and senior solutions, on a passed code submission. Null on

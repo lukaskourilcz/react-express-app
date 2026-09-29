@@ -1731,7 +1731,7 @@ export const en = {
   'coding.lesson.pending': '{n} coding tasks still to pass',
   'coding.lesson.allPassed': 'All coding tasks passed.',
   'coding.lesson.signedOutPending': 'Coding tasks count toward a level only when you are signed in, so this level cannot pass signed out. Sign in and play it again.',
-  'coding.lesson.giveUpNote': 'Showing the solution ends this level attempt. You can retry the level later.',
+  'coding.lesson.giveUpNote': 'Showing a solution ends this level attempt, and that task then earns no XP or coins when you pass it. You can retry the level later.',
   'coding.lesson.continue': 'Continue',
   'coding.lesson.mapGlyph': 'Includes a coding task',
   'coding.design.brief': 'Brief',
@@ -2108,6 +2108,12 @@ export const en = {
   'daily.failed': 'The question could not load. Try again in a moment.',
   'daily.noScript': 'Turn on JavaScript to see the question and check your answer.',
   'daily.checkFailed': 'Your answer could not be checked. Try again in a moment.',
+
+  // Revealing a solution before a pass costs that task's XP and coins.
+  'coding.giveUpConfirmXp': 'Showing the solution ends this attempt, and this task will earn no XP or coins when you pass it. Show it?',
+  'coding.lesson.giveUpConfirm': 'Showing the solution ends this level attempt, and this task will earn no XP or coins when you pass it. You can retry the level later. Show it?',
+  'coding.lesson.giveUpEnds': 'Showing the solution ends this level attempt. You can retry the level later. Show it?',
+  'coding.verdict.passedNoXp': 'Passed — no XP because the solution was revealed',
 } as const;
 
 export type TranslationKey = keyof typeof en;

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { runChecks, runInSandbox } from '../lib/coding/sandbox';
-import { handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
+import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
 import { puzzleFor } from '../lib/coding/puzzles';
@@ -86,14 +86,21 @@ console.log('PASS integrity: Submit shows the visible checks\' console only');
 // the same submission stays a replay. The fake below keeps the routine's
 // contract from migration 041: one application per attempt id, progress per
 // account and task, XP once per account and task, and a level link that only
-// ever turns true.
-function codingDatabase() {
+// ever turns true. `record_coding_reveal` counts a reveal the way migration
+// 038 does, and `forfeitAfterReveal` adds migration 048's rule: a first pass
+// after a reveal pays no XP.
+type ProgressFake = { status: 'in_progress' | 'passed' | 'revealed'; passes: number; revealCount: number };
+function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   const attempts = new Set<string>();
-  const progress = new Map<string, { status: 'in_progress' | 'passed'; passes: number }>();
+  const progress = new Map<string, ProgressFake>();
   const links = new Map<string, boolean>();
   const xp = new Set<string>();
   const attemptIds: string[] = [];
   const result = (data: unknown) => Promise.resolve({ data, error: null });
+  const progressRow = (taskId: unknown, row: ProgressFake) => ({
+    task_id: taskId, track: 'javascript', status: row.status, passes: row.passes,
+    review_stage: 0, next_review_at: null, reveal_count: row.revealCount, best_passed_at: null,
+  });
   const from = (table: string) => {
     const filters: Record<string, unknown> = {};
     const chain = {
@@ -104,18 +111,29 @@ function codingDatabase() {
         if (table === 'roadmap_attempts') return result({ attempt_id: filters.attempt_id });
         if (table === 'coding_progress') {
           const row = progress.get(`${filters.user_id}:${filters.task_id}`);
-          return result(row ? {
-            task_id: filters.task_id, track: 'javascript', status: row.status, passes: row.passes,
-            review_stage: 0, next_review_at: null, reveal_count: 0, best_passed_at: null,
-          } : null);
+          return result(row ? progressRow(filters.task_id, row) : null);
         }
         return result(null);
       },
-      then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+      // A list read of coding_progress returns the account's rows.
+      then: (resolve: (value: unknown) => unknown) => resolve({
+        data: table === 'coding_progress'
+          ? [...progress].filter(([key]) => key.startsWith(`${filters.user_id}:`)).map(([key, row]) => progressRow(key.slice(key.indexOf(':') + 1), row))
+          : [],
+        error: null,
+      }),
     };
     return chain;
   };
   const rpc = (name: string, args: Record<string, unknown>) => {
+    if (name === 'record_coding_reveal') {
+      const key = `${args.p_user_id}:${args.p_task_id}`;
+      const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
+      row.revealCount += 1;
+      if (row.status !== 'passed') row.status = 'revealed';
+      progress.set(key, row);
+      return result(null);
+    }
     if (name !== 'record_coding_verdict') return result(null);
     const attemptId = String(args.p_attempt_id);
     attemptIds.push(attemptId);
@@ -123,14 +141,15 @@ function codingDatabase() {
     const key = `${args.p_user_id}:${args.p_task_id}`;
     if (attempts.has(attemptId)) return result({ applied: false, firstPass: false, xpAwarded: false, codeChanged: false });
     attempts.add(attemptId);
-    const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0 };
+    const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
     let firstPass = false;
     let xpAwarded = false;
     if (args.p_outcome === 'passed') {
       firstPass = row.passes === 0;
       row.status = 'passed';
       row.passes += 1;
-      if (firstPass && !xp.has(key)) { xp.add(key); xpAwarded = true; }
+      const forfeited = options.forfeitAfterReveal === true && row.revealCount > 0;
+      if (firstPass && !forfeited && !xp.has(key)) { xp.add(key); xpAwarded = true; }
     }
     progress.set(key, row);
     if (args.p_roadmap_attempt_id) {
@@ -148,7 +167,7 @@ function codingDatabase() {
   const levelAttempt = 'levelattempt0123456789';
   const session = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null, roadmapAttemptId: levelAttempt });
   const reference = solutionFor('js-double-numbers')!;
-  type Verdict = { verdict?: string; applied?: boolean; firstPass?: boolean; xpAwarded?: number; progress?: { status?: string } | null };
+  type Verdict = { verdict?: string; applied?: boolean; firstPass?: boolean; xpAwarded?: number; xpForfeited?: boolean; progress?: { status?: string } | null };
   const submit = async (code: string) => {
     const out = { statusCode: 200, body: null as null | Verdict, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
     await handleCodingSubmit({
@@ -166,6 +185,7 @@ function codingDatabase() {
   assert.equal(passed.applied, true, 'a fix submitted from the same session is recorded');
   assert.equal(passed.firstPass, true);
   assert.ok((passed.xpAwarded ?? 0) > 0, 'the first pass earns the task XP');
+  assert.equal(passed.xpForfeited, false, 'a paid pass claims no forfeit');
   assert.equal(passed.progress?.status, 'passed', 'the task reads as passed');
   assert.equal(db.links.get(`${levelAttempt}:js-double-numbers`), true, 'the Learn level sees the coding task passed');
   const replay = await submit(reference.solution);
@@ -198,6 +218,66 @@ function codingDatabase() {
   assert.equal(outage.body?.failureHint, null, 'no hint blames the code');
   assert.equal(db.attemptIds.length, before, 'a runner outage writes no verdict');
   console.log('PASS integrity: a React runner outage is not recorded as the learner\'s error');
+}
+
+// ── a pass after a reveal says it paid nothing, and only then ───────────
+// Migration 048 pays no XP (and so no coins) for a first pass after the
+// learner revealed that task's solution. The verdict says so in
+// `xpForfeited`, read from the progress row before the pass. Before 048 the
+// routine still pays: xpAwarded is then true and nothing claims a forfeit.
+{
+  type Verdict = { verdict?: string; firstPass?: boolean; xpAwarded?: number; xpForfeited?: boolean };
+  const reference = solutionFor('js-double-numbers')!;
+  const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+  // An address of its own, so these requests spend none of the other tests' rate budget.
+  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.21' };
+  const play = (db: ReturnType<typeof codingDatabase>, learner: string) => {
+    const session = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null });
+    return {
+      reveal: async () => {
+        const out = reply();
+        await handleCodingReveal({ method: 'POST', headers: auth, query: {}, body: { session, hintsUsed: 20, user_id: learner } } as never, out as never, db.client as never);
+        assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+      },
+      submit: async (code: string) => {
+        const out = reply();
+        await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session, code, user_id: learner } } as never, out as never, db.client as never);
+        assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+        return out.body as Verdict;
+      },
+    };
+  };
+
+  const after048 = codingDatabase({ forfeitAfterReveal: true });
+  const learner = 'user-bbbb-2222';
+  const run = play(after048, learner);
+  await run.reveal();
+  assert.equal(after048.progress.get(`${learner}:js-double-numbers`)?.status, 'revealed');
+  const forfeited = await run.submit(reference.solution);
+  assert.equal(forfeited.verdict, 'passed');
+  assert.equal(forfeited.firstPass, true);
+  assert.equal(forfeited.xpAwarded, 0, 'migration 048 pays nothing for a first pass after a reveal');
+  assert.equal(forfeited.xpForfeited, true, 'the verdict says the reveal cost the XP');
+  const later = await run.submit(reference.senior!);
+  assert.equal(later.verdict, 'passed');
+  assert.equal(later.xpForfeited, false, 'a later pass forfeits nothing: nothing was on offer');
+
+  const before048 = codingDatabase();
+  const early = play(before048, learner);
+  await early.reveal();
+  const paid = await early.submit(reference.solution);
+  assert.equal(paid.firstPass, true);
+  assert.ok((paid.xpAwarded ?? 0) > 0, 'before 048 the routine still pays');
+  assert.equal(paid.xpForfeited, false, 'a paid pass never claims a forfeit');
+
+  // XP withheld for another reason, with no reveal on record, is no forfeit.
+  const ledger = codingDatabase({ forfeitAfterReveal: true });
+  ledger.xp.add(`${learner}:js-double-numbers`);
+  const unpaid = await play(ledger, learner).submit(reference.solution);
+  assert.equal(unpaid.firstPass, true);
+  assert.equal(unpaid.xpAwarded, 0);
+  assert.equal(unpaid.xpForfeited, false, 'no reveal, no claim');
+  console.log('PASS integrity: a pass after a reveal says it earned no XP, and nothing else does');
 }
 
 // ── a code-ordering puzzle round-trips through its session (CODE-7) ──────
