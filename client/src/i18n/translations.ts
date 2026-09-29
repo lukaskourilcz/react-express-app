@@ -461,7 +461,7 @@ export const en = {
   // (migration 049); until then their row reads "Learner" with no photo.
   'leaderboard.anonymous': 'Learner',
   'leaderboard.visibility.label': 'Show my name and photo on leaderboards',
-  'leaderboard.visibility.hint': 'Leaderboards are public. With this off, you appear as “Learner” with no photo.',
+  'leaderboard.visibility.hint': 'Leaderboards are public. With this off, you appear as “Learner” with no photo. A change reaches the public boards within about a minute.',
   'leaderboard.visibility.saveFailed': 'Your leaderboard setting wasn’t saved. Try again.',
   'leaderboard.visibility.loadFailed': 'Your leaderboard setting couldn’t be loaded.',
 

@@ -160,12 +160,17 @@ PUT charged to the account's write limit). Every board routine returns
 `display_name` and `picture` only while the flag is on and NULL otherwise, and
 the screen then shows "Learner" with the default avatar. The viewer's own
 30-day row follows the same rule, so it shows them what everybody else sees:
-a switch refetches their personal board at once, and the shared boards follow
-within the CDN's minute. The privacy policy says the same under
+a switch refetches every board the learner's tab has loaded, their personal
+board at once, and everyone else sees the change within about a minute, which
+the switch's hint says. The privacy policy says the same under
 "Leaderboards".
-`api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
-request with a Bearer token or `me=1` also gets the learner's own line and is
-answered `Cache-Control: private, no-store`. `friend_list` orders friends by
+`api/leaderboard.ts` serves every shared board (`period=30d`, `global`,
+`category` and `daily`) to everyone with `public, s-maxage=60` and no
+`stale-while-revalidate`, so the CDN never serves a board older than a
+minute; with the five minutes of stale-while-revalidate it had before, a name
+switched off could stay on a board for about six. A request with a Bearer
+token or `me=1` also gets the learner's own line and is answered
+`Cache-Control: private, no-store`. `friend_list` orders friends by
 correct answers and accuracy, shows each friend's live streak by the rule
 above, and marks a friend active today when their last verified learning day
 is today. No board ranks by XP or by streak.

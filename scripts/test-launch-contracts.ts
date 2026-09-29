@@ -3135,7 +3135,10 @@ async function main() {
     // The shared board stays cacheable; a personal one never is.
     const boardHandler = readFileSync(join(process.cwd(), 'api/leaderboard.ts'), 'utf8');
     assert.match(boardHandler, /'private, no-store'/);
-    assert.match(boardHandler, /'public, s-maxage=60, stale-while-revalidate=300'/);
+    assert.match(boardHandler, /'public, s-maxage=60'/);
+    // Never served stale past the minute: a name switched off leaves every
+    // shared board within about a minute (review finding RANK-5).
+    assert.doesNotMatch(boardHandler, /stale-while-revalidate/, 'the shared boards are not served stale');
     assert.match(boardHandler, /RATE_LIMITS\.leaderboardPersonal/);
 
     // The screen: a rank is a number, never a medal colour, and the
