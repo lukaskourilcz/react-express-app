@@ -4214,16 +4214,424 @@ test('unticking Unread only brings back what was marked read meanwhile', () => w
 }));`,
   },
   "react-booking-prototype": {
-    solution: `Senior-style approach for Booking prototype:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: pick a free slot, press Book, and read whether it worked.
+// Data model: slot { id, title, booked }; booking { id, slotId, userId, createdAt }.
+// API endpoints: GET /slots, and POST /bookings { slotId } in a real app
+// (PATCH /todos/:id stands in here), answering 409 Conflict when taken.
+// Reliability and scale: the checks in this page only stop one person
+// sending the same booking twice. Two people can still press Book at the same
+// moment, so the server decides: a unique constraint on bookings.slot_id, or
+// an UPDATE slots SET booked = true WHERE id = $1 AND booked = false that must
+// change exactly one row, inside a transaction. One request wins and the
+// other gets 409. An idempotency key makes a retried request safe.
+
+const SLOTS_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=10';
+
+const App = () => {
+  const [slots, setSlots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [selectedId, setSelectedId] = useState(null);
+  const [booking, setBooking] = useState(false);
+  const [status, setStatus] = useState('');
+  const [problem, setProblem] = useState('');
+
+  useEffect(() => {
+    const loadSlots = async () => {
+      try {
+        const response = await fetch(SLOTS_URL);
+        if (!response.ok) throw new Error('Request failed');
+        setSlots(await response.json());
+      } catch (requestError) {
+        setLoadError('Could not load slots');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadSlots();
+  }, []);
+
+  const markBooked = id =>
+    setSlots(current => current.map(slot => (slot.id === id ? { ...slot, completed: true } : slot)));
+
+  const book = async () => {
+    const slot = slots.find(one => one.id === selectedId);
+    if (!slot || slot.completed || booking) return;
+    setBooking(true);
+    setStatus('');
+    setProblem('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/todos/' + slot.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: true }),
+      });
+      if (response.status === 409) {
+        markBooked(slot.id);
+        setSelectedId(null);
+        setProblem(slot.title + ' was just booked by someone else');
+      } else if (!response.ok) {
+        setProblem('Could not book ' + slot.title);
+      } else {
+        markBooked(slot.id);
+        setSelectedId(null);
+        setStatus('Booked: ' + slot.title);
+      }
+    } catch (requestError) {
+      setProblem('Could not book ' + slot.title);
+    } finally {
+      setBooking(false);
+    }
+  };
+
+  if (loading) return <main><h2>Booking prototype</h2><p>Loading slots…</p></main>;
+  if (loadError) return <main><h2>Booking prototype</h2><p role="alert">{loadError}</p></main>;
+
+  return (
+    <main>
+      <h2>Booking prototype</h2>
+      <ul>
+        {slots.map(slot => (
+          <li key={slot.id}>
+            <button
+              type="button"
+              disabled={slot.completed}
+              aria-pressed={slot.id === selectedId}
+              onClick={() => setSelectedId(slot.id)}
+            >
+              {slot.title}
+            </button>
+          </li>
+        ))}
+      </ul>
+      <button type="button" disabled={selectedId === null || booking} onClick={book}>
+        {booking ? 'Booking…' : 'Book'}
+      </button>
+      {status && <p role="status">{status}</p>}
+      {problem && <p role="alert">{problem}</p>}
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `import React, { useEffect, useState } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: choose a free slot, press Book, see a message.
+// Data model: a slot has id, title and completed (true means booked).
+// API endpoints: GET the slots, then PATCH one slot to book it.
+// Reliability and scale: disabling the buttons only protects one browser.
+// If two people book the same slot at once, the database has to refuse the
+// second one, for example with a unique index on the slot id in a bookings
+// table. The server then answers 409 and the page tells the second person.
+
+const App = () => {
+  const [slots, setSlots] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [selectedId, setSelectedId] = useState(null);
+  const [isBooking, setIsBooking] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
+
+  useEffect(() => {
+    const loadSlots = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/todos?_limit=10');
+        if (!response.ok) {
+          throw new Error('Request failed');
+        }
+        const data = await response.json();
+        setSlots(data);
+      } catch (requestError) {
+        setLoadError('Could not load slots');
+      }
+      setLoading(false);
+    };
+    loadSlots();
+  }, []);
+
+  const findSelectedSlot = () => {
+    for (const slot of slots) {
+      if (slot.id === selectedId) {
+        return slot;
+      }
+    }
+    return null;
+  };
+
+  const markSlotBooked = (id) => {
+    setSlots((currentSlots) => {
+      const updated = [];
+      for (const slot of currentSlots) {
+        if (slot.id === id) {
+          updated.push({ ...slot, completed: true });
+        } else {
+          updated.push(slot);
+        }
+      }
+      return updated;
+    });
+  };
+
+  const handleBook = async () => {
+    const slot = findSelectedSlot();
+    if (slot === null || isBooking) {
+      return;
+    }
+    setIsBooking(true);
+    setSuccessMessage('');
+    setErrorMessage('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/todos/' + slot.id, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: true }),
+      });
+      if (response.status === 409) {
+        markSlotBooked(slot.id);
+        setSelectedId(null);
+        setErrorMessage(slot.title + ' was just booked by someone else');
+      } else if (response.ok) {
+        markSlotBooked(slot.id);
+        setSelectedId(null);
+        setSuccessMessage('Booked: ' + slot.title);
+      } else {
+        setErrorMessage('Could not book ' + slot.title);
+      }
+    } catch (requestError) {
+      setErrorMessage('Could not book ' + slot.title);
+    }
+    setIsBooking(false);
+  };
+
+  if (loading) {
+    return (
+      <main>
+        <h2>Booking prototype</h2>
+        <p>Loading slots…</p>
+      </main>
+    );
+  }
+
+  if (loadError !== '') {
+    return (
+      <main>
+        <h2>Booking prototype</h2>
+        <p role="alert">{loadError}</p>
+      </main>
+    );
+  }
+
+  let bookLabel = 'Book';
+  if (isBooking) {
+    bookLabel = 'Booking…';
+  }
+
+  return (
+    <main>
+      <h2>Booking prototype</h2>
+      <ul>
+        {slots.map((slot) => {
+          let pressed = 'false';
+          if (slot.id === selectedId) {
+            pressed = 'true';
+          }
+          return (
+            <li key={slot.id}>
+              <button type="button" disabled={slot.completed} aria-pressed={pressed} onClick={() => setSelectedId(slot.id)}>
+                {slot.title}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <button type="button" disabled={selectedId === null || isBooking} onClick={handleBook}>
+        {bookLabel}
+      </button>
+      {successMessage !== '' && <p role="status">{successMessage}</p>}
+      {errorMessage !== '' && <p role="alert">{errorMessage}</p>}
+    </main>
+  );
+};
+
+export default App;`,
+    senior: `import React, { useCallback, useEffect, useReducer } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: select one free slot, book it, get a definite answer.
+// Data model: slots [{ id, title, completed }] and one booking state machine:
+// idle -> sending -> booked | taken | failed.
+// API endpoints: GET /slots; POST /bookings { slotId, idempotencyKey } in a
+// real app (PATCH /todos/:id here), 201 on success and 409 when taken.
+// Reliability and scale: the UI guard stops double clicks, not races. The
+// server makes the booking atomic: INSERT INTO bookings (slot_id, user_id)
+// with UNIQUE (slot_id), or SELECT ... FOR UPDATE on the slot row inside a
+// transaction, so exactly one of two concurrent requests commits and the
+// other maps the constraint violation to 409. The idempotency key lets a
+// client retry a timed-out request without booking twice, and a short hold
+// with an expiry covers a checkout that takes several steps.
+
+const SLOTS_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=10';
+const slotUrl = id => 'https://jsonplaceholder.typicode.com/todos/' + id;
+
+const initial = { status: 'loading', slots: [], selectedId: null, sending: false, notice: null };
+
+const reducer = (state, action) => {
+  const book = id => state.slots.map(slot => (slot.id === id ? { ...slot, completed: true } : slot));
+  switch (action.type) {
+    case 'loaded': return { ...state, status: 'ready', slots: action.slots };
+    case 'load-failed': return { ...state, status: 'error' };
+    case 'select': return { ...state, selectedId: action.id };
+    case 'send': return { ...state, sending: true, notice: null };
+    case 'booked': return { ...state, sending: false, selectedId: null, slots: book(action.slot.id), notice: { kind: 'status', text: 'Booked: ' + action.slot.title } };
+    case 'taken': return { ...state, sending: false, selectedId: null, slots: book(action.slot.id), notice: { kind: 'alert', text: action.slot.title + ' was just booked by someone else' } };
+    case 'failed': return { ...state, sending: false, notice: { kind: 'alert', text: 'Could not book ' + action.slot.title } };
+    default: return state;
+  }
+};
+
+const Slot = ({ slot, selected, onSelect }) => (
+  <li>
+    <button type="button" disabled={slot.completed} aria-pressed={selected} onClick={() => onSelect(slot.id)}>
+      {slot.title}
+    </button>
+  </li>
+);
+
+const App = () => {
+  const [state, dispatch] = useReducer(reducer, initial);
+  const { status, slots, selectedId, sending, notice } = state;
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch(SLOTS_URL);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        if (active) dispatch({ type: 'loaded', slots: data });
+      } catch {
+        if (active) dispatch({ type: 'load-failed' });
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const select = useCallback(id => dispatch({ type: 'select', id }), []);
+
+  const book = async () => {
+    const slot = slots.find(one => one.id === selectedId);
+    if (!slot || slot.completed || sending) return;
+    dispatch({ type: 'send' });
+    try {
+      const response = await fetch(slotUrl(slot.id), {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ completed: true }),
+      });
+      if (response.status === 409) dispatch({ type: 'taken', slot });
+      else dispatch({ type: response.ok ? 'booked' : 'failed', slot });
+    } catch {
+      dispatch({ type: 'failed', slot });
+    }
+  };
+
+  if (status === 'loading') return <main><h2>Booking prototype</h2><p aria-live="polite">Loading slots…</p></main>;
+  if (status === 'error') return <main><h2>Booking prototype</h2><p role="alert">Could not load slots</p></main>;
+
+  return (
+    <main>
+      <h2>Booking prototype</h2>
+      <ul aria-label="Slots">
+        {slots.map(slot => <Slot key={slot.id} slot={slot} selected={slot.id === selectedId} onSelect={select} />)}
+      </ul>
+      <button type="button" disabled={selectedId === null || sending} onClick={book}>
+        {sending ? 'Booking…' : 'Book'}
+      </button>
+      {notice && <p role={notice.kind}>{notice.text}</p>}
+    </main>
+  );
+};
+
+export default App;`,
+    hiddenSuite: `const FRIDAY = [
+  { id: 57, userId: 4, title: 'Fri 14:00', completed: true },
+  { id: 58, userId: 4, title: 'Fri 15:00', completed: false },
+  { id: 59, userId: 4, title: 'Fri 16:00', completed: true },
+  { id: 60, userId: 4, title: 'Fri 17:00', completed: false },
+];
+const statusText = () => {
+  const status = screen.queryByRole('status');
+  return status ? status.textContent : '';
+};
+
+test('other slots: a booked one cannot be chosen, and the PATCH goes to the id chosen', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRIDAY);
+  expect(slots()).toEqual([['Fri 14:00', 'booked'], ['Fri 15:00', 'free'], ['Fri 16:00', 'booked'], ['Fri 17:00', 'free']]);
+  pick('Fri 16:00');
+  expect(bookButton().disabled).toBe(true);
+  pick('Fri 17:00');
+  fireEvent.click(bookButton());
+  expect(calls).toHaveLength(2);
+  expect([calls[1].url, calls[1].method]).toEqual(['https://jsonplaceholder.typicode.com/todos/60', 'PATCH']);
+  await answer(calls[1], { ...FRIDAY[3], completed: true });
+  expect(statusText()).toBe('Booked: Fri 17:00');
+  expect(slots()).toEqual([['Fri 14:00', 'booked'], ['Fri 15:00', 'free'], ['Fri 16:00', 'booked'], ['Fri 17:00', 'booked']]);
+}));
+
+test('an answer that is not ok is a failure, and a retry that works clears the alert', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 11:00');
+  fireEvent.click(bookButton());
+  await answer(calls[1], { ...SLOTS[2], completed: true }, 500);
+  expect(screen.getByRole('alert').textContent).toBe('Could not book Mon 11:00');
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'selected']]);
+  fireEvent.click(bookButton());
+  expect(calls).toHaveLength(3);
+  expect(screen.queryByRole('alert')).toBeNull();
+  await answer(calls[2], { ...SLOTS[2], completed: true });
+  expect(statusText()).toBe('Booked: Mon 11:00');
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'booked']]);
+}));
+
+test('slots that fail to load show an alert', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load slots');
+  expect(screen.queryByText('Loading slots…')).toBeNull();
+  expect(slots()).toEqual([]);
+}));
+
+test('a slot list answered with a status that is not ok is a failure too', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS, 503);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load slots');
+  expect(slots()).toEqual([]);
+}));
+
+test('a new booking clears the last status, and a 409 after a success books both', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 09:00');
+  fireEvent.click(bookButton());
+  await answer(calls[1], { ...SLOTS[0], completed: true });
+  expect(statusText()).toBe('Booked: Mon 09:00');
+  pick('Mon 11:00');
+  fireEvent.click(bookButton());
+  expect(statusText()).toBe('');
+  expect(calls[2].url).toBe('https://jsonplaceholder.typicode.com/todos/3');
+  await answer(calls[2], { error: 'Slot already booked' }, 409);
+  expect(screen.getByRole('alert').textContent).toBe('Mon 11:00 was just booked by someone else');
+  expect(statusText()).toBe('');
+  expect(slots()).toEqual([['Mon 09:00', 'booked'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'booked']]);
+  expect(bookButton().disabled).toBe(true);
+}));`,
   },
   "react-analytics-panel": {
     solution: `Senior-style approach for Analytics panel:

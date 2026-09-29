@@ -3644,7 +3644,7 @@ test('a failed request shows an alert', () => withRequests(async calls => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Booking prototype",
-    prompt: "Render available slots, select one, submit a booking, and prevent duplicate local selection. Explain server-side double-booking prevention.",
+    prompt: "A booking page for a small studio. On mount, fetch `https://jsonplaceholder.typicode.com/todos?_limit=10` and treat each record as a time slot: its `title` names the slot and `completed: true` means it is already booked. While the slots load, show “Loading slots…”; a failed request, rejected or answered with a status that is not ok, shows “Could not load slots” in an element with `role=\"alert\"`. Show every slot as a `button` inside an `li`, reading the slot’s title, and disable the button of a booked slot. Clicking a free slot selects it: its button gets `aria-pressed=\"true\"` and the other slot buttons `aria-pressed=\"false\"`, so only one slot is selected at a time. A “Book” button stays disabled until a slot is selected. Pressing it sends `PATCH https://jsonplaceholder.typicode.com/todos/<id>` for the selected slot with the JSON body `{\"completed\":true}`, and while that request is on its way the button reads “Booking…” and is disabled, so the same booking cannot go out twice. When the answer is ok, the slot becomes booked, the selection clears, and an element with `role=\"status\"` reads “Booked: <title>”. When the server answers 409, someone else took the slot first: mark it booked, clear the selection, and show “<title> was just booked by someone else” in an alert. Any other failure shows “Could not book <title>” in an alert and leaves the slot free and selected, so Book can be pressed again. Starting a booking clears the previous status and alert. The notes at the top are for your explanation of how the server stops two people booking the same slot; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3660,57 +3660,176 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=10';
-const [items, setItems] = useState([]);
+    skeleton: `const SLOTS_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=10';
+const [slots, setSlots] = useState([]);
 const [loading, setLoading] = useState(true);
-const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [loadError, setLoadError] = useState('');
+const [selectedId, setSelectedId] = useState(null);
+const [booking, setBooking] = useState(false);
+const [status, setStatus] = useState('');
+const [problem, setProblem] = useState('');
 
-useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+// load the slots in a mount effect, as in the earlier tasks
 
-  loadItems();
-}, []);
+const markBooked = id =>
+  setSlots(current => current.map(slot => (slot.id === id ? { ...slot, completed: true } : slot)));
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
+const book = async () => {
+  const slot = slots.find(one => one.id === selectedId);
+  if (!slot || booking) return;
+  setBooking(true);
+  setStatus('');
+  setProblem('');
+  try {
+    const response = await fetch('https://jsonplaceholder.typicode.com/todos/' + slot.id, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ completed: true }),
+    });
+    // 409: taken by someone else. Not ok: could not book. Ok: booked.
+  } catch (requestError) {
+    setProblem('Could not book ' + slot.title);
+  } finally {
+    setBooking(false);
+  }
+};
 
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+// <button type="button" disabled={slot.completed} aria-pressed={slot.id === selectedId}
+//   onClick={() => setSelectedId(slot.id)}>{slot.title}</button>`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "The client can stop one person sending the same booking twice: disable booked slots, and disable Book while a request is on its way. Only the server can stop two people booking at the same moment, which is why a 409 answer needs its own branch.",
     ],
     approach: [
-      "Fetch the mock slots into array state and render each one as a keyed, clickable option.",
-      "Store the selected slot id in state and mark slots already booked locally as unavailable.",
-      "On submit, move the chosen slot into a booked list and guard the handler so the same slot cannot be taken twice.",
-      "Explain in comments why the real guard is a unique constraint or a transaction on the server, not this client check.",
+      "Fetch the slots once in a mount effect into array state, with loading and error state, and render each one as a keyed `li` with a slot button disabled when `completed` is true.",
+      "Keep the selected slot’s id in state and set `aria-pressed` on each slot button by comparing ids.",
+      "Write `book()` as one async function: return early while a booking is on its way, set the booking flag, clear the old messages, send the PATCH, and branch on 409, any other failure, and success.",
+      "Mark a slot booked by mapping to a copy with `completed: true`. Then write the notes: a unique constraint or a conditional update inside a transaction on the server, answering 409 to whoever comes second.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Available slots render and one can be selected and submitted.",
-      "Duplicate local selection is prevented.",
-      "Your comments explain server-side double-booking prevention.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      method: String(options.method || 'GET').toUpperCase(),
+      body: options.body,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const answer = (call, data, status = 200) => act(async () => {
+  call.respond(data, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+// Each slot as its title and 'booked' (disabled), 'selected' (pressed) or 'free'.
+const slots = () => screen.queryAllByRole('listitem').map(item => {
+  const button = item.querySelector('button');
+  return [button.textContent, button.disabled ? 'booked' : button.getAttribute('aria-pressed') === 'true' ? 'selected' : 'free'];
+});
+const pick = title => fireEvent.click(screen.getByRole('button', { name: title }));
+const bookButton = () => screen.getByRole('button', { name: 'Book' });
+const SLOTS = [
+  { id: 1, userId: 1, title: 'Mon 09:00', completed: false },
+  { id: 2, userId: 1, title: 'Mon 10:00', completed: true },
+  { id: 3, userId: 1, title: 'Mon 11:00', completed: false },
+];
+
+test('the slots load on mount and booked ones are disabled', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  const url = new URL(calls[0].url);
+  expect([url.origin + url.pathname, url.searchParams.get('_limit')]).toEqual(['https://jsonplaceholder.typicode.com/todos', '10']);
+  expect(screen.getByText('Loading slots…')).toBeTruthy();
+  await answer(calls[0], SLOTS);
+  expect(screen.queryByText('Loading slots…')).toBeNull();
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'free']]);
+  expect(bookButton().disabled).toBe(true);
+}));
+
+test('one free slot is selected at a time', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 09:00');
+  expect(slots()).toEqual([['Mon 09:00', 'selected'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'free']]);
+  expect(bookButton().disabled).toBe(false);
+  pick('Mon 11:00');
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'selected']]);
+  pick('Mon 10:00');
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'selected']]);
+}));
+
+test('Book sends one PATCH for the selected slot and cannot send it twice', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 11:00');
+  fireEvent.click(bookButton());
+  expect(calls).toHaveLength(2);
+  expect([calls[1].url, calls[1].method, JSON.parse(calls[1].body).completed]).toEqual(['https://jsonplaceholder.typicode.com/todos/3', 'PATCH', true]);
+  const waiting = screen.getByRole('button', { name: 'Booking…' });
+  expect(waiting.disabled).toBe(true);
+  fireEvent.click(waiting);
+  expect(calls).toHaveLength(2);
+}));
+
+test('a booking that works marks the slot booked and says so', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 09:00');
+  fireEvent.click(bookButton());
+  await answer(calls[1], { ...SLOTS[0], completed: true });
+  expect(slots()).toEqual([['Mon 09:00', 'booked'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'free']]);
+  expect(screen.getByRole('status').textContent).toBe('Booked: Mon 09:00');
+  expect(bookButton().disabled).toBe(true);
+}));
+
+test('a 409 answer means someone else was first', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 11:00');
+  fireEvent.click(bookButton());
+  await answer(calls[1], { error: 'Slot already booked' }, 409);
+  expect(screen.getByRole('alert').textContent).toBe('Mon 11:00 was just booked by someone else');
+  expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'booked']]);
+  expect(bookButton().disabled).toBe(true);
+}));
+
+test('a failed booking keeps the slot free and selected for another try', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], SLOTS);
+  pick('Mon 09:00');
+  fireEvent.click(bookButton());
+  await breakOff(calls[1]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not book Mon 09:00');
+  expect(slots()).toEqual([['Mon 09:00', 'selected'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'free']]);
+  fireEvent.click(bookButton());
+  expect(calls).toHaveLength(3);
+  expect(calls[2].url).toBe('https://jsonplaceholder.typicode.com/todos/1');
+}));
+`,
     api: {
-      method: "GET",
+      method: "GET + PATCH",
       url: "https://jsonplaceholder.typicode.com/todos?_limit=10",
-      note: "Use these records as mock slots, then model booking locally.",
+      note: "The records stand in for time slots. JSONPlaceholder accepts the PATCH but does not save it, so a reload shows every slot as it was.",
     },
   },
   {
