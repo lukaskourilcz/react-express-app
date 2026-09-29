@@ -40,6 +40,7 @@ import { playable as playableCodingTask, CODING_TASKS } from '../lib/coding/cata
 import { codingTaskById, levelCodingTasks } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
+import { giveUpAfter as clientGiveUpAfter } from '../client/src/coding/hint-ladder';
 import { runInSandbox } from '../lib/coding/sandbox';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
@@ -2126,7 +2127,13 @@ async function main() {
   const preparedDrill = prepareDesign(drillTask!, (list) => [...list].reverse());
   assert.equal(gradeDesign(drillTask!, preparedDrill.key, [preparedDrill.key.order!]).outcome, 'passed', 'a sequence drill grades the shuffled order');
   assert.equal(gradeDesign(drillTask!, preparedDrill.key, [[...preparedDrill.key.order!].reverse()]).outcome, 'failed');
-  assert.equal(giveUpAfter(ladderLength(doubleTask!)), Math.min(Math.max(2, Math.ceil(ladderLength(doubleTask!) / 2)), ladderLength(doubleTask!)));
+  // The solution opens once half the ladder is spent, never before two rungs
+  // (or the whole ladder, when it is shorter). The browser shows the same number.
+  assert.equal(ladderLength(doubleTask!), 5, 'js-double-numbers offers five rungs: a hint, two approach steps, the skeleton and the docs link');
+  for (const [rungs, opensAfter] of [[1, 1], [2, 2], [3, 2], [4, 2], [5, 3], [6, 3], [7, 4], [9, 5]]) {
+    assert.equal(giveUpAfter(rungs), opensAfter, `a ${rungs}-rung ladder opens the solution after ${opensAfter}`);
+    assert.equal(clientGiveUpAfter(rungs), opensAfter, `the workbench says the same for ${rungs} rungs`);
+  }
 
   assert.ok(levelCodingTasks('javascript', 6).length >= 1, 'javascript level 6 carries a coding task');
   assert.ok(levelCodingTasks('javascript', 6).length <= 2);
