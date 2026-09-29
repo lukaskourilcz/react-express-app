@@ -151,7 +151,7 @@ export const en = {
   'register.cta': 'Sign in',
   'register.dismiss': 'Not now',
   // Under a guest's Learn map and quiz result: sign-in does not carry it over.
-  'register.deviceOnly': 'You’re not signed in, so this progress is saved on this device only.',
+  'register.deviceOnly': 'You’re not signed in, so this progress stays on this device only. Signing in starts from your account’s progress instead.',
 
   // Rewards (the /shop route). The unit is coins; code keeps `token` (#227).
   'shop.merchSection': 'Merchandise',
@@ -1013,6 +1013,8 @@ export const en = {
   'today.progress': '{done}/{target} done',
   'today.targetMet': 'Target reached',
   'today.done': 'Today’s plan is complete',
+  // Unrendered: Today no longer promises a card pack, since no screen opens
+  // one. The keys stay because the retained Czech file still has them.
   'today.packReady': 'Card pack ready',
   'today.openPack': 'Open your pack',
   'today.emptyTitle': 'Nothing queued',
@@ -1329,6 +1331,8 @@ export const en = {
   'error.pathAttemptExpired': 'This attempt expired. Try again to start a new one.',
   'error.pathPaused': 'This path is paused. Resume it on the path page to carry on.',
   'error.pathUnavailable': 'This path is not open right now. Everything you did in it is kept.',
+  'error.topicLocked': 'This topic is still locked. Finish the topics it builds on first.',
+  'error.prerequisiteNotMet': 'Pass the steps before this one first.',
   // ── end of Billing ──────────────────────────────────────────────────────
   // ── Premium page, plan table and legal pages (issue #222) ───────────────
   // Section 4 of the second handoff. The landing keys above keep their names
@@ -1752,7 +1756,7 @@ export const en = {
   'coding.lesson.intro': 'The questions are done. Now write the code.',
   'coding.lesson.pending': '{n} coding tasks still to pass',
   'coding.lesson.allPassed': 'All coding tasks passed.',
-  'coding.lesson.guestUnverified': 'Coding tasks are checked and saved when you sign in.',
+  'coding.lesson.guestUnverified': 'Coding tasks are not checked while you’re signed out. This pass stays on this device only, and signing in starts from your account’s progress instead.',
   'coding.lesson.giveUpNote': 'Showing a solution ends this level attempt, and that task then earns no XP or coins when you pass it. You can retry the level later.',
   'coding.lesson.continue': 'Continue',
   'coding.lesson.mapGlyph': 'Includes a coding task',

@@ -577,10 +577,7 @@ async function learnerContext(
   };
 }
 
-type StepRequest =
-  | { kind: 'level'; level: number }
-  | { kind: 'checkpoint'; checkpoint: number }
-  | { kind: 'test'; from: number; to: number };
+type StepRequest = ProgressStep;
 
 /** Why the server will not serve this step, or null when it will. */
 function stepRefusal(
@@ -596,9 +593,8 @@ function stepRefusal(
   // switched to backend — where Next.js is not in the plan — would be told
   // those very levels are "not part of the learning plan you chose".
   //
-  // Part tests are deliberately not covered: what gates a part test is passing
-  // the levels it spans, not a record of having sat it, so it keeps the
-  // ordinary check below.
+  // A passed part test is covered on both of its names: `?test=n` and the
+  // older `?checkpoint=n` read the same record, and the map offers it again.
   if (stepAlreadyPassed(context.progress, topic, step)) return null;
 
   if (!isTopicInPlan(context.profile, subject, topic)) {
@@ -1244,6 +1240,21 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       );
       if (closed.error) return jsonError(res, 500, 'db_error', 'Could not close the learning attempt');
       applied = true;
+      // A Learn level counts for the streak whether it was passed, failed or
+      // lost on hearts. complete_verified_roadmap_attempt advances the streak
+      // for the other two; this attempt closes without it, so the day is
+      // counted here, once, by the request that closed it. Before migration
+      // 048 the routine does not exist and the level simply does not count.
+      if (userId) {
+        const streak = await withTimeout(supabase.rpc('advance_verified_streak', { p_user_id: userId })).catch(() => null);
+        if (!streak || streak.error) {
+          if (!isRpcMissing(streak?.error)) {
+            logEvent({ status: 500, kind: 'streak_failed', reason: streak?.error?.code ?? 'timeout' });
+          }
+        } else {
+          await settleMilestones(supabase, userId, session.subject!);
+        }
+      }
     }
   } else if (userId) {
     // Only a first pass earns a step's learning XP, so only a first pass
@@ -1554,7 +1565,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       logEvent({ status: 409, kind: 'unavailable', topic, part });
       return jsonError(res, 409, STEP_UNAVAILABLE.code, STEP_UNAVAILABLE.message);
     }
-    if (refuse({ kind: 'test', from: range.startLevel, to: range.endLevel })) return;
+    if (refuse({ kind: 'test', part, from: range.startLevel, to: range.endLevel })) return;
     if (await refusePremium({ kind: 'learn-part-test', topic, part }, { kind: 'checkpoint', checkpoint: part })) return;
 
     const pool: string[] = [];

@@ -142,9 +142,11 @@ export async function handleQuestionOfTheDay(req: VercelRequest, res: VercelResp
 
   const { correctAnswer, ...answer } = picked;
   const sessionId = encodeSession([{ questionId: picked.question.id, correctAnswer }], { scope: 'qotd', date, subject: 'webdev' });
-  // The body carries a sealed session; keep it out of shared caches like the
-  // daily challenge's.
-  res.setHeader('Cache-Control', 'private, max-age=300');
+  // The body carries a sealed session, which one check claims. Keep it out of
+  // every cache: a browser that kept it for five minutes answered "Load it
+  // again" after a 409 with the same claimed session, and the page stayed on
+  // the expired banner.
+  res.setHeader('Cache-Control', 'private, no-store');
   const body: QotdResponse = { ...answer, sessionId };
   return res.json(body);
 }

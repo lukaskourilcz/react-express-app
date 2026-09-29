@@ -64,10 +64,14 @@ A streak day is a UTC day with verified learning, not only a quiz
 a day is counted, and four routines call it behind the receipts that already
 make them idempotent: `record_verified_quiz_result_v2` (a quiz or daily
 result), `complete_verified_roadmap_attempt` (a Learn level or part test with
-every question answered, passed or not; a level ended by running out of hearts
-is closed by the handler and does not count), `record_coding_verdict` (any
+every question answered, passed or not), `record_coding_verdict` (any
 passing verdict, in the coding section or inside a Learn level) and
 `record_challenge_completion` (a Biggest Shark Challenge run that earned XP).
+A level ended by running out of hearts is closed by `api/quiz/roadmap.ts`
+without the completion routine, so the request that closes it calls
+`advance_verified_streak` directly: a Learn level counts however it ends. A
+database without the routine (before 048) leaves that level uncounted and
+the completion succeeds.
 A second source the same day adds nothing, and a replayed receipt moves
 nothing. `user_stats.last_quiz_date` keeps its name and means the last UTC day
 with verified learning; a learner with no stats row gets one with zero totals
@@ -76,9 +80,11 @@ by the month's protections. A shield covers exactly two UTC dates, the one it
 was raised on and the next: `activate_streak_shield` ends it at 00:00 UTC the
 day after tomorrow, and every reader takes `shield_until - 48 hours` as the
 raise date, which also holds for a shield stored as "raised + 48 hours" before
-048. The server keeps UTC days; the streak card, Today's target, the daily
-challenge and the cleared-level tooltip say when the day changes on the
-learner's clock (`client/src/lib/utcDay.ts`).
+048. The server keeps UTC days; the streak card, Today's target, done and
+empty panels, the daily challenge and the cleared-level tooltip say when the
+day changes on the learner's clock (`client/src/lib/utcDay.ts`). Reaching
+Today's target hands out nothing: the panel says the plan is complete and
+when the next day starts.
 
 ### Question of the day (#239)
 
@@ -93,7 +99,10 @@ the same seed, the answer sealed in a quiz session with scope `qotd`. A future
 date answers 404 `qotd_not_yet`, so tomorrow's question cannot be read today.
 `api/quiz/submit.ts` grades a `qotd` session as if signed out, whoever sends
 it: no result receipt, answer proof, XP, streak day, leaderboard entry or
-concept-review record.
+concept-review record. Every read seals a fresh session and one check claims
+it, so the response is `private, no-store` and the page fetches it with
+`cache: 'no-store'`; after a claimed or expired session, "Load it again" starts
+the question over with the new one.
 
 ### Daily challenge
 
@@ -107,6 +116,9 @@ marker row in `quiz_submissions` and sealed into every later session of the
 day, so fetching again just before submitting does not shorten it. The same
 lookup tells the client the day is already played. The response is
 `private, no-store`, because the session inside it belongs to one caller.
+`/quiz?mode=daily` starts the daily challenge once the sign-in is known and
+then drops the parameter; the Home "Daily challenge" tile and the empty Today
+leaderboard link there.
 `api/quiz/submit.ts` grades only the sessions it serves (quiz, review, daily,
 question of the day, challenge batch, assessment); a Learn session is refused.
 
@@ -134,7 +146,10 @@ outcomes whose question the learner had not answered earlier the same UTC day,
 read from `user_question_history` before the attempt updates it, and scales
 the quiz's XP by that share, `floor(xp × fresh ÷ total)`. The awarded XP is
 kept on the receipt row (`quiz_attempts.quest_xp`) and the stats handler
-credits coins for that amount. `total_quizzes` still counts every quiz.
+credits coins for that amount, also when a retry finds the result already
+recorded after a commit that timed out: the credit is keyed to the attempt
+and pays once, and a NULL amount (a refused second daily) pays nothing.
+`total_quizzes` still counts every quiz.
 Coding passes are not answers and are not counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank.

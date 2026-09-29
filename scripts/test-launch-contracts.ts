@@ -1906,6 +1906,15 @@ async function qotdContracts() {
   const wire = JSON.stringify({ ...body, sessionId: '' });
   assert.doesNotMatch(wire, /correctAnswer|explanation/, 'no answer or explanation before a check');
   assert.match(today.headers.get('cache-control') ?? '', /private/, 'the sealed session stays out of shared caches');
+  // One check claims the session, so a reload must reach the server for a
+  // fresh one: a browser that kept this for five minutes answered "Load it
+  // again" after a 409 with the claimed session.
+  assert.match(today.headers.get('cache-control') ?? '', /no-store/, 'and out of the browser cache');
+  assert.doesNotMatch(today.headers.get('cache-control') ?? '', /max-age/);
+  const again = mockResponse();
+  await dailyHandler({ method: 'GET', headers: {}, query: { qotd: 'today' } } as never, again as never);
+  assert.notEqual((again.body as { sessionId: string }).sessionId, body.sessionId, 'each read seals a fresh session');
+  assert.equal((again.body as { question: { id: string } }).question.id, body.question.id, 'for the same question');
 
   const future = mockResponse();
   await dailyHandler({ method: 'GET', headers: {}, query: { qotd: addDays(utcToday(), 1) } } as never, future as never);
@@ -2113,9 +2122,17 @@ async function quizSubmitScopeContracts() {
     ['challenge batch', (batch.body as { questions: unknown[] }).questions],
     ['question of the day', [(qotd.body as { question: unknown }).question]],
   ];
+  // An allowlist rather than one blocked key: a question handed out before
+  // grading carries what the learner needs to answer it and nothing else, so
+  // a new field (correctAnswer, explanation, tags, a hint) fails here until it
+  // is reviewed and added.
+  const PRE_GRADING_KEYS = new Set(['id', 'introduction', 'question', 'options', 'category', 'difficulty', 'review']);
   for (const [label, questions] of payloads) {
+    assert.ok((questions as unknown[]).length > 0, `${label} hands out questions`);
     for (const question of questions as Record<string, unknown>[]) {
       assert.equal('tags' in question, false, `${label} sends ${String(question.id)} with its tags before grading`);
+      const extra = Object.keys(question).filter((key) => !PRE_GRADING_KEYS.has(key));
+      assert.deepEqual(extra, [], `${label} sends ${String(question.id)} with ${extra.join(', ')} before grading`);
     }
   }
   const placement = mockResponse();
@@ -2123,6 +2140,8 @@ async function quizSubmitScopeContracts() {
   assert.equal(placement.statusCode, 200, JSON.stringify(placement.body));
   for (const question of (placement.body as { questions: Record<string, unknown>[] }).questions) {
     assert.equal('tags' in question, false, 'a placement round sends no tags');
+    const extra = Object.keys(question).filter((key) => !PRE_GRADING_KEYS.has(key));
+    assert.deepEqual(extra, [], `a placement round sends ${String(question.id)} with ${extra.join(', ')} before grading`);
   }
 }
 
@@ -3551,10 +3570,16 @@ async function main() {
     const passedCheckpoint = { nextjs: { checkpoints: { '1': { passed: true } } } };
     assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'checkpoint', checkpoint: 1 }), true);
     assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'checkpoint', checkpoint: 2 }), false);
-    // A part test is gated by the levels it spans, not by a record of sitting
-    // it, so it never takes the carve-out.
-    assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'test', from: 1, to: 2 }), false,
-      'a part test is never "already passed"');
+    // A part test is recorded under `checkpoints` by its part number, so a
+    // passed one takes the carve-out on `?test=` as it does on `?checkpoint=`.
+    // Before, `?test=` refused it with not_in_plan while `?checkpoint=` served
+    // the same test, and the map offered it as passed and clickable.
+    assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'test', part: 1, from: 1, to: 5 }), true,
+      'a passed part test is already passed under its ?test= name');
+    assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'test', part: 2, from: 6, to: 10 }), false,
+      'a part test never passed still takes the ordinary check');
+    assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'test', part: 1, from: 1, to: 2 }), false,
+      'passing the levels a part test spans is not passing the test');
   }
 
   // No plan may be empty, and every plan topic must belong to devShark.

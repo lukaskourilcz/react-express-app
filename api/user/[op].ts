@@ -362,16 +362,24 @@ function verifiedProfile(payload: Record<string, unknown>): { name: string | nul
   };
 }
 
-/** The XP record_verified_quiz_result_v2 awarded for an attempt it has just
- * applied, as migration 048 stores it on the receipt row. Before 048 the
- * column is missing and the routine awarded the receipt's amount in full, so
- * that is the answer when the read fails. */
-async function awardedQuestXp(userId: string, attemptId: string, receiptXp: number): Promise<number> {
+/** The XP record_verified_quiz_result_v2 awarded for this attempt, as
+ * migration 048 stores it on the receipt row, whichever request applied it.
+ *
+ * `applied` is what the routine answered this request. A routine that
+ * committed and then timed out answers the retry FALSE, yet the attempt was
+ * awarded, so a stored amount counts whatever `applied` says; crediting it
+ * again is harmless, since the coin credit is keyed to the attempt. A row
+ * whose amount is NULL was refused (a second daily result for the day) and
+ * awarded nothing. Before 048 the column is missing and the routine awarded
+ * the receipt's amount in full, so a failed read answers that for an attempt
+ * applied now, and nothing otherwise. */
+async function awardedQuestXp(userId: string, attemptId: string, receiptXp: number, applied: boolean): Promise<number> {
   const stored = await withTimeout(
     supabase!.from('quiz_attempts').select('quest_xp').eq('attempt_id', attemptId).eq('user_id', userId).maybeSingle(),
   ).catch(() => null);
-  const value = stored && !stored.error ? (stored.data as { quest_xp?: unknown } | null)?.quest_xp : undefined;
-  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? Math.min(value, receiptXp) : receiptXp;
+  if (!stored || stored.error) return applied ? receiptXp : 0;
+  const value = (stored.data as { quest_xp?: unknown } | null)?.quest_xp;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? Math.min(value, receiptXp) : 0;
 }
 
 async function stats(req: VercelRequest, res: VercelResponse) {
@@ -453,8 +461,9 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         // The XP the routine awarded: from migration 048 a question answered
         // earlier the same UTC day earns none, so it can be less than the
         // receipt's. Tokens follow that amount, keyed to the attempt so a
-        // replayed submission credits nothing.
-        const questXp = data === true ? await awardedQuestXp(user_id, receipt.attemptId, receipt.questXp) : 0;
+        // replayed submission credits nothing more, and a retry after a
+        // commit that timed out credits what the first request could not.
+        const questXp = await awardedQuestXp(user_id, receipt.attemptId, receipt.questXp, data === true);
         if (questXp > 0) {
           await creditVerifiedXp(supabase!, {
             userId: user_id,

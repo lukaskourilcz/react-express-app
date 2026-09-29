@@ -46,17 +46,17 @@ async function renderLearn() {
 
 it('tells a guest on the Learn map that progress stays on this device', async () => {
   await renderLearn();
-  expect(await screen.findByText('You’re not signed in, so this progress is saved on this device only.')).toBeInTheDocument();
+  expect(await screen.findByText('You’re not signed in, so this progress stays on this device only. Signing in starts from your account’s progress instead.')).toBeInTheDocument();
 });
 
 it('says nothing about this device while the session is restored, or to a signed-in learner', async () => {
   auth.value = { user: null, isAuthenticated: false, isLoading: true };
   await renderLearn();
-  expect(screen.queryByText(/saved on this device only/)).toBeNull();
+  expect(screen.queryByText(/on this device only/)).toBeNull();
   cleanup();
   auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false };
   await renderLearn();
-  expect(screen.queryByText(/saved on this device only/)).toBeNull();
+  expect(screen.queryByText(/on this device only/)).toBeNull();
 });
 
 it('tells a guest on the quiz result that the progress stays on this device', async () => {
@@ -84,5 +84,5 @@ it('tells a guest on the quiz result that the progress stays on this device', as
   fireEvent.click(screen.getByRole('button', { name: 'Start quiz' }));
   fireEvent.click(await screen.findByRole('radio', { name: /anchor/ }, { timeout: 4000 }));
   fireEvent.click(screen.getByRole('button', { name: 'Submit quiz' }));
-  expect(await screen.findByText('You’re not signed in, so this progress is saved on this device only.')).toBeInTheDocument();
+  expect(await screen.findByText('You’re not signed in, so this progress stays on this device only. Signing in starts from your account’s progress instead.')).toBeInTheDocument();
 }, 15_000);
