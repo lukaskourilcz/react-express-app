@@ -99,7 +99,10 @@ the same seed, the answer sealed in a quiz session with scope `qotd`. A future
 date answers 404 `qotd_not_yet`, so tomorrow's question cannot be read today.
 `api/quiz/submit.ts` grades a `qotd` session as if signed out, whoever sends
 it: no result receipt, answer proof, XP, streak day, leaderboard entry or
-concept-review record.
+concept-review record. Every read seals a fresh session and one check claims
+it, so the response is `private, no-store` and the page fetches it with
+`cache: 'no-store'`; after a claimed or expired session, "Load it again" starts
+the question over with the new one.
 
 ### Daily challenge
 

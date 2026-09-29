@@ -1906,6 +1906,15 @@ async function qotdContracts() {
   const wire = JSON.stringify({ ...body, sessionId: '' });
   assert.doesNotMatch(wire, /correctAnswer|explanation/, 'no answer or explanation before a check');
   assert.match(today.headers.get('cache-control') ?? '', /private/, 'the sealed session stays out of shared caches');
+  // One check claims the session, so a reload must reach the server for a
+  // fresh one: a browser that kept this for five minutes answered "Load it
+  // again" after a 409 with the claimed session.
+  assert.match(today.headers.get('cache-control') ?? '', /no-store/, 'and out of the browser cache');
+  assert.doesNotMatch(today.headers.get('cache-control') ?? '', /max-age/);
+  const again = mockResponse();
+  await dailyHandler({ method: 'GET', headers: {}, query: { qotd: 'today' } } as never, again as never);
+  assert.notEqual((again.body as { sessionId: string }).sessionId, body.sessionId, 'each read seals a fresh session');
+  assert.equal((again.body as { question: { id: string } }).question.id, body.question.id, 'for the same question');
 
   const future = mockResponse();
   await dailyHandler({ method: 'GET', headers: {}, query: { qotd: addDays(utcToday(), 1) } } as never, future as never);
