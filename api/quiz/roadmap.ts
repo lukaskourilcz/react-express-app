@@ -23,6 +23,7 @@ import {
   requireAuthResult,
   isRpcMissing,
   withRequestContext,
+  ServiceUnavailableError,
 } from '../../lib/http';
 import { AuthError, confirmedEmail, tryAuth } from '../../lib/auth';
 import {
@@ -1360,6 +1361,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Allow', resource === 'coding-task' || resource === 'coding-approaches' ? 'GET' : 'POST');
       return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
     } catch (error) {
+      if (error instanceof ServiceUnavailableError) return jsonError(res, 503, error.code, error.message);
       logEvent({ status: 500, kind: 'coding_error', resource, category: error instanceof Error ? error.name : 'unknown' });
       return jsonError(res, 500, 'internal_error', 'Could not handle the coding request');
     }
@@ -1459,6 +1461,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       try {
         return await handlePlacementRound(req, res);
       } catch (error) {
+        if (error instanceof ServiceUnavailableError) return jsonError(res, 503, error.code, error.message);
         logEvent({ status: 500, kind: 'placement_round_error', category: error instanceof Error ? error.name : 'unknown' });
         return jsonError(res, 500, 'internal_error', 'Could not grade the placement round');
       }

@@ -49,6 +49,7 @@ export function withRequestContext<T>(
     } catch (error) {
       // A refusal of locked content is an answer, not a failure.
       if (error instanceof PremiumRequiredError && !res.headersSent) return jsonPremiumRequired(res, error);
+      if (error instanceof ServiceUnavailableError && !res.headersSent) return jsonError(res, 503, error.code, error.message);
       logEvent('request', {
         level: 'error',
         method: req.method ?? 'UNKNOWN',
@@ -116,6 +117,18 @@ export class PremiumRequiredError extends Error {
     this.name = 'PremiumRequiredError';
     this.kind = content.kind;
     this.ref = gatedRef(content);
+  }
+}
+
+/** Thrown where going on would be unsafe while a service is down, such as a
+ * one-time claim that could not be recorded (lib/rate-limit.ts `claimOnce`).
+ * `withRequestContext` answers it with HTTP 503 and its code. */
+export class ServiceUnavailableError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'ServiceUnavailableError';
+    this.code = code;
   }
 }
 

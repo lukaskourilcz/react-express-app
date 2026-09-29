@@ -21,7 +21,7 @@
 // exported for the fallback path and any sync call site.
 
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
-import { jsonError } from './http';
+import { jsonError, ServiceUnavailableError } from './http';
 
 interface Bucket {
   tokens: number;
@@ -354,9 +354,12 @@ export async function enforceRateLimit(
 // replay would leak something (a placement round answered again with other
 // options reports a different score), the handler claims the token's id once:
 // the first claim wins, every later one is refused. Upstash holds the claim
-// across instances (SET NX with an expiry); without it, or when Redis fails
-// mid-request, a per-instance map does, which is enough locally and blunts a
-// script hammering one warm instance.
+// across instances (SET NX with an expiry). Where Upstash is configured (in
+// production it is), a claim it cannot record is not a claim: this instance's
+// memory knows nothing of the others, so a replay sent to another instance
+// would be graded again. The request is refused with 503 instead
+// (`ServiceUnavailableError`). Only without Upstash, as in local development,
+// does a per-instance map hold the claim.
 
 type OnceStore = { set: (key: string, value: string, opts: { nx: true; ex: number }) => Promise<unknown> };
 let onceStore: Promise<OnceStore | null> | null = null;
@@ -377,14 +380,16 @@ function getOnceStore(): Promise<OnceStore | null> {
 }
 
 /** Claim `key` for `ttlSeconds`. True for the first caller, false while the
- * claim stands. */
+ * claim stands. Throws `ServiceUnavailableError` when Upstash is configured
+ * and does not record the claim. */
 export async function claimOnce(key: string, ttlSeconds: number): Promise<boolean> {
-  const store = await getOnceStore();
-  if (store) {
+  if (isDistributedRateLimitEnabled()) {
+    const store = await getOnceStore();
     try {
+      if (!store) throw new Error('once_store_unavailable');
       return (await withLimiterDeadline(store.set(`once:${key}`, '1', { nx: true, ex: ttlSeconds }))) === 'OK';
     } catch {
-      // Redis unreachable: fall back to this instance's memory below.
+      throw new ServiceUnavailableError('claim_unavailable', 'This could not be checked right now. Try again in a minute.');
     }
   }
   const now = Date.now();
