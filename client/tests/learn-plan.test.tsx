@@ -149,6 +149,21 @@ async function mountAt(path: string, page: ReactNode) {
 }
 
 describe('the account’s record', () => {
+  it('plans Today from the account, not from an empty browser copy', async () => {
+    signInAs(BACKEND);
+    answer({ progress: { javascript: { levels: { '1': MASTERED, '2': MASTERED, '3': MASTERED }, checkpoints: {} } } });
+    await mountAt('/today', <Today />);
+    expect(await screen.findByText('JavaScript · Level 4')).toBeInTheDocument();
+    expect(screen.queryByText('JavaScript · Level 1')).toBeNull();
+  });
+
+  it('replaces this device’s unlocks with the account’s on sync', async () => {
+    unlockExtraTopics(['react', 'nodejs']);
+    answer({ unlocked: ['typescript'] });
+    await syncProgressWithServer();
+    expect(getExtraUnlocks()).toEqual(['typescript']);
+  });
+
   it('keeps the spaced-mastery days a completion returns', async () => {
     const progress = {
       html: {
@@ -166,6 +181,43 @@ describe('the account’s record', () => {
     const stored = getRoadmapProgress().html!.levels as unknown as Record<string, Record<string, unknown>>;
     expect(stored['1']).toMatchObject({ mastered: true, masteredAt: MASTERED.masteredAt });
     expect(stored['2']).toMatchObject({ passed: true, lastPassDay: TODAY, passDays: [DAYS_AGO(3), TODAY] });
+  });
+
+  it('opens nothing on this device when the placement receipt cannot be applied', async () => {
+    signInAs(BACKEND);
+    let fail = true;
+    const seen = answer({
+      placement: { done: true, correct: 20, total: 20, difficulty: 5, unlockedPreview: ['typescript', 'react'], resultReceipt: 'receipt-1' },
+      skillCheck: () => (fail
+        ? HttpResponse.json({ error: { code: 'db_error', message: 'Could not apply assessment unlocks' } }, { status: 500 })
+        : HttpResponse.json({ applied: true, unlocked: ['typescript'] })),
+    });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: /Skill check/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start placement' }));
+    expect(await screen.findByText('Your score could not be saved to your account, so no paths opened. Try again.', {}, { timeout: 3000 })).toBeInTheDocument();
+    expect(seen.skillChecks).toBe(1);
+    expect(screen.queryByText('Every path is now open.')).toBeNull();
+    // Try again applies the same receipt.
+    fail = false;
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+    await waitFor(() => expect(seen.skillChecks).toBe(2));
+    await waitFor(() => expect(screen.queryByText(/could not be saved to your account/)).toBeNull());
+    fireEvent.click(screen.getByRole('button', { name: 'Back to paths' }));
+    expect(getExtraUnlocks()).toEqual(['typescript']);
+  });
+
+  it('does not fall back to the score’s own unlocks after a failure', async () => {
+    signInAs(BACKEND);
+    answer({
+      placement: { done: true, correct: 20, total: 20, difficulty: 5, unlockedPreview: ['typescript', 'react'], resultReceipt: 'receipt-1' },
+      skillCheck: () => HttpResponse.json({ error: { code: 'db_error', message: 'Could not apply assessment unlocks' } }, { status: 500 }),
+    });
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: /Skill check/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Start placement' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Back to paths' }, { timeout: 3000 }));
+    expect(getExtraUnlocks()).toEqual([]);
   });
 });
 

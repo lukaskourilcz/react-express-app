@@ -1023,6 +1023,7 @@ export const en = {
   'placement.finish': 'Finish',
   'placement.done': 'Placement complete',
   'placement.doneBody': 'We opened the paths that match where you are. You can retake this anytime.',
+  'placement.applyFailed': 'Your score could not be saved to your account, so no paths opened. Try again.',
   'placement.retry': 'Retake placement',
   'placement.cancel': 'Cancel',
   'placement.loading': 'Setting up your placement…',

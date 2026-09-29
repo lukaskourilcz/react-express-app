@@ -17,6 +17,7 @@ import { setTrackValue } from './lib/tracks';
 import type { TranslationKey } from './i18n/translations';
 import { useGameConfig, type GameConfig } from './lib/gameConfig';
 import { primeRankMarker } from './lib/xp';
+import { syncProgressWithServer } from './lib/roadmap';
 import XpToaster from './components/XpToaster';
 import RegisterPromptSnackbar from './components/RegisterPromptSnackbar';
 import ReferralBinder from './components/ReferralBinder';
@@ -386,6 +387,14 @@ function App() {
     const pref = preferredTrackOf(user);
     if (pref) setTrackValue(pref);
   }, [user]);
+
+  // Pull the account's verified progress and unlocks once per sign-in. Today,
+  // the maps and the header read the browser's copy; on a new device, or after
+  // playing signed out, that copy is not the account's.
+  const signedInId = user?.id ?? null;
+  useEffect(() => {
+    if (signedInId) syncProgressWithServer().catch(() => {});
+  }, [signedInId]);
 
   // Sign-out drops every cached account response. Without this, the next
   // person to sign in on this browser could see the previous learner's

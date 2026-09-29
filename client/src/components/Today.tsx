@@ -12,6 +12,7 @@ import type { TranslationKey } from '../i18n/translations';
 import { useSubject, topicsForSubject, type SubjectId } from '../lib/subjects';
 import { useRoadmapProgress, useExtraUnlocks, type RoadmapProgress,
   availabilityOf,
+  syncProgressWithServer,
   type StepAvailability,
 } from '../lib/roadmap';
 import { conceptDueQuery, roadmapStructureQuery } from '../lib/queries';
@@ -126,6 +127,10 @@ function useTodayFirstData() {
     readOnce(queryClient, roadmapStructureQuery),
     ...(user
       ? [
+          // The plan is built from the browser's copy of the progress. On a
+          // new device that copy is empty, and Today would plan JavaScript 1
+          // for a learner with dozens of passed levels.
+          syncProgressWithServer(),
           readOnce(queryClient, entitlementQuery(user.id)),
           ...SIGNED_IN_PARTS.map((part) => part.load()),
           readOnce(queryClient, conceptDueQuery),

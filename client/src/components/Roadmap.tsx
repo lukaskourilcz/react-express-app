@@ -434,6 +434,9 @@ function Roadmap() {
 
   const onSkillCheckFinished = useCallback(
     (correct: number, verifiedUnlocks?: RoadmapTopic[]) => {
+      // Signed in, only what the server applied opens anything: the runner
+      // passes that list, empty when applying failed. The score's own tier
+      // is the signed-out preview, which the server never sees.
       const granted = verifiedUnlocks ?? topicsFromAssessment(correct);
       const added = unlockExtraTopics(granted);
       setSkillCheckOpen(false);
@@ -1942,6 +1945,9 @@ function SkillCheckRunner({
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [correct, setCorrect] = useState(0);
   const [verifiedUnlocks, setVerifiedUnlocks] = useState<RoadmapTopic[] | undefined>();
+  // Signed in, the receipt that could not be applied, kept for Try again.
+  const [unapplied, setUnapplied] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -1967,22 +1973,35 @@ function SkillCheckRunner({
   // Apply the server-verified result. Grading + unlocks live on the server; the
   // receipt is only applied when signed in — guests get the local unlock tier
   // from `correct` back in the parent's onSkillCheckFinished.
+  const applyReceipt = useCallback(async (receipt: string) => {
+    setApplying(true);
+    try {
+      const applied = await applySkillCheckReceipt(receipt);
+      setVerifiedUnlocks(applied.unlocked);
+      setUnapplied(null);
+    } catch {
+      // Opening paths on this device alone would draw them as open while the
+      // server refuses every level in them, so nothing opens; the result says
+      // so and offers to try again while the receipt is still valid.
+      setVerifiedUnlocks([]);
+      setUnapplied(receipt);
+    } finally {
+      setApplying(false);
+    }
+  }, []);
+
   const finishFrom = useCallback(async (res: PlacementDone) => {
     setCorrect(res.correct);
-    let verified: RoadmapTopic[] | undefined;
-    if (isAuthenticated && res.resultReceipt) {
-      try {
-        const applied = await applySkillCheckReceipt(res.resultReceipt);
-        verified = applied.unlocked;
-      } catch {
-        // The receipt is the server's authority; if applying it fails we still
-        // show the score and fall back to the local unlock tier in onFinished.
-        verified = undefined;
-      }
+    setUnapplied(null);
+    if (isAuthenticated) {
+      // Without a receipt the server verified nothing, so nothing opens.
+      if (res.resultReceipt) await applyReceipt(res.resultReceipt);
+      else setVerifiedUnlocks([]);
+    } else {
+      setVerifiedUnlocks(undefined);
     }
-    setVerifiedUnlocks(verified);
     setPhase('result');
-  }, [isAuthenticated]);
+  }, [isAuthenticated, applyReceipt]);
 
   const start = useCallback(async () => {
     setPhase('loading');
@@ -2094,14 +2113,25 @@ function SkillCheckRunner({
         <div style={{ marginTop: 4 }}>
           <Text color="secondary" weight="bold">{t('roadmap.skillCheckResult', { correct, total })}</Text>
         </div>
-        <div style={{ marginTop: 8, marginBottom: 8 }}>
-          <Text color="secondary">{t(tier as TranslationKey)}</Text>
-        </div>
-        <div style={{ marginBottom: 24 }}>
-          <Text type="supporting" color="secondary">{t('placement.doneBody')}</Text>
-        </div>
+        {unapplied ? (
+          <div role="alert" style={{ marginTop: 8, marginBottom: 24 }}>
+            <Text color="secondary">{t('placement.applyFailed')}</Text>
+          </div>
+        ) : (
+          <>
+            <div style={{ marginTop: 8, marginBottom: 8 }}>
+              <Text color="secondary">{t(tier as TranslationKey)}</Text>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <Text type="supporting" color="secondary">{t('placement.doneBody')}</Text>
+            </div>
+          </>
+        )}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <AxButton variant="primary" label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
+          {unapplied && (
+            <AxButton variant="primary" label={t('roadmap.retry')} isDisabled={applying} onClick={() => void applyReceipt(unapplied)} />
+          )}
+          <AxButton variant={unapplied ? 'secondary' : 'primary'} label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
           <AxButton variant="secondary" label={t('placement.retry')} onClick={() => void start()} />
         </div>
       </div>
