@@ -182,3 +182,67 @@ it('falls back to the all-time board until the 30-day board exists', async () =>
   expect(await screen.findByText('Long-time learner')).toBeVisible();
   expect(screen.getByRole('status')).toHaveTextContent('The 30-day board isn’t switched on yet');
 });
+
+/** Answers the 30-day board with the usual fixture and every other board with `entries`. */
+function otherBoard(period: string, entries: object[]) {
+  server.use(http.get('*/api/leaderboard', ({ request }) =>
+    new URL(request.url).searchParams.get('period') === '30d'
+      ? HttpResponse.json(leaderboardData)
+      : HttpResponse.json({ period, entries })));
+}
+const drawnRanks = () => within(screen.getByRole('table')).getAllByRole('row').slice(1)
+  .map((row) => row.querySelector('.lb-rank')?.textContent);
+
+it('gives equal results on the all-time board one shared rank', async () => {
+  otherBoard('global', [
+    { display_name: 'Tied first', picture: null, total_correct: 40, total_questions: 50, accuracy_pct: 80 },
+    { display_name: 'Tied second', picture: null, total_correct: 40, total_questions: 50, accuracy_pct: 80 },
+    { display_name: 'Fewer answers', picture: null, total_correct: 30, total_questions: 31, accuracy_pct: 97 },
+    { display_name: 'More answers', picture: null, total_correct: 30, total_questions: 60, accuracy_pct: 50 },
+  ]);
+  await mount();
+  await screen.findByText('Workshop learner');
+  fireEvent.click(screen.getByRole('radio', { name: 'All time' }));
+  await screen.findByText('Tied first');
+  expect(drawnRanks()).toEqual(['1', '1', '3', '4']);
+});
+
+it('ranks Today by score, then time, sharing a rank only when both match', async () => {
+  otherBoard('daily', [
+    { display_name: 'Quick', picture: null, correct: 5, total: 5, duration_ms: 60_000, attempted_at: '2026-09-29T07:00:00Z' },
+    { display_name: 'Just as quick', picture: null, correct: 5, total: 5, duration_ms: 60_000, attempted_at: '2026-09-29T08:00:00Z' },
+    { display_name: 'Slower', picture: null, correct: 5, total: 5, duration_ms: 61_000, attempted_at: '2026-09-29T09:00:00Z' },
+    { display_name: 'Four right', picture: null, correct: 4, total: 5, duration_ms: 30_000, attempted_at: '2026-09-29T10:00:00Z' },
+  ]);
+  await mount();
+  await screen.findByText('Workshop learner');
+  fireEvent.click(screen.getByRole('radio', { name: 'Today' }));
+  await screen.findByText('Just as quick');
+  expect(drawnRanks()).toEqual(['1', '1', '3', '4']);
+});
+
+it('never shows the next visitor someone else’s row as theirs from the offline copy', async () => {
+  auth.value = { user: { id: 'user-a' }, isAuthenticated: true, isLoading: false };
+  const mine = { ...leaderboardData, entries: [{ ...leaderboardData.entries[0], is_viewer: true }, leaderboardData.entries[1]], me: null };
+  server.use(http.get('*/api/leaderboard', () => HttpResponse.json(mine)));
+  const first = await mount();
+  expect(await screen.findByText('Workshop learner')).toBeVisible();
+  expect(document.querySelector('tr[aria-current="true"]')).not.toBeNull();
+  first.unmount();
+
+  // Signed out, offline, on the same device.
+  auth.value = { user: null, isAuthenticated: false, isLoading: false };
+  server.use(leaderboardHandlers.offline); await mount();
+  expect(await screen.findByRole('alert')).toHaveTextContent(/This is the board as it was at/);
+  expect(screen.getByText('Workshop learner')).toBeVisible();
+  expect(document.querySelector('[aria-current="true"]')).toBeNull();
+  expect(screen.queryByText('You')).toBeNull();
+});
+
+it('drops the “You” mark from an offline copy an older version saved', async () => {
+  const saved = { ...leaderboardData, entries: [{ ...leaderboardData.entries[0], is_viewer: true }] };
+  localStorage.setItem('devshark:leaderboard:v1:30d:', JSON.stringify({ savedAt: Date.now(), data: saved }));
+  server.use(leaderboardHandlers.offline); await mount();
+  expect(await screen.findByText('Workshop learner')).toBeVisible();
+  expect(document.querySelector('[aria-current="true"]')).toBeNull();
+});

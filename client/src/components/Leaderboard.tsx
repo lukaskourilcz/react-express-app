@@ -4,8 +4,10 @@
 // because it is the one a new learner can climb; the all-time board is one tab
 // away and keeps its own sources; Today is the daily challenge. Every board
 // ranks by correct answers, then accuracy (Today: correct answers, then time).
-// Nothing here ranks by XP or by streak, and nothing here computes a rank: the
-// server does, and this screen only draws what it was sent.
+// Nothing here ranks by XP or by streak, and nothing here reorders a board: the
+// server does. The 30-day board arrives with its ranks; the all-time and Today
+// boards arrive in order, and this screen numbers them so equal results share
+// a rank, as the 30-day board's do.
 //
 // A rank is always the number as text. The top three get a heavier ink ring,
 // never a fill or a medal colour, so the order reads the same without colour. Nothing
@@ -59,8 +61,10 @@ const today = () => new Date().toISOString().slice(0, 10);
 
 // The last board that loaded, per board, so opening this screen offline still
 // shows something true with its age beside it. A per-viewer convenience: it
-// may be missing or unreadable, and the screen works without it. The learner's
-// own line is left out of it.
+// may be missing or unreadable, and the screen works without it. It belongs to
+// the device, not to a person, so it keeps nobody's own line: the learner's
+// `me` line and the "You" mark on their row are left out when a board is
+// written, and again when one is read, since older caches kept the mark.
 const CACHE_PREFIX = 'devshark:leaderboard:v1:';
 
 interface CachedBoard {
@@ -68,13 +72,19 @@ interface CachedBoard {
   data: LeaderboardResponse;
 }
 
+function withoutViewer(data: LeaderboardResponse): LeaderboardResponse {
+  const { me: _me, ...board } = data;
+  const entries = (board.entries as unknown as Array<Record<string, unknown>>).map(({ is_viewer: _viewer, ...entry }) => entry);
+  return { ...board, entries: entries as unknown as LeaderboardResponse['entries'] };
+}
+
 function readCachedBoard(key: string): CachedBoard | null {
   try {
     const raw = window.localStorage.getItem(CACHE_PREFIX + key);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as Partial<CachedBoard>;
-    if (typeof parsed?.savedAt !== 'number' || !Array.isArray(parsed.data?.entries)) return null;
-    return parsed as CachedBoard;
+    if (typeof parsed?.savedAt !== 'number' || !parsed.data || !Array.isArray(parsed.data.entries)) return null;
+    return { savedAt: parsed.savedAt, data: withoutViewer(parsed.data) };
   } catch {
     return null;
   }
@@ -82,8 +92,7 @@ function readCachedBoard(key: string): CachedBoard | null {
 
 function writeCachedBoard(key: string, data: LeaderboardResponse): void {
   try {
-    const { me: _me, ...board } = data;
-    window.localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ savedAt: Date.now(), data: board }));
+    window.localStorage.setItem(CACHE_PREFIX + key, JSON.stringify({ savedAt: Date.now(), data: withoutViewer(data) }));
   } catch {
     // Storage full, blocked or absent: the live board is unaffected.
   }
@@ -290,6 +299,17 @@ function Leaderboard() {
   );
 }
 
+/** Ranks for rows that arrive in board order, numbered so equal results share
+ *  a rank (1, 1, 3): a row tied with the one above it on every sort key takes
+ *  that row's rank. `tie` returns the board's sort keys. */
+function sharedRanks<T>(entries: T[], tie: (entry: T) => string): number[] {
+  const ranks: number[] = [];
+  entries.forEach((entry, index) => {
+    ranks.push(index > 0 && tie(entry) === tie(entries[index - 1]) ? ranks[index - 1] : index + 1);
+  });
+  return ranks;
+}
+
 function toRows(tab: Tab, board: LeaderboardResponse, t: ReturnType<typeof useT>): Row[] {
   if (tab === '30d') {
     return (board.entries as WindowLeaderboardEntry[]).map((entry, index) => ({
@@ -304,9 +324,12 @@ function toRows(tab: Tab, board: LeaderboardResponse, t: ReturnType<typeof useT>
     }));
   }
   if (tab === 'today') {
-    return (board.entries as LeaderboardDailyEntry[]).map((entry, index) => ({
+    // Today ranks by correct answers, then the faster time.
+    const daily = board.entries as LeaderboardDailyEntry[];
+    const ranks = sharedRanks(daily, (entry) => `${entry.correct}:${entry.duration_ms}`);
+    return daily.map((entry, index) => ({
       key: String(index),
-      rank: index + 1,
+      rank: ranks[index],
       name: entry.display_name,
       picture: entry.picture ?? null,
       first: `${entry.correct}/${entry.total}`,
@@ -315,10 +338,13 @@ function toRows(tab: Tab, board: LeaderboardResponse, t: ReturnType<typeof useT>
       isViewer: false,
     }));
   }
-  // The subject's all-time board and a single category's board share a shape.
-  return (board.entries as CategoryLeaderboardEntry[]).map((entry, index) => ({
+  // The subject's all-time board and a single category's board share a shape,
+  // and a rule: correct answers, then fewer answers for the same number correct.
+  const lifetime = board.entries as CategoryLeaderboardEntry[];
+  const ranks = sharedRanks(lifetime, (entry) => `${entry.total_correct}:${entry.total_questions}`);
+  return lifetime.map((entry, index) => ({
     key: String(index),
-    rank: index + 1,
+    rank: ranks[index],
     name: entry.display_name,
     picture: entry.picture ?? null,
     first: String(entry.total_correct),
