@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw';
-import { DEFAULT_COIN_SETTINGS } from '../../../shared/rewards';
+import apiSettings from '../../../tests/fixtures/api-settings.json';
 // Invented test data only. These fixtures are imported by tests and Storybook,
 // never by the production app, and use the real public response contract:
 // the bodies api/leaderboard.ts and api/settings.ts send, with the same keys,
@@ -66,34 +66,9 @@ export const leaderboardHandlers = {
 // GET /api/settings as api/settings.ts sends it for a launched deployment with
 // the stored settings at their defaults: checkout on through Stripe Managed
 // Payments, no launch coupon, both learning paths switched off, merchandise
-// redemption closed and no Spreadshop promotion this month.
-export const publicSettings = {
-  quiz: {
-    defaultCount: 10,
-    countOptions: [10, 20, 30, 40, 50],
-    maxCount: 50,
-    defaultDifficulty: 'zero-to-hero',
-    defaultCategoryIds: ['javascript', 'typescript', 'react', 'nodejs', 'nextjs', 'html', 'css', 'git', 'dsa', 'databases', 'system-design', 'devops'],
-  },
-  daily: { count: 5 },
-  play: { defaultDurationS: 60, durationOptionsS: [30, 60, 120, 300, 0], countOptions: [5, 10, 15, 20] },
-  features: { dailyChallenge: true, multiplayer: true, leaderboard: true, flashcards: true },
-  leveling: { rankThresholds: [0, 2000, 6000, 14000, 26000, 44000, 68000, 100000, 144000, 200000] },
-  shop: {
-    prices: { 'double-xp': 75, 'ring-emerald': 200, 'ring-gold': 250, 'ring-violet': 375, 'flair-rocket': 150, 'flair-flame': 300, 'flair-crown': 500 },
-    pathUnlockPrice: 200,
-  },
-  coins: DEFAULT_COIN_SETTINGS,
-  merch: { redemptionOpen: false },
-  devTips: ['Remember to code.'],
-  learningPaths: {
-    paths: {
-      fde: { enabled: false, version: 1, availability: 'disabled' },
-      'dsa-foundations': { enabled: false, version: 1, availability: 'disabled' },
-    },
-  },
-  billing: { enabled: true, cancellable: true, cancelByEmail: true, seller: 'link', launchOffer: false },
-  merchPromo: null,
-};
+// redemption closed and no Spreadshop promotion this month. The body lives in
+// tests/fixtures/api-settings.json, which the responsive sweep answers with
+// too, and test:launch checks it against the handler.
+export const publicSettings = apiSettings;
 
 export const settingsHandler = http.get('*/api/settings', () => HttpResponse.json(publicSettings));

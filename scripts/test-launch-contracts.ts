@@ -901,6 +901,16 @@ async function retiredSupportContracts() {
   await settingsHandler({ method: 'GET', headers: {}, query: {} } as never, publicSettings as never);
   assert.equal(publicSettings.statusCode, 200);
   assert.equal('support' in (publicSettings.body as Record<string, unknown>), false, '/api/settings answers without a support block');
+  // tests/fixtures/api-settings.json is the body the client tests and the
+  // responsive sweep answer /api/settings with: this handler's own body at
+  // default settings, except that checkout is on, as it is after launch.
+  const settingsFixture = JSON.parse(read('tests/fixtures/api-settings.json')) as Record<string, unknown>;
+  const liveSettings = publicSettings.body as Record<string, unknown>;
+  assert.deepEqual(Object.keys(settingsFixture).sort(), Object.keys(liveSettings).sort(), 'the settings fixture has the keys the handler sends');
+  for (const key of Object.keys(liveSettings).filter((one) => one !== 'billing')) {
+    assert.deepEqual(settingsFixture[key], liveSettings[key], `the settings fixture's ${key} is what the handler sends`);
+  }
+  assert.deepEqual(Object.keys(settingsFixture.billing as object).sort(), Object.keys(liveSettings.billing as object).sort(), 'the fixture\'s billing has the handler\'s keys');
 
   // The files that held the flag, the block and the /dev fields keep none of them.
   for (const file of ['api/settings.ts', 'lib/settings-store.ts', 'client/src/lib/gameConfig.ts', 'client/src/lib/devApi.ts',
