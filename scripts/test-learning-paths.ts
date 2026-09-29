@@ -24,6 +24,7 @@ import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
 import { codingTaskById } from '../lib/coding/active';
 import { moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
+import { handlerContracts } from './learning-path-handler-contracts';
 
 const ONLY = process.env.PATHS_ONLY ?? '';
 const SKIP_RUN = process.env.PATHS_SKIP_RUN === '1';
@@ -286,6 +287,9 @@ async function main() {
   }
   const catalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue must not import the solutions');
+
+  /* ── the handlers: availability, refusals, rate limits ─────────────── */
+  await handlerContracts(fail);
 
   if (failures.length > 0) {
     console.error(`Learning-path content check failed with ${failures.length} problem(s):`);

@@ -372,6 +372,11 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     // Read what the account already holds so a partial save — the Profile's
     // track toggle, which sends no profile answers — keeps the rest.
     const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
+    // Without the saved answers a partial save would write empty goals,
+    // experience, study time and skill paths over them, so nothing is written.
+    if (existingRead.error) {
+      return jsonError(res, 503, 'db_error', 'Could not read the saved preference, so nothing was changed. Try again.');
+    }
     const existingMeta = (existingRead.data?.user?.user_metadata ?? {}) as Record<string, unknown>;
     const existing = parseLearnerProfile(existingMeta[LEARNER_PROFILE_META_KEY])
       ?? profileFromPreference(parseLearningPreference(existingMeta[LEARNING_PREFERENCE_META_KEY]));
@@ -788,6 +793,22 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
 
   const path = pathById(session.pathId);
   if (!path) return jsonError(res, 404, 'not_found', 'Unknown learning path');
+  // A session outlives the switch that opened it and the enrollment state it
+  // was opened under, so both are checked again before anything is graded.
+  if (availability(path) !== 'available') {
+    return jsonError(res, 503, 'path_unavailable', 'That learning path is not open right now');
+  }
+  let enrollmentRow: EnrollmentRow | null;
+  try {
+    enrollmentRow = await loadEnrollment(supabase, userId, session.enrollmentId);
+  } catch (error) {
+    if (migrationMissing(res, (error as { supabase?: { message?: string } }).supabase ?? null)) return;
+    return jsonError(res, 500, 'db_error', 'Could not load the enrollment');
+  }
+  if (!enrollmentRow) return jsonError(res, 404, 'not_found', 'Unknown enrollment');
+  if (enrollmentRow.status === 'paused') {
+    return jsonError(res, 409, 'enrollment_paused', 'Resume this path before submitting work');
+  }
   if (await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
   if (session.curriculumVersion !== path.version) {
     return jsonError(res, 409, 'version_conflict', 'The curriculum changed while this attempt was open. Start it again.');
@@ -1097,6 +1118,8 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
   const text = (value: unknown, max: number): string =>
     (typeof value === 'string' ? value.trim() : '').slice(0, max);
 
+  // The caps are `merch_orders`' own (migration 028): a longer value would
+  // fail its CHECK inside the claim.
   const claimed = await withTimeout(
     supabase.rpc('claim_path_reward', {
       p_user_id: userId,
@@ -1104,8 +1127,8 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
       p_modules: inventory.modules,
       p_shirt: text(body.shirt, 3).toUpperCase(),
       p_name: text(body.name, 120),
-      p_line1: text(body.line1, 160),
-      p_line2: text(body.line2, 160) || null,
+      p_line1: text(body.line1, 120),
+      p_line2: text(body.line2, 120) || null,
       p_city: text(body.city, 80),
       p_postal: text(body.postal, 24),
       p_country: text(body.country, 2).toUpperCase(),
@@ -1123,6 +1146,19 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
     }
     if (/invalid_variant/i.test(claimed.error.message ?? '')) {
       return jsonError(res, 400, 'bad_request', 'Pick a shirt size');
+    }
+    // An address field the table refuses (check_violation).
+    if (claimed.error.code === '23514') {
+      return jsonError(res, 400, 'invalid_address', 'A name, street, town, postcode and two-letter country are all required');
+    }
+    // A second claim that raced the first one to the claim row
+    // (unique_violation): the first one won, so this is the "already" answer.
+    if (claimed.error.code === '23505') {
+      const first = await withTimeout(
+        supabase.from('path_reward_claims').select('order_id').eq('user_id', userId).eq('path_id', pathId).maybeSingle(),
+      );
+      logEvent({ status: 200, kind: 'path_reward_claimed', granted: false, raced: true });
+      return res.json({ granted: false, already: true, orderId: first.data?.order_id ?? null });
     }
     return jsonError(res, 500, 'db_error', 'Could not claim the package');
   }
