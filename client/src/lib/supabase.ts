@@ -59,9 +59,12 @@ export async function recordQuizResult(
 export interface DailyChallenge {
   date: string;
   sessionId: string;
+  /** When the session stops being gradable (epoch ms). */
+  expiresAt?: number;
+  /** A signed-in learner has already submitted today's challenge. */
+  completed?: boolean;
   questions: Array<{
     id: string;
-    tags: string[];
     introduction: string;
     question: string;
     options: string[];

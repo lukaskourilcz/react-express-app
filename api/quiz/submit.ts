@@ -6,6 +6,9 @@ import {
   encodeScoreProof,
   encodeQuizResultReceipt,
   encodeAnswerProof,
+  dailyDurationMs,
+  stableAttemptId,
+  type DecodedQuizSession,
 } from '../../lib/quiz-tokens';
 import { localizeQuestion, normalizeLang } from '../../lib/quiz-runtime';
 import { AuthError, tryAuth } from '../../lib/auth';
@@ -18,6 +21,14 @@ import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review
 import { contentVersion } from '../../lib/curation';
 
 const MAX_ANSWERS = 50;
+
+// Who issues a session this handler grades: a quiz or a personalised review
+// (api/quiz/questions.ts, no scope), the daily challenge (api/quiz/daily.ts),
+// the question of the day (lib/daily-question.ts), a Biggest Shark Challenge
+// batch and the 20-question assessment (api/quiz/challenge.ts).
+const SUBMITTABLE_SCOPES: ReadonlySet<DecodedQuizSession['scope']> = new Set([
+  undefined, 'daily', 'qotd', 'challenge', 'assessment',
+]);
 
 const logEvent = createLogger('quiz/submit');
 const reportLogger = createLogger('quiz/report');
@@ -87,6 +98,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  // The address bucket holds a class behind one NAT; each caller is bounded
+  // again below, once the session and the account are known.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSubmit))) return;
 
   const body = req.body as { sessionId?: unknown; answers?: unknown; lang?: unknown };
@@ -137,6 +150,15 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     logEvent({ status: 400, reason: 'invalid_session', latency_ms: Date.now() - started });
     return jsonError(res, 400, 'invalid_session', 'Quiz session expired or invalid');
   }
+  // Only the sessions this endpoint issues a verdict for. A Learn level or
+  // part test (scope 'roadmap') is graded one answer at a time by
+  // /api/quiz/roadmap, which reveals each correct option as it goes; graded
+  // here as a whole it would turn those revealed answers into quiz XP, a
+  // streak day and leaderboard stats, as often as the level can be reopened.
+  if (!SUBMITTABLE_SCOPES.has(session.scope)) {
+    logEvent({ status: 400, reason: 'foreign_scope', scope: session.scope, latency_ms: Date.now() - started });
+    return jsonError(res, 400, 'invalid_session', 'This session is not graded here');
+  }
 
   const sessionById = new Map(session.questions.map((q) => [q.questionId, q]));
   if (validated.some(({ questionId }) => !sessionById.has(questionId))) {
@@ -163,10 +185,23 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
   }
+  // A signed-in caller is bounded by their account, with room for a Challenge
+  // answer every few seconds; a caller without one keeps the address rate.
+  const withinCallerLimit = !signedIn
+    ? await enforceRateLimit(req, res, RATE_LIMITS.quizSubmitAnonymous)
+    : session.scope === 'challenge'
+      ? await enforceRateLimit(req, res, RATE_LIMITS.challengeSubmitPerUser, `user:${signedIn.sub}`)
+      : await enforceRateLimit(req, res, RATE_LIMITS.quizSubmitPerUser, `user:${signedIn.sub}`);
+  if (!withinCallerLimit) return;
   // The public question of the day (#239) is practice: it is graded as if
   // signed out, so it mints no receipt, XP, streak day or review record for
-  // anyone.
-  const auth = session.scope === 'qotd' ? null : signedIn;
+  // anyone. So is a daily challenge a signed-in learner did not fetch as
+  // their own one attempt of the day: fetched signed out it carries a random
+  // attempt id, and ranking it would let a learner who has seen the answers
+  // refetch and replace their result.
+  const dailyPractice = session.scope === 'daily' && signedIn !== null &&
+    session.attemptId !== stableAttemptId('daily', signedIn.sub, subject, session.date ?? '');
+  const auth = session.scope === 'qotd' || dailyPractice ? null : signedIn;
   const canonicalAnswers = [...validated].sort((a, b) => a.questionId.localeCompare(b.questionId));
   const answerHash = createHash('sha256').update(JSON.stringify(canonicalAnswers)).digest('hex');
   const gradeKey = session.scope === 'challenge'
@@ -254,7 +289,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
             ? 'daily'
             : 'quiz',
         ...(session.scope === 'daily' && session.date
-          ? { daily: { date: session.date, durationMs: Math.max(0, Date.now() - session.issuedAt) } }
+          ? { daily: { date: session.date, durationMs: dailyDurationMs(session) } }
           : {}),
       })
     : undefined;

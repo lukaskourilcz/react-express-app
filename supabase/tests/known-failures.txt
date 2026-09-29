@@ -1,0 +1,7 @@
+# SQL tests that fail today because of a known, tracked bug.
+#
+# One line per test file: `<file>: <text its failure must contain>`, with the
+# bug described in a comment above it. `npm run test:sql` still runs each listed
+# file: it is an expected failure only while it fails with that text. Failing
+# any other way, or passing, fails the suite until the line is removed, so this
+# list only shrinks. Never add a line to make a new failure go away: fix the SQL.

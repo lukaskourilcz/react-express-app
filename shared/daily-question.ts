@@ -78,7 +78,6 @@ export interface QotdResponse {
     options: string[];
     category: string;
     difficulty: number;
-    tags?: string[];
   };
 }
 

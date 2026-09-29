@@ -22,6 +22,12 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   return slug;
 };`,
     senior: `const toSlug = (title: string): string => title.trim().toLowerCase().replace(/\\s+/g, "-");`,
+    hiddenTests: [
+      { call: "toSlug(\"My   First Post\")", expected: "my-first-post" },
+      { call: "toSlug(\"   \")", expected: "" },
+      { call: "toSlug(\"TypeScript\")", expected: "typescript" },
+      { call: "toSlug(\" Learn TS Today \")", expected: "learn-ts-today" },
+    ],
   },
   "ts-top-three-scores": {
     solution: "const topThree = (scores: number[]): number[] => [...scores].sort((one, other) => other - one).slice(0, 3);",
@@ -40,6 +46,13 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
     senior: `const topThree = (scores: number[]): number[] =>
   // Carry only the current best three, so the whole list is never sorted.
   scores.reduce<number[]>((best, score) => [...best, score].sort((one, other) => other - one).slice(0, 3), []);`,
+    hiddenTests: [
+      { call: "topThree([10,50,20,40,30])", expected: [50, 40, 30] },
+      { call: "topThree([100,9,20])", expected: [100, 20, 9] },
+      { call: "topThree([2,8])", expected: [8, 2] },
+      { call: "topThree([7,7,3,7])", expected: [7, 7, 7] },
+      { call: "(() => { const scores = [1,3,2]; topThree(scores); return scores; })()", expected: [1, 3, 2] },
+    ],
   },
   "ts-greeting-with-a-default": {
     solution: "const greet = (name: string, greeting = \"Hello\"): string => `${greeting}, ${name}!`;",
@@ -57,6 +70,11 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   const opener = greeting ?? "Hello";
   return \`\${opener}, \${name}!\`;
 };`,
+    hiddenTests: [
+      { call: "greet(\"Eve\", \"Welcome\")", expected: "Welcome, Eve!" },
+      { call: "greet(\"Fay\")", expected: "Hello, Fay!" },
+      { call: "greet(\"Ivy\", \"\")", expected: ", Ivy!" },
+    ],
   },
   "ts-person-interface": {
     solution: `interface Person {
@@ -86,6 +104,11 @@ const fullName = (person: Person): string => {
 
 // A missing half leaves one stray space at an end, which trim() removes.
 const fullName = ({ first, last }: Person): string => \`\${first} \${last}\`.trim();`,
+    hiddenTests: [
+      { call: "fullName({first:\"Grace\",last:\"Hopper\"})", expected: "Grace Hopper" },
+      { call: "fullName({first:\"\",last:\"Prince\"})", expected: "Prince" },
+      { call: "fullName({first:\"Madonna\",last:\"\"})", expected: "Madonna" },
+    ],
   },
   "ts-optional-nickname": {
     solution: `interface User {
@@ -115,6 +138,11 @@ const displayName = (user: User): string => {
   const { name, nickname = name } = user;
   return nickname;
 };`,
+    hiddenTests: [
+      { call: "displayName({name:\"Eve\",nickname:\"Evie\"})", expected: "Evie" },
+      { call: "displayName({name:\"Fay\"})", expected: "Fay" },
+      { call: "displayName({name:\"Gus\",nickname:\"\"})", expected: "" },
+    ],
   },
   "ts-padded-id": {
     solution: "const idText = (id: string | number): string => (typeof id === \"number\" ? String(id).padStart(4, \"0\") : id);",
@@ -132,6 +160,12 @@ const displayName = (user: User): string => {
   if (typeof id === "string") return id;
   return id.toString().padStart(4, "0");
 };`,
+    hiddenTests: [
+      { call: "idText(42)", expected: "0042" },
+      { call: "idText(0)", expected: "0000" },
+      { call: "idText(\"7\")", expected: "7" },
+      { call: "idText(99999)", expected: "99999" },
+    ],
   },
   "ts-shipping-speed": {
     solution: `type Speed = "standard" | "express" | "overnight";
@@ -162,6 +196,11 @@ const shippingDays = (speed: Speed, weekend: boolean): number => {
 const BASE_DAYS: Record<Speed, number> = { standard: 5, express: 2, overnight: 1 };
 
 const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed] + (weekend ? 1 : 0);`,
+    hiddenTests: [
+      { call: "shippingDays(\"express\", true)", expected: 3 },
+      { call: "[\"standard\",\"express\",\"overnight\"].map(speed => shippingDays(speed, true))", expected: [6, 3, 2] },
+      { call: "[\"standard\",\"express\",\"overnight\"].map(speed => shippingDays(speed, false))", expected: [5, 2, 1] },
+    ],
   },
   "ts-split-a-name": {
     solution: `const splitName = (text: string): [string, string] => {
@@ -188,6 +227,12 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
   const [first, ...rest] = text.split(" ");
   return [first, rest.join(" ")];
 };`,
+    hiddenTests: [
+      { call: "splitName(\"Grace Brewster Murray Hopper\")", expected: ["Grace", "Brewster Murray Hopper"] },
+      { call: "splitName(\"Cher\")", expected: ["Cher", ""] },
+      { call: "splitName(\"Jo  Smith\")", expected: ["Jo", " Smith"] },
+      { call: "splitName(\"A B\")", expected: ["A", "B"] },
+    ],
   },
   "ts-tally-votes": {
     solution: "const tally = (votes: string[]): Record<string, number> => votes.reduce<Record<string, number>>((counts, vote) => ({...counts, [vote]: (counts[vote] ?? 0) + 1}), {});",
@@ -207,6 +252,11 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
   for (const vote of votes) counts.set(vote, (counts.get(vote) ?? 0) + 1);
   return Object.fromEntries(counts);
 };`,
+    hiddenTests: [
+      { call: "tally([\"yes\",\"no\",\"yes\",\"yes\"])", expected: { yes: 3, no: 1 } },
+      { call: "tally([\"b\",\"a\",\"b\"])", expected: { b: 2, a: 1 } },
+      { call: "tally([\"x\",\"y\",\"z\",\"x\",\"y\",\"x\"])", expected: { x: 3, y: 2, z: 1 } },
+    ],
   },
   "ts-rotate-a-list": {
     solution: "const rotate = (items: readonly string[]): string[] => (items.length === 0 ? [] : [...items.slice(1), items[0]]);",
@@ -223,6 +273,11 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
 };`,
     senior: `// Each slot takes the next item, and the modulo wraps the last slot back to the first.
 const rotate = (items: readonly string[]): string[] => items.map((_, index) => items[(index + 1) % items.length]);`,
+    hiddenTests: [
+      { call: "rotate([\"x\",\"y\",\"z\",\"w\"])", expected: ["y", "z", "w", "x"] },
+      { call: "(() => { const items = [\"p\",\"q\",\"r\"]; const rotated = rotate(items); return [rotated, items]; })()", expected: [["q", "r", "p"], ["p", "q", "r"]] },
+      { call: "rotate([\"solo\"])", expected: ["solo"] },
+    ],
   },
   "ts-describe-a-value": {
     solution: `const describeValue = (value: unknown): string => {
@@ -259,6 +314,12 @@ const rotate = (items: readonly string[]): string[] => items.map((_, index) => i
       return "something else";
   }
 };`,
+    hiddenTests: [
+      { call: "describeValue(0)", expected: "a number" },
+      { call: "describeValue(\"\")", expected: "text" },
+      { call: "describeValue([])", expected: "a list" },
+      { call: "describeValue(true)", expected: "something else" },
+    ],
   },
   "ts-first-item": {
     solution: "const first = <T>(items: T[]): T | undefined => items[0];",
@@ -270,6 +331,11 @@ const rotate = (items: readonly string[]): string[] => items.map((_, index) => i
 };`,
     senior: `// at(0) is typed T | undefined, so an empty list needs no separate branch.
 const first = <T>(items: T[]): T | undefined => items.at(0);`,
+    hiddenTests: [
+      { call: "first([false,true])", expected: false },
+      { call: "first([\"only\"])", expected: "only" },
+      { call: "first([{id:7},{id:8}])", expected: { id: 7 } },
+    ],
   },
   "ts-fall-back-to-a-default": {
     solution: "const orDefault = <T>(value: T | null | undefined, fallback: T): T => value ?? fallback;",
@@ -287,6 +353,12 @@ const first = <T>(items: T[]): T | undefined => items.at(0);`,
   if (value == null) return fallback;
   return value;
 };`,
+    hiddenTests: [
+      { call: "orDefault(false, true)", expected: false },
+      { call: "orDefault(undefined, 0)", expected: 0 },
+      { call: "orDefault(\"set\", \"fallback\")", expected: "set" },
+      { call: "orDefault(null, [1])", expected: [1] },
+    ],
   },
   "ts-transform-a-list": {
     solution: "const transform = <T, R>(items: T[], change: (item: T) => R): R[] => items.map(item => change(item));",
@@ -301,6 +373,12 @@ const first = <T>(items: T[]): T | undefined => items.at(0);`,
 };`,
     senior: `// Array.from takes a mapper of its own, so the new list is built in one pass without a wrapper arrow.
 const transform = <T, R>(items: T[], change: (item: T) => R): R[] => Array.from(items, change);`,
+    hiddenTests: [
+      { call: "transform([3,4], n => n * n)", expected: [9, 16] },
+      { call: "transform([\"x\",\"yy\",\"zzz\"], s => s.length)", expected: [1, 2, 3] },
+      { call: "transform([{a:1},{a:2}], item => item.a)", expected: [1, 2] },
+      { call: "transform([true,false], flag => !flag)", expected: [false, true] },
+    ],
   },
   "ts-sort-by-name": {
     solution: "const sortByName = <T extends {name: string}>(items: T[]): T[] => [...items].sort((one, other) => one.name.localeCompare(other.name));",
@@ -322,6 +400,11 @@ const transform = <T, R>(items: T[], change: (item: T) => R): R[] => Array.from(
 };`,
     senior: `// toSorted() returns a sorted copy, so the caller's list is never reordered under them.
 const sortByName = <T extends { name: string }>(items: T[]): T[] => items.toSorted((one, other) => one.name.localeCompare(other.name));`,
+    hiddenTests: [
+      { call: "sortByName([{name:\"Cy\"},{name:\"Ada\"},{name:\"Bo\"}])", expected: [{ name: "Ada" }, { name: "Bo" }, { name: "Cy" }] },
+      { call: "(() => { const people = [{name:\"Zoe\"},{name:\"Amy\"}]; const sorted = sortByName(people); return [sorted.map(person => person.name), people.map(person => person.name)]; })()", expected: [["Amy", "Zoe"], ["Zoe", "Amy"]] },
+      { call: "sortByName([{name:\"Bea\",score:3},{name:\"Al\",score:9}])", expected: [{ name: "Al", score: 9 }, { name: "Bea", score: 3 }] },
+    ],
   },
   "ts-pluck-a-property": {
     solution: "const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => items.map(item => item[key]);",
@@ -335,6 +418,12 @@ const sortByName = <T extends { name: string }>(items: T[]): T[] => items.toSort
 };`,
     senior: `// A computed key in the parameter pattern pulls out just the property asked for, typed T[K].
 const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => items.map(({ [key]: value }) => value);`,
+    hiddenTests: [
+      { call: "pluck([{x:1,y:2},{x:3,y:4}], \"y\")", expected: [2, 4] },
+      { call: "pluck([], \"id\")", expected: [] },
+      { call: "pluck([{tags:[\"a\"]},{tags:[]}], \"tags\")", expected: [["a"], []] },
+      { call: "pluck([{ok:true},{ok:false}], \"ok\")", expected: [true, false] },
+    ],
   },
   "ts-apply-a-patch": {
     solution: `interface Settings {
@@ -369,6 +458,11 @@ const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
   const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
   return { ...settings, ...defined };
 };`,
+    hiddenTests: [
+      { call: "(() => { const settings = {theme:\"dark\",fontSize:14}; const next = applyPatch(settings, {fontSize:20}); return [settings, next, next === settings]; })()", expected: [{ theme: "dark", fontSize: 14 }, { theme: "dark", fontSize: 20 }, false] },
+      { call: "applyPatch({theme:\"light\",fontSize:10}, {theme:\"solarized\"})", expected: { theme: "solarized", fontSize: 10 } },
+      { call: "applyPatch({theme:\"x\",fontSize:1}, {theme:\"\",fontSize:0})", expected: { theme: "", fontSize: 0 } },
+    ],
   },
   "ts-hide-the-password": {
     solution: `interface Account {
@@ -408,6 +502,11 @@ const omit = <T extends object, K extends keyof T>(source: T, key: K): Omit<T, K
 };
 
 const publicUser = (account: Account): Omit<Account, "password"> => omit(account, "password");`,
+    hiddenTests: [
+      { call: "publicUser({id:5,email:\"lin@example.dev\",password:\"pw\"})", expected: { id: 5, email: "lin@example.dev" } },
+      { call: "(() => { const account = {id:6,email:\"x@example.dev\",password:\"keep\"}; publicUser(account); return account; })()", expected: { id: 6, email: "x@example.dev", password: "keep" } },
+      { call: "\"password\" in publicUser({id:7,email:\"y@example.dev\",password:\"z\"})", expected: false },
+    ],
   },
   "ts-area-of-a-shape": {
     solution: `type Shape =
@@ -456,6 +555,12 @@ const area = (shape: Shape): number => {
     }
   }
 };`,
+    hiddenTests: [
+      { call: "area({kind:\"rectangle\",width:1.5,height:4})", expected: 6 },
+      { call: "area({kind:\"square\",side:2.5})", expected: 6.25 },
+      { call: "area({kind:\"triangle\",base:10,height:0})", expected: 0 },
+      { call: "area({kind:\"triangle\",base:5,height:2})", expected: 5 },
+    ],
   },
   "ts-only-the-strings": {
     solution: `const isString = (value: unknown): value is string => typeof value === "string";
@@ -481,5 +586,11 @@ const onlyStrings = (values: unknown[]): string[] => {
 
 // flatMap doubles as a typed filter: the guard narrows value, and an empty array drops it.
 const onlyStrings = (values: unknown[]): string[] => values.flatMap((value) => (isString(value) ? [value] : []));`,
+    hiddenTests: [
+      { call: "onlyStrings([1,\"one\",true,\"two\",{}])", expected: ["one", "two"] },
+      { call: "onlyStrings([\"\",0,false])", expected: [""] },
+      { call: "onlyStrings([[\"a\"],\"b\"])", expected: ["b"] },
+      { call: "[isString(\"x\"), isString(5), isString(null)]", expected: [true, false, false] },
+    ],
   },
 };

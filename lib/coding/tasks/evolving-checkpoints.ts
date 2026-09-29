@@ -450,7 +450,14 @@ function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
       ...step(
         `Port normalizeInput to TypeScript: input unknown, return Draft|null, where Draft={name:string;${amount}:number}. Keep all earlier validation. Define Item=Draft & {id:number;version:number}.`,
         `Převeď normalizeInput do TypeScriptu: vstup unknown, návrat Draft|null, kde Draft={name:string;${amount}:number}. Zachovej předchozí validaci. Definuj Item=Draft & {id:number;version:number}.`,
-        [],
+        // The earlier validation, checked where the stage-1 checks leave gaps:
+        // a positive amount, a negative one, and both upper limits exactly.
+        calls(
+          [`normalizeInput({name:'Plan',${amount}:5})`, { name: 'Plan', [amount]: 5 }],
+          [`normalizeInput({name:'A',${amount}:-1})`, null],
+          [`normalizeInput({name:'x'.repeat(80),${amount}:1})`, { name: 'x'.repeat(80), [amount]: 1 }],
+          [`normalizeInput({name:'A',${amount}:1000})`, { name: 'A', [amount]: 1000 }],
+        ),
       ),
       typeTests: [
         { code: '{const d:Draft|null=normalizeInput({});}' },

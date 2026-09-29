@@ -40,6 +40,8 @@ const sb = vi.hoisted(() => {
       key,
       /** Subscribers that heard the SIGNED_IN announcing a restored session. */
       heardRestore: 0,
+      /** An event supabase-js sends on its own (a failed return, an expired session). */
+      emit,
       auth: {
         getSession: vi.fn(async () => {
           await initialized;
@@ -358,12 +360,14 @@ describe('an OAuth return', () => {
     expect(sb.imports).toBe(1);
   });
 
-  it('imports supabase-js for a PKCE ?code= whose verifier this browser stored', async () => {
+  it('imports supabase-js for a PKCE ?code= whose verifier this browser stored, and reports the sign-in', async () => {
     localStorage.setItem(`${KEY}-code-verifier`, '"verifier"');
     window.history.replaceState(null, '', '/?code=pkce-code');
+    const reports = recordSignInReports();
     await mountAuth();
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-pkce'));
     expect(sb.imports).toBe(1);
+    await waitFor(() => expect(reports).toEqual(['Bearer pkce-pkce-code']));
   });
 });
 
@@ -379,6 +383,30 @@ describe('signing in', () => {
       options: { redirectTo: window.location.origin },
     });
     expect(sessionStorage.getItem('devshark:auth-return')).toContain('"/premium"');
+  });
+
+  it('comes back to the page it was pressed on when no return path is given', async () => {
+    // A student opens a classroom invite signed out and presses Log in.
+    window.history.replaceState(null, '', '/play/K7Q2AB?from=invite#join');
+    const { current } = await mountAuth();
+    await act(() => current().signInWithGoogle());
+    expect(sb.clients[0].auth.signInWithOAuth).toHaveBeenCalledTimes(1);
+    const { takeAuthReturn } = await import('../src/lib/authReturn');
+    // Taken once the account arrives, within fifteen minutes...
+    const saved = sessionStorage.getItem('devshark:auth-return');
+    expect(takeAuthReturn()).toBe('/play/K7Q2AB?from=invite#join');
+    // ...and never after that.
+    sessionStorage.setItem('devshark:auth-return', saved!);
+    expect(takeAuthReturn(Date.now() + 16 * 60_000)).toBeNull();
+  });
+
+  it('records no return from the home page, and a named return path wins', async () => {
+    const { current } = await mountAuth();
+    await act(() => current().signInWithGoogle());
+    expect(sessionStorage.getItem('devshark:auth-return')).toBeNull();
+    window.history.replaceState(null, '', '/premium/success?session_id=cs_1');
+    await act(() => current().signInWithGoogle('/premium'));
+    expect(JSON.parse(sessionStorage.getItem('devshark:auth-return')!).path).toBe('/premium');
   });
 
   it('fails the sign-in and forgets the return when the download fails', async () => {
@@ -404,6 +432,110 @@ describe('signing in', () => {
     expect(renders).not.toContain('loading');
     // The tab that signed in reports the sign-in; this one restored it.
     expect(reports).toEqual([]);
+  });
+});
+
+describe('signing out', () => {
+  // What an account leaves on the device, and the device's own settings.
+  const ACCOUNT_LOCAL = {
+    'devquiz:roadmap:v2': JSON.stringify({ html: { levels: { 1: { passed: true, bestPct: 100 } }, checkpoints: {} } }),
+    'devquiz:roadmap:unlocks:v1': '["react"]',
+    'devquiz:roadmap:track': '"backend"',
+    'devquiz:xp:quest:v2': '{"webdev":340}',
+    'devquiz:xp:rank-seen:v2': '{"webdev":3}',
+    'devquiz:tokens:balance:v2': '{"webdev":500}',
+    'devquiz:shop:inventory:v2': '{"webdev":{"owned":["ring-gold"],"ring":"ring-gold","flair":null,"doubleXp":0}}',
+    'devquiz:perfect-quiz-count': '2',
+    'devquiz:bookmarks': '["q1"]',
+    'devquiz:bookmarked-questions': '[{"id":"q1"}]',
+    'devquiz:devshark:learning-preference:user-stored': '{"schemaVersion":1,"baseTrack":"backend","specialization":null}',
+    'devshark:coding:draft:html-forms-1': 'const mine = true;',
+    'devshark:typing:v1': '{"bestWpm":61}',
+    'devshark:leaderboard:v1:30d:': '{"savedAt":1,"data":{}}',
+    'devshark:referral': JSON.stringify({ code: 'ABCD2345', savedAt: Date.now() }),
+    'studyshark:pending-quiz-receipt:v1': '{"userId":"user-stored","profile":{"email":"user-stored@example.test"}}',
+    'studyshark:pending-challenge-reward:v1': '{"userId":"user-stored"}',
+  };
+  const ACCOUNT_SESSION = {
+    'devquiz:in-progress': '{"sessionId":"s1"}',
+    'devquiz:dev-password': 'admin-secret',
+    'devshark:voucher-prefill': 'LAUNCH55',
+  };
+  const DEVICE_LOCAL = {
+    'devquiz:color-mode': 'dark',
+    'devquiz:settings': '{"soundEffects":true}',
+    'devquiz.lang': 'en',
+    'devquiz:quiz-setup:v1': '{"count":10}',
+    'devshark:coding:layout:v1': '{"split":60}',
+    'devshark:campaign': '{"campaign":{"utm_source":"threads"},"savedAt":1}',
+    'devquiz:devshark:learning-preference:guest': '{"schemaVersion":1,"baseTrack":"frontend","specialization":null}',
+  };
+  const DEVICE_SESSION = {
+    'devshark:auth-return': JSON.stringify({ path: '/learn', at: Date.now() }),
+    'devquiz:register-prompt:dismissed:v1': '1',
+  };
+  const seed = (storage: Storage, entries: Record<string, string>) => Object.entries(entries).forEach(([key, value]) => storage.setItem(key, value));
+  const kept = (storage: Storage, entries: Record<string, string>) => Object.keys(entries).filter((key) => storage.getItem(key) !== null);
+
+  afterEach(() => localStorage.clear());
+
+  it('forgets the account’s data on this device, keeps the device’s settings, and shows the empty state at once', async () => {
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    seed(localStorage, { ...ACCOUNT_LOCAL, ...DEVICE_LOCAL });
+    seed(sessionStorage, { ...ACCOUNT_SESSION, ...DEVICE_SESSION });
+    const { current } = await mountAuth();
+    const { useRoadmapProgress } = await import('../src/lib/roadmap');
+    function Passed() {
+      return <p data-testid="passed">{Object.keys(useRoadmapProgress()).join(',') || 'none'}</p>;
+    }
+    render(<Passed />);
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    expect(screen.getByTestId('passed')).toHaveTextContent('html');
+
+    await act(() => current().signOut());
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual([]);
+    expect(kept(sessionStorage, ACCOUNT_SESSION)).toEqual([]);
+    expect(kept(localStorage, DEVICE_LOCAL)).toEqual(Object.keys(DEVICE_LOCAL));
+    expect(kept(sessionStorage, DEVICE_SESSION)).toEqual(Object.keys(DEVICE_SESSION));
+    // The page that was open when the account left no longer shows its progress.
+    expect(screen.getByTestId('passed')).toHaveTextContent('none');
+  });
+
+  it('keeps a guest’s progress through a sign-in, and forgets it with the account', async () => {
+    seed(localStorage, ACCOUNT_LOCAL);
+    const { current } = await mountAuth();
+    await settle();
+    // Signed in from another tab: signing in clears nothing.
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    act(() => {
+      window.dispatchEvent(new window.StorageEvent('storage', { key: KEY, newValue: JSON.stringify(STORED) }));
+    });
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual(Object.keys(ACCOUNT_LOCAL));
+    await act(() => current().signOut());
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual([]);
+  });
+
+  it('leaves a guest’s progress alone when supabase-js signs out a failed OAuth return', async () => {
+    seed(localStorage, ACCOUNT_LOCAL);
+    window.history.replaceState(null, '', '/#error=access_denied&error_description=The+user+denied+the+request');
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('signed-out'));
+    act(() => sb.clients[0].emit('SIGNED_OUT', null));
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual(Object.keys(ACCOUNT_LOCAL));
+  });
+
+  it('forgets the data of an account whose stored session supabase-js finds expired', async () => {
+    freshPageLoad('held');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    seed(localStorage, ACCOUNT_LOCAL);
+    await mountAuth();
+    // supabase-js cannot refresh the stored session: it removes it and signs out.
+    localStorage.removeItem(KEY);
+    await releaseDownload();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('signed-out'));
+    act(() => sb.clients[0].emit('SIGNED_OUT', null));
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual([]);
   });
 });
 

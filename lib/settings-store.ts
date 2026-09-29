@@ -54,9 +54,13 @@ export interface GameSettings {
     maxSpeedBonus: number;
   };
   features: {
+    /** Off: GET /api/quiz/daily refuses the challenge (503 feature_disabled)
+     * and the quiz hides its link. The question of the day stays open. */
     dailyChallenge: boolean;
     multiplayer: boolean;
     leaderboard: boolean;
+    /** Read by nothing: flashcards and bookmarks are always on, and /dev no
+     * longer shows a switch for it. Kept so stored settings still parse. */
     flashcards: boolean;
   };
   leveling: {
@@ -447,6 +451,11 @@ export function normalizeSettings(raw: unknown): GameSettings {
 }
 
 let cache: { at: number; value: GameSettings } | null = null;
+
+/** Serve these settings until reset (tests only); null restores the store. */
+export function setGameSettingsForTests(value: GameSettings | null): void {
+  cache = value ? { at: Number.POSITIVE_INFINITY, value } : null;
+}
 
 export async function getGameSettings(): Promise<GameSettings> {
   if (cache && Date.now() - cache.at < CACHE_TTL_MS) return cache.value;

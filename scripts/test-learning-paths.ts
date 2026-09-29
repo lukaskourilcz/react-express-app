@@ -18,14 +18,27 @@ import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { LEARNING_PATHS, activitySummary, publicManifest, readinessFor } from '../lib/learning-paths/catalog';
-import { gradeCheck, gradePathCode, codeFromReusedTask } from '../lib/learning-paths/grade';
+import { codeFeedback, gradeCheck, gradePathCode, codeFromReusedTask } from '../lib/learning-paths/grade';
 import { solutionFor, solutionIds } from '../lib/learning-paths/solutions';
+import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
 import { codingTaskById } from '../lib/coding/active';
-import { pathInventory } from '../shared/learning-paths';
+import { moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
+import { handlerContracts } from './learning-path-handler-contracts';
+import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 const ONLY = process.env.PATHS_ONLY ?? '';
 const SKIP_RUN = process.env.PATHS_SKIP_RUN === '1';
+
+/** For every coding task a path reuses, an implementation that meets the
+ * visible tests with the wrong method. The path grader must refuse it, which
+ * it can only do by running the task's own hidden assertions. */
+const KNOWN_WRONG_REUSED: Record<string, { label: string; code: string }> = {
+  'js-binary-search': {
+    label: 'a linear search (indexOf)',
+    code: 'const binarySearch = (sorted, target) => sorted.indexOf(target);',
+  },
+};
 
 /** The authoring targets the curriculum documents commit to. A path that
  * falls short is not ready to publish, whatever the validator says. */
@@ -47,6 +60,8 @@ function codeActivities(path: MergedPath): { module: string; activity: MergedAct
 }
 
 async function main() {
+  // Code activities are graded on the grader's worker thread, built fresh.
+  await buildSandboxWorker();
   const failures: string[] = [];
   const fail = (message: string) => {
     failures.push(message);
@@ -143,6 +158,26 @@ async function main() {
       }
     }
 
+    /* ── the next action teaches before it checks ───────────────────────── */
+    // A lesson never gates a module, but a new learner is sent to the first
+    // lesson, then the next, and only then to the first unmet requirement.
+    {
+      const first = manifest.modules.find((module) => !module.optional);
+      const lessons = first?.activities.filter((activity) => activity.kind === 'lesson') ?? [];
+      const states = new Map<string, EvidenceState>();
+      for (const lesson of lessons) {
+        const next = nextActivityId(manifest, states);
+        if (next !== lesson.id) fail(`${where}: after ${states.size} lessons read, the next action is ${next}, not the lesson ${lesson.id}`);
+        states.set(lesson.id, 'self_reviewed');
+      }
+      const firstRequirement = first?.requires[0]?.activityId ?? null;
+      if (nextActivityId(manifest, states) !== firstRequirement) {
+        fail(`${where}: with every lesson read, the next action is not the first requirement ${firstRequirement}`);
+      }
+      // Reading changes no completion arithmetic: lessons are never required.
+      if (first && moduleComplete(first, states)) fail(`${where}: reading the lessons completed ${first.id}`);
+    }
+
     /* ── 3. every reference solution passes its own assertions ─────────── */
     for (const { activity } of codeActivities(path)) {
       const at = `${where}/${activity.id}`;
@@ -155,6 +190,27 @@ async function main() {
         // A reused task keeps its own identity and its own reference; the path
         // must not restate it, or the two could drift apart.
         if (solutionFor(activity.id)) fail(`${at}: a reused task must not carry a second reference solution`);
+        // Its hidden assertions are the task's own, and the path grader must
+        // run them: they are what forces the intended method.
+        const reference = codingSolutionFor(activity.reuseTaskId);
+        if (!reference) {
+          fail(`${at}: reused task ${activity.reuseTaskId} has no reference solution`);
+          continue;
+        }
+        const wrong = KNOWN_WRONG_REUSED[activity.reuseTaskId];
+        if (!wrong) fail(`${at}: name a known-wrong implementation of ${activity.reuseTaskId} in KNOWN_WRONG_REUSED`);
+        if (SKIP_RUN) continue;
+        const merged = codeFromReusedTask(task);
+        const graded = await withTimeout(gradePathCode(activity, merged, reference.solution, runReactSuite), 30_000, at);
+        if (graded.state !== 'verified_pass') fail(`${at}: the reused task's reference does not pass through the path grader (${graded.code.outcome})`);
+        const hiddenCount = (reference.hiddenTests?.length ?? 0) + (reference.hiddenTypeTests?.length ?? 0);
+        if ((graded.code.hidden?.total ?? 0) !== hiddenCount) {
+          fail(`${at}: the path grader ran ${graded.code.hidden?.total ?? 0} of the reused task's ${hiddenCount} hidden assertions`);
+        }
+        if (wrong) {
+          const shortcut = await withTimeout(gradePathCode(activity, merged, wrong.code, runReactSuite), 30_000, at);
+          if (shortcut.state === 'verified_pass') fail(`${at}: ${wrong.label} passes; the hidden assertions did not run`);
+        }
         continue;
       }
       const solution = solutionFor(activity.id);
@@ -195,6 +251,18 @@ async function main() {
         );
       }
     }
+
+    /* ── code that does not run is a recorded attempt, and says so ─────── */
+    // The submit handler records a syntax error as needs_revision, so its
+    // feedback must not tell the learner that nothing was recorded.
+    const plain = codeActivities(path).find(({ activity }) => activity.code?.language === 'javascript');
+    if (plain && !SKIP_RUN) {
+      const broken = await gradePathCode(plain.activity, plain.activity.code!, 'const broken = (n) => { return n +; };');
+      if (broken.state !== 'needs_revision') fail(`${where}: a syntax error grades as ${broken.state}, not needs_revision`);
+      for (const line of codeFeedback(broken)) {
+        if (/nothing was recorded|not recorded/i.test(line.en)) fail(`${where}: a recorded syntax error says "${line.en}"`);
+      }
+    }
   }
 
   /* ── no orphan solutions ───────────────────────────────────────────── */
@@ -222,6 +290,9 @@ async function main() {
   }
   const catalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue must not import the solutions');
+
+  /* ── the handlers: availability, refusals, rate limits ─────────────── */
+  await handlerContracts(fail);
 
   if (failures.length > 0) {
     console.error(`Learning-path content check failed with ${failures.length} problem(s):`);

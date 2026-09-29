@@ -179,10 +179,9 @@ export const DEBUG_EVOLVING: Record<string, Spec> = {
       ],
     ],
     references: [
-      [
-        ref('How I finally learnt to solve coding interview questions (Cathy Lai)', 'Jak jsem se konečně naučila řešit programovací úlohy (Cathy Lai)', 'https://dev.to/cathylai/how-i-finally-learnt-to-solve-coding-interview-questions-2cop'),
-        ref('console.log()', 'console.log()', mdn + 'API/console/log_static'),
-      ],
+      // The hint ladder ends on the first reference, so it is the MDN page
+      // for the stage's instrument, as on every other stage.
+      [ref('console.log()', 'console.log()', mdn + 'API/console/log_static')],
       [ref('console.table() for tracing a loop', 'console.table() pro trasování cyklu', mdn + 'API/console/table_static')],
       [ref('Math.round()', 'Math.round()', mdn + 'JavaScript/Reference/Global_Objects/Math/round')],
       [ref('The return statement', 'Příkaz return', mdn + 'JavaScript/Reference/Statements/return')],

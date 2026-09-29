@@ -79,6 +79,15 @@ const readLayout = (): WorkbenchLayout => {
   return { split };
 };
 
+// A narrow screen waits for a bigger one by default, but the learner may take
+// the editor here instead (docs/interactive-content-manifest.md). The choice is
+// theirs for the rest of the browser session, on every task, and nothing else
+// reads it: the server grades the same code from any screen.
+const NARROW_EDITOR_KEY = 'devshark:coding:narrow-editor:v1';
+const readNarrowEditor = (): boolean => {
+  try { return sessionStorage.getItem(NARROW_EDITOR_KEY) === '1'; } catch { return false; }
+};
+
 /** The names a React suite gives its cases, in order, so Results can list them
  * before the first run. The suite is read, never executed, here. */
 const suiteCaseNames = (suite: string | undefined): string[] =>
@@ -148,9 +157,25 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const harness = useReactHarness();
   // What a narrow screen gets instead of an editor: the task's puzzle when it
   // has one, and an honest pending state when it does not. Neither is a pass.
+  // The pending state offers the editor anyway, so it is never a dead end.
   const narrow = useIsNarrowForEditor();
+  const [editorHere, setEditorHere] = useState(readNarrowEditor);
+  const editorPaneRef = useRef<HTMLElement | null>(null);
+  const focusEditorPane = useRef(false);
   const puzzleMode = narrow && Boolean(task.puzzle) && mode === 'section';
-  const pendingOnDesktop = narrow && !task.puzzle;
+  const pendingOnDesktop = narrow && !task.puzzle && !editorHere;
+  const chooseEditorHere = useCallback(() => {
+    try { sessionStorage.setItem(NARROW_EDITOR_KEY, '1'); } catch { /* the choice then lasts for this page only */ }
+    focusEditorPane.current = true;
+    setEditorHere(true);
+  }, []);
+  // The button that made the choice is gone, so focus goes to the pane that
+  // replaced it rather than back to the top of the page.
+  useEffect(() => {
+    if (pendingOnDesktop || !focusEditorPane.current) return;
+    focusEditorPane.current = false;
+    editorPaneRef.current?.focus();
+  }, [pendingOnDesktop]);
 
   const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
   const taken = Math.min(hintsTaken, rungs.length);
@@ -879,9 +904,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             <section className="cd-pane cd-pane--editor" aria-labelledby={titleId}>
               {brief}
               {/* No editor, no puzzle, and no pass: the task waits. The draft is
-                  kept exactly as it is, and nothing about this marks it done. */}
+                  kept exactly as it is, and nothing about this marks it done.
+                  Waiting is the default, never the only way: the editor works
+                  here too, just with less room. */}
               <p className="cd-note cd-note--warn" role="status">{t('coding.pendingDesktop')}</p>
               <p className="cd-shortcuts">{t('coding.pendingDesktopNote')}</p>
+              <div className="cd-actions">
+                <Button variant="secondary" onClick={chooseEditorHere} label={t('coding.pendingDesktopUseEditor')} />
+              </div>
               {actionBar}
             </section>
           )}
@@ -889,10 +919,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {/* Stays mounted while a puzzle or the pending note stands in for it,
               so the code survives a resize. The brief and the actions go with
               whichever pane is showing. */}
-          <section className="cd-pane cd-pane--editor" hidden={puzzleMode || pendingOnDesktop} aria-labelledby={puzzleMode || pendingOnDesktop ? undefined : titleId}>
+          <section className="cd-pane cd-pane--editor" ref={editorPaneRef} tabIndex={-1} hidden={puzzleMode || pendingOnDesktop} aria-labelledby={puzzleMode || pendingOnDesktop ? undefined : titleId}>
             {!puzzleMode && !pendingOnDesktop && brief}
             <div className="cd-editor-slot">
-              <Editor minHeight={480} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
+              {/* Shorter on a narrow screen, so Run and Submit are not a screen
+                  away from the code; it still grows with the code. */}
+              <Editor minHeight={narrow ? 280 : 480} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
               {/* The shortcuts are not printed on the page; a screen reader
                   hears them with the editor, Escape then Tab included. */}
               <span id={`${baseId}-keys`} className="cd-visually-hidden">{t('coding.shortcuts')}</span>

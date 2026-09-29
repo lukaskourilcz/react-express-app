@@ -1,5 +1,9 @@
+// First: clears the environment the handlers below read when imported.
+import './launch-test-env';
 import assert from 'node:assert/strict';
-import { readFileSync, readdirSync, statSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
+import { execFileSync, spawnSync } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   MERCH_SHOP,
@@ -38,9 +42,12 @@ import { playable as playableCodingTask, CODING_TASKS } from '../lib/coding/cata
 import { codingTaskById, levelCodingTasks } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
-import { runInSandbox } from '../lib/coding/sandbox';
+import { giveUpAfter as clientGiveUpAfter } from '../client/src/coding/hint-ladder';
+import { runInSandbox, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
+import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
+import { GUEST_NODE_FLAGS, readGuestResult } from '../lib/coding/react-guest';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -55,7 +62,10 @@ import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRange
 import { eligibilityFrom, registryEntryConsistent, type RegistryEntry } from '../shared/curation';
 import submitHandler from '../api/quiz/submit';
 import dailyHandler from '../api/quiz/daily';
-import { pickQuestionOfTheDay } from '../lib/daily-question';
+import questionsHandler from '../api/quiz/questions';
+import challengeHandler from '../api/quiz/challenge';
+import { decodeSessionEnvelope } from '../lib/quiz-tokens';
+import { dailySeededShuffle, pickQuestionOfTheDay, UNBIASED_SHUFFLE_FROM } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
 import { CODING_INDEX } from '../shared/coding-index';
 import { freeCodingCounts } from '../shared/tiers';
@@ -85,7 +95,7 @@ import {
   MARKER_MAX,
   type ReviewRecord,
 } from '../shared/curation';
-import { createHash } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
 import {
   CONCEPT_IDS,
   areContrastable,
@@ -104,6 +114,7 @@ import {
 import { arrangePractice, arrangementProblems } from '../shared/interleave';
 import { questions } from '../lib/quiz-data';
 import { LESSON_FIGURES, figuresFor, visibleFigures, validateFigures } from '../shared/lesson-figures';
+import { LEVEL_INTROS } from '../client/src/lib/levelIntros';
 import { FAILURE_CATEGORIES, classifyFailure, failureHint } from '../shared/coding-failure';
 import { RETIRED_TOPIC_IDS, retirementOf } from '../shared/retired-content';
 import { GLOSSARY, termsIn } from '../shared/glossary';
@@ -116,7 +127,7 @@ import {
   tokensForVerifiedXp,
   validateAddress,
 } from '../shared/rewards';
-import { DEFAULT_SETTINGS, normalizeSettings } from '../lib/settings-store';
+import { DEFAULT_SETTINGS, normalizeSettings, setGameSettingsForTests } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
 import { STREAK_PROTECTION_CAP } from '../shared/rewards';
 import {
@@ -127,7 +138,6 @@ import {
   isTopicInPlan,
   planTopics,
   validateProgressionGraph,
-  WEBDEV_PLAN_STAGES,
 } from '../shared/progression';
 import {
   isLearnerProfileComplete,
@@ -147,7 +157,6 @@ import {
 } from '../shared/learning-paths';
 import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack, isDifficulty } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
-import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks, roadmapEndedOnHearts, ROADMAP_MAX_HEARTS } from '../shared/assessment';
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
@@ -166,10 +175,11 @@ import {
   isOpenTo,
 } from '../shared/tiers';
 import { EVOLVING_CHALLENGES } from '../shared/evolving';
-import { techniqueGroup } from '../shared/coding-catalog';
+import { techniqueGroup, CODING_SECTION_TRACKS } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
-import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError } from '../lib/http';
+import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
+import { limitUserWrite } from '../api/user/[op]';
 import { handleAdminEntitlements, handleEntitlement, parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
 import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
 import { WAIVER_TEXT } from '../lib/billing/sync';
@@ -441,6 +451,33 @@ async function auditGateContracts() {
   assert.equal(round.lastRoundSize, 1, 'the void item does not count in the round');
   assert.equal(round.lastRoundCorrect, 1);
   assert.equal(round.asked, 1, 'the run continues from what was actually graded');
+  // A round is graded once. Submitted again with other answers it would report
+  // a different score, and a few dozen replays would find every key and mint a
+  // perfect, verified placement receipt.
+  const replayRes = mockResponse();
+  await roadmapHandler({ method: 'POST', headers: {}, query: { resource: 'placement' }, body: { placementToken, answers: { [pool[0].id]: 1, 'retired-while-open': 1 } } } as never, replayRes as never);
+  assert.equal(replayRes.statusCode, 409, 'a placement round cannot be submitted twice');
+  assert.equal((replayRes.body as { error: { code: string } }).error.code, 'placement_round_used');
+  assert.equal(JSON.stringify(replayRes.body).includes('lastRoundCorrect'), false, 'the refusal reports no score');
+
+  // A Learn session lives as long as the attempt the answer routine opens for
+  // it (two hours), so a level whose coding tasks run past an hour can still
+  // be completed. Other sessions keep their hour.
+  const realNow = Date.now;
+  try {
+    const opened = realNow();
+    const learnSession = encodeSession([{ questionId: sample.id, correctAnswer: 0 }], {
+      scope: 'roadmap', subject: 'webdev', topic: 'javascript', roadmapKind: 'level', ref: 1, userId: null,
+    });
+    const quizSession = encodeSession([{ questionId: sample.id, correctAnswer: 0 }], { subject: 'webdev' });
+    Date.now = () => opened + 61 * 60_000;
+    assert.ok(decodeSession(learnSession), 'a Learn session is still open after an hour');
+    assert.equal(decodeSession(quizSession), null, 'a quiz session still ends after an hour');
+    Date.now = () => opened + 121 * 60_000;
+    assert.equal(decodeSession(learnSession), null, 'a Learn session ends after two hours');
+  } finally {
+    Date.now = realNow;
+  }
 }
 
 /* ── the free tier and Premium (#220) ─────────────────────────────────────
@@ -561,6 +598,9 @@ async function tierContracts() {
     'lib/learning-paths/handlers.ts', 'api/quiz/roadmap.ts',
     // Redeeming coins for shipped merchandise is Premium only (#227).
     'lib/rewards/handlers.ts',
+    // A challenge run and a skip's next suggestion offer only what the plan
+    // opens, so a free run never stops at a Premium challenge's 402.
+    'lib/coding/practice-handlers.ts',
   ]);
   const serverFiles = [...apiFiles(join(process.cwd(), 'api')), ...apiFiles(join(process.cwd(), 'lib'))]
     .map((path) => path.slice(process.cwd().length + 1));
@@ -633,7 +673,7 @@ async function tierContracts() {
 
   // The handlers themselves, where they can run without a database: a signed-in
   // account with no grant is free, and a guest holds the free tier.
-  if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+  {
     const signedIn = (query: Record<string, string>) => ({
       method: 'GET', headers: { authorization: 'Bearer contract' }, query: { ...query, user_id: 'contract-free-account' },
     });
@@ -744,7 +784,7 @@ function billingContracts() {
   for (const op of ['billing-checkout', 'billing-portal', 'billing-webhook', 'billing-cancel']) {
     assert.match(userOps, new RegExp(`op === '${op}'`), `${op} is a branch of api/user/[op].ts, not a new handler`);
   }
-  assert.match(userOps, /op !== 'billing-webhook' &&\s*!\(await enforceRateLimit/, 'the signed webhook skips the per-address limiter');
+  assert.match(userOps, /if \(req\.method === 'GET' \|\| op === 'billing-webhook' \|\|[^)]*\) return true;/, 'the signed webhook skips the write limiter');
   // Hosted Checkout and Portal only: no Stripe.js, no iframe, the CSP untouched.
   const clientPackage = read('client/package.json');
   assert.doesNotMatch(clientPackage, /stripe/i, 'the browser bundle carries no Stripe library');
@@ -900,6 +940,16 @@ async function retiredSupportContracts() {
   await settingsHandler({ method: 'GET', headers: {}, query: {} } as never, publicSettings as never);
   assert.equal(publicSettings.statusCode, 200);
   assert.equal('support' in (publicSettings.body as Record<string, unknown>), false, '/api/settings answers without a support block');
+  // tests/fixtures/api-settings.json is the body the client tests and the
+  // responsive sweep answer /api/settings with: this handler's own body at
+  // default settings, except that checkout is on, as it is after launch.
+  const settingsFixture = JSON.parse(read('tests/fixtures/api-settings.json')) as Record<string, unknown>;
+  const liveSettings = publicSettings.body as Record<string, unknown>;
+  assert.deepEqual(Object.keys(settingsFixture).sort(), Object.keys(liveSettings).sort(), 'the settings fixture has the keys the handler sends');
+  for (const key of Object.keys(liveSettings).filter((one) => one !== 'billing')) {
+    assert.deepEqual(settingsFixture[key], liveSettings[key], `the settings fixture's ${key} is what the handler sends`);
+  }
+  assert.deepEqual(Object.keys(settingsFixture.billing as object).sort(), Object.keys(liveSettings.billing as object).sort(), 'the fixture\'s billing has the handler\'s keys');
 
   // The files that held the flag, the block and the /dev fields keep none of them.
   for (const file of ['api/settings.ts', 'lib/settings-store.ts', 'client/src/lib/gameConfig.ts', 'client/src/lib/devApi.ts',
@@ -1205,7 +1255,7 @@ async function referralContracts() {
   // 5. The handler, against a stand-in database: the GET sends counts and no
   // account id, the POST takes the creation time from the token and never from
   // the body, and it asks for no amount.
-  if (!process.env.SUPABASE_URL && !process.env.VITE_SUPABASE_URL) {
+  {
     const calls: { fn: string; args: Record<string, unknown> }[] = [];
     const fake = {
       rpc: async (fn: string, args: Record<string, unknown>) => {
@@ -1518,8 +1568,6 @@ async function voucherContracts() {
   assert.match(ENGLISH['legal.privacy.voucher.body'], /does not store the code you type/);
   assert.match(ENGLISH['legal.privacy.deletion.body'], /your voucher redemptions/);
   assert.match(read('client/src/components/LegalPages.tsx'), /id: 'vouchers', title: 'legal\.privacy\.voucher\.title'/);
-
-  if (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) return;
 
   // 4. The redemption against a stand-in database. Log lines are captured to
   // prove that no code, hash or hint is ever written to them.
@@ -1876,12 +1924,230 @@ async function qotdContracts() {
   assert.equal(checked.resultReceipt, undefined, 'a question of the day mints no receipt, so no XP, streak or leaderboard entry');
   assert.equal(checked.results[0].answerProof, undefined);
   assert.ok(checked.results[0].explanation.length > 0, 'the check explains the answer');
-  assert.match(readFileSync(join(process.cwd(), 'api/quiz/submit.ts'), 'utf8'), /const auth = session\.scope === 'qotd' \? null : signedIn;/);
 
   // The share images' count is the tier rule over the catalogue.
   const counts = freeCodingCounts(CODING_INDEX.map((task) => task.id));
   assert.equal(counts.total, CODING_INDEX.length);
   assert.equal(counts.free, CODING_INDEX.filter((task) => task.free === true).length);
+}
+
+/** The daily challenge and the question of the day draw with a seeded shuffle
+ * that favours no position, and the days already published keep their draw. */
+function seededShuffleContracts() {
+  const ten = Array.from({ length: 10 }, (_, i) => i);
+  // Golden orders from the shuffle those days were published with.
+  assert.deepEqual(dailySeededShuffle(ten, 'qotd::2026-09-15', '2026-09-15'), [0, 8, 2, 6, 3, 7, 5, 1, 4, 9]);
+  assert.deepEqual(dailySeededShuffle(ten, '2026-09-29::3', '2026-09-29'), [2, 7, 8, 1, 3, 0, 4, 6, 5, 9]);
+
+  const pool = Array.from({ length: 571 }, (_, i) => i);
+  const once = dailySeededShuffle(pool, 'qotd::2026-12-01', '2026-12-01');
+  assert.deepEqual(once, dailySeededShuffle(pool, 'qotd::2026-12-01', '2026-12-01'), 'the same seed gives the same order');
+  assert.deepEqual([...once].sort((a, b) => a - b), pool, 'a shuffle is a permutation');
+  // The old draw took one hash byte per swap: in a 571-question pool it put a
+  // question from past position 255 first on 1 day in 2000. Uniform is 55 %.
+  let late = 0;
+  for (let day = 0; day < 2000; day++) {
+    if (dailySeededShuffle(pool, `seed-${day}`, UNBIASED_SHUFFLE_FROM)[0] >= 256) late++;
+  }
+  assert.ok(late > 2000 * 0.5 && late < 2000 * 0.6, `a question past position 255 comes first on ${late} of 2000 days`);
+}
+
+/** A caller with its own address, so the per-address limits of the quiz
+ * handlers never decide an assertion here; signed in through the development
+ * fallback when `user` is given. */
+let quizCallerSeq = 0;
+function quizRequest(method: 'GET' | 'POST', query: Record<string, string>, body?: Record<string, unknown>, user?: string) {
+  quizCallerSeq++;
+  return {
+    method,
+    headers: { 'x-forwarded-for': `198.51.100.${quizCallerSeq % 250}`, ...(user ? { authorization: 'Bearer contract' } : {}) },
+    query: { ...query, ...(user && method === 'GET' ? { user_id: user } : {}) },
+    body: body && user ? { ...body, user_id: user } : body,
+  } as never;
+}
+
+/** POST /api/quiz/submit grades only the sessions it serves, each checked
+ * through the handler that really issues it. */
+async function quizSubmitScopeContracts() {
+  const learner = 'scope-contract-learner-01';
+  const submitAll = async (sessionId: string, user?: string) => {
+    const session = decodeSessionEnvelope(sessionId)!;
+    const answers = Object.fromEntries(session.questions.map((q) => [q.questionId, q.correctAnswer]));
+    const response = mockResponse();
+    await submitHandler(quizRequest('POST', {}, { sessionId, answers }, user), response as never);
+    return { session, response, body: response.body as { resultReceipt?: string; correctAnswers?: number; error?: { code: string } } };
+  };
+
+  // A Learn level: /api/quiz/roadmap?resource=answer reveals every correct
+  // option before the level is finished, so this session must not be
+  // gradable as a quiz.
+  const level = mockResponse();
+  await roadmapHandler(quizRequest('GET', { topic: 'javascript', level: '1', lang: 'en' }), level as never);
+  assert.equal(level.statusCode, 200, JSON.stringify(level.body));
+  const learn = await submitAll((level.body as { sessionId: string }).sessionId, learner);
+  assert.equal(learn.session.scope, 'roadmap');
+  assert.equal(learn.response.statusCode, 400, 'a Learn level session is refused by the quiz grader');
+  assert.equal(learn.body.error?.code, 'invalid_session');
+  assert.equal(learn.body.resultReceipt, undefined, 'no quiz receipt, XP, streak day or board entry for a Learn level');
+
+  // A quiz (and a personalised review, which is issued the same way).
+  const quiz = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '2', difficulty: 'mixed', categories: 'javascript' }), quiz as never);
+  assert.equal(quiz.statusCode, 200, JSON.stringify(quiz.body));
+  const graded = await submitAll((quiz.body as { sessionId: string }).sessionId, learner);
+  assert.equal(graded.response.statusCode, 200, JSON.stringify(graded.body));
+  assert.equal(decodeQuizResultReceipt(graded.body.resultReceipt!)?.purpose, 'quiz');
+  // The questions say when their session stops being gradable, no later
+  // than the sealed session itself does, so a saved quiz can be dropped.
+  const quizExpiresAt = (quiz.body as { expiresAt: number }).expiresAt;
+  assert.ok(quizExpiresAt <= graded.session.issuedAt + 60 * 60_000 && quizExpiresAt > Date.now() + 59 * 60_000, `expiresAt ${quizExpiresAt}`);
+
+  // The daily challenge, fetched and submitted signed in.
+  const daily = mockResponse();
+  await dailyHandler(quizRequest('GET', {}, undefined, learner), daily as never);
+  assert.equal(daily.statusCode, 200, JSON.stringify(daily.body));
+  const dailyGraded = await submitAll((daily.body as { sessionId: string }).sessionId, learner);
+  assert.equal(dailyGraded.response.statusCode, 200, JSON.stringify(dailyGraded.body));
+  assert.ok((daily.body as { expiresAt: number }).expiresAt <= dailyGraded.session.issuedAt + 60 * 60_000);
+  assert.equal(decodeQuizResultReceipt(dailyGraded.body.resultReceipt!)?.purpose, 'daily');
+
+  // The 20-question assessment.
+  const assessment = mockResponse();
+  await challengeHandler(quizRequest('GET', { resource: 'assessment', categories: deliveryCategories('webdev').join(',') }), assessment as never);
+  assert.equal(assessment.statusCode, 200, JSON.stringify(assessment.body));
+  const assessed = await submitAll((assessment.body as { sessionId: string }).sessionId, learner);
+  assert.equal(assessed.response.statusCode, 200, JSON.stringify(assessed.body));
+  assert.equal(decodeQuizResultReceipt(assessed.body.resultReceipt!)?.purpose, 'assessment');
+
+  // A Biggest Shark Challenge batch, one answer at a time.
+  const batch = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: deliveryCategories('webdev').join(',') }), batch as never);
+  assert.equal(batch.statusCode, 200, JSON.stringify(batch.body));
+  const batchSession = decodeSessionEnvelope((batch.body as { sessionId: string }).sessionId)!;
+  const one = batchSession.questions[0];
+  const challenged = mockResponse();
+  await submitHandler(quizRequest('POST', {}, { sessionId: (batch.body as { sessionId: string }).sessionId, answers: { [one.questionId]: one.correctAnswer } }, learner), challenged as never);
+  assert.equal(challenged.statusCode, 200, JSON.stringify(challenged.body));
+  assert.equal((challenged.body as { resultReceipt?: string }).resultReceipt, undefined);
+
+  // The question of the day is graded here too, as practice.
+  const qotd = mockResponse();
+  await dailyHandler(quizRequest('GET', { qotd: 'today' }), qotd as never);
+  assert.equal(qotd.statusCode, 200, JSON.stringify(qotd.body));
+  const checked = await submitAll((qotd.body as { sessionId: string }).sessionId, learner);
+  assert.equal(checked.response.statusCode, 200, JSON.stringify(checked.body));
+  assert.equal(checked.body.resultReceipt, undefined);
+
+  // Nothing handed out before grading carries the question's tags: a dozen
+  // served questions have a tag that is their correct option (rm-db-19
+  // WHERE, rm-db-37 HAVING, rm-react-183 useCallback).
+  const payloads: [string, unknown][] = [
+    ['quiz', (quiz.body as { questions: unknown[] }).questions],
+    ['daily', (daily.body as { questions: unknown[] }).questions],
+    ['Learn level', (level.body as { questions: unknown[] }).questions],
+    ['assessment', (assessment.body as { questions: unknown[] }).questions],
+    ['challenge batch', (batch.body as { questions: unknown[] }).questions],
+    ['question of the day', [(qotd.body as { question: unknown }).question]],
+  ];
+  for (const [label, questions] of payloads) {
+    for (const question of questions as Record<string, unknown>[]) {
+      assert.equal('tags' in question, false, `${label} sends ${String(question.id)} with its tags before grading`);
+    }
+  }
+  const placement = mockResponse();
+  await roadmapHandler(quizRequest('GET', { resource: 'placement', subject: 'webdev', lang: 'en' }), placement as never);
+  assert.equal(placement.statusCode, 200, JSON.stringify(placement.body));
+  for (const question of (placement.body as { questions: Record<string, unknown>[] }).questions) {
+    assert.equal('tags' in question, false, 'a placement round sends no tags');
+  }
+}
+
+/** Advanced asked of a topic with nothing above difficulty 2 is served its
+ * hardest questions, and says so, instead of a 404 that Retry repeats. */
+async function quizDifficultyContracts() {
+  const served = await getEffectiveQuestions('webdev', false);
+  const hardestHtml = Math.max(...served.filter((q) => q.category === 'html').map((q) => q.difficulty));
+  assert.ok(hardestHtml < 3, 'this contract needs a topic with no advanced questions');
+  const html = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '5', difficulty: 'advanced', categories: 'html' }), html as never);
+  assert.equal(html.statusCode, 200, JSON.stringify(html.body));
+  const htmlBody = html.body as { questions: { difficulty: number }[]; hardestAvailable?: boolean };
+  assert.equal(htmlBody.hardestAvailable, true);
+  assert.ok(htmlBody.questions.length > 0 && htmlBody.questions.every((q) => q.difficulty === hardestHtml));
+
+  const js = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '5', difficulty: 'advanced', categories: 'javascript,html' }), js as never);
+  assert.equal(js.statusCode, 200, JSON.stringify(js.body));
+  const jsBody = js.body as { questions: { difficulty: number }[]; hardestAvailable?: boolean };
+  assert.equal(jsBody.hardestAvailable, undefined, 'a selection with advanced questions is served those');
+  assert.ok(jsBody.questions.every((q) => q.difficulty >= 3));
+}
+
+/** The /dev "Daily challenge" switch turns the challenge off on the server;
+ * the question of the day is its own feature and stays open. */
+async function dailySwitchContracts() {
+  setGameSettingsForTests({ ...DEFAULT_SETTINGS, features: { ...DEFAULT_SETTINGS.features, dailyChallenge: false } });
+  try {
+    const off = mockResponse();
+    await dailyHandler(quizRequest('GET', {}), off as never);
+    assert.equal(off.statusCode, 503, JSON.stringify(off.body));
+    assert.equal((off.body as { error: { code: string } }).error.code, 'feature_disabled');
+    const qotd = mockResponse();
+    await dailyHandler(quizRequest('GET', { qotd: 'today' }), qotd as never);
+    assert.equal(qotd.statusCode, 200, JSON.stringify(qotd.body));
+  } finally {
+    setGameSettingsForTests(null);
+  }
+  const on = mockResponse();
+  await dailyHandler(quizRequest('GET', {}), on as never);
+  assert.equal(on.statusCode, 200, JSON.stringify(on.body));
+}
+
+/** A signed-in learner has one ranked daily attempt, timed from the first
+ * time they were handed the day's questions. */
+async function dailyIntegrityContracts() {
+  const learner = 'daily-contract-learner-01';
+  const fetchDaily = async (user?: string) => {
+    const response = mockResponse();
+    await dailyHandler(quizRequest('GET', {}, undefined, user), response as never);
+    assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+    return response;
+  };
+  const submitAll = async (sessionId: string, user?: string) => {
+    const session = decodeSessionEnvelope(sessionId)!;
+    const answers = Object.fromEntries(session.questions.map((q) => [q.questionId, q.correctAnswer]));
+    const response = mockResponse();
+    await submitHandler(quizRequest('POST', {}, { sessionId, answers }, user), response as never);
+    assert.equal(response.statusCode, 200, JSON.stringify(response.body));
+    return response.body as { resultReceipt?: string; correctAnswers: number };
+  };
+
+  const first = await fetchDaily(learner);
+  // Never cached: a response fetched signed out must not be served again
+  // once the learner signs in.
+  assert.match(first.headers.get('cache-control') ?? '', /no-store/);
+  assert.match(first.headers.get('vary') ?? '', /Authorization/i);
+
+  // Fetched signed out, the day's questions carry a random attempt id.
+  // Submitted signed in with every answer right, they are practice: no
+  // receipt, so no daily result, XP or streak day, and nothing to replace
+  // the learner's own attempt with.
+  const anonymous = await fetchDaily();
+  const practised = await submitAll((anonymous.body as { sessionId: string }).sessionId, learner);
+  assert.equal(practised.correctAnswers > 0, true);
+  assert.equal(practised.resultReceipt, undefined, 'a daily fetched signed out never ranks a signed-in learner');
+
+  // Fetching again just before submitting does not restart the clock.
+  await new Promise((resolve) => setTimeout(resolve, 60));
+  const again = await fetchDaily(learner);
+  const firstSession = decodeSessionEnvelope((first.body as { sessionId: string }).sessionId)!;
+  const againSession = decodeSessionEnvelope((again.body as { sessionId: string }).sessionId)!;
+  assert.equal(againSession.attemptId, firstSession.attemptId, 'one attempt a day');
+  assert.equal(againSession.startedAt, firstSession.startedAt, 'the start is the first fetch of the day');
+  const ranked = await submitAll((again.body as { sessionId: string }).sessionId, learner);
+  const receipt = decodeQuizResultReceipt(ranked.resultReceipt!);
+  assert.equal(receipt?.purpose, 'daily');
+  assert.ok((receipt?.daily?.durationMs ?? 0) >= 60, `the time runs from the first fetch, got ${receipt?.daily?.durationMs} ms`);
 }
 
 /** The launch price (shared/launch-offer.ts): 4 Oct 2026 00:00 to 2 Nov 2026
@@ -1961,6 +2227,9 @@ function launchOfferContracts() {
 }
 
 async function main() {
+  // Code graded below runs on the grader's worker thread, built fresh from the
+  // sources under test.
+  await buildSandboxWorker();
   assert.equal(apiFiles(join(process.cwd(), 'api')).length, 12, 'Vercel function budget must remain exactly 12');
 
   // devShark is the only product this repository builds. An unset identity
@@ -2102,6 +2371,12 @@ async function main() {
   assert.ok(doubleSolution?.solution.includes('double'));
   const playableDouble = JSON.stringify(playableCodingTask(doubleTask!));
   assert.ok(!playableDouble.includes(doubleSolution!.solution.trim().slice(0, 30)), 'playable task must not carry the solution');
+  // The grader runs on a worker thread the host can stop (CODE-5). Its bundle
+  // is built with the React runner and shipped with the roadmap function; a
+  // deployment without it would fall back to running on the request thread.
+  assert.match(readFileSync(join(process.cwd(), 'scripts', 'build-react-runner.mjs'), 'utf8'), /await buildSandboxWorker\(\)/, 'the build writes the grader worker bundle');
+  const roadmapFunction = (JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as { functions: Record<string, { includeFiles?: string }> }).functions['api/quiz/roadmap.ts'];
+  assert.ok(roadmapFunction?.includeFiles?.includes('lib/coding/generated/*.cjs') && SANDBOX_WORKER_FILE.startsWith('lib/coding/generated/') && SANDBOX_WORKER_FILE.endsWith('.cjs'), 'the roadmap function ships the grader worker bundle');
   const graded = await runInSandbox({ code: doubleSolution!.solution, calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });
   assert.equal(codeOutcome({ visible: graded, hidden: null, check: null }), 'passed', 'the reference solution passes in the sandbox');
   const wrong = await runInSandbox({ code: 'const double = ns => ns;', calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });
@@ -2126,7 +2401,13 @@ async function main() {
   const preparedDrill = prepareDesign(drillTask!, (list) => [...list].reverse());
   assert.equal(gradeDesign(drillTask!, preparedDrill.key, [preparedDrill.key.order!]).outcome, 'passed', 'a sequence drill grades the shuffled order');
   assert.equal(gradeDesign(drillTask!, preparedDrill.key, [[...preparedDrill.key.order!].reverse()]).outcome, 'failed');
-  assert.equal(giveUpAfter(ladderLength(doubleTask!)), Math.min(Math.max(2, Math.ceil(ladderLength(doubleTask!) / 2)), ladderLength(doubleTask!)));
+  // The solution opens once half the ladder is spent, never before two rungs
+  // (or the whole ladder, when it is shorter). The browser shows the same number.
+  assert.equal(ladderLength(doubleTask!), 5, 'js-double-numbers offers five rungs: a hint, two approach steps, the skeleton and the docs link');
+  for (const [rungs, opensAfter] of [[1, 1], [2, 2], [3, 2], [4, 2], [5, 3], [6, 3], [7, 4], [9, 5]]) {
+    assert.equal(giveUpAfter(rungs), opensAfter, `a ${rungs}-rung ladder opens the solution after ${opensAfter}`);
+    assert.equal(clientGiveUpAfter(rungs), opensAfter, `the workbench says the same for ${rungs} rungs`);
+  }
 
   assert.ok(levelCodingTasks('javascript', 6).length >= 1, 'javascript level 6 carries a coding task');
   assert.ok(levelCodingTasks('javascript', 6).length <= 2);
@@ -2244,11 +2525,109 @@ async function main() {
   });
   assert.equal(previewRun.failed, 0, `the load-more preview pages through the stub's photos (${previewRun.cases.map((one) => one.error).filter(Boolean).join('; ')})`);
 
+  // Learner code runs in a page realm with nothing in it that leads to Node.
+  // With `process` in reach, a component wrote its own verdict file, ended the
+  // grader before the hidden cases ran, and was graded a pass.
+  const pageRealm = await runReactSuite({
+    suite: [
+      "import { reach } from './App';",
+      "test('the component reaches nothing of Node, nor Testing Library', async () => { expect(await reach()).toEqual({ process: 'undefined', global: 'undefined', require: 'blocked', thisGlobal: 'blocked', constructor: 'blocked', eval: 'blocked', dynamicImport: 'blocked', testingLibrary: 'blocked' }); });",
+    ].join('\n'),
+    appSource: [
+      "const attempt = (run) => { try { run(); return 'reached'; } catch { return 'blocked'; } };",
+      'export const reach = async () => ({',
+      '  process: typeof process,',
+      '  global: typeof globalThis.global,',
+      "  require: attempt(() => require('fs')),",
+      "  thisGlobal: attempt(() => Function('return this')()),",
+      "  constructor: attempt(() => globalThis.constructor.constructor('return process')()),",
+      "  eval: attempt(() => (0, eval)('1')),",
+      "  dynamicImport: await import('fs').then(() => 'reached', () => 'blocked'),",
+      // With Testing Library, a component set asyncWrapper to skip every waitFor.
+      "  testingLibrary: attempt(() => require('@testing-library/react').configure({ asyncWrapper: async () => undefined })),",
+      '});',
+      'export default function App() { return null; }',
+    ].join('\n'),
+  });
+  assert.equal(pageRealm.compileError, null, JSON.stringify(pageRealm));
+  assert.equal(pageRealm.failed, 0, `learner code reached the host: ${pageRealm.cases.map((one) => one.error).filter(Boolean).join('; ')}`);
+  // The suite hands Testing Library, in the host realm, regular expressions
+  // and functions made in the page realm. And Node reports an unhandled
+  // rejection on `process`, which the page does not have, so it arrives on
+  // window the way a browser reports it.
+  const crossRealm = await runReactSuite({
+    suite: [
+      "import React from 'react';",
+      "import { render, screen } from '@testing-library/react';",
+      "import App from './App';",
+      "test('regex and function matchers', () => { render(<App />); expect(screen.getByText(/^Slide \\d of 4$/).tagName).toBe('P'); expect(screen.getByRole('button', { name: /^next/i })).toBeTruthy(); expect(screen.getByText((text) => text.startsWith('Slide 1')).tagName).toBe('P'); });",
+      "test('an unhandled rejection reaches window', async () => { const seen = []; const onWindow = (event) => { seen.push(event.reason && event.reason.message); event.preventDefault(); }; window.addEventListener('unhandledrejection', onWindow); try { Promise.reject(new Error('left')); await new Promise((resolve) => setTimeout(resolve, 20)); } finally { window.removeEventListener('unhandledrejection', onWindow); } expect(seen).toEqual(['left']); });",
+    ].join('\n'),
+    appSource: 'export default function App() { return <main><p>Slide 1 of 4</p><button>Next slide</button></main>; }',
+  });
+  assert.equal(crossRealm.failed, 0, `a page-realm matcher or rejection went astray: ${crossRealm.cases.map((one) => one.error).filter(Boolean).join('; ')}`);
+  // A case that threw has failed, whatever the message: a component that
+  // threw an error with an empty message passed every case that rendered it.
+  const emptyThrow = await runReactSuite({
+    suite: "import React from 'react';\nimport { render } from '@testing-library/react';\nimport App from './App';\ntest('renders', () => { render(<App />); });",
+    appSource: "export default function App() { throw new Error(''); }",
+  });
+  assert.ok(emptyThrow.passed === 0 && emptyThrow.failed === 1, JSON.stringify(emptyThrow));
+
+  // The real guest bundle, started with the flags the API passes, outside any
+  // VM. It deletes its input before learner code runs, only the stdout line
+  // with this run's nonce counts, and the case count has to match the suite.
+  execFileSync(process.execPath, ['scripts/build-react-runner.mjs'], { stdio: 'ignore' });
+  const guest = (suite: string, appSource: string) => {
+    const dir = mkdtempSync(join(tmpdir(), 'react-guest-'));
+    const input = join(dir, 'input.json');
+    const nonce = randomBytes(24).toString('hex');
+    writeFileSync(input, JSON.stringify({ suite, appSource, nonce }));
+    const command = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), input], {
+      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, NODE_ENV: 'development' },
+    });
+    const left = readdirSync(dir);
+    rmSync(dir, { recursive: true, force: true });
+    return { status: command.status, stdout: command.stdout, nonce, left };
+  };
+  const guestTask = codingTaskById('react-easy2-disclosure')!;
+  const guestSuite = withHiddenCases(guestTask.suite!, solutionFor(guestTask.id)!.hiddenSuite);
+  const honest = guest(guestSuite, solutionFor(guestTask.id)!.solution);
+  assert.equal(honest.status, 0);
+  assert.deepEqual(honest.left, [], 'the guest deletes its input before learner code runs');
+  const honestResult = readGuestResult(honest.stdout, honest.nonce, guestSuite);
+  assert.equal(honestResult.failed, 0, JSON.stringify(honestResult));
+  assert.equal(splitHiddenCases(honestResult.cases).hidden.length, 3, 'the hidden cases ran');
+  assert.throws(() => readGuestResult(honest.stdout, randomBytes(24).toString('hex'), guestSuite), /no result/, 'a line without this run\'s nonce is not a result');
+  assert.throws(() => readGuestResult(`${honest.stdout}${honest.stdout}`, honest.nonce, guestSuite), /no result/, 'two result lines are refused');
+  assert.throws(() => readGuestResult(honest.stdout, honest.nonce, guestTask.suite!), /wrong number of cases/, 'a run reporting other cases than the suite declares is refused');
+  // The reported forgery: write result.json and exit before the suite runs.
+  const forged = guest(guestSuite, [
+    "process.getBuiltinModule('fs').writeFileSync('/vercel/sandbox/result.json', JSON.stringify({ cases: [{ name: 'ok', status: 'pass', error: null, durationMs: 0 }], passed: 1, failed: 0, total: 1, compileError: null, timedOut: false }));",
+    'process.exit(0);',
+    'export default function App() { return null; }',
+  ].join('\n'));
+  assert.deepEqual(forged.left, [], 'the forged component wrote nothing');
+  const forgedResult = readGuestResult(forged.stdout, forged.nonce, guestSuite);
+  assert.ok(forgedResult.passed === 0 && /process is not defined/.test(forgedResult.compileError ?? ''), JSON.stringify(forgedResult));
+  // A host function the component can reach compiles nothing either, and a
+  // verdict line printed through the page's window.console is ignored.
+  const escape = guest(guestSuite, [
+    "window.console.log('\\n' + 'f'.repeat(48) + ' ' + JSON.stringify({ cases: [{ name: 'ok', status: 'pass', error: null, durationMs: 0 }], compileError: null, timedOut: false }));",
+    "const proc = document.createElement.constructor('return process')();",
+    "proc.getBuiltinModule('fs').writeFileSync('result.json', '{}');",
+    'export default function App() { return null; }',
+  ].join('\n'));
+  assert.deepEqual(escape.left, [], 'a host function gave the component nothing to write with');
+  const escapeResult = readGuestResult(escape.stdout, escape.nonce, guestSuite);
+  assert.ok(escapeResult.passed === 0 && /Code generation from strings disallowed/.test(escapeResult.compileError ?? ''), JSON.stringify(escapeResult));
+
   const qualityIssues = inspectQuestionQuality([{
     ...reviewQuestions[0],
     source: 'base', deleted: false,
     options: ['Always correct', 'Always correct'],
     cs: { question: '', options: [], introduction: '', explanation: '' },
+    review: { active: true, reason: 'reviewed', csApproved: false },
   }]);
   assert.ok(qualityIssues.some((issue) => issue.kind === 'weak_distractor'));
   assert.ok(qualityIssues.some((issue) => issue.kind === 'missing_translation'));
@@ -2290,7 +2669,9 @@ async function main() {
   }
   assert.match(coding, /p_coding_task_ids JSONB DEFAULT NULL/, 'level completion must accept the sealed coding task ids');
   assert.match(coding, /DROP FUNCTION IF EXISTS public\.complete_verified_roadmap_attempt\(TEXT, TEXT\)/);
-  assert.match(coding, /'coding:' \|\| p_task_id/, 'coding XP must go through the verified-activity ledger once per task');
+  // Coding XP once per account and task is run against the built schema by
+  // supabase/tests/030-coding-xp-once.test.sql (npm run test:sql); 041
+  // replaced the award id this file used to pin here.
   assert.match(coding, /DELETE FROM public\.coding_progress WHERE user_id = p_user_id/);
   assert.match(coding, /DELETE FROM public\.github_connections WHERE user_id = p_user_id/);
   assert.doesNotMatch(coding, /access_token|refresh_token|provider_token/, 'the garden must never store a user token');
@@ -2735,6 +3116,120 @@ async function main() {
       assert.ok(start >= 0 && verified >= 0 && verified < limited && limited < Math.min(...reads),
         `${fn} takes its ${cfg} token after ${verify} and before it reads the database`);
     }
+  }
+
+  // The Biggest Shark Challenge sends one grading request per answer, so a
+  // class playing it from one school address spent the old twelve-a-minute
+  // address budget in seconds and pupils 13 onwards got 429 (review PLAY-4).
+  // Grading, the completion step and the Hall of Fame now have the play
+  // shape: a class-sized address bucket, then the caller's own bucket, per
+  // account when signed in and per address, at the old rate, when not.
+  {
+    const stamp = Date.now();
+    const school = { headers: { 'x-forwarded-for': `challenge-class-${stamp}` }, socket: {} } as never;
+    const pupil = (n: number) => `user:challenge-${stamp}-${n}`;
+    type Limit = (typeof RATE_LIMITS)[keyof typeof RATE_LIMITS];
+    const through = (address: Limit, account: Limit, n: number) =>
+      checkRateLimit(school, mockResponse() as never, address) && checkRateLimit(school, mockResponse() as never, account, pupil(n));
+    for (let question = 0; question < 4; question += 1) {
+      for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+        assert.ok(through(RATE_LIMITS.quizSubmit, RATE_LIMITS.challengeSubmitPerUser, n), `seat ${n + 1} answers Challenge question ${question + 1}`);
+      }
+    }
+    for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+      assert.ok(through(RATE_LIMITS.challengeComplete, RATE_LIMITS.challengeCompletePerUser, n), `seat ${n + 1} completes a run`);
+      assert.ok(through(RATE_LIMITS.challengeScore, RATE_LIMITS.challengeScorePerUser, n), `seat ${n + 1} saves a score`);
+    }
+    // One account is still bounded while the address has room for the class.
+    for (let answer = 4; answer < RATE_LIMITS.challengeSubmitPerUser.capacity; answer += 1) {
+      assert.ok(through(RATE_LIMITS.quizSubmit, RATE_LIMITS.challengeSubmitPerUser, 0), `seat 1 answers again, ${answer + 1}`);
+    }
+    assert.equal(checkRateLimit(school, mockResponse() as never, RATE_LIMITS.quizSubmit), true, 'the address bucket still has room');
+    assert.equal(checkRateLimit(school, mockResponse() as never, RATE_LIMITS.challengeSubmitPerUser, pupil(0)), false, 'one account is bounded');
+    // A person's own limits are the rates the address buckets carried before
+    // the split, except the Challenge answer and completion budgets, which
+    // were the finding; a caller without an account keeps the old rates.
+    const preSplit = {
+      quizSubmitPerUser: [12, 12 / 60], quizSubmitAnonymous: [12, 12 / 60],
+      challengeScorePerUser: [3, 10 / 3600], challengeScoreAnonymous: [3, 10 / 3600],
+      challengeCompleteAnonymous: [12, 12 / 3600],
+    } as const;
+    for (const [key, [capacity, refill]] of Object.entries(preSplit) as Array<[keyof typeof preSplit, readonly [number, number]]>) {
+      assert.equal(RATE_LIMITS[key].capacity, capacity, `${key} holds the pre-split ${capacity}`);
+      assert.equal(RATE_LIMITS[key].refillPerSecond, refill, `${key} refills at the pre-split rate`);
+    }
+    // Each handler verifies the caller, then takes the caller's token, then
+    // writes: grading claims the answer, completion credits XP, the Hall of
+    // Fame inserts a row.
+    const submitSource = readFileSync(join(process.cwd(), 'api/quiz/submit.ts'), 'utf8');
+    const challengeSource = readFileSync(join(process.cwd(), 'api/quiz/challenge.ts'), 'utf8');
+    const bodyOf = (source: string, fn: string) => {
+      const start = source.indexOf(`async function ${fn}(`);
+      const end = source.indexOf('\nasync function ', start + 1);
+      assert.ok(start >= 0, `${fn} exists`);
+      return source.slice(start, end < 0 ? undefined : end);
+    };
+    for (const [body, verify, limits, write] of [
+      [bodyOf(submitSource, 'routeHandler'), 'await tryAuth(req)', ['quizSubmitPerUser', 'challengeSubmitPerUser', 'quizSubmitAnonymous'], 'await claimSubmission('],
+      [bodyOf(challengeSource, 'handleCompleteRun'), 'await tryAuth(req)', ['challengeCompletePerUser', 'challengeCompleteAnonymous'], "rpc('record_challenge_completion'"],
+      [bodyOf(challengeSource, 'handleSubmitScore'), 'await tryAuth(req)', ['challengeScorePerUser', 'challengeScoreAnonymous'], 'await recordChallengeScore('],
+    ] as const) {
+      const verified = body.indexOf(verify);
+      const written = body.indexOf(write);
+      for (const limit of limits) {
+        const at = body.indexOf(`RATE_LIMITS.${limit}`);
+        assert.ok(verified >= 0 && verified < at && at < written, `${limit} is taken after the caller is verified and before the write`);
+        if (limit.endsWith('PerUser')) assert.match(body, new RegExp(`RATE_LIMITS\\.${limit}, \`user:\\$\\{\\w+\\.sub\\}\``), `${limit} is keyed by the verified account`);
+      }
+    }
+  }
+
+  // Writes to api/user/[op].ts take the same two tiers. Thirty pupils behind
+  // one school address each post a quiz result in the same minute, and every
+  // one lands: the per-address bucket used to stop the class at twenty, and a
+  // refused result's receipt expires, so the XP was lost.
+  {
+    const stamp = Date.now();
+    const school = `school-${stamp}`;
+    const write = async (op: string, userId: string | null, address = school) => {
+      const res = mockResponse();
+      const req = { method: 'POST', headers: { 'x-forwarded-for': address }, query: { op }, body: userId ? { user_id: userId } : {}, socket: {} };
+      return (await limitUserWrite(req as never, res as never, op)) ? 200 : res.statusCode;
+    };
+    const pupils: number[] = [];
+    for (let n = 0; n < 30; n += 1) pupils.push(await write('stats', `pupil-${stamp}-${n}`));
+    assert.deepEqual(pupils, Array(30).fill(200), 'thirty pupils behind one address each record a result');
+    // One account is still bounded at the rate the address bucket carried.
+    for (let n = 1; n < RATE_LIMITS.userMutation.capacity; n += 1) {
+      assert.equal(await write('stats', `pupil-${stamp}-0`), 200, `pupil 1 writes again, try ${n + 1}`);
+    }
+    assert.equal(await write('stats', `pupil-${stamp}-0`), 429, 'one account is bounded at its own rate');
+    assert.equal(await write('stats', `pupil-${stamp}-1`), 200, 'and that spends nobody else\'s budget');
+    // A caller without an account keeps the per-address rate it had.
+    const lone = `lone-${stamp}`;
+    for (let n = 0; n < RATE_LIMITS.userMutation.capacity; n += 1) assert.equal(await write('payment-webhook', null, lone), 200);
+    assert.equal(await write('payment-webhook', null, lone), 429, 'a caller without an account keeps the per-address rate');
+    // The signed webhook and a path draft autosave are not charged here.
+    assert.equal(await write('billing-webhook', null, lone), 200);
+    assert.equal(await write('learning-path-draft', null, lone), 200);
+    // The address backstop holds a class at the per-account rate.
+    assert.ok(RATE_LIMITS.userMutationAddress.capacity >= SHARED_NETWORK_SEATS * RATE_LIMITS.userMutation.capacity);
+    // The route's limiter and the op's own check verify the token once.
+    const verifications: string[] = [];
+    const seen: (string | null)[] = [];
+    const warn = console.warn;
+    console.warn = (line: unknown) => { if (String(line).includes('requireAuth_dev_fallback')) verifications.push(String(line)); };
+    try {
+      const req = { method: 'POST', headers: {}, query: { op: 'stats' }, body: { user_id: `pupil-${stamp}-once` }, socket: {} };
+      await withRequestContext(req as never, mockResponse() as never, async () => {
+        seen.push(await verifiedCallerId(req as never));
+        seen.push(await requireAuthSub(req as never, mockResponse() as never));
+      });
+    } finally {
+      console.warn = warn;
+    }
+    assert.deepEqual(seen, [`pupil-${stamp}-once`, `pupil-${stamp}-once`], 'the limiter and the op see the same caller');
+    assert.equal(verifications.length, 1, 'one request verifies its credentials once');
   }
 
   const healthRes = mockResponse();
@@ -3210,7 +3705,7 @@ async function main() {
       assert.equal(hours(failed), RELEARN_HOURS);
     }
     // The ladder is bounded at the top: nothing is pushed past its last rung.
-    let climbed = { ...start, stage: 0 };
+    let climbed: ReturnType<typeof nextReviewState> = { ...start, stage: 0 };
     for (let i = 0; i < 20; i++) {
       climbed = nextReviewState(climbed, { conceptId: 'js-map', correct: true, kind: 'independent', itemId: `q${i}` }, t0);
     }
@@ -3421,7 +3916,7 @@ async function main() {
   // trims that set; it never reaches past the tier gate, and a shuffled run
   // is a permutation of the sequential one.
   {
-    const base = { minutes: 20, topic: null, passed: new Set<string>(), due: new Set<string>() };
+    const base = { minutes: 20, topic: null, plan: 'free' as const, passed: new Set<string>(), due: new Set<string>() };
     const sequential = buildQueue({ ...base, count: 5, order: 'sequential' });
     assert.equal(sequential.length, 5, 'a run sized by count holds that many challenges');
     assert.deepEqual(buildQueue({ ...base, count: 5, order: 'sequential' }), sequential, 'sequential runs are deterministic');
@@ -3440,6 +3935,14 @@ async function main() {
     }
     assert.equal(buildQueue({ ...base, count: 200, order: 'sequential' }).length, 20, 'a count is capped');
     assert.ok(buildQueue({ ...base, order: 'sequential' }).length >= 1, 'a run sized by minutes still offers something');
+    // The plan is a gate too: a free account's run holds only what the free
+    // plan opens, or the run stops at the first Premium challenge with a 402.
+    for (const topic of [null, ...CODING_SECTION_TRACKS]) {
+      const free = buildQueue({ ...base, count: 10, topic, order: 'sequential' });
+      assert.ok(free.length > 0 && free.every(isFreeCodingTask), `a free ${topic ?? 'mixed'} run holds only free challenges: ${free.filter((id) => !isFreeCodingTask(id)).join(', ')}`);
+    }
+    const premiumRun = buildQueue({ ...base, plan: 'premium', count: 10, topic: 'algorithms', order: 'sequential' });
+    assert.ok(premiumRun.some((id) => !isFreeCodingTask(id)), 'Premium opens the rest of the catalogue to a run');
 
     const now = Date.parse('2026-09-18T12:00:00Z');
     assert.deepEqual(parseScheduledFor(undefined, now), { at: null }, 'no moment means now');
@@ -3507,6 +4010,20 @@ async function main() {
     }
   }
 
+  // ── level intros ────────────────────────────────────────────────────────
+  // A level opens with the intro at its own index. When a curriculum changed
+  // its levels and the intros stayed, every level after the first change
+  // opened with another level's text (CSS "Flexbox" with the box model), so
+  // each served topic carries exactly one intro per level.
+  for (const topic of SUBJECT_SCOPE_CATALOG.webdev.topics) {
+    assert.ok(isRoadmapTopic(topic), `${topic} is a Learn topic`);
+    assert.equal(
+      LEVEL_INTROS[topic as keyof typeof LEVEL_INTROS]?.length,
+      topicLevelCount(topic),
+      `${topic}: one intro per level`,
+    );
+  }
+
   await auditGateContracts();
   await tierContracts();
   billingContracts();
@@ -3519,6 +4036,11 @@ async function main() {
   erasureContracts();
   await voucherContracts();
   await qotdContracts();
+  await quizSubmitScopeContracts();
+  await dailyIntegrityContracts();
+  seededShuffleContracts();
+  await quizDifficultyContracts();
+  await dailySwitchContracts();
   await webdevBankContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');

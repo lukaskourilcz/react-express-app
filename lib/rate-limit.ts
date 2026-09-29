@@ -55,14 +55,37 @@ export const SHARED_NETWORK_SEATS = 32;
 export const RATE_LIMITS = {
   admin: { key: 'admin_gate', capacity: 5, refillPerSecond: 1 },
   quizSession: { key: 'quiz_session', capacity: 20, refillPerSecond: 20 / 60 },
-  quizSubmit: { key: 'quiz_submit', capacity: 12, refillPerSecond: 12 / 60 },
-  challengeScore: { key: 'challenge_score', capacity: 3, refillPerSecond: 10 / 3600 },
-  challengeComplete: { key: 'challenge_complete', capacity: 12, refillPerSecond: 12 / 3600 },
+  // Grading and the Challenge have two tiers, like `play` below. The address
+  // buckets hold a class behind one NAT: a Challenge sends one submit per
+  // question, so a class playing it at once spent the old one-person budget
+  // in seconds. A signed-in caller is then bounded by an account bucket, and a
+  // caller without an account keeps the address rate these endpoints had
+  // before the split.
+  quizSubmit: { key: 'quiz_submit', capacity: SHARED_NETWORK_SEATS * 12, refillPerSecond: (SHARED_NETWORK_SEATS * 12) / 60 },
+  quizSubmitPerUser: { key: 'quiz_submit_user', capacity: 12, refillPerSecond: 12 / 60 },
+  // One Challenge answer per submit: a quick learner answers a question every
+  // few seconds, which the twelve-a-minute quiz budget cut off.
+  challengeSubmitPerUser: { key: 'challenge_submit_user', capacity: 30, refillPerSecond: 30 / 60 },
+  quizSubmitAnonymous: { key: 'quiz_submit_anon', capacity: 12, refillPerSecond: 12 / 60 },
+  challengeScore: { key: 'challenge_score', capacity: SHARED_NETWORK_SEATS * 3, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 3600 },
+  challengeScorePerUser: { key: 'challenge_score_user', capacity: 3, refillPerSecond: 10 / 3600 },
+  challengeScoreAnonymous: { key: 'challenge_score_anon', capacity: 3, refillPerSecond: 10 / 3600 },
+  // A run can end after three quick answers, and a completion that failed is
+  // sent again with the next one, so a learner's own budget is larger than
+  // the twelve an hour one whole address used to share.
+  challengeComplete: { key: 'challenge_complete', capacity: SHARED_NETWORK_SEATS * 12, refillPerSecond: (SHARED_NETWORK_SEATS * 12) / 3600 },
+  challengeCompletePerUser: { key: 'challenge_complete_user', capacity: 30, refillPerSecond: 30 / 3600 },
+  challengeCompleteAnonymous: { key: 'challenge_complete_anon', capacity: 12, refillPerSecond: 12 / 3600 },
   // A signed-in leaderboard read skips the CDN (it carries the learner's own
   // rank), so it gets a bucket; the anonymous board is cached and needs none.
   leaderboardPersonal: { key: 'leaderboard_personal', capacity: 30, refillPerSecond: 30 / 60 },
   questionReport: { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 },
+  // Every write to `api/user/[op].ts`, in two tiers like play's: an address
+  // backstop that holds a class behind one NAT, then `userMutation` keyed by
+  // the verified account. A caller without an account keeps `userMutation` by
+  // address, the rate it had before the split.
   userMutation: { key: 'user_mutation', capacity: 20, refillPerSecond: 20 / 60 },
+  userMutationAddress: { key: 'user_mutation_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
   flashcardMutation: { key: 'flashcard_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   roadmapMutation: { key: 'roadmap_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   roadmapAnswer: { key: 'roadmap_answer', capacity: 80, refillPerSecond: 80 / 60 },
@@ -102,6 +125,7 @@ export const RATE_LIMITS = {
   // buys an anonymous caller nothing.
   playStateAnonymous: { key: 'play_state_anon', capacity: 60, refillPerSecond: 60 / 60 },
   accountDelete: { key: 'account_delete', capacity: 2, refillPerSecond: 2 / 3600 },
+  accountDeleteAddress: { key: 'account_delete_address', capacity: SHARED_NETWORK_SEATS * 2, refillPerSecond: (SHARED_NETWORK_SEATS * 2) / 3600 },
   aiExplanation: { key: 'ai_explanation', capacity: 3, refillPerSecond: 5 / 3600 },
   codingRun: { key: 'coding_run', capacity: 30, refillPerSecond: 30 / 600 },
   codingDraft: { key: 'coding_draft', capacity: 60, refillPerSecond: 60 / 600 },
@@ -109,11 +133,19 @@ export const RATE_LIMITS = {
   githubConnect: { key: 'github_connect', capacity: 10, refillPerSecond: 10 / 3600 },
   githubSync: { key: 'github_sync', capacity: 6, refillPerSecond: 6 / 3600 },
   // Learning paths: starting an activity is cheap, submitting one runs the
-  // sandbox, and a draft autosave fires while the learner types.
+  // sandbox, and a draft autosave fires while the learner types. These four
+  // are keyed by the verified account (`user:<id>`), because a class works
+  // through one address.
   learningPathStart: { key: 'learning_path_start', capacity: 30, refillPerSecond: 30 / 600 },
   learningPathSubmit: { key: 'learning_path_submit', capacity: 30, refillPerSecond: 30 / 600 },
   learningPathDraft: { key: 'learning_path_draft', capacity: 60, refillPerSecond: 60 / 600 },
   learningPathEnroll: { key: 'learning_path_enroll', capacity: 10, refillPerSecond: 10 / 600 },
+  // Their address backstops, taken before the token is verified: a whole class
+  // behind one NAT at the per-account rate, so only a flood from one address
+  // meets them.
+  learningPathStartAddress: { key: 'learning_path_start_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },
+  learningPathSubmitAddress: { key: 'learning_path_submit_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },
+  learningPathDraftAddress: { key: 'learning_path_draft_address', capacity: SHARED_NETWORK_SEATS * 60, refillPerSecond: (SHARED_NETWORK_SEATS * 60) / 600 },
   // Billing (#221). Checkout, the portal and the success-page lookup are keyed
   // by account (the `identity` argument); the public cancellation page by
   // address. The Stripe webhook has no limit: its signature is the gate.
@@ -311,4 +343,54 @@ export async function enforceRateLimit(
     // to the in-memory bucket so the endpoint stays available.
     return checkRateLimit(req, res, config, identity);
   }
+}
+
+/* -------------------------------------------------------------------------- */
+/* One-time claims                                                            */
+/* -------------------------------------------------------------------------- */
+
+// A sealed token can be replayed as often as its lifetime allows. Where a
+// replay would leak something (a placement round answered again with other
+// options reports a different score), the handler claims the token's id once:
+// the first claim wins, every later one is refused. Upstash holds the claim
+// across instances (SET NX with an expiry); without it, or when Redis fails
+// mid-request, a per-instance map does, which is enough locally and blunts a
+// script hammering one warm instance.
+
+type OnceStore = { set: (key: string, value: string, opts: { nx: true; ex: number }) => Promise<unknown> };
+let onceStore: Promise<OnceStore | null> | null = null;
+const localClaims = new Map<string, number>();
+
+function getOnceStore(): Promise<OnceStore | null> {
+  if (!isDistributedRateLimitEnabled()) return Promise.resolve(null);
+  onceStore ??= (async () => {
+    try {
+      // @ts-ignore — optional dependency, resolved at runtime in production
+      const Redis = ((await import('@upstash/redis')) as any).Redis;
+      return new Redis({ url: UPSTASH_URL as string, token: UPSTASH_TOKEN as string }) as OnceStore;
+    } catch {
+      return null;
+    }
+  })();
+  return onceStore;
+}
+
+/** Claim `key` for `ttlSeconds`. True for the first caller, false while the
+ * claim stands. */
+export async function claimOnce(key: string, ttlSeconds: number): Promise<boolean> {
+  const store = await getOnceStore();
+  if (store) {
+    try {
+      return (await withLimiterDeadline(store.set(`once:${key}`, '1', { nx: true, ex: ttlSeconds }))) === 'OK';
+    } catch {
+      // Redis unreachable: fall back to this instance's memory below.
+    }
+  }
+  const now = Date.now();
+  if ((localClaims.get(key) ?? 0) > now) return false;
+  if (localClaims.size >= 10_000) {
+    for (const [claimed, until] of localClaims) if (until <= now) localClaims.delete(claimed);
+  }
+  localClaims.set(key, now + ttlSeconds * 1000);
+  return true;
 }

@@ -19,7 +19,7 @@ import { CODING_SUMMARIES, codingTaskById } from './active';
 import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
-import { runInSandbox } from './sandbox';
+import { runChecks } from './sandbox';
 import { nodeTypeScriptChecker } from './ts-check-node';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
@@ -153,6 +153,29 @@ async function taskCleared(supabase: SupabaseClient | null, userId: string, task
 const readLang = (value: unknown): 'en' | 'cs' => (value === 'cs' ? 'cs' : 'en');
 const codeHash = (code: string) => createHash('sha256').update(code, 'utf8').digest('base64url').slice(0, 32);
 
+/**
+ * The verdict log's key for one graded submission.
+ *
+ * `record_coding_verdict` applies an attempt id once and reports every later
+ * call with it as a replay. A workbench keeps one session for its whole life,
+ * so the session's id alone recorded only the first Submit: fail, fix, pass
+ * and the pass was never written — no completion, no XP, no Learn level. The
+ * key is therefore the session plus what was graded, the code and the verdict
+ * it earned: a retried request for the same submission stays a replay, and a
+ * changed one is recorded. XP stays once per task and account either way; its
+ * award id names the task, not the attempt.
+ *
+ * A system-design session keeps one graded verdict. Its first verdict returns
+ * the key it was sealed with, so a second submission from the same session
+ * would be answered from that key; it is reported and never applied. A new
+ * attempt takes a new session, with the options shuffled again.
+ */
+function submissionAttemptId(session: CodingSession, verdict: CodingOutcome, code: string | null): string {
+  if (code === null) return session.attemptId;
+  const graded = createHash('sha256').update(`${verdict}\n${code}`, 'utf8').digest('base64url').slice(0, 32);
+  return `${session.attemptId}:${graded}`;
+}
+
 /* ── GET ?resource=coding-task&id=… ──────────────────────────────────── */
 
 export async function handleCodingTask(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
@@ -272,6 +295,9 @@ interface Graded {
   designReference: CodingVerdictResponse['designReference'];
   failureHint?: CodingVerdictResponse['failureHint'];
   puzzle?: CodingVerdictResponse['puzzle'];
+  /** The grader itself failed: the React runner could not start or answer.
+   * That says nothing about the learner's code, so nothing is recorded. */
+  infra?: boolean;
 }
 
 /** The authored hint for the way this attempt failed, or null.
@@ -316,18 +342,11 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
     }
     codeToRun = checker.toJavaScript(code);
   }
-  const run = await runInSandbox({
-    code: codeToRun,
-    calls: [...tests.map((t) => t.call), ...hiddenTests.map((t) => t.call)],
-    expectations: [...tests.map((t) => t.expected), ...hiddenTests.map((t) => t.expected)],
-    // Only the visible calls' console output comes back: a learner who logs
-    // inside their function must not read the hidden checks' inputs.
-    shownCalls: tests.length,
-  });
-  const visible: EvaluateResult = { results: run.results.slice(0, tests.length), logs: run.logs, codeError: run.codeError, timedOut: run.timedOut };
-  const hiddenRun: EvaluateResult | null = hiddenTests.length > 0
-    ? { results: run.results.slice(tests.length), logs: [], codeError: run.codeError, timedOut: run.timedOut }
-    : null;
+  // Only the visible checks' console output comes back: a learner who logs
+  // inside their function must not read the hidden checks' inputs. The hidden
+  // checks run in a fresh program, in an order shuffled for this submission.
+  const { visible, hidden: hiddenRun } = await runChecks({ code: codeToRun, visible: tests, hidden: hiddenTests, shuffle: secureShuffle });
+  const run = { logs: visible.logs, codeError: visible.codeError ?? hiddenRun?.codeError ?? null, timedOut: Boolean(visible.timedOut || hiddenRun?.timedOut) };
   let verdict = codeOutcome({ visible, hidden: hiddenRun, check });
   if (verdict === 'passed' && hiddenTypeFailures > 0) verdict = 'failed';
   const hiddenPassed = (hiddenRun?.results.filter((r) => r.pass === true).length ?? 0) + (hiddenTypeTotal - hiddenTypeFailures);
@@ -374,8 +393,8 @@ async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
     });
     return {
       verdict: 'error', results: [], hidden: null, check: null, logs: [],
-      codeError: 'The React runner could not start. Try again in a moment.',
-      design: null, designReference: null,
+      codeError: 'The React runner could not start, so this Submit was not recorded. Try again in a moment.',
+      design: null, designReference: null, infra: true,
     };
   }
   // Hidden cases decide the verdict with the rest but go back only as a count,
@@ -451,7 +470,7 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   const saved = await withTimeout(
     supabase.rpc('record_coding_verdict', {
       p_user_id: userId,
-      p_attempt_id: session.attemptId,
+      p_attempt_id: submissionAttemptId(session, input.verdict, input.code),
       p_task_id: task.id,
       p_track: task.track,
       p_outcome: input.verdict,
@@ -585,6 +604,13 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
     code = body.code;
     graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
+  }
+  // A grader outage is not the learner's error: it is neither recorded nor
+  // counted against the attempt, and the message asks for another Submit.
+  if (graded.infra) {
+    logEvent({ status: 200, kind: 'submit_unrecorded', track: task.track, hasUser: Boolean(userId) });
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.json(verdictBody(graded, null, null, null));
   }
 
   let recorded: Recorded | null = null;

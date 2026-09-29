@@ -78,8 +78,10 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
       if (res.status === 402 && body?.error?.code === PREMIUM_REQUIRED) {
         openUpgradeSheet({ kind: body.error.kind, ref: body.error.ref, fromResponse: true });
       }
+      // Without a server message (an HTML 404 page, a proxy error) the learner
+      // gets the generic copy, never a bare status text such as "Not Found".
       throw new ApiError(
-        body?.error?.message || res.statusText || 'Request failed',
+        body?.error?.message || translateStatic('error.generic'),
         res.status,
         body?.error?.code,
       );
@@ -129,6 +131,13 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   no_billing_account: 'error.noBillingAccount',
   bad_email: 'error.badEmail',
   billing_conflict: 'error.billingConflict',
+  // Learning paths. One attempt takes one result, and a sealed session
+  // expires; either way a new attempt is the way on.
+  idempotency_conflict: 'error.pathAttemptUsed',
+  session_expired: 'error.pathAttemptExpired',
+  attempt_expired: 'error.pathAttemptExpired',
+  enrollment_paused: 'error.pathPaused',
+  path_unavailable: 'error.pathUnavailable',
 };
 
 // not_found spans several endpoints whose English server messages are more

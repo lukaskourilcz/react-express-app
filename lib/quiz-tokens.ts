@@ -2,6 +2,7 @@ import { createCipheriv, createDecipheriv, createHash, createHmac, randomBytes }
 import { isScopeSubject, type ScopeSubjectId } from '../shared/subject-catalog';
 import { isLearningPathId, type LearningPathId } from '../shared/learning-paths';
 import { isCodingTrack, type CodingTrack } from '../shared/coding-catalog';
+import { PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
 
 const SECRET = process.env.SESSION_SECRET;
 const IS_PROD = process.env.NODE_ENV === 'production' || process.env.VERCEL === '1';
@@ -10,6 +11,15 @@ if (IS_PROD && (!SECRET || SECRET.length < 32)) {
 }
 
 const TOKEN_TTL_MS = 60 * 60 * 1000;
+/** A daily result's time runs from the learner's first sight of the day's
+ * questions, which can be longer ago than one session lasts. The database
+ * accepts up to a day. */
+const DAILY_MAX_DURATION_MS = 24 * 60 * 60 * 1000;
+/** A Learn level or part test. It lives as long as the attempt the answer
+ * routine opens for it (two hours in record_roadmap_answer_v2 and the TS
+ * fallback), so a level with coding tasks that runs past an hour can still be
+ * completed; its coding sessions last three. */
+const ROADMAP_TTL_MS = 2 * 60 * 60 * 1000;
 const CHALLENGE_TTL_MS = 3 * 60 * 60 * 1000;
 const TOKEN_AAD = Buffer.from('shark-quiz-token:v2');
 const TOKEN_KEY = createHash('sha256').update(SECRET || 'dev-only-not-for-production', 'utf8').digest();
@@ -28,10 +38,15 @@ interface SessionPayload {
   roadmapKind?: 'level' | 'checkpoint';
   ref?: number;
   attemptId?: string;
+  /** Daily challenge: when this learner was first handed today's questions. */
+  startedAt?: number;
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
   /** Learn levels with coding tasks: the ids the completion gate checks. */
   codingTaskIds?: string[];
+  /** Learn sessions: the account the step was issued to, or null for a guest.
+   * Only the issuer may answer or complete it. */
+  userId?: string | null;
   iat: number;
   exp: number;
 }
@@ -213,7 +228,7 @@ function validLifetime(payload: { iat?: unknown; exp?: unknown }, maxTtl: number
 type SessionContext =
   | { subject: ScopeSubjectId }
   | { scope: 'challenge'; runId: string; subject: ScopeSubjectId; attemptId?: string }
-  | { scope: 'daily'; date: string; subject: ScopeSubjectId; attemptId?: string }
+  | { scope: 'daily'; date: string; subject: ScopeSubjectId; attemptId?: string; startedAt?: number }
   // The public question of the day (#239): practice only, graded as if
   // signed out, whoever sends it.
   | { scope: 'qotd'; date: string; subject: ScopeSubjectId }
@@ -228,6 +243,7 @@ type SessionContext =
       requiredLevelStart?: number;
       requiredLevelEnd?: number;
       codingTaskIds?: string[];
+      userId: string | null;
     };
 
 export interface DecodedQuizSession {
@@ -240,9 +256,14 @@ export interface DecodedQuizSession {
   roadmapKind?: 'level' | 'checkpoint';
   ref?: number;
   attemptId?: string;
+  /** Daily challenge: when this learner was first handed the day's questions. */
+  startedAt?: number;
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
   codingTaskIds?: string[];
+  /** Learn sessions only: who the step was issued to (null: a guest, or a
+   * session sealed before the owner was recorded). */
+  userId?: string | null;
   issuedAt: number;
 }
 
@@ -255,13 +276,13 @@ export function encodeSession(data: SessionPayload['questions'], context?: Sessi
     ...(context ?? {}),
     attemptId: providedAttemptId ?? b64url(randomBytes(18)),
     iat: now,
-    exp: now + TOKEN_TTL_MS,
+    exp: now + (context && 'scope' in context && context.scope === 'roadmap' ? ROADMAP_TTL_MS : TOKEN_TTL_MS),
   });
 }
 
 export function decodeSessionEnvelope(token: string): DecodedQuizSession | null {
   const payload = openToken(token) as Partial<SessionPayload> | null;
-  if (!payload || payload.kind !== 'quiz-session' || !validLifetime(payload, TOKEN_TTL_MS) || typeof payload.iat !== 'number') return null;
+  if (!payload || payload.kind !== 'quiz-session' || !validLifetime(payload, payload.scope === 'roadmap' ? ROADMAP_TTL_MS : TOKEN_TTL_MS) || typeof payload.iat !== 'number') return null;
   if (!Array.isArray(payload.questions) || payload.questions.length === 0 || payload.questions.length > 50) return null;
   if (!payload.questions.every((question) => question && typeof question.questionId === 'string' && question.questionId.length > 0 && question.questionId.length <= 64 && Number.isInteger(question.correctAnswer) && question.correctAnswer >= 0 && question.correctAnswer <= 25)) return null;
   if (payload.subject !== undefined && !isScopeSubject(payload.subject)) return null;
@@ -273,7 +294,9 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
   }
   if (payload.scope === 'daily') {
     if (!payload.subject || typeof payload.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) return null;
-    return { ...base, scope: 'daily', date: payload.date };
+    const startedAt = payload.startedAt;
+    if (startedAt !== undefined && (!Number.isInteger(startedAt) || startedAt > payload.iat || payload.iat - startedAt > DAILY_MAX_DURATION_MS)) return null;
+    return { ...base, scope: 'daily', date: payload.date, ...(startedAt !== undefined ? { startedAt } : {}) };
   }
   if (payload.scope === 'qotd') {
     if (!payload.subject || typeof payload.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date) || payload.questions.length !== 1) return null;
@@ -290,6 +313,8 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
     if (!payload.subject || typeof payload.topic !== 'string' || (payload.roadmapKind !== 'level' && payload.roadmapKind !== 'checkpoint') || !Number.isInteger(payload.ref) || (payload.ref ?? 0) < 1 || (payload.attemptId !== undefined && !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) || (hasRequiredRange && (!Number.isInteger(requiredStart) || !Number.isInteger(requiredEnd) || requiredStart! < 1 || requiredEnd! < requiredStart! || requiredEnd! > 100))) return null;
     const codingIds = payload.codingTaskIds;
     if (codingIds !== undefined && (!Array.isArray(codingIds) || codingIds.length > 5 || !codingIds.every((id) => typeof id === 'string' && /^[a-z0-9-]{3,64}$/.test(id)))) return null;
+    const owner = payload.userId;
+    if (owner !== undefined && owner !== null && (typeof owner !== 'string' || owner.length === 0 || owner.length > 128)) return null;
     return {
       ...base,
       scope: 'roadmap',
@@ -299,12 +324,24 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
       attemptId: payload.attemptId,
       ...(hasRequiredRange ? { requiredLevelStart: requiredStart, requiredLevelEnd: requiredEnd } : {}),
       ...(codingIds && codingIds.length > 0 ? { codingTaskIds: codingIds } : {}),
+      userId: owner ?? null,
     };
   }
   return base;
 }
 
 export const decodeSession = (token: string) => decodeSessionEnvelope(token)?.questions ?? null;
+
+/** When a quiz session issued at `issuedAt` stops being gradable. Handlers
+ * send it with the questions so the client can drop a saved quiz that has
+ * run out instead of letting the learner answer it for nothing. */
+export const quizSessionExpiresAt = (issuedAt: number): number => issuedAt + TOKEN_TTL_MS;
+
+/** The time a daily result records: from the first time the learner was
+ * handed the day's questions when that is known, else from this session. */
+export function dailyDurationMs(session: Pick<DecodedQuizSession, 'startedAt' | 'issuedAt'>, now = Date.now()): number {
+  return Math.min(DAILY_MAX_DURATION_MS, Math.max(0, now - (session.startedAt ?? session.issuedAt)));
+}
 
 /** Stable opaque claim id for one server-defined attempt; never exposes the source identifiers. */
 export function stableAttemptId(...parts: string[]): string {
@@ -359,7 +396,7 @@ export function decodeQuizResultReceipt(token: string): QuizResultReceipt | null
   if (typeof payload.attemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId) || typeof payload.userId !== 'string' || payload.userId.length === 0 || payload.userId.length > 128) return null;
   if (!Number.isInteger(payload.correct) || !Number.isInteger(payload.total) || payload.total! <= 0 || payload.total! > 50 || payload.correct! < 0 || payload.correct! > payload.total!) return null;
   if (!payload.breakdown || typeof payload.breakdown !== 'object' || Array.isArray(payload.breakdown) || !Array.isArray(payload.outcomes) || payload.outcomes.length === 0 || payload.outcomes.length > 50 || !isScopeSubject(payload.subject) || !Number.isInteger(payload.questXp) || payload.questXp! < 0 || payload.questXp! > 10_000 || !['quiz', 'challenge', 'daily', 'assessment'].includes(payload.purpose ?? '')) return null;
-  if (payload.daily !== undefined && (!payload.daily || typeof payload.daily.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.daily.date) || !Number.isInteger(payload.daily.durationMs) || payload.daily.durationMs < 0 || payload.daily.durationMs > TOKEN_TTL_MS)) return null;
+  if (payload.daily !== undefined && (!payload.daily || typeof payload.daily.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.daily.date) || !Number.isInteger(payload.daily.durationMs) || payload.daily.durationMs < 0 || payload.daily.durationMs > DAILY_MAX_DURATION_MS)) return null;
   const breakdown: QuizResultReceipt['breakdown'] = {};
   for (const [category, value] of Object.entries(payload.breakdown)) {
     const item = value as { correct?: unknown; total?: unknown };
@@ -498,6 +535,12 @@ export function decodeCodingSession(token: string): CodingSession | null {
     const k = payload.key as Record<string, unknown>;
     if (!k || typeof k !== 'object') return null;
     key = {};
+    if (k.puzzle !== undefined) {
+      // The authored line ids behind the presentation ids, one per line.
+      if (!Array.isArray(k.puzzle) || k.puzzle.length === 0 || k.puzzle.length > PUZZLE_MAX_LINES ||
+          !k.puzzle.every((id) => typeof id === 'string' && /^[a-z]{1,2}$/.test(id))) return null;
+      key.puzzle = k.puzzle as string[];
+    }
     if (k.steps !== undefined) { if (!isIndexList(k.steps, 10)) return null; key.steps = k.steps; }
     if (k.correct !== undefined) { if (!Number.isInteger(k.correct) || (k.correct as number) < 0 || (k.correct as number) > 25) return null; key.correct = k.correct as number; }
     if (k.order !== undefined) { if (!isIndexList(k.order, 12)) return null; key.order = k.order; }

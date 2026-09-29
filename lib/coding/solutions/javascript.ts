@@ -16,6 +16,12 @@ export const JAVASCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
 };`,
     senior: `// Array.from maps while it copies, and accepts any iterable, not only an array.
 const double = numbers => Array.from(numbers, number => number * 2);`,
+    hiddenTests: [
+      { call: "double([10,-3])", expected: [20, -6] },
+      { call: "double([0.25,7])", expected: [0.5, 14] },
+      { call: "double([0])", expected: [0] },
+      { call: "(() => { const numbers = [1,2]; const doubled = double(numbers); return [doubled, numbers, doubled === numbers]; })()", expected: [[2, 4], [1, 2], false] },
+    ],
   },
   "js-even-numbers": {
     solution: "const evens = numbers => numbers.filter(number => number % 2 === 0);",
@@ -32,6 +38,11 @@ const double = numbers => Array.from(numbers, number => number * 2);`,
 const isEven = number => number % 2 === 0;
 
 const evens = numbers => numbers.filter(isEven);`,
+    hiddenTests: [
+      { call: "evens([7,10,3,8,6])", expected: [10, 8, 6] },
+      { call: "evens([-4,-1,0,5])", expected: [-4, 0] },
+      { call: "evens([9])", expected: [] },
+    ],
   },
   "js-sum-array": {
     solution: "const sum = numbers => numbers.reduce((total, number) => total + number, 0);",
@@ -46,6 +57,12 @@ const evens = numbers => numbers.filter(isEven);`,
 
 // The 0 seed is what makes an empty array total 0 instead of throwing.
 const sum = numbers => numbers.reduce(add, 0);`,
+    hiddenTests: [
+      { call: "sum([10,-4,6])", expected: 12 },
+      { call: "sum([0.5,0.25])", expected: 0.75 },
+      { call: "sum([-1,-2,-3])", expected: -6 },
+      { call: "sum([100])", expected: 100 },
+    ],
   },
   "js-longest-word": {
     solution: "const longest = words => words.reduce((best, word) => word.length > best.length ? word : best, \"\");",
@@ -63,6 +80,12 @@ const sum = numbers => numbers.reduce(add, 0);`,
   // find returns the first word of that length, which settles a tie in favour of the earlier one
   return words.find(word => word.length === longestLength) ?? "";
 };`,
+    hiddenTests: [
+      { call: "longest([\"hi\",\"hey\",\"yo\"])", expected: "hey" },
+      { call: "longest([\"abc\",\"xyz\",\"ab\"])", expected: "abc" },
+      { call: "longest([\"short\",\"longest\",\"longer\"])", expected: "longest" },
+      { call: "longest([\"a\",\"\",\"\"])", expected: "a" },
+    ],
   },
   "js-count-vowels": {
     solution: "const countVowels = text => [...text.toLowerCase()].filter(letter => \"aeiou\".includes(letter)).length;",
@@ -78,6 +101,12 @@ const sum = numbers => numbers.reduce(add, 0);`,
 };`,
     senior: `// match gives null rather than [] when nothing matches; the i flag covers uppercase.
 const countVowels = text => (text.match(/[aeiou]/gi) ?? []).length;`,
+    hiddenTests: [
+      { call: "countVowels(\"JavaScript\")", expected: 3 },
+      { call: "countVowels(\"rhythm\")", expected: 0 },
+      { call: "countVowels(\"AEIOU aeiou\")", expected: 10 },
+      { call: "countVowels(\"Education\")", expected: 5 },
+    ],
   },
   "js-reverse-string": {
     solution: "const reverse = text => [...text].reverse().join(\"\");",
@@ -90,6 +119,12 @@ const countVowels = text => (text.match(/[aeiou]/gi) ?? []).length;`,
 };`,
     senior: `// Spreading splits by code point, so an emoji stays whole where split("") would tear it in two.
 const reverse = text => [...text].reduceRight((reversed, character) => reversed + character, "");`,
+    hiddenTests: [
+      { call: "reverse(\"stressed\")", expected: "desserts" },
+      { call: "reverse(\" x\")", expected: "x " },
+      { call: "reverse(\"a b c\")", expected: "c b a" },
+      { call: "reverse(\"Z\")", expected: "Z" },
+    ],
   },
   "js-positive-numbers": {
     solution: "const positives = numbers => numbers.filter(number => number > 0);",
@@ -106,6 +141,11 @@ const reverse = text => [...text].reduceRight((reversed, character) => reversed 
 
 // Zero is the boundary, and above(0) says so at the call site.
 const positives = numbers => numbers.filter(above(0));`,
+    hiddenTests: [
+      { call: "positives([3,-2,0,7,0.5])", expected: [3, 7, 0.5] },
+      { call: "positives([0,0])", expected: [] },
+      { call: "positives([-0.1,4])", expected: [4] },
+    ],
   },
   "js-square-numbers": {
     solution: "const squares = numbers => numbers.map(number => number ** 2);",
@@ -119,6 +159,11 @@ const positives = numbers => numbers.filter(above(0));`,
     senior: `const square = number => number ** 2;
 
 const squares = numbers => numbers.map(square);`,
+    hiddenTests: [
+      { call: "squares([-4,3])", expected: [16, 9] },
+      { call: "squares([0.5,10])", expected: [0.25, 100] },
+      { call: "squares([1,2,3])", expected: [1, 4, 9] },
+    ],
   },
   "js-largest-number": {
     solution: "const largest = numbers => Math.max(...numbers);",
@@ -133,6 +178,12 @@ const squares = numbers => numbers.map(square);`,
 };`,
     senior: `// reduce with no seed starts from the first value, and unlike Math.max(...numbers) it never spreads a huge array onto the call stack.
 const largest = numbers => numbers.reduce((best, number) => Math.max(best, number));`,
+    hiddenTests: [
+      { call: "largest([-10,-3,-7])", expected: -3 },
+      { call: "largest([3,8,8,1])", expected: 8 },
+      { call: "largest([0,-1])", expected: 0 },
+      { call: "largest([1.5,1.25])", expected: 1.5 },
+    ],
   },
   "js-fizz-values": {
     solution: "const fizz = n => Array.from({length: n}, (_, index) => index + 1).map(number => number % 3 === 0 ? \"Fizz\" : number);",
@@ -151,6 +202,11 @@ const largest = numbers => numbers.reduce((best, number) => Math.max(best, numbe
 
 // The rule lives apart from the counting, so adding Buzz later touches one line.
 const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
+    hiddenTests: [
+      { call: "fizz(2)", expected: [1, 2] },
+      { call: "fizz(7)", expected: [1, 2, "Fizz", 4, 5, "Fizz", 7] },
+      { call: "fizz(9)", expected: [1, 2, "Fizz", 4, 5, "Fizz", 7, 8, "Fizz"] },
+    ],
   },
   "js-countdown": {
     solution: "const countDown = n => { const result = []; while (n > 0) result.push(n--); return result; };",
@@ -162,6 +218,11 @@ const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
   return result;
 };`,
     senior: `const countDown = n => Array.from({ length: n }, (_, index) => n - index);`,
+    hiddenTests: [
+      { call: "countDown(2)", expected: [2, 1] },
+      { call: "countDown(7)", expected: [7, 6, 5, 4, 3, 2, 1] },
+      { call: "countDown(4)", expected: [4, 3, 2, 1] },
+    ],
   },
   "js-first-letters": {
     solution: "const firstLetters = words => words.map(word => word[0]);",
@@ -175,6 +236,11 @@ const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
 };`,
     senior: `// A string is iterable, so destructuring its first element gives its first character.
 const firstLetters = words => words.map(([first]) => first);`,
+    hiddenTests: [
+      { call: "firstLetters([\"apple\",\"Banana\",\"cherry\"])", expected: ["a", "B", "c"] },
+      { call: "firstLetters([\"x\",\"y\"])", expected: ["x", "y"] },
+      { call: "firstLetters([\"Zed\"])", expected: ["Z"] },
+    ],
   },
   "js-has-adult": {
     solution: "const hasAdult = ages => ages.some(age => age >= 18);",
@@ -190,6 +256,11 @@ const firstLetters = words => words.map(([first]) => first);`,
 const isAdult = age => age >= ADULT_AGE;
 
 const hasAdult = ages => ages.some(isAdult);`,
+    hiddenTests: [
+      { call: "hasAdult([5,17,16])", expected: false },
+      { call: "hasAdult([2,65,1])", expected: true },
+      { call: "hasAdult([0])", expected: false },
+    ],
   },
   "js-all-positive": {
     solution: "const allPositive = numbers => numbers.every(number => number > 0);",
@@ -203,6 +274,12 @@ const hasAdult = ages => ages.some(isAdult);`,
 };`,
     senior: `// "All positive" is "none at or below zero"; some() on an empty array is false, so the result is true, as every() would give.
 const allPositive = numbers => !numbers.some(number => number <= 0);`,
+    hiddenTests: [
+      { call: "allPositive([3,7,1])", expected: true },
+      { call: "allPositive([4,0,2])", expected: false },
+      { call: "allPositive([-2])", expected: false },
+      { call: "allPositive([0.1])", expected: true },
+    ],
   },
   "js-total-price": {
     solution: "const total = items => items.reduce((sum, item) => sum + item.price, 0);",
@@ -214,6 +291,11 @@ const allPositive = numbers => !numbers.some(number => number <= 0);`,
   return sum;
 };`,
     senior: `const total = items => items.map(({ price }) => price).reduce((sum, price) => sum + price, 0);`,
+    hiddenTests: [
+      { call: "total([{price:4},{price:6},{price:10}])", expected: 20 },
+      { call: "total([{price:0.5,name:\"a\"},{price:0.25}])", expected: 0.75 },
+      { call: "total([{price:7,qty:3}])", expected: 7 },
+    ],
   },
   "js-capitalize": {
     solution: "const capitalize = word => word ? word[0].toUpperCase() + word.slice(1) : \"\";",
@@ -227,6 +309,12 @@ const allPositive = numbers => !numbers.some(number => number <= 0);`,
 };`,
     senior: `// charAt(0) is "" on an empty string, and so is slice(1), so no guard is needed.
 const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
+    hiddenTests: [
+      { call: "capitalize(\"world\")", expected: "World" },
+      { call: "capitalize(\"jAVA script\")", expected: "JAVA script" },
+      { call: "capitalize(\"z\")", expected: "Z" },
+      { call: "capitalize(\"already Done\")", expected: "Already Done" },
+    ],
   },
   "js-unique-values": {
     solution: "const unique = values => [...new Set(values)];",
@@ -248,6 +336,12 @@ const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
     return true;
   });
 };`,
+    hiddenTests: [
+      { call: "unique([3,1,3,2,1])", expected: [3, 1, 2] },
+      { call: "unique([\"b\",\"a\",\"b\",\"c\",\"a\"])", expected: ["b", "a", "c"] },
+      { call: "unique([5,5,5])", expected: [5] },
+      { call: "(() => { const values = [1,1]; const result = unique(values); return [result, values]; })()", expected: [[1], [1, 1]] },
+    ],
   },
   "js-word-count": {
     solution: "const wordCount = sentence => sentence.trim() ? sentence.trim().split(/\\s+/).length : 0;",
@@ -263,6 +357,12 @@ const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
 };`,
     senior: `// \\S+ matches each run of non-whitespace; match gives null, not [], when there is none.
 const wordCount = sentence => (sentence.match(/\\S+/g) ?? []).length;`,
+    hiddenTests: [
+      { call: "wordCount(\"   \")", expected: 0 },
+      { call: "wordCount(\"the quick brown fox\")", expected: 4 },
+      { call: "wordCount(\"  lead and trail  \")", expected: 3 },
+      { call: "wordCount(\"one\")", expected: 1 },
+    ],
   },
   "js-find-user": {
     solution: "const findUser = (users, name) => users.find(user => user.name === name);",
@@ -278,6 +378,11 @@ const wordCount = sentence => (sentence.match(/\\S+/g) ?? []).length;`,
 
 // find already gives undefined for no match and for an empty list.
 const findUser = (users, name) => users.find(byName(name));`,
+    hiddenTests: [
+      { call: "findUser([{name:\"Ana\",id:1},{name:\"Ana\",id:2}],\"Ana\")", expected: { name: "Ana", id: 1 } },
+      { call: "findUser([{name:\"Cy\"},{name:\"Di\"},{name:\"Ed\"}],\"Ed\")", expected: { name: "Ed" } },
+      { call: "findUser([{name:\"Cy\"}],\"Zed\")", expected: undefined },
+    ],
   },
   "js-odd-sum": {
     solution: "const oddSum = numbers => numbers.filter(number => number % 2 !== 0).reduce((sum, number) => sum + number, 0);",
@@ -293,6 +398,12 @@ const findUser = (users, name) => users.find(byName(name));`,
 };`,
     senior: `// One pass: the reducer skips the evens itself instead of filtering into a second array first.
 const oddSum = numbers => numbers.reduce((sum, number) => (number % 2 === 0 ? sum : sum + number), 0);`,
+    hiddenTests: [
+      { call: "oddSum([1,2,3,4,5])", expected: 9 },
+      { call: "oddSum([-5,2,3])", expected: -2 },
+      { call: "oddSum([0,8])", expected: 0 },
+      { call: "oddSum([7])", expected: 7 },
+    ],
   },
   "js-repeat-word": {
     solution: "const repeat = (word, n) => Array.from({length: n}, () => word).join(\" \");",
@@ -308,6 +419,11 @@ const oddSum = numbers => numbers.reduce((sum, number) => (number % 2 === 0 ? su
 };`,
     senior: `// join puts the separator between items only, so once gives no space and zero gives "".
 const repeat = (word, times) => Array(times).fill(word).join(" ");`,
+    hiddenTests: [
+      { call: "repeat(\"go\",4)", expected: "go go go go" },
+      { call: "repeat(\"yes\",1)", expected: "yes" },
+      { call: "repeat(\"no\",0)", expected: "" },
+    ],
   },
   "js-number-range": {
     solution: "const range = (start, end) => Array.from({length: end - start + 1}, (_, index) => start + index);",
@@ -324,6 +440,12 @@ function* count(start, end) {
 }
 
 const range = (start, end) => [...count(start, end)];`,
+    hiddenTests: [
+      { call: "range(5,8)", expected: [5, 6, 7, 8] },
+      { call: "range(-3,-1)", expected: [-3, -2, -1] },
+      { call: "range(-1,2)", expected: [-1, 0, 1, 2] },
+      { call: "range(0,0)", expected: [0] },
+    ],
   },
   "js-average": {
     solution: "const average = numbers => numbers.length ? numbers.reduce((sum, number) => sum + number, 0) / numbers.length : 0;",
@@ -339,6 +461,12 @@ const range = (start, end) => [...count(start, end)];`,
 };`,
     senior: `// An empty array sums to 0, and dividing by at least 1 keeps that 0 instead of producing NaN.
 const average = numbers => numbers.reduce((sum, number) => sum + number, 0) / Math.max(numbers.length, 1);`,
+    hiddenTests: [
+      { call: "average([1,2,3,4])", expected: 2.5 },
+      { call: "average([10,20])", expected: 15 },
+      { call: "average([-4,-2])", expected: -3 },
+      { call: "average([7])", expected: 7 },
+    ],
   },
   "js-short-words": {
     solution: "const shortWords = words => words.filter(word => word.length < 5);",
@@ -355,6 +483,11 @@ const average = numbers => numbers.reduce((sum, number) => sum + number, 0) / Ma
 const MAX_SHORT_LENGTH = 4;
 
 const shortWords = words => words.filter(word => word.length <= MAX_SHORT_LENGTH);`,
+    hiddenTests: [
+      { call: "shortWords([\"tree\",\"house\",\"ox\",\"plant\"])", expected: ["tree", "ox"] },
+      { call: "shortWords([\"fives\",\"sixsix\"])", expected: [] },
+      { call: "shortWords([\"\",\"abcd\",\"abcde\"])", expected: ["", "abcd"] },
+    ],
   },
   "js-object-keys": {
     solution: "const keys = object => Object.keys(object);",
@@ -369,6 +502,12 @@ const shortWords = words => words.filter(word => word.length <= MAX_SHORT_LENGTH
 };`,
     senior: `// entries keeps insertion order too; destructuring the pair takes the key and leaves the value unused.
 const keys = object => Object.entries(object).map(([key]) => key);`,
+    hiddenTests: [
+      { call: "keys({z:1,a:2})", expected: ["z", "a"] },
+      { call: "keys({name:\"Ada\",age:36,city:\"London\"})", expected: ["name", "age", "city"] },
+      { call: "keys({only:null})", expected: ["only"] },
+      { call: "keys(Object.assign(Object.create({inherited:1}), {own:2}))", expected: ["own"] },
+    ],
   },
   "js-object-values": {
     solution: "const values = object => Object.values(object);",
@@ -383,6 +522,11 @@ const keys = object => Object.entries(object).map(([key]) => key);`,
 };`,
     senior: `// keys + lookup was the values() idiom before ES2017 and follows the same insertion order.
 const values = object => Object.keys(object).map(key => object[key]);`,
+    hiddenTests: [
+      { call: "values({b:2,a:1})", expected: [2, 1] },
+      { call: "values({x:null,y:0,z:\"\"})", expected: [null, 0, ""] },
+      { call: "values({list:[1,2],inner:{k:1}})", expected: [[1, 2], { k: 1 }] },
+    ],
   },
   "js-activate-user": {
     solution: "const activate = user => ({...user, active: true});",
@@ -396,6 +540,11 @@ const values = object => Object.keys(object).map(key => object[key]);`,
 };`,
     senior: `// Assigning into a fresh {} is what protects the caller's object; the later source wins on active.
 const activate = user => Object.assign({}, user, { active: true });`,
+    hiddenTests: [
+      { call: "activate({name:\"Lin\",role:\"admin\"})", expected: { name: "Lin", role: "admin", active: true } },
+      { call: "(() => { const user = {name:\"Bo\",active:false}; const next = activate(user); return [user, next, next === user]; })()", expected: [{ name: "Bo", active: false }, { name: "Bo", active: true }, false] },
+      { call: "activate({active:true})", expected: { active: true } },
+    ],
   },
   "js-palindrome": {
     solution: "const isPalindrome = word => word === [...word].reverse().join(\"\");",
@@ -409,6 +558,12 @@ const activate = user => Object.assign({}, user, { active: true });`,
     senior: `// every stops at the first mismatch; its third argument is the same array, so nothing is copied or reversed.
 const isPalindrome = text =>
   [...text].every((character, index, characters) => character === characters[characters.length - 1 - index]);`,
+    hiddenTests: [
+      { call: "isPalindrome(\"racecar\")", expected: true },
+      { call: "isPalindrome(\"abca\")", expected: false },
+      { call: "isPalindrome(\"ab\")", expected: false },
+      { call: "isPalindrome(\"z\")", expected: true },
+    ],
   },
   "js-letter-counts": {
     solution: "const countLetters = text => [...text].reduce((counts, letter) => ({...counts, [letter]: (counts[letter] ?? 0) + 1}), {});",
@@ -429,6 +584,11 @@ const countLetters = text =>
     counts[letter] = (counts[letter] ?? 0) + 1;
     return counts;
   }, {});`,
+    hiddenTests: [
+      { call: "countLetters(\"banana\")", expected: { b: 1, a: 3, n: 2 } },
+      { call: "countLetters(\"a a\")", expected: { a: 2, " ": 1 } },
+      { call: "countLetters(\"zzz\")", expected: { z: 3 } },
+    ],
   },
   "js-flatten-arrays": {
     solution: "const flatten = arrays => arrays.reduce((result, array) => [...result, ...array], []);",
@@ -443,6 +603,12 @@ const countLetters = text =>
 };`,
     senior: `// concat unwraps exactly one level of each argument, which is the single level the task asks for.
 const flatten = arrays => [].concat(...arrays);`,
+    hiddenTests: [
+      { call: "flatten([[1],[2,[3]]])", expected: [1, 2, [3]] },
+      { call: "flatten([[\"a\",\"b\"],[],[\"c\"]])", expected: ["a", "b", "c"] },
+      { call: "flatten([[[1,2]],[[3]]])", expected: [[1, 2], [3]] },
+      { call: "(() => { const flat = Array.prototype.flat; Array.prototype.flat = undefined; try { return flatten([[1],[2,3]]); } finally { Array.prototype.flat = flat; } })()", expected: [1, 2, 3] },
+    ],
   },
   "js-call-once": {
     solution: "const once = fn => { let called = false, value; return (...args) => { if (!called) { called = true; value = fn(...args); } return value; }; };",
@@ -469,6 +635,12 @@ const flatten = arrays => [].concat(...arrays);`,
     return result;
   };
 };`,
+    hiddenTests: [
+      { call: "once(() => { const add = once((a, b) => a + b); return [add(2, 3), add(10, 10)]; })()", expected: [5, 5] },
+      { call: "once(() => { let runs = 0; const empty = once(() => { runs += 1; return \"\"; }); return [empty(), empty(), runs]; })()", expected: ["", "", 1] },
+      { call: "once(() => { let runs = 0; const nothing = once(() => { runs += 1; }); nothing(); nothing(); return runs; })()", expected: 1 },
+      { call: "once(() => { const a = once(() => \"a\"); const b = once(() => \"b\"); b(); return [a(), b()]; })()", expected: ["a", "b"] },
+    ],
   },
   "js-counter-object": {
     solution: "const makeCounter = () => { let count = 0; const counter = {increment: () => (count += 1, counter), reset: () => (count = 0, counter), value: () => count}; return counter; };",
@@ -507,6 +679,12 @@ const flatten = arrays => [].concat(...arrays);`,
 }
 
 const makeCounter = () => new Counter();`,
+    hiddenTests: [
+      { call: "(() => { const a = makeCounter(); const b = makeCounter(); a.increment(); a.increment(); b.increment(); return [a.value(), b.value()]; })()", expected: [2, 1] },
+      { call: "(() => { const counter = makeCounter(); counter.increment(); counter.increment(); return counter.value(); })()", expected: 2 },
+      { call: "(() => { const a = makeCounter(); a.increment().increment(); const b = makeCounter(); b.increment(); a.reset(); return [a.value(), b.value()]; })()", expected: [0, 1] },
+      { call: "makeCounter().increment().increment().increment().increment().reset().increment().increment().value()", expected: 2 },
+    ],
   },
   "js-debounce-calls": {
     solution: "const debounce = (fn, ms) => { let timer; return (...args) => { clearTimeout(timer); timer = setTimeout(() => fn(...args), ms); }; };",
@@ -535,6 +713,11 @@ const makeCounter = () => new Counter();`,
     timer = setTimeout(fire, waitMs);
   };
 };`,
+    hiddenTests: [
+      { call: "debounce(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const save = debounce(n => log.push(n), 50); save(1); await wait(10); save(2); await wait(10); save(3); await wait(150); return log; })()", expected: [3], async: true },
+      { call: "debounce(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const save = debounce(n => log.push(n), 50); save(1); save(2); await wait(150); save(3); save(4); await wait(150); return log; })()", expected: [2, 4], async: true },
+      { call: "debounce(value => value, 10) && (async () => { const log = []; const a = debounce(x => log.push(\"a\" + x), 20); const b = debounce(x => log.push(\"b\" + x), 20); a(1); b(1); a(2); await new Promise(done => setTimeout(done, 60)); return log.sort(); })()", expected: ["a2", "b1"], async: true },
+    ],
   },
   "js-throttle-calls": {
     solution: "const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { if (Date.now() - last >= ms) { last = Date.now(); fn(...args); } }; };",
@@ -560,6 +743,11 @@ const makeCounter = () => new Counter();`,
     fn(...args);
   };
 };`,
+    hiddenTests: [
+      { call: "throttle(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const send = throttle(n => log.push(n), 25); for (let n = 1; n <= 10; n += 1) { send(n); await wait(10); } return [log[0], log.length > 1]; })()", expected: [1, true], async: true },
+      { call: "throttle(value => value, 10) && (async () => { const log = []; const send = throttle(n => log.push(n), 20); send(1); send(2); send(3); await new Promise(done => setTimeout(done, 100)); return log; })()", expected: [1], async: true },
+      { call: "throttle(value => value, 10) && (async () => { const log = []; const send = throttle((a, b) => log.push(a * b), 50); send(3, 4); return log; })()", expected: [12], async: true },
+    ],
   },
   "js-sleep": {
     solution: "const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));",
@@ -575,6 +763,11 @@ const makeCounter = () => new Counter();`,
 const sleep = async (ms = 0) => {
   await new Promise(resolve => setTimeout(resolve, ms));
 };`,
+    hiddenTests: [
+      { call: "Promise.race([sleep(40).then(() => \"slept\"), new Promise(done => setTimeout(() => done(\"timer first\"), 20))])", expected: "timer first", async: true },
+      { call: "Promise.race([sleep(40).then(() => \"slept\"), new Promise(done => setTimeout(() => done(\"timer first\"), 60))])", expected: "slept", async: true },
+      { call: "(() => { const start = Date.now(); return sleep(45).then(() => Date.now() - start >= 40); })()", expected: true, async: true },
+    ],
   },
   "js-retry-on-failure": {
     solution: "const retry = async (fn, attempts) => { let lastError; for (let attempt = 0; attempt < attempts; attempt += 1) { try { return await fn(); } catch (error) { lastError = error; } } throw lastError; };",
@@ -603,6 +796,11 @@ const sleep = async (ms = 0) => {
     return retry(fn, attempts - 1);
   }
 };`,
+    hiddenTests: [
+      { call: "(() => { let runs = 0; return retry(async () => { runs += 1; if (runs < 2) throw new Error(\"no\"); return \"yes\"; }, 5).then(value => [value, runs]); })()", expected: ["yes", 2], async: true },
+      { call: "(() => { let runs = 0; return retry(async () => { runs += 1; throw new Error(\"down \" + runs); }, 4).catch(error => [error.message, runs]); })()", expected: ["down 4", 4], async: true },
+      { call: "(() => { let runs = 0; return retry(async () => { runs += 1; if (runs < 3) throw new Error(\"not yet\"); return runs; }, 3); })()", expected: 3, async: true },
+    ],
   },
   "js-clone-promise-all": {
     solution: "const promiseAll = promises => new Promise((resolve, reject) => { const results = []; let settled = 0; if (!promises.length) resolve(results); promises.forEach((promise, index) => Promise.resolve(promise).then(value => { results[index] = value; settled += 1; if (settled === promises.length) resolve(results); }, reject)); });",
@@ -645,6 +843,11 @@ const sleep = async (ms = 0) => {
       }
     });
   });`,
+    hiddenTests: [
+      { call: "promiseAll([new Promise(done => setTimeout(() => done(\"a\"), 30)), new Promise(done => setTimeout(() => done(\"b\"), 10)), \"c\"])", expected: ["a", "b", "c"], async: true },
+      { call: "Promise.race([promiseAll([new Promise(done => setTimeout(() => done(\"slow\"), 100)), new Promise((_, fail) => setTimeout(() => fail(new Error(\"early\")), 10))]).catch(error => \"rejected: \" + error.message), new Promise(done => setTimeout(() => done(\"waited for the slow one\"), 50))])", expected: "rejected: early", async: true },
+      { call: "(() => { const all = Promise.all; Promise.all = () => { throw new Error(\"Promise.all is off limits\"); }; try { return promiseAll([1, Promise.resolve(2)]); } finally { Promise.all = all; } })()", expected: [1, 2], async: true },
+    ],
   },
   "js-run-tasks-in-order": {
     solution: "const runSequentially = async tasks => { const results = []; for (const task of tasks) results.push(await task()); return results; };",
@@ -663,6 +866,11 @@ const runSequentially = tasks =>
     (chain, task) => chain.then(async results => [...results, await task()]),
     Promise.resolve([]),
   );`,
+    hiddenTests: [
+      { call: "(() => { let running = 0, most = 0; const task = value => async () => { running += 1; most = Math.max(most, running); await new Promise(done => setTimeout(done, 10)); running -= 1; return value; }; return runSequentially([task(\"a\"), task(\"b\"), task(\"c\")]).then(values => [values, most]); })()", expected: [["a", "b", "c"], 1], async: true },
+      { call: "(() => { const log = []; const step = (name, ms) => () => new Promise(done => { log.push(\"start \" + name); setTimeout(() => { log.push(\"end \" + name); done(name); }, ms); }); return runSequentially([step(\"x\", 30), step(\"y\", 5)]).then(() => log); })()", expected: ["start x", "end x", "start y", "end y"], async: true },
+      { call: "runSequentially([() => 1, async () => 2, () => \"three\"])", expected: [1, 2, "three"], async: true },
+    ],
   },
   "js-chunk-an-array": {
     solution: "const chunk = (array, size) => Array.from({length: Math.ceil(array.length / size)}, (_, index) => array.slice(index * size, index * size + size));",
@@ -681,6 +889,12 @@ const chunk = (items, size) =>
     chunks[chunks.length - 1].push(item);
     return chunks;
   }, []);`,
+    hiddenTests: [
+      { call: "chunk([1,2,3,4,5,6,7], 3)", expected: [[1, 2, 3], [4, 5, 6], [7]] },
+      { call: "chunk([\"a\",\"b\",\"c\",\"d\"], 4)", expected: [["a", "b", "c", "d"]] },
+      { call: "chunk([1,2,3], 10)", expected: [[1, 2, 3]] },
+      { call: "chunk([], 1)", expected: [] },
+    ],
   },
   "js-group-by-key": {
     solution: "const groupBy = (array, keyFn) => array.reduce((groups, item) => { const key = keyFn(item); (groups[key] ??= []).push(item); return groups; }, {});",
@@ -704,6 +918,11 @@ const chunk = (items, size) =>
   }
   return Object.fromEntries(groups);
 };`,
+    hiddenTests: [
+      { call: "groupBy([3,1,2,5], n => n % 2)", expected: { "0": [2], "1": [3, 1, 5] } },
+      { call: "groupBy([\"apple\",\"avocado\",\"banana\"], word => word.length)", expected: { "5": ["apple"], "6": ["banana"], "7": ["avocado"] } },
+      { call: "groupBy([{t:\"x\",v:1},{t:\"y\",v:2},{t:\"x\",v:3}], item => item.t)", expected: { x: [{ t: "x", v: 1 }, { t: "x", v: 3 }], y: [{ t: "y", v: 2 }] } },
+    ],
   },
   "js-memoize-results": {
     solution: "const memoize = fn => { const cache = new Map(); return (...args) => { if (!cache.has(args[0])) cache.set(args[0], fn(...args)); return cache.get(args[0]); }; };",
@@ -735,6 +954,11 @@ const chunk = (items, size) =>
 
 // The task keys on the first argument; the factory lets another caller key on all of them.
 const memoize = memoizeBy(([first]) => first);`,
+    hiddenTests: [
+      { call: "memoize(() => { let runs = 0; const square = memoize(n => { runs += 1; return n * n; }); return [square(3), square(4), square(3), square(4), runs]; })()", expected: [9, 16, 9, 16, 2] },
+      { call: "memoize(() => { let runs = 0; const isEmpty = memoize(text => { runs += 1; return text.length === 0; }); return [isEmpty(\"x\"), isEmpty(\"x\"), runs]; })()", expected: [false, false, 1] },
+      { call: "memoize(() => { let runs = 0; const add = memoize((a, b) => { runs += 1; return a + b; }); return [add(1, 2), add(1, 100), runs]; })()", expected: [3, 3, 1] },
+    ],
   },
   "js-event-emitter": {
     solution: "const createEmitter = () => { const listeners = {}; const emitter = {on: (name, listener) => ((listeners[name] ??= []).push(listener), emitter), off: (name, listener) => (listeners[name] = listener ? (listeners[name] ?? []).filter(one => one !== listener) : [], emitter), emit: (name, payload) => (listeners[name] ?? []).map(listener => listener(payload))}; return emitter; };",
@@ -791,6 +1015,12 @@ const memoize = memoizeBy(([first]) => first);`,
   };
   return emitter;
 };`,
+    hiddenTests: [
+      { call: "(() => { const bus = createEmitter(); const double = n => n * 2; bus.on(\"x\", double).on(\"x\", n => n + 1).off(\"x\", double); return bus.emit(\"x\", 5); })()", expected: [6] },
+      { call: "(() => { const bus = createEmitter(); bus.on(\"a\", n => \"a\" + n).on(\"b\", n => \"b\" + n).off(\"a\"); return [bus.emit(\"a\", 1), bus.emit(\"b\", 2)]; })()", expected: [[], ["b2"]] },
+      { call: "createEmitter().on(\"e\", () => 1).on(\"e\", () => 2).on(\"e\", () => 3).emit(\"e\")", expected: [1, 2, 3] },
+      { call: "createEmitter().off(\"none\").on(\"x\", n => n).emit(\"x\", 9)", expected: [9] },
+    ],
   },
   "js-lru-cache": {
     solution: "const LRUCache = strArr => { const cache = []; for (const letter of strArr) { const at = cache.indexOf(letter); if (at !== -1) cache.splice(at, 1); cache.push(letter); if (cache.length > 5) cache.shift(); } return cache.join(\"-\"); };",
@@ -823,5 +1053,11 @@ const LRUCache = strArr => {
   }
   return [...cache].join("-");
 };`,
+    hiddenTests: [
+      { call: "LRUCache([\"A\",\"B\",\"C\",\"D\",\"E\",\"C\"])", expected: "A-B-D-E-C" },
+      { call: "LRUCache([\"A\",\"B\",\"C\",\"D\",\"E\",\"A\",\"F\"])", expected: "C-D-E-A-F" },
+      { call: "LRUCache([\"Z\",\"Y\",\"Z\",\"Y\"])", expected: "Z-Y" },
+      { call: "LRUCache([\"A\",\"B\",\"C\",\"D\",\"E\",\"F\",\"G\",\"B\"])", expected: "D-E-F-G-B" },
+    ],
   },
 };

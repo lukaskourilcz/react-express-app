@@ -4,12 +4,21 @@
  * no real timers. Timers are virtual, so a debounce task that waits 80 ms
  * finishes in microseconds and the same code grades the same way every time.
  * A memory limit, a stack limit and a CPU deadline bound every run. This is
- * the verdict of record for JavaScript and TypeScript tasks. */
+ * the verdict of record for JavaScript and TypeScript tasks.
+ *
+ * The run happens on a worker thread. QuickJS checks its deadline between
+ * bytecode instructions, so a loop that spends its time inside native calls
+ * (`"x".repeat(2e6)` over and over) overran it by minutes, and on the request
+ * thread that blocked every other request the instance served. The host now
+ * stops the thread when the deadline and a short grace have passed. */
 
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { Worker } from 'node:worker_threads';
 import { newQuickJSWASMModuleFromVariant, shouldInterruptAfterDeadline, type QuickJSWASMModule, type QuickJSHandle } from 'quickjs-emscripten';
 import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
-import { TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
+import { LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, MAX_LOGS, TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
 import { CONSOLE_SOURCE } from '../../shared/coding-console';
 
 let modulePromise: Promise<QuickJSWASMModule> | null = null;
@@ -33,7 +42,6 @@ export const SANDBOX_DEADLINE_MS = 2_500;
 const MEMORY_BYTES = 64 * 1024 * 1024;
 const STACK_BYTES = 1024 * 1024;
 const MAX_TICKS = 10_000;
-const MAX_LOGS = 100;
 /** What a learner sees when their call chain ran out of stack. Named rather
  * than inlined so the message reads the same wherever the overflow surfaces. */
 const STACK_MESSAGE = 'The call stack ran out of room: the recursion went too deep, or a base case is never reached.';
@@ -72,7 +80,15 @@ const encode = (value, depth = 0, seen = makeArray()) => {
   return packet(names ? 'object' : 'array', entries);
 };
 const message = error => { try { return string(error && error.message || error); } catch { return 'Evaluation failed'; } };
-const emit = line => { if (logs.length < ${MAX_LOGS}) logs[logs.length] = line; };
+const sliceText = String.prototype.slice;
+let logChars = 0, logsCut = false;
+const emit = line => {
+  if (logsCut || logs.length >= ${MAX_LOGS}) return;
+  const text = line.length > ${MAX_LOG_LINE_CHARS} ? apply(sliceText, line, [0, ${MAX_LOG_LINE_CHARS}]) + ${JSON.stringify(LOG_LINE_CUT)} : line;
+  if (logChars + text.length > ${MAX_LOG_CHARS}) { logs[logs.length] = ${JSON.stringify(LOG_OUTPUT_CUT)}; logsCut = true; return; }
+  logChars += text.length;
+  logs[logs.length] = text;
+};
 const format = value => {
   if (typeof value === 'string') return value;
   try { const text = stringify(value); return text === undefined ? string(value) : text; } catch { return '[unprintable]'; }
@@ -95,10 +111,71 @@ globalThis.clearTimeout = globalThis.clearInterval = id => {
   timers = kept;
 };
 globalThis.queueMicrotask = fn => { void (async () => { await 0; fn(); })(); };
-const parse = JSON.parse;
-globalThis.structuredClone = value => parse(stringify(value));
-Date.now = () => 1700000000000 + now;
+// One clock for every way of asking the time: Date.now, new Date() and Date()
+// all read the virtual clock the timers advance, so code that times itself
+// with new Date() grades the way it runs in the browser.
+const RealDate = Date, construct = Reflect.construct, defineProperty = Object.defineProperty;
+const clock = () => 1700000000000 + now;
+function VirtualDate(...args) {
+  if (new.target === undefined) return construct(RealDate, [clock()], RealDate).toString();
+  return construct(RealDate, args.length === 0 ? [clock()] : args, new.target);
+}
+VirtualDate.prototype = RealDate.prototype;
+defineProperty(RealDate.prototype, 'constructor', { value: VirtualDate, writable: true, configurable: true });
+VirtualDate.now = clock;
+VirtualDate.parse = RealDate.parse;
+VirtualDate.UTC = RealDate.UTC;
+globalThis.Date = VirtualDate;
 globalThis.performance = { now: () => now };
+// structuredClone as the browser has it: a deep copy that keeps Maps, Sets,
+// Dates, RegExps, undefined, NaN and shared or circular references, drops
+// prototypes, and refuses functions and symbols.
+const NativeMap = Map, NativeSet = Set, NativeRegExp = RegExp, NativeError = Error, NativeObject = Object;
+const mapGet = Map.prototype.get, mapSet = Map.prototype.set, mapHas = Map.prototype.has, mapEach = Map.prototype.forEach;
+const setAdd = Set.prototype.add, setEach = Set.prototype.forEach, dateTime = Date.prototype.getTime;
+const objectTag = Object.prototype.toString, isView = ArrayBuffer.isView;
+const tagOf = value => apply(objectTag, value, []);
+const refuse = what => { const error = new NativeError(what + ' could not be cloned.'); error.name = 'DataCloneError'; return error; };
+globalThis.structuredClone = value => {
+  const copies = new NativeMap();
+  const copy = item => {
+    if (typeof item === 'function') throw refuse('A function');
+    if (typeof item === 'symbol') throw refuse('A symbol');
+    if (item === null || typeof item !== 'object') return item;
+    if (apply(mapHas, copies, [item])) return apply(mapGet, copies, [item]);
+    const tag = tagOf(item);
+    let out;
+    if (tag === '[object Date]') out = new RealDate(apply(dateTime, item, []));
+    else if (tag === '[object RegExp]') out = new NativeRegExp(item.source, item.flags);
+    else if (tag === '[object Boolean]' || tag === '[object Number]' || tag === '[object String]') out = NativeObject(item.valueOf());
+    else if (tag === '[object ArrayBuffer]' || (isView(item) && typeof item.slice === 'function')) out = item.slice(0);
+    else if (tag === '[object Map]') {
+      out = new NativeMap();
+      apply(mapSet, copies, [item, out]);
+      apply(mapEach, item, [(entry, key) => { apply(mapSet, out, [copy(key), copy(entry)]); }]);
+      return out;
+    } else if (tag === '[object Set]') {
+      out = new NativeSet();
+      apply(mapSet, copies, [item, out]);
+      apply(setEach, item, [entry => { apply(setAdd, out, [copy(entry)]); }]);
+      return out;
+    } else if (tag === '[object Error]') {
+      out = new NativeError(item.message);
+      out.name = item.name;
+    } else if (tag === '[object Promise]' || tag === '[object WeakMap]' || tag === '[object WeakSet]' || tag === '[object Symbol]') {
+      throw refuse(tag.slice(8, -1));
+    } else {
+      out = isArray(item) ? new Array(item.length) : {};
+      apply(mapSet, copies, [item, out]);
+      const names = keys(item);
+      for (let i = 0; i < names.length; i++) out[names[i]] = copy(item[names[i]]);
+      return out;
+    }
+    apply(mapSet, copies, [item, out]);
+    return out;
+  };
+  return copy(value);
+};
 globalThis.console = (${CONSOLE_SOURCE})(emit, format, () => now);
 const evaluate = NativeFunction(${JSON.stringify('"use strict";\n' + code + '\n;return [' + calls.map(call => '() => (' + call.trim().replace(/;+$/, '') + '\n)').join(',') + '];')})();
 const outcomes = makeArray();
@@ -164,10 +241,146 @@ function decode(value: unknown, depth = 0): unknown {
   throw new Error('Malformed result value');
 }
 
-/** Runs one program. Never throws for learner mistakes: a syntax error, a
- * throw, an infinite loop or a promise that never settles all come back as
- * results the caller can show. */
+/* ── the worker thread ───────────────────────────────────────────────── */
+
+/** The worker bundle `npm run build:react-runner` writes
+ * (scripts/sandbox-worker-entry.ts with QuickJS inside). vercel.json ships
+ * it with api/quiz/roadmap.ts. */
+export const SANDBOX_WORKER_FILE = 'lib/coding/generated/quickjs-sandbox.cjs';
+/** How long past the run's own deadline the thread may take to answer
+ * before it is stopped. A run the interrupt handler catches answers well
+ * inside it. */
+const WORKER_GRACE_MS = 1_500;
+/** How long a new thread may take to load QuickJS and pick up the run. */
+const WORKER_BOOT_MS = 10_000;
+/** Threads running at once; further runs wait for one to finish. */
+const MAX_WORKERS = 4;
+/** Threads kept loaded between runs. */
+const IDLE_WORKERS = 2;
+
+const idleWorkers: Worker[] = [];
+const waitingRuns: (() => void)[] = [];
+let busyWorkers = 0;
+let workerFile: string | null | undefined;
+
+const sandboxWorkerFile = (): string | null => {
+  if (workerFile === undefined) {
+    const file = join(process.cwd(), SANDBOX_WORKER_FILE);
+    workerFile = existsSync(file) ? file : null;
+    // The pre-worker behaviour, and still a working grader; logged so a
+    // deployment that lost the bundle shows up.
+    if (!workerFile) console.warn(JSON.stringify({ level: 'warn', msg: 'sandbox_worker_missing', file: SANDBOX_WORKER_FILE }));
+  }
+  return workerFile;
+};
+
+const acquireWorkerSlot = async (): Promise<void> => {
+  if (busyWorkers < MAX_WORKERS) { busyWorkers++; return; }
+  await new Promise<void>((resume) => waitingRuns.push(resume));
+};
+const releaseWorkerSlot = () => {
+  const next = waitingRuns.shift();
+  if (next) next();
+  else busyWorkers--;
+};
+
+type WorkerReply = { type: 'start' } | { type: 'done'; result: EvaluateResult } | { type: 'fail'; message: string };
+
+/** The thread could not be started or never picked the run up: a fault of
+ * the host, not of the learner's program. */
+class WorkerUnavailableError extends Error {}
+
+const stopped = (codeError: string, timedOut: boolean): EvaluateResult => ({ results: [], logs: [], codeError, timedOut });
+
+function newWorker(file: string): Worker {
+  const worker = new Worker(file, { resourceLimits: { maxOldGenerationSizeMb: 192 } });
+  // An idle thread must not keep the process alive (a run in flight holds a
+  // timer that does), and one that dies while idle leaves the pool quietly.
+  worker.unref();
+  const forget = () => {
+    const index = idleWorkers.indexOf(worker);
+    if (index >= 0) idleWorkers.splice(index, 1);
+  };
+  worker.on('error', forget);
+  worker.on('exit', forget);
+  return worker;
+}
+
+function runOnWorker(file: string, input: SandboxInput): Promise<EvaluateResult> {
+  const worker = idleWorkers.pop() ?? newWorker(file);
+  return new Promise<EvaluateResult>((resolve, reject) => {
+    let settled = false;
+    let started = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const settle = (keep: boolean) => {
+      settled = true;
+      clearTimeout(timer);
+      worker.off('message', onMessage);
+      worker.off('error', onFailure);
+      worker.off('exit', onFailure);
+      if (keep && idleWorkers.length < IDLE_WORKERS) idleWorkers.push(worker);
+      else void worker.terminate();
+    };
+    const finish = (result: EvaluateResult) => {
+      if (settled) return;
+      settle(false);
+      resolve(result);
+    };
+    const unavailable = (reason: string) => {
+      if (settled) return;
+      settle(false);
+      reject(new WorkerUnavailableError(reason));
+    };
+    const onMessage = (reply: WorkerReply) => {
+      if (settled) return;
+      if (reply.type === 'start') {
+        started = true;
+        clearTimeout(timer);
+        // The run measures its own deadline from here. A run the interrupt
+        // handler cannot reach is stopped with the thread.
+        timer = setTimeout(() => finish(stopped(TIMEOUT_MESSAGE, true)), (input.deadlineMs ?? SANDBOX_DEADLINE_MS) + WORKER_GRACE_MS);
+        return;
+      }
+      settle(reply.type === 'done');
+      if (reply.type === 'done') resolve(reply.result);
+      else reject(new Error(reply.message));
+    };
+    // A thread that dies mid-run (its heap limit, a WebAssembly abort) took
+    // the learner's program with it, and says so like any other failed run.
+    // One that dies before it picked the run up is the host's problem.
+    const onFailure = () => (started ? finish(stopped('The run stopped unexpectedly.', false)) : unavailable('sandbox_worker_failed'));
+    worker.on('message', onMessage);
+    worker.on('error', onFailure);
+    worker.on('exit', onFailure);
+    timer = setTimeout(() => unavailable('sandbox_worker_boot_timeout'), WORKER_BOOT_MS);
+    worker.postMessage({ type: 'run', input });
+  });
+}
+
+/** Runs one program on a worker thread; in this thread when the worker
+ * bundle is missing (tests and local runs before a build) or cannot start,
+ * which is how it ran before the worker existed. Never throws for learner
+ * mistakes: a syntax error, a throw, an infinite loop or a promise that
+ * never settles all come back as results the caller can show. */
 export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult> {
+  const file = sandboxWorkerFile();
+  if (!file) return runInQuickJS(input);
+  await acquireWorkerSlot();
+  try {
+    return await runOnWorker(file, input);
+  } catch (error) {
+    if (!(error instanceof WorkerUnavailableError)) throw error;
+    console.warn(JSON.stringify({ level: 'warn', msg: 'sandbox_worker_unavailable', reason: error.message }));
+    workerFile = null;
+    return runInQuickJS(input);
+  } finally {
+    releaseWorkerSlot();
+  }
+}
+
+/** Runs one program in this thread. The worker entry calls this; everything
+ * else goes through `runInSandbox`. */
+export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult> {
   const QuickJS = await getModule();
   const runtime = QuickJS.newRuntime();
   const deadline = Date.now() + (input.deadlineMs ?? SANDBOX_DEADLINE_MS);
@@ -265,4 +478,51 @@ export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult>
     try { runtime.dispose(); } catch { disposalFailed = true; }
     if (disposalFailed) modulePromise = null;
   }
+}
+
+/** One check: a call expression and the value it must produce. */
+export interface SandboxCheck {
+  call: string;
+  expected: unknown;
+}
+
+/**
+ * Grades code against its visible and hidden checks.
+ *
+ * The visible checks run together, and their console output is what the
+ * learner sees. The hidden checks run in a fresh program — the code evaluated
+ * again, sharing no state with the visible run — in an order shuffled for
+ * every submission. So an answer cannot be served by counting calls (`A[k++]`
+ * handed the hidden checks their answers in authored order when every call
+ * shared one program), and the hidden pass count cannot be read position by
+ * position. Nothing a hidden check prints comes back. Hidden results return
+ * in authored order.
+ */
+export async function runChecks(input: {
+  code: string;
+  visible: readonly SandboxCheck[];
+  hidden: readonly SandboxCheck[];
+  shuffle: <T>(list: T[]) => T[];
+}): Promise<{ visible: EvaluateResult; hidden: EvaluateResult | null }> {
+  const visible = await runInSandbox({
+    code: input.code,
+    calls: input.visible.map((check) => check.call),
+    expectations: input.visible.map((check) => check.expected),
+  });
+  if (input.hidden.length === 0) return { visible, hidden: null };
+  // A program that does not load, or runs out of time, fails the hidden checks
+  // the same way; running it again would only spend the time twice.
+  if (visible.codeError || visible.timedOut) {
+    return { visible, hidden: { results: [], logs: [], codeError: visible.codeError, timedOut: visible.timedOut } };
+  }
+  const order = input.shuffle(input.hidden.map((_, index) => index));
+  const run = await runInSandbox({
+    code: input.code,
+    calls: order.map((index) => input.hidden[index].call),
+    expectations: order.map((index) => input.hidden[index].expected),
+    shownCalls: 0,
+  });
+  const results: EvaluateResult['results'] = [];
+  if (!run.codeError && !run.timedOut) order.forEach((original, position) => { results[original] = run.results[position]; });
+  return { visible, hidden: { results, logs: [], codeError: run.codeError, timedOut: run.timedOut } };
 }

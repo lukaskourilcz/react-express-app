@@ -866,7 +866,7 @@ const HIDDEN: Record<string, Hidden> = {
     [['[...tagsByUser([{user: "b", tag: "1"}, {user: "a", tag: "2"}]).keys()]', ['b', 'a']], ['tagsByUser([{user: "a", tag: "x"}]).has("b")', false]],
     [['isIsomorphic("badc", "baba")', false], ['isIsomorphic("abab", "cdcd")', true]],
     [['buildIndex([{id: 1, text: "A b"}, {id: 2, text: "a"}]).get("a").size', 2], ['buildIndex([{id: 3, text: "x"}]).has("y")', false]],
-    [['search([{id: 1, text: "a b"}, {id: 2, text: "b a"}], "b a b")', [1, 2]], ['search([{id: "x", text: "a"}], "A")', ['x']]],
+    [['search([{id: 1, text: "a b"}, {id: 2, text: "b a"}], "b a b")', [1, 2]], ['search([{id: "x", text: "a"}], "A")', ['x']], ['search([{id: 1, text: "redfish"}], "red")', []], ['search([{id: 1, text: "catalog"}, {id: 2, text: "a cat nap"}], "cat")', [2]]],
   ],
   'js-path-objects': [
     [['countByCategory([{category: "b"}, {category: "a"}]).b', 1], ['Object.keys(countByCategory([{category: "z"}, {category: "a"}]))', ['z', 'a']]],

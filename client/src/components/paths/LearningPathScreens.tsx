@@ -12,12 +12,15 @@
 // A guest sees the whole outline. Signing in is required to record graded
 // work, and the screen says so rather than hiding the material behind a wall.
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../lib/auth';
 import { useT } from '../../i18n/LanguageContext';
 import { ApiError, friendlyError } from '../../lib/api';
+import { isBarred, useLocks } from '../../lib/locks';
+import { openUpgradeSheet } from '../../lib/upgradeSheet';
+import { useTrack } from '../../lib/tracks';
 import { capturePathEvent } from '../../lib/analytics';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
@@ -36,8 +39,11 @@ import {
   activityHref,
   changeEnrollment,
   entryFor,
+  forgetLocalDraft,
   isOpen,
+  keepDraftLocally,
   learningPathKeys,
+  localDraftOver,
   moduleHref,
   newIdempotencyKey,
   pathHref,
@@ -186,8 +192,14 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { userId, isAuthenticated, catalog, entry, enrollment, progress } = usePathState(pathId);
+  const [track] = useTrack();
+  const { lockOf } = useLocks();
   const [enrolling, setEnrolling] = useState(false);
   const [enrollError, setEnrollError] = useState<string | null>(null);
+  // Premium opens the paths. Starting or resuming one the plan does not open
+  // asks for Premium instead, and the button carries the Premium mark.
+  const barred = isBarred(lockOf({ kind: 'learning-path', pathId }));
+  const askForPremium = useCallback(() => openUpgradeSheet({ kind: 'learning-path', ref: pathId }), [pathId]);
 
   const states = useMemo(() => statesOf(progress.data), [progress.data]);
   const completedModules = useMemo(
@@ -201,7 +213,13 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
       setEnrolling(true);
       setEnrollError(null);
       try {
-        await changeEnrollment({ pathId, curriculumVersion: entry.manifest.version, action });
+        await changeEnrollment({
+          pathId,
+          curriculumVersion: entry.manifest.version,
+          action,
+          // A role specialization records the base track it sits above.
+          ...(entry.manifest.kind === 'role_specialization' ? { baseTrack: track } : {}),
+        });
         if (action === 'enroll') {
           capturePathEvent('learning_path_enrolled', { pathId, curriculumVersion: entry.manifest.version });
         }
@@ -212,7 +230,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         setEnrolling(false);
       }
     },
-    [entry, pathId, queryClient, userId],
+    [entry, pathId, queryClient, userId, track],
   );
 
   if (catalog.isLoading) return <LoadingScreen label={t('paths.loading')} />;
@@ -230,6 +248,10 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   const nextModule = next ? manifest.modules.find((one) => one.activities.some((a) => a.id === next)) : undefined;
   const requiredModules = manifest.modules.filter((one) => !one.optional);
   const optionalModules = manifest.modules.filter((one) => one.optional);
+  // Activities link only while the path is open to this learner; a closed
+  // path, or a lapsed plan, keeps its outline and evidence without dead ends.
+  const reachable = Boolean(enrollment) && open && !barred;
+  const premiumMark = <span className="ss-premium-label">{t('premium.badge')}</span>;
 
   return (
     <div className="lp-page">
@@ -274,14 +296,15 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
         </div>
         <div className="lp-head__actions">
           {!isAuthenticated && <span className="lp-actions__status">{t('paths.guestPreview')}</span>}
+          {open && barred && premiumMark}
           {isAuthenticated && !enrollment && open && (
-            <Button variant="primary" onClick={() => enrol('enroll')} isDisabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
+            <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('enroll'))} isDisabled={enrolling} label={enrolling ? t('paths.action.starting') : t('paths.action.start')} />
           )}
-          {isAuthenticated && enrollment?.status === 'paused' && (
-            <Button variant="primary" onClick={() => enrol('resume')} isDisabled={enrolling} label={t('paths.action.resume')} />
+          {isAuthenticated && enrollment?.status === 'paused' && open && (
+            <Button variant="primary" onClick={() => (barred ? askForPremium() : enrol('resume'))} isDisabled={enrolling} label={t('paths.action.resume')} />
           )}
-          {enrollment?.status === 'active' && next && nextModule && (
-            <Button variant="primary" onClick={() => navigate(activityHref(pathId, nextModule.id, next))} label={t('paths.action.continue')} />
+          {enrollment?.status === 'active' && open && next && nextModule && (
+            <Button variant="primary" onClick={() => (barred ? askForPremium() : navigate(activityHref(pathId, nextModule.id, next)))} label={t('paths.action.continue')} />
           )}
           {enrollment?.status === 'active' && (
             <Button variant="ghost" onClick={() => enrol('pause')} isDisabled={enrolling} label={t('paths.action.pause')} />
@@ -398,7 +421,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               index={index + 1}
               states={states}
               completed={completedModules.has(module.id)}
-              interactive={Boolean(enrollment)}
+              interactive={reachable}
             />
           ))}
         </div>
@@ -417,7 +440,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
                 index={0}
                 states={states}
                 completed={false}
-                interactive={Boolean(enrollment)}
+                interactive={reachable}
               />
             ))}
           </div>
@@ -429,6 +452,31 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
 
 /* ── workspace ─────────────────────────────────────────────────────────── */
 
+/** An opened attempt: its sealed session, when that expires, the idempotency
+ * key its submission carries, and whether it has taken its one result. */
+interface Attempt {
+  session: string;
+  expiresAt: string;
+  key: string;
+  usedUp: boolean;
+}
+
+/** One opened activity's autosave. Saves go one at a time; `revision` is the
+ * one the server returned last, so a keystroke during a save never sends a
+ * revision the server has already moved past; `queued` is the newest content
+ * not sent yet. A save that lands after the learner moved on changes nothing
+ * on screen, because the next activity has a channel of its own. */
+interface DraftChannel {
+  enrollmentId: string;
+  activityId: string;
+  revision: number;
+  inFlight: boolean;
+  queued: PathDraft['content'] | null;
+}
+
+/** Refusals that mean the attempt cannot take this submission. */
+const ATTEMPT_USED_UP = new Set(['idempotency_conflict', 'session_expired', 'attempt_expired']);
+
 export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   const t = useT();
   const loc = useLoc();
@@ -438,45 +486,69 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   const [search, setSearch] = useSearchParams();
   const queryClient = useQueryClient();
   const { userId, isAuthenticated, catalog, entry, enrollment, progress } = usePathState(pathId);
+  const { lockOf } = useLocks();
 
   const activityId = search.get('activity');
+  const enrollmentId = enrollment?.enrollmentId;
+  const curriculumVersion = enrollment?.curriculumVersion;
   const [open, setOpen] = useState<StartActivityResponse | null>(null);
   const [result, setResult] = useState<SubmitActivityResponse | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [draftStatus, setDraftStatus] = useState<DraftStatus>('idle');
   const [draft, setDraft] = useState<PathDraft | null>(null);
-  // One key per intended submission: a retry after a network failure reuses it
-  // so the server replays its stored result instead of grading twice.
-  const [submitKey, setSubmitKey] = useState(() => newIdempotencyKey());
+  // Bumped to start the open activity again: a check's "Try again" deals its
+  // questions afresh, with a new order and a new sealed key.
+  const [deal, setDeal] = useState(0);
+  // The attempt the next submission goes to. The server accepts one result per
+  // attempt, so once it has one (or has expired, or refused the key) the next
+  // submission opens a fresh attempt with a key of its own. Until then a retry
+  // after a network failure reuses the key, and the server replays its stored
+  // result instead of grading twice.
+  const attempt = useRef<Attempt | null>(null);
+  const [attemptUsedUp, setAttemptUsedUp] = useState(false);
+  // The autosave for the open activity: one save in flight at a time, the
+  // revision the next one expects, and the newest content waiting behind it.
+  const drafts = useRef<DraftChannel | null>(null);
 
   const module = entry?.manifest.modules.find((one) => one.id === moduleId);
   const activity = module?.activities.find((one) => one.id === activityId);
 
   useEffect(() => {
     let cancelled = false;
-    if (!activityId || !enrollment) {
-      setOpen(null);
-      setResult(null);
-      return;
-    }
+    // The previous activity's view goes first, so nothing it holds (an
+    // editor's source, a form's fields, a check's answers) carries into the
+    // next activity or is autosaved as its draft.
+    setOpen(null);
+    setResult(null);
+    setAttemptUsedUp(false);
+    attempt.current = null;
+    drafts.current = null;
+    if (!activityId || !enrollmentId) return;
     setBusy(true);
     setError(null);
-    setResult(null);
-    startActivity({ enrollmentId: enrollment.enrollmentId, activityId })
+    startActivity({ enrollmentId, activityId })
       .then((started) => {
         if (cancelled) return;
+        const kept = localDraftOver(enrollmentId, activityId, started.draft);
+        attempt.current = { session: started.session, expiresAt: started.expiresAt, key: newIdempotencyKey(), usedUp: false };
+        drafts.current = {
+          enrollmentId,
+          activityId,
+          revision: started.draft?.revision ?? 0,
+          inFlight: false,
+          queued: kept?.content ?? null,
+        };
         setOpen(started);
-        setDraft(started.draft);
+        setDraft(kept ?? started.draft);
         setDraftStatus(started.draft ? 'saved' : 'idle');
-        setSubmitKey(newIdempotencyKey());
         capturePathEvent(
           started.previous && started.previous.attempts > 0
             ? 'learning_path_returned'
             : 'learning_path_activity_started',
           {
             pathId,
-            curriculumVersion: enrollment.curriculumVersion,
+            curriculumVersion: curriculumVersion ?? 0,
             activityId: started.activity.id,
             activityKind: started.activity.kind,
           },
@@ -491,46 +563,115 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     return () => {
       cancelled = true;
     };
-  }, [activityId, enrollment]);
+  }, [activityId, enrollmentId, curriculumVersion, deal, pathId]);
+
+  const pushDraft = useCallback(async () => {
+    const channel = drafts.current;
+    if (!channel || channel.inFlight || !channel.queued) return;
+    const live = () => drafts.current === channel;
+    channel.inFlight = true;
+    try {
+      while (channel.queued) {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+          // Offline keeps the copy on this device and says so; reconnecting
+          // sends it. It never overwrites a newer server revision: that save
+          // would conflict first.
+          if (live()) setDraftStatus('offline');
+          return;
+        }
+        const content = channel.queued;
+        channel.queued = null;
+        if (live()) setDraftStatus('saving');
+        try {
+          const saved = await savePathDraft({
+            enrollmentId: channel.enrollmentId,
+            activityId: channel.activityId,
+            expectedRevision: channel.revision,
+            content,
+          });
+          channel.revision = saved.draft.revision;
+          if (channel.queued) keepDraftLocally(channel.enrollmentId, channel.activityId, channel.revision, channel.queued);
+          else forgetLocalDraft(channel.enrollmentId, channel.activityId);
+          if (live()) {
+            setDraft(saved.draft);
+            if (!channel.queued) setDraftStatus('saved');
+          }
+        } catch (caught) {
+          // The newest unsaved content waits for the next keystroke or the
+          // connection coming back.
+          channel.queued ??= content;
+          if (live()) setDraftStatus(caught instanceof ApiError && caught.code === 'draft_conflict' ? 'conflict' : 'error');
+          return;
+        }
+      }
+    } finally {
+      channel.inFlight = false;
+    }
+  }, []);
 
   const saveDraft = useCallback(
-    async (content: PathDraft['content']) => {
-      if (!enrollment || !activityId) return;
-      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        // Offline keeps the local copy and says so. Nothing authoritative
-        // happens offline, and reconnecting never overwrites a newer server
-        // revision — the save below would conflict first.
-        setDraftStatus('offline');
-        return;
-      }
-      setDraftStatus('saving');
-      try {
-        const saved = await savePathDraft({
-          enrollmentId: enrollment.enrollmentId,
-          activityId,
-          expectedRevision: draft?.revision ?? 0,
-          content,
-        });
-        setDraft(saved.draft);
-        setDraftStatus('saved');
-      } catch (caught) {
-        setDraftStatus(caught instanceof ApiError && caught.code === 'draft_conflict' ? 'conflict' : 'error');
-      }
+    (content: PathDraft['content']) => {
+      const channel = drafts.current;
+      if (!channel) return;
+      channel.queued = content;
+      keepDraftLocally(channel.enrollmentId, channel.activityId, channel.revision, content);
+      void pushDraft();
     },
-    [enrollment, activityId, draft],
+    [pushDraft],
   );
+
+  // A copy kept on this device from an earlier visit goes out as soon as the
+  // activity opens, and anything waiting goes out when the connection is back.
+  useEffect(() => {
+    if (open) void pushDraft();
+  }, [open, pushDraft]);
+  useEffect(() => {
+    const resend = () => void pushDraft();
+    window.addEventListener('online', resend);
+    return () => window.removeEventListener('online', resend);
+  }, [pushDraft]);
+
+  // Starts the open activity again. A check is dealt afresh; anything else
+  // keeps what the learner wrote, and the next Submit opens a new attempt.
+  const retry = useCallback(() => {
+    if (open?.check) {
+      setDeal((count) => count + 1);
+      return;
+    }
+    setResult(null);
+    setError(null);
+  }, [open]);
 
   const submit = useCallback(
     async (payload: Record<string, unknown>) => {
-      if (!open || !enrollment) return;
+      const current = attempt.current;
+      if (!open || !enrollment || !current) return;
+      const expired = Date.parse(current.expiresAt) <= Date.now();
+      // A check's answers index its own attempt's order, so a check whose
+      // attempt is used up is dealt again rather than resubmitted.
+      if (open.check && (current.usedUp || expired)) {
+        retry();
+        return;
+      }
       setBusy(true);
       setError(null);
       try {
+        let target = current;
+        if (current.usedUp || expired) {
+          const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id });
+          if (attempt.current !== current) return;
+          target = { session: fresh.session, expiresAt: fresh.expiresAt, key: newIdempotencyKey(), usedUp: false };
+          attempt.current = target;
+        }
         const graded = await submitActivity({
-          session: open.session,
-          idempotencyKey: submitKey,
+          session: target.session,
+          idempotencyKey: target.key,
           ...payload,
         });
+        target.usedUp = true;
+        // The learner moved to another activity while this one was graded.
+        if (attempt.current !== target) return;
+        setAttemptUsedUp(false);
         setResult(graded);
         if (graded.state === 'verified_pass') {
           capturePathEvent('learning_path_activity_verified', {
@@ -544,12 +685,18 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           queryKey: learningPathKeys.progress(userId, enrollment.enrollmentId, enrollment.curriculumVersion),
         });
       } catch (caught) {
+        // An attempt that expired or already holds a result cannot take this
+        // submission; the next one goes to a new attempt.
+        if (caught instanceof ApiError && caught.code && ATTEMPT_USED_UP.has(caught.code) && attempt.current) {
+          attempt.current.usedUp = true;
+          setAttemptUsedUp(true);
+        }
         setError(friendlyError(caught));
       } finally {
         setBusy(false);
       }
     },
-    [open, enrollment, submitKey, queryClient, userId],
+    [open, enrollment, retry, queryClient, userId, pathId],
   );
 
   if (catalog.isLoading) return <LoadingScreen label={t('paths.loading')} />;
@@ -563,6 +710,9 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
 
   const states = statesOf(progress.data);
   const moduleProgress = progress.data?.modules.find((one) => one.moduleId === module.id);
+  // A path that is switched off, or that the plan no longer opens, lists its
+  // activities without links: starting one would be refused.
+  const reachable = Boolean(enrollment) && isOpen(entry.availability) && !isBarred(lockOf({ kind: 'learning-path', pathId }));
   // Only the dimensions this artifact is judged against, so the learner reads
   // the criteria that apply rather than the whole rubric.
   const rubric = entry.manifest.rubric.dimensions
@@ -623,7 +773,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               moduleId={module.id}
               activity={one}
               state={states.get(one.id) ?? 'not_started'}
-              interactive={Boolean(enrollment)}
+              interactive={reachable}
             />
           ))}
         </ul>
@@ -687,31 +837,34 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               result={result}
               busy={busy}
               onSubmit={(answers) => submit({ answers })}
+              onRetry={retry}
+              retryNeeded={attemptUsedUp}
             />
           )}
 
           {open?.code && (
             <CodeActivity
+              key={open.activity.id}
               code={open.code}
               draft={draft}
               result={result}
               busy={busy}
-              expired={Date.parse(open.expiresAt) < Date.now()}
               draftStatus={draftStatus}
-              onDraft={(source) => void saveDraft({ code: source })}
+              onDraft={(source) => saveDraft({ code: source })}
               onSubmit={(source) => submit({ code: source })}
             />
           )}
 
           {open?.artifact && (
             <ArtifactActivity
+              key={open.activity.id}
               artifact={open.artifact}
               rubric={rubric}
               draft={draft}
               result={result}
               busy={busy}
               draftStatus={draftStatus}
-              onDraft={(values) => void saveDraft({ artifact: values })}
+              onDraft={(values) => saveDraft({ artifact: values })}
               onSubmit={(values) => submit({ artifact: values })}
             />
           )}
@@ -740,7 +893,10 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
               )}
               <CriteriaList criteria={result.criteria} />
               <Feedback feedback={result.feedback} />
-              {result.nextActivityId && (
+              {/* When the next thing worth doing is this activity again, the way
+                  on is another attempt, not a link back to where the learner
+                  already is. A check offers its own "Try again" above. */}
+              {result.nextActivityId && result.nextActivityId !== open?.activity.id && (
                 <div className="lp-actions lp-actions--end">
                   <Button variant="primary" onClick={() => {
                       const nextModule = entry.manifest.modules.find((one) =>
@@ -749,6 +905,11 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
                       if (!nextModule) return;
                       navigate(activityHref(pathId, nextModule.id, result.nextActivityId!));
                     }} label={t('paths.action.next')} />
+                </div>
+              )}
+              {result.nextActivityId && result.nextActivityId === open?.activity.id && !open.check && (
+                <div className="lp-actions lp-actions--end">
+                  <Button variant="primary" onClick={retry} label={t('error.tryAgain')} />
                 </div>
               )}
             </section>

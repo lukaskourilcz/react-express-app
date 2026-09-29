@@ -186,17 +186,19 @@ export function announceVerifiedQuestXp(amount: number): void {
 /**
  * Record the outcome of a finished learning lesson. `deltaLearningXp` is the
  * increase in derived learning XP (compute it before/after recording the pass).
- * A new pass shows the big learning gain; anything else (replay, fail) grants a
- * small flat practice reward, so every completed session still pays out.
+ * A new pass shows the big learning gain. A replay or a failed attempt earns a
+ * small flat practice reward only in a signed-out browser, whose XP is local
+ * anyway: no server route awards it, so a signed-in learner would see XP (and
+ * possibly a rank-up) their account never gets.
  */
-export function awardLearningOutcome(deltaLearningXp: number): void {
+export function awardLearningOutcome(deltaLearningXp: number, signedIn: boolean): void {
   if (deltaLearningXp > 0) {
     const rounded = Math.round(deltaLearningXp);
     // Learning XP isn't stored — it's derived from progress. Its coins are
     // credited by the server when it records the first pass (#227).
     emitToast({ kind: 'gain', amount: rounded, source: 'learn' });
     reconcileRank(true);
-  } else {
+  } else if (!signedIn) {
     awardQuestXp(PRACTICE_XP, 'practice');
   }
 }
@@ -221,7 +223,12 @@ export function flushQuestXpBeacon(): void {
 // browser cache. A legacy account blob (one pre-split total, no
 // per-subject map) is attributed to the active subject, matching the local
 // migration rule so the max-merge never double-counts.
-export async function syncXpWithServer(): Promise<void> {
+//
+// A sync only catches the rank marker up, so progress from another session
+// is never celebrated. `announceRankUp` is for the one caller whose new XP
+// exists only on the server: a verified quiz result it has just recorded. Its
+// rank-up would otherwise be marked seen here without ever being shown.
+export async function syncXpWithServer({ announceRankUp = false }: { announceRankUp?: boolean } = {}): Promise<void> {
   let serverMap: QuestMap = {};
   try {
     const { data } = await apiFetch<{ data: { quest_xp: number; by_subject?: Record<string, number> } }>(XP_GET);
@@ -234,7 +241,7 @@ export async function syncXpWithServer(): Promise<void> {
     return; // not signed in or offline — keep local only
   }
   writeQuestMap(serverMap);
-  reconcileRank(false);
+  reconcileRank(announceRankUp);
 }
 
 /**

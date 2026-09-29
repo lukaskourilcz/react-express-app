@@ -186,7 +186,8 @@ console.log(framed(["a", "b"], "Name", "End"));
 console.log(toCsvLine(["Ada", null, "London"]));
 `,
     skeleton: `const toCsvLine = values => {
-  return values.join(/* the separator */);
+  const separator = /* the text that goes between two values */;
+  return values.join(separator);
 };`,
     hints: ['`join` turns every item into text and puts the separator between them. It writes `null` and `undefined` as nothing at all, where `"" + null` would give the word `"null"`.'],
     approach: [

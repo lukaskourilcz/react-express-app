@@ -827,6 +827,7 @@ const myFilter = (list, fn) => {
       { call: "(() => { const list = [3,4,5]; list.map = null; list.filter = null; return [myMap(list, n => n + 1), myFilter(list, n => n > 3)]; })()", expected: [[4, 5, 6], [4, 5]] },
       { call: "myFilter([0, 1, \"\", \"a\", null], item => item)", expected: [1, "a"] },
       { call: "myMap([1,2,3,4,5,6], (n, index) => n * index)", expected: [0, 2, 6, 12, 20, 30] },
+      { call: "myFilter([10, 20, 30], (n, index) => index !== 1)", expected: [10, 30] },
     ],
   },
   "js-my-reduce": {
@@ -859,6 +860,7 @@ const myFilter = (list, fn) => {
       { call: "(() => { const list = [1,2,3,4]; list.reduce = null; return myReduce(list, (a, b) => a * b, 1); })()", expected: 24 },
       { call: "myReduce([[1],[2],[3]], (flat, part) => flat.concat(part), [])", expected: [1, 2, 3] },
       { call: "myReduce([\"x\"], (a, b) => a + b)", expected: "x" },
+      { call: "myReduce([1, 2, 3], (total, n) => total + n)", expected: 6 },
     ],
   },
   "js-label-numbers": {

@@ -4,7 +4,6 @@ export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'node
 
 export interface Question {
   id: string;
-  tags: string[];
   introduction: string;
   question: string;
   options: string[];
@@ -86,7 +85,6 @@ export interface RoadmapStructure {
 // specific question has been submitted.
 export interface RoadmapQuestion {
   id: string;
-  tags: string[];
   introduction: string;
   question: string;
   options: string[];

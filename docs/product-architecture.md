@@ -74,6 +74,21 @@ date answers 404 `qotd_not_yet`, so tomorrow's question cannot be read today.
 it: no result receipt, answer proof, XP, streak day, leaderboard entry or
 concept-review record.
 
+### Daily challenge
+
+`GET /api/quiz/daily` gives everyone the same five questions for the UTC day.
+A signed-in learner's session carries one attempt id for the day
+(`stableAttemptId('daily', user, subject, date)`), and `api/quiz/submit.ts`
+ranks only that attempt: a daily fetched signed out and submitted signed in is
+graded as practice, with no receipt. The recorded time runs from the first time
+the learner was handed the day's questions, kept as a `daily-start:<attempt>`
+marker row in `quiz_submissions` and sealed into every later session of the
+day, so fetching again just before submitting does not shorten it. The same
+lookup tells the client the day is already played. The response is
+`private, no-store`, because the session inside it belongs to one caller.
+`api/quiz/submit.ts` grades only the sessions it serves (quiz, review, daily,
+question of the day, challenge batch, assessment); a Learn session is refused.
+
 ## Leaderboards
 
 `/leaderboard` opens on the last 30 days, so a new learner can reach the top;
@@ -97,6 +112,9 @@ answers and are not counted.
 fewer answers for the same number correct, and equal results share a rank. The
 all-time board keeps its sources (`subject_leaderboard`, `category_leaderboard`
 over `user_category_stats`), so it counts quiz and daily answers and not Learn.
+Those boards and Today arrive in order without a rank, and the Leaderboard
+screen numbers them so equal results share a rank there too (Today ties only
+on the same score and the same time).
 `api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
 request with a Bearer token or `me=1` also gets the learner's own line and is
 answered `Cache-Control: private, no-store`. `friend_list` orders friends by
@@ -106,9 +124,11 @@ correct answers and accuracy. No board ranks by XP or by streak.
 
 The `/coding` section, the coding phase inside Learn levels, and the GitHub
 garden are additive. The server owns grading: JavaScript and
-TypeScript submissions run in a QuickJS WebAssembly sandbox inside
-`api/quiz/roadmap.ts` (`resource=coding-submit`) with a 2.5 s deadline and
-virtual timers, TypeScript type tests run through the real compiler, and
+TypeScript submissions run in a QuickJS WebAssembly sandbox on a worker thread
+of `api/quiz/roadmap.ts` (`resource=coding-submit`) with a 2.5 s deadline, which
+the host enforces by stopping the thread 1.5 s past it, and virtual timers;
+hidden checks run in a fresh program in a per-submission shuffled order;
+TypeScript type tests run through the real compiler, each in its own file; and
 system-design answers are graded against a key sealed in the coding session.
 React submissions use `lib/coding/react-isolated.ts`: a fresh Vercel Sandbox
 microVM with network denied, no application credentials, a 256 MB Node heap,
@@ -344,7 +364,8 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   and Hard waves of #226). Re-pick the list, not the task files,
   when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
   Challenge, multiplayer, flashcards, the typing racer, leaderboards, streaks,
-  friends and the token shop stay open (`QUIZ_FREE_CATEGORIES = 'all'`).
+  friends and the token shop stay open: no quiz category is gated, so nothing
+  in this module names one.
   `contentTier` and `isOpenTo` take a `GatedContent` value and pure index
   data. The module imports nothing from `lib/`, so the browser draws its locks
   and the server refuses with the same function. A signed-out visitor holds

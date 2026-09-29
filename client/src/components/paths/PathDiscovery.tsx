@@ -14,6 +14,7 @@
 import { Link } from 'react-router-dom';
 import { useT } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
+import { isBarred, useLocks } from '../../lib/locks';
 import { entryFor, isOpen, pathHref, useEnrollments, usePathCatalog } from '../../lib/learningPaths';
 import { useLoc } from './localized';
 import type { LearningPathId } from '../../../../shared/learning-paths';
@@ -27,6 +28,7 @@ export default function PathDiscovery() {
   const { user, isAuthenticated } = useAuth();
   const catalog = usePathCatalog();
   const enrollments = useEnrollments(isAuthenticated ? user?.id : undefined);
+  const { lockOf } = useLocks();
 
   // Nothing to advertise while the catalogue loads or if it fails: the roadmap
   // below is the page's real content, and a spinner here would only be noise.
@@ -41,6 +43,9 @@ export default function PathDiscovery() {
           const { manifest, inventory, availability } = entry;
           const enrollment = enrollments.data?.enrollments.find((one) => one.pathId === pathId);
           const open = isOpen(availability);
+          // Premium opens the paths: an open path the plan does not open carries
+          // the Premium mark here, and its page asks for Premium on Start.
+          const premium = open && isBarred(lockOf({ kind: 'learning-path', pathId }));
           return (
             <section key={pathId} className="lp-module">
               <div className="lp-module__head">
@@ -51,6 +56,7 @@ export default function PathDiscovery() {
                   <Link to={pathHref(pathId)}>{loc(manifest.title)}</Link>
                 </h3>
                 <span className="lp-module__meta">
+                  {premium && <><span className="ss-premium-label">{t('premium.badge')}</span>{' '}</>}
                   {enrollment
                     ? enrollment.status === 'paused'
                       ? t('paths.action.resume')

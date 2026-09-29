@@ -947,6 +947,11 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     const withCoupon = lib.billingConfig({ ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'launch55' });
     const params = (config: ReturnType<typeof lib.billingConfig>, now: number, plan: 'monthly' | 'annual' = 'monthly') =>
       lib.checkoutSessionParams(config, plan, 'user-launch', 'cus_launch', now);
+    // Stripe types `submit` as `'' | { message }`, where '' unsets it.
+    const submitText = (session: ReturnType<typeof params>) => {
+      const submit = session.custom_text?.submit;
+      return submit ? submit.message : '';
+    };
 
     for (const plan of ['monthly', 'annual'] as const) {
       const inside = params(withCoupon, INSIDE, plan);
@@ -954,7 +959,7 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
       assert.equal(inside.allow_promotion_codes, undefined, 'Stripe takes discounts or allow_promotion_codes, never both');
       assert.equal(inside.subscription_data?.metadata?.offer, 'launch-55');
       assert.equal(inside.metadata?.offer, 'launch-55');
-      assert.match(inside.custom_text?.submit?.message ?? '', /launch price, 55% below the regular price, applies to every renewal for as long as this subscription runs/);
+      assert.match(submitText(inside), /launch price, 55% below the regular price, applies to every renewal for as long as this subscription runs/);
       assert.deepEqual(inside.managed_payments, { enabled: true }, 'Managed Payments keeps the coupon');
     }
     for (const [label, now, on] of [['before', BEFORE, false], ['start', START, true], ['last', LAST, true], ['after', AFTER, false]] as const) {
@@ -966,7 +971,7 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     const outside = params(withCoupon, Date.parse('2026-09-28T12:00:00Z'));
     assert.deepEqual(outside, params(lib.billingConfig({ ...BASE_ENV }), Date.parse('2026-09-28T12:00:00Z')), 'the coupon env var alone changes nothing');
     assert.equal(outside.expires_at, undefined);
-    assert.doesNotMatch(outside.custom_text?.submit?.message ?? '', /launch/);
+    assert.doesNotMatch(submitText(outside), /launch/);
     // No coupon, a malformed coupon or billing off: no discount, even inside.
     assert.equal(params(lib.billingConfig({ ...BASE_ENV }), INSIDE).discounts, undefined, 'env missing: inactive');
     assert.equal(params(lib.billingConfig({ ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'bad coupon/id' }), INSIDE).discounts, undefined, 'a malformed id is unset');

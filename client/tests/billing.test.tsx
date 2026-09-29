@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -361,6 +361,20 @@ describe('the checkout button', () => {
     serve({ plan: PREMIUM });
     renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
     expect(await screen.findByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
+  });
+
+  it('is pressable again when Back restores the page from the browser cache', async () => {
+    serve();
+    renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
+    const button = await screen.findByRole('button', { name: 'Sign in to continue' });
+    await waitFor(() => expect(button).toBeEnabled());
+    // The press leaves for Google; the page stays busy until the browser unloads it.
+    fireEvent.click(button);
+    await waitFor(() => expect(button).toBeDisabled());
+    act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false })); });
+    expect(button).toBeDisabled();
+    act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); });
+    await waitFor(() => expect(button).toBeEnabled());
   });
 
   it('sends a subscriber under a complimentary grant to the portal, not to a second checkout', async () => {

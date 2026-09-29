@@ -17,6 +17,11 @@ for (const url of urls) {
   const file = path.join(dir, url.pathname, 'index.html');
   const doc = new JSDOM(readFileSync(file, 'utf8')).window.document;
   assert.equal(doc.querySelector('link[rel="canonical"]')?.getAttribute('href'), url.href);
+  assert.equal(doc.querySelector('meta[property="og:url"]')?.getAttribute('content'), url.href, `${url}: og:url matches the canonical`);
+  // Link previews on LinkedIn, Slack and iMessage need an absolute image URL.
+  for (const selector of ['meta[property="og:image"]', 'meta[name="twitter:image"]']) {
+    assert.match(doc.querySelector(selector)?.getAttribute('content') ?? '', /^https:\/\/devshark\.app\//, `${url}: ${selector} is absolute`);
+  }
   assert.equal(url.hostname, 'devshark.app');
   if (url.pathname === '/') continue;
   assert.equal(doc.querySelectorAll('h1').length, 1, `${url}: one static h1`);

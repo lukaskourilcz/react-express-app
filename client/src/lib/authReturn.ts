@@ -1,9 +1,10 @@
 // Where to go after the Google sign-in round trip.
 //
 // Supabase sends every sign-in back to the site's origin, because that is the
-// one redirect URL the project allow-lists. A page that asks the visitor to
-// sign in first (/premium, the checkout success page) records its own path
-// here; the app shell reads it once the account arrives and goes back there.
+// one redirect URL the project allow-lists. A sign-in records the page it was
+// pressed on (a page may name another: the checkout success page names itself
+// with its session id); the app shell reads it once the account arrives and
+// goes back there.
 //
 // The record lives in sessionStorage (this tab only), accepts same-origin
 // paths only, and goes stale after fifteen minutes, so an abandoned sign-in
@@ -18,6 +19,13 @@ export function isSafeReturnPath(path: unknown): path is string {
   return typeof path === 'string'
     && path.length <= 512
     && /^\/(?![/\\])[^\s\\]*$/.test(path);
+}
+
+/** The page the visitor is on (path, query and fragment), as a return path;
+ * null on the home page, where the sign-in lands anyway. */
+export function currentReturnPath(location: Pick<Location, 'pathname' | 'search' | 'hash'> = window.location): string | null {
+  const path = location.pathname + location.search + location.hash;
+  return path === '/' ? null : path;
 }
 
 export function rememberAuthReturn(path: string, now = Date.now()): void {

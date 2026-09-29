@@ -54,6 +54,9 @@ const BOARD = {
   champion: { id: 'run-1', name: 'Harbour reader', score: 42, createdAt: '2026-09-25T10:00:00Z' },
 };
 const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
+// Premium opens the learning paths, so Today offers a path's next step only to
+// an account that holds it.
+const PREMIUM = { ...FREE, tier: 'premium' };
 const MANIFEST = {
   id: 'dsa-foundations', kind: 'skill_path', version: 1,
   title: { en: 'DSA Foundations', cs: '' },
@@ -70,7 +73,7 @@ const ENROLLMENT = { enrollmentId: 'enr-1', pathId: 'dsa-foundations', curriculu
 const RUN = { session: { sessionId: 'run-1', minutes: 20, topic: 'javascript', queue: ['js-digit-sum'], position: 0, status: 'active', estimatedMinutes: 20, order: 'sequential', count: 1, scheduledFor: null } };
 
 /** Every read the three pages make; returns the account reads it answered. */
-function answer() {
+function answer(plan: typeof FREE = FREE) {
   const accountReads: string[] = [];
   server.use(
     http.get('*/api/quiz/challenge', () => HttpResponse.json(BOARD)),
@@ -87,7 +90,7 @@ function answer() {
     http.get('*/api/user/*', ({ request }) => {
       const op = new URL(request.url).searchParams.get('op') ?? '';
       accountReads.push(op);
-      if (op === 'entitlement') return HttpResponse.json(FREE);
+      if (op === 'entitlement') return HttpResponse.json(plan);
       if (op === 'practice-session') return HttpResponse.json(RUN);
       if (op === 'coding-progress') return HttpResponse.json({ tasks: {}, due: [], javascriptLevelsCleared: 0, passedByTrack: {} });
       if (op === 'learning-path-enrollment') return HttpResponse.json({ enrollments: [ENROLLMENT] });
@@ -113,17 +116,17 @@ describe('/challenge', () => {
     server.use(http.get('*/api/quiz/challenge', () => HttpResponse.json({ error: { code: 'db_error', message: 'Down' } }, { status: 500 })));
     await mountAt('/challenge', <Challenge />);
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-    expect(await screen.findByText('Today’s board could not be loaded. Your challenge is still available.')).toBeInTheDocument();
+    expect(await screen.findByText('The top scores could not be loaded. You can still play.')).toBeInTheDocument();
   });
 });
 
 describe('/today', () => {
   it('draws a signed-in learner’s review, run and path sections with the plan', async () => {
     signIn();
-    answer();
+    answer(PREMIUM);
     const drawn = firstDraw('h1', headings);
     await mountAt('/today', <Today />);
-    expect(drawn()).toEqual(expect.arrayContaining(['Today', 'Due for review', 'Challenge run', 'Skill path']));
+    expect(drawn()).toEqual(expect.arrayContaining(['Today', 'Due for review', 'Challenge run', 'Learning paths']));
     expect(screen.getByText('Where you start')).toBeInTheDocument();
   });
 
@@ -131,7 +134,7 @@ describe('/today', () => {
     const accountReads = answer();
     await mountAt('/today', <Today />);
     expect(screen.getByRole('heading', { level: 1, name: 'Today' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /Due for review|Challenge run|Skill path/ })).toBeNull();
+    expect(screen.queryByRole('heading', { name: /Due for review|Challenge run|Learning paths/ })).toBeNull();
     expect(accountReads).toEqual([]);
   });
 });

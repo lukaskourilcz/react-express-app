@@ -166,7 +166,11 @@ export async function handleFriends(
       );
       if (error) return rpcError(res, error, 'Could not send the request');
       logEvent({ status: 200, op: 'request', state: String(data) });
-      return res.json({ state: data });
+      // The routine answers 'pending' for a request it recorded, for one that
+      // was already waiting and, on purpose, for one a block dropped. The
+      // screen names states from the asker's side, where all three read as
+      // "Request sent", so a blocked asker learns nothing either.
+      return res.json({ state: data === 'pending' ? 'pending_out' : data });
     }
 
     if (op === 'friends-respond') {

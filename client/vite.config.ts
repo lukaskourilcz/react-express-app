@@ -195,9 +195,12 @@ function productMetadata(env: Record<string, string>): Plugin {
     async writeBundle() {
       await writeFile(path.join(outDir, 'manifest.webmanifest'), manifest);
 
-      const indexHtml = await readFile(path.join(outDir, 'index.html'), 'utf8');
       const topics = TOPIC_LANDINGS;
       const origin = PUBLIC_ORIGIN;
+      // Link previews need an absolute image URL: LinkedIn, Slack and iMessage
+      // do not resolve the shell's "/og-image.png" against the page.
+      const indexHtml = (await readFile(path.join(outDir, 'index.html'), 'utf8'))
+        .replace(/(<meta (?:property|name)="(?:og:image|twitter:image)" content=")\/(?!\/)/g, `$1${origin}/`);
       const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]!));
       const urls = [`${origin}/`];
       /** The shell with one page's og:image (absolute) and its size and alt. */
@@ -303,7 +306,7 @@ function productMetadata(env: Record<string, string>): Plugin {
       this.info(`share pages: ${CODING_INDEX.length} coding tasks, ${days} days of the question of the day, ${drawn} images drawn (the rest from cache)`);
 
       const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug, 'en')}">${escape(topic.title.en)}</a></li>`).join('')}</ul></main>`;
-      await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root"><noscript>${fallback}</noscript></div>`));
+      await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /><meta property="og:url" content="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root"><noscript>${fallback}</noscript></div>`));
       await writeFile(path.join(outDir, 'sitemap.xml'), `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls.map(url => `<url><loc>${url}</loc></url>`).join('')}</urlset>`);
       await writeFile(path.join(outDir, 'robots.txt'), `User-agent: *\nAllow: /\nDisallow: /api/\nDisallow: /sandbox/\nDisallow: /dev\nSitemap: ${origin}/sitemap.xml\n`);
     },

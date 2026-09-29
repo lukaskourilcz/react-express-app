@@ -336,7 +336,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
   }
 
   if (req.method === 'PUT') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const body = (req.body || {}) as Partial<LearningPreferenceRequest>;
     if (!isBaseTrack(body.baseTrack)) return jsonError(res, 400, 'bad_request', 'baseTrack must be fullstack, frontend or backend');
     const specialization = body.specialization === null || body.specialization === undefined ? null : body.specialization;
@@ -372,6 +371,11 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
     // Read what the account already holds so a partial save — the Profile's
     // track toggle, which sends no profile answers — keeps the rest.
     const existingRead = await withTimeout(supabase.auth.admin.getUserById(auth.sub));
+    // Without the saved answers a partial save would write empty goals,
+    // experience, study time and skill paths over them, so nothing is written.
+    if (existingRead.error) {
+      return jsonError(res, 503, 'db_error', 'Could not read the saved preference, so nothing was changed. Try again.');
+    }
     const existingMeta = (existingRead.data?.user?.user_metadata ?? {}) as Record<string, unknown>;
     const existing = parseLearnerProfile(existingMeta[LEARNER_PROFILE_META_KEY])
       ?? profileFromPreference(parseLearningPreference(existingMeta[LEARNING_PREFERENCE_META_KEY]));
@@ -439,7 +443,7 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
   }
 
   if (req.method === 'POST') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathEnroll))) return;
+    if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathEnroll, `user:${userId}`))) return;
     const body = (req.body || {}) as Partial<EnrollmentCreateRequest>;
     if (!isLearningPathId(body.pathId)) return jsonError(res, 400, 'bad_request', 'Unknown learning path');
     const path = pathById(body.pathId);
@@ -541,9 +545,12 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStart))) return;
+  // Two tiers: an address backstop sized for a class behind one NAT, then the
+  // learner's own bucket once the token says who they are.
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStartAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStart, `user:${userId}`))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');
 
   const body = (req.body || {}) as Partial<StartActivityRequest>;
@@ -769,9 +776,10 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmit))) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmitAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmit, `user:${userId}`))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');
 
   const body = (req.body || {}) as Partial<SubmitActivityRequest>;
@@ -788,6 +796,22 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
 
   const path = pathById(session.pathId);
   if (!path) return jsonError(res, 404, 'not_found', 'Unknown learning path');
+  // A session outlives the switch that opened it and the enrollment state it
+  // was opened under, so both are checked again before anything is graded.
+  if (availability(path) !== 'available') {
+    return jsonError(res, 503, 'path_unavailable', 'That learning path is not open right now');
+  }
+  let enrollmentRow: EnrollmentRow | null;
+  try {
+    enrollmentRow = await loadEnrollment(supabase, userId, session.enrollmentId);
+  } catch (error) {
+    if (migrationMissing(res, (error as { supabase?: { message?: string } }).supabase ?? null)) return;
+    return jsonError(res, 500, 'db_error', 'Could not load the enrollment');
+  }
+  if (!enrollmentRow) return jsonError(res, 404, 'not_found', 'Unknown enrollment');
+  if (enrollmentRow.status === 'paused') {
+    return jsonError(res, 409, 'enrollment_paused', 'Resume this path before submitting work');
+  }
   if (await refuseLocked(res, userId, { kind: 'learning-path', pathId: path.id })) return;
   if (session.curriculumVersion !== path.version) {
     return jsonError(res, 409, 'version_conflict', 'The curriculum changed while this attempt was open. Start it again.');
@@ -1091,12 +1115,13 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
     res.setHeader('Allow', 'GET, POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
 
   const body = (req.body || {}) as Record<string, unknown>;
   const text = (value: unknown, max: number): string =>
     (typeof value === 'string' ? value.trim() : '').slice(0, max);
 
+  // The caps are `merch_orders`' own (migration 028): a longer value would
+  // fail its CHECK inside the claim.
   const claimed = await withTimeout(
     supabase.rpc('claim_path_reward', {
       p_user_id: userId,
@@ -1104,8 +1129,8 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
       p_modules: inventory.modules,
       p_shirt: text(body.shirt, 3).toUpperCase(),
       p_name: text(body.name, 120),
-      p_line1: text(body.line1, 160),
-      p_line2: text(body.line2, 160) || null,
+      p_line1: text(body.line1, 120),
+      p_line2: text(body.line2, 120) || null,
       p_city: text(body.city, 80),
       p_postal: text(body.postal, 24),
       p_country: text(body.country, 2).toUpperCase(),
@@ -1124,6 +1149,19 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
     if (/invalid_variant/i.test(claimed.error.message ?? '')) {
       return jsonError(res, 400, 'bad_request', 'Pick a shirt size');
     }
+    // An address field the table refuses (check_violation).
+    if (claimed.error.code === '23514') {
+      return jsonError(res, 400, 'invalid_address', 'A name, street, town, postcode and two-letter country are all required');
+    }
+    // A second claim that raced the first one to the claim row
+    // (unique_violation): the first one won, so this is the "already" answer.
+    if (claimed.error.code === '23505') {
+      const first = await withTimeout(
+        supabase.from('path_reward_claims').select('order_id').eq('user_id', userId).eq('path_id', pathId).maybeSingle(),
+      );
+      logEvent({ status: 200, kind: 'path_reward_claimed', granted: false, raced: true });
+      return res.json({ granted: false, already: true, orderId: first.data?.order_id ?? null });
+    }
     return jsonError(res, 500, 'db_error', 'Could not claim the package');
   }
   const row = Array.isArray(claimed.data) ? claimed.data[0] : claimed.data;
@@ -1137,6 +1175,10 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
 
 export async function handlePathDraft(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!pathsAvailable()) return notAvailable(res);
+  // An autosave fires while the learner types, so a save is kept out of the
+  // shared per-address bucket in `api/user/[op].ts`. Two tiers instead: an
+  // address backstop sized for a class behind one NAT, then the learner's own.
+  if (req.method === 'PUT' && !(await enforceRateLimit(req, res, RATE_LIMITS.learningPathDraftAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');
@@ -1177,7 +1219,7 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
   }
 
   if (req.method === 'PUT') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathDraft))) return;
+    if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathDraft, `user:${userId}`))) return;
     const body = (req.body || {}) as Partial<DraftSaveRequest>;
     if (typeof body.enrollmentId !== 'string' || !ID.test(body.enrollmentId)) {
       return jsonError(res, 400, 'bad_request', 'An enrollmentId is required');

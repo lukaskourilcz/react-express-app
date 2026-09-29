@@ -18,6 +18,7 @@ import { TrophyIcon } from './ui/icons';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
+import { useClearOnPageRestore } from '../lib/pageRestore';
 import { useActiveSubject } from '../lib/subjects';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
 import { AppToast } from './ui/AppToast';
@@ -167,6 +168,9 @@ export default function Home() {
   const { isAuthenticated, signInWithGoogle } = useAuth();
   const [authError, setAuthError] = useState<string | null>(null);
   const [signingIn, setSigningIn] = useState(false);
+  // Back from Google's account chooser can bring this page back from the cache
+  // with the sign-in link still busy.
+  useClearOnPageRestore(setSigningIn);
   const topicsRef = useRef<HTMLElement>(null);
 
   const featured = (LANDING_TOPICS[subject.id] ?? []).map((topic) => localizeLandingTopic(topic, lang, t));

@@ -95,17 +95,26 @@ export function firstTouchCampaign(now: number = Date.now()): Campaign {
   return campaignFrom(campaignQuery(kept.campaign as Campaign));
 }
 
+/** A URL or referrer property as analytics may see it. PostHog's `$direct`
+ * (no referrer) is a label, not an address, and stays. */
+const scrubUrlValue = (value: string): string => (value === '$direct' ? value : scrubUrl(value, true));
+
 /** Every event PostHog sends passes here: URLs lose every parameter but the
- * campaign labels, so no code, id or address reaches analytics. */
+ * campaign labels, so no code, id or address reaches analytics. That covers
+ * every property PostHog fills from an address on its own (`$current_url`,
+ * `$session_entry_url`, `$referrer`, `$session_entry_referrer`, their
+ * `$initial_` copies) and the `u`/`r` pair in `$initial_person_info`. */
 function scrubEvent<T extends { properties?: Record<string, unknown>; $set?: Record<string, unknown>; $set_once?: Record<string, unknown> } | null>(event: T): T {
   if (!event) return event;
   for (const bag of [event.properties, event.$set, event.$set_once, event.properties?.$set as Record<string, unknown> | undefined, event.properties?.$set_once as Record<string, unknown> | undefined]) {
     if (!bag || typeof bag !== 'object') continue;
     for (const key of Object.keys(bag)) {
       const value = bag[key];
-      if (/current_url$/.test(key) && typeof value === 'string') bag[key] = scrubUrl(value, true);
-      if (key === '$initial_person_info' && value && typeof value === 'object' && typeof (value as { u?: unknown }).u === 'string') {
-        (value as { u: string }).u = scrubUrl((value as { u: string }).u, true);
+      if (/(_url|referrer)$/.test(key) && typeof value === 'string') bag[key] = scrubUrlValue(value);
+      if (key === '$initial_person_info' && value && typeof value === 'object') {
+        const info = value as { u?: unknown; r?: unknown };
+        if (typeof info.u === 'string') info.u = scrubUrlValue(info.u);
+        if (typeof info.r === 'string') info.r = scrubUrlValue(info.r);
       }
     }
   }
@@ -135,6 +144,9 @@ export function initAnalytics(): void {
         autocapture: false,
         disable_session_recording: true,
         capture_dead_clicks: false,
+        // A fragment can carry a token (a cancel confirmation, an OAuth
+        // return); PostHog leaves it out of the URLs it records itself.
+        disable_capture_url_hashes: true,
         before_send: (event) => scrubEvent(event),
       });
       return ph;

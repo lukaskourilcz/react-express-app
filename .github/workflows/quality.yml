@@ -9,9 +9,39 @@ concurrency:
   group: quality-${{ github.ref }}
   cancel-in-progress: true
 jobs:
+  sql:
+    # Builds the database from supabase-schema.sql and every numbered
+    # migration on Supabase's own Postgres 17 image, then runs the behaviour
+    # tests in supabase/tests (XP once, vouchers once, the 30-day board,
+    # account erasure, grants and RLS). See scripts/test-sql.mjs.
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: supabase/postgres:17.6.1.171
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -h 127.0.0.1"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - run: npm run test:sql
+        env:
+          DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    # The coding content contract now also grades every task against wrong
+    # solutions (lookup tables, constants, static React pages), which adds
+    # a few minutes to a run that already took about fifteen.
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -22,7 +52,7 @@ jobs:
             package-lock.json
             client/package-lock.json
       - run: npm ci && npm ci --prefix client
-      - run: npm run typecheck:api && npm run typecheck:tooling --prefix client
+      - run: npm run typecheck:api && npm run typecheck:scripts && npm run typecheck:tooling --prefix client
       - run: npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:coding && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:client
       - run: npm run check:unused && npm run check:security
       - run: |
@@ -56,8 +86,8 @@ jobs:
           npm run test:browser -- tests/browser/launch-offer.spec.ts
           export CHROME_BIN=$(node -e "console.log(require('@playwright/test').chromium.executablePath())")
           TOPIC=javascript-closures
-          npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/cs/topics/$TOPIC,/daily,/changelog --widths 360,390,430,768,1024,1280,1440
-          RESPONSIVE_THEME=dark RESPONSIVE_LOCALE=cs npm run check:responsive -- --routes /,/cs/topics/$TOPIC --widths 390,768,1280
+          npm run check:responsive -- --routes /,/quiz,/topics/$TOPIC,/cs/topics/$TOPIC,/daily,/not-found-responsive-check --widths 360,390,430,768,1024,1280,1440
+          RESPONSIVE_THEME=dark npm run check:responsive -- --routes /,/topics/$TOPIC,/daily --widths 390,768,1280
           npm run test:harness
       - if: ${{ !cancelled() && steps.build.conclusion == 'success' }}
         name: Storybook and performance

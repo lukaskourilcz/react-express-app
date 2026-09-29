@@ -4,7 +4,9 @@ import {
   jsonError,
   withTimeout,
   isRpcMissing,
+  requireAuthResult,
   requireAuthSub,
+  verifiedCallerId,
   logEvent as emit,
   withRequestContext,
 } from '../../lib/http';
@@ -62,17 +64,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const op = String(req.query.op || '').toLowerCase();
-  // Stripe's signature gates the billing webhook; a burst of retries must not
-  // meet a 429 meant for people.
-  if (
-    req.method !== 'GET' &&
-    op !== 'billing-webhook' &&
-    !(await enforceRateLimit(
-      req,
-      res,
-      op === 'delete-account' ? RATE_LIMITS.accountDelete : RATE_LIMITS.userMutation,
-    ))
-  ) return;
+  if (!(await limitUserWrite(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
   if (op === 'category-stats') return categoryStats(req, res);
   if (op === 'streak') return streak(req, res);
@@ -110,6 +102,30 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
   if (op.startsWith('friends-')) return handleFriends(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
+}
+
+/**
+ * The rate limit every write here takes, in two tiers as play's routes do.
+ * The first token, before the credentials are read, comes from an address
+ * backstop that holds a class behind one NAT: thirty pupils finishing a quiz
+ * in the same minute used to share one person's budget, and the ones past
+ * twenty lost their result. The second is the caller's own, keyed by the
+ * verified account (verified once per request; the op reuses it). A caller
+ * without an account keeps the per-address rate it had before the split.
+ *
+ * Stripe's signature gates the billing webhook, so a burst of retries never
+ * meets a 429 meant for people; a learning-path draft autosave takes its own
+ * two tiers in `handlePathDraft`. Returns false after sending the 429.
+ */
+export async function limitUserWrite(req: VercelRequest, res: VercelResponse, op: string): Promise<boolean> {
+  if (req.method === 'GET' || op === 'billing-webhook' || op === 'learning-path-draft') return true;
+  const deleting = op === 'delete-account';
+  if (!(await enforceRateLimit(req, res, deleting ? RATE_LIMITS.accountDeleteAddress : RATE_LIMITS.userMutationAddress))) return false;
+  const callerId = await verifiedCallerId(req);
+  const perCaller = deleting ? RATE_LIMITS.accountDelete : RATE_LIMITS.userMutation;
+  return callerId
+    ? enforceRateLimit(req, res, perCaller, `user:${callerId}`)
+    : enforceRateLimit(req, res, perCaller);
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
@@ -304,11 +320,52 @@ async function streak(req: VercelRequest, res: VercelResponse) {
   }
 }
 
+// A leaderboard row shows the name and picture stored here, so both come from
+// the verified sign-in and never from the request body. The picture is kept
+// only when Google serves it (the host the client already requires), so a
+// board never loads an image from anywhere else. The name loses control and
+// text-direction characters and is cut to a length a row can show. No email
+// ever stands in for a missing name: the boards say "Learner" instead.
+const PUBLIC_NAME_MAX = 60;
+const HIDDEN_NAME_CHARS = /[\p{Cc}\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu;
+
+function publicName(value: unknown): string | null {
+  if (typeof value !== 'string') return null;
+  const clean = Array.from(value.replace(HIDDEN_NAME_CHARS, '').trim())
+    .slice(0, PUBLIC_NAME_MAX)
+    .join('')
+    .trim();
+  return clean || null;
+}
+
+function publicPicture(value: unknown): string | null {
+  if (typeof value !== 'string' || value.length > 2048) return null;
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase();
+    const google = host === 'googleusercontent.com' || host.endsWith('.googleusercontent.com');
+    return url.protocol === 'https:' && google ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function verifiedProfile(payload: Record<string, unknown>): { name: string | null; picture: string | null } {
+  const meta = (payload.user_metadata && typeof payload.user_metadata === 'object'
+    ? payload.user_metadata
+    : {}) as Record<string, unknown>;
+  return {
+    name: publicName(meta.full_name || meta.name),
+    picture: publicPicture(meta.avatar_url || meta.picture),
+  };
+}
+
 async function stats(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
   try {
-    const user_id = await requireAuthSub(req, res);
-    if (!user_id) return;
+    const auth = await requireAuthResult(req, res);
+    if (!auth) return;
+    const user_id = auth.sub;
 
     if (req.method === 'GET') {
       const { data, error } = await withTimeout(
@@ -325,11 +382,11 @@ async function stats(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'POST') {
       const body = (req.body || {}) as {
         email?: unknown;
-        name?: unknown;
-        picture?: unknown;
         result_receipt?: unknown;
         profile?: unknown;
       };
+      // Name and picture sent in the body are ignored; see verifiedProfile.
+      const shown = verifiedProfile(auth.payload);
 
       if (body.result_receipt !== undefined) {
         if (typeof body.result_receipt !== 'string') {
@@ -351,14 +408,6 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         if (receipt.outcomes.some((outcome) => subjectForCategory(outcome.category) !== receipt.subject)) {
           return jsonError(res, 400, 'invalid_receipt', 'Quiz result receipt has mixed question scope');
         }
-        const rawProfile = body.profile && typeof body.profile === 'object'
-          ? body.profile as Record<string, unknown>
-          : {};
-        const safePicture =
-          typeof rawProfile.picture === 'string' && rawProfile.picture.length <= 2048 && /^https:\/\//i.test(rawProfile.picture)
-            ? rawProfile.picture
-            : null;
-
         const { data, error } = await withTimeout(
           supabase!.rpc('record_verified_quiz_result_v2', {
             p_user_id: user_id,
@@ -371,9 +420,9 @@ async function stats(req: VercelRequest, res: VercelResponse) {
             p_quest_xp: receipt.questXp,
             p_daily_date: receipt.daily?.date ?? null,
             p_duration_ms: receipt.daily?.durationMs ?? null,
-            p_email: typeof rawProfile.email === 'string' && rawProfile.email.length <= MAX_STR ? rawProfile.email : null,
-            p_name: typeof rawProfile.name === 'string' && rawProfile.name.length <= MAX_STR ? rawProfile.name : null,
-            p_picture: safePicture,
+            p_email: typeof auth.payload.email === 'string' && auth.payload.email.length <= MAX_STR ? auth.payload.email : null,
+            p_name: shown.name,
+            p_picture: shown.picture,
           }),
         );
 
@@ -408,18 +457,12 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         return res.json({ data: row.data, xp: xpRow.data, applied: data === true });
       }
 
-      const picture =
-        typeof body.picture === 'string' && body.picture.length <= 2048 ? body.picture : null;
-      // Only allow https:// URLs for the avatar so a stored 'javascript:' or
-      // 'data:' URL cannot be rendered in an <img> as an XSS/exfil vector.
-      const safePicture =
-        picture && /^https:\/\//i.test(picture) ? picture : null;
-
       const profile = {
         user_id,
-        email: typeof body.email === 'string' && body.email.length <= MAX_STR ? body.email : null,
-        name: typeof body.name === 'string' && body.name.length <= MAX_STR ? body.name : null,
-        picture: safePicture,
+        // The address of the verified sign-in, like the name and picture above.
+        email: typeof auth.payload.email === 'string' && auth.payload.email.length <= MAX_STR ? auth.payload.email : null,
+        name: shown.name,
+        picture: shown.picture,
       };
 
       const { data, error } = await withTimeout(
@@ -661,7 +704,6 @@ async function freezes(req: VercelRequest, res: VercelResponse) {
     // empty budget and returns the running window unchanged rather than
     // charging twice, so a double click or two devices cost one protection.
     if (req.method === 'POST') {
-      if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
       const spent = await withTimeout(supabase!.rpc('activate_streak_shield', { p_user_id: userId }));
       if (spent.error) {
         if (isRpcMissing(spent.error)) {

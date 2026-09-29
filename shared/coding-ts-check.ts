@@ -86,43 +86,51 @@ export function createTypeScript({ ts: compiler, libs }: { ts: TypeScriptModule;
     allowUnusedLabels: true,
   };
 
-  const diagnose = (source: string) => {
-    const answer = compiler.createSourceFile(ANSWER_FILE, source, target, true);
-    const globals = compiler.createSourceFile(GLOBALS_FILE, GLOBALS, target, true);
+  // The learner's code and each type test are separate root files of one
+  // program. With the module system off they are global scripts, so a test
+  // sees every declaration in the code; but each file is parsed on its own, so
+  // code that ends inside an unterminated template literal, comment or string
+  // can no longer swallow the assertions after it and pass them.
+  const diagnose = (code: string, tests: readonly string[]) => {
+    const testNames = tests.map((_, index) => `type-test-${index + 1}.ts`);
+    const files = new Map<string, ts.SourceFile>([
+      [GLOBALS_FILE, compiler.createSourceFile(GLOBALS_FILE, GLOBALS, target, true)],
+      [ANSWER_FILE, compiler.createSourceFile(ANSWER_FILE, code, target, true)],
+      ...testNames.map((name, index): [string, ts.SourceFile] => [name, compiler.createSourceFile(name, tests[index], target, true)]),
+    ]);
     const host: ts.CompilerHost = {
-      getSourceFile: (name: string) => (name === ANSWER_FILE ? answer : name === GLOBALS_FILE ? globals : libSource(name)),
+      getSourceFile: (name: string) => files.get(name) ?? libSource(name),
       writeFile: () => {},
       getDefaultLibFileName: () => LIB_FILE,
       useCaseSensitiveFileNames: () => true,
       getCanonicalFileName: (name: string) => name,
       getCurrentDirectory: () => '/',
       getNewLine: () => '\n',
-      fileExists: (name: string) => name === ANSWER_FILE || name === GLOBALS_FILE || Boolean(libSource(name)),
+      fileExists: (name: string) => files.has(name) || Boolean(libSource(name)),
       readFile: (name: string) => host.getSourceFile(name, target)?.text,
       directoryExists: () => true,
       getDirectories: () => [],
     };
-    const program = compiler.createProgram([GLOBALS_FILE, ANSWER_FILE], options, host);
-    return [...program.getSyntacticDiagnostics(answer), ...program.getSemanticDiagnostics(answer)].map((diagnostic) => ({
+    const program = compiler.createProgram([...files.keys()], options, host);
+    const report = (file: ts.SourceFile) => [...program.getSyntacticDiagnostics(file), ...program.getSemanticDiagnostics(file)].map((diagnostic) => ({
       line: diagnostic.file && diagnostic.start !== undefined
         ? diagnostic.file.getLineAndCharacterOfPosition(diagnostic.start).line
         : 0,
       message: compiler.flattenDiagnosticMessageText(diagnostic.messageText, ' '),
     }));
+    return { code: report(files.get(ANSWER_FILE)!), tests: testNames.map((name) => report(files.get(name)!)) };
   };
 
-  /** Type-checks `code` with each type test appended as one extra line, so a
-   * diagnostic maps back to the assertion that provoked it by line number. */
+  /** Type-checks `code`, with each type test as its own file beside it: a
+   * diagnostic in a test's file belongs to that assertion, and one in the
+   * code's file to the code. */
   const check = (code: string, typeTests: TypeTestInput[] = []): TypeCheckResult => {
-    const codeLines = code.split('\n');
-    const source = [...codeLines, ...typeTests.map((one) => one.code)].join('\n');
-    const diagnostics = diagnose(source);
-    const codeErrors = diagnostics
-      .filter((one) => one.line < codeLines.length)
+    const diagnostics = diagnose(code, typeTests.map((one) => one.code));
+    const codeErrors = diagnostics.code
       .map((one) => ({ ...one, line: one.line + 1 }))
       .slice(0, MAX_REPORTED_ERRORS);
     const results = typeTests.map((typeTest, index) => {
-      const errors = diagnostics.filter((one) => one.line === codeLines.length + index);
+      const errors = diagnostics.tests[index];
       const rejected = errors.length > 0;
       return { pass: Boolean(typeTest.rejects) === rejected, error: rejected ? errors[0].message : null };
     });

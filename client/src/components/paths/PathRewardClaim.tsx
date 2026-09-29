@@ -117,8 +117,8 @@ export function PathRewardClaim({ pathId }: { pathId: string }) {
             </select>
           </label>
           {field('name', 'paths.rewardName', 120)}
-          {field('line1', 'paths.rewardLine1', 160)}
-          {field('line2', 'paths.rewardLine2', 160, false)}
+          {field('line1', 'paths.rewardLine1', 120)}
+          {field('line2', 'paths.rewardLine2', 120, false)}
           {field('city', 'paths.rewardCity', 80)}
           {field('postal', 'paths.rewardPostal', 24)}
           <label className="lp-field">

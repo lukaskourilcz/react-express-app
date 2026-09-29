@@ -120,6 +120,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (!(await enforceRateLimit(req, res, policy))) return;
   }
 
+  // The Play switch in /dev → Settings turns the whole feature off, rooms
+  // already open included, not only its nav entry.
+  if (!(await getGameSettings()).features.multiplayer) {
+    return jsonError(res, 503, 'feature_disabled', 'Live games are switched off');
+  }
+
   switch (action) {
     case 'create':
       return create(req, res);
@@ -381,8 +387,9 @@ async function state(req: VercelRequest, res: VercelResponse) {
 
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
 
-    // Lazy auto-finish ghost matches.
-    if (match.status === 'running') {
+    // Lazy auto-finish ghost matches: a host who stopped sending heartbeats
+    // left a running room, or a lobby that will never start.
+    if (match.status === 'running' || match.status === 'lobby') {
       const ref = match.last_heartbeat_at ?? match.started_at;
       if (ref && Date.now() - new Date(ref).getTime() > STALE_MATCH_MS) {
         const { data: updated } = await withTimeout(
@@ -390,6 +397,7 @@ async function state(req: VercelRequest, res: VercelResponse) {
             .from('matches')
             .update({ status: 'finished', ended_at: new Date().toISOString() })
             .eq('id', match.id)
+            .eq('status', match.status)
             .select(STATE_COLUMNS)
             .single(),
         );
@@ -456,10 +464,17 @@ async function state(req: VercelRequest, res: VercelResponse) {
       }
     }
 
+    // A classroom host presents and never answers, so they get no scoreboard
+    // row: in a room where nobody scored, their zero time would top it.
+    const hostPresents = match.mode === 'classroom';
+    const scoreboard = ((scoreboardRes.data ?? []) as Array<{ user_id: string }>).filter(
+      (row) => !(hostPresents && row.user_id === match.host_id),
+    );
+
     return res.json({
       match: { ...match, questions: sanitizeQuestions(match, sub) },
       participants: participantsRes.data ?? [],
-      scoreboard: scoreboardRes.data ?? [],
+      scoreboard,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
@@ -607,6 +622,12 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     const q = matchQuestions[body.question_idx];
     if (!q) return jsonError(res, 400, 'bad_request', 'question_idx out of range');
 
+    // A classroom host holds the answer key while the room runs; they present
+    // and never compete.
+    if (match.mode === 'classroom' && match.host_id === sub) {
+      return jsonError(res, 403, 'host_cannot_answer', 'The classroom host presents and does not answer');
+    }
+
     // Only players who joined the lobby may answer — otherwise anyone with
     // the code could inject rows that count toward the all-answered advance.
     const { data: participantRows, error: participantError } = await withTimeout(
@@ -643,6 +664,17 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     const questionStartMs = match.question_started_at
       ? new Date(match.question_started_at).getTime()
       : null;
+
+    // A timed question closes when its clock runs out, plus the grace the
+    // expiry advance in state() allows an answer sent on the buzzer. A
+    // classroom question stays current until the host moves on, and a
+    // multiplayer one until someone reads the room, so the clock is checked
+    // here rather than inferred from the current index. A retry of an answer
+    // that landed in time was replayed above.
+    const limitS = match.question_duration_s ?? 0;
+    if (limitS > 0 && questionStartMs !== null && Date.now() > questionStartMs + limitS * 1000 + QUESTION_EXPIRE_GRACE_MS) {
+      return jsonError(res, 409, 'time_up', 'Time ran out for this question');
+    }
 
     let serverElapsedMs = 0;
     if (questionStartMs) {
@@ -758,12 +790,17 @@ async function distribution(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { data: match } = await withTimeout(
-      supabase!.from('matches').select('id, host_id').eq('code', code).in('subject', deploymentSubjectIds()).maybeSingle(),
+      supabase!.from('matches').select('id, host_id, mode, status').eq('code', code).in('subject', deploymentSubjectIds()).maybeSingle(),
     );
 
     if (!match) return jsonError(res, 404, 'not_found', 'Match not found');
     if (sub !== match.host_id) {
       return jsonError(res, 403, 'forbidden', 'Only the host can view distribution');
+    }
+    // The buckets carry per-option counts and which option is correct. A
+    // multiplayer host is a competitor, so they read them only after the end.
+    if (match.mode !== 'classroom' && match.status !== 'finished') {
+      return jsonError(res, 403, 'forbidden', 'The answer distribution opens when the match ends');
     }
 
     const { data, error } = await withTimeout(

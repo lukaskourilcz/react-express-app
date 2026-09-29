@@ -421,7 +421,6 @@ export default function DevSettings() {
         <Switch label="Daily challenge" value={form.featDaily} onChange={(c) => set('featDaily', c)} />
         <Switch label="Multiplayer / Play" value={form.featMulti} onChange={(c) => set('featMulti', c)} />
         <Switch label="Leaderboard" value={form.featLeader} onChange={(c) => set('featLeader', c)} />
-        <Switch label="Flashcards" value={form.featFlash} onChange={(c) => set('featFlash', c)} />
       </Section>
 
       <Section title="Coins">

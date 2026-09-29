@@ -54,10 +54,15 @@ request, accepted orders never leave the server).
 More than one accepted order is normal: independent declarations can swap, and
 insisting on one canonical answer would teach a rule that does not exist.
 
-**Gaps.** JavaScript only, and only tier 1–2. A task without a puzzle shows the
-"waiting for a bigger screen" state on a narrow viewport, keeps the draft, and
-completes nothing — that state is the honest answer, not a placeholder for a
-puzzle we have not written.
+**Gaps.** JavaScript only, and only tier 1–2. A task without a puzzle opens in
+the "waiting for a bigger screen" state on a narrow viewport (below 1024 CSS
+px: phones, portrait tablets, a desktop at 200% zoom). That state keeps the
+draft and completes nothing; it is the honest default, not a placeholder for a
+puzzle we have not written. It is not a dead end: its "Use the editor on this
+screen" button opens the normal editor with Run and Submit, and the choice
+holds for every task until the browser session ends. The server grades that
+code as it grades code from any other screen, so a Learn level whose coding
+task is required can be finished on a phone.
 
 ## 3. Debugging tasks (#163)
 

@@ -13,9 +13,13 @@ export interface Store<T> {
   emit: () => void;
 }
 
+// Every store, so a change made to storage behind their backs (a sign-out
+// clearing the account's data) can reach the components that show them.
+const stores = new Set<Store<unknown>>();
+
 export function createStore<T>(read: () => T): Store<T> {
   const listeners = new Set<() => void>();
-  return {
+  const store: Store<T> = {
     get: read,
     subscribe(listener) {
       listeners.add(listener);
@@ -27,6 +31,13 @@ export function createStore<T>(read: () => T): Store<T> {
       listeners.forEach((listener) => listener());
     },
   };
+  stores.add(store);
+  return store;
+}
+
+/** Re-read every store from storage and re-render what shows it. */
+export function emitAllStores(): void {
+  stores.forEach((store) => store.emit());
 }
 
 /** Subscribe a component to a store and re-render it whenever the value changes. */

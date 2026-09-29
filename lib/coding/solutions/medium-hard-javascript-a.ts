@@ -514,6 +514,7 @@ const parseCsvLine = line => {
       { call: 'spiral([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]])', expected: [1, 2, 3, 6, 9, 12, 15, 14, 13, 10, 7, 4, 5, 8, 11] },
       { call: 'spiral([[7]])', expected: [7] },
       { call: '(() => { const grid = [[1, 2], [3, 4]]; const out = spiral(grid); return [out, grid]; })()', expected: [[1, 2, 4, 3], [[1, 2], [3, 4]]] },
+      { call: 'spiral([[1, 2, 3], [4, 5, 6]])', expected: [1, 2, 3, 6, 5, 4] },
     ],
   },
   'js-mh-paint-bucket': {
@@ -586,6 +587,7 @@ const paintBucket = (grid, row, col, colour) => {
       { call: 'paintBucket([["a", "a", "b", "a"]], 0, 3, "c")', expected: [['a', 'a', 'b', 'c']] },
       { call: 'paintBucket([["a"]], 0, 0, "b")', expected: [['b']] },
       { call: '(() => { const grid = [["a"]]; const out = paintBucket(grid, 0, 0, "a"); return [out !== grid, out[0] !== grid[0], out]; })()', expected: [true, true, [['a']]] },
+      { call: 'paintBucket([["a", "b"], ["a", "b"]], 1, 0, "z")', expected: [['z', 'b'], ['z', 'b']] },
     ],
   },
   'js-mh-sudoku-check': {
@@ -1197,6 +1199,7 @@ const diffLines = (before, after) => {
       { call: '(() => { const before = [..."ABCBDAB"]; const after = [..."BDCABA"]; const edit = diffLines(before, after); return [edit.filter(([mark]) => mark === " ").length, edit.filter(([mark]) => mark !== "+").map(([, line]) => line).join(""), edit.filter(([mark]) => mark !== "-").map(([, line]) => line).join("")]; })()', expected: [4, 'ABCBDAB', 'BDCABA'] },
       { call: '(() => { const before = Array.from({ length: 60 }, (_, i) => "line " + (i % 7)); const after = Array.from({ length: 60 }, (_, i) => "line " + (i % 5)); const edit = diffLines(before, after); return [edit.filter(([mark]) => mark === " ").length, edit.filter(([mark]) => mark !== "+").map(([, line]) => line).join() === before.join(), edit.filter(([mark]) => mark !== "-").map(([, line]) => line).join() === after.join()]; })()', expected: [44, true, true] },
       { call: 'diffLines([], [])', expected: [] },
+      { call: '(() => { const before = ["b", "c"]; const after = ["c", "b", "a", "c", "b"]; const edit = diffLines(before, after); return [edit.filter(([mark]) => mark === " ").length, edit.filter(([mark]) => mark !== "+").map(([, line]) => line), edit.filter(([mark]) => mark !== "-").map(([, line]) => line)]; })()', expected: [2, ['b', 'c'], ['c', 'b', 'a', 'c', 'b']] },
     ],
   },
   'js-mh-word-search': {

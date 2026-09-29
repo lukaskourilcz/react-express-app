@@ -20,6 +20,19 @@ describe('real API transport with MSW', () => {
     expect(error.status).toBe(502);
     expect(friendlyError(error)).not.toContain('gateway');
   });
+  it('shows the generic error for an HTML 404, not the status text', async () => {
+    server.use(http.get('*/api/test', () => new HttpResponse('<h1>Not Found</h1>', { status: 404, statusText: 'Not Found', headers: { 'Content-Type': 'text/html' } })));
+    const error = await apiFetch('/api/test').catch(e => e);
+    expect(error).toBeInstanceOf(ApiError);
+    if (!(error instanceof ApiError)) throw error;
+    expect(error.status).toBe(404);
+    expect(friendlyError(error)).toBe('Something went wrong. Try again.');
+  });
+  it('keeps the server message of a JSON 4xx', async () => {
+    server.use(http.get('*/api/test', () => HttpResponse.json({ error: { code: 'not_found', message: 'No match with that code.' } }, { status: 404 })));
+    const error = await apiFetch('/api/test').catch(e => e);
+    expect(friendlyError(error)).toBe('No match with that code.');
+  });
   it('classifies network failure separately from timeout', async () => {
     server.use(http.get('*/api/test', () => HttpResponse.error()));
     await expect(apiFetch('/api/test')).rejects.toMatchObject({ code: 'network', status: 0 });

@@ -51,7 +51,7 @@ import {
 import { getGameSettings } from '../../lib/settings-store';
 import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { claimOnce, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { playable as playableCodingTask } from '../../lib/coding/catalog';
 import { levelCodingTasks } from '../../lib/coding/active';
@@ -147,7 +147,7 @@ function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLang>, b
       answerKey.push({ questionId: q.id, correctAnswer: options.indexOf(correctText) });
       return {
         id: q.id,
-        tags: q.tags,
+        // No tags before grading: some name the correct option.
         introduction: q.introduction,
         question: q.question,
         options,
@@ -171,6 +171,8 @@ function playableResponse(input: {
   difficulty?: number;
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
+  /** The account the step is issued to, or null for a guest. */
+  userId: string | null;
 }) {
   const built = buildQuestions(input.ids, input.lang, input.byId);
   const subject = subjectForTopic(input.topic);
@@ -194,6 +196,10 @@ function playableResponse(input: {
       ? { requiredLevelStart: input.requiredLevelStart, requiredLevelEnd: input.requiredLevelEnd }
       : {}),
     ...(codingTasks.length > 0 ? { codingTaskIds: codingTasks.map((task) => task.id) } : {}),
+    // Sealed so only the account the progression guard checked may answer
+    // and complete the step. A guest session carries null: presenting it with
+    // a token would otherwise record a level the guard never allowed.
+    userId: input.userId,
   });
   return {
     kind: input.kind,
@@ -208,7 +214,7 @@ function playableResponse(input: {
       ? {
           coding: codingTasks.map((task) => ({
             task: playableCodingTask(task),
-            session: encodeCodingSession({ taskId: task.id, track: task.track, userId: null, roadmapAttemptId: attemptId }),
+            session: encodeCodingSession({ taskId: task.id, track: task.track, userId: input.userId, roadmapAttemptId: attemptId }),
           })),
         }
       : {}),
@@ -220,6 +226,12 @@ function playableResponse(input: {
 interface Entry {
   passed: boolean;
   bestPct: number;
+  // Spaced mastery (migration 024), written by the completion routine on
+  // levels only. Optional: older rows and part tests have none.
+  passDays?: string[];
+  mastered?: boolean;
+  masteredAt?: string;
+  lastPassDay?: string;
 }
 type TopicProgress = { levels: Record<string, Entry>; checkpoints: Record<string, Entry> };
 type ProgressBlob = Record<string, TopicProgress>;
@@ -248,6 +260,22 @@ const MAX_SUBJECT_KEYS = 16;
 const isSafeId = (v: unknown): v is string =>
   typeof v === 'string' && v.length > 0 && v.length <= MAX_STR_LEN && /^[a-z0-9_-]+$/i.test(v);
 const isSubjectKey = (v: string): boolean => /^[a-z][a-z0-9-]{0,31}$/.test(v);
+
+const isDayKey = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+/** The completion routine keeps at most twelve distinct passing days. */
+const MAX_PASS_DAYS = 12;
+
+/** A level entry's spaced-mastery fields, validated. The client reads them for
+ * the map's mastered/due states and Today's review list, so a response that
+ * carries progress must keep them exactly as the GET does. */
+function masteryFields(e: Record<string, unknown>): Pick<Entry, 'passDays' | 'mastered' | 'masteredAt' | 'lastPassDay'> {
+  return {
+    ...(Array.isArray(e.passDays) ? { passDays: e.passDays.filter(isDayKey).slice(0, MAX_PASS_DAYS) } : {}),
+    ...(typeof e.mastered === 'boolean' ? { mastered: e.mastered } : {}),
+    ...(isDayKey(e.masteredAt) ? { masteredAt: e.masteredAt } : {}),
+    ...(isDayKey(e.lastPassDay) ? { lastPassDay: e.lastPassDay } : {}),
+  };
+}
 
 const clampPct = (n: unknown): number => {
   const v = typeof n === 'number' && Number.isFinite(n) ? Math.round(n) : 0;
@@ -354,7 +382,7 @@ export function sanitize(input: unknown): ProgressBlob {
         if (!Number.isInteger(n) || n < 1 || n > ROADMAP_LEVELS) continue;
         if (!v || typeof v !== 'object') continue;
         const e = v as Record<string, unknown>;
-        levels[String(n)] = { passed: e.passed === true, bestPct: clampPct(e.bestPct) };
+        levels[String(n)] = { passed: e.passed === true, bestPct: clampPct(e.bestPct), ...masteryFields(e) };
       }
     }
     if (checkpointsIn && typeof checkpointsIn === 'object') {
@@ -498,7 +526,8 @@ interface LearnerContext {
 }
 
 /** The learner's plan and verified record, or null for a guest.
- * `undefined` means a response was already sent (a broken credential). */
+ * `undefined` means a response was already sent (a broken credential, or a
+ * record that could not be read). */
 async function learnerContext(
   req: VercelRequest,
   res: VercelResponse,
@@ -514,22 +543,37 @@ async function learnerContext(
     throw error;
   }
   if (!auth) return null;
+  const emailClaim = auth.payload.email;
+  const email = typeof emailClaim === 'string' ? emailClaim : null;
   const metadata = ((auth.payload as Record<string, unknown>).user_metadata ?? {}) as Record<string, unknown>;
   // The v2 profile when there is one; otherwise the plan the account already
   // chose through the v1 preference, with its required answers still missing.
   const profile =
     parseLearnerProfile(metadata[LEARNER_PROFILE_META_KEY]) ??
     profileFromPreference(parseLearningPreference(metadata[LEARNING_PREFERENCE_META_KEY]));
-  if (!supabase) return { userId: auth.sub, profile, progress: {}, extraUnlocked: [] };
-  const row = await withTimeout(
-    supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', auth.sub).maybeSingle(),
-  );
-  if (row.error) return { userId: auth.sub, profile, progress: {}, extraUnlocked: [] };
+  // Paths granted to the account open here exactly as the progress GET
+  // reports them (see handleProgress), or the map would draw a granted topic
+  // open while every level in it answered 403 topic_locked.
+  if (!supabase) {
+    const { ownerEmail } = await getGameSettings();
+    return { userId: auth.sub, profile, progress: {}, extraUnlocked: withGrantedTopics([], email, ownerEmail) };
+  }
+  const [{ ownerEmail }, row] = await Promise.all([
+    getGameSettings(),
+    withTimeout(supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', auth.sub).maybeSingle()),
+  ]);
+  // Without the record nothing can be checked against evidence. Carrying on
+  // with an empty one would refuse every level past the first as "complete
+  // the preceding steps" over a database blip, which is not true.
+  if (row.error) {
+    jsonError(res, 503, 'progress_unavailable', 'Could not load your learning progress. Try again.');
+    return undefined;
+  }
   return {
     userId: auth.sub,
     profile,
     progress: (row.data?.data as VerifiedProgress) ?? {},
-    extraUnlocked: sanitizeExtra(row.data?.extra).unlocked,
+    extraUnlocked: withGrantedTopics(sanitizeExtra(row.data?.extra).unlocked, email, ownerEmail),
   };
 }
 
@@ -624,6 +668,8 @@ function requiredRange(availability: StepAvailability, from: number, to: number)
 // keeping unlocks server-authoritative and idempotent (by the run's attemptId).
 
 type PlacementOutcome = { questionId: string; category: string; isCorrect: boolean };
+/** How long a submitted round stays claimed: the life of a placement token. */
+const PLACEMENT_ROUND_TTL_S = 60 * 60;
 
 /** The placement pool: the subject's served questions, in the categories
  * discovery still offers. Retired sections are excluded here as they are from
@@ -769,6 +815,17 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
     const isCorrect = selected >= 0 && selected === item.correctAnswer;
     if (isCorrect) roundCorrect++;
     roundOutcomes.push({ questionId: item.questionId, category: item.category, isCorrect });
+  }
+
+  // Each round is graded once. The token is sealed but not single-use, and
+  // every response reports how the round went (the next difficulty, the
+  // round's score, the final total), so a round submitted again with other
+  // answers would reveal which ones were right: a few dozen replays would
+  // find every key and mint a perfect, verified receipt. The client never
+  // resubmits a round; after an error it starts a new placement.
+  if (!(await claimOnce(`placement:${state.attemptId}:${state.round}`, PLACEMENT_ROUND_TTL_S))) {
+    logEvent({ status: 409, kind: 'placement_replayed', subject: state.subject, round: state.round });
+    return jsonError(res, 409, 'placement_round_used', 'This placement round was already submitted. Start the placement again.');
   }
 
   const history = [...state.history, ...roundOutcomes];
@@ -944,6 +1001,24 @@ async function refuseLockedSession(
   });
 }
 
+/** A Learn session answers only to the account it was issued to. The
+ * progression guard runs when a step is issued, and only for a signed-in
+ * request, so a session fetched without a token (or under another account)
+ * must not be answered or completed with one: that would record a level the
+ * guard never checked. Signing in or out mid-level lands here too; the client
+ * restarts the step under the current sign-in. A session sealed before the
+ * owner was recorded reads as a guest's. */
+function refuseForeignSession(
+  res: VercelResponse,
+  session: NonNullable<ReturnType<typeof roadmapSession>>,
+  userId: string | null,
+): boolean {
+  if ((session.userId ?? null) === userId) return false;
+  logEvent({ status: 409, kind: 'session_owner_mismatch', topic: session.topic, hasUser: Boolean(userId) });
+  jsonError(res, 409, 'session_owner_mismatch', 'This lesson was opened under a different sign-in. Start it again.');
+  return true;
+}
+
 async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapAnswer))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
@@ -960,6 +1035,7 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   if (!sessionQuestion) return jsonError(res, 400, 'bad_request', 'Question is not part of this learning session');
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
+  if (refuseForeignSession(res, session, userId)) return;
   if (await refuseLockedSession(res, userId, session)) return;
 
   const selectedIndex = Number(body.selectedIndex);
@@ -1066,6 +1142,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   if (!session) return jsonError(res, 400, 'invalid_session', 'Learning session expired or invalid');
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
+  if (refuseForeignSession(res, session, userId)) return;
   if (await refuseLockedSession(res, userId, session)) return;
   const attemptResult = await ensureAttempt(session, userId);
   if (attemptResult.error || !attemptResult.data) {
@@ -1132,14 +1209,19 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     totalQuestions,
   );
   if (endedOnHearts) passed = false;
-  // A level with coding tasks passes only when every one of them passed.
+  // A level with coding tasks passes only when every one of them passed in
+  // this attempt without its solution being revealed, the rule
+  // complete_verified_roadmap_attempt applies from migration 047: a reveal
+  // ends the attempt, and the task is passed again in a fresh one.
   let codingPending: string[] = [];
   if (passed && session.codingTaskIds && session.codingTaskIds.length > 0) {
     const codingRows = await withTimeout(
-      supabase.from('roadmap_attempt_coding').select('task_id,passed').eq('attempt_id', session.attemptId!),
+      supabase.from('roadmap_attempt_coding').select('task_id,passed,revealed').eq('attempt_id', session.attemptId!),
     );
     if (codingRows.error) return jsonError(res, 500, 'db_error', 'Could not grade the coding tasks');
-    const passedIds = new Set((codingRows.data ?? []).filter((row) => row.passed === true).map((row) => String(row.task_id)));
+    const passedIds = new Set((codingRows.data ?? [])
+      .filter((row) => row.passed === true && row.revealed !== true)
+      .map((row) => String(row.task_id)));
     codingPending = session.codingTaskIds.filter((id) => !passedIds.has(id));
     if (codingPending.length > 0) passed = false;
   }
@@ -1471,7 +1553,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
     const playable = playableResponse({
       kind: 'checkpoint', topic, ref: part, title: `Part ${part}`,
-      passPct: PART_TEST_PASS, ids, lang, byId,
+      passPct: PART_TEST_PASS, ids, lang, byId, userId: learner?.userId ?? null,
       ...requiredRange(availability, range.startLevel, range.endLevel),
     });
     if (!playable || playable.questions.length === 0) return jsonError(res, 404, 'no_questions', 'No questions for this test');
@@ -1506,7 +1588,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
     const playable = playableResponse({
       kind: 'checkpoint', topic, ref: checkpoint, title: `Part ${checkpoint}`,
-      passPct: PART_TEST_PASS, ids, lang, byId,
+      passPct: PART_TEST_PASS, ids, lang, byId, userId: learner?.userId ?? null,
       ...requiredRange(availability, range.startLevel, range.endLevel),
     });
     if (!playable || playable.questions.length === 0) {
@@ -1537,7 +1619,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const playable = playableResponse({
     kind: 'level', topic, ref: meta.level, title: meta.title,
     difficulty: meta.difficulty, passPct: LEVEL_PASS,
-    ids: live.levelIds[level - 1] ?? [], lang, byId,
+    ids: live.levelIds[level - 1] ?? [], lang, byId, userId: learner?.userId ?? null,
     ...(required !== null ? { requiredLevelStart: required, requiredLevelEnd: required } : {}),
   });
   if (!playable || playable.questions.length === 0) {

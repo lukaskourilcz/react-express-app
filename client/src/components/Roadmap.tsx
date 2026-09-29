@@ -51,6 +51,7 @@ import {
   getExtraUnlocks,
   topicsFromAssessment,
   type PartRange,
+  type RoadmapProgress,
 } from '../lib/roadmap';
 import { availabilityOf } from '../lib/roadmap';
 import ReferralMoment from './ReferralMoment';
@@ -73,7 +74,9 @@ import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
-import { friendlyError, isPremiumRequired } from '../lib/api';
+import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
+import { useInPlan } from '../lib/eligibility';
+import SignInButton from './SignInButton';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
@@ -179,6 +182,8 @@ interface PlacedNode {
   /** Premium opens this step and the account holds the free plan: the node reads
    * "Premium", stays focusable and opens the upgrade sheet. */
   premium?: boolean;
+  /** The topic is outside the learner's plan and this step was never passed. */
+  outOfPlan?: boolean;
 }
 
 // Track an element's width so the path can lay itself out responsively. Uses a
@@ -296,7 +301,7 @@ function nextAfter(a: Active, ranges: PartRange[]): Active | null {
 function Roadmap() {
   useRoadmapStructureFirst({ plan: true });
   const { lang, t } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
   const [pathRef, pathWidth] = useElementWidth<HTMLDivElement>();
@@ -322,6 +327,16 @@ function Roadmap() {
   // fallback landing topic.
   const [subject] = useSubject();
   const TOPICS = topicsForSubject(subject);
+  // The server serves nothing new outside the learner's chosen track (403
+  // not_in_plan), and keeps serving levels already passed whatever the plan
+  // says. The rail lists what the plan holds plus any topic with a passed
+  // level; everything else would only lead to a refusal.
+  const inPlan = useInPlan();
+  const topicVisible = useCallback(
+    (value: RoadmapTopic, p: RoadmapProgress = progress) => inPlan(value) || passedLevelCount(p, value) > 0,
+    [inPlan, progress],
+  );
+  const visibleTopics = useMemo(() => TOPICS.filter((value) => topicVisible(value)), [TOPICS, topicVisible]);
   // An old link to a path that no longer exists. It is answered rather than
   // redirected: the learner asked for something specific and deserves to know
   // where it went, and their history for it is untouched.
@@ -336,10 +351,13 @@ function Roadmap() {
     const saved = fromUrl && (TOPICS as string[]).includes(fromUrl) ? fromUrl : readString(TOPIC_KEY);
     const candidate =
       saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : TOPICS[0];
-    // If the saved topic is locked (fresh user, reset progress, etc.) fall back
-    // to the always-open starter so the page lands somewhere actionable.
-    if (!isTopicUnlocked(getRoadmapProgress(), candidate, new Set(getExtraUnlocks()))) {
-      return TOPICS[0];
+    // If the saved topic is locked (fresh user, reset progress, etc.) or
+    // outside the plan, fall back to the first open topic of the plan so the
+    // page lands somewhere actionable.
+    const stored = getRoadmapProgress();
+    const extra = new Set(getExtraUnlocks());
+    if (!isTopicUnlocked(stored, candidate, extra) || !topicVisible(candidate, stored)) {
+      return TOPICS.find((value) => inPlan(value) && isTopicUnlocked(stored, value, extra)) ?? TOPICS[0];
     }
     return candidate;
   });
@@ -359,6 +377,16 @@ function Roadmap() {
       setPart(1);
     }
   }, [subject]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The plan arrives with the account (a restored session, a track changed on
+  // another page). A topic it leaves out, with nothing passed in it, is not
+  // one to stay on.
+  useEffect(() => {
+    if (visibleTopics.length > 0 && !visibleTopics.includes(topic)) {
+      setTopic(visibleTopics.find((value) => isTopicUnlocked(progress, value, new Set(extraUnlocks))) ?? visibleTopics[0]);
+      setPart(1);
+    }
+  }, [visibleTopics]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [active, setActive] = useState<Active | null>(null);
   const [playable, setPlayable] = useState<RoadmapPlayable | null>(null);
@@ -380,8 +408,8 @@ function Roadmap() {
   // How many of the subject's paths are still closed — surfaced under the rail
   // so the dimmed pills read as content to earn, not as broken buttons.
   const lockedTopicCount = useMemo(
-    () => TOPICS.filter((value) => !isUnlocked(value)).length,
-    [TOPICS, isUnlocked],
+    () => visibleTopics.filter((value) => !isUnlocked(value)).length,
+    [visibleTopics, isUnlocked],
   );
   // The topic's full (global) level list, split into progression checkpoints.
   const topicStructure = structure?.structure[topic];
@@ -392,7 +420,10 @@ function Roadmap() {
   const availability = useMemo(() => availabilityOf(topicStructure), [topicStructure]);
   const safePart = Math.min(Math.max(part, 1), Math.max(1, ranges.length));
   const topicColor = getCategoryHexColor(topic);
-  const continueLevel = levels.find((meta) => {
+  // A topic outside the plan is on the rail only for the levels already
+  // passed in it: those open for review, the rest stay shut.
+  const topicInPlan = inPlan(topic);
+  const continueLevel = topicInPlan && levels.find((meta) => {
     const owningRange = ranges.find((r) => meta.level >= r.startLevel && meta.level <= r.endLevel);
     return !!owningRange && isPartLevelUnlocked(progress, topic, owningRange, meta.level, availability) && !isLevelPassed(progress, topic, meta.level);
   });
@@ -434,6 +465,9 @@ function Roadmap() {
 
   const onSkillCheckFinished = useCallback(
     (correct: number, verifiedUnlocks?: RoadmapTopic[]) => {
+      // Signed in, only what the server applied opens anything: the runner
+      // passes that list, empty when applying failed. The score's own tier
+      // is the signed-out preview, which the server never sees.
       const granted = verifiedUnlocks ?? topicsFromAssessment(correct);
       const added = unlockExtraTopics(granted);
       setSkillCheckOpen(false);
@@ -487,6 +521,10 @@ function Roadmap() {
     a.kind === 'level' ? { kind: 'learn-level', topic, level: a.ref } : { kind: 'learn-part-test', topic, part: a.ref };
   const openOrUpgrade = (a: Active) => {
     const content = stepContent(a);
+    // Outside the plan the server refuses the step before it asks about
+    // Premium, so never offer Premium for it.
+    const passedStep = a.kind === 'level' ? isLevelPassed(progress, topic, a.ref) : isPartTestPassed(progress, topic, a.ref);
+    if (!inPlan(topic) && !passedStep) return;
     if (isBarred(lockOf(content))) openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) });
     else open(a);
   };
@@ -508,6 +546,7 @@ function Roadmap() {
     if (urlTopic && urlTopic !== topic) return;
     const lvl = parseInt(levelRaw, 10);
     if (!Number.isInteger(lvl) || lvl < 1) return;
+    if (!inPlan(topic) && !isLevelPassed(progress, topic, lvl)) return;
     const lvls = structure.structure[topic]?.levels ?? [];
     const range = partRanges(lvls.length).find((r) => lvl >= r.startLevel && lvl <= r.endLevel);
     if (!range) return;
@@ -541,11 +580,12 @@ function Roadmap() {
   const handleFinished = (pct: number) => {
     if (!active || !playable) return;
     // Learning XP is derived from progress, so measure it across the record to
-    // reward only a NEW pass; replays/fails fall back to a small practice grant.
+    // reward only a NEW pass; replays/fails fall back to a small practice grant
+    // in a signed-out browser only (no server route awards it).
     const before = learningXpBeforeAttemptRef.current;
     if (active.kind === 'level') recordLevelResult(topic, active.ref, pct, playable.passPct);
     else recordPartTestResult(topic, active.ref, pct, playable.passPct);
-    awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before);
+    awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before, isAuthenticated);
   };
 
   // Lay the whole topic out as a serpentine: nodes flow left→right and gently
@@ -574,12 +614,13 @@ function Roadmap() {
       if (node.type === 'test') {
         const passed = isPartTestPassed(progress, topic, node.part);
         const unavailable = availability.unavailableCheckpoints?.has(node.part) ?? false;
-        const unlocked = !unavailable && isPartTestUnlocked(progress, topic, node.range, availability);
-        const premium = !passed && !unavailable && isBarred(lockOf({ kind: 'learn-part-test', topic, part: node.part }));
+        const outOfPlan = !topicInPlan && !passed;
+        const unlocked = !unavailable && !outOfPlan && isPartTestUnlocked(progress, topic, node.range, availability);
+        const premium = !passed && !unavailable && !outOfPlan && isBarred(lockOf({ kind: 'learn-part-test', topic, part: node.part }));
         return {
           i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 25,
           accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, part: node.part, range: node.range,
-          unlocked, passed, isCurrent: unlocked && !passed && !premium, unavailable, premium,
+          unlocked, passed, isCurrent: unlocked && !passed && !premium, unavailable, premium, outOfPlan,
           best: partTestBestPct(progress, topic, node.part),
         };
       }
@@ -588,8 +629,9 @@ function Roadmap() {
       const band = bandForCategory(topic, meta.difficulty);
       const passed = isLevelPassed(progress, topic, meta.level);
       const unavailable = meta.unavailable === true;
-      const unlocked = !unavailable && isPartLevelUnlocked(progress, topic, nodeRange, meta.level, availability);
-      const premium = !passed && !unavailable && isBarred(lockOf({ kind: 'learn-level', topic, level: meta.level }));
+      const outOfPlan = !topicInPlan && !passed;
+      const unlocked = !unavailable && !outOfPlan && isPartLevelUnlocked(progress, topic, nodeRange, meta.level, availability);
+      const premium = !passed && !unavailable && !outOfPlan && isBarred(lockOf({ kind: 'learn-level', topic, level: meta.level }));
       const isCurrent = unlocked && !passed && !premium;
       // Spaced mastery reads the stored level entry (migration-024 fields are
       // additive; older/guest rows without passDays resolve to "cleared").
@@ -598,7 +640,7 @@ function Roadmap() {
         i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: isCurrent ? 23 : 20,
         accent: band.solid, grad: band.grad, level: meta,
         displayNum: meta.level,
-        unlocked, passed, isCurrent, unavailable, premium,
+        unlocked, passed, isCurrent, unavailable, premium, outOfPlan,
         best: levelBestPct(progress, topic, meta.level),
         mastery: masteryState(entry),
         due: isDueForReview(entry),
@@ -614,7 +656,7 @@ function Roadmap() {
       return { x1: a.cx, y1: a.cy, x2: b.cx, y2: b.cy, color: done || active ? b.accent : null, active };
     });
     return { width: pathWidth, height, cellW, nodes: placed, segments };
-  }, [pathWidth, levels, ranges, progress, topic, availability, lockOf]);
+  }, [pathWidth, levels, ranges, progress, topic, availability, lockOf, topicInPlan]);
 
   /* ──── skill check view ─────────────────────────────────────────────── */
   if (skillCheckOpen) {
@@ -681,6 +723,11 @@ function Roadmap() {
         <div style={{ marginTop: 4 }}>
           <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
         </div>
+        {!isAuthenticated && !authLoading && (
+          <div style={{ marginTop: 4 }}>
+            <Text type="supporting" color="secondary">{t('register.deviceOnly')}</Text>
+          </div>
+        )}
       </div>
 
       {retired && (
@@ -698,7 +745,7 @@ function Roadmap() {
       {/* Radiogroup semantics (not tabs — there is no tabpanel wiring), so AT
           announces "N of M selected" correctly. */}
       <RadioCardGroup value={topic} onChange={(value) => selectTopic(value as RoadmapTopic)} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail">
-        {TOPICS.map((value, index) => {
+        {visibleTopics.map((value, index) => {
           const unlocked = isUnlocked(value);
           const color = getCategoryHexColor(value);
           const label = t(categoryLabelKey(value));
@@ -739,7 +786,7 @@ function Roadmap() {
       {lockedTopicCount > 0 && (
         <p className="rm-topic-locked-note">
           <LockIcon size={13} />
-          <span>{t('roadmap.topicsLockedCount', { locked: lockedTopicCount, total: TOPICS.length })}</span>
+          <span>{t('roadmap.topicsLockedCount', { locked: lockedTopicCount, total: visibleTopics.length })}</span>
           <span>{t('roadmap.topicsLockedHowTo')}</span>
         </p>
       )}
@@ -863,6 +910,7 @@ function Roadmap() {
                           best={n.best}
                           isCurrent={n.isCurrent}
                           premium={n.premium ?? false}
+                          outOfPlan={n.outOfPlan ?? false}
                           cellW={layout.cellW}
                           onClick={() => openOrUpgrade({ kind: 'test', ref: n.part! })}
                           t={t}
@@ -881,6 +929,7 @@ function Roadmap() {
                           due={n.due ?? false}
                           masteryDays={n.masteryDays ?? 0}
                           premium={n.premium ?? false}
+                          outOfPlan={n.outOfPlan ?? false}
                           cellW={layout.cellW}
                           onClick={() => openOrUpgrade({ kind: 'level', ref: n.level!.level })}
                           t={t}
@@ -951,13 +1000,15 @@ function MasteryLegend({ t }: { t: TFn }) {
 /* ──── level node ───────────────────────────────────────────────────────── */
 
 function LevelNode({
-  meta, displayNum, accent, unlocked, unavailable, passed, best, isCurrent, mastery, due, masteryDays, premium, onClick, t, cellW,
+  meta, displayNum, accent, unlocked, unavailable, passed, best, isCurrent, mastery, due, masteryDays, premium, outOfPlan = false, onClick, t, cellW,
 }: {
   meta: RoadmapLevelMeta; displayNum: number; accent: string;
   unlocked: boolean; unavailable: boolean; passed: boolean; best: number; isCurrent: boolean;
   mastery: MasteryState; due: boolean; masteryDays: number;
   /** Premium opens this level: focusable, aria-disabled, "Premium" in text. */
   premium: boolean;
+  /** Outside the learner's plan: shut, with the reason in its hint. */
+  outOfPlan?: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
   if (premium) {
@@ -976,7 +1027,7 @@ function LevelNode({
   // gated by the previous part's test at the part selector, never here. An
   // unavailable level is a different thing from a locked one: nothing the
   // learner does opens it, and the path continues past it.
-  const lockedHint = unavailable ? t('roadmap.unavailableHint') : t('roadmap.lockedHint');
+  const lockedHint = unavailable ? t('roadmap.unavailableHint') : outOfPlan ? t('roadmap.notInPlanHint') : t('roadmap.lockedHint');
   // Spaced mastery: a passed level is "cleared" (amber) until it is mastered
   // (green). Soft fill + strong border/icon mirror the quiz feedback tokens so
   // contrast holds in light and dark; the glyph (check vs star) and the aria
@@ -1056,11 +1107,12 @@ function LevelNode({
 /* ──── part-test (boss) node ────────────────────────────────────────────── */
 
 function PartTestNode({
-  part, range, accent, grad, unlocked, unavailable, passed, best, isCurrent, premium, onClick, t, cellW,
+  part, range, accent, grad, unlocked, unavailable, passed, best, isCurrent, premium, outOfPlan = false, onClick, t, cellW,
 }: {
   part: number; range: PartRange; accent: string; grad: [string, string];
   unlocked: boolean; unavailable: boolean; passed: boolean; best: number; isCurrent: boolean;
   premium: boolean;
+  outOfPlan?: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
   const title = t('roadmap.partTestTitle', { n: part });
@@ -1074,7 +1126,7 @@ function PartTestNode({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <div className={isCurrent ? 'rm-bob' : undefined}>
-        <Tooltip content={unavailable ? t('roadmap.unavailableHint') : t('roadmap.checkpointLocked', { from: range.startLevel, to: range.endLevel })} placement="above" isEnabled={!unlocked}>
+        <Tooltip content={unavailable ? t('roadmap.unavailableHint') : outOfPlan ? t('roadmap.notInPlanHint') : t('roadmap.checkpointLocked', { from: range.startLevel, to: range.endLevel })} placement="above" isEnabled={!unlocked}>
           <span style={{ display: 'inline-block' }}>
           <button
             type="button"
@@ -1207,6 +1259,18 @@ function HeartMeter({ mistakes, max, hit, t }: { mistakes: number; max: number; 
   );
 }
 
+/** Why a level's session can no longer be used. `expired`: it outlived the
+ * attempt the server keeps for it (two hours), or the attempt was closed.
+ * `signInChanged`: it was opened under a different sign-in than the one now
+ * answering (a sign-in or sign-out mid-level). */
+type SessionRestart = 'expired' | 'signInChanged';
+function sessionRestartFor(error: unknown): SessionRestart | null {
+  if (!(error instanceof ApiError)) return null;
+  if (error.code === 'session_owner_mismatch') return 'signInChanged';
+  if (error.code === 'invalid_session' || error.code === 'attempt_conflict') return 'expired';
+  return null;
+}
+
 function LessonRunner({
   playable, firstLevelPass = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
 }: {
@@ -1270,6 +1334,15 @@ function LessonRunner({
   // retired while it was open. Nothing was recorded, so the finish screen
   // offers the level again rather than a score.
   const [invalidated, setInvalidated] = useState(false);
+  // The server can no longer use this session: it outlived its attempt, or it
+  // was opened under a different sign-in. Sending it again fails the same
+  // way, so the level offers a fresh start instead of Try again.
+  const [restart, setRestart] = useState<SessionRestart | null>(null);
+  const reportError = useCallback((error: unknown) => {
+    const reason = sessionRestartFor(error);
+    if (reason) setRestart(reason);
+    else setAnswerError(friendlyError(error));
+  }, []);
 
   const question = presented[qIndex];
   // Out of hearts once this answer is revealed and it pushed mistakes to the max.
@@ -1294,12 +1367,12 @@ function LessonRunner({
           window.setTimeout(() => setHeartHit(false), 500);
         }
       } catch (error) {
-        setAnswerError(friendlyError(error));
+        reportError(error);
       } finally {
         setGrading(false);
       }
     },
-    [revealed, grading, playable.sessionId, question.id, lang, isCheckpoint],
+    [revealed, grading, playable.sessionId, question.id, lang, isCheckpoint, reportError],
   );
 
   const complete = useCallback(async () => {
@@ -1322,11 +1395,11 @@ function LessonRunner({
       setCodingPhase(false);
       setFinished(true);
     } catch (error) {
-      setAnswerError(friendlyError(error));
+      reportError(error);
     } finally {
       setCompleting(false);
     }
-  }, [onFinished, playable.passPct, playable.sessionId]);
+  }, [onFinished, playable.passPct, playable.sessionId, reportError]);
 
   const advance = useCallback(async () => {
     if (outOfHearts) {
@@ -1346,7 +1419,7 @@ function LessonRunner({
         setDead(true);
         setFinished(true);
       } catch (error) {
-        setAnswerError(friendlyError(error));
+        reportError(error);
       } finally {
         setCompleting(false);
       }
@@ -1365,7 +1438,7 @@ function LessonRunner({
     } else {
       await complete();
     }
-  }, [total, outOfHearts, qIndex, onFinished, playable.passPct, playable.sessionId, codingTasks.length, complete]);
+  }, [total, outOfHearts, qIndex, onFinished, playable.passPct, playable.sessionId, codingTasks.length, complete, reportError]);
 
   const submitFlag = async (detail?: string) => {
     await reportQuestion({
@@ -1401,8 +1474,35 @@ function LessonRunner({
   }, [finished, showIntro, codingPhase, revealed, question, choose, advance]);
 
   useEffect(() => {
-    if (finished) resultHeadingRef.current?.focus({ preventScroll: true });
-  }, [finished]);
+    if (finished || restart) resultHeadingRef.current?.focus({ preventScroll: true });
+  }, [finished, restart]);
+
+  if (restart) {
+    return (
+      <div
+        style={{
+          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          alignItems: 'center', textAlign: 'center', maxWidth: 520, margin: '0 auto', position: 'relative',
+          paddingLeft: 16, paddingRight: 16,
+        }}
+      >
+        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">
+          {restart === 'expired' ? t('roadmap.expiredTitle') : t('roadmap.signInChangedTitle')}
+        </h1>
+        <div role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
+          {restart === 'expired' ? t('roadmap.expiredBody') : t('roadmap.signInChangedBody')}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+          <button type="button" className="rm-accent-btn" onClick={onReplay} style={accentFill}>
+            {t('roadmap.restartLevel')}
+          </button>
+          <button type="button" className="rm-text-btn" onClick={onExit}>
+            {t('roadmap.backToPath')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (showIntro && intro) {
     return (
@@ -1575,9 +1675,19 @@ function LessonRunner({
             <div style={{ color: 'var(--color-text-secondary)', marginBottom: 8 }}>
               {t('roadmap.scoreLine', { correct: correctCount, total })}
             </div>
-            {codingTasks.length > 0 && (
+            {codingTasks.length > 0 && (user || codingPending.length === 0) && (
               <div style={{ fontSize: '0.9rem', color: codingPending.length === 0 ? 'var(--ss-success-strong, var(--ss-success))' : 'var(--ss-warning)', fontWeight: 600, marginBottom: 8 }}>
                 {codingPending.length === 0 ? t('coding.lesson.allPassed') : t('coding.lesson.pending', { n: codingPending.length })}
+              </div>
+            )}
+            {/* Signed out, a coding task's pass is never recorded, so the level
+                always reads its tasks as pending. Say why, and how to fix it. */}
+            {codingTasks.length > 0 && !user && codingPending.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+                  {t('coding.lesson.signedOutPending')}
+                </div>
+                <SignInButton />
               </div>
             )}
             {!passed && pct < playable.passPct && (
@@ -1894,6 +2004,9 @@ function SkillCheckRunner({
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [correct, setCorrect] = useState(0);
   const [verifiedUnlocks, setVerifiedUnlocks] = useState<RoadmapTopic[] | undefined>();
+  // Signed in, the receipt that could not be applied, kept for Try again.
+  const [unapplied, setUnapplied] = useState<string | null>(null);
+  const [applying, setApplying] = useState(false);
   const resultHeadingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
@@ -1919,22 +2032,35 @@ function SkillCheckRunner({
   // Apply the server-verified result. Grading + unlocks live on the server; the
   // receipt is only applied when signed in — guests get the local unlock tier
   // from `correct` back in the parent's onSkillCheckFinished.
+  const applyReceipt = useCallback(async (receipt: string) => {
+    setApplying(true);
+    try {
+      const applied = await applySkillCheckReceipt(receipt);
+      setVerifiedUnlocks(applied.unlocked);
+      setUnapplied(null);
+    } catch {
+      // Opening paths on this device alone would draw them as open while the
+      // server refuses every level in them, so nothing opens; the result says
+      // so and offers to try again while the receipt is still valid.
+      setVerifiedUnlocks([]);
+      setUnapplied(receipt);
+    } finally {
+      setApplying(false);
+    }
+  }, []);
+
   const finishFrom = useCallback(async (res: PlacementDone) => {
     setCorrect(res.correct);
-    let verified: RoadmapTopic[] | undefined;
-    if (isAuthenticated && res.resultReceipt) {
-      try {
-        const applied = await applySkillCheckReceipt(res.resultReceipt);
-        verified = applied.unlocked;
-      } catch {
-        // The receipt is the server's authority; if applying it fails we still
-        // show the score and fall back to the local unlock tier in onFinished.
-        verified = undefined;
-      }
+    setUnapplied(null);
+    if (isAuthenticated) {
+      // Without a receipt the server verified nothing, so nothing opens.
+      if (res.resultReceipt) await applyReceipt(res.resultReceipt);
+      else setVerifiedUnlocks([]);
+    } else {
+      setVerifiedUnlocks(undefined);
     }
-    setVerifiedUnlocks(verified);
     setPhase('result');
-  }, [isAuthenticated]);
+  }, [isAuthenticated, applyReceipt]);
 
   const start = useCallback(async () => {
     setPhase('loading');
@@ -2046,14 +2172,25 @@ function SkillCheckRunner({
         <div style={{ marginTop: 4 }}>
           <Text color="secondary" weight="bold">{t('roadmap.skillCheckResult', { correct, total })}</Text>
         </div>
-        <div style={{ marginTop: 8, marginBottom: 8 }}>
-          <Text color="secondary">{t(tier as TranslationKey)}</Text>
-        </div>
-        <div style={{ marginBottom: 24 }}>
-          <Text type="supporting" color="secondary">{t('placement.doneBody')}</Text>
-        </div>
+        {unapplied ? (
+          <div role="alert" style={{ marginTop: 8, marginBottom: 24 }}>
+            <Text color="secondary">{t('placement.applyFailed')}</Text>
+          </div>
+        ) : (
+          <>
+            <div style={{ marginTop: 8, marginBottom: 8 }}>
+              <Text color="secondary">{t(tier as TranslationKey)}</Text>
+            </div>
+            <div style={{ marginBottom: 24 }}>
+              <Text type="supporting" color="secondary">{t('placement.doneBody')}</Text>
+            </div>
+          </>
+        )}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <AxButton variant="primary" label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
+          {unapplied && (
+            <AxButton variant="primary" label={t('roadmap.retry')} isDisabled={applying} onClick={() => void applyReceipt(unapplied)} />
+          )}
+          <AxButton variant={unapplied ? 'secondary' : 'primary'} label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
           <AxButton variant="secondary" label={t('placement.retry')} onClick={() => void start()} />
         </div>
       </div>
