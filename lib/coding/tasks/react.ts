@@ -3841,7 +3841,7 @@ test('a failed booking keeps the slot free and selected for another try', () => 
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Analytics panel",
-    prompt: "Fetch events, aggregate totals with reduce, filter by date/type, and render summary cards. Explain write-heavy event storage.",
+    prompt: "An analytics panel sums up a product’s events. On mount, fetch `/api/events`; the answer is a list of `{ id, type, date }`, where `type` is a word such as `visit` or `signup` and `date` a day such as `2026-09-03`. While it loads, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load events” in an element with `role=\"alert\"`. Three controls filter the events: a `select` labelled “Type”, whose first option “All types” keeps every type, followed by one option per type found in the events, in alphabetical order; and two date inputs labelled “From” and “To”, both inclusive, where an empty box sets no limit. From the events that pass every filter, count each type with `reduce` and render one summary card per type: an `article` with the type in an `h3` and its count, just the number, in a `p`, in alphabetical order of type. Above the cards, a line reads “Showing <n> of <m> events”, where m counts every event loaded. When no event passes the filters, show “No events match these filters” instead of the cards. The notes at the top are for your explanation of how you would store events when many arrive every second; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3857,57 +3857,147 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
-const [items, setItems] = useState([]);
+    skeleton: `const [events, setEvents] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [type, setType] = useState('all');
+const [from, setFrom] = useState('');
+const [to, setTo] = useState('');
 
-useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+// load /api/events in a mount effect, as in the earlier tasks
 
-  loadItems();
-}, []);
+const types = [...new Set(events.map(event => event.type))].sort();
+const shown = events.filter(event =>
+  (type === 'all' || event.type === type) &&
+  (from === '' || event.date >= from) &&
+  true); // and the To box
+const counts = shown.reduce((totals, event) => {
+  // totals[event.type] goes up by one
+  return totals;
+}, {});
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
-
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+// <label>From <input type="date" value={from} onChange={event => setFrom(event.target.value)} /></label>`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "Dates written as `2026-09-03` sort the same as text and as time, so a plain string comparison with `>=` and `<=` checks a range. Filter first, then reduce over what is left, and the cards follow every filter.",
     ],
     approach: [
-      "Fetch the mock events once into array state with loading and error handling.",
-      "Keep the date range and the event type as separate state values bound to controlled inputs.",
-      "Derive the filtered events first, then aggregate the totals over that subset with reduce so the cards follow the filters.",
-      "Render one keyed summary card per aggregated total, and explain write-heavy event storage in comments.",
+      "Fetch the events once in a mount effect into array state, with loading and error state, and treat an answer that is not ok as a failure.",
+      "Keep the type and the two dates as separate state values bound to controlled inputs, with `all` and empty strings for no filter.",
+      "Derive the filtered events first, then reduce them into an object of counts by type, and render one keyed card per key of that object, sorted.",
+      "Build the type options from the full list with a `Set`. Then write the notes: append-only writes, a queue in front of the database, and totals rolled up per day instead of scanning raw events.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Events are fetched and aggregated with reduce.",
-      "Date and type filters change the summary cards.",
-      "Your comments explain write-heavy event storage.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const answer = (call, data, status = 200) => act(async () => {
+  call.respond(data, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+// Each summary card as its type and its count.
+const cards = () => [...document.querySelectorAll('article')].map(card => [card.querySelector('h3').textContent, card.querySelector('p').textContent]);
+const chooseType = text => {
+  const select = screen.getByLabelText('Type');
+  const option = [...select.options].find(one => one.textContent === text);
+  fireEvent.change(select, { target: { value: option.value } });
+};
+const setDate = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+const EVENTS = [
+  { id: 1, type: 'visit', date: '2026-09-01' },
+  { id: 2, type: 'signup', date: '2026-09-01' },
+  { id: 3, type: 'visit', date: '2026-09-02' },
+  { id: 4, type: 'purchase', date: '2026-09-03' },
+  { id: 5, type: 'visit', date: '2026-09-03' },
+  { id: 6, type: 'signup', date: '2026-09-04' },
+];
+
+test('events load on mount and one card per type counts them', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  expect(calls[0].url).toBe('/api/events');
+  expect(screen.getByText('Loading…')).toBeTruthy();
+  await answer(calls[0], EVENTS);
+  expect(screen.queryByText('Loading…')).toBeNull();
+  expect(cards()).toEqual([['purchase', '1'], ['signup', '2'], ['visit', '3']]);
+  expect(screen.getByText('Showing 6 of 6 events')).toBeTruthy();
+}));
+
+test('the type filter keeps one type, and All types brings the rest back', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], EVENTS);
+  chooseType('visit');
+  expect(cards()).toEqual([['visit', '3']]);
+  expect(screen.getByText('Showing 3 of 6 events')).toBeTruthy();
+  chooseType('All types');
+  expect(cards()).toEqual([['purchase', '1'], ['signup', '2'], ['visit', '3']]);
+}));
+
+test('From keeps that day and the days after it', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], EVENTS);
+  setDate('From', '2026-09-03');
+  expect(cards()).toEqual([['purchase', '1'], ['signup', '1'], ['visit', '1']]);
+  expect(screen.getByText('Showing 3 of 6 events')).toBeTruthy();
+}));
+
+test('To keeps that day and the days before it, and both make a range', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], EVENTS);
+  setDate('To', '2026-09-02');
+  expect(cards()).toEqual([['signup', '1'], ['visit', '2']]);
+  setDate('From', '2026-09-02');
+  expect(cards()).toEqual([['visit', '1']]);
+  expect(screen.getByText('Showing 1 of 6 events')).toBeTruthy();
+}));
+
+test('the filters combine, and nothing left says so', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], EVENTS);
+  chooseType('purchase');
+  setDate('From', '2026-09-04');
+  expect(cards()).toEqual([]);
+  expect(screen.getByText('No events match these filters')).toBeTruthy();
+  expect(screen.getByText('Showing 0 of 6 events')).toBeTruthy();
+}));
+
+test('a failed request shows an alert', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load events');
+  expect(screen.queryByText('Loading…')).toBeNull();
+  expect(cards()).toEqual([]);
+}));
+`,
     api: {
       method: "GET",
-      url: "https://jsonplaceholder.typicode.com/posts",
-      note: "Use the returned records as mock events for aggregation practice.",
+      url: "/api/events",
+      note: "Your own endpoint, with no public service behind it: the checks answer it with their own events and the preview with a few samples.",
     },
   },
   {

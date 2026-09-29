@@ -4634,16 +4634,332 @@ test('a new booking clears the last status, and a 409 after a success books both
 }));`,
   },
   "react-analytics-panel": {
-    solution: `Senior-style approach for Analytics panel:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: open the panel, narrow it by type and by a range of days, and
+// read the count of each type in the cards.
+// Data model: event { id, type, date, userId, payload }. The page keeps the
+// raw list and derives the filtered list and the counts during render.
+// API endpoints: POST /api/events to record one (write path), GET
+// /api/events?from&to&type for the panel (read path).
+// Reliability and scale: writes far outnumber reads, so the write path only
+// appends: the API validates, puts the event on a queue and answers 202, and
+// a worker batches inserts into an append-only table partitioned by day.
+// The panel never counts raw rows: a job rolls events up into daily totals
+// per type, and the API sums those. Old raw partitions go to cheap storage.
+
+const App = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [type, setType] = useState('all');
+  const [from, setFrom] = useState('');
+  const [to, setTo] = useState('');
+
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const response = await fetch('/api/events');
+        if (!response.ok) throw new Error('Request failed');
+        setEvents(await response.json());
+      } catch (requestError) {
+        setError('Could not load events');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadEvents();
+  }, []);
+
+  const types = [...new Set(events.map(event => event.type))].sort();
+  // Days written as 2026-09-03 compare correctly as text.
+  const shown = events.filter(event =>
+    (type === 'all' || event.type === type) &&
+    (from === '' || event.date >= from) &&
+    (to === '' || event.date <= to));
+  const counts = shown.reduce((totals, event) => ({ ...totals, [event.type]: (totals[event.type] || 0) + 1 }), {});
+  const cardTypes = Object.keys(counts).sort();
+
+  if (loading) return <main><h2>Analytics panel</h2><p>Loading…</p></main>;
+  if (error) return <main><h2>Analytics panel</h2><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>Analytics panel</h2>
+      <label>
+        Type{' '}
+        <select value={type} onChange={event => setType(event.target.value)}>
+          <option value="all">All types</option>
+          {types.map(one => <option key={one} value={one}>{one}</option>)}
+        </select>
+      </label>
+      <label>From <input type="date" value={from} onChange={event => setFrom(event.target.value)} /></label>
+      <label>To <input type="date" value={to} onChange={event => setTo(event.target.value)} /></label>
+      <p>Showing {shown.length} of {events.length} events</p>
+      {cardTypes.length === 0 && <p>No events match these filters</p>}
+      {cardTypes.map(one => (
+        <article key={one}>
+          <h3>{one}</h3>
+          <p>{counts[one]}</p>
+        </article>
+      ))}
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `import React, { useEffect, useState } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: pick a type and dates, and the cards show how many of each
+// type happened.
+// Data model: each event has an id, a type and a date.
+// API endpoints: GET /api/events, and POST /api/events to record a new one.
+// Reliability and scale: many events arrive every second, so I would save
+// them without waiting (put them in a queue and insert them in batches) and
+// keep a table of totals per day and type, so the panel reads a few rows
+// instead of counting millions.
+
+const App = () => {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedType, setSelectedType] = useState('all');
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
+
+  useEffect(() => {
+    const loadEvents = async () => {
+      try {
+        const response = await fetch('/api/events');
+        if (!response.ok) {
+          throw new Error('Request failed');
+        }
+        const data = await response.json();
+        setEvents(data);
+      } catch (requestError) {
+        setError('Could not load events');
+      }
+      setLoading(false);
+    };
+    loadEvents();
+  }, []);
+
+  const types = [];
+  for (const event of events) {
+    if (!types.includes(event.type)) {
+      types.push(event.type);
+    }
+  }
+  types.sort();
+
+  const shownEvents = [];
+  for (const event of events) {
+    if (selectedType !== 'all' && event.type !== selectedType) {
+      continue;
+    }
+    if (fromDate !== '' && event.date < fromDate) {
+      continue;
+    }
+    if (toDate !== '' && event.date > toDate) {
+      continue;
+    }
+    shownEvents.push(event);
+  }
+
+  const addToTotals = (totals, event) => {
+    const updated = { ...totals };
+    if (updated[event.type] === undefined) {
+      updated[event.type] = 0;
+    }
+    updated[event.type] = updated[event.type] + 1;
+    return updated;
+  };
+  const counts = shownEvents.reduce(addToTotals, {});
+  const cardTypes = Object.keys(counts);
+  cardTypes.sort();
+
+  if (loading) {
+    return (
+      <main>
+        <h2>Analytics panel</h2>
+        <p>Loading…</p>
+      </main>
+    );
+  }
+
+  if (error !== '') {
+    return (
+      <main>
+        <h2>Analytics panel</h2>
+        <p role="alert">{error}</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <h2>Analytics panel</h2>
+      <label htmlFor="type">Type</label>
+      <select id="type" value={selectedType} onChange={(event) => setSelectedType(event.target.value)}>
+        <option value="all">All types</option>
+        {types.map((type) => (
+          <option key={type} value={type}>{type}</option>
+        ))}
+      </select>
+      <label htmlFor="from">From</label>
+      <input id="from" type="date" value={fromDate} onChange={(event) => setFromDate(event.target.value)} />
+      <label htmlFor="to">To</label>
+      <input id="to" type="date" value={toDate} onChange={(event) => setToDate(event.target.value)} />
+      <p>Showing {shownEvents.length} of {events.length} events</p>
+      {cardTypes.length === 0 && <p>No events match these filters</p>}
+      {cardTypes.map((type) => (
+        <article key={type}>
+          <h3>{type}</h3>
+          <p>{counts[type]}</p>
+        </article>
+      ))}
+    </main>
+  );
+};
+
+export default App;`,
+    senior: `import React, { useEffect, useMemo, useState } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: filter by type and an inclusive range of days; the cards and
+// the summary line follow every filter.
+// Data model: event { id, type, date, userId, props }; the client keeps raw
+// events and derives everything else with useMemo.
+// API endpoints: POST /api/events (batched, 202 Accepted) and
+// GET /api/stats?from&to&type answered from rollups.
+// Reliability and scale: the write path is append-only and asynchronous:
+// clients batch and retry with an idempotency id per event, the API writes to
+// a log (Kafka or a queue) and returns 202, and consumers load a columnar
+// store partitioned by day. Reads hit per-day, per-type rollups maintained by
+// the consumer, so a dashboard query touches days x types rows, never raw
+// events. Late events land in their day's partition and update its rollup.
+
+const NO_FILTERS = { type: 'all', from: '', to: '' };
+
+const matches = ({ type, from, to }) => event =>
+  (type === 'all' || event.type === type) &&
+  (!from || event.date >= from) &&
+  (!to || event.date <= to);
+
+const useEvents = () => {
+  const [state, setState] = useState({ status: 'loading', events: [] });
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch('/api/events');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const events = await response.json();
+        if (active) setState({ status: 'ready', events });
+      } catch {
+        if (active) setState({ status: 'error', events: [] });
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+  return state;
+};
+
+const SummaryCard = ({ type, count }) => (
+  <article>
+    <h3>{type}</h3>
+    <p>{count}</p>
+  </article>
+);
+
+const App = () => {
+  const { status, events } = useEvents();
+  const [filters, setFilters] = useState(NO_FILTERS);
+  const update = key => event => setFilters(current => ({ ...current, [key]: event.target.value }));
+
+  const types = useMemo(() => [...new Set(events.map(event => event.type))].sort(), [events]);
+  const shown = useMemo(() => events.filter(matches(filters)), [events, filters]);
+  const counts = useMemo(() => shown.reduce((totals, { type }) => totals.set(type, (totals.get(type) || 0) + 1), new Map()), [shown]);
+  const cards = [...counts].sort(([a], [b]) => a.localeCompare(b));
+
+  if (status === 'loading') return <main><h2>Analytics panel</h2><p aria-live="polite">Loading…</p></main>;
+  if (status === 'error') return <main><h2>Analytics panel</h2><p role="alert">Could not load events</p></main>;
+
+  return (
+    <main>
+      <h2>Analytics panel</h2>
+      <fieldset>
+        <legend>Filters</legend>
+        <label>Type <select value={filters.type} onChange={update('type')}>
+          <option value="all">All types</option>
+          {types.map(type => <option key={type} value={type}>{type}</option>)}
+        </select></label>
+        <label>From <input type="date" value={filters.from} max={filters.to || undefined} onChange={update('from')} /></label>
+        <label>To <input type="date" value={filters.to} min={filters.from || undefined} onChange={update('to')} /></label>
+      </fieldset>
+      <p aria-live="polite">Showing {shown.length} of {events.length} events</p>
+      {cards.length === 0
+        ? <p>No events match these filters</p>
+        : cards.map(([type, count]) => <SummaryCard key={type} type={type} count={count} />)}
+    </main>
+  );
+};
+
+export default App;`,
+    hiddenSuite: `const FRESH = [
+  { id: 11, type: 'refund', date: '2026-10-05' },
+  { id: 12, type: 'download', date: '2026-10-01' },
+  { id: 13, type: 'visit', date: '2026-10-03' },
+  { id: 14, type: 'download', date: '2026-10-02' },
+  { id: 15, type: 'download', date: '2026-10-05' },
+];
+const typeOptions = () => [...screen.getByLabelText('Type').options].map(option => option.textContent);
+
+test('the type options and the cards come from the events themselves', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH);
+  expect(typeOptions()).toEqual(['All types', 'download', 'refund', 'visit']);
+  expect(cards()).toEqual([['download', '3'], ['refund', '1'], ['visit', '1']]);
+  expect(screen.getByText('Showing 5 of 5 events')).toBeTruthy();
+}));
+
+test('emptying a date box removes that limit', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH);
+  setDate('From', '2026-10-03');
+  expect(cards()).toEqual([['download', '1'], ['refund', '1'], ['visit', '1']]);
+  expect(screen.getByText('Showing 3 of 5 events')).toBeTruthy();
+  setDate('From', '');
+  expect(cards()).toEqual([['download', '3'], ['refund', '1'], ['visit', '1']]);
+}));
+
+test('a type and a range work together', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH);
+  chooseType('download');
+  setDate('From', '2026-10-02');
+  setDate('To', '2026-10-05');
+  expect(cards()).toEqual([['download', '2']]);
+  expect(screen.getByText('Showing 2 of 5 events')).toBeTruthy();
+}));
+
+test('an answer that is not ok is a failure', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH, 500);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load events');
+  expect(cards()).toEqual([]);
+}));
+
+test('no events at all', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], []);
+  expect(typeOptions()).toEqual(['All types']);
+  expect(cards()).toEqual([]);
+  expect(screen.getByText('Showing 0 of 0 events')).toBeTruthy();
+  expect(screen.getByText('No events match these filters')).toBeTruthy();
+}));`,
   },
   "react-interview-mini-project": {
     solution: `Senior-style approach for Interview mini project:
