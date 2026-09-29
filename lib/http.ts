@@ -42,6 +42,11 @@ export function withRequestContext<T>(
 ): Promise<Awaited<T> | VercelResponse | void> {
   const requestId = incomingRequestId(req);
   res.setHeader('X-Request-Id', requestId);
+  // Most answers are about the caller (stats, XP, a wallet, a room's host view
+  // with its answers), so none is stored by a shared cache unless its handler
+  // says so: the public boards, settings and structure set their own header,
+  // which replaces this one.
+  res.setHeader('Cache-Control', 'private, no-store');
   const started = Date.now();
   return requestContext.run({ requestId }, async () => {
     try {
