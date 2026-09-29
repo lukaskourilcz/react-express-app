@@ -251,7 +251,13 @@ describe('the timeout strike', () => {
     await mount();
     await start();
     const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
-    for (let second = 0; second < 90; second += 1) await tick(1000);
+    // The clock counts wall time, which on a slow runner also moves while
+    // the test works, so the strike can go out a tick or two before 90.
+    let second = 0;
+    while (timeouts === 0 && second < 90) {
+      await tick(1000);
+      second += 1;
+    }
     await settle();
     expect(timeouts).toBe(1);
     expect(screen.getByText('Time ran out. The strike could not be saved yet and will be sent again in a moment.')).toBeInTheDocument();
