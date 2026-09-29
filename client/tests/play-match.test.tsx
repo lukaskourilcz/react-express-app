@@ -17,6 +17,7 @@ const api = vi.hoisted(() => ({
   sendHeartbeat: vi.fn(async () => ({ ok: true })),
   createMatch: vi.fn(),
   fetchDistribution: vi.fn(),
+  controlMatch: vi.fn(),
 }));
 vi.mock('../src/lib/play', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/lib/play')>(),
@@ -28,12 +29,15 @@ vi.mock('../src/lib/auth', () => ({
   getUserProfile: () => ({}),
   displayNameFromProfile: (_profile: unknown, fallback: string) => fallback,
 }));
-const live = vi.hoisted(() => ({ listeners: new Map<string, () => void>() }));
+const live = vi.hoisted(() => ({
+  listeners: new Map<string, (payload?: unknown) => void>(),
+  sent: [] as Array<{ event: string; payload: unknown }>,
+}));
 vi.mock('../src/lib/realtime', async (importOriginal) => ({
   ...await importOriginal<typeof import('../src/lib/realtime')>(),
   joinMatchChannel: () => ({
-    send: async () => undefined,
-    subscribe: (event: string, fn: () => void) => {
+    send: async (event: string, payload: unknown) => { live.sent.push({ event, payload }); },
+    subscribe: (event: string, fn: (payload?: unknown) => void) => {
       live.listeners.set(event, fn);
       return () => undefined;
     },
@@ -84,6 +88,7 @@ beforeEach(() => {
   for (const fn of Object.values(api)) fn.mockReset();
   api.sendHeartbeat.mockResolvedValue({ ok: true });
   live.listeners.clear();
+  live.sent.length = 0;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -235,7 +240,7 @@ describe('the classroom presenter screen', () => {
     expect(screen.queryByRole('button', { name: 'Reveal answer' })).toBeNull();
   });
 
-  it('shows a timed question’s answer when its time is up, without the button', async () => {
+  it('shows a timed question’s answer once the server stops taking answers, without the button', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     presenting({ question_started_at: new Date(Date.now() - 28_000).toISOString(), question_duration_s: 30 });
     await mount();
@@ -244,7 +249,13 @@ describe('the classroom presenter screen', () => {
     expect(histogramKey()).toHaveLength(0);
     expect(screen.getByText('The correct answer stays hidden until time is up or you reveal it.')).toBeInTheDocument();
 
+    // The clock is out, but an answer sent on the buzzer still counts for
+    // two more seconds: the key stays off the projector until then.
     await act(async () => { await vi.advanceTimersByTimeAsync(2_500); });
+    expect(screen.getByRole('timer')).toHaveTextContent('0s');
+    expect(tone('beta')).toBe('default');
+    expect(histogramKey()).toHaveLength(0);
+    await act(async () => { await vi.advanceTimersByTimeAsync(2_000); });
     expect(tone('beta')).toBe('success');
     expect(histogramKey()).toHaveLength(1);
     expect(screen.getByText('Correct answer: B. beta')).toBeInTheDocument();
@@ -274,6 +285,227 @@ describe('the classroom presenter screen', () => {
     await screen.findByText('Pick one?');
     expect(screen.queryByRole('button', { name: 'Reveal answer' })).toBeNull();
     expect(api.fetchDistribution).not.toHaveBeenCalled();
+  });
+});
+
+const KEYED_QUESTIONS = [
+  { ...QUESTIONS[0], correct_index: 1 },
+  { ...QUESTIONS[1], correct_index: 0 },
+];
+const reads = () => api.fetchMatchState.mock.calls.length;
+// What this client broadcast, apart from the hello every client sends when
+// its channel connects.
+const roomEvents = () => live.sent.filter((one) => one.event !== 'participant_joined');
+const fire = (event: string, payload?: unknown) => act(async () => { live.listeners.get(event)!(payload); });
+const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+
+describe('what a room broadcasts', () => {
+  // A class of thirty used to send one broadcast per answer, and every
+  // client read the room for each one: about 960 reads a question from one
+  // school address. Only a change of question or phase is broadcast now,
+  // with the state it changed to.
+
+  it('tells only the host about an answer that leaves the room where it was', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    api.submitMatchAnswer.mockResolvedValue({ ok: true, is_correct: true, advanced: false });
+    await mount();
+    await screen.findByText('Pick one?');
+    const before = reads();
+    fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
+    await waitFor(() => expect(roomEvents()).toEqual([{ event: 'answered', payload: { question_idx: 0 } }]));
+    await settle();
+    expect(reads()).toBe(before);
+  });
+
+  it('announces the next question when an answer moves the room on, and the end after the last one', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValueOnce(stateOf(match)).mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    api.submitMatchAnswer.mockResolvedValue({ ok: true, is_correct: true, advanced: true });
+    await mount();
+    await screen.findByText('Pick one?');
+    fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
+    await screen.findByText('Next one?');
+    expect(roomEvents()).toEqual([{ event: 'match_updated', payload: { status: 'running', current_index: 1 } }]);
+
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, status: 'finished', current_index: 1 }));
+    fireEvent.click(screen.getByRole('radio', { name: 'delta' }));
+    expect(await screen.findByRole('heading', { name: 'Match complete' })).toBeInTheDocument();
+    expect(roomEvents()[1]).toEqual({ event: 'match_updated', payload: { status: 'finished', current_index: 1 } });
+  });
+
+  it('reads for a broadcast of a new question, and not for the one on screen or one already read', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    await mount();
+    await screen.findByText('Pick one?');
+    const before = reads();
+    await fire('match_updated', { status: 'running', current_index: 0 });
+    await settle();
+    expect(reads()).toBe(before);
+
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    await fire('match_updated', { status: 'running', current_index: 1 });
+    await screen.findByText('Next one?');
+    expect(reads()).toBe(before + 1);
+    // The same change from a second sender.
+    await fire('match_updated', { status: 'running', current_index: 1 });
+    await settle();
+    expect(reads()).toBe(before + 1);
+  });
+
+  it('lets the host read the room once for a burst of answers', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const match = running({ host_id: USER.id });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    await mount();
+    await screen.findByText('Pick one?');
+    const before = reads();
+    for (let i = 0; i < 12; i += 1) await fire('answered', { question_idx: 0 });
+    expect(reads()).toBe(before);
+    await tick(1_600);
+    expect(reads()).toBe(before + 1);
+    await tick(5_000);
+    expect(reads()).toBe(before + 1);
+  });
+
+  it('leaves a player alone when someone else answers', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const match = running();
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    await mount();
+    await screen.findByText('Pick one?');
+    const before = reads();
+    for (let i = 0; i < 12; i += 1) await fire('answered', { question_idx: 0 });
+    await tick(5_000);
+    expect(reads()).toBe(before);
+  });
+
+  it('has the host announce a change of question that their own read found', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    // An untimed multiplayer round whose last two answers raced: neither
+    // answer moved the room on, and the host's read after them did.
+    const match = running({ host_id: USER.id });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValueOnce(stateOf(match)).mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    await mount();
+    await screen.findByText('Pick one?');
+    await fire('answered', { question_idx: 0 });
+    await tick(1_600);
+    await screen.findByText('Next one?');
+    expect(roomEvents()).toEqual([{ event: 'match_updated', payload: { status: 'running', current_index: 1 } }]);
+  });
+
+  it('keeps a player quiet about a change their read found', async () => {
+    const match = running();
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValueOnce(stateOf(match)).mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    await mount();
+    await screen.findByText('Pick one?');
+    // A broadcast from a tab on the build before broadcasts carried the room.
+    await fire('match_updated', { at: Date.now() });
+    await screen.findByText('Next one?');
+    expect(roomEvents()).toEqual([]);
+  });
+
+  it('announces the presenter’s next question and shows it', async () => {
+    const match = running({ mode: 'classroom', host_id: USER.id, questions: KEYED_QUESTIONS });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValueOnce(stateOf(match)).mockResolvedValue(stateOf({ ...match, current_index: 1 }));
+    api.fetchDistribution.mockResolvedValue({ buckets: [] });
+    api.controlMatch.mockResolvedValue({ ok: true, status: 'running', current_index: 1 });
+    await mount();
+    await screen.findByText('Pick one?');
+    fireEvent.click(screen.getByRole('button', { name: 'Next question →' }));
+    await screen.findByText('Next one?');
+    expect(api.controlMatch).toHaveBeenCalledWith(expect.objectContaining({ action: 'advance' }));
+    expect(roomEvents()).toEqual([{ event: 'match_updated', payload: { status: 'running', current_index: 1 } }]);
+  });
+});
+
+describe('the room clock', () => {
+  // A device clock 31 s ahead of the server's. The server says what its clock
+  // reads in every join and state response.
+  const SKEW = 31_000;
+  const serverClock = () => new Date(Date.now() - SKEW).toISOString();
+  function openedOnServer(over: Partial<Match>) {
+    const serverNow = Date.now();
+    vi.useFakeTimers({ shouldAdvanceTime: true, now: serverNow + SKEW });
+    const match = running({ question_started_at: new Date(serverNow).toISOString(), question_duration_s: 30, ...over });
+    api.joinMatch.mockImplementation(async () => ({ ...match, server_now: serverClock() }));
+    api.fetchMatchState.mockImplementation(async () => ({ ...stateOf(match), server_now: serverClock() }));
+    api.fetchDistribution.mockResolvedValue({ buckets: [] });
+    return match;
+  }
+  const tone = (name: string) => screen.getByRole('radio', { name }).getAttribute('data-tone');
+
+  it('keeps the key off a projector whose clock runs fast until the question closes', async () => {
+    openedOnServer({ mode: 'classroom', host_id: USER.id, questions: KEYED_QUESTIONS });
+    await mount();
+    await screen.findByText('Pick one?');
+    expect(screen.getByRole('timer')).toHaveTextContent('30s');
+    expect(tone('beta')).toBe('default');
+    await tick(31_000);
+    expect(tone('beta')).toBe('default');
+    await tick(2_000);
+    expect(tone('beta')).toBe('success');
+  });
+
+  it('lets a player whose phone runs fast answer a question that just opened', async () => {
+    openedOnServer({});
+    api.submitMatchAnswer.mockResolvedValue({ ok: true, is_correct: true, advanced: false });
+    await mount();
+    await screen.findByText('Pick one?');
+    expect(screen.getByRole('timer')).toHaveTextContent('30s');
+    expect(screen.queryByText('Time is up for this question.')).toBeNull();
+    expect(screen.getByRole('radio', { name: 'beta' })).not.toBeDisabled();
+    fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
+    await waitFor(() => expect(api.submitMatchAnswer).toHaveBeenCalledTimes(1));
+  });
+
+  it('reads the room when the server’s clock runs out, not the phone’s', async () => {
+    openedOnServer({});
+    await mount();
+    await screen.findByText('Pick one?');
+    const before = reads();
+    await tick(20_000);
+    expect(reads()).toBe(before);
+    await tick(13_000);
+    expect(reads()).toBe(before + 2); // the 30 s healing poll and the expiry read
+  });
+});
+
+describe('the questions a player holds', () => {
+  // A player receives only the questions already shown; `question_count`
+  // says how long the round is.
+  it('counts the round from question_count', async () => {
+    const match = running({ questions: [QUESTIONS[0]], question_count: 5 });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    await mount();
+    expect(await screen.findByText('Question 1 of 5 · JavaScript · difficulty 1')).toBeInTheDocument();
+  });
+
+  it('offers a competing host a skip, not the results, on the first of five', async () => {
+    const match = running({ host_id: USER.id, questions: [QUESTIONS[0]], question_count: 5 });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    await mount();
+    expect(await screen.findByRole('button', { name: 'Skip question →' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Show results' })).toBeNull();
+  });
+
+  it('names the round’s length on the lobby’s start button', async () => {
+    const lobby = running({ status: 'lobby', started_at: null, host_id: USER.id, questions: [], question_count: 10 });
+    api.joinMatch.mockResolvedValue(lobby);
+    api.fetchMatchState.mockResolvedValue(stateOf(lobby));
+    await mount();
+    expect(await screen.findByRole('button', { name: 'Start (10 questions)' })).toBeInTheDocument();
   });
 });
 

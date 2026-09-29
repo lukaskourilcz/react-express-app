@@ -3,7 +3,7 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
-import { onXpToast, type XpToast } from '../src/lib/xp';
+import { onXpToast, primeRankMarker, type XpToast } from '../src/lib/xp';
 
 // The Biggest Shark Challenge against a small stand-in for the three endpoints
 // it calls: the batch (GET /api/quiz/challenge), grading (POST
@@ -24,7 +24,17 @@ const api = vi.hoisted(() => ({
   grade: null as Grade | null,
   completions: [] as { runToken: string; proofs: string[]; status: number }[],
   completeStatus: (_runToken: string): { status: number; code?: string } => ({ status: 200 }),
-  auth: { user: null as null | { id: string }, isAuthenticated: false, isLoading: false },
+  auth: { user: null as null | { id: string; user_metadata?: Record<string, string> }, isAuthenticated: false, isLoading: false },
+  /** Refuses the nth batch request (1-based) when it returns a status. */
+  batchRefusal: null as null | ((n: number) => { status: number; code: string } | null),
+  /** The nth batch request waits for `release()`. */
+  holdBatch: 0,
+  release: null as null | (() => void),
+  /** The account's XP after a credited run (GET /api/user/xp). */
+  accountXp: 0,
+  /** "Show my name and photo on leaderboards". */
+  visible: false,
+  scores: [] as { name: string; runToken: string }[],
 }));
 
 vi.mock('../src/lib/api', async (importOriginal) => {
@@ -35,6 +45,10 @@ vi.mock('../src/lib/api', async (importOriginal) => {
     if (parsed.pathname === '/api/quiz/challenge' && (opts.method ?? 'GET') === 'GET') {
       if (parsed.searchParams.get('resource') === 'leaderboard') return { top: [], champion: null };
       api.batchRequests.push(parsed.searchParams);
+      const request = api.batchRequests.length;
+      const refusal = api.batchRefusal?.(request) ?? null;
+      if (refusal) return fail(refusal.status, refusal.code);
+      if (request === api.holdBatch) await new Promise<void>((release) => { api.release = release; });
       api.batches += 1;
       const batch = api.batches;
       const sessionId = `S${batch}`;
@@ -79,7 +93,15 @@ vi.mock('../src/lib/api', async (importOriginal) => {
       const score = body.proofs.filter((proof) => proof.endsWith(':true')).length;
       return { ok: true, awarded: score > 0, score, xp: score * 5 };
     }
-    if (parsed.pathname === '/api/user/xp') return { data: { quest_xp: 0, by_subject: {} } };
+    if (parsed.pathname === '/api/quiz/challenge' && opts.method === 'POST' && !parsed.searchParams.has('resource')) {
+      const body = JSON.parse(String(opts.body)) as { name: string; runToken: string };
+      api.scores.push({ name: body.name, runToken: body.runToken });
+      return { ok: true, record: null };
+    }
+    if (parsed.pathname === '/api/user/xp') {
+      return { data: { quest_xp: api.accountXp, by_subject: api.accountXp ? { webdev: api.accountXp } : {} } };
+    }
+    if (parsed.pathname === '/api/user/leaderboard-visibility') return { visible: api.visible };
     return fail(404, 'not_found');
   };
   return { ...actual, apiFetch };
@@ -145,6 +167,12 @@ beforeEach(() => {
   api.completions.length = 0;
   api.completeStatus = () => ({ status: 200 });
   api.auth = { user: null, isAuthenticated: false, isLoading: false };
+  api.batchRefusal = null;
+  api.holdBatch = 0;
+  api.release = null;
+  api.accountXp = 0;
+  api.visible = false;
+  api.scores.length = 0;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -223,7 +251,13 @@ describe('the timeout strike', () => {
     await mount();
     await start();
     const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
-    for (let second = 0; second < 90; second += 1) await tick(1000);
+    // The clock counts wall time, which on a slow runner also moves while
+    // the test works, so the strike can go out a tick or two before 90.
+    let second = 0;
+    while (timeouts === 0 && second < 90) {
+      await tick(1000);
+      second += 1;
+    }
     await settle();
     expect(timeouts).toBe(1);
     expect(screen.getByText('Time ran out. The strike could not be saved yet and will be sent again in a moment.')).toBeInTheDocument();
@@ -325,5 +359,206 @@ describe('the run reward', () => {
     await mount();
     expect(await screen.findByRole('heading', { name: 'Top scores' })).toBeInTheDocument();
     expect(screen.queryByText(/today/i)).toBeNull();
+  });
+});
+
+const SIGNED_IN = { user: { id: 'learner-1' }, isAuthenticated: true, isLoading: false };
+const tick = (ms: number) => act(async () => { await vi.advanceTimersByTimeAsync(ms); });
+const clockSeconds = () => {
+  const [minutes, seconds] = (screen.getByRole('timer').textContent ?? '').split(':').map(Number);
+  return minutes * 60 + seconds;
+};
+async function strikeOutNow() {
+  for (let strike = 0; strike < 3; strike += 1) {
+    await answer('wrong');
+    await next();
+  }
+  await screen.findByText('Run ended');
+  await settle();
+}
+
+describe('a refill that fails when the queue runs dry', () => {
+  it('keeps the run, and Retry asks for the batch again under the same run', async () => {
+    api.auth = SIGNED_IN;
+    let online = false;
+    api.batchRefusal = (n) => (n > 1 && !online ? { status: 0, code: 'network' } : null);
+    await mount();
+    await start();
+    for (let n = 0; n < 6; n += 1) {
+      await answer('right');
+      if (n < 5) await next();
+    }
+    // The sixth answer emptied the queue, and every refill so far failed.
+    fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+    expect(await screen.findByText('Could not load the next question. Your run and score are kept.')).toBeInTheDocument();
+    expect(screen.queryByText('No questions available right now.')).toBeNull();
+    expect(screen.getByText('Correct')).toBeInTheDocument();
+    expect(api.completions).toEqual([]);
+
+    online = true;
+    const sent = api.batchRequests.length;
+    fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
+    await screen.findByText('Batch 2 question 1?');
+    expect(api.batchRequests).toHaveLength(sent + 1);
+    expect(api.batchRequests[sent].get('runToken')).toBe('RUN-1');
+
+    // The run goes on to its end and is credited with every answer.
+    await strikeOutNow();
+    await waitFor(() => expect(api.completions).toHaveLength(1));
+    expect(api.completions[0].runToken).toBe('RUN-1');
+    expect(api.completions[0].proofs.filter((proof) => proof.endsWith(':true'))).toHaveLength(6);
+  });
+});
+
+describe('Play again while the last run’s refill is in flight', () => {
+  it('starts a new run, and the old refill joins nothing', async () => {
+    api.auth = SIGNED_IN;
+    api.holdBatch = 2;
+    await mount();
+    await start();
+    // After the second answer four questions are queued: RUN-1's refill goes out and hangs.
+    await strikeOutNow();
+    await waitFor(() => expect(api.completions.map((one) => one.runToken)).toEqual(['RUN-1']));
+    expect(api.batchRequests).toHaveLength(2);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Play again' }));
+    await settle();
+    await act(async () => { api.release!(); });
+    await settle();
+    await screen.findByText(/^Batch \d question 1\?$/);
+    expect(api.batchRequests).toHaveLength(3);
+    expect(api.batchRequests[2].get('runToken')).toBeNull();
+
+    await strikeOutNow();
+    await waitFor(() => expect(api.completions).toHaveLength(2));
+    expect(api.completions[1].runToken).toBe('RUN-2');
+    // None of the old run's late batch was played in the new one.
+    expect(api.submits.filter((submit) => submit.sessionId === 'S3')).toEqual([]);
+  });
+});
+
+describe('a grade whose response was lost', () => {
+  it('is replayed when the learner picks again, and when the clock runs out', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    api.auth = SIGNED_IN;
+    // The server grades a question once: the same pick replays the grade, any
+    // other is refused. The responses to the first grades of two questions
+    // never arrive.
+    const graded = new Map<string, number>();
+    const lost = new Set(['b1-q1', 'b1-q2']);
+    api.grade = (_body, questionId, selected) => {
+      const first = graded.get(questionId);
+      if (first !== undefined && first !== selected) {
+        return { status: 409, code: 'attempt_already_graded', message: 'This answer has already been graded and cannot be changed' };
+      }
+      graded.set(questionId, selected);
+      return lost.delete(questionId) ? { status: 0, code: 'network', message: 'Network error' } : null;
+    };
+    await mount();
+    await start();
+
+    // "right" is graded, its response is lost; the learner switches to "wrong".
+    fireEvent.click(screen.getByRole('radio', { name: 'right' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await settle();
+    fireEvent.click(screen.getByRole('radio', { name: 'wrong' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    expect(await screen.findByText('Correct')).toBeInTheDocument();
+    expect(screen.getByLabelText('3 shark fins left')).toBeInTheDocument();
+    await next();
+
+    // "wrong" is graded, its response is lost, and the clock runs out.
+    fireEvent.click(screen.getByRole('radio', { name: 'wrong' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+    await settle();
+    for (let second = 0; second < 91; second += 1) await tick(1000);
+    await settle();
+    expect(screen.getByText('Wrong')).toBeInTheDocument();
+    expect(screen.getByLabelText('2 shark fins left')).toBeInTheDocument();
+    await next();
+
+    for (let strike = 0; strike < 2; strike += 1) {
+      await answer('wrong');
+      await next();
+    }
+    await screen.findByText('Run ended');
+    await waitFor(() => expect(api.completions).toHaveLength(1));
+    // One correct answer and three strikes, each with its proof: the run completes.
+    expect(api.completions[0].status).toBe(200);
+    expect(api.completions[0].proofs.filter((proof) => proof.endsWith(':true'))).toHaveLength(1);
+    expect(api.completions[0].proofs.filter((proof) => proof.endsWith(':false'))).toHaveLength(3);
+  });
+});
+
+describe('the ranked clock', () => {
+  it('counts the time the page spent in the background', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    await mount();
+    await start();
+    // Each second is its own act, so the page renders between them.
+    const seconds = async (n: number) => { for (let second = 0; second < n; second += 1) await tick(1000); };
+    await seconds(5);
+    const before = clockSeconds();
+    expect(before).toBeLessThanOrEqual(85);
+    // A phone switched to another app for 80 s: the wall clock moves, and no
+    // timer runs until the page is back.
+    vi.setSystemTime(Date.now() + 80_000);
+    await tick(1_000);
+    expect(before - clockSeconds()).toBeGreaterThanOrEqual(80);
+    await seconds(clockSeconds() + 1);
+    await settle();
+    expect(api.submits.some((submit) => submit.selected === -1)).toBe(true);
+    expect(screen.getByText('Time ran out. One strike.')).toBeInTheDocument();
+  });
+});
+
+describe('the Hall of Fame name', () => {
+  const JANA = { user: { id: 'learner-1', user_metadata: { full_name: 'Jana Novakova' } }, isAuthenticated: true, isLoading: false };
+
+  it('starts empty for a learner whose name is hidden on the leaderboards', async () => {
+    api.auth = JANA;
+    api.visible = false;
+    await mount();
+    await start();
+    await strikeOutNow();
+    expect((screen.getByLabelText('Your name') as HTMLInputElement).value).toBe('');
+    expect(screen.getByText('Shown publicly on the Hall of Fame.')).toBeInTheDocument();
+  });
+
+  it('holds the account name for a learner who shows it, once: a cleared box stays clear', async () => {
+    api.auth = JANA;
+    api.visible = true;
+    await mount();
+    await start();
+    await strikeOutNow();
+    const box = () => screen.getByLabelText('Your name') as HTMLInputElement;
+    await waitFor(() => expect(box().value).toBe('Jana Novakova'));
+    fireEvent.change(box(), { target: { value: '' } });
+    await settle();
+    expect(box().value).toBe('');
+    fireEvent.change(box(), { target: { value: 'Reef runner' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Submit score' }));
+    await waitFor(() => expect(api.scores).toEqual([{ name: 'Reef runner', runToken: 'RUN-1' }]));
+  });
+});
+
+describe('a run’s rank-up', () => {
+  it('is announced when the run’s XP crosses a rank', async () => {
+    const toasts: XpToast[] = [];
+    const stop = onXpToast((toast: XpToast) => toasts.push(toast));
+    try {
+      primeRankMarker();
+      api.auth = SIGNED_IN;
+      // The account's balance once the run is credited crosses 2000 XP.
+      api.accountXp = 2020;
+      await mount();
+      await start();
+      await answer('right');
+      await next();
+      await strikeOutNow();
+      await waitFor(() => expect(toasts.map((toast) => toast.kind)).toEqual(['gain', 'rankup']));
+    } finally {
+      stop();
+    }
   });
 });

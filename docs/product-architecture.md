@@ -187,7 +187,10 @@ within the CDN's minute. The privacy policy says the same under
 account's Google identity (`identity_data.full_name` or `name`, `avatar_url`
 or `picture`), read in `verifiedProfile` (`api/user/[op].ts`), never
 `user_metadata`, which the account can rewrite from the browser. An account
-without a Google identity has no name there, and the boards say "Learner".
+without a Google identity has no name there, and the boards say "Learner". The Biggest Shark Challenge's Hall of Fame shows the name a
+learner types when saving a score. That box starts empty: it takes the
+account's name only while this switch is on, fills it once so a cleared box
+stays clear, and says the name is shown publicly on the Hall of Fame.
 `api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
 request with a Bearer token or `me=1` also gets the learner's own line and is
 answered `Cache-Control: private, no-store`. A `limit` is served as the
@@ -196,6 +199,30 @@ CDN did not answer it) takes the address read bucket below. `friend_list` orders
 correct answers and accuracy, shows each friend's live streak by the rule
 above, and marks a friend active today when their last verified learning day
 is today. No board ranks by XP or by streak.
+
+## Live rooms (Play)
+
+`api/play/[action].ts` keeps the answer key on the server. A viewer who may
+not see it (every player while a room runs, a multiplayer host included, and
+anyone reading a lobby) gets only the questions already shown: none in the
+lobby, up to the current one while the room runs. A classroom presenter holds
+the whole round with the key, and everyone sees it once the room is finished.
+`join` and `state` also send `question_count` and `server_now`. The screens
+count each question down against the server's clock, not the device's; the
+presenter's key appears once the server stops taking answers, the question's
+limit plus a 2 s grace, or when the teacher reveals it.
+
+A class shares one school address, and each state read spends that address's
+bucket. Realtime therefore carries only changes of the room: `match_updated`
+with `{ status, current_index }` on start, next, finish and the answer that
+moves a multiplayer room on, and a screen that already shows that state reads
+nothing. A single answer sends `answered`, which only the host handles, with
+one read at most every 1.5 s for the live scoreboard. A read can move a
+multiplayer room on by itself (an expired question, or the last answers of an
+untimed round racing); the host announces a change their read found, and a
+read that loses that race gets the room as the winner left it. Each screen
+also reads once when a timed multiplayer question expires, and every 30 s as
+a healing poll, or every 4 s while Realtime is down.
 
 ## Coding section
 
