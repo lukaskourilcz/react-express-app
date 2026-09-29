@@ -11,6 +11,21 @@ globalThis.fetch = (input, init) => nativeFetch(typeof input === 'string' ? new 
 // findBy*/waitFor default to 1 s, which a loaded CI runner can miss while the
 // app is still rendering the right thing.
 configure({ asyncUtilTimeout: 3000 });
-beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
-afterEach(() => { cleanup(); server.resetHandlers(); localStorage.clear(); });
+// A request no handler answers fails the test that made it. MSW's own "error"
+// strategy only logs and makes the request fail, which the app may swallow, so
+// the test would pass while the screen it checked never got its data.
+const unhandled: string[] = [];
+beforeAll(() => server.listen({
+  onUnhandledRequest(request, print) {
+    unhandled.push(`${request.method} ${new URL(request.url).pathname}`);
+    print.error();
+  },
+}));
+afterEach(() => {
+  cleanup();
+  server.resetHandlers();
+  localStorage.clear();
+  const missed = unhandled.splice(0);
+  if (missed.length) throw new Error(`Requests without a handler (add one in the test or tests/mocks/handlers.ts): ${[...new Set(missed)].join(', ')}`);
+});
 afterAll(() => server.close());

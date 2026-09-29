@@ -11,6 +11,7 @@ import { isBarred, useLocks } from '../src/lib/locks';
 import { buildToday } from '../src/lib/today';
 import UpgradeSheet from '../src/components/UpgradeSheet';
 import { server } from './mocks/server';
+import { settingsHandler } from './mocks/handlers';
 
 const auth = vi.hoisted(() => ({ value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false } }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
@@ -117,6 +118,7 @@ describe('the upgrade sheet', () => {
   proto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
 
   it('says what Premium includes and what it costs, with VAT, and closes on Not now', async () => {
+    server.use(settingsHandler);
     render(<UpgradeSheet request={{ id: 1, kind: 'learn-level', ref: 'react:13' }} />, { wrapper });
     expect(screen.getByText('This level is part of Premium.')).toBeInTheDocument();
     // The merchandise line waits for redemption to open (design audit P0.1).
