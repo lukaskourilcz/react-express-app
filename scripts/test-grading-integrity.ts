@@ -339,6 +339,16 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   assert.deepEqual(allWrong.design?.map((step) => step.correct), right.map(() => false));
   assert.deepEqual(allWrong.design?.map((step) => step.given), wrong, 'the learner\'s own answers come back');
   withheld(allWrong, secrets, 'all wrong');
+  // The same session is checked once: sending it again, even with the right
+  // answers, is refused, so the key cannot be read off it step by step.
+  {
+    const out = reply();
+    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session: first.session, answers: right, user_id: learner } } as never, out as never, db.client as never);
+    assert.equal(out.statusCode, 409, JSON.stringify(out.body));
+    assert.equal((out.body as { error?: { code?: string } }).error?.code, 'design_session_used');
+    const wire = JSON.stringify(out.body);
+    for (const secret of secrets) assert.ok(!wire.includes(secret.slice(0, 60)), 'a refused resubmission carries no key');
+  }
   const second = await open(guided.id);
   const secondRight = rightFor(second);
   const shortBy = design.passMark - 1;

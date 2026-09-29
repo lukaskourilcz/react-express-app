@@ -10,7 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError, tryAuth } from '../auth';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
-import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
+import { claimOnce, enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
@@ -150,6 +150,9 @@ async function taskCleared(supabase: SupabaseClient | null, userId: string, task
   return evolvingPassed(taskId, passed);
 }
 
+/** How long a design session's single check is remembered: its whole life
+ * (a coding session lasts three hours, lib/quiz-tokens.ts). */
+const DESIGN_SESSION_TTL_S = 3 * 60 * 60;
 const readLang = (value: unknown): 'en' | 'cs' => (value === 'cs' ? 'cs' : 'en');
 const codeHash = (code: string) => createHash('sha256').update(code, 'utf8').digest('base64url').slice(0, 32);
 
@@ -628,6 +631,13 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   }
   if (task.track === 'system-design') {
     if (!Array.isArray(body.answers) || body.answers.length > 12) return jsonError(res, 400, 'bad_request', 'answers must be an array');
+    // One check per design session. A failed check names which answers were
+    // right, so sending the same session again with other answers would read
+    // the key off it step by step, and a pass would then hand over the whole
+    // walkthrough. A new attempt opens the task again, under a new shuffle.
+    if (!(await claimOnce(`design:${session.attemptId}`, DESIGN_SESSION_TTL_S))) {
+      return jsonError(res, 409, 'design_session_used', 'This walkthrough was already checked. Open it again for a new attempt.');
+    }
     graded = gradeDesignTask(task, session, body.answers);
   } else {
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
