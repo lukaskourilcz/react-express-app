@@ -12,7 +12,7 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { AppToast } from './ui/AppToast';
-import { apiFetch, friendlyError } from '../lib/api';
+import { ApiError, apiFetch, friendlyError } from '../lib/api';
 import {
   fetchChallengeBatch,
   completeChallengeRun,
@@ -31,8 +31,8 @@ import { MotionPop } from '../lib/motion';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
-import { awardQuestXp, syncXpWithServer } from '../lib/xp';
-import { challengeRunXp } from '../lib/leveling';
+import { announceVerifiedQuestXp, awardQuestXp, syncXpWithServer } from '../lib/xp';
+import { challengeRunXp } from '../../../shared/progression';
 import { SwimCta } from './landing/LandingKit';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import './DeepEndScreens.css';
@@ -54,12 +54,84 @@ const LOW_BATCH_THRESHOLD = 4; // top up the buffer when this few remain
 const TIME_LIMIT_S = 90; // each question is capped at 90 seconds
 const RELAXED_TIME_LIMIT_S = 180; // accessibility practice pace; never ranked
 const LOW_TIME_S = 15; // highlight + pulse the clock under this many seconds
+// A batch's session is sealed for an hour (lib/quiz-tokens.ts). No question is
+// shown from a batch older than this, so its answer, even at the relaxed pace,
+// reaches the server while that session still grades it.
+const STALE_BATCH_MS = 50 * 60 * 1000;
+// A timeout strike the network or the rate limit refused is sent again after
+// a pause that doubles each time, up to the cap.
+const STRIKE_RETRY_MS = 2_000;
+const STRIKE_RETRY_MAX_MS = 30_000;
+// Finished runs whose reward has not reached the server yet. The first
+// version held one run; a list is kept now, and both shapes parse.
 const PENDING_CHALLENGE_KEY = 'studyshark:pending-challenge-reward:v1';
+const MAX_PENDING_REWARDS = 20;
+// Completion refusals that no retry can change: an expired or foreign run, or
+// proofs that do not make a finished run. Such a run leaves the list.
+const PERMANENT_REWARD_ERRORS = new Set(['invalid_run', 'incomplete_run', 'invalid_proof', 'bad_request']);
 
 interface PendingChallengeReward {
   userId: string;
   runToken: string;
   proofs: string[];
+}
+
+function readPendingRewards(): PendingChallengeReward[] {
+  const raw = readJSON<unknown>(PENDING_CHALLENGE_KEY, null);
+  const list: unknown[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
+  return list.filter((one): one is PendingChallengeReward => {
+    const run = one as Partial<PendingChallengeReward> | null;
+    return !!run && typeof run.userId === 'string' && typeof run.runToken === 'string' && Array.isArray(run.proofs);
+  });
+}
+
+function writePendingRewards(list: PendingChallengeReward[]): void {
+  if (list.length === 0) removeStored(PENDING_CHALLENGE_KEY);
+  else writeJSON(PENDING_CHALLENGE_KEY, list.slice(-MAX_PENDING_REWARDS));
+}
+
+const dropPendingReward = (runToken: string) =>
+  writePendingRewards(readPendingRewards().filter((run) => run.runToken !== runToken));
+
+/** Send each saved run of this learner to the completion step. A run that
+ * lands, or that can never land, leaves the list; one the network or the rate
+ * limit turned away stays for the next try. */
+async function sendPendingRewards(userId: string): Promise<{ kept: number; xp: number }> {
+  let kept = 0;
+  let xp = 0;
+  for (const run of readPendingRewards().filter((one) => one.userId === userId)) {
+    try {
+      const res = await completeChallengeRun({ runToken: run.runToken, proofs: run.proofs });
+      if (res.awarded) xp += res.xp ?? 0;
+      dropPendingReward(run.runToken);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 400 && PERMANENT_REWARD_ERRORS.has(err.code ?? '')) {
+        dropPendingReward(run.runToken);
+        continue;
+      }
+      kept += 1;
+      // Offline or rate limited: the rest would be turned away the same way.
+      if (err instanceof ApiError && (err.status === 0 || err.status === 429)) break;
+    }
+  }
+  return { kept, xp };
+}
+
+/** The batch session that issued the question can no longer grade it: it
+ * expired, or the answer reached a session the question is not in. */
+const isSessionRefusal = (err: unknown): boolean =>
+  err instanceof ApiError && err.status === 400 &&
+  (err.code === 'invalid_session' || /outside this session/i.test(err.message));
+
+/** A refusal worth sending again later: offline, rate limited, or a server fault. */
+const isRetryable = (err: unknown): boolean =>
+  !(err instanceof ApiError) || err.status === 0 || err.status === 429 || err.status >= 500;
+
+function gradeChallengeAnswer(sessionId: string, questionId: string, selectedIndex: number, lang: string) {
+  return apiFetch<QuizResult>('/api/quiz/submit', {
+    method: 'POST',
+    body: JSON.stringify({ sessionId, answers: { [questionId]: selectedIndex }, lang }),
+  });
 }
 
 /** Seconds → "m:ss" (e.g. 90 → "1:30"). Clamps negatives to 0. */
@@ -77,12 +149,25 @@ interface AnsweredQ {
   question: Question;
   /** True when the strike came from the per-question clock hitting zero. */
   timedOut?: boolean;
+  /** Set when the answer does not count either way: the question was
+   * retired mid-run, or its batch session expired before it was graded. No
+   * strike, no point, no proof. */
+  notCounted?: 'retired' | 'expired';
+}
+
+interface BufferedQuestion {
+  question: Question;
+  /** The batch session that issued the question, and so the one that grades it. */
+  sessionId: string;
+  receivedAt: number;
 }
 
 interface BufferState {
-  sessionId: string;
-  queue: Question[];
+  queue: BufferedQuestion[];
 }
+
+/** Ids still queued, so a refill does not repeat them. */
+const queuedIds = (buffer: BufferState | null): string[] => buffer?.queue.map((entry) => entry.question.id) ?? [];
 
 /** The board line beside the intro, in the cache before the first render: it
  * used to fill in after the page. It is best-effort, so the wait is the usual
@@ -129,26 +214,47 @@ export default function Challenge() {
   // Buffered question batches: we always keep one round of questions ready so
   // the next question appears instantly after each grade.
   const buffer = useRef<BufferState | null>(null);
+  // The batch session of the question on screen: a refill brings a new
+  // session, and the question already shown still belongs to the old one.
+  const currentSessionRef = useRef('');
   const runTokenRef = useRef('');
   const scoreProofsRef = useRef<string[]>([]);
   const topupInFlight = useRef<Promise<void> | null>(null);
   // Guards the once-per-run XP/token payout on game over.
   const awardedRef = useRef(false);
+  // The timeout strike goes out once per question. A refusal worth retrying
+  // is sent again after a growing pause, never on every render.
+  const strikeSentFor = useRef<string | null>(null);
+  const strikeRetry = useRef<{ timer: number | null; attempt: number }>({ timer: null, attempt: 0 });
+  const [strikeWake, setStrikeWake] = useState(0);
+  const [strikeWaiting, setStrikeWaiting] = useState(false);
+
+  const clearStrikeRetry = useCallback(() => {
+    if (strikeRetry.current.timer !== null) window.clearTimeout(strikeRetry.current.timer);
+    strikeRetry.current = { timer: null, attempt: 0 };
+    strikeSentFor.current = null;
+    setStrikeWaiting(false);
+  }, []);
+  useEffect(() => clearStrikeRetry, [clearStrikeRetry]);
+
+  // Saved rewards go out one after another, so a sync started at game over
+  // never races the one started on arrival.
+  const rewardSync = useRef<Promise<void>>(Promise.resolve());
+  const syncRewards = useCallback((userId: string) => {
+    rewardSync.current = rewardSync.current.then(async () => {
+      const { kept, xp } = await sendPendingRewards(userId);
+      if (xp > 0) {
+        await syncXpWithServer();
+        announceVerifiedQuestXp(xp);
+      }
+      if (kept > 0) setSnack(t('challenge.rewardPending'));
+    });
+    return rewardSync.current;
+  }, [t]);
 
   useEffect(() => {
-    if (!user?.id) return;
-    const pending = readJSON<PendingChallengeReward | null>(PENDING_CHALLENGE_KEY, null);
-    if (!pending || pending.userId !== user.id) return;
-    void completeChallengeRun({ runToken: pending.runToken, proofs: pending.proofs })
-      .then(() => {
-        removeStored(PENDING_CHALLENGE_KEY);
-        return syncXpWithServer();
-      })
-      .catch(() => {
-        // Keep the signed run for a later online retry.
-        setSnack(t('challenge.rewardPending'));
-      });
-  }, [t, user?.id]);
+    if (user?.id) void syncRewards(user.id);
+  }, [syncRewards, user?.id]);
   // Focus target when the run ends, so AT users hear the transition.
   const gameOverHeadingRef = useRef<HTMLDivElement | null>(null);
   const [scoreSubmitting, setScoreSubmitting] = useState(false);
@@ -178,8 +284,19 @@ export default function Challenge() {
             ranked: !relaxedPace,
           });
           runTokenRef.current = batch.runToken;
-          // First batch or a refill — replace queue (the previous one was drained).
-          buffer.current = { sessionId: batch.sessionId, queue: [...batch.questions] };
+          // Append to what is still queued. Each question keeps the session
+          // that issued it, and is graded against that session.
+          const receivedAt = Date.now();
+          const queued = buffer.current?.queue ?? [];
+          const known = new Set(queued.map((entry) => entry.question.id));
+          buffer.current = {
+            queue: [
+              ...queued,
+              ...batch.questions
+                .filter((question) => !known.has(question.id))
+                .map((question) => ({ question, sessionId: batch.sessionId, receivedAt })),
+            ],
+          };
         } catch (err) {
           // Surface the first failure; on later refills we just keep what we have.
           if (!buffer.current) {
@@ -198,11 +315,20 @@ export default function Challenge() {
     [lang, relaxedPace],
   );
 
-  const popNext = useCallback((): Question | null => {
+  const popNext = useCallback((): BufferedQuestion | null => {
     const buf = buffer.current;
-    if (!buf || buf.queue.length === 0) return null;
+    if (!buf) return null;
+    // A question from a batch near the end of its session's hour is skipped:
+    // its answer could no longer be graded.
+    while (buf.queue.length > 0 && Date.now() - buf.queue[0].receivedAt > STALE_BATCH_MS) buf.queue.shift();
     return buf.queue.shift() ?? null;
   }, []);
+
+  const showQuestion = useCallback((next: BufferedQuestion) => {
+    clearStrikeRetry();
+    currentSessionRef.current = next.sessionId;
+    setCurrent(next.question);
+  }, [clearStrikeRetry]);
 
   /* ─── game flow ─────────────────────────────────────────────── */
 
@@ -230,10 +356,10 @@ export default function Challenge() {
       setError(t('challenge.noQuestions'));
       return;
     }
-    setCurrent(next);
-    setSeenIds([next.id]);
+    showQuestion(next);
+    setSeenIds([next.question.id]);
     setPhase('playing');
-  }, [ensureBufferTopUp, popNext, t, timeLimitS]);
+  }, [ensureBufferTopUp, popNext, showQuestion, t, timeLimitS]);
 
   const advance = useCallback(
     async (becameGameOver: boolean) => {
@@ -245,12 +371,12 @@ export default function Challenge() {
       const remaining = buffer.current?.queue.length ?? 0;
       if (remaining <= LOW_BATCH_THRESHOLD && !topupInFlight.current) {
         // fire-and-forget; the next pop below uses whatever's available
-        void ensureBufferTopUp(seenIds);
+        void ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
       }
       let next = popNext();
       if (!next) {
         // Buffer ran dry while topping up — await it.
-        await ensureBufferTopUp(seenIds);
+        await ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
         next = popNext();
       }
       if (!next) {
@@ -258,57 +384,70 @@ export default function Challenge() {
         setError(t('challenge.noQuestions'));
         return;
       }
-      setCurrent(next);
+      showQuestion(next);
       // Cap the seen-ids list so a long run doesn't grow the `exclude`
       // query string without bound. The server caps at 500 already; we keep
       // the most recent 300 client-side to keep `advance` and the request
       // payload light.
-      setSeenIds((prev) => [...prev, next!.id].slice(-300));
+      setSeenIds((prev) => [...prev, next!.question.id].slice(-300));
       setSelected(null);
       setLastResult(null);
       // Fresh question, fresh clock.
       setTimeLeft(timeLimitS);
     },
-    [ensureBufferTopUp, popNext, seenIds, t, timeLimitS],
+    [ensureBufferTopUp, popNext, seenIds, showQuestion, t, timeLimitS],
   );
 
+  // Record the server's grade for the question on screen. A question retired
+  // after its batch was issued comes back void: it neither scores nor strikes,
+  // and it carries no proof.
+  const applyGrade = useCallback((question: Question, selectedIndex: number, result: QuizResult, timedOut: boolean) => {
+    const graded = result.results.find((one) => one.questionId === question.id);
+    if (!graded || result.voided?.includes(question.id)) {
+      setLastResult({ questionId: question.id, selectedIndex, correctAnswer: -1, isCorrect: false, explanation: '', question, notCounted: 'retired' });
+      return;
+    }
+    setLastResult({
+      questionId: question.id,
+      selectedIndex,
+      correctAnswer: graded.correctAnswer,
+      isCorrect: graded.isCorrect,
+      explanation: graded.explanation,
+      question,
+      ...(timedOut ? { timedOut: true } : {}),
+    });
+    if (graded.isCorrect) setScore((s) => s + 1);
+    else setLivesLost((l) => l + 1);
+    if (graded.scoreProof) scoreProofsRef.current.push(graded.scoreProof);
+  }, []);
+
+  // The session that issued this question cannot grade it any more, so the
+  // question does not count. Its batch leaves the queue, and moving on asks
+  // for a fresh batch under the same run.
+  const expireQuestion = useCallback((question: Question, selectedIndex: number, sessionId: string) => {
+    if (buffer.current) {
+      buffer.current = { queue: buffer.current.queue.filter((entry) => entry.sessionId !== sessionId) };
+    }
+    setLastResult({ questionId: question.id, selectedIndex, correctAnswer: -1, isCorrect: false, explanation: '', question, notCounted: 'expired' });
+  }, []);
+
   const submitAnswer = useCallback(async () => {
-    if (selected == null || !current || !buffer.current || submitting) return;
+    if (selected == null || !current || submitting || timeLeft <= 0) return;
+    const question = current;
+    const sessionId = currentSessionRef.current;
     setSubmitting(true);
     try {
-      const result = await apiFetch<QuizResult>('/api/quiz/submit', {
-        method: 'POST',
-        body: JSON.stringify({
-          sessionId: buffer.current.sessionId,
-          answers: { [current.id]: selected },
-          lang,
-        }),
-      });
-      const r = result.results[0];
-      const answered: AnsweredQ = {
-        questionId: current.id,
-        selectedIndex: selected,
-        correctAnswer: r?.correctAnswer ?? -1,
-        isCorrect: !!r?.isCorrect,
-        explanation: r?.explanation ?? '',
-        question: current,
-      };
-      setLastResult(answered);
-      if (answered.isCorrect) {
-        setScore((s) => s + 1);
-      } else {
-        setLivesLost((l) => l + 1);
-      }
-      if (r?.scoreProof) scoreProofsRef.current.push(r.scoreProof);
+      applyGrade(question, selected, await gradeChallengeAnswer(sessionId, question.id, selected, lang), false);
     } catch (err) {
-      setSnack(friendlyError(err));
+      if (isSessionRefusal(err)) expireQuestion(question, selected, sessionId);
+      else setSnack(friendlyError(err));
     } finally {
       setSubmitting(false);
     }
-  }, [selected, current, lang, submitting]);
+  }, [selected, current, lang, submitting, timeLeft, applyGrade, expireQuestion]);
 
   const onContinue = useCallback(() => {
-    const willGameOver = lastResult ? !lastResult.isCorrect && livesLost >= MAX_LIVES : false;
+    const willGameOver = lastResult ? !lastResult.notCounted && !lastResult.isCorrect && livesLost >= MAX_LIVES : false;
     void advance(willGameOver);
   }, [advance, lastResult, livesLost]);
 
@@ -316,33 +455,42 @@ export default function Challenge() {
   // fin, exactly like a wrong answer; the graded feedback card then lets the
   // learner continue (or ends the run if it was the third strike).
   const handleTimeout = useCallback(async () => {
-    if (!current || !buffer.current || lastResult || submitting) return;
+    if (!current || lastResult || submitting || strikeSentFor.current === current.id) return;
+    strikeSentFor.current = current.id;
+    const question = current;
+    const sessionId = currentSessionRef.current;
     setSubmitting(true);
     try {
       // A timeout is graded as an explicit server-proven strike. This prevents
       // ranked clients from omitting timeouts from the final proof set.
-      const result = await apiFetch<QuizResult>('/api/quiz/submit', {
-        method: 'POST',
-        body: JSON.stringify({ sessionId: buffer.current.sessionId, answers: { [current.id]: -1 }, lang }),
-      });
-      const graded = result.results[0];
-      setLivesLost((l) => l + 1);
-      setLastResult({
-        questionId: current.id,
-        selectedIndex: -1,
-        correctAnswer: graded?.correctAnswer ?? -1,
-        isCorrect: false,
-        explanation: graded?.explanation ?? '',
-        question: current,
-        timedOut: true,
-      });
-      if (graded?.scoreProof) scoreProofsRef.current.push(graded.scoreProof);
+      applyGrade(question, -1, await gradeChallengeAnswer(sessionId, question.id, -1, lang), true);
+      setStrikeWaiting(false);
     } catch (err) {
-      setSnack(friendlyError(err));
+      if (isSessionRefusal(err)) {
+        setStrikeWaiting(false);
+        expireQuestion(question, -1, sessionId);
+      } else if (isRetryable(err)) {
+        // Offline, rate limited or a server fault: send it again after a
+        // pause. Re-sending at once spent the shared rate bucket in a loop.
+        const attempt = strikeRetry.current.attempt;
+        strikeRetry.current.attempt = attempt + 1;
+        strikeRetry.current.timer = window.setTimeout(() => {
+          strikeRetry.current.timer = null;
+          strikeSentFor.current = null;
+          setStrikeWake((n) => n + 1);
+        }, Math.min(STRIKE_RETRY_MAX_MS, STRIKE_RETRY_MS * 2 ** attempt));
+        setStrikeWaiting(true);
+      } else {
+        // Refused for good: no proof comes back, but the clock did run out,
+        // so the fin is lost here and the run goes on.
+        setStrikeWaiting(false);
+        setLivesLost((l) => l + 1);
+        setLastResult({ questionId: question.id, selectedIndex: -1, correctAnswer: -1, isCorrect: false, explanation: '', question, timedOut: true });
+      }
     } finally {
       setSubmitting(false);
     }
-  }, [current, lastResult, submitting, lang]);
+  }, [current, lastResult, submitting, lang, applyGrade, expireQuestion]);
 
   /* ─── leaderboard submit on game over ───────────────────────── */
 
@@ -376,7 +524,8 @@ export default function Challenge() {
   // Each question is capped at TIME_LIMIT_S. Tick once per second while the
   // learner is still working on the current question; pause once it's graded
   // (the feedback card is up) so reading the explanation doesn't burn the next
-  // question's time. When the clock hits zero unanswered, it's a timeout strike.
+  // question's time. When the clock hits zero unanswered, it's a timeout strike;
+  // handleTimeout sends it once, and `strikeWake` brings a delayed retry here.
   useEffect(() => {
     if (phase !== 'playing' || lastResult) return;
     if (timeLeft <= 0) {
@@ -385,39 +534,35 @@ export default function Challenge() {
     }
     const id = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
     return () => clearTimeout(id);
-  }, [phase, timeLeft, lastResult, handleTimeout]);
+  }, [phase, timeLeft, lastResult, handleTimeout, strikeWake]);
 
   /* ─── reward on game over ───────────────────────────────────── */
 
-  // Every finished run pays out XP (and tokens, which follow from XP) — a base
-  // for finishing plus a bonus per correct answer — so a challenge is never
-  // empty-handed. Guarded so it credits exactly once per run.
+  // A finished run pays five XP per server-proven correct answer (and tokens,
+  // which follow from XP). Signed in, the run joins the saved list and the
+  // server credits it; every saved run is sent again now, so one that failed
+  // earlier is not left behind by the next. Signed out, the same amount is
+  // kept in this browser. Guarded so it pays exactly once per run.
   useEffect(() => {
     if (phase === 'gameover' && !awardedRef.current) {
       awardedRef.current = true;
-      awardQuestXp(challengeRunXp(score), 'quiz');
-      if (user && runTokenRef.current) {
-        const pending: PendingChallengeReward = {
-          userId: user.id,
-          runToken: runTokenRef.current,
-          proofs: [...scoreProofsRef.current],
-        };
-        writeJSON(PENDING_CHALLENGE_KEY, pending);
-        void completeChallengeRun({ runToken: pending.runToken, proofs: pending.proofs })
-          .then(() => {
-            removeStored(PENDING_CHALLENGE_KEY);
-            return syncXpWithServer();
-          })
-          .catch(() => {
-            // Retried automatically during the next signed-in session.
-          });
+      if (user) {
+        if (runTokenRef.current) {
+          writePendingRewards([
+            ...readPendingRewards(),
+            { userId: user.id, runToken: runTokenRef.current, proofs: [...scoreProofsRef.current] },
+          ]);
+          void syncRewards(user.id);
+        }
+      } else {
+        awardQuestXp(challengeRunXp(score), 'quiz');
       }
     }
     // Announce the run's end to AT by moving focus to the game-over heading.
     if (phase === 'gameover') {
       requestAnimationFrame(() => gameOverHeadingRef.current?.focus());
     }
-  }, [phase, score, user]);
+  }, [phase, score, user, syncRewards]);
 
   /* ─── keyboard during play ──────────────────────────────────── */
 
@@ -433,6 +578,7 @@ export default function Challenge() {
         }
         return;
       }
+      if (timeLeft <= 0) return;
       if (/^[1-9]$/.test(e.key)) {
         const idx = parseInt(e.key, 10) - 1;
         if (idx < current.options.length) {
@@ -446,7 +592,7 @@ export default function Challenge() {
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [phase, current, selected, lastResult, submitAnswer, onContinue]);
+  }, [phase, current, selected, lastResult, submitAnswer, onContinue, timeLeft]);
 
   /* ─── render ────────────────────────────────────────────────── */
 
@@ -467,7 +613,6 @@ export default function Challenge() {
   );
 
   if (phase === 'intro') {
-    const today = new Intl.DateTimeFormat(lang, { month: 'short', day: 'numeric' }).format(new Date());
     return (
       <div className="de-page de-challenge-grid ss-pop">
         <section className="de-hero-panel">
@@ -478,7 +623,6 @@ export default function Challenge() {
               <Text type="large" color="secondary">{t('challenge.description')}</Text>
             </VStack>
             <div className="de-stat-row">
-              <div className="de-stat"><strong>{today}</strong><span>{t('challenge.todaySet')}</span></div>
               <div className="de-stat"><strong>{MAX_LIVES}</strong><span>{t('challenge.finsStat')}</span></div>
               <div className="de-stat"><strong>{timeLimitS} s</strong><span>{t('challenge.perQuestion')}</span></div>
             </div>
@@ -502,7 +646,7 @@ export default function Challenge() {
         </section>
         <aside className="ss-panel" style={{ padding: 20 }}>
           <VStack gap={1.5}>
-            <Heading level={3}>{t('challenge.todayBoard')}</Heading>
+            <Heading level={3}>{t('challenge.topScores')}</Heading>
             {boardLoading ? (
               <Text color="secondary">…</Text>
             ) : boardQuery.isError ? (
@@ -648,6 +792,9 @@ export default function Challenge() {
 
   const low = timeLeft <= LOW_TIME_S;
   const timePct = (Math.max(0, timeLeft) / timeLimitS) * 100;
+  // Once the clock is out, no answer can be picked or sent: the question is a
+  // timeout strike, whatever the connection is doing.
+  const timeUp = timeLeft <= 0;
 
   return (
     // One-viewport layout matching the Quiz card geometry: ~560px column,
@@ -768,7 +915,7 @@ export default function Challenge() {
               off the wave on phones. */}
           <RadioCardGroup
             value={selected}
-            onChange={(value) => { if (!lastResult) setSelected(Number(value)); }}
+            onChange={(value) => { if (!lastResult && !timeUp) setSelected(Number(value)); }}
             labelledBy="challenge-question"
             style={{ flexShrink: 0, marginTop: 'auto', marginBottom: isMobile ? 50 : 0 }}
           >
@@ -778,14 +925,14 @@ export default function Challenge() {
                 const graded = !!lastResult;
                 const isCorrectOpt = graded && idx === lastResult!.correctAnswer;
                 const isWrongPick =
-                  graded && idx === lastResult!.selectedIndex && !lastResult!.isCorrect;
+                  graded && idx === lastResult!.selectedIndex && !lastResult!.isCorrect && !lastResult!.notCounted;
                 return (
                   <RadioCard
                     key={idx}
                     value={idx}
                     index={idx}
                     label={opt}
-                    disabled={graded}
+                    disabled={graded || timeUp}
                     tone={isCorrectOpt ? 'success' : 'default'}
                     padding={2}
                     style={{
@@ -844,16 +991,26 @@ export default function Challenge() {
           }}
         >
           <Banner
-            status={lastResult.isCorrect ? 'success' : 'error'}
+            status={lastResult.notCounted ? 'info' : lastResult.isCorrect ? 'success' : 'error'}
             title={
-              lastResult.isCorrect
-                ? t('challenge.correct')
-                : lastResult.timedOut
-                  ? t('challenge.questionTimeout')
-                  : t('challenge.wrong')
+              lastResult.notCounted === 'retired'
+                ? t('challenge.questionRetired')
+                : lastResult.notCounted === 'expired'
+                  ? t('challenge.questionExpired')
+                  : lastResult.isCorrect
+                    ? t('challenge.correct')
+                    : lastResult.timedOut
+                      ? t('challenge.questionTimeout')
+                      : t('challenge.wrong')
             }
             description={lastResult.explanation || undefined}
           />
+        </div>
+      )}
+
+      {!lastResult && strikeWaiting && (
+        <div style={{ marginTop: 12, flexShrink: 0 }}>
+          <Banner status="warning" title={t('challenge.strikeRetrying')} />
         </div>
       )}
 
@@ -862,7 +1019,7 @@ export default function Challenge() {
           <Button
             variant="primary"
             label={t('challenge.lockIn')}
-            isDisabled={selected == null || submitting}
+            isDisabled={selected == null || submitting || timeUp}
             isLoading={submitting}
             onClick={() => void submitAnswer()}
           />

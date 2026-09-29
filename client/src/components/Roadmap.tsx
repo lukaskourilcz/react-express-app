@@ -541,11 +541,12 @@ function Roadmap() {
   const handleFinished = (pct: number) => {
     if (!active || !playable) return;
     // Learning XP is derived from progress, so measure it across the record to
-    // reward only a NEW pass; replays/fails fall back to a small practice grant.
+    // reward only a NEW pass; replays/fails fall back to a small practice grant
+    // in a signed-out browser only (no server route awards it).
     const before = learningXpBeforeAttemptRef.current;
     if (active.kind === 'level') recordLevelResult(topic, active.ref, pct, playable.passPct);
     else recordPartTestResult(topic, active.ref, pct, playable.passPct);
-    awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before);
+    awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before, isAuthenticated);
   };
 
   // Lay the whole topic out as a serpentine: nodes flow left→right and gently

@@ -49,6 +49,30 @@ import { visuallyHidden } from '../theme/MuiTheme';
 const POLL_FALLBACK_MS = 4000;
 const REALTIME_HEALING_POLL_MS = 30_000;
 const DEFAULT_DURATION_S = 60;
+// A timed question that runs out moves on when someone reads the room: the
+// server advances it lazily, 2 s past the limit. With Realtime up the next
+// read could be the 30 s healing poll, so each client reads once just after.
+const EXPIRY_RESYNC_MS = 2500;
+
+/** The Play switch in /dev → Settings is off, and the server says so. */
+const isPlayOff = (err: unknown) => err instanceof ApiError && err.code === 'feature_disabled';
+
+/** Shown in place of a Play page while live games are switched off. */
+function PlayUnavailable() {
+  const navigate = useNavigate();
+  const t = useT();
+  return (
+    <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
+      <Card padding={6} width="100%">
+        <VStack gap={2} align="center">
+          <Heading level={2} justify="center">{t('play.unavailableTitle')}</Heading>
+          <Text color="secondary" justify="center">{t('play.unavailableBody')}</Text>
+          <Button variant="primary" label={t('common.back')} onClick={() => navigate('/')} />
+        </VStack>
+      </Card>
+    </div>
+  );
+}
 
 // Human-readable label for a per-question time limit (0 = no limit).
 function formatDuration(n: number, t: ReturnType<typeof useT>): string {
@@ -100,6 +124,9 @@ export function PlayLanding() {
     );
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<'create' | 'join' | null>(null);
+  const [playOff, setPlayOff] = useState(false);
+
+  if (!config.features.multiplayer || playOff) return <PlayUnavailable />;
 
   if (authLoading) {
     return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
@@ -158,7 +185,8 @@ export function PlayLanding() {
       capture(mode === 'classroom' ? 'classroom_created' : 'multiplayer_created', { question_count: count });
       navigate(`/play/${m.code}`);
     } catch (err) {
-      setError(friendlyError(err));
+      if (isPlayOff(err)) setPlayOff(true);
+      else setError(friendlyError(err));
     } finally {
       setLoading(null);
     }
@@ -182,7 +210,8 @@ export function PlayLanding() {
       capture('classroom_or_match_joined');
       navigate(`/play/${code}`);
     } catch (err) {
-      setError(friendlyError(err));
+      if (isPlayOff(err)) setPlayOff(true);
+      else setError(friendlyError(err));
     } finally {
       setLoading(null);
     }
@@ -418,9 +447,15 @@ export function PlayMatch() {
   const code = (codeParam || '').toUpperCase();
   const navigate = useNavigate();
   const t = useT();
+  const config = useGameConfig();
   const { user, isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
   const profile = getUserProfile(user);
 
+  const [playOff, setPlayOff] = useState(false);
+  const playOn = config.features.multiplayer && !playOff;
+  // Bumped by "Try again" after a failed join, which runs the join again: a
+  // state read alone draws the room without making this learner a player.
+  const [joinAttempt, setJoinAttempt] = useState(0);
   const [match, setMatch] = useState<Match | null>(null);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [scoreboard, setScoreboard] = useState<ScoreboardEntry[]>([]);
@@ -445,23 +480,33 @@ export function PlayMatch() {
 
   // Initial join + state load.
   useEffect(() => {
-    if (!isAuthenticated || !user?.id || !code) return;
+    if (!isAuthenticated || !user?.id || !code || !playOn) return;
     let cancelled = false;
     (async () => {
       try {
-        const m = await joinMatch({
-          code,
-          user_id: user.id,
-          display_name: displayNameFromProfile(profile, t('play.playerFallback')),
-        });
+        let joined: Match | null = null;
+        try {
+          joined = await joinMatch({
+            code,
+            user_id: user.id,
+            display_name: displayNameFromProfile(profile, t('play.playerFallback')),
+          });
+        } catch (err) {
+          // A finished room takes no new players, but its results are still
+          // there to read: reopening it shows them instead of an error.
+          if (!(err instanceof ApiError && err.code === 'finished')) throw err;
+        }
         if (cancelled) return;
-        setMatch(m);
+        if (joined) setMatch(joined);
         const state = await fetchMatchState(code, user.id);
         if (cancelled) return;
+        if (!joined) setMatch(state.match);
         setParticipants(state.participants);
         setScoreboard(state.scoreboard);
       } catch (err) {
-        setError(friendlyError(err));
+        if (cancelled) return;
+        if (isPlayOff(err)) setPlayOff(true);
+        else setError(friendlyError(err));
       } finally {
         if (!cancelled) setJoining(false);
       }
@@ -469,7 +514,7 @@ export function PlayMatch() {
     return () => {
       cancelled = true;
     };
-  }, [code, isAuthenticated, user]);
+  }, [code, isAuthenticated, user, joinAttempt, playOn]);
 
   // Pull the latest match state. Shared by the realtime/poll loop and by
   // submitAnswer so an auto-advance is reflected immediately for the answerer.
@@ -480,11 +525,12 @@ export function PlayMatch() {
 
   // Realtime broadcast wiring.
   useEffect(() => {
-    if (!code || !user?.id) return;
+    if (!code || !user?.id || !playOn) return;
     const userId = user.id;
     // Cleared on unmount or when the match changes, so a read still in
     // flight for this match writes nothing afterwards.
     let active = true;
+    let realtimeReady = false;
     const reader = coalesceReads(async () => {
       try {
         const state = await fetchMatchState(code, userId);
@@ -493,8 +539,15 @@ export function PlayMatch() {
         setParticipants(state.participants);
         setScoreboard(state.scoreboard);
         refreshFailures.current = 0;
-      } catch {
+        // A read that works again clears the "could not refresh" warning,
+        // even while Realtime stayed connected throughout.
+        setConnectionState(realtimeReady ? 'live' : 'polling');
+      } catch (err) {
         if (!active) return;
+        if (isPlayOff(err)) {
+          setPlayOff(true);
+          return;
+        }
         refreshFailures.current += 1;
         setConnectionState(refreshFailures.current >= 3 ? 'stale' : 'polling');
       }
@@ -502,7 +555,6 @@ export function PlayMatch() {
     readerRef.current = reader;
     const channel = joinMatchChannel(code);
     channelRef.current = channel;
-    let realtimeReady = false;
 
     channel.subscribe('participant_joined', refresh);
     channel.subscribe('match_updated', refresh);
@@ -531,7 +583,19 @@ export function PlayMatch() {
       stopStatus();
       channel.unsubscribe();
     };
-  }, [code, user?.id, refresh]);
+  }, [code, user?.id, refresh, playOn]);
+
+  // Read the room once just after a timed question's clock (and the server's
+  // expiry grace) runs out, so everyone moves on without waiting for a poll.
+  const matchStatus = match?.status;
+  const questionStartedAt = match?.question_started_at;
+  const questionDurationS = match?.question_duration_s ?? 0;
+  useEffect(() => {
+    if (matchStatus !== 'running' || !questionStartedAt || questionDurationS <= 0) return;
+    const dueIn = new Date(questionStartedAt).getTime() + questionDurationS * 1000 + EXPIRY_RESYNC_MS - Date.now();
+    const id = window.setTimeout(() => void refresh(), Math.max(0, dueIn));
+    return () => window.clearTimeout(id);
+  }, [matchStatus, match?.current_index, questionStartedAt, questionDurationS, refresh]);
 
   // Reset per-question UI when the index changes.
   useEffect(() => {
@@ -614,9 +678,9 @@ export function PlayMatch() {
       // question (or the results screen) without waiting for the poll.
       if (result.advanced) await refresh();
     } catch (err) {
-      if (err instanceof ApiError && err.code === 'wrong_question') {
-        // The match moved past this question (timer expiry beat the submit).
-        // Tell the player their answer didn't count, then resync.
+      if (err instanceof ApiError && (err.code === 'wrong_question' || err.code === 'time_up')) {
+        // The clock ran out (or the match moved past this question) before
+        // the answer landed. Tell the player it didn't count, then resync.
         setError(t('play.tooLate'));
         await refresh();
         return;
@@ -632,6 +696,8 @@ export function PlayMatch() {
       setError(friendlyError(err));
     }
   };
+
+  if (!playOn) return <PlayUnavailable />;
 
   if (authLoading) {
     return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
@@ -669,7 +735,15 @@ export function PlayMatch() {
         <VStack gap={2}>
           <Banner status="error" title={error} />
           <HStack gap={1} wrap="wrap">
-            <Button variant="primary" label={t('error.tryAgain')} onClick={() => void refresh()} />
+            <Button
+              variant="primary"
+              label={t('error.tryAgain')}
+              onClick={() => {
+                setError(null);
+                setJoining(true);
+                setJoinAttempt((n) => n + 1);
+              }}
+            />
             <Button variant="secondary" label={t('common.back')} onClick={() => navigate('/play')} />
           </HStack>
         </VStack>
@@ -1011,6 +1085,8 @@ function RunningQuestion({
       : durationS * 1000;
   const remainingS = Math.ceil(remainingMs / 1000);
   const pctLeft = noLimit ? 100 : startedMs ? (remainingMs / (durationS * 1000)) * 100 : 100;
+  // The clock is out: the server refuses a new answer, so none can be picked.
+  const timeUp = !noLimit && remainingMs === 0;
 
   // Time-up auto-lock: clicking locks instantly, so this only catches a
   // keyboard user who arrow-browsed to an option but never pressed Enter.
@@ -1082,7 +1158,7 @@ function RunningQuestion({
           // One click locks the answer in — no confirm button. Arrow keys
           // still browse without committing; Enter/Space commits.
           onActivate={(v) => {
-            if (isPlayer && !submitted) onAnswer(v as number);
+            if (isPlayer && !submitted && !timeUp) onAnswer(v as number);
           }}
           labelledBy={questionLabelId}
         >
@@ -1098,7 +1174,7 @@ function RunningQuestion({
                   index={i}
                   label={opt}
                   padding={2}
-                  disabled={submitted}
+                  disabled={submitted || timeUp}
                   tone={isCorrect ? 'success' : 'default'}
                 >
                   <Text>{opt}</Text>
@@ -1110,7 +1186,7 @@ function RunningQuestion({
 
         {isPlayer && !submitted && (
           <Text type="supporting" size="xsm" color="secondary">
-            {t('play.tapToLock')}
+            {timeUp ? t('play.timeUp') : t('play.tapToLock')}
           </Text>
         )}
         {isPlayer && submitted && (
@@ -1297,6 +1373,28 @@ function Finished({
   useEffect(() => {
     headingRef.current?.focus({ preventScroll: true });
   }, []);
+  // A room that finished without ever starting is a lobby its host left.
+  const hostLeft = !match.started_at;
+  // Nobody scored, so nobody won: first place would only be the fastest zero.
+  const top = scoreboard[0];
+  const hasWinner = !!top && (top.score ?? top.correct) > 0;
+  if (hostLeft) {
+    return (
+      <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
+        <Card padding={5} width="100%">
+          <VStack gap={2} align="center">
+            <div ref={headingRef} tabIndex={-1}>
+              <Heading level={1} type="display-3" justify="center">
+                {t('play.hostLeftTitle')}
+              </Heading>
+            </div>
+            <Text color="secondary" justify="center">{t('play.hostLeftBody')}</Text>
+            <Button variant="primary" size="lg" label={t('common.back')} onClick={onLeave} />
+          </VStack>
+        </Card>
+      </div>
+    );
+  }
   return (
     <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%' }}>
     <Card padding={5} width="100%">
@@ -1307,7 +1405,7 @@ function Finished({
               {t('play.matchComplete')}
             </Heading>
           </div>
-          {scoreboard.length > 0 && (
+          {hasWinner && (
             <div
               style={{
                 borderRadius: 999,
@@ -1319,8 +1417,8 @@ function Finished({
               }}
             >
               {t('play.winner', {
-                name: scoreboard[0].display_name,
-                correct: scoreboard[0].correct,
+                name: top.display_name,
+                correct: top.correct,
                 total: match.questions.length,
               })}
             </div>

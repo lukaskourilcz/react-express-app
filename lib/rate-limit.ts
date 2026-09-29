@@ -55,9 +55,27 @@ export const SHARED_NETWORK_SEATS = 32;
 export const RATE_LIMITS = {
   admin: { key: 'admin_gate', capacity: 5, refillPerSecond: 1 },
   quizSession: { key: 'quiz_session', capacity: 20, refillPerSecond: 20 / 60 },
-  quizSubmit: { key: 'quiz_submit', capacity: 12, refillPerSecond: 12 / 60 },
-  challengeScore: { key: 'challenge_score', capacity: 3, refillPerSecond: 10 / 3600 },
-  challengeComplete: { key: 'challenge_complete', capacity: 12, refillPerSecond: 12 / 3600 },
+  // Grading and the Challenge have two tiers, like `play` below. The address
+  // buckets hold a class behind one NAT: a Challenge sends one submit per
+  // question, so a class playing it at once spent the old one-person budget
+  // in seconds. A signed-in caller is then bounded by an account bucket, and a
+  // caller without an account keeps the address rate these endpoints had
+  // before the split.
+  quizSubmit: { key: 'quiz_submit', capacity: SHARED_NETWORK_SEATS * 12, refillPerSecond: (SHARED_NETWORK_SEATS * 12) / 60 },
+  quizSubmitPerUser: { key: 'quiz_submit_user', capacity: 12, refillPerSecond: 12 / 60 },
+  // One Challenge answer per submit: a quick learner answers a question every
+  // few seconds, which the twelve-a-minute quiz budget cut off.
+  challengeSubmitPerUser: { key: 'challenge_submit_user', capacity: 30, refillPerSecond: 30 / 60 },
+  quizSubmitAnonymous: { key: 'quiz_submit_anon', capacity: 12, refillPerSecond: 12 / 60 },
+  challengeScore: { key: 'challenge_score', capacity: SHARED_NETWORK_SEATS * 3, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 3600 },
+  challengeScorePerUser: { key: 'challenge_score_user', capacity: 3, refillPerSecond: 10 / 3600 },
+  challengeScoreAnonymous: { key: 'challenge_score_anon', capacity: 3, refillPerSecond: 10 / 3600 },
+  // A run can end after three quick answers, and a completion that failed is
+  // sent again with the next one, so a learner's own budget is larger than
+  // the twelve an hour one whole address used to share.
+  challengeComplete: { key: 'challenge_complete', capacity: SHARED_NETWORK_SEATS * 12, refillPerSecond: (SHARED_NETWORK_SEATS * 12) / 3600 },
+  challengeCompletePerUser: { key: 'challenge_complete_user', capacity: 30, refillPerSecond: 30 / 3600 },
+  challengeCompleteAnonymous: { key: 'challenge_complete_anon', capacity: 12, refillPerSecond: 12 / 3600 },
   // A signed-in leaderboard read skips the CDN (it carries the learner's own
   // rank), so it gets a bucket; the anonymous board is cached and needs none.
   leaderboardPersonal: { key: 'leaderboard_personal', capacity: 30, refillPerSecond: 30 / 60 },

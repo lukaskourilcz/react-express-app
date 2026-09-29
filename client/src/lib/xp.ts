@@ -186,17 +186,19 @@ export function announceVerifiedQuestXp(amount: number): void {
 /**
  * Record the outcome of a finished learning lesson. `deltaLearningXp` is the
  * increase in derived learning XP (compute it before/after recording the pass).
- * A new pass shows the big learning gain; anything else (replay, fail) grants a
- * small flat practice reward, so every completed session still pays out.
+ * A new pass shows the big learning gain. A replay or a failed attempt earns a
+ * small flat practice reward only in a signed-out browser, whose XP is local
+ * anyway: no server route awards it, so a signed-in learner would see XP (and
+ * possibly a rank-up) their account never gets.
  */
-export function awardLearningOutcome(deltaLearningXp: number): void {
+export function awardLearningOutcome(deltaLearningXp: number, signedIn: boolean): void {
   if (deltaLearningXp > 0) {
     const rounded = Math.round(deltaLearningXp);
     // Learning XP isn't stored — it's derived from progress. Its coins are
     // credited by the server when it records the first pass (#227).
     emitToast({ kind: 'gain', amount: rounded, source: 'learn' });
     reconcileRank(true);
-  } else {
+  } else if (!signedIn) {
     awardQuestXp(PRACTICE_XP, 'practice');
   }
 }

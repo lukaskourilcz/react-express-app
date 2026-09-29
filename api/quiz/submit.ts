@@ -87,6 +87,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
+  // The address bucket holds a class behind one NAT; each caller is bounded
+  // again below, once the session and the account are known.
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSubmit))) return;
 
   const body = req.body as { sessionId?: unknown; answers?: unknown; lang?: unknown };
@@ -163,6 +165,14 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
   }
+  // A signed-in caller is bounded by their account, with room for a Challenge
+  // answer every few seconds; a caller without one keeps the address rate.
+  const withinCallerLimit = !signedIn
+    ? await enforceRateLimit(req, res, RATE_LIMITS.quizSubmitAnonymous)
+    : session.scope === 'challenge'
+      ? await enforceRateLimit(req, res, RATE_LIMITS.challengeSubmitPerUser, `user:${signedIn.sub}`)
+      : await enforceRateLimit(req, res, RATE_LIMITS.quizSubmitPerUser, `user:${signedIn.sub}`);
+  if (!withinCallerLimit) return;
   // The public question of the day (#239) is practice: it is graded as if
   // signed out, so it mints no receipt, XP, streak day or review record for
   // anyone.

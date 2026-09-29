@@ -113,7 +113,7 @@ describe('/challenge', () => {
     server.use(http.get('*/api/quiz/challenge', () => HttpResponse.json({ error: { code: 'db_error', message: 'Down' } }, { status: 500 })));
     await mountAt('/challenge', <Challenge />);
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
-    expect(await screen.findByText('Today’s board could not be loaded. Your challenge is still available.')).toBeInTheDocument();
+    expect(await screen.findByText('The top scores could not be loaded. You can still play.')).toBeInTheDocument();
   });
 });
 
