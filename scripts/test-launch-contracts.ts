@@ -441,6 +441,24 @@ async function auditGateContracts() {
   assert.equal(round.lastRoundSize, 1, 'the void item does not count in the round');
   assert.equal(round.lastRoundCorrect, 1);
   assert.equal(round.asked, 1, 'the run continues from what was actually graded');
+  // A Learn session lives as long as the attempt the answer routine opens for
+  // it (two hours), so a level whose coding tasks run past an hour can still
+  // be completed. Other sessions keep their hour.
+  const realNow = Date.now;
+  try {
+    const opened = realNow();
+    const learnSession = encodeSession([{ questionId: sample.id, correctAnswer: 0 }], {
+      scope: 'roadmap', subject: 'webdev', topic: 'javascript', roadmapKind: 'level', ref: 1, userId: null,
+    });
+    const quizSession = encodeSession([{ questionId: sample.id, correctAnswer: 0 }], { subject: 'webdev' });
+    Date.now = () => opened + 61 * 60_000;
+    assert.ok(decodeSession(learnSession), 'a Learn session is still open after an hour');
+    assert.equal(decodeSession(quizSession), null, 'a quiz session still ends after an hour');
+    Date.now = () => opened + 121 * 60_000;
+    assert.equal(decodeSession(learnSession), null, 'a Learn session ends after two hours');
+  } finally {
+    Date.now = realNow;
+  }
 }
 
 /* ── the free tier and Premium (#220) ─────────────────────────────────────

@@ -4,6 +4,9 @@
  * the way PostgREST does for the learning tables and routines, with the
  * state kept in memory. It covers what only shows once a database answers:
  *
+ *  - a Learn session answers only to the account it was issued to, so a
+ *    level fetched without a token (the progression guard runs only for a
+ *    signed-in request) cannot be answered and completed with one;
  *  - the progress a completion returns is the progress the GET returns,
  *    spaced-mastery fields included, because the browser replaces its copy
  *    with it;
@@ -218,6 +221,52 @@ async function main() {
       }
       return statuses;
     };
+
+    // ── A guest's session cannot be completed by an account ────────────────
+    // JavaScript level 10 opens part two: a new account is refused it when it
+    // asks with its token. Fetched without the token, the same level is served
+    // as a preview; answering and completing it with the token must not record
+    // it for the account.
+    const refused = await call('GET', { topic: 'javascript', level: '10', lang: 'en' }, LEARNER.token);
+    assert.equal(refused.statusCode, 403, 'a new account is refused a level it has not reached');
+    const preview = await call('GET', { topic: 'javascript', level: '10', lang: 'en' });
+    assert.equal(preview.statusCode, 200, 'a guest is served the preview');
+    const previewSession = preview.body.sessionId as string;
+    const foreign = await answerAll(previewSession, LEARNER.token);
+    assert.ok(foreign.every((status) => status === 409), `a guest session is not answered with a token (${foreign.join(',')})`);
+    const foreignAnswer = await call('POST', { resource: 'answer' }, LEARNER.token, { sessionId: previewSession, questionId: tokens.decodeSessionEnvelope(previewSession)!.questions[0].questionId, selectedIndex: 0, lang: 'en' });
+    assert.equal(foreignAnswer.body?.error?.code, 'session_owner_mismatch', 'the refusal names why, so the client can restart the level');
+    const foreignComplete = await call('POST', { resource: 'complete' }, LEARNER.token, { sessionId: previewSession });
+    assert.equal(foreignComplete.statusCode, 409, 'a guest session is not completed with a token');
+    assert.equal(foreignComplete.body?.error?.code, 'session_owner_mismatch');
+    assert.equal(tables.roadmap_progress.find((row) => row.user_id === LEARNER.id), undefined, 'nothing was recorded for the account');
+    assert.equal(tables.roadmap_attempts.filter((row) => row.user_id === LEARNER.id).length, 0, 'no attempt was opened for the account');
+    // The coding tasks inside the level carry the same owner.
+    const codingItem = (preview.body.coding ?? [])[0] as { session: string } | undefined;
+    assert.ok(codingItem, 'JavaScript level 10 carries a coding task');
+    assert.equal(tokens.decodeCodingSession(codingItem.session)?.userId, null, 'a guest level seals a guest coding session');
+
+    // An account's session answers to that account alone: not to a guest (a
+    // learner who signed out mid-level) and not to another account.
+    const own = await call('GET', { topic: 'javascript', level: '1', lang: 'en' }, LEARNER.token);
+    assert.equal(own.statusCode, 200);
+    assert.equal(tokens.decodeSessionEnvelope(own.body.sessionId)?.userId, LEARNER.id, 'the session is sealed to the account');
+    const ownCoding = (own.body.coding ?? [])[0] as { session: string } | undefined;
+    assert.ok(ownCoding, 'JavaScript level 1 carries a coding task');
+    assert.equal(tokens.decodeCodingSession(ownCoding.session)?.userId, LEARNER.id, 'and so is its coding task');
+    const firstQuestion = tokens.decodeSessionEnvelope(own.body.sessionId)!.questions[0];
+    const signedOut = await call('POST', { resource: 'answer' }, undefined, { sessionId: own.body.sessionId, questionId: firstQuestion.questionId, selectedIndex: 0, lang: 'en' });
+    assert.equal(signedOut.statusCode, 409, 'a signed-in session is not answered after signing out');
+    const otherAccount = await call('POST', { resource: 'answer' }, OTHER.token, { sessionId: own.body.sessionId, questionId: firstQuestion.questionId, selectedIndex: 0, lang: 'en' });
+    assert.equal(otherAccount.statusCode, 409, 'nor by another account');
+    const ownAnswer = await call('POST', { resource: 'answer' }, LEARNER.token, { sessionId: own.body.sessionId, questionId: firstQuestion.questionId, selectedIndex: firstQuestion.correctAnswer, lang: 'en' });
+    assert.equal(ownAnswer.statusCode, 200, `the account itself answers (${JSON.stringify(ownAnswer.body)})`);
+    assert.equal(ownAnswer.body.isCorrect, true);
+    // A guest keeps playing a guest session.
+    const guestLevel = await call('GET', { topic: 'html', level: '1', lang: 'en' });
+    const guestStatuses = await answerAll(guestLevel.body.sessionId);
+    assert.ok(guestStatuses.every((status) => status === 200), `a guest answers a guest session (${guestStatuses.join(',')})`);
+    console.log('PASS learn: a session answers only to the account it was issued to');
 
     // ── The completion returns the progress the GET returns ────────────────
     // HTML level 1 is mastered and level 2 is due for its second pass. After

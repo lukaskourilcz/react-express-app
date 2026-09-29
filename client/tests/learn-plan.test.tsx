@@ -168,3 +168,28 @@ describe('the account’s record', () => {
     expect(stored['2']).toMatchObject({ passed: true, lastPassDay: TODAY, passDays: [DAYS_AGO(3), TODAY] });
   });
 });
+
+describe('a level whose session cannot be used', () => {
+  async function openLevelAndAnswer() {
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
+    fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
+  }
+
+  it('offers a fresh start when the session timed out', async () => {
+    const seen = answer({ answer: () => HttpResponse.json({ error: { code: 'invalid_session', message: 'Learning session expired or invalid' } }, { status: 400 }) });
+    await openLevelAndAnswer();
+    expect(await screen.findByRole('heading', { name: 'This level timed out' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Start the level again' }));
+    await waitFor(() => expect(seen.levelFetches).toBe(2));
+  });
+
+  it('offers a fresh start when the sign-in changed mid-level', async () => {
+    answer({ answer: () => HttpResponse.json({ error: { code: 'session_owner_mismatch', message: 'This lesson was opened under a different sign-in. Start it again.' } }, { status: 409 }) });
+    await openLevelAndAnswer();
+    expect(await screen.findByRole('heading', { name: 'Your sign-in changed during this level' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Start the level again' })).toBeInTheDocument();
+  });
+});

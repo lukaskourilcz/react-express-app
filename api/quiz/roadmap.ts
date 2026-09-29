@@ -171,6 +171,8 @@ function playableResponse(input: {
   difficulty?: number;
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
+  /** The account the step is issued to, or null for a guest. */
+  userId: string | null;
 }) {
   const built = buildQuestions(input.ids, input.lang, input.byId);
   const subject = subjectForTopic(input.topic);
@@ -194,6 +196,10 @@ function playableResponse(input: {
       ? { requiredLevelStart: input.requiredLevelStart, requiredLevelEnd: input.requiredLevelEnd }
       : {}),
     ...(codingTasks.length > 0 ? { codingTaskIds: codingTasks.map((task) => task.id) } : {}),
+    // Sealed so only the account the progression guard checked may answer
+    // and complete the step. A guest session carries null: presenting it with
+    // a token would otherwise record a level the guard never allowed.
+    userId: input.userId,
   });
   return {
     kind: input.kind,
@@ -208,7 +214,7 @@ function playableResponse(input: {
       ? {
           coding: codingTasks.map((task) => ({
             task: playableCodingTask(task),
-            session: encodeCodingSession({ taskId: task.id, track: task.track, userId: null, roadmapAttemptId: attemptId }),
+            session: encodeCodingSession({ taskId: task.id, track: task.track, userId: input.userId, roadmapAttemptId: attemptId }),
           })),
         }
       : {}),
@@ -966,6 +972,24 @@ async function refuseLockedSession(
   });
 }
 
+/** A Learn session answers only to the account it was issued to. The
+ * progression guard runs when a step is issued, and only for a signed-in
+ * request, so a session fetched without a token (or under another account)
+ * must not be answered or completed with one: that would record a level the
+ * guard never checked. Signing in or out mid-level lands here too; the client
+ * restarts the step under the current sign-in. A session sealed before the
+ * owner was recorded reads as a guest's. */
+function refuseForeignSession(
+  res: VercelResponse,
+  session: NonNullable<ReturnType<typeof roadmapSession>>,
+  userId: string | null,
+): boolean {
+  if ((session.userId ?? null) === userId) return false;
+  logEvent({ status: 409, kind: 'session_owner_mismatch', topic: session.topic, hasUser: Boolean(userId) });
+  jsonError(res, 409, 'session_owner_mismatch', 'This lesson was opened under a different sign-in. Start it again.');
+  return true;
+}
+
 async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapAnswer))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
@@ -982,6 +1006,7 @@ async function handleAnswer(req: VercelRequest, res: VercelResponse) {
   if (!sessionQuestion) return jsonError(res, 400, 'bad_request', 'Question is not part of this learning session');
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
+  if (refuseForeignSession(res, session, userId)) return;
   if (await refuseLockedSession(res, userId, session)) return;
 
   const selectedIndex = Number(body.selectedIndex);
@@ -1088,6 +1113,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   if (!session) return jsonError(res, 400, 'invalid_session', 'Learning session expired or invalid');
   const userId = await optionalAuthSub(req, res);
   if (userId === undefined) return;
+  if (refuseForeignSession(res, session, userId)) return;
   if (await refuseLockedSession(res, userId, session)) return;
   const attemptResult = await ensureAttempt(session, userId);
   if (attemptResult.error || !attemptResult.data) {
@@ -1493,7 +1519,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
     const playable = playableResponse({
       kind: 'checkpoint', topic, ref: part, title: `Part ${part}`,
-      passPct: PART_TEST_PASS, ids, lang, byId,
+      passPct: PART_TEST_PASS, ids, lang, byId, userId: learner?.userId ?? null,
       ...requiredRange(availability, range.startLevel, range.endLevel),
     });
     if (!playable || playable.questions.length === 0) return jsonError(res, 404, 'no_questions', 'No questions for this test');
@@ -1528,7 +1554,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
     const playable = playableResponse({
       kind: 'checkpoint', topic, ref: checkpoint, title: `Part ${checkpoint}`,
-      passPct: PART_TEST_PASS, ids, lang, byId,
+      passPct: PART_TEST_PASS, ids, lang, byId, userId: learner?.userId ?? null,
       ...requiredRange(availability, range.startLevel, range.endLevel),
     });
     if (!playable || playable.questions.length === 0) {
@@ -1559,7 +1585,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const playable = playableResponse({
     kind: 'level', topic, ref: meta.level, title: meta.title,
     difficulty: meta.difficulty, passPct: LEVEL_PASS,
-    ids: live.levelIds[level - 1] ?? [], lang, byId,
+    ids: live.levelIds[level - 1] ?? [], lang, byId, userId: learner?.userId ?? null,
     ...(required !== null ? { requiredLevelStart: required, requiredLevelEnd: required } : {}),
   });
   if (!playable || playable.questions.length === 0) {

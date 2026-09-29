@@ -73,7 +73,7 @@ import { BRAND } from '../theme/MuiTheme';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
-import { friendlyError, isPremiumRequired } from '../lib/api';
+import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
@@ -1207,6 +1207,18 @@ function HeartMeter({ mistakes, max, hit, t }: { mistakes: number; max: number; 
   );
 }
 
+/** Why a level's session can no longer be used. `expired`: it outlived the
+ * attempt the server keeps for it (two hours), or the attempt was closed.
+ * `signInChanged`: it was opened under a different sign-in than the one now
+ * answering (a sign-in or sign-out mid-level). */
+type SessionRestart = 'expired' | 'signInChanged';
+function sessionRestartFor(error: unknown): SessionRestart | null {
+  if (!(error instanceof ApiError)) return null;
+  if (error.code === 'session_owner_mismatch') return 'signInChanged';
+  if (error.code === 'invalid_session' || error.code === 'attempt_conflict') return 'expired';
+  return null;
+}
+
 function LessonRunner({
   playable, firstLevelPass = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
 }: {
@@ -1270,6 +1282,15 @@ function LessonRunner({
   // retired while it was open. Nothing was recorded, so the finish screen
   // offers the level again rather than a score.
   const [invalidated, setInvalidated] = useState(false);
+  // The server can no longer use this session: it outlived its attempt, or it
+  // was opened under a different sign-in. Sending it again fails the same
+  // way, so the level offers a fresh start instead of Try again.
+  const [restart, setRestart] = useState<SessionRestart | null>(null);
+  const reportError = useCallback((error: unknown) => {
+    const reason = sessionRestartFor(error);
+    if (reason) setRestart(reason);
+    else setAnswerError(friendlyError(error));
+  }, []);
 
   const question = presented[qIndex];
   // Out of hearts once this answer is revealed and it pushed mistakes to the max.
@@ -1294,12 +1315,12 @@ function LessonRunner({
           window.setTimeout(() => setHeartHit(false), 500);
         }
       } catch (error) {
-        setAnswerError(friendlyError(error));
+        reportError(error);
       } finally {
         setGrading(false);
       }
     },
-    [revealed, grading, playable.sessionId, question.id, lang, isCheckpoint],
+    [revealed, grading, playable.sessionId, question.id, lang, isCheckpoint, reportError],
   );
 
   const complete = useCallback(async () => {
@@ -1322,11 +1343,11 @@ function LessonRunner({
       setCodingPhase(false);
       setFinished(true);
     } catch (error) {
-      setAnswerError(friendlyError(error));
+      reportError(error);
     } finally {
       setCompleting(false);
     }
-  }, [onFinished, playable.passPct, playable.sessionId]);
+  }, [onFinished, playable.passPct, playable.sessionId, reportError]);
 
   const advance = useCallback(async () => {
     if (outOfHearts) {
@@ -1346,7 +1367,7 @@ function LessonRunner({
         setDead(true);
         setFinished(true);
       } catch (error) {
-        setAnswerError(friendlyError(error));
+        reportError(error);
       } finally {
         setCompleting(false);
       }
@@ -1365,7 +1386,7 @@ function LessonRunner({
     } else {
       await complete();
     }
-  }, [total, outOfHearts, qIndex, onFinished, playable.passPct, playable.sessionId, codingTasks.length, complete]);
+  }, [total, outOfHearts, qIndex, onFinished, playable.passPct, playable.sessionId, codingTasks.length, complete, reportError]);
 
   const submitFlag = async (detail?: string) => {
     await reportQuestion({
@@ -1401,8 +1422,35 @@ function LessonRunner({
   }, [finished, showIntro, codingPhase, revealed, question, choose, advance]);
 
   useEffect(() => {
-    if (finished) resultHeadingRef.current?.focus({ preventScroll: true });
-  }, [finished]);
+    if (finished || restart) resultHeadingRef.current?.focus({ preventScroll: true });
+  }, [finished, restart]);
+
+  if (restart) {
+    return (
+      <div
+        style={{
+          flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: 'center',
+          alignItems: 'center', textAlign: 'center', maxWidth: 520, margin: '0 auto', position: 'relative',
+          paddingLeft: 16, paddingRight: 16,
+        }}
+      >
+        <h1 ref={resultHeadingRef} tabIndex={-1} className="rm-finish-title">
+          {restart === 'expired' ? t('roadmap.expiredTitle') : t('roadmap.signInChangedTitle')}
+        </h1>
+        <div role="status" style={{ color: 'var(--color-text-secondary)', marginBottom: 16 }}>
+          {restart === 'expired' ? t('roadmap.expiredBody') : t('roadmap.signInChangedBody')}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 16 }}>
+          <button type="button" className="rm-accent-btn" onClick={onReplay} style={accentFill}>
+            {t('roadmap.restartLevel')}
+          </button>
+          <button type="button" className="rm-text-btn" onClick={onExit}>
+            {t('roadmap.backToPath')}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (showIntro && intro) {
     return (

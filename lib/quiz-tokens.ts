@@ -10,6 +10,11 @@ if (IS_PROD && (!SECRET || SECRET.length < 32)) {
 }
 
 const TOKEN_TTL_MS = 60 * 60 * 1000;
+/** A Learn level or part test. It lives as long as the attempt the answer
+ * routine opens for it (two hours in record_roadmap_answer_v2 and the TS
+ * fallback), so a level with coding tasks that runs past an hour can still be
+ * completed; its coding sessions last three. */
+const ROADMAP_TTL_MS = 2 * 60 * 60 * 1000;
 const CHALLENGE_TTL_MS = 3 * 60 * 60 * 1000;
 const TOKEN_AAD = Buffer.from('shark-quiz-token:v2');
 const TOKEN_KEY = createHash('sha256').update(SECRET || 'dev-only-not-for-production', 'utf8').digest();
@@ -32,6 +37,9 @@ interface SessionPayload {
   requiredLevelEnd?: number;
   /** Learn levels with coding tasks: the ids the completion gate checks. */
   codingTaskIds?: string[];
+  /** Learn sessions: the account the step was issued to, or null for a guest.
+   * Only the issuer may answer or complete it. */
+  userId?: string | null;
   iat: number;
   exp: number;
 }
@@ -228,6 +236,7 @@ type SessionContext =
       requiredLevelStart?: number;
       requiredLevelEnd?: number;
       codingTaskIds?: string[];
+      userId: string | null;
     };
 
 export interface DecodedQuizSession {
@@ -243,6 +252,9 @@ export interface DecodedQuizSession {
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
   codingTaskIds?: string[];
+  /** Learn sessions only: who the step was issued to (null: a guest, or a
+   * session sealed before the owner was recorded). */
+  userId?: string | null;
   issuedAt: number;
 }
 
@@ -255,13 +267,13 @@ export function encodeSession(data: SessionPayload['questions'], context?: Sessi
     ...(context ?? {}),
     attemptId: providedAttemptId ?? b64url(randomBytes(18)),
     iat: now,
-    exp: now + TOKEN_TTL_MS,
+    exp: now + (context && 'scope' in context && context.scope === 'roadmap' ? ROADMAP_TTL_MS : TOKEN_TTL_MS),
   });
 }
 
 export function decodeSessionEnvelope(token: string): DecodedQuizSession | null {
   const payload = openToken(token) as Partial<SessionPayload> | null;
-  if (!payload || payload.kind !== 'quiz-session' || !validLifetime(payload, TOKEN_TTL_MS) || typeof payload.iat !== 'number') return null;
+  if (!payload || payload.kind !== 'quiz-session' || !validLifetime(payload, payload.scope === 'roadmap' ? ROADMAP_TTL_MS : TOKEN_TTL_MS) || typeof payload.iat !== 'number') return null;
   if (!Array.isArray(payload.questions) || payload.questions.length === 0 || payload.questions.length > 50) return null;
   if (!payload.questions.every((question) => question && typeof question.questionId === 'string' && question.questionId.length > 0 && question.questionId.length <= 64 && Number.isInteger(question.correctAnswer) && question.correctAnswer >= 0 && question.correctAnswer <= 25)) return null;
   if (payload.subject !== undefined && !isScopeSubject(payload.subject)) return null;
@@ -290,6 +302,8 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
     if (!payload.subject || typeof payload.topic !== 'string' || (payload.roadmapKind !== 'level' && payload.roadmapKind !== 'checkpoint') || !Number.isInteger(payload.ref) || (payload.ref ?? 0) < 1 || (payload.attemptId !== undefined && !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) || (hasRequiredRange && (!Number.isInteger(requiredStart) || !Number.isInteger(requiredEnd) || requiredStart! < 1 || requiredEnd! < requiredStart! || requiredEnd! > 100))) return null;
     const codingIds = payload.codingTaskIds;
     if (codingIds !== undefined && (!Array.isArray(codingIds) || codingIds.length > 5 || !codingIds.every((id) => typeof id === 'string' && /^[a-z0-9-]{3,64}$/.test(id)))) return null;
+    const owner = payload.userId;
+    if (owner !== undefined && owner !== null && (typeof owner !== 'string' || owner.length === 0 || owner.length > 128)) return null;
     return {
       ...base,
       scope: 'roadmap',
@@ -299,6 +313,7 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
       attemptId: payload.attemptId,
       ...(hasRequiredRange ? { requiredLevelStart: requiredStart, requiredLevelEnd: requiredEnd } : {}),
       ...(codingIds && codingIds.length > 0 ? { codingTaskIds: codingIds } : {}),
+      userId: owner ?? null,
     };
   }
   return base;
