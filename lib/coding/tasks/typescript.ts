@@ -66,7 +66,7 @@ console.log(toSlug("Hello World"));
     tier: 1,
     focus: ["annotations", "sort", "slice"],
     title: "Top three scores",
-    prompt: "Write `topThree(scores: number[]): number[]`, returning the three highest values, largest first. Fewer than three values gives back all of them in order, and the array you were handed must not be reordered in place.",
+    prompt: "Write `topThree(scores: number[]): number[]`, returning the three highest values, largest first. Fewer than three values gives back all of them, largest first, and the array you were handed must not be reordered in place.",
     starter: `const topThree = (scores) => {
   
 };
@@ -93,6 +93,7 @@ console.log(topThree([5,9,1,7]));
       { call: "topThree([4])", expected: [4], label: "fewer than three", edge: true },
       { call: "topThree([])", expected: [], label: "empty input", edge: true },
       { call: "topThree([-1,-5,-3])", expected: [-1, -3, -5], label: "all negative", edge: true },
+      { call: "topThree([2,8])", expected: [8, 2], label: "two values, largest first", edge: true },
     ],
     typeTests: [
       {
@@ -232,7 +233,7 @@ const fullName = (person: Person): string => {
     tier: 1,
     focus: ["optional", "interfaces"],
     title: "Optional nickname",
-    prompt: "Declare an interface named `User` with a required `name` and an optional `nickname`, both strings, then write `displayName(user: User): string` returning the nickname when the property is there and the name when it is not. A nickname that is present but empty still wins.",
+    prompt: "Declare an interface named `User` with a required `name` and an optional `nickname`, both strings, then write `displayName(user: User): string` returning the nickname when it is set (not `undefined`) and the name otherwise. A nickname that is set but empty still wins.",
     starter: `const displayName = (user) => {
   
 };
