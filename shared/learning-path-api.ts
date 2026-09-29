@@ -344,6 +344,8 @@ export interface SubmitActivityResponse {
 
 export interface PathDraft {
   activityId: string;
+  /** The saved draft's revision, from 1. A start answers 0 for a submitted
+   * written piece reopened from its evidence: no draft is saved for it. */
   revision: number;
   /** Code text, or the artifact's fields. */
   content: { code?: string; artifact?: Record<string, string | string[]> };
@@ -384,6 +386,9 @@ export const PATH_LIMITS = {
   payloadBytes: 64 * 1024,
   /** Submitted code, matching the existing coding limit. */
   codeBytes: 20 * 1024,
-  draftsPerEnrollment: 20,
+  /** At least every code exercise and artifact of a path, so a learner who
+   * types into all of them is never refused (`npm run test:paths` checks it).
+   * A pass deletes its draft (migration 054), so few are held at once. */
+  draftsPerEnrollment: 60,
   idempotencyKeyPattern: /^[A-Za-z0-9_-]{16,64}$/,
 } as const;

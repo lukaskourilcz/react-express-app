@@ -272,6 +272,18 @@ describe('the draft autosave', () => {
     await waitFor(() => expect(calls.drafts.map((one) => [one.expected, one.code])).toEqual([[0, 'kept from last time']]));
   });
 
+  it('shows a submission reopened at revision 0 without calling it a saved draft, and saves the first edit as a new one', async () => {
+    // A pass deletes the draft (migration 054); the start reopens a submitted
+    // written piece from its evidence at revision 0, and nothing is saved yet.
+    calls.serverDraft = { activityId: A, revision: 0, content: { code: 'what I submitted' }, updatedAt: '' };
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe('what I submitted'));
+    expect(status()).toBe('Nothing to save yet');
+    await type('what I submitted, revised');
+    await waitFor(() => expect(calls.drafts.map((one) => [one.expected, one.code])).toEqual([[0, 'what I submitted, revised']]));
+    await waitFor(() => expect(status()).toBe('Draft saved'));
+  });
+
   it('prefers the server\'s draft when another device saved after the copy on this one', async () => {
     localStorage.setItem(`devshark:path:draft:${ENROLLMENT}:${A}`, JSON.stringify({ baseRevision: 1, content: { code: 'older, from here' } }));
     calls.serverRevision = 2;

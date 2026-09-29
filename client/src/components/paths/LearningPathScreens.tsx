@@ -546,7 +546,9 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         };
         setOpen(started);
         setDraft(kept ?? started.draft);
-        setDraftStatus(started.draft ? 'saved' : 'idle');
+        // Revision 0 is a submitted written piece reopened from its evidence:
+        // shown to edit, but not a saved draft.
+        setDraftStatus(started.draft && started.draft.revision > 0 ? 'saved' : 'idle');
         capturePathEvent(
           started.previous && started.previous.attempts > 0
             ? 'learning_path_returned'

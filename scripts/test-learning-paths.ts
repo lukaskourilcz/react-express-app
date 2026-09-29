@@ -24,6 +24,8 @@ import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
 import { codingTaskById } from '../lib/coding/active';
 import { moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
+import { PATH_LIMITS } from '../shared/learning-path-api';
+import { moduleRequirements, recordedState } from '../lib/learning-paths/handlers';
 import { handlerContracts } from './learning-path-handler-contracts';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
@@ -93,6 +95,39 @@ async function main() {
       const exercises = inventory.moduleCodeExercises + inventory.finalCodeExercises;
       if (exercises < target.codeExercises) {
         fail(`${where}: ${exercises} coding exercises, the curriculum commits to ${target.codeExercises}`);
+      }
+    }
+
+    /* ── a learner can hold a draft of every exercise and write-up ─────── */
+    // Every code exercise and artifact autosaves a draft, one per activity.
+    // With a cap below their number, a learner who typed into all of them was
+    // refused from the next one on (DSA has 30 and the cap was 20).
+    const draftable = inventory.codeExercises + inventory.artifacts;
+    if (draftable > PATH_LIMITS.draftsPerEnrollment) {
+      fail(`${where}: ${draftable} activities keep drafts, but an enrollment holds at most ${PATH_LIMITS.draftsPerEnrollment}`);
+    }
+
+    /* ── the database completes a module by moduleComplete's rule ──────── */
+    // accept_learning_path_result (migration 054) decides completion from the
+    // requirement lists a submit sends. For every module they must agree with
+    // moduleComplete: nothing recorded, every requirement met at its own state
+    // (and a verified pass for a write-up), and each requirement missed alone.
+    for (const module of path.modules) {
+      const requirements = moduleRequirements(module);
+      const databaseSays = (states: Map<string, EvidenceState>) => requirements.length > 0
+        && requirements.every((one) => one.states.includes(states.get(one.activityId) ?? 'not_started'));
+      const met = new Map(module.requires.map((one) => [one.activityId, one.state]));
+      const cases = [
+        new Map<string, EvidenceState>(),
+        met,
+        new Map(module.requires.map((one) => [one.activityId, 'verified_pass' as EvidenceState])),
+        ...module.requires.map((one) => new Map([...met, [one.activityId, 'needs_revision' as EvidenceState]])),
+      ];
+      for (const states of cases) {
+        const expected = !module.optional && moduleComplete(module, states);
+        if (databaseSays(states) !== expected) {
+          fail(`${where}/${module.id}: the requirements sent to the database say ${!expected} where moduleComplete says ${expected} for ${JSON.stringify([...states])}`);
+        }
       }
     }
 
@@ -272,6 +307,25 @@ async function main() {
     );
     for (const id of solutionIds()) {
       if (!known.has(id)) fail(`solutions: ${id} does not match any activity`);
+    }
+  }
+
+  /* ── what a later, weaker result leaves on record ──────────────────── */
+  // The rule accept_learning_path_result applies (migration 054): a verified
+  // pass is never demoted, and a submitted write-up only by a verified pass.
+  {
+    const folds: Array<[EvidenceState | undefined, EvidenceState, EvidenceState]> = [
+      ['self_reviewed', 'needs_revision', 'self_reviewed'],
+      ['self_reviewed', 'in_progress', 'self_reviewed'],
+      ['self_reviewed', 'verified_pass', 'verified_pass'],
+      ['verified_pass', 'needs_revision', 'verified_pass'],
+      ['verified_pass', 'self_reviewed', 'verified_pass'],
+      ['needs_revision', 'self_reviewed', 'self_reviewed'],
+      [undefined, 'needs_revision', 'needs_revision'],
+    ];
+    for (const [prior, next, kept] of folds) {
+      const got = recordedState(prior, next);
+      if (got !== kept) fail(`${next} after ${prior ?? 'nothing'} leaves ${got} on record, not ${kept}`);
     }
   }
 

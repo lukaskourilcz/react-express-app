@@ -6,6 +6,8 @@
 // suite in this repository runs under, and the plan check reads the free tier.
 //
 //   * a submit re-checks the path's switch and a paused enrollment
+//   * a resubmitted write-up keeps its submission, and a submit sends the
+//     module's requirements so the database decides completion
 //   * a preference save that cannot read the saved answers writes nothing
 //   * a path reward: the address caps, a raced second claim, a refused field
 //   * rate limits are the learner's own, with a class-sized address backstop
@@ -18,10 +20,13 @@ import {
   handleLearningPreference,
   handlePathDraft,
   handlePathReward,
+  moduleRequirements,
 } from '../lib/learning-paths/handlers';
+import { requestMemo, withRequestContext } from '../lib/http';
 import { encodeLearningPathSession } from '../lib/quiz-tokens';
 import { RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { LEARNER_PROFILE_META_KEY } from '../shared/learning-paths';
+import type { StartActivityResponse, SubmitActivityResponse } from '../shared/learning-path-api';
 
 type Fail = (message: string) => void;
 
@@ -48,9 +53,11 @@ const request = (method: string, address: string, body: Record<string, unknown>,
 
 const code = (res: Captured) => (res.body as { error?: { code?: string } } | undefined)?.error?.code;
 
-/** A chainable stand-in for the few Supabase calls these handlers make. */
+/** A chainable stand-in for the few Supabase calls these handlers make: a
+ * single row through `maybeSingle()`, a list when the chain is awaited. */
 function fakeSupabase(options: {
   rows?: Record<string, unknown>;
+  lists?: Record<string, unknown[]>;
   rpc?: (name: string, params: Record<string, unknown>) => { data?: unknown; error?: unknown };
   auth?: Record<string, unknown>;
 }) {
@@ -58,7 +65,11 @@ function fakeSupabase(options: {
     const chain = {
       select: () => chain,
       eq: () => chain,
+      not: () => chain,
+      order: () => chain,
+      limit: () => chain,
       maybeSingle: async () => ({ data: options.rows?.[table] ?? null, error: null }),
+      then: <A>(resolve: (value: { data: unknown[]; error: null }) => A) => resolve({ data: options.lists?.[table] ?? [], error: null }),
     };
     return chain;
   };
@@ -133,6 +144,102 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     } finally {
       if (switchBefore === undefined) delete process.env.LEARNING_PATH_DSA_ENABLED;
       else process.env.LEARNING_PATH_DSA_ENABLED = switchBefore;
+    }
+
+    /* ── a resubmitted write-up, and the requirements a submit sends ──── */
+    // An FDE module that requires a written piece, already completed: the
+    // piece submitted in full, every other requirement met. The learner sends
+    // it again with every field empty. The plan check reads Premium here.
+    {
+      const fde = LEARNING_PATHS.find((path) => path.id === 'fde')!;
+      const module = fde.modules.find((one) => !one.optional
+        && one.requires.some((requirement) => one.activities.find((activity) => activity.id === requirement.activityId)?.kind === 'artifact'))!;
+      const writeUp = module.activities.find((activity) => activity.kind === 'artifact' && module.requires.some((one) => one.activityId === activity.id))!;
+      const fdeEnrollment = `FDEENROLL${stamp}`.padEnd(20, 'a');
+      const fdeSession = encodeLearningPathSession({
+        attemptId: `FDEATTEMPT${stamp}`.padEnd(20, 'a'),
+        enrollmentId: fdeEnrollment,
+        userId: learner,
+        pathId: 'fde',
+        activityId: writeUp.id,
+        activityKind: writeUp.kind,
+        purpose: writeUp.purpose,
+        curriculumVersion: fde.version,
+        rubricVersion: fde.rubric.version,
+      }).token;
+      const recorded = Object.fromEntries(module.requires.map((requirement) => [requirement.activityId, {
+        state: requirement.state, score: requirement.state === 'verified_pass' ? 1 : null,
+        verification: requirement.state === 'verified_pass' ? 'machine_verified' : 'self_reviewed', attempts: 1, updatedAt: '2026-09-01T00:00:00Z',
+      }]));
+      const fdeRow = { ...enrollmentRow('active'), enrollment_id: fdeEnrollment, path_id: 'fde', curriculum_version: fde.version, base_track_at_enrollment: 'fullstack' };
+      const submitWriteUp = async (rpc: (name: string, params: Record<string, unknown>) => { data?: unknown; error?: unknown }) => {
+        const res = response();
+        const req = request('POST', `writeup-${stamp}`, { user_id: learner, session: fdeSession, idempotencyKey: 'KEYwriteup0123456789ab', artifact: {} });
+        await withRequestContext(req, res as never, async () => {
+          await requestMemo(`tier:${learner}`, async () => 'premium');
+          await handleActivitySubmit(req, res as never, fakeSupabase({
+            rows: { learning_path_enrollments: fdeRow },
+            lists: { learning_path_progress: [{ module_id: module.id, activity_states: recorded, completed_at: '2026-09-01T00:00:00Z' }] },
+            rpc,
+          }));
+        });
+        return res;
+      };
+      const fdeSwitch = process.env.LEARNING_PATH_FDE_ENABLED;
+      try {
+        process.env.LEARNING_PATH_FDE_ENABLED = 'true';
+        const sent: Record<string, unknown>[] = [];
+        let res = await submitWriteUp((_name, params) => { sent.push(params); return { data: { ok: true, replayed: false, revision: 2 } }; });
+        const answer = res.body as SubmitActivityResponse | undefined;
+        const projected = answer?.module?.activities.find((activity) => activity.activityId === writeUp.id);
+        if (res.statusCode !== 200 || answer?.state !== 'needs_revision') {
+          fail(`an empty resubmission of ${writeUp.id} answers ${res.statusCode} ${answer?.state ?? JSON.stringify(res.body)}, not 200 needs_revision`);
+        }
+        if (projected?.state !== 'self_reviewed' || answer?.module?.completed !== true) {
+          fail(`an empty resubmission of a submitted write-up projects it as ${projected?.state} (module completed: ${answer?.module?.completed}), not self_reviewed in a completed module`);
+        }
+        if (sent[0]?.p_state !== 'needs_revision') fail(`the weaker attempt is recorded as ${String(sent[0]?.p_state)}, not needs_revision evidence`);
+        const requirements = module.requires.map((one) => one.activityId);
+        const sentRequirements = sent[0]?.p_module_requires as { activityId: string; states: string[] }[] | undefined;
+        if (JSON.stringify(sentRequirements) !== JSON.stringify(moduleRequirements(module))
+            || sentRequirements?.map((one) => one.activityId).join() !== requirements.join()
+            || !sentRequirements?.find((one) => one.activityId === writeUp.id)?.states.includes('self_reviewed')) {
+          fail(`a submit sends the requirements ${JSON.stringify(sentRequirements)}, not ${module.id}'s own`);
+        }
+
+        // A database without migration 054 has no requirements parameter: the
+        // result is recorded without it rather than refused.
+        sent.length = 0;
+        res = await submitWriteUp((_name, params) => {
+          sent.push(params);
+          return 'p_module_requires' in params
+            ? { error: { code: 'PGRST202', message: 'Could not find the function public.accept_learning_path_result(p_artifact, p_attempt_id, p_criteria, p_domain_scores, p_idempotency_key, p_module_complete, p_module_id, p_module_requires, p_request_hash, p_result, p_score, p_state, p_user_id, p_verification_kind) in the schema cache' } }
+            : { data: { ok: true, replayed: false, revision: 2 } };
+        });
+        if (res.statusCode !== 200 || sent.length !== 2 || 'p_module_requires' in (sent[1] ?? {})) {
+          fail(`before migration 054 a submit answers ${res.statusCode} after ${sent.length} calls, not 200 after a second call without p_module_requires`);
+        }
+
+        // Reopened, the submitted piece comes back from its evidence, since
+        // the pass deleted its draft: at revision 0, so it is not a saved draft.
+        const submittedFields = Object.fromEntries(writeUp.artifact!.fields.map((field) => [field.id, field.kind === 'list' ? ['kept'] : 'kept']));
+        const startRes = response();
+        const startReq = request('POST', `writeup-start-${stamp}`, { user_id: learner, enrollmentId: fdeEnrollment, activityId: writeUp.id });
+        await withRequestContext(startReq, startRes as never, async () => {
+          await requestMemo(`tier:${learner}`, async () => 'premium');
+          await handleActivityStart(startReq, startRes as never, fakeSupabase({
+            rows: { learning_path_enrollments: fdeRow, learning_path_evidence: { artifact: submittedFields, created_at: '2026-09-01T00:00:00Z' } },
+            rpc: () => ({ data: { ok: true, expiresAt: '2026-09-01T03:00:00Z' } }),
+          }));
+        });
+        const reopened = (startRes.body as StartActivityResponse | undefined)?.draft;
+        if (startRes.statusCode !== 200 || reopened?.revision !== 0 || JSON.stringify(reopened?.content.artifact) !== JSON.stringify(submittedFields)) {
+          fail(`a submitted write-up reopens with ${startRes.statusCode} ${JSON.stringify(reopened)}, not its submission at revision 0`);
+        }
+      } finally {
+        if (fdeSwitch === undefined) delete process.env.LEARNING_PATH_FDE_ENABLED;
+        else process.env.LEARNING_PATH_FDE_ENABLED = fdeSwitch;
+      }
     }
 
     /* ── a preference save that cannot read the saved answers ─────────── */

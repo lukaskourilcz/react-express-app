@@ -55,6 +55,7 @@ import {
   pathGuidedComplete,
   pathInventory,
   artifactTally,
+  SATISFYING_STATES,
   type BaseTrack,
   type EvidenceState,
   type LearningPathId,
@@ -688,6 +689,24 @@ async function buildActivityPayload(
         content: (data.content ?? {}) as PathDraft['content'],
         updatedAt: data.updated_at as string,
       };
+    } else if (activity.kind === 'artifact') {
+      // A submitted written piece has no draft (a pass deletes it, migration
+      // 054), but the evidence holds what was submitted: it reopens with that,
+      // at revision 0, so revising it does not start from empty fields.
+      const { data: submitted } = await withTimeout(
+        supabase.from('learning_path_evidence').select('artifact,created_at')
+          .eq('enrollment_id', enrollmentId).eq('activity_id', activity.id)
+          .not('artifact', 'is', null)
+          .order('revision', { ascending: false }).limit(1).maybeSingle(),
+      );
+      if (submitted?.artifact && typeof submitted.artifact === 'object') {
+        draft = {
+          activityId: activity.id,
+          revision: 0,
+          content: { artifact: submitted.artifact as Record<string, string | string[]> },
+          updatedAt: submitted.created_at as string,
+        };
+      }
     }
   }
 
@@ -772,6 +791,30 @@ function reusedCode(activity: MergedActivity) {
 }
 
 /* ── submitting ───────────────────────────────────────────────────────── */
+
+/**
+ * The state a result leaves on record, folded the way
+ * `accept_learning_path_result` (migration 054) folds it: a verified pass is
+ * never demoted, and a submitted write-up (`self_reviewed`) is replaced only
+ * by a verified pass. The weaker attempt is still stored as evidence.
+ */
+export function recordedState(prior: EvidenceState | undefined, next: EvidenceState): EvidenceState {
+  if (prior === 'verified_pass' && next !== 'verified_pass') return 'verified_pass';
+  if (prior === 'self_reviewed' && (next === 'needs_revision' || next === 'in_progress')) return 'self_reviewed';
+  return next;
+}
+
+/** A module's completion requirements in the shape
+ * `accept_learning_path_result` takes: each required activity with every
+ * state that satisfies it (`SATISFYING_STATES`, the rule `moduleComplete`
+ * applies). An optional module sends none and never completes. */
+export function moduleRequirements(module: MergedPath['modules'][number]): { activityId: string; states: readonly EvidenceState[] }[] {
+  if (module.optional) return [];
+  return module.requires.map((requirement) => ({
+    activityId: requirement.activityId,
+    states: SATISFYING_STATES[requirement.state],
+  }));
+}
 
 /** POST /api/quiz/roadmap?resource=learning-path-submit */
 export async function handleActivitySubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
@@ -926,13 +969,11 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     if (migrationMissing(res, (error as { supabase?: { message?: string } }).supabase ?? null)) return;
     return jsonError(res, 500, 'db_error', 'Could not load learning-path progress');
   }
-  // A verified pass is never demoted by a later weaker attempt: the learner
-  // keeps what they proved. The RPC applies the same rule, so this projection
-  // matches what the write is about to store.
+  // A verified pass or a submitted write-up is never demoted by a later weaker
+  // attempt. The RPC applies the same rule, so this projection matches what
+  // the write is about to store.
   const states = stateMap(rows);
-  const priorState = states.get(activity.id);
-  const effectiveState: EvidenceState =
-    priorState === 'verified_pass' && state !== 'verified_pass' ? 'verified_pass' : state;
+  const effectiveState = recordedState(states.get(activity.id), state);
   states.set(activity.id, effectiveState);
   const moduleWillComplete = !module.optional && moduleComplete(module, states);
 
@@ -960,7 +1001,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     xpAwarded: 0,
   };
 
-  const accepted = await withTimeout(supabase.rpc('accept_learning_path_result', {
+  const acceptParams = {
     p_user_id: userId,
     p_attempt_id: session.attemptId,
     p_idempotency_key: body.idempotencyKey,
@@ -979,7 +1020,19 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     p_artifact: artifact,
     p_module_complete: moduleWillComplete,
     p_result: out,
+  };
+  // moduleWillComplete comes from progress read before this call, so two
+  // submits finishing a module's last activities at once would each miss the
+  // other. With the requirements, the routine (migration 054) decides
+  // completion again from the states it writes, one result at a time. Before
+  // 054 is installed it does not take them, and the call is made without.
+  let accepted = await withTimeout(supabase.rpc('accept_learning_path_result', {
+    ...acceptParams,
+    p_module_requires: moduleRequirements(module),
   }));
+  if (accepted.error && isRpcMissing(accepted.error)) {
+    accepted = await withTimeout(supabase.rpc('accept_learning_path_result', acceptParams));
+  }
   if (accepted.error) {
     if (migrationMissing(res, accepted.error)) return;
     return jsonError(res, 500, 'db_error', 'Could not record the result');
@@ -1012,7 +1065,8 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
  * Computed rather than re-read, so the response the learner sees and the
  * response stored for a replay are the same object. The arithmetic mirrors
  * `accept_learning_path_result`: attempts increment, the best score is kept,
- * and a verified pass is never demoted.
+ * and a verified pass or a submitted write-up is never demoted (`state` is
+ * what `recordedState` folded).
  */
 function projectModuleProgress(
   module: MergedPath['modules'][number],
