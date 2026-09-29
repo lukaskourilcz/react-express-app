@@ -109,12 +109,32 @@ questions never change and each answer returns the correct option, so a replayed
 level would otherwise add correct answers without limit. Coding passes are not
 answers and are not counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
-fewer answers for the same number correct, and equal results share a rank. The
-all-time board keeps its sources (`subject_leaderboard`, `category_leaderboard`
-over `user_category_stats`), so it counts quiz and daily answers and not Learn.
-Those boards and Today arrive in order without a rank, and the Leaderboard
-screen numbers them so equal results share a rank there too (Today ties only
-on the same score and the same time).
+fewer answers for the same number correct, and equal results share a rank.
+Since `supabase/supabase-schema-049.sql` the all-time boards
+(`subject_leaderboard`, `category_leaderboard`) read the same
+`user_activity_days` rows with no date window, so they count quiz, daily
+challenge, Learn and Biggest Shark Challenge answers under the same rule and
+the same five-answer minimum. `user_activity_days` starts at migration 040
+(26 September 2026). Quiz history from before it lives only in
+`user_category_stats` and is not copied in: the rows written since 040 are in
+both tables, so a copy would count them twice. Today (`daily_leaderboard_v2`)
+ranks by correct answers alone. Equal scores keep the order they were
+recorded in and share a rank; the time is shown and recorded but decides
+nothing. The all-time boards and Today arrive in order without a rank, and
+the Leaderboard screen numbers them so equal results share a rank there too.
+
+Names on the boards are opt-in. `user_stats.show_on_leaderboards` (049) is off
+for every learner, existing ones included, until they switch on "Show my name
+and photo on leaderboards" on the Profile or on the Leaderboard. Both switches
+read one query and write through `op=leaderboard-visibility` in
+`api/user/[op].ts` (GET `{ visible }`, PUT `{ visible }`; signed in only, each
+PUT charged to the account's write limit). Every board routine returns
+`display_name` and `picture` only while the flag is on and NULL otherwise, and
+the screen then shows "Learner" with the default avatar. The viewer's own
+30-day row follows the same rule, so it shows them what everybody else sees:
+a switch refetches their personal board at once, and the shared boards follow
+within the CDN's minute. The privacy policy says the same under
+"Leaderboards".
 `api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
 request with a Bearer token or `me=1` also gets the learner's own line and is
 answered `Cache-Control: private, no-store`. `friend_list` orders friends by

@@ -18,7 +18,9 @@ import { enforceRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 
 // Public responses are served by this scoped API, but leaderboard RPCs are
 // service-only so callers cannot bypass deployment/category validation through
-// the Supabase Data API.
+// the Supabase Data API. Every routine returns a learner's name and picture
+// only when they switched on user_stats.show_on_leaderboards (migration 049);
+// otherwise both are null and the client shows "Learner".
 const supabase = createServiceClient();
 
 const logEvent = createLogger('leaderboard');
@@ -49,9 +51,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
     if (period === 'global') {
       // Per-subject (platform) scoping: ?categories=a,b,c sums each user's
-      // per-category lifetime stats over exactly those categories. The client
-      // sends the active subject's category set; subjects are disjoint, so the
-      // result is that platform's own all-time board.
+      // dated activity (user_activity_days, no window, migration 049) over
+      // exactly those categories, so it counts what the 30-day board counts.
+      // The client sends the active subject's category set; subjects are
+      // disjoint, so the result is that platform's own all-time board.
       const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
       const requested = catRaw
         ? catRaw.split(',').map((s) => s.trim()).filter(Boolean)

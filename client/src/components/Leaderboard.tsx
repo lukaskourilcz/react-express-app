@@ -2,12 +2,19 @@
 //
 // Three boards share one ranked-rows shape. The 30-day board is the default
 // because it is the one a new learner can climb; the all-time board is one tab
-// away and keeps its own sources; Today is the daily challenge. Every board
-// ranks by correct answers, then accuracy (Today: correct answers, then time).
-// Nothing here ranks by XP or by streak, and nothing here reorders a board: the
-// server does. The 30-day board arrives with its ranks; the all-time and Today
-// boards arrive in order, and this screen numbers them so equal results share
-// a rank, as the 30-day board's do.
+// away and counts the same answers with no window; Today is the daily
+// challenge. Every board ranks by correct answers, then accuracy (Today: by
+// correct answers alone, whatever the time). Nothing here ranks by XP or by
+// streak, and nothing here reorders a board: the server does. The 30-day board
+// arrives with its ranks; the all-time and Today boards arrive in order, and
+// this screen numbers them so equal results share a rank, as the 30-day
+// board's do.
+//
+// A row names a learner only if they switched that on (migration 049): the
+// server sends no name and no picture otherwise, and the row reads "Learner"
+// with the default avatar. A signed-in learner's own row follows the same
+// rule, so it shows them what everybody else sees, and the switch sits on
+// this screen as well as on the Profile.
 //
 // A rank is always the number as text. The top three get a heavier ink ring,
 // never a fill or a medal colour, so the order reads the same without colour. Nothing
@@ -28,6 +35,8 @@ import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
 import { getUserProfile, useAuth } from '../lib/auth';
 import { ApiError, friendlyError } from '../lib/api';
 import { leaderboardQuery, useLeaderboard, type LeaderboardRequest } from '../lib/queries';
+import { leaderboardVisibilityQuery, useLeaderboardVisibility } from '../lib/leaderboardVisibility';
+import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
 import type {
   CategoryLeaderboardEntry,
@@ -46,7 +55,10 @@ type Tab = '30d' | 'all' | 'today';
 interface Row {
   key: string;
   rank: number;
+  /** The learner's name, or the anonymous label when they are not named. */
   name: string;
+  /** No name came with the row: the avatar is the default one, not initials. */
+  anonymous: boolean;
   picture: string | null;
   /** The first numeric column: correct answers, or today's score. */
   first: string;
@@ -105,14 +117,16 @@ function isOffline(error: unknown): boolean {
 
 /** The board this screen opens on, in the cache before the first render, so
  *  the screen draws the board rather than a skeleton that the board replaces.
- *  Signed in, that board carries the learner's own line. Offline the screen
- *  draws at once and shows the last board it loaded. */
+ *  Signed in, that board carries the learner's own line, and the learner's
+ *  name setting comes with it, so their pinned line and the switch draw once.
+ *  Offline the screen draws at once and shows the last board it loaded. */
 function useBoardFirstData() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
   const viewer = user?.id ?? null;
   useFirstData(`leaderboard ${viewer ?? ''}`, () => settled([
     readOnce(queryClient, leaderboardQuery({ period: '30d', category: null, viewer })),
+    viewer ? readOnce(queryClient, leaderboardVisibilityQuery(viewer)) : null,
   ]));
 }
 
@@ -127,6 +141,7 @@ function Leaderboard() {
   const subject = useActiveSubject();
   const { user } = useAuth();
   const profile = getUserProfile(user);
+  const { visible: named } = useLeaderboardVisibility();
   const topics = visibleCategoryOptionsFor();
   const selectId = useId();
 
@@ -188,13 +203,17 @@ function Leaderboard() {
 
   const rows = board ? toRows(drawTab, board, t) : [];
   const viewerListed = rows.some((row) => row.isViewer);
+  // The pinned line is drawn here, not sent, so it applies the server's rule
+  // itself: the learner's own name and photo only while they are switched on.
+  const ownName = named === true ? profile.name?.trim() || null : null;
   const pinned: Row | null =
     me && me.rank !== null && !viewerListed
       ? {
           key: 'you',
           rank: me.rank,
-          name: profile.name?.trim() || t('leaderboard.you'),
-          picture: profile.picture ?? null,
+          name: ownName ?? t('leaderboard.anonymous'),
+          anonymous: ownName === null,
+          picture: named === true ? profile.picture ?? null : null,
           first: String(me.correct),
           second: `${me.accuracy_pct}%`,
           detail: t('leaderboard.answersDetail', { answered: me.answered, accuracy: me.accuracy_pct }),
@@ -287,6 +306,8 @@ function Leaderboard() {
         )}
       </div>
 
+      {user && <LeaderboardVisibilitySwitch />}
+
       {stale && board && (
         <Banner
           status="warning"
@@ -314,12 +335,16 @@ function sharedRanks<T>(entries: T[], tie: (entry: T) => string): number[] {
 }
 
 function toRows(tab: Tab, board: LeaderboardResponse, t: ReturnType<typeof useT>): Row[] {
+  // A learner who has not switched their name on arrives with none.
+  const who = (entry: { display_name: string | null; picture: string | null }) => {
+    const name = entry.display_name?.trim() || null;
+    return { name: name ?? t('leaderboard.anonymous'), anonymous: name === null, picture: entry.picture ?? null };
+  };
   if (tab === '30d') {
     return (board.entries as WindowLeaderboardEntry[]).map((entry, index) => ({
       key: `${entry.rank}-${index}`,
       rank: typeof entry.rank === 'number' ? entry.rank : index + 1,
-      name: entry.display_name,
-      picture: entry.picture ?? null,
+      ...who(entry),
       first: String(entry.correct),
       second: `${entry.accuracy_pct}%`,
       detail: t('leaderboard.answersDetail', { answered: entry.answered, accuracy: entry.accuracy_pct }),
@@ -327,14 +352,14 @@ function toRows(tab: Tab, board: LeaderboardResponse, t: ReturnType<typeof useT>
     }));
   }
   if (tab === 'today') {
-    // Today ranks by correct answers, then the faster time.
+    // Today ranks by correct answers alone: equal scores share a rank however
+    // long each took. The time is shown, and decides nothing.
     const daily = board.entries as LeaderboardDailyEntry[];
-    const ranks = sharedRanks(daily, (entry) => `${entry.correct}:${entry.duration_ms}`);
+    const ranks = sharedRanks(daily, (entry) => String(entry.correct));
     return daily.map((entry, index) => ({
       key: String(index),
       rank: ranks[index],
-      name: entry.display_name,
-      picture: entry.picture ?? null,
+      ...who(entry),
       first: `${entry.correct}/${entry.total}`,
       second: formatMs(entry.duration_ms),
       detail: formatMs(entry.duration_ms),
@@ -348,8 +373,7 @@ function toRows(tab: Tab, board: LeaderboardResponse, t: ReturnType<typeof useT>
   return lifetime.map((entry, index) => ({
     key: String(index),
     rank: ranks[index],
-    name: entry.display_name,
-    picture: entry.picture ?? null,
+    ...who(entry),
     first: String(entry.total_correct),
     second: `${entry.accuracy_pct}%`,
     detail: t('leaderboard.answersDetail', { answered: entry.total_questions, accuracy: entry.accuracy_pct }),
@@ -369,21 +393,25 @@ function RankDisc({ rank, label }: { rank: number; label?: string }) {
 function Who({ row }: { row: Row }) {
   return (
     <span className="lb-who">
-      <Avatar src={row.picture ?? undefined} name={row.name} size="small" />
+      <RowAvatar row={row} />
       <Name row={row} />
     </span>
   );
 }
 
-/** The name, and "You" beside it on the learner's own row — unless the name
- *  already is "You", which is what a pinned row without a profile name shows. */
+/** The photo, the name's initials, or for an unnamed learner the default
+ *  avatar rather than an "L" for "Learner". */
+function RowAvatar({ row }: { row: Row }) {
+  return <Avatar src={row.picture ?? undefined} name={row.anonymous ? undefined : row.name} size="small" />;
+}
+
+/** The name, and "You" beside it on the learner's own row, named or not. */
 function Name({ row }: { row: Row }) {
   const t = useT();
-  const you = t('leaderboard.you');
   return (
     <>
       <span className="lb-name">{row.name}</span>
-      {row.isViewer && row.name !== you && <span className="ss-tag">{you}</span>}
+      {row.isViewer && <span className="ss-tag">{t('leaderboard.you')}</span>}
     </>
   );
 }
@@ -425,7 +453,7 @@ function MobileBoard({ rows, pinned, caption }: { rows: Row[]; pinned: Row | nul
     <li key={row.key} className={`lb-card${row.isViewer ? ' is-viewer' : ''}`} aria-current={row.isViewer ? 'true' : undefined}>
       <RankDisc rank={row.rank} label={t('leaderboard.rank')} />
       <span className="lb-card__avatar">
-        <Avatar src={row.picture ?? undefined} name={row.name} size="small" />
+        <RowAvatar row={row} />
       </span>
       <span className="lb-card__main">
         <span className="lb-card__name">

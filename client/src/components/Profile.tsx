@@ -44,6 +44,7 @@ import { ShieldIcon, TrophyIcon, TargetIcon, SunIcon, MoonIcon, SoundOnIcon, Sou
 import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDialog';
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
+import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
 import { useEntitlement } from '../lib/entitlement';
 import { clearAccountData } from '../lib/accountData';
 import { useGithubConnection } from '../coding/api';
@@ -347,6 +348,8 @@ function ProfileBody({
             <AdvisorCard />
 
             <GithubGardenCard />
+
+            <LeaderboardVisibilityCard />
 
             <AccountDeletionCard />
           </VStack>
@@ -685,6 +688,20 @@ function AdvisorCard() {
           )}
         </VStack>
       </div>
+  );
+}
+
+/** Whether the public leaderboards name this learner: the same switch the
+ *  Leaderboard shows, over the same query, so the two always agree. */
+export function LeaderboardVisibilityCard() {
+  const t = useT();
+  return (
+    <div className="ss-panel" style={{ padding: 24, width: '100%' }}>
+      <VStack gap={1.5}>
+        <SectionLabel>{t('leaderboard.title')}</SectionLabel>
+        <LeaderboardVisibilitySwitch />
+      </VStack>
+    </div>
   );
 }
 
