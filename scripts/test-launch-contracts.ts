@@ -130,7 +130,6 @@ import {
   isTopicInPlan,
   planTopics,
   validateProgressionGraph,
-  WEBDEV_PLAN_STAGES,
 } from '../shared/progression';
 import {
   isLearnerProfileComplete,
@@ -150,7 +149,6 @@ import {
 } from '../shared/learning-paths';
 import { gardenPathFor, tierUnlocked, eligibleCodingBadges, CODING_TASK_XP, CODING_BADGE_IDS, CODING_TRACKS, formatOf, isCodingSectionTrack, isDifficulty } from '../shared/coding-catalog';
 import { CODING_BADGES } from '../shared/badges';
-import { CODING_INDEX } from '../shared/coding-index';
 import { inspectQuestionQuality } from '../lib/question-quality';
 import { assessmentUnlocks, roadmapEndedOnHearts, ROADMAP_MAX_HEARTS } from '../shared/assessment';
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
@@ -2256,6 +2254,7 @@ async function main() {
     source: 'base', deleted: false,
     options: ['Always correct', 'Always correct'],
     cs: { question: '', options: [], introduction: '', explanation: '' },
+    review: { active: true, reason: 'reviewed', csApproved: false },
   }]);
   assert.ok(qualityIssues.some((issue) => issue.kind === 'weak_distractor'));
   assert.ok(qualityIssues.some((issue) => issue.kind === 'missing_translation'));
@@ -3219,7 +3218,7 @@ async function main() {
       assert.equal(hours(failed), RELEARN_HOURS);
     }
     // The ladder is bounded at the top: nothing is pushed past its last rung.
-    let climbed = { ...start, stage: 0 };
+    let climbed: ReturnType<typeof nextReviewState> = { ...start, stage: 0 };
     for (let i = 0; i < 20; i++) {
       climbed = nextReviewState(climbed, { conceptId: 'js-map', correct: true, kind: 'independent', itemId: `q${i}` }, t0);
     }
