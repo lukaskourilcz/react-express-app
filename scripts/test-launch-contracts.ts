@@ -65,6 +65,7 @@ import submitHandler from '../api/quiz/submit';
 import dailyHandler from '../api/quiz/daily';
 import questionsHandler from '../api/quiz/questions';
 import challengeHandler from '../api/quiz/challenge';
+import flashcardsHandler from '../api/flashcards';
 import { decodeSessionEnvelope } from '../lib/quiz-tokens';
 import { dailySeededShuffle, pickQuestionOfTheDay, UNBIASED_SHUFFLE_FROM } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
@@ -2030,6 +2031,184 @@ async function guestChallengeLimitContracts() {
   assert.equal(quizStatuses.at(-1), 429, 'guest quizzes behind one address keep sharing its rate');
 }
 
+/** A class behind one school address (review round 3: SEC-1, QUIZ-2, PLAY-3,
+ * CODE-8, PROF-7). Each route below charged one person's budget to the whole
+ * address, so the pupil past it got 429: a quiz, the due list, the daily
+ * challenge, the question of the day, a Challenge batch, placement, a Learn
+ * answer, completion or progress sync, a coding task, Submit or reveal, a
+ * flashcard. Each now takes a class-sized address bucket, then the caller's
+ * own. Run through the real handlers: thirty signed-in pupils behind one
+ * address all get through, one pupil hammering is still refused while a
+ * classmate is not, and guests still share their address's budget. */
+async function classroomLimitContracts() {
+  const stamp = Date.now();
+  const PUPILS = 30;
+  let schools = 0;
+  const school = () => `class-${stamp}-${++schools}`;
+  type Handler = (req: never, res: never) => unknown;
+  type Route = {
+    name: string;
+    handler: Handler;
+    method: 'GET' | 'POST' | 'PUT';
+    query: Record<string, string>;
+    body?: Record<string, unknown>;
+    /** What one person may do in a full bucket; before the split, the whole address. */
+    perPerson: number;
+    own: keyof typeof RATE_LIMITS;
+    address: keyof typeof RATE_LIMITS;
+  };
+  const call = async (route: Route, address: string, user?: string) => {
+    const res = mockResponse();
+    const signedIn = user !== undefined;
+    await route.handler({
+      method: route.method,
+      headers: { 'x-forwarded-for': address, ...(signedIn ? { authorization: 'Bearer contract' } : {}) },
+      query: { ...route.query, ...(signedIn && route.method === 'GET' ? { user_id: user } : {}) },
+      body: route.method === 'GET' ? undefined : { ...(route.body ?? {}), ...(signedIn ? { user_id: user } : {}) },
+      socket: {},
+    } as never, res as never);
+    return res;
+  };
+  const webdev = deliveryCategories('webdev').join(',');
+  const freeTask = CODING_INDEX.find((task) => task.free && task.track === 'javascript')!;
+  const quiz = { perPerson: 20, own: 'quizSession', address: 'quizSessionAddress' } as const;
+  const learnAnswer = { perPerson: 80, own: 'roadmapAnswer', address: 'roadmapAnswerAddress' } as const;
+  const learnComplete = { perPerson: 12, own: 'roadmapComplete', address: 'roadmapCompleteAddress' } as const;
+  const routes: Route[] = [
+    { name: 'a quiz', handler: questionsHandler, method: 'GET', query: { categories: 'javascript', count: '1', difficulty: 'mixed' }, ...quiz },
+    { name: 'the due list', handler: questionsHandler, method: 'GET', query: { resource: 'due', categories: 'javascript' }, ...quiz },
+    { name: 'the daily challenge', handler: dailyHandler, method: 'GET', query: { categories: webdev }, ...quiz },
+    { name: 'the question of the day', handler: dailyHandler, method: 'GET', query: { qotd: 'today' }, ...quiz },
+    { name: 'a Challenge batch', handler: challengeHandler, method: 'GET', query: { categories: webdev }, ...quiz },
+    { name: 'a placement start', handler: roadmapHandler, method: 'GET', query: { resource: 'placement', subject: 'webdev' }, ...quiz },
+    { name: 'a placement round', handler: roadmapHandler, method: 'POST', query: { resource: 'placement' }, body: { placementToken: 'x', answers: {} }, ...learnAnswer },
+    { name: 'a Learn answer', handler: roadmapHandler, method: 'POST', query: { resource: 'answer' }, body: { sessionId: 'x' }, ...learnAnswer },
+    { name: 'a Learn completion', handler: roadmapHandler, method: 'POST', query: { resource: 'complete' }, body: { sessionId: 'x' }, ...learnComplete },
+    { name: 'a skill check', handler: roadmapHandler, method: 'POST', query: { resource: 'skill-check' }, body: {}, ...learnComplete },
+    { name: 'a progress sync', handler: roadmapHandler, method: 'PUT', query: {}, body: {}, perPerson: 20, own: 'roadmapMutation', address: 'roadmapMutationAddress' },
+    { name: 'a coding task', handler: roadmapHandler, method: 'GET', query: { resource: 'coding-task', id: freeTask.id }, perPerson: 20, own: 'codingTask', address: 'codingTaskAddress' },
+    { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: 'x' }, perPerson: 30, own: 'codingRun', address: 'codingRunAddress' },
+    { name: 'a coding reveal', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-reveal' }, body: { session: 'x' }, perPerson: 10, own: 'codingReveal', address: 'codingRevealAddress' },
+    { name: 'a flashcard write', handler: flashcardsHandler, method: 'POST', query: {}, body: { subject: 'webdev', question_id: 'q1', question: 'Q?', correct_answer: 'A' }, perPerson: 20, own: 'flashcardMutation', address: 'flashcardMutationAddress' },
+  ];
+
+  // 1. Thirty pupils behind one address, each with an account, together send
+  //    more than one person's budget, and none is refused.
+  const refused: Record<string, number> = {};
+  for (const [r, route] of routes.entries()) {
+    const address = school();
+    const each = Math.floor(route.perPerson / PUPILS) + 1;
+    refused[route.name] = 0;
+    for (let round = 0; round < each; round += 1) {
+      for (let n = 0; n < PUPILS; n += 1) {
+        if ((await call(route, address, `pupil-${stamp}-${r}-${n}`)).statusCode === 429) refused[route.name] += 1;
+      }
+    }
+  }
+  assert.deepEqual(refused, Object.fromEntries(routes.map((route) => [route.name, 0])),
+    'no pupil in a class behind one address is refused a route a class uses together');
+
+  /** Calls until the first 429: how many got through. A slow run may refill a
+   * token or two, so the bound past `capacity` allows for that. */
+  const throughUntilRefused = async (send: () => Promise<number>, capacity: number, refillPerSecond: number) => {
+    const started = Date.now();
+    for (let passed = 0; ; passed += 1) {
+      if ((await send()) === 429) return passed;
+      const slack = Math.ceil(((Date.now() - started) / 1000) * refillPerSecond) + 1;
+      assert.ok(passed < capacity + slack, `refused within ${capacity} calls and the refill`);
+    }
+  };
+  for (const [r, route] of routes.entries()) {
+    const own = RATE_LIMITS[route.own];
+    const address = RATE_LIMITS[route.address];
+    // 2. One person's budget is what the address carried before the split,
+    //    and the address holds a class at that rate.
+    assert.equal(own.capacity, route.perPerson, `${route.name}: one person keeps ${route.perPerson} in a full bucket`);
+    assert.equal(address.capacity, SHARED_NETWORK_SEATS * own.capacity, `${route.name}: the address holds a class`);
+    assert.ok(Math.abs(address.refillPerSecond - SHARED_NETWORK_SEATS * own.refillPerSecond) < 1e-9, `${route.name}: and refills at a class's rate`);
+    assert.notEqual(address.key, own.key, `${route.name}: the two tiers are separate buckets`);
+
+    // 3. One pupil hammering is refused at their own budget, while a
+    //    classmate on the same address is not.
+    const shared = school();
+    const hammer = `hammer-${stamp}-${r}`;
+    const passed = await throughUntilRefused(async () => (await call(route, shared, hammer)).statusCode, own.capacity, own.refillPerSecond);
+    assert.ok(passed >= own.capacity, `${route.name}: one pupil gets their whole budget (${passed})`);
+    assert.notEqual((await call(route, shared, `classmate-${stamp}-${r}`)).statusCode, 429, `${route.name}: a classmate is not refused`);
+
+    // 4. Guests share their address's budget, the rate the route had before.
+    const guests = school();
+    const guestsThrough = await throughUntilRefused(async () => (await call(route, guests)).statusCode, own.capacity, own.refillPerSecond);
+    assert.ok(guestsThrough >= own.capacity, `${route.name}: guests get the address's budget (${guestsThrough})`);
+  }
+
+  // 5. A flood of accounts from one address meets the address bucket.
+  {
+    const route = routes.find((one) => one.name === 'a Learn completion')!;
+    const address = RATE_LIMITS.roadmapCompleteAddress;
+    const flood = school();
+    let account = 0;
+    const passed = await throughUntilRefused(async () => (await call(route, flood, `flood-${stamp}-${++account}`)).statusCode, address.capacity, address.refillPerSecond);
+    assert.ok(passed >= address.capacity, `a class's worth of accounts gets through (${passed})`);
+  }
+
+  // 6. A guest's Challenge refill is charged to the run its sealed token
+  //    names: once new runs have spent the address's guest budget, a run
+  //    already under way still refills, one run is bounded, and a token that
+  //    does not verify is charged to the spent address.
+  {
+    const batch = routes.find((one) => one.name === 'a Challenge batch')!;
+    const address = school();
+    let runToken = '';
+    let sessionId = '';
+    let started = 0;
+    for (;;) {
+      const res = await call(batch, address);
+      if (res.statusCode === 429) break;
+      assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      ({ runToken, sessionId } = res.body as { runToken: string; sessionId: string });
+      started += 1;
+      assert.ok(started <= RATE_LIMITS.quizSession.capacity + 2, 'guests starting runs share the address rate');
+    }
+    const refill = { ...batch, query: { ...batch.query, runToken } };
+    const refills = await throughUntilRefused(async () => (await call(refill, address)).statusCode, RATE_LIMITS.quizSession.capacity, RATE_LIMITS.quizSession.refillPerSecond);
+    assert.ok(refills >= RATE_LIMITS.quizSession.capacity, `a run under way refills after the address's guest budget is spent (${refills})`);
+    const forged = { ...batch, query: { ...batch.query, runToken: tamperToken(runToken) } };
+    assert.equal((await call(forged, address)).statusCode, 429, 'a run token that does not verify is charged to the address');
+    assert.ok(decodeSessionEnvelope(sessionId)?.runId, 'the batch was sealed to its run');
+  }
+
+  // 7. The limiter and the handler verify a caller once between them.
+  for (const route of routes.filter((one) => ['the due list', 'the daily challenge', 'a coding task'].includes(one.name))) {
+    const verifications: string[] = [];
+    const warn = console.warn;
+    console.warn = (line: unknown) => { if (String(line).includes('requireAuth_dev_fallback')) verifications.push(String(line)); };
+    try {
+      const res = await call(route, school(), `once-${stamp}`);
+      assert.equal(res.statusCode, 200, `${route.name}: ${JSON.stringify(res.body)}`);
+    } finally {
+      console.warn = warn;
+    }
+    assert.equal(verifications.length, 1, `${route.name}: one request verifies its credentials once`);
+  }
+
+  // 8. In the source: every class route takes both tiers; no handler charges
+  //    one of these per-person budgets to an address alone; and the one
+  //    sealed guest identity is the Challenge run a refill's token names.
+  const perPersonOnly = new RegExp(`enforceRateLimit\\(\\s*req,\\s*res,\\s*RATE_LIMITS\\.(${[...new Set(routes.map((route) => route.own))].join('|')})\\s*\\)`);
+  for (const file of ['api', 'lib'].flatMap(codeFiles)) {
+    const source = readFileSync(join(process.cwd(), file), 'utf8');
+    assert.doesNotMatch(source, perPersonOnly, `${file} charges a per-person budget to a whole address`);
+    for (const tiers of source.matchAll(/enforceClassRateLimit\(\s*req,\s*res,\s*RATE_LIMITS\.(\w+),\s*RATE_LIMITS\.(\w+)(?:,\s*([^)]+?))?\s*\)/g)) {
+      assert.equal(tiers[1], `${tiers[2]}Address`, `${file}: ${tiers[2]} is paired with its own address bucket`);
+      if (tiers[3] === undefined) continue;
+      assert.equal(file, 'api/quiz/challenge.ts', `${file} passes a guest identity`);
+      assert.equal(tiers[3], 'refill ? `run:${refill.runId}` : undefined', 'a guest refill is charged to its sealed run');
+      assert.match(source, /const refill = [^;]*\? decodeChallengeRun\(req\.query\.runToken\) : null;/, 'the run is the one the token seals');
+    }
+  }
+}
+
 /** POST /api/quiz/submit grades only the sessions it serves, each checked
  * through the handler that really issues it. */
 async function quizSubmitScopeContracts() {
@@ -3452,6 +3631,9 @@ async function main() {
     assert.deepEqual(seen, [`pupil-${stamp}-once`, `pupil-${stamp}-once`], 'the limiter and the op see the same caller');
     assert.equal(verifications.length, 1, 'one request verifies its credentials once');
   }
+
+  // Quizzes, Learn, coding and flashcards take the same two tiers.
+  await classroomLimitContracts();
 
   const healthRes = mockResponse();
   await healthHandler({ method: 'POST', headers: {}, query: {} } as never, healthRes as never);

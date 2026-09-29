@@ -23,6 +23,7 @@ import {
   requireAuthResult,
   isRpcMissing,
   withRequestContext,
+  tryAuthOnce,
 } from '../../lib/http';
 import { AuthError, tryAuth } from '../../lib/auth';
 import {
@@ -51,7 +52,7 @@ import {
 import { getGameSettings } from '../../lib/settings-store';
 import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
-import { claimOnce, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { claimOnce, enforceClassRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { playable as playableCodingTask } from '../../lib/coding/catalog';
 import { levelCodingTasks } from '../../lib/coding/active';
@@ -443,7 +444,7 @@ async function handleProgress(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleSkillCheck(req: VercelRequest, res: VercelResponse) {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapComplete))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.roadmapCompleteAddress, RATE_LIMITS.roadmapComplete))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
@@ -494,7 +495,7 @@ async function handleSkillCheck(req: VercelRequest, res: VercelResponse) {
 
 async function optionalAuthSub(req: VercelRequest, res: VercelResponse): Promise<string | null | undefined> {
   try {
-    return (await tryAuth(req))?.sub ?? null;
+    return (await tryAuthOnce(req))?.sub ?? null;
   } catch (error) {
     if (error instanceof AuthError) {
       jsonError(res, error.status, error.code, error.message);
@@ -760,7 +761,7 @@ function placementRoundResponse(input: {
 }
 
 async function handlePlacementStart(req: VercelRequest, res: VercelResponse) {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.quizSessionAddress, RATE_LIMITS.quizSession))) return;
   const rawSubject = req.query.subject;
   if (!isScopeSubject(rawSubject) || !deploymentSubjectIds().includes(rawSubject)) {
     return jsonError(res, 400, 'invalid_subject_scope', 'A subject from this deployment is required');
@@ -780,7 +781,7 @@ async function handlePlacementStart(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapAnswer))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.roadmapAnswerAddress, RATE_LIMITS.roadmapAnswer))) return;
   const body = (req.body || {}) as { placementToken?: unknown; answers?: unknown; lang?: unknown };
   if (typeof body.placementToken !== 'string') {
     return jsonError(res, 400, 'invalid_session', 'Placement session expired or invalid');
@@ -1020,7 +1021,7 @@ function refuseForeignSession(
 }
 
 async function handleAnswer(req: VercelRequest, res: VercelResponse) {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapAnswer))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.roadmapAnswerAddress, RATE_LIMITS.roadmapAnswer))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
   const body = (req.body || {}) as {
     sessionId?: unknown; questionId?: unknown; selectedIndex?: unknown; lang?: unknown;
@@ -1135,7 +1136,7 @@ async function stepPassed(userId: string, session: NonNullable<ReturnType<typeof
 }
 
 async function handleComplete(req: VercelRequest, res: VercelResponse) {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.roadmapComplete))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.roadmapCompleteAddress, RATE_LIMITS.roadmapComplete))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
   const body = (req.body || {}) as { sessionId?: unknown };
   const session = roadmapSession(body.sessionId);
@@ -1472,7 +1473,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // learning-path check above rather than left to catch everything.
   if (req.method === 'PUT' || (req.method === 'GET' && req.query.resource === 'progress')) {
     try {
-      if (req.method === 'PUT' && !(await enforceRateLimit(req, res, RATE_LIMITS.roadmapMutation))) return;
+      if (req.method === 'PUT' && !(await enforceClassRateLimit(req, res, RATE_LIMITS.roadmapMutationAddress, RATE_LIMITS.roadmapMutation))) return;
       return await handleProgress(req, res);
     } catch {
       return jsonError(res, 500, 'internal_error', 'Internal error');

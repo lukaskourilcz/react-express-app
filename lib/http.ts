@@ -9,7 +9,7 @@ import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { AuthError, requireAuth, type AuthResult } from './auth';
+import { AuthError, getBearer, requireAuth, type AuthResult } from './auth';
 import { SUBJECT_SCOPE_CATALOG } from '../shared/subject-catalog';
 import { gatedRef, PREMIUM_REQUIRED, type GatedContent, type GatedKind, type PremiumRequiredBody } from '../shared/tiers';
 
@@ -213,6 +213,18 @@ function verifyOnce(req: VercelRequest): Promise<AuthResult | AuthError> {
 export async function verifiedCallerId(req: VercelRequest): Promise<string | null> {
   const outcome = await verifyOnce(req).catch(() => null);
   return outcome && !(outcome instanceof AuthError) ? outcome.sub : null;
+}
+
+/** `tryAuth` (lib/auth.ts), verified at most once per request: null for a
+ * caller who presented no credentials, the verified caller otherwise, and
+ * refused credentials throw their AuthError as `tryAuth`'s do. A route whose
+ * rate limit already verified the caller (`enforceClassRateLimit`) reads that
+ * result here instead of asking Supabase Auth again. */
+export async function tryAuthOnce(req: VercelRequest): Promise<AuthResult | null> {
+  if (!getBearer(req)) return null;
+  const outcome = await verifyOnce(req);
+  if (outcome instanceof AuthError) throw outcome;
+  return outcome;
 }
 
 /**

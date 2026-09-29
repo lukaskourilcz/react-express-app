@@ -32,7 +32,7 @@ export class AuthError extends Error {
   }
 }
 
-function getBearer(req: VercelRequest): string | null {
+export function getBearer(req: VercelRequest): string | null {
   const raw = req.headers.authorization || req.headers.Authorization;
   if (typeof raw !== 'string') return null;
   const m = raw.match(/^Bearer\s+(.+)$/i);

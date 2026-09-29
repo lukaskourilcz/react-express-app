@@ -14,7 +14,7 @@ import { jsonError, createLogger, createServiceClient, withTimeout, isRpcMissing
 import { AuthError, tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions, getEffectiveQuestionsById } from '../../lib/questions-store';
 import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceClassRateLimit, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
 import { ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
 import { challengeRunXp } from '../../shared/progression';
@@ -82,7 +82,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  // A guest's refill is charged to the run its sealed token names, as its
+  // answers are; a new run, an assessment or a token that does not verify is
+  // charged to the address.
+  const refill = typeof req.query.runToken === 'string' && req.query.runToken ? decodeChallengeRun(req.query.runToken) : null;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.quizSessionAddress, RATE_LIMITS.quizSession, refill ? `run:${refill.runId}` : undefined))) return;
   const excludeRaw = typeof req.query.exclude === 'string' ? req.query.exclude : '';
   const excludeSet = new Set(
     excludeRaw
