@@ -22,7 +22,8 @@
  * same stand-in, the stats write is checked to store the verified sign-in's
  * name and Google picture whatever the body says, and a friend request to
  * answer in the states the Friends screen reads. The stats write also credits
- * a quiz's coins for the XP migration 048 says it awarded, and for the
+ * a quiz's coins for the XP migration 048 says it awarded, also on a retry
+ * the routine answers FALSE after a commit that timed out, and for the
  * receipt's XP before 048 adds that column. Sign-in and the deletion of
  * the sign-in identity are answered by the same stand-in. Nothing leaves the
  * machine. */
@@ -352,6 +353,51 @@ async function main() {
       assert.equal(credit?.args.p_xp, expected, `coins follow the awarded XP: ${expected}`);
       assert.equal(saved.body?.questXp, expected, 'and the response names it for the client to announce');
       assert.ok(calls.some((call) => call.name === 'settle_coin_milestones'), 'the streak day settles the milestones');
+    }
+
+    // The routine can commit and then time out. The retry finds the attempt
+    // recorded and answers FALSE, yet the XP was awarded, so the coins follow
+    // the stored amount; the credit is keyed to the attempt and pays once. A
+    // NULL amount is a refused result (a second daily for the day) that
+    // awarded nothing, and a failed read for an attempt this request did not
+    // apply credits nothing. Before, a FALSE answer credited nothing at all.
+    INSTALLED.record_verified_quiz_result_v2 = false;
+    for (const [label, read, expected] of [
+      ['a commit that timed out', { status: 200, body: [{ quest_xp: 16 }] }, 16],
+      ['a refused daily', { status: 200, body: [{ quest_xp: null }] }, 0],
+      ['an unreadable amount', { status: 400, body: { code: '42703', details: null, hint: null, message: 'column quiz_attempts.quest_xp does not exist' } }, 0],
+    ] as const) {
+      TABLE_READS.quiz_attempts = read;
+      calls.length = 0;
+      const attemptId = `retry-attempt-${expected}-${label.length}`.padEnd(24, 'x');
+      const retried = tokens.encodeQuizResultReceipt({
+        userId: USER.id,
+        attemptId,
+        correct: 10,
+        total: 10,
+        breakdown: { html: { correct: 10, total: 10 } },
+        outcomes: Array.from({ length: 10 }, (_, i) => ({ questionId: `fallback-html-${i}`, category: 'html', isCorrect: true })),
+        subject: 'webdev',
+        questXp: 80,
+        purpose: 'quiz',
+      });
+      const saved = mockResponse();
+      await userOps({
+        method: 'POST',
+        headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.7' },
+        query: { op: 'stats' },
+        url: '/api/user/stats',
+        body: { result_receipt: retried },
+      } as never, saved as never);
+      assert.equal(saved.statusCode, 200, `${label}: ${JSON.stringify(saved.body)}`);
+      assert.equal(saved.body?.applied, false, `${label}: the routine did not apply it now`);
+      const credit = calls.find((call) => call.name === 'credit_verified_xp_tokens');
+      if (expected > 0) {
+        assert.equal(credit?.args.p_xp, expected, `${label}: the coins follow the stored XP`);
+        assert.equal(credit?.args.p_award_id, `quiz:${attemptId}`, `${label}: keyed to the attempt, so they pay once`);
+      } else {
+        assert.equal(credit, undefined, `${label}: no coins`);
+      }
     }
     delete TABLE_READS.quiz_attempts;
     INSTALLED.record_verified_quiz_result_v2 = false;

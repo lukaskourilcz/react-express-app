@@ -146,7 +146,10 @@ outcomes whose question the learner had not answered earlier the same UTC day,
 read from `user_question_history` before the attempt updates it, and scales
 the quiz's XP by that share, `floor(xp × fresh ÷ total)`. The awarded XP is
 kept on the receipt row (`quiz_attempts.quest_xp`) and the stats handler
-credits coins for that amount. `total_quizzes` still counts every quiz.
+credits coins for that amount, also when a retry finds the result already
+recorded after a commit that timed out: the credit is keyed to the attempt
+and pays once, and a NULL amount (a refused second daily) pays nothing.
+`total_quizzes` still counts every quiz.
 Coding passes are not answers and are not counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank.
