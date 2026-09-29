@@ -225,6 +225,16 @@ function verifyOnce(req: VercelRequest): Promise<AuthResult | AuthError> {
     }));
 }
 
+/** `tryAuth` (lib/auth.ts), verified at most once per request: null without
+ * credentials, the typed AuthError thrown for credentials that fail. */
+export async function tryAuthOnce(req: VercelRequest): Promise<AuthResult | null> {
+  const header = req.headers.authorization || req.headers.Authorization;
+  if (typeof header !== 'string' || !/^Bearer\s+.+$/i.test(header)) return null;
+  const outcome = await verifyOnce(req);
+  if (outcome instanceof AuthError) throw outcome;
+  return outcome;
+}
+
 /** The verified caller's id, or null for a caller without valid credentials.
  * Sends nothing: for a route that treats a signed-out caller differently
  * rather than refusing it. */

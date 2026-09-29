@@ -21,7 +21,7 @@
 // exported for the fallback path and any sync call site.
 
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
-import { jsonError, ServiceUnavailableError } from './http';
+import { jsonError, ServiceUnavailableError, verifiedCallerId } from './http';
 
 interface Bucket {
   tokens: number;
@@ -163,6 +163,14 @@ export const RATE_LIMITS = {
   // address, so two people behind one router each keep their five.
   voucherRedeem: { key: 'voucher_redeem', capacity: 5, refillPerSecond: 5 / 3600 },
   voucherRedeemAddress: { key: 'voucher_redeem_address', capacity: 10, refillPerSecond: 10 / 3600 },
+  // Reads a script can drive (`limitRead` below): the wallet, badges and a
+  // friend lookup, the Learn map, plan and steps, and a leaderboard read the
+  // CDN did not answer. Two tiers like the writes: an address backstop that
+  // holds a class behind one NAT, then the verified account's own. A guest
+  // has the address tier alone. Generous: nobody reading at a person's pace
+  // meets either.
+  readAddress: { key: 'read_address', capacity: SHARED_NETWORK_SEATS * 60, refillPerSecond: (SHARED_NETWORK_SEATS * 60) / 60 },
+  readPerUser: { key: 'read_user', capacity: 120, refillPerSecond: 120 / 60 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
@@ -399,4 +407,20 @@ export async function claimOnce(key: string, ttlSeconds: number): Promise<boolea
   }
   localClaims.set(key, now + ttlSeconds * 1000);
   return true;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reads                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The read limit for a GET a script can drive, in the two tiers of
+ * `RATE_LIMITS.readAddress` and `readPerUser`. The account is verified once
+ * per request (lib/http.ts), so the handler's own check that follows costs
+ * nothing more. Returns false after sending the 429.
+ */
+export async function limitRead(req: VercelRequest, res: VercelResponse): Promise<boolean> {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return false;
+  const callerId = await verifiedCallerId(req);
+  return callerId ? enforceRateLimit(req, res, RATE_LIMITS.readPerUser, `user:${callerId}`) : true;
 }

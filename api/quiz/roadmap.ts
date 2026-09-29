@@ -23,6 +23,7 @@ import {
   requireAuthResult,
   isRpcMissing,
   withRequestContext,
+  tryAuthOnce,
   ServiceUnavailableError,
 } from '../../lib/http';
 import { AuthError, confirmedEmail, tryAuth } from '../../lib/auth';
@@ -52,7 +53,7 @@ import {
 import { getGameSettings } from '../../lib/settings-store';
 import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
-import { claimOnce, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { claimOnce, enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { playable as playableCodingTask } from '../../lib/coding/catalog';
 import { levelCodingTasks } from '../../lib/coding/active';
@@ -535,7 +536,8 @@ async function learnerContext(
 ): Promise<LearnerContext | null | undefined> {
   let auth: Awaited<ReturnType<typeof tryAuth>>;
   try {
-    auth = await tryAuth(req);
+    // Verified once per request: the read limit in front has checked it.
+    auth = await tryAuthOnce(req);
   } catch (error) {
     if (error instanceof AuthError) {
       jsonError(res, error.status, error.code, error.message);
@@ -1411,6 +1413,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // answer, so the roadmap, Today and the navigation cannot disagree about
   // what is eligible — and none of them has to recompute it from local state.
   if (req.method === 'GET' && req.query.resource === 'eligibility') {
+    if (!(await limitRead(req, res))) return;
     try {
       const learner = await learnerContext(req, res);
       if (learner === undefined) return;
@@ -1476,6 +1479,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'PUT' || (req.method === 'GET' && req.query.resource === 'progress')) {
     try {
       if (req.method === 'PUT' && !(await enforceRateLimit(req, res, RATE_LIMITS.roadmapMutation))) return;
+      if (req.method === 'GET' && !(await limitRead(req, res))) return;
       return await handleProgress(req, res);
     } catch {
       return jsonError(res, 500, 'internal_error', 'Internal error');
@@ -1494,6 +1498,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
   // No topic → return the whole map so the client can render the path.
   if (!topicRaw && levelRaw === undefined && checkpointRaw === undefined && testRaw === undefined) {
+    // The same for everyone, so only the address tier: verifying a token
+    // here would cost a round trip the map never needed.
+    if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return;
     const byId = await getEffectiveQuestionsById(undefined, false);
     const exists = (id: string) => byId.has(id);
     const topics = deploymentSubjectIds().flatMap((subject) => [...SUBJECT_SCOPE_CATALOG[subject].topics]);
@@ -1518,6 +1525,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const topic: RoadmapTopic = topicRaw;
   const lang = normalizeLang(req.query.lang);
   const subject = subjectForTopic(topic)!;
+  if (!(await limitRead(req, res))) return;
   // One read of the learner's plan and verified record, shared by the three
   // step branches below. A guest has neither, and takes the preview path.
   const learner = await learnerContext(req, res);

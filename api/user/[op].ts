@@ -13,7 +13,7 @@ import {
 } from '../../lib/http';
 import { requireAuth, type AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
 import {
   SUBJECT_SCOPE_CATALOG,
@@ -66,6 +66,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
   const op = String(req.query.op || '').toLowerCase();
   if (!(await limitUserWrite(req, res, op))) return;
+  if (!(await limitUserRead(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
   if (op === 'leaderboard-visibility') return handleLeaderboardVisibility(req, res, supabase);
   if (op === 'category-stats') return categoryStats(req, res);
@@ -128,6 +129,16 @@ export async function limitUserWrite(req: VercelRequest, res: VercelResponse, op
   return callerId
     ? enforceRateLimit(req, res, perCaller, `user:${callerId}`)
     : enforceRateLimit(req, res, perCaller);
+}
+
+/** GETs a script can drive for more than a row: the wallet settles grants,
+ * milestones and invitations as it reads, badges are worked out from the
+ * stats, and a friend lookup searches by handle. They take the two-tier read
+ * limit (`limitRead`). Returns false after sending the 429. */
+const LIMITED_READS: ReadonlySet<string> = new Set(['wallet', 'badges', 'friends-lookup']);
+async function limitUserRead(req: VercelRequest, res: VercelResponse, op: string): Promise<boolean> {
+  if (req.method !== 'GET' || !LIMITED_READS.has(op)) return true;
+  return limitRead(req, res);
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
