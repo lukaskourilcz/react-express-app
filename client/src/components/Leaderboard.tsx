@@ -253,7 +253,7 @@ function Leaderboard() {
     body = (
       <div className="lb-board ss-panel lb-empty">
         <p className="lb-empty__text">{emptyText}</p>
-        <Button variant="secondary" label={tab === 'today' ? t('quiz.todaysChallenge') : t('leaderboard.emptyCta')} onClick={() => navigate('/quiz')} />
+        <Button variant="secondary" label={tab === 'today' ? t('quiz.todaysChallenge') : t('leaderboard.emptyCta')} onClick={() => navigate(tab === 'today' ? '/quiz?mode=daily' : '/quiz')} />
       </div>
     );
   } else {

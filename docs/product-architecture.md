@@ -116,6 +116,9 @@ marker row in `quiz_submissions` and sealed into every later session of the
 day, so fetching again just before submitting does not shorten it. The same
 lookup tells the client the day is already played. The response is
 `private, no-store`, because the session inside it belongs to one caller.
+`/quiz?mode=daily` starts the daily challenge once the sign-in is known and
+then drops the parameter; the Home "Daily challenge" tile and the empty Today
+leaderboard link there.
 `api/quiz/submit.ts` grades only the sessions it serves (quiz, review, daily,
 question of the day, challenge batch, assessment); a Learn session is refused.
 
