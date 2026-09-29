@@ -296,7 +296,7 @@ function nextAfter(a: Active, ranges: PartRange[]): Active | null {
 function Roadmap() {
   useRoadmapStructureFirst({ plan: true });
   const { lang, t } = useLanguage();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const progress = useRoadmapProgress();
   const extraUnlocks = useExtraUnlocks();
   const [pathRef, pathWidth] = useElementWidth<HTMLDivElement>();
@@ -681,6 +681,11 @@ function Roadmap() {
         <div style={{ marginTop: 4 }}>
           <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
         </div>
+        {!isAuthenticated && !authLoading && (
+          <div style={{ marginTop: 4 }}>
+            <Text type="supporting" color="secondary">{t('register.deviceOnly')}</Text>
+          </div>
+        )}
       </div>
 
       {retired && (
