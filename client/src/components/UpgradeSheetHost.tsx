@@ -8,6 +8,7 @@ import {
   closeUpgradeSheet,
   markUpgradeResume,
   openUpgradeSheet,
+  takeUpgradeOpener,
   takeUpgradeResume,
   useUpgradeRequest,
   type UpgradeRequest,
@@ -62,6 +63,14 @@ export default function UpgradeSheetHost({ recovery = browserRecovery }: { recov
   useEffect(() => {
     if (requestId !== undefined) void queryClient.invalidateQueries({ queryKey: ENTITLEMENT_QUERY_ROOT });
   }, [requestId, queryClient]);
+  // Closed (Escape, Not now, or a sheet that failed): focus goes back to the
+  // lock that opened it, now that the dialog has left the page.
+  const open = request !== null;
+  useEffect(() => {
+    if (open) return;
+    const opener = takeUpgradeOpener();
+    if (opener?.isConnected) opener.focus();
+  }, [open]);
   return (
     <>
       {request && (
