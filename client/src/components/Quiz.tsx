@@ -558,8 +558,10 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             const saved = await recordQuizResult(pending.receipt, pending.profile);
             if (saved.data) queryClient.setQueryData(profileStatsQueryKey(user.id), saved.data);
             removeStored(PENDING_RECEIPT_KEY);
-            await syncXpWithServer();
+            // The gain first, then the rank it crosses once the account's
+            // verified balance is in.
             if (saved.applied) announceVerifiedQuestXp(data.questXp);
+            await syncXpWithServer({ announceRankUp: saved.applied });
           } catch (writeError) {
             console.error('Stat write failed:', writeError);
             setSnack(t('quiz.streakWarning'));
