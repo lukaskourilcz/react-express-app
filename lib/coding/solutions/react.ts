@@ -3386,65 +3386,1489 @@ const App = () => {
   );
 };`,
   },
+  // The first five capstones of tier 5. Their suites open with
+  // CAPSTONE_HEADER (tasks/react-capstone-support.ts): every request waits
+  // until a check answers it, and the hidden cases below use the same
+  // helpers and each visible suite's `loaded`, with data no visible check
+  // shows.
   "react-user-directory": {
-    solution: `Senior-style approach for User directory:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: open the directory, narrow it by typing part of a name or by
+// choosing a city, and read the people who match.
+// Data model: User { id, name, email, address: { city } }, as the API sends
+// it. The city options and the visible users are derived during render and
+// never stored beside the list.
+// API endpoints: GET /users returns everyone, which is fine for ten users.
+// Past a few hundred the server should filter and page instead:
+// GET /users?q=ann&city=Porto&cursor=…&limit=20, backed by an index on
+// lower(name) and one on city, answering the next cursor with each page.
+// Reliability and scale: keep the last good answer per query in a small
+// client cache (or HTTP Cache-Control with a short max-age) and show it while
+// a fresh request runs. A failed request shows an alert rather than an empty
+// page. Page with a cursor, not an offset, so new users do not shift the
+// pages under someone who is reading them.
+
+const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+
+const App = () => {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [city, setCity] = useState('');
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const response = await fetch(USERS_URL);
+        if (!response.ok) throw new Error('Could not load the users (' + response.status + ')');
+        setUsers(await response.json());
+      } catch (requestError) {
+        setError(requestError.message || 'Could not load the users');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadUsers();
+  }, []);
+
+  // Each city once, A to Z, from the data itself.
+  const cities = [...new Set(users.map(user => user.address.city))].sort();
+  const needle = query.toLowerCase();
+  const visibleUsers = users.filter(user =>
+    user.name.toLowerCase().includes(needle) && (city === '' || user.address.city === city));
+
+  if (loading) return <main><h2>User directory</h2><p>Loading users…</p></main>;
+  if (error) return <main><h2>User directory</h2><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>User directory</h2>
+      <input value={query} onChange={event => setQuery(event.target.value)} placeholder="Search by name" aria-label="Search by name" />
+      <select value={city} onChange={event => setCity(event.target.value)} aria-label="City">
+        <option value="">All cities</option>
+        {cities.map(name => <option key={name} value={name}>{name}</option>)}
+      </select>
+      {visibleUsers.length === 0 ? <p>No users match.</p> : (
+        <ul>
+          {visibleUsers.map(user => <li key={user.id}>{user.name} — {user.address.city}</li>)}
+        </ul>
+      )}
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `const App = () => {
+  const [users, setUsers] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [selectedCity, setSelectedCity] = useState('');
+
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/users');
+        if (!response.ok) {
+          throw new Error('The server answered with status ' + response.status);
+        }
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        setErrorMessage('Could not load the users. ' + error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadUsers();
+  }, []);
+
+  const handleSearchChange = (event) => {
+    setSearchText(event.target.value);
+  };
+
+  const handleCityChange = (event) => {
+    setSelectedCity(event.target.value);
+  };
+
+  const cities = [];
+  for (const user of users) {
+    const city = user.address.city;
+    if (!cities.includes(city)) {
+      cities.push(city);
+    }
+  }
+  cities.sort();
+
+  const lowerSearch = searchText.toLowerCase();
+  const visibleUsers = [];
+  for (const user of users) {
+    const nameMatches = user.name.toLowerCase().includes(lowerSearch);
+    const cityMatches = selectedCity === '' || user.address.city === selectedCity;
+    if (nameMatches && cityMatches) {
+      visibleUsers.push(user);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <main>
+        <p>Loading users…</p>
+      </main>
+    );
+  }
+
+  if (errorMessage !== '') {
+    return (
+      <main>
+        <p role="alert">{errorMessage}</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <h2>User directory</h2>
+      <input type="text" value={searchText} onChange={handleSearchChange} placeholder="Search by name" />
+      <select value={selectedCity} onChange={handleCityChange}>
+        <option value="">All cities</option>
+        {cities.map(city => (
+          <option key={city} value={city}>{city}</option>
+        ))}
+      </select>
+      {visibleUsers.length === 0 && <p>No users match.</p>}
+      <ul>
+        {visibleUsers.map(user => (
+          <li key={user.id}>{user.name} ({user.address.city})</li>
+        ))}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const USERS_URL = 'https://jsonplaceholder.typicode.com/users';
+
+const useUsers = () => {
+  const [state, setState] = useState({ status: 'loading', users: [], error: '' });
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(USERS_URL, { signal: controller.signal })
+      .then(response => {
+        if (!response.ok) throw new Error('Could not load the users (' + response.status + ')');
+        return response.json();
+      })
+      .then(users => setState({ status: 'ready', users, error: '' }))
+      .catch(error => {
+        if (error.name !== 'AbortError') setState({ status: 'error', users: [], error: error.message || 'Could not load the users' });
+      });
+    return () => controller.abort();
+  }, []);
+  return state;
+};
+
+const UserRow = ({ user }) => <li>{user.name} · {user.address.city}</li>;
+
+const App = () => {
+  const { status, users, error } = useUsers();
+  const [query, setQuery] = useState('');
+  const [city, setCity] = useState('');
+
+  const cities = useMemo(
+    () => [...new Set(users.map(user => user.address.city))].sort((a, b) => a.localeCompare(b)),
+    [users],
+  );
+  const visible = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    return users.filter(user => (!city || user.address.city === city) && user.name.toLowerCase().includes(needle));
+  }, [users, query, city]);
+
+  if (status === 'loading') return <main><p role="status">Loading users…</p></main>;
+  if (status === 'error') return <main><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>User directory</h2>
+      <input type="search" aria-label="Search by name" value={query} onChange={event => setQuery(event.target.value)} />
+      <select aria-label="City" value={city} onChange={event => setCity(event.target.value)}>
+        <option value="">All cities</option>
+        {cities.map(name => <option key={name} value={name}>{name}</option>)}
+      </select>
+      {visible.length === 0
+        ? <p role="status">No users match.</p>
+        : <ul>{visible.map(user => <UserRow key={user.id} user={user} />)}</ul>}
+    </main>
+  );
+};`,
+    hiddenSuite: `// Five users the visible checks never show, with a repeated city and cities
+// that arrive out of alphabetical order.
+const DIRECTORY = [
+  { id: 31, name: 'Maya Lindqvist', email: 'maya@fjord.example', address: { city: 'Tromso' } },
+  { id: 32, name: 'Jonas Berg', email: 'jonas@fjord.example', address: { city: 'Bergen' } },
+  { id: 33, name: 'Ines Duarte', email: 'ines@porto.example', address: { city: 'Porto' } },
+  { id: 34, name: 'Lars Bergman', email: 'lars@fjord.example', address: { city: 'Bergen' } },
+  { id: 35, name: 'Ana Maya', email: 'ana@porto.example', address: { city: 'Porto' } },
+];
+
+test('lists every user of the answer, in order, with their city', () => withServer(async calls => {
+  const container = await loaded(calls, DIRECTORY);
+  const items = itemTexts(container);
+  DIRECTORY.forEach((user, index) => {
+    expect(items[index]).toContain(user.name);
+    expect(items[index]).toContain(user.address.city);
+  });
+}));
+
+test('the city options come from the answer: each city once, A to Z', () => withServer(async calls => {
+  const container = await loaded(calls, DIRECTORY);
+  expect(optionsOf(citySelect(container))).toEqual([['', 'All cities'], ['Bergen', 'Bergen'], ['Porto', 'Porto'], ['Tromso', 'Tromso']]);
+}));
+
+test('a city and a search narrow the answer together, and the search matches any part of a name', () => withServer(async calls => {
+  const container = await loaded(calls, DIRECTORY);
+  chooseCity(container, 'Bergen');
+  expectItems(itemTexts(container), ['Jonas Berg', 'Lars Bergman']);
+  search(container, 'LARS');
+  expectItems(itemTexts(container), ['Lars Bergman']);
+  chooseCity(container, '');
+  expectItems(itemTexts(container), ['Lars Bergman']);
+  search(container, 'maya');
+  expectItems(itemTexts(container), ['Maya Lindqvist', 'Ana Maya']);
+}));
+
+test('a request that throws shows an alert, not the loading line', () => withServer(async calls => {
+  const { container } = render(<App />);
+  gets(calls, USERS_URL)[0].fail(new TypeError('Failed to fetch'));
+  await expectFailure(container);
+}));
+
+test('an answer that is not ok is a failure even with users in its body', () => withServer(async calls => {
+  const { container } = render(<App />);
+  gets(calls, USERS_URL)[0].respond(DIRECTORY, 503);
+  await expectFailure(container);
+}));`,
   },
   "react-posts-dashboard": {
-    solution: `Senior-style approach for Posts dashboard:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: open the dashboard, pick an author, read their posts.
+// Data model: Post { id, userId, title, body }. The grouping by author is
+// derived from the posts during render and never stored beside them.
+// API endpoints: GET /posts returns every post. A real feed asks for one
+// author and one page at a time, GET /users/:id/posts?cursor=…&limit=20, and
+// the buttons come from GET /users?fields=id,postCount.
+// Reliability and scale: an index on posts(user_id, created_at) serves each
+// author's page. Page with a cursor (the last id seen) so new posts do not
+// shift the pages, cache each page briefly in the client and at the edge,
+// and precompute the per-author counts instead of counting on every read.
+// A failed request shows an alert and leaves nothing half-loaded.
+
+const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+
+const App = () => {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const response = await fetch(POSTS_URL);
+        if (!response.ok) throw new Error('Could not load the posts (' + response.status + ')');
+        setPosts(await response.json());
+      } catch (requestError) {
+        setError(requestError.message || 'Could not load the posts');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPosts();
+  }, []);
+
+  // { 1: [post, post, …], 2: […] }, built in one pass.
+  const postsByUser = posts.reduce((groups, post) => {
+    groups[post.userId] = [...(groups[post.userId] || []), post];
+    return groups;
+  }, {});
+  // Object keys are strings: turn them back into numbers and sort them as
+  // numbers, so user 12 comes after user 3.
+  const userIds = Object.keys(postsByUser).map(Number).sort((a, b) => a - b);
+  const selectedPosts = selectedUser === null ? [] : postsByUser[selectedUser] || [];
+
+  if (loading) return <main><h2>Posts dashboard</h2><p>Loading posts…</p></main>;
+  if (error) return <main><h2>Posts dashboard</h2><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>Posts dashboard</h2>
+      <div>
+        {userIds.map(id => (
+          <button key={id} type="button" aria-pressed={id === selectedUser} onClick={() => setSelectedUser(id)}>
+            User {id} ({postsByUser[id].length})
+          </button>
+        ))}
+      </div>
+      {selectedUser === null ? <p>Choose a user to read their posts.</p> : (
+        <ul>
+          {selectedPosts.map(post => <li key={post.id}>{post.title}</li>)}
+        </ul>
+      )}
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `const App = () => {
+  const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [selectedUserId, setSelectedUserId] = useState(null);
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        if (!response.ok) {
+          throw new Error('The server answered with status ' + response.status);
+        }
+        const data = await response.json();
+        setPosts(data);
+      } catch (error) {
+        setErrorMessage('Could not load the posts. ' + error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadPosts();
+  }, []);
+
+  const postsByUser = posts.reduce((groups, post) => {
+    if (groups[post.userId] === undefined) {
+      groups[post.userId] = [];
+    }
+    groups[post.userId].push(post);
+    return groups;
+  }, {});
+
+  const userIds = [];
+  for (const key of Object.keys(postsByUser)) {
+    userIds.push(Number(key));
+  }
+  userIds.sort((a, b) => a - b);
+
+  let selectedPosts = [];
+  if (selectedUserId !== null) {
+    selectedPosts = postsByUser[selectedUserId];
+  }
+
+  if (isLoading) {
+    return (
+      <main>
+        <p>Loading posts…</p>
+      </main>
+    );
+  }
+
+  if (errorMessage !== '') {
+    return (
+      <main>
+        <p role="alert">{errorMessage}</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <h2>Posts dashboard</h2>
+      {userIds.map(userId => {
+        const isSelected = userId === selectedUserId;
+        return (
+          <button key={userId} type="button" aria-pressed={isSelected ? 'true' : 'false'} onClick={() => setSelectedUserId(userId)}>
+            User {userId} ({postsByUser[userId].length})
+          </button>
+        );
+      })}
+      {selectedUserId === null && <p>Pick a user to see their posts.</p>}
+      <ul>
+        {selectedPosts.map(post => (
+          <li key={post.id}>{post.title}</li>
+        ))}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+
+const useJson = url => {
+  const [state, setState] = useState({ status: 'loading', data: null, error: '' });
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(url, { signal: controller.signal })
+      .then(response => {
+        if (!response.ok) throw new Error('Could not load the posts (' + response.status + ')');
+        return response.json();
+      })
+      .then(data => setState({ status: 'ready', data, error: '' }))
+      .catch(error => {
+        if (error.name !== 'AbortError') setState({ status: 'error', data: null, error: error.message || 'Could not load the posts' });
+      });
+    return () => controller.abort();
+  }, [url]);
+  return state;
+};
+
+const groupBy = (items, keyOf) => items.reduce((groups, item) => {
+  (groups[keyOf(item)] ||= []).push(item);
+  return groups;
+}, {});
+
+const App = () => {
+  const { status, data: posts, error } = useJson(POSTS_URL);
+  const [selected, setSelected] = useState(null);
+
+  const byUser = useMemo(() => groupBy(posts ?? [], post => post.userId), [posts]);
+  const userIds = useMemo(() => Object.keys(byUser).map(Number).sort((a, b) => a - b), [byUser]);
+
+  if (status === 'loading') return <main><p role="status">Loading posts…</p></main>;
+  if (status === 'error') return <main><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>Posts dashboard</h2>
+      <nav aria-label="Authors">
+        {userIds.map(id => (
+          <button key={id} type="button" aria-pressed={id === selected} onClick={() => setSelected(id)}>
+            User {id} ({byUser[id].length})
+          </button>
+        ))}
+      </nav>
+      {selected === null
+        ? <p>Choose a user to read their posts.</p>
+        : <ul aria-label={'Posts by user ' + selected}>{byUser[selected].map(post => <li key={post.id}>{post.title}</li>)}</ul>}
+    </main>
+  );
+};`,
+    hiddenSuite: `// Six posts by users 7, 12 and 3, arriving in that order: sorted as text the
+// buttons would read 12, 3, 7, and in arrival order 7, 12, 3.
+const FEED = [
+  { id: 81, userId: 7, title: 'Tide tables', body: 'b' },
+  { id: 82, userId: 12, title: 'Harbour lights', body: 'b' },
+  { id: 83, userId: 7, title: 'Knots for beginners', body: 'b' },
+  { id: 84, userId: 3, title: 'Mending nets', body: 'b' },
+  { id: 85, userId: 12, title: 'Night crossing', body: 'b' },
+  { id: 86, userId: 7, title: 'Reading the swell', body: 'b' },
+];
+
+test('the buttons come from the answer, lowest user id first, and nothing is listed yet', () => withServer(async calls => {
+  const container = await loaded(calls, FEED);
+  expect(buttonTexts(container)).toEqual(['User 3 (1)', 'User 7 (3)', 'User 12 (2)']);
+  expect(container.querySelectorAll('li')).toHaveLength(0);
+}));
+
+test('user 12 sees exactly their posts, in the order they arrived', () => withServer(async calls => {
+  const container = await loaded(calls, FEED);
+  choose(container, 'User 12 (2)');
+  expectItems(itemTexts(container), ['Harbour lights', 'Night crossing']);
+}));
+
+test('moving from user 7 to user 3 replaces the list and moves the pressed mark', () => withServer(async calls => {
+  const container = await loaded(calls, FEED);
+  choose(container, 'User 7 (3)');
+  expectItems(itemTexts(container), ['Tide tables', 'Knots for beginners', 'Reading the swell']);
+  choose(container, 'User 3 (1)');
+  expectItems(itemTexts(container), ['Mending nets']);
+  expect(userButtons(container).map(button => button.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
+}));
+
+test('a request that throws shows an alert and no users', () => withServer(async calls => {
+  const { container } = render(<App />);
+  gets(calls, POSTS_URL)[0].fail(new TypeError('Failed to fetch'));
+  await expectFailure(container);
+  expect(userButtons(container)).toHaveLength(0);
+}));
+
+test('an answer that is not ok is a failure even with posts in its body', () => withServer(async calls => {
+  const { container } = render(<App />);
+  gets(calls, POSTS_URL)[0].respond(FEED, 500);
+  await expectFailure(container);
+  expect(userButtons(container)).toHaveLength(0);
+}));`,
   },
   "react-todo-client": {
-    solution: `Senior-style approach for Todo client:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: see the first five todos, tick or delete them, add a new one.
+// Data model: Todo { id, userId, title, completed }. The completed count is
+// derived from the list on every render, never stored beside it.
+// API endpoints: GET /todos?_limit=5 reads, POST /todos creates and answers
+// with the stored todo. Ticking and deleting stay local here; a real client
+// would send PATCH /todos/:id { completed } and DELETE /todos/:id.
+// Conflict handling: two tabs can edit the same todo. Last write wins is the
+// simple answer, and it silently loses one of the edits. Better: every todo
+// carries a version (or updated_at); a PATCH sends the version it read, the
+// server answers 409 Conflict when the todo has moved on, and the client
+// reloads that todo and shows which edit won. Sending "completed: true"
+// rather than "toggle" makes a retried request harmless.
+
+const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
+
+const App = () => {
+  const [todos, setTodos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [title, setTitle] = useState('');
+
+  useEffect(() => {
+    const loadTodos = async () => {
+      try {
+        const response = await fetch(TODOS_URL + '?_limit=5');
+        if (!response.ok) throw new Error('Could not load the todos (' + response.status + ')');
+        setTodos(await response.json());
+      } catch (requestError) {
+        setError(requestError.message || 'Could not load the todos');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTodos();
+  }, []);
+
+  const addTodo = async event => {
+    event.preventDefault();
+    const text = title.trim();
+    if (!text) return;
+    try {
+      const response = await fetch(TODOS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: text, completed: false, userId: 1 }),
+      });
+      if (!response.ok) throw new Error('Could not add the todo (' + response.status + ')');
+      // The server's copy is the one to keep: it carries the id it gave.
+      const created = await response.json();
+      setTodos(current => [...current, created]);
+      setTitle('');
+      setError('');
+    } catch (requestError) {
+      setError(requestError.message || 'Could not add the todo');
+    }
+  };
+
+  const toggleTodo = id => setTodos(current => current.map(todo => (todo.id === id ? { ...todo, completed: !todo.completed } : todo)));
+  const deleteTodo = id => setTodos(current => current.filter(todo => todo.id !== id));
+  const done = todos.filter(todo => todo.completed).length;
+
+  if (loading) return <main><h2>Todo client</h2><p>Loading todos…</p></main>;
+
+  return (
+    <main>
+      <h2>Todo client</h2>
+      {error && <p role="alert">{error}</p>}
+      <p>Completed: {done} of {todos.length}</p>
+      <form onSubmit={addTodo}>
+        <input value={title} onChange={event => setTitle(event.target.value)} aria-label="New todo" />
+        <button type="submit">Add</button>
+      </form>
+      <ul>
+        {todos.map(todo => (
+          <li key={todo.id}>
+            <label>
+              <input type="checkbox" checked={todo.completed} onChange={() => toggleTodo(todo.id)} /> {todo.title}
+            </label>
+            <button type="button" onClick={() => deleteTodo(todo.id)}>Delete</button>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
+
+const App = () => {
+  const [todos, setTodos] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [newTitle, setNewTitle] = useState('');
+
+  useEffect(() => {
+    const loadTodos = async () => {
+      try {
+        const response = await fetch(TODOS_URL + '?_limit=5');
+        if (!response.ok) {
+          throw new Error('The server answered with status ' + response.status);
+        }
+        const data = await response.json();
+        setTodos(data);
+      } catch (error) {
+        setErrorMessage('Could not load the todos. ' + error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadTodos();
+  }, []);
+
+  const handleTitleChange = (event) => {
+    setNewTitle(event.target.value);
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const title = newTitle.trim();
+    if (title === '') {
+      return;
+    }
+    const newTodo = { title: title, completed: false, userId: 1 };
+    try {
+      const response = await fetch(TODOS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newTodo),
+      });
+      if (!response.ok) {
+        throw new Error('The server answered with status ' + response.status);
+      }
+      const createdTodo = await response.json();
+      setTodos(currentTodos => [...currentTodos, createdTodo]);
+      setNewTitle('');
+      setErrorMessage('');
+    } catch (error) {
+      setErrorMessage('Could not add the todo. ' + error.message);
+    }
+  };
+
+  const handleToggle = (id) => {
+    const updatedTodos = [];
+    for (const todo of todos) {
+      if (todo.id === id) {
+        updatedTodos.push({ ...todo, completed: !todo.completed });
+      } else {
+        updatedTodos.push(todo);
+      }
+    }
+    setTodos(updatedTodos);
+  };
+
+  const handleDelete = (id) => {
+    const remainingTodos = [];
+    for (const todo of todos) {
+      if (todo.id !== id) {
+        remainingTodos.push(todo);
+      }
+    }
+    setTodos(remainingTodos);
+  };
+
+  let completedCount = 0;
+  for (const todo of todos) {
+    if (todo.completed) {
+      completedCount = completedCount + 1;
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <main>
+        <p>Loading todos…</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <h2>Todo client</h2>
+      {errorMessage !== '' && <p role="alert">{errorMessage}</p>}
+      <p>Completed: {completedCount} of {todos.length}</p>
+      <form onSubmit={handleSubmit}>
+        <input type="text" value={newTitle} onChange={handleTitleChange} placeholder="What needs doing?" />
+        <button type="submit">Add</button>
+      </form>
+      <ul>
+        {todos.map(todo => (
+          <li key={todo.id}>
+            <input type="checkbox" checked={todo.completed} onChange={() => handleToggle(todo.id)} />
+            {todo.title}
+            <button type="button" onClick={() => handleDelete(todo.id)}>Delete</button>
+          </li>
+        ))}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const TODOS_URL = 'https://jsonplaceholder.typicode.com/todos';
+
+const requestJson = async (url, options) => {
+  const response = await fetch(url, options);
+  if (!response.ok) throw new Error('Request failed (' + response.status + ')');
+  return response.json();
+};
+
+const TodoItem = ({ todo, onToggle, onDelete }) => (
+  <li>
+    <label>
+      <input type="checkbox" checked={todo.completed} onChange={() => onToggle(todo.id)} />
+      {' '}{todo.title}
+    </label>
+    <button type="button" aria-label={'Delete ' + todo.title} onClick={() => onDelete(todo.id)}>Delete</button>
+  </li>
+);
+
+const App = () => {
+  const [todos, setTodos] = useState([]);
+  const [status, setStatus] = useState('loading');
+  const [error, setError] = useState('');
+  const [title, setTitle] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    requestJson(TODOS_URL + '?_limit=5', { signal: controller.signal })
+      .then(data => { setTodos(data); setStatus('ready'); })
+      .catch(failure => {
+        if (failure.name === 'AbortError') return;
+        setError('Could not load the todos: ' + failure.message);
+        setStatus('error');
+      });
+    return () => controller.abort();
+  }, []);
+
+  const add = async event => {
+    event.preventDefault();
+    const text = title.trim();
+    if (!text || saving) return;
+    setSaving(true);
+    try {
+      const created = await requestJson(TODOS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: text, completed: false, userId: 1 }),
+      });
+      setTodos(current => [...current, created]);
+      setTitle('');
+      setError('');
+    } catch (failure) {
+      setError('Could not add the todo: ' + failure.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggle = useCallback(id => setTodos(current => current.map(todo => (todo.id === id ? { ...todo, completed: !todo.completed } : todo))), []);
+  const remove = useCallback(id => setTodos(current => current.filter(todo => todo.id !== id)), []);
+  const done = todos.filter(todo => todo.completed).length;
+
+  if (status === 'loading') return <main><p role="status">Loading todos…</p></main>;
+
+  return (
+    <main>
+      <h2>Todo client</h2>
+      {error && <p role="alert">{error}</p>}
+      <p role="status">Completed: {done} of {todos.length}</p>
+      <form onSubmit={add}>
+        <input aria-label="New todo" value={title} onChange={event => setTitle(event.target.value)} />
+        <button type="submit" disabled={saving}>Add</button>
+      </form>
+      <ul>{todos.map(todo => <TodoItem key={todo.id} todo={todo} onToggle={toggle} onDelete={remove} />)}</ul>
+    </main>
+  );
+};`,
+    hiddenSuite: `// Five todos the visible checks never show, three of them done.
+const SERVER_TODOS = [
+  { id: 51, userId: 3, title: 'Renew the passport', completed: true },
+  { id: 52, userId: 3, title: 'Call the plumber', completed: false },
+  { id: 53, userId: 3, title: 'Return library books', completed: true },
+  { id: 54, userId: 3, title: 'Book a dentist visit', completed: true },
+  { id: 55, userId: 3, title: 'Back up the laptop', completed: false },
+];
+
+test('shows the todos of the answer, ticked as they are, and counts Completed: 3 of 5', () => withServer(async calls => {
+  const container = await loaded(calls, SERVER_TODOS);
+  expectItems(itemTexts(container), SERVER_TODOS.map(todo => todo.title));
+  expect(ticked(container)).toEqual([true, false, true, true, false]);
+  expect(says(container, 'Completed: 3 of 5')).toBe(true);
+}));
+
+test('the new todo appears only once the server answers, and it can be ticked', () => withServer(async calls => {
+  const container = await loaded(calls, SERVER_TODOS);
+  add(container, 'Buy stamps');
+  const [post] = posts(calls);
+  expect(Boolean(post)).toBe(true);
+  expect(JSON.parse(post.options.body)).toEqual({ title: 'Buy stamps', completed: false, userId: 1 });
+  expect(itemTexts(container).some(text => text.includes('Buy stamps'))).toBe(false);
+  post.respond({ id: 777, title: 'Buy stamps', completed: false, userId: 1 }, 201);
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(6));
+  expect(itemTexts(container)[5]).toContain('Buy stamps');
+  expect(says(container, 'Completed: 3 of 6')).toBe(true);
+  fireEvent.click(boxes(container)[5]);
+  expect(says(container, 'Completed: 4 of 6')).toBe(true);
+}));
+
+test('a POST the server refuses adds nothing and shows an alert', () => withServer(async calls => {
+  const container = await loaded(calls, SERVER_TODOS);
+  add(container, 'Buy stamps');
+  posts(calls)[0].respond({ message: 'Server error' }, 500);
+  await waitFor(() => expect(Boolean(alertIn(container))).toBe(true));
+  expect(container.querySelectorAll('li')).toHaveLength(5);
+  expect(says(container, 'Completed: 3 of 5')).toBe(true);
+}));
+
+test('a load that throws shows an alert and no todos', () => withServer(async calls => {
+  const { container } = render(<App />);
+  gets(calls, TODOS_URL)[0].fail(new TypeError('Failed to fetch'));
+  await expectFailure(container);
+}));
+
+test('Delete and the checkboxes act on the todo they belong to', () => withServer(async calls => {
+  const container = await loaded(calls, SERVER_TODOS);
+  fireEvent.click(buttonNamed(container.querySelectorAll('li')[2], 'Delete'));
+  expectItems(itemTexts(container), ['Renew the passport', 'Call the plumber', 'Book a dentist visit', 'Back up the laptop']);
+  expect(says(container, 'Completed: 2 of 4')).toBe(true);
+  fireEvent.click(boxes(container)[1]);
+  expect(ticked(container)).toEqual([true, true, true, false]);
+  expect(says(container, 'Completed: 3 of 4')).toBe(true);
+}));`,
   },
   "react-product-explorer": {
-    solution: `Senior-style approach for Product explorer:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: search the catalogue, choose an order, page through the
+// matches, and read the average price of everything that matches.
+// Data model: Product { id, title, price, … } as DummyJSON sends it, inside
+// { products, total, skip, limit }. Matches, order, page and average are
+// derived during render; only the products and the three controls are state.
+// API endpoints: GET /products returns the first 30. A real shop searches on
+// the server, GET /products/search?q=lamp&sortBy=price&order=asc&limit=5&skip=5,
+// and answers the total so the client can show "Page 2 of 7".
+// Search and caching: index the titles for search (a trigram or full-text
+// index in Postgres, or a search engine once ranking and typos matter) and
+// index price for the sort. Debounce the typing, cache each
+// (query, order, page) answer briefly in the client and at the edge, and keep
+// the previous page on screen while the next one loads.
+
+const PRODUCTS_URL = 'https://dummyjson.com/products';
+const PAGE_SIZE = 5;
+const ORDERS = {
+  'price-asc': (a, b) => a.price - b.price,
+  'price-desc': (a, b) => b.price - a.price,
+};
+
+const App = () => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [query, setQuery] = useState('');
+  const [order, setOrder] = useState('');
+  const [page, setPage] = useState(1);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await fetch(PRODUCTS_URL);
+        if (!response.ok) throw new Error('Could not load the products (' + response.status + ')');
+        const data = await response.json();
+        setProducts(data.products);
+      } catch (requestError) {
+        setError(requestError.message || 'Could not load the products');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  // Filter, sort a copy (never the state itself), then cut the page.
+  const needle = query.toLowerCase();
+  const matches = products.filter(product => product.title.toLowerCase().includes(needle));
+  const ordered = order ? [...matches].sort(ORDERS[order]) : matches;
+  const pages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
+  const shown = ordered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  // The average reads every match, not only the page on screen.
+  const average = matches.length > 0
+    ? matches.reduce((sum, product) => sum + product.price, 0) / matches.length
+    : null;
+
+  if (loading) return <main><h2>Product explorer</h2><p>Loading products…</p></main>;
+  if (error) return <main><h2>Product explorer</h2><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>Product explorer</h2>
+      <input value={query} onChange={event => { setQuery(event.target.value); setPage(1); }} placeholder="Search by title" aria-label="Search by title" />
+      <select value={order} onChange={event => { setOrder(event.target.value); setPage(1); }} aria-label="Order">
+        <option value="">Default order</option>
+        <option value="price-asc">Price: low to high</option>
+        <option value="price-desc">Price: high to low</option>
+      </select>
+      {average !== null && <p>Average price: {average.toFixed(2)}</p>}
+      {shown.length === 0 ? <p>No products match.</p> : (
+        <ul>
+          {shown.map(product => <li key={product.id}>{product.title} — {product.price}</li>)}
+        </ul>
+      )}
+      <button type="button" disabled={page === 1} onClick={() => setPage(page - 1)}>Previous</button>
+      <span> Page {page} of {pages} </span>
+      <button type="button" disabled={page === pages} onClick={() => setPage(page + 1)}>Next</button>
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `const PAGE_SIZE = 5;
+
+const App = () => {
+  const [products, setProducts] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [sortOrder, setSortOrder] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+
+  useEffect(() => {
+    const loadProducts = async () => {
+      try {
+        const response = await fetch('https://dummyjson.com/products');
+        if (!response.ok) {
+          throw new Error('The server answered with status ' + response.status);
+        }
+        const data = await response.json();
+        setProducts(data.products);
+      } catch (error) {
+        setErrorMessage('Could not load the products. ' + error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadProducts();
+  }, []);
+
+  const handleSearchChange = (event) => {
+    setSearchText(event.target.value);
+    setCurrentPage(1);
+  };
+
+  const handleSortChange = (event) => {
+    setSortOrder(event.target.value);
+    setCurrentPage(1);
+  };
+
+  const lowerSearch = searchText.toLowerCase();
+  const matchingProducts = [];
+  for (const product of products) {
+    if (product.title.toLowerCase().includes(lowerSearch)) {
+      matchingProducts.push(product);
+    }
+  }
+
+  const sortedProducts = [...matchingProducts];
+  if (sortOrder === 'price-asc') {
+    sortedProducts.sort((a, b) => a.price - b.price);
+  }
+  if (sortOrder === 'price-desc') {
+    sortedProducts.sort((a, b) => b.price - a.price);
+  }
+
+  let totalPages = Math.ceil(sortedProducts.length / PAGE_SIZE);
+  if (totalPages < 1) {
+    totalPages = 1;
+  }
+  const firstIndex = (currentPage - 1) * PAGE_SIZE;
+  const productsOnPage = sortedProducts.slice(firstIndex, firstIndex + PAGE_SIZE);
+
+  const totalPrice = matchingProducts.reduce((sum, product) => sum + product.price, 0);
+  const averagePrice = totalPrice / matchingProducts.length;
+
+  if (isLoading) {
+    return (
+      <main>
+        <p>Loading products…</p>
+      </main>
+    );
+  }
+
+  if (errorMessage !== '') {
+    return (
+      <main>
+        <p role="alert">{errorMessage}</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <h2>Product explorer</h2>
+      <input type="text" value={searchText} onChange={handleSearchChange} placeholder="Search by title" />
+      <select value={sortOrder} onChange={handleSortChange}>
+        <option value="">Default order</option>
+        <option value="price-asc">Price: low to high</option>
+        <option value="price-desc">Price: high to low</option>
+      </select>
+      {matchingProducts.length > 0 && <p>Average price: {averagePrice.toFixed(2)}</p>}
+      {matchingProducts.length === 0 && <p>No products match.</p>}
+      <ul>
+        {productsOnPage.map(product => (
+          <li key={product.id}>{product.title}: {product.price}</li>
+        ))}
+      </ul>
+      <button type="button" onClick={() => setCurrentPage(currentPage - 1)} disabled={currentPage === 1}>Previous</button>
+      <p>Page {currentPage} of {totalPages}</p>
+      <button type="button" onClick={() => setCurrentPage(currentPage + 1)} disabled={currentPage === totalPages}>Next</button>
+    </main>
+  );
+};`,
+    senior: `const PRODUCTS_URL = 'https://dummyjson.com/products';
+const PAGE_SIZE = 5;
+const ORDERS = {
+  '': null,
+  'price-asc': (a, b) => a.price - b.price,
+  'price-desc': (a, b) => b.price - a.price,
+};
+
+const useProducts = () => {
+  const [state, setState] = useState({ status: 'loading', products: [], error: '' });
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(PRODUCTS_URL, { signal: controller.signal })
+      .then(response => {
+        if (!response.ok) throw new Error('Could not load the products (' + response.status + ')');
+        return response.json();
+      })
+      .then(data => setState({ status: 'ready', products: data.products ?? [], error: '' }))
+      .catch(error => {
+        if (error.name !== 'AbortError') setState({ status: 'error', products: [], error: error.message || 'Could not load the products' });
+      });
+    return () => controller.abort();
+  }, []);
+  return state;
+};
+
+const App = () => {
+  const { status, products, error } = useProducts();
+  const [view, setView] = useState({ query: '', order: '', page: 1 });
+  const update = change => setView(current => ({ ...current, ...change, page: change.page ?? 1 }));
+
+  const matches = useMemo(() => {
+    const needle = view.query.toLowerCase();
+    return products.filter(product => product.title.toLowerCase().includes(needle));
+  }, [products, view.query]);
+  const ordered = useMemo(
+    () => (ORDERS[view.order] ? [...matches].sort(ORDERS[view.order]) : matches),
+    [matches, view.order],
+  );
+  const pages = Math.max(1, Math.ceil(ordered.length / PAGE_SIZE));
+  const page = Math.min(view.page, pages);
+  const shown = ordered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const average = matches.length ? matches.reduce((sum, product) => sum + product.price, 0) / matches.length : null;
+
+  if (status === 'loading') return <main><p role="status">Loading products…</p></main>;
+  if (status === 'error') return <main><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>Product explorer</h2>
+      <input type="search" aria-label="Search products" value={view.query} onChange={event => update({ query: event.target.value })} />
+      <select aria-label="Order" value={view.order} onChange={event => update({ order: event.target.value })}>
+        <option value="">Default order</option>
+        <option value="price-asc">Price: low to high</option>
+        <option value="price-desc">Price: high to low</option>
+      </select>
+      {average === null
+        ? <p role="status">No products match.</p>
+        : (
+          <>
+            <p>Average price: {average.toFixed(2)}</p>
+            <ul>{shown.map(product => <li key={product.id}>{product.title} · {product.price}</li>)}</ul>
+          </>
+        )}
+      <nav aria-label="Pages">
+        <button type="button" disabled={page === 1} onClick={() => update({ page: page - 1 })}>Previous</button>
+        <span aria-live="polite"> Page {page} of {pages} </span>
+        <button type="button" disabled={page === pages} onClick={() => update({ page: page + 1 })}>Next</button>
+      </nav>
+    </main>
+  );
+};`,
+    hiddenSuite: `// Twelve products the visible checks never show: three pages, and an API
+// order that is neither price order.
+const CATALOGUE = [
+  { id: 11, title: 'Oak Desk', price: 249.99 },
+  { id: 12, title: 'Desk Lamp', price: 34.95 },
+  { id: 13, title: 'Wool Rug', price: 89.95 },
+  { id: 14, title: 'Standing Desk', price: 399.99 },
+  { id: 15, title: 'Bookshelf', price: 129.95 },
+  { id: 16, title: 'Office Chair', price: 189.99 },
+  { id: 17, title: 'Desk Organizer', price: 19.95 },
+  { id: 18, title: 'Floor Lamp', price: 59.99 },
+  { id: 19, title: 'Cable Tray', price: 24.99 },
+  { id: 20, title: 'Monitor Arm', price: 79.99 },
+  { id: 21, title: 'Footrest', price: 29.99 },
+  { id: 22, title: 'Whiteboard', price: 44.99 },
+];
+
+test('twelve products make three pages, the last one holding two', () => withServer(async calls => {
+  const container = await loaded(calls, CATALOGUE);
+  expect(says(container, 'Page 1 of 3')).toBe(true);
+  press(container, 'Next');
+  expectItems(itemTexts(container), ['Office Chair', 'Desk Organizer', 'Floor Lamp', 'Cable Tray', 'Monitor Arm']);
+  press(container, 'Next');
+  expectItems(itemTexts(container), ['Footrest', 'Whiteboard']);
+  expect(says(container, 'Page 3 of 3')).toBe(true);
+  expect(buttonNamed(container, 'Next').disabled).toBe(true);
+  expect(buttonNamed(container, 'Previous').disabled).toBe(false);
+}));
+
+test('a new search goes back to page 1, and the average covers every match', () => withServer(async calls => {
+  const container = await loaded(calls, CATALOGUE);
+  press(container, 'Next');
+  search(container, 'desk');
+  expect(says(container, 'Page 1 of 1')).toBe(true);
+  expectItems(itemTexts(container), ['Oak Desk', 'Desk Lamp', 'Standing Desk', 'Desk Organizer']);
+  expect(says(container, 'Average price: 176.22')).toBe(true);
+}));
+
+test('a new order goes back to page 1 and sorts across every page', () => withServer(async calls => {
+  const container = await loaded(calls, CATALOGUE);
+  press(container, 'Next');
+  press(container, 'Next');
+  sortBy(container, 'price-desc');
+  expect(says(container, 'Page 1 of 3')).toBe(true);
+  expectItems(itemTexts(container), ['Standing Desk', 'Oak Desk', 'Office Chair', 'Bookshelf', 'Wool Rug']);
+  sortBy(container, 'price-asc');
+  expectItems(itemTexts(container), ['Desk Organizer', 'Cable Tray', 'Footrest', 'Desk Lamp', 'Whiteboard']);
+}));
+
+test('Default order brings back the order the API sent', () => withServer(async calls => {
+  const container = await loaded(calls, CATALOGUE);
+  sortBy(container, 'price-asc');
+  sortBy(container, '');
+  expectItems(itemTexts(container), ['Oak Desk', 'Desk Lamp', 'Wool Rug', 'Standing Desk', 'Bookshelf']);
+}));
+
+test('the average reads every match on every page, not the page shown', () => withServer(async calls => {
+  const container = await loaded(calls, CATALOGUE);
+  expect(says(container, 'Average price: 112.89')).toBe(true);
+  search(container, 'LAMP');
+  expect(says(container, 'Average price: 47.47')).toBe(true);
+}));
+
+test('a request that throws shows an alert and no products', () => withServer(async calls => {
+  const { container } = render(<App />);
+  gets(calls, PRODUCTS_URL)[0].fail(new TypeError('Failed to fetch'));
+  await expectFailure(container);
+}));`,
   },
   "react-comments-viewer": {
-    solution: `Senior-style approach for Comments viewer:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: open the comments, narrow them to one post or to an email, and
+// read which email domains the comments on screen come from.
+// Data model: Comment { id, postId, name, email, body }. The post options,
+// the visible comments and the domain counts are derived during render.
+// API endpoints: GET /comments returns all of them at once, which does not
+// last. Real endpoints page and filter on the server,
+// GET /posts/:id/comments?cursor=…&limit=20 and GET /comments?email=…, with
+// an index on comments(post_id, id). A cursor keeps the pages stable while
+// new comments arrive, and the domain counts would come from the server too.
+// Abuse protection: rate-limit reads and, above all, writes per account and
+// per IP (a token bucket at the edge), require an account to post, cap the
+// body length, hold links from new accounts for review, and never show full
+// email addresses to other readers in a real product.
+
+const COMMENTS_URL = 'https://jsonplaceholder.typicode.com/comments';
+
+const App = () => {
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [postId, setPostId] = useState('');
+  const [emailQuery, setEmailQuery] = useState('');
+
+  useEffect(() => {
+    const loadComments = async () => {
+      try {
+        const response = await fetch(COMMENTS_URL);
+        if (!response.ok) throw new Error('Could not load the comments (' + response.status + ')');
+        setComments(await response.json());
+      } catch (requestError) {
+        setError(requestError.message || 'Could not load the comments');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadComments();
+  }, []);
+
+  // Each post id once, lowest first: sort as numbers, not as text.
+  const postIds = [...new Set(comments.map(comment => comment.postId))].sort((a, b) => a - b);
+  const needle = emailQuery.toLowerCase();
+  const shown = comments.filter(comment =>
+    (postId === '' || String(comment.postId) === postId) && comment.email.toLowerCase().includes(needle));
+  const domainCounts = shown.reduce((counts, comment) => {
+    const domain = comment.email.split('@')[1];
+    counts[domain] = (counts[domain] || 0) + 1;
+    return counts;
+  }, {});
+  // Most comments first; a tie in A to Z order.
+  const domains = Object.entries(domainCounts).sort(([nameA, countA], [nameB, countB]) =>
+    countB - countA || nameA.localeCompare(nameB));
+
+  if (loading) return <main><h2>Comments viewer</h2><p>Loading comments…</p></main>;
+  if (error) return <main><h2>Comments viewer</h2><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>Comments viewer</h2>
+      <select value={postId} onChange={event => setPostId(event.target.value)} aria-label="Post">
+        <option value="">All posts</option>
+        {postIds.map(id => <option key={id} value={String(id)}>{'Post ' + id}</option>)}
+      </select>
+      <input value={emailQuery} onChange={event => setEmailQuery(event.target.value)} placeholder="Filter by email" aria-label="Filter by email" />
+      {shown.length === 0 && <p>No comments match.</p>}
+      <ul aria-label="Comments">
+        {shown.map(comment => <li key={comment.id}>{comment.name} — {comment.email}</li>)}
+      </ul>
+      <ul aria-label="Domains">
+        {domains.map(([domain, count]) => <li key={domain}>{domain}: {count}</li>)}
+      </ul>
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `const App = () => {
+  const [comments, setComments] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [selectedPostId, setSelectedPostId] = useState('');
+  const [emailFilter, setEmailFilter] = useState('');
+
+  useEffect(() => {
+    const loadComments = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/comments');
+        if (!response.ok) {
+          throw new Error('The server answered with status ' + response.status);
+        }
+        const data = await response.json();
+        setComments(data);
+      } catch (error) {
+        setErrorMessage('Could not load the comments. ' + error.message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    loadComments();
+  }, []);
+
+  const handlePostChange = (event) => {
+    setSelectedPostId(event.target.value);
+  };
+
+  const handleEmailChange = (event) => {
+    setEmailFilter(event.target.value);
+  };
+
+  const postIds = [];
+  for (const comment of comments) {
+    if (!postIds.includes(comment.postId)) {
+      postIds.push(comment.postId);
+    }
+  }
+  postIds.sort((a, b) => a - b);
+
+  const lowerFilter = emailFilter.toLowerCase();
+  const visibleComments = [];
+  for (const comment of comments) {
+    const postMatches = selectedPostId === '' || String(comment.postId) === selectedPostId;
+    const emailMatches = comment.email.toLowerCase().includes(lowerFilter);
+    if (postMatches && emailMatches) {
+      visibleComments.push(comment);
+    }
+  }
+
+  const domainCounts = visibleComments.reduce((counts, comment) => {
+    const parts = comment.email.split('@');
+    const domain = parts[1];
+    if (counts[domain] === undefined) {
+      counts[domain] = 0;
+    }
+    counts[domain] = counts[domain] + 1;
+    return counts;
+  }, {});
+
+  const domainRows = Object.entries(domainCounts);
+  domainRows.sort((first, second) => {
+    if (second[1] !== first[1]) {
+      return second[1] - first[1];
+    }
+    if (first[0] < second[0]) {
+      return -1;
+    }
+    return 1;
+  });
+
+  if (isLoading) {
+    return (
+      <main>
+        <p>Loading comments…</p>
+      </main>
+    );
+  }
+
+  if (errorMessage !== '') {
+    return (
+      <main>
+        <p role="alert">{errorMessage}</p>
+      </main>
+    );
+  }
+
+  return (
+    <main>
+      <h2>Comments viewer</h2>
+      <select value={selectedPostId} onChange={handlePostChange}>
+        <option value="">All posts</option>
+        {postIds.map(postId => (
+          <option key={postId} value={String(postId)}>{'Post ' + postId}</option>
+        ))}
+      </select>
+      <input type="text" value={emailFilter} onChange={handleEmailChange} placeholder="Filter by email" />
+      {visibleComments.length === 0 && <p>No comments match.</p>}
+      <ul aria-label="Comments">
+        {visibleComments.map(comment => (
+          <li key={comment.id}>{comment.name} ({comment.email})</li>
+        ))}
+      </ul>
+      <ul aria-label="Domains">
+        {domainRows.map(row => (
+          <li key={row[0]}>{row[0]}: {row[1]}</li>
+        ))}
+      </ul>
+    </main>
+  );
+};`,
+    senior: `const COMMENTS_URL = 'https://jsonplaceholder.typicode.com/comments';
+
+const useComments = () => {
+  const [state, setState] = useState({ status: 'loading', comments: [], error: '' });
+  useEffect(() => {
+    const controller = new AbortController();
+    fetch(COMMENTS_URL, { signal: controller.signal })
+      .then(response => {
+        if (!response.ok) throw new Error('Could not load the comments (' + response.status + ')');
+        return response.json();
+      })
+      .then(comments => setState({ status: 'ready', comments, error: '' }))
+      .catch(error => {
+        if (error.name !== 'AbortError') setState({ status: 'error', comments: [], error: error.message || 'Could not load the comments' });
+      });
+    return () => controller.abort();
+  }, []);
+  return state;
+};
+
+const domainOf = email => email.slice(email.indexOf('@') + 1);
+const countBy = (items, keyOf) => items.reduce((counts, item) => {
+  const key = keyOf(item);
+  return counts.set(key, (counts.get(key) ?? 0) + 1);
+}, new Map());
+const byCountThenName = ([nameA, countA], [nameB, countB]) => countB - countA || nameA.localeCompare(nameB);
+
+const App = () => {
+  const { status, comments, error } = useComments();
+  const [postId, setPostId] = useState('');
+  const [email, setEmail] = useState('');
+
+  const postIds = useMemo(() => [...new Set(comments.map(comment => comment.postId))].sort((a, b) => a - b), [comments]);
+  const shown = useMemo(() => {
+    const needle = email.toLowerCase();
+    return comments.filter(comment => (!postId || comment.postId === Number(postId)) && comment.email.toLowerCase().includes(needle));
+  }, [comments, postId, email]);
+  const domains = useMemo(() => [...countBy(shown, comment => domainOf(comment.email))].sort(byCountThenName), [shown]);
+
+  if (status === 'loading') return <main><p role="status">Loading comments…</p></main>;
+  if (status === 'error') return <main><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>Comments viewer</h2>
+      <label>
+        Post{' '}
+        <select value={postId} onChange={event => setPostId(event.target.value)}>
+          <option value="">All posts</option>
+          {postIds.map(id => <option key={id} value={id}>{'Post ' + id}</option>)}
+        </select>
+      </label>
+      <label>
+        Email{' '}
+        <input type="search" value={email} onChange={event => setEmail(event.target.value)} />
+      </label>
+      {shown.length === 0 && <p role="status">No comments match.</p>}
+      <ul aria-label="Comments">{shown.map(comment => <li key={comment.id}>{comment.name} · {comment.email}</li>)}</ul>
+      <ul aria-label="Domains">{domains.map(([domain, count]) => <li key={domain}>{domain}: {count}</li>)}</ul>
+    </main>
+  );
+};`,
+    hiddenSuite: `// Six comments the visible checks never show: posts 9, 4 and 12 (sorted as
+// text they would read 12, 4, 9), three domains with unequal counts, and a
+// tie on post 4 whose first domain is not the first in A to Z order.
+const THREAD = [
+  { id: 61, postId: 9, name: 'Great write-up', email: 'rosa@mail.example', body: 'b' },
+  { id: 62, postId: 4, name: 'Small typo', email: 'rosa@home.example', body: 'b' },
+  { id: 63, postId: 9, name: 'Thanks', email: 'lee@corp.example', body: 'b' },
+  { id: 64, postId: 12, name: 'Question', email: 'amy@mail.example', body: 'b' },
+  { id: 65, postId: 4, name: 'Agreed', email: 'ken@corp.example', body: 'b' },
+  { id: 66, postId: 9, name: 'Follow-up', email: 'kenji@corp.example', body: 'b' },
+];
+
+test('lists every comment of the answer with its name and email', () => withServer(async calls => {
+  await loaded(calls, THREAD);
+  const items = entries('Comments');
+  THREAD.forEach((comment, index) => {
+    expect(items[index]).toContain(comment.name);
+    expect(items[index]).toContain(comment.email);
+  });
+}));
+
+test('the post options come from the answer, lowest id first', () => withServer(async calls => {
+  const container = await loaded(calls, THREAD);
+  expect(optionsOf(postSelect(container))).toEqual([['', 'All posts'], ['4', 'Post 4'], ['9', 'Post 9'], ['12', 'Post 12']]);
+}));
+
+test('every domain of the answer is counted, most comments first', () => withServer(async calls => {
+  await loaded(calls, THREAD);
+  expect(entries('Domains')).toEqual(['corp.example: 3', 'mail.example: 2', 'home.example: 1']);
+}));
+
+test('a tie between domains is broken A to Z', () => withServer(async calls => {
+  const container = await loaded(calls, THREAD);
+  choosePost(container, '4');
+  expectItems(entries('Comments'), ['Small typo', 'Agreed']);
+  expect(entries('Domains')).toEqual(['corp.example: 1', 'home.example: 1']);
+}));
+
+test('a post and an email narrow together, and the domains follow', () => withServer(async calls => {
+  const container = await loaded(calls, THREAD);
+  choosePost(container, '9');
+  filterEmail(container, 'KEN');
+  expectItems(entries('Comments'), ['Follow-up']);
+  expect(entries('Domains')).toEqual(['corp.example: 1']);
+  choosePost(container, '');
+  expectItems(entries('Comments'), ['Agreed', 'Follow-up']);
+}));
+
+test('a request that throws shows an alert and no comments', () => withServer(async calls => {
+  const { container } = render(<App />);
+  gets(calls, COMMENTS_URL)[0].fail(new TypeError('Failed to fetch'));
+  await expectFailure(container);
+}));`,
   },
   "react-weather-style-dashboard": {
     solution: `Senior-style approach for Weather-style dashboard:
