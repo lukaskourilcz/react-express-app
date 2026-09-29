@@ -1829,6 +1829,7 @@ export const en = {
   'github.callbackRequestedBody': 'The app must be installed on your own account, not an organisation. Install it on your personal account and try again.',
   'github.signIn': 'Sign in',
   'github.backToProfile': 'Back to profile',
+  'github.connectAgain': 'Connect again',
   'home.stripCodingTitle': 'Coding challenges',
   'home.stripCodingText': 'Loops, array methods, types and components with real tests, plus a GitHub garden.',
 
