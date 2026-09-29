@@ -43,7 +43,8 @@ import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder } from '..
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
 import { evaluateCalls, allPassed, deepEqual } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
-import { runReactSuite } from '../lib/coding/react-runner';
+import { prepareReactRuntime, runReactSuite } from '../lib/coding/react-runner';
+import { lockDownRealm } from '../lib/coding/realm-lockdown';
 import { HIDDEN_CASE_PREFIX, splitHiddenCases, suiteCaseCount, withHiddenCases } from '../lib/coding/react-hidden';
 import { renderCodingIndex } from './build-coding-index';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
@@ -619,6 +620,13 @@ async function main() {
   }
 
   /* ── React solutions ────────────────────────────────────────────────── */
+  // The React guest freezes its realm's built-ins after loading jsdom, React
+  // and Testing Library and before any learner code runs
+  // (lib/coding/realm-lockdown.ts). The solutions and probes run the same way
+  // here, so a suite or a library path that needs a writable built-in fails
+  // this test instead of every Submit.
+  await prepareReactRuntime();
+  lockDownRealm();
   for (const task of CODING_TASKS) {
     if (task.track !== 'react' || task.verify !== 'tests' || !task.suite) continue;
     if (!ONLY.test(task.id)) continue;

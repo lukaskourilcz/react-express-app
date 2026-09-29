@@ -31,8 +31,31 @@ the suite with its hidden cases, and a random nonce made for this run.
    reconfigure (an `asyncWrapper` that skips every `waitFor`, for example).
    Both consoles it can reach, its own and jsdom's `window.console`, go
    nowhere.
-3. The grader prints the result on stdout as one line that starts with the
-   nonce. The API takes only that line from the command's stdout and never
+3. The component still reaches objects of the grader's own realm: React's
+   exports, jsdom's document, the timers. One step up their prototype chains
+   are the built-ins that the test runner, the matchers and the result
+   printer use. Until September 29 a component could put a `toJSON` on the
+   grader's `Object.prototype` and have `JSON.stringify` print every case,
+   hidden ones included, as passed; its own `String.prototype.split` did the
+   same before the result was printed. So once jsdom, React and Testing
+   Library are loaded, and before the suite or the component runs, the grader
+   freezes every standard built-in of its realm and pins the global names to
+   them (`lib/coding/realm-lockdown.ts`). A change to one of them throws, and
+   the run reports it as a compile error. Ordinary code can still give its
+   own object a `toString`, `constructor`, `name` or `message`, and React can
+   still switch `Error.prepareStackTrace` off and back on; nothing else can
+   set it. `npm run test:coding` proves every React solution and probe under
+   the same lockdown.
+4. The grader follows each case's promise with the page realm's own
+   `Promise.prototype.then`, captured before the suite ran. A component that
+   replaced `then` in its realm otherwise ended every async case at once, as
+   a pass.
+5. The grader prints the result on stdout as one line that starts with the
+   nonce. It writes that JSON itself from the result's own data properties,
+   with functions captured before any learner code ran
+   (`serializeGuestResult` in `lib/coding/react-guest.ts`): no `toJSON`,
+   getter or inherited field is read, and a result of any other shape ends
+   the run. The API takes only that line from the command's stdout and never
    reads a file from the VM; a `result.json` left behind means nothing. A
    missing or repeated line, a malformed result, or a case count different
    from the number of `test(` and `it(` calls in the suite that ran (visible
@@ -64,8 +87,9 @@ Create a fresh dependency snapshot whenever the root lockfile's runtime
 dependencies change. Code-only grader changes are included in the build and do
 not require a new snapshot: the snapshot holds only `node_modules` and the
 Node 24 runtime, and the grader bundle is uploaded with every run. That covers
-the September 29 change to the page realm, the nonce line and the deleted
-input, which needs no new snapshot. Delete obsolete dependency snapshots after
+the September 29 changes to the page realm, the nonce line, the deleted
+input, the frozen built-ins and the hand-written result, which need no new
+snapshot. Delete obsolete dependency snapshots after
 a verified rollout; retain the previous one while rollback remains possible.
 
 ## Resource limits and evidence
@@ -90,14 +114,16 @@ a verified rollout; retain the previous one while rollback remains possible.
   realm has no `process`, so the grader reports each one on `window` as an
   `unhandledrejection` event, where a suite that checks for them listens.
 - This boundary protects the application host and credentials, and it stops
-  a component from forging its verdict through the filesystem, the process or
-  stdout. It is not a claim of comprehensive adversarial grading integrity or
-  platform penetration testing. The suite shares its realm with the component,
-  and the component can reach objects that jsdom, React and the test helpers
-  also use, so a component written to tamper with the built-ins or objects the
-  suite relies on can still influence its own result. jsdom can read files
-  that exist in the VM (an `XMLHttpRequest` to a `file:` URL, for example);
-  once the input is deleted nothing there is secret.
+  a component from forging its verdict through the filesystem, the process,
+  stdout, the printed result or the grader realm's built-ins. It is not a
+  claim of comprehensive adversarial grading integrity or platform
+  penetration testing. The suite shares its page realm with the component,
+  whose built-ins stay writable (suites replace `Date.now` there, for
+  example), and the component can reach jsdom and React objects the test
+  helpers also use, which are not frozen. So a component written to tamper
+  with what one case reads can still influence that case. jsdom can read
+  files that exist in the VM (an `XMLHttpRequest` to a `file:` URL, for
+  example); once the input is deleted nothing there is secret.
 
 The September 15 audit created and tested the dependency snapshot and configured
 both environments on `react-express-app`. No plan or billing settings changed.
