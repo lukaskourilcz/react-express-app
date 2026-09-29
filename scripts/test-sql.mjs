@@ -14,9 +14,10 @@
 //   DATABASE_URL=postgres://postgres:postgres@127.0.0.1:54339/postgres npm run test:sql
 //
 // supabase/tests/known-failures.txt lists test files that fail today because of
-// a known, tracked bug. They still run: a listed file that fails is reported as
-// an expected failure, and a listed file that passes fails the suite until it
-// is removed from the list, so the list can only shrink.
+// a known, tracked bug, each with the text its failure must contain. They still
+// run: a listed file that fails with that text is reported as an expected
+// failure; one that fails any other way fails the suite, and so does one that
+// passes, until its line is removed. The list can only shrink.
 import { spawnSync } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -83,8 +84,12 @@ if (existsSync(knownPath)) {
   for (const line of readFileSync(knownPath, 'utf8').split('\n')) {
     const text = line.replace(/#.*/, '').trim();
     if (!text) continue;
-    const [file, ...reason] = text.split(/\s+/);
-    known.set(file, reason.join(' '));
+    const match = /^(\S+\.test\.sql):\s*(.+)$/.exec(text);
+    if (!match) {
+      console.error(`known-failures.txt: "${text}" is not "<file>.test.sql: <text the failure contains>".`);
+      process.exit(1);
+    }
+    known.set(match[1], match[2]);
   }
 }
 const tests = readdirSync(testDir).filter((name) => name.endsWith('.test.sql')).sort();
@@ -106,10 +111,14 @@ for (const name of tests) {
     if (passed) {
       failed += 1;
       console.error(`  FIXED ${name} — it passes now; remove it from supabase/tests/known-failures.txt`);
-    } else {
+    } else if (output.includes(known.get(name))) {
       expected += 1;
-      console.log(`  XFAIL ${name} — known bug: ${known.get(name)}`);
+      console.log(`  XFAIL ${name} — the known bug in known-failures.txt`);
       console.log(indent(output));
+    } else {
+      failed += 1;
+      console.error(`  FAIL  ${name} — not the known failure ("${known.get(name)}")`);
+      console.error(indent(output));
     }
   } else if (passed) {
     console.log(`  ok    ${name}`);

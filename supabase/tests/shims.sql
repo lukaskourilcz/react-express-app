@@ -13,6 +13,13 @@ BEGIN
   END IF;
   IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
     CREATE ROLE service_role NOLOGIN NOINHERIT BYPASSRLS;
+    -- What Supabase grants on everything created in public: the browser
+    -- roles too, which is why every table needs RLS and every service
+    -- routine its REVOKE.
+    GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;
+    ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
   END IF;
 END;
 $$;
@@ -22,7 +29,6 @@ BEGIN
   IF to_regnamespace('auth') IS NULL THEN
     CREATE SCHEMA auth;
     GRANT USAGE ON SCHEMA auth TO anon, authenticated, service_role;
-    GRANT USAGE ON SCHEMA public TO anon, authenticated, service_role;
   END IF;
   -- Migration 044 reads auth.users; the suite only needs its id column.
   IF to_regclass('auth.users') IS NULL THEN
