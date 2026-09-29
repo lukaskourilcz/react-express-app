@@ -38,6 +38,7 @@ import { docsFor, taskResources } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
 import { runChecks, runInSandbox } from '../lib/coding/sandbox';
+import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder } from '../lib/coding/puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
@@ -73,6 +74,9 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
 const hiddenCaseCount = (hiddenSuite: string | undefined): number => (hiddenSuite?.match(/^\s*(?:test|it)\(/gm) ?? []).length;
 
 async function main() {
+  // The solutions are proven on the grader's worker thread, built fresh from
+  // the sources under test, as the deployment runs it.
+  await buildSandboxWorker();
   const failures: string[] = [];
   const fail = (message: string) => { failures.push(message); };
 

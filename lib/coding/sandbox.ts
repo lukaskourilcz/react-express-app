@@ -4,8 +4,17 @@
  * no real timers. Timers are virtual, so a debounce task that waits 80 ms
  * finishes in microseconds and the same code grades the same way every time.
  * A memory limit, a stack limit and a CPU deadline bound every run. This is
- * the verdict of record for JavaScript and TypeScript tasks. */
+ * the verdict of record for JavaScript and TypeScript tasks.
+ *
+ * The run happens on a worker thread. QuickJS checks its deadline between
+ * bytecode instructions, so a loop that spends its time inside native calls
+ * (`"x".repeat(2e6)` over and over) overran it by minutes, and on the request
+ * thread that blocked every other request the instance served. The host now
+ * stops the thread when the deadline and a short grace have passed. */
 
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
+import { Worker } from 'node:worker_threads';
 import { newQuickJSWASMModuleFromVariant, shouldInterruptAfterDeadline, type QuickJSWASMModule, type QuickJSHandle } from 'quickjs-emscripten';
 import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
@@ -232,10 +241,146 @@ function decode(value: unknown, depth = 0): unknown {
   throw new Error('Malformed result value');
 }
 
-/** Runs one program. Never throws for learner mistakes: a syntax error, a
- * throw, an infinite loop or a promise that never settles all come back as
- * results the caller can show. */
+/* ── the worker thread ───────────────────────────────────────────────── */
+
+/** The worker bundle `npm run build:react-runner` writes
+ * (scripts/sandbox-worker-entry.ts with QuickJS inside). vercel.json ships
+ * it with api/quiz/roadmap.ts. */
+export const SANDBOX_WORKER_FILE = 'lib/coding/generated/quickjs-sandbox.cjs';
+/** How long past the run's own deadline the thread may take to answer
+ * before it is stopped. A run the interrupt handler catches answers well
+ * inside it. */
+const WORKER_GRACE_MS = 1_500;
+/** How long a new thread may take to load QuickJS and pick up the run. */
+const WORKER_BOOT_MS = 10_000;
+/** Threads running at once; further runs wait for one to finish. */
+const MAX_WORKERS = 4;
+/** Threads kept loaded between runs. */
+const IDLE_WORKERS = 2;
+
+const idleWorkers: Worker[] = [];
+const waitingRuns: (() => void)[] = [];
+let busyWorkers = 0;
+let workerFile: string | null | undefined;
+
+const sandboxWorkerFile = (): string | null => {
+  if (workerFile === undefined) {
+    const file = join(process.cwd(), SANDBOX_WORKER_FILE);
+    workerFile = existsSync(file) ? file : null;
+    // The pre-worker behaviour, and still a working grader; logged so a
+    // deployment that lost the bundle shows up.
+    if (!workerFile) console.warn(JSON.stringify({ level: 'warn', msg: 'sandbox_worker_missing', file: SANDBOX_WORKER_FILE }));
+  }
+  return workerFile;
+};
+
+const acquireWorkerSlot = async (): Promise<void> => {
+  if (busyWorkers < MAX_WORKERS) { busyWorkers++; return; }
+  await new Promise<void>((resume) => waitingRuns.push(resume));
+};
+const releaseWorkerSlot = () => {
+  const next = waitingRuns.shift();
+  if (next) next();
+  else busyWorkers--;
+};
+
+type WorkerReply = { type: 'start' } | { type: 'done'; result: EvaluateResult } | { type: 'fail'; message: string };
+
+/** The thread could not be started or never picked the run up: a fault of
+ * the host, not of the learner's program. */
+class WorkerUnavailableError extends Error {}
+
+const stopped = (codeError: string, timedOut: boolean): EvaluateResult => ({ results: [], logs: [], codeError, timedOut });
+
+function newWorker(file: string): Worker {
+  const worker = new Worker(file, { resourceLimits: { maxOldGenerationSizeMb: 192 } });
+  // An idle thread must not keep the process alive (a run in flight holds a
+  // timer that does), and one that dies while idle leaves the pool quietly.
+  worker.unref();
+  const forget = () => {
+    const index = idleWorkers.indexOf(worker);
+    if (index >= 0) idleWorkers.splice(index, 1);
+  };
+  worker.on('error', forget);
+  worker.on('exit', forget);
+  return worker;
+}
+
+function runOnWorker(file: string, input: SandboxInput): Promise<EvaluateResult> {
+  const worker = idleWorkers.pop() ?? newWorker(file);
+  return new Promise<EvaluateResult>((resolve, reject) => {
+    let settled = false;
+    let started = false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const settle = (keep: boolean) => {
+      settled = true;
+      clearTimeout(timer);
+      worker.off('message', onMessage);
+      worker.off('error', onFailure);
+      worker.off('exit', onFailure);
+      if (keep && idleWorkers.length < IDLE_WORKERS) idleWorkers.push(worker);
+      else void worker.terminate();
+    };
+    const finish = (result: EvaluateResult) => {
+      if (settled) return;
+      settle(false);
+      resolve(result);
+    };
+    const unavailable = (reason: string) => {
+      if (settled) return;
+      settle(false);
+      reject(new WorkerUnavailableError(reason));
+    };
+    const onMessage = (reply: WorkerReply) => {
+      if (settled) return;
+      if (reply.type === 'start') {
+        started = true;
+        clearTimeout(timer);
+        // The run measures its own deadline from here. A run the interrupt
+        // handler cannot reach is stopped with the thread.
+        timer = setTimeout(() => finish(stopped(TIMEOUT_MESSAGE, true)), (input.deadlineMs ?? SANDBOX_DEADLINE_MS) + WORKER_GRACE_MS);
+        return;
+      }
+      settle(reply.type === 'done');
+      if (reply.type === 'done') resolve(reply.result);
+      else reject(new Error(reply.message));
+    };
+    // A thread that dies mid-run (its heap limit, a WebAssembly abort) took
+    // the learner's program with it, and says so like any other failed run.
+    // One that dies before it picked the run up is the host's problem.
+    const onFailure = () => (started ? finish(stopped('The run stopped unexpectedly.', false)) : unavailable('sandbox_worker_failed'));
+    worker.on('message', onMessage);
+    worker.on('error', onFailure);
+    worker.on('exit', onFailure);
+    timer = setTimeout(() => unavailable('sandbox_worker_boot_timeout'), WORKER_BOOT_MS);
+    worker.postMessage({ type: 'run', input });
+  });
+}
+
+/** Runs one program on a worker thread; in this thread when the worker
+ * bundle is missing (tests and local runs before a build) or cannot start,
+ * which is how it ran before the worker existed. Never throws for learner
+ * mistakes: a syntax error, a throw, an infinite loop or a promise that
+ * never settles all come back as results the caller can show. */
 export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult> {
+  const file = sandboxWorkerFile();
+  if (!file) return runInQuickJS(input);
+  await acquireWorkerSlot();
+  try {
+    return await runOnWorker(file, input);
+  } catch (error) {
+    if (!(error instanceof WorkerUnavailableError)) throw error;
+    console.warn(JSON.stringify({ level: 'warn', msg: 'sandbox_worker_unavailable', reason: error.message }));
+    workerFile = null;
+    return runInQuickJS(input);
+  } finally {
+    releaseWorkerSlot();
+  }
+}
+
+/** Runs one program in this thread. The worker entry calls this; everything
+ * else goes through `runInSandbox`. */
+export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult> {
   const QuickJS = await getModule();
   const runtime = QuickJS.newRuntime();
   const deadline = Date.now() + (input.deadlineMs ?? SANDBOX_DEADLINE_MS);

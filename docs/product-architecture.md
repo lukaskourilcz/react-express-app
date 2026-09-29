@@ -106,9 +106,11 @@ correct answers and accuracy. No board ranks by XP or by streak.
 
 The `/coding` section, the coding phase inside Learn levels, and the GitHub
 garden are additive. The server owns grading: JavaScript and
-TypeScript submissions run in a QuickJS WebAssembly sandbox inside
-`api/quiz/roadmap.ts` (`resource=coding-submit`) with a 2.5 s deadline and
-virtual timers, TypeScript type tests run through the real compiler, and
+TypeScript submissions run in a QuickJS WebAssembly sandbox on a worker thread
+of `api/quiz/roadmap.ts` (`resource=coding-submit`) with a 2.5 s deadline, which
+the host enforces by stopping the thread 1.5 s past it, and virtual timers;
+hidden checks run in a fresh program in a per-submission shuffled order;
+TypeScript type tests run through the real compiler, each in its own file; and
 system-design answers are graded against a key sealed in the coding session.
 React submissions use `lib/coding/react-isolated.ts`: a fresh Vercel Sandbox
 microVM with network denied, no application credentials, a 256 MB Node heap,

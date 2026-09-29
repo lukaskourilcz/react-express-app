@@ -23,6 +23,7 @@ import { solutionFor, solutionIds } from '../lib/learning-paths/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
 import { codingTaskById } from '../lib/coding/active';
 import { pathInventory } from '../shared/learning-paths';
+import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 const ONLY = process.env.PATHS_ONLY ?? '';
 const SKIP_RUN = process.env.PATHS_SKIP_RUN === '1';
@@ -47,6 +48,8 @@ function codeActivities(path: MergedPath): { module: string; activity: MergedAct
 }
 
 async function main() {
+  // Code activities are graded on the grader's worker thread, built fresh.
+  await buildSandboxWorker();
   const failures: string[] = [];
   const fail = (message: string) => {
     failures.push(message);

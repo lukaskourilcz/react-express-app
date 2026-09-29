@@ -11,6 +11,11 @@ import { createMiniJest } from '../shared/coding-mini-jest';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { withHiddenCases } from '../lib/coding/react-hidden';
 import { allPassed, evaluateCalls, LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS } from '../shared/coding-evaluate';
+import { buildSandboxWorker } from './build-sandbox-worker.mjs';
+
+// Every run below goes through the grader's worker thread, built fresh from
+// the sources under test, exactly as the deployment runs it.
+await buildSandboxWorker();
 
 const attacks = [
   ['replace comparison', 'globalThis.__deepEqual=()=>true; function answer(){return 0}'],
@@ -392,4 +397,30 @@ function codingDatabase() {
   const fair = await runChecks({ code: solutionFor(task.id)!.solution, visible: task.tests!, hidden, shuffle: (list) => [...list].reverse() });
   assert.ok(allPassed(fair.visible) && allPassed(fair.hidden!), 'a real solution passes in any order');
   console.log('PASS integrity: hidden checks cannot be answered by call order');
+}
+
+// ── a run that outlives its deadline is stopped (CODE-5) ─────────────────
+// QuickJS checks its deadline between bytecode instructions. A loop whose
+// time goes into native calls ran for 54 s on the request thread, and a
+// split-heavy one for nearly ten minutes, blocking every other request the
+// instance served. The thread running it is stopped at the deadline plus a
+// short grace, and the request thread keeps answering meanwhile.
+{
+  let worstLag = 0;
+  let last = Date.now();
+  const beat = setInterval(() => { const now = Date.now(); worstLag = Math.max(worstLag, now - last - 20); last = now; }, 20);
+  const started = Date.now();
+  const [native, split] = await Promise.all([
+    runInSandbox({ code: 'let s = 0; while (true) { s += "x".repeat(2e6).length; } const f = () => 1;', calls: ['f()'], expectations: [1], deadlineMs: 300 }),
+    runInSandbox({ code: 'const f = () => { let s = 0; while (true) { s += "ab".repeat(1e6).split("").length; } };', calls: ['f()'], expectations: [1], deadlineMs: 300 }),
+  ]);
+  const took = Date.now() - started;
+  clearInterval(beat);
+  assert.equal(native.timedOut, true);
+  assert.equal(split.timedOut, true);
+  assert.ok(took < 4_000, `both runaway runs were stopped near their deadline (${took} ms)`);
+  assert.ok(worstLag < 500, `the request thread kept answering (worst lag ${worstLag} ms)`);
+  const after = await runInSandbox({ code: 'const f = () => 1;', calls: ['f()'], expectations: [1] });
+  assert.equal(after.results[0]?.pass, true, 'the next run gets a working thread');
+  console.log(`PASS integrity: a runaway run is stopped in ${took} ms without blocking the request thread`);
 }

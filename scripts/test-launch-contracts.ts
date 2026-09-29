@@ -38,7 +38,8 @@ import { playable as playableCodingTask, CODING_TASKS } from '../lib/coding/cata
 import { codingTaskById, levelCodingTasks } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
-import { runInSandbox } from '../lib/coding/sandbox';
+import { runInSandbox, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
+import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
@@ -1964,6 +1965,9 @@ function launchOfferContracts() {
 }
 
 async function main() {
+  // Code graded below runs on the grader's worker thread, built fresh from the
+  // sources under test.
+  await buildSandboxWorker();
   assert.equal(apiFiles(join(process.cwd(), 'api')).length, 12, 'Vercel function budget must remain exactly 12');
 
   // devShark is the only product this repository builds. An unset identity
@@ -2105,6 +2109,12 @@ async function main() {
   assert.ok(doubleSolution?.solution.includes('double'));
   const playableDouble = JSON.stringify(playableCodingTask(doubleTask!));
   assert.ok(!playableDouble.includes(doubleSolution!.solution.trim().slice(0, 30)), 'playable task must not carry the solution');
+  // The grader runs on a worker thread the host can stop (CODE-5). Its bundle
+  // is built with the React runner and shipped with the roadmap function; a
+  // deployment without it would fall back to running on the request thread.
+  assert.match(readFileSync(join(process.cwd(), 'scripts', 'build-react-runner.mjs'), 'utf8'), /await buildSandboxWorker\(\)/, 'the build writes the grader worker bundle');
+  const roadmapFunction = (JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as { functions: Record<string, { includeFiles?: string }> }).functions['api/quiz/roadmap.ts'];
+  assert.ok(roadmapFunction?.includeFiles?.includes('lib/coding/generated/*.cjs') && SANDBOX_WORKER_FILE.startsWith('lib/coding/generated/') && SANDBOX_WORKER_FILE.endsWith('.cjs'), 'the roadmap function ships the grader worker bundle');
   const graded = await runInSandbox({ code: doubleSolution!.solution, calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });
   assert.equal(codeOutcome({ visible: graded, hidden: null, check: null }), 'passed', 'the reference solution passes in the sandbox');
   const wrong = await runInSandbox({ code: 'const double = ns => ns;', calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });

@@ -1,5 +1,10 @@
 import { build } from 'esbuild';
 import { execFileSync } from 'node:child_process';
+import { buildSandboxWorker } from './build-sandbox-worker.mjs';
+
+// The QuickJS grader's worker thread (lib/coding/sandbox.ts).
+await buildSandboxWorker();
+
 await build({
   entryPoints: ['scripts/react-sandbox-entry.ts'],
   outfile: 'lib/coding/generated/react-sandbox.cjs',
