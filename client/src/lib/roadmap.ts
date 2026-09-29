@@ -3,6 +3,7 @@
 // in localStorage, and (when signed in) sync that progress to the user's account.
 
 import { apiFetch } from './api';
+import { staleProfileStats } from './queryClient';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
 import { getSubject } from './subjects';
@@ -137,6 +138,8 @@ export async function completeRoadmapAttempt(sessionId: string): Promise<Roadmap
     body: JSON.stringify({ sessionId }),
   });
   if (result.progress) writeProgress(result.progress);
+  // A finished level or part test is a streak day, passed or not.
+  if (result.applied) staleProfileStats();
   return result;
 }
 

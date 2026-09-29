@@ -16,3 +16,12 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+/** Any verified learning can move the streak from migration 048 (a quiz, a
+ * finished Learn level, a coding pass, an awarded Challenge run), so after one
+ * the Profile re-reads its stats the next time it shows them. The key is
+ * profileStatsQueryKey's prefix (lib/queries.ts, which imports this file's
+ * callers and so cannot be imported here). */
+export function staleProfileStats(): void {
+  void queryClient.invalidateQueries({ queryKey: ['profile-stats'] });
+}

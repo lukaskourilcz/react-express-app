@@ -1,4 +1,5 @@
 import { apiFetch } from './api';
+import { staleProfileStats } from './queryClient';
 import type { Question } from '../types/quiz';
 import { getSubject, deliveryCategoriesForSubject } from './subjects';
 
@@ -59,9 +60,12 @@ export function submitChallengeScore(input: { name: string; runToken: string; pr
   });
 }
 
-export function completeChallengeRun(input: { runToken: string; proofs: string[] }): Promise<{ ok: true; awarded: boolean; score: number; xp?: number }> {
-  return apiFetch('/api/quiz/challenge?resource=complete', {
+export async function completeChallengeRun(input: { runToken: string; proofs: string[] }): Promise<{ ok: true; awarded: boolean; score: number; xp?: number }> {
+  const result = await apiFetch<{ ok: true; awarded: boolean; score: number; xp?: number }>('/api/quiz/challenge?resource=complete', {
     method: 'POST',
     body: JSON.stringify(input),
   });
+  // An awarded run is a streak day.
+  if (result.awarded) staleProfileStats();
+  return result;
 }
