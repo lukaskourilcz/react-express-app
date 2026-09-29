@@ -74,11 +74,26 @@ with verified learning; a learner with no stats row gets one with zero totals
 on their first learning day. Missed days are bridged first by the shield, then
 by the month's protections. A shield covers exactly two UTC dates, the one it
 was raised on and the next: `activate_streak_shield` ends it at 00:00 UTC the
-day after tomorrow, and every reader takes `shield_until - 48 hours` as the
-raise date, which also holds for a shield stored as "raised + 48 hours" before
-048. The server keeps UTC days; the streak card, Today's target, the daily
-challenge and the cleared-level tooltip say when the day changes on the
-learner's clock (`client/src/lib/utcDay.ts`).
+day after tomorrow, and `shield_until - 48 hours` is the raise date, which
+also holds for a shield stored as "raised + 48 hours" before 048. From
+`supabase/supabase-schema-052.sql` every date a shield covered in the last 40
+days is kept in `user_streak_freezes.shield_days`, because `shield_until` holds
+only the latest shield: a second shield used to turn the first one's days into
+missed days. A day is shielded when it is in `shield_days` or in the window
+of `shield_until` (all a row from before 052 has); `streak_day_shielded`,
+`streak_missed_days` and `streak_live` are that one rule, used by
+`advance_verified_streak`, `activate_streak_shield`, `friend_list`,
+`settle_coin_milestones` (the Shop's streak milestones) and, in the same
+terms, `liveStreak` on the Profile. `activate_streak_shield` refuses and
+spends nothing when a missed day still needs the protection the shield would
+take (`remaining - 1 < missed`): the handler answers 409
+`shield_would_end_streak`, "Learn today to keep your streak", and the Profile
+does not offer the shield then. The month change restores the two
+protections and never clears a shield (`refresh_streak_freezes`, 052); when
+the Profile cannot read the protections it shows a streak that depends on
+them as "—" rather than 0. The server keeps UTC days; the streak card,
+Today's target, the daily challenge and the cleared-level tooltip say when
+the day changes on the learner's clock (`client/src/lib/utcDay.ts`).
 
 ### Question of the day (#239)
 
@@ -131,11 +146,27 @@ level would otherwise add correct answers without limit. A quiz question
 counts the same way from migration 048: `record_verified_quiz_result_v2` builds
 its category counts (for `user_category_stats` and this board) from the
 outcomes whose question the learner had not answered earlier the same UTC day,
-read from `user_question_history` before the attempt updates it, and scales
-the quiz's XP by that share, `floor(xp × fresh ÷ total)`. The awarded XP is
-kept on the receipt row (`quiz_attempts.quest_xp`) and the stats handler
-credits coins for that amount. `total_quizzes` still counts every quiz.
-Coding passes are not answers and are not counted.
+read from `user_question_history` before the attempt updates it. From
+migration 052 its XP follows the same rule per question: each receipt outcome
+carries the XP its question earned (`api/quiz/submit.ts`: 2 + 2 × difficulty
+when correct, 0 when not), and the routine pays the sum over the fresh
+outcomes, never more than the receipt's total. A question answered earlier
+the same UTC day pays nothing and a fresh correct answer pays in full. The
+daily challenge keeps its minimum of 20 XP when it has at least one fresh
+correct answer; a daily whose correct answers were all answered earlier that
+day pays only its fresh questions' XP, which is 0. A receipt minted before
+052 carries no per-question XP and keeps 048's share formula,
+`floor(xp × fresh ÷ total)`. The awarded XP is kept on the receipt row
+(`quiz_attempts.quest_xp`) and the stats handler credits coins for that
+amount. `total_quizzes` still counts every quiz. A Biggest Shark Challenge
+answer counts the same way on the boards from 052: the handler sends the
+run's answers with their categories (`p_outcomes`), and
+`record_challenge_completion` dates only the questions the learner had not
+answered earlier the same UTC day and updates `user_question_history`, so a
+replayed run adds nothing. The run's Challenge XP (5 a correct answer) is
+unchanged. Without `p_outcomes` (the handler before 052) it counts the run's
+breakdown in full, as before. Coding passes are not answers and are not
+counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank.
 Since `supabase/supabase-schema-049.sql` the all-time boards
@@ -729,7 +760,9 @@ production (issue #227, step D8).
   tunes them in `/dev` → Settings → Coins without a deploy. Every account earns
   10 % of verified XP; Premium doubles it at credit time; one account earns at
   most 400 coins a day from XP, counted after the doubling. The welcome grant is
-  200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300), a
+  200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300;
+  "live" as the Profile counts it, a shield or a protection covering the gap
+  since the last learning day, `streak_live` from migration 052), a
   Learn topic with every level passed (100), an evolving project (150) or short
   path (50) with every stage passed, and the top three of a finished calendar
   month on the dated board of migration 040 (300, 200, 100). Milestones sit

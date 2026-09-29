@@ -40,6 +40,10 @@ const INSTALLED: Record<string, unknown> = {
 /** What a table read answers, by table; any other read finds nothing. */
 const TABLE_READS: Record<string, { status: number; body: unknown }> = {};
 
+/** Arguments an installed routine does not take yet: PostgREST finds no
+ * routine for the call and answers PGRST202, as it does for a missing one. */
+const UNKNOWN_ARGS: Record<string, string[]> = {};
+
 const USER = { id: '0b5e7c1e-2f7a-4c3d-9a61-5d2f0c9e8a41', email: 'fallback@example.invalid' };
 const TOKEN = 'fallback-contract-token';
 /** What the sign-in provider put on USER's account: the verified profile. */
@@ -80,8 +84,10 @@ async function startStandIn(calls: Call[], writes: Call[]) {
     if (rpc) {
       const name = rpc[1];
       const raw = await readBody(req);
-      calls.push({ name, args: raw ? JSON.parse(raw) : {} });
-      if (name in INSTALLED) {
+      const args = raw ? JSON.parse(raw) : {};
+      calls.push({ name, args });
+      const unknownArg = (UNKNOWN_ARGS[name] ?? []).some((arg) => arg in args);
+      if (name in INSTALLED && !unknownArg) {
         res.end(JSON.stringify(INSTALLED[name]));
         return;
       }
@@ -196,6 +202,46 @@ async function main() {
     assert.equal(calls[award].args.p_user_id, USER.id);
     // An awarded run is a streak day from 048, so it settles the milestones.
     assert.ok(names.indexOf('settle_coin_milestones') > award, 'an awarded run settles the streak milestones');
+
+    // From 052 the completion step takes the run's answers with their
+    // categories and counts each question once a UTC day. Between 040 and
+    // 052 it takes the breakdown alone and answers PGRST202 for p_outcomes,
+    // so the handler asks again without them. Either way the XP is 5 a
+    // correct answer.
+    const { getEffectiveQuestions } = await import('../lib/questions-store');
+    const bank = (await getEffectiveQuestions('webdev', false)).slice(0, 5);
+    const answered = (runId: string) => bank.map((question, i) => tokens.encodeScoreProof(runId, question.id, 'webdev', i < 2));
+    INSTALLED.record_challenge_completion = true;
+    for (const shape of ['052', '040'] as const) {
+      if (shape === '040') UNKNOWN_ARGS.record_challenge_completion = ['p_outcomes'];
+      calls.length = 0;
+      const played = tokens.createChallengeRun(true, 'webdev');
+      const finished = mockResponse();
+      await challenge({
+        method: 'POST',
+        headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': `10.20.0.${shape === '052' ? 10 : 11}` },
+        query: { resource: 'complete' },
+        url: '/api/quiz/challenge?resource=complete',
+        body: { runToken: played.runToken, proofs: answered(played.runId) },
+      } as never, finished as never);
+      assert.equal(finished.statusCode, 200, `a finished run is recorded on ${shape} (${JSON.stringify(finished.body)})`);
+      assert.deepEqual({ awarded: finished.body.awarded, xp: finished.body.xp }, { awarded: true, xp: 10 });
+      const completions = calls.filter((call) => call.name === 'record_challenge_completion');
+      const expectedOutcomes = bank.map((question, i) => ({ questionId: question.id, category: question.category, isCorrect: i < 2 }));
+      assert.deepEqual(completions[0]?.args.p_outcomes, expectedOutcomes, `the run's answers go with their categories (${shape})`);
+      assert.equal(completions[0]?.args.p_xp, 10, 'the Challenge XP is unchanged');
+      if (shape === '052') {
+        assert.equal(completions.length, 1, 'one call on 052');
+      } else {
+        assert.equal(completions.length, 2, 'before 052 the handler asks again');
+        assert.ok(!('p_outcomes' in completions[1].args), 'without the answers');
+        const total = Object.values(completions[1].args.p_breakdown as Record<string, { total: number }>).reduce((sum, entry) => sum + entry.total, 0);
+        assert.equal(total, 5, 'and with the breakdown 040 counts');
+        assert.ok(!calls.some((call) => call.name === 'record_verified_activity_xp'), 'and never falls back to the bare award');
+      }
+    }
+    delete UNKNOWN_ARGS.record_challenge_completion;
+    delete INSTALLED.record_challenge_completion;
 
     // The tier before 039: every account reads as free, so a cleared step
     // stays open and a new Premium step answers 402, never 503.
@@ -331,7 +377,7 @@ async function main() {
         correct: 10,
         total: 10,
         breakdown: { html: { correct: 10, total: 10 } },
-        outcomes: Array.from({ length: 10 }, (_, i) => ({ questionId: `fallback-html-${i}`, category: 'html', isCorrect: true })),
+        outcomes: Array.from({ length: 10 }, (_, i) => ({ questionId: `fallback-html-${i}`, category: 'html', isCorrect: true, xp: 8 })),
         subject: 'webdev',
         questXp: 80,
         purpose: 'quiz',
@@ -352,6 +398,10 @@ async function main() {
       assert.equal(credit?.args.p_xp, expected, `coins follow the awarded XP: ${expected}`);
       assert.equal(saved.body?.questXp, expected, 'and the response names it for the client to announce');
       assert.ok(calls.some((call) => call.name === 'settle_coin_milestones'), 'the streak day settles the milestones');
+      // From 052 each outcome carries its question's XP to the routine, which
+      // pays only the questions not answered earlier the same UTC day.
+      const recorded = calls.find((call) => call.name === 'record_verified_quiz_result_v2');
+      assert.deepEqual((recorded?.args.p_outcomes as { xp?: number }[]).map((outcome) => outcome.xp), Array(10).fill(8), 'each outcome carries its XP');
     }
     delete TABLE_READS.quiz_attempts;
     INSTALLED.record_verified_quiz_result_v2 = false;
@@ -387,10 +437,64 @@ async function main() {
       assert.deepEqual(asked.body, { state }, `request_friend's '${answer}' reaches the screen as '${state}'`);
       assert.equal(calls[0]?.args.p_handle, 'harbour-reader');
     }
+
+    // The streak shield. From 052 the budget read returns every date a
+    // shield covered (shieldDays), and the Profile counts a day under any of
+    // them as not missed; before 052 there are none and shieldUntil alone is
+    // read. A shield that would spend the protection a missed day still needs
+    // is refused by the routine and answered 409 shield_would_end_streak.
+    const freezes = async (method: 'GET' | 'POST') => {
+      const res = mockResponse();
+      await userOps({
+        method,
+        headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.12' },
+        query: { op: 'freezes' },
+        url: '/api/user/freezes',
+      } as never, res as never);
+      return res;
+    };
+    INSTALLED.refresh_streak_freezes = [{
+      period: '2026-09', remaining: 1, used: [], shield_until: '2026-09-29T00:00:00+00:00',
+      shield_days: ['2026-09-26', '2026-09-27', '2026-09-28'],
+    }];
+    let budget = await freezes('GET');
+    assert.equal(budget.statusCode, 200, JSON.stringify(budget.body));
+    assert.deepEqual(budget.body.shieldDays, ['2026-09-26', '2026-09-27', '2026-09-28'], 'the Profile gets every shielded date');
+    assert.equal(budget.body.shieldUntil, '2026-09-29T00:00:00+00:00');
+    INSTALLED.refresh_streak_freezes = [{ period: '2026-09', remaining: 1, used: [], shield_until: '2026-09-29T00:00:00+00:00' }];
+    budget = await freezes('GET');
+    assert.deepEqual(
+      { days: budget.body.shieldDays, until: budget.body.shieldUntil, supported: budget.body.shieldSupported },
+      { days: [], until: '2026-09-29T00:00:00+00:00', supported: true },
+      'before 052 the read has no shielded dates and the latest shield still reads',
+    );
+
+    INSTALLED.activate_streak_shield = [{
+      granted: false, period: '2026-09', remaining: 1, used: [], shield_until: null, shield_days: [], outcome: 'would_end_streak',
+    }];
+    const refused = await freezes('POST');
+    assert.equal(refused.statusCode, 409, JSON.stringify(refused.body));
+    assert.deepEqual(
+      { code: refused.body?.error?.code, message: refused.body?.error?.message },
+      { code: 'shield_would_end_streak', message: 'Learn today to keep your streak' },
+    );
+    INSTALLED.activate_streak_shield = [{
+      granted: true, period: '2026-09', remaining: 0, used: ['2026-09-29'], shield_until: '2026-10-01T00:00:00+00:00',
+      shield_days: ['2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30'], outcome: 'granted',
+    }];
+    const raised = await freezes('POST');
+    assert.equal(raised.statusCode, 200, JSON.stringify(raised.body));
+    assert.deepEqual(raised.body.shieldDays, ['2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30'], 'a raised shield returns every shielded date');
+    INSTALLED.activate_streak_shield = [{
+      granted: false, period: '2026-09', remaining: 0, used: [], shield_until: null, shield_days: [], outcome: 'empty',
+    }];
+    const empty = await freezes('POST');
+    assert.equal(empty.statusCode, 409);
+    assert.equal(empty.body?.error?.code, 'no_protection_left', 'an empty budget answers as before');
   } finally {
     server.close();
   }
-  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the verified name and Google picture and ignores the body, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; against a stand-in that answers PGRST202 as PostgREST 12 does.');
+  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the verified name and Google picture and ignores the body, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; a finished challenge run sends its answers from 052 and only its breakdown before; the streak shield returns every shielded date and answers 409 shield_would_end_streak when the routine refuses; against a stand-in that answers PGRST202 as PostgREST 12 does.');
 }
 
 main().catch((error) => {
