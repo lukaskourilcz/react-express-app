@@ -17,6 +17,7 @@ import { friendlyError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { openBillingPortal, startCheckout, useBilling, type BillingPlan } from '../lib/billing';
 import { useEntitlement } from '../lib/entitlement';
+import { useClearOnPageRestore } from '../lib/pageRestore';
 
 export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   const { t } = useLanguage();
@@ -26,6 +27,8 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   const location = useLocation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Back from Google or Stripe can bring this page back from the cache busy.
+  useClearOnPageRestore(setBusy);
 
   const run = async (action: () => Promise<void>) => {
     setBusy(true);
