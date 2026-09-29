@@ -76,8 +76,11 @@ export interface CodingVerdictResponse {
   check: TypeCheckResult | null;
   logs: string[];
   codeError: string | null;
-  /** System design: per step or drill, with the explanation once answered. */
+  /** System design: per step or drill. A pass carries the whole walkthrough;
+   * any other verdict says only which steps were right (see
+   * `DesignStepVerdict`). */
   design: DesignStepVerdict[] | null;
+  /** The reference answer for a system-design task, on a pass only. */
   designReference: Localized | null;
   /** Why this attempt failed, and the authored line about that kind of
    * mistake. Null on a pass, and null when the only honest answer is "some
@@ -92,6 +95,11 @@ export interface CodingVerdictResponse {
   progress: CodingTaskProgress | null;
   firstPass: boolean;
   xpAwarded: number;
+  /** True when this was the task's first pass, it earned no XP, and the
+   * learner had revealed the solution before it: a pass after a reveal earns
+   * no XP and no coins. False whenever XP was paid, so a database that still
+   * pays for such a pass never makes the verdict claim otherwise. */
+  xpForfeited: boolean;
   applied: boolean;
   github: CodingGardenStatus | null;
   /** The junior and senior solutions, on a passed code submission. Null on
@@ -99,13 +107,23 @@ export interface CodingVerdictResponse {
   solutions: CodingSolutionPair | null;
 }
 
+/** One graded step of a walkthrough, or the one answer of a drill.
+ *
+ * A failed or partly right submission carries `correct` and `given` and
+ * nothing else: no correct option, order or range, and no explanation, since
+ * the explanations name the right option. Otherwise the key could be read off
+ * a failed attempt and the task reopened under a fresh shuffle and passed for
+ * full XP. The rest arrives only with a pass. */
 export interface DesignStepVerdict {
   correct: boolean;
-  /** The correct option index (or order) is revealed with the explanation. */
+  /** The learner's own answer as graded: an option index, an estimate, or an
+   * order of step positions. Null when it was missing or malformed. */
+  given: DesignAnswer | null;
+  /** On a pass only: the correct option, order or range, with the explanation. */
   correctIndex?: number;
   correctOrder?: number[];
   acceptedRange?: { min: number; max: number; answer: number };
-  explanation: Localized;
+  explanation?: Localized;
 }
 
 /** POST ?resource=coding-reveal */

@@ -130,6 +130,11 @@ the host enforces by stopping the thread 1.5 s past it, and virtual timers;
 hidden checks run in a fresh program in a per-submission shuffled order;
 TypeScript type tests run through the real compiler, each in its own file; and
 system-design answers are graded against a key sealed in the coding session.
+A failed or partly right system-design submission returns, per step, only
+whether it was right and the learner's own answer (`gradeDesign`): the correct
+options, orders and ranges, the explanations (which name the right option) and
+the reference answer travel only with a pass, so a failed attempt cannot be
+read for the key and replayed under the next shuffle.
 React submissions use `lib/coding/react-isolated.ts`: a fresh Vercel Sandbox
 microVM with network denied, no application credentials, a 256 MB Node heap,
 and an externally enforced command deadline. The dependency-only snapshot is
@@ -145,6 +150,14 @@ button's immediate feedback, but the verdict of record is the server's.
 Reference solutions never leave the server:
 `resource=coding-reveal` returns one only after a pass or after the authored
 hint ladder is exhausted, and a reveal ends the current Learn level attempt.
+A reveal before the task's first pass also costs that task its XP and coins:
+from migration 048 the first pass after a recorded reveal pays nothing, and the
+verdict says so with `xpForfeited` (set only when no XP was paid and the
+progress row showed a reveal before the pass, so a database without 048, which
+still pays, never reads as a forfeit). The workbench says this in the reveal
+confirmation for a signed-in learner who has not passed the task, and shows
+"Passed — no XP because the solution was revealed" on such a pass; after a
+recorded pass the solution opens without the warning, since it costs nothing.
 The junior and senior readings shown beside each other after a pass are
 stripped of their authoring comments in `lib/coding/solutions/index.ts`, so the
 boards carry code alone; the content contract executes the stripped text and

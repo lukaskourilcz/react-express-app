@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { runChecks, runInSandbox } from '../lib/coding/sandbox';
-import { handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
+import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
 import { puzzleFor } from '../lib/coding/puzzles';
@@ -86,14 +86,21 @@ console.log('PASS integrity: Submit shows the visible checks\' console only');
 // the same submission stays a replay. The fake below keeps the routine's
 // contract from migration 041: one application per attempt id, progress per
 // account and task, XP once per account and task, and a level link that only
-// ever turns true.
-function codingDatabase() {
+// ever turns true. `record_coding_reveal` counts a reveal the way migration
+// 038 does, and `forfeitAfterReveal` adds migration 048's rule: a first pass
+// after a reveal pays no XP.
+type ProgressFake = { status: 'in_progress' | 'passed' | 'revealed'; passes: number; revealCount: number };
+function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   const attempts = new Set<string>();
-  const progress = new Map<string, { status: 'in_progress' | 'passed'; passes: number }>();
+  const progress = new Map<string, ProgressFake>();
   const links = new Map<string, boolean>();
   const xp = new Set<string>();
   const attemptIds: string[] = [];
   const result = (data: unknown) => Promise.resolve({ data, error: null });
+  const progressRow = (taskId: unknown, row: ProgressFake) => ({
+    task_id: taskId, track: 'javascript', status: row.status, passes: row.passes,
+    review_stage: 0, next_review_at: null, reveal_count: row.revealCount, best_passed_at: null,
+  });
   const from = (table: string) => {
     const filters: Record<string, unknown> = {};
     const chain = {
@@ -104,18 +111,29 @@ function codingDatabase() {
         if (table === 'roadmap_attempts') return result({ attempt_id: filters.attempt_id });
         if (table === 'coding_progress') {
           const row = progress.get(`${filters.user_id}:${filters.task_id}`);
-          return result(row ? {
-            task_id: filters.task_id, track: 'javascript', status: row.status, passes: row.passes,
-            review_stage: 0, next_review_at: null, reveal_count: 0, best_passed_at: null,
-          } : null);
+          return result(row ? progressRow(filters.task_id, row) : null);
         }
         return result(null);
       },
-      then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+      // A list read of coding_progress returns the account's rows.
+      then: (resolve: (value: unknown) => unknown) => resolve({
+        data: table === 'coding_progress'
+          ? [...progress].filter(([key]) => key.startsWith(`${filters.user_id}:`)).map(([key, row]) => progressRow(key.slice(key.indexOf(':') + 1), row))
+          : [],
+        error: null,
+      }),
     };
     return chain;
   };
   const rpc = (name: string, args: Record<string, unknown>) => {
+    if (name === 'record_coding_reveal') {
+      const key = `${args.p_user_id}:${args.p_task_id}`;
+      const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
+      row.revealCount += 1;
+      if (row.status !== 'passed') row.status = 'revealed';
+      progress.set(key, row);
+      return result(null);
+    }
     if (name !== 'record_coding_verdict') return result(null);
     const attemptId = String(args.p_attempt_id);
     attemptIds.push(attemptId);
@@ -123,14 +141,15 @@ function codingDatabase() {
     const key = `${args.p_user_id}:${args.p_task_id}`;
     if (attempts.has(attemptId)) return result({ applied: false, firstPass: false, xpAwarded: false, codeChanged: false });
     attempts.add(attemptId);
-    const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0 };
+    const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
     let firstPass = false;
     let xpAwarded = false;
     if (args.p_outcome === 'passed') {
       firstPass = row.passes === 0;
       row.status = 'passed';
       row.passes += 1;
-      if (firstPass && !xp.has(key)) { xp.add(key); xpAwarded = true; }
+      const forfeited = options.forfeitAfterReveal === true && row.revealCount > 0;
+      if (firstPass && !forfeited && !xp.has(key)) { xp.add(key); xpAwarded = true; }
     }
     progress.set(key, row);
     if (args.p_roadmap_attempt_id) {
@@ -148,7 +167,7 @@ function codingDatabase() {
   const levelAttempt = 'levelattempt0123456789';
   const session = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null, roadmapAttemptId: levelAttempt });
   const reference = solutionFor('js-double-numbers')!;
-  type Verdict = { verdict?: string; applied?: boolean; firstPass?: boolean; xpAwarded?: number; progress?: { status?: string } | null };
+  type Verdict = { verdict?: string; applied?: boolean; firstPass?: boolean; xpAwarded?: number; xpForfeited?: boolean; progress?: { status?: string } | null };
   const submit = async (code: string) => {
     const out = { statusCode: 200, body: null as null | Verdict, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
     await handleCodingSubmit({
@@ -166,6 +185,7 @@ function codingDatabase() {
   assert.equal(passed.applied, true, 'a fix submitted from the same session is recorded');
   assert.equal(passed.firstPass, true);
   assert.ok((passed.xpAwarded ?? 0) > 0, 'the first pass earns the task XP');
+  assert.equal(passed.xpForfeited, false, 'a paid pass claims no forfeit');
   assert.equal(passed.progress?.status, 'passed', 'the task reads as passed');
   assert.equal(db.links.get(`${levelAttempt}:js-double-numbers`), true, 'the Learn level sees the coding task passed');
   const replay = await submit(reference.solution);
@@ -198,6 +218,178 @@ function codingDatabase() {
   assert.equal(outage.body?.failureHint, null, 'no hint blames the code');
   assert.equal(db.attemptIds.length, before, 'a runner outage writes no verdict');
   console.log('PASS integrity: a React runner outage is not recorded as the learner\'s error');
+}
+
+// ── a pass after a reveal says it paid nothing, and only then ───────────
+// Migration 048 pays no XP (and so no coins) for a first pass after the
+// learner revealed that task's solution. The verdict says so in
+// `xpForfeited`, read from the progress row before the pass. Before 048 the
+// routine still pays: xpAwarded is then true and nothing claims a forfeit.
+{
+  type Verdict = { verdict?: string; firstPass?: boolean; xpAwarded?: number; xpForfeited?: boolean };
+  const reference = solutionFor('js-double-numbers')!;
+  const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+  // An address of its own, so these requests spend none of the other tests' rate budget.
+  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.21' };
+  const play = (db: ReturnType<typeof codingDatabase>, learner: string) => {
+    const session = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null });
+    return {
+      reveal: async () => {
+        const out = reply();
+        await handleCodingReveal({ method: 'POST', headers: auth, query: {}, body: { session, hintsUsed: 20, user_id: learner } } as never, out as never, db.client as never);
+        assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+      },
+      submit: async (code: string) => {
+        const out = reply();
+        await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session, code, user_id: learner } } as never, out as never, db.client as never);
+        assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+        return out.body as Verdict;
+      },
+    };
+  };
+
+  const after048 = codingDatabase({ forfeitAfterReveal: true });
+  const learner = 'user-bbbb-2222';
+  const run = play(after048, learner);
+  await run.reveal();
+  assert.equal(after048.progress.get(`${learner}:js-double-numbers`)?.status, 'revealed');
+  const forfeited = await run.submit(reference.solution);
+  assert.equal(forfeited.verdict, 'passed');
+  assert.equal(forfeited.firstPass, true);
+  assert.equal(forfeited.xpAwarded, 0, 'migration 048 pays nothing for a first pass after a reveal');
+  assert.equal(forfeited.xpForfeited, true, 'the verdict says the reveal cost the XP');
+  const later = await run.submit(reference.senior!);
+  assert.equal(later.verdict, 'passed');
+  assert.equal(later.xpForfeited, false, 'a later pass forfeits nothing: nothing was on offer');
+
+  const before048 = codingDatabase();
+  const early = play(before048, learner);
+  await early.reveal();
+  const paid = await early.submit(reference.solution);
+  assert.equal(paid.firstPass, true);
+  assert.ok((paid.xpAwarded ?? 0) > 0, 'before 048 the routine still pays');
+  assert.equal(paid.xpForfeited, false, 'a paid pass never claims a forfeit');
+
+  // XP withheld for another reason, with no reveal on record, is no forfeit.
+  const ledger = codingDatabase({ forfeitAfterReveal: true });
+  ledger.xp.add(`${learner}:js-double-numbers`);
+  const unpaid = await play(ledger, learner).submit(reference.solution);
+  assert.equal(unpaid.firstPass, true);
+  assert.equal(unpaid.xpAwarded, 0);
+  assert.equal(unpaid.xpForfeited, false, 'no reveal, no claim');
+  console.log('PASS integrity: a pass after a reveal says it earned no XP, and nothing else does');
+}
+
+// ── a failed system-design submission carries no key ────────────────────
+// A failed or partly right submission says which answers were wrong and
+// nothing of the key: no correct option, order or range, no explanation and
+// no reference answer. Otherwise the key could be read, the task reopened
+// under a new shuffle and passed for full XP. A pass carries all of it. The
+// learner below has passed these tasks before, which keeps the Premium tasks
+// open for review; the grading does not depend on that.
+{
+  type Step = { correct: boolean; given: unknown; correctIndex?: number; correctOrder?: number[]; acceptedRange?: unknown; explanation?: { en: string } };
+  type Verdict = { verdict?: string; design?: Step[] | null; designReference?: { en: string } | null };
+  type Opened = { session: string; task: { design?: { steps: { options: { en: string }[] }[] }; drill?: { options?: { en: string }[]; steps?: { en: string }[] } } };
+  const db = codingDatabase();
+  const learner = 'user-cccc-3333';
+  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.22' };
+  const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+  const open = async (id: string) => {
+    const out = reply();
+    await handleCodingTask({ method: 'GET', headers: auth, query: { id, user_id: learner } } as never, out as never, db.client as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Opened;
+  };
+  const submit = async (session: string, answers: unknown[]) => {
+    const out = reply();
+    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session, answers, user_id: learner } } as never, out as never, db.client as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Verdict;
+  };
+  const withheld = (verdict: Verdict, secrets: string[], label: string) => {
+    assert.equal(verdict.designReference, null, `${label}: no reference answer`);
+    for (const step of verdict.design ?? []) {
+      assert.deepEqual(Object.keys(step).sort(), ['correct', 'given'], `${label}: a step carries whether it was right and the answer given, nothing else`);
+    }
+    const wire = JSON.stringify(verdict);
+    for (const secret of secrets) assert.ok(!wire.includes(secret.slice(0, 60)), `${label}: no explanation or reference text`);
+  };
+  const byId = (id: string) => CODING_TASKS.find((task) => task.id === id)!;
+  const guided = CODING_TASKS.find((task) => task.track === 'system-design' && task.design)!;
+  const estimate = CODING_TASKS.find((task) => task.drill?.format === 'estimate')!;
+  const choice = CODING_TASKS.find((task) => task.drill?.format === 'tradeoff')!;
+  const sequence = CODING_TASKS.find((task) => task.drill?.format === 'sequence')!;
+  for (const task of [guided, estimate, choice, sequence]) db.progress.set(`${learner}:${task.id}`, { status: 'passed', passes: 1, revealCount: 0 });
+
+  // A guided walkthrough: all wrong, then one short of the pass mark.
+  const design = guided.design!;
+  const secrets = [...design.steps.map((step) => step.explanation.en), design.reference.en];
+  const rightFor = (opened: Opened) => opened.task.design!.steps.map((step, index) =>
+    step.options.findIndex((option) => option.en === design.steps[index].options[design.steps[index].correct].en));
+  const first = await open(guided.id);
+  const right = rightFor(first);
+  assert.ok(right.every((index) => index >= 0));
+  const wrong = right.map((index, step) => (index + 1) % design.steps[step].options.length);
+  const allWrong = await submit(first.session, wrong);
+  assert.equal(allWrong.verdict, 'failed');
+  assert.deepEqual(allWrong.design?.map((step) => step.correct), right.map(() => false));
+  assert.deepEqual(allWrong.design?.map((step) => step.given), wrong, 'the learner\'s own answers come back');
+  withheld(allWrong, secrets, 'all wrong');
+  const second = await open(guided.id);
+  const secondRight = rightFor(second);
+  const shortBy = design.passMark - 1;
+  const partly = await submit(second.session, secondRight.map((index, step) => (step < shortBy ? index : (index + 1) % design.steps[step].options.length)));
+  assert.equal(partly.verdict, 'failed');
+  assert.equal(partly.design?.filter((step) => step.correct).length, shortBy, 'the right steps are marked right');
+  withheld(partly, secrets, 'partly right');
+  const third = await open(guided.id);
+  const thirdRight = rightFor(third);
+  const pass = await submit(third.session, thirdRight);
+  assert.equal(pass.verdict, 'passed');
+  assert.deepEqual(pass.design?.map((step) => step.correctIndex), thirdRight, 'a pass carries the correct options');
+  assert.deepEqual(pass.design?.map((step) => step.explanation?.en), design.steps.map((step) => step.explanation.en), 'and the explanations');
+  assert.equal(pass.designReference?.en, design.reference.en, 'and the reference answer');
+
+  // An estimate drill.
+  const band = byId(estimate.id).drill!;
+  const estimateOpened = await open(estimate.id);
+  const tooHigh = (band.max ?? 0) * 10 + 1;
+  const missed = await submit(estimateOpened.session, [tooHigh]);
+  assert.equal(missed.verdict, 'failed');
+  assert.deepEqual(missed.design, [{ correct: false, given: tooHigh }]);
+  withheld(missed, [band.explanation.en], 'estimate');
+  const inBand = await submit((await open(estimate.id)).session, [band.answer!]);
+  assert.equal(inBand.verdict, 'passed');
+  assert.deepEqual(inBand.design?.[0].acceptedRange, { min: band.min, max: band.max, answer: band.answer }, 'a pass carries the accepted range');
+  assert.equal(inBand.design?.[0].explanation?.en, band.explanation.en);
+
+  // A trade-off drill.
+  const pick = byId(choice.id).drill!;
+  const choiceOpened = await open(choice.id);
+  const choiceRight = choiceOpened.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en);
+  const choiceWrong = (choiceRight + 1) % pick.options!.length;
+  const wrongPick = await submit(choiceOpened.session, [choiceWrong]);
+  assert.deepEqual(wrongPick.design, [{ correct: false, given: choiceWrong }]);
+  withheld(wrongPick, [pick.explanation.en], 'trade-off');
+  const choiceAgain = await open(choice.id);
+  const rightPick = await submit(choiceAgain.session, [choiceAgain.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en)]);
+  assert.equal(rightPick.verdict, 'passed');
+  assert.equal(typeof rightPick.design?.[0].correctIndex, 'number', 'a pass carries the correct option');
+
+  // A sequence drill.
+  const order = byId(sequence.id).drill!;
+  const orderFor = (opened: Opened) => order.steps!.map((step) => opened.task.drill!.steps!.findIndex((shown) => shown.en === step.en));
+  const sequenceOpened = await open(sequence.id);
+  const reversed = [...orderFor(sequenceOpened)].reverse();
+  const outOfOrder = await submit(sequenceOpened.session, [reversed]);
+  assert.deepEqual(outOfOrder.design, [{ correct: false, given: reversed }]);
+  withheld(outOfOrder, [order.explanation.en], 'sequence');
+  const sequenceAgain = await open(sequence.id);
+  const inOrder = await submit(sequenceAgain.session, [orderFor(sequenceAgain)]);
+  assert.equal(inOrder.verdict, 'passed');
+  assert.deepEqual(inOrder.design?.[0].correctOrder, orderFor(sequenceAgain), 'a pass carries the correct order');
+  console.log('PASS integrity: a failed system-design submission carries no key, a pass carries all of it');
 }
 
 // ── a code-ordering puzzle round-trips through its session (CODE-7) ──────

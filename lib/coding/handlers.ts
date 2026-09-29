@@ -165,10 +165,11 @@ const codeHash = (code: string) => createHash('sha256').update(code, 'utf8').dig
  * changed one is recorded. XP stays once per task and account either way; its
  * award id names the task, not the attempt.
  *
- * A system-design session keeps one graded verdict. Its first verdict returns
+ * A system-design session keeps one graded verdict. A passing verdict returns
  * the key it was sealed with, so a second submission from the same session
- * would be answered from that key; it is reported and never applied. A new
- * attempt takes a new session, with the options shuffled again.
+ * could be answered from that key; it is reported and never applied. A failed
+ * verdict returns no key (see `gradeDesign`), and a new attempt takes a new
+ * session, with the options shuffled again.
  */
 function submissionAttemptId(session: CodingSession, verdict: CodingOutcome, code: string | null): string {
   if (code === null) return session.attemptId;
@@ -450,6 +451,7 @@ interface Recorded {
   progress: CodingTaskProgress | null;
   firstPass: boolean;
   xpAwarded: number;
+  xpForfeited: boolean;
   applied: boolean;
   codeChanged: boolean;
 }
@@ -466,6 +468,15 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   if (session.roadmapAttemptId) {
     const attempt = await withTimeout(supabase.from('roadmap_attempts').select('attempt_id').eq('attempt_id', session.roadmapAttemptId).eq('user_id', userId).maybeSingle());
     if (!attempt.error && attempt.data) roadmapAttemptId = session.roadmapAttemptId;
+  }
+  // Whether the solution was revealed before this pass, read before the pass
+  // is written. Only a pass can forfeit XP, so nothing else pays for the read.
+  let revealedBefore = false;
+  if (input.verdict === 'passed') {
+    try {
+      const before = await loadProgressRow(supabase, userId, task.id);
+      revealedBefore = before !== null && before.status !== 'passed' && before.revealCount > 0;
+    } catch { /* unknown: the verdict then claims no forfeit */ }
   }
   const saved = await withTimeout(
     supabase.rpc('record_coding_verdict', {
@@ -506,6 +517,11 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     progress,
     firstPass: data.firstPass === true,
     xpAwarded: data.xpAwarded === true ? CODING_TASK_XP[task.tier] : 0,
+    // Migration 048 pays no XP, and so no coins, for a first pass after a
+    // reveal. Before 048 the routine still pays it: xpAwarded is then true and
+    // this stays false, so the verdict never claims a forfeit that did not
+    // happen.
+    xpForfeited: revealedBefore && data.applied === true && data.firstPass === true && data.xpAwarded !== true && CODING_TASK_XP[task.tier] > 0,
     applied: data.applied === true,
     codeChanged: data.codeChanged === true,
   };
@@ -534,6 +550,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     progress: recorded?.progress ?? null,
     firstPass: recorded?.firstPass ?? false,
     xpAwarded: recorded?.xpAwarded ?? 0,
+    xpForfeited: recorded?.xpForfeited ?? false,
     applied: recorded?.applied ?? false,
     github,
     solutions,
