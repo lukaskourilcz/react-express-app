@@ -39,12 +39,38 @@ it('keeps the campaign labels on the first pageview only and drops every other p
   const beforeSend = client.init.mock.calls[0][1].before_send as (event: unknown) => { properties: Record<string, unknown>; $set_once: Record<string, unknown> };
   const scrubbed = beforeSend({
     event: '$pageview',
-    properties: { $current_url: `${origin}/premium?voucher=SECRETCODE&utm_source=threads#voucher` },
-    $set_once: { $initial_current_url: `${origin}/?ref=abc123&utm_campaign=you%40mail.cz`, $initial_person_info: { u: `${origin}/?session_id=cs_1`, r: '$direct' } },
+    properties: {
+      $current_url: `${origin}/premium?voucher=SECRETCODE&utm_source=threads#voucher`,
+      // posthog-js fills these from the full location.href of the session's first page.
+      $session_entry_url: `${origin}/premium?voucher=SECRETCODE&utm_campaign=launch-55`,
+      $session_entry_referrer: `${origin}/premium/cancel#confirm=TOKENTOKENTOKEN`,
+      $referrer: `${origin}/premium/success?session_id=cs_live_1`,
+      $session_entry_referring_domain: 'devshark.app',
+    },
+    $set_once: {
+      $initial_current_url: `${origin}/?ref=abc123&utm_campaign=you%40mail.cz`,
+      $initial_referrer: '$direct',
+      $initial_session_entry_url: `${origin}/play/K7Q2AB?code=oauth-code#access_token=secret`,
+      $initial_person_info: { u: `${origin}/?session_id=cs_1`, r: '$direct' },
+    },
   });
   expect(scrubbed.properties.$current_url).toBe(`${origin}/premium?utm_source=threads`);
+  expect(scrubbed.properties.$session_entry_url).toBe(`${origin}/premium?utm_campaign=launch-55`);
+  expect(scrubbed.properties.$session_entry_referrer).toBe(`${origin}/premium/cancel`);
+  expect(scrubbed.properties.$referrer).toBe(`${origin}/premium/success`);
+  expect(scrubbed.properties.$session_entry_referring_domain).toBe('devshark.app');
   expect(scrubbed.$set_once.$initial_current_url).toBe(`${origin}/`);
+  expect(scrubbed.$set_once.$initial_referrer).toBe('$direct');
+  expect(scrubbed.$set_once.$initial_session_entry_url).toBe(`${origin}/play/K7Q2AB`);
   expect(scrubbed.$set_once.$initial_person_info).toEqual({ u: `${origin}/`, r: '$direct' });
+  const withReferrer = beforeSend({
+    event: '$pageview',
+    properties: {},
+    $set_once: { $initial_person_info: { u: `${origin}/`, r: 'https://mail.example.com/inbox?voucher=SECRETCODE#msg' } },
+  });
+  expect(withReferrer.$set_once.$initial_person_info).toEqual({ u: `${origin}/`, r: 'https://mail.example.com/inbox' });
+  // PostHog leaves fragments out of the URLs it records itself.
+  expect(client.init.mock.calls[0][1]).toMatchObject({ disable_capture_url_hashes: true });
 
   // The first campaign becomes the person's initial one when they sign in.
   identifyUser('user-1');

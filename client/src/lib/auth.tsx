@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import {
   getSupabaseSession,
+  hasStoredSession,
   loadSupabase,
   mayHaveSession,
   onSupabaseAuthStateChange,
@@ -10,7 +11,8 @@ import {
 } from './supabaseClient';
 import { apiFetch } from './api';
 import { registerAccessTokenReader } from './roadmap';
-import { clearAuthReturn, clearSignInResume, markSignInResume, rememberAuthReturn, takeSignInResume } from './authReturn';
+import { clearAccountData } from './accountData';
+import { clearAuthReturn, clearSignInResume, currentReturnPath, markSignInResume, rememberAuthReturn, takeSignInResume } from './authReturn';
 import { RELOAD_GRACE_MS, browserRecovery, isChunkLoadError, reloadOnPress, type Recovery } from './routeRecovery';
 
 // Cache the latest access token in memory so the pagehide beacon (which can't
@@ -55,13 +57,19 @@ function clearSignInReport(): void {
 // reloaded on a sign-in press and left the sign-in for this one to finish.
 let resumePending = typeof window !== 'undefined' && takeSignInResume();
 
+// Whether an account was signed in on this page: a session was stored when it
+// opened (supabase-js may still find it expired), or one arrived since. Only
+// then does a SIGNED_OUT forget the account's data on this device; supabase-js
+// also sends one for a guest's failed OAuth return, and a guest keeps theirs.
+let accountSignedIn = typeof window !== 'undefined' && hasStoredSession();
+
 interface AuthContextValue {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   /** Sign in with Google. `returnTo` is a path on this site to come back to
-   * after the round trip (see lib/authReturn.ts); without it the visitor lands
-   * on the home page. */
+   * after the round trip (see lib/authReturn.ts); without it the visitor comes
+   * back to the page the sign-in was pressed on. */
   signInWithGoogle: (returnTo?: string) => Promise<void>;
   signOut: () => Promise<void>;
   /** A sign-in pressed before a reload failed when this document finished it
@@ -153,9 +161,16 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
       cachedAccessToken = session?.access_token ?? null;
       setUser(session?.user ?? null);
       setIsLoading(false);
+      if (session?.user) accountSignedIn = true;
       if (event === 'INITIAL_SESSION') initialized = true;
       if (event === 'SIGNED_IN' && initialized && session?.user) reportSignIn();
-      if (event === 'SIGNED_OUT') clearSignInReport();
+      if (event === 'SIGNED_OUT') {
+        clearSignInReport();
+        // The next person on this device starts from nothing, not from the
+        // progress, XP, coins, bookmarks and drafts of the account that left.
+        if (accountSignedIn) clearAccountData();
+        accountSignedIn = false;
+      }
     });
 
     if (!mayHaveSession()) {
@@ -177,6 +192,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
       .then((session) => {
         cachedAccessToken = session?.access_token ?? null;
         setUser(session?.user ?? null);
+        if (session?.user) accountSignedIn = true;
       })
       .catch(() => {
         cachedAccessToken = null;
@@ -190,7 +206,10 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
   const signInWithGoogle = async (returnTo?: string) => {
     // A sign-in from anywhere else must not inherit an older page's return.
     clearAuthReturn();
-    if (returnTo) rememberAuthReturn(returnTo);
+    // A classroom invite (/play/K7Q2AB), a flashcard deck or the GitHub
+    // settings page must not turn into the home page on the way back.
+    const path = returnTo ?? currentReturnPath();
+    if (path) rememberAuthReturn(path);
     // Signing in is when a signed-out visitor downloads supabase-js.
     await startSignIn(true);
   };

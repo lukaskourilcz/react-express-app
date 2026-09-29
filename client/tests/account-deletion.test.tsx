@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -22,9 +22,17 @@ proto.showModal ??= function (this: HTMLDialogElement) { this.setAttribute('open
 proto.close ??= function (this: HTMLDialogElement) { this.removeAttribute('open'); };
 
 const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
-const plan = (body: unknown) => server.use(http.get('*/api/user/*', ({ request }) => new URL(request.url).searchParams.get('op') === 'entitlement'
-  ? HttpResponse.json(body as never)
-  : undefined));
+const NOT_CONNECTED = { available: true, status: 'not_connected', accountLogin: null, repoFullName: null, defaultBranch: null, lastCommitAt: null, queued: 0, lastError: null };
+/** Which account reads the card made. */
+const requests: string[] = [];
+/** The plan and, beside it, the GitHub garden connection (the card reads both). */
+const plan = (body: unknown, github: unknown = NOT_CONNECTED) => server.use(http.get('*/api/user/*', ({ request }) => {
+  const op = new URL(request.url).searchParams.get('op');
+  if (op) requests.push(op);
+  if (op === 'entitlement') return HttpResponse.json(body as never);
+  if (op === 'github-connection') return HttpResponse.json(github as never);
+  return undefined;
+}));
 
 function renderCard(node: ReactNode) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -55,5 +63,45 @@ describe('deleting an account', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Delete my account' }));
     expect(await screen.findByText(/This action cannot be undone\.$/)).toBeInTheDocument();
     expect(screen.queryByText(PREMIUM_LINE, { exact: false })).toBeNull();
+  });
+
+  it('says the GitHub app keeps its access when one is installed, and only then', async () => {
+    const GITHUB_LINE = 'The devShark app you installed on GitHub keeps access to the repositories you gave it until you uninstall it on GitHub.';
+    plan({ ...FREE, billingAccount: false, subscriptionLive: false }, { ...NOT_CONNECTED, status: 'connected', accountLogin: 'learner', repoFullName: 'learner/garden', defaultBranch: 'main' });
+    const view = renderCard(<AccountDeletionCard />);
+    // The garden card beside this one would have loaded the connection already.
+    await waitFor(() => expect(requests).toContain('github-connection'));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete my account' }));
+    expect(await screen.findByText(`multiplayer records. This action cannot be undone. ${GITHUB_LINE}`, { exact: false })).toBeInTheDocument();
+    view.unmount();
+
+    // Garden switched off on this deployment: nothing to uninstall.
+    plan({ ...FREE, billingAccount: false, subscriptionLive: false }, { ...NOT_CONNECTED, available: false });
+    renderCard(<AccountDeletionCard />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete my account' }));
+    expect(await screen.findByText(/This action cannot be undone\.$/)).toBeInTheDocument();
+    expect(screen.queryByText(GITHUB_LINE, { exact: false })).toBeNull();
+  });
+
+  it('forgets the account’s data on this device after the deletion and keeps the device’s settings', async () => {
+    plan({ ...FREE, billingAccount: false, subscriptionLive: false });
+    server.use(http.delete('*/api/user/*', () => HttpResponse.json({ ok: true })));
+    localStorage.setItem('devquiz:roadmap:v2', JSON.stringify({ html: { levels: { 1: { passed: true, bestPct: 100 } }, checkpoints: {} } }));
+    localStorage.setItem('devshark:coding:draft:html-1', 'const secret = 1;');
+    localStorage.setItem('devshark:referral', JSON.stringify({ code: 'ABCD2345', savedAt: Date.now() }));
+    localStorage.setItem('devquiz:color-mode', 'dark');
+    localStorage.setItem('devquiz.lang', 'en');
+    sessionStorage.setItem('devshark:voucher-prefill', 'LAUNCH55');
+    renderCard(<AccountDeletionCard />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete my account' }));
+    const dialog = await screen.findByRole('alertdialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete my account' }));
+    await waitFor(() => expect(localStorage.getItem('devquiz:roadmap:v2')).toBeNull());
+    expect(localStorage.getItem('devshark:coding:draft:html-1')).toBeNull();
+    expect(localStorage.getItem('devshark:referral')).toBeNull();
+    expect(sessionStorage.getItem('devshark:voucher-prefill')).toBeNull();
+    expect(localStorage.getItem('devquiz:color-mode')).toBe('dark');
+    expect(localStorage.getItem('devquiz.lang')).toBe('en');
+    sessionStorage.clear();
   });
 });

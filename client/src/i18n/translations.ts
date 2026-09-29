@@ -146,10 +146,12 @@ export const en = {
   'play.playerFallback': 'Player',
 
   // Register prompt (guest snackbar)
-  'register.title': 'Save your progress',
-  'register.body': 'Sign in to keep your XP and streak. +{tokens} coins.',
+  'register.title': 'Save your progress from now on',
+  'register.body': 'Sign in so the XP and streak you earn from now on are saved to your account. +{tokens} coins.',
   'register.cta': 'Sign in',
   'register.dismiss': 'Not now',
+  // Under a guest's Learn map and quiz result: sign-in does not carry it over.
+  'register.deviceOnly': 'You’re not signed in, so this progress is saved on this device only.',
 
   // Rewards (the /shop route). The unit is coins; code keeps `token` (#227).
   'shop.merchSection': 'Merchandise',
@@ -218,7 +220,7 @@ export const en = {
   'shop.insufficient': 'Not enough coins',
 
   // ── Coins and the Rewards screen (D8, #227). One block; English only. ──
-  'register.bodyNoCoins': 'Sign in to keep your XP and streak.',
+  'register.bodyNoCoins': 'Sign in so the XP and streak you earn from now on are saved to your account.',
   'shop.reason.milestone': 'Milestone',
   'shop.reason.social': 'Thanks for visiting',
   'premium.sheet.kind.merch-redemption': 'Premium members redeem coins for merchandise.',
@@ -526,6 +528,7 @@ export const en = {
   'profile.deleteDescription': 'Deletes your account and all learning data.',
   'profile.deleteConfirm': 'This permanently deletes your profile, progress, statistics, flashcards, challenge entries and multiplayer records. This action cannot be undone.',
   'profile.deleteAction': 'Delete my account',
+  'profile.deleteGithub': 'The devShark app you installed on GitHub keeps access to the repositories you gave it until you uninstall it on GitHub.',
   'profile.deletePremium': 'Your Premium subscription ends at once and is not refunded. Within 14 days of your first payment, withdraw on the cancellation page first to get that payment back.',
   'common.remove': 'Remove',
 

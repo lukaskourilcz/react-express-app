@@ -900,6 +900,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </Text>
             )}
 
+            {!isAuthenticated && (
+              <Text type="supporting" color="secondary" justify="center">
+                {t('register.deviceOnly')}
+              </Text>
+            )}
+
             {mode === 'review' && reviewPlan.length > 0 && (
               <div style={{ position: 'relative', width: '100%', maxWidth: 520, textAlign: 'left' }}>
                 <Text weight="bold">{t('quiz.reviewPlanTitle')}</Text>
