@@ -9,7 +9,7 @@
 import { newQuickJSWASMModuleFromVariant, shouldInterruptAfterDeadline, type QuickJSWASMModule, type QuickJSHandle } from 'quickjs-emscripten';
 import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
-import { TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
+import { LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, MAX_LOGS, TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
 import { CONSOLE_SOURCE } from '../../shared/coding-console';
 
 let modulePromise: Promise<QuickJSWASMModule> | null = null;
@@ -33,7 +33,6 @@ export const SANDBOX_DEADLINE_MS = 2_500;
 const MEMORY_BYTES = 64 * 1024 * 1024;
 const STACK_BYTES = 1024 * 1024;
 const MAX_TICKS = 10_000;
-const MAX_LOGS = 100;
 /** What a learner sees when their call chain ran out of stack. Named rather
  * than inlined so the message reads the same wherever the overflow surfaces. */
 const STACK_MESSAGE = 'The call stack ran out of room: the recursion went too deep, or a base case is never reached.';
@@ -72,7 +71,15 @@ const encode = (value, depth = 0, seen = makeArray()) => {
   return packet(names ? 'object' : 'array', entries);
 };
 const message = error => { try { return string(error && error.message || error); } catch { return 'Evaluation failed'; } };
-const emit = line => { if (logs.length < ${MAX_LOGS}) logs[logs.length] = line; };
+const sliceText = String.prototype.slice;
+let logChars = 0, logsCut = false;
+const emit = line => {
+  if (logsCut || logs.length >= ${MAX_LOGS}) return;
+  const text = line.length > ${MAX_LOG_LINE_CHARS} ? apply(sliceText, line, [0, ${MAX_LOG_LINE_CHARS}]) + ${JSON.stringify(LOG_LINE_CUT)} : line;
+  if (logChars + text.length > ${MAX_LOG_CHARS}) { logs[logs.length] = ${JSON.stringify(LOG_OUTPUT_CUT)}; logsCut = true; return; }
+  logChars += text.length;
+  logs[logs.length] = text;
+};
 const format = value => {
   if (typeof value === 'string') return value;
   try { const text = stringify(value); return text === undefined ? string(value) : text; } catch { return '[unprintable]'; }

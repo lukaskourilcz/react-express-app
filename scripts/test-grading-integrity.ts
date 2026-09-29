@@ -10,7 +10,7 @@ import { evolvingStage } from '../shared/evolving';
 import { createMiniJest } from '../shared/coding-mini-jest';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { withHiddenCases } from '../lib/coding/react-hidden';
-import { allPassed, evaluateCalls } from '../shared/coding-evaluate';
+import { allPassed, evaluateCalls, LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS } from '../shared/coding-evaluate';
 
 const attacks = [
   ['replace comparison', 'globalThis.__deepEqual=()=>true; function answer(){return 0}'],
@@ -337,4 +337,29 @@ function codingDatabase() {
   });
   assert.deepEqual(semantics.results.map((one) => one.pass), [true, true, true, true, true, true], JSON.stringify(semantics.results));
   console.log('PASS integrity: Run and Submit agree on strict mode, the clock and structuredClone');
+}
+
+// ── console output is capped by size (CODE-13) ───────────────────────────
+// A hundred megabyte-long lines made a 20 MB Submit response, past what the
+// platform sends, after the verdict was already recorded.
+{
+  const flood = 'const shout = () => { for (let i = 0; i < 200; i++) console.log("x".repeat(1_000_000)); return 1; };';
+  const run = await evaluateCalls({ code: flood, calls: ['shout()'], expectations: [1] });
+  const submit = await runInSandbox({ code: flood, calls: ['shout()'], expectations: [1] });
+  for (const [where, logs] of [['Run', run.logs], ['Submit', submit.logs]] as const) {
+    const total = logs.reduce((sum, line) => sum + line.length, 0);
+    assert.ok(logs.every((line) => line.length <= MAX_LOG_LINE_CHARS + LOG_LINE_CUT.length), `${where}: every line is cut to size`);
+    assert.ok(total <= MAX_LOG_CHARS + LOG_OUTPUT_CUT.length, `${where}: the output is capped in all (${total})`);
+    assert.equal(logs.at(-1), LOG_OUTPUT_CUT, `${where}: the cut is marked`);
+  }
+  assert.deepEqual(submit.logs, run.logs, 'both runners cut the same way');
+  assert.equal(submit.results[0]?.pass, true, 'the calls still grade');
+  const response = { statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await handleCodingSubmit({
+    method: 'POST', headers: {},
+    body: { session: encodeCodingSession({ taskId: 'js-sum-array', track: 'javascript', userId: null }), code: 'function sum(numbers) { for (let i = 0; i < 100; i++) console.log("y".repeat(5_000_000)); return numbers.reduce((a, b) => a + b, 0); }' },
+  } as never, response as never, null);
+  assert.equal(response.statusCode, 200);
+  assert.ok(JSON.stringify(response.body).length < 200_000, `the Submit response stays small (${JSON.stringify(response.body).length} bytes)`);
+  console.log('PASS integrity: console output is capped by size');
 }
