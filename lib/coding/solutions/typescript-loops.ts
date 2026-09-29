@@ -759,6 +759,7 @@ const tagAll = <P extends string>(prefix: P, ids: number[]): Tag<P>[] => ids.map
     hiddenTests: [
       { call: "pairWithSum([1, 2, 4, 5], 6)", expected: [1, 5] },
       { call: "pairWithSum([1, 2, 3], 7)", expected: null },
+      { call: "pairWithSum([1, 3, 4], 6)", expected: null },
     ],
   },
   "ts-binary-search": {

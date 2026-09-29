@@ -392,7 +392,7 @@ const HIDDEN: Record<string, Hidden> = {
   'ts-path-unions': [
     [['area({kind: "rect", width: 0, height: 9})', 0], ['area({kind: "square", side: 10})', 100]],
     [['perimeter({kind: "rect", width: 0.5, height: 0.5})', 2], ['perimeter({kind: "circle", radius: 0})', 0]],
-    [['parseAmount("007")', 7], ['parseAmount(Infinity)', null], ['parseAmount("1.")', null], ['parseAmount(" -0.5 ")', -0.5]],
+    [['parseAmount("007")', 7], ['parseAmount(Infinity)', null], ['parseAmount("1.")', null], ['parseAmount(" -0.5 ")', -0.5], ['["+5", ".5", "1e3", "0x1F"].map(parseAmount)', [null, null, null, null]]],
     [['isShape({kind: "square", side: 0})', true], ['isShape({kind: "rect", width: Infinity, height: 1})', false], ['isShape("circle")', false], ['isShape({kind: "toString", side: 1})', false]],
     [['totalArea([undefined, 0, {}])', { total: 0, skipped: 3 }], ['totalArea([{kind: "square", side: 1}, {kind: "square", side: 1}])', { total: 2, skipped: 0 }]],
   ],
