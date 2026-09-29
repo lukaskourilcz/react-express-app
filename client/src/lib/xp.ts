@@ -223,7 +223,12 @@ export function flushQuestXpBeacon(): void {
 // browser cache. A legacy account blob (one pre-split total, no
 // per-subject map) is attributed to the active subject, matching the local
 // migration rule so the max-merge never double-counts.
-export async function syncXpWithServer(): Promise<void> {
+//
+// A sync only catches the rank marker up, so progress from another session
+// is never celebrated. `announceRankUp` is for the one caller whose new XP
+// exists only on the server: a verified quiz result it has just recorded. Its
+// rank-up would otherwise be marked seen here without ever being shown.
+export async function syncXpWithServer({ announceRankUp = false }: { announceRankUp?: boolean } = {}): Promise<void> {
   let serverMap: QuestMap = {};
   try {
     const { data } = await apiFetch<{ data: { quest_xp: number; by_subject?: Record<string, number> } }>(XP_GET);
@@ -236,7 +241,7 @@ export async function syncXpWithServer(): Promise<void> {
     return; // not signed in or offline — keep local only
   }
   writeQuestMap(serverMap);
-  reconcileRank(false);
+  reconcileRank(announceRankUp);
 }
 
 /**

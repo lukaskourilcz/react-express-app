@@ -97,6 +97,9 @@ answers and are not counted.
 fewer answers for the same number correct, and equal results share a rank. The
 all-time board keeps its sources (`subject_leaderboard`, `category_leaderboard`
 over `user_category_stats`), so it counts quiz and daily answers and not Learn.
+Those boards and Today arrive in order without a rank, and the Leaderboard
+screen numbers them so equal results share a rank there too (Today ties only
+on the same score and the same time).
 `api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
 request with a Bearer token or `me=1` also gets the learner's own line and is
 answered `Cache-Control: private, no-store`. `friend_list` orders friends by

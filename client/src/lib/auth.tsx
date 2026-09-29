@@ -250,7 +250,9 @@ export function getUserProfile(user: User | null) {
     }
   }
   return {
-    name: (meta.full_name || meta.name || user?.email) as string | undefined,
+    // Never the email: this name can reach a public board, and an address is
+    // not a name anybody chose to publish. Without one, a board says "Learner".
+    name: (meta.full_name || meta.name) as string | undefined,
     email: user?.email,
     picture,
   };
