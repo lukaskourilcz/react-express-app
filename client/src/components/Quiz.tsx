@@ -24,13 +24,20 @@ import {
   categoryLabelKey,
 } from '../lib/categories';
 import { getSubject, deliveryCategoriesForSubject } from '../lib/subjects';
-import { readJSON, writeJSON, removeStored } from '../lib/storage';
+import { readJSON, writeJSON } from '../lib/storage';
 import {
   recordQuizResult,
   getDailyChallenge,
   reportQuestion,
 } from '../lib/supabase';
-import { apiFetch, friendlyError } from '../lib/api';
+import { apiFetch, ApiError, friendlyError } from '../lib/api';
+import {
+  attemptKeyOf,
+  dropPendingReceipt,
+  isReceiptRefused,
+  queuePendingReceipt,
+  type PendingReceipt,
+} from '../lib/pendingQuizReceipts';
 import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
@@ -63,7 +70,16 @@ const DIFFICULTY_VALUES: DifficultyMode[] = ['basics', 'easy', 'zero-to-hero', '
 
 const PROGRESS_KEY = 'devquiz:in-progress';
 const SETUP_KEY = 'devquiz:quiz-setup:v1';
-const PENDING_RECEIPT_KEY = 'studyshark:pending-quiz-receipt:v1';
+
+/** How a quiz was started, so Retry and "New quiz, same settings" repeat it
+ * rather than always starting a standard quiz. */
+type StartSpec =
+  | { mode: 'standard'; count: number; difficulty: DifficultyMode; categories: CategoryType[] }
+  | { mode: 'daily' }
+  | { mode: 'review' };
+
+/** Why a quiz stopped on the error screen without a result. */
+type StopReason = 'expired' | 'graded' | 'daily-done';
 
 
 interface SavedSetup {
@@ -78,12 +94,15 @@ interface PersistedProgress {
   answers: Record<string, number>;
   currentIndex: number;
   mode: QuizMode;
-}
-
-interface PendingReceipt {
-  userId: string;
-  receipt: string;
-  profile: { email?: string; name?: string; picture?: string };
+  /** When the server stops grading this session (epoch ms). Absent from a
+   * quiz saved before it was recorded. */
+  expiresAt?: number;
+  /** Questions whose hint was opened, so a reload does not record them as
+   * answered unaided. */
+  hinted?: string[];
+  /** A submit was sent: the answers can no longer change. */
+  locked?: boolean;
+  start?: StartSpec;
 }
 
 const HintIcon = () => (
@@ -147,6 +166,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [result, setResult] = useState<QuizResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [stop, setStop] = useState<StopReason | null>(null);
+  const [lastStart, setLastStart] = useState<StartSpec | null>(null);
+  const [expiresAt, setExpiresAt] = useState<number | null>(null);
+  // Set when a submit is sent. The server claims the answer set on its first
+  // grade, so an answer changed after that could never be graded: a retry
+  // after a lost response must send the same answers.
+  const [answersLocked, setAnswersLocked] = useState(false);
   // Setup preferences persist across visits, so a returning learner's
   // categories/count/difficulty are one tap from "Start quiz".
   const [questionCount, setQuestionCount] = useState<number>(() => {
@@ -238,23 +264,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     ? collapsedOptions
     : visibleCategoryOptions;
 
-  // A successful grade must not be lost if the follow-up stats write is
-  // interrupted. Replaying the signed receipt is safe and idempotent.
-  useEffect(() => {
-    if (!isAuthenticated || !user?.id) return;
-    const pending = readJSON<PendingReceipt | null>(PENDING_RECEIPT_KEY, null);
-    if (!pending || pending.userId !== user.id) return;
-    void recordQuizResult(pending.receipt, pending.profile)
-      .then((saved) => {
-        if (saved.data) queryClient.setQueryData(profileStatsQueryKey(user.id), saved.data);
-        removeStored(PENDING_RECEIPT_KEY);
-        return syncXpWithServer();
-      })
-      .catch(() => {
-        // Keep the receipt for the next online session.
-      });
-  }, [isAuthenticated, user?.id]);
-
   // Hide the app chrome only while actively taking the quiz (and the brief load
   // before it). On the results/review screen ('submitted') the nav + footer come
   // back so the learner can navigate away easily.
@@ -269,9 +278,20 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       if (!raw) return;
       const saved = JSON.parse(raw) as PersistedProgress;
       if (!saved?.sessionId || !Array.isArray(saved.questions) || saved.questions.length === 0) return;
+      // Past its hour the server would refuse every answer: say so now rather
+      // than after the learner has answered the rest.
+      if (typeof saved.expiresAt === 'number' && Date.now() >= saved.expiresAt) {
+        sessionStorage.removeItem(PROGRESS_KEY);
+        setSnack(t('quiz.resumeExpired'));
+        return;
+      }
       setSessionId(saved.sessionId);
       setQuestions(saved.questions);
       setAnswers(saved.answers || {});
+      setHintedIds(Array.isArray(saved.hinted) ? saved.hinted.filter((id) => typeof id === 'string') : []);
+      setExpiresAt(typeof saved.expiresAt === 'number' ? saved.expiresAt : null);
+      setAnswersLocked(saved.locked === true);
+      setLastStart(saved.start ?? null);
       setCurrentIndex(Math.min(saved.currentIndex || 0, saved.questions.length - 1));
       // A quiz saved before practice mode was removed still says 'practice'
       // here. Nothing branches on it any more, but it would still be reported
@@ -281,18 +301,26 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     } catch {
       // ignore corrupt state
     }
+    // Once, on mount; `t` only words the notice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Persist in-progress state
   useEffect(() => {
     if (state !== 'in-progress' || questions.length === 0) return;
     try {
-      const payload: PersistedProgress = { sessionId, questions, answers, currentIndex, mode };
+      const payload: PersistedProgress = {
+        sessionId, questions, answers, currentIndex, mode,
+        ...(expiresAt !== null ? { expiresAt } : {}),
+        hinted: hintedIds,
+        ...(answersLocked ? { locked: true } : {}),
+        ...(lastStart ? { start: lastStart } : {}),
+      };
       sessionStorage.setItem(PROGRESS_KEY, JSON.stringify(payload));
     } catch {
       // quota or private mode — ignore
     }
-  }, [state, sessionId, questions, answers, currentIndex, mode]);
+  }, [state, sessionId, questions, answers, currentIndex, mode, expiresAt, hintedIds, answersLocked, lastStart]);
 
   // Persist the setup preferences so the next visit starts pre-configured.
   useEffect(() => {
@@ -321,6 +349,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       const controller = new AbortController();
       fetchAbortRef.current = controller;
 
+      setLastStart({ mode: 'standard', count, difficulty, categories });
+      setStop(null);
       setState('loading');
       setError(null);
       const startedAt = Date.now();
@@ -331,7 +361,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           categories: categories.join(','),
           lang,
         });
-        const data = await apiFetch<{ sessionId: string; questions: Question[]; hardestAvailable?: boolean }>(
+        const data = await apiFetch<{ sessionId: string; expiresAt?: number; questions: Question[]; hardestAvailable?: boolean }>(
           `/api/quiz/questions?${params}`,
           { signal: controller.signal },
         );
@@ -349,6 +379,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         setQuestions(data.questions);
         setAnswers({});
         setHintedIds([]);
+        setExpiresAt(data.expiresAt ?? null);
+        setAnswersLocked(false);
         setReviewPlan([]);
         setHardestAvailable(data.hardestAvailable === true);
         setCurrentIndex(0);
@@ -364,6 +396,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   );
 
   const startDailyChallenge = useCallback(async () => {
+    setLastStart({ mode: 'daily' });
+    setStop(null);
     setState('loading');
     setError(null);
     capture('quiz_started', { mode: 'daily' });
@@ -371,6 +405,12 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     try {
       const data = await getDailyChallenge(lang);
       await holdLoadingScreen(startedAt);
+      // Already submitted today: the grader would refuse a second run.
+      if (data.completed) {
+        setStop('daily-done');
+        setState('error');
+        return;
+      }
       if (!Array.isArray(data.questions) || data.questions.length === 0) {
         setError(t('quiz.noQuestions'));
         setState('error');
@@ -380,6 +420,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setQuestions(data.questions as Question[]);
       setAnswers({});
       setHintedIds([]);
+      setExpiresAt(data.expiresAt ?? null);
+      setAnswersLocked(false);
       setCurrentIndex(0);
       setMode('daily');
       setState('in-progress');
@@ -393,6 +435,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     fetchAbortRef.current?.abort();
     const controller = new AbortController();
     fetchAbortRef.current = controller;
+    setLastStart({ mode: 'review' });
+    setStop(null);
     setState('loading');
     setError(null);
     const startedAt = Date.now();
@@ -407,6 +451,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       });
       const data = await apiFetch<{
         sessionId: string;
+        expiresAt?: number;
         questions: Question[];
         reviewPlan?: ReviewWeakArea[];
         interleaved?: { contrasted: string[] };
@@ -418,6 +463,8 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setQuestions(data.questions);
       setAnswers({});
       setHintedIds([]);
+      setExpiresAt(data.expiresAt ?? null);
+      setAnswersLocked(false);
       setReviewPlan(data.reviewPlan ?? []);
       setInterleaved(Boolean(data.interleaved));
       setCurrentIndex(0);
@@ -430,6 +477,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       setState('error');
     }
   }, [config.quiz.maxCount, lang, t, visibleCategoryOptions]);
+
+  // Retry after an error, and "New quiz, same settings" after an expired
+  // one, repeat how the last quiz was started: a failed daily retries the
+  // daily, not an all-topics quiz.
+  const startAgain = () => {
+    if (lastStart?.mode === 'daily') return void startDailyChallenge();
+    if (lastStart?.mode === 'review') return void startPersonalizedReview();
+    const spec = lastStart ?? { count: questionCount, difficulty: difficultyMode, categories: selectedCategories };
+    void fetchQuestions(spec.count, spec.difficulty, spec.categories);
+  };
 
   // Today's review card links straight here. The parameter starts the same
   // session the button does, once, and is then cleared so a reload does not
@@ -479,6 +536,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     displayedCategoryIds.every((c) => selectedCategories.includes(c));
 
   const handleAnswer = (questionId: string, answerIndex: number) => {
+    if (answersLocked) return;
     setAnswers((prev) => ({ ...prev, [questionId]: answerIndex }));
     if (settings.soundEffects) {
       // soft confirmation tone on each pick — no correctness reveal until submit.
@@ -518,6 +576,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const handleSubmit = useCallback(async () => {
     if (submitting) return;
     setSubmitting(true);
+    setAnswersLocked(true);
     setError(null);
     try {
       const data = await apiFetch<QuizResult>('/api/quiz/submit', {
@@ -550,23 +609,34 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       // question left is whether there is an account to record it against.
       if (isAuthenticated && user?.id) {
         if (!data.resultReceipt) {
-          setSnack(t('quiz.streakWarning'));
+          // Nothing to record. A daily fetched signed out is practice; with
+          // every question retired there was nothing to grade, and the
+          // result screen already says why.
+          if (data.totalQuestions > 0) setSnack(t(mode === 'daily' ? 'quiz.dailyPractice' : 'quiz.resultNotSaved'));
         } else {
           const pending: PendingReceipt = {
             userId: user.id,
             receipt: data.resultReceipt,
             profile: { email: profile.email, name: profile.name, picture: profile.picture },
           };
-          writeJSON(PENDING_RECEIPT_KEY, pending);
+          const attemptKey = attemptKeyOf(sessionId);
+          queuePendingReceipt(attemptKey, pending);
           try {
             const saved = await recordQuizResult(pending.receipt, pending.profile);
             if (saved.data) queryClient.setQueryData(profileStatsQueryKey(user.id), saved.data);
-            removeStored(PENDING_RECEIPT_KEY);
+            dropPendingReceipt(attemptKey);
             await syncXpWithServer();
             if (saved.applied) announceVerifiedQuestXp(data.questXp);
           } catch (writeError) {
             console.error('Stat write failed:', writeError);
-            setSnack(t('quiz.streakWarning'));
+            // Refused (expired or invalid) can never be recorded: drop it and
+            // say so. Anything else waits in the queue and is sent again.
+            if (isReceiptRefused(writeError)) {
+              dropPendingReceipt(attemptKey);
+              setSnack(t('quiz.resultNotSaved'));
+            } else {
+              setSnack(t('quiz.streakWarning'));
+            }
           }
         }
       } else if (data.questXp > 0) {
@@ -575,7 +645,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         awardQuestXp(data.questXp, 'quiz');
       }
     } catch (err) {
-      setError(friendlyError(err));
+      // An hour past its start the session is gone, and an answer set that
+      // was already graded cannot be graded again. Neither improves with
+      // another submit, so the quiz stops and says what happened.
+      if (err instanceof ApiError && (err.code === 'invalid_session' || err.code === 'attempt_already_graded')) {
+        clearProgress();
+        setStop(err.code === 'invalid_session' ? 'expired' : mode === 'daily' ? 'daily-done' : 'graded');
+        setState('error');
+      } else {
+        setError(friendlyError(err));
+      }
     } finally {
       setSubmitting(false);
     }
@@ -588,6 +667,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setResult(null);
     setAnswers({});
     setHintedIds([]);
+    setAnswersLocked(false);
+    setExpiresAt(null);
+    setStop(null);
     setCurrentIndex(0);
     setMode('standard');
     setReviewPlan([]);
@@ -678,8 +760,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   useEffect(() => {
     if (state !== 'in-progress' || !currentQuestion) return;
     const handler = (e: KeyboardEvent) => {
-      const target = e.target as HTMLElement | null;
-      if (target?.closest('input, textarea, select, button, a, [contenteditable="true"], [role="textbox"], [role="radio"], [role="checkbox"]')) return;
+      if (e.defaultPrevented || e.altKey || e.ctrlKey || e.metaKey) return;
+      const target = e.target instanceof Element ? e.target : null;
+      // Typing, or working in a dialog (report, leave): the keys are theirs.
+      if (target?.closest('input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="textbox"], [role="dialog"], [role="alertdialog"]')) return;
+      // The shortcuts keep working after a click has left focus on an answer
+      // or a button. Only Enter on a button or link is left alone: the
+      // browser already activates it, and acting as well would act twice.
+      const onAnswer = !!target?.closest('[role="radio"]');
+      const onControl = !onAnswer && !!target?.closest('button, a[href], [role="button"]');
 
       if (e.key === 'ArrowRight') {
         e.preventDefault();
@@ -688,6 +777,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         e.preventDefault();
         if (currentIndex > 0) handlePrevious();
       } else if (e.key === 'Enter') {
+        if (onControl) return;
+        // On a focused answer this also stops the browser's click, which
+        // would re-pick that answer over one chosen with a number key.
         const allAnswered = questions.every((q) => answers[q.id] !== undefined);
         if (currentIndex === questions.length - 1 && allAnswered) {
           e.preventDefault();
@@ -698,7 +790,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         }
       } else if (/^[1-9]$/.test(e.key)) {
         const idx = parseInt(e.key, 10) - 1;
-        if (idx < currentQuestion.options.length) {
+        if (idx < currentQuestion.options.length && !answersLocked) {
           e.preventDefault();
           handleAnswer(currentQuestion.id, idx);
         }
@@ -706,7 +798,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [state, currentIndex, currentQuestion, questions, answers, handleNext, handlePrevious, handleSubmit]);
+  }, [state, currentIndex, currentQuestion, questions, answers, answersLocked, handleNext, handlePrevious, handleSubmit]);
 
   // Confirm-on-leave during quiz
   useEffect(() => {
@@ -726,17 +818,24 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   }
 
   if (state === 'error') {
+    const banner = stop === 'daily-done'
+      ? { status: 'info' as const, title: t('quiz.dailyDoneTitle'), description: t('quiz.dailyDoneBody') }
+      : stop === 'expired'
+        ? { status: 'error' as const, title: t('quiz.expiredTitle'), description: t('quiz.expiredBody') }
+        : stop === 'graded'
+          ? { status: 'error' as const, title: t('quiz.alreadyGradedTitle'), description: t('quiz.alreadyGradedBody') }
+          : { status: 'error' as const, title: error || t('error.somethingWrong') };
     return (
       <div style={{ width: '100%', maxWidth: 560, margin: '0 auto' }}>
         <Card padding={5} width="100%">
           <VStack gap={3}>
-            <Banner status="error" title={error || t('error.somethingWrong')} />
+            <Banner {...banner} />
             <HStack gap={1.5} wrap="wrap">
-              <Button
-                variant="primary"
-                label={t('quiz.retry')}
-                onClick={() => fetchQuestions(questionCount, difficultyMode, selectedCategories)}
-              />
+              {stop === 'daily-done' ? (
+                <Button variant="primary" label={t('quiz.dailyLeaderboard')} onClick={() => navigate('/leaderboard?tab=today')} />
+              ) : (
+                <Button variant="primary" label={stop ? t('quiz.startAgainSame') : t('quiz.retry')} onClick={startAgain} />
+              )}
               <Button variant="secondary" label={t('quiz.backToSettings')} onClick={handleRestart} />
             </HStack>
           </VStack>
@@ -942,36 +1041,45 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           const questionResult = resultsById.get(question.id);
           const isCorrect = questionResult?.isCorrect;
           const isBookmarked = !!bookmarks[question.id];
+          // Retired while the quiz was open: graded as void, so there is no
+          // verdict and no answer key to show or to bookmark.
+          const isVoided = !questionResult && (result.voided ?? []).includes(question.id);
 
           return (
-            <MotionItem key={question.id} index={index} className={`quiz-review-item ${isCorrect ? 'is-correct' : 'is-incorrect'}`}>
+            <MotionItem key={question.id} index={index} className={`quiz-review-item ${isVoided ? 'is-voided' : isCorrect ? 'is-correct' : 'is-incorrect'}`}>
               <Card variant="default" padding={3} width="100%" className="quiz-review-card">
                 <VStack gap={1.5}>
                   <HStack justify="between" align="center" wrap="wrap" gap={1}>
                     {/* One meta line: number, topic, verdict (glyph and word). */}
                     <Text type="supporting" color="secondary">
                       {index + 1} · {t(categoryLabelKey(question.category))} ·{' '}
-                      <span style={{ color: isCorrect ? 'var(--ss-success-strong)' : 'var(--ss-error)', fontWeight: 600 }}>
-                        <span aria-hidden>{isCorrect ? '✓' : '✕'}</span> {isCorrect ? t('quiz.correct') : t('quiz.incorrect')}
-                      </span>
+                      {isVoided ? (
+                        <span style={{ fontWeight: 600 }}>{t('quiz.voidedItem')}</span>
+                      ) : (
+                        <span style={{ color: isCorrect ? 'var(--ss-success-strong)' : 'var(--ss-error)', fontWeight: 600 }}>
+                          <span aria-hidden>{isCorrect ? '✓' : '✕'}</span> {isCorrect ? t('quiz.correct') : t('quiz.incorrect')}
+                        </span>
+                      )}
                     </Text>
                     <HStack gap={0.5} align="center">
-                      <button
-                        type="button"
-                        aria-pressed={isBookmarked}
-                        aria-label={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
-                        title={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
-                        onClick={() =>
-                          toggleBookmark(
-                            question,
-                            questionResult?.correctAnswer ?? 0,
-                            questionResult?.explanation ?? '',
-                          )
-                        }
-                        style={iconBtnStyle(isBookmarked ? 'var(--brand-accent)' : 'var(--color-text-secondary)')}
-                      >
-                        <BookmarkIcon filled={isBookmarked} />
-                      </button>
+                      {!isVoided && (
+                        <button
+                          type="button"
+                          aria-pressed={isBookmarked}
+                          aria-label={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
+                          title={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
+                          onClick={() =>
+                            toggleBookmark(
+                              question,
+                              questionResult?.correctAnswer ?? 0,
+                              questionResult?.explanation ?? '',
+                            )
+                          }
+                          style={iconBtnStyle(isBookmarked ? 'var(--brand-accent)' : 'var(--color-text-secondary)')}
+                        >
+                          <BookmarkIcon filled={isBookmarked} />
+                        </button>
+                      )}
                       <button
                         type="button"
                         aria-label={t('quiz.reportAria')}
@@ -986,11 +1094,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
                   <div className="quiz-review-question">{renderQuestion(question.question)}</div>
 
-                  <Text type="body" size="sm">
-                    {t('quiz.yourAnswerLabel')}{' '}
-                    <strong>{question.options[questionResult?.selectedIndex ?? 0]}</strong>
-                  </Text>
-                  {!isCorrect && (
+                  {!isVoided && (
+                    <Text type="body" size="sm">
+                      {t('quiz.yourAnswerLabel')}{' '}
+                      <strong>{question.options[questionResult?.selectedIndex ?? 0]}</strong>
+                    </Text>
+                  )}
+                  {!isCorrect && !isVoided && (
                     <span style={{ color: 'var(--ss-success-strong)' }}>
                       <Text type="body" size="sm" color="inherit">
                         {t('quiz.correctLabel')}{' '}
@@ -1062,7 +1172,13 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     >
       {error && (
         <div style={{ marginBottom: 12, flexShrink: 0 }}>
-          <Banner status="error" title={error} isDismissable onDismiss={() => setError(null)} />
+          <Banner
+            status="error"
+            title={error}
+            description={answersLocked ? t('quiz.answersLocked') : undefined}
+            isDismissable
+            onDismiss={() => setError(null)}
+          />
         </div>
       )}
 
@@ -1238,7 +1354,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                 {currentQuestion.options.map((option, index) => {
                   const isSelected = answers[currentQuestion.id] === index;
                   return (
-                    <RadioCard key={index} value={index} index={index} label={option} padding={2}>
+                    <RadioCard key={index} value={index} index={index} label={option} padding={2} disabled={answersLocked}>
                       <HStack gap={2} align="center">
                         <span
                           aria-hidden

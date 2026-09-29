@@ -12,7 +12,7 @@
 // animates, so reduced motion has nothing to switch off.
 
 import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Avatar } from '@astryxdesign/core/Avatar';
@@ -121,7 +121,10 @@ function Leaderboard() {
   const topics = visibleCategoryOptionsFor();
   const selectId = useId();
 
-  const [tab, setTab] = useState<Tab>('30d');
+  // /leaderboard?tab=today opens on the daily board (the quiz links there
+  // once today's challenge is played).
+  const [searchParams] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => (searchParams.get('tab') === 'today' ? 'today' : '30d'));
   // '' is "All topics". The filter applies to the 30-day and all-time boards.
   const [category, setCategory] = useState('');
   const [windowUnavailable, setWindowUnavailable] = useState(false);

@@ -381,6 +381,7 @@ export const en = {
   'quiz.resultTopics': '{n} topics',
   'quiz.dailyComplete': 'Today’s challenge complete.',
   'quiz.voidedNote': '{n} questions were retired while you were answering and do not count.',
+  'quiz.voidedItem': 'Retired, not counted',
   'quiz.newQuiz': 'New quiz',
   'quiz.shareResult': 'Share result',
   'quiz.reviewAnswersArrow': 'Review answers ↓',
@@ -622,13 +623,28 @@ export const en = {
   // Loading / error states
   'quiz.retry': 'Retry',
   'quiz.backToSettings': 'Back to settings',
+  'quiz.startAgainSame': 'New quiz, same settings',
+  'quiz.expiredTitle': 'This quiz expired',
+  'quiz.expiredBody': 'A quiz can be submitted for an hour after it starts, so these answers can no longer be graded.',
+  'quiz.resumeExpired': 'Your unfinished quiz was more than an hour old, so it could no longer be graded and was cleared.',
+  'quiz.alreadyGradedTitle': 'These answers were already graded',
+  'quiz.alreadyGradedBody': 'A quiz is graded once, and its answers can’t be changed afterwards.',
+  'quiz.dailyDoneTitle': 'You’ve played today’s challenge',
+  'quiz.dailyDoneBody': 'Each day’s challenge counts once. A new one starts at 00:00 UTC.',
+  'quiz.dailyLeaderboard': 'See today’s leaderboard',
+  'quiz.answersLocked': 'Your answers were sent for grading, so they can’t be changed now. Submit again to get your result.',
   'quiz.noQuestions': 'No questions match those settings. Try different categories or a different difficulty.',
   'error.somethingWrong': 'Something went wrong',
 
   // Practice / stats toasts
   'quiz.reportSent': 'Thanks, report sent',
   'quiz.reportFailed': 'Could not send report',
-  'quiz.streakWarning': 'We saved your score but could not update your streak.',
+  // The old key, kept because the retained Czech file has it: a result
+  // waiting in the queue (lib/pendingQuizReceipts.ts) to be saved.
+  'quiz.streakWarning': 'Your result isn’t saved to your account yet. devShark will try again the next time you open it.',
+  'quiz.resultNotSaved': 'This result could not be saved to your account.',
+  'quiz.dailyPractice': 'You started this daily challenge signed out, so it counted as practice and was not saved.',
+  'quiz.pendingResultLost': 'An earlier quiz result could not be saved to your account: a result has to be saved within an hour.',
   'quiz.shareCopied': 'Result copied to clipboard',
   'quiz.shareSaved': 'Share card saved and result text copied',
   'quiz.shareCardTitle': 'Quiz result',
