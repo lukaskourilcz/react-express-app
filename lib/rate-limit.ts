@@ -312,3 +312,53 @@ export async function enforceRateLimit(
     return checkRateLimit(req, res, config, identity);
   }
 }
+
+/* -------------------------------------------------------------------------- */
+/* One-time claims                                                            */
+/* -------------------------------------------------------------------------- */
+
+// A sealed token can be replayed as often as its lifetime allows. Where a
+// replay would leak something (a placement round answered again with other
+// options reports a different score), the handler claims the token's id once:
+// the first claim wins, every later one is refused. Upstash holds the claim
+// across instances (SET NX with an expiry); without it, or when Redis fails
+// mid-request, a per-instance map does, which is enough locally and blunts a
+// script hammering one warm instance.
+
+type OnceStore = { set: (key: string, value: string, opts: { nx: true; ex: number }) => Promise<unknown> };
+let onceStore: Promise<OnceStore | null> | null = null;
+const localClaims = new Map<string, number>();
+
+function getOnceStore(): Promise<OnceStore | null> {
+  if (!isDistributedRateLimitEnabled()) return Promise.resolve(null);
+  onceStore ??= (async () => {
+    try {
+      // @ts-ignore — optional dependency, resolved at runtime in production
+      const Redis = ((await import('@upstash/redis')) as any).Redis;
+      return new Redis({ url: UPSTASH_URL as string, token: UPSTASH_TOKEN as string }) as OnceStore;
+    } catch {
+      return null;
+    }
+  })();
+  return onceStore;
+}
+
+/** Claim `key` for `ttlSeconds`. True for the first caller, false while the
+ * claim stands. */
+export async function claimOnce(key: string, ttlSeconds: number): Promise<boolean> {
+  const store = await getOnceStore();
+  if (store) {
+    try {
+      return (await withLimiterDeadline(store.set(`once:${key}`, '1', { nx: true, ex: ttlSeconds }))) === 'OK';
+    } catch {
+      // Redis unreachable: fall back to this instance's memory below.
+    }
+  }
+  const now = Date.now();
+  if ((localClaims.get(key) ?? 0) > now) return false;
+  if (localClaims.size >= 10_000) {
+    for (const [claimed, until] of localClaims) if (until <= now) localClaims.delete(claimed);
+  }
+  localClaims.set(key, now + ttlSeconds * 1000);
+  return true;
+}

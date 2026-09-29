@@ -441,6 +441,15 @@ async function auditGateContracts() {
   assert.equal(round.lastRoundSize, 1, 'the void item does not count in the round');
   assert.equal(round.lastRoundCorrect, 1);
   assert.equal(round.asked, 1, 'the run continues from what was actually graded');
+  // A round is graded once. Submitted again with other answers it would report
+  // a different score, and a few dozen replays would find every key and mint a
+  // perfect, verified placement receipt.
+  const replayRes = mockResponse();
+  await roadmapHandler({ method: 'POST', headers: {}, query: { resource: 'placement' }, body: { placementToken, answers: { [pool[0].id]: 1, 'retired-while-open': 1 } } } as never, replayRes as never);
+  assert.equal(replayRes.statusCode, 409, 'a placement round cannot be submitted twice');
+  assert.equal((replayRes.body as { error: { code: string } }).error.code, 'placement_round_used');
+  assert.equal(JSON.stringify(replayRes.body).includes('lastRoundCorrect'), false, 'the refusal reports no score');
+
   // A Learn session lives as long as the attempt the answer routine opens for
   // it (two hours), so a level whose coding tasks run past an hour can still
   // be completed. Other sessions keep their hour.

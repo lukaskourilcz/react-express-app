@@ -51,7 +51,7 @@ import {
 import { getGameSettings } from '../../lib/settings-store';
 import { withGrantedTopics } from '../../lib/topic-grants';
 import { getEffectiveQuestionsById } from '../../lib/questions-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { claimOnce, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope';
 import { playable as playableCodingTask } from '../../lib/coding/catalog';
 import { levelCodingTasks } from '../../lib/coding/active';
@@ -668,6 +668,8 @@ function requiredRange(availability: StepAvailability, from: number, to: number)
 // keeping unlocks server-authoritative and idempotent (by the run's attemptId).
 
 type PlacementOutcome = { questionId: string; category: string; isCorrect: boolean };
+/** How long a submitted round stays claimed: the life of a placement token. */
+const PLACEMENT_ROUND_TTL_S = 60 * 60;
 
 /** The placement pool: the subject's served questions, in the categories
  * discovery still offers. Retired sections are excluded here as they are from
@@ -813,6 +815,17 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
     const isCorrect = selected >= 0 && selected === item.correctAnswer;
     if (isCorrect) roundCorrect++;
     roundOutcomes.push({ questionId: item.questionId, category: item.category, isCorrect });
+  }
+
+  // Each round is graded once. The token is sealed but not single-use, and
+  // every response reports how the round went (the next difficulty, the
+  // round's score, the final total), so a round submitted again with other
+  // answers would reveal which ones were right: a few dozen replays would
+  // find every key and mint a perfect, verified receipt. The client never
+  // resubmits a round; after an error it starts a new placement.
+  if (!(await claimOnce(`placement:${state.attemptId}:${state.round}`, PLACEMENT_ROUND_TTL_S))) {
+    logEvent({ status: 409, kind: 'placement_replayed', subject: state.subject, round: state.round });
+    return jsonError(res, 409, 'placement_round_used', 'This placement round was already submitted. Start the placement again.');
   }
 
   const history = [...state.history, ...roundOutcomes];
