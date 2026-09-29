@@ -3853,16 +3853,365 @@ test('the next search removes the unknown-city message', () => withRequests(asyn
 }));`,
   },
   "react-notification-center": {
-    solution: `Senior-style approach for Notification center:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: open the page, read the newest day first, mark what you have
+// read, or tick Unread only to see what is left.
+// Data model: notification { id, userId, text, date, read }. The page keeps
+// one list; the count, the filter and the day groups are derived from it.
+// API endpoints: GET /api/notifications (paged by date in a real app) and
+// PATCH /api/notifications/:id { read: true } to keep a read across devices.
+// Reliability and scale: new notifications arrive over a WebSocket or
+// server-sent events and are put at the top of the list; when the connection
+// drops the page polls, and on reconnect it asks for everything newer than the
+// last id it has, so nothing is missed or shown twice. They are stored in a
+// table indexed by (user_id, created_at), with an unread count kept per user
+// so the badge never scans the table, and old rows are archived.
+
+const App = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [unreadOnly, setUnreadOnly] = useState(false);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const response = await fetch('/api/notifications');
+        if (!response.ok) throw new Error('Request failed');
+        setNotifications(await response.json());
+      } catch (requestError) {
+        setError('Could not load notifications');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadNotifications();
+  }, []);
+
+  const markRead = id =>
+    setNotifications(current => current.map(one => (one.id === id ? { ...one, read: true } : one)));
+
+  const unread = notifications.filter(one => !one.read).length;
+  const visible = unreadOnly ? notifications.filter(one => !one.read) : notifications;
+  const byDate = visible.reduce((groups, one) => {
+    groups[one.date] = [...(groups[one.date] || []), one];
+    return groups;
+  }, {});
+  const dates = Object.keys(byDate).sort().reverse();
+
+  if (loading) return <main><h2>Notification center</h2><p>Loading…</p></main>;
+  if (error) return <main><h2>Notification center</h2><p role="alert">{error}</p></main>;
+
+  return (
+    <main>
+      <h2>Notification center</h2>
+      <p>Unread: {unread}</p>
+      <label>
+        <input type="checkbox" checked={unreadOnly} onChange={event => setUnreadOnly(event.target.checked)} /> Unread only
+      </label>
+      {dates.length === 0 && <p>{unreadOnly ? 'No unread notifications' : 'No notifications'}</p>}
+      {dates.map(date => (
+        <section key={date}>
+          <h3>{date}</h3>
+          <ul>
+            {byDate[date].map(one => (
+              <li key={one.id}>
+                {one.text}{' '}
+                {!one.read && <button type="button" onClick={() => markRead(one.id)}>Mark as read</button>}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `import React, { useEffect, useState } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: see my notifications grouped by day, mark them read, and hide
+// the read ones with a checkbox.
+// Data model: each notification has id, text, date and read.
+// API endpoints: GET /api/notifications. Marking read would be a PATCH to
+// /api/notifications/:id in a real app.
+// Reliability and scale: the server could push new notifications through a
+// WebSocket, and the page could ask again every minute if that connection
+// breaks. They would be saved in a database table with the user id and the
+// time, so one user's newest notifications are quick to find.
+
+const App = () => {
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [unreadOnly, setUnreadOnly] = useState(false);
+
+  useEffect(() => {
+    const loadNotifications = async () => {
+      try {
+        const response = await fetch('/api/notifications');
+        if (!response.ok) {
+          throw new Error('Request failed');
+        }
+        const data = await response.json();
+        setNotifications(data);
+      } catch (requestError) {
+        setError('Could not load notifications');
+      }
+      setLoading(false);
+    };
+    loadNotifications();
+  }, []);
+
+  const handleMarkRead = (id) => {
+    const updated = [];
+    for (const notification of notifications) {
+      if (notification.id === id) {
+        updated.push({ ...notification, read: true });
+      } else {
+        updated.push(notification);
+      }
+    }
+    setNotifications(updated);
+  };
+
+  const handleUnreadOnlyChange = (event) => {
+    setUnreadOnly(event.target.checked);
+  };
+
+  let unreadCount = 0;
+  for (const notification of notifications) {
+    if (!notification.read) {
+      unreadCount = unreadCount + 1;
+    }
+  }
+
+  const visible = [];
+  for (const notification of notifications) {
+    if (!unreadOnly || !notification.read) {
+      visible.push(notification);
+    }
+  }
+
+  const groups = {};
+  for (const notification of visible) {
+    if (!groups[notification.date]) {
+      groups[notification.date] = [];
+    }
+    groups[notification.date].push(notification);
+  }
+  const dates = Object.keys(groups);
+  dates.sort();
+  dates.reverse();
+
+  if (loading) {
+    return (
+      <main>
+        <h2>Notification center</h2>
+        <p>Loading…</p>
+      </main>
+    );
+  }
+
+  if (error !== '') {
+    return (
+      <main>
+        <h2>Notification center</h2>
+        <p role="alert">{error}</p>
+      </main>
+    );
+  }
+
+  let emptyMessage = 'No notifications';
+  if (unreadOnly) {
+    emptyMessage = 'No unread notifications';
+  }
+
+  return (
+    <main>
+      <h2>Notification center</h2>
+      <p>Unread: {unreadCount}</p>
+      <label>
+        <input type="checkbox" checked={unreadOnly} onChange={handleUnreadOnlyChange} />
+        Unread only
+      </label>
+      {dates.length === 0 && <p>{emptyMessage}</p>}
+      {dates.map((date) => (
+        <section key={date}>
+          <h3>{date}</h3>
+          <ul>
+            {groups[date].map((notification) => (
+              <li key={notification.id}>
+                {notification.text}
+                {!notification.read && (
+                  <button type="button" onClick={() => handleMarkRead(notification.id)}>Mark as read</button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ))}
+    </main>
+  );
+};
+
+export default App;`,
+    senior: `import React, { useCallback, useEffect, useMemo, useReducer, useState } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: newest day first; mark one read; Unread only for what is left.
+// Data model: notification { id, userId, text, date, read }, one list in a
+// reducer; the count, the filter and the groups are derived with useMemo.
+// API endpoints: GET /api/notifications?before=<cursor>, PATCH
+// /api/notifications/:id { read: true }, and a stream for new ones.
+// Reliability and scale: delivery is a push channel (WebSocket or SSE) that
+// carries only new ids; the client fetches anything after its newest id on
+// reconnect, which makes delivery at-least-once and the merge idempotent by id.
+// Storage is a notifications table partitioned by time and indexed on
+// (user_id, created_at desc), a per-user unread counter updated in the same
+// transaction as the insert, and fan-out through a queue so one event for a
+// million followers never blocks the request that caused it.
+
+const reducer = (notifications, action) => {
+  switch (action.type) {
+    case 'loaded':
+      return action.notifications;
+    case 'read':
+      return notifications.map(one => (one.id === action.id ? { ...one, read: true } : one));
+    default:
+      return notifications;
+  }
+};
+
+const useNotifications = () => {
+  const [notifications, dispatch] = useReducer(reducer, []);
+  const [status, setStatus] = useState('loading');
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch('/api/notifications');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const data = await response.json();
+        if (!active) return;
+        dispatch({ type: 'loaded', notifications: data });
+        setStatus('ready');
+      } catch {
+        if (active) setStatus('error');
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const markRead = useCallback(id => dispatch({ type: 'read', id }), []);
+  return { notifications, status, markRead };
+};
+
+const Notification = ({ notification, onRead }) => (
+  <li>
+    {notification.text}{' '}
+    {!notification.read && (
+      <button type="button" onClick={() => onRead(notification.id)}>Mark as read</button>
+    )}
+  </li>
+);
+
+const App = () => {
+  const { notifications, status, markRead } = useNotifications();
+  const [unreadOnly, setUnreadOnly] = useState(false);
+
+  const unread = useMemo(() => notifications.filter(one => !one.read).length, [notifications]);
+  const days = useMemo(() => {
+    const visible = unreadOnly ? notifications.filter(one => !one.read) : notifications;
+    const byDate = visible.reduce((groups, one) => ({ ...groups, [one.date]: [...(groups[one.date] || []), one] }), {});
+    // ISO days sort as text, so the newest comes first when the order is flipped.
+    return Object.entries(byDate).sort(([a], [b]) => b.localeCompare(a));
+  }, [notifications, unreadOnly]);
+
+  if (status === 'loading') return <main><h2>Notification center</h2><p aria-live="polite">Loading…</p></main>;
+  if (status === 'error') return <main><h2>Notification center</h2><p role="alert">Could not load notifications</p></main>;
+
+  return (
+    <main>
+      <h2>Notification center</h2>
+      <p aria-live="polite">Unread: {unread}</p>
+      <label>
+        <input type="checkbox" checked={unreadOnly} onChange={event => setUnreadOnly(event.target.checked)} /> Unread only
+      </label>
+      {days.length === 0 && <p>{unreadOnly ? 'No unread notifications' : 'No notifications'}</p>}
+      {days.map(([date, items]) => (
+        <section key={date} aria-labelledby={'day-' + date}>
+          <h3 id={'day-' + date}>{date}</h3>
+          <ul>
+            {items.map(notification => <Notification key={notification.id} notification={notification} onRead={markRead} />)}
+          </ul>
+        </section>
+      ))}
+    </main>
+  );
+};
+
+export default App;`,
+    hiddenSuite: `const FRESH = [
+  { id: 31, text: 'Deploy finished', date: '2026-10-02', read: false },
+  { id: 32, text: 'Invoice paid', date: '2026-09-30', read: true },
+  { id: 33, text: 'New sign-in from Linux', date: '2026-10-02', read: true },
+  { id: 34, text: 'Cara mentioned you', date: '2026-10-01', read: false },
+  { id: 35, text: 'Backup completed', date: '2026-10-02', read: false },
+];
+
+test('days come newest first even when the server sends them out of order', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH);
+  expect(groups()).toEqual([
+    ['2026-10-02', ['Deploy finished', 'unread'], ['New sign-in from Linux', 'read'], ['Backup completed', 'unread']],
+    ['2026-10-01', ['Cara mentioned you', 'unread']],
+    ['2026-09-30', ['Invoice paid', 'read']],
+  ]);
+  expect(screen.getByText('Unread: 3')).toBeTruthy();
+}));
+
+test('Mark as read marks the notification it belongs to, not the first of its day', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH);
+  markRead('Backup completed');
+  expect(groups()[0]).toEqual(['2026-10-02', ['Deploy finished', 'unread'], ['New sign-in from Linux', 'read'], ['Backup completed', 'read']]);
+  expect(screen.getByText('Unread: 2')).toBeTruthy();
+}));
+
+test('no notifications at all says so', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], []);
+  expect(groups()).toEqual([]);
+  expect(screen.getByText('No notifications')).toBeTruthy();
+  expect(screen.getByText('Unread: 0')).toBeTruthy();
+}));
+
+test('an answer that is not ok is a failure', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH, 500);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load notifications');
+  expect(groups()).toEqual([]);
+}));
+
+test('unticking Unread only brings back what was marked read meanwhile', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH);
+  unreadOnly();
+  markRead('Cara mentioned you');
+  expect(groups()).toEqual([['2026-10-02', ['Deploy finished', 'unread'], ['Backup completed', 'unread']]]);
+  unreadOnly();
+  expect(groups()).toEqual([
+    ['2026-10-02', ['Deploy finished', 'unread'], ['New sign-in from Linux', 'read'], ['Backup completed', 'unread']],
+    ['2026-10-01', ['Cara mentioned you', 'read']],
+    ['2026-09-30', ['Invoice paid', 'read']],
+  ]);
+  expect(screen.getByText('Unread: 2')).toBeTruthy();
+}));`,
   },
   "react-booking-prototype": {
     solution: `Senior-style approach for Booking prototype:

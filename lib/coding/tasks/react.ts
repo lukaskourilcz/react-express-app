@@ -3458,7 +3458,7 @@ test('a failed request offers Retry, which asks for the same city', () => withRe
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Notification center",
-    prompt: "Fetch notifications, filter unread items, mark them read, and group by date. Explain real-time delivery and storage.",
+    prompt: "A notification center lists a user’s notifications by day. On mount, fetch `/api/notifications`; the answer is a list of `{ id, text, date, read }`, where `date` is a day such as `2026-09-28`. While it loads, show “Loading…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load notifications” in an element with `role=\"alert\"`. Group the notifications by date: one `section` per date, newest date first, with the date, exactly as the server sent it, in an `h3` and a `ul` of that day’s notifications in the order the server sent them. Each `li` shows the notification’s text, and an unread one also has a “Mark as read” button, which marks that one notification read in state, so its button goes. Above the groups, a line reads “Unread: <n>”. A checkbox labelled “Unread only” hides the read notifications and any day left with none. When nothing is left to show, say “No notifications”, or “No unread notifications” while the checkbox is ticked. Keep one list in state and work the count, the filter and the groups out of it while rendering. The notes at the top are for your explanation of how new notifications could reach the page in real time and how you would store them; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -3474,57 +3474,165 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://dummyjson.com/todos';
-const [items, setItems] = useState([]);
+    skeleton: `const [notifications, setNotifications] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [unreadOnly, setUnreadOnly] = useState(false);
 
 useEffect(() => {
-  const loadItems = async () => {
+  const loadNotifications = async () => {
     try {
-      const response = await fetch(API_URL);
+      const response = await fetch('/api/notifications');
       if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
+      setNotifications(await response.json());
     } catch (requestError) {
-      setError(requestError.message);
+      setError('Could not load notifications');
     } finally {
       setLoading(false);
     }
   };
-
-  loadItems();
+  loadNotifications();
 }, []);
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
+const markRead = id =>
+  setNotifications(current => current.map(one => (one.id === id ? { ...one, read: true } : one)));
 
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+const visible = notifications.filter(one => true); // apply the checkbox
+const byDate = visible.reduce((groups, one) => {
+  // add one to groups[one.date]
+  return groups;
+}, {});
+const dates = Object.keys(byDate).sort().reverse(); // newest day first`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "One array in state is the source of truth. The unread count, the Unread only filter and the day groups are all worked out from it while rendering, so marking one notification read updates all three at once.",
     ],
     approach: [
-      "Fetch the records once into a single array state, using the completion flag as the read or unread marker.",
-      "Mark one as read by mapping to a spread copy with that flag changed for the matching id only.",
-      "Keep an unread-only toggle in state and derive the visible list from it rather than storing a second array.",
-      "Group the visible items by date with reduce, then explain real-time delivery and storage in comments.",
+      "Fetch `/api/notifications` once in a mount effect into one array, with loading and error state, and treat an answer that is not ok as a failure.",
+      "Mark one read by mapping to a new array in which only the notification with that id becomes a spread copy with `read: true`.",
+      "Keep the checkbox as a boolean in state and derive the visible notifications with `filter`; count the unread ones over the whole list.",
+      "Group the visible notifications with `reduce` into an object keyed by date and render its keys sorted newest first. Then write the notes: a push channel such as WebSockets or server-sent events, a fallback to polling, and a table indexed by user and time.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "Notifications are fetched, unread ones filter, and marking read updates state.",
-      "Items are grouped by date.",
-      "Your comments explain real-time delivery and storage.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act, within } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const answer = (call, data, status = 200) => act(async () => {
+  call.respond(data, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+// Each day on the page: its heading, then each notification as its text and
+// whether it still has a Mark as read button.
+const groups = () => [...document.querySelectorAll('section')].map(section => [
+  section.querySelector('h3').textContent,
+  ...[...section.querySelectorAll('li')].map(item => {
+    const copy = item.cloneNode(true);
+    const buttons = [...copy.querySelectorAll('button')];
+    const unread = buttons.some(button => button.textContent === 'Mark as read');
+    buttons.forEach(button => button.remove());
+    return [copy.textContent.trim(), unread ? 'unread' : 'read'];
+  }),
+]);
+const markRead = text => {
+  const item = screen.getAllByRole('listitem').find(one => one.textContent.includes(text));
+  fireEvent.click(within(item).getByRole('button', { name: 'Mark as read' }));
+};
+const unreadOnly = () => fireEvent.click(screen.getByLabelText('Unread only'));
+const NOTIFICATIONS = [
+  { id: 1, text: 'Ana replied to your comment', date: '2026-09-28', read: false },
+  { id: 2, text: 'Your export is ready', date: '2026-09-28', read: true },
+  { id: 3, text: 'Bo started following you', date: '2026-09-27', read: false },
+  { id: 4, text: 'Weekly summary', date: '2026-09-25', read: true },
+];
+
+test('notifications load on mount, grouped by day, newest day first', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  expect(calls[0].url).toBe('/api/notifications');
+  expect(screen.getByText('Loading…')).toBeTruthy();
+  await answer(calls[0], NOTIFICATIONS);
+  expect(screen.queryByText('Loading…')).toBeNull();
+  expect(groups()).toEqual([
+    ['2026-09-28', ['Ana replied to your comment', 'unread'], ['Your export is ready', 'read']],
+    ['2026-09-27', ['Bo started following you', 'unread']],
+    ['2026-09-25', ['Weekly summary', 'read']],
+  ]);
+  expect(screen.getByText('Unread: 2')).toBeTruthy();
+}));
+
+test('Mark as read marks that one notification and lowers the count', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], NOTIFICATIONS);
+  markRead('Bo started following you');
+  expect(groups()).toEqual([
+    ['2026-09-28', ['Ana replied to your comment', 'unread'], ['Your export is ready', 'read']],
+    ['2026-09-27', ['Bo started following you', 'read']],
+    ['2026-09-25', ['Weekly summary', 'read']],
+  ]);
+  expect(screen.getByText('Unread: 1')).toBeTruthy();
+}));
+
+test('Unread only hides read notifications and the days left empty', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], NOTIFICATIONS);
+  unreadOnly();
+  expect(groups()).toEqual([
+    ['2026-09-28', ['Ana replied to your comment', 'unread']],
+    ['2026-09-27', ['Bo started following you', 'unread']],
+  ]);
+  unreadOnly();
+  expect(groups()).toHaveLength(3);
+}));
+
+test('with Unread only ticked, a notification marked read leaves the list', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], NOTIFICATIONS);
+  unreadOnly();
+  markRead('Ana replied to your comment');
+  expect(groups()).toEqual([['2026-09-27', ['Bo started following you', 'unread']]]);
+  markRead('Bo started following you');
+  expect(groups()).toEqual([]);
+  expect(screen.getByText('No unread notifications')).toBeTruthy();
+  expect(screen.getByText('Unread: 0')).toBeTruthy();
+}));
+
+test('a failed request shows an alert', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load notifications');
+  expect(screen.queryByText('Loading…')).toBeNull();
+  expect(groups()).toEqual([]);
+}));
+`,
     api: {
       method: "GET",
-      url: "https://dummyjson.com/todos",
-      note: "Use todo completion as a practice stand-in for read/unread notification state.",
+      url: "/api/notifications",
+      note: "Your own endpoint, with no public service behind it: the checks answer it with their own notifications and the preview with a few samples.",
     },
   },
   {
