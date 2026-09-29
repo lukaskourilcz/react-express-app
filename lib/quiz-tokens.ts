@@ -44,8 +44,8 @@ interface SessionPayload {
   requiredLevelEnd?: number;
   /** Learn levels with coding tasks: the ids the completion gate checks. */
   codingTaskIds?: string[];
-  /** Learn sessions: the account the step was issued to, or null for a guest.
-   * Only the issuer may answer or complete it. */
+  /** Learn and daily sessions: the account the session was issued to, or
+   * null for a guest. Only the issuer may answer, complete or submit it. */
   userId?: string | null;
   iat: number;
   exp: number;
@@ -228,7 +228,9 @@ function validLifetime(payload: { iat?: unknown; exp?: unknown }, maxTtl: number
 type SessionContext =
   | { subject: ScopeSubjectId }
   | { scope: 'challenge'; runId: string; subject: ScopeSubjectId; attemptId?: string }
-  | { scope: 'daily'; date: string; subject: ScopeSubjectId; attemptId?: string; startedAt?: number }
+  // A daily fetched signed in names its account (`userId`), and only that
+  // account may submit it (api/quiz/submit.ts).
+  | { scope: 'daily'; date: string; subject: ScopeSubjectId; attemptId?: string; startedAt?: number; userId?: string | null }
   // The public question of the day (#239): practice only, graded as if
   // signed out, whoever sends it.
   | { scope: 'qotd'; date: string; subject: ScopeSubjectId }
@@ -261,8 +263,8 @@ export interface DecodedQuizSession {
   requiredLevelStart?: number;
   requiredLevelEnd?: number;
   codingTaskIds?: string[];
-  /** Learn sessions only: who the step was issued to (null: a guest, or a
-   * session sealed before the owner was recorded). */
+  /** Learn and daily sessions: who the session was issued to (null: a guest,
+   * or a session sealed before the owner was recorded). */
   userId?: string | null;
   issuedAt: number;
 }
@@ -296,7 +298,9 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
     if (!payload.subject || typeof payload.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date)) return null;
     const startedAt = payload.startedAt;
     if (startedAt !== undefined && (!Number.isInteger(startedAt) || startedAt > payload.iat || payload.iat - startedAt > DAILY_MAX_DURATION_MS)) return null;
-    return { ...base, scope: 'daily', date: payload.date, ...(startedAt !== undefined ? { startedAt } : {}) };
+    const dailyOwner = payload.userId;
+    if (dailyOwner !== undefined && dailyOwner !== null && (typeof dailyOwner !== 'string' || dailyOwner.length === 0 || dailyOwner.length > 128)) return null;
+    return { ...base, scope: 'daily', date: payload.date, ...(startedAt !== undefined ? { startedAt } : {}), userId: dailyOwner ?? null };
   }
   if (payload.scope === 'qotd') {
     if (!payload.subject || typeof payload.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(payload.date) || payload.questions.length !== 1) return null;

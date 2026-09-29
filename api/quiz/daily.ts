@@ -177,6 +177,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     subject: scope.subject,
     ...(attemptId ? { attemptId } : {}),
     ...(start.startedAt !== null ? { startedAt: start.startedAt } : {}),
+    // The account it was fetched for: quiz/submit grades it for that account
+    // only, so a submit that arrives without the token is refused instead of
+    // spending the day's one claim as a guest's.
+    userId: auth?.sub ?? null,
   });
 
   // The response embeds an opaque, authenticated session token bound to the

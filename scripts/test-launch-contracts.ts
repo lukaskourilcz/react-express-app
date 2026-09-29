@@ -2220,6 +2220,50 @@ async function dailyIntegrityContracts() {
   assert.ok((receipt?.daily?.durationMs ?? 0) >= 60, `the time runs from the first fetch, got ${receipt?.daily?.durationMs} ms`);
 }
 
+/** A daily fetched signed in names its account (PROF-1). A submit of it that
+ * arrives without the token (a client that could not read its session) is
+ * refused with 401 before anything is claimed, so the same answers still rank
+ * when they come back signed in; another account's submit is refused too. */
+async function dailyOwnerContracts() {
+  const learner = 'daily-owner-learner-001';
+  const other = 'daily-owner-learner-002';
+  const fetched = mockResponse();
+  await dailyHandler(quizRequest('GET', {}, undefined, learner), fetched as never);
+  assert.equal(fetched.statusCode, 200, JSON.stringify(fetched.body));
+  const sessionId = (fetched.body as { sessionId: string }).sessionId;
+  const session = decodeSessionEnvelope(sessionId)!;
+  assert.equal(session.userId, learner, 'the daily session names the account it was fetched for');
+  const answers = Object.fromEntries(session.questions.map((q) => [q.questionId, q.correctAnswer]));
+  const submit = async (user?: string) => {
+    const response = mockResponse();
+    await submitHandler(quizRequest('POST', {}, { sessionId, answers }, user), response as never);
+    return { status: response.statusCode, body: response.body as { resultReceipt?: string; error?: { code: string } } };
+  };
+
+  const tokenless = await submit();
+  assert.equal(tokenless.status, 401, `a signed-in daily sent without the token is refused (${JSON.stringify(tokenless.body)})`);
+  assert.equal(tokenless.body.error?.code, 'sign_in_required');
+  const stranger = await submit(other);
+  assert.equal(stranger.status, 409, `another account's submit is refused (${JSON.stringify(stranger.body)})`);
+  assert.equal(stranger.body.error?.code, 'session_owner_mismatch');
+  const ranked = await submit(learner);
+  assert.equal(ranked.status, 200, `the same answers rank once they come back signed in (${JSON.stringify(ranked.body)})`);
+  assert.equal(decodeQuizResultReceipt(ranked.body.resultReceipt!)?.purpose, 'daily');
+
+  // Fetched signed out, the daily names nobody and stays open to a guest.
+  const anonymous = mockResponse();
+  await dailyHandler(quizRequest('GET', {}), anonymous as never);
+  const guestSessionId = (anonymous.body as { sessionId: string }).sessionId;
+  const guestSession = decodeSessionEnvelope(guestSessionId)!;
+  assert.equal(guestSession.userId, null);
+  const guest = mockResponse();
+  await submitHandler(quizRequest('POST', {}, {
+    sessionId: guestSessionId,
+    answers: Object.fromEntries(guestSession.questions.map((q) => [q.questionId, q.correctAnswer])),
+  }), guest as never);
+  assert.equal(guest.statusCode, 200, JSON.stringify(guest.body));
+}
+
 /** The launch price (shared/launch-offer.ts): 4 Oct 2026 00:00 to 2 Nov 2026
  * 23:59:59 in Prague, inert without billing and the coupon. */
 function launchOfferContracts() {
@@ -4266,6 +4310,7 @@ async function main() {
   await quizSubmitScopeContracts();
   await guestChallengeLimitContracts();
   await dailyIntegrityContracts();
+  await dailyOwnerContracts();
   seededShuffleContracts();
   await quizDifficultyContracts();
   await dailySwitchContracts();
