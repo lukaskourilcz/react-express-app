@@ -16,6 +16,7 @@ import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challen
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
 import { ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
+import { challengeRunXp } from '../../shared/progression';
 import { itemReview } from '../../lib/curation';
 
 // Biggest Shark Challenge: a single function serving every challenge resource
@@ -278,7 +279,7 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account progress is not configured');
   // Only server-proven correct answers earn XP. Merely creating/ending a run
   // (including an all-timeout run) must never be a farmable base award.
-  const xp = Math.min(10_000, score * 5);
+  const xp = challengeRunXp(score);
   if (xp <= 0) return res.json({ ok: true, awarded: false, score, xp: 0 });
   // Migration 040's completion step applies the same award under the same id
   // and also dates the run's answers for the 30-day board. Until it is

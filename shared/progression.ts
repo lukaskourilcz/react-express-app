@@ -159,6 +159,13 @@ export const learnLevelDifficulty = (level: number): number =>
 export const learnLevelXp = (level: number): number => LEVEL_XP_PER_DIFFICULTY * learnLevelDifficulty(level);
 export const learnCheckpointXp = (checkpoint: number): number => CHECKPOINT_XP_PER_PART * Math.max(1, checkpoint);
 
+/** XP for a finished Biggest Shark Challenge run: five per server-proven
+ * correct answer and nothing for ending one, so an all-timeout run is not a
+ * farmable award. The server credits it; a signed-out browser counts the same
+ * amount locally. */
+export const challengeRunXp = (score: number): number =>
+  Math.min(10_000, Math.max(0, Math.floor(Number.isFinite(score) ? score : 0)) * 5);
+
 /* ── parts and availability ────────────────────────────────────────────── */
 
 /** Every topic is presented as this many sequential parts, each ending with
