@@ -6,6 +6,7 @@ import {
   encodeScoreProof,
   encodeQuizResultReceipt,
   encodeAnswerProof,
+  type DecodedQuizSession,
 } from '../../lib/quiz-tokens';
 import { localizeQuestion, normalizeLang } from '../../lib/quiz-runtime';
 import { AuthError, tryAuth } from '../../lib/auth';
@@ -18,6 +19,14 @@ import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review
 import { contentVersion } from '../../lib/curation';
 
 const MAX_ANSWERS = 50;
+
+// Who issues a session this handler grades: a quiz or a personalised review
+// (api/quiz/questions.ts, no scope), the daily challenge (api/quiz/daily.ts),
+// the question of the day (lib/daily-question.ts), a Biggest Shark Challenge
+// batch and the 20-question assessment (api/quiz/challenge.ts).
+const SUBMITTABLE_SCOPES: ReadonlySet<DecodedQuizSession['scope']> = new Set([
+  undefined, 'daily', 'qotd', 'challenge', 'assessment',
+]);
 
 const logEvent = createLogger('quiz/submit');
 const reportLogger = createLogger('quiz/report');
@@ -136,6 +145,15 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!session || !session.attemptId) {
     logEvent({ status: 400, reason: 'invalid_session', latency_ms: Date.now() - started });
     return jsonError(res, 400, 'invalid_session', 'Quiz session expired or invalid');
+  }
+  // Only the sessions this endpoint issues a verdict for. A Learn level or
+  // part test (scope 'roadmap') is graded one answer at a time by
+  // /api/quiz/roadmap, which reveals each correct option as it goes; graded
+  // here as a whole it would turn those revealed answers into quiz XP, a
+  // streak day and leaderboard stats, as often as the level can be reopened.
+  if (!SUBMITTABLE_SCOPES.has(session.scope)) {
+    logEvent({ status: 400, reason: 'foreign_scope', scope: session.scope, latency_ms: Date.now() - started });
+    return jsonError(res, 400, 'invalid_session', 'This session is not graded here');
   }
 
   const sessionById = new Map(session.questions.map((q) => [q.questionId, q]));

@@ -55,6 +55,9 @@ import { isSegmentCleared, firstUnfinishedLevel, isCheckpointUnlocked, partRange
 import { eligibilityFrom, registryEntryConsistent, type RegistryEntry } from '../shared/curation';
 import submitHandler from '../api/quiz/submit';
 import dailyHandler from '../api/quiz/daily';
+import questionsHandler from '../api/quiz/questions';
+import challengeHandler from '../api/quiz/challenge';
+import { decodeSessionEnvelope } from '../lib/quiz-tokens';
 import { pickQuestionOfTheDay } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
 import { CODING_INDEX } from '../shared/coding-index';
@@ -1884,6 +1887,88 @@ async function qotdContracts() {
   assert.equal(counts.free, CODING_INDEX.filter((task) => task.free === true).length);
 }
 
+/** A caller with its own address, so the per-address limits of the quiz
+ * handlers never decide an assertion here; signed in through the development
+ * fallback when `user` is given. */
+let quizCallerSeq = 0;
+function quizRequest(method: 'GET' | 'POST', query: Record<string, string>, body?: Record<string, unknown>, user?: string) {
+  quizCallerSeq++;
+  return {
+    method,
+    headers: { 'x-forwarded-for': `198.51.100.${quizCallerSeq % 250}`, ...(user ? { authorization: 'Bearer contract' } : {}) },
+    query: { ...query, ...(user && method === 'GET' ? { user_id: user } : {}) },
+    body: body && user ? { ...body, user_id: user } : body,
+  } as never;
+}
+
+/** POST /api/quiz/submit grades only the sessions it serves, each checked
+ * through the handler that really issues it. */
+async function quizSubmitScopeContracts() {
+  const learner = 'scope-contract-learner-01';
+  const submitAll = async (sessionId: string, user?: string) => {
+    const session = decodeSessionEnvelope(sessionId)!;
+    const answers = Object.fromEntries(session.questions.map((q) => [q.questionId, q.correctAnswer]));
+    const response = mockResponse();
+    await submitHandler(quizRequest('POST', {}, { sessionId, answers }, user), response as never);
+    return { session, response, body: response.body as { resultReceipt?: string; correctAnswers?: number; error?: { code: string } } };
+  };
+
+  // A Learn level: /api/quiz/roadmap?resource=answer reveals every correct
+  // option before the level is finished, so this session must not be
+  // gradable as a quiz.
+  const level = mockResponse();
+  await roadmapHandler(quizRequest('GET', { topic: 'javascript', level: '1', lang: 'en' }), level as never);
+  assert.equal(level.statusCode, 200, JSON.stringify(level.body));
+  const learn = await submitAll((level.body as { sessionId: string }).sessionId, learner);
+  assert.equal(learn.session.scope, 'roadmap');
+  assert.equal(learn.response.statusCode, 400, 'a Learn level session is refused by the quiz grader');
+  assert.equal(learn.body.error?.code, 'invalid_session');
+  assert.equal(learn.body.resultReceipt, undefined, 'no quiz receipt, XP, streak day or board entry for a Learn level');
+
+  // A quiz (and a personalised review, which is issued the same way).
+  const quiz = mockResponse();
+  await questionsHandler(quizRequest('GET', { count: '2', difficulty: 'mixed', categories: 'javascript' }), quiz as never);
+  assert.equal(quiz.statusCode, 200, JSON.stringify(quiz.body));
+  const graded = await submitAll((quiz.body as { sessionId: string }).sessionId, learner);
+  assert.equal(graded.response.statusCode, 200, JSON.stringify(graded.body));
+  assert.equal(decodeQuizResultReceipt(graded.body.resultReceipt!)?.purpose, 'quiz');
+
+  // The daily challenge, fetched and submitted signed in.
+  const daily = mockResponse();
+  await dailyHandler(quizRequest('GET', {}, undefined, learner), daily as never);
+  assert.equal(daily.statusCode, 200, JSON.stringify(daily.body));
+  const dailyGraded = await submitAll((daily.body as { sessionId: string }).sessionId, learner);
+  assert.equal(dailyGraded.response.statusCode, 200, JSON.stringify(dailyGraded.body));
+  assert.equal(decodeQuizResultReceipt(dailyGraded.body.resultReceipt!)?.purpose, 'daily');
+
+  // The 20-question assessment.
+  const assessment = mockResponse();
+  await challengeHandler(quizRequest('GET', { resource: 'assessment', categories: deliveryCategories('webdev').join(',') }), assessment as never);
+  assert.equal(assessment.statusCode, 200, JSON.stringify(assessment.body));
+  const assessed = await submitAll((assessment.body as { sessionId: string }).sessionId, learner);
+  assert.equal(assessed.response.statusCode, 200, JSON.stringify(assessed.body));
+  assert.equal(decodeQuizResultReceipt(assessed.body.resultReceipt!)?.purpose, 'assessment');
+
+  // A Biggest Shark Challenge batch, one answer at a time.
+  const batch = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: deliveryCategories('webdev').join(',') }), batch as never);
+  assert.equal(batch.statusCode, 200, JSON.stringify(batch.body));
+  const batchSession = decodeSessionEnvelope((batch.body as { sessionId: string }).sessionId)!;
+  const one = batchSession.questions[0];
+  const challenged = mockResponse();
+  await submitHandler(quizRequest('POST', {}, { sessionId: (batch.body as { sessionId: string }).sessionId, answers: { [one.questionId]: one.correctAnswer } }, learner), challenged as never);
+  assert.equal(challenged.statusCode, 200, JSON.stringify(challenged.body));
+  assert.equal((challenged.body as { resultReceipt?: string }).resultReceipt, undefined);
+
+  // The question of the day is graded here too, as practice.
+  const qotd = mockResponse();
+  await dailyHandler(quizRequest('GET', { qotd: 'today' }), qotd as never);
+  assert.equal(qotd.statusCode, 200, JSON.stringify(qotd.body));
+  const checked = await submitAll((qotd.body as { sessionId: string }).sessionId, learner);
+  assert.equal(checked.response.statusCode, 200, JSON.stringify(checked.body));
+  assert.equal(checked.body.resultReceipt, undefined);
+}
+
 /** The launch price (shared/launch-offer.ts): 4 Oct 2026 00:00 to 2 Nov 2026
  * 23:59:59 in Prague, inert without billing and the coupon. */
 function launchOfferContracts() {
@@ -3519,6 +3604,7 @@ async function main() {
   erasureContracts();
   await voucherContracts();
   await qotdContracts();
+  await quizSubmitScopeContracts();
   await webdevBankContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
