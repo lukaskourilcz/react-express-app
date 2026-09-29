@@ -548,6 +548,7 @@ const moveTo = ({ address, ...rest }: Readonly<User>, city: string): User => ({
       { call: 'ranked({ x: -1, y: 1 })', expected: [['y', 1], ['x', -1]] },
       { call: '(() => { const scores = { a: 1, b: 2 }; ranked(scores); return Object.keys(scores); })()', expected: ['a', 'b'] },
       { call: 'ranked({ a: 3, b: 3, c: 3, d: 3, e: 3, f: 3, g: 3, h: 3 }).map(([name]) => name)', expected: ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] },
+      { call: 'ranked({ Zed: 4, Amy: 4, Kit: 9 })', expected: [['Kit', 9], ['Zed', 4], ['Amy', 4]] },
     ],
   },
 

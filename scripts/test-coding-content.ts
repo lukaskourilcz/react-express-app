@@ -41,7 +41,7 @@ import { runChecks, runInSandbox } from '../lib/coding/sandbox';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder } from '../lib/coding/puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
-import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
+import { evaluateCalls, allPassed, deepEqual } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { HIDDEN_CASE_PREFIX, splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
@@ -72,6 +72,60 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
 // The cases a hidden React suite declares, counted from its source. The React
 // proofs below check the count against the cases the run registered.
 const hiddenCaseCount = (hiddenSuite: string | undefined): number => (hiddenSuite?.match(/^\s*(?:test|it)\(/gm) ?? []).length;
+
+// The hosts a hint ladder may end on: official documentation, never a blog.
+const OFFICIAL_DOCS = new Set(['developer.mozilla.org', 'www.typescriptlang.org', 'react.dev']);
+
+/* Two cheats the hidden checks must catch, written as solutions. */
+type TypeScriptApi = typeof import('typescript');
+type Check = { call: string; expected: unknown };
+
+/** JavaScript source that evaluates to a fresh copy of an expected value. */
+const literal = (value: unknown): string => {
+  if (value === undefined) return 'undefined';
+  if (typeof value === 'number') return Object.is(value, -0) ? '-0' : String(value);
+  if (value === null || typeof value !== 'object') return JSON.stringify(value);
+  if (Array.isArray(value)) return `[${value.map(literal).join(', ')}]`;
+  return `{${Object.entries(value).map(([key, item]) => `${JSON.stringify(key)}: ${literal(item)}`).join(', ')}}`;
+};
+
+/** `name(argument, …)` with a plain name as the callee, or null. */
+const plainCall = (ts: TypeScriptApi, call: string): { name: string; args: string } | null => {
+  const file = ts.createSourceFile('call.ts', `(${call.trim().replace(/;+$/, '')}\n)`, ts.ScriptTarget.Latest, true);
+  const [statement] = file.statements;
+  if (file.statements.length !== 1 || !ts.isExpressionStatement(statement)) return null;
+  let expression = statement.expression;
+  while (ts.isParenthesizedExpression(expression)) expression = expression.expression;
+  if (!ts.isCallExpression(expression) || !ts.isIdentifier(expression.expression)) return null;
+  return { name: expression.expression.text, args: expression.arguments.map((arg) => arg.getText(file)).join(', ') };
+};
+
+/** A learner who copies the page's examples into a table: every visible
+ * call answered with its visible answer, compared by value and key order
+ * the way a JSON.stringify key would, and undefined for anything else. Null
+ * when a visible check is not a plain call a table could answer. */
+const lookupTable = (ts: TypeScriptApi, visible: readonly Check[]): string | null => {
+  const rows = visible.map((test) => ({ call: plainCall(ts, test.call), expected: test.expected }));
+  if (rows.some((row) => !row.call)) return null;
+  const names = [...new Set(rows.map((row) => row.call!.name))];
+  return [
+    'const __same = (x, y) => { if (Object.is(x, y)) return true; if (typeof x === "function" || typeof y === "function") return typeof x === typeof y && String(x) === String(y); if (!x || !y || typeof x !== "object" || typeof y !== "object" || Array.isArray(x) !== Array.isArray(y)) return false; const kx = Object.keys(x), ky = Object.keys(y); return kx.length === ky.length && kx.every((k, i) => k === ky[i] && __same(x[k], y[k])); };',
+    `const __table = {${names.map((name) => `${JSON.stringify(name)}: [${rows.filter((row) => row.call!.name === name).map((row) => `[() => [${row.call!.args}], () => (${literal(row.expected)})]`).join(', ')}]`).join(', ')}};`,
+    ...names.map((name) => `function ${name}(...args) { for (const [input, output] of __table[${JSON.stringify(name)}]) if (__same(input(), args)) return output(); return undefined; }`),
+  ].join('\n');
+};
+
+/** The names a solution declares at its top level. */
+const topLevelNames = (ts: TypeScriptApi, source: string): string[] => {
+  const names = new Set<string>();
+  for (const statement of ts.createSourceFile('solution.ts', source, ts.ScriptTarget.Latest, true).statements) {
+    if ((ts.isFunctionDeclaration(statement) || ts.isClassDeclaration(statement)) && statement.name) names.add(statement.name.text);
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) if (ts.isIdentifier(declaration.name)) names.add(declaration.name.text);
+    }
+  }
+  return [...names];
+};
 
 async function main() {
   // The solutions are proven on the grader's worker thread, built fresh from
@@ -462,6 +516,66 @@ async function main() {
       const starterRun = await withTimeout(evaluateCalls({ code: starterCode, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, where);
       if (allPassed(starterRun)) fail(`${where}: the untouched starter already passes`);
     }
+  }
+
+  /* ── hidden checks that catch the cheap passes ──────────────────────── */
+  // The checks a learner can see are examples; the hidden ones are what make
+  // a pass mean the task was done. Every standalone task and every milestone
+  // carries hidden checks (a checkpoint is graded on its visible contract
+  // alone, by design), and they have to reject two solutions that do not do
+  // the task: a table of the visible answers, and a function that returns
+  // one constant. A skeleton hint rung must not already be a passing answer.
+  const ts = nodeRequire('typescript') as TypeScriptApi;
+  const cheatsStarted = Date.now();
+  let cheatTasks = 0;
+  let tables = 0;
+  for (const task of CODING_TASKS) {
+    if (task.verify !== 'tests' || task.track === 'react' || !task.tests || task.id.endsWith('-start')) continue;
+    if (!ONLY.test(task.id)) continue;
+    const solution = solutionFor(task.id);
+    if (!solution) continue;
+    const where = `${task.id}`;
+    const visible = task.tests;
+    const hidden = solution.hiddenTests ?? [];
+    if (hidden.length === 0) { fail(`${where}: needs hidden checks beside the visible ones`); continue; }
+    cheatTasks += 1;
+    const every = [...visible, ...hidden];
+    // None of these is a real answer, so a short deadline is enough: running
+    // out of time counts as failing, never as passing, and a skeleton whose
+    // loop has no condition yet would otherwise spin for the full deadline.
+    const passes = async (code: string, checks: readonly Check[] = every, deadlineMs = 1_000): Promise<boolean> =>
+      allPassed(await runInSandbox({ code, calls: checks.map((one) => one.call), expectations: checks.map((one) => one.expected), shownCalls: visible.length, deadlineMs }));
+    // A table only proves something when it really answers every visible call.
+    const table = lookupTable(ts, visible);
+    if (table && await passes(table, visible)) {
+      tables += 1;
+      if (await passes(table)) fail(`${where}: a table of the visible answers passes the hidden checks too`);
+    }
+    const names = topLevelNames(ts, solution.solution);
+    const callees = every.map((one) => plainCall(ts, one.call)?.name);
+    const constants = new Map(every.map((one) => [literal(one.expected), one.expected]));
+    for (const [shown, value] of constants) {
+      // A plain call to a replaced function returns the constant itself, so a
+      // single such check that expects something else already sinks it; only
+      // the constants no plain check rules out need a run.
+      if (every.some((one, index) => names.includes(callees[index] ?? '') && !deepEqual(value, one.expected))) continue;
+      if (await passes(names.map((name) => `function ${name}() { return (${literal(value)}); }`).join('\n'))) fail(`${where}: a solution that always returns ${shown.slice(0, 60)} passes every check`);
+    }
+    if (task.skeleton) {
+      const skeleton = task.skeleton;
+      const code = task.track === 'typescript' ? checker.toJavaScript(skeleton) : skeleton;
+      const typed = () => task.track !== 'typescript' || (typesPassed(checker.check(skeleton, task.typeTests ?? [])) && typesPassed(checker.check(skeleton, solution.hiddenTypeTests ?? [])));
+      if (await passes(code, every, 250) && typed()) fail(`${where}: the skeleton hint rung already passes every check`);
+    }
+  }
+  console.log(`Hidden checks: ${cheatTasks} tasks reject a constant answer, ${tables} of them a table of the visible answers too (${((Date.now() - cheatsStarted) / 1000).toFixed(1)} s).`);
+
+  /* ── the last hint rung ─────────────────────────────────────────────── */
+  // The ladder ends on the task's first reference, or on the documentation
+  // page of its first focus tag: official documentation either way.
+  for (const task of CODING_TASKS) {
+    const url = task.references?.[0]?.url ?? docsFor(task.focus).url;
+    if (!OFFICIAL_DOCS.has(new URL(url).host)) fail(`${task.id}: the hint ladder ends on ${url}, not on official documentation`);
   }
 
   /* ── React solutions ────────────────────────────────────────────────── */

@@ -1147,6 +1147,7 @@ const hidden: Record<string, [string, unknown][][]> = {
     [['(()=>{const a=[{x:1},{x:2}];const out=query(a);out.pop();return a.length})()',2]],
     [['(()=>{const a=[{x:2},{x:1}];query(a,{orderBy:"x"});return a})()',[{x:2},{x:1}]]],
     [['query([{a:null},{a:false},{a:0},{a:null}],{select:["a"],distinct:true})',[{a:null},{a:false},{a:0}]]],
+    [['groupRows([{k:"a",v:1},{k:"a",v:NaN},{k:"a",v:Infinity},{k:"a",v:-Infinity}],"k","v")',[{key:'a',count:4,sum:1}]],['(()=>{const rows=[{k:"a",v:1},{k:"b",v:2}];groupRows(rows,"k","v");return rows})()',[{k:'a',v:1},{k:'b',v:2}]]],
   ],
   'js-evolving-events': [
     [['(()=>{const b=createBus(),a=[];const fn=v=>a.push(v);b.on("e",fn);b.on("e",fn);b.emit("e",0);return a})()',[0,0]]],
@@ -1166,12 +1167,13 @@ const hidden: Record<string, [string, unknown][][]> = {
   'ts-evolving-store': [
     [['(()=>{const s=createStore(null);s.set(null);return s.get()})()',null]],
     [['(()=>{const s=createStore(0),a=[];s.subscribe(v=>a.push(v));s.update(v=>v);return a})()',[]]],
-    [['(()=>{const s=createStore(0);s.update(x=>x+1);s.update(x=>x+1);s.undo();s.undo();s.redo();s.redo();return [s.get(),s.redo()]})()',[2,false]]],
+    [['(()=>{const s=createStore(0);s.update(x=>x+1);s.update(x=>x+1);s.undo();s.undo();s.redo();s.redo();return [s.get(),s.redo()]})()',[2,false]],['(()=>{const s=createStore(0),a=[];s.subscribe(v=>a.push(v));const done=[s.undo(),s.redo()];return [done,a]})()',[[false,false],[]]],['(()=>{const s=createStore(0);s.set(1);s.set(1);s.undo();return [s.get(),s.undo()]})()',[0,false]]],
   ],
   'ts-evolving-schema': [
     [['validate("number",Infinity)',['$: expected number']],['validate("boolean",false)',[]]],
     [['validate({object:{a:"string",b:"number"}},null)',['$: expected object']],['validate({object:{a:"string",b:"number"}},{})',['$.a: expected string','$.b: expected number']]],
     [['validate({array:{optional:"number"}},[undefined,0,null])',['$[2]: expected number']],['validate({array:"string"},{})',['$: expected array']]],
+    [['validateRecord("number",null)',['$: expected record']],['[5,"abc",true,undefined].map(value=>validateRecord("string",value))',[['$: expected record'],['$: expected record'],['$: expected record'],['$: expected record']]]],
   ],
 };
 for (const [id, stages] of Object.entries(hidden)) {

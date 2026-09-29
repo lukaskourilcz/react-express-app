@@ -1319,11 +1319,20 @@ console.log(flatten([[1,2],[3]]));
 // console.log(makeCounter().increment().value());
 `,
     skeleton: `const makeCounter = () => {
-  // hold whatever has to survive between calls out here
+  // hold the count out here, where only the methods below can reach it
 
-  return (...args) => {
-    // decide what this call does with that state
+  const counter = {
+    increment() {
+      // change the count, then return the counter so calls chain
+    },
+    reset() {
+      // put the count back to 0, then return the counter
+    },
+    value() {
+      // read the count as it is now
+    },
   };
+  return counter;
 };`,
     hints: ["Hold the count in the closure and return methods that read and change it."],
     approach: [
@@ -1448,10 +1457,11 @@ console.log(flatten([[1,2],[3]]));
 // send(1); send(2); send(3);
 `,
     skeleton: `const throttle = (fn, waitMs) => {
-  let timer;
+  // remember when fn last ran, starting far enough back that the first call runs
 
   return (...args) => {
-    // cancel or ignore the pending call, then schedule this one
+    // still inside waitMs of that run: drop this call and do nothing else
+    // otherwise: note the time now, and call fn with args straight away
   };
 };`,
     hints: ["Remember when the last run happened and compare it with now."],
@@ -1947,11 +1957,20 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
 // bus.emit("greet", "ana");
 `,
     skeleton: `const createEmitter = () => {
-  // hold whatever has to survive between calls out here
+  // hold the listeners out here, one array per event name
 
-  return (...args) => {
-    // decide what this call does with that state
+  const emitter = {
+    on(name, listener) {
+      // add the listener under name, then return the emitter
+    },
+    off(name, listener) {
+      // drop that one listener, or every listener when none is given; return the emitter
+    },
+    emit(name, payload) {
+      // call each listener for name with payload and return what they give back
+    },
   };
+  return emitter;
 };`,
     hints: ["Keep an object of listener arrays, one per event name."],
     approach: [

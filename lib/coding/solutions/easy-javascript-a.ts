@@ -282,6 +282,7 @@ const schedule = (task, ms) => {
       { call: 'new Promise(done => { const log = []; repeat(n => log.push(n), 4, 5); setTimeout(() => done(log), 150); })', expected: [1, 2, 3, 4], async: true },
       { call: 'new Promise(done => { let calls = 0; repeat(() => { calls += 1; }, 2, 5); setTimeout(() => done(calls), 120); })', expected: 2, async: true },
       { call: 'new Promise(done => { const log = []; repeat(n => log.push("a" + n), 2, 5); repeat(n => log.push("b" + n), 1, 5); setTimeout(() => done(log.length), 120); })', expected: 3, async: true },
+      { call: 'new Promise(done => { const setRepeat = setInterval, stopRepeat = clearInterval, stopTimer = clearTimeout; const open = new Set(); globalThis.setInterval = (...args) => { const id = setRepeat(...args); open.add(id); return id; }; globalThis.clearInterval = id => { open.delete(id); stopRepeat(id); }; globalThis.clearTimeout = id => { open.delete(id); stopTimer(id); }; repeat(() => {}, 2, 5); repeat(() => {}, 3, 5); setTimeout(() => { globalThis.setInterval = setRepeat; globalThis.clearInterval = stopRepeat; globalThis.clearTimeout = stopTimer; done(open.size); }, 100); })', expected: 0, async: true },
     ],
   },
   'js-easy2-fire-in-delay-order': {

@@ -758,9 +758,25 @@ function buildSenior(app: FullStackApp, stage: number): string {
 
 export const FULLSTACK_SOLUTIONS:Record<string,CodingSolution> = Object.fromEntries(FULLSTACK_APPS.flatMap(app=>{
  const project=EVOLVING_CHALLENGES.find(p=>p.id===`fullstack-${app.slug}`)!;
+ const row=fullstackSeed(app)[0];
  return project.stages.filter(id => !id.endsWith('-start')).map((id,i)=>[id,{solution:build(app,i+1),junior:buildJunior(app,i+1),senior:buildSenior(app,i+1),...(i<4?{hiddenTests:[
   {call:`normalizeInput({name:'x'.repeat(81),${app.amount}:1})`,expected:null},
   {call:`normalizeInput({name:'A',${app.amount}:1001})`,expected:null},
+  // Stage 1 only: from stage 2 on, the checkpoint shows these as visible checks.
+  ...(i===0?[
+   {call:`normalizeInput({name:'Plan',${app.amount}:5})`,expected:{name:'Plan',[app.amount]:5}},
+   {call:`normalizeInput({name:'A',${app.amount}:-1})`,expected:null},
+   {call:`normalizeInput({name:'x'.repeat(80),${app.amount}:1})`,expected:{name:'x'.repeat(80),[app.amount]:1}},
+   {call:`normalizeInput({name:'A',${app.amount}:1000})`,expected:{name:'A',[app.amount]:1000}},
+  ]:[]),
+  // updateItem, from stage 2: each rule the brief states.
+  ...(i>=1?[
+   {call:`updateItem(${JSON.stringify(row)},{${app.amount}:1})`,expected:null},
+   {call:`updateItem(${JSON.stringify(row)},{version:1,${app.amount}:1.5})`,expected:null},
+   {call:`updateItem(${JSON.stringify(row)},{version:1,${app.amount}:5000})`,expected:null},
+   {call:`updateItem(${JSON.stringify(row)},{version:1,${app.amount}:1,name:'Other',id:9})`,expected:{...row,[app.amount]:1,version:2}},
+   {call:`[null,5,'patch'].map(patch=>updateItem(${JSON.stringify(row)},patch))`,expected:[null,null,null]},
+  ]:[]),
   ...(i>=2?[{call:`(()=>{const seed=${JSON.stringify(fullstackSeed(app))};const api=createApi(seed);seed[0].name='changed';const first=api({method:'GET',path:'${app.endpoint}'});first.body[0].name='mutated';return api({method:'GET',path:'${app.endpoint}'}).body[0].name})()`,expected:app.first}]:[]),
  ]}:{})}]);
 }));
