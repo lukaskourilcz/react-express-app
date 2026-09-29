@@ -83,6 +83,7 @@ import type {
   SubmitActivityResponse,
 } from '../../shared/learning-path-api';
 import { PATH_LIMITS } from '../../shared/learning-path-api';
+import { MAX_ADDRESS_FIELD, SHIRT_SIZES, validateAddress } from '../../shared/rewards';
 
 const logEvent = createLogger('learning-paths');
 
@@ -1122,13 +1123,25 @@ function projectModuleProgress(
 /** GET/PUT /api/user/[op]?op=learning-path-draft */
 /* ── GET/POST ?op=learning-path-reward ─────────────────────────────────── */
 
+/** What to correct, for each field `validateAddress` refuses. Every field
+ * holds what `merch_orders` holds (migration 028). */
+const REWARD_ADDRESS_ERRORS: Record<string, string> = {
+  name: `Enter the name to post the package to, up to ${MAX_ADDRESS_FIELD} characters`,
+  line1: `Enter the street address, up to ${MAX_ADDRESS_FIELD} characters`,
+  line2: `The second address line holds up to ${MAX_ADDRESS_FIELD} characters`,
+  city: `Enter the town or city, up to ${MAX_ADDRESS_FIELD} characters`,
+  postalCode: `Enter the postcode, up to ${MAX_ADDRESS_FIELD} characters`,
+  country: 'Enter the country as its two-letter ISO code, such as CZ or DE',
+};
+
 /**
  * The merchandise package a finished learning path earns: a t-shirt, a mug and
  * a sticker set.
  *
  * Completion is the server's own reading of the progress rows the graders
- * wrote — `path_is_complete` counts them against the module count this
- * deployment ships — so a client cannot claim a package for a path it did not
+ * wrote — `path_is_complete` counts the completed modules of the enrollment
+ * in the curriculum version this deployment ships against that version's
+ * module count — so a client cannot claim a package for a path it did not
  * finish. The claim is keyed by (learner, path), which is what makes it
  * one-time: completing twice, or two devices reporting the same completion,
  * grants once and the second call reports the first order.
@@ -1155,15 +1168,26 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
   const pathId = typeof req.query.pathId === 'string' ? req.query.pathId : String((req.body as { pathId?: unknown })?.pathId ?? '');
   if (!isLearningPathId(pathId)) return jsonError(res, 400, 'bad_request', 'Unknown path');
   const inventory = inventoryFor(pathId);
-  if (!inventory) return jsonError(res, 404, 'not_found', 'Unknown path');
+  const path = pathById(pathId);
+  if (!inventory || !path) return jsonError(res, 404, 'not_found', 'Unknown path');
 
   const missing = (error: { message?: string } | null) =>
     /does not exist|schema cache/i.test(error?.message ?? '');
 
+  // Every module finished within the enrollment of the curriculum version this
+  // deployment publishes, which `path_is_complete` checks from migration 054.
+  // A database without 054 has neither routine's version parameter, so the
+  // call is made again without it (one enrollment of any version).
+  const atVersion = async (name: 'path_is_complete' | 'claim_path_reward', params: Record<string, unknown>) => {
+    const first = await withTimeout(supabase.rpc(name, { ...params, p_curriculum_version: path.version }));
+    if (!first.error || !isRpcMissing(first.error)) return first;
+    return withTimeout(supabase.rpc(name, params));
+  };
+
   if (req.method === 'GET') {
     const [claim, complete] = await Promise.all([
       withTimeout(supabase.from('path_reward_claims').select('order_id,claimed_at').eq('user_id', userId).eq('path_id', pathId).maybeSingle()),
-      withTimeout(supabase.rpc('path_is_complete', { p_user_id: userId, p_path_id: pathId, p_modules: inventory.modules })),
+      atVersion('path_is_complete', { p_user_id: userId, p_path_id: pathId, p_modules: inventory.modules }),
     ]);
     if (missing(claim.error) || missing(complete.error)) {
       return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-035.sql to enable path rewards');
@@ -1183,25 +1207,28 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
   }
 
   const body = (req.body || {}) as Record<string, unknown>;
-  const text = (value: unknown, max: number): string =>
-    (typeof value === 'string' ? value.trim() : '').slice(0, max);
+  // Checked here, the same way a shop order is, and refused rather than cut to
+  // fit: a truncated street or a made-up country is a parcel that goes nowhere.
+  const shirt = typeof body.shirt === 'string' ? body.shirt.trim().toUpperCase() : '';
+  if (!(SHIRT_SIZES as readonly string[]).includes(shirt)) return jsonError(res, 400, 'bad_request', 'Pick a shirt size');
+  const checked = validateAddress({
+    name: body.name, line1: body.line1, line2: body.line2, city: body.city, postalCode: body.postal, country: body.country,
+  });
+  if (!checked.ok) return jsonError(res, 400, 'invalid_address', REWARD_ADDRESS_ERRORS[checked.field] ?? REWARD_ADDRESS_ERRORS.name);
+  const address = checked.address;
 
-  // The caps are `merch_orders`' own (migration 028): a longer value would
-  // fail its CHECK inside the claim.
-  const claimed = await withTimeout(
-    supabase.rpc('claim_path_reward', {
-      p_user_id: userId,
-      p_path_id: pathId,
-      p_modules: inventory.modules,
-      p_shirt: text(body.shirt, 3).toUpperCase(),
-      p_name: text(body.name, 120),
-      p_line1: text(body.line1, 120),
-      p_line2: text(body.line2, 120) || null,
-      p_city: text(body.city, 80),
-      p_postal: text(body.postal, 24),
-      p_country: text(body.country, 2).toUpperCase(),
-    }),
-  );
+  const claimed = await atVersion('claim_path_reward', {
+    p_user_id: userId,
+    p_path_id: pathId,
+    p_modules: inventory.modules,
+    p_shirt: shirt,
+    p_name: address.name,
+    p_line1: address.line1,
+    p_line2: address.line2 ?? null,
+    p_city: address.city,
+    p_postal: address.postalCode,
+    p_country: address.country,
+  });
   if (claimed.error) {
     if (missing(claimed.error)) {
       return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-035.sql to enable path rewards');

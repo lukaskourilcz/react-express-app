@@ -3702,8 +3702,13 @@ async function main() {
   // Addresses: bounded, and refused when the obviously required parts are
   // missing, before anything is charged.
   assert.equal(validateAddress({}).ok, false);
-  assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'zz' }).ok, true);
+  const lowerCase = validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'cz' });
+  assert.equal(lowerCase.ok && lowerCase.address.country, 'CZ', 'a country code is read in capitals');
   assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'ZZZ' }).ok, false);
+  // Two letters are not enough: the code has to be an assigned ISO 3166-1 one.
+  for (const country of ['ZZ', 'UK', 'EU', 'XK']) {
+    assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country }).ok, false, `${country} is not an ISO 3166-1 code`);
+  }
   assert.equal(validateAddress({ name: 'x'.repeat(200), line1: 'B', city: 'C', postalCode: 'D', country: 'CZ' }).ok, false);
 
   // Tokens follow verified XP only, and the rate is the documented one.

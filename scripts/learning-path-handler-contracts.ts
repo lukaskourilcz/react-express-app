@@ -9,7 +9,9 @@
 //   * a resubmitted write-up keeps its submission, and a submit sends the
 //     module's requirements so the database decides completion
 //   * a preference save that cannot read the saved answers writes nothing
-//   * a path reward: the address caps, a raced second claim, a refused field
+//   * a path reward: the address is checked, not cut to fit, completion is
+//     read for the published curriculum version, a raced second claim, a
+//     refused field
 //   * rate limits are the learner's own, with a class-sized address backstop
 
 import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
@@ -277,7 +279,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     /* ── the path reward ──────────────────────────────────────────────── */
     {
       const claims: Record<string, unknown>[] = [];
-      const claim = { user_id: learner, pathId: 'dsa-foundations', shirt: 'M', name: 'Ann', line1: 'x'.repeat(150), line2: 'y'.repeat(150), city: 'Brno', postal: '60200', country: 'CZ' };
+      const claim = { user_id: learner, pathId: 'dsa-foundations', shirt: ' m ', name: ' Ann ', line1: 'x'.repeat(120), line2: 'y'.repeat(120), city: 'Brno', postal: '60200', country: 'cz' };
       // A second claim that lost the race to the first one's claim row.
       let res = response();
       await handlePathReward(request('POST', `reward-${stamp}`, claim), res as never, fakeSupabase({
@@ -291,10 +293,55 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       if (res.statusCode !== 200 || answer?.granted !== false || answer?.already !== true || answer?.orderId !== 'reward-0123456789abcdef01234567') {
         fail(`a raced second reward claim answers ${res.statusCode} ${JSON.stringify(res.body)}, not the first claim's order`);
       }
-      // `merch_orders` holds 120 characters per address line.
+      // The claim is checked for the curriculum version this deployment
+      // publishes, with the fields trimmed and the codes in capitals.
       const sent = claims[0] ?? {};
-      if (String(sent.p_line1 ?? '').length > 120 || String(sent.p_line2 ?? '').length > 120) {
-        fail(`a reward claim sends address lines of ${String(sent.p_line1 ?? '').length} and ${String(sent.p_line2 ?? '').length} characters; the table holds 120`);
+      if (sent.p_curriculum_version !== dsa.version || sent.p_shirt !== 'M' || sent.p_name !== 'Ann' || sent.p_country !== 'CZ'
+          || String(sent.p_line1).length !== 120) {
+        fail(`a reward claim sends ${JSON.stringify({ ...sent, p_line1: String(sent.p_line1).length, p_line2: String(sent.p_line2).length })}`);
+      }
+
+      // An address the package cannot be posted to is refused with what to
+      // fix, and never cut to fit or sent to the database: a line longer than
+      // merch_orders holds (120), a country that is not an ISO 3166-1 code, a
+      // size the shop does not print.
+      const refusals: Array<[string, Record<string, unknown>, string, RegExp]> = [
+        ['a 121-character street', { line1: 'x'.repeat(121) }, 'invalid_address', /street/],
+        ['a 121-character second line', { line2: 'y'.repeat(121) }, 'invalid_address', /second address line/],
+        ['a 121-character town', { city: 'z'.repeat(121) }, 'invalid_address', /town/],
+        ['a 121-character postcode', { postal: '1'.repeat(121) }, 'invalid_address', /postcode/],
+        ['a missing name', { name: '  ' }, 'invalid_address', /name/],
+        ['the country ZZ', { country: 'ZZ' }, 'invalid_address', /ISO code/],
+        ['the country UK', { country: 'UK' }, 'invalid_address', /ISO code/],
+        ['the country "CZE"', { country: 'CZE' }, 'invalid_address', /ISO code/],
+        ['the shirt size XXLARGE', { shirt: 'XXLARGE' }, 'bad_request', /shirt size/],
+      ];
+      for (const [label, change, expected, message] of refusals) {
+        const called: string[] = [];
+        res = response();
+        await handlePathReward(request('POST', `reward-${stamp}`, { ...claim, ...change }), res as never, fakeSupabase({
+          rpc: (name) => { called.push(name); return { data: [{ granted: true, reward_order_id: 'reward-x', already: false }] }; },
+        }));
+        const error = (res.body as { error?: { code?: string; message?: string } } | undefined)?.error;
+        if (res.statusCode !== 400 || error?.code !== expected || !message.test(error?.message ?? '') || called.length > 0) {
+          fail(`a reward claim with ${label} answers ${res.statusCode} ${JSON.stringify(res.body)} after ${called.length} database calls, not 400 ${expected}`);
+        }
+      }
+
+      // Before migration 054 neither routine takes the version: the call is
+      // made again without it.
+      const tried: Record<string, unknown>[] = [];
+      res = response();
+      await handlePathReward(request('GET', `reward-${stamp}`, { user_id: learner }, { query: { pathId: 'dsa-foundations' } }), res as never, fakeSupabase({
+        rpc: (_name, params) => {
+          tried.push(params);
+          return 'p_curriculum_version' in params
+            ? { error: { code: 'PGRST202', message: 'Could not find the function public.path_is_complete(p_curriculum_version, p_modules, p_path_id, p_user_id) in the schema cache' } }
+            : { data: true };
+        },
+      }));
+      if (res.statusCode !== 200 || (res.body as { eligible?: boolean }).eligible !== true || tried.length !== 2 || tried[0].p_curriculum_version !== dsa.version) {
+        fail(`a reward read before migration 054 answers ${res.statusCode} ${JSON.stringify(res.body)} after ${tried.length} calls`);
       }
       // A field the table's CHECK refuses is the learner's address, not a 500.
       res = response();
