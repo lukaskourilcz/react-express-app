@@ -166,7 +166,7 @@ import {
   isOpenTo,
 } from '../shared/tiers';
 import { EVOLVING_CHALLENGES } from '../shared/evolving';
-import { techniqueGroup } from '../shared/coding-catalog';
+import { techniqueGroup, CODING_SECTION_TRACKS } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError } from '../lib/http';
@@ -561,6 +561,9 @@ async function tierContracts() {
     'lib/learning-paths/handlers.ts', 'api/quiz/roadmap.ts',
     // Redeeming coins for shipped merchandise is Premium only (#227).
     'lib/rewards/handlers.ts',
+    // A challenge run and a skip's next suggestion offer only what the plan
+    // opens, so a free run never stops at a Premium challenge's 402.
+    'lib/coding/practice-handlers.ts',
   ]);
   const serverFiles = [...apiFiles(join(process.cwd(), 'api')), ...apiFiles(join(process.cwd(), 'lib'))]
     .map((path) => path.slice(process.cwd().length + 1));
@@ -3421,7 +3424,7 @@ async function main() {
   // trims that set; it never reaches past the tier gate, and a shuffled run
   // is a permutation of the sequential one.
   {
-    const base = { minutes: 20, topic: null, passed: new Set<string>(), due: new Set<string>() };
+    const base = { minutes: 20, topic: null, plan: 'free' as const, passed: new Set<string>(), due: new Set<string>() };
     const sequential = buildQueue({ ...base, count: 5, order: 'sequential' });
     assert.equal(sequential.length, 5, 'a run sized by count holds that many challenges');
     assert.deepEqual(buildQueue({ ...base, count: 5, order: 'sequential' }), sequential, 'sequential runs are deterministic');
@@ -3440,6 +3443,14 @@ async function main() {
     }
     assert.equal(buildQueue({ ...base, count: 200, order: 'sequential' }).length, 20, 'a count is capped');
     assert.ok(buildQueue({ ...base, order: 'sequential' }).length >= 1, 'a run sized by minutes still offers something');
+    // The plan is a gate too: a free account's run holds only what the free
+    // plan opens, or the run stops at the first Premium challenge with a 402.
+    for (const topic of [null, ...CODING_SECTION_TRACKS]) {
+      const free = buildQueue({ ...base, count: 10, topic, order: 'sequential' });
+      assert.ok(free.length > 0 && free.every(isFreeCodingTask), `a free ${topic ?? 'mixed'} run holds only free challenges: ${free.filter((id) => !isFreeCodingTask(id)).join(', ')}`);
+    }
+    const premiumRun = buildQueue({ ...base, plan: 'premium', count: 10, topic: 'algorithms', order: 'sequential' });
+    assert.ok(premiumRun.some((id) => !isFreeCodingTask(id)), 'Premium opens the rest of the catalogue to a run');
 
     const now = Date.parse('2026-09-18T12:00:00Z');
     assert.deepEqual(parseScheduledFor(undefined, now), { at: null }, 'no moment means now');

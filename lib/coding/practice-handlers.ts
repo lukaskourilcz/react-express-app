@@ -20,8 +20,10 @@ import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } fr
 import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
+import { resolveTier, serverContentIndex } from '../access';
 import { CODING_SUMMARIES } from './active';
 import { evolvingStage } from '../../shared/evolving';
+import { codingContent, isOpenTo, type Tier } from '../../shared/tiers';
 import { isCodingSectionTrack, isCodingTaskId, tierUnlocked, type CodingTaskSummary } from '../../shared/coding-catalog';
 import {
   isPracticeOrder,
@@ -48,6 +50,12 @@ const notAvailable = (res: VercelResponse) =>
   jsonError(res, 404, 'not_available', 'Coding practice is not part of this product');
 const migrationRequired = (res: VercelResponse, migration = '027') =>
   jsonError(res, 503, 'migration_required', `Practice migration ${migration} is not installed`);
+
+/** Whether the learner's plan opens a task: Premium opens the catalogue, the
+ * free plan its free set. A task already passed stays open for review on any
+ * plan, as it does everywhere else. */
+const planOpens = (tier: Tier, passed: ReadonlySet<string>, taskId: string): boolean =>
+  passed.has(taskId) || isOpenTo(tier, codingContent(taskId), serverContentIndex());
 
 /** Ids are opaque and generated here: a client never names a row. */
 const newId = (): string => randomBytes(24).toString('base64url').slice(0, 32);
@@ -239,13 +247,16 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
 
   // Something else to do, from what the learner can already open. A skip never
   // opens anything: the tier gate is applied here exactly as it is everywhere.
+  // A plan that cannot be read suggests from the free set, which only narrows.
   const passed = await passedTaskIds(supabase, userId);
+  const plan = await resolveTier(userId).catch((): Tier => 'free');
   const next = SECTION_TASKS.find((one) =>
     one.id !== task.id
     && !evolvingStage(one.id)
     && one.track === task.track
     && !passed.has(one.id)
-    && tierUnlocked({ track: one.track, tier: one.tier, progress: { passed }, tasks: SECTION_TASKS, javascriptLevelsCleared: 0 }),
+    && tierUnlocked({ track: one.track, tier: one.tier, progress: { passed }, tasks: SECTION_TASKS, javascriptLevelsCleared: 0 })
+    && planOpens(plan, passed, one.id),
   ) ?? null;
 
   logEvent({ status: 200, kind: 'skip_recorded', reason: body.reason });
@@ -290,8 +301,10 @@ const toSession = (row: Record<string, unknown>): PracticeSession => {
  * session — then new work: in catalogue order, one challenge after the next,
  * or shuffled when the learner asked for that. Sized by a number of
  * challenges when `count` is given, otherwise by the minutes budget. Every
- * candidate has already passed the tier gate, so the queue can only reorder
- * what was available. The total is an estimate and the response says so.
+ * candidate has already passed both gates — the ladder's tiers and the
+ * learner's plan — so the queue can only reorder what was available: a free
+ * account is never handed a Premium challenge it would be refused mid-run.
+ * The total is an estimate and the response says so.
  *
  * Pure apart from the shuffle, which is injected so the contracts can prove
  * a shuffled run is a permutation of the sequential one.
@@ -301,6 +314,8 @@ export function buildQueue(input: {
   count?: number | null;
   order?: PracticeOrder;
   topic: string | null;
+  /** The learner's plan, resolved once for the whole queue. */
+  plan: Tier;
   passed: Set<string>;
   due: Set<string>;
   shuffle?: <T>(list: T[]) => T[];
@@ -311,7 +326,8 @@ export function buildQueue(input: {
     && tierUnlocked({
       track: task.track, tier: task.tier, progress: { passed: input.passed },
       tasks: SECTION_TASKS, javascriptLevelsCleared: 0,
-    }),
+    })
+    && planOpens(input.plan, input.passed, task.id),
   );
   const review = eligible.filter((task) => input.due.has(task.id));
   const fresh = eligible.filter((task) => !input.due.has(task.id) && !input.passed.has(task.id));
@@ -401,8 +417,14 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
 
     const passed = await passedTaskIds(supabase, userId);
     const due = new Set<string>();
+    let plan: Tier;
+    try {
+      plan = await resolveTier(userId);
+    } catch {
+      return jsonError(res, 503, 'entitlement_unavailable', 'Could not check your plan. Try again in a moment.');
+    }
 
-    const queue = buildQueue({ minutes: minutes ?? 0, count, order, topic, passed, due });
+    const queue = buildQueue({ minutes: minutes ?? 0, count, order, topic, plan, passed, due });
     if (queue.length === 0) {
       return jsonError(res, 409, 'nothing_eligible', 'There is nothing eligible to practise right now');
     }
