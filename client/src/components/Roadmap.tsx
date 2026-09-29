@@ -51,6 +51,7 @@ import {
   getExtraUnlocks,
   topicsFromAssessment,
   type PartRange,
+  type RoadmapProgress,
 } from '../lib/roadmap';
 import { availabilityOf } from '../lib/roadmap';
 import ReferralMoment from './ReferralMoment';
@@ -74,6 +75,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
+import { useInPlan } from '../lib/eligibility';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
@@ -179,6 +181,8 @@ interface PlacedNode {
   /** Premium opens this step and the account holds the free plan: the node reads
    * "Premium", stays focusable and opens the upgrade sheet. */
   premium?: boolean;
+  /** The topic is outside the learner's plan and this step was never passed. */
+  outOfPlan?: boolean;
 }
 
 // Track an element's width so the path can lay itself out responsively. Uses a
@@ -322,6 +326,16 @@ function Roadmap() {
   // fallback landing topic.
   const [subject] = useSubject();
   const TOPICS = topicsForSubject(subject);
+  // The server serves nothing new outside the learner's chosen track (403
+  // not_in_plan), and keeps serving levels already passed whatever the plan
+  // says. The rail lists what the plan holds plus any topic with a passed
+  // level; everything else would only lead to a refusal.
+  const inPlan = useInPlan();
+  const topicVisible = useCallback(
+    (value: RoadmapTopic, p: RoadmapProgress = progress) => inPlan(value) || passedLevelCount(p, value) > 0,
+    [inPlan, progress],
+  );
+  const visibleTopics = useMemo(() => TOPICS.filter((value) => topicVisible(value)), [TOPICS, topicVisible]);
   // An old link to a path that no longer exists. It is answered rather than
   // redirected: the learner asked for something specific and deserves to know
   // where it went, and their history for it is untouched.
@@ -336,10 +350,13 @@ function Roadmap() {
     const saved = fromUrl && (TOPICS as string[]).includes(fromUrl) ? fromUrl : readString(TOPIC_KEY);
     const candidate =
       saved && (TOPICS as string[]).includes(saved) ? (saved as RoadmapTopic) : TOPICS[0];
-    // If the saved topic is locked (fresh user, reset progress, etc.) fall back
-    // to the always-open starter so the page lands somewhere actionable.
-    if (!isTopicUnlocked(getRoadmapProgress(), candidate, new Set(getExtraUnlocks()))) {
-      return TOPICS[0];
+    // If the saved topic is locked (fresh user, reset progress, etc.) or
+    // outside the plan, fall back to the first open topic of the plan so the
+    // page lands somewhere actionable.
+    const stored = getRoadmapProgress();
+    const extra = new Set(getExtraUnlocks());
+    if (!isTopicUnlocked(stored, candidate, extra) || !topicVisible(candidate, stored)) {
+      return TOPICS.find((value) => inPlan(value) && isTopicUnlocked(stored, value, extra)) ?? TOPICS[0];
     }
     return candidate;
   });
@@ -359,6 +376,16 @@ function Roadmap() {
       setPart(1);
     }
   }, [subject]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // The plan arrives with the account (a restored session, a track changed on
+  // another page). A topic it leaves out, with nothing passed in it, is not
+  // one to stay on.
+  useEffect(() => {
+    if (visibleTopics.length > 0 && !visibleTopics.includes(topic)) {
+      setTopic(visibleTopics.find((value) => isTopicUnlocked(progress, value, new Set(extraUnlocks))) ?? visibleTopics[0]);
+      setPart(1);
+    }
+  }, [visibleTopics]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [active, setActive] = useState<Active | null>(null);
   const [playable, setPlayable] = useState<RoadmapPlayable | null>(null);
@@ -380,8 +407,8 @@ function Roadmap() {
   // How many of the subject's paths are still closed — surfaced under the rail
   // so the dimmed pills read as content to earn, not as broken buttons.
   const lockedTopicCount = useMemo(
-    () => TOPICS.filter((value) => !isUnlocked(value)).length,
-    [TOPICS, isUnlocked],
+    () => visibleTopics.filter((value) => !isUnlocked(value)).length,
+    [visibleTopics, isUnlocked],
   );
   // The topic's full (global) level list, split into progression checkpoints.
   const topicStructure = structure?.structure[topic];
@@ -392,7 +419,10 @@ function Roadmap() {
   const availability = useMemo(() => availabilityOf(topicStructure), [topicStructure]);
   const safePart = Math.min(Math.max(part, 1), Math.max(1, ranges.length));
   const topicColor = getCategoryHexColor(topic);
-  const continueLevel = levels.find((meta) => {
+  // A topic outside the plan is on the rail only for the levels already
+  // passed in it: those open for review, the rest stay shut.
+  const topicInPlan = inPlan(topic);
+  const continueLevel = topicInPlan && levels.find((meta) => {
     const owningRange = ranges.find((r) => meta.level >= r.startLevel && meta.level <= r.endLevel);
     return !!owningRange && isPartLevelUnlocked(progress, topic, owningRange, meta.level, availability) && !isLevelPassed(progress, topic, meta.level);
   });
@@ -490,6 +520,10 @@ function Roadmap() {
     a.kind === 'level' ? { kind: 'learn-level', topic, level: a.ref } : { kind: 'learn-part-test', topic, part: a.ref };
   const openOrUpgrade = (a: Active) => {
     const content = stepContent(a);
+    // Outside the plan the server refuses the step before it asks about
+    // Premium, so never offer Premium for it.
+    const passedStep = a.kind === 'level' ? isLevelPassed(progress, topic, a.ref) : isPartTestPassed(progress, topic, a.ref);
+    if (!inPlan(topic) && !passedStep) return;
     if (isBarred(lockOf(content))) openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) });
     else open(a);
   };
@@ -511,6 +545,7 @@ function Roadmap() {
     if (urlTopic && urlTopic !== topic) return;
     const lvl = parseInt(levelRaw, 10);
     if (!Number.isInteger(lvl) || lvl < 1) return;
+    if (!inPlan(topic) && !isLevelPassed(progress, topic, lvl)) return;
     const lvls = structure.structure[topic]?.levels ?? [];
     const range = partRanges(lvls.length).find((r) => lvl >= r.startLevel && lvl <= r.endLevel);
     if (!range) return;
@@ -577,12 +612,13 @@ function Roadmap() {
       if (node.type === 'test') {
         const passed = isPartTestPassed(progress, topic, node.part);
         const unavailable = availability.unavailableCheckpoints?.has(node.part) ?? false;
-        const unlocked = !unavailable && isPartTestUnlocked(progress, topic, node.range, availability);
-        const premium = !passed && !unavailable && isBarred(lockOf({ kind: 'learn-part-test', topic, part: node.part }));
+        const outOfPlan = !topicInPlan && !passed;
+        const unlocked = !unavailable && !outOfPlan && isPartTestUnlocked(progress, topic, node.range, availability);
+        const premium = !passed && !unavailable && !outOfPlan && isBarred(lockOf({ kind: 'learn-part-test', topic, part: node.part }));
         return {
           i, kind: 'test', key: `test-${node.part}`, cx, cy, half: 25,
           accent: CHECKPOINT_GOLD, grad: CHECKPOINT_GRAD, part: node.part, range: node.range,
-          unlocked, passed, isCurrent: unlocked && !passed && !premium, unavailable, premium,
+          unlocked, passed, isCurrent: unlocked && !passed && !premium, unavailable, premium, outOfPlan,
           best: partTestBestPct(progress, topic, node.part),
         };
       }
@@ -591,8 +627,9 @@ function Roadmap() {
       const band = bandForCategory(topic, meta.difficulty);
       const passed = isLevelPassed(progress, topic, meta.level);
       const unavailable = meta.unavailable === true;
-      const unlocked = !unavailable && isPartLevelUnlocked(progress, topic, nodeRange, meta.level, availability);
-      const premium = !passed && !unavailable && isBarred(lockOf({ kind: 'learn-level', topic, level: meta.level }));
+      const outOfPlan = !topicInPlan && !passed;
+      const unlocked = !unavailable && !outOfPlan && isPartLevelUnlocked(progress, topic, nodeRange, meta.level, availability);
+      const premium = !passed && !unavailable && !outOfPlan && isBarred(lockOf({ kind: 'learn-level', topic, level: meta.level }));
       const isCurrent = unlocked && !passed && !premium;
       // Spaced mastery reads the stored level entry (migration-024 fields are
       // additive; older/guest rows without passDays resolve to "cleared").
@@ -601,7 +638,7 @@ function Roadmap() {
         i, kind: 'level', key: `lvl-${meta.level}`, cx, cy, half: isCurrent ? 23 : 20,
         accent: band.solid, grad: band.grad, level: meta,
         displayNum: meta.level,
-        unlocked, passed, isCurrent, unavailable, premium,
+        unlocked, passed, isCurrent, unavailable, premium, outOfPlan,
         best: levelBestPct(progress, topic, meta.level),
         mastery: masteryState(entry),
         due: isDueForReview(entry),
@@ -617,7 +654,7 @@ function Roadmap() {
       return { x1: a.cx, y1: a.cy, x2: b.cx, y2: b.cy, color: done || active ? b.accent : null, active };
     });
     return { width: pathWidth, height, cellW, nodes: placed, segments };
-  }, [pathWidth, levels, ranges, progress, topic, availability, lockOf]);
+  }, [pathWidth, levels, ranges, progress, topic, availability, lockOf, topicInPlan]);
 
   /* ──── skill check view ─────────────────────────────────────────────── */
   if (skillCheckOpen) {
@@ -701,7 +738,7 @@ function Roadmap() {
       {/* Radiogroup semantics (not tabs — there is no tabpanel wiring), so AT
           announces "N of M selected" correctly. */}
       <RadioCardGroup value={topic} onChange={(value) => selectTopic(value as RoadmapTopic)} label={t('roadmap.topicsAria')} orientation="horizontal" className="rm-topic-rail">
-        {TOPICS.map((value, index) => {
+        {visibleTopics.map((value, index) => {
           const unlocked = isUnlocked(value);
           const color = getCategoryHexColor(value);
           const label = t(categoryLabelKey(value));
@@ -742,7 +779,7 @@ function Roadmap() {
       {lockedTopicCount > 0 && (
         <p className="rm-topic-locked-note">
           <LockIcon size={13} />
-          <span>{t('roadmap.topicsLockedCount', { locked: lockedTopicCount, total: TOPICS.length })}</span>
+          <span>{t('roadmap.topicsLockedCount', { locked: lockedTopicCount, total: visibleTopics.length })}</span>
           <span>{t('roadmap.topicsLockedHowTo')}</span>
         </p>
       )}
@@ -866,6 +903,7 @@ function Roadmap() {
                           best={n.best}
                           isCurrent={n.isCurrent}
                           premium={n.premium ?? false}
+                          outOfPlan={n.outOfPlan ?? false}
                           cellW={layout.cellW}
                           onClick={() => openOrUpgrade({ kind: 'test', ref: n.part! })}
                           t={t}
@@ -884,6 +922,7 @@ function Roadmap() {
                           due={n.due ?? false}
                           masteryDays={n.masteryDays ?? 0}
                           premium={n.premium ?? false}
+                          outOfPlan={n.outOfPlan ?? false}
                           cellW={layout.cellW}
                           onClick={() => openOrUpgrade({ kind: 'level', ref: n.level!.level })}
                           t={t}
@@ -954,13 +993,15 @@ function MasteryLegend({ t }: { t: TFn }) {
 /* ──── level node ───────────────────────────────────────────────────────── */
 
 function LevelNode({
-  meta, displayNum, accent, unlocked, unavailable, passed, best, isCurrent, mastery, due, masteryDays, premium, onClick, t, cellW,
+  meta, displayNum, accent, unlocked, unavailable, passed, best, isCurrent, mastery, due, masteryDays, premium, outOfPlan = false, onClick, t, cellW,
 }: {
   meta: RoadmapLevelMeta; displayNum: number; accent: string;
   unlocked: boolean; unavailable: boolean; passed: boolean; best: number; isCurrent: boolean;
   mastery: MasteryState; due: boolean; masteryDays: number;
   /** Premium opens this level: focusable, aria-disabled, "Premium" in text. */
   premium: boolean;
+  /** Outside the learner's plan: shut, with the reason in its hint. */
+  outOfPlan?: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
   if (premium) {
@@ -979,7 +1020,7 @@ function LevelNode({
   // gated by the previous part's test at the part selector, never here. An
   // unavailable level is a different thing from a locked one: nothing the
   // learner does opens it, and the path continues past it.
-  const lockedHint = unavailable ? t('roadmap.unavailableHint') : t('roadmap.lockedHint');
+  const lockedHint = unavailable ? t('roadmap.unavailableHint') : outOfPlan ? t('roadmap.notInPlanHint') : t('roadmap.lockedHint');
   // Spaced mastery: a passed level is "cleared" (amber) until it is mastered
   // (green). Soft fill + strong border/icon mirror the quiz feedback tokens so
   // contrast holds in light and dark; the glyph (check vs star) and the aria
@@ -1059,11 +1100,12 @@ function LevelNode({
 /* ──── part-test (boss) node ────────────────────────────────────────────── */
 
 function PartTestNode({
-  part, range, accent, grad, unlocked, unavailable, passed, best, isCurrent, premium, onClick, t, cellW,
+  part, range, accent, grad, unlocked, unavailable, passed, best, isCurrent, premium, outOfPlan = false, onClick, t, cellW,
 }: {
   part: number; range: PartRange; accent: string; grad: [string, string];
   unlocked: boolean; unavailable: boolean; passed: boolean; best: number; isCurrent: boolean;
   premium: boolean;
+  outOfPlan?: boolean;
   onClick: () => void; t: TFn; cellW: number;
 }) {
   const title = t('roadmap.partTestTitle', { n: part });
@@ -1077,7 +1119,7 @@ function PartTestNode({
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <div className={isCurrent ? 'rm-bob' : undefined}>
-        <Tooltip content={unavailable ? t('roadmap.unavailableHint') : t('roadmap.checkpointLocked', { from: range.startLevel, to: range.endLevel })} placement="above" isEnabled={!unlocked}>
+        <Tooltip content={unavailable ? t('roadmap.unavailableHint') : outOfPlan ? t('roadmap.notInPlanHint') : t('roadmap.checkpointLocked', { from: range.startLevel, to: range.endLevel })} placement="above" isEnabled={!unlocked}>
           <span style={{ display: 'inline-block' }}>
           <button
             type="button"

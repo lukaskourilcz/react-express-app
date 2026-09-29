@@ -27,6 +27,9 @@ import { CategoryGlyph } from './ui/techIcons';
 import { SharkFin } from './SharkFin';
 import { useAuth } from '../lib/auth';
 import { isBarred, useLocks } from '../lib/locks';
+import { useInPlan } from '../lib/eligibility';
+import { openUpgradeSheet } from '../lib/upgradeSheet';
+import { gatedRef } from '../../../shared/tiers';
 import type { RoadmapTopic, RoadmapStructure } from '../types/quiz';
 import './Today.css';
 import './DeepEndScreens.css';
@@ -167,6 +170,8 @@ export default function Today() {
     (topic: RoadmapTopic, level: number) => !isBarred(lockOf({ kind: 'learn-level', topic, level })),
     [lockOf],
   );
+  // The server serves nothing new outside the learner's chosen track.
+  const inPlan = useInPlan();
 
   // buildToday is pure and offline: it reads local roadmap progress + the shared
   // spaced-mastery rules, so the plan renders even when the structure fetch
@@ -179,8 +184,9 @@ export default function Today() {
         availability: availabilityFor(structure, subject),
         extraUnlocks,
         canStart,
+        inPlan,
       }),
-    [progress, subject, extraUnlocks, structure, canStart],
+    [progress, subject, extraUnlocks, structure, canStart, inPlan],
   );
   const done = useMemo(() => doneToday(progress, subject, plan.target), [progress, subject, plan.target]);
 
@@ -251,7 +257,7 @@ export default function Today() {
           </p>
         </>
       ) : !completedToday ? (
-        <EmptyState t={t} />
+        plan.premiumNext ? <PremiumEmptyState item={plan.premiumNext} t={t} /> : <EmptyState t={t} />
       ) : null}
 
       {isAuthenticated && (
@@ -362,6 +368,24 @@ function TodayCard({ item, isStartHere, t }: { item: TodayItem; isStartHere: boo
 }
 
 /* ── nothing queued ───────────────────────────────────────────────────────── */
+
+/** Everything the free plan opens is done and the next level is Premium's:
+ * "a new plan is ready tomorrow" would not be true, so say what opens it. */
+function PremiumEmptyState({ item, t }: { item: TodayItem; t: TFn }) {
+  const content = { kind: 'learn-level', topic: item.topic, level: item.level } as const;
+  return (
+    <section className="today-empty ss-panel">
+      <span className="today-empty__fin" aria-hidden="true"><SharkFin size={30} /></span>
+      <Heading level={2}>{t('today.premiumTitle')}</Heading>
+      <div style={{ marginTop: 4, marginBottom: 18 }}>
+        <Text type="supporting" color="secondary">
+          {t('today.premiumBody', { label: t('today.itemMeta', { topic: t(item.topicLabelKey), level: item.level }) })}
+        </Text>
+      </div>
+      <AxButton variant="primary" label={t('rewards.seePremium')} onClick={() => openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) })} />
+    </section>
+  );
+}
 
 function EmptyState({ t }: { t: TFn }) {
   return (

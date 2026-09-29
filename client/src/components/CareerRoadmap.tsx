@@ -8,7 +8,7 @@
 // SegmentedControl track chooser, ProgressBars and Badges — all logic, hooks and
 // i18n preserved verbatim.
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { VStack } from '@astryxdesign/core/VStack';
@@ -34,7 +34,9 @@ import { roadmapStructureQuery, useRoadmapStructure } from '../lib/queries';
 import { useAuth } from '../lib/auth';
 import { enrollmentsQuery, pathCatalogQuery } from '../lib/learningPaths';
 import { lazyPart, readOnce, settled, useFirstData } from '../lib/routeData';
-import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER } from '../lib/tracks';
+import { useTrack, isTopicInTrack, rankLabelKeyFor, trackLabelKey, trackBlurbKey, TRACK_ORDER, type Track } from '../lib/tracks';
+import { preferredLearningOf, saveLearningPreference } from '../lib/trackPref';
+import { eligibilityKeys } from '../lib/eligibility';
 import { getCategoryHexColor } from '../lib/categories';
 import { useSubject } from '../lib/subjects';
 import type { RoadmapTopic } from '../types/quiz';
@@ -138,6 +140,31 @@ export default function CareerRoadmap() {
   // The chosen track drives this whole page — map, pillars and headline %.
   const [track, setTrack] = useTrack();
   const [subject] = useSubject();
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const [savingTrack, setSavingTrack] = useState(false);
+  const [trackNotice, setTrackNotice] = useState<string | null>(null);
+
+  // Signed in, the track is the plan on the account, the one the server holds
+  // Learn and Today to (a topic outside it answers 403 not_in_plan). Changing
+  // it here changes it there too, or the map would show one track while every
+  // level of it was refused. Signed out, it only chooses what the map shows.
+  const chooseTrack = async (next: Track) => {
+    setTrack(next);
+    setTrackNotice(null);
+    if (!user) return;
+    setSavingTrack(true);
+    const saved = await saveLearningPreference(user.id, {
+      schemaVersion: 1,
+      baseTrack: next,
+      specialization: preferredLearningOf(user)?.specialization ?? null,
+    });
+    if (saved.ok) await queryClient.invalidateQueries({ queryKey: eligibilityKeys.all });
+    setSavingTrack(false);
+    setTrackNotice(saved.ok
+      ? t('profile.pathSaved', { track: t(trackLabelKey(subject, next)), role: '' })
+      : t('paths.picker.saveFailed'));
+  };
   const pillars = useMemo(() => webdevPillars(t), [t]);
 
   const pageTitle = t('roadmapPage.title');
@@ -200,8 +227,10 @@ export default function CareerRoadmap() {
           <div style={{ maxWidth: '100%', overflowX: 'auto' }}>
             <SegmentedControl
               value={track}
-              onChange={(v) => setTrack(v as typeof track)}
+              onChange={(v) => void chooseTrack(v as Track)}
               label={t('careerRoadmap.chooseTrack')}
+              isDisabled={savingTrack}
+              disabledMessage={t('paths.picker.saving')}
             >
               {TRACK_ORDER.map((tk) => (
                 <SegmentedControlItem key={tk} value={tk} label={t(trackLabelKey(subject, tk))} />
@@ -211,6 +240,13 @@ export default function CareerRoadmap() {
           <Text type="supporting" color="secondary" justify="center">
             {t(trackBlurbKey(subject, track))}
           </Text>
+          <div role="status" aria-live="polite">
+            {trackNotice && (
+              <Text type="supporting" size="xsm" color="secondary" justify="center">
+                {trackNotice}
+              </Text>
+            )}
+          </div>
         </VStack>
 
         {/* Where you are now — the headline stat for the chosen track. */}

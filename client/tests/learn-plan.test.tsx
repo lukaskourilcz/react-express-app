@@ -148,6 +148,82 @@ async function mountAt(path: string, page: ReactNode) {
   await screen.findByRole('heading', { level: 1 });
 }
 
+describe('the plan', () => {
+  it('keeps Today to the topics of a signed-in learner’s track', async () => {
+    signInAs(BACKEND);
+    answer();
+    await mountAt('/today', <Today />);
+    expect(await screen.findByText('JavaScript · Level 1')).toBeInTheDocument();
+    expect(screen.queryByText('HTML · Level 1')).toBeNull();
+    expect(screen.queryByText('CSS · Level 1')).toBeNull();
+  });
+
+  it('leaves a visitor’s Today as it was', async () => {
+    answer();
+    await mountAt('/today', <Today />);
+    expect(await screen.findByText('HTML · Level 1')).toBeInTheDocument();
+  });
+
+  it('keeps a review of a level passed outside the track', async () => {
+    signInAs(BACKEND);
+    answer({ progress: { html: { levels: { '1': { passed: true, bestPct: 90, passDays: [DAYS_AGO(2)], mastered: false, lastPassDay: DAYS_AGO(2) } }, checkpoints: {} } } });
+    await mountAt('/today', <Today />);
+    expect(await screen.findByText('HTML · Level 1')).toBeInTheDocument();
+    expect(screen.getByText('Due for review')).toBeInTheDocument();
+    expect(screen.queryByText('HTML · Level 2')).toBeNull();
+  });
+
+  it('lists only the track’s topics on the Learn rail, and a topic with passed levels', async () => {
+    signInAs(BACKEND);
+    answer();
+    await mountAt('/learn', <Roadmap />);
+    expect(await screen.findByRole('radio', { name: /^JavaScript/ })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /^HTML/ })).toBeNull();
+    expect(screen.queryByRole('radio', { name: /^CSS/ })).toBeNull();
+  });
+
+  it('keeps a topic with passed levels on the rail outside the track', async () => {
+    signInAs(BACKEND);
+    answer({ progress: { html: { levels: { '1': MASTERED }, checkpoints: {} } } });
+    await mountAt('/learn', <Roadmap />);
+    expect(await screen.findByRole('radio', { name: /^HTML/ })).toBeInTheDocument();
+    expect(screen.queryByRole('radio', { name: /^CSS/ })).toBeNull();
+  });
+
+  it('lists every topic for a visitor', async () => {
+    answer();
+    await mountAt('/learn', <Roadmap />);
+    expect(await screen.findByRole('radio', { name: /^HTML/ })).toBeInTheDocument();
+  });
+
+  it('draws only the track’s topics in the roadmap tree', async () => {
+    signInAs(BACKEND);
+    answer();
+    const client = new QueryClient();
+    render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><RoadmapTree structure={STRUCTURE} track="fullstack" /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+    expect(screen.getByText('JavaScript')).toBeInTheDocument();
+    expect(screen.queryByText('HTML')).toBeNull();
+  });
+
+  it('saves the /roadmap track to the account when signed in', async () => {
+    signInAs(BACKEND);
+    answer();
+    await mountAt('/roadmap', <CareerRoadmap />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Frontend' }));
+    await waitFor(() => expect(saves.calls).toHaveLength(1));
+    expect(saves.calls[0][0]).toBe('user-1');
+    expect(saves.calls[0][1]).toMatchObject({ baseTrack: 'frontend', specialization: null });
+    expect(await screen.findByText('Saved: Frontend')).toBeInTheDocument();
+  });
+
+  it('only changes the view for a visitor', async () => {
+    answer();
+    await mountAt('/roadmap', <CareerRoadmap />);
+    fireEvent.click(screen.getByRole('radio', { name: 'Backend' }));
+    expect(saves.calls).toHaveLength(0);
+  });
+});
+
 describe('the account’s record', () => {
   it('plans Today from the account, not from an empty browser copy', async () => {
     signInAs(BACKEND);
@@ -218,6 +294,23 @@ describe('the account’s record', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Start placement' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Back to paths' }, { timeout: 3000 }));
     expect(getExtraUnlocks()).toEqual([]);
+  });
+});
+
+describe('Premium on Today', () => {
+  it('says Premium opens the next level when nothing free is left to start', async () => {
+    signInAs(BACKEND);
+    const allPassed = Object.fromEntries(Array.from({ length: 25 }, (_, i) => [String(i + 1), MASTERED]));
+    answer({ progress: { javascript: { levels: allPassed, checkpoints: {} } } });
+    await mountAt('/today', <Today />);
+    expect(await screen.findByText('Premium opens your next level')).toBeInTheDocument();
+    expect(screen.queryByText('Nothing is due today. A new plan is ready tomorrow.')).toBeNull();
+    expect(screen.getByText(/Next on your path is TypeScript · Level 1, which Premium opens/)).toBeInTheDocument();
+    let request: ReturnType<typeof useUpgradeRequest> = null;
+    function Probe() { request = useUpgradeRequest(); return null; }
+    render(<Probe />);
+    fireEvent.click(screen.getByRole('button', { name: 'See what Premium includes' }));
+    expect(request).toMatchObject({ kind: 'learn-level' });
   });
 });
 
