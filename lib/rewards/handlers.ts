@@ -20,7 +20,6 @@ import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
-import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { getGameSettings } from '../settings-store';
 import { requireAdmin } from '../admin-auth';
 import { deploymentSubjectIds } from '../product-scope';
@@ -139,7 +138,6 @@ export async function handleWallet(req: VercelRequest, res: VercelResponse, supa
   // reports one is told nothing was granted, and the ledger keeps the reason
   // for the credits already made.
   if (req.method === 'POST') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const body = (req.body || {}) as { claim?: unknown; platform?: unknown };
     if (body.claim === 'social') {
       res.setHeader('Cache-Control', 'private, no-store');
@@ -343,7 +341,6 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
   }
 
   if (req.method === 'POST') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const settings = await getGameSettings();
     const merch = settings.merch;
     if (!merch.enabled) return jsonError(res, 409, 'shop_disabled', 'The shop is not open');
@@ -430,7 +427,6 @@ export async function handleOrders(req: VercelRequest, res: VercelResponse, supa
 
   // Cancelling: the owner's own order, and only while it can still be stopped.
   if (req.method === 'DELETE') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const orderId = typeof req.query.id === 'string' ? req.query.id : '';
     if (!/^[A-Za-z0-9_-]{16,64}$/.test(orderId)) return jsonError(res, 400, 'bad_request', 'An order is required');
     const subject = walletSubject(req);
@@ -467,7 +463,6 @@ export async function handleCosmetic(req: VercelRequest, res: VercelResponse, su
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
 
   const body = (req.body || {}) as Record<string, unknown>;
   if (body.id !== 'crown') return jsonError(res, 400, 'bad_request', 'Unknown cosmetic');
@@ -529,7 +524,6 @@ export async function handleStreakProtection(req: VercelRequest, res: VercelResp
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
 
   const subject = walletSubject(req);
   if (!subject) return jsonError(res, 400, 'bad_request', 'Unknown subject');

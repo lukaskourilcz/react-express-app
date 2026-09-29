@@ -5,6 +5,7 @@ import {
   withTimeout,
   isRpcMissing,
   requireAuthSub,
+  verifiedCallerId,
   logEvent as emit,
   withRequestContext,
 } from '../../lib/http';
@@ -62,17 +63,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const op = String(req.query.op || '').toLowerCase();
-  // Stripe's signature gates the billing webhook; a burst of retries must not
-  // meet a 429 meant for people.
-  if (
-    req.method !== 'GET' &&
-    op !== 'billing-webhook' &&
-    !(await enforceRateLimit(
-      req,
-      res,
-      op === 'delete-account' ? RATE_LIMITS.accountDelete : RATE_LIMITS.userMutation,
-    ))
-  ) return;
+  if (!(await limitUserWrite(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
   if (op === 'category-stats') return categoryStats(req, res);
   if (op === 'streak') return streak(req, res);
@@ -110,6 +101,30 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op.startsWith('github-')) return handleGithub(op, req, res, supabase);
   if (op.startsWith('friends-')) return handleFriends(op, req, res, supabase);
   return jsonError(res, 404, 'unknown_op', `Unknown user op: ${op}`);
+}
+
+/**
+ * The rate limit every write here takes, in two tiers as play's routes do.
+ * The first token, before the credentials are read, comes from an address
+ * backstop that holds a class behind one NAT: thirty pupils finishing a quiz
+ * in the same minute used to share one person's budget, and the ones past
+ * twenty lost their result. The second is the caller's own, keyed by the
+ * verified account (verified once per request; the op reuses it). A caller
+ * without an account keeps the per-address rate it had before the split.
+ *
+ * Stripe's signature gates the billing webhook, so a burst of retries never
+ * meets a 429 meant for people; a learning-path draft autosave takes its own
+ * two tiers in `handlePathDraft`. Returns false after sending the 429.
+ */
+export async function limitUserWrite(req: VercelRequest, res: VercelResponse, op: string): Promise<boolean> {
+  if (req.method === 'GET' || op === 'billing-webhook' || op === 'learning-path-draft') return true;
+  const deleting = op === 'delete-account';
+  if (!(await enforceRateLimit(req, res, deleting ? RATE_LIMITS.accountDeleteAddress : RATE_LIMITS.userMutationAddress))) return false;
+  const callerId = await verifiedCallerId(req);
+  const perCaller = deleting ? RATE_LIMITS.accountDelete : RATE_LIMITS.userMutation;
+  return callerId
+    ? enforceRateLimit(req, res, perCaller, `user:${callerId}`)
+    : enforceRateLimit(req, res, perCaller);
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
@@ -661,7 +676,6 @@ async function freezes(req: VercelRequest, res: VercelResponse) {
     // empty budget and returns the running window unchanged rather than
     // charging twice, so a double click or two devices cost one protection.
     if (req.method === 'POST') {
-      if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
       const spent = await withTimeout(supabase!.rpc('activate_streak_shield', { p_user_id: userId }));
       if (spent.error) {
         if (isRpcMissing(spent.error)) {

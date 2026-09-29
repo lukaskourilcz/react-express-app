@@ -62,7 +62,12 @@ export const RATE_LIMITS = {
   // rank), so it gets a bucket; the anonymous board is cached and needs none.
   leaderboardPersonal: { key: 'leaderboard_personal', capacity: 30, refillPerSecond: 30 / 60 },
   questionReport: { key: 'question_report', capacity: 3, refillPerSecond: 20 / 3600 },
+  // Every write to `api/user/[op].ts`, in two tiers like play's: an address
+  // backstop that holds a class behind one NAT, then `userMutation` keyed by
+  // the verified account. A caller without an account keeps `userMutation` by
+  // address, the rate it had before the split.
   userMutation: { key: 'user_mutation', capacity: 20, refillPerSecond: 20 / 60 },
+  userMutationAddress: { key: 'user_mutation_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
   flashcardMutation: { key: 'flashcard_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   roadmapMutation: { key: 'roadmap_mutation', capacity: 20, refillPerSecond: 20 / 60 },
   roadmapAnswer: { key: 'roadmap_answer', capacity: 80, refillPerSecond: 80 / 60 },
@@ -102,6 +107,7 @@ export const RATE_LIMITS = {
   // buys an anonymous caller nothing.
   playStateAnonymous: { key: 'play_state_anon', capacity: 60, refillPerSecond: 60 / 60 },
   accountDelete: { key: 'account_delete', capacity: 2, refillPerSecond: 2 / 3600 },
+  accountDeleteAddress: { key: 'account_delete_address', capacity: SHARED_NETWORK_SEATS * 2, refillPerSecond: (SHARED_NETWORK_SEATS * 2) / 3600 },
   aiExplanation: { key: 'ai_explanation', capacity: 3, refillPerSecond: 5 / 3600 },
   codingRun: { key: 'coding_run', capacity: 30, refillPerSecond: 30 / 600 },
   codingDraft: { key: 'coding_draft', capacity: 60, refillPerSecond: 60 / 600 },
@@ -109,11 +115,19 @@ export const RATE_LIMITS = {
   githubConnect: { key: 'github_connect', capacity: 10, refillPerSecond: 10 / 3600 },
   githubSync: { key: 'github_sync', capacity: 6, refillPerSecond: 6 / 3600 },
   // Learning paths: starting an activity is cheap, submitting one runs the
-  // sandbox, and a draft autosave fires while the learner types.
+  // sandbox, and a draft autosave fires while the learner types. These four
+  // are keyed by the verified account (`user:<id>`), because a class works
+  // through one address.
   learningPathStart: { key: 'learning_path_start', capacity: 30, refillPerSecond: 30 / 600 },
   learningPathSubmit: { key: 'learning_path_submit', capacity: 30, refillPerSecond: 30 / 600 },
   learningPathDraft: { key: 'learning_path_draft', capacity: 60, refillPerSecond: 60 / 600 },
   learningPathEnroll: { key: 'learning_path_enroll', capacity: 10, refillPerSecond: 10 / 600 },
+  // Their address backstops, taken before the token is verified: a whole class
+  // behind one NAT at the per-account rate, so only a flood from one address
+  // meets them.
+  learningPathStartAddress: { key: 'learning_path_start_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },
+  learningPathSubmitAddress: { key: 'learning_path_submit_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },
+  learningPathDraftAddress: { key: 'learning_path_draft_address', capacity: SHARED_NETWORK_SEATS * 60, refillPerSecond: (SHARED_NETWORK_SEATS * 60) / 600 },
   // Billing (#221). Checkout, the portal and the success-page lookup are keyed
   // by account (the `identity` argument); the public cancellation page by
   // address. The Stripe webhook has no limit: its signature is the gate.

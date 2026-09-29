@@ -8,14 +8,19 @@
 //   * a submit re-checks the path's switch and a paused enrollment
 //   * a preference save that cannot read the saved answers writes nothing
 //   * a path reward: the address caps, a raced second claim, a refused field
+//   * rate limits are the learner's own, with a class-sized address backstop
 
 import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
 import {
+  handleActivityStart,
   handleActivitySubmit,
+  handleEnrollment,
   handleLearningPreference,
+  handlePathDraft,
   handlePathReward,
 } from '../lib/learning-paths/handlers';
 import { encodeLearningPathSession } from '../lib/quiz-tokens';
+import { RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { LEARNER_PROFILE_META_KEY } from '../shared/learning-paths';
 
 type Fail = (message: string) => void;
@@ -192,6 +197,50 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       if (res.statusCode !== 400 || code(res) !== 'invalid_address') {
         fail(`a reward address the table refuses answers ${res.statusCode} ${code(res)}, not 400 invalid_address`);
       }
+    }
+
+    /* ── rate limits are the learner's own ────────────────────────────── */
+    // A class works through one address. Each learner's budget is their own,
+    // one learner is still bounded, and the address backstop holds the class.
+    type Call = (user: string, address: string) => Promise<number>;
+    const cases: { name: string; per: { capacity: number }; call: Call }[] = [
+      {
+        name: 'start',
+        per: RATE_LIMITS.learningPathStart,
+        call: async (user, address) => { const res = response(); await handleActivityStart(request('POST', address, { user_id: user }), res as never, null); return res.statusCode; },
+      },
+      {
+        name: 'submit',
+        per: RATE_LIMITS.learningPathSubmit,
+        call: async (user, address) => { const res = response(); await handleActivitySubmit(request('POST', address, { user_id: user }), res as never, null); return res.statusCode; },
+      },
+      {
+        name: 'draft',
+        per: RATE_LIMITS.learningPathDraft,
+        call: async (user, address) => { const res = response(); await handlePathDraft(request('PUT', address, { user_id: user }), res as never, fakeSupabase({})); return res.statusCode; },
+      },
+      {
+        name: 'enrollment',
+        per: RATE_LIMITS.learningPathEnroll,
+        call: async (user, address) => { const res = response(); await handleEnrollment(request('POST', address, { user_id: user }), res as never, fakeSupabase({})); return res.statusCode; },
+      },
+    ];
+    for (const one of cases) {
+      // Every seat of a class spends its whole budget from one address.
+      const classroom = `classroom-${one.name}-${stamp}`;
+      let refused = 0;
+      for (let n = 0; n < SHARED_NETWORK_SEATS; n += 1) {
+        for (let call = 0; call < one.per.capacity; call += 1) {
+          if ((await one.call(`user-seat-${one.name}-${stamp}-${n}`, classroom)) === 429) refused += 1;
+        }
+      }
+      if (refused > 0) fail(`${one.name}: ${refused} calls of a class of ${SHARED_NETWORK_SEATS} behind one address met a 429`);
+      // One learner past their own budget is refused; the next one on the same
+      // address is not.
+      const desk = `desk-${one.name}-${stamp}`;
+      for (let call = 0; call < one.per.capacity; call += 1) await one.call(`user-first-${one.name}-${stamp}`, desk);
+      if ((await one.call(`user-first-${one.name}-${stamp}`, desk)) !== 429) fail(`${one.name}: one learner is not bounded by their own budget`);
+      if ((await one.call(`user-second-${one.name}-${stamp}`, desk)) === 429) fail(`${one.name}: one learner's spent budget refused another learner on the same address`);
     }
   });
 }

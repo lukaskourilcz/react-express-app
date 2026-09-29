@@ -194,6 +194,27 @@ export function isRpcMissing(error: { code?: string; message?: string } | null |
   return /could not find the function/i.test(message) || /function .* does not exist/i.test(message);
 }
 
+/** The caller's credentials, verified at most once per request. A route that
+ * keys its rate limit by account verifies the token before the handler it
+ * dispatches to does, and a second `auth.getUser` round trip for the same
+ * token would buy nothing. A refused token is remembered as refused. */
+function verifyOnce(req: VercelRequest): Promise<AuthResult | AuthError> {
+  const header = req.headers.authorization || req.headers.Authorization;
+  return requestMemo(`auth:${typeof header === 'string' ? header : ''}`, () =>
+    requireAuth(req).catch((error: unknown) => {
+      if (error instanceof AuthError) return error;
+      throw error;
+    }));
+}
+
+/** The verified caller's id, or null for a caller without valid credentials.
+ * Sends nothing: for a route that treats a signed-out caller differently
+ * rather than refusing it. */
+export async function verifiedCallerId(req: VercelRequest): Promise<string | null> {
+  const outcome = await verifyOnce(req).catch(() => null);
+  return outcome && !(outcome instanceof AuthError) ? outcome.sub : null;
+}
+
 /**
  * Verify the caller and return the whole verified result (subject id plus the
  * token claims). Use this instead of `requireAuthSub` when the handler also
@@ -205,12 +226,13 @@ export async function requireAuthResult(
   res: VercelResponse,
 ): Promise<AuthResult | null> {
   try {
-    return await requireAuth(req);
-  } catch (err) {
-    if (err instanceof AuthError) {
-      jsonError(res, err.status, err.code, err.message);
+    const outcome = await verifyOnce(req);
+    if (outcome instanceof AuthError) {
+      jsonError(res, outcome.status, outcome.code, outcome.message);
       return null;
     }
+    return outcome;
+  } catch {
     jsonError(res, 500, 'internal_error', 'Auth failed');
     return null;
   }

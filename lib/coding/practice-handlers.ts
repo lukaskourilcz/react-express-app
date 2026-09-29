@@ -17,7 +17,6 @@ import { randomBytes } from 'node:crypto';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
-import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { CODING_SUMMARIES } from './active';
@@ -107,7 +106,6 @@ export async function handleCodingBookmarks(req: VercelRequest, res: VercelRespo
   }
 
   if (req.method === 'PUT') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const body = (req.body || {}) as Partial<CodingBookmarkRequest> & Record<string, unknown>;
 
     if (body.op === 'save') {
@@ -217,7 +215,6 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
 
   const body = (req.body || {}) as Partial<CodingSkipRequest>;
   if (!isCodingTaskId(body.taskId) || !isSkipReason(body.reason)) {
@@ -381,7 +378,6 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
   }
 
   if (req.method === 'POST') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const body = (req.body || {}) as Partial<PracticeSessionStartRequest>;
     const count = Number.isInteger(body.count) && Number(body.count) >= 1 && Number(body.count) <= PRACTICE_MAX_COUNT ? Number(body.count) : null;
     if (body.count !== undefined && count === null) {
@@ -449,7 +445,6 @@ export async function handlePracticeSession(req: VercelRequest, res: VercelRespo
   }
 
   if (req.method === 'PUT') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const body = (req.body || {}) as Partial<PracticeSessionAdvanceRequest>;
     if (typeof body.sessionId !== 'string') return jsonError(res, 400, 'bad_request', 'A session is required');
     if (body.status !== undefined && body.status !== 'finished' && body.status !== 'abandoned' && body.status !== 'active') {

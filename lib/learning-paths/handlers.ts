@@ -336,7 +336,6 @@ export async function handleLearningPreference(req: VercelRequest, res: VercelRe
   }
 
   if (req.method === 'PUT') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
     const body = (req.body || {}) as Partial<LearningPreferenceRequest>;
     if (!isBaseTrack(body.baseTrack)) return jsonError(res, 400, 'bad_request', 'baseTrack must be fullstack, frontend or backend');
     const specialization = body.specialization === null || body.specialization === undefined ? null : body.specialization;
@@ -444,7 +443,7 @@ export async function handleEnrollment(req: VercelRequest, res: VercelResponse, 
   }
 
   if (req.method === 'POST') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathEnroll))) return;
+    if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathEnroll, `user:${userId}`))) return;
     const body = (req.body || {}) as Partial<EnrollmentCreateRequest>;
     if (!isLearningPathId(body.pathId)) return jsonError(res, 400, 'bad_request', 'Unknown learning path');
     const path = pathById(body.pathId);
@@ -546,9 +545,12 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStart))) return;
+  // Two tiers: an address backstop sized for a class behind one NAT, then the
+  // learner's own bucket once the token says who they are.
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStartAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathStart, `user:${userId}`))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');
 
   const body = (req.body || {}) as Partial<StartActivityRequest>;
@@ -774,9 +776,10 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmit))) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmitAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmit, `user:${userId}`))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');
 
   const body = (req.body || {}) as Partial<SubmitActivityRequest>;
@@ -1112,7 +1115,6 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
     res.setHeader('Allow', 'GET, POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.userMutation))) return;
 
   const body = (req.body || {}) as Record<string, unknown>;
   const text = (value: unknown, max: number): string =>
@@ -1173,6 +1175,10 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
 
 export async function handlePathDraft(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!pathsAvailable()) return notAvailable(res);
+  // An autosave fires while the learner types, so a save is kept out of the
+  // shared per-address bucket in `api/user/[op].ts`. Two tiers instead: an
+  // address backstop sized for a class behind one NAT, then the learner's own.
+  if (req.method === 'PUT' && !(await enforceRateLimit(req, res, RATE_LIMITS.learningPathDraftAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');
@@ -1213,7 +1219,7 @@ export async function handlePathDraft(req: VercelRequest, res: VercelResponse, s
   }
 
   if (req.method === 'PUT') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathDraft))) return;
+    if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathDraft, `user:${userId}`))) return;
     const body = (req.body || {}) as Partial<DraftSaveRequest>;
     if (typeof body.enrollmentId !== 'string' || !ID.test(body.enrollmentId)) {
       return jsonError(res, 400, 'bad_request', 'An enrollmentId is required');

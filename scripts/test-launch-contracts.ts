@@ -169,7 +169,8 @@ import { EVOLVING_CHALLENGES } from '../shared/evolving';
 import { techniqueGroup } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
-import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError } from '../lib/http';
+import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
+import { limitUserWrite } from '../api/user/[op]';
 import { handleAdminEntitlements, handleEntitlement, parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
 import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
 import { WAIVER_TEXT } from '../lib/billing/sync';
@@ -744,7 +745,7 @@ function billingContracts() {
   for (const op of ['billing-checkout', 'billing-portal', 'billing-webhook', 'billing-cancel']) {
     assert.match(userOps, new RegExp(`op === '${op}'`), `${op} is a branch of api/user/[op].ts, not a new handler`);
   }
-  assert.match(userOps, /op !== 'billing-webhook' &&\s*!\(await enforceRateLimit/, 'the signed webhook skips the per-address limiter');
+  assert.match(userOps, /if \(req\.method === 'GET' \|\| op === 'billing-webhook' \|\|[^)]*\) return true;/, 'the signed webhook skips the write limiter');
   // Hosted Checkout and Portal only: no Stripe.js, no iframe, the CSP untouched.
   const clientPackage = read('client/package.json');
   assert.doesNotMatch(clientPackage, /stripe/i, 'the browser bundle carries no Stripe library');
@@ -2735,6 +2736,54 @@ async function main() {
       assert.ok(start >= 0 && verified >= 0 && verified < limited && limited < Math.min(...reads),
         `${fn} takes its ${cfg} token after ${verify} and before it reads the database`);
     }
+  }
+
+  // Writes to api/user/[op].ts take the same two tiers. Thirty pupils behind
+  // one school address each post a quiz result in the same minute, and every
+  // one lands: the per-address bucket used to stop the class at twenty, and a
+  // refused result's receipt expires, so the XP was lost.
+  {
+    const stamp = Date.now();
+    const school = `school-${stamp}`;
+    const write = async (op: string, userId: string | null, address = school) => {
+      const res = mockResponse();
+      const req = { method: 'POST', headers: { 'x-forwarded-for': address }, query: { op }, body: userId ? { user_id: userId } : {}, socket: {} };
+      return (await limitUserWrite(req as never, res as never, op)) ? 200 : res.statusCode;
+    };
+    const pupils: number[] = [];
+    for (let n = 0; n < 30; n += 1) pupils.push(await write('stats', `pupil-${stamp}-${n}`));
+    assert.deepEqual(pupils, Array(30).fill(200), 'thirty pupils behind one address each record a result');
+    // One account is still bounded at the rate the address bucket carried.
+    for (let n = 1; n < RATE_LIMITS.userMutation.capacity; n += 1) {
+      assert.equal(await write('stats', `pupil-${stamp}-0`), 200, `pupil 1 writes again, try ${n + 1}`);
+    }
+    assert.equal(await write('stats', `pupil-${stamp}-0`), 429, 'one account is bounded at its own rate');
+    assert.equal(await write('stats', `pupil-${stamp}-1`), 200, 'and that spends nobody else\'s budget');
+    // A caller without an account keeps the per-address rate it had.
+    const lone = `lone-${stamp}`;
+    for (let n = 0; n < RATE_LIMITS.userMutation.capacity; n += 1) assert.equal(await write('payment-webhook', null, lone), 200);
+    assert.equal(await write('payment-webhook', null, lone), 429, 'a caller without an account keeps the per-address rate');
+    // The signed webhook and a path draft autosave are not charged here.
+    assert.equal(await write('billing-webhook', null, lone), 200);
+    assert.equal(await write('learning-path-draft', null, lone), 200);
+    // The address backstop holds a class at the per-account rate.
+    assert.ok(RATE_LIMITS.userMutationAddress.capacity >= SHARED_NETWORK_SEATS * RATE_LIMITS.userMutation.capacity);
+    // The route's limiter and the op's own check verify the token once.
+    const verifications: string[] = [];
+    const seen: (string | null)[] = [];
+    const warn = console.warn;
+    console.warn = (line: unknown) => { if (String(line).includes('requireAuth_dev_fallback')) verifications.push(String(line)); };
+    try {
+      const req = { method: 'POST', headers: {}, query: { op: 'stats' }, body: { user_id: `pupil-${stamp}-once` }, socket: {} };
+      await withRequestContext(req as never, mockResponse() as never, async () => {
+        seen.push(await verifiedCallerId(req as never));
+        seen.push(await requireAuthSub(req as never, mockResponse() as never));
+      });
+    } finally {
+      console.warn = warn;
+    }
+    assert.deepEqual(seen, [`pupil-${stamp}-once`, `pupil-${stamp}-once`], 'the limiter and the op see the same caller');
+    assert.equal(verifications.length, 1, 'one request verifies its credentials once');
   }
 
   const healthRes = mockResponse();
