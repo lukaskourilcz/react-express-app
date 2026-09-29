@@ -2034,11 +2034,11 @@ async function guestChallengeLimitContracts() {
 /** A class behind one school address (review round 3: SEC-1, QUIZ-2, PLAY-3,
  * CODE-8, PROF-7). Each route below charged one person's budget to the whole
  * address, so the pupil past it got 429: a quiz, the due list, the daily
- * challenge, the question of the day, a Challenge batch, placement, a Learn
- * answer, completion or progress sync, a coding task, Submit or reveal, a
- * flashcard. Each now takes a class-sized address bucket, then the caller's
- * own. Run through the real handlers: thirty signed-in pupils behind one
- * address all get through, one pupil hammering is still refused while a
+ * challenge, the question of the day, a Challenge batch or answer, placement,
+ * a Learn answer, completion or progress sync, a coding task, Submit or
+ * reveal, a flashcard. Each now takes a class-sized address bucket, then the
+ * caller's own. Run through the real handlers: thirty signed-in pupils behind
+ * one address all get through, one pupil hammering is still refused while a
  * classmate is not, and guests still share their address's budget. */
 async function classroomLimitContracts() {
   const stamp = Date.now();
@@ -2206,6 +2206,45 @@ async function classroomLimitContracts() {
       assert.equal(tiers[3], 'refill ? `run:${refill.runId}` : undefined', 'a guest refill is charged to its sealed run');
       assert.match(source, /const refill = [^;]*\? decodeChallengeRun\(req\.query\.runToken\) : null;/, 'the run is the one the token seals');
     }
+  }
+
+  // 9. Challenge answers (PLAY-3). Every pupil answers at their own full
+  //    Challenge rate for a minute, through the real grading handler.
+  {
+    const address = school();
+    const perPupil = RATE_LIMITS.challengeSubmitPerUser.capacity;
+    const statuses: Record<number, number> = {};
+    const seats: Array<{ user: string; questions: Array<{ sessionId: string; questionId: string; correctAnswer: number }> }> = [];
+    for (let n = 0; n < PUPILS; n += 1) {
+      const user = `answers-${stamp}-${n}`;
+      const questions: Array<{ sessionId: string; questionId: string; correctAnswer: number }> = [];
+      let runToken = '';
+      while (questions.length < perPupil) {
+        const query: Record<string, string> = { categories: webdev, ...(runToken ? { runToken, exclude: questions.map((q) => q.questionId).join(',') } : {}) };
+        const res = await call({ ...routes.find((one) => one.name === 'a Challenge batch')!, query }, address, user);
+        assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+        const body = res.body as { sessionId: string; runToken: string };
+        runToken = body.runToken;
+        for (const q of decodeSessionEnvelope(body.sessionId)!.questions) questions.push({ sessionId: body.sessionId, ...q });
+      }
+      seats.push({ user, questions: questions.slice(0, perPupil) });
+    }
+    for (let answer = 0; answer < perPupil; answer += 1) {
+      for (const seat of seats) {
+        const q = seat.questions[answer];
+        const res = mockResponse();
+        await submitHandler({
+          method: 'POST',
+          headers: { 'x-forwarded-for': address, authorization: 'Bearer contract' },
+          query: {},
+          body: { sessionId: q.sessionId, answers: { [q.questionId]: q.correctAnswer }, user_id: seat.user },
+          socket: {},
+        } as never, res as never);
+        statuses[res.statusCode] = (statuses[res.statusCode] ?? 0) + 1;
+      }
+    }
+    assert.deepEqual(statuses, { 200: PUPILS * perPupil }, 'every Challenge answer from a class behind one address is graded');
+    assert.equal(RATE_LIMITS.quizSubmit.capacity, SHARED_NETWORK_SEATS * perPupil, 'grading\'s address bucket holds a class answering the Challenge');
   }
 }
 

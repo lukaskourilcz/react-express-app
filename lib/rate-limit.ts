@@ -65,13 +65,15 @@ export const RATE_LIMITS = {
   // Grading and the Challenge have two tiers, like `play` below. The address
   // buckets hold a class behind one NAT: a Challenge sends one submit per
   // question, so a class playing it at once spent the old one-person budget
-  // in seconds. Each caller is then bounded by a bucket of their own: a
+  // in seconds, and grading's address bucket holds every seat answering at
+  // its full Challenge rate (`challengeSubmitPerUser`), the fastest any
+  // caller submits. Each caller is then bounded by a bucket of their own: a
   // signed-in caller's account, or, for a Challenge played without an
   // account, the run id sealed in its session or run token (`run:<runId>`),
   // with the same budget, so a class of guests is not held to one person's
   // rate. Any other caller without an account keeps the address rate these
   // endpoints had before the split.
-  quizSubmit: { key: 'quiz_submit', capacity: SHARED_NETWORK_SEATS * 12, refillPerSecond: (SHARED_NETWORK_SEATS * 12) / 60 },
+  quizSubmit: { key: 'quiz_submit', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 60 },
   quizSubmitPerUser: { key: 'quiz_submit_user', capacity: 12, refillPerSecond: 12 / 60 },
   // One Challenge answer per submit: a quick learner answers a question every
   // few seconds, which the twelve-a-minute quiz budget cut off.
