@@ -103,3 +103,17 @@ The September 15 audit created and tested the dependency snapshot and configured
 both environments on `react-express-app`. No plan or billing settings changed.
 Sandbox execution consumes the project's existing Sandbox allowance; monitor
 usage and concurrency as part of the launch load test.
+
+## Production check
+
+`.github/workflows/grading-monitor.yml` runs `npm run check:live-grading`
+every six hours and on demand. It opens `react-counter` and
+`js-double-numbers` on `https://devshark.app` as a signed-out visitor, submits
+each task's reference solution (the verdict must be `passed`) and a wrong
+solution that compiles (it must be `failed`), and fails the run with the HTTP
+status and the start of the body when either answer differs. A snapshot the
+Sandbox can no longer start, missing credentials or a broken QuickJS worker all
+show up as a failed run. Anonymous submits record nothing. The script retries
+once after a network error or a 429; `LIVE_GRADING_BASE_URL` points it at
+another deployment, and `npm run test:live-grading` runs it against a local
+stub.

@@ -57,8 +57,10 @@ export function fetchGithubConnection(signal?: AbortSignal): Promise<GithubConne
 export function startGithubConnect(): Promise<GithubConnectStartResponse> {
   return apiFetch<GithubConnectStartResponse>(`${USER}?op=github-connect-start`, { method: 'POST', body: '{}' });
 }
-export function finishGithubConnect(installationId: string, state: string): Promise<GithubConnectionResponse> {
-  return apiFetch<GithubConnectionResponse>(`${USER}?op=github-connect-finish`, { method: 'POST', body: JSON.stringify({ installationId, state }) });
+/** `code` is GitHub's one-time user authorization from the install redirect;
+ * the server exchanges it to check the installation is the learner's own. */
+export function finishGithubConnect(installationId: string, state: string, code: string): Promise<GithubConnectionResponse> {
+  return apiFetch<GithubConnectionResponse>(`${USER}?op=github-connect-finish`, { method: 'POST', body: JSON.stringify({ installationId, state, code }) });
 }
 export function chooseGithubRepo(repoFullName: string): Promise<GithubConnectionResponse> {
   return apiFetch<GithubConnectionResponse>(`${USER}?op=github-repo`, { method: 'POST', body: JSON.stringify({ repoFullName }) });

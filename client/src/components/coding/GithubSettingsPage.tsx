@@ -3,18 +3,31 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../../lib/auth';
-import { friendlyError } from '../../lib/api';
+import { ApiError, friendlyError } from '../../lib/api';
 import { useLanguage } from '../../i18n/LanguageContext';
+import type { TranslationKey } from '../../i18n/translations';
 import { codingKeys, finishGithubConnect } from '../../coding/api';
 import { SwimmingFin } from '../SharkFin';
 
-type Phase = { kind: 'working' } | { kind: 'signin' } | { kind: 'error'; message: string } | { kind: 'requested' };
+type Phase = { kind: 'working' } | { kind: 'signin' } | { kind: 'error'; message: string; retry: boolean } | { kind: 'requested' };
+
+/** Refusals that asking again cannot fix: GitHub's code works once, and who
+ * owns or holds an installation does not change on a retry. */
+const REFUSAL_KEYS: Partial<Record<string, TranslationKey>> = {
+  authorization_missing: 'github.callbackAuthorize',
+  authorization_failed: 'github.callbackAuthorize',
+  installation_not_yours: 'github.callbackNotYours',
+  installation_taken: 'github.callbackTaken',
+};
 
 /**
- * `/settings/github` is the GitHub App setup URL. GitHub lands here after the
- * learner installs the app, carrying `installation_id`, `setup_action` and
- * the sealed `state` we issued. The page finishes the connection on the
- * server and returns to the profile, where the garden card shows the result.
+ * `/settings/github` is the GitHub App's callback URL. The app requests user
+ * authorization during installation, so GitHub lands here after the learner
+ * installs and authorizes it, carrying `installation_id`, `setup_action`, the
+ * one-time `code` and the sealed `state` we issued. The page finishes the
+ * connection on the server, which checks through the code that the
+ * installation is the learner's own, and returns to the profile, where the
+ * garden card shows the result.
  */
 export function GithubSettingsPage() {
   const { t } = useLanguage();
@@ -28,27 +41,39 @@ export function GithubSettingsPage() {
   const installationId = params.get('installation_id');
   const state = params.get('state');
   const setupAction = params.get('setup_action');
+  const code = params.get('code');
 
   const finish = useCallback(() => {
-    if (!installationId || !state || inFlight.current) return;
+    if (!installationId || !state || !code || inFlight.current) return;
     inFlight.current = true;
     setPhase({ kind: 'working' });
-    finishGithubConnect(installationId, state)
+    finishGithubConnect(installationId, state, code)
       .then((connection) => {
         queryClient.setQueryData(codingKeys.github(), connection);
         navigate('/profile#github-garden', { replace: true });
       })
-      .catch((error: unknown) => setPhase({ kind: 'error', message: friendlyError(error) }))
+      .catch((error: unknown) => {
+        const refusal = error instanceof ApiError && error.code ? REFUSAL_KEYS[error.code] : undefined;
+        setPhase(refusal ? { kind: 'error', message: t(refusal), retry: false } : { kind: 'error', message: friendlyError(error), retry: true });
+      })
       .finally(() => { inFlight.current = false; });
-  }, [installationId, state, navigate, queryClient]);
+  }, [installationId, state, code, navigate, queryClient, t]);
 
   useEffect(() => {
     if (isLoading) return;
+    // GitHub also sends a learner here after they change the installation's
+    // repositories on GitHub. That visit carries no state and has nothing to
+    // finish; the profile reads the connection as it now stands.
+    if (setupAction === 'update' && !state) {
+      navigate('/profile#github-garden', { replace: true });
+      return;
+    }
     if (!isAuthenticated) return setPhase({ kind: 'signin' });
     if (setupAction === 'request') return setPhase({ kind: 'requested' });
-    if (!installationId || !state) return setPhase({ kind: 'error', message: t('github.callbackMissing') });
+    if (!installationId || !state) return setPhase({ kind: 'error', message: t('github.callbackMissing'), retry: false });
+    if (!code) return setPhase({ kind: 'error', message: t('github.callbackAuthorize'), retry: false });
     finish();
-  }, [finish, installationId, state, setupAction, isAuthenticated, isLoading, t]);
+  }, [finish, installationId, state, code, setupAction, isAuthenticated, isLoading, navigate, t]);
 
   const heading = phase.kind === 'error' ? t('github.callbackFailed')
     : phase.kind === 'signin' ? t('github.callbackSignIn')
@@ -69,7 +94,7 @@ export function GithubSettingsPage() {
       </header>
       <div className="ss-info-actions">
         {phase.kind === 'signin' && <Button variant="primary" label={t('github.signIn')} onClick={() => void signInWithGoogle()} />}
-        {phase.kind === 'error' && installationId && state && <Button variant="primary" label={t('quiz.retry')} onClick={finish} />}
+        {phase.kind === 'error' && phase.retry && <Button variant="primary" label={t('quiz.retry')} onClick={finish} />}
         {phase.kind !== 'working' && <Button variant="secondary" label={t('github.backToProfile')} onClick={() => navigate('/profile', { replace: true })} />}
       </div>
     </article>
