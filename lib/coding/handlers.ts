@@ -521,7 +521,10 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
       userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
     });
   }
-  if (data.firstPass === true && input.verified && evolvingStage(task.id)) await settleMilestones(supabase, userId, 'webdev');
+  // From migration 048 every applied verified pass is also a streak day, which
+  // can reach a Premium streak milestone; an unverified (checklist) pass
+  // settles nothing.
+  if (data.applied === true && input.verdict === 'passed' && input.verified) await settleMilestones(supabase, userId, 'webdev');
   const progress = await loadProgressRow(supabase, userId, task.id);
   return {
     progress,

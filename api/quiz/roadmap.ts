@@ -1282,12 +1282,13 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
         kind: session.roadmapKind!,
         ref: session.ref!,
       });
-      // The last level of a topic is a Premium milestone.
-      if (session.roadmapKind === 'level') await settleMilestones(supabase, userId, session.subject!);
       // A friend's first passed Learn level pays both sides of an invitation
       // once; the routine reads the verified progress itself (#228).
       await creditReferral(supabase, userId, session.subject!);
     }
+    // A completed level or part test is a streak day from migration 048, passed
+    // or not, and the last level of a topic is a Premium milestone.
+    if (applied) await settleMilestones(supabase, userId, session.subject!);
   } else if (!attempt.completed_at) {
     await withTimeout(
       supabase.from('roadmap_attempts').update({ completed_at: new Date().toISOString() }).eq('attempt_id', session.attemptId!),

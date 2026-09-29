@@ -468,7 +468,7 @@ export const en = {
   // Profile
   'profile.loading': 'Loading profile…',
   'profile.redirecting': 'Redirecting…',
-  'profile.shieldAction': 'Protect for 48 h',
+  'profile.shieldAction': 'Protect today and tomorrow',
   'profile.shieldSpending': 'Protecting…',
   'profile.shieldActive': 'Protected · {h} h {m} m left',
   'profile.shieldNone': 'No protection left this month',
@@ -522,6 +522,8 @@ export const en = {
   'profile.days': 'days',
   'profile.daysFew': 'days',
   'profile.streakUnavailable': 'Streak data did not load. Retry below.',
+  // Migration 048: any verified learning counts, not only a quiz.
+  'profile.streakRule': 'A day counts when you finish a quiz, a Learn level or a Challenge run, or pass a coding task.',
   'profile.streakValueUnavailable': 'Unavailable',
   'profile.statsRefreshFailed': 'Latest statistics did not load; showing saved figures.',
   'profile.quizzesCompleted': 'Quizzes completed',
@@ -651,7 +653,10 @@ export const en = {
   'quiz.alreadyGradedTitle': 'These answers were already graded',
   'quiz.alreadyGradedBody': 'A quiz is graded once, and its answers can’t be changed afterwards.',
   'quiz.dailyDoneTitle': 'You’ve played today’s challenge',
-  'quiz.dailyDoneBody': 'Each day’s challenge counts once. A new one starts at 00:00 UTC.',
+  'quiz.dailyDoneBody': 'Each day’s challenge counts once. The next one starts at {time} your time.',
+  'quiz.dailyNext': 'The next one starts at {time} your time.',
+  // Under a signed-in result whose recorded XP is lower than the graded one.
+  'quiz.repeatXp': 'You answered some of these questions earlier today. A question counts once a day, so this quiz earned {xp} XP.',
   'quiz.dailyLeaderboard': 'See today’s leaderboard',
   'quiz.answersLocked': 'Your answers were sent for grading, so they can’t be changed now. Submit again to get your result.',
   'quiz.noQuestions': 'No questions match those settings. Try different categories or a different difficulty.',
@@ -1003,6 +1008,8 @@ export const en = {
   'today.runActive': '{done} of {total} done',
   'today.runStart': 'Start',
   'today.targetLabel': 'Today’s target',
+  // Days are UTC days on the server; {time} is when one ends on the learner's clock.
+  'dayChange.note': 'Days change at {time} your time.',
   'today.progress': '{done}/{target} done',
   'today.targetMet': 'Target reached',
   'today.done': 'Today’s plan is complete',
@@ -1022,7 +1029,7 @@ export const en = {
   'mastery.cleared': 'Cleared',
   'mastery.mastered': 'Mastered',
   'mastery.dueForReview': 'Due for review',
-  'mastery.clearedTooltip': 'Cleared on your first pass. Come back on another day to build mastery.',
+  'mastery.clearedTooltip': 'Cleared on your first pass. Come back on another day to build mastery. Days change at {time} your time.',
   'mastery.masteredTooltip': 'Mastered — passed on {days} different days.',
   'mastery.dueTooltip': 'It’s been a while. A quick review will keep this sharp.',
   'mastery.legendTitle': 'Roadmap key',

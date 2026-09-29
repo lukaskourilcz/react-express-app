@@ -4,7 +4,7 @@
 // after the fact: come back after a missed day and one was quietly used to
 // bridge it. That is still the safety net, but it is invisible, and a learner
 // who knows they will be away tomorrow had no way to say so. The shield is
-// that way: spend one now and the streak survives the next 48 hours.
+// that way: spend one now and today and tomorrow (UTC dates) are covered.
 //
 // `getStreakProtection` is a read and degrades gracefully — it never throws
 // into render, so a signed-out visitor, an offline device or a database that
@@ -61,8 +61,9 @@ export async function getStreakProtection(): Promise<StreakProtection> {
 }
 
 /**
- * Spend one protection to shield the streak for the next 48 hours, and return
- * the refreshed state. Throws on failure — call it from an event handler.
+ * Spend one protection to shield the streak today and tomorrow (UTC dates),
+ * and return the refreshed state. Throws on failure — call it from an event
+ * handler.
  *
  * Spending is the server's decision, not this function's: it refuses when the
  * budget is empty and returns the existing window unchanged when a shield is
@@ -76,17 +77,24 @@ const DAY_MS = 86_400_000;
 const SHIELD_MS = 48 * 3_600_000;
 const utcDay = (ms: number): number => Math.floor(ms / DAY_MS);
 
+/** The UTC day a shield was raised: 48 hours before its end. Right for a
+ * shield stored as "raised + 48 h" (before migration 048) and for one that
+ * ends at 00:00 UTC the day after tomorrow (from 048). */
+const shieldRaisedDay = (shieldUntil: number): number => utcDay(shieldUntil - SHIELD_MS);
+
 /**
  * The streak as it stands today: the recorded count while the streak is still
  * alive, 0 once it has ended.
  *
- * This is the rule the server applies when the learner comes back
- * (record_verified_quiz_result_v2, migration 040): a day inside the shield's
- * window was paid for in advance; each other day missed between the last
- * active day and today needs a protection; more than two missed days, or more
- * than the protections left this month, end the streak. `protection` is the
- * state `getStreakProtection` read. Without it only today and yesterday keep
- * a streak alive. Days are UTC days, as on the server.
+ * This is the rule the server applies when the learner comes back to any
+ * verified learning (advance_verified_streak, migration 048): the UTC date a
+ * shield was raised and the next one were paid for in advance; each other day
+ * missed between the last learning day and today needs a protection; more
+ * than two missed days, or more than the protections left this month, end the
+ * streak. `last_quiz_date` is that last learning day, whatever the learning
+ * was. `protection` is the state `getStreakProtection` read. Without it only
+ * today and yesterday keep a streak alive. Days are UTC days, as on the
+ * server.
  */
 export function liveStreak(
   stats: { current_streak: number; last_quiz_date: string | null } | null,
@@ -101,8 +109,8 @@ export function liveStreak(
   if (today - lastDay <= 1) return stats.current_streak;
 
   const until = protection?.shieldUntil ? Date.parse(protection.shieldUntil) : Number.NaN;
-  const shielded = (day: number) =>
-    Number.isFinite(until) && day >= utcDay(until - SHIELD_MS) && day <= utcDay(until);
+  const raised = Number.isFinite(until) ? shieldRaisedDay(until) : Number.NaN;
+  const shielded = (day: number) => Number.isFinite(raised) && day >= raised && day <= raised + 1;
   let missed = 0;
   for (let day = lastDay + 1; day < today && missed <= 2; day++) {
     if (!shielded(day)) missed++;
@@ -113,12 +121,15 @@ export function liveStreak(
 
 /** Whole hours and minutes left on a shield, or null once it has expired.
  * Deliberately not live: it is read on load and left alone, because a ticking
- * clock on a two-day window is decoration that costs a render a second. */
+ * clock on a window of up to two days is decoration that costs a render a
+ * second. */
 export function shieldRemaining(shieldUntil: string | null, now = Date.now()): { hours: number; minutes: number } | null {
   if (!shieldUntil) return null;
   const until = Date.parse(shieldUntil);
   if (!Number.isFinite(until)) return null;
-  const ms = until - now;
+  // Covered until the day after the raise date ends (UTC). A shield raised
+  // before migration 048 is stored as raised + 48 h and can run past that.
+  const ms = Math.min(until, (shieldRaisedDay(until) + 2) * DAY_MS) - now;
   if (ms <= 0) return null;
   return { hours: Math.floor(ms / 3_600_000), minutes: Math.floor((ms % 3_600_000) / 60_000) };
 }

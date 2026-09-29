@@ -1,6 +1,7 @@
 import { useCallback, useMemo, type ReactNode } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
+import { DayChangeNote } from './DayChangeNote';
 import { Link } from 'react-router-dom';
 import { Heading } from '@astryxdesign/core/Heading';
 import { Text } from '@astryxdesign/core/Text';
@@ -307,6 +308,7 @@ function ProgressPanel({ done, target, t }: { done: number; target: number; t: T
       >
         <div className="today-progress__fill" style={{ width: `${pct}%` }} />
       </div>
+      <div className="today-progress__note"><DayChangeNote /></div>
     </section>
   );
 }

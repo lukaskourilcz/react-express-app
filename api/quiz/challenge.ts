@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { creditVerifiedXp } from '../../lib/rewards/handlers';
+import { settleMilestones } from '../../lib/rewards/coins';
 import {
   secureShuffle,
   weightedSample,
@@ -314,6 +315,9 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   // nothing, and a wallet that cannot be reached never fails the learning.
   if (data === true) {
     await creditVerifiedXp(supabase, { userId: auth.sub, awardId: `challenge:${run.runId}`, subject: run.subject, xp });
+    // From migration 048 an awarded run is a streak day, so a Premium streak
+    // milestone may have just been reached. Idempotent; a failure costs nothing.
+    await settleMilestones(supabase, auth.sub, run.subject);
   }
   return res.json({ ok: true, awarded: data === true, score, xp });
 }

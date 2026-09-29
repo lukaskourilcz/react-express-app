@@ -10,6 +10,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { queryClient } from '../src/lib/queryClient';
 import { DEFAULT_CONFIG } from '../src/lib/gameConfig';
 import { server } from './mocks/server';
+import { localDayChangeTime } from '../src/lib/utcDay';
 
 // Each test renders the whole quiz and walks through it.
 vi.setConfig({ testTimeout: 30_000 });
@@ -159,6 +160,27 @@ describe('the daily challenge', () => {
     expect(screen.queryByText('Question d1?')).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /see today’s leaderboard/i }));
     expect(await screen.findByTestId('location')).toHaveTextContent('/leaderboard?tab=today');
+  });
+
+  it('says when the next one starts on the learner’s own clock', async () => {
+    signIn();
+    server.use(http.get('*/api/quiz/daily', () => HttpResponse.json({ date: '2026-09-29', sessionId: sessionFor('daily'), questions: [Q('d1')], completed: true })));
+    renderQuiz();
+    fireEvent.click(await screen.findByRole('button', { name: /today’s challenge/i }));
+    expect(await screen.findByText(`Each day’s challenge counts once. The next one starts at ${localDayChangeTime()} your time.`)).toBeInTheDocument();
+  });
+
+  it('says the same under a finished challenge', async () => {
+    server.use(
+      http.get('*/api/quiz/daily', () => HttpResponse.json({ date: '2026-09-29', sessionId: sessionFor('daily'), questions: [Q('d1')] })),
+      http.post('*/api/quiz/submit', () => HttpResponse.json(graded([Q('d1')]))),
+    );
+    renderQuiz();
+    fireEvent.click(await screen.findByRole('button', { name: /today’s challenge/i }));
+    await questionOnScreen();
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    expect(await screen.findByText(`Today’s challenge complete. The next one starts at ${localDayChangeTime()} your time.`)).toBeInTheDocument();
   });
 
   it('links to a leaderboard that opens on today’s board', async () => {
@@ -344,6 +366,34 @@ describe('saving a result to the account', () => {
     fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
     expect(await screen.findByText('This result could not be saved to your account.')).toBeInTheDocument();
     expect(pendingStore()).toEqual({});
+  });
+
+  it('says so when questions answered earlier today earned less XP than the result', async () => {
+    signIn();
+    server.use(
+      http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a'), Q('b')]), resultReceipt: 'repeat-receipt' })),
+      // The routine counted one of the two questions: half of the result's 12 XP.
+      http.post('*/api/user/stats', () => HttpResponse.json({ data: null, xp: { quest_xp: 6, quest_xp_by_subject: { webdev: 6 } }, applied: true, questXp: 6 })),
+    );
+    await startQuiz([Q('a'), Q('b')]);
+    answerAll(2);
+    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    expect(await screen.findByText('You answered some of these questions earlier today. A question counts once a day, so this quiz earned 6 XP.')).toBeInTheDocument();
+  });
+
+  it('adds no such note when the account recorded the whole result', async () => {
+    signIn();
+    let saved = 0;
+    server.use(
+      http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a')]), resultReceipt: 'whole-receipt' })),
+      http.post('*/api/user/stats', () => { saved++; return HttpResponse.json({ data: null, xp: { quest_xp: 6, quest_xp_by_subject: { webdev: 6 } }, applied: true, questXp: 6 }); }),
+    );
+    await startQuiz([Q('a')]);
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    await waitFor(() => expect(saved).toBe(1));
+    await act(async () => {});
+    expect(screen.queryByText(/A question counts once a day/)).not.toBeInTheDocument();
   });
 
   it('sends waiting results once signed in, and drops the ones too old to record', async () => {

@@ -42,11 +42,14 @@ export async function createOrUpdateUserStats(
   return data;
 }
 
+/** `questXp` is the XP the account recorded for this result, which from
+ * migration 048 can be less than the graded result's (a question answered
+ * earlier the same UTC day earns none). Absent from an older server. */
 export async function recordQuizResult(
   resultReceipt: string,
   profile: { email?: string; name?: string; picture?: string },
-): Promise<{ data: UserStats | null; applied: boolean }> {
-  const result = await apiFetch<{ data: UserStats | null; applied: boolean }>('/api/user/stats', {
+): Promise<{ data: UserStats | null; applied: boolean; questXp?: number }> {
+  const result = await apiFetch<{ data: UserStats | null; applied: boolean; questXp?: number }>('/api/user/stats', {
     method: 'POST',
     body: JSON.stringify({
       result_receipt: resultReceipt,

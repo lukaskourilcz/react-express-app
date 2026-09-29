@@ -362,6 +362,18 @@ function verifiedProfile(payload: Record<string, unknown>): { name: string | nul
   };
 }
 
+/** The XP record_verified_quiz_result_v2 awarded for an attempt it has just
+ * applied, as migration 048 stores it on the receipt row. Before 048 the
+ * column is missing and the routine awarded the receipt's amount in full, so
+ * that is the answer when the read fails. */
+async function awardedQuestXp(userId: string, attemptId: string, receiptXp: number): Promise<number> {
+  const stored = await withTimeout(
+    supabase!.from('quiz_attempts').select('quest_xp').eq('attempt_id', attemptId).eq('user_id', userId).maybeSingle(),
+  ).catch(() => null);
+  const value = stored && !stored.error ? (stored.data as { quest_xp?: unknown } | null)?.quest_xp : undefined;
+  return typeof value === 'number' && Number.isInteger(value) && value >= 0 ? Math.min(value, receiptXp) : receiptXp;
+}
+
 async function stats(req: VercelRequest, res: VercelResponse) {
   const started = Date.now();
   try {
@@ -438,14 +450,17 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         }
 
         logEvent('stats', { status: 200, op: 'submit', latency_ms: Date.now() - started });
-        // Tokens follow the XP the server just verified, keyed to the attempt
-        // so a replayed submission credits nothing.
-        if (data === true && receipt.questXp > 0) {
+        // The XP the routine awarded: from migration 048 a question answered
+        // earlier the same UTC day earns none, so it can be less than the
+        // receipt's. Tokens follow that amount, keyed to the attempt so a
+        // replayed submission credits nothing.
+        const questXp = data === true ? await awardedQuestXp(user_id, receipt.attemptId, receipt.questXp) : 0;
+        if (questXp > 0) {
           await creditVerifiedXp(supabase!, {
             userId: user_id,
             awardId: `quiz:${receipt.attemptId}`,
             subject: receipt.subject,
-            xp: receipt.questXp,
+            xp: questXp,
           });
         }
         // A verified quiz moves the streak, so a Premium streak milestone may
@@ -456,7 +471,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
           withTimeout(supabase!.from('user_xp').select('quest_xp, quest_xp_by_subject').eq('user_id', user_id).maybeSingle()),
         ]);
         if (row.error || xpRow.error) return jsonError(res, 500, 'db_error', 'Result saved but account progress could not be loaded');
-        return res.json({ data: row.data, xp: xpRow.data, applied: data === true });
+        return res.json({ data: row.data, xp: xpRow.data, applied: data === true, questXp });
       }
 
       const profile = {
@@ -757,7 +772,7 @@ async function badges(req: VercelRequest, res: VercelResponse) {
 // GET  /api/user/[op]?op=freezes — the monthly protection budget and any
 //                                   active shield.
 // POST                            — spend one protection to shield the streak
-//                                   for 48 hours.
+//                                   today and tomorrow (UTC dates).
 //
 // The budget, the spend and the expiry are all the server's. A client can ask
 // for a shield; it cannot grant itself one, cannot choose the window and cannot

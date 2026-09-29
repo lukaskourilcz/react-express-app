@@ -59,6 +59,27 @@ effect limited to the day count of a streak. No leaderboard in this product
 ranks by streak — every one of them ranks by correct answers and accuracy — so a
 protected streak moves nobody up anything.
 
+A streak day is a UTC day with verified learning, not only a quiz
+(`supabase/supabase-schema-048.sql`). `advance_verified_streak` is the one place
+a day is counted, and four routines call it behind the receipts that already
+make them idempotent: `record_verified_quiz_result_v2` (a quiz or daily
+result), `complete_verified_roadmap_attempt` (a Learn level or part test with
+every question answered, passed or not; a level ended by running out of hearts
+is closed by the handler and does not count), `record_coding_verdict` (any
+passing verdict, in the coding section or inside a Learn level) and
+`record_challenge_completion` (a Biggest Shark Challenge run that earned XP).
+A second source the same day adds nothing, and a replayed receipt moves
+nothing. `user_stats.last_quiz_date` keeps its name and means the last UTC day
+with verified learning; a learner with no stats row gets one with zero totals
+on their first learning day. Missed days are bridged first by the shield, then
+by the month's protections. A shield covers exactly two UTC dates, the one it
+was raised on and the next: `activate_streak_shield` ends it at 00:00 UTC the
+day after tomorrow, and every reader takes `shield_until - 48 hours` as the
+raise date, which also holds for a shield stored as "raised + 48 hours" before
+048. The server keeps UTC days; the streak card, Today's target, the daily
+challenge and the cleared-level tooltip say when the day changes on the
+learner's clock (`client/src/lib/utcDay.ts`).
+
 ### Question of the day (#239)
 
 `/daily` and `/daily/<date>` show one public question a day. The track is a
@@ -106,8 +127,15 @@ earlier proof batches. Do not claim the record is cryptographically complete; a
 full fix has to fit an existing typed handler and keep the twelve-function limit. A Learn answer counts only while its level or part test is not yet
 passed, and a question counts at most once per learner and UTC day: a level's
 questions never change and each answer returns the correct option, so a replayed
-level would otherwise add correct answers without limit. Coding passes are not
-answers and are not counted.
+level would otherwise add correct answers without limit. A quiz question
+counts the same way from migration 048: `record_verified_quiz_result_v2` builds
+its category counts (for `user_category_stats` and this board) from the
+outcomes whose question the learner had not answered earlier the same UTC day,
+read from `user_question_history` before the attempt updates it, and scales
+the quiz's XP by that share, `floor(xp × fresh ÷ total)`. The awarded XP is
+kept on the receipt row (`quiz_attempts.quest_xp`) and the stats handler
+credits coins for that amount. `total_quizzes` still counts every quiz.
+Coding passes are not answers and are not counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank.
 Since `supabase/supabase-schema-049.sql` the all-time boards
@@ -138,7 +166,9 @@ within the CDN's minute. The privacy policy says the same under
 `api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
 request with a Bearer token or `me=1` also gets the learner's own line and is
 answered `Cache-Control: private, no-store`. `friend_list` orders friends by
-correct answers and accuracy. No board ranks by XP or by streak.
+correct answers and accuracy, shows each friend's live streak by the rule
+above, and marks a friend active today when their last verified learning day
+is today. No board ranks by XP or by streak.
 
 ## Coding section
 
@@ -722,8 +752,12 @@ production (issue #227, step D8).
   before; a Learn level or part test passed for the first time credits
   `learn:<account>:<topic>:L<n>` (or `P<n>`) at 50 × the level's tier or 300 ×
   the part (`shared/progression.ts`); a coding challenge's first pass credits
-  `coding:<account>:<task>`, the same id its XP now uses. A verified quiz, a
-  first Learn pass and a first evolving stage pass then settle the milestones.
+  `coding:<account>:<task>`, the same id its XP now uses. A quiz's credit is
+  for the XP the routine awarded, which migration 048 can lower below the
+  receipt's. Everything that moves the streak (a verified quiz, a completed
+  Learn level or part test, an applied coding pass, an awarded Challenge run)
+  then settles the milestones, so a streak milestone reached on a Learn or
+  coding day pays at once.
   The first wallet read (`op=wallet` GET) pays the welcome coins, settles the
   month that just ended and the learner's milestones, and returns the rules and
   progress for "How to earn". Before 041 is installed the XP credit falls back
