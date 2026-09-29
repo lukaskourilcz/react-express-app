@@ -15,11 +15,24 @@ afterEach(() => { auth.value = { user: null, isAuthenticated: false, isLoading: 
 const level = (n: number) => ({ level: n, title: `Level ${n}`, difficulty: 1, questionCount: 10 });
 // The map holds its first render until the structure is here (lib/routeData.ts),
 // so it mounts inside an awaited act, as page-holds.test.tsx does.
+const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 async function renderLearn() {
-  server.use(http.get('*/api/quiz/roadmap', () => HttpResponse.json({
-    topics: ['html'],
-    structure: { html: { levels: [level(1), level(2), level(3)], checkpoints: [] } },
-  })));
+  server.use(
+    http.get('*/api/quiz/roadmap', ({ request }) => new URL(request.url).searchParams.get('resource') === 'progress'
+      ? HttpResponse.json({ data: {}, extra: { unlocked: [] } })
+      : HttpResponse.json({
+        topics: ['html'],
+        structure: { html: { levels: [level(1), level(2), level(3)], checkpoints: [] } },
+      })),
+    // A signed-in map syncs its progress and reads the plan.
+    http.put('*/api/quiz/roadmap', () => HttpResponse.json({ ok: true, data: {}, extra: { unlocked: [] } })),
+    http.get('*/api/user/*', ({ request }) => {
+      const op = new URL(request.url).searchParams.get('op');
+      if (op === 'entitlement') return HttpResponse.json(FREE);
+      if (op === 'xp' || request.url.includes('/api/user/xp')) return HttpResponse.json({ data: { quest_xp: 0, by_subject: {} } });
+      return undefined;
+    }),
+  );
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   await act(async () => render(
     <QueryClientProvider client={client}>
@@ -49,6 +62,7 @@ it('says nothing about this device while the session is restored, or to a signed
 it('tells a guest on the quiz result that the progress stays on this device', async () => {
   server.use(
     http.get('*/api/settings', () => HttpResponse.json({})),
+    http.get('*/api/user/xp', () => HttpResponse.json({ data: { quest_xp: 0, by_subject: {} } })),
     http.get('*/api/quiz/questions', () => HttpResponse.json({
       sessionId: 'session-1',
       questions: [{ id: 'q1', tags: [], introduction: '', question: 'Which element makes a link?', options: ['anchor', 'paragraph'], category: 'html', difficulty: 1 }],
