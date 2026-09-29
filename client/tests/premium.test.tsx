@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { apiFetch, friendlyError, isPremiumRequired } from '../src/lib/api';
-import { closeUpgradeSheet, useUpgradeRequest } from '../src/lib/upgradeSheet';
+import { closeUpgradeSheet, openUpgradeSheet, useUpgradeRequest } from '../src/lib/upgradeSheet';
 import { isBarred, useLocks } from '../src/lib/locks';
 import { buildToday } from '../src/lib/today';
 import UpgradeSheet from '../src/components/UpgradeSheet';
@@ -119,14 +119,16 @@ describe('the upgrade sheet', () => {
 
   it('says what Premium includes and what it costs, with VAT, and closes on Not now', async () => {
     server.use(settingsHandler);
-    render(<UpgradeSheet request={{ id: 1, kind: 'learn-level', ref: 'react:13' }} />, { wrapper });
+    const sheet = renderHook(() => useUpgradeRequest());
+    act(() => openUpgradeSheet({ kind: 'learn-level', ref: 'react:13' }));
+    expect(sheet.result.current).toMatchObject({ kind: 'learn-level', ref: 'react:13' });
+    render(<UpgradeSheet request={sheet.result.current!} />, { wrapper });
     expect(screen.getByText('This level is part of Premium.')).toBeInTheDocument();
     // The merchandise line waits for redemption to open (design audit P0.1).
     expect(screen.getAllByRole('listitem')).toHaveLength(5);
     expect(screen.queryByText(/redeem for devShark merchandise/)).not.toBeInTheDocument();
     expect(screen.getByText(/€3\.99 a month or €39\.99 a year, VAT included/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Go Premium' })).toBeInTheDocument();
-    const sheet = renderHook(() => useUpgradeRequest());
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Not now' })); });
     expect(sheet.result.current).toBeNull();
   });
