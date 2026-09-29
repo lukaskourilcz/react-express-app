@@ -104,6 +104,7 @@ import {
 import { arrangePractice, arrangementProblems } from '../shared/interleave';
 import { questions } from '../lib/quiz-data';
 import { LESSON_FIGURES, figuresFor, visibleFigures, validateFigures } from '../shared/lesson-figures';
+import { LEVEL_INTROS } from '../client/src/lib/levelIntros';
 import { FAILURE_CATEGORIES, classifyFailure, failureHint } from '../shared/coding-failure';
 import { RETIRED_TOPIC_IDS, retirementOf } from '../shared/retired-content';
 import { GLOSSARY, termsIn } from '../shared/glossary';
@@ -3532,6 +3533,20 @@ async function main() {
     for (const topic of ['html', 'css', 'javascript', 'react', 'dsa', 'databases', 'general']) {
       assert.ok(topics.has(topic), `no figure covers ${topic}`);
     }
+  }
+
+  // ── level intros ────────────────────────────────────────────────────────
+  // A level opens with the intro at its own index. When a curriculum changed
+  // its levels and the intros stayed, every level after the first change
+  // opened with another level's text (CSS "Flexbox" with the box model), so
+  // each served topic carries exactly one intro per level.
+  for (const topic of SUBJECT_SCOPE_CATALOG.webdev.topics) {
+    assert.ok(isRoadmapTopic(topic), `${topic} is a Learn topic`);
+    assert.equal(
+      LEVEL_INTROS[topic as keyof typeof LEVEL_INTROS]?.length,
+      topicLevelCount(topic),
+      `${topic}: one intro per level`,
+    );
   }
 
   await auditGateContracts();
