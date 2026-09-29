@@ -73,6 +73,9 @@ export default function PathPickerDialog({
   current,
   currentSpecialization,
   currentProfile = null,
+  dsaEnrolled = false,
+  fdeLocked = false,
+  dsaLocked = false,
   onChoose,
   /** Set while the parent is saving, so the dialog cannot be double-submitted. */
   busy = false,
@@ -86,6 +89,13 @@ export default function PathPickerDialog({
   /** The profile already on the account, so an edit starts from the learner's
    * own answers rather than a blank form. */
   currentProfile?: LearnerProfile | null;
+  /** DSA Foundations is running, whatever the profile says: a learner who
+   * started it from its own page sees it chosen, so saving here does not
+   * pause it. */
+  dsaEnrolled?: boolean;
+  /** The plan does not open this path: the option carries the Premium mark. */
+  fdeLocked?: boolean;
+  dsaLocked?: boolean;
   onChoose: (result: PathPickerResult) => void;
   busy?: boolean;
   error?: string | null;
@@ -106,7 +116,7 @@ export default function PathPickerDialog({
     setStep('track');
     setTrack(current);
     setRole(currentSpecialization ?? 'none');
-    setDsa(currentProfile?.skillPaths.includes('dsa-foundations') ?? false);
+    setDsa((currentProfile?.skillPaths.includes('dsa-foundations') ?? false) || dsaEnrolled);
     setGoals(currentProfile?.goals ?? []);
     setExperience(EXPERIENCE_LEVELS.includes(currentProfile?.experience as ExperienceLevel)
       ? (currentProfile!.experience as ExperienceLevel)
@@ -114,7 +124,7 @@ export default function PathPickerDialog({
     setStudyTime(STUDY_TIMES.includes(currentProfile?.studyTime as StudyTime)
       ? (currentProfile!.studyTime as StudyTime)
       : null);
-  }, [open, current, currentSpecialization, currentProfile]);
+  }, [open, current, currentSpecialization, currentProfile, dsaEnrolled]);
 
   const steps: Step[] = [...DEV_STEPS];
   const index = Math.max(0, steps.indexOf(step));
@@ -234,6 +244,7 @@ export default function PathPickerDialog({
                     {option === (currentSpecialization ?? 'none') && (
                       <Badge variant="cyan" label={t('home.pathCurrent')} />
                     )}
+                    {option === 'fde' && fdeLocked && <span className="ss-premium-label">{t('premium.badge')}</span>}
                   </HStack>
                   <Text type="supporting" color="secondary">
                     {t(option === 'none' ? 'paths.picker.noneBlurb' : 'paths.picker.fdeBlurb')}
@@ -252,7 +263,10 @@ export default function PathPickerDialog({
           <label className="lp-check">
             <input type="checkbox" checked={dsa} onChange={(event) => setDsa(event.target.checked)} />
             <span>
-              <Heading level={4}>{t('paths.picker.dsaLabel')}</Heading>
+              <HStack gap={1} align="center">
+                <Heading level={4}>{t('paths.picker.dsaLabel')}</Heading>
+                {dsaLocked && <span className="ss-premium-label">{t('premium.badge')}</span>}
+              </HStack>
               <Text type="supporting" color="secondary">{t('paths.picker.dsaBlurb')}</Text>
             </span>
           </label>

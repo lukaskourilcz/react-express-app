@@ -358,15 +358,24 @@ export function artifactTally(
   return { submitted, total: artifacts.length };
 }
 
-/** The next thing worth doing: the first unmet requirement of the first
- * incomplete module, preferring an activity already in progress. One concrete
- * action, never a list of everything outstanding. */
+/** The next thing worth doing in the first incomplete module: a lesson not
+ * read yet, in the module's own order, and then the first unmet requirement,
+ * preferring an activity already in progress. Lessons never gate a module, so
+ * they are not requirements, but a module teaches before it checks: without
+ * this a new learner is sent to the module check before any lesson. One
+ * concrete action, never a list of everything outstanding. */
 export function nextActivityId(
   manifest: LearningPathManifest,
   states: ReadonlyMap<string, EvidenceState>,
 ): string | null {
   for (const module of manifest.modules) {
     if (module.optional || moduleComplete(module, states)) continue;
+    const unread = module.activities.find((activity) => {
+      if (activity.kind !== 'lesson') return false;
+      const state = states.get(activity.id);
+      return state !== 'self_reviewed' && state !== 'verified_pass';
+    });
+    if (unread) return unread.id;
     const unmet = module.requires.filter(
       (requirement) => !stateSatisfies(requirement.state, states.get(requirement.activityId) ?? 'not_started'),
     );

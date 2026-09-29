@@ -34,6 +34,7 @@ import { nodeTypeScriptChecker } from '../coding/ts-check-node';
 import { codeOutcome } from '../coding/grade';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedCallTest, type MergedCode, type PathCodeSolution } from './types';
 import { solutionFor } from './solutions';
+import { solutionFor as codingSolutionFor } from '../coding/solutions';
 
 /** The share of non-critical weighted criteria a pass needs when the activity
  * does not state its own. Piloted, versioned with the rubric, and the same
@@ -208,6 +209,21 @@ function foldCriteria(
   };
 }
 
+/** Where an activity's hidden assertions live. A path exercise keeps them in
+ * the path's own solutions; a reused coding task keeps them with that task,
+ * and the path must not restate them, so they are read from the coding
+ * solutions. Without this a reused task was graded on its visible tests
+ * alone, and the hidden ones that force the intended method never ran. */
+function hiddenAssertionsFor(activity: MergedActivity): PathCodeSolution | undefined {
+  if (activity.reuseTaskId) {
+    const reused = codingSolutionFor(activity.reuseTaskId);
+    return reused
+      ? { solution: reused.solution, hiddenTests: reused.hiddenTests, hiddenTypeTests: reused.hiddenTypeTests }
+      : undefined;
+  }
+  return solutionFor(activity.id);
+}
+
 /**
  * Runs one code submission. The task's harness is appended *after* the
  * learner's source, so an author-supplied probe — a counted accessor, a
@@ -221,7 +237,7 @@ export async function gradePathCode(
   submitted: string,
   reactRunner?: (input: {suite:string;appSource:string}) => Promise<ReactSuiteOutcome>,
 ): Promise<PathCodeGrade> {
-  const solution: PathCodeSolution | undefined = solutionFor(activity.id);
+  const solution: PathCodeSolution | undefined = hiddenAssertionsFor(activity);
   const visible: MergedCallTest[] = code.tests;
   const hidden: MergedCallTest[] = (solution?.hiddenTests ?? []).map((test) => ({
     call: test.call,
@@ -445,10 +461,12 @@ export function codeFeedback(grade: PathCodeGrade): Localized[] {
       cs: 'Běh narazil na časový limit. Hledej cyklus, který nikdy neskončí, nebo práci, která roste mnohem rychleji než vstup.',
     }];
   }
+  // A syntax or runtime error is the learner's code, so it is recorded as an
+  // attempt that needs revision; only a runner that could not start is not.
   if (grade.code.outcome === 'error' && grade.code.codeError) {
     return [{
-      en: 'The code did not run. Fix the error above and try again; nothing was recorded as a failed attempt.',
-      cs: 'Kód se nespustil. Oprav chybu výše a zkus to znovu; jako neúspěšný pokus se nic nezaznamenalo.',
+      en: 'The code did not run. Fix the error above and try again.',
+      cs: 'Kód se nespustil. Oprav chybu výše a zkus to znovu.',
     }];
   }
   const failed = grade.criteria.filter((criterion) => !criterion.passed);
