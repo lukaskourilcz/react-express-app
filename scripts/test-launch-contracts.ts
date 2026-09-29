@@ -1431,7 +1431,13 @@ async function merchContracts() {
   const handlers = read('lib/rewards/handlers.ts');
   assert.match(handlers, /if \(!item\.variants\.includes\(variant\)\) return null;/, 'a size must be one the item has');
   const fulfilment = handlers.slice(handlers.indexOf('export async function handleFulfilment('));
-  assert.match(fulfilment.slice(0, 200), /if \(!\(await requireAdmin\(req, res\)\)\) return;/, 'op=fulfilment checks the admin first');
+  // The admin bucket, then the admin: a GET skips the route's write limit
+  // (SEC-9), so the gate takes the bucket api/admin takes.
+  assert.match(
+    fulfilment.slice(0, 300),
+    /\{\n  if \(!\(await enforceRateLimit\(req, res, RATE_LIMITS\.admin\)\)\) return;\n  if \(!\(await requireAdmin\(req, res\)\)\) return;/,
+    'op=fulfilment takes the admin bucket, then checks the admin, before anything else',
+  );
   assert.match(fulfilment, /supabase\.rpc\('set_merch_stock'/, 'the cap is written by the 043 routine');
 }
 
