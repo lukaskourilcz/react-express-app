@@ -17,10 +17,23 @@
 --   5. sync_user_badges raised on every call ("badge_id is ambiguous").
 --   6. complete_verified_roadmap_attempt counted a coding task whose solution
 --      was revealed in the same attempt.
+--   7. grant_daily_queue_cards failed with a 500 for the whole day when a pack
+--      held the same card twice (about one pack in five).
+--   8. friend_list showed a friend's stored streak, which only changes on
+--      their next quiz, so a streak that ended weeks ago still showed.
+--   9. record_verified_quiz_result_v2 let a later daily receipt replace the
+--      first daily score on the Today board; the first verified one stands.
+--  10. Stored names that are just the account's email address are cleared:
+--      the client used the email as a fallback name, and the boards are public.
 
 -- ---------------------------------------------------------------------------
 -- 1. Every streak-protection purchase is its own ledger event.
 -- ---------------------------------------------------------------------------
+-- Each purchase gets its own event id, numbered by the purchases already
+-- charged this month (035's ':0'/':1' ids included), and nothing is granted
+-- unless the debit went through. The row lock taken before the ceiling check
+-- serialises one learner's purchases, so two requests cannot pick the same
+-- number, and the ceiling makes a repeated request at two charge nothing.
 CREATE OR REPLACE FUNCTION public.purchase_streak_protection(
   p_user_id TEXT,
   p_subject TEXT,
@@ -35,29 +48,38 @@ DECLARE
   v_row    public.user_streak_freezes%ROWTYPE;
   v_period TEXT := TO_CHAR((NOW() AT TIME ZONE 'UTC')::DATE, 'YYYY-MM');
   v_prefix TEXT;
-  v_n      INTEGER;
+  v_bought INTEGER;
 BEGIN
-  IF p_price IS NULL OR p_price <= 0 THEN RAISE EXCEPTION 'invalid_price'; END IF;
+  IF p_price <= 0 THEN RAISE EXCEPTION 'invalid_price'; END IF;
 
   PERFORM public.refresh_streak_freezes(p_user_id);
   SELECT * INTO v_row FROM public.user_streak_freezes
    WHERE user_id = p_user_id FOR UPDATE;
 
+  -- The ceiling is the point. Two is what everybody gets; buying restores what
+  -- was spent and never exceeds it, so no amount of learning-earned currency
+  -- buys a bigger reserve than a learner who spends nothing has.
   IF COALESCE(v_row.remaining, 0) >= 2 THEN
     RETURN QUERY SELECT FALSE, v_row.period, v_row.remaining, v_row.used, v_row.shield_until;
     RETURN;
   END IF;
 
-  -- The row lock above serialises one account's purchases, so the count is
-  -- exact and the id is new for every purchase (old ':0'/':1' ids included).
+  -- 'streak-protection:<user>:<YYYY-MM>:' then 'n1', 'n2', ... The 'n' keeps
+  -- the new ids clear of 035's ':0' and ':1', which are counted all the same.
   v_prefix := 'streak-protection:' || p_user_id || ':' || v_period || ':';
-  SELECT COUNT(*) INTO v_n
+  SELECT COUNT(*)::INTEGER INTO v_bought
     FROM public.token_ledger l
-   WHERE l.user_id = p_user_id AND l.reference = 'streak-protection'
-     AND left(l.event_id, length(v_prefix)) = v_prefix;
-  IF NOT public.debit_tokens(p_user_id, v_prefix || 'p' || (v_n + 1)::TEXT,
-                             p_subject, p_price, 'purchase', 'streak-protection') THEN
-    RAISE EXCEPTION 'protection_not_charged';
+   WHERE l.user_id = p_user_id
+     AND starts_with(l.event_id, v_prefix);
+
+  -- debit_tokens raises insufficient_tokens itself. FALSE means the event
+  -- was already in the ledger: nothing was charged, so nothing is granted.
+  IF NOT public.debit_tokens(
+    p_user_id, v_prefix || 'n' || (v_bought + 1)::TEXT,
+    p_subject, p_price, 'purchase', 'streak-protection'
+  ) THEN
+    RETURN QUERY SELECT FALSE, v_row.period, v_row.remaining, v_row.used, v_row.shield_until;
+    RETURN;
   END IF;
 
   UPDATE public.user_streak_freezes
@@ -70,6 +92,7 @@ BEGIN
   RETURN QUERY SELECT TRUE, v_row.period, v_row.remaining, v_row.used, v_row.shield_until;
 END;
 $$;
+
 REVOKE ALL ON FUNCTION public.purchase_streak_protection(TEXT, TEXT, INTEGER) FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.purchase_streak_protection(TEXT, TEXT, INTEGER) TO service_role;
 
@@ -361,3 +384,390 @@ REVOKE ALL ON FUNCTION public.complete_verified_roadmap_attempt(TEXT, TEXT, JSON
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.complete_verified_roadmap_attempt(TEXT, TEXT, JSONB)
   TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 7. A pack that repeats a card adds to its count.
+-- ---------------------------------------------------------------------------
+CREATE OR REPLACE FUNCTION public.grant_daily_queue_cards(
+  p_user_id TEXT,
+  p_subject TEXT,
+  p_date DATE,
+  p_card_ids JSONB
+)
+RETURNS TABLE (status TEXT, granted_cards JSONB)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_inserted INTEGER;
+  v_existing JSONB;
+BEGIN
+  IF p_subject NOT IN ('webdev', 'geography', 'math', 'history', 'biology', 'chess', 'poker') OR
+     p_date IS DISTINCT FROM (NOW() AT TIME ZONE 'UTC')::DATE OR
+     jsonb_typeof(p_card_ids) IS DISTINCT FROM 'array' OR
+     jsonb_array_length(p_card_ids) = 0 OR jsonb_array_length(p_card_ids) > 10 THEN
+    RAISE EXCEPTION 'invalid_card_grant';
+  END IF;
+
+  INSERT INTO public.daily_queue_completions (user_id, subject, queue_date, granted_cards)
+  VALUES (p_user_id, p_subject, p_date, p_card_ids)
+  ON CONFLICT (user_id, subject, queue_date) DO NOTHING;
+  GET DIAGNOSTICS v_inserted = ROW_COUNT;
+
+  IF v_inserted = 0 THEN
+    SELECT c.granted_cards INTO v_existing
+      FROM public.daily_queue_completions c
+     WHERE c.user_id = p_user_id AND c.subject = p_subject AND c.queue_date = p_date;
+    RETURN QUERY SELECT 'claimed'::TEXT, COALESCE(v_existing, '[]'::jsonb);
+    RETURN;
+  END IF;
+
+  INSERT INTO public.user_cards (user_id, subject, card_id, count)
+  SELECT p_user_id, p_subject, value, COUNT(*)::INTEGER
+    FROM jsonb_array_elements_text(p_card_ids) AS value
+   WHERE value ~ '^[a-z0-9-]{1,60}$'
+   GROUP BY value
+  ON CONFLICT (user_id, subject, card_id) DO UPDATE SET
+    count = LEAST(100000, public.user_cards.count + EXCLUDED.count);
+
+  RETURN QUERY SELECT 'granted'::TEXT, p_card_ids;
+END;
+$$;
+
+REVOKE ALL ON FUNCTION public.grant_daily_queue_cards(TEXT, TEXT, DATE, JSONB) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.grant_daily_queue_cards(TEXT, TEXT, DATE, JSONB) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 8. A friend's streak as it stands today.
+-- ---------------------------------------------------------------------------
+-- Restated from 040 with one column changed: current_streak is the live
+-- streak, by the rule record_verified_quiz_result_v2 applies on return and the
+-- Profile shows (client/src/lib/streakFreezes.ts liveStreak).
+CREATE OR REPLACE FUNCTION public.friend_list(p_user_id TEXT, p_categories TEXT[])
+RETURNS TABLE (
+  handle          TEXT,
+  picture         TEXT,
+  country         TEXT,
+  crown           BOOLEAN,
+  current_streak  INTEGER,
+  longest_streak  INTEGER,
+  total_correct   INTEGER,
+  total_questions INTEGER,
+  accuracy_pct    INTEGER,
+  active_today    BOOLEAN,
+  since           TIMESTAMPTZ
+)
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = ''
+AS $$
+  WITH mine AS (
+    SELECT CASE WHEN f.user_low = p_user_id THEN f.user_high ELSE f.user_low END AS friend_id,
+           COALESCE(f.responded_at, f.created_at) AS since
+      FROM public.friendships f
+     WHERE f.state = 'accepted'
+       AND p_user_id IN (f.user_low, f.user_high)
+  )
+  SELECT h.handle,
+         s.picture,
+         h.country,
+         EXISTS (
+           SELECT 1 FROM public.cosmetic_entitlements ce
+            WHERE ce.user_id = m.friend_id
+              AND ce.cosmetic_id = 'crown'
+              AND ce.equipped
+         ),
+         (CASE
+            WHEN s.last_quiz_date IS NULL OR COALESCE(s.current_streak, 0) <= 0 THEN 0
+            WHEN s.last_quiz_date >= (NOW() AT TIME ZONE 'UTC')::DATE - 1 THEN s.current_streak
+            WHEN s.last_quiz_date < (NOW() AT TIME ZONE 'UTC')::DATE - 6 THEN 0
+            ELSE (
+              SELECT CASE
+                       WHEN COUNT(*) = 0 THEN s.current_streak
+                       WHEN COUNT(*) <= 2 AND COUNT(*) <= CASE
+                              WHEN fz.period = TO_CHAR((NOW() AT TIME ZONE 'UTC')::DATE, 'YYYY-MM')
+                              THEN COALESCE(fz.remaining, 0)
+                              ELSE 2
+                            END
+                         THEN s.current_streak
+                       ELSE 0
+                     END
+                FROM generate_series(s.last_quiz_date + 1, (NOW() AT TIME ZONE 'UTC')::DATE - 1, INTERVAL '1 day') AS gap(day)
+               WHERE fz.shield_until IS NULL
+                  OR gap.day::DATE < (fz.shield_until - INTERVAL '48 hours')::DATE
+                  OR gap.day::DATE > fz.shield_until::DATE
+            )
+          END)::INT,
+         COALESCE(s.longest_streak, 0)::INT,
+         COALESCE(c.total_correct, 0)::INT,
+         COALESCE(c.total_questions, 0)::INT,
+         CASE WHEN COALESCE(c.total_questions, 0) > 0
+              THEN ROUND(100.0 * c.total_correct / c.total_questions)::INT
+              ELSE 0 END,
+         (s.last_quiz_date = (NOW() AT TIME ZONE 'UTC')::DATE) IS TRUE,
+         m.since
+    FROM mine m
+    JOIN public.user_handles h ON h.user_id = m.friend_id
+    LEFT JOIN public.user_stats s ON s.user_id = m.friend_id
+    LEFT JOIN public.user_streak_freezes fz ON fz.user_id = m.friend_id
+    LEFT JOIN LATERAL (
+      SELECT SUM(k.total_correct)   AS total_correct,
+             SUM(k.total_questions) AS total_questions
+        FROM public.user_category_stats k
+       WHERE k.user_id = m.friend_id
+         AND k.category = ANY(p_categories)
+    ) c ON TRUE
+   ORDER BY COALESCE(c.total_correct, 0) DESC,
+            CASE WHEN COALESCE(c.total_questions, 0) > 0
+                 THEN 100.0 * c.total_correct / c.total_questions
+                 ELSE -1 END DESC,
+            h.handle ASC
+   LIMIT 200;
+$$;
+
+REVOKE ALL ON FUNCTION public.friend_list(TEXT, TEXT[]) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.friend_list(TEXT, TEXT[]) TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 9. The first verified daily result stands.
+-- ---------------------------------------------------------------------------
+-- Restated from 040; only the daily block changes. quiz/submit now ranks only
+-- a learner's fixed attempt of the day, so a second receipt for the same day
+-- can only be one minted before that deploy.
+CREATE OR REPLACE FUNCTION public.record_verified_quiz_result_v2(
+  p_user_id TEXT,
+  p_attempt_id TEXT,
+  p_correct INTEGER,
+  p_total INTEGER,
+  p_breakdown JSONB,
+  p_outcomes JSONB,
+  p_subject TEXT,
+  p_quest_xp INTEGER,
+  p_email TEXT DEFAULT NULL,
+  p_name TEXT DEFAULT NULL,
+  p_picture TEXT DEFAULT NULL,
+  p_daily_date DATE DEFAULT NULL,
+  p_duration_ms INTEGER DEFAULT NULL
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_today DATE := (NOW() AT TIME ZONE 'UTC')::DATE;
+  v_period TEXT := TO_CHAR(v_today, 'YYYY-MM');
+  v_applied INTEGER;
+  rec RECORD;
+  v_prev_streak INTEGER;
+  v_prev_date DATE;
+  v_shield_from DATE;
+  v_shield_to DATE;
+  v_missed INTEGER := 0;
+  v_new_streak INTEGER;
+  v_remaining INTEGER;
+  v_used JSONB;
+BEGIN
+  IF p_user_id IS NULL OR char_length(p_user_id) < 8 OR char_length(p_user_id) > 128 OR
+     p_correct < 0 OR p_total <= 0 OR p_correct > p_total OR p_total > 50 OR
+     p_attempt_id !~ '^[A-Za-z0-9_-]{16,64}$' OR
+     p_subject NOT IN ('webdev', 'geography', 'math', 'history', 'biology', 'chess', 'poker') OR
+     p_quest_xp < 0 OR p_quest_xp > 10000 OR
+     (p_duration_ms IS NOT NULL AND (p_duration_ms < 0 OR p_duration_ms > 86400000)) OR
+     (p_daily_date IS NULL) <> (p_duration_ms IS NULL) THEN
+    RAISE EXCEPTION 'invalid_quiz_result';
+  END IF;
+
+  INSERT INTO public.quiz_attempts (attempt_id, user_id)
+  VALUES (p_attempt_id, p_user_id)
+  ON CONFLICT (attempt_id) DO NOTHING;
+  GET DIAGNOSTICS v_applied = ROW_COUNT;
+  IF v_applied = 0 THEN RETURN FALSE; END IF;
+
+  -- One daily result per user/date/subject: the first verified one. A later
+  -- receipt for the same day neither replaces it on the board nor mutates
+  -- stats and XP. quiz/submit ranks only the learner's stable attempt of the
+  -- day, so a second receipt can only be one minted before that change.
+  IF p_daily_date IS NOT NULL THEN
+    INSERT INTO public.daily_attempts (
+      user_id, challenge_date, subject, correct, total, duration_ms
+    ) VALUES (
+      p_user_id, p_daily_date, p_subject, p_correct, p_total, p_duration_ms
+    )
+    ON CONFLICT (user_id, challenge_date, subject) DO NOTHING;
+    GET DIAGNOSTICS v_applied = ROW_COUNT;
+    IF v_applied = 0 THEN
+      RETURN FALSE;
+    END IF;
+  END IF;
+
+  -- Read the previous streak state under a row lock so the freeze-aware
+  -- computation below cannot race concurrent tabs.
+  SELECT current_streak, last_quiz_date INTO v_prev_streak, v_prev_date
+    FROM public.user_stats
+   WHERE user_id = p_user_id
+   FOR UPDATE;
+
+  IF v_prev_date IS NULL THEN
+    v_new_streak := 1;                       -- first ever activity
+  ELSIF v_prev_date = v_today THEN
+    v_new_streak := COALESCE(v_prev_streak, 1);  -- already active today
+  ELSE
+    -- The learner's own shield, if one was raised. A shield covers the two
+    -- days up to its expiry; days inside that window are already paid for and
+    -- are not missed days.
+    SELECT (shield_until - INTERVAL '48 hours')::DATE, shield_until::DATE
+      INTO v_shield_from, v_shield_to
+      FROM public.user_streak_freezes
+     WHERE user_id = p_user_id AND shield_until IS NOT NULL;
+
+    -- Count the missed days strictly between the last active day and today,
+    -- ignoring any the shield covers.
+    SELECT COUNT(*) INTO v_missed
+      FROM generate_series(v_prev_date + 1, v_today - 1, INTERVAL '1 day') AS gap(day)
+     WHERE v_shield_to IS NULL
+        OR gap.day::DATE < v_shield_from
+        OR gap.day::DATE > v_shield_to;
+
+    IF v_missed = 0 THEN
+      v_new_streak := COALESCE(v_prev_streak, 0) + 1;
+    ELSE
+      -- Try to bridge the gap with the monthly freeze budget. refresh_streak_
+      -- freezes creates/locks the row and resets a stale month before returning
+      -- the live balance.
+      SELECT period, remaining, used INTO v_period, v_remaining, v_used
+        FROM public.refresh_streak_freezes(p_user_id);
+
+      IF v_remaining >= v_missed AND v_missed <= 2 THEN
+        UPDATE public.user_streak_freezes
+           SET remaining = v_remaining - v_missed,
+               used = (
+                 SELECT COALESCE(jsonb_agg(elem), '[]'::jsonb)
+                 FROM (
+                   SELECT elem FROM jsonb_array_elements(v_used) AS elem
+                   UNION ALL
+                   SELECT to_jsonb(TO_CHAR(gap.day, 'YYYY-MM-DD'))
+                     FROM generate_series(v_prev_date + 1, v_today - 1, INTERVAL '1 day') AS gap(day)
+                    WHERE v_shield_to IS NULL
+                       OR gap.day::DATE < v_shield_from
+                       OR gap.day::DATE > v_shield_to
+                   LIMIT 24
+                 ) AS merged
+               ),
+               updated_at = NOW()
+         WHERE user_id = p_user_id;
+        v_new_streak := COALESCE(v_prev_streak, 0) + 1;
+      ELSE
+        v_new_streak := 1;                   -- gap too large: streak restarts
+      END IF;
+    END IF;
+  END IF;
+
+  INSERT INTO public.user_stats (
+    user_id, email, name, picture, total_quizzes, total_correct,
+    total_questions, current_streak, longest_streak, last_quiz_date
+  ) VALUES (
+    p_user_id, p_email, p_name, p_picture, 1, p_correct,
+    p_total, v_new_streak, v_new_streak, v_today
+  )
+  ON CONFLICT (user_id) DO UPDATE SET
+    email = COALESCE(EXCLUDED.email, public.user_stats.email),
+    name = COALESCE(EXCLUDED.name, public.user_stats.name),
+    picture = COALESCE(EXCLUDED.picture, public.user_stats.picture),
+    total_quizzes = public.user_stats.total_quizzes + 1,
+    total_correct = public.user_stats.total_correct + EXCLUDED.total_correct,
+    total_questions = public.user_stats.total_questions + EXCLUDED.total_questions,
+    current_streak = v_new_streak,
+    longest_streak = GREATEST(public.user_stats.longest_streak, v_new_streak),
+    last_quiz_date = v_today,
+    updated_at = NOW();
+
+  IF p_breakdown IS NOT NULL AND jsonb_typeof(p_breakdown) = 'object' THEN
+    FOR rec IN
+      SELECT key AS category,
+             (value->>'correct')::INTEGER AS correct,
+             (value->>'total')::INTEGER AS total
+      FROM jsonb_each(p_breakdown)
+    LOOP
+      IF rec.category !~ '^[a-z0-9-]{1,50}$' OR rec.total <= 0 OR
+         rec.total > 50 OR rec.correct < 0 OR rec.correct > rec.total THEN
+        CONTINUE;
+      END IF;
+      INSERT INTO public.user_category_stats (
+        user_id, category, total_correct, total_questions, updated_at
+      ) VALUES (
+        p_user_id, rec.category, rec.correct, rec.total, NOW()
+      )
+      ON CONFLICT (user_id, category) DO UPDATE SET
+        total_correct = public.user_category_stats.total_correct + EXCLUDED.total_correct,
+        total_questions = public.user_category_stats.total_questions + EXCLUDED.total_questions,
+        updated_at = NOW();
+      -- New in 040: the same batch, dated, for the windowed boards. It sits
+      -- behind the same receipt as the lines above: a replayed attempt and a
+      -- daily retry both returned before reaching this loop.
+      PERFORM public.add_activity_day(p_user_id, v_today, rec.category, rec.correct, rec.total);
+    END LOOP;
+  END IF;
+
+  IF p_outcomes IS NOT NULL AND jsonb_typeof(p_outcomes) = 'array' THEN
+    FOR rec IN
+      SELECT value->>'questionId' AS question_id,
+             value->>'category' AS category,
+             (value->>'isCorrect')::BOOLEAN AS is_correct
+        FROM jsonb_array_elements(p_outcomes)
+       LIMIT 50
+    LOOP
+      IF rec.question_id !~ '^[A-Za-z0-9_-]{1,64}$' OR
+         rec.category !~ '^[a-z0-9-]{1,50}$' THEN
+        CONTINUE;
+      END IF;
+      INSERT INTO public.user_question_history (
+        user_id, question_id, subject, category, times_seen, times_missed,
+        last_seen_at, last_missed_at
+      ) VALUES (
+        p_user_id, rec.question_id, p_subject, rec.category, 1,
+        CASE WHEN rec.is_correct THEN 0 ELSE 1 END,
+        NOW(), CASE WHEN rec.is_correct THEN NULL ELSE NOW() END
+      )
+      ON CONFLICT (user_id, subject, question_id) DO UPDATE SET
+        category = EXCLUDED.category,
+        times_seen = public.user_question_history.times_seen + 1,
+        times_missed = public.user_question_history.times_missed +
+          CASE WHEN rec.is_correct THEN 0 ELSE 1 END,
+        last_seen_at = NOW(),
+        last_missed_at = CASE
+          WHEN rec.is_correct THEN public.user_question_history.last_missed_at
+          ELSE NOW()
+        END;
+    END LOOP;
+  END IF;
+
+  IF p_quest_xp > 0 THEN
+    INSERT INTO public.user_xp (user_id, quest_xp, quest_xp_by_subject)
+    VALUES (p_user_id, p_quest_xp, jsonb_build_object(p_subject, p_quest_xp))
+    ON CONFLICT (user_id) DO UPDATE SET
+      quest_xp = LEAST(100000000, public.user_xp.quest_xp + p_quest_xp),
+      quest_xp_by_subject = jsonb_set(
+        COALESCE(public.user_xp.quest_xp_by_subject, '{}'::jsonb),
+        ARRAY[p_subject],
+        to_jsonb(LEAST(
+          100000000,
+          COALESCE((public.user_xp.quest_xp_by_subject ->> p_subject)::BIGINT, 0) + p_quest_xp
+        )),
+        TRUE
+      ),
+      updated_at = NOW();
+  END IF;
+
+  RETURN TRUE;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.record_verified_quiz_result_v2(TEXT, TEXT, INTEGER, INTEGER, JSONB, JSONB, TEXT, INTEGER, TEXT, TEXT, TEXT, DATE, INTEGER)
+  FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.record_verified_quiz_result_v2(TEXT, TEXT, INTEGER, INTEGER, JSONB, JSONB, TEXT, INTEGER, TEXT, TEXT, TEXT, DATE, INTEGER)
+  TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 10. No email address stands in for a name.
+-- ---------------------------------------------------------------------------
+UPDATE public.user_stats SET name = NULL, updated_at = NOW()
+ WHERE name IS NOT NULL AND email IS NOT NULL AND lower(btrim(name)) = lower(btrim(email));
