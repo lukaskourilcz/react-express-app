@@ -405,15 +405,13 @@ function RowAvatar({ row }: { row: Row }) {
   return <Avatar src={row.picture ?? undefined} name={row.anonymous ? undefined : row.name} size="small" />;
 }
 
-/** The name, and "You" beside it on the learner's own row — unless the name
- *  already is "You", which is what a pinned row without a profile name shows. */
+/** The name, and "You" beside it on the learner's own row, named or not. */
 function Name({ row }: { row: Row }) {
   const t = useT();
-  const you = t('leaderboard.you');
   return (
     <>
       <span className="lb-name">{row.name}</span>
-      {row.isViewer && row.name !== you && <span className="ss-tag">{you}</span>}
+      {row.isViewer && <span className="ss-tag">{t('leaderboard.you')}</span>}
     </>
   );
 }
