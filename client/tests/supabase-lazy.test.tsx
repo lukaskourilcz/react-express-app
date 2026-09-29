@@ -611,7 +611,7 @@ describe('signing out', () => {
     const { current } = await mountAuth();
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
     // supabase-js 2.110 refuses the local sign-out and keeps the session.
-    sb.clients[0].auth.signOut.mockImplementationOnce(async () => ({ error: Object.assign(new Error(failure.message), failure) }));
+    sb.clients[0].auth.signOut.mockImplementationOnce(async () => ({ error: Object.assign(new Error(failure.message), failure) }) as never);
 
     await act(() => current().signOut());
     expect(sb.clients[0].auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
@@ -632,7 +632,7 @@ describe('signing out', () => {
     localStorage.setItem(KEY, JSON.stringify(STORED));
     const { current } = await mountAuth();
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
-    sb.clients[0].auth.signOut.mockImplementationOnce(async () => ({ error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError', status: 0 }) }));
+    sb.clients[0].auth.signOut.mockImplementationOnce(async () => ({ error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError', status: 0 }) }) as never);
     await act(() => expect(current().signOut('global')).rejects.toThrow('Failed to fetch'));
     expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored');
     expect(localStorage.getItem(KEY)).not.toBeNull();

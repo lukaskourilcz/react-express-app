@@ -18,7 +18,7 @@ function holdProgress() {
   server.use(http.get('*/api/quiz/roadmap', ({ request }) => {
     expect(new URL(request.url).searchParams.get('resource')).toBe('progress');
     return new Promise<Response>((resolve) => {
-      waiting.push((body) => resolve(HttpResponse.json(body)));
+      waiting.push((body) => resolve(HttpResponse.json(body as Record<string, unknown>)));
     });
   }));
   return {
