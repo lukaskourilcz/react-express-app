@@ -17,7 +17,9 @@
  *  - a coding task whose solution was revealed in the attempt does not
  *    complete the level;
  *  - a guest's level passes on its questions with its coding marked
- *    unverified, while an account's still waits for a recorded coding pass.
+ *    unverified, while an account's still waits for a recorded coding pass;
+ *  - a part test already passed in a topic outside the learner's plan is
+ *    served under `?test=` as it is under `?checkpoint=`.
  *
  * Nothing leaves the machine. */
 
@@ -29,7 +31,12 @@ const LEARNER = { id: '5a0e7c1e-2f7a-4c3d-9a61-5d2f0c9e8a41', email: 'learner@ex
 const OTHER = { id: '9b1f3a2e-5b6d-4e8f-9a0b-1c2d3e4f5a6b', email: 'other@example.invalid', token: 'learn-contract-other' };
 const OWNER = { id: '3c2d1e0f-6a7b-4c8d-9e0f-a1b2c3d4e5f6', email: 'owner@example.invalid', token: 'learn-contract-owner' };
 const BROKEN = { id: '7d6c5b4a-3e2f-4a1b-8c9d-0e1f2a3b4c5d', email: 'broken@example.invalid', token: 'learn-contract-broken' };
-const USERS = [LEARNER, OTHER, OWNER, BROKEN];
+/** On the backend track, whose plan has no HTML. */
+const BACKEND = {
+  id: '2e4f6a8b-1c3d-4e5f-8a9b-0c1d2e3f4a5b', email: 'backend@example.invalid', token: 'learn-contract-backend',
+  meta: { devquiz_learning_preference_v1: { schemaVersion: 1, baseTrack: 'backend', specialization: null } },
+};
+const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown> }> = [LEARNER, OTHER, OWNER, BROKEN, BACKEND];
 const PREMIUM = new Set([OWNER.id]);
 const DAY = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
 
@@ -132,7 +139,7 @@ async function startStandIn() {
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
       const user = USERS.find((one) => one.token === token);
       if (!user) return send(401, { message: 'invalid token' });
-      return send(200, { id: user.id, email: user.email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} });
+      return send(200, { id: user.id, email: user.email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: user.meta ?? {} });
     }
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname);
     if (rpc) {
@@ -376,6 +383,35 @@ async function main() {
     assert.equal(blip.statusCode, 503, `a progress read that fails answers 503 (${JSON.stringify(blip.body)})`);
     assert.equal(blip.body?.error?.code, 'progress_unavailable');
     console.log('PASS learn: a failed progress read answers 503, not "complete the preceding steps"');
+
+    // ── A passed part test outside the plan is served on both names ────────
+    // HTML is not on the backend track. The map draws a passed part test as
+    // passed and opens it with `?test=`; that answered 403 not_in_plan while
+    // `?checkpoint=`, the older name for the same test, served it.
+    {
+      const map = await call('GET', {});
+      const htmlLevelCount = (map.body.structure.html.levels as unknown[]).length;
+      assert.ok(htmlLevelCount > 3, 'HTML has levels to pass');
+      // Every HTML level passed but the last, and the first part test.
+      const htmlLevels = Object.fromEntries(Array.from({ length: htmlLevelCount - 1 }, (_, i) => [String(i + 1), { passed: true, bestPct: 100 }]));
+      tables.roadmap_progress.push({
+        user_id: BACKEND.id,
+        extra: {},
+        data: { html: { levels: htmlLevels, checkpoints: { '1': { passed: true, bestPct: 95 } } } },
+      });
+      const viaTest = await call('GET', { topic: 'html', test: '1', lang: 'en' }, BACKEND.token);
+      assert.equal(viaTest.statusCode, 200, `a passed part test outside the plan is served under ?test= (${JSON.stringify(viaTest.body?.error)})`);
+      assert.equal(viaTest.body.kind, 'checkpoint');
+      assert.equal(viaTest.body.ref, 1);
+      const viaCheckpoint = await call('GET', { topic: 'html', checkpoint: '1', lang: 'en' }, BACKEND.token);
+      assert.equal(viaCheckpoint.statusCode, 200, 'and still under ?checkpoint=');
+      const notPassed = await call('GET', { topic: 'html', test: '2', lang: 'en' }, BACKEND.token);
+      assert.equal(notPassed.statusCode, 403, 'a part test never passed outside the plan is still refused');
+      assert.equal(notPassed.body?.error?.code, 'not_in_plan');
+      const nextLevel = await call('GET', { topic: 'html', level: String(htmlLevelCount), lang: 'en' }, BACKEND.token);
+      assert.equal(nextLevel.body?.error?.code, 'not_in_plan', 'as is a level never passed');
+    }
+    console.log('PASS learn: a passed part test outside the plan is served under ?test= and ?checkpoint=');
   } finally {
     server.close();
   }

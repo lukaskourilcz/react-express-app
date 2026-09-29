@@ -138,6 +138,11 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   attempt_expired: 'error.pathAttemptExpired',
   enrollment_paused: 'error.pathPaused',
   path_unavailable: 'error.pathUnavailable',
+  // Learn refusals for a signed-in learner (403, and 409 at completion). Left
+  // to the status fallback they read "You need to sign in to do that."
+  not_in_plan: 'roadmap.notInPlanHint',
+  topic_locked: 'error.topicLocked',
+  prerequisite_not_met: 'error.prerequisiteNotMet',
 };
 
 // not_found spans several endpoints whose English server messages are more

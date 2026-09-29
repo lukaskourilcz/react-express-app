@@ -3551,10 +3551,16 @@ async function main() {
     const passedCheckpoint = { nextjs: { checkpoints: { '1': { passed: true } } } };
     assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'checkpoint', checkpoint: 1 }), true);
     assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'checkpoint', checkpoint: 2 }), false);
-    // A part test is gated by the levels it spans, not by a record of sitting
-    // it, so it never takes the carve-out.
-    assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'test', from: 1, to: 2 }), false,
-      'a part test is never "already passed"');
+    // A part test is recorded under `checkpoints` by its part number, so a
+    // passed one takes the carve-out on `?test=` as it does on `?checkpoint=`.
+    // Before, `?test=` refused it with not_in_plan while `?checkpoint=` served
+    // the same test, and the map offered it as passed and clickable.
+    assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'test', part: 1, from: 1, to: 5 }), true,
+      'a passed part test is already passed under its ?test= name');
+    assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'test', part: 2, from: 6, to: 10 }), false,
+      'a part test never passed still takes the ordinary check');
+    assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'test', part: 1, from: 1, to: 2 }), false,
+      'passing the levels a part test spans is not passing the test');
   }
 
   // No plan may be empty, and every plan topic must belong to devShark.

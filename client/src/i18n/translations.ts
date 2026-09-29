@@ -1329,6 +1329,8 @@ export const en = {
   'error.pathAttemptExpired': 'This attempt expired. Try again to start a new one.',
   'error.pathPaused': 'This path is paused. Resume it on the path page to carry on.',
   'error.pathUnavailable': 'This path is not open right now. Everything you did in it is kept.',
+  'error.topicLocked': 'This topic is still locked. Finish the topics it builds on first.',
+  'error.prerequisiteNotMet': 'Pass the steps before this one first.',
   // ── end of Billing ──────────────────────────────────────────────────────
   // ── Premium page, plan table and legal pages (issue #222) ───────────────
   // Section 4 of the second handoff. The landing keys above keep their names

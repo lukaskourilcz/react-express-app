@@ -577,10 +577,7 @@ async function learnerContext(
   };
 }
 
-type StepRequest =
-  | { kind: 'level'; level: number }
-  | { kind: 'checkpoint'; checkpoint: number }
-  | { kind: 'test'; from: number; to: number };
+type StepRequest = ProgressStep;
 
 /** Why the server will not serve this step, or null when it will. */
 function stepRefusal(
@@ -596,9 +593,8 @@ function stepRefusal(
   // switched to backend — where Next.js is not in the plan — would be told
   // those very levels are "not part of the learning plan you chose".
   //
-  // Part tests are deliberately not covered: what gates a part test is passing
-  // the levels it spans, not a record of having sat it, so it keeps the
-  // ordinary check below.
+  // A passed part test is covered on both of its names: `?test=n` and the
+  // older `?checkpoint=n` read the same record, and the map offers it again.
   if (stepAlreadyPassed(context.progress, topic, step)) return null;
 
   if (!isTopicInPlan(context.profile, subject, topic)) {
@@ -1554,7 +1550,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       logEvent({ status: 409, kind: 'unavailable', topic, part });
       return jsonError(res, 409, STEP_UNAVAILABLE.code, STEP_UNAVAILABLE.message);
     }
-    if (refuse({ kind: 'test', from: range.startLevel, to: range.endLevel })) return;
+    if (refuse({ kind: 'test', part, from: range.startLevel, to: range.endLevel })) return;
     if (await refusePremium({ kind: 'learn-part-test', topic, part }, { kind: 'checkpoint', checkpoint: part })) return;
 
     const pool: string[] = [];
