@@ -6,10 +6,11 @@ import { http, HttpResponse } from 'msw';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Leaderboard from '../src/components/Leaderboard';
 import { server } from './mocks/server';
-import { boardFor, leaderboardData, leaderboardHandlers, pinnedData } from './mocks/handlers';
+import { boardFor, leaderboardData, leaderboardHandlers, pinnedData, visibilityHandler } from './mocks/handlers';
 import { firstDraw } from './firstDraw';
 
-const auth = vi.hoisted(() => ({ value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false } }));
+type TestUser = { id: string; user_metadata?: Record<string, unknown> };
+const auth = vi.hoisted(() => ({ value: { user: null as TestUser | null, isAuthenticated: false, isLoading: false } }));
 vi.mock('../src/lib/auth', async (importOriginal) => ({ ...(await importOriginal<typeof import('../src/lib/auth')>()), useAuth: () => auth.value }));
 afterEach(() => { auth.value = { user: null, isAuthenticated: false, isLoading: false }; });
 
@@ -53,6 +54,8 @@ it('opens on the 30-day board and says what it counts', async () => {
   expect(screen.getByText(/Learn answers from the last 30 days. Five answers put you on the board./)).toBeVisible();
   // The multi-subject pill is gone.
   expect(screen.queryByText('Web Dev')).toBeNull();
+  // A visitor has no name to show or hide, and nothing asks for one.
+  expect(screen.queryByRole('switch')).toBeNull();
 });
 
 it('draws the default board in its first frame instead of a skeleton the board replaces', async () => {
@@ -73,7 +76,7 @@ it('holds a signed-in learner for the board that carries their own line', async 
   server.use(http.get('*/api/leaderboard', ({ request }) => {
     seen.push(new URL(request.url).searchParams);
     return HttpResponse.json(pinnedData);
-  }));
+  }), visibilityHandler());
   const drawn = firstDraw('h1', () => document.querySelector('tfoot tr[aria-current="true"]') !== null);
   await mount();
   expect(drawn()).toBe(true);
@@ -205,24 +208,32 @@ it('gives equal results on the all-time board one shared rank', async () => {
   expect(drawnRanks()).toEqual(['1', '1', '3', '4']);
 });
 
-it('ranks Today by score, then time, sharing a rank only when both match', async () => {
+it('ranks Today by score alone: equal scores share a rank whatever the time', async () => {
+  // In the order daily_leaderboard_v2 sends them: score, then first recorded.
   otherBoard('daily', [
-    { display_name: 'Quick', picture: null, correct: 5, total: 5, duration_ms: 60_000, attempted_at: '2026-09-29T07:00:00Z' },
-    { display_name: 'Just as quick', picture: null, correct: 5, total: 5, duration_ms: 60_000, attempted_at: '2026-09-29T08:00:00Z' },
-    { display_name: 'Slower', picture: null, correct: 5, total: 5, duration_ms: 61_000, attempted_at: '2026-09-29T09:00:00Z' },
-    { display_name: 'Four right', picture: null, correct: 4, total: 5, duration_ms: 30_000, attempted_at: '2026-09-29T10:00:00Z' },
+    { display_name: 'Slow and early', picture: null, correct: 5, total: 5, duration_ms: 300_000, attempted_at: '2026-09-29T07:00:00Z' },
+    { display_name: 'Quick', picture: null, correct: 5, total: 5, duration_ms: 60_000, attempted_at: '2026-09-29T08:00:00Z' },
+    { display_name: null, picture: null, correct: 5, total: 5, duration_ms: 30_000, attempted_at: '2026-09-29T09:00:00Z' },
+    { display_name: 'Four right, fastest', picture: null, correct: 4, total: 5, duration_ms: 10_000, attempted_at: '2026-09-29T10:00:00Z' },
   ]);
   await mount();
   await screen.findByText('Workshop learner');
   fireEvent.click(screen.getByRole('radio', { name: 'Today' }));
-  await screen.findByText('Just as quick');
-  expect(drawnRanks()).toEqual(['1', '1', '3', '4']);
+  await screen.findByText('Slow and early');
+  expect(drawnRanks()).toEqual(['1', '1', '1', '4']);
+  // The time is still shown; the copy no longer says it decides.
+  expect(screen.getByText('5m 0s')).toBeVisible();
+  expect(screen.getByText('Today’s daily challenge, ranked by correct answers. Equal scores share a place, whatever the time.')).toBeVisible();
+  expect(screen.queryByText(/faster/i)).toBeNull();
+  // The unnamed learner is on the board as “Learner”.
+  const third = within(screen.getByRole('table')).getAllByRole('row')[3];
+  expect(within(third).getByText('Learner')).toBeVisible();
 });
 
 it('never shows the next visitor someone else’s row as theirs from the offline copy', async () => {
   auth.value = { user: { id: 'user-a' }, isAuthenticated: true, isLoading: false };
   const mine = { ...leaderboardData, entries: [{ ...leaderboardData.entries[0], is_viewer: true }, leaderboardData.entries[1]], me: null };
-  server.use(http.get('*/api/leaderboard', () => HttpResponse.json(mine)));
+  server.use(http.get('*/api/leaderboard', () => HttpResponse.json(mine)), visibilityHandler());
   const first = await mount();
   expect(await screen.findByText('Workshop learner')).toBeVisible();
   expect(document.querySelector('tr[aria-current="true"]')).not.toBeNull();
@@ -243,4 +254,103 @@ it('drops the “You” mark from an offline copy an older version saved', async
   server.use(leaderboardHandlers.offline); await mount();
   expect(await screen.findByText('Workshop learner')).toBeVisible();
   expect(document.querySelector('[aria-current="true"]')).toBeNull();
+});
+
+// ── Names on the public boards (migration 049) ──────────────────────────────
+
+const PAT = { id: 'user-1', user_metadata: { full_name: 'Pat Example' } };
+const SWITCH = 'Show my name and photo on leaderboards';
+
+it('shows a learner who has not switched their name on as “Learner”, with the default avatar', async () => {
+  server.use(http.get('*/api/leaderboard', () => HttpResponse.json({
+    ...leaderboardData,
+    entries: [{ ...leaderboardData.entries[0], display_name: null, picture: null }, leaderboardData.entries[1]],
+  })));
+  await mount();
+  const table = await screen.findByRole('table');
+  await within(table).findByText('Harbour reader');
+  const [unnamed, named] = within(table).getAllByRole('row').slice(1);
+  expect(within(unnamed).getByText('Learner')).toBeVisible();
+  // The default avatar, not initials: no "L" for "Learner", no named image.
+  expect(within(unnamed).queryByRole('img')).toBeNull();
+  expect(within(unnamed).queryByText('L')).toBeNull();
+  expect(within(named).getByRole('img', { name: 'Harbour reader' })).toBeInTheDocument();
+});
+
+it('names the learner’s own pinned line only while they are switched on', async () => {
+  auth.value = { user: PAT, isAuthenticated: true, isLoading: false };
+  server.use(leaderboardHandlers.pinned, visibilityHandler(false));
+  const hidden = await mount();
+  const pinned = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
+  expect(within(pinned).getByText('Learner')).toBeVisible();
+  expect(within(pinned).getByText('You')).toBeVisible();
+  expect(screen.queryByText('Pat Example')).toBeNull();
+  expect(await screen.findByRole('switch', { name: SWITCH })).not.toBeChecked();
+  hidden.unmount();
+
+  server.use(visibilityHandler(true));
+  await mount();
+  const shown = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
+  expect(within(shown).getByText('Pat Example')).toBeVisible();
+  expect(await screen.findByRole('switch', { name: SWITCH })).toBeChecked();
+});
+
+it('switches the learner’s name on from the board and reloads their own line at once', async () => {
+  auth.value = { user: PAT, isAuthenticated: true, isLoading: false };
+  const puts: unknown[] = [];
+  let named = false;
+  let boards = 0;
+  let release = () => {};
+  const held = new Promise<void>((resolve) => { release = resolve; });
+  server.use(
+    // The personal board names the viewer's row once the flag is stored.
+    http.get('*/api/leaderboard', () => {
+      boards += 1;
+      const own = { ...leaderboardData.entries[0], is_viewer: true, display_name: named ? 'Pat Example' : null };
+      return HttpResponse.json({ ...leaderboardData, entries: [own, leaderboardData.entries[1]], me: { rank: 1, correct: 8, answered: 10, accuracy_pct: 80 } });
+    }),
+    visibilityHandler(false),
+    http.put('*/api/user/leaderboard-visibility', async ({ request }) => {
+      const body = (await request.json()) as { visible: boolean };
+      puts.push(body);
+      await held;
+      named = body.visible;
+      return HttpResponse.json({ visible: body.visible });
+    }),
+  );
+  await mount();
+  const toggle = await screen.findByRole('switch', { name: SWITCH });
+  await waitFor(() => expect(toggle).toBeEnabled());
+  expect(toggle).not.toBeChecked();
+  const own = () => document.querySelector('tbody tr[aria-current="true"]') as HTMLElement;
+  expect(within(own()).getByText('Learner')).toBeVisible();
+
+  fireEvent.click(toggle);
+  // On at once, while the save is still on its way.
+  await waitFor(() => expect(puts).toEqual([{ visible: true }]));
+  expect(toggle).toBeChecked();
+  release();
+  await waitFor(() => expect(within(own()).getByText('Pat Example')).toBeVisible());
+  expect(boards).toBe(2);
+  expect(toggle).toBeChecked();
+});
+
+it('puts the switch back and says so when saving it fails', async () => {
+  auth.value = { user: PAT, isAuthenticated: true, isLoading: false };
+  const puts: unknown[] = [];
+  server.use(
+    leaderboardHandlers.populated,
+    visibilityHandler(false),
+    http.put('*/api/user/leaderboard-visibility', async ({ request }) => {
+      puts.push(await request.json());
+      return HttpResponse.json({ error: { code: 'db_error', message: 'Could not load or save leaderboard visibility' } }, { status: 500 });
+    }),
+  );
+  await mount();
+  const toggle = await screen.findByRole('switch', { name: SWITCH });
+  await waitFor(() => expect(toggle).toBeEnabled());
+  fireEvent.click(toggle);
+  expect(await screen.findByRole('alert')).toHaveTextContent('Your leaderboard setting wasn’t saved. Try again.');
+  expect(puts).toEqual([{ visible: true }]);
+  await waitFor(() => expect(toggle).not.toBeChecked());
 });

@@ -434,8 +434,8 @@ export const en = {
   'leaderboard.last30': 'Last 30 days',
   'leaderboard.last30Short': '30 days',
   'leaderboard.scope30d': 'Ranked by correct answers, then accuracy: quiz, daily challenge, Biggest Shark Challenge and Learn answers from the last 30 days. Five answers put you on the board.',
-  'leaderboard.scopeAllTime': 'Ranked by correct answers, then accuracy: every quiz and daily challenge answer since the board began. Five answers put you on the board.',
-  'leaderboard.scopeToday': 'Today’s daily challenge: most correct answers first, then the faster time.',
+  'leaderboard.scopeAllTime': 'Ranked by correct answers, then accuracy: quiz, daily challenge, Biggest Shark Challenge and Learn answers since the board began. Five answers put you on the board.',
+  'leaderboard.scopeToday': 'Today’s daily challenge, ranked by correct answers. Equal scores share a place, whatever the time.',
   'leaderboard.topic': 'Topic',
   'leaderboard.allTopics': 'All topics',
   'leaderboard.caption': '{period}, {topic}',
@@ -457,6 +457,13 @@ export const en = {
   'leaderboard.offline': 'You’re offline. Reconnect and try again.',
   'leaderboard.offlineStale': 'You’re offline. This is the board as it was at {time}.',
   'leaderboard.windowUnavailable': 'The 30-day board isn’t switched on yet, so this is the all-time board.',
+  // A learner is named on the public boards only after switching this on
+  // (migration 049); until then their row reads "Learner" with no photo.
+  'leaderboard.anonymous': 'Learner',
+  'leaderboard.visibility.label': 'Show my name and photo on leaderboards',
+  'leaderboard.visibility.hint': 'Leaderboards are public. With this off, you appear as “Learner” with no photo.',
+  'leaderboard.visibility.saveFailed': 'Your leaderboard setting wasn’t saved. Try again.',
+  'leaderboard.visibility.loadFailed': 'Your leaderboard setting couldn’t be loaded.',
 
   // Profile
   'profile.loading': 'Loading profile…',
@@ -1461,6 +1468,8 @@ export const en = {
   'legal.privacy.controller.body': 'The trader named in the Terms of use, under Who runs devShark, is the controller for the personal data devShark processes.',
   'legal.privacy.account.title': 'Account and learning data',
   'legal.privacy.account.body': 'When you sign in, Supabase Auth processes your account identifier and the profile your Google account shares. devShark stores your progress, statistics, flashcards, preferences, plan and multiplayer records so they work on every device. Without an account, your preferences and progress stay in your browser.',
+  'legal.privacy.leaderboards.title': 'Leaderboards',
+  'legal.privacy.leaderboards.body': 'The leaderboards are public: anyone can see them without signing in. By default you appear on them without your name or photo, as “Learner”, next to your results. If you switch on “Show my name and photo on leaderboards”, devShark shows the name and profile photo of your Google account on the public leaderboards until you switch it off. You can switch it off at any time in your profile or on the Leaderboard page.',
   'legal.privacy.payments.title': 'Payments',
   'legal.privacy.payments.body': 'You enter your payment details on Stripe’s checkout page, never on devShark. devShark stores your Stripe customer id, your plan, the status and dates of your subscription, and your consent at checkout with its time and checkout id. devShark never sees or stores your full card number.',
   'legal.privacy.payments.sellerLink': 'Stripe sells Premium as Link, the seller of record, and processes your payment, billing and tax details as an independent controller under its own privacy policy.',

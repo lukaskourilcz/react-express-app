@@ -1,0 +1,23 @@
+/* The leaderboard-visibility switch (LeaderboardVisibilitySwitch.tsx).
+ *
+ * Astryx draws a 40×24 switch, and its invisible checkbox is the hit area.
+ * The checkbox grows to 44×44, centred on the track, so the switch is a full
+ * target on any pointer; the label is a <label for> and toggles it too. The
+ * row keeps 44px of height so the grown area overlaps nothing. !important for
+ * the reason app-shell.css gives under "Touch targets": Astryx's StyleX rules
+ * outrank any class selector. Colours, focus ring and motion stay Astryx's
+ * own, so light, dark and reduced motion need nothing here.
+ */
+.lb-visibility {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  min-width: 0;
+  max-width: 46rem;
+}
+.lb-visibility input[role='switch'] {
+  top: -10px !important;
+  left: -2px !important;
+  width: 44px !important;
+  height: 44px !important;
+}
