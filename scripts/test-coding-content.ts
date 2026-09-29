@@ -37,7 +37,7 @@ import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, tec
 import { docsFor, taskResources } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
-import { runInSandbox } from '../lib/coding/sandbox';
+import { runChecks, runInSandbox } from '../lib/coding/sandbox';
 import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder } from '../lib/coding/puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
 import { evaluateCalls, allPassed } from '../shared/coding-evaluate';
@@ -439,9 +439,11 @@ async function main() {
         code = checker.toJavaScript(source);
       }
       const run = await withTimeout(evaluateCalls({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
-      const serverTests = [...task.tests, ...solution.hiddenTests ?? []];
-      const sandbox = await runInSandbox({code, calls:serverTests.map(test=>test.call), expectations:serverTests.map(test=>test.expected), shownCalls:task.tests.length});
-      if (!allPassed(sandbox)) fail(`${label}: solution fails the production QuickJS grader: ${JSON.stringify(sandbox).slice(0,500)}`);
+      // The production grader: the hidden checks in a fresh program and, here,
+      // in reverse order, so no solution leans on the order they run in or on
+      // state the visible calls left behind.
+      const server = await runChecks({ code, visible: task.tests, hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
+      if (!allPassed(server.visible) || (server.hidden && !allPassed(server.hidden))) fail(`${label}: solution fails the production QuickJS grader: ${JSON.stringify(server).slice(0,500)}`);
       if (!allPassed(run)) {
         const wrong = run.results.map((r, i) => (r.pass ? null : `${task.tests![i].call} → ${r.error ?? r.actual}`)).filter(Boolean);
         fail(`${label}: solution fails visible tests: ${run.codeError ?? wrong.join('; ')}`);

@@ -334,3 +334,50 @@ export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult>
     if (disposalFailed) modulePromise = null;
   }
 }
+
+/** One check: a call expression and the value it must produce. */
+export interface SandboxCheck {
+  call: string;
+  expected: unknown;
+}
+
+/**
+ * Grades code against its visible and hidden checks.
+ *
+ * The visible checks run together, and their console output is what the
+ * learner sees. The hidden checks run in a fresh program — the code evaluated
+ * again, sharing no state with the visible run — in an order shuffled for
+ * every submission. So an answer cannot be served by counting calls (`A[k++]`
+ * handed the hidden checks their answers in authored order when every call
+ * shared one program), and the hidden pass count cannot be read position by
+ * position. Nothing a hidden check prints comes back. Hidden results return
+ * in authored order.
+ */
+export async function runChecks(input: {
+  code: string;
+  visible: readonly SandboxCheck[];
+  hidden: readonly SandboxCheck[];
+  shuffle: <T>(list: T[]) => T[];
+}): Promise<{ visible: EvaluateResult; hidden: EvaluateResult | null }> {
+  const visible = await runInSandbox({
+    code: input.code,
+    calls: input.visible.map((check) => check.call),
+    expectations: input.visible.map((check) => check.expected),
+  });
+  if (input.hidden.length === 0) return { visible, hidden: null };
+  // A program that does not load, or runs out of time, fails the hidden checks
+  // the same way; running it again would only spend the time twice.
+  if (visible.codeError || visible.timedOut) {
+    return { visible, hidden: { results: [], logs: [], codeError: visible.codeError, timedOut: visible.timedOut } };
+  }
+  const order = input.shuffle(input.hidden.map((_, index) => index));
+  const run = await runInSandbox({
+    code: input.code,
+    calls: order.map((index) => input.hidden[index].call),
+    expectations: order.map((index) => input.hidden[index].expected),
+    shownCalls: 0,
+  });
+  const results: EvaluateResult['results'] = [];
+  if (!run.codeError && !run.timedOut) order.forEach((original, position) => { results[original] = run.results[position]; });
+  return { visible, hidden: { results, logs: [], codeError: run.codeError, timedOut: run.timedOut } };
+}

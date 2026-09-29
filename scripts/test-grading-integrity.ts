@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { runInSandbox } from '../lib/coding/sandbox';
+import { runChecks, runInSandbox } from '../lib/coding/sandbox';
 import { handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
@@ -362,4 +362,34 @@ function codingDatabase() {
   assert.equal(response.statusCode, 200);
   assert.ok(JSON.stringify(response.body).length < 200_000, `the Submit response stays small (${JSON.stringify(response.body).length} bytes)`);
   console.log('PASS integrity: console output is capped by size');
+}
+
+// ── hidden checks cannot be answered by call order (CODE-11) ─────────────
+// Every call used to share one program, visible first, so `A[k++]` served
+// the hidden checks their answers in authored order, and the hidden pass
+// count told a prober which guesses were right. Hidden checks now run in a
+// fresh program, in an order shuffled per submission.
+{
+  const task = CODING_TASKS.find((one) => one.id === 'js-digit-sum')!;
+  const hidden = solutionFor(task.id)!.hiddenTests!;
+  const answers = [...task.tests!.map((one) => one.expected), ...hidden.map((one) => one.expected)];
+  const response = { statusCode: 200, body: null as null | { verdict?: string; hidden?: { passed: number; total: number } }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await handleCodingSubmit({
+    method: 'POST', headers: {},
+    body: { session: encodeCodingSession({ taskId: task.id, track: 'javascript', userId: null }), code: `let k = 0; const A = ${JSON.stringify(answers)}; const digitSum = () => A[k++];` },
+  } as never, response as never, null);
+  assert.equal(response.statusCode, 200);
+  assert.notEqual(response.body?.verdict, 'passed', 'answers served by call count do not pass');
+  assert.equal(response.body?.hidden?.passed, 0, 'the hidden run starts from a fresh program');
+
+  // Even knowing the hidden answers, serving them in authored order depends on
+  // an order the learner never sees. Reversed here, so the check is exact.
+  const known = Object.fromEntries(task.tests!.map((one) => [one.call, one.expected]));
+  const byOrder = `const known = ${JSON.stringify(known)}; const H = ${JSON.stringify(hidden.map((one) => one.expected))}; let k = 0; const digitSum = (n) => { const seen = known["digitSum(" + n + ")"]; return seen === undefined ? H[k++] : seen; };`;
+  const graded = await runChecks({ code: byOrder, visible: task.tests!, hidden, shuffle: (list) => [...list].reverse() });
+  assert.ok(allPassed(graded.visible));
+  assert.ok(!allPassed(graded.hidden!), 'hidden answers served in authored order fail a shuffled run');
+  const fair = await runChecks({ code: solutionFor(task.id)!.solution, visible: task.tests!, hidden, shuffle: (list) => [...list].reverse() });
+  assert.ok(allPassed(fair.visible) && allPassed(fair.hidden!), 'a real solution passes in any order');
+  console.log('PASS integrity: hidden checks cannot be answered by call order');
 }

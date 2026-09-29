@@ -19,7 +19,7 @@ import { CODING_SUMMARIES, codingTaskById } from './active';
 import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
-import { runInSandbox } from './sandbox';
+import { runChecks } from './sandbox';
 import { nodeTypeScriptChecker } from './ts-check-node';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
@@ -342,18 +342,11 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
     }
     codeToRun = checker.toJavaScript(code);
   }
-  const run = await runInSandbox({
-    code: codeToRun,
-    calls: [...tests.map((t) => t.call), ...hiddenTests.map((t) => t.call)],
-    expectations: [...tests.map((t) => t.expected), ...hiddenTests.map((t) => t.expected)],
-    // Only the visible calls' console output comes back: a learner who logs
-    // inside their function must not read the hidden checks' inputs.
-    shownCalls: tests.length,
-  });
-  const visible: EvaluateResult = { results: run.results.slice(0, tests.length), logs: run.logs, codeError: run.codeError, timedOut: run.timedOut };
-  const hiddenRun: EvaluateResult | null = hiddenTests.length > 0
-    ? { results: run.results.slice(tests.length), logs: [], codeError: run.codeError, timedOut: run.timedOut }
-    : null;
+  // Only the visible checks' console output comes back: a learner who logs
+  // inside their function must not read the hidden checks' inputs. The hidden
+  // checks run in a fresh program, in an order shuffled for this submission.
+  const { visible, hidden: hiddenRun } = await runChecks({ code: codeToRun, visible: tests, hidden: hiddenTests, shuffle: secureShuffle });
+  const run = { logs: visible.logs, codeError: visible.codeError ?? hiddenRun?.codeError ?? null, timedOut: Boolean(visible.timedOut || hiddenRun?.timedOut) };
   let verdict = codeOutcome({ visible, hidden: hiddenRun, check });
   if (verdict === 'passed' && hiddenTypeFailures > 0) verdict = 'failed';
   const hiddenPassed = (hiddenRun?.results.filter((r) => r.pass === true).length ?? 0) + (hiddenTypeTotal - hiddenTypeFailures);
