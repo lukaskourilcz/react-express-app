@@ -4,6 +4,9 @@ import { handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
 import { puzzleFor } from '../lib/coding/puzzles';
+import { CODING_TASKS } from '../lib/coding/catalog';
+import { isFreeCodingTask } from '../shared/tiers';
+import { evolvingStage } from '../shared/evolving';
 
 const attacks = [
   ['replace comparison', 'globalThis.__deepEqual=()=>true; function answer(){return 0}'],
@@ -167,6 +170,25 @@ function codingDatabase() {
   assert.equal(db.progress.get(`${learner}:js-double-numbers`)?.passes, 2);
   assert.equal(new Set(db.attemptIds).size, 3, 'three distinct submissions, one replay');
   console.log('PASS integrity: a fix submitted from the same session is recorded, a replay is not');
+
+  // A grader outage is not the learner's error (CODE-14). Without a runner
+  // snapshot the isolated React runner cannot start: the Submit says so and
+  // records nothing, so the next Submit from the same session still counts.
+  delete process.env.REACT_RUNNER_SNAPSHOT_ID;
+  const reactTask = CODING_TASKS.find((task) => task.track === 'react' && task.verify === 'tests' && task.suite && isFreeCodingTask(task.id) && !evolvingStage(task.id))!;
+  const before = db.attemptIds.length;
+  const outage = { statusCode: 200, body: null as null | { verdict?: string; applied?: boolean; codeError?: string | null; failureHint?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await handleCodingSubmit({
+    method: 'POST', headers: { authorization: 'Bearer local-test' }, query: {},
+    body: { session: encodeCodingSession({ taskId: reactTask.id, track: 'react', userId: null }), code: solutionFor(reactTask.id)!.solution, user_id: learner },
+  } as never, outage as never, db.client as never);
+  assert.equal(outage.statusCode, 200);
+  assert.equal(outage.body?.verdict, 'error');
+  assert.equal(outage.body?.applied, false);
+  assert.match(outage.body?.codeError ?? '', /not recorded/, 'the learner is told nothing was recorded');
+  assert.equal(outage.body?.failureHint, null, 'no hint blames the code');
+  assert.equal(db.attemptIds.length, before, 'a runner outage writes no verdict');
+  console.log('PASS integrity: a React runner outage is not recorded as the learner\'s error');
 }
 
 // ── a code-ordering puzzle round-trips through its session (CODE-7) ──────

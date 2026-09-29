@@ -295,6 +295,9 @@ interface Graded {
   designReference: CodingVerdictResponse['designReference'];
   failureHint?: CodingVerdictResponse['failureHint'];
   puzzle?: CodingVerdictResponse['puzzle'];
+  /** The grader itself failed: the React runner could not start or answer.
+   * That says nothing about the learner's code, so nothing is recorded. */
+  infra?: boolean;
 }
 
 /** The authored hint for the way this attempt failed, or null.
@@ -397,8 +400,8 @@ async function gradeReact(task: CodingTask, code: string): Promise<Graded> {
     });
     return {
       verdict: 'error', results: [], hidden: null, check: null, logs: [],
-      codeError: 'The React runner could not start. Try again in a moment.',
-      design: null, designReference: null,
+      codeError: 'The React runner could not start, so this Submit was not recorded. Try again in a moment.',
+      design: null, designReference: null, infra: true,
     };
   }
   // Hidden cases decide the verdict with the rest but go back only as a count,
@@ -608,6 +611,13 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
     code = body.code;
     graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
+  }
+  // A grader outage is not the learner's error: it is neither recorded nor
+  // counted against the attempt, and the message asks for another Submit.
+  if (graded.infra) {
+    logEvent({ status: 200, kind: 'submit_unrecorded', track: task.track, hasUser: Boolean(userId) });
+    res.setHeader('Cache-Control', 'private, no-store');
+    return res.json(verdictBody(graded, null, null, null));
   }
 
   let recorded: Recorded | null = null;
