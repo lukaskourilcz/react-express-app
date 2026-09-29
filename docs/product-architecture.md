@@ -498,6 +498,9 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   cancelAtPeriodEnd, inGrace, validUntil, billingAccount, subscriptionLive }`
   from `entitlement_summary`; the last two say whether the account has a
   Stripe customer and a live subscription, whichever grant wins the plan line.
+  Since migration 053 a live subscription is one Stripe can still charge
+  (`active`, `trialing`, `past_due`, `unpaid` or `paused`), whether or not it
+  still opens Premium.
 - **The browser** mirrors the server. `useEntitlement()`
   (`client/src/lib/entitlement.ts`) reads the plan; `useLocks()`
   (`client/src/lib/locks.ts`) draws locks from `contentTier` in four states:
@@ -536,7 +539,16 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   browser grant: it holds the SHA-256 of each emailed link, the address typed
   on the page, the action and the times, never a token or an account id, and
   each new request purges rows a day past their expiry. A revoked provider grant stays revoked, and an account holds
-  at most one active manual grant. Admins test Premium with manual grants
+  at most one active manual grant. Migration 053 restates four of them:
+  `billing_account.providerLive` and `entitlement_summary.subscriptionLive`
+  mean a provider grant in `active`, `trialing`, `past_due`, `unpaid` or
+  `paused` (a subscription Stripe can still charge), `billing_account` also
+  lists those subscriptions (`liveSubscriptionIds`), and
+  `link_billing_customer` and `upsert_provider_entitlement` refuse an id with
+  no `auth.users` row (`unknown_account`) through the private
+  `billing_account_exists`. `supabase/tests/160` to `165` run these routines,
+  the grace window, `record_billing_event`, `claim_voluntary_refund` and
+  `revoke_premium_benefits` on a real Postgres. Admins test Premium with manual grants
   through `op=entitlements` in `api/admin/[op].ts` (GET lists grants, or one
   account's with `?userId=`; POST `{ action: 'grant', userId, validUntil,
   note }` or `{ action: 'revoke', userId, grantId?, note? }`).
@@ -600,9 +612,12 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   the handler count stays at twelve:
   - `billing-checkout` POST `{ plan: 'monthly' | 'annual' }` (signed in, 10 a
     minute per account): gets or creates the account's Stripe customer, sends
-    an account with a live subscription to the portal instead (409
-    `already_premium`), and creates a subscription Checkout Session with
-    `client_reference_id`, `subscription_data.metadata.supabase_user_id`,
+    an account with a subscription that can still charge to the portal
+    instead (409 `already_premium`), whether the database or Stripe knows it
+    first, expires the customer's open devShark Checkout Sessions (a session
+    paid in that moment also answers 409), and creates a subscription
+    Checkout Session with `client_reference_id`,
+    `subscription_data.metadata` `product: 'devshark'` and `supabase_user_id`,
     required terms consent whose text is the withdrawal waiver, the renewal and
     cancellation sentence beside the order button, `submit_type: 'pay'`,
     promotion codes and `locale: 'auto'`. GET `?session_id=` is the success
@@ -649,10 +664,22 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   Price, or an earlier one listed in `STRIPE_PRICE_PREMIUM_LEGACY`, opens
   Premium: one that devShark's checkout created and that now bills another
   product is written `canceled`, and any other is recorded as
-  `not_devshark_price` (the Stripe account may sell other things). A full
+  `not_devshark_price` (the Stripe account may sell other things). The
+  `product: 'devshark'` metadata decides first: another product's marker is
+  never devShark's, whatever it bills. A full
   refund, a dispute, an early fraud warning (which first refunds the charge)
   and a withdrawal cancel the subscription at Stripe and write the grant
-  `revoked` with the reason in its note; a partial refund only logs. Then
+  `revoked` with the reason in its note; a partial refund only logs. The
+  first three are events of the whole Stripe account, so nothing is
+  cancelled or refunded unless the subscription bills a devShark Price or
+  carries devShark's checkout metadata and maps to an existing account; any
+  other is recorded as `not_devshark_price` or `unknown_user`. A subscription
+  with the devShark marker whose account Auth reports missing (a Checkout
+  paid after the account was deleted) is cancelled at once, without a final
+  invoice or proration, and logged as `orphaned_subscription_ended` for the
+  owner to refund by hand. An account that gets a second subscription that
+  can charge it is logged as `second_subscription`; nothing is refunded
+  automatically. Then
   `revoke_premium_benefits` (migration 041) takes back what Premium paid out
   while that grant existed: coin redemptions not yet sent are cancelled and
   their coins returned, and the milestone coins and the doubled share of XP
@@ -674,8 +701,8 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   "Manage billing" to every account with a Stripe customer, on Free as well,
   so the card, the plan and the invoices stay reachable. Deleting an account
   ends its subscriptions at Stripe first, at once and without a refund, and
-  stops if Stripe cannot be reached; the deletion card says so to a paying
-  account and links the withdrawal.
+  expires its open Checkout Sessions. It stops if Stripe cannot be reached.
+  The deletion card says so to a paying account and links the withdrawal.
 - **Public copy and legal pages (#222).** `/premium` (`PremiumPage.tsx`) shows
   the two plans with "VAT included", the renewal, the waiver sentence and the
   14-day refund beside the buttons (`PremiumFacts.tsx`), what Premium opens,
@@ -826,11 +853,15 @@ claim's account part becomes `deleted-account:<order id>`), a settled month's
 ranks, a referral the account made (`deleted-account`), and a voucher the
 account created as an admin, which keeps its counts (`created_by` becomes
 `deleted-account`). The handler calls
-no other routine. The four that 039 to 042 shipped
+no other routine. After the Auth identity is deleted it calls
+`delete_user_data` once more, because the webhook of the subscription it
+cancelled can write billing rows in between. Once the identity is gone,
+migration 053's `link_billing_customer` and `upsert_provider_entitlement`
+refuse the id. The four that 039 to 042 shipped
 (`delete_entitlement_data`, `delete_user_activity_days`, `delete_coin_data`,
 `delete_referral_data`) deleted nothing once 044 held their statements, and
 migration 046 drops them; production runs it after the code that stopped
-calling them is deployed. The Auth identity goes last. `erasureContracts()` in
+calling them is deployed. The Auth identity goes after the first erasure. `erasureContracts()` in
 `scripts/test-launch-contracts.ts` fails when a migration creates a table with
 an account column that the newest `delete_user_data` does not erase, or when
 that body loses a statement of the four routines.
