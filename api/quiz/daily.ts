@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { createHash } from 'node:crypto';
-import { encodeSession, stableAttemptId } from '../../lib/quiz-tokens';
+import { encodeSession, quizSessionExpiresAt, stableAttemptId } from '../../lib/quiz-tokens';
 import { localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-runtime';
 import { createLogger, createServiceClient, jsonError, withRequestContext, withTimeout } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
@@ -170,6 +170,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const start = auth && attemptId
     ? await dailyStart({ attemptId, userId: auth.sub, subject: scope.subject })
     : { startedAt: null, completed: false };
+  const issuedAt = Date.now();
   const sessionId = encodeSession(sessionData, {
     scope: 'daily',
     date: dateParam,
@@ -186,6 +187,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   res.json({
     date: dateParam,
     sessionId,
+    expiresAt: quizSessionExpiresAt(issuedAt),
     questions: dailyQuestions,
     // Already submitted today: the client shows that instead of a second run
     // the grader would refuse.

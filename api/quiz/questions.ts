@@ -9,7 +9,7 @@ import {
   type CategoryType,
   type Question,
 } from '../../lib/quiz-runtime';
-import { encodeSession } from '../../lib/quiz-tokens';
+import { encodeSession, quizSessionExpiresAt } from '../../lib/quiz-tokens';
 import { tryAuth } from '../../lib/auth';
 import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
@@ -314,6 +314,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     };
   });
 
+  const issuedAt = Date.now();
   const sessionId = encodeSession(sessionData, { subject: scope.subject });
 
   // Per-request shuffle differs, so don't CDN-cache the response itself.
@@ -322,6 +323,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
   res.json({
     sessionId,
+    expiresAt: quizSessionExpiresAt(issuedAt),
     questions: questionsWithShuffledOptions,
     ...(reviewPlan ? { reviewPlan } : {}),
     ...(mixed ? { interleaved: { contrasted } } : {}),

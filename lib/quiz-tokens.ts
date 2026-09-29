@@ -316,6 +316,11 @@ export function decodeSessionEnvelope(token: string): DecodedQuizSession | null 
 
 export const decodeSession = (token: string) => decodeSessionEnvelope(token)?.questions ?? null;
 
+/** When a quiz session issued at `issuedAt` stops being gradable. Handlers
+ * send it with the questions so the client can drop a saved quiz that has
+ * run out instead of letting the learner answer it for nothing. */
+export const quizSessionExpiresAt = (issuedAt: number): number => issuedAt + TOKEN_TTL_MS;
+
 /** The time a daily result records: from the first time the learner was
  * handed the day's questions when that is known, else from this session. */
 export function dailyDurationMs(session: Pick<DecodedQuizSession, 'startedAt' | 'issuedAt'>, now = Date.now()): number {

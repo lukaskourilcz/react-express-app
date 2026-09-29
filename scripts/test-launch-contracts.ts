@@ -1952,6 +1952,10 @@ async function quizSubmitScopeContracts() {
   const graded = await submitAll((quiz.body as { sessionId: string }).sessionId, learner);
   assert.equal(graded.response.statusCode, 200, JSON.stringify(graded.body));
   assert.equal(decodeQuizResultReceipt(graded.body.resultReceipt!)?.purpose, 'quiz');
+  // The questions say when their session stops being gradable, no later
+  // than the sealed session itself does, so a saved quiz can be dropped.
+  const quizExpiresAt = (quiz.body as { expiresAt: number }).expiresAt;
+  assert.ok(quizExpiresAt <= graded.session.issuedAt + 60 * 60_000 && quizExpiresAt > Date.now() + 59 * 60_000, `expiresAt ${quizExpiresAt}`);
 
   // The daily challenge, fetched and submitted signed in.
   const daily = mockResponse();
@@ -1959,6 +1963,7 @@ async function quizSubmitScopeContracts() {
   assert.equal(daily.statusCode, 200, JSON.stringify(daily.body));
   const dailyGraded = await submitAll((daily.body as { sessionId: string }).sessionId, learner);
   assert.equal(dailyGraded.response.statusCode, 200, JSON.stringify(dailyGraded.body));
+  assert.ok((daily.body as { expiresAt: number }).expiresAt <= dailyGraded.session.issuedAt + 60 * 60_000);
   assert.equal(decodeQuizResultReceipt(dailyGraded.body.resultReceipt!)?.purpose, 'daily');
 
   // The 20-question assessment.
