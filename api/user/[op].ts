@@ -11,9 +11,9 @@ import {
   logEvent as emit,
   withRequestContext,
 } from '../../lib/http';
-import { requireAuth } from '../../lib/auth';
+import { requireAuth, type AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
 import {
   SUBJECT_SCOPE_CATALOG,
@@ -66,6 +66,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
   const op = String(req.query.op || '').toLowerCase();
   if (!(await limitUserWrite(req, res, op))) return;
+  if (!(await limitUserRead(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
   if (op === 'leaderboard-visibility') return handleLeaderboardVisibility(req, res, supabase);
   if (op === 'category-stats') return categoryStats(req, res);
@@ -128,6 +129,16 @@ export async function limitUserWrite(req: VercelRequest, res: VercelResponse, op
   return callerId
     ? enforceRateLimit(req, res, perCaller, `user:${callerId}`)
     : enforceRateLimit(req, res, perCaller);
+}
+
+/** GETs a script can drive for more than a row: the wallet settles grants,
+ * milestones and invitations as it reads, badges are worked out from the
+ * stats, and a friend lookup searches by handle. They take the two-tier read
+ * limit (`limitRead`). Returns false after sending the 429. */
+const LIMITED_READS: ReadonlySet<string> = new Set(['wallet', 'badges', 'friends-lookup']);
+async function limitUserRead(req: VercelRequest, res: VercelResponse, op: string): Promise<boolean> {
+  if (req.method !== 'GET' || !LIMITED_READS.has(op)) return true;
+  return limitRead(req, res);
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
@@ -361,13 +372,27 @@ function publicPicture(value: unknown): string | null {
   }
 }
 
-function verifiedProfile(payload: Record<string, unknown>): { name: string | null; picture: string | null } {
-  const meta = (payload.user_metadata && typeof payload.user_metadata === 'object'
-    ? payload.user_metadata
+/** The name and picture Google gave the account. Never `user_metadata`: any
+ * signed-in user can rewrite that from the browser (`supabase.auth.updateUser`),
+ * and a board would show whatever they wrote. The Google identity's data is
+ * written by the sign-in alone. The verified user carries its identities; when
+ * it does not, the admin API is asked. No Google identity, no name: the
+ * boards say "Learner". */
+async function verifiedProfile(auth: AuthResult): Promise<{ name: string | null; picture: string | null }> {
+  let identities: unknown = auth.payload.identities;
+  if (!Array.isArray(identities) && supabase) {
+    const fetched = await withTimeout(supabase.auth.admin.getUserById(auth.sub)).catch(() => null);
+    identities = fetched && !fetched.error ? fetched.data.user?.identities : undefined;
+  }
+  const google = Array.isArray(identities)
+    ? (identities as { provider?: unknown; identity_data?: unknown }[]).find((identity) => identity?.provider === 'google')
+    : undefined;
+  const data = (google?.identity_data && typeof google.identity_data === 'object'
+    ? google.identity_data
     : {}) as Record<string, unknown>;
   return {
-    name: publicName(meta.full_name || meta.name),
-    picture: publicPicture(meta.avatar_url || meta.picture),
+    name: publicName(data.full_name || data.name),
+    picture: publicPicture(data.avatar_url || data.picture),
   };
 }
 
@@ -417,7 +442,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         profile?: unknown;
       };
       // Name and picture sent in the body are ignored; see verifiedProfile.
-      const shown = verifiedProfile(auth.payload);
+      const shown = await verifiedProfile(auth);
 
       if (body.result_receipt !== undefined) {
         if (typeof body.result_receipt !== 'string') {
@@ -575,6 +600,7 @@ export async function handleLeaderboardVisibility(
   }
 
   try {
+    const shown = visible === null ? null : await verifiedProfile(auth);
     const result = visible === null
       ? await withTimeout(
           db.from('user_stats').select('show_on_leaderboards').eq('user_id', auth.sub).maybeSingle(),
@@ -586,7 +612,7 @@ export async function handleLeaderboardVisibility(
               {
                 user_id: auth.sub,
                 email: typeof auth.payload.email === 'string' && auth.payload.email.length <= MAX_STR ? auth.payload.email : null,
-                ...verifiedProfile(auth.payload),
+                ...shown,
                 show_on_leaderboards: visible,
               },
               { onConflict: 'user_id' },

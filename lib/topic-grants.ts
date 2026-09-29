@@ -1,8 +1,9 @@
 // Learning paths handed to a named account without the usual prerequisite
 // ladder or skill-check run.
 //
-// Grants are resolved on the server from the verified token's email claim and
-// merged into the extras blob `/api/quiz/roadmap?resource=progress` returns, so
+// Grants are resolved on the server from the verified account's confirmed
+// email (`confirmedEmail` in lib/auth.ts; an unconfirmed address is nobody's
+// yet) and merged into the extras blob `/api/quiz/roadmap?resource=progress` returns, so
 // the browser can never mint one for itself — the same rule the skill-check
 // unlocks follow.
 //
@@ -17,7 +18,8 @@ import { isRoadmapTopic, type RoadmapTopic } from './roadmap';
 const OWNER_GRANTS: readonly RoadmapTopic[] = ['system-design'];
 
 /**
- * The topics granted to `email`, or an empty array for everyone else.
+ * The topics granted to `email`, a confirmed address, or an empty array for
+ * everyone else.
  * `ownerEmail` comes from the stored game settings, so the owner address can be
  * changed without a deploy.
  */

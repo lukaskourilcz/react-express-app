@@ -3,6 +3,7 @@
 // in localStorage, and (when signed in) sync that progress to the user's account.
 
 import { apiFetch } from './api';
+import { accountEpoch } from './accountData';
 import { staleProfileStats } from './queryClient';
 import { readJSON, writeJSON } from './storage';
 import { createStore, useStore } from './store';
@@ -581,14 +582,20 @@ export function installProgressSyncFlusher(): void {
 // active subject — the same rule the local stores use when migrating.
 //
 // Sign-in, Today and the maps all ask for this; one request answers the ones
-// that ask while it is in flight.
-let syncInFlight: Promise<void> | null = null;
+// that ask while it is in flight, for the same account. A sync still in flight
+// when the account signs out answers for nobody: it writes nothing (see
+// accountEpoch), and the next account's first ask starts its own.
+let syncInFlight: { epoch: number; done: Promise<void> } | null = null;
 export function syncProgressWithServer(): Promise<void> {
-  syncInFlight ??= syncOnce().finally(() => { syncInFlight = null; });
-  return syncInFlight;
+  const epoch = accountEpoch();
+  if (syncInFlight?.epoch !== epoch) {
+    const entry = { epoch, done: syncOnce(epoch).finally(() => { if (syncInFlight === entry) syncInFlight = null; }) };
+    syncInFlight = entry;
+  }
+  return syncInFlight.done;
 }
 
-async function syncOnce(): Promise<void> {
+async function syncOnce(epoch: number): Promise<void> {
   interface ServerInventory {
     owned?: string[];
     ring?: string | null;
@@ -611,6 +618,9 @@ async function syncOnce(): Promise<void> {
   } catch {
     return; // not signed in or offline — keep local only
   }
+  // The account signed out while this was in flight: its progress, unlocks
+  // and balances are no longer this browser's to hold.
+  if (accountEpoch() !== epoch) return;
   // Signed-in progress is server-authoritative. Legacy server rows are retained
   // by migration; unverified browser-only values cannot unlock account XP.
   writeProgress(serverProgress);

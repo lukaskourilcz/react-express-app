@@ -185,6 +185,21 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
   }
+  // A session issued to an account (a daily fetched signed in) is graded for
+  // that account only. Graded as a guest's, a submit that arrived without the
+  // token would spend the attempt's one-time claim under nobody's name, and
+  // every retry after it would be refused as already graded. Nothing is
+  // claimed here, so the same answers can be sent again signed in.
+  if (session.userId && !signedIn) {
+    logEvent({ status: 401, reason: 'owner_signed_out', scope: session.scope, latency_ms: Date.now() - started });
+    return jsonError(res, 401, 'sign_in_required', 'Sign in again to submit this. It was started signed in.');
+  }
+  // Another account's session is refused as a Learn step is: graded as
+  // practice, it would still spend its owner's claim for the day.
+  if (session.userId && signedIn && signedIn.sub !== session.userId) {
+    logEvent({ status: 409, reason: 'session_owner_mismatch', scope: session.scope, latency_ms: Date.now() - started });
+    return jsonError(res, 409, 'session_owner_mismatch', 'This was started under a different sign-in. Start it again.');
+  }
   // A signed-in caller is bounded by their account, with room for a Challenge
   // answer every few seconds. A Challenge played without an account is
   // bounded the same way by the run sealed in its session, so a class of

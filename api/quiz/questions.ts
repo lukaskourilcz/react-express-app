@@ -10,7 +10,7 @@ import {
   type Question,
 } from '../../lib/quiz-runtime';
 import { encodeSession, quizSessionExpiresAt } from '../../lib/quiz-tokens';
-import { tryAuth } from '../../lib/auth';
+import { confirmedEmail, tryAuth } from '../../lib/auth';
 import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
@@ -123,8 +123,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     } catch {
       return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
     }
-    const emailClaim = auth?.payload?.email;
-    const email = typeof emailClaim === 'string' ? emailClaim.toLowerCase() : null;
+    // Only a confirmed address is the owner's.
+    const email = auth ? confirmedEmail(auth.payload)?.toLowerCase() ?? null : null;
     if (email !== ownerEmail) {
       selectedCategories = selectedCategories.filter((c) => !PRIVATE_CATEGORIES.includes(c));
       if (selectedCategories.length === 0) {

@@ -298,6 +298,56 @@ describe('a returning visitor with a stored session', () => {
     expect(authorization).toEqual(['Bearer stored-access-token']);
   });
 
+  it('sends nothing when the stored session is not read within the four-second limit, and says why', async () => {
+    // A signed-in learner whose token refresh is slow: sent without the token,
+    // a quiz submit would be graded as a guest's and its one-time claim spent.
+    freshPageLoad('held');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const authorization = recordAuthorization();
+    const { apiFetch, friendlyError } = await import('../src/lib/api');
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] });
+    const request = apiFetch('/api/test').catch((error: unknown) => error);
+    await vi.advanceTimersByTimeAsync(4_001);
+    vi.useRealTimers();
+    const error = await request;
+    expect(error).toMatchObject({ status: 0, code: 'auth_unavailable' });
+    expect(friendlyError(error)).toBe('We couldn’t confirm your sign-in, so nothing was saved. Check your connection and try again.');
+    expect(authorization).toEqual([]);
+    // The retry, once the session can be read, goes out signed in.
+    await releaseDownload();
+    await expect(apiFetch('/api/test')).resolves.toEqual({ ok: true });
+    expect(authorization).toEqual(['Bearer stored-access-token']);
+  });
+
+  it('sends nothing while supabase-js keeps a session it could not refresh', async () => {
+    // An expired token whose refresh met a network error: supabase-js answers
+    // no session and keeps the stored one for the next try.
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const authorization = recordAuthorization();
+    const { apiFetch } = await import('../src/lib/api');
+    await waitFor(() => expect(sb.createClient).toHaveBeenCalledTimes(1));
+    const offline = Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError', status: 0 });
+    sb.clients[0].auth.getSession.mockImplementationOnce(async () => ({ data: { session: null }, error: offline }) as never);
+    await expect(apiFetch('/api/test')).rejects.toMatchObject({ status: 0, code: 'auth_unavailable' });
+    expect(authorization).toEqual([]);
+    expect(localStorage.getItem(KEY)).not.toBeNull();
+  });
+
+  it('sends a request without a token once supabase-js has removed a session it cannot refresh', async () => {
+    // A revoked refresh token: supabase-js removes the session and signs out,
+    // so this browser is a guest's again.
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const authorization = recordAuthorization();
+    const { apiFetch } = await import('../src/lib/api');
+    await waitFor(() => expect(sb.createClient).toHaveBeenCalledTimes(1));
+    sb.clients[0].auth.getSession.mockImplementationOnce(async () => {
+      localStorage.removeItem(KEY);
+      return { data: { session: null }, error: null } as never;
+    });
+    await expect(apiFetch('/api/test')).resolves.toEqual({ ok: true });
+    expect(authorization).toEqual([null]);
+  });
+
   it('signs out through the loaded client', async () => {
     localStorage.setItem(KEY, JSON.stringify(STORED));
     const { current } = await mountAuth();
@@ -548,6 +598,56 @@ describe('signing out', () => {
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('signed-out'));
     act(() => sb.clients[0].emit('SIGNED_OUT', null));
     expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual(Object.keys(ACCOUNT_LOCAL));
+  });
+
+  it.each([
+    ['offline', { name: 'AuthRetryableFetchError', status: 0, message: 'Failed to fetch' }],
+    ['while the sign-in service answers 500', { name: 'AuthApiError', status: 500, message: 'Internal server error' }],
+  ])('logs out of this browser %s: the session, its code verifier and the account’s data go', async (_when, failure) => {
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    localStorage.setItem(`${KEY}-code-verifier`, 'verifier');
+    seed(localStorage, { ...ACCOUNT_LOCAL, ...DEVICE_LOCAL });
+    seed(sessionStorage, { ...ACCOUNT_SESSION, ...DEVICE_SESSION });
+    const { current } = await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    // supabase-js 2.110 refuses the local sign-out and keeps the session.
+    sb.clients[0].auth.signOut.mockImplementationOnce(async () => ({ error: Object.assign(new Error(failure.message), failure) }) as never);
+
+    await act(() => current().signOut());
+    expect(sb.clients[0].auth.signOut).toHaveBeenCalledWith({ scope: 'local' });
+    expect(screen.getByTestId('auth')).toHaveTextContent('signed-out');
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(localStorage.getItem(`${KEY}-code-verifier`)).toBeNull();
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual([]);
+    expect(kept(sessionStorage, ACCOUNT_SESSION)).toEqual([]);
+    expect(kept(localStorage, DEVICE_LOCAL)).toEqual(Object.keys(DEVICE_LOCAL));
+    // The next request is a guest's.
+    const authorization = recordAuthorization();
+    const { apiFetch } = await import('../src/lib/api');
+    await expect(apiFetch('/api/test')).resolves.toEqual({ ok: true });
+    expect(authorization).toEqual([null]);
+  });
+
+  it('still says so when signing out everywhere fails offline, and keeps the session', async () => {
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    const { current } = await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    sb.clients[0].auth.signOut.mockImplementationOnce(async () => ({ error: Object.assign(new Error('Failed to fetch'), { name: 'AuthRetryableFetchError', status: 0 }) }) as never);
+    await act(() => expect(current().signOut('global')).rejects.toThrow('Failed to fetch'));
+    expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored');
+    expect(localStorage.getItem(KEY)).not.toBeNull();
+  });
+
+  it('logs out of this browser when supabase-js could not be downloaded', async () => {
+    freshPageLoad('fails');
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    seed(localStorage, ACCOUNT_LOCAL);
+    const { current } = await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).not.toHaveTextContent('loading'));
+    await act(() => current().signOut());
+    expect(localStorage.getItem(KEY)).toBeNull();
+    expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual([]);
+    expect(screen.getByTestId('auth')).toHaveTextContent('signed-out');
   });
 
   it('forgets the data of an account whose stored session supabase-js finds expired', async () => {

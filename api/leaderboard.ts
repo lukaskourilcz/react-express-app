@@ -30,6 +30,17 @@ const logEvent = createLogger('leaderboard');
 const WINDOW_DAYS: Readonly<Record<string, number>> = { '30d': 30, '7d': 7 };
 const WINDOW_MIN_ANSWERS = 5;
 
+// The row counts a board is served at. Any other `limit` is rounded up to the
+// next of these (200 at most), so a query string varied to get past the CDN
+// meets the same few boards, and the read limit in the handler bounds how
+// often that can happen.
+const LIMIT_STEPS = [10, 25, 50, 100, 200] as const;
+function boardLimit(raw: unknown): number {
+  const asked = parseInt(String(raw ?? ''), 10);
+  if (!Number.isFinite(asked)) return 100;
+  return LIMIT_STEPS.find((step) => step >= asked) ?? 200;
+}
+
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
@@ -38,11 +49,14 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!supabase) {
     return jsonError(res, 503, 'not_configured', 'Leaderboard backend is not configured');
   }
+  // What reaches the function is a read the CDN did not answer: a signed-in
+  // board, or a URL nobody asked for in the last minute. A script varying the
+  // query string would make every read one of those.
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return;
 
   const period = (req.query.period as string) || 'global';
   const dateParam = (req.query.date as string) || new Date().toISOString().slice(0, 10);
-  const limitParam = parseInt(req.query.limit as string, 10);
-  const limit = Number.isFinite(limitParam) ? Math.min(Math.max(limitParam, 1), 200) : 100;
+  const limit = boardLimit(req.query.limit);
 
   try {
     if (Object.prototype.hasOwnProperty.call(WINDOW_DAYS, period)) {

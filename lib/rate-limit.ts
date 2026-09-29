@@ -21,7 +21,7 @@
 // exported for the fallback path and any sync call site.
 
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
-import { jsonError } from './http';
+import { jsonError, ServiceUnavailableError, verifiedCallerId } from './http';
 
 interface Bucket {
   tokens: number;
@@ -163,6 +163,14 @@ export const RATE_LIMITS = {
   // address, so two people behind one router each keep their five.
   voucherRedeem: { key: 'voucher_redeem', capacity: 5, refillPerSecond: 5 / 3600 },
   voucherRedeemAddress: { key: 'voucher_redeem_address', capacity: 10, refillPerSecond: 10 / 3600 },
+  // Reads a script can drive (`limitRead` below): the wallet, badges and a
+  // friend lookup, the Learn map, plan and steps, and a leaderboard read the
+  // CDN did not answer. Two tiers like the writes: an address backstop that
+  // holds a class behind one NAT, then the verified account's own. A guest
+  // has the address tier alone. Generous: nobody reading at a person's pace
+  // meets either.
+  readAddress: { key: 'read_address', capacity: SHARED_NETWORK_SEATS * 60, refillPerSecond: (SHARED_NETWORK_SEATS * 60) / 60 },
+  readPerUser: { key: 'read_user', capacity: 120, refillPerSecond: 120 / 60 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
@@ -354,9 +362,12 @@ export async function enforceRateLimit(
 // replay would leak something (a placement round answered again with other
 // options reports a different score), the handler claims the token's id once:
 // the first claim wins, every later one is refused. Upstash holds the claim
-// across instances (SET NX with an expiry); without it, or when Redis fails
-// mid-request, a per-instance map does, which is enough locally and blunts a
-// script hammering one warm instance.
+// across instances (SET NX with an expiry). Where Upstash is configured (in
+// production it is), a claim it cannot record is not a claim: this instance's
+// memory knows nothing of the others, so a replay sent to another instance
+// would be graded again. The request is refused with 503 instead
+// (`ServiceUnavailableError`). Only without Upstash, as in local development,
+// does a per-instance map hold the claim.
 
 type OnceStore = { set: (key: string, value: string, opts: { nx: true; ex: number }) => Promise<unknown> };
 let onceStore: Promise<OnceStore | null> | null = null;
@@ -377,14 +388,16 @@ function getOnceStore(): Promise<OnceStore | null> {
 }
 
 /** Claim `key` for `ttlSeconds`. True for the first caller, false while the
- * claim stands. */
+ * claim stands. Throws `ServiceUnavailableError` when Upstash is configured
+ * and does not record the claim. */
 export async function claimOnce(key: string, ttlSeconds: number): Promise<boolean> {
-  const store = await getOnceStore();
-  if (store) {
+  if (isDistributedRateLimitEnabled()) {
+    const store = await getOnceStore();
     try {
+      if (!store) throw new Error('once_store_unavailable');
       return (await withLimiterDeadline(store.set(`once:${key}`, '1', { nx: true, ex: ttlSeconds }))) === 'OK';
     } catch {
-      // Redis unreachable: fall back to this instance's memory below.
+      throw new ServiceUnavailableError('claim_unavailable', 'This could not be checked right now. Try again in a minute.');
     }
   }
   const now = Date.now();
@@ -394,4 +407,20 @@ export async function claimOnce(key: string, ttlSeconds: number): Promise<boolea
   }
   localClaims.set(key, now + ttlSeconds * 1000);
   return true;
+}
+
+/* -------------------------------------------------------------------------- */
+/* Reads                                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * The read limit for a GET a script can drive, in the two tiers of
+ * `RATE_LIMITS.readAddress` and `readPerUser`. The account is verified once
+ * per request (lib/http.ts), so the handler's own check that follows costs
+ * nothing more. Returns false after sending the 429.
+ */
+export async function limitRead(req: VercelRequest, res: VercelResponse): Promise<boolean> {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.readAddress))) return false;
+  const callerId = await verifiedCallerId(req);
+  return callerId ? enforceRateLimit(req, res, RATE_LIMITS.readPerUser, `user:${callerId}`) : true;
 }

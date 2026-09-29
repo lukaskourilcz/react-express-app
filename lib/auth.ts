@@ -102,6 +102,21 @@ export async function requireAuth(req: VercelRequest): Promise<AuthResult> {
 }
 
 /**
+ * The verified account's email, only once Supabase has confirmed it
+ * (`email_confirmed_at`); null otherwise. An unconfirmed address proves
+ * nothing: anyone can sign up with someone else's and hold that session until
+ * the link is clicked. So anything granted by address (the admin allow-list,
+ * the owner's paths and private categories) reads it here, as billing does.
+ */
+export function confirmedEmail(payload: Record<string, unknown>): string | null {
+  const email = payload.email;
+  const confirmedAt = payload.email_confirmed_at;
+  return typeof email === 'string' && email.length > 0 && typeof confirmedAt === 'string' && confirmedAt.length > 0
+    ? email
+    : null;
+}
+
+/**
  * Verify auth, but return null on failure instead of throwing. Useful for
  * routes that have both authenticated and unauthenticated branches.
  */

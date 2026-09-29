@@ -11,7 +11,7 @@
  *    spaced-mastery fields included, because the browser replaces its copy
  *    with it;
  *  - a topic granted to an account opens its levels as the progress GET
- *    reports it open;
+ *    reports it open, and only once the account's address is confirmed;
  *  - a failed progress read answers 503 rather than refusing the level as if
  *    the learner had not earned it;
  *  - a coding task whose solution was revealed in the attempt does not
@@ -33,13 +33,15 @@ const LEARNER = { id: '5a0e7c1e-2f7a-4c3d-9a61-5d2f0c9e8a41', email: 'learner@ex
 const OTHER = { id: '9b1f3a2e-5b6d-4e8f-9a0b-1c2d3e4f5a6b', email: 'other@example.invalid', token: 'learn-contract-other' };
 const OWNER = { id: '3c2d1e0f-6a7b-4c8d-9e0f-a1b2c3d4e5f6', email: 'owner@example.invalid', token: 'learn-contract-owner' };
 const BROKEN = { id: '7d6c5b4a-3e2f-4a1b-8c9d-0e1f2a3b4c5d', email: 'broken@example.invalid', token: 'learn-contract-broken' };
+// Someone who signed up with the owner's address and never confirmed it.
+const OWNER_UNCONFIRMED = { id: '4e3d2c1b-7a8b-4c9d-8e0f-b1c2d3e4f5a6', email: OWNER.email, token: 'learn-contract-owner-unconfirmed', unconfirmed: true };
 /** On the backend track, whose plan has no HTML. */
 const BACKEND = {
   id: '2e4f6a8b-1c3d-4e5f-8a9b-0c1d2e3f4a5b', email: 'backend@example.invalid', token: 'learn-contract-backend',
   meta: { devquiz_learning_preference_v1: { schemaVersion: 1, baseTrack: 'backend', specialization: null } },
 };
 const HEARTS = { id: '6f5e4d3c-2b1a-4f0e-9d8c-7b6a5f4e3d2c', email: 'hearts@example.invalid', token: 'learn-contract-hearts' };
-const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown> }> = [LEARNER, OTHER, OWNER, BROKEN, BACKEND, HEARTS];
+const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown>; unconfirmed?: boolean }> = [LEARNER, OTHER, OWNER, BROKEN, OWNER_UNCONFIRMED, BACKEND, HEARTS];
 const PREMIUM = new Set([OWNER.id]);
 const DAY = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
 
@@ -146,7 +148,7 @@ async function startStandIn() {
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
       const user = USERS.find((one) => one.token === token);
       if (!user) return send(401, { message: 'invalid token' });
-      return send(200, { id: user.id, email: user.email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: user.meta ?? {} });
+      return send(200, { id: user.id, email: user.email, ...(user.unconfirmed ? {} : { email_confirmed_at: '2026-09-01T00:00:00Z' }), aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: user.meta ?? {} });
     }
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname);
     if (rpc) {
@@ -332,6 +334,12 @@ async function main() {
     assert.equal(grantedLevel.statusCode, 200, `a granted topic serves its first level (${JSON.stringify(grantedLevel.body?.error)})`);
     const notGranted = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OTHER.token);
     assert.equal(notGranted.body?.error?.code, 'topic_locked', 'an account without the grant is still refused');
+    // The grant is keyed on the address, so an unconfirmed one gets nothing.
+    const unconfirmed = await call('GET', { resource: 'progress' }, OWNER_UNCONFIRMED.token);
+    assert.equal(unconfirmed.statusCode, 200, JSON.stringify(unconfirmed.body));
+    assert.ok(!unconfirmed.body.extra.unlocked.includes('system-design'), 'an unconfirmed owner address is not granted the topic');
+    const unconfirmedLevel = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OWNER_UNCONFIRMED.token);
+    assert.equal(unconfirmedLevel.body?.error?.code, 'topic_locked', 'nor served its levels');
     console.log('PASS learn: a granted topic opens its levels');
 
     // ── A revealed coding task does not complete the level ─────────────────
