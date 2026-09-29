@@ -114,7 +114,7 @@ export function pickQuestionOfTheDay(
       options,
       category: base.category,
       difficulty: base.difficulty,
-      ...(base.tags ? { tags: base.tags } : {}),
+      // No tags before grading: some name the correct option.
     },
   };
 }

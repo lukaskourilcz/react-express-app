@@ -61,7 +61,6 @@ export interface DailyChallenge {
   sessionId: string;
   questions: Array<{
     id: string;
-    tags: string[];
     introduction: string;
     question: string;
     options: string[];

@@ -1987,6 +1987,29 @@ async function quizSubmitScopeContracts() {
   const checked = await submitAll((qotd.body as { sessionId: string }).sessionId, learner);
   assert.equal(checked.response.statusCode, 200, JSON.stringify(checked.body));
   assert.equal(checked.body.resultReceipt, undefined);
+
+  // Nothing handed out before grading carries the question's tags: a dozen
+  // served questions have a tag that is their correct option (rm-db-19
+  // WHERE, rm-db-37 HAVING, rm-react-183 useCallback).
+  const payloads: [string, unknown][] = [
+    ['quiz', (quiz.body as { questions: unknown[] }).questions],
+    ['daily', (daily.body as { questions: unknown[] }).questions],
+    ['Learn level', (level.body as { questions: unknown[] }).questions],
+    ['assessment', (assessment.body as { questions: unknown[] }).questions],
+    ['challenge batch', (batch.body as { questions: unknown[] }).questions],
+    ['question of the day', [(qotd.body as { question: unknown }).question]],
+  ];
+  for (const [label, questions] of payloads) {
+    for (const question of questions as Record<string, unknown>[]) {
+      assert.equal('tags' in question, false, `${label} sends ${String(question.id)} with its tags before grading`);
+    }
+  }
+  const placement = mockResponse();
+  await roadmapHandler(quizRequest('GET', { resource: 'placement', subject: 'webdev', lang: 'en' }), placement as never);
+  assert.equal(placement.statusCode, 200, JSON.stringify(placement.body));
+  for (const question of (placement.body as { questions: Record<string, unknown>[] }).questions) {
+    assert.equal('tags' in question, false, 'a placement round sends no tags');
+  }
 }
 
 /** A signed-in learner has one ranked daily attempt, timed from the first

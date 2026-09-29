@@ -290,7 +290,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     sessionData.push({ questionId: q.id, correctAnswer: shuffled.indexOf(correctText) });
     return {
       id: q.id,
-      tags: q.tags,
+      // No tags before grading: some name the correct option.
       introduction: q.introduction,
       question: q.question,
       options: shuffled,
