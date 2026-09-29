@@ -80,9 +80,11 @@ by the month's protections. A shield covers exactly two UTC dates, the one it
 was raised on and the next: `activate_streak_shield` ends it at 00:00 UTC the
 day after tomorrow, and every reader takes `shield_until - 48 hours` as the
 raise date, which also holds for a shield stored as "raised + 48 hours" before
-048. The server keeps UTC days; the streak card, Today's target, the daily
-challenge and the cleared-level tooltip say when the day changes on the
-learner's clock (`client/src/lib/utcDay.ts`).
+048. The server keeps UTC days; the streak card, Today's target, done and
+empty panels, the daily challenge and the cleared-level tooltip say when the
+day changes on the learner's clock (`client/src/lib/utcDay.ts`). Reaching
+Today's target hands out nothing: the panel says the plan is complete and
+when the next day starts.
 
 ### Question of the day (#239)
 

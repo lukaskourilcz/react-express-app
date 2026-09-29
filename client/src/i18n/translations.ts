@@ -1013,6 +1013,8 @@ export const en = {
   'today.progress': '{done}/{target} done',
   'today.targetMet': 'Target reached',
   'today.done': 'Today’s plan is complete',
+  // Unrendered: Today no longer promises a card pack, since no screen opens
+  // one. The keys stay because the retained Czech file still has them.
   'today.packReady': 'Card pack ready',
   'today.openPack': 'Open your pack',
   'today.emptyTitle': 'Nothing queued',
