@@ -4009,7 +4009,7 @@ test('a failed request shows an alert', () => withRequests(async calls => {
     tier: 5,
     focus: ["fetch", "useState", "useEffect"],
     title: "Interview mini project",
-    prompt: "Build a small CRUD app using GET and POST, state, effects, mapped lists, loading, errors, filters, and derived stats. Explain the full browser-to-database flow.",
+    prompt: "Build a small posts app that reads and creates, the way an interview project would ask. On mount, fetch `https://jsonplaceholder.typicode.com/posts`; each post is `{ id, userId, title, body }`. While it loads, show “Loading posts…”. A failed request, rejected or answered with a status that is not ok, shows “Could not load posts” in an element with `role=\"alert\"`. List the posts in a `ul`, one `li` per post holding just its title. Two filters narrow the list: an input labelled “Search” keeps the posts whose title contains its text, ignoring case, and a `select` labelled “Author”, whose first option “All authors” keeps everyone, offers one option “User <userId>” per author in the posts, in ascending order of `userId`. Two lines of stats follow: “Showing <n> of <m> posts”, where m counts every post in state, and “Authors: <k>”, the number of different authors among the posts shown. A form adds a post: an input labelled “Title” and an “Add post” button. A blank title sends nothing. Otherwise send `POST https://jsonplaceholder.typicode.com/posts` with the JSON body `{ title, body: \"\", userId: 1 }`, the title trimmed; while it is on its way the button reads “Adding…” and is disabled. The answer is the new post with its id: add it to the end of the list and empty the Title box. A failed POST shows “Could not add the post” in an alert and keeps the title in the box; the next attempt clears the alert. Work the filtered list and the stats out of the posts in state while rendering. The notes at the top are for your explanation of the whole trip from the browser to the database and back; the checks do not read them.",
     starter: `import React, { useEffect, useState } from 'react';
 
 // SYSTEM DESIGN NOTES
@@ -4025,53 +4025,167 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
-const [items, setItems] = useState([]);
+    skeleton: `const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+const [posts, setPosts] = useState([]);
 const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
-const [query, setQuery] = useState('');
+const [search, setSearch] = useState('');
+const [author, setAuthor] = useState('all');
+const [title, setTitle] = useState('');
+const [adding, setAdding] = useState(false);
+const [addError, setAddError] = useState('');
 
-useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(Array.isArray(data) ? data : data.products ?? data.todos ?? []);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+// load POSTS_URL in a mount effect, as in the earlier tasks
 
-  loadItems();
-}, []);
+const addPost = async event => {
+  event.preventDefault();
+  const text = title.trim();
+  if (!text || adding) return;
+  setAdding(true);
+  setAddError('');
+  try {
+    const response = await fetch(POSTS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: text, body: '', userId: 1 }),
+    });
+    if (!response.ok) throw new Error('Request failed');
+    const created = await response.json();
+    // append created with the updater form, then empty the box
+  } catch (requestError) {
+    setAddError('Could not add the post');
+  } finally {
+    setAdding(false);
+  }
+};
 
-const visibleItems = items.filter(item => {
-  // apply the requested filters
-  return true;
-});
-
-{visibleItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}`,
+const authors = [...new Set(posts.map(post => post.userId))].sort((a, b) => a - b);
+const shown = posts.filter(post => true); // the search and the author
+const authorsShown = new Set(shown.map(post => post.userId)).size;`,
     hints: [
-      "Write a short data-flow plan in comments first. Build GET and rendering, then interactions, then POST, then loading/error states. Finish by explaining storage, API boundaries, failure handling, and scale.",
+      "Build it in slices and keep each one working: the GET with its loading and error states, then the list, then the filters and stats worked out from the posts in state, then the POST. Nothing on screen but the posts and the form fields needs its own state.",
     ],
     approach: [
-      "Write the user flow, the data model and the endpoints in comments before writing any component code.",
+      "Write the user flow, the data model and the endpoints in the notes before writing any component code.",
       "Build the GET slice first: one array state, a mount effect, loading and error branches, and a keyed mapped list.",
-      "Add the POST slice next, appending the created record immutably and resetting the controlled input.",
-      "Layer filters and derived stats on top of the existing array, then explain the browser to REST API to database flow in comments.",
+      "Add the POST slice next: skip a blank title, send the trimmed one, disable the button while the request is out, append the answer with the updater form, and empty the box only on success.",
+      "Layer the search, the author filter and the stats on top of the same array during render, sorting the author ids as numbers. Then explain the browser to API to database trip in the notes.",
     ],
-    verify: "checklist",
+    verify: "tests",
     estimatedMinutes: 45,
-    checklist: [
-      "GET and POST both work, with mapped lists, loading, and error states.",
-      "Filters and derived stats come from existing state.",
-      "Your comments explain the full browser-to-database flow.",
-    ],
+    suite: `import './fetchStub';
+import React from 'react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
+import App from './App';
+
+// Every request waits until the check answers it, so the page can be read
+// while one is on its way. The shared stub comes back when the case ends.
+const withRequests = async body => {
+  const calls = [];
+  const real = globalThis.fetch;
+  globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
+    calls.push({
+      url: String(url),
+      method: String(options.method || 'GET').toUpperCase(),
+      body: options.body,
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      fail: error => reject(error),
+    });
+  });
+  try {
+    await body(calls);
+  } finally {
+    globalThis.fetch = real;
+  }
+};
+const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+const answer = (call, data, status = 200) => act(async () => {
+  call.respond(data, status);
+  await settle();
+});
+const breakOff = call => act(async () => {
+  call.fail(new TypeError('Failed to fetch'));
+  await settle();
+});
+const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+const titles = () => screen.queryAllByRole('listitem').map(item => item.textContent);
+const typeIn = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+const chooseAuthor = text => {
+  const select = screen.getByLabelText('Author');
+  const option = [...select.options].find(one => one.textContent === text);
+  fireEvent.change(select, { target: { value: option.value } });
+};
+const POSTS = [
+  { id: 1, userId: 1, title: 'Hooks in practice', body: 'One' },
+  { id: 2, userId: 2, title: 'Testing React forms', body: 'Two' },
+  { id: 3, userId: 1, title: 'Why keys matter', body: 'Three' },
+  { id: 4, userId: 3, title: 'Practical hooks recipes', body: 'Four' },
+];
+
+test('the posts load on mount with their stats', () => withRequests(async calls => {
+  render(<App />);
+  expect(calls).toHaveLength(1);
+  expect([calls[0].url, calls[0].method]).toEqual([POSTS_URL, 'GET']);
+  expect(screen.getByText('Loading posts…')).toBeTruthy();
+  await answer(calls[0], POSTS);
+  expect(screen.queryByText('Loading posts…')).toBeNull();
+  expect(titles()).toEqual(['Hooks in practice', 'Testing React forms', 'Why keys matter', 'Practical hooks recipes']);
+  expect(screen.getByText('Showing 4 of 4 posts')).toBeTruthy();
+  expect(screen.getByText('Authors: 3')).toBeTruthy();
+}));
+
+test('Search keeps the titles that contain the text, ignoring case', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  typeIn('Search', 'HOOKS');
+  expect(titles()).toEqual(['Hooks in practice', 'Practical hooks recipes']);
+  expect(screen.getByText('Showing 2 of 4 posts')).toBeTruthy();
+  expect(screen.getByText('Authors: 2')).toBeTruthy();
+}));
+
+test('the author filter narrows the list and works with the search', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  chooseAuthor('User 1');
+  expect(titles()).toEqual(['Hooks in practice', 'Why keys matter']);
+  expect(screen.getByText('Authors: 1')).toBeTruthy();
+  typeIn('Search', 'keys');
+  expect(titles()).toEqual(['Why keys matter']);
+  expect(screen.getByText('Showing 1 of 4 posts')).toBeTruthy();
+}));
+
+test('Add post sends the trimmed title and appends the post the server returns', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  typeIn('Title', '  New idea ');
+  fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
+  expect(calls).toHaveLength(2);
+  const sent = JSON.parse(calls[1].body);
+  expect([calls[1].url, calls[1].method, sent.title, sent.body, sent.userId]).toEqual([POSTS_URL, 'POST', 'New idea', '', 1]);
+  expect(screen.getByRole('button', { name: 'Adding…' }).disabled).toBe(true);
+  await answer(calls[1], { id: 201, userId: 1, title: 'New idea', body: '' });
+  expect(titles()).toEqual(['Hooks in practice', 'Testing React forms', 'Why keys matter', 'Practical hooks recipes', 'New idea']);
+  expect(screen.getByLabelText('Title').value).toBe('');
+  expect(screen.getByText('Showing 5 of 5 posts')).toBeTruthy();
+}));
+
+test('a blank title sends nothing', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  typeIn('Title', '   ');
+  fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
+  expect(calls).toHaveLength(1);
+  expect(titles()).toHaveLength(4);
+}));
+
+test('a failed load shows an alert', () => withRequests(async calls => {
+  render(<App />);
+  await breakOff(calls[0]);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load posts');
+  expect(screen.queryByText('Loading posts…')).toBeNull();
+  expect(titles()).toEqual([]);
+}));
+`,
     api: {
       method: "GET + POST",
       url: "https://jsonplaceholder.typicode.com/posts",

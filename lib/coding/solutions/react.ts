@@ -4962,15 +4962,413 @@ test('no events at all', () => withRequests(async calls => {
 }));`,
   },
   "react-interview-mini-project": {
-    solution: `Senior-style approach for Interview mini project:
+    solution: `import React, { useEffect, useState } from 'react';
 
-1. Write the user flow and data shape before coding.
-2. Build the smallest GET request with loading and error state.
-3. Render stable keyed items and derive filters, sorting, and totals instead of storing duplicate state.
-4. Add one interaction at a time with small arrow-function handlers and immutable updates.
-5. Put POST logic in a named async arrow function; check response.ok and show failure feedback.
-6. Keep effects focused, list every dependency, and clean up timers or requests.
-7. Explain a simple client → REST API → relational database design. Add indexes, pagination, caching, or queues only for a stated bottleneck.
-8. Finish by testing empty, loading, success, and error states.`,
+// SYSTEM DESIGN NOTES
+// User flow: the posts load, the search and the author filter narrow them,
+// and the form adds a post that appears at the end of the list.
+// Data model: post { id, userId, title, body }. State holds the posts and the
+// form; the filtered list and the stats are worked out from them.
+// API endpoints: GET /posts and POST /posts { title, body, userId }, which
+// answers 201 with the stored post and its new id.
+// Reliability and scale: the browser sends HTTPS to the API; the API checks
+// the session and validates the body, then runs INSERT ... RETURNING or a
+// SELECT with LIMIT through a connection pool; the database stores the row
+// (posts table, index on user_id) and the API answers JSON, which becomes
+// state and then DOM. Paginate the GET, cache it at the edge, and make the
+// POST safe to retry with an idempotency key.
+
+const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+
+const App = () => {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
+  const [author, setAuthor] = useState('all');
+  const [title, setTitle] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [addError, setAddError] = useState('');
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const response = await fetch(POSTS_URL);
+        if (!response.ok) throw new Error('Request failed');
+        setPosts(await response.json());
+      } catch (requestError) {
+        setError('Could not load posts');
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadPosts();
+  }, []);
+
+  const addPost = async event => {
+    event.preventDefault();
+    const text = title.trim();
+    if (!text || adding) return;
+    setAdding(true);
+    setAddError('');
+    try {
+      const response = await fetch(POSTS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: text, body: '', userId: 1 }),
+      });
+      if (!response.ok) throw new Error('Request failed');
+      const created = await response.json();
+      setPosts(current => [...current, created]);
+      setTitle('');
+    } catch (requestError) {
+      setAddError('Could not add the post');
+    } finally {
+      setAdding(false);
+    }
+  };
+
+  const authors = [...new Set(posts.map(post => post.userId))].sort((a, b) => a - b);
+  const needle = search.toLowerCase();
+  const shown = posts.filter(post =>
+    post.title.toLowerCase().includes(needle) && (author === 'all' || String(post.userId) === author));
+  const authorsShown = new Set(shown.map(post => post.userId)).size;
+
+  return (
+    <main>
+      <h2>Interview mini project</h2>
+      {loading && <p>Loading posts…</p>}
+      {error && <p role="alert">{error}</p>}
+      <label>Search <input value={search} onChange={event => setSearch(event.target.value)} /></label>
+      <label>
+        Author{' '}
+        <select value={author} onChange={event => setAuthor(event.target.value)}>
+          <option value="all">All authors</option>
+          {authors.map(id => <option key={id} value={String(id)}>User {id}</option>)}
+        </select>
+      </label>
+      <p>Showing {shown.length} of {posts.length} posts</p>
+      <p>Authors: {authorsShown}</p>
+      <ul>
+        {shown.map(post => <li key={post.id}>{post.title}</li>)}
+      </ul>
+      <form onSubmit={addPost}>
+        <label>Title <input value={title} onChange={event => setTitle(event.target.value)} /></label>
+        <button type="submit" disabled={adding}>{adding ? 'Adding…' : 'Add post'}</button>
+      </form>
+      {addError && <p role="alert">{addError}</p>}
+    </main>
+  );
+};
+
+export default App;`,
+    junior: `import React, { useEffect, useState } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: see the posts, search them, pick an author, and add a new post.
+// Data model: a post has id, userId, title and body.
+// API endpoints: GET /posts loads them, POST /posts creates one.
+// Reliability and scale: the browser sends the request to the server, the
+// server checks it and saves it in the database, and sends the saved post
+// back as JSON. The page puts it in state and React shows it. If a request
+// fails I show an error instead of losing what is on the screen.
+
+const App = () => {
+  const [posts, setPosts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [searchText, setSearchText] = useState('');
+  const [selectedAuthor, setSelectedAuthor] = useState('all');
+  const [newTitle, setNewTitle] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
+  const [addError, setAddError] = useState('');
+
+  useEffect(() => {
+    const loadPosts = async () => {
+      try {
+        const response = await fetch('https://jsonplaceholder.typicode.com/posts');
+        if (!response.ok) {
+          throw new Error('Request failed');
+        }
+        const data = await response.json();
+        setPosts(data);
+      } catch (requestError) {
+        setLoadError('Could not load posts');
+      }
+      setLoading(false);
+    };
+    loadPosts();
+  }, []);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    const trimmedTitle = newTitle.trim();
+    if (trimmedTitle === '' || isAdding) {
+      return;
+    }
+    setIsAdding(true);
+    setAddError('');
+    try {
+      const response = await fetch('https://jsonplaceholder.typicode.com/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: trimmedTitle, body: '', userId: 1 }),
+      });
+      if (!response.ok) {
+        throw new Error('Request failed');
+      }
+      const createdPost = await response.json();
+      setPosts((oldPosts) => [...oldPosts, createdPost]);
+      setNewTitle('');
+    } catch (requestError) {
+      setAddError('Could not add the post');
+    }
+    setIsAdding(false);
+  };
+
+  const authorIds = [];
+  for (const post of posts) {
+    if (!authorIds.includes(post.userId)) {
+      authorIds.push(post.userId);
+    }
+  }
+  authorIds.sort((a, b) => a - b);
+
+  const lowerSearch = searchText.toLowerCase();
+  const shownPosts = [];
+  for (const post of posts) {
+    const titleMatches = post.title.toLowerCase().includes(lowerSearch);
+    const authorMatches = selectedAuthor === 'all' || String(post.userId) === selectedAuthor;
+    if (titleMatches && authorMatches) {
+      shownPosts.push(post);
+    }
+  }
+
+  const shownAuthors = [];
+  for (const post of shownPosts) {
+    if (!shownAuthors.includes(post.userId)) {
+      shownAuthors.push(post.userId);
+    }
+  }
+
+  let buttonText = 'Add post';
+  if (isAdding) {
+    buttonText = 'Adding…';
+  }
+
+  return (
+    <main>
+      <h2>Interview mini project</h2>
+      {loading && <p>Loading posts…</p>}
+      {loadError !== '' && <p role="alert">{loadError}</p>}
+      <label htmlFor="search">Search</label>
+      <input id="search" type="text" value={searchText} onChange={(event) => setSearchText(event.target.value)} />
+      <label htmlFor="author">Author</label>
+      <select id="author" value={selectedAuthor} onChange={(event) => setSelectedAuthor(event.target.value)}>
+        <option value="all">All authors</option>
+        {authorIds.map((id) => (
+          <option key={id} value={String(id)}>User {id}</option>
+        ))}
+      </select>
+      <p>Showing {shownPosts.length} of {posts.length} posts</p>
+      <p>Authors: {shownAuthors.length}</p>
+      <ul>
+        {shownPosts.map((post) => (
+          <li key={post.id}>{post.title}</li>
+        ))}
+      </ul>
+      <form onSubmit={handleSubmit}>
+        <label htmlFor="title">Title</label>
+        <input id="title" type="text" value={newTitle} onChange={(event) => setNewTitle(event.target.value)} />
+        <button type="submit" disabled={isAdding}>{buttonText}</button>
+      </form>
+      {addError !== '' && <p role="alert">{addError}</p>}
+    </main>
+  );
+};
+
+export default App;`,
+    senior: `import React, { useCallback, useEffect, useMemo, useState } from 'react';
+
+// SYSTEM DESIGN NOTES
+// User flow: read, narrow, create; every view is derived from one list.
+// Data model: post { id, userId, title, body }; client state is the list,
+// the two filters and the form.
+// API endpoints: GET /posts?cursor=&limit= and POST /posts, 201 + Location.
+// Reliability and scale: browser -> CDN/edge (caches the GET) -> API (auth,
+// validation, rate limit) -> connection pool -> Postgres (posts table,
+// index on (user_id, created_at)), then JSON back up the same path into
+// state and the DOM. The POST carries an idempotency key so a retry after a
+// timeout cannot create two rows; reads page by cursor, not offset; writes
+// invalidate the cached first page.
+
+const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+
+const usePosts = () => {
+  const [state, setState] = useState({ status: 'loading', posts: [] });
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const response = await fetch(POSTS_URL);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const posts = await response.json();
+        if (active) setState({ status: 'ready', posts });
+      } catch {
+        if (active) setState(current => ({ ...current, status: 'error' }));
+      }
+    })();
+    return () => { active = false; };
+  }, []);
+
+  const create = useCallback(async title => {
+    const response = await fetch(POSTS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, body: '', userId: 1 }),
+    });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const created = await response.json();
+    setState(current => ({ ...current, posts: [...current.posts, created] }));
+  }, []);
+
+  return { ...state, create };
+};
+
+const NewPostForm = ({ onCreate }) => {
+  const [title, setTitle] = useState('');
+  const [sending, setSending] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  const submit = async event => {
+    event.preventDefault();
+    const text = title.trim();
+    if (!text || sending) return;
+    setSending(true);
+    setFailed(false);
+    try {
+      await onCreate(text);
+      setTitle('');
+    } catch {
+      setFailed(true);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <form onSubmit={submit} aria-label="New post">
+      <label>Title <input value={title} onChange={event => setTitle(event.target.value)} /></label>
+      <button type="submit" disabled={sending}>{sending ? 'Adding…' : 'Add post'}</button>
+      {failed && <p role="alert">Could not add the post</p>}
+    </form>
+  );
+};
+
+const App = () => {
+  const { status, posts, create } = usePosts();
+  const [search, setSearch] = useState('');
+  const [author, setAuthor] = useState('all');
+
+  const authors = useMemo(() => [...new Set(posts.map(post => post.userId))].sort((a, b) => a - b), [posts]);
+  const shown = useMemo(() => {
+    const needle = search.toLowerCase();
+    return posts.filter(post =>
+      post.title.toLowerCase().includes(needle) && (author === 'all' || String(post.userId) === author));
+  }, [posts, search, author]);
+  const authorsShown = useMemo(() => new Set(shown.map(post => post.userId)).size, [shown]);
+
+  return (
+    <main>
+      <h2>Interview mini project</h2>
+      {status === 'loading' && <p aria-live="polite">Loading posts…</p>}
+      {status === 'error' && <p role="alert">Could not load posts</p>}
+      <div role="search">
+        <label>Search <input type="search" value={search} onChange={event => setSearch(event.target.value)} /></label>
+        <label>Author <select value={author} onChange={event => setAuthor(event.target.value)}>
+          <option value="all">All authors</option>
+          {authors.map(id => <option key={id} value={String(id)}>User {id}</option>)}
+        </select></label>
+      </div>
+      <p aria-live="polite">Showing {shown.length} of {posts.length} posts</p>
+      <p>Authors: {authorsShown}</p>
+      <ul>{shown.map(post => <li key={post.id}>{post.title}</li>)}</ul>
+      <NewPostForm onCreate={create} />
+    </main>
+  );
+};
+
+export default App;`,
+    hiddenSuite: `const FRESH = [
+  { id: 51, userId: 10, title: 'Scaling the feed', body: 'a' },
+  { id: 52, userId: 4, title: 'Caching with care', body: 'b' },
+  { id: 53, userId: 9, title: 'Feed ranking basics', body: 'c' },
+  { id: 54, userId: 10, title: 'Queues for writes', body: 'd' },
+];
+const authorOptions = () => [...screen.getByLabelText('Author').options].map(option => option.textContent);
+
+test('the author options come from the posts, in number order', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH);
+  expect(authorOptions()).toEqual(['All authors', 'User 4', 'User 9', 'User 10']);
+  expect(screen.getByText('Showing 4 of 4 posts')).toBeTruthy();
+  expect(screen.getByText('Authors: 3')).toBeTruthy();
+  chooseAuthor('User 10');
+  expect(titles()).toEqual(['Scaling the feed', 'Queues for writes']);
+  typeIn('Search', 'FEED');
+  expect(titles()).toEqual(['Scaling the feed']);
+  expect(screen.getByText('Showing 1 of 4 posts')).toBeTruthy();
+}));
+
+test('a POST answered with a status that is not ok keeps the title, and the next attempt clears the alert', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  typeIn('Title', 'Draft idea');
+  fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
+  await answer(calls[1], { id: 202, userId: 1, title: 'Draft idea', body: '' }, 500);
+  expect(screen.getByRole('alert').textContent).toBe('Could not add the post');
+  expect(screen.getByLabelText('Title').value).toBe('Draft idea');
+  expect(titles()).toHaveLength(4);
+  fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
+  expect(calls).toHaveLength(3);
+  expect(screen.queryByRole('alert')).toBeNull();
+  await answer(calls[2], { id: 202, userId: 1, title: 'Draft idea', body: '' });
+  expect(titles()[4]).toBe('Draft idea');
+  expect(screen.getByLabelText('Title').value).toBe('');
+}));
+
+test('a list answered with a status that is not ok is a failure', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS, 500);
+  expect(screen.getByRole('alert').textContent).toBe('Could not load posts');
+  expect(titles()).toEqual([]);
+}));
+
+test('a new post counts in the total even while a filter hides it', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  chooseAuthor('User 2');
+  typeIn('Title', 'Hidden gem');
+  fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
+  await answer(calls[1], { id: 203, userId: 1, title: 'Hidden gem', body: '' });
+  expect(titles()).toEqual(['Testing React forms']);
+  expect(screen.getByText('Showing 1 of 5 posts')).toBeTruthy();
+  chooseAuthor('All authors');
+  expect(titles()).toHaveLength(5);
+  expect(titles()[4]).toBe('Hidden gem');
+}));
+
+test('a second click while a post is on its way sends nothing', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  typeIn('Title', 'Once only');
+  fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Adding…' }));
+  expect(calls).toHaveLength(2);
+  await answer(calls[1], { id: 204, userId: 1, title: 'Once only', body: '' });
+  expect(titles().filter(title => title === 'Once only')).toHaveLength(1);
+  expect(screen.getByRole('button', { name: 'Add post' }).disabled).toBe(false);
+}));`,
   },
 };
