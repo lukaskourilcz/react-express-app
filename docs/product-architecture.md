@@ -728,11 +728,16 @@ production (issue #227, step D8).
 stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
 which since migration 044 erases every table that holds an account id in one
 routine, including the ones 035 and 039 to 042 added; 045 restates it with the
-voucher redemptions. A few rows stay without the person: a merchandise order
-already with Spreadshop and its package claim (the claim's account part becomes
-`deleted-account:<order id>`), a settled month's ranks, a referral the account
-made (`deleted-account`), and a voucher the account created as an admin, which
-keeps its counts (`created_by` becomes `deleted-account`). The handler calls
+voucher redemptions, and 051 with the merchandise the account held. An order
+Spreadshop never received gives its stock reservation back (a claimed package
+reserved none): one awaiting payment is deleted, and a paid one is cancelled,
+which takes it off the fulfilment queue, and kept without the person as the
+record of what was paid. A few rows stay without the person: those cancelled
+orders, a merchandise order already with Spreadshop and its package claim (the
+claim's account part becomes `deleted-account:<order id>`), a settled month's
+ranks, a referral the account made (`deleted-account`), and a voucher the
+account created as an admin, which keeps its counts (`created_by` becomes
+`deleted-account`). The handler calls
 no other routine. The four that 039 to 042 shipped
 (`delete_entitlement_data`, `delete_user_activity_days`, `delete_coin_data`,
 `delete_referral_data`) deleted nothing once 044 held their statements, and
