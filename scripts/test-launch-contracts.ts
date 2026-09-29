@@ -58,7 +58,7 @@ import dailyHandler from '../api/quiz/daily';
 import questionsHandler from '../api/quiz/questions';
 import challengeHandler from '../api/quiz/challenge';
 import { decodeSessionEnvelope } from '../lib/quiz-tokens';
-import { pickQuestionOfTheDay } from '../lib/daily-question';
+import { dailySeededShuffle, pickQuestionOfTheDay, UNBIASED_SHUFFLE_FROM } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
 import { CODING_INDEX } from '../shared/coding-index';
 import { freeCodingCounts } from '../shared/tiers';
@@ -1886,6 +1886,27 @@ async function qotdContracts() {
   assert.equal(counts.free, CODING_INDEX.filter((task) => task.free === true).length);
 }
 
+/** The daily challenge and the question of the day draw with a seeded shuffle
+ * that favours no position, and the days already published keep their draw. */
+function seededShuffleContracts() {
+  const ten = Array.from({ length: 10 }, (_, i) => i);
+  // Golden orders from the shuffle those days were published with.
+  assert.deepEqual(dailySeededShuffle(ten, 'qotd::2026-09-15', '2026-09-15'), [0, 8, 2, 6, 3, 7, 5, 1, 4, 9]);
+  assert.deepEqual(dailySeededShuffle(ten, '2026-09-29::3', '2026-09-29'), [2, 7, 8, 1, 3, 0, 4, 6, 5, 9]);
+
+  const pool = Array.from({ length: 571 }, (_, i) => i);
+  const once = dailySeededShuffle(pool, 'qotd::2026-12-01', '2026-12-01');
+  assert.deepEqual(once, dailySeededShuffle(pool, 'qotd::2026-12-01', '2026-12-01'), 'the same seed gives the same order');
+  assert.deepEqual([...once].sort((a, b) => a - b), pool, 'a shuffle is a permutation');
+  // The old draw took one hash byte per swap: in a 571-question pool it put a
+  // question from past position 255 first on 1 day in 2000. Uniform is 55 %.
+  let late = 0;
+  for (let day = 0; day < 2000; day++) {
+    if (dailySeededShuffle(pool, `seed-${day}`, UNBIASED_SHUFFLE_FROM)[0] >= 256) late++;
+  }
+  assert.ok(late > 2000 * 0.5 && late < 2000 * 0.6, `a question past position 255 comes first on ${late} of 2000 days`);
+}
+
 /** A caller with its own address, so the per-address limits of the quiz
  * handlers never decide an assertion here; signed in through the development
  * fallback when `user` is given. */
@@ -3652,6 +3673,7 @@ async function main() {
   await qotdContracts();
   await quizSubmitScopeContracts();
   await dailyIntegrityContracts();
+  seededShuffleContracts();
   await webdevBankContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');

@@ -8,7 +8,7 @@ import { getGameSettings } from '../../lib/settings-store';
 import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
 import { AuthError, tryAuth } from '../../lib/auth';
-import { handleQuestionOfTheDay, seededShuffle } from '../../lib/daily-question';
+import { dailySeededShuffle, handleQuestionOfTheDay } from '../../lib/daily-question';
 import type { ScopeSubjectId } from '../../shared/subject-catalog';
 
 // Daily challenge: deterministic per-UTC-date selection (one question per
@@ -134,7 +134,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     // are still enough to vary day to day, otherwise fall back to the full pool.
     const worthy = pool.filter((q) => (q.importance ?? 5) >= 4);
     const usePool = worthy.length >= 3 ? worthy : pool;
-    const shuffled = seededShuffle(usePool, `${dateParam}::${diff}`);
+    const shuffled = dailySeededShuffle(usePool, `${dateParam}::${diff}`, dateParam);
     selected.push(shuffled[0]);
     if (selected.length >= dailyCount) break;
   }
@@ -144,7 +144,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const dailyQuestions = selected.map((base, i) => {
     const q = localizeQuestion(base, lang);
     const correctText = q.options[base.correctAnswer];
-    const optShuffled = seededShuffle(q.options, `${dateParam}::${q.id}::opts::${i}`);
+    const optShuffled = dailySeededShuffle(q.options, `${dateParam}::${q.id}::opts::${i}`, dateParam);
     sessionData.push({ questionId: q.id, correctAnswer: optShuffled.indexOf(correctText) });
     return {
       id: q.id,

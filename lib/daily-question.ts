@@ -32,8 +32,41 @@ import {
   type QotdResponse,
 } from '../shared/daily-question';
 
-/** Deterministic seeded shuffle: the same seed always gives the same order. */
+/** Deterministic seeded shuffle: the same seed always gives the same order,
+ * and every order is equally likely. Each swap draws a 32-bit word from
+ * SHA-256 of `${seed}:${block}`, eight words a block, and redraws a word past
+ * the largest multiple of the range, so no index is favoured. */
 export function seededShuffle<T>(arr: T[], seed: string): T[] {
+  const out = [...arr];
+  let block = 0;
+  let words = Buffer.alloc(0);
+  let offset = 0;
+  const draw = (): number => {
+    if (offset >= words.length) {
+      words = createHash('sha256').update(`${seed}:${block++}`).digest();
+      offset = 0;
+    }
+    const word = words.readUInt32BE(offset);
+    offset += 4;
+    return word;
+  };
+  for (let i = out.length - 1; i > 0; i--) {
+    const range = i + 1;
+    const limit = Math.floor(0x1_0000_0000 / range) * range;
+    let word = draw();
+    while (word >= limit) word = draw();
+    const j = word % range;
+    [out[i], out[j]] = [out[j], out[i]];
+  }
+  return out;
+}
+
+/** The shuffle used before `UNBIASED_SHUFFLE_FROM`. It took one hash byte per
+ * swap, modulo the range, cycling through 32 bytes: in a pool of more than
+ * 256 questions nothing past position 255 could come first, and the early
+ * positions came up far more often. Kept only so the days already published
+ * keep the question and order they showed. */
+function legacySeededShuffle<T>(arr: T[], seed: string): T[] {
   const out = [...arr];
   const hash = createHash('sha256').update(seed).digest();
   let cursor = 0;
@@ -43,6 +76,17 @@ export function seededShuffle<T>(arr: T[], seed: string): T[] {
     [out[i], out[j]] = [out[j], out[i]];
   }
   return out;
+}
+
+/** The first day the daily challenge and the question of the day are drawn
+ * with the unbiased shuffle. Earlier days keep the draw they were published
+ * with, so an old /daily/<date> link and a day's leaderboard still show the
+ * questions they were about. */
+export const UNBIASED_SHUFFLE_FROM = '2026-10-01';
+
+/** The shuffle for one day's daily challenge or question of the day. */
+export function dailySeededShuffle<T>(arr: T[], seed: string, date: string): T[] {
+  return date < UNBIASED_SHUFFLE_FROM ? legacySeededShuffle(arr, seed) : seededShuffle(arr, seed);
 }
 
 type Picked = Omit<QotdResponse, 'sessionId'> & { correctAnswer: number };
@@ -56,9 +100,9 @@ export function pickQuestionOfTheDay(
   const pool = questions.filter((q) => q.category === track && !(PRIVATE_CATEGORIES as string[]).includes(q.category) && q.options.length >= 2);
   if (pool.length === 0) return null;
   const worthy = pool.filter((q) => (q.importance ?? 5) >= 4);
-  const base = seededShuffle(worthy.length >= 10 ? worthy : pool, `qotd::${date}`)[0];
+  const base = dailySeededShuffle(worthy.length >= 10 ? worthy : pool, `qotd::${date}`, date)[0];
   const correctText = base.options[base.correctAnswer];
-  const options = seededShuffle(base.options, `qotd::${date}::${base.id}::opts`);
+  const options = dailySeededShuffle(base.options, `qotd::${date}::${base.id}::opts`, date);
   return {
     date,
     track,
