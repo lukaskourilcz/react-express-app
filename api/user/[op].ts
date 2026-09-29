@@ -393,10 +393,6 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         if (receipt.outcomes.some((outcome) => subjectForCategory(outcome.category) !== receipt.subject)) {
           return jsonError(res, 400, 'invalid_receipt', 'Quiz result receipt has mixed question scope');
         }
-        const rawProfile = body.profile && typeof body.profile === 'object'
-          ? body.profile as Record<string, unknown>
-          : {};
-
         const { data, error } = await withTimeout(
           supabase!.rpc('record_verified_quiz_result_v2', {
             p_user_id: user_id,
@@ -409,7 +405,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
             p_quest_xp: receipt.questXp,
             p_daily_date: receipt.daily?.date ?? null,
             p_duration_ms: receipt.daily?.durationMs ?? null,
-            p_email: typeof rawProfile.email === 'string' && rawProfile.email.length <= MAX_STR ? rawProfile.email : null,
+            p_email: typeof auth.payload.email === 'string' && auth.payload.email.length <= MAX_STR ? auth.payload.email : null,
             p_name: shown.name,
             p_picture: shown.picture,
           }),
@@ -448,7 +444,8 @@ async function stats(req: VercelRequest, res: VercelResponse) {
 
       const profile = {
         user_id,
-        email: typeof body.email === 'string' && body.email.length <= MAX_STR ? body.email : null,
+        // The address of the verified sign-in, like the name and picture above.
+        email: typeof auth.payload.email === 'string' && auth.payload.email.length <= MAX_STR ? auth.payload.email : null,
         name: shown.name,
         picture: shown.picture,
       };
