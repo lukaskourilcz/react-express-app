@@ -19,7 +19,9 @@
  *  - a guest's level passes on its questions with its coding marked
  *    unverified, while an account's still waits for a recorded coding pass;
  *  - a part test already passed in a topic outside the learner's plan is
- *    served under `?test=` as it is under `?checkpoint=`.
+ *    served under `?test=` as it is under `?checkpoint=`;
+ *  - a level lost on hearts counts for the streak once, and a database
+ *    without the streak routine (before migration 048) does not fail it.
  *
  * Nothing leaves the machine. */
 
@@ -36,7 +38,8 @@ const BACKEND = {
   id: '2e4f6a8b-1c3d-4e5f-8a9b-0c1d2e3f4a5b', email: 'backend@example.invalid', token: 'learn-contract-backend',
   meta: { devquiz_learning_preference_v1: { schemaVersion: 1, baseTrack: 'backend', specialization: null } },
 };
-const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown> }> = [LEARNER, OTHER, OWNER, BROKEN, BACKEND];
+const HEARTS = { id: '6f5e4d3c-2b1a-4f0e-9d8c-7b6a5f4e3d2c', email: 'hearts@example.invalid', token: 'learn-contract-hearts' };
+const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown> }> = [LEARNER, OTHER, OWNER, BROKEN, BACKEND, HEARTS];
 const PREMIUM = new Set([OWNER.id]);
 const DAY = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
 
@@ -47,6 +50,10 @@ const tables: Record<string, Row[]> = {
   roadmap_attempt_answers: [],
   roadmap_attempt_coding: [],
 };
+/** Every routine the handler called, with its arguments, in order. */
+const rpcCalls: { name: string; args: Row }[] = [];
+/** Answer advance_verified_streak as a database before migration 048 does. */
+let streakRoutineMissing = false;
 
 const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
   let text = '';
@@ -145,6 +152,10 @@ async function startStandIn() {
     if (rpc) {
       const raw = await readBody(req);
       const args = (raw ? JSON.parse(raw) : {}) as Row;
+      rpcCalls.push({ name: rpc[1], args });
+      if (rpc[1] === 'advance_verified_streak' && streakRoutineMissing) {
+        return send(404, { code: 'PGRST202', message: 'Could not find the function public.advance_verified_streak(p_user_id) in the schema cache' });
+      }
       if (rpc[1] === 'record_roadmap_answer_v2') { const out = recordAnswer(args); return send(out.status, out.body); }
       if (rpc[1] === 'complete_verified_roadmap_attempt') { const out = completeAttempt(args); return send(out.status, out.body); }
       if (rpc[1] === 'is_premium') return send(200, PREMIUM.has(String(args.p_user)));
@@ -412,6 +423,61 @@ async function main() {
       assert.equal(nextLevel.body?.error?.code, 'not_in_plan', 'as is a level never passed');
     }
     console.log('PASS learn: a passed part test outside the plan is served under ?test= and ?checkpoint=');
+
+    // ── A level lost on hearts counts for the streak ───────────────────────
+    // Three wrong answers end a level before every question is answered. The
+    // handler closes that attempt itself, without the completion routine that
+    // advances the streak for a passed or failed level, so it advances it.
+    const loseOnHearts = async () => {
+      const level = await call('GET', { topic: 'javascript', level: '1', lang: 'en' }, HEARTS.token);
+      assert.equal(level.statusCode, 200, JSON.stringify(level.body));
+      const session = tokens.decodeSessionEnvelope(level.body.sessionId)!;
+      for (const question of session.questions.slice(0, 3)) {
+        const options = (level.body.questions as Array<{ id: string; options: string[] }>).find((one) => one.id === question.questionId)!.options.length;
+        const wrong = await call('POST', { resource: 'answer' }, HEARTS.token, { sessionId: level.body.sessionId, questionId: question.questionId, selectedIndex: (question.correctAnswer + 1) % options, lang: 'en' });
+        assert.equal(wrong.statusCode, 200, JSON.stringify(wrong.body));
+        assert.equal(wrong.body.isCorrect, false);
+      }
+      rpcCalls.length = 0;
+      const done = await call('POST', { resource: 'complete' }, HEARTS.token, { sessionId: level.body.sessionId });
+      assert.equal(done.statusCode, 200, JSON.stringify(done.body));
+      assert.equal(done.body.passed, false, 'a level lost on hearts is not passed');
+      assert.equal(done.body.applied, true, 'and this request closed it');
+      return level.body.sessionId as string;
+    };
+    {
+      const sessionId = await loseOnHearts();
+      assert.equal(rpcCalls.some((one) => one.name === 'complete_verified_roadmap_attempt'), false, 'the attempt is closed by the handler, not the completion routine');
+      const streaks = rpcCalls.filter((one) => one.name === 'advance_verified_streak');
+      assert.equal(streaks.length, 1, `the streak routine runs once (${JSON.stringify(rpcCalls.map((one) => one.name))})`);
+      assert.deepEqual(streaks[0].args, { p_user_id: HEARTS.id }, 'for the learner who lost the level');
+      // A retried completion finds the attempt closed and counts nothing again.
+      rpcCalls.length = 0;
+      const again = await call('POST', { resource: 'complete' }, HEARTS.token, { sessionId });
+      assert.equal(again.statusCode, 200, JSON.stringify(again.body));
+      assert.equal(again.body.applied, false);
+      assert.equal(rpcCalls.some((one) => one.name === 'advance_verified_streak'), false, 'a retried completion does not count the day again');
+      // A guest's level lost on hearts has no streak to count.
+      const guest = await call('GET', { topic: 'javascript', level: '1', lang: 'en' });
+      const guestSession = tokens.decodeSessionEnvelope(guest.body.sessionId)!;
+      for (const question of guestSession.questions.slice(0, 3)) {
+        const options = (guest.body.questions as Array<{ id: string; options: string[] }>).find((one) => one.id === question.questionId)!.options.length;
+        await call('POST', { resource: 'answer' }, undefined, { sessionId: guest.body.sessionId, questionId: question.questionId, selectedIndex: (question.correctAnswer + 1) % options, lang: 'en' });
+      }
+      rpcCalls.length = 0;
+      const guestDone = await call('POST', { resource: 'complete' }, undefined, { sessionId: guest.body.sessionId });
+      assert.equal(guestDone.statusCode, 200, JSON.stringify(guestDone.body));
+      assert.equal(rpcCalls.some((one) => one.name === 'advance_verified_streak'), false, 'a guest has no streak');
+      // Before migration 048 the routine is missing: the level still closes.
+      streakRoutineMissing = true;
+      try {
+        await loseOnHearts();
+        assert.equal(rpcCalls.filter((one) => one.name === 'advance_verified_streak').length, 1, 'the routine was asked');
+      } finally {
+        streakRoutineMissing = false;
+      }
+    }
+    console.log('PASS learn: a level lost on hearts counts for the streak once, and closes without the routine');
   } finally {
     server.close();
   }

@@ -1240,6 +1240,21 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       );
       if (closed.error) return jsonError(res, 500, 'db_error', 'Could not close the learning attempt');
       applied = true;
+      // A Learn level counts for the streak whether it was passed, failed or
+      // lost on hearts. complete_verified_roadmap_attempt advances the streak
+      // for the other two; this attempt closes without it, so the day is
+      // counted here, once, by the request that closed it. Before migration
+      // 048 the routine does not exist and the level simply does not count.
+      if (userId) {
+        const streak = await withTimeout(supabase.rpc('advance_verified_streak', { p_user_id: userId })).catch(() => null);
+        if (!streak || streak.error) {
+          if (!isRpcMissing(streak?.error)) {
+            logEvent({ status: 500, kind: 'streak_failed', reason: streak?.error?.code ?? 'timeout' });
+          }
+        } else {
+          await settleMilestones(supabase, userId, session.subject!);
+        }
+      }
     }
   } else if (userId) {
     // Only a first pass earns a step's learning XP, so only a first pass

@@ -64,10 +64,14 @@ A streak day is a UTC day with verified learning, not only a quiz
 a day is counted, and four routines call it behind the receipts that already
 make them idempotent: `record_verified_quiz_result_v2` (a quiz or daily
 result), `complete_verified_roadmap_attempt` (a Learn level or part test with
-every question answered, passed or not; a level ended by running out of hearts
-is closed by the handler and does not count), `record_coding_verdict` (any
+every question answered, passed or not), `record_coding_verdict` (any
 passing verdict, in the coding section or inside a Learn level) and
 `record_challenge_completion` (a Biggest Shark Challenge run that earned XP).
+A level ended by running out of hearts is closed by `api/quiz/roadmap.ts`
+without the completion routine, so the request that closes it calls
+`advance_verified_streak` directly: a Learn level counts however it ends. A
+database without the routine (before 048) leaves that level uncounted and
+the completion succeeds.
 A second source the same day adds nothing, and a replayed receipt moves
 nothing. `user_stats.last_quiz_date` keeps its name and means the last UTC day
 with verified learning; a learner with no stats row gets one with zero totals
