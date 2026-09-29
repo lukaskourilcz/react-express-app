@@ -10,6 +10,10 @@
  *  - the progress a completion returns is the progress the GET returns,
  *    spaced-mastery fields included, because the browser replaces its copy
  *    with it;
+ *  - a topic granted to an account opens its levels as the progress GET
+ *    reports it open;
+ *  - a failed progress read answers 503 rather than refusing the level as if
+ *    the learner had not earned it.
  *
  * Nothing leaves the machine. */
 
@@ -299,6 +303,20 @@ async function main() {
     assert.equal(completed.body.progress.html.levels['2'].lastPassDay, DAY(0), 'so Today counts the level as done today');
     console.log('PASS learn: a completion returns the progress the GET returns, spaced mastery included');
 
+    // ── A granted topic opens its levels ───────────────────────────────────
+    const granted = await call('GET', { resource: 'progress' }, OWNER.token);
+    assert.ok(granted.body.extra.unlocked.includes('system-design'), 'the progress GET reports the grant');
+    const grantedLevel = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OWNER.token);
+    assert.equal(grantedLevel.statusCode, 200, `a granted topic serves its first level (${JSON.stringify(grantedLevel.body?.error)})`);
+    const notGranted = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OTHER.token);
+    assert.equal(notGranted.body?.error?.code, 'topic_locked', 'an account without the grant is still refused');
+    console.log('PASS learn: a granted topic opens its levels');
+
+    // ── A failed progress read is not a refusal ────────────────────────────
+    const blip = await call('GET', { topic: 'javascript', level: '2', lang: 'en' }, BROKEN.token);
+    assert.equal(blip.statusCode, 503, `a progress read that fails answers 503 (${JSON.stringify(blip.body)})`);
+    assert.equal(blip.body?.error?.code, 'progress_unavailable');
+    console.log('PASS learn: a failed progress read answers 503, not "complete the preceding steps"');
   } finally {
     server.close();
   }

@@ -526,7 +526,8 @@ interface LearnerContext {
 }
 
 /** The learner's plan and verified record, or null for a guest.
- * `undefined` means a response was already sent (a broken credential). */
+ * `undefined` means a response was already sent (a broken credential, or a
+ * record that could not be read). */
 async function learnerContext(
   req: VercelRequest,
   res: VercelResponse,
@@ -542,22 +543,37 @@ async function learnerContext(
     throw error;
   }
   if (!auth) return null;
+  const emailClaim = auth.payload.email;
+  const email = typeof emailClaim === 'string' ? emailClaim : null;
   const metadata = ((auth.payload as Record<string, unknown>).user_metadata ?? {}) as Record<string, unknown>;
   // The v2 profile when there is one; otherwise the plan the account already
   // chose through the v1 preference, with its required answers still missing.
   const profile =
     parseLearnerProfile(metadata[LEARNER_PROFILE_META_KEY]) ??
     profileFromPreference(parseLearningPreference(metadata[LEARNING_PREFERENCE_META_KEY]));
-  if (!supabase) return { userId: auth.sub, profile, progress: {}, extraUnlocked: [] };
-  const row = await withTimeout(
-    supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', auth.sub).maybeSingle(),
-  );
-  if (row.error) return { userId: auth.sub, profile, progress: {}, extraUnlocked: [] };
+  // Paths granted to the account open here exactly as the progress GET
+  // reports them (see handleProgress), or the map would draw a granted topic
+  // open while every level in it answered 403 topic_locked.
+  if (!supabase) {
+    const { ownerEmail } = await getGameSettings();
+    return { userId: auth.sub, profile, progress: {}, extraUnlocked: withGrantedTopics([], email, ownerEmail) };
+  }
+  const [{ ownerEmail }, row] = await Promise.all([
+    getGameSettings(),
+    withTimeout(supabase.from(PROGRESS_TABLE).select('data, extra').eq('user_id', auth.sub).maybeSingle()),
+  ]);
+  // Without the record nothing can be checked against evidence. Carrying on
+  // with an empty one would refuse every level past the first as "complete
+  // the preceding steps" over a database blip, which is not true.
+  if (row.error) {
+    jsonError(res, 503, 'progress_unavailable', 'Could not load your learning progress. Try again.');
+    return undefined;
+  }
   return {
     userId: auth.sub,
     profile,
     progress: (row.data?.data as VerifiedProgress) ?? {},
-    extraUnlocked: sanitizeExtra(row.data?.extra).unlocked,
+    extraUnlocked: withGrantedTopics(sanitizeExtra(row.data?.extra).unlocked, email, ownerEmail),
   };
 }
 
