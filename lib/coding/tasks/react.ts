@@ -4,6 +4,7 @@
 
 import type { CodingTaskSource } from '../types';
 import { CAPSTONE_HEADER } from './react-capstone-support';
+import { FAKE_CLOCK } from './easy-react-a';
 
 export const REACT_TASKS: CodingTaskSource[] = [
   {
@@ -2074,11 +2075,13 @@ return (
     ],
     verify: "tests",
     estimatedMinutes: 20,
+    // On the hand-moved clock of FAKE_CLOCK: a second passes when the check
+    // says so, not after a real second on a machine that may be busy.
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
-
+${FAKE_CLOCK}
 const control = (container, label) =>
   [...container.querySelectorAll('button')].find(b => new RegExp(label, 'i').test(b.textContent));
 const elapsed = container => container.querySelector('p').textContent;
@@ -2088,24 +2091,26 @@ test('starts on zero seconds', () => {
   expect(elapsed(container)).toContain('0');
 });
 
-test('counts up once Start is pressed', async () => {
+test('counts up once Start is pressed', () => withClock(async clock => {
   const { container } = render(<App />);
   fireEvent.click(control(container, 'start'));
-  await waitFor(() => expect(elapsed(container)).toContain('1'), { timeout: 5000 });
-});
+  await clock.tick(1000);
+  expect(elapsed(container)).toContain('1');
+}));
 
-test('Stop freezes the count and Reset clears it', async () => {
+test('Stop freezes the count and Reset clears it', () => withClock(async clock => {
   const { container } = render(<App />);
   fireEvent.click(control(container, 'start'));
-  await waitFor(() => expect(elapsed(container)).toContain('1'), { timeout: 5000 });
+  await clock.tick(1000);
+  expect(elapsed(container)).toContain('1');
   fireEvent.click(control(container, 'stop'));
   const frozen = elapsed(container);
-  await new Promise(resolve => setTimeout(resolve, 1200));
+  await clock.tick(1200);
   expect(elapsed(container)).toBe(frozen);
   fireEvent.click(control(container, 'reset'));
   expect(elapsed(container)).toContain('0');
   expect(container.textContent).not.toContain('1');
-});
+}));
 `,
   },
   {

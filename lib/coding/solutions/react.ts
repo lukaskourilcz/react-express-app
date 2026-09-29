@@ -2431,9 +2431,10 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK, so each second is exact and a
-    // second interval shows as a count that runs ahead.
-    hiddenSuite: `${FAKE_CLOCK}${NUMBERS_SHOWN}
+    // On the hand-moved clock of FAKE_CLOCK, which the visible suite declares,
+    // so each second is exact and a second interval shows as a count that
+    // runs ahead.
+    hiddenSuite: `${NUMBERS_SHOWN}
 const secondsShown = container => numbersShown(container.querySelector('p'));
 
 test('Start counts exactly one per second from 0', () => withClock(async clock => {
