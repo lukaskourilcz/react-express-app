@@ -85,10 +85,11 @@ console.log('PASS integrity: Submit shows the visible checks\' console only');
 // a passed task, XP once, and a passed Learn level link. A retried request for
 // the same submission stays a replay. The fake below keeps the routine's
 // contract from migration 041: one application per attempt id, progress per
-// account and task, XP once per account and task, and a level link that only
-// ever turns true. `record_coding_reveal` counts a reveal the way migration
-// 038 does, and `forfeitAfterReveal` adds migration 048's rule: a first pass
-// after a reveal pays no XP.
+// account and task, XP once per account and task and only when p_xp is above
+// zero, and a level link that only ever turns true. Every routine call is
+// kept, with its arguments. `record_coding_reveal` counts a reveal the way
+// migration 038 does, and `forfeitAfterReveal` adds migration 048's rule: a
+// first pass after a reveal pays no XP.
 type ProgressFake = { status: 'in_progress' | 'passed' | 'revealed'; passes: number; revealCount: number };
 function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   const attempts = new Set<string>();
@@ -96,6 +97,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   const links = new Map<string, boolean>();
   const xp = new Set<string>();
   const attemptIds: string[] = [];
+  const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
   const result = (data: unknown) => Promise.resolve({ data, error: null });
   const progressRow = (taskId: unknown, row: ProgressFake) => ({
     task_id: taskId, track: 'javascript', status: row.status, passes: row.passes,
@@ -126,6 +128,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
     return chain;
   };
   const rpc = (name: string, args: Record<string, unknown>) => {
+    rpcCalls.push({ name, args });
     if (name === 'record_coding_reveal') {
       const key = `${args.p_user_id}:${args.p_task_id}`;
       const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
@@ -149,7 +152,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
       row.status = 'passed';
       row.passes += 1;
       const forfeited = options.forfeitAfterReveal === true && row.revealCount > 0;
-      if (firstPass && !forfeited && !xp.has(key)) { xp.add(key); xpAwarded = true; }
+      if (firstPass && !forfeited && !xp.has(key) && Number(args.p_xp) > 0) { xp.add(key); xpAwarded = true; }
     }
     progress.set(key, row);
     if (args.p_roadmap_attempt_id) {
@@ -158,7 +161,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
     }
     return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass });
   };
-  return { client: { from, rpc }, progress, links, xp, attemptIds };
+  return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls };
 }
 
 {
@@ -390,6 +393,46 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   assert.equal(inOrder.verdict, 'passed');
   assert.deepEqual(inOrder.design?.[0].correctOrder, orderFor(sequenceAgain), 'a pass carries the correct order');
   console.log('PASS integrity: a failed system-design submission carries no key, a pass carries all of it');
+}
+
+// ── a checklist pass is the learner's word, and pays nothing ─────────────
+// A React task graded `verify: 'checklist'` has no suite, so any code passes.
+// That pass is recorded as unverified: no XP and so no coins, no link to the
+// Learn level attempt the session names, and no junior and senior solutions.
+// No task in the catalogue uses the mode any more, so the case turns a free
+// React task with both solutions into one and puts it back afterwards.
+{
+  const db = codingDatabase();
+  const learner = 'user-bbbb-2222';
+  const levelAttempt = 'levelattemptchecklist01';
+  const task = CODING_TASKS.find((one) => one.track === 'react' && one.verify === 'tests' && one.suite && isFreeCodingTask(one.id)
+    && !evolvingStage(one.id) && solutionFor(one.id)?.junior && solutionFor(one.id)?.senior)!;
+  const { verify, suite } = task;
+  task.verify = 'checklist';
+  delete task.suite;
+  try {
+    const out = { statusCode: 200, body: null as null | { verdict?: string; xpAwarded?: number; applied?: boolean; solutions?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+    await handleCodingSubmit({
+      method: 'POST', headers: { authorization: 'Bearer local-test' }, query: {},
+      body: { session: encodeCodingSession({ taskId: task.id, track: 'react', userId: null, roadmapAttemptId: levelAttempt }), code: 'const App = () => null;', user_id: learner },
+    } as never, out as never, db.client as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    assert.equal(out.body?.verdict, 'passed', 'the learner\'s confirmation still stands');
+    assert.equal(out.body?.applied, true, 'the attempt is recorded');
+    const [verdict] = db.rpcCalls.filter((call) => call.name === 'record_coding_verdict');
+    assert.equal(verdict?.args.p_verified, false, 'recorded as unverified');
+    assert.equal(verdict?.args.p_xp, 0, 'with no XP');
+    assert.equal(verdict?.args.p_roadmap_attempt_id, null, 'and linked to no Learn level attempt');
+    assert.equal(db.links.size, 0, 'so the Learn level never counts it');
+    assert.equal(out.body?.xpAwarded, 0);
+    assert.equal(db.xp.size, 0);
+    assert.ok(!db.rpcCalls.some((call) => call.name === 'credit_verified_xp_tokens'), 'no coins');
+    assert.equal(out.body?.solutions, null, 'a pass nothing checked opens no solutions');
+  } finally {
+    task.verify = verify;
+    task.suite = suite;
+  }
+  console.log('PASS integrity: a checklist pass is recorded unverified, with no XP, coins, Learn link or solutions');
 }
 
 // ── a code-ordering puzzle round-trips through its session (CODE-7) ──────
