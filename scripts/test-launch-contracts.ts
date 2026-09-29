@@ -179,7 +179,7 @@ import { techniqueGroup, CODING_SECTION_TRACKS } from '../shared/coding-catalog'
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
-import { limitUserWrite } from '../api/user/[op]';
+import { handleLeaderboardVisibility, limitUserWrite } from '../api/user/[op]';
 import { handleAdminEntitlements, handleEntitlement, parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
 import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
 import { WAIVER_TEXT } from '../lib/billing/sync';
@@ -2226,6 +2226,115 @@ function launchOfferContracts() {
   assert.match(ENGLISH['premium.offer.srPrice'], /regular price from \{regularFrom\}/);
 }
 
+/** op=leaderboard-visibility (migration 049): a signed-in learner reads and
+ * sets whether the public boards show their name and photo. Run against a
+ * stand-in user_stats table. */
+async function leaderboardVisibilityContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  // A branch of the existing handler, behind the route's write limit.
+  const route = read('api/user/[op].ts');
+  const limited = route.indexOf('if (!(await limitUserWrite(req, res, op))) return;');
+  const branch = route.indexOf("if (op === 'leaderboard-visibility') return handleLeaderboardVisibility(req, res, supabase);");
+  assert.ok(limited > 0 && branch > limited, 'op=leaderboard-visibility is a branch of api/user/[op].ts after the write limit');
+
+  // The stand-in: one row per account, the supabase-js calls the op makes.
+  const rows = new Map<string, Record<string, unknown>>();
+  const writes: { row: Record<string, unknown>; onConflict?: string }[] = [];
+  let missingColumn = false;
+  const db = {
+    from(table: string) {
+      assert.equal(table, 'user_stats');
+      let userId = '';
+      let written: Record<string, unknown> | null = null;
+      const answer = () => missingColumn
+        ? { data: null, error: { code: '42703', message: 'column user_stats.show_on_leaderboards does not exist' } }
+        : { data: rows.has(userId) ? { show_on_leaderboards: rows.get(userId)!.show_on_leaderboards } : null, error: null };
+      const query = {
+        select(columns: string) { assert.equal(columns, 'show_on_leaderboards'); return query; },
+        eq(column: string, value: string) { assert.equal(column, 'user_id'); userId = value; return query; },
+        upsert(row: Record<string, unknown>, options?: { onConflict?: string }) {
+          writes.push({ row, onConflict: options?.onConflict });
+          written = row;
+          userId = String(row.user_id);
+          return query;
+        },
+        async maybeSingle() { return answer(); },
+        async single() {
+          if (written && !missingColumn) rows.set(userId, { ...(rows.get(userId) ?? { show_on_leaderboards: false }), ...written });
+          return answer();
+        },
+      };
+      return query;
+    },
+  };
+  const call = async (method: string, options: { user?: string | null; body?: unknown } = {}) => {
+    const user = options.user === undefined ? 'contract-visibility-1' : options.user;
+    const res = mockResponse();
+    await handleLeaderboardVisibility({
+      method,
+      headers: {},
+      query: { op: 'leaderboard-visibility', ...(user ? { user_id: user } : {}) },
+      body: options.body,
+    } as never, res as never, db as never);
+    return res;
+  };
+
+  // Signed in only, GET and PUT only.
+  assert.equal((await call('GET', { user: null })).statusCode, 401, 'a guest cannot read it');
+  assert.equal((await call('PUT', { user: null, body: { visible: true } })).statusCode, 401, 'a guest cannot set it');
+  const post = await call('POST', { body: { visible: true } });
+  assert.equal(post.statusCode, 405);
+  assert.equal(post.headers.get('allow'), 'GET, PUT');
+
+  // Off until the learner switches it on; a learner without a row is off.
+  const first = await call('GET');
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(first.body, { visible: false });
+  assert.equal(first.headers.get('cache-control'), 'private, no-store');
+
+  // The body is `{ visible: boolean }` and nothing else is read from it.
+  for (const body of [undefined, null, {}, { visible: 'true' }, { visible: 1 }, { visible: null }, [true]]) {
+    const refused = await call('PUT', { body });
+    assert.equal(refused.statusCode, 400, `${JSON.stringify(body)} is refused`);
+    assert.equal((refused.body as { error?: { code?: string } }).error?.code, 'bad_request');
+  }
+  assert.equal(writes.length, 0, 'a refused body writes nothing');
+
+  const on = await call('PUT', { body: { visible: true, name: 'Someone Else', picture: 'https://example.com/me.png', user_id: 'contract-visibility-1' } });
+  assert.equal(on.statusCode, 200);
+  assert.deepEqual(on.body, { visible: true });
+  assert.equal(on.headers.get('cache-control'), 'private, no-store');
+  assert.deepEqual(writes.at(-1), {
+    row: { user_id: 'contract-visibility-1', email: null, name: null, picture: null, show_on_leaderboards: true },
+    onConflict: 'user_id',
+  }, 'the row is the verified account\'s, created if missing, with the verified name and picture and never the body\'s');
+  assert.deepEqual((await call('GET')).body, { visible: true }, 'the choice is stored');
+  assert.deepEqual((await call('GET', { user: 'contract-visibility-2' })).body, { visible: false }, 'and it is that account\'s alone');
+  assert.deepEqual((await call('PUT', { body: { visible: false } })).body, { visible: false }, 'switching it off');
+  assert.deepEqual((await call('GET')).body, { visible: false });
+
+  // Before migration 049 the column is missing: say so rather than 500.
+  missingColumn = true;
+  const missing = await call('GET');
+  assert.equal(missing.statusCode, 503);
+  assert.equal((missing.body as { error?: { code?: string } }).error?.code, 'migration_required');
+  missingColumn = false;
+
+  // Each PUT is charged to the account by the route's write limit; a GET is not.
+  const stamp = Date.now();
+  const limit = async (method: string, userId: string) => {
+    const res = mockResponse();
+    const req = { method, headers: { 'x-forwarded-for': `visibility-${stamp}` }, query: { op: 'leaderboard-visibility' }, body: { user_id: userId, visible: true }, socket: {} };
+    return (await limitUserWrite(req as never, res as never, 'leaderboard-visibility')) ? 200 : res.statusCode;
+  };
+  for (let n = 0; n < RATE_LIMITS.userMutation.capacity; n += 1) {
+    assert.equal(await limit('PUT', `visibility-${stamp}-a`), 200, `switch ${n + 1} is allowed`);
+  }
+  assert.equal(await limit('PUT', `visibility-${stamp}-a`), 429, 'one account is bounded at the per-account write rate');
+  assert.equal(await limit('PUT', `visibility-${stamp}-b`), 200, 'which spends nobody else\'s budget');
+  assert.equal(await limit('GET', `visibility-${stamp}-a`), 200, 'reading it is not a write');
+}
+
 async function main() {
   // Code graded below runs on the grader's worker thread, built fresh from the
   // sources under test.
@@ -4042,6 +4151,7 @@ async function main() {
   await quizDifficultyContracts();
   await dailySwitchContracts();
   await webdevBankContracts();
+  await leaderboardVisibilityContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
 }
