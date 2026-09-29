@@ -1158,6 +1158,9 @@ const hidden: Record<string, [string, unknown][][]> = {
     [['plan({a:["c","c"],b:["c"],c:[]})',['c','a','b']]],
     [['plan({a:["b"],b:["c"],c:["b"]})',null]],
     [['plan({d:["b","c"],c:["a"],b:["a"],a:[]},{layers:true})',[['a'],['c','b'],['d']]]],
+    // Zero is a valid duration, and ties go to the earlier chain in depth-first
+    // order, then to the earlier dependency in the array.
+    [['criticalPath({a:[],b:["a"]},{a:0,b:2})',{duration:2,path:['a','b']}],['criticalPath({a:[],b:[]},{})',{duration:1,path:['a']}],['criticalPath({a:[],b:[],c:["b","a"]},{})',{duration:2,path:['b','c']}]],
   ],
   'ts-evolving-result': [
     [['mapResult({ok:true,value:false},x=>!x)',{ok:true,value:true}]],
