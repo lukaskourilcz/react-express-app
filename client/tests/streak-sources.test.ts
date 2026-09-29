@@ -18,7 +18,7 @@ const stale = () => queryClient.getQueryState(KEY)?.isInvalidated === true;
 const verdict = (over: Partial<CodingVerdictResponse>): CodingVerdictResponse => ({
   verdict: 'passed', results: [], hidden: null, check: null, logs: [], codeError: null,
   design: null, designReference: null, failureHint: null, puzzle: null, progress: null,
-  firstPass: false, xpAwarded: 0, applied: true, github: null, solutions: null, ...over,
+  firstPass: false, xpAwarded: 0, xpForfeited: false, applied: true, github: null, solutions: null, ...over,
 });
 
 beforeEach(() => {
