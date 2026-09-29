@@ -381,6 +381,30 @@ describe('signing in', () => {
     expect(sessionStorage.getItem('devshark:auth-return')).toContain('"/premium"');
   });
 
+  it('comes back to the page it was pressed on when no return path is given', async () => {
+    // A student opens a classroom invite signed out and presses Log in.
+    window.history.replaceState(null, '', '/play/K7Q2AB?from=invite#join');
+    const { current } = await mountAuth();
+    await act(() => current().signInWithGoogle());
+    expect(sb.clients[0].auth.signInWithOAuth).toHaveBeenCalledTimes(1);
+    const { takeAuthReturn } = await import('../src/lib/authReturn');
+    // Taken once the account arrives, within fifteen minutes...
+    const saved = sessionStorage.getItem('devshark:auth-return');
+    expect(takeAuthReturn()).toBe('/play/K7Q2AB?from=invite#join');
+    // ...and never after that.
+    sessionStorage.setItem('devshark:auth-return', saved!);
+    expect(takeAuthReturn(Date.now() + 16 * 60_000)).toBeNull();
+  });
+
+  it('records no return from the home page, and a named return path wins', async () => {
+    const { current } = await mountAuth();
+    await act(() => current().signInWithGoogle());
+    expect(sessionStorage.getItem('devshark:auth-return')).toBeNull();
+    window.history.replaceState(null, '', '/premium/success?session_id=cs_1');
+    await act(() => current().signInWithGoogle('/premium'));
+    expect(JSON.parse(sessionStorage.getItem('devshark:auth-return')!).path).toBe('/premium');
+  });
+
   it('fails the sign-in and forgets the return when the download fails', async () => {
     freshPageLoad('fails');
     const { current } = await mountAuth();

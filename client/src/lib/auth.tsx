@@ -10,7 +10,7 @@ import {
 } from './supabaseClient';
 import { apiFetch } from './api';
 import { registerAccessTokenReader } from './roadmap';
-import { clearAuthReturn, clearSignInResume, markSignInResume, rememberAuthReturn, takeSignInResume } from './authReturn';
+import { clearAuthReturn, clearSignInResume, currentReturnPath, markSignInResume, rememberAuthReturn, takeSignInResume } from './authReturn';
 import { RELOAD_GRACE_MS, browserRecovery, isChunkLoadError, reloadOnPress, type Recovery } from './routeRecovery';
 
 // Cache the latest access token in memory so the pagehide beacon (which can't
@@ -60,8 +60,8 @@ interface AuthContextValue {
   isAuthenticated: boolean;
   isLoading: boolean;
   /** Sign in with Google. `returnTo` is a path on this site to come back to
-   * after the round trip (see lib/authReturn.ts); without it the visitor lands
-   * on the home page. */
+   * after the round trip (see lib/authReturn.ts); without it the visitor comes
+   * back to the page the sign-in was pressed on. */
   signInWithGoogle: (returnTo?: string) => Promise<void>;
   signOut: () => Promise<void>;
   /** A sign-in pressed before a reload failed when this document finished it
@@ -190,7 +190,10 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
   const signInWithGoogle = async (returnTo?: string) => {
     // A sign-in from anywhere else must not inherit an older page's return.
     clearAuthReturn();
-    if (returnTo) rememberAuthReturn(returnTo);
+    // A classroom invite (/play/K7Q2AB), a flashcard deck or the GitHub
+    // settings page must not turn into the home page on the way back.
+    const path = returnTo ?? currentReturnPath();
+    if (path) rememberAuthReturn(path);
     // Signing in is when a signed-out visitor downloads supabase-js.
     await startSignIn(true);
   };
