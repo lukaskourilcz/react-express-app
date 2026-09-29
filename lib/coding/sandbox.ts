@@ -95,10 +95,71 @@ globalThis.clearTimeout = globalThis.clearInterval = id => {
   timers = kept;
 };
 globalThis.queueMicrotask = fn => { void (async () => { await 0; fn(); })(); };
-const parse = JSON.parse;
-globalThis.structuredClone = value => parse(stringify(value));
-Date.now = () => 1700000000000 + now;
+// One clock for every way of asking the time: Date.now, new Date() and Date()
+// all read the virtual clock the timers advance, so code that times itself
+// with new Date() grades the way it runs in the browser.
+const RealDate = Date, construct = Reflect.construct, defineProperty = Object.defineProperty;
+const clock = () => 1700000000000 + now;
+function VirtualDate(...args) {
+  if (new.target === undefined) return construct(RealDate, [clock()], RealDate).toString();
+  return construct(RealDate, args.length === 0 ? [clock()] : args, new.target);
+}
+VirtualDate.prototype = RealDate.prototype;
+defineProperty(RealDate.prototype, 'constructor', { value: VirtualDate, writable: true, configurable: true });
+VirtualDate.now = clock;
+VirtualDate.parse = RealDate.parse;
+VirtualDate.UTC = RealDate.UTC;
+globalThis.Date = VirtualDate;
 globalThis.performance = { now: () => now };
+// structuredClone as the browser has it: a deep copy that keeps Maps, Sets,
+// Dates, RegExps, undefined, NaN and shared or circular references, drops
+// prototypes, and refuses functions and symbols.
+const NativeMap = Map, NativeSet = Set, NativeRegExp = RegExp, NativeError = Error, NativeObject = Object;
+const mapGet = Map.prototype.get, mapSet = Map.prototype.set, mapHas = Map.prototype.has, mapEach = Map.prototype.forEach;
+const setAdd = Set.prototype.add, setEach = Set.prototype.forEach, dateTime = Date.prototype.getTime;
+const objectTag = Object.prototype.toString, isView = ArrayBuffer.isView;
+const tagOf = value => apply(objectTag, value, []);
+const refuse = what => { const error = new NativeError(what + ' could not be cloned.'); error.name = 'DataCloneError'; return error; };
+globalThis.structuredClone = value => {
+  const copies = new NativeMap();
+  const copy = item => {
+    if (typeof item === 'function') throw refuse('A function');
+    if (typeof item === 'symbol') throw refuse('A symbol');
+    if (item === null || typeof item !== 'object') return item;
+    if (apply(mapHas, copies, [item])) return apply(mapGet, copies, [item]);
+    const tag = tagOf(item);
+    let out;
+    if (tag === '[object Date]') out = new RealDate(apply(dateTime, item, []));
+    else if (tag === '[object RegExp]') out = new NativeRegExp(item.source, item.flags);
+    else if (tag === '[object Boolean]' || tag === '[object Number]' || tag === '[object String]') out = NativeObject(item.valueOf());
+    else if (tag === '[object ArrayBuffer]' || (isView(item) && typeof item.slice === 'function')) out = item.slice(0);
+    else if (tag === '[object Map]') {
+      out = new NativeMap();
+      apply(mapSet, copies, [item, out]);
+      apply(mapEach, item, [(entry, key) => { apply(mapSet, out, [copy(key), copy(entry)]); }]);
+      return out;
+    } else if (tag === '[object Set]') {
+      out = new NativeSet();
+      apply(mapSet, copies, [item, out]);
+      apply(setEach, item, [entry => { apply(setAdd, out, [copy(entry)]); }]);
+      return out;
+    } else if (tag === '[object Error]') {
+      out = new NativeError(item.message);
+      out.name = item.name;
+    } else if (tag === '[object Promise]' || tag === '[object WeakMap]' || tag === '[object WeakSet]' || tag === '[object Symbol]') {
+      throw refuse(tag.slice(8, -1));
+    } else {
+      out = isArray(item) ? new Array(item.length) : {};
+      apply(mapSet, copies, [item, out]);
+      const names = keys(item);
+      for (let i = 0; i < names.length; i++) out[names[i]] = copy(item[names[i]]);
+      return out;
+    }
+    apply(mapSet, copies, [item, out]);
+    return out;
+  };
+  return copy(value);
+};
 globalThis.console = (${CONSOLE_SOURCE})(emit, format, () => now);
 const evaluate = NativeFunction(${JSON.stringify('"use strict";\n' + code + '\n;return [' + calls.map(call => '() => (' + call.trim().replace(/;+$/, '') + '\n)').join(',') + '];')})();
 const outcomes = makeArray();

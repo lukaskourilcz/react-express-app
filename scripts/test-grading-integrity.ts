@@ -10,6 +10,7 @@ import { evolvingStage } from '../shared/evolving';
 import { createMiniJest } from '../shared/coding-mini-jest';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { withHiddenCases } from '../lib/coding/react-hidden';
+import { allPassed, evaluateCalls } from '../shared/coding-evaluate';
 
 const attacks = [
   ['replace comparison', 'globalThis.__deepEqual=()=>true; function answer(){return 0}'],
@@ -297,4 +298,43 @@ function codingDatabase() {
   const reorderedRun = await runReactSuite({ suite: withHiddenCases(dispatchTask.suite!, dispatchSolution.hiddenSuite), appSource: reordered });
   assert.equal(reorderedRun.failed, 0, `key order passes the suite: ${reorderedRun.cases.filter((one) => one.status === 'fail').map((one) => one.error).join('; ')}`);
   console.log('PASS integrity: React suites compare values the way Jest does');
+}
+
+// ── Run and Submit agree (CODE-10) ───────────────────────────────────────
+// The browser's Run and the server's Submit have to reach the same verdict:
+// both in strict mode, one clock however the code asks for the time, and a
+// structuredClone that copies what the browser's copies.
+{
+  const checks = (id: string) => {
+    const task = CODING_TASKS.find((one) => one.id === id)!;
+    const all = [...task.tests!, ...(solutionFor(id)?.hiddenTests ?? [])];
+    return { calls: all.map((one) => one.call), expectations: all.map((one) => one.expected), shown: task.tests!.length };
+  };
+  const agree = async (id: string, code: string) => {
+    const { calls, expectations, shown } = checks(id);
+    const run = await evaluateCalls({ code, calls: calls.slice(0, shown), expectations: expectations.slice(0, shown) });
+    const submit = await runInSandbox({ code, calls, expectations, shownCalls: shown });
+    assert.deepEqual(submit.results.slice(0, shown).map((one) => one.pass), run.results.map((one) => one.pass), `${id}: Run and Submit disagree`);
+    return { run, submit };
+  };
+  const sloppy = await agree('js-sum-array', 'function sum(numbers) {\n  total = 0;\n  for (const n of numbers) total += n;\n  return total;\n}');
+  assert.ok(sloppy.run.results.every((one) => one.pass === false && /total/.test(one.error ?? '')), 'Run reports an undeclared assignment, as Submit does');
+  const timed = await agree('js-throttle-calls', 'const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { const now = new Date().getTime(); if (now - last >= ms) { last = now; fn(...args); } }; };');
+  assert.ok(allPassed(timed.submit), `new Date() reads the same clock as the timers: ${JSON.stringify(timed.submit.results)}`);
+  const cloned = await agree('alg-deep-clone', 'const deepClone = (value) => structuredClone(value);');
+  assert.ok(allPassed(cloned.submit), `structuredClone copies like the browser's: ${JSON.stringify(cloned.submit.results)}`);
+  const semantics = await runInSandbox({
+    code: '',
+    calls: [
+      'Date.now() === new Date().getTime() && new Date() instanceof Date && new Date(0).getTime() === 0 && typeof Date() === "string"',
+      '(() => { const start = Date.now(); return new Promise((done) => setTimeout(() => done(new Date().getTime() - start), 250)); })()',
+      '(() => { const inner = { n: 1 }; const m = new Map([["k", inner]]); const c = structuredClone(m); return [c instanceof Map, c.get("k").n, c.get("k") !== inner]; })()',
+      '(() => { const s = structuredClone(new Set([1, 2])); return [s instanceof Set, s.size]; })()',
+      '(() => { const o = { d: new Date(5), r: /a/g, u: undefined, n: NaN }; o.self = o; const c = structuredClone(o); return [c.self === c, c.d instanceof Date, c.d.getTime(), c.r.flags, "u" in c, Number.isNaN(c.n)]; })()',
+      '(() => { try { structuredClone({ f() {} }); return "cloned"; } catch (error) { return error.name; } })()',
+    ],
+    expectations: [true, 250, [true, 1, true], [true, 2], [true, true, 5, 'g', true, true], 'DataCloneError'],
+  });
+  assert.deepEqual(semantics.results.map((one) => one.pass), [true, true, true, true, true, true], JSON.stringify(semantics.results));
+  console.log('PASS integrity: Run and Submit agree on strict mode, the clock and structuredClone');
 }

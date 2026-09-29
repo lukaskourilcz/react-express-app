@@ -83,8 +83,10 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   let evaluate: (calls: string[], console: typeof sink) => Promise<{ ok: boolean; value?: unknown; error?: string }[]>;
   try {
     // Declarations from the learner's code are in scope for the direct eval of
-    // each call, so a suite sees the functions the code defines.
-    evaluate = new Function('__calls__', 'console', `${input.code}\n${[
+    // each call, so a suite sees the functions the code defines. Strict mode,
+    // as in the grading sandbox: an undeclared assignment that Run let through
+    // as a stray global would otherwise fail only on Submit.
+    evaluate = new Function('__calls__', 'console', `"use strict";\n${input.code}\n${[
       'return Promise.all(__calls__.map(async source => {',
       '  try { return { ok: true, value: await eval(source) }; }',
       '  catch (error) { return { ok: false, error: String((error && error.message) || error) }; }',
