@@ -78,7 +78,13 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (req.query.qotd !== undefined) return handleQuestionOfTheDay(req, res);
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
 
-  const dailyCount = (await getGameSettings()).daily.count;
+  const settings = await getGameSettings();
+  // The /dev switch. The question of the day above is its own feature and
+  // stays open.
+  if (!settings.features.dailyChallenge) {
+    return jsonError(res, 503, 'feature_disabled', 'The daily challenge is switched off');
+  }
+  const dailyCount = settings.daily.count;
   const today = dateString();
   const dateParam = (req.query.date as string) || today;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateParam)) {

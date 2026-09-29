@@ -119,7 +119,7 @@ import {
   tokensForVerifiedXp,
   validateAddress,
 } from '../shared/rewards';
-import { DEFAULT_SETTINGS, normalizeSettings } from '../lib/settings-store';
+import { DEFAULT_SETTINGS, normalizeSettings, setGameSettingsForTests } from '../lib/settings-store';
 import { taskResources, CODING_DOC_LINKS } from '../shared/coding-docs';
 import { STREAK_PROTECTION_CAP } from '../shared/rewards';
 import {
@@ -2033,6 +2033,26 @@ async function quizDifficultyContracts() {
   assert.ok(jsBody.questions.every((q) => q.difficulty >= 3));
 }
 
+/** The /dev "Daily challenge" switch turns the challenge off on the server;
+ * the question of the day is its own feature and stays open. */
+async function dailySwitchContracts() {
+  setGameSettingsForTests({ ...DEFAULT_SETTINGS, features: { ...DEFAULT_SETTINGS.features, dailyChallenge: false } });
+  try {
+    const off = mockResponse();
+    await dailyHandler(quizRequest('GET', {}), off as never);
+    assert.equal(off.statusCode, 503, JSON.stringify(off.body));
+    assert.equal((off.body as { error: { code: string } }).error.code, 'feature_disabled');
+    const qotd = mockResponse();
+    await dailyHandler(quizRequest('GET', { qotd: 'today' }), qotd as never);
+    assert.equal(qotd.statusCode, 200, JSON.stringify(qotd.body));
+  } finally {
+    setGameSettingsForTests(null);
+  }
+  const on = mockResponse();
+  await dailyHandler(quizRequest('GET', {}), on as never);
+  assert.equal(on.statusCode, 200, JSON.stringify(on.body));
+}
+
 /** A signed-in learner has one ranked daily attempt, timed from the first
  * time they were handed the day's questions. */
 async function dailyIntegrityContracts() {
@@ -3719,6 +3739,7 @@ async function main() {
   await dailyIntegrityContracts();
   seededShuffleContracts();
   await quizDifficultyContracts();
+  await dailySwitchContracts();
   await webdevBankContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');

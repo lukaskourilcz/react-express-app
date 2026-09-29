@@ -839,7 +839,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
 
         {/* Quick entries into the daily challenge — kept as quiet links. */}
         <div className="ss-text-links" style={{ justifyContent: 'center', marginTop: 16 }}>
-          <button type="button" onClick={startDailyChallenge}>{t('quiz.todaysChallenge')}</button>
+          {config.features.dailyChallenge && (
+            <button type="button" onClick={startDailyChallenge}>{t('quiz.todaysChallenge')}</button>
+          )}
           {isAuthenticated && (
             <button type="button" onClick={() => void startPersonalizedReview()}>{t('quiz.reviewWeakAreas')}</button>
           )}

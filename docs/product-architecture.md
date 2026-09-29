@@ -359,7 +359,8 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   and Hard waves of #226). Re-pick the list, not the task files,
   when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
   Challenge, multiplayer, flashcards, the typing racer, leaderboards, streaks,
-  friends and the token shop stay open (`QUIZ_FREE_CATEGORIES = 'all'`).
+  friends and the token shop stay open: no quiz category is gated, so nothing
+  in this module names one.
   `contentTier` and `isOpenTo` take a `GatedContent` value and pure index
   data. The module imports nothing from `lib/`, so the browser draws its locks
   and the server refuses with the same function. A signed-out visitor holds
