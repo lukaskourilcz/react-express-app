@@ -540,7 +540,10 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
 // A hundred megabyte-long lines made a 20 MB Submit response, past what the
 // platform sends, after the verdict was already recorded.
 {
-  const flood = 'const shout = () => { for (let i = 0; i < 200; i++) console.log("x".repeat(1_000_000)); return 1; };';
+  // 200 lines of 20 000 characters: ten times the line cap and sixty times the
+  // total cap, small enough to finish well inside the 2.5 s run deadline on a
+  // loaded CI runner.
+  const flood = 'const shout = () => { for (let i = 0; i < 200; i++) console.log("x".repeat(20_000)); return 1; };';
   const run = await evaluateCalls({ code: flood, calls: ['shout()'], expectations: [1] });
   const submit = await runInSandbox({ code: flood, calls: ['shout()'], expectations: [1] });
   for (const [where, logs] of [['Run', run.logs], ['Submit', submit.logs]] as const) {
@@ -554,7 +557,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   const response = { statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
   await handleCodingSubmit({
     method: 'POST', headers: {},
-    body: { session: encodeCodingSession({ taskId: 'js-sum-array', track: 'javascript', userId: null }), code: 'function sum(numbers) { for (let i = 0; i < 100; i++) console.log("y".repeat(5_000_000)); return numbers.reduce((a, b) => a + b, 0); }' },
+    body: { session: encodeCodingSession({ taskId: 'js-sum-array', track: 'javascript', userId: null }), code: 'function sum(numbers) { for (let i = 0; i < 100; i++) console.log("y".repeat(50_000)); return numbers.reduce((a, b) => a + b, 0); }' },
   } as never, response as never, null);
   assert.equal(response.statusCode, 200);
   assert.ok(JSON.stringify(response.body).length < 200_000, `the Submit response stays small (${JSON.stringify(response.body).length} bytes)`);
