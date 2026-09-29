@@ -76,6 +76,7 @@ import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { useInPlan } from '../lib/eligibility';
+import SignInButton from './SignInButton';
 import { isBarred, useLocks } from '../lib/locks';
 import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
@@ -1668,9 +1669,19 @@ function LessonRunner({
             <div style={{ color: 'var(--color-text-secondary)', marginBottom: 8 }}>
               {t('roadmap.scoreLine', { correct: correctCount, total })}
             </div>
-            {codingTasks.length > 0 && (
+            {codingTasks.length > 0 && (user || codingPending.length === 0) && (
               <div style={{ fontSize: '0.9rem', color: codingPending.length === 0 ? 'var(--ss-success-strong, var(--ss-success))' : 'var(--ss-warning)', fontWeight: 600, marginBottom: 8 }}>
                 {codingPending.length === 0 ? t('coding.lesson.allPassed') : t('coding.lesson.pending', { n: codingPending.length })}
+              </div>
+            )}
+            {/* Signed out, a coding task's pass is never recorded, so the level
+                always reads its tasks as pending. Say why, and how to fix it. */}
+            {codingTasks.length > 0 && !user && codingPending.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                <div style={{ fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
+                  {t('coding.lesson.signedOutPending')}
+                </div>
+                <SignInButton />
               </div>
             )}
             {!passed && pct < playable.passPct && (

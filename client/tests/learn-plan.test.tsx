@@ -337,4 +337,17 @@ describe('a level whose session cannot be used', () => {
     expect(await screen.findByRole('heading', { name: 'Your sign-in changed during this level' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Start the level again' })).toBeInTheDocument();
   });
+
+  it('tells a visitor that coding tasks count only when signed in', async () => {
+    answer({
+      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: { en: 'Digit sum', cs: '' } }, session: 'coding-session-1' }] },
+      complete: () => HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: false, applied: true, codingPending: ['js-digit-sum'] }),
+    });
+    await openLevelAndAnswer();
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish the coding task' }));
+    expect(await screen.findByText(/Coding tasks count toward a level only when you are signed in/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Log in' })).toBeInTheDocument();
+    expect(screen.queryByText('1 coding tasks still to pass')).toBeNull();
+  });
 });
