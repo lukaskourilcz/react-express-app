@@ -280,6 +280,118 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   console.log('PASS integrity: a pass after a reveal says it earned no XP, and nothing else does');
 }
 
+// ── a failed system-design submission carries no key ────────────────────
+// A failed or partly right submission says which answers were wrong and
+// nothing of the key: no correct option, order or range, no explanation and
+// no reference answer. Otherwise the key could be read, the task reopened
+// under a new shuffle and passed for full XP. A pass carries all of it. The
+// learner below has passed these tasks before, which keeps the Premium tasks
+// open for review; the grading does not depend on that.
+{
+  type Step = { correct: boolean; given: unknown; correctIndex?: number; correctOrder?: number[]; acceptedRange?: unknown; explanation?: { en: string } };
+  type Verdict = { verdict?: string; design?: Step[] | null; designReference?: { en: string } | null };
+  type Opened = { session: string; task: { design?: { steps: { options: { en: string }[] }[] }; drill?: { options?: { en: string }[]; steps?: { en: string }[] } } };
+  const db = codingDatabase();
+  const learner = 'user-cccc-3333';
+  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.22' };
+  const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+  const open = async (id: string) => {
+    const out = reply();
+    await handleCodingTask({ method: 'GET', headers: auth, query: { id, user_id: learner } } as never, out as never, db.client as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Opened;
+  };
+  const submit = async (session: string, answers: unknown[]) => {
+    const out = reply();
+    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session, answers, user_id: learner } } as never, out as never, db.client as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Verdict;
+  };
+  const withheld = (verdict: Verdict, secrets: string[], label: string) => {
+    assert.equal(verdict.designReference, null, `${label}: no reference answer`);
+    for (const step of verdict.design ?? []) {
+      assert.deepEqual(Object.keys(step).sort(), ['correct', 'given'], `${label}: a step carries whether it was right and the answer given, nothing else`);
+    }
+    const wire = JSON.stringify(verdict);
+    for (const secret of secrets) assert.ok(!wire.includes(secret.slice(0, 60)), `${label}: no explanation or reference text`);
+  };
+  const byId = (id: string) => CODING_TASKS.find((task) => task.id === id)!;
+  const guided = CODING_TASKS.find((task) => task.track === 'system-design' && task.design)!;
+  const estimate = CODING_TASKS.find((task) => task.drill?.format === 'estimate')!;
+  const choice = CODING_TASKS.find((task) => task.drill?.format === 'tradeoff')!;
+  const sequence = CODING_TASKS.find((task) => task.drill?.format === 'sequence')!;
+  for (const task of [guided, estimate, choice, sequence]) db.progress.set(`${learner}:${task.id}`, { status: 'passed', passes: 1, revealCount: 0 });
+
+  // A guided walkthrough: all wrong, then one short of the pass mark.
+  const design = guided.design!;
+  const secrets = [...design.steps.map((step) => step.explanation.en), design.reference.en];
+  const rightFor = (opened: Opened) => opened.task.design!.steps.map((step, index) =>
+    step.options.findIndex((option) => option.en === design.steps[index].options[design.steps[index].correct].en));
+  const first = await open(guided.id);
+  const right = rightFor(first);
+  assert.ok(right.every((index) => index >= 0));
+  const wrong = right.map((index, step) => (index + 1) % design.steps[step].options.length);
+  const allWrong = await submit(first.session, wrong);
+  assert.equal(allWrong.verdict, 'failed');
+  assert.deepEqual(allWrong.design?.map((step) => step.correct), right.map(() => false));
+  assert.deepEqual(allWrong.design?.map((step) => step.given), wrong, 'the learner\'s own answers come back');
+  withheld(allWrong, secrets, 'all wrong');
+  const second = await open(guided.id);
+  const secondRight = rightFor(second);
+  const shortBy = design.passMark - 1;
+  const partly = await submit(second.session, secondRight.map((index, step) => (step < shortBy ? index : (index + 1) % design.steps[step].options.length)));
+  assert.equal(partly.verdict, 'failed');
+  assert.equal(partly.design?.filter((step) => step.correct).length, shortBy, 'the right steps are marked right');
+  withheld(partly, secrets, 'partly right');
+  const third = await open(guided.id);
+  const thirdRight = rightFor(third);
+  const pass = await submit(third.session, thirdRight);
+  assert.equal(pass.verdict, 'passed');
+  assert.deepEqual(pass.design?.map((step) => step.correctIndex), thirdRight, 'a pass carries the correct options');
+  assert.deepEqual(pass.design?.map((step) => step.explanation?.en), design.steps.map((step) => step.explanation.en), 'and the explanations');
+  assert.equal(pass.designReference?.en, design.reference.en, 'and the reference answer');
+
+  // An estimate drill.
+  const band = byId(estimate.id).drill!;
+  const estimateOpened = await open(estimate.id);
+  const tooHigh = (band.max ?? 0) * 10 + 1;
+  const missed = await submit(estimateOpened.session, [tooHigh]);
+  assert.equal(missed.verdict, 'failed');
+  assert.deepEqual(missed.design, [{ correct: false, given: tooHigh }]);
+  withheld(missed, [band.explanation.en], 'estimate');
+  const inBand = await submit((await open(estimate.id)).session, [band.answer!]);
+  assert.equal(inBand.verdict, 'passed');
+  assert.deepEqual(inBand.design?.[0].acceptedRange, { min: band.min, max: band.max, answer: band.answer }, 'a pass carries the accepted range');
+  assert.equal(inBand.design?.[0].explanation?.en, band.explanation.en);
+
+  // A trade-off drill.
+  const pick = byId(choice.id).drill!;
+  const choiceOpened = await open(choice.id);
+  const choiceRight = choiceOpened.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en);
+  const choiceWrong = (choiceRight + 1) % pick.options!.length;
+  const wrongPick = await submit(choiceOpened.session, [choiceWrong]);
+  assert.deepEqual(wrongPick.design, [{ correct: false, given: choiceWrong }]);
+  withheld(wrongPick, [pick.explanation.en], 'trade-off');
+  const choiceAgain = await open(choice.id);
+  const rightPick = await submit(choiceAgain.session, [choiceAgain.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en)]);
+  assert.equal(rightPick.verdict, 'passed');
+  assert.equal(typeof rightPick.design?.[0].correctIndex, 'number', 'a pass carries the correct option');
+
+  // A sequence drill.
+  const order = byId(sequence.id).drill!;
+  const orderFor = (opened: Opened) => order.steps!.map((step) => opened.task.drill!.steps!.findIndex((shown) => shown.en === step.en));
+  const sequenceOpened = await open(sequence.id);
+  const reversed = [...orderFor(sequenceOpened)].reverse();
+  const outOfOrder = await submit(sequenceOpened.session, [reversed]);
+  assert.deepEqual(outOfOrder.design, [{ correct: false, given: reversed }]);
+  withheld(outOfOrder, [order.explanation.en], 'sequence');
+  const sequenceAgain = await open(sequence.id);
+  const inOrder = await submit(sequenceAgain.session, [orderFor(sequenceAgain)]);
+  assert.equal(inOrder.verdict, 'passed');
+  assert.deepEqual(inOrder.design?.[0].correctOrder, orderFor(sequenceAgain), 'a pass carries the correct order');
+  console.log('PASS integrity: a failed system-design submission carries no key, a pass carries all of it');
+}
+
 // ── a code-ordering puzzle round-trips through its session (CODE-7) ──────
 // The task handler seals the presentation-id translation into the session;
 // the submit handler must find it there again, or every arrangement is

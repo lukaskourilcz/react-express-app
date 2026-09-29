@@ -2109,11 +2109,14 @@ export const en = {
   'daily.noScript': 'Turn on JavaScript to see the question and check your answer.',
   'daily.checkFailed': 'Your answer could not be checked. Try again in a moment.',
 
-  // Revealing a solution before a pass costs that task's XP and coins.
+  // Revealing a solution before a pass costs that task's XP and coins, and a
+  // failed system-design submission says only which answers were wrong.
   'coding.giveUpConfirmXp': 'Showing the solution ends this attempt, and this task will earn no XP or coins when you pass it. Show it?',
   'coding.lesson.giveUpConfirm': 'Showing the solution ends this level attempt, and this task will earn no XP or coins when you pass it. You can retry the level later. Show it?',
   'coding.lesson.giveUpEnds': 'Showing the solution ends this level attempt. You can retry the level later. Show it?',
   'coding.verdict.passedNoXp': 'Passed — no XP because the solution was revealed',
+  'coding.design.yourAnswer': 'Your answer',
+  'coding.design.failedNote': 'The correct answers and explanations appear once you pass. Try again: the options come back in a new order.',
 } as const;
 
 export type TranslationKey = keyof typeof en;

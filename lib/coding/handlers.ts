@@ -165,10 +165,11 @@ const codeHash = (code: string) => createHash('sha256').update(code, 'utf8').dig
  * changed one is recorded. XP stays once per task and account either way; its
  * award id names the task, not the attempt.
  *
- * A system-design session keeps one graded verdict. Its first verdict returns
+ * A system-design session keeps one graded verdict. A passing verdict returns
  * the key it was sealed with, so a second submission from the same session
- * would be answered from that key; it is reported and never applied. A new
- * attempt takes a new session, with the options shuffled again.
+ * could be answered from that key; it is reported and never applied. A failed
+ * verdict returns no key (see `gradeDesign`), and a new attempt takes a new
+ * session, with the options shuffled again.
  */
 function submissionAttemptId(session: CodingSession, verdict: CodingOutcome, code: string | null): string {
   if (code === null) return session.attemptId;

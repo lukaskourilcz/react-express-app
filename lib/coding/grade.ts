@@ -47,21 +47,26 @@ export function prepareDesign(task: CodingTask, shuffle: <U>(list: U[]) => U[]):
   return { key: {} };
 }
 
-const asIndex = (value: DesignAnswer | undefined): number | null =>
+const asIndex = (value: unknown): number | null =>
   typeof value === 'number' && Number.isInteger(value) && value >= 0 && value <= 25 ? value : null;
+const asEstimate = (value: unknown): number | null => (typeof value === 'number' && Number.isFinite(value) ? value : null);
+const asOrder = (value: unknown): number[] | null =>
+  Array.isArray(value) && value.length <= 25 && value.every((position) => asIndex(position) !== null) ? [...(value as number[])] : null;
 
-/** Grades a system-design submission against the sealed key. */
-export function gradeDesign(task: CodingTask, key: CodingDesignKey, answers: DesignAnswer[] | undefined): {
+interface DesignGrade {
   outcome: CodingOutcome;
   verdicts: DesignStepVerdict[];
   reference: Localized | null;
-} {
+}
+
+/** Grades a system-design submission against the sealed key, key and all. */
+function gradeDesignWithKey(task: CodingTask, key: CodingDesignKey, answers: DesignAnswer[] | undefined): DesignGrade {
   const given = Array.isArray(answers) ? answers : [];
   if (task.design && key.steps) {
     const verdicts = task.design.steps.map((step, index): DesignStepVerdict => {
       const chosen = asIndex(given[index]);
       const correctIndex = key.steps![index];
-      return { correct: chosen !== null && chosen === correctIndex, correctIndex, explanation: step.explanation };
+      return { correct: chosen !== null && chosen === correctIndex, given: chosen, correctIndex, explanation: step.explanation };
     });
     const correct = verdicts.filter((v) => v.correct).length;
     return { outcome: correct >= task.design.passMark ? 'passed' : 'failed', verdicts, reference: task.design.reference };
@@ -71,23 +76,41 @@ export function gradeDesign(task: CodingTask, key: CodingDesignKey, answers: Des
     const format: DesignDrillFormat = drill.format;
     let verdict: DesignStepVerdict;
     if (format === 'estimate' && key.band) {
-      const value = typeof given[0] === 'number' ? given[0] : Number.NaN;
+      const value = asEstimate(given[0]);
       verdict = {
-        correct: Number.isFinite(value) && value >= key.band.min && value <= key.band.max,
+        correct: value !== null && value >= key.band.min && value <= key.band.max,
+        given: value,
         acceptedRange: key.band,
         explanation: drill.explanation,
       };
     } else if (format === 'sequence' && key.order) {
-      const order = Array.isArray(given[0]) ? given[0] : [];
-      const correct = order.length === key.order.length && order.every((position, index) => position === key.order![index]);
-      verdict = { correct, correctOrder: key.order, explanation: drill.explanation };
+      const order = asOrder(given[0]);
+      const correct = order !== null && order.length === key.order.length && order.every((position, index) => position === key.order![index]);
+      verdict = { correct, given: order, correctOrder: key.order, explanation: drill.explanation };
     } else {
       const chosen = asIndex(given[0]);
-      verdict = { correct: chosen !== null && chosen === key.correct, correctIndex: key.correct, explanation: drill.explanation };
+      verdict = { correct: chosen !== null && chosen === key.correct, given: chosen, correctIndex: key.correct, explanation: drill.explanation };
     }
     return { outcome: verdict.correct ? 'passed' : 'failed', verdicts: [verdict], reference: null };
   }
   return { outcome: 'error', verdicts: [], reference: null };
+}
+
+/** Grades a system-design submission against the sealed key.
+ *
+ * Only a pass returns the walkthrough: each step's correct option, order or
+ * range, its explanation, and the reference answer. A failed or partly right
+ * submission returns, per step, whether it was right and the learner's own
+ * answer. The explanations name the right option, so they stay behind too:
+ * a failed attempt must not hand over the key for the next shuffle. */
+export function gradeDesign(task: CodingTask, key: CodingDesignKey, answers: DesignAnswer[] | undefined): DesignGrade {
+  const graded = gradeDesignWithKey(task, key, answers);
+  if (graded.outcome === 'passed') return graded;
+  return {
+    outcome: graded.outcome,
+    verdicts: graded.verdicts.map((step): DesignStepVerdict => ({ correct: step.correct, given: step.given })),
+    reference: null,
+  };
 }
 
 /** The outcome of a code run: every visible and hidden call matched and, for

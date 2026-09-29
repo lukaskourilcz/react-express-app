@@ -2401,6 +2401,27 @@ async function main() {
   const preparedDrill = prepareDesign(drillTask!, (list) => [...list].reverse());
   assert.equal(gradeDesign(drillTask!, preparedDrill.key, [preparedDrill.key.order!]).outcome, 'passed', 'a sequence drill grades the shuffled order');
   assert.equal(gradeDesign(drillTask!, preparedDrill.key, [[...preparedDrill.key.order!].reverse()]).outcome, 'failed');
+  // A failed or partly right submission says which steps were right and echoes
+  // the learner's answers, nothing more: the explanations name the right
+  // option, so a failed attempt read for the key could be passed for full XP
+  // under the next shuffle. The whole walkthrough travels with a pass.
+  const onlyRightOrWrong = (verdicts: { correct: boolean }[]) => verdicts.every((step) => Object.keys(step).sort().join() === 'correct,given');
+  const shortOfPass = gradeDesign(designTask!, prepared.key, prepared.key.steps!.map((i, step) => (step < designTask!.design!.passMark - 1 ? i : (i + 1) % 3)));
+  assert.equal(shortOfPass.outcome, 'failed');
+  assert.equal(shortOfPass.verdicts.filter((step) => step.correct).length, designTask!.design!.passMark - 1, 'a failed walkthrough still marks the right steps');
+  assert.ok(onlyRightOrWrong(shortOfPass.verdicts) && shortOfPass.reference === null, 'a failed walkthrough carries no key, explanation or reference');
+  assert.ok(allRight.verdicts.every((step, index) => step.correctIndex === prepared.key.steps![index] && step.explanation) && allRight.reference, 'a passed walkthrough carries the key, the explanations and the reference');
+  const failedDrill = gradeDesign(drillTask!, preparedDrill.key, [[...preparedDrill.key.order!].reverse()]);
+  assert.ok(onlyRightOrWrong(failedDrill.verdicts), 'a failed drill carries no key or explanation');
+  assert.deepEqual(failedDrill.verdicts[0].given, [...preparedDrill.key.order!].reverse(), 'and echoes the order the learner gave');
+  // The Learn lesson view and the learning paths run coding tasks in the code
+  // workbench only: no Learn level and no path activity may embed a design task.
+  assert.ok(CODING_TASKS.filter((task) => task.track === 'system-design').every((task) => task.level === 0), 'no system-design task sits in a Learn level');
+  for (const path of LEARNING_PATHS) {
+    for (const activity of path.modules.flatMap((module) => module.activities)) {
+      if (activity.reuseTaskId) assert.notEqual(codingTaskById(activity.reuseTaskId)?.track, 'system-design', `${activity.id} reuses no system-design task`);
+    }
+  }
   // The solution opens once half the ladder is spent, never before two rungs
   // (or the whole ladder, when it is shorter). The browser shows the same number.
   assert.equal(ladderLength(doubleTask!), 5, 'js-double-numbers offers five rungs: a hint, two approach steps, the skeleton and the docs link');
