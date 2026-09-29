@@ -318,14 +318,12 @@ const App = () => (
 export default App;
 `,
     skeleton: `export const useTheme = () => {
-  const value = useContext(ThemeContext);
-  if (/* no provider above */) {
-    throw new Error('useTheme must be used inside ThemeProvider');
-  }
-  return value;
+  const value = /* read ThemeContext */;
+  // no provider above: stop the render with the error the prompt names
+  // a provider above: give its value to the caller
 };
 
-// in Badge: const { theme, toggle } = useTheme();`,
+// in Badge: take theme and toggle from your hook, not from useContext`,
     hints: ['`useContext` returns the default from `createContext` when no provider sits above the component. Here the default is `null`, so a `null` value means the component was rendered in the wrong place. A hook may throw during render, and its message can name the mistake.'],
     approach: [
       'Declare `export const useTheme = () => { ... }` and call `useContext(ThemeContext)` inside it.',

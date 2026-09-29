@@ -128,6 +128,45 @@ const topLevelNames = (ts: TypeScriptApi, source: string): string[] => {
   return [...names];
 };
 
+// Every string a suite mentions: quoted literals (minus module names and ARIA
+// role names) and the text of simple regular expressions.
+const ARIA_ROLE = /^(button|textbox|checkbox|heading|listitem|list|combobox|option|alert|status|link|img|dialog|form|region|navigation|searchbox|spinbutton|radio|tab|tabpanel|table|row|cell|article|main|group|progressbar|separator|switch|menu|menuitem|tooltip|banner|contentinfo|complementary)$/;
+const suiteStrings = (suite: string): string[] => {
+  const found = new Set<string>();
+  for (const match of suite.matchAll(/(['"`])((?:(?!\1)[^\\\n$]|\\.){1,80})\1/g)) {
+    if (/^\.\/|^@testing|^react/.test(match[2]) || ARIA_ROLE.test(match[2])) continue;
+    found.add(match[2].replace(/\\(.)/g, '$1'));
+  }
+  for (const match of suite.matchAll(/\/((?:[A-Za-z0-9 ,.'!?:-]|\\s){2,60})\/[gimsuy]*/g)) found.add(match[1].replace(/\\s/g, ' '));
+  return [...found];
+};
+
+// Components with no state, effect, request or timer: one that renders
+// nothing, and static pages that print every string the suite mentions as
+// paragraphs, buttons or list items. A suite one of them passes checks that
+// some text is on the page, not that the component does what the task asks.
+const staticPages = (suite: string): [string, string][] => {
+  const text = suiteStrings(suite).map((one) => `{${JSON.stringify(one)}}`);
+  return [
+    ['a component that renders nothing', 'const App = () => null;'],
+    ['one static paragraph of the suite\'s strings', `const App = () => <main><p>${text.join(' ')}</p><button>ok</button><input /></main>;`],
+    ['one static paragraph per suite string', `const App = () => <main>${text.map((one) => `<p>${one}</p>`).join('')}<button>ok</button><input /></main>;`],
+    ['one static button per suite string', `const App = () => <main>${text.map((one) => `<button>${one}</button>`).join('')}<input /></main>;`],
+    ['one static list item per suite string', `const App = () => <main><ul>${text.map((one) => `<li>${one}</li>`).join('')}</ul><button>ok</button><input /></main>;`],
+  ];
+};
+
+// The Testing Library instance the React runner loaded (the runner loads it
+// on its first suite), for its waitFor and findBy settings.
+interface AsyncWaitConfig {
+  getConfig(): { asyncUtilTimeout: number };
+  configure(config: { asyncUtilTimeout: number }): void;
+}
+const testingLibrary = async (): Promise<AsyncWaitConfig> => {
+  const loaded = await import('@testing-library/react');
+  return ((loaded as { default?: AsyncWaitConfig }).default ?? loaded) as AsyncWaitConfig;
+};
+
 async function main() {
   // The solutions are proven on the grader's worker thread, built fresh from
   // the sources under test, as the deployment runs it.
@@ -605,6 +644,26 @@ async function main() {
     if (!starter.compileError && starter.failed === 0) fail(`${where}: the untouched starter already passes its suite`);
     // A learning path runs the visible suite alone, and the server counts it too.
     if (!starter.compileError && starter.cases.length !== suiteCaseCount(task.suite)) fail(`${where}: the visible suite declares ${suiteCaseCount(task.suite)} case(s) and ran ${starter.cases.length}`);
+    // The server's suite (visible and hidden cases) has to check behaviour:
+    // no page without state, effects, requests or timers may pass it. A
+    // static page never changes after its first render, so what a waitFor or
+    // findBy waits for cannot arrive later: the probes run with Testing
+    // Library's default wait cut short, which only makes them fail sooner.
+    // Every case stops at the runner's own time limit, so a probe run always
+    // ends; it gets no outer timer, which would keep the process alive long
+    // after the last probe.
+    const testing = await testingLibrary();
+    const fullWait = testing.getConfig().asyncUtilTimeout;
+    testing.configure({ asyncUtilTimeout: 150 });
+    try {
+      for (const [page, source] of staticPages(suite)) {
+        const run = await runReactSuite({ suite, appSource: source });
+        if (run.compileError) fail(`${where}: the probe "${page}" did not run: ${run.compileError}`);
+        else if (run.failed === 0 && run.total > 0) fail(`${where}: ${page} passes the suite, so it checks text instead of behaviour`);
+      }
+    } finally {
+      testing.configure({ asyncUtilTimeout: fullWait });
+    }
   }
 
   if (failures.length > 0) {

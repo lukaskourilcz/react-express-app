@@ -2914,10 +2914,35 @@ const seniorBuilders: Record<string,(stage:number)=>string> = {
   'react-evolving-form': seniorForm,
 };
 
+/*
+ * Hidden cases (lib/coding/react-hidden.ts) for the requirements a stage's
+ * visible check reads in one situation only. A stage keeps every earlier
+ * requirement, so a case stays hidden in every later stage of its project.
+ * They use the visible suite's `add` helper.
+ */
+const hiddenFrom: Record<string,{from:number;suite:string}[]> = {
+  'react-evolving-board': [
+    {from:2, suite:`test('Remaining counts every unfinished task under each filter',()=>{render(<App/>);add('One');add('Two');add('Three');fireEvent.click(screen.getByRole('checkbox',{name:'Two'}));for(const name of ['All','Active','Completed','All']){fireEvent.click(screen.getByRole('button',{name,exact:true}));expect(screen.getByLabelText('Remaining').textContent).toBe('2')}});`},
+    {from:5, suite:`const order=()=>screen.getAllByRole('checkbox').map(box=>box.closest('label').textContent);
+test('Move down moves one place and is disabled on the last task of the full list',()=>{render(<App/>);add('A');add('B');add('C');expect(screen.getByRole('button',{name:'Move down C',exact:true}).disabled).toBe(true);fireEvent.click(screen.getByRole('button',{name:'Move down A',exact:true}));expect(order().join(',')).toBe('B,A,C');fireEvent.click(screen.getByRole('button',{name:'Move down A',exact:true}));expect(order().join(',')).toBe('B,C,A');expect(screen.getByRole('button',{name:'Move down A',exact:true}).disabled).toBe(true);expect(screen.getByRole('button',{name:'Move down C',exact:true}).disabled).toBe(false)});
+test('under a filter a move swaps with the neighbour in the full list, and the full list decides what is disabled',()=>{render(<App/>);add('A');add('B');add('C');fireEvent.click(screen.getByRole('checkbox',{name:'B'}));fireEvent.click(screen.getByRole('button',{name:'Active',exact:true}));expect(screen.getByRole('button',{name:'Move up A',exact:true}).disabled).toBe(true);expect(screen.getByRole('button',{name:'Move down C',exact:true}).disabled).toBe(true);fireEvent.click(screen.getByRole('button',{name:'Move down A',exact:true}));expect(order().join(',')).toBe('A,C');expect(screen.getByRole('button',{name:'Move up A',exact:true}).disabled).toBe(false);fireEvent.click(screen.getByRole('button',{name:'All',exact:true}));expect(order().join(',')).toBe('B,A,C');expect(screen.getByRole('checkbox',{name:'B'}).checked).toBe(true)});
+test('a moved duplicate keeps its own completion, and undo puts it back',()=>{render(<App/>);add('Dup');add('X');add('Dup');fireEvent.click(screen.getAllByRole('checkbox')[2]);fireEvent.click(screen.getAllByRole('button',{name:'Move up Dup',exact:true})[1]);expect(order().join(',')).toBe('Dup,Dup,X');expect(screen.getAllByRole('checkbox').map(box=>box.checked).join(',')).toBe('false,true,false');fireEvent.click(screen.getByRole('button',{name:'Undo',exact:true}));expect(order().join(',')).toBe('Dup,X,Dup');expect(screen.getAllByRole('checkbox').map(box=>box.checked).join(',')).toBe('false,false,true')});`},
+  ],
+};
+
+const hiddenSuiteFor = (id:string, stage:number): string|undefined => {
+  const cases = (hiddenFrom[id] ?? []).filter(one=>one.from<=stage).map(one=>one.suite);
+  return cases.length ? cases.join('\n') : undefined;
+};
+
 export const REACT_EVOLVING_SOLUTIONS: Record<string,CodingSolution> = Object.fromEntries(
-  Object.entries(builders).flatMap(([id,build])=>[1,2,3,4,5].map(stage=>[`${id}-${stage}`,{
-    solution:advanceReact(build(Math.min(stage,3)),id,stage),
-    junior:juniorBuilders[id](stage),
-    senior:seniorBuilders[id](stage),
-  }])),
+  Object.entries(builders).flatMap(([id,build])=>[1,2,3,4,5].map(stage=>{
+    const hiddenSuite = hiddenSuiteFor(id, stage);
+    return [`${id}-${stage}`,{
+      solution:advanceReact(build(Math.min(stage,3)),id,stage),
+      junior:juniorBuilders[id](stage),
+      senior:seniorBuilders[id](stage),
+      ...(hiddenSuite ? { hiddenSuite } : {}),
+    }];
+  })),
 );
