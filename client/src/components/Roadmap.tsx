@@ -594,9 +594,9 @@ function Roadmap() {
   const layout = useMemo(() => {
     if (!pathWidth || levels.length === 0) return null;
     const nodes = buildFullPath(levels, ranges);
-    // Five levels + their checkpoint per row on desktop, three + checkpoint
-    // on narrow screens — the compact rhythm from the Deep End handoff.
-    const cols = 6;
+    // Five levels + their checkpoint per row; under 480px a part takes two
+    // rows of three, since six columns left a phone's labels overlapping.
+    const cols = pathWidth < 480 ? 3 : 6;
     const cellW = pathWidth / cols;
     // ROW_H must clear the accumulated within-row slope so the lowest node of a
     // row doesn't collide with the next row's start node (same column at a turn) —
@@ -1053,7 +1053,8 @@ function LevelNode({
   const label = unlocked
     ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? `, ${masteryText}${due ? `, ${t('mastery.dueForReview')}` : ''}, ${best}%` : ''}${coding ? `, ${t('coding.lesson.mapGlyph')}` : ''}`
     : `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}, ${unavailable ? t('roadmap.unavailable') : t('roadmap.locked')}`;
-  const labelWidth = Math.max(72, Math.min(150, cellW - 10));
+  // Never wider than the cell, so neighbouring labels cannot overlap.
+  const labelWidth = Math.min(cellW - 4, Math.max(72, Math.min(150, cellW - 10)));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -1093,7 +1094,9 @@ function LevelNode({
           fontSize: '0.75rem',
           fontWeight: isCurrent ? 700 : 500,
           fontStyle: unavailable ? 'italic' : undefined,
-          color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
+          // Secondary, not disabled: the lock glyph says it is locked, and the
+          // name still has to be readable (3.34:1 in light mode before).
+          color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
           maxWidth: labelWidth,
           textAlign: 'center',
           lineHeight: 1.15,
@@ -1128,7 +1131,7 @@ function PartTestNode({
   const label = unlocked
     ? `${title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
     : `${title}: ${unavailable ? t('roadmap.unavailable') : t('roadmap.locked')}`;
-  const labelWidth = Math.max(84, Math.min(160, cellW - 8));
+  const labelWidth = Math.min(cellW - 4, Math.max(84, Math.min(160, cellW - 8)));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <div className={isCurrent ? 'rm-bob' : undefined}>
@@ -1165,7 +1168,7 @@ function PartTestNode({
         style={{
           fontSize: '0.75rem',
           fontWeight: 700,
-          color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
+          color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
           textAlign: 'center',
           lineHeight: 1.15,
           maxWidth: labelWidth,
@@ -1217,7 +1220,7 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
           fontSize: '0.75rem',
           fontWeight: shape === 'test' ? 700 : 500,
           color: 'var(--color-text-secondary)',
-          maxWidth: Math.max(72, Math.min(150, cellW - 10)),
+          maxWidth: Math.min(cellW - 4, Math.max(72, Math.min(150, cellW - 10))),
           textAlign: 'center',
           lineHeight: 1.15,
           // One line of title, so the "Premium" line fits the row's label band.
