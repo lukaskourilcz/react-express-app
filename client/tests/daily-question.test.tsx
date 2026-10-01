@@ -13,6 +13,12 @@ import { server } from './mocks/server';
 
 const analytics = vi.hoisted(() => ({ capture: vi.fn() }));
 vi.mock('../src/lib/analytics', async (importOriginal) => ({ ...(await importOriginal<object>()), capture: analytics.capture }));
+// Signed out unless a test signs in (Save as Shark Card needs an account).
+const auth = vi.hoisted(() => ({ value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false } }));
+vi.mock('../src/lib/auth', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../src/lib/auth')>()),
+  useAuth: () => ({ ...auth.value, signInWithGoogle: async () => {} }),
+}));
 
 const today = utcToday();
 const trackName = (date: string) => en[`category.${qotdTrack(date)}` as keyof typeof en];
@@ -41,6 +47,7 @@ function renderAt(path: string) {
 
 const clipboard = { writeText: vi.fn(async (_text: string) => undefined) };
 beforeEach(() => {
+  auth.value = { user: null, isAuthenticated: false, isLoading: false };
   Object.defineProperty(navigator, 'clipboard', { configurable: true, value: clipboard });
   clipboard.writeText.mockClear();
   analytics.capture.mockClear();
@@ -99,6 +106,32 @@ describe('/daily', () => {
     expect(await screen.findByText('Not this one')).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /"null", your answer/ })).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /"object", correct answer/ })).toBeInTheDocument();
+    // Signed out, there is no account to keep a Shark Card in.
+    expect(screen.queryByRole('button', { name: /Shark Card/ })).toBeNull();
+  });
+
+  it('offers a signed-in learner Save as Shark Card under a wrong answer, with the answer and explanation checked here', async () => {
+    auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false };
+    const saved: Record<string, unknown>[] = [];
+    server.use(
+      http.get('*/api/quiz/daily', () => HttpResponse.json(QUESTION)),
+      http.post('*/api/quiz/submit', () => HttpResponse.json({
+        totalQuestions: 1, correctAnswers: 0, percentage: 0, questXp: 0,
+        results: [{ questionId: 'q-1', selectedIndex: 0, correctAnswer: 1, isCorrect: false, explanation: 'It is "object".' }],
+      })),
+      http.get('*/api/flashcards', () => HttpResponse.json({ cards: saved })),
+      http.post('*/api/flashcards', async ({ request }) => {
+        const body = await request.json() as Record<string, unknown>;
+        saved.push({ ...body, created_at: '2026-10-01T10:00:00Z' });
+        return HttpResponse.json({ card: body });
+      }),
+    );
+    renderAt('/daily');
+    fireEvent.click((await screen.findAllByRole('radio'))[0]);
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save as Shark Card' }));
+    expect(await screen.findByRole('button', { name: 'Saved as Shark Card' })).toBeInTheDocument();
+    expect(saved[0]).toMatchObject({ question_id: 'q-1', correct_answer: '"object"', explanation: 'It is "object".', category: QUESTION.question.category });
   });
 
   it('does not ask the server for a day that has not come yet', () => {

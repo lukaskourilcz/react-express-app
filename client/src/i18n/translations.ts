@@ -11,7 +11,7 @@ export const en = {
   'nav.roadmap': 'Career',
   'nav.play': 'Play',
   'nav.leaderboard': 'Leaderboard',
-  'nav.cards': 'Collection',
+  'nav.cards': 'Shark Cards',
   'collection.heading': 'Collection',
   'coding.discovery.next': 'Your next challenge',
   'coding.discovery.loading': 'Loading progress…',
@@ -39,15 +39,15 @@ export const en = {
   'coding.evolving.progress': '{n} of {total} stages completed',
   'coding.evolving.complete': 'All stages completed',
   'coding.lock.evolving': 'Complete the previous stages while signed in to unlock this stage.',
-  'collection.subtitle': 'Your saved questions and coding challenges, together.',
-  'collection.questions': 'Questions',
+  'collection.subtitle': 'Coding challenges you saved from their pages.',
+  'collection.questions': 'Shark Cards',
   'collection.challenges': 'Coding challenges',
   'collection.cards': 'Shark Cards',
   'collection.empty': 'No challenges saved yet. Save one from its page to keep it here.',
   'collection.unavailable': 'This saved challenge is no longer available.',
   'nav.today': 'Today',
   'title.today': 'Today · devShark',
-  'title.collection': 'Collection · devShark',
+  'title.collection': 'Shark Cards · devShark',
   'title.typing': 'Typing · devShark',
   'nav.shop': 'Coins',
   'nav.challenge': 'Challenge',
@@ -75,7 +75,7 @@ export const en = {
   'roadmapPage.treeIntro': 'Choose Frontend, Backend or Fullstack, then follow it top to bottom, foundations first, production last. Each topic splits into 3 short parts and fills in as you clear them.',
   'title.profile': 'Profile · devShark',
   'title.leaderboard': 'Leaderboard · devShark',
-  'title.cards': 'Cards · devShark',
+  'title.cards': 'Shark Cards · devShark',
   'title.shop': 'Coins · devShark',
   'title.play': 'Play live · devShark',
   'title.playMatch': 'Live match · devShark',
@@ -683,7 +683,8 @@ export const en = {
 
   // Generic errors
 
-  // Flashcards (Cards)
+  // Unrendered since Shark Cards replaced the flashcard grid (the sharkCards.*
+  // block below). The keys stay because the retained Czech file has them.
   'card.heading': 'Cards',
   'card.kicker': 'Flashcards',
   'card.practiceAll': 'Practice all {count}',
@@ -701,6 +702,44 @@ export const en = {
   'card.added': 'Saved to Collection',
   'card.removed': 'Removed from Collection',
   'card.syncFailed': 'Saved on this device, but syncing to your Cards failed.',
+
+  // ── Shark Cards (owner decision 12): a question the learner did not know,
+  // saved where its explanation was shown, reviewed later as a card that
+  // explains the topic. The collectible card packs are retired.
+  'sharkCards.title': 'Shark Cards',
+  'sharkCards.kicker': 'Saved questions',
+  'sharkCards.lead': 'Questions you missed and saved. Read the question, answer it in your head, then turn the card for the answer and why.',
+  'sharkCards.save': 'Save as Shark Card',
+  'sharkCards.savedButton': 'Saved as Shark Card',
+  'sharkCards.open': 'Open Shark Cards',
+  'sharkCards.saveFailed': 'Could not save the card.',
+  'sharkCards.removeFailed': 'Could not remove the card.',
+  'sharkCards.loading': 'Loading your Shark Cards…',
+  'sharkCards.signInTitle': 'Sign in to keep Shark Cards',
+  'sharkCards.signInBody': 'Shark Cards are saved to your account, so you can review them on any device.',
+  'sharkCards.emptyTitle': 'No Shark Cards yet',
+  'sharkCards.emptyBody': 'When you miss a question in a quiz, the daily challenge, the question of the day, Learn or the Challenge, choose Save as Shark Card under its explanation. It comes back here as a card that explains the topic.',
+  'sharkCards.emptyQuiz': 'Take a quiz',
+  'sharkCards.emptyLearn': 'Go to Learn',
+  'sharkCards.position': 'Card {n} of {total}',
+  'sharkCards.frontLabel': 'Question',
+  'sharkCards.backLabel': 'Answer',
+  'sharkCards.turn': 'Show the answer',
+  'sharkCards.turnBack': 'Hide the answer',
+  'sharkCards.answerLabel': 'Correct answer',
+  'sharkCards.explanationLabel': 'Why',
+  'sharkCards.learnLevel': 'Learn this topic: {topic}, level {level}',
+  'sharkCards.learnTopic': 'Learn this topic: {topic}',
+  'sharkCards.practiceTopic': 'Practise this topic: {topic}',
+  'sharkCards.previous': 'Previous',
+  'sharkCards.next': 'Next',
+  'sharkCards.gotIt': 'Got it',
+  'sharkCards.gotItHint': 'Got it takes the card out of your deck. The arrow keys move between cards.',
+  'sharkCards.removed': 'Card taken out of your Shark Cards.',
+  'sharkCards.undo': 'Undo',
+  'sharkCards.missedTitle': 'Questions you missed',
+  'sharkCards.missedBody': 'Save the ones you want to come back to. Each becomes a Shark Card with its explanation.',
+  'collection.challengesTitle': 'Saved coding challenges',
 
   // Roadmap ("Learn") mode
   'roadmap.morePathsLater': 'More learning paths will show once you start completing levels',
@@ -1043,9 +1082,10 @@ export const en = {
   'mastery.dueTooltip': 'It’s been a while. A quick review will keep this sharp.',
   'mastery.legendTitle': 'Roadmap key',
 
-  // ── Shark Cards (cosmetic collectible album) ──────────────────────────
+  // Unrendered: the collectible album and its card packs are retired (owner
+  // decision 12). Shark Cards are the sharkCards.* block. The key stays because
+  // the retained Czech file has it.
   'cards.title': 'Shark Cards',
-  // Card rarities — referenced verbatim as card.rarity.<rarity>
 
   // ── Server-synced badges (badge.<id>.label / badge.<id>.desc) ─────────
   'badges.title': 'Badges',

@@ -32,6 +32,7 @@ import type { CategoryType } from '../types/quiz';
 import { renderQuestion } from './CodeBlock';
 import { CategoryTag } from './ui/CategoryTag';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
+import { SaveSharkCard } from './SaveSharkCard';
 import BrandCase from './BrandCase';
 import './DailyQuestion.css';
 
@@ -220,6 +221,9 @@ function DailyQuestion({ data, onReload }: { data: QotdResponse; onReload: () =>
             title={result.isCorrect ? t('daily.right') : t('daily.wrong')}
             description={result.explanation || undefined}
           />
+          {/* Shark Cards (owner decision 12): signed in, the question can be
+              kept with the answer and explanation checked here. */}
+          <SaveSharkCard question={question} correctIndex={result.correctAnswer} explanation={result.explanation ?? ''} />
           <div className="ss-info-actions">
             <Button variant="primary" as={Link} href={`/quiz?category=${encodeURIComponent(track)}`} label={t('daily.practice', { track: trackName })} />
             <Button variant="secondary" label={t('daily.share')} onClick={() => void onShare()} />
