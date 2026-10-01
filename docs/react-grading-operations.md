@@ -85,6 +85,17 @@ a verified rollout; retain the previous one while rollback remains possible.
   reach of a component written to go looking for them.
 - A case that threw has failed, even when the error carries no message;
   mini-jest on its own read an empty message as a pass.
+- A case during which a form submits and the component does not cancel it
+  fails with that reason (`watchFormSubmits` in
+  `shared/coding-react-support.ts`). The browser harness applies the same rule,
+  so Run and Submit agree; in the preview such a submission would reload the
+  frame and lose what it showed.
+- A run the 10-second command limit stops reports no case at all, so
+  `npm run test:coding` keeps every React suite, visible and hidden cases
+  together, under 6 seconds of case time for a page that renders nothing, the
+  untouched starter, and for a task with an API a page that asks for its data
+  and shows none of it. The capstone suites wait 300 ms for a page to show
+  its data instead of Testing Library's 1 second.
 - A promise rejection the component leaves unhandled is ignored while a suite
   runs, as the browser does, instead of ending the grader process. The page
   realm has no `process`, so the grader reports each one on `window` as an
@@ -98,17 +109,6 @@ a verified rollout; retain the previous one while rollback remains possible.
   suite relies on can still influence its own result. jsdom can read files
   that exist in the VM (an `XMLHttpRequest` to a `file:` URL, for example);
   once the input is deleted nothing there is secret.
-- A case during which a form submits and the component does not cancel it
-  fails with that reason (`watchFormSubmits` in
-  `shared/coding-react-support.ts`). The browser harness applies the same rule,
-  so Run and Submit agree; in the preview such a submission would reload the
-  frame and lose what it showed.
-- A run the 10-second command limit stops reports no case at all, so
-  `npm run test:coding` keeps every React suite, visible and hidden cases
-  together, under 6 seconds of case time for a page that renders nothing, the
-  untouched starter, and for a task with an API a page that asks for its data
-  and shows none of it. The capstone suites wait 300 ms for a page to show
-  its data instead of Testing Library's 1 second.
 
 The September 15 audit created and tested the dependency snapshot and configured
 both environments on `react-express-app`. No plan or billing settings changed.

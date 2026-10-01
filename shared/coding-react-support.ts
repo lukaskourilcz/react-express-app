@@ -201,3 +201,35 @@ export function watchFormSubmits(page: FormSubmitTarget): () => string | null {
     return leftToBrowser + stopped > 0 ? FORM_SUBMIT_NOT_PREVENTED : null;
   };
 }
+
+/** The `beforeEach` and `afterEach` a suite registers its hooks with. */
+interface CaseHooks {
+  beforeEach(body: () => void): void;
+  afterEach(body: () => void): void;
+}
+
+/**
+ * Watches every case of a suite with `watchFormSubmits`, through the suite's
+ * own hooks: each case starts a watch, and an `afterEach` ends it and fails
+ * the case with the reason. A case that has already failed skips its
+ * `afterEach` hooks, so the next case, and the function returned here once
+ * the run is over, close a watch it left open. Register after the suite's
+ * module has run, so this `afterEach` comes after the suite's own.
+ */
+export function failUncancelledSubmits(hooks: CaseHooks, page: FormSubmitTarget): () => void {
+  let finish: (() => string | null) | null = null;
+  const stop = (): string | null => {
+    const problem = finish ? finish() : null;
+    finish = null;
+    return problem;
+  };
+  hooks.beforeEach(() => {
+    stop();
+    finish = watchFormSubmits(page);
+  });
+  hooks.afterEach(() => {
+    const problem = stop();
+    if (problem) throw new Error(problem);
+  });
+  return () => { stop(); };
+}

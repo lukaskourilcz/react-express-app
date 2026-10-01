@@ -12,7 +12,7 @@ import * as JsxRuntime from 'react/jsx-runtime';
 import * as RTL from '@testing-library/react';
 import { transform } from 'sucrase';
 import { createMiniJest } from '../../shared/coding-mini-jest';
-import { asRunnableModule, FETCH_STUB_SOURCE, watchFormSubmits } from '../../shared/coding-react-support';
+import { asRunnableModule, failUncancelledSubmits, FETCH_STUB_SOURCE } from '../../shared/coding-react-support';
 import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
 
 interface RunMessage {
@@ -173,7 +173,8 @@ async function runInner(message: RunMessage) {
     if (total === 0) {
       // Same rule as the grader (lib/coding/react-runner.ts): a form the
       // component lets submit fails its case instead of reloading this frame.
-      const outcome = await jest.run({ afterEach: () => RTL.cleanup(), timeoutMs: 5_000, watchCase: () => watchFormSubmits(window) });
+      const stopWatchingSubmits = failUncancelledSubmits(jest.globals, window);
+      const outcome = await jest.run({ afterEach: () => RTL.cleanup(), timeoutMs: 5_000 }).finally(stopWatchingSubmits);
       for (const one of outcome.cases) {
         post({ type: 'test', token: message.token, name: one.name, status: one.status, error: one.error, durationMs: one.durationMs });
       }

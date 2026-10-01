@@ -42,7 +42,7 @@
 
 import { compileFunction, createContext, runInContext, type Context } from 'node:vm';
 import { transform } from 'sucrase';
-import { asRunnableModule, FETCH_STUB_SOURCE, watchFormSubmits, type FormSubmitTarget } from '../../shared/coding-react-support';
+import { asRunnableModule, failUncancelledSubmits, FETCH_STUB_SOURCE, type FormSubmitTarget } from '../../shared/coding-react-support';
 import { createMiniJest, type MiniJestRun } from '../../shared/coding-mini-jest';
 import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
 
@@ -275,18 +275,17 @@ export async function runReactSuite(input: { suite: string; appSource: string })
       compileError: `compiling suite: ${(error as Error).message.split('\n')[0]}`,
     };
   }
+  // A form the component lets submit fails its case, as in the browser
+  // harness (client/sandbox): in the preview that submission reloads the
+  // frame and loses what it showed.
+  const stopWatchingSubmits = failUncancelledSubmits(jest.globals, pageWindow as unknown as FormSubmitTarget);
   let run: MiniJestRun;
   holdRejections(true);
   try {
-    // A form the component lets submit fails its case, as in the browser
-    // harness: in the preview the frame would reload and lose its state.
-    run = await jest.run({
-      afterEach: () => testing.cleanup(),
-      timeoutMs: REACT_SUITE_TIMEOUT_MS,
-      watchCase: () => watchFormSubmits(pageWindow as unknown as FormSubmitTarget),
-    });
+    run = await jest.run({ afterEach: () => testing.cleanup(), timeoutMs: REACT_SUITE_TIMEOUT_MS });
   } finally {
     holdRejections(false);
+    stopWatchingSubmits();
   }
   // A case that threw has an error, even an empty one. Mini-jest reads an
   // empty message as no error, so a component that threw `new Error('')`
