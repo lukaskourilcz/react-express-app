@@ -18,10 +18,9 @@ import { TrophyIcon } from './ui/icons';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useAuth } from '../lib/auth';
-import { useClearOnPageRestore } from '../lib/pageRestore';
+import { openSignIn } from '../lib/signInDialog';
 import { useActiveSubject } from '../lib/subjects';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
-import { AppToast } from './ui/AppToast';
 import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
@@ -169,12 +168,7 @@ export default function Home() {
   const { t, lang } = useLanguage();
   const navigate = useNavigate();
   const subject = useActiveSubject();
-  const { isAuthenticated, signInWithGoogle } = useAuth();
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [signingIn, setSigningIn] = useState(false);
-  // Back from Google's account chooser can bring this page back from the cache
-  // with the sign-in link still busy.
-  useClearOnPageRestore(setSigningIn);
+  const { isAuthenticated } = useAuth();
   const topicsRef = useRef<HTMLElement>(null);
 
   const featured = (LANDING_TOPICS[subject.id] ?? []).map((topic) => localizeLandingTopic(topic, lang, t));
@@ -192,15 +186,6 @@ export default function Home() {
     { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions') },
   ];
 
-  const handleSignIn = async () => {
-    setSigningIn(true);
-    try {
-      await signInWithGoogle();
-    } catch {
-      setAuthError(t('auth.signInFailed'));
-      setSigningIn(false);
-    }
-  };
 
   const scrollToTopics = () => topicsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
@@ -230,8 +215,8 @@ export default function Home() {
               {isAuthenticated ? (
                 <Link to={`/learn?topic=${encodeURIComponent(selected?.id ?? '')}`}>{t('home.ctaLearn')}</Link>
               ) : (
-                <button type="button" disabled={signingIn} onClick={handleSignIn}>
-                  {signingIn ? t('home.ctaSignIn') : t('home.signInGoogle')}
+                <button type="button" aria-haspopup="dialog" onClick={() => openSignIn()}>
+                  {t('home.signIn')}
                 </button>
               )}
             </span>
@@ -319,7 +304,6 @@ export default function Home() {
           for; its CTA opens Learn. ── */}
       <ComparisonTable showOfferNote={false} afterTable={<LaunchOfferBanner />} />
 
-      <AppToast open={!!authError} onClose={() => setAuthError(null)} severity="error" message={authError} autoHideDuration={5000} />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../../lib/auth';
+import { openSignIn } from '../../lib/signInDialog';
 import { ApiError, friendlyError } from '../../lib/api';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
@@ -41,7 +42,7 @@ const sameCodeMayWork = (error: unknown): boolean =>
  */
 export function GithubSettingsPage() {
   const { t } = useLanguage();
-  const { isAuthenticated, isLoading, signInWithGoogle } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -118,7 +119,7 @@ export function GithubSettingsPage() {
         <p role="status" aria-live="polite">{body}</p>
       </header>
       <div className="ss-info-actions">
-        {phase.kind === 'signin' && <Button variant="primary" label={t('github.signIn')} onClick={() => void signInWithGoogle()} />}
+        {phase.kind === 'signin' && <Button variant="primary" label={t('github.signIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />}
         {phase.kind === 'error' && phase.next === 'retry' && <Button variant="primary" label={t('quiz.retry')} onClick={finish} />}
         {phase.kind === 'error' && phase.next === 'connect' && (
           <Button variant="primary" label={opening ? t('github.connecting') : t('github.connectAgain')} isDisabled={opening} onClick={connectAgain} />

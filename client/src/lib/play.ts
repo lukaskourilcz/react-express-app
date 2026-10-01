@@ -144,9 +144,11 @@ export interface LeaderboardResponse {
   me?: LeaderboardMe | MonthLeaderboardMe | null;
 }
 
+/** The server names the host and every player itself (the Google name, the
+ * sharkname, or "Player" and a number; lib/public-identity.ts), so neither
+ * call sends a name. */
 export const createMatch = (input: {
   host_id: string;
-  host_name: string;
   mode: 'multiplayer' | 'classroom';
   count: number;
   /** Must be non-empty: the active subject's topics (or a subset of them). */
@@ -167,7 +169,7 @@ export const questionCountOf = (match: Pick<Match, 'questions' | 'question_count
   match.question_count ?? match.questions.length;
 
 /** `server_now` is the server's clock when it answered (ISO). */
-export const joinMatch = (input: { code: string; user_id: string; display_name: string }) =>
+export const joinMatch = (input: { code: string; user_id: string }) =>
   apiFetch<Match & { server_now?: string }>('/api/play/join', {
     method: 'POST',
     body: JSON.stringify(input),

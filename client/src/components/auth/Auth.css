@@ -1,0 +1,79 @@
+/* The sign-in dialog and the email-link pages (/auth/confirmed,
+   /reset-password). Fields are the shared .ss-field-label + .ss-input (44px);
+   text actions are .ss-text-links; the dialog surface is the shared Deep End
+   one in astryx-theme.css. */
+
+.ss-auth { display: flex; flex-direction: column; gap: 16px; width: 100%; min-width: 0; }
+/* In line with the dialog's title, as the upgrade sheet's body is. */
+.ss-auth--dialog { box-sizing: border-box; padding: 4px 16px 20px; }
+/* At 320px "Create account" wraps inside Astryx's 12px segment padding.
+   !important for the reason app-shell.css gives at its touch-target rules:
+   StyleX's atomic rules are out of reach of a class selector. */
+@media (max-width: 380px) {
+  .ss-auth--dialog .astryx-segmented-control-item { padding-inline: 6px !important; white-space: nowrap; }
+}
+.ss-auth__google { display: flex; }
+.ss-auth__google > * { flex: 1 1 auto; justify-content: center; }
+.ss-auth__form { display: flex; flex-direction: column; gap: 14px; margin: 0; }
+.ss-auth__submit { display: flex; }
+.ss-auth__submit > * { flex: 1 1 auto; justify-content: center; }
+.ss-auth__row { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0 1rem; margin: -6px 0 0; }
+.ss-auth__row.ss-text-links { margin-top: -6px; }
+.ss-auth__lead { margin: 0; color: var(--color-text-secondary); line-height: 1.55; overflow-wrap: anywhere; }
+.ss-auth__lead:focus { outline: none; }
+.ss-auth__lead:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 3px; border-radius: var(--radius-inner); }
+.ss-auth__email { color: var(--color-text-primary); font-weight: 700; overflow-wrap: anywhere; }
+.ss-auth__note { margin: 0; font-size: var(--ss-type-meta); color: var(--color-text-secondary); line-height: 1.5; }
+.ss-auth__legal { margin: 0; font-size: var(--ss-type-meta); color: var(--color-text-secondary); line-height: 1.5; }
+.ss-auth__legal a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
+.ss-auth__legal a:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 2px; border-radius: var(--radius-inner); }
+.ss-auth__failure { display: flex; flex-direction: column; gap: 8px; }
+.ss-auth__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.ss-auth__status { margin: 0; font-size: var(--ss-type-compact); color: var(--color-text-primary); }
+
+/* "or" between Google and the email form: a hairline on each side. */
+.ss-auth__or {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--ss-type-meta);
+  font-weight: 600;
+  text-transform: lowercase;
+}
+.ss-auth__or::before,
+.ss-auth__or::after { content: ''; flex: 1 1 auto; height: 1px; background: var(--color-border); }
+
+/* A field: label, input, then its hint and its error, read with the input. */
+.ss-auth-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.ss-auth-field .ss-field-label { margin-bottom: 0; }
+.ss-auth-field__box { position: relative; }
+.ss-auth-field__box .ss-input { padding-right: 48px; }
+.ss-auth-field .ss-input[aria-invalid='true'] { border-color: var(--ss-error); }
+.ss-auth-field__hint { margin: 0; font-size: var(--ss-type-meta); color: var(--color-text-secondary); }
+.ss-auth-field__error { margin: 0; font-size: var(--ss-type-meta); font-weight: 600; color: var(--ss-error-text); }
+.ss-auth-field__toggle {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 44px;
+  height: 100%;
+  min-height: 44px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-element);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+}
+.ss-auth-field__toggle:hover { color: var(--color-text-primary); }
+.ss-auth-field__toggle[aria-pressed='true'] { color: var(--brand-accent); }
+.ss-auth-field__toggle:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: -4px; }
+.ss-auth-field__toggle:disabled { cursor: not-allowed; opacity: 0.6; }
+
+/* The email-link pages: one card under the page header. */
+.ss-auth-page { max-width: 560px; }
+.ss-auth-page .ss-auth { gap: 14px; }

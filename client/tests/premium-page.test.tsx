@@ -15,13 +15,15 @@ import { server } from './mocks/server';
 import { settingsHandler } from './mocks/handlers';
 import { firstDraw, headings } from './firstDraw';
 
-const signInWithGoogle = vi.fn(async (_returnTo?: string) => undefined);
 const auth = vi.hoisted(() => ({
   value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false },
 }));
-vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ ...auth.value, signInWithGoogle }) }));
+vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
+// Signing in opens the sign-in dialog (Google, or an email and password).
+const openSignIn = vi.hoisted(() => vi.fn());
+vi.mock('../src/lib/signInDialog', async (importOriginal) => ({ ...(await importOriginal<object>()), openSignIn }));
 const signIn = () => { auth.value = { ...auth.value, user: { id: 'user-1' }, isAuthenticated: true }; };
-afterEach(() => { auth.value = { ...auth.value, user: null, isAuthenticated: false }; signInWithGoogle.mockClear(); });
+afterEach(() => { auth.value = { ...auth.value, user: null, isAuthenticated: false }; openSignIn.mockClear(); });
 
 const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 const PAYING = { ...FREE, tier: 'premium', source: 'provider', currentPeriodEnd: '2026-11-12T10:00:00.000Z' };
@@ -82,11 +84,11 @@ describe('/premium', () => {
     renderAt('/premium', <PremiumPage />);
     const buttons = await screen.findAllByRole('button', { name: 'Sign in to continue' });
     expect(buttons).toHaveLength(2);
-    expect(screen.getByText('Sign in with Google first. You come back here to choose a plan.')).toBeInTheDocument();
+    expect(screen.getByText('Sign in first. You come back here to choose a plan.')).toBeInTheDocument();
     // The button waits for the billing settings before it acts.
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Sign in to continue' })[0]).toBeEnabled());
     fireEvent.click(screen.getAllByRole('button', { name: 'Sign in to continue' })[0]);
-    await waitFor(() => expect(signInWithGoogle).toHaveBeenCalledWith('/premium'));
+    await waitFor(() => expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium' }));
   });
 
   it('offers both checkouts to a free account', async () => {

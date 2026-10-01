@@ -40,6 +40,7 @@ import {
 } from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
 import { handleFriends, handleIdentity } from '../../lib/friends-handlers';
+import { verifiedProfile as verifiedProfileOf } from '../../lib/public-identity';
 import { handleEntitlement } from '../../lib/entitlements';
 import { handleVoucherRedeem } from '../../lib/vouchers';
 import {
@@ -343,58 +344,9 @@ async function streak(req: VercelRequest, res: VercelResponse) {
 }
 
 // A leaderboard row shows the name and picture stored here, so both come from
-// the verified sign-in and never from the request body. The picture is kept
-// only when Google serves it (the host the client already requires), so a
-// board never loads an image from anywhere else. The name loses control and
-// text-direction characters and is cut to a length a row can show. No email
-// ever stands in for a missing name: the boards say "Learner" instead.
-const PUBLIC_NAME_MAX = 60;
-const HIDDEN_NAME_CHARS = /[\p{Cc}\u200E\u200F\u202A-\u202E\u2066-\u2069]/gu;
-
-function publicName(value: unknown): string | null {
-  if (typeof value !== 'string') return null;
-  const clean = Array.from(value.replace(HIDDEN_NAME_CHARS, '').trim())
-    .slice(0, PUBLIC_NAME_MAX)
-    .join('')
-    .trim();
-  return clean || null;
-}
-
-function publicPicture(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length > 2048) return null;
-  try {
-    const url = new URL(value);
-    const host = url.hostname.toLowerCase();
-    const google = host === 'googleusercontent.com' || host.endsWith('.googleusercontent.com');
-    return url.protocol === 'https:' && google ? url.toString() : null;
-  } catch {
-    return null;
-  }
-}
-
-/** The name and picture Google gave the account. Never `user_metadata`: any
- * signed-in user can rewrite that from the browser (`supabase.auth.updateUser`),
- * and a board would show whatever they wrote. The Google identity's data is
- * written by the sign-in alone. The verified user carries its identities; when
- * it does not, the admin API is asked. No Google identity, no name: the
- * boards say "Learner". */
-async function verifiedProfile(auth: AuthResult): Promise<{ name: string | null; picture: string | null }> {
-  let identities: unknown = auth.payload.identities;
-  if (!Array.isArray(identities) && supabase) {
-    const fetched = await withTimeout(supabase.auth.admin.getUserById(auth.sub)).catch(() => null);
-    identities = fetched && !fetched.error ? fetched.data.user?.identities : undefined;
-  }
-  const google = Array.isArray(identities)
-    ? (identities as { provider?: unknown; identity_data?: unknown }[]).find((identity) => identity?.provider === 'google')
-    : undefined;
-  const data = (google?.identity_data && typeof google.identity_data === 'object'
-    ? google.identity_data
-    : {}) as Record<string, unknown>;
-  return {
-    name: publicName(data.full_name || data.name),
-    picture: publicPicture(data.avatar_url || data.picture),
-  };
-}
+// the verified sign-in and never from the request body (lib/public-identity.ts).
+// No email ever stands in for a missing name: the boards say "Learner" instead.
+const verifiedProfile = (auth: AuthResult) => verifiedProfileOf(auth, supabase);
 
 /** The XP record_verified_quiz_result_v2 awarded for this attempt, as
  * migration 048 stores it on the receipt row, whichever request applied it.

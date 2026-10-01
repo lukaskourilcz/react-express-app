@@ -33,7 +33,8 @@ import { CURRENT_PRODUCT } from './lib/products';
 import { CloseIcon, CoinIcon, TrophyIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
-import { takeAuthReturn } from './lib/authReturn';
+import SignInDialogHost from './components/auth/SignInDialogHost';
+import { useAuthLanding } from './lib/authLanding';
 import { installIntentPreloading, routeChunk } from './lib/routePreload';
 import { lazyPage, lazyShellPart } from './lib/routeRecovery';
 import { RouteErrorBoundary } from './components/RouteErrorBoundary';
@@ -77,6 +78,7 @@ const loadPaths = routeChunk(under('/roadmap/specializations', '/roadmap/paths')
 const loadPremium = routeChunk(exact('/premium'), () => import('./components/PremiumPage'));
 const loadBilling = routeChunk(exact('/premium/success', '/premium/cancel'), () => import('./components/PremiumBillingPages'));
 const loadDaily = routeChunk(under('/daily'), () => import('./components/DailyQuestionPage'));
+const loadAuthPages = routeChunk(exact('/auth/confirmed', '/reset-password'), () => import('./components/auth/AuthPages'));
 
 const Home = lazyPage(loadHome);
 const Quiz = lazyPage(loadQuiz);
@@ -113,6 +115,8 @@ const PremiumPage = lazyPage(loadPremium);
 const DailyQuestionPage = lazyPage(loadDaily);
 const PremiumSuccessPage = lazyPage(() => loadBilling().then((m) => ({ default: m.PremiumSuccessPage })));
 const PremiumCancelPage = lazyPage(() => loadBilling().then((m) => ({ default: m.PremiumCancelPage })));
+const EmailConfirmedPage = lazyPage(() => loadAuthPages().then((m) => ({ default: m.EmailConfirmedPage })));
+const ResetPasswordPage = lazyPage(() => loadAuthPages().then((m) => ({ default: m.ResetPasswordPage })));
 
 // Route-transition variants, hoisted so the m.div props keep a stable identity
 // across App re-renders (App re-renders on every navigation — hottest path).
@@ -246,7 +250,7 @@ function App() {
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
-  const { user, isLoading: authLoading, signInResumeFailed } = useAuth();
+  const { user, isLoading: authLoading, signInResumeFailed, passwordRecovery } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
   // A sign-in pressed before a reload (lib/auth.tsx) failed in this document,
   // where the button that was pressed is gone: the shell says so.
@@ -385,14 +389,9 @@ function App() {
     lastUserId.current = id;
   }, [user]);
 
-  // Back to the page that asked for the sign-in (/premium, the checkout
-  // success page). Supabase always returns to the origin; lib/authReturn.ts
-  // holds the path for fifteen minutes in this tab only.
-  useEffect(() => {
-    if (!user) return;
-    const path = takeAuthReturn();
-    if (path && path !== window.location.pathname + window.location.search) navigate(path, { replace: true });
-  }, [user, navigate]);
+  // Back to the page that asked for the sign-in, and to the new-password
+  // form after a reset link (lib/authLanding.ts).
+  useAuthLanding(user, passwordRecovery);
 
   // The welcome coins: the server pays them on the account's first wallet
   // read (the header reads the wallet for the crown) and says so once, on the
@@ -793,6 +792,9 @@ function App() {
                   <Route path="/premium" element={<PremiumPage />} />
                   <Route path="/premium/success" element={<PremiumSuccessPage />} />
                   <Route path="/premium/cancel" element={<PremiumCancelPage />} />
+                  {/* Where the confirmation and password-reset emails land. */}
+                  <Route path="/auth/confirmed" element={<EmailConfirmedPage />} />
+                  <Route path="/reset-password" element={<ResetPasswordPage />} />
                   <Route path="/curation" element={<CurationPage />} />
                   <Route path="/daily" element={<DailyQuestionPage />} />
                   <Route path="/daily/:date" element={<DailyQuestionPage />} />
@@ -850,6 +852,7 @@ function App() {
       <XpToaster />
       <ConnectionStatus />
       <UpgradeSheetHost />
+      <SignInDialogHost />
       <RegisterPromptSnackbar />
       <ReferralBinder />
       <PendingQuizResults />

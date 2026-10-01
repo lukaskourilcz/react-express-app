@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { http, HttpResponse } from 'msw';
+import { delay, http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -16,8 +16,11 @@ const auth = vi.hoisted(() => ({
   value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false, signInWithGoogle: async () => undefined },
 }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
+// Signing in opens the sign-in dialog (Google, or an email and password).
+const openSignIn = vi.hoisted(() => vi.fn());
+vi.mock('../src/lib/signInDialog', async (importOriginal) => ({ ...(await importOriginal<object>()), openSignIn }));
 const signIn = () => { auth.value = { ...auth.value, user: { id: 'user-1' }, isAuthenticated: true }; };
-afterEach(() => { auth.value = { ...auth.value, user: null, isAuthenticated: false }; });
+afterEach(() => { auth.value = { ...auth.value, user: null, isAuthenticated: false }; openSignIn.mockClear(); });
 
 const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 const PREMIUM = { ...FREE, tier: 'premium', source: 'provider', currentPeriodEnd: '2026-11-12T10:00:00.000Z' };
@@ -363,12 +366,25 @@ describe('the checkout button', () => {
     expect(await screen.findByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
   });
 
-  it('is pressable again when Back restores the page from the browser cache', async () => {
+  it('opens the sign-in dialog for a visitor, which comes back to this page, and stays pressable', async () => {
     serve();
-    renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
+    renderAt('/premium?plan=annual', <PremiumCheckoutButton plan="monthly" />);
     const button = await screen.findByRole('button', { name: 'Sign in to continue' });
     await waitFor(() => expect(button).toBeEnabled());
-    // The press leaves for Google; the page stays busy until the browser unloads it.
+    fireEvent.click(button);
+    expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium?plan=annual' });
+    // Nothing left the page, so nothing waits for it to.
+    expect(button).toBeEnabled();
+  });
+
+  it('is pressable again when Back restores the page from the browser cache', async () => {
+    signIn();
+    serve();
+    // The press leaves for Stripe; the page stays busy until the browser unloads it.
+    server.use(http.post('*/api/user/*', async () => { await delay('infinite'); return HttpResponse.json({ url: 'https://checkout.stripe.com/c/pay/cs_test_x' }); }));
+    renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
+    const button = await screen.findByRole('button', { name: 'Continue with monthly' });
+    await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
     await waitFor(() => expect(button).toBeDisabled());
     act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false })); });

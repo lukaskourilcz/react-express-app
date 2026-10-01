@@ -5,6 +5,7 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { friendlyError } from '../../lib/api';
 import { verifyPassword, setDevPassword } from '../../lib/devApi';
 import { useAuth } from '../../lib/auth';
+import { openSignIn } from '../../lib/signInDialog';
 import './DevConsole.css';
 
 /** Password prompt for the /dev console. On success, stores the password and continues. */
@@ -12,17 +13,17 @@ export default function DevLogin({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const { isAuthenticated, signInWithGoogle } = useAuth();
+  const { isAuthenticated } = useAuth();
   const showLegacy = typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('legacy') === '1';
 
   const checkAccount = async () => {
-    setSubmitting(true);
     setError(null);
+    if (!isAuthenticated) {
+      openSignIn();
+      return;
+    }
+    setSubmitting(true);
     try {
-      if (!isAuthenticated) {
-        await signInWithGoogle();
-        return;
-      }
       if (await verifyPassword('')) onSuccess();
       else setError('This account does not have administrative access.');
     } catch (err) {

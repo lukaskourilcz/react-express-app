@@ -79,6 +79,7 @@ jobs:
           npm run test:browser -- tests/browser/on-accent.spec.ts
           npm run test:browser -- tests/browser/navigation.spec.ts
           npm run test:browser -- tests/browser/lazy-auth.spec.ts
+          npm run test:browser -- tests/browser/sign-in.spec.ts
           npm run test:browser -- tests/browser/route-errors.spec.ts
           npm run test:browser -- tests/browser/first-load.spec.ts
           npm run test:browser -- tests/browser/routes-axe.spec.ts

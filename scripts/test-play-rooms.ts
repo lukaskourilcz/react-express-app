@@ -13,7 +13,10 @@
  * - a classroom scoreboard counts only closed questions, "Reveal answer"
  *   closes the question, and a pupil's answer is acknowledged, never graded
  *   back (migration 056); a multiplayer one counts every answer;
- * - the Play switch in the app settings turns every action off.
+ * - the Play switch in the app settings turns every action off;
+ * - a room names each player itself: the Google name, else the sharkname,
+ *   else "Player" and a number, never the part of the address before the @
+ *   an older client sent for an account without a Google name.
  *
  * Nothing leaves the machine. */
 
@@ -24,19 +27,28 @@ import type { AddressInfo } from 'node:net';
 
 type Row = Record<string, unknown>;
 
+// The host signs in with Google; one and two made their accounts with an
+// email and a password, so they have no name, and only one has a sharkname.
+const googleIdentity = (fullName: string) => ({ provider: 'google', identity_data: { full_name: fullName, email: 'grace@example.com' } });
+const emailIdentity = (email: string) => ({ provider: 'email', identity_data: { email, email_verified: true } });
 const USERS = {
-  host: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e01', token: 'play-contract-host' },
-  one: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e02', token: 'play-contract-one' },
-  two: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e03', token: 'play-contract-two' },
+  host: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e01', token: 'play-contract-host', email: 'grace@example.com', identities: [googleIdentity('Grace Hopper')] },
+  one: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e02', token: 'play-contract-one', email: 'ada.lovelace@example.com', identities: [emailIdentity('ada.lovelace@example.com')] },
+  two: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e03', token: 'play-contract-two', email: 'alan.turing@example.com', identities: [emailIdentity('alan.turing@example.com')] },
 } as const;
 type Who = keyof typeof USERS;
 
-const tables: Record<string, Row[]> = { matches: [], match_participants: [], match_answers: [], app_settings: [] };
+const tables: Record<string, Row[]> = {
+  matches: [], match_participants: [], match_answers: [], app_settings: [],
+  // Migration 055's sharknames: only `one` has one.
+  user_handles: [{ user_id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e02', handle: 'el-tiburon-loco' }],
+};
 const UNIQUE: Record<string, string[][]> = {
   matches: [['id'], ['code']],
   match_participants: [['match_id', 'user_id']],
   match_answers: [['match_id', 'user_id', 'question_idx']],
   app_settings: [['key']],
+  user_handles: [['user_id']],
 };
 let clock = 0;
 /** The arguments of every match_scoreboard call, in order. */
@@ -51,7 +63,7 @@ const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
 /** The PostgREST filters the handler uses: eq, in and is. */
 function matches(row: Row, params: URLSearchParams): boolean {
   for (const [column, raw] of params) {
-    if (['select', 'order', 'limit', 'on_conflict', 'columns'].includes(column)) continue;
+    if (['select', 'order', 'limit', 'offset', 'on_conflict', 'columns'].includes(column)) continue;
     const value = String(row[column] ?? 'null');
     if (raw.startsWith('eq.')) {
       if (value !== raw.slice(3)) return false;
@@ -132,7 +144,7 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       res.end(JSON.stringify({ message: 'invalid token' }));
       return;
     }
-    res.end(JSON.stringify({ id: user.id, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }));
+    res.end(JSON.stringify({ id: user.id, aud: 'authenticated', role: 'authenticated', email: user.email, app_metadata: {}, user_metadata: {}, identities: user.identities }));
     return;
   }
 
@@ -543,10 +555,39 @@ async function main() {
       await settings.saveGameSettings(settings.DEFAULT_SETTINGS);
       assert.equal((await call('one', 'GET', 'state', { code })).statusCode, 200, 'switching Play back on reopens the room');
     }
+
+    // 6. A room names its players itself (round 4): the Google name, else the
+    //    sharkname, else "Player" and a number. What the body says is ignored:
+    //    an older client sent the part of the address before the @.
+    {
+      const created = await call('one', 'POST', 'create', { host_name: 'ada.lovelace', mode: 'classroom', count: 5, categories: ['javascript'], duration_s: 30 });
+      assert.equal(created.statusCode, 200, JSON.stringify(created.body));
+      const code = created.body.code as string;
+      assert.equal(created.body.host_name, 'el-tiburon-loco', 'a host without a Google name is named by their sharkname, not the body');
+      assert.equal((await call('host', 'POST', 'join', { code, display_name: 'grace' })).statusCode, 200);
+      // A client that sends no name at all joins too.
+      assert.equal((await call('two', 'POST', 'join', { code })).statusCode, 200, 'a join needs no display_name');
+      const state = (await call('one', 'GET', 'state', { code })).body as { match: { host_name: string }; participants: { user_id: string; display_name: string }[] };
+      const named = Object.fromEntries(state.participants.map((p) => [p.user_id, p.display_name]));
+      assert.equal(state.match.host_name, 'el-tiburon-loco');
+      assert.equal(named[USERS.one.id], 'el-tiburon-loco', 'an email account is named by its sharkname');
+      assert.equal(named[USERS.host.id], 'Grace Hopper', 'a Google account by its Google name');
+      assert.match(named[USERS.two.id], /^Player \d{4}$/, 'an email account without a sharkname is "Player" and a number');
+      // The same number in every room, as a host too.
+      const again = await call('two', 'POST', 'create', { mode: 'multiplayer', count: 5, categories: ['javascript'], duration_s: 30 });
+      assert.equal(again.statusCode, 200, JSON.stringify(again.body));
+      assert.equal(again.body.host_name, named[USERS.two.id], 'a player keeps their number across rooms');
+      // No part of any address reaches a room.
+      const stored = JSON.stringify([tables.matches, tables.match_participants]);
+      for (const user of Object.values(USERS)) {
+        const local = user.email.split('@')[0];
+        assert.ok(!stored.includes(local), `${local} is not stored in a room`);
+      }
+    }
   } finally {
     server.close();
   }
-  console.log('Play room contracts passed: late answers, the classroom host, the live distribution, abandoned lobbies, the questions a player reads, the classroom reveal and scoreboard, and the Play switch.');
+  console.log('Play room contracts passed: late answers, the classroom host, the live distribution, abandoned lobbies, the questions a player reads, the classroom reveal and scoreboard, the Play switch, and room names that never come from an address.');
 }
 
 await main();

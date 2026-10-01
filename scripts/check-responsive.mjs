@@ -79,6 +79,8 @@ const DEFAULT_ROUTES = [
   '/terms',
   '/premium/success',
   '/premium/cancel',
+  '/auth/confirmed',
+  '/reset-password',
   '/classroom',
   '/topics/javascript-closures',
   '/not-found-responsive-check',

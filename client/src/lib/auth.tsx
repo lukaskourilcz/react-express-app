@@ -81,7 +81,9 @@ interface AuthContextValue {
   isLoading: boolean;
   /** Sign in with Google. `returnTo` is a path on this site to come back to
    * after the round trip (see lib/authReturn.ts); without it the visitor comes
-   * back to the page the sign-in was pressed on. */
+   * back to the page the sign-in was pressed on. Pages do not call this: they
+   * open the sign-in dialog (lib/signInDialog.ts), whose Google button does.
+   * Email and password sign-in lives in lib/emailAuth.ts. */
   signInWithGoogle: (returnTo?: string) => Promise<void>;
   /** Signs out this browser, or every device with `'global'`. Either way
    * supabase-js announces SIGNED_OUT here, which forgets the account's data
@@ -90,6 +92,10 @@ interface AuthContextValue {
   /** A sign-in pressed before a reload failed when this document finished it
    * (there is no button of that press left to say so). */
   signInResumeFailed: boolean;
+  /** A password-reset link opened this session (supabase-js's
+   * PASSWORD_RECOVERY), until it signs out. The app shell then opens
+   * /reset-password once, wherever the link landed. */
+  passwordRecovery: boolean;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -103,6 +109,7 @@ const AuthContext = createContext<AuthContextValue>({
   },
   signOut: async () => {},
   signInResumeFailed: false,
+  passwordRecovery: false,
 });
 
 export function AuthProvider({ children, recovery = browserRecovery }: {
@@ -115,6 +122,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
   // first render, and supabase-js is never downloaded (lib/supabaseClient.ts).
   const [isLoading, setIsLoading] = useState(mayHaveSession);
   const [signInResumeFailed, setSignInResumeFailed] = useState(false);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
   const graceTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(graceTimer.current), []);
 
@@ -166,7 +174,8 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
 
   useEffect(() => {
     // A sign-in is a SIGNED_IN after INITIAL_SESSION; INITIAL_SESSION and
-    // TOKEN_REFRESHED are never reported, so the log records real logins.
+    // TOKEN_REFRESHED are never reported, so the log records real logins. A
+    // password-reset link signs in too, announced as PASSWORD_RECOVERY.
     // supabase-js also sends SIGNED_IN for a session it restores from storage,
     // while it initializes and before INITIAL_SESSION. The eager client sent
     // that before this effect ran; a client loaded on demand can attach this
@@ -178,8 +187,10 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
       setIsLoading(false);
       if (session?.user) accountSignedIn = true;
       if (event === 'INITIAL_SESSION') initialized = true;
-      if (event === 'SIGNED_IN' && initialized && session?.user) reportSignIn();
+      if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && initialized && session?.user) reportSignIn();
+      if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
       if (event === 'SIGNED_OUT') {
+        setPasswordRecovery(false);
         clearSignInReport();
         // The next person on this device starts from nothing, not from the
         // progress, XP, coins, bookmarks and drafts of the account that left.
@@ -237,6 +248,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     clearSignInReport();
     clearAccountData();
     accountSignedIn = false;
+    setPasswordRecovery(false);
     setUser(null);
   };
 
@@ -266,7 +278,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, isLoading, signInWithGoogle, signOut, signInResumeFailed }}
+      value={{ user, isAuthenticated: !!user, isLoading, signInWithGoogle, signOut, signInResumeFailed, passwordRecovery }}
     >
       {children}
     </AuthContext.Provider>
@@ -277,7 +289,8 @@ export function useAuth() {
   return useContext(AuthContext);
 }
 
-// Display fields from a Supabase user. Google populates user_metadata.
+// Display fields from a Supabase user. Google populates user_metadata; an
+// account made with an email and password has no name or picture there.
 export function getUserProfile(user: User | null) {
   const meta = user?.user_metadata ?? {};
   const rawPicture = (meta.avatar_url || meta.picture) as string | undefined;
@@ -299,16 +312,4 @@ export function getUserProfile(user: User | null) {
     email: user?.email,
     picture,
   };
-}
-
-export interface UserProfile {
-  name?: string;
-  email?: string;
-  picture?: string;
-}
-
-// Best display name for a profile: full name, else the local part of the email,
-// else the given fallback (e.g. 'Host' / 'Player').
-export function displayNameFromProfile(profile: UserProfile, fallback: string): string {
-  return profile.name || profile.email?.split('@')[0] || fallback;
 }

@@ -18,6 +18,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
+import { openSignIn } from '../lib/signInDialog';
 import { useT } from '../i18n/LanguageContext';
 import { CATEGORY_LOOKUP, categoryLabelKey } from '../lib/categories';
 import type { CategoryType } from '../types/quiz';
@@ -75,10 +76,9 @@ function StatePanel({ level, title, body, children }: { level: 1 | 2; title: str
 function Flashcards({ embedded = false }: { embedded?: boolean }) {
   const t = useT();
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [index, setIndex] = useState(0);
   const [turned, setTurned] = useState(false);
-  const [signInError, setSignInError] = useState<string | null>(null);
   const [toast, setToast] = useState<{ kind: 'removed'; card: Flashcard } | { kind: 'error'; message: string } | null>(null);
   const flipRef = useRef<HTMLButtonElement>(null);
   // After Got it, the next card's turn button takes the focus.
@@ -145,11 +145,9 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
   }
 
   if (!isAuthenticated) {
-    const signIn = () => void signInWithGoogle().catch((err) => setSignInError(friendlyError(err)));
     return (
       <StatePanel level={heading} title={t('sharkCards.signInTitle')} body={t('sharkCards.signInBody')}>
-        <Button variant="primary" label={t('auth.logIn')} onClick={signIn} />
-        {signInError && <ErrorRetry message={signInError} onRetry={signIn} />}
+        <Button variant="primary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
       </StatePanel>
     );
   }

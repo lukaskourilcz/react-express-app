@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -7,27 +7,26 @@ import Home from '../src/components/Home';
 import { server } from './mocks/server';
 import { settingsHandler } from './mocks/handlers';
 
-// The press leaves for Google: the promise settles only when the page unloads.
 const auth = vi.hoisted(() => ({
-  value: { user: null, isAuthenticated: false, isLoading: false, signInWithGoogle: () => new Promise<void>(() => {}) },
+  value: { user: null, isAuthenticated: false, isLoading: false },
 }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
+const openSignIn = vi.hoisted(() => vi.fn());
+vi.mock('../src/lib/signInDialog', async (importOriginal) => ({ ...(await importOriginal<object>()), openSignIn }));
 vi.mock('../src/lib/billing', () => ({ useBilling: () => ({ known: true, enabled: false, launchOffer: false }) }));
 
-it('gives the sign-in link back when Back restores the home page from the browser cache', async () => {
+// The hero's sign-in link opens the sign-in dialog, where Google comes first
+// and an email and password follow. The dialog's Google button keeps the
+// Back-from-Google recovery (tests/sign-in-dialog.test.tsx).
+it('opens the sign-in dialog from the hero link', () => {
   server.use(settingsHandler);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
-  const link = screen.getByRole('button', { name: 'Sign in with Google' });
+  const link = screen.getByRole('button', { name: 'Sign in or create an account' });
+  expect(link).toHaveAttribute('aria-haspopup', 'dialog');
   fireEvent.click(link);
-  await waitFor(() => expect(link).toBeDisabled());
-  expect(link).toHaveTextContent('Sign in to start');
-  // An ordinary page show (a first load) changes nothing.
-  act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: false })); });
-  expect(link).toBeDisabled();
-  act(() => { window.dispatchEvent(new PageTransitionEvent('pageshow', { persisted: true })); });
-  await waitFor(() => expect(link).toBeEnabled());
-  expect(link).toHaveTextContent('Sign in with Google');
+  expect(openSignIn).toHaveBeenCalledTimes(1);
+  expect(link).toBeEnabled();
 });
 
 // The tile says "Daily challenge": one question set for everyone a day, which

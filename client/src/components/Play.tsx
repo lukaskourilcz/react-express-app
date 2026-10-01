@@ -16,7 +16,8 @@ import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { ToggleButtonGroup } from '@astryxdesign/core/ToggleButton';
-import { useAuth, getUserProfile, displayNameFromProfile } from '../lib/auth';
+import { useAuth, getUserProfile } from '../lib/auth';
+import { openSignIn } from '../lib/signInDialog';
 import {
   createMatch,
   joinMatch,
@@ -142,7 +143,7 @@ export function PlayLanding() {
   const config = useGameConfig();
   const isDesktop = useMediaQuery('(min-width: 900px)');
   const accent = useActiveSubject().accent;
-  const { user, isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const profile = getUserProfile(user);
   const [mode, setMode] = useState<'ffa' | 'classroom'>(() =>
     typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('mode') === 'classroom'
@@ -181,20 +182,8 @@ export function PlayLanding() {
               {t('play.signInBody')}
             </Text>
             <div style={{ marginTop: 8 }}>
-              <Button
-                variant="primary"
-                size="lg"
-                label={t('auth.logIn')}
-                onClick={async () => {
-                  try {
-                    await signInWithGoogle();
-                  } catch (err) {
-                    setError(friendlyError(err));
-                  }
-                }}
-              />
+              <Button variant="primary" size="lg" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
             </div>
-            {error && <Banner status="error" title={error} />}
           </VStack>
         </Card>
       </div>
@@ -208,7 +197,6 @@ export function PlayLanding() {
     try {
       const m = await createMatch({
         host_id: user.id,
-        host_name: displayNameFromProfile(profile, t('play.hostFallback')),
         mode: mode === 'classroom' ? 'classroom' : 'multiplayer',
         count,
         // "No selection" means every topic of the ACTIVE subject — sending the
@@ -242,7 +230,6 @@ export function PlayLanding() {
       await joinMatch({
         code,
         user_id: user.id,
-        display_name: displayNameFromProfile(profile, t('play.playerFallback')),
       });
       capture('classroom_or_match_joined');
       navigate(`/play/${code}`);
@@ -486,8 +473,7 @@ export function PlayMatch() {
   const navigate = useNavigate();
   const t = useT();
   const config = useGameConfig();
-  const { user, isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
-  const profile = getUserProfile(user);
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
 
   const [playOff, setPlayOff] = useState(false);
   const playOn = config.features.multiplayer && !playOff;
@@ -562,7 +548,6 @@ export function PlayMatch() {
           const { server_now: serverNow, ...room } = await joinMatch({
             code,
             user_id: user.id,
-            display_name: displayNameFromProfile(profile, t('play.playerFallback')),
           });
           noteServerClock(serverNow, sentAt);
           joined = room;
@@ -854,9 +839,9 @@ export function PlayMatch() {
               variant="primary"
               size="lg"
               label={t('auth.logIn')}
-              onClick={() => void signInWithGoogle().catch((err) => setError(friendlyError(err)))}
+              aria-haspopup="dialog"
+              onClick={() => openSignIn()}
             />
-            {error && <Text type="supporting" color="secondary" justify="center">{error}</Text>}
           </VStack>
         </Card>
       </div>

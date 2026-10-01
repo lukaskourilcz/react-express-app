@@ -303,10 +303,12 @@ test('a supabase-js download that fails on a sign-in click neither reloads nor r
 
   const logIn = page.getByRole('button', { name: 'Log in', exact: true }).first();
   await logIn.click();
-  // The click reports the failure itself, and nothing else happens. A second
-  // click is lazy-auth.spec.ts's: it reloads where the browser remembers the
+  // "Log in" opens the sign-in dialog; its Google press downloads supabase-js.
+  // The press reports the failure itself, and nothing else happens. A second
+  // press is lazy-auth.spec.ts's: it reloads where the browser remembers the
   // failed download.
-  await expect(page.getByText('Sign-in failed. Try again.')).toBeVisible();
+  await page.getByRole('dialog').getByRole('button', { name: 'Continue with Google' }).click();
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('We couldn’t reach the sign-in service.');
   expect(dropped).toBe(1);
   await page.waitForTimeout(600);
   expect(documents).toHaveLength(1);
