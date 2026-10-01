@@ -211,6 +211,17 @@ async function main() {
     assert.equal((upsert?.body as Row | undefined)?.email, A.email, 'with the token\'s email');
     console.log('PASS verified caller: leaderboard visibility reads and writes the token\'s account');
 
+    // What friends see (op=identity, migration 055) is the token's account's too.
+    seen.length = 0;
+    const identityGet = await user('identity', { account: A, query: { user_id: B.id } });
+    assert.equal(identityGet.statusCode, 200, JSON.stringify(identityGet.body));
+    assert.deepEqual(reads('/rest/v1/user_handles').map((one) => one.filters.user_id), [A.id], 'what friends see is read for the token\'s account');
+    seen.length = 0;
+    const identityPut = await user('identity', { method: 'PUT', account: A, query: { user_id: B.id }, body: { showRealName: false, user_id: B.id } });
+    assert.equal(identityPut.statusCode, 200, JSON.stringify(identityPut.body));
+    assert.deepEqual(reads('/rest/v1/rpc/set_friend_display').map((one) => (one.body as Row).p_user_id), [A.id], 'and written for it');
+    console.log('PASS verified caller: what friends see reads and writes the token\'s account');
+
     const codingTask = CODING_TASKS.find((task) => task.track === 'javascript')!;
     seen.length = 0;
     const draft = await user('coding-draft', { method: 'POST', account: A, query: { user_id: B.id }, body: { id: codingTask.id, code: 'const mine = 1;', user_id: B.id } });

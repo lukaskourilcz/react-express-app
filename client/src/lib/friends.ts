@@ -7,6 +7,9 @@
 // the source of a number.
 
 import { apiFetch } from './api';
+import { isValidHandle } from '../../../shared/handles';
+
+export { isValidHandle };
 
 export interface HandleState {
   /** null until the learner claims one — and until then nobody can find them. */
@@ -30,10 +33,15 @@ export interface LookupResult {
   found: boolean;
   handle?: string;
   state?: FriendState;
+  /** The handle, or an accepted friend's chosen name (migration 055). */
+  displayName?: string;
 }
 
 export interface Friend {
   handle: string;
+  /** Their sharkname, or their Google name if they chose to show it. */
+  displayName: string;
+  /** Their Google photo, only when they switched it on; otherwise initials. */
   picture: string | null;
   /** ISO 3166-1 alpha-2, or null. Shown as a flag, never ranked. */
   country: string | null;
@@ -49,7 +57,21 @@ export interface Friend {
 
 export interface FriendRequest {
   handle: string;
+  /** Incoming: the asker's chosen name. Outgoing: the other side's sharkname. */
+  displayName: string;
   direction: 'incoming' | 'outgoing';
+}
+
+/** What friends see of the signed-in learner (op=identity, migration 055). */
+export interface Identity {
+  /** Friends see `realName` instead of the sharkname. */
+  showRealName: boolean;
+  /** Friends see `photo` instead of an initials avatar. */
+  showPhoto: boolean;
+  /** The account's Google name, or null (an email/password account). */
+  realName: string | null;
+  /** The account's Google photo, or null. */
+  photo: string | null;
 }
 
 export interface FriendsResponse {
@@ -60,10 +82,6 @@ export interface FriendsResponse {
 // `api/user/[op].ts` is a dynamic route: the last path segment *is* the op, the
 // same way /api/user/advisor and /api/user/cards reach theirs.
 const OP = (op: string) => `/api/user/${op}`;
-
-/** Same shape the database enforces, so a typo is answered without a round trip. */
-export const HANDLE_PATTERN = /^[A-Za-z0-9][A-Za-z0-9_-]{1,22}[A-Za-z0-9]$/;
-export const isValidHandle = (value: string): boolean => HANDLE_PATTERN.test(value.trim());
 
 export const getHandle = (): Promise<HandleState> => apiFetch<HandleState>(OP('friends-handle'));
 
@@ -90,3 +108,9 @@ export const removeFriend = (handle: string): Promise<{ removed: boolean }> =>
   apiFetch(OP('friends-remove'), { method: 'POST', body: JSON.stringify({ handle }) });
 
 export const listFriends = (): Promise<FriendsResponse> => apiFetch<FriendsResponse>(OP('friends-list'));
+
+export const getIdentity = (): Promise<Identity> => apiFetch<Identity>(OP('identity'));
+
+/** Send only the switch that changed; the server leaves the other alone. */
+export const setIdentity = (change: { showRealName?: boolean; showPhoto?: boolean }): Promise<Identity> =>
+  apiFetch(OP('identity'), { method: 'PUT', body: JSON.stringify(change) });

@@ -184,6 +184,8 @@ import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
 import { handleLeaderboardVisibility, limitUserWrite } from '../api/user/[op]';
+import { handleFriends, handleIdentity } from '../lib/friends-handlers';
+import { isValidHandle } from '../shared/handles';
 import { handleAdminEntitlements, handleEntitlement, parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
 import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
 import { WAIVER_TEXT } from '../lib/billing/sync';
@@ -2847,6 +2849,198 @@ function monthlyXpContracts() {
     /'rewards\.earn\.monthTopDetail': 'Finish a calendar month with the most XP — top three earn \{first\}, \{second\} and \{third\} coins; ties share the place\.'/);
 }
 
+/** op=identity (migration 055): what friends see of a learner, the sharkname
+ * or the Google name, and an initials avatar or the Google photo. Plus the
+ * 32-character handle rule and the display name the friends ops pass on. Run
+ * against stand-ins for the tables and routines. */
+async function identityContracts() {
+  const route = readFileSync(join(process.cwd(), 'api/user/[op].ts'), 'utf8');
+  const limited = route.indexOf('if (!(await limitUserWrite(req, res, op))) return;');
+  const branch = route.indexOf("if (op === 'identity') return handleIdentity(req, res, supabase, verifiedProfile);");
+  assert.ok(limited > 0 && branch > limited, 'op=identity is a branch of api/user/[op].ts after the write limit, given the verified Google profile');
+  assert.ok(branch < route.indexOf("if (op.startsWith('friends-'))"), 'and it is reached before the friends- prefix');
+
+  // Google gave Ada a name and a photo; Bo signed up with an email and has neither.
+  const profiles: Record<string, { name: string | null; picture: string | null }> = {
+    'contract-identity-ada': { name: 'Ada Lovelace', picture: 'https://lh3.googleusercontent.com/a/ada' },
+    'contract-identity-bo': { name: null, picture: null },
+  };
+  const handles = new Map<string, { show_real_name: boolean; show_photo_to_friends: boolean }>([
+    ['contract-identity-ada', { show_real_name: false, show_photo_to_friends: false }],
+    ['contract-identity-bo', { show_real_name: false, show_photo_to_friends: false }],
+  ]);
+  const statsWrites: { row: Record<string, unknown>; onConflict?: string }[] = [];
+  const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+  let missingColumn = false;
+  const db = {
+    from(table: string) {
+      if (table === 'user_stats') {
+        return {
+          async upsert(row: Record<string, unknown>, options?: { onConflict?: string }) {
+            statsWrites.push({ row, onConflict: options?.onConflict });
+            return { data: null, error: null };
+          },
+        };
+      }
+      assert.equal(table, 'user_handles');
+      let userId = '';
+      const query = {
+        select(columns: string) { assert.equal(columns, 'show_real_name, show_photo_to_friends'); return query; },
+        eq(column: string, value: string) { assert.equal(column, 'user_id'); userId = value; return query; },
+        async maybeSingle() {
+          return missingColumn
+            ? { data: null, error: { code: '42703', message: 'column user_handles.show_real_name does not exist' } }
+            : { data: handles.get(userId) ?? null, error: null };
+        },
+      };
+      return query;
+    },
+    async rpc(name: string, args: Record<string, unknown>) {
+      rpcCalls.push({ name, args });
+      assert.equal(name, 'set_friend_display');
+      const row = handles.get(String(args.p_user_id));
+      if (!row) return { data: null, error: { message: 'no_handle' } };
+      if (typeof args.p_show_real_name === 'boolean') row.show_real_name = args.p_show_real_name;
+      if (typeof args.p_show_photo === 'boolean') row.show_photo_to_friends = args.p_show_photo;
+      return { data: [{ ...row }], error: null };
+    },
+  };
+  const call = async (method: string, options: { user?: string | null; body?: unknown } = {}) => {
+    const user = options.user === undefined ? 'contract-identity-ada' : options.user;
+    const res = mockResponse();
+    await handleIdentity({
+      method,
+      headers: {},
+      query: { op: 'identity', ...(user ? { user_id: user } : {}) },
+      body: options.body,
+    } as never, res as never, db as never, async (auth) => profiles[auth.sub] ?? { name: null, picture: null });
+    return res;
+  };
+  const code = (res: { body: unknown }) => (res.body as { error?: { code?: string } }).error?.code;
+
+  // Signed in only, GET and PUT only.
+  assert.equal((await call('GET', { user: null })).statusCode, 401, 'a guest cannot read it');
+  assert.equal((await call('PUT', { user: null, body: { showRealName: true } })).statusCode, 401, 'a guest cannot set it');
+  const post = await call('POST', { body: { showRealName: true } });
+  assert.equal(post.statusCode, 405);
+  assert.equal(post.headers.get('allow'), 'GET, PUT');
+
+  // Both off by default; the learner's own Google name and photo come along
+  // so the Profile can offer them, and nothing is cached.
+  const first = await call('GET');
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(first.body, { showRealName: false, showPhoto: false, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' });
+  assert.equal(first.headers.get('cache-control'), 'private, no-store');
+  assert.deepEqual((await call('GET', { user: 'contract-identity-none' })).body,
+    { showRealName: false, showPhoto: false, realName: null, photo: null }, 'an account without a handle reads as off');
+
+  // The body is `{ showRealName?, showPhoto? }` with booleans, at least one.
+  for (const body of [undefined, null, {}, [true], { showRealName: 'true' }, { showPhoto: 1 }, { showRealName: null }, { showRealName: true, showPhoto: 'no' }]) {
+    const refused = await call('PUT', { body });
+    assert.equal(refused.statusCode, 400, `${JSON.stringify(body)} is refused`);
+    assert.equal(code(refused), 'bad_request');
+  }
+  assert.equal(statsWrites.length + rpcCalls.length, 0, 'a refused body writes nothing');
+
+  // An email account has no Google name or photo to show: refused, nothing written.
+  const noName = await call('PUT', { user: 'contract-identity-bo', body: { showRealName: true } });
+  assert.equal(noName.statusCode, 409);
+  assert.equal(code(noName), 'no_real_name');
+  const noPhoto = await call('PUT', { user: 'contract-identity-bo', body: { showPhoto: true } });
+  assert.equal(noPhoto.statusCode, 409);
+  assert.equal(code(noPhoto), 'no_photo');
+  assert.equal(statsWrites.length + rpcCalls.length, 0, 'nothing is written for a name or photo the account does not have');
+  // Choosing the sharkname needs nothing from Google.
+  const bo = await call('PUT', { user: 'contract-identity-bo', body: { showRealName: false } });
+  assert.deepEqual(bo.body, { showRealName: false, showPhoto: false, realName: null, photo: null });
+
+  // Ada shows her name: the verified name and photo are copied to the stats
+  // row first, never anything from the body.
+  const on = await call('PUT', { body: { showRealName: true, name: 'Someone Else', picture: 'https://example.com/me.png' } });
+  assert.equal(on.statusCode, 200);
+  assert.deepEqual(on.body, { showRealName: true, showPhoto: false, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' });
+  assert.deepEqual(statsWrites.at(-1), {
+    row: { user_id: 'contract-identity-ada', name: 'Ada Lovelace', picture: 'https://lh3.googleusercontent.com/a/ada' },
+    onConflict: 'user_id',
+  });
+  assert.deepEqual(rpcCalls.at(-1), { name: 'set_friend_display', args: { p_user_id: 'contract-identity-ada', p_show_real_name: true, p_show_photo: null } },
+    'only the switch sent changes; the other is NULL, which the routine leaves alone');
+
+  // Turning the photo on and then off: off writes no stats row.
+  assert.deepEqual((await call('PUT', { body: { showPhoto: true } })).body,
+    { showRealName: true, showPhoto: true, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' });
+  const writesBefore = statsWrites.length;
+  assert.deepEqual((await call('PUT', { body: { showPhoto: false } })).body,
+    { showRealName: true, showPhoto: false, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' });
+  assert.equal(statsWrites.length, writesBefore, 'switching off copies nothing');
+  assert.deepEqual((await call('GET')).body,
+    { showRealName: true, showPhoto: false, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' }, 'the choice is stored');
+
+  // No sharkname yet: the routine says no_handle and the learner is told to choose one.
+  profiles['contract-identity-new'] = { name: 'New Person', picture: null };
+  const noHandle = await call('PUT', { user: 'contract-identity-new', body: { showRealName: true } });
+  assert.equal(noHandle.statusCode, 409);
+  assert.equal(code(noHandle), 'no_handle');
+
+  // Before migration 055 the columns are missing: say so rather than 500.
+  missingColumn = true;
+  const missing = await call('GET');
+  assert.equal(missing.statusCode, 503);
+  assert.equal(code(missing), 'migration_required');
+  missingColumn = false;
+
+  // Each PUT is charged to the account by the route's write limit; a GET is not.
+  const stamp = Date.now();
+  const limit = async (method: string, userId: string) => {
+    const res = mockResponse();
+    const req = { method, headers: { 'x-forwarded-for': `identity-${stamp}` }, query: { op: 'identity' }, body: { user_id: userId, showPhoto: false }, socket: {} };
+    return (await limitUserWrite(req as never, res as never, 'identity')) ? 200 : res.statusCode;
+  };
+  for (let n = 0; n < RATE_LIMITS.userMutation.capacity; n += 1) {
+    assert.equal(await limit('PUT', `identity-${stamp}-a`), 200, `switch ${n + 1} is allowed`);
+  }
+  assert.equal(await limit('PUT', `identity-${stamp}-a`), 429, 'one account is bounded at the per-account write rate');
+  assert.equal(await limit('PUT', `identity-${stamp}-b`), 200, 'which spends nobody else\'s budget');
+  assert.equal(await limit('GET', `identity-${stamp}-a`), 200, 'reading it is not a write');
+
+  // The handle rule is 3–32 characters (it was 24), the same in the API and
+  // the client, and the friends ops pass the display name on.
+  const friendCalls: { name: string; args: Record<string, unknown> }[] = [];
+  const friendsDb = {
+    async rpc(name: string, args: Record<string, unknown>) {
+      friendCalls.push({ name, args });
+      if (name === 'set_user_handle') return { data: args.p_handle, error: null };
+      if (name === 'friend_lookup') return { data: [{ handle: 'thirsty-sharkie', state: 'accepted', display_name: 'Ada Lovelace' }], error: null };
+      if (name === 'friend_list') return { data: [{ handle: 'thirsty-sharkie', display_name: 'Ada Lovelace', picture: null, current_streak: 3 }], error: null };
+      if (name === 'friend_requests') return { data: [{ handle: 'fin-de-fiesta', direction: 'incoming', display_name: 'Dee Example' }], error: null };
+      throw new Error(`unexpected rpc ${name}`);
+    },
+  };
+  const friends = async (op: string, method: string, options: { body?: unknown; query?: Record<string, string> } = {}) => {
+    const res = mockResponse();
+    await handleFriends(op, { method, headers: {}, query: { op, user_id: 'contract-identity-ada', ...options.query }, body: options.body } as never, res as never, friendsDb as never);
+    return res;
+  };
+  const longest = 'shark-so-fat-it-cant-swim-at-all';
+  assert.equal(longest.length, 32);
+  assert.deepEqual((await friends('friends-handle', 'PUT', { body: { handle: longest } })).body, { handle: longest }, 'a 32-character sharkname is accepted');
+  for (const handle of [`${longest}x`, 'ab', '-sharkie', 'Shark', 'thirsty sharkie']) {
+    const refused = await friends('friends-handle', 'PUT', { body: { handle } });
+    assert.equal(refused.statusCode, 400, `${handle} is refused before the database`);
+    assert.equal(code(refused), 'invalid_handle');
+    assert.match((refused.body as { error: { message: string } }).error.message, /3–32/);
+  }
+  assert.equal(friendCalls.filter((one) => one.name === 'set_user_handle').length, 1, 'only the valid sharkname reached set_user_handle');
+  assert.match(readFileSync(join(process.cwd(), 'client/src/lib/friends.ts'), 'utf8'), /from '\.\.\/\.\.\/\.\.\/shared\/handles'/, 'the client checks the same rule as the API, from shared/handles.ts');
+  assert.ok(isValidHandle(longest) && !isValidHandle(`${longest}x`));
+
+  assert.deepEqual((await friends('friends-lookup', 'GET', { query: { handle: 'thirsty-sharkie' } })).body,
+    { found: true, handle: 'thirsty-sharkie', state: 'accepted', displayName: 'Ada Lovelace' });
+  const list = (await friends('friends-list', 'GET')).body as { friends: { handle: string; displayName: string; picture: string | null }[]; requests: unknown[] };
+  assert.deepEqual([list.friends[0].handle, list.friends[0].displayName, list.friends[0].picture], ['thirsty-sharkie', 'Ada Lovelace', null]);
+  assert.deepEqual(list.requests, [{ handle: 'fin-de-fiesta', displayName: 'Dee Example', direction: 'incoming' }]);
+}
+
 async function main() {
   // Code graded below runs on the grader's worker thread, built fresh from the
   // sources under test.
@@ -4820,6 +5014,7 @@ async function main() {
   await leaderboardVisibilityContracts();
   classroomRevealContracts();
   monthlyXpContracts();
+  await identityContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
 }

@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
   ACCENT_SOFT_ALPHA,
@@ -122,4 +123,22 @@ describe('--brand-accent-on-soft', () => {
     expect(accentOnSoft(webdev.accent, webdev.accent, 'light')).toBe('#2a712a');
     expect(accentOnSoft(webdev.accentBright, webdev.accent, 'dark')).toBe('#4caf50');
   });
+});
+
+describe('initials avatars (--ss-avatar-1 … 8)', () => {
+  // ui/InitialsAvatar.tsx paints initials in --ss-on-avatar on one of eight
+  // inks from astryx-theme.css. Every pair is small bold text: 4.5:1.
+  const theme = readFileSync(new URL('../src/styles/astryx-theme.css', import.meta.url), 'utf8');
+  const token = (name: string) => new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6});`).exec(theme)?.[1];
+
+  it('defines eight inks and the text colour', () => {
+    expect(Array.from({ length: 8 }, (_, i) => token(`ss-avatar-${i + 1}`)).every(Boolean)).toBe(true);
+    expect(token('ss-on-avatar')).toBe('#ffffff');
+  });
+
+  for (let i = 1; i <= 8; i += 1) {
+    it(`clears 4.5:1 on ink ${i}`, () => {
+      expect(contrastRatio(token('ss-on-avatar')!, token(`ss-avatar-${i}`)!)).toBeGreaterThanOrEqual(AA_SMALL_TEXT);
+    });
+  }
 });

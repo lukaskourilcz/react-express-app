@@ -40,7 +40,7 @@ import {
   handlePathProgress,
 } from '../../lib/learning-paths/handlers';
 import { handleGithub } from '../../lib/github-handlers';
-import { handleFriends } from '../../lib/friends-handlers';
+import { handleFriends, handleIdentity } from '../../lib/friends-handlers';
 import { handleEntitlement } from '../../lib/entitlements';
 import { handleVoucherRedeem } from '../../lib/vouchers';
 import {
@@ -69,6 +69,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (!(await limitUserRead(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
   if (op === 'leaderboard-visibility') return handleLeaderboardVisibility(req, res, supabase);
+  if (op === 'identity') return handleIdentity(req, res, supabase, verifiedProfile);
   if (op === 'category-stats') return categoryStats(req, res);
   if (op === 'streak') return streak(req, res);
   if (op === 'xp') return xp(req, res);
