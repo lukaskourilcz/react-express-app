@@ -2330,8 +2330,8 @@ async function quizSubmitScopeContracts() {
   assert.ok((daily.body as { expiresAt: number }).expiresAt <= dailyGraded.session.issuedAt + 60 * 60_000);
   assert.equal(decodeQuizResultReceipt(dailyGraded.body.resultReceipt!)?.purpose, 'daily');
   // Each outcome carries its question's XP (2 + 2 × difficulty when correct),
-  // which migration 052 pays per fresh question. The daily's 20 XP minimum
-  // stays on the receipt's total.
+  // and the receipt's total, which migration 056 pays whole, repeats
+  // included, is their sum. The daily's 20 XP minimum is in that total.
   for (const [what, body] of [['quiz', graded.body], ['daily', dailyGraded.body]] as const) {
     const receipt = decodeQuizResultReceipt(body.resultReceipt!)!;
     const perQuestion = receipt.outcomes.map((outcome) => outcome.xp);

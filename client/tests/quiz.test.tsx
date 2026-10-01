@@ -32,6 +32,7 @@ vi.mock('../src/components/LoadingScreen', async (importOriginal) => ({
 import Quiz from '../src/components/Quiz';
 import PendingQuizResults from '../src/components/PendingQuizResults';
 import Leaderboard from '../src/components/Leaderboard';
+import { onXpToast } from '../src/lib/xp';
 
 const LEARNER = { id: 'user-quiz-test-0001', email: 'learner@example.test', user_metadata: {} };
 const PROGRESS_KEY = 'devquiz:in-progress';
@@ -444,32 +445,30 @@ describe('saving a result to the account', () => {
     expect(pendingStore()).toEqual({});
   });
 
-  it('says so when questions answered earlier today earned less XP than the result', async () => {
+  it('announces the XP the account recorded and never says repeats earn less', async () => {
+    // From migration 056 every answer earns XP, a repeat included, so the
+    // result screen no longer explains a smaller award. A server from before
+    // 056 may still record less than the result (here 6 of 12): the screen
+    // announces what was recorded and adds no note about repeats.
     signIn();
-    server.use(
-      http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a'), Q('b')]), resultReceipt: 'repeat-receipt' })),
-      // The routine counted one of the two questions: half of the result's 12 XP.
-      http.post('*/api/user/stats', () => HttpResponse.json({ data: null, xp: { quest_xp: 6, quest_xp_by_subject: { webdev: 6 } }, applied: true, questXp: 6 })),
-    );
-    await startQuiz([Q('a'), Q('b')]);
-    answerAll(2);
-    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
-    expect(await screen.findByText('You answered some of these questions earlier today. A question counts once a day, so this quiz earned 6 XP.')).toBeInTheDocument();
-  });
-
-  it('adds no such note when the account recorded the whole result', async () => {
-    signIn();
+    const gains: number[] = [];
+    const stop = onXpToast((toast) => { if (toast.kind === 'gain') gains.push(toast.amount); });
     let saved = 0;
     server.use(
-      http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a')]), resultReceipt: 'whole-receipt' })),
+      http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a'), Q('b')]), resultReceipt: 'repeat-receipt' })),
       http.post('*/api/user/stats', () => { saved++; return HttpResponse.json({ data: null, xp: { quest_xp: 6, quest_xp_by_subject: { webdev: 6 } }, applied: true, questXp: 6 }); }),
     );
-    await startQuiz([Q('a')]);
-    fireEvent.keyDown(document.body, { key: '1' });
-    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
-    await waitFor(() => expect(saved).toBe(1));
-    await act(async () => {});
-    expect(screen.queryByText(/A question counts once a day/)).not.toBeInTheDocument();
+    try {
+      await startQuiz([Q('a'), Q('b')]);
+      answerAll(2);
+      fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+      await waitFor(() => expect(saved).toBe(1));
+      await waitFor(() => expect(gains).toEqual([6]));
+      await act(async () => {});
+      expect(screen.queryByText(/earlier today|counts once a day/)).not.toBeInTheDocument();
+    } finally {
+      stop();
+    }
   });
 
   it('sends waiting results once signed in, and drops the ones too old to record', async () => {

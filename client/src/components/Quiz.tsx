@@ -216,9 +216,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const [attemptedStart, setAttemptedStart] = useState(false);
   const { ids: bookmarks } = useBookmarks();
   const [snack, setSnack] = useState<string | null>(null);
-  // The XP the account recorded, when it is less than the result's: from
-  // migration 048 a question answered earlier the same UTC day earns none.
-  const [repeatXp, setRepeatXp] = useState<number | null>(null);
   const dayChange = useDayChangeTime();
   const [mode, setMode] = useState<QuizMode>('standard');
   const [reviewPlan, setReviewPlan] = useState<ReviewWeakArea[]>([]);
@@ -607,7 +604,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           hinted: hintedIds,
         }),
       });
-      setRepeatXp(null);
       setResult(data);
       setState('submitted');
       clearProgress();
@@ -646,10 +642,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             // once the account's verified balance is in. A server from before
             // migration 048 names no amount and awarded the result's.
             const recordedXp = typeof saved.questXp === 'number' ? saved.questXp : data.questXp;
-            if (saved.applied) {
-              announceVerifiedQuestXp(recordedXp);
-              if (recordedXp < data.questXp) setRepeatXp(recordedXp);
-            }
+            if (saved.applied) announceVerifiedQuestXp(recordedXp);
             await syncXpWithServer({ announceRankUp: saved.applied });
           } catch (writeError) {
             console.error('Stat write failed:', writeError);
@@ -1035,12 +1028,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             {mode === 'daily' && (
               <Text type="supporting" color="secondary" justify="center">
                 {t('quiz.dailyComplete')} {t('quiz.dailyNext', { time: dayChange })}
-              </Text>
-            )}
-
-            {repeatXp !== null && (
-              <Text type="supporting" color="secondary" justify="center">
-                {t('quiz.repeatXp', { xp: repeatXp })}
               </Text>
             )}
 

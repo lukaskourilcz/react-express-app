@@ -168,17 +168,15 @@ level would otherwise add correct answers without limit. A quiz question
 counts the same way from migration 048: `record_verified_quiz_result_v2` builds
 its category counts (for `user_category_stats` and this board) from the
 outcomes whose question the learner had not answered earlier the same UTC day,
-read from `user_question_history` before the attempt updates it. From
-migration 052 its XP follows the same rule per question: each receipt outcome
-carries the XP its question earned (`api/quiz/submit.ts`: 2 + 2 × difficulty
-when correct, 0 when not), and the routine pays the sum over the fresh
-outcomes, never more than the receipt's total. A question answered earlier
-the same UTC day pays nothing and a fresh correct answer pays in full. The
-daily challenge keeps its minimum of 20 XP when it has at least one question
-not answered earlier that UTC day; a daily whose questions were all answered
-earlier that day pays nothing. A receipt minted before
-052 carries no per-question XP and keeps 048's share formula,
-`floor(xp × fresh ÷ total)`. The awarded XP is kept on the receipt row
+read from `user_question_history` before the attempt updates it. XP does
+not follow that rule: from migration 056 every answer earns XP, a repeated
+question included (owner decision of 1 October 2026), so the routine pays the
+receipt's whole XP (`api/quiz/submit.ts`: 2 + 2 × difficulty for each correct
+answer, and at least 20 for the daily challenge). 052 paid only the questions
+not answered earlier the same UTC day, and 048 scaled the quiz by the share of
+such questions. A repeat earns XP and coins, never a place on a board. Each
+receipt outcome still carries its question's XP; the routine no longer reads
+it. The awarded XP is kept on the receipt row
 (`quiz_attempts.quest_xp`) and the stats handler credits coins for that
 amount, also when a retry finds the result already recorded after a commit
 that timed out: the credit is keyed to the attempt and pays once, and a NULL
@@ -888,7 +886,10 @@ production (issue #227, step D8).
   and the game settings mirror them as `coins`, clamped on read, so the owner
   tunes them in `/dev` → Settings → Coins without a deploy. Every account earns
   10 % of verified XP; Premium doubles it at credit time; one account earns at
-  most 400 coins a day from XP, counted after the doubling. The welcome grant is
+  most 400 coins a day from XP, counted after the doubling. Since every answer
+  earns XP (056), repeated questions included, this cap is what bounds the
+  coins a replayed quiz can earn: 400 coins is 4,000 XP a day on the free plan
+  and 2,000 on Premium. The welcome grant is
   200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300;
   "live" as the Profile counts it, a shield or a protection covering the gap
   since the last learning day, `streak_live` from migration 052), a
@@ -920,8 +921,8 @@ production (issue #227, step D8).
   `learn:<account>:<topic>:L<n>` (or `P<n>`) at 50 × the level's tier or 300 ×
   the part (`shared/progression.ts`); a coding challenge's first pass credits
   `coding:<account>:<task>`, the same id its XP now uses. A quiz's credit is
-  for the XP the routine awarded, which migration 048 can lower below the
-  receipt's. Everything that moves the streak (a verified quiz, a completed
+  for the XP the routine awarded: the receipt's whole XP from migration 056
+  (048 to 055 could pay less), and nothing for a refused second daily. Everything that moves the streak (a verified quiz, a completed
   Learn level or part test, an applied coding pass, an awarded Challenge run)
   then settles the milestones, so a streak milestone reached on a Learn or
   coding day pays at once.
