@@ -213,7 +213,13 @@ read one query and write through `op=leaderboard-visibility` in
 `api/user/[op].ts` (GET `{ visible }`, PUT `{ visible }`; signed in only, each
 PUT charged to the account's write limit). Every board routine returns
 `display_name` and `picture` only while the flag is on and NULL otherwise, and
-the screen then shows "Learner" with the default avatar. The viewer's own
+the screen then shows "Learner" with the default avatar. From 055 the name is
+`board_display_name(user_id)`, one rule for every board, and any new board
+reads it too: NULL while the flag is off; with it on, the learner's
+sharkname, or their Google name when they chose "Friends see: your name";
+and, for a learner with no sharkname, the Google name, as 049 showed it. The
+picture still follows the flag alone (`CASE WHEN show_on_leaderboards THEN
+picture END`). The viewer's own
 30-day row follows the same rule, so it shows them what everybody else sees:
 a switch refetches every board the learner's tab has loaded, their personal
 board at once, and everyone else sees the change within about a minute, which
@@ -222,7 +228,9 @@ the switch's hint says. The privacy policy says the same under
 account's Google identity (`identity_data.full_name` or `name`, `avatar_url`
 or `picture`), read in `verifiedProfile` (`api/user/[op].ts`), never
 `user_metadata`, which the account can rewrite from the browser. An account
-without a Google identity has no name there, and the boards say "Learner". The Biggest Shark Challenge's Hall of Fame shows the name a
+without a Google identity (email and password) has no name there: with the
+switch on it appears by its sharkname, and without a sharkname the boards
+say "Learner". The Biggest Shark Challenge's Hall of Fame shows the name a
 learner types when saving a score. That box starts empty: it takes the
 account's name only while this switch is on, fills it once so a cleared box
 stays clear, and says the name is shown publicly on the Hall of Fame.
@@ -238,6 +246,32 @@ not answer it) takes the address read bucket below. `friend_list` orders friends
 correct answers and accuracy, shows each friend's live streak by the rule
 above, and marks a friend active today when their last verified learning day
 is today. No board ranks by XP or by streak.
+
+### Sharknames and what friends see
+
+A learner's handle is their sharkname: the address friends add them by,
+3 to 32 characters (`shared/handles.ts`, the same rule as the
+`user_handles_handle_check` CHECK and `set_user_handle`, raised from 24 in
+055). "Your sharkname" on the Profile's Overview (`SharknameCard`) shows it,
+rolls a new one with Generate (`shared/sharkname.ts`: lower-case
+kebab-case, always a shark word, about 6,800 names, deterministic for a
+seeded source), lets the learner edit it, and saves through
+`op=friends-handle`; a taken name answers 409 `handle_taken` and the card
+offers another roll. A handle still changes once every 30 days. The Friends
+tab says what friends add you by and links to the card.
+
+What friends see is two switches on `user_handles` (055), both off by
+default, set through `op=identity` (GET/PUT, signed in, PUT on the
+per-account write limit): `show_real_name` (friends see the Google name
+instead of the sharkname, offered only to an account with one) and
+`show_photo_to_friends` (friends see the Google photo instead of an
+initials avatar, `ui/InitialsAvatar`). Switching either on copies the
+verified Google name and photo into `user_stats`, where the routines read
+them. `friend_display_name()` is the name rule: `friend_list` returns it
+and the photo only when switched on; an incoming request carries the
+asker's chosen name; a lookup carries it only for an accepted friend, and
+everyone else sees the sharkname. The same name choice reaches the boards
+through `board_display_name()`, above.
 
 ## Live rooms (Play)
 
