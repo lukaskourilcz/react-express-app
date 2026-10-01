@@ -1039,6 +1039,75 @@ calling them is deployed. The Auth identity goes after the first erasure. `erasu
 an account column that the newest `delete_user_data` does not erase, or when
 that body loses a statement of the four routines.
 
+## Cookie consent, analytics and the privacy policy
+
+Owner decisions 2 and 4 (1 October 2026).
+
+- **The choice.** `client/src/lib/consent.ts` holds three categories:
+  `necessary` (always on: sign-in, settings, progress kept in the browser, the
+  choice itself), `analytics` (PostHog) and `marketing` (GA4 and the Meta
+  Pixel, not connected). The choice is stored in localStorage
+  (`devshark:consent`: version, the two booleans, the time) and copied into
+  the first-party cookie `devshark_consent`
+  (`v=1&analytics=0|1&marketing=0|1&at=<epoch s>`, `SameSite=Lax`, 12
+  months) for a later server or edge read; nothing reads the cookie today.
+  Until the visitor decides, both optional categories are off. Raising
+  `CONSENT_VERSION` asks every browser again, and so does a choice older than
+  12 months. A browser that refuses storage counts as not consented: the
+  banner closes for the page, nothing optional runs, and the next visit asks
+  again. A choice made in another tab applies through the `storage` event.
+- **The banner and the dialog** (`client/src/components/CookieConsent.tsx`).
+  The shell mounts them right after the skip link; CSS (`order`) draws the
+  banner under `<main>` and 30px above the bottom edge, so `<main>` gives up
+  the height and nothing is covered. Accept all, Reject all and Choose are the
+  same Astryx secondary button, 44px tall. On `/privacy` and `/terms` the
+  banner shows its title and actions only. It is hidden where the shell hides
+  its chrome (`/dev`, a running quiz). Choose and the footer's "Cookie
+  settings" button (`openConsentSettings`) open one Astryx dialog: a switch
+  per category with its purpose and a link to the policy section, Necessary
+  locked on, Reject all, Accept all and Save choices. The native modal makes
+  the page inert, `useFocusTrap` wraps Tab, Escape closes, and focus returns
+  to the opener or to `<main>` when the opener left with the banner. The
+  privacy policy's cookie section has the same button. While the banner
+  shows, `--ss-consent-dock` lifts `AppToast` and `XpToaster` above it.
+- **PostHog** (`client/src/lib/analytics.ts`). `initAnalytics()` follows the
+  consent store. Without a yes, posthog-js is not downloaded and nothing is
+  stored or sent; the current path and the signed-in id wait in memory and
+  go out after a yes on the same page, and the first-touch campaign
+  (`devshark:campaign`) is written only then. PostHog is initialised with
+  `opt_out_capturing_by_default` and `opt_out_persistence_by_default` and
+  opted in explicitly, because it reads its own consent flag from storage on
+  every check. A no or a withdrawal calls `reset()` then
+  `opt_out_capturing()` (in that order: `reset()` clears PostHog's flag) and
+  removes every `ph_` / `__ph_` cookie and storage key and the campaign,
+  including what builds before the banner left for visitors who never
+  agreed. Sign-out calls `reset()` and opts back in. The URL scrubbing
+  (`before_send`) is unchanged.
+- **Marketing readiness** (`client/src/lib/marketing.ts`). `MARKETING_LOADERS`
+  is empty, so `installMarketing()` does nothing: no `dataLayer`, no script,
+  no CSP change. A loader added there starts only after a yes to marketing,
+  behind Google Consent Mode v2 defaults (`ad_storage`, `analytics_storage`,
+  `ad_user_data`, `ad_personalization` denied; a yes grants all four, since
+  GA4 sits under marketing). Connecting a tag also needs its hosts in the CSP
+  of `vercel.json`, a raised `CONSENT_VERSION` and the policy's marketing
+  section and cookie table updated (NEEDED.md).
+- **Sentry** stays under necessary because it stores nothing in the browser
+  and sends no personal data: no cookie, no storage (`linkPreviousTrace`
+  pinned to `in-memory`), `sendDefaultPii: false`, no Session Replay, no
+  `setUser`. Adding any of those moves it under analytics consent.
+- **The privacy policy** (`PRIVACY` in `client/src/components/LegalPages.tsx`,
+  keys `legal.privacy.*`) covers sign-in (Google or email and password),
+  learning data and Shark Cards, the sharkname and what friends see, the
+  boards, the Hall of Fame, Play rooms, invitations, reports, payments,
+  vouchers, merchandise (not offered), email, cookies with a table of every
+  name, analytics, marketing, error monitoring, providers and transfers, legal
+  bases, a retention table, deletion, rights and changes. The cookie table
+  (`COOKIE_ROWS`) names the real keys; change it with them. The sign-in log
+  (`auth_events`) keeps a record 12 months: migration 058 adds that delete to
+  `purge_expired_learning_data`, which production runs daily through
+  pg_cron, and `consentContracts()` in `scripts/test-launch-contracts.ts`
+  ties the sentence to the SQL.
+
 ## Deployment
 
 One Vercel project builds this repository for `https://devshark.app`. Set
