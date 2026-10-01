@@ -171,7 +171,7 @@ async function runInner(message: RunMessage) {
       total = 1;
     }
     if (total === 0) {
-      // Same rule as the grader (lib/coding/react-runner.ts): a form the
+      // Same rule as the grader's React runner: a form the
       // component lets submit fails its case instead of reloading this frame.
       const stopWatchingSubmits = failUncancelledSubmits(jest.globals, window);
       const outcome = await jest.run({ afterEach: () => RTL.cleanup(), timeoutMs: 5_000 }).finally(stopWatchingSubmits);
