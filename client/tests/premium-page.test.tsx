@@ -336,7 +336,7 @@ describe('the Terms and the privacy policy', () => {
     renderAt('/privacy', <PrivacyPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Privacy policy' })).toBeInTheDocument();
     expect(screen.queryByText(/sprd\.net AG/)).toBeNull();
-    expect(screen.getByText(/does not sell or ship merchandise at the moment and collects no postal address/)).toBeInTheDocument();
+    expect(screen.getByText(/does not offer merchandise yet\. It collects no order and no postal address/)).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Link privacy policy' })).toHaveAttribute('href', 'https://link.com/privacy');
     expect(screen.getByRole('link', { name: 'Stripe privacy policy' })).toHaveAttribute('href', 'https://stripe.com/privacy');
     expect(screen.getByText(/devShark has no AI feature/)).toBeInTheDocument();

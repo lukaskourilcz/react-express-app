@@ -57,7 +57,9 @@ describe('the privacy policy', () => {
   it('says what friends, the boards and the sign-in log see and keep', () => {
     saveConsent({ analytics: false, marketing: false });
     renderPolicy();
-    expect(screen.getByText(/They see your profile photo only if you switch on “Show my photo to friends”; otherwise they see your initials/)).toBeInTheDocument();
+    expect(screen.getByText(/They see your Google photo only if you switch on “Show my photo to friends”; otherwise they see your initials/)).toBeInTheDocument();
+    expect(screen.getByText(/someone who looks it up sees only the sharkname/)).toBeInTheDocument();
+    expect(screen.getByText(/An account without a Google name, such as an email and password account, appears by its sharkname/)).toBeInTheDocument();
     expect(screen.getByText(/You appear on them as “Learner”, without a name or photo/)).toBeInTheDocument();
     expect(screen.getByText(/catch up with a change within about a minute/)).toBeInTheDocument();
     expect(screen.getByText(/the name you type appears publicly on the Hall of Fame/)).toBeInTheDocument();
@@ -65,6 +67,8 @@ describe('the privacy policy', () => {
     expect(screen.getByText(/It deletes each record after 12 months/)).toBeInTheDocument();
     expect(screen.getByText(/keeps only a salted hash of it: devShark never sees or stores your password/)).toBeInTheDocument();
     expect(screen.queryByText(/sprd\.net AG/)).toBeNull();
+    expect(screen.getByText(/devShark does not offer merchandise yet\. It collects no order and no postal address/)).toBeInTheDocument();
+    expect(screen.getByText(/For each Shark Card you save, it keeps the question, its topic, the correct answer, the explanation and when you saved it/)).toBeInTheDocument();
   });
 
   it('lists what the browser keeps, with the real names', () => {
