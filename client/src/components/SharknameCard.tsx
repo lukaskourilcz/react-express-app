@@ -53,7 +53,11 @@ export default function SharknameCard({ focus = false, onFocused }: { focus?: bo
   const [handle, setHandleState] = useState<HandleState | null>(null);
   const [identity, setIdentityState] = useState<Identity | null>(null);
   const alive = useRef(true);
-  useEffect(() => () => { alive.current = false; }, []);
+  // Set on mount as well as cleared on unmount: StrictMode mounts twice.
+  useEffect(() => {
+    alive.current = true;
+    return () => { alive.current = false; };
+  }, []);
 
   const read = useCallback(async () => {
     setLoad('loading');

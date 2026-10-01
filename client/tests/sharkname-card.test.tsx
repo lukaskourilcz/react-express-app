@@ -1,4 +1,5 @@
 import { readFileSync } from 'node:fs';
+import { StrictMode } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
@@ -189,6 +190,19 @@ describe('your sharkname', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByRole('radio', { name: /Your sharkname/ })).toBeChecked();
     expect(screen.getByText(`Saved. Your sharkname is ${rolled}.`)).toBeInTheDocument();
+  });
+
+  it('loads under StrictMode, which the app renders in', async () => {
+    serve();
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    render(
+      <StrictMode>
+        <QueryClientProvider client={client}>
+          <LanguageProvider><SharknameCard /></LanguageProvider>
+        </QueryClientProvider>
+      </StrictMode>,
+    );
+    expect(await field()).toHaveValue('thirsty-sharkie');
   });
 
   it('puts the cursor in the field when the Friends tab sends the learner here', async () => {
