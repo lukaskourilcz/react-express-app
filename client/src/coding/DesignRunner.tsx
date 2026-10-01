@@ -8,7 +8,7 @@ import { Kicker } from '../components/landing/LandingKit';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { RadioCard, RadioCardGroup } from '../components/ui/RadioCards';
-import { ApiError } from '../lib/api';
+import { ApiError, friendlyError } from '../lib/api';
 import { submitCoding } from './api';
 import { difficultyOf, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
@@ -44,6 +44,9 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
   const [verdict, setVerdict] = useState<CodingVerdictResponse | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The server already checked this session: a first check whose answer was
+  // lost still used it up. Only a new attempt, opened again, can be checked.
+  const [sessionUsed, setSessionUsed] = useState(false);
   const [moved, setMoved] = useState('');
 
   const answered = useMemo(() => answers.filter((one) => one !== null).length, [answers]);
@@ -58,7 +61,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
   }, [drill, estimate, order, choice]);
 
   const submit = useCallback(async () => {
-    if (!session || submitting) return;
+    if (!session || submitting || sessionUsed) return;
     const payload: DesignAnswer[] = design ? answers.map((one) => (one ?? -1)) : drillAnswer !== null ? [drillAnswer] : [];
     if (design && answered < steps.length) return;
     if (!design && drillAnswer === null) return;
@@ -69,11 +72,16 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
       setVerdict(result);
       onVerdict?.(result);
     } catch (caught) {
-      setError(caught instanceof ApiError && caught.code === 'invalid_session' ? t('coding.verdict.sessionExpired') : t('coding.verdict.submitError'));
+      if (caught instanceof ApiError && caught.code === 'design_session_used') {
+        setSessionUsed(true);
+        setError(t('coding.design.sessionUsed'));
+      } else {
+        setError(caught instanceof ApiError && caught.code === 'invalid_session' ? t('coding.verdict.sessionExpired') : friendlyError(caught));
+      }
     } finally {
       setSubmitting(false);
     }
-  }, [session, submitting, design, answers, answered, steps.length, drillAnswer, onVerdict, t]);
+  }, [session, submitting, sessionUsed, design, answers, answered, steps.length, drillAnswer, onVerdict, t]);
 
   const move = (from: number, direction: -1 | 1) => {
     setOrder((prev) => {
@@ -222,7 +230,7 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
               <Button variant="secondary" onClick={() => setStepIndex((i) => Math.max(0, i - 1))} isDisabled={stepIndex === 0} label={t('coding.design.previous')} />
               {stepIndex < steps.length - 1
                 ? <Button variant="primary" onClick={() => setStepIndex((i) => Math.min(steps.length - 1, i + 1))} isDisabled={answers[stepIndex] === null} label={t('coding.design.next')} />
-                : <Button variant="primary" onClick={() => void submit()} isDisabled={!session || submitting || answered < steps.length} label={submitting ? t('coding.submitting') : t('coding.design.submit')} />}
+                : <Button variant="primary" onClick={() => void submit()} isDisabled={!session || submitting || sessionUsed || answered < steps.length} label={submitting ? t('coding.submitting') : t('coding.design.submit')} />}
             </div>
           </div>
         )}
@@ -260,11 +268,16 @@ export function DesignRunner({ task, session, locked, signedIn, mode, onVerdict,
               </>
             )}
             <div className="cd-design__nav">
-              <Button variant="primary" onClick={() => void submit()} isDisabled={!session || submitting || drillAnswer === null} label={submitting ? t('coding.submitting') : t('coding.design.submit')} />
+              <Button variant="primary" onClick={() => void submit()} isDisabled={!session || submitting || sessionUsed || drillAnswer === null} label={submitting ? t('coding.submitting') : t('coding.design.submit')} />
             </div>
           </div>
         )}
         {error && <p className="cd-note cd-note--error" role="alert">{error}</p>}
+        {sessionUsed && onRetry && (
+          <div className="cd-verdict__actions">
+            <Button variant="secondary" onClick={onRetry} label={t('coding.design.tryAgain')} />
+          </div>
+        )}
       </section>
     </div>
   );

@@ -1331,7 +1331,7 @@ export const en = {
   'footer.cancelPremium': 'Cancel Premium',
   'error.billingUnavailable': 'The payment provider did not answer. Try again in a few minutes.',
   'error.billingDisabled': 'Premium checkout is not open yet.',
-  'error.alreadyPremium': 'Your Premium subscription is active. Manage it from your profile.',
+  'error.alreadyPremium': 'You already have a Premium subscription. Manage it from your profile.',
   'error.noBillingAccount': 'This account has no billing history yet.',
   'error.badEmail': 'Enter the email address your subscription uses.',
   'error.billingConflict': 'We could not match this payment to your account. Write to the contact on the Terms page.',
@@ -2157,6 +2157,15 @@ export const en = {
   'coding.verdict.passedNoXp': 'Passed — no XP because the solution was revealed',
   'coding.design.yourAnswer': 'Your answer',
   'coding.design.failedNote': 'The correct answers and explanations appear once you pass. Try again: the options come back in a new order.',
+
+  // The coding workbench says why a Submit failed, and a revealed solution
+  // in a Learn level stays on screen until the learner finishes the level.
+  'coding.verdict.tooLarge': 'Your code is over 20 kB, the most one Submit takes. Shorten it and submit again.',
+  'coding.verdict.graderUnavailable': 'The checker could not run just now, so this Submit was not recorded. Try again in a moment.',
+  'error.stageLocked': 'Pass the earlier stages of this challenge first.',
+  'coding.design.sessionUsed': 'This walkthrough was already checked. Open it again for a new attempt.',
+  'coding.lesson.solutionShown': 'The solution is open in the Solution tab. Showing it ended this level attempt: read it, then finish the level. You can retry the level later.',
+  'coding.lesson.finishLevel': 'Finish the level',
 } as const;
 
 export type TranslationKey = keyof typeof en;

@@ -21,6 +21,7 @@ import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
 import { nodeTypeScriptChecker } from './ts-check-node';
+import { checkTypes, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
@@ -40,6 +41,7 @@ import {
   type CodingTask,
   type CodingTrack,
 } from '../../shared/coding-catalog';
+import { CODING_CODE_LIMIT_BYTES } from '../../shared/coding-api';
 import type {
   CodingDraftResponse,
   CodingGardenStatus,
@@ -59,7 +61,7 @@ import type { EvaluateResult } from '../../shared/coding-evaluate';
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
 
 const logEvent = createLogger('coding');
-const MAX_CODE_BYTES = 20 * 1024;
+const MAX_CODE_BYTES = CODING_CODE_LIMIT_BYTES;
 
 const codingAvailable = () => deploymentSubjectIds().includes('webdev');
 const notAvailable = (res: VercelResponse) => jsonError(res, 404, 'not_available', 'Coding challenges are not part of this product');
@@ -341,14 +343,24 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
   let hiddenTypeTotal = 0;
   let codeToRun = code;
   if (task.track === 'typescript') {
-    const checker = nodeTypeScriptChecker();
-    check = checker.check(code, task.typeTests ?? []);
-    if (solution?.hiddenTypeTests?.length) {
-      const hiddenCheck = checker.check(code, solution.hiddenTypeTests);
+    // The compiler runs on a worker thread with a deadline: a few hundred
+    // bytes of recursive types kept it busy for half a minute on this thread.
+    const hiddenTypeTests = solution?.hiddenTypeTests ?? [];
+    const typed = await checkTypes(code, hiddenTypeTests.length ? [task.typeTests ?? [], hiddenTypeTests] : [task.typeTests ?? []]);
+    if (typed.stopped) {
+      const graded: Graded = {
+        verdict: 'timeout', results: [], check: null, logs: [], codeError: TYPE_CHECK_STOPPED_MESSAGE, design: null, designReference: null,
+        hidden: hiddenTests.length + hiddenTypeTests.length > 0 ? { passed: 0, total: hiddenTests.length + hiddenTypeTests.length } : null,
+      };
+      return { ...graded, failureHint: hintForFailure(task, { ...graded, timedOut: true }) };
+    }
+    check = typed.results[0];
+    const hiddenCheck = typed.results[1];
+    if (hiddenCheck) {
       hiddenTypeTotal = hiddenCheck.typeTests.length;
       hiddenTypeFailures = hiddenCheck.typeTests.filter((one) => !one.pass).length;
     }
-    codeToRun = checker.toJavaScript(code);
+    codeToRun = nodeTypeScriptChecker().toJavaScript(code);
   }
   // Only the visible checks' console output comes back: a learner who logs
   // inside their function must not read the hidden checks' inputs. The hidden
@@ -570,6 +582,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     applied: recorded?.applied ?? false,
     github,
     solutions,
+    ...(graded.infra ? { graderUnavailable: true as const } : {}),
   };
 }
 

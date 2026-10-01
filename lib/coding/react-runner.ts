@@ -17,9 +17,13 @@
 // --disallow-code-generation-from-strings, so a host function reached through
 // jsdom or React cannot compile code with `.constructor` either. Learner code
 // therefore cannot write files, end the process or print the result itself.
-// It still shares a realm with the suite, so this is not a claim that no
-// component can ever influence its own verdict: see
-// docs/react-grading-operations.md.
+// It does reach this realm's objects through React and jsdom, so the guest
+// freezes this realm's built-ins before any learner code runs
+// (lib/coding/realm-lockdown.ts, called by scripts/react-sandbox-entry.ts),
+// and each case's promise is followed with the page's own `then` captured
+// before the suite ran. The component still shares the page realm with the
+// suite, so this is not a claim that no component can ever influence its own
+// verdict: see docs/react-grading-operations.md.
 //
 // Three details this module exists to get right:
 //
@@ -41,6 +45,7 @@
 //    `unhandledrejection` event.
 
 import { compileFunction, createContext, runInContext, type Context } from 'node:vm';
+import { types } from 'node:util';
 import { transform } from 'sucrase';
 import { asRunnableModule, FETCH_STUB_SOURCE } from '../../shared/coding-react-support';
 import { createMiniJest, type MiniJestRun } from '../../shared/coding-mini-jest';
@@ -126,6 +131,9 @@ function createPageRealm(): Context {
 let runtime: Runtime | null = null;
 let runtimeError: string | null = null;
 
+/** Whether a value is a promise of any realm, asked without running its code. */
+const isPromise = types.isPromise;
+
 /** A CJS package loaded through `import()` exposes its exports as `default`. */
 const cjs = (namespace: unknown): unknown =>
   (namespace as { default?: unknown })?.default ?? namespace;
@@ -184,6 +192,39 @@ async function ensureRuntime(): Promise<Runtime> {
   return runtime;
 }
 
+/** Loads jsdom, React and Testing Library now rather than on the first
+ * suite, so the React guest can lock its realm down (lib/coding/realm-lockdown.ts)
+ * after they are in and before any learner code runs. */
+export async function prepareReactRuntime(): Promise<void> {
+  await ensureRuntime();
+}
+
+/**
+ * How the runner waits for what a case or a hook returned. A promise, from
+ * either realm, is followed with the page realm's own
+ * `Promise.prototype.then`, captured before the suite or the component runs,
+ * and the value it resolves with is dropped. Awaiting it the ordinary way asks
+ * the promise for `then`, and in the page realm the component can replace
+ * that: a `then` that settled at once passed every async case, whatever the
+ * case went on to check. Any other value is awaited as before; the work it
+ * stands for has already run by the time a case returns it, unless it is a
+ * thenable such as the one React's `act` returns, whose own `then` is used.
+ */
+function followInPage(page: Context): (value: unknown) => unknown {
+  const pageThen = runInContext('Promise.prototype.then', page) as (this: unknown, ...args: unknown[]) => unknown;
+  const apply = Reflect.apply;
+  return (value) => {
+    if (!isPromise(value)) return value;
+    return new Promise<void>((resolve, reject) => {
+      try {
+        apply(pageThen, value, [() => resolve(), (reason: unknown) => reject(reason)]);
+      } catch (error) {
+        reject(error);
+      }
+    });
+  };
+}
+
 /** The same compile the browser frame performs, so both agree on the syntax. */
 const compile = (source: string): string =>
   transform(source, { transforms: ['typescript', 'jsx', 'imports'], jsxRuntime: 'automatic', production: true, filePath: 'file.tsx' }).code;
@@ -240,6 +281,7 @@ export async function runReactSuite(input: { suite: string; appSource: string })
   const { testing, modules } = await ensureRuntime();
   const jest = createMiniJest();
   const page = createPageRealm();
+  const follow = followInPage(page);
   let compileError: string | null = null;
   let appModule: unknown = null;
 
@@ -278,7 +320,7 @@ export async function runReactSuite(input: { suite: string; appSource: string })
   let run: MiniJestRun;
   holdRejections(true);
   try {
-    run = await jest.run({ afterEach: () => testing.cleanup(), timeoutMs: REACT_SUITE_TIMEOUT_MS });
+    run = await jest.run({ afterEach: () => testing.cleanup(), timeoutMs: REACT_SUITE_TIMEOUT_MS, follow });
   } finally {
     holdRejections(false);
   }

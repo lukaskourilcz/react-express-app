@@ -15,13 +15,15 @@ import type { ModuleSource } from '../../types';
 
 /** Counts index writes on a plain array by proxying it, and reports whether
  * the learner handed back the very object they were given. Appended after the
- * learner's code, so it cannot be shadowed. */
+ * learner's code, so it cannot be shadowed, and it counts with the built-ins
+ * taken before that code ran (`__probe`, shared/coding-evaluate.ts), so
+ * replacing `Proxy` changes nothing. */
 const WRITE_PROBE = `
 var __countWrites = function (values, run) {
   var writes = 0;
-  var proxy = new Proxy(values, {
+  var proxy = new __probe.Proxy(values, {
     set: function (target, prop, value) {
-      if (typeof prop === 'string' && /^[0-9]+$/.test(prop)) writes += 1;
+      if (typeof prop === 'string' && __probe.isIndex(prop)) writes += 1;
       target[prop] = value;
       return true;
     },

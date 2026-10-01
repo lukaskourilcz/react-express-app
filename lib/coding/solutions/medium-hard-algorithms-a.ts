@@ -12,7 +12,7 @@ import { tree, withList, withTree } from '../tasks/easy-algorithms-a';
 const LIST_VALUES = 'const values = node => { const out = []; for (; node; node = node.next) out.push(node.value); return out; };';
 
 const countedSearch = (n: number, cut: number, target: number): string =>
-  `(() => { const base = Array.from({ length: ${n} }, (_, i) => ((i + ${cut}) % ${n}) * 3); let reads = 0; const values = new Proxy(base, { get(list, key, receiver) { if (typeof key === "string" && /^\\d+$/.test(key)) reads++; return Reflect.get(list, key, receiver); } }); return [findRotated(values, ${target}), reads <= 200]; })()`;
+  `(() => { const base = Array.from({ length: ${n} }, (_, i) => ((i + ${cut}) % ${n}) * 3); let reads = 0; const values = new __probe.Proxy(base, { get(list, key, receiver) { if (__probe.isIndex(key)) reads++; return __probe.get(list, key, receiver); } }); return [findRotated(values, ${target}), reads <= 200]; })()`;
 
 const GRID_TRACKS = 'const tracks = []; for (let r = 0; r < 10; r++) for (let c = 0; c < 10; c++) { if (c < 9) tracks.push([r + ":" + c, r + ":" + (c + 1), (r * 7 + c * 13) % 9 + 1]); if (r < 9) tracks.push([r + ":" + c, (r + 1) + ":" + c, (r * 11 + c * 5) % 9 + 1]); }';
 

@@ -39,6 +39,10 @@ export interface CodingGardenStatus {
   url?: string;
 }
 
+/** The most code, in UTF-8 bytes, one Submit may carry. The server refuses
+ * more with 413 `too_large`; the workbench says so before sending. */
+export const CODING_CODE_LIMIT_BYTES = 20 * 1024;
+
 /** POST ?resource=coding-submit (JavaScript, TypeScript, system design) */
 export interface CodingSubmitRequest {
   /** A code-ordering submission: the puzzle's line ids in the arranged order.
@@ -105,6 +109,10 @@ export interface CodingVerdictResponse {
   /** The junior and senior solutions, on a passed code submission. Null on
    * any other verdict, on a puzzle, and for tasks without authored pairs. */
   solutions: CodingSolutionPair | null;
+  /** Set when the grader itself could not run (the React runner did not
+   * start). The verdict says nothing about the code and nothing was
+   * recorded; the learner can submit again. */
+  graderUnavailable?: true;
 }
 
 /** One graded step of a walkthrough, or the one answer of a drill.

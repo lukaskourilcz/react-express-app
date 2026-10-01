@@ -20,7 +20,7 @@ import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } fr
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { resolveTier, serverContentIndex } from '../access';
-import { CODING_SUMMARIES } from './active';
+import { CODING_SUMMARIES, codingTaskById, levelCodingTasks } from './active';
 import { evolvingStage } from '../../shared/evolving';
 import { codingContent, isOpenTo, type Tier } from '../../shared/tiers';
 import { isCodingSectionTrack, isCodingTaskId, tierUnlocked, type CodingTaskSummary } from '../../shared/coding-catalog';
@@ -261,11 +261,18 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   const answer: CodingSkipResponse = {
     recorded: true,
     next: next?.id ?? null,
-    // Every task in a Learn level's coding phase is required by that level, so
-    // a skip postpones it rather than clearing it. Section tasks are optional.
-    required: task.level > 0 && !evolvingStage(task.id),
+    required: skipPostpones(task.id),
   };
   return res.json(answer);
+}
+
+/** Whether a skip only postpones a task: a Learn level's coding phase needs
+ * it, because it is one of the tasks that level issues (`levelCodingTasks`),
+ * so it comes back. A task with a level number outside that quota is as
+ * optional as any other section task. */
+export function skipPostpones(taskId: string): boolean {
+  const task = codingTaskById(taskId);
+  return Boolean(task && task.level > 0 && !evolvingStage(task.id) && levelCodingTasks(task.topic, task.level).some((one) => one.id === task.id));
 }
 
 /* ── challenge runs (short practice sessions) ────────────────────────── */

@@ -310,6 +310,61 @@ async function main() {
     }
   }
 
+  /* ── the probes, the hidden run and the type check (PATH-1, CODE-2) ─── */
+  const dsaPath = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations');
+  const dsaActivity = (id: string) => dsaPath?.modules.flatMap((module) => module.activities).find((activity) => activity.id === id);
+  if (!SKIP_RUN && dsaPath) {
+    // The DSA method checks count array reads through a Proxy. Code that
+    // replaced the global Proxy, or RegExp.prototype.test, made every count
+    // zero, so a linear scan passed the binary-search and one-pass budgets.
+    const tamperings = [
+      ['Proxy replaced', 'var Proxy = function (target) { return target; };'],
+      ['RegExp test replaced', 'RegExp.prototype.test = function () { return false; };'],
+    ] as const;
+    const binary = dsaActivity('dsa-v1-d07-binary-search');
+    const linear = dsaActivity('dsa-v1-d07-linear-search');
+    if (!binary?.reuseTaskId || !linear?.code) {
+      fail('dsa-foundations: the D07 search exercises are missing');
+    } else {
+      const binaryCode = codeFromReusedTask(codingTaskById(binary.reuseTaskId)!);
+      const scan = 'const binarySearch = (sorted, target) => { for (let i = 0; i < sorted.length; i++) if (sorted[i] === target) return i; return -1; };';
+      const runOn = 'const linearSearch = (values, target) => { let found = -1; for (let i = values.length - 1; i >= 0; i--) if (values[i] === target) found = i; return found; };';
+      for (const [name, tamper] of tamperings) {
+        const scanned = await gradePathCode(binary, binaryCode, `${tamper}\n${scan}`);
+        if (scanned.state === 'verified_pass') fail(`dsa-v1-d07-binary-search: a linear scan passes with the ${name}`);
+        const ranOn = await gradePathCode(linear, linear.code, `${tamper}\n${runOn}`);
+        if (ranOn.state === 'verified_pass') fail(`dsa-v1-d07-linear-search: a scan past the match passes with the ${name}`);
+      }
+    }
+    // The hidden assertions run in a fresh program, in a shuffled order, as
+    // in the coding section: a table of every expected answer served by call
+    // count passed them when they ran in the same program after the visible
+    // ones.
+    const digits = codingTaskById('js-digit-sum')!;
+    const table = [...digits.tests!, ...codingSolutionFor(digits.id)!.hiddenTests!].map((test) => test.expected);
+    const byCount = await gradePathCode(
+      { ...binary!, id: 'synthetic-digit-sum', reuseTaskId: digits.id },
+      codeFromReusedTask(digits),
+      `let k = 0; const table = ${JSON.stringify(table)}; const digitSum = () => table[k++];`,
+    );
+    if (byCount.code.results.some((result) => result.pass !== true)) fail('the call-count table should pass the visible assertions');
+    if (byCount.state === 'verified_pass') fail('a table of answers served by call count passes the hidden assertions');
+    // A type check that runs past its deadline is stopped on its worker
+    // thread and graded as a timeout, as in the coding section.
+    const typed = LEARNING_PATHS.flatMap(codeActivities).find(({ activity }) => activity.code?.language === 'typescript');
+    if (typed) {
+      const recursive = "type B<N extends number, E, A extends unknown[] = []> = A['length'] extends N ? A : B<N, E, [...A, E]>;\n"
+        + Array.from({ length: 30 }, (_, index) => `const q${index}: B<999, 'k${index}'>['length'] = 999;\n`).join('');
+      const started = Date.now();
+      const stopped = await gradePathCode(typed.activity, typed.activity.code!, recursive);
+      const took = Date.now() - started;
+      if (stopped.code.outcome !== 'timeout' || stopped.state !== 'needs_revision') fail(`a runaway type check grades as ${stopped.code.outcome}/${stopped.state}, not a timeout`);
+      if (took > 15_000) fail(`a runaway type check took ${took} ms to stop`);
+    } else {
+      fail('no TypeScript path activity to check the type-check deadline with');
+    }
+  }
+
   /* ── what a later, weaker result leaves on record ──────────────────── */
   // The rule accept_learning_path_result applies (migration 054): a verified
   // pass is never demoted, and a submitted write-up only by a verified pass.

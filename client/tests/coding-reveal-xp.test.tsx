@@ -136,3 +136,21 @@ it('keeps the plain pass and its XP when nothing was revealed', async () => {
   expect(heading).toHaveTextContent('+35 XP');
   expect(heading).not.toHaveTextContent('no XP');
 });
+
+// CODE-13: Submit is off once the solution is showing, but Ctrl or Cmd with
+// Shift and Enter still sent the code.
+it('does not submit from the keyboard while Submit is off after a reveal', async () => {
+  vi.mocked(revealCoding).mockResolvedValue(revealed);
+  vi.mocked(submitCoding).mockReset();
+  vi.mocked(submitCoding).mockResolvedValue(verdict({}));
+  mount({ signedIn: false });
+  climbTheLadder();
+  fireEvent.click(screen.getByRole('button', { name: 'Solution' }));
+  fireEvent.click(within(screen.getByRole('alertdialog', { name: 'Solution' })).getByRole('button', { name: 'Solution' }));
+  expect(await screen.findByText('const one = () => 1;')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  fireEvent.keyDown(screen.getByLabelText('Test editor'), { key: 'Enter', ctrlKey: true, shiftKey: true });
+  fireEvent.keyDown(screen.getByLabelText('Test editor'), { key: 'Enter', metaKey: true, shiftKey: true });
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  expect(submitCoding).not.toHaveBeenCalled();
+});

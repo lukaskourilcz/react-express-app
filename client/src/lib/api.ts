@@ -169,6 +169,8 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   not_in_plan: 'roadmap.notInPlanHint',
   topic_locked: 'error.topicLocked',
   prerequisite_not_met: 'error.prerequisiteNotMet',
+  // An evolving challenge's later stage, sent before the earlier ones passed.
+  stage_locked: 'error.stageLocked',
 };
 
 // not_found spans several endpoints whose English server messages are more
