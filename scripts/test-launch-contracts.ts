@@ -66,6 +66,8 @@ import submitHandler from '../api/quiz/submit';
 import dailyHandler from '../api/quiz/daily';
 import questionsHandler from '../api/quiz/questions';
 import challengeHandler from '../api/quiz/challenge';
+import flashcardsHandler from '../api/flashcards';
+import { handleCodingDraft } from '../lib/coding/handlers';
 import { decodeSessionEnvelope } from '../lib/quiz-tokens';
 import { dailySeededShuffle, pickQuestionOfTheDay, UNBIASED_SHUFFLE_FROM } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
@@ -1432,7 +1434,13 @@ async function merchContracts() {
   const handlers = read('lib/rewards/handlers.ts');
   assert.match(handlers, /if \(!item\.variants\.includes\(variant\)\) return null;/, 'a size must be one the item has');
   const fulfilment = handlers.slice(handlers.indexOf('export async function handleFulfilment('));
-  assert.match(fulfilment.slice(0, 200), /if \(!\(await requireAdmin\(req, res\)\)\) return;/, 'op=fulfilment checks the admin first');
+  // The admin bucket, then the admin: a GET skips the route's write limit
+  // (SEC-9), so the gate takes the bucket api/admin takes.
+  assert.match(
+    fulfilment.slice(0, 300),
+    /\{\n  if \(!\(await enforceRateLimit\(req, res, RATE_LIMITS\.admin\)\)\) return;\n  if \(!\(await requireAdmin\(req, res\)\)\) return;/,
+    'op=fulfilment takes the admin bucket, then checks the admin, before anything else',
+  );
   assert.match(fulfilment, /supabase\.rpc\('set_merch_stock'/, 'the cap is written by the 043 routine');
 }
 
@@ -1841,9 +1849,10 @@ function erasureContracts() {
   const deletion = userOps.slice(deletionStart, userOps.indexOf('\nasync function ', deletionStart + 1));
   assert.ok(deletion.includes('supabase!.auth.admin.deleteUser(auth.sub)'), 'the deleteAccount slice reaches the sign-in identity');
   assert.ok(deletion.indexOf('endBillingForDeletedAccount') < deletion.indexOf("rpc('delete_user_data'"), 'billing ends before the data goes');
-  assert.deepEqual([...deletion.matchAll(/\.rpc\(\s*([^,)]+)/g)].map((match) => match[1]), ["'delete_user_data'"],
+  assert.deepEqual([...new Set([...deletion.matchAll(/\.rpc\(\s*([^,)]+)/g)].map((match) => match[1]))], ["'delete_user_data'"],
     'deleting an account calls delete_user_data and no other routine');
-  assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('auth.admin.deleteUser'), 'the sign-in identity goes last');
+  assert.ok(deletion.indexOf("rpc('delete_user_data'") < deletion.indexOf('auth.admin.deleteUser'), 'the data goes before the sign-in identity');
+  assert.ok(deletion.lastIndexOf("rpc('delete_user_data'") > deletion.indexOf('auth.admin.deleteUser'), 'and is erased once more after it (PROF-4)');
   // No code calls a dropped routine.
   for (const file of ['api', 'lib', 'shared', 'client/src'].flatMap(codeFiles)) {
     const source = read(file);
@@ -1907,6 +1916,15 @@ async function qotdContracts() {
   const wire = JSON.stringify({ ...body, sessionId: '' });
   assert.doesNotMatch(wire, /correctAnswer|explanation/, 'no answer or explanation before a check');
   assert.match(today.headers.get('cache-control') ?? '', /private/, 'the sealed session stays out of shared caches');
+  // One check claims the session, so a reload must reach the server for a
+  // fresh one: a browser that kept this for five minutes answered "Load it
+  // again" after a 409 with the claimed session.
+  assert.match(today.headers.get('cache-control') ?? '', /no-store/, 'and out of the browser cache');
+  assert.doesNotMatch(today.headers.get('cache-control') ?? '', /max-age/);
+  const again = mockResponse();
+  await dailyHandler({ method: 'GET', headers: {}, query: { qotd: 'today' } } as never, again as never);
+  assert.notEqual((again.body as { sessionId: string }).sessionId, body.sessionId, 'each read seals a fresh session');
+  assert.equal((again.body as { question: { id: string } }).question.id, body.question.id, 'for the same question');
 
   const future = mockResponse();
   await dailyHandler({ method: 'GET', headers: {}, query: { qotd: addDays(utcToday(), 1) } } as never, future as never);
@@ -2031,6 +2049,242 @@ async function guestChallengeLimitContracts() {
   assert.equal(quizStatuses.at(-1), 429, 'guest quizzes behind one address keep sharing its rate');
 }
 
+/** A class behind one school address (review round 3: SEC-1, QUIZ-2, PLAY-3,
+ * CODE-8, PROF-7). Each route below charged one person's budget to the whole
+ * address, so the pupil past it got 429: a quiz, the due list, the daily
+ * challenge, the question of the day, a Challenge batch or answer, placement,
+ * a Learn answer, completion or progress sync, a coding task, Submit, reveal
+ * or draft save, a flashcard. Each now takes a class-sized address bucket,
+ * then the caller's own. Run through the real handlers: thirty signed-in
+ * pupils behind one address all get through, one pupil hammering is still
+ * refused while a classmate is not, and guests still share their address's
+ * budget. */
+async function classroomLimitContracts() {
+  const stamp = Date.now();
+  const PUPILS = 30;
+  let schools = 0;
+  const school = () => `class-${stamp}-${++schools}`;
+  type Handler = (req: never, res: never) => unknown;
+  type Route = {
+    name: string;
+    handler: Handler;
+    method: 'GET' | 'POST' | 'PUT';
+    query: Record<string, string>;
+    body?: Record<string, unknown>;
+    /** What one person may do in a full bucket; before the split, the whole address. */
+    perPerson: number;
+    own: keyof typeof RATE_LIMITS;
+    address: keyof typeof RATE_LIMITS;
+  };
+  const call = async (route: Route, address: string, user?: string) => {
+    const res = mockResponse();
+    const signedIn = user !== undefined;
+    await route.handler({
+      method: route.method,
+      headers: { 'x-forwarded-for': address, ...(signedIn ? { authorization: 'Bearer contract' } : {}) },
+      query: { ...route.query, ...(signedIn && route.method === 'GET' ? { user_id: user } : {}) },
+      body: route.method === 'GET' ? undefined : { ...(route.body ?? {}), ...(signedIn ? { user_id: user } : {}) },
+      socket: {},
+    } as never, res as never);
+    return res;
+  };
+  const webdev = deliveryCategories('webdev').join(',');
+  const freeTask = CODING_INDEX.find((task) => task.free && task.track === 'javascript')!;
+  const quiz = { perPerson: 20, own: 'quizSession', address: 'quizSessionAddress' } as const;
+  const learnAnswer = { perPerson: 80, own: 'roadmapAnswer', address: 'roadmapAnswerAddress' } as const;
+  const learnComplete = { perPerson: 12, own: 'roadmapComplete', address: 'roadmapCompleteAddress' } as const;
+  const routes: Route[] = [
+    { name: 'a quiz', handler: questionsHandler, method: 'GET', query: { categories: 'javascript', count: '1', difficulty: 'mixed' }, ...quiz },
+    { name: 'the due list', handler: questionsHandler, method: 'GET', query: { resource: 'due', categories: 'javascript' }, ...quiz },
+    { name: 'the daily challenge', handler: dailyHandler, method: 'GET', query: { categories: webdev }, ...quiz },
+    { name: 'the question of the day', handler: dailyHandler, method: 'GET', query: { qotd: 'today' }, ...quiz },
+    { name: 'a Challenge batch', handler: challengeHandler, method: 'GET', query: { categories: webdev }, ...quiz },
+    { name: 'a placement start', handler: roadmapHandler, method: 'GET', query: { resource: 'placement', subject: 'webdev' }, ...quiz },
+    { name: 'a placement round', handler: roadmapHandler, method: 'POST', query: { resource: 'placement' }, body: { placementToken: 'x', answers: {} }, ...learnAnswer },
+    { name: 'a Learn answer', handler: roadmapHandler, method: 'POST', query: { resource: 'answer' }, body: { sessionId: 'x' }, ...learnAnswer },
+    { name: 'a Learn completion', handler: roadmapHandler, method: 'POST', query: { resource: 'complete' }, body: { sessionId: 'x' }, ...learnComplete },
+    { name: 'a skill check', handler: roadmapHandler, method: 'POST', query: { resource: 'skill-check' }, body: {}, ...learnComplete },
+    { name: 'a progress sync', handler: roadmapHandler, method: 'PUT', query: {}, body: {}, perPerson: 20, own: 'roadmapMutation', address: 'roadmapMutationAddress' },
+    { name: 'a coding task', handler: roadmapHandler, method: 'GET', query: { resource: 'coding-task', id: freeTask.id }, perPerson: 20, own: 'codingTask', address: 'codingTaskAddress' },
+    { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: 'x' }, perPerson: 30, own: 'codingRun', address: 'codingRunAddress' },
+    { name: 'a coding reveal', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-reveal' }, body: { session: 'x' }, perPerson: 10, own: 'codingReveal', address: 'codingRevealAddress' },
+    { name: 'a flashcard write', handler: flashcardsHandler, method: 'POST', query: {}, body: { subject: 'webdev', question_id: 'q1', question: 'Q?', correct_answer: 'A' }, perPerson: 20, own: 'flashcardMutation', address: 'flashcardMutationAddress' },
+  ];
+
+  // 1. Thirty pupils behind one address, each with an account, together send
+  //    more than one person's budget, and none is refused.
+  const refused: Record<string, number> = {};
+  for (const [r, route] of routes.entries()) {
+    const address = school();
+    const each = Math.floor(route.perPerson / PUPILS) + 1;
+    refused[route.name] = 0;
+    for (let round = 0; round < each; round += 1) {
+      for (let n = 0; n < PUPILS; n += 1) {
+        if ((await call(route, address, `pupil-${stamp}-${r}-${n}`)).statusCode === 429) refused[route.name] += 1;
+      }
+    }
+  }
+  assert.deepEqual(refused, Object.fromEntries(routes.map((route) => [route.name, 0])),
+    'no pupil in a class behind one address is refused a route a class uses together');
+
+  /** Calls until the first 429: how many got through. A slow run may refill a
+   * token or two, so the bound past `capacity` allows for that. */
+  const throughUntilRefused = async (send: () => Promise<number>, capacity: number, refillPerSecond: number) => {
+    const started = Date.now();
+    for (let passed = 0; ; passed += 1) {
+      if ((await send()) === 429) return passed;
+      const slack = Math.ceil(((Date.now() - started) / 1000) * refillPerSecond) + 1;
+      assert.ok(passed < capacity + slack, `refused within ${capacity} calls and the refill`);
+    }
+  };
+  for (const [r, route] of routes.entries()) {
+    const own = RATE_LIMITS[route.own];
+    const address = RATE_LIMITS[route.address];
+    // 2. One person's budget is what the address carried before the split,
+    //    and the address holds a class at that rate.
+    assert.equal(own.capacity, route.perPerson, `${route.name}: one person keeps ${route.perPerson} in a full bucket`);
+    assert.equal(address.capacity, SHARED_NETWORK_SEATS * own.capacity, `${route.name}: the address holds a class`);
+    assert.ok(Math.abs(address.refillPerSecond - SHARED_NETWORK_SEATS * own.refillPerSecond) < 1e-9, `${route.name}: and refills at a class's rate`);
+    assert.notEqual(address.key, own.key, `${route.name}: the two tiers are separate buckets`);
+
+    // 3. One pupil hammering is refused at their own budget, while a
+    //    classmate on the same address is not.
+    const shared = school();
+    const hammer = `hammer-${stamp}-${r}`;
+    const passed = await throughUntilRefused(async () => (await call(route, shared, hammer)).statusCode, own.capacity, own.refillPerSecond);
+    assert.ok(passed >= own.capacity, `${route.name}: one pupil gets their whole budget (${passed})`);
+    assert.notEqual((await call(route, shared, `classmate-${stamp}-${r}`)).statusCode, 429, `${route.name}: a classmate is not refused`);
+
+    // 4. Guests share their address's budget, the rate the route had before.
+    const guests = school();
+    const guestsThrough = await throughUntilRefused(async () => (await call(route, guests)).statusCode, own.capacity, own.refillPerSecond);
+    assert.ok(guestsThrough >= own.capacity, `${route.name}: guests get the address's budget (${guestsThrough})`);
+  }
+
+  // 5. A flood of accounts from one address meets the address bucket.
+  {
+    const route = routes.find((one) => one.name === 'a Learn completion')!;
+    const address = RATE_LIMITS.roadmapCompleteAddress;
+    const flood = school();
+    let account = 0;
+    const passed = await throughUntilRefused(async () => (await call(route, flood, `flood-${stamp}-${++account}`)).statusCode, address.capacity, address.refillPerSecond);
+    assert.ok(passed >= address.capacity, `a class's worth of accounts gets through (${passed})`);
+  }
+
+  // 6. A guest's Challenge refill is charged to the run its sealed token
+  //    names: once new runs have spent the address's guest budget, a run
+  //    already under way still refills, one run is bounded, and a token that
+  //    does not verify is charged to the spent address.
+  {
+    const batch = routes.find((one) => one.name === 'a Challenge batch')!;
+    const address = school();
+    let runToken = '';
+    let sessionId = '';
+    let started = 0;
+    for (;;) {
+      const res = await call(batch, address);
+      if (res.statusCode === 429) break;
+      assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      ({ runToken, sessionId } = res.body as { runToken: string; sessionId: string });
+      started += 1;
+      assert.ok(started <= RATE_LIMITS.quizSession.capacity + 2, 'guests starting runs share the address rate');
+    }
+    const refill = { ...batch, query: { ...batch.query, runToken } };
+    const refills = await throughUntilRefused(async () => (await call(refill, address)).statusCode, RATE_LIMITS.quizSession.capacity, RATE_LIMITS.quizSession.refillPerSecond);
+    assert.ok(refills >= RATE_LIMITS.quizSession.capacity, `a run under way refills after the address's guest budget is spent (${refills})`);
+    const forged = { ...batch, query: { ...batch.query, runToken: tamperToken(runToken) } };
+    assert.equal((await call(forged, address)).statusCode, 429, 'a run token that does not verify is charged to the address');
+    assert.ok(decodeSessionEnvelope(sessionId)?.runId, 'the batch was sealed to its run');
+  }
+
+  // 7. The limiter and the handler verify a caller once between them.
+  for (const route of routes.filter((one) => ['the due list', 'the daily challenge', 'a coding task'].includes(one.name))) {
+    const verifications: string[] = [];
+    const warn = console.warn;
+    console.warn = (line: unknown) => { if (String(line).includes('requireAuth_dev_fallback')) verifications.push(String(line)); };
+    try {
+      const res = await call(route, school(), `once-${stamp}`);
+      assert.equal(res.statusCode, 200, `${route.name}: ${JSON.stringify(res.body)}`);
+    } finally {
+      console.warn = warn;
+    }
+    assert.equal(verifications.length, 1, `${route.name}: one request verifies its credentials once`);
+  }
+
+  // 8. In the source: every class route takes both tiers; no handler charges
+  //    one of these per-person budgets to an address alone; and the one
+  //    sealed guest identity is the Challenge run a refill's token names.
+  const perPersonOnly = new RegExp(`enforceRateLimit\\(\\s*req,\\s*res,\\s*RATE_LIMITS\\.(${[...new Set(routes.map((route) => route.own))].join('|')})\\s*\\)`);
+  for (const file of ['api', 'lib'].flatMap(codeFiles)) {
+    const source = readFileSync(join(process.cwd(), file), 'utf8');
+    assert.doesNotMatch(source, perPersonOnly, `${file} charges a per-person budget to a whole address`);
+    for (const tiers of source.matchAll(/enforceClassRateLimit\(\s*req,\s*res,\s*RATE_LIMITS\.(\w+),\s*RATE_LIMITS\.(\w+)(?:,\s*([^)]+?))?\s*\)/g)) {
+      assert.equal(tiers[1], `${tiers[2]}Address`, `${file}: ${tiers[2]} is paired with its own address bucket`);
+      if (tiers[3] === undefined) continue;
+      assert.equal(file, 'api/quiz/challenge.ts', `${file} passes a guest identity`);
+      assert.equal(tiers[3], 'refill ? `run:${refill.runId}` : undefined', 'a guest refill is charged to its sealed run');
+      assert.match(source, /const refill = [^;]*\? decodeChallengeRun\(req\.query\.runToken\) : null;/, 'the run is the one the token seals');
+    }
+  }
+
+  // 9. Challenge answers (PLAY-3). Every pupil answers at their own full
+  //    Challenge rate for a minute, through the real grading handler.
+  {
+    const address = school();
+    const perPupil = RATE_LIMITS.challengeSubmitPerUser.capacity;
+    const statuses: Record<number, number> = {};
+    const seats: Array<{ user: string; questions: Array<{ sessionId: string; questionId: string; correctAnswer: number }> }> = [];
+    for (let n = 0; n < PUPILS; n += 1) {
+      const user = `answers-${stamp}-${n}`;
+      const questions: Array<{ sessionId: string; questionId: string; correctAnswer: number }> = [];
+      let runToken = '';
+      while (questions.length < perPupil) {
+        const query: Record<string, string> = { categories: webdev, ...(runToken ? { runToken, exclude: questions.map((q) => q.questionId).join(',') } : {}) };
+        const res = await call({ ...routes.find((one) => one.name === 'a Challenge batch')!, query }, address, user);
+        assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+        const body = res.body as { sessionId: string; runToken: string };
+        runToken = body.runToken;
+        for (const q of decodeSessionEnvelope(body.sessionId)!.questions) questions.push({ sessionId: body.sessionId, ...q });
+      }
+      seats.push({ user, questions: questions.slice(0, perPupil) });
+    }
+    for (let answer = 0; answer < perPupil; answer += 1) {
+      for (const seat of seats) {
+        const q = seat.questions[answer];
+        const res = mockResponse();
+        await submitHandler({
+          method: 'POST',
+          headers: { 'x-forwarded-for': address, authorization: 'Bearer contract' },
+          query: {},
+          body: { sessionId: q.sessionId, answers: { [q.questionId]: q.correctAnswer }, user_id: seat.user },
+          socket: {},
+        } as never, res as never);
+        statuses[res.statusCode] = (statuses[res.statusCode] ?? 0) + 1;
+      }
+    }
+    assert.deepEqual(statuses, { 200: PUPILS * perPupil }, 'every Challenge answer from a class behind one address is graded');
+    assert.equal(RATE_LIMITS.quizSubmit.capacity, SHARED_NETWORK_SEATS * perPupil, 'grading\'s address bucket holds a class answering the Challenge');
+  }
+
+  // 10. A coding draft save is a write to api/user/[op].ts and takes its two
+  //     tiers there; the handler holds no bucket of its own keyed by address.
+  {
+    const saved: number[] = [];
+    const database = { rpc: async () => ({ data: null, error: null }) } as never;
+    const address = school();
+    for (let save = 0; save < 3; save += 1) {
+      for (let n = 0; n < PUPILS; n += 1) {
+        const res = mockResponse();
+        const req = { method: 'POST', headers: { 'x-forwarded-for': address }, query: { op: 'coding-draft' }, body: { user_id: `draft-${stamp}-${n}`, id: freeTask.id, code: 'let x = 1;' }, socket: {} };
+        if (await limitUserWrite(req as never, res as never, 'coding-draft')) await handleCodingDraft(req as never, res as never, database);
+        saved.push(res.statusCode);
+      }
+    }
+    assert.deepEqual(saved.filter((status) => status !== 200), [], 'thirty pupils behind one address each save their draft three times');
+    assert.equal('codingDraft' in RATE_LIMITS, false, 'codingDraft is gone: limitUserWrite bounds a draft save');
+  }
+}
+
 /** POST /api/quiz/submit grades only the sessions it serves, each checked
  * through the handler that really issues it. */
 async function quizSubmitScopeContracts() {
@@ -2075,6 +2329,16 @@ async function quizSubmitScopeContracts() {
   assert.equal(dailyGraded.response.statusCode, 200, JSON.stringify(dailyGraded.body));
   assert.ok((daily.body as { expiresAt: number }).expiresAt <= dailyGraded.session.issuedAt + 60 * 60_000);
   assert.equal(decodeQuizResultReceipt(dailyGraded.body.resultReceipt!)?.purpose, 'daily');
+  // Each outcome carries its question's XP (2 + 2 × difficulty when correct),
+  // which migration 052 pays per fresh question. The daily's 20 XP minimum
+  // stays on the receipt's total.
+  for (const [what, body] of [['quiz', graded.body], ['daily', dailyGraded.body]] as const) {
+    const receipt = decodeQuizResultReceipt(body.resultReceipt!)!;
+    const perQuestion = receipt.outcomes.map((outcome) => outcome.xp);
+    assert.ok(perQuestion.every((xp) => Number.isInteger(xp) && xp! >= 4 && xp! <= 100), `${what}: every correct outcome carries its XP (${perQuestion})`);
+    const sum = perQuestion.reduce((total, xp) => total! + xp!, 0)!;
+    assert.equal(receipt.questXp, what === 'daily' ? Math.max(20, sum) : sum, `${what}: the receipt's XP is the sum of its questions'`);
+  }
 
   // The 20-question assessment.
   const assessment = mockResponse();
@@ -2114,9 +2378,17 @@ async function quizSubmitScopeContracts() {
     ['challenge batch', (batch.body as { questions: unknown[] }).questions],
     ['question of the day', [(qotd.body as { question: unknown }).question]],
   ];
+  // An allowlist rather than one blocked key: a question handed out before
+  // grading carries what the learner needs to answer it and nothing else, so
+  // a new field (correctAnswer, explanation, tags, a hint) fails here until it
+  // is reviewed and added.
+  const PRE_GRADING_KEYS = new Set(['id', 'introduction', 'question', 'options', 'category', 'difficulty', 'review']);
   for (const [label, questions] of payloads) {
+    assert.ok((questions as unknown[]).length > 0, `${label} hands out questions`);
     for (const question of questions as Record<string, unknown>[]) {
       assert.equal('tags' in question, false, `${label} sends ${String(question.id)} with its tags before grading`);
+      const extra = Object.keys(question).filter((key) => !PRE_GRADING_KEYS.has(key));
+      assert.deepEqual(extra, [], `${label} sends ${String(question.id)} with ${extra.join(', ')} before grading`);
     }
   }
   const placement = mockResponse();
@@ -2124,6 +2396,8 @@ async function quizSubmitScopeContracts() {
   assert.equal(placement.statusCode, 200, JSON.stringify(placement.body));
   for (const question of (placement.body as { questions: Record<string, unknown>[] }).questions) {
     assert.equal('tags' in question, false, 'a placement round sends no tags');
+    const extra = Object.keys(question).filter((key) => !PRE_GRADING_KEYS.has(key));
+    assert.deepEqual(extra, [], `a placement round sends ${String(question.id)} with ${extra.join(', ')} before grading`);
   }
 }
 
@@ -2213,6 +2487,50 @@ async function dailyIntegrityContracts() {
   const receipt = decodeQuizResultReceipt(ranked.resultReceipt!);
   assert.equal(receipt?.purpose, 'daily');
   assert.ok((receipt?.daily?.durationMs ?? 0) >= 60, `the time runs from the first fetch, got ${receipt?.daily?.durationMs} ms`);
+}
+
+/** A daily fetched signed in names its account (PROF-1). A submit of it that
+ * arrives without the token (a client that could not read its session) is
+ * refused with 401 before anything is claimed, so the same answers still rank
+ * when they come back signed in; another account's submit is refused too. */
+async function dailyOwnerContracts() {
+  const learner = 'daily-owner-learner-001';
+  const other = 'daily-owner-learner-002';
+  const fetched = mockResponse();
+  await dailyHandler(quizRequest('GET', {}, undefined, learner), fetched as never);
+  assert.equal(fetched.statusCode, 200, JSON.stringify(fetched.body));
+  const sessionId = (fetched.body as { sessionId: string }).sessionId;
+  const session = decodeSessionEnvelope(sessionId)!;
+  assert.equal(session.userId, learner, 'the daily session names the account it was fetched for');
+  const answers = Object.fromEntries(session.questions.map((q) => [q.questionId, q.correctAnswer]));
+  const submit = async (user?: string) => {
+    const response = mockResponse();
+    await submitHandler(quizRequest('POST', {}, { sessionId, answers }, user), response as never);
+    return { status: response.statusCode, body: response.body as { resultReceipt?: string; error?: { code: string } } };
+  };
+
+  const tokenless = await submit();
+  assert.equal(tokenless.status, 401, `a signed-in daily sent without the token is refused (${JSON.stringify(tokenless.body)})`);
+  assert.equal(tokenless.body.error?.code, 'sign_in_required');
+  const stranger = await submit(other);
+  assert.equal(stranger.status, 409, `another account's submit is refused (${JSON.stringify(stranger.body)})`);
+  assert.equal(stranger.body.error?.code, 'session_owner_mismatch');
+  const ranked = await submit(learner);
+  assert.equal(ranked.status, 200, `the same answers rank once they come back signed in (${JSON.stringify(ranked.body)})`);
+  assert.equal(decodeQuizResultReceipt(ranked.body.resultReceipt!)?.purpose, 'daily');
+
+  // Fetched signed out, the daily names nobody and stays open to a guest.
+  const anonymous = mockResponse();
+  await dailyHandler(quizRequest('GET', {}), anonymous as never);
+  const guestSessionId = (anonymous.body as { sessionId: string }).sessionId;
+  const guestSession = decodeSessionEnvelope(guestSessionId)!;
+  assert.equal(guestSession.userId, null);
+  const guest = mockResponse();
+  await submitHandler(quizRequest('POST', {}, {
+    sessionId: guestSessionId,
+    answers: Object.fromEntries(guestSession.questions.map((q) => [q.questionId, q.correctAnswer])),
+  }), guest as never);
+  assert.equal(guest.statusCode, 200, JSON.stringify(guest.body));
 }
 
 /** The launch price (shared/launch-offer.ts): 4 Oct 2026 00:00 to 2 Nov 2026
@@ -2452,6 +2770,18 @@ async function main() {
   });
   assert.deepEqual(decodeQuizResultReceipt(receipt)?.breakdown, { javascript: { correct: 1, total: 2 } });
   assert.equal(decodeQuizResultReceipt(receipt)?.subject, 'webdev');
+  // A receipt from before 052 has no per-question XP and still decodes; one
+  // with it keeps it, and an XP out of range is refused.
+  assert.deepEqual(decodeQuizResultReceipt(receipt)?.outcomes, [{ questionId: 'closure-1', category: 'javascript', isCorrect: true }]);
+  const withXp = (xp: number) => encodeQuizResultReceipt({
+    userId: 'user-0001', correct: 1, total: 1,
+    breakdown: { javascript: { correct: 1, total: 1 } },
+    outcomes: [{ questionId: 'closure-1', category: 'javascript', isCorrect: true, xp }],
+    subject: 'webdev', questXp: 6, purpose: 'quiz',
+  });
+  assert.equal(decodeQuizResultReceipt(withXp(6))?.outcomes[0].xp, 6);
+  assert.equal(decodeQuizResultReceipt(withXp(101)), null);
+  assert.equal(decodeQuizResultReceipt(withXp(2.5)), null);
 
   const now = Date.UTC(2026, 6, 21);
   const reviewQuestions = [
@@ -3087,7 +3417,7 @@ async function main() {
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue loader must not import the solutions');
   const pathCatalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(pathCatalogSource, /from '\.\/solutions/, 'the learning-path catalogue must not import the solutions');
-  for (const key of ['codingRun', 'codingDraft', 'codingReveal', 'githubConnect', 'githubSync',
+  for (const key of ['codingRun', 'codingReveal', 'githubConnect', 'githubSync',
                      'learningPathStart', 'learningPathSubmit', 'learningPathDraft', 'learningPathEnroll']) {
     assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
   }
@@ -3202,7 +3532,10 @@ async function main() {
     // The shared board stays cacheable; a personal one never is.
     const boardHandler = readFileSync(join(process.cwd(), 'api/leaderboard.ts'), 'utf8');
     assert.match(boardHandler, /'private, no-store'/);
-    assert.match(boardHandler, /'public, s-maxage=60, stale-while-revalidate=300'/);
+    assert.match(boardHandler, /'public, s-maxage=60'/);
+    // Never served stale past the minute: a name switched off leaves every
+    // shared board within about a minute (review finding RANK-5).
+    assert.doesNotMatch(boardHandler, /stale-while-revalidate/, 'the shared boards are not served stale');
     assert.match(boardHandler, /RATE_LIMITS\.leaderboardPersonal/);
 
     // The screen: a rank is a number, never a medal colour, and the
@@ -3520,6 +3853,9 @@ async function main() {
     assert.equal(verifications.length, 1, 'one request verifies its credentials once');
   }
 
+  // Quizzes, Learn, coding and flashcards take the same two tiers.
+  await classroomLimitContracts();
+
   const healthRes = mockResponse();
   await healthHandler({ method: 'POST', headers: {}, query: {} } as never, healthRes as never);
   assert.equal(healthRes.statusCode, 405);
@@ -3618,10 +3954,16 @@ async function main() {
     const passedCheckpoint = { nextjs: { checkpoints: { '1': { passed: true } } } };
     assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'checkpoint', checkpoint: 1 }), true);
     assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'checkpoint', checkpoint: 2 }), false);
-    // A part test is gated by the levels it spans, not by a record of sitting
-    // it, so it never takes the carve-out.
-    assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'test', from: 1, to: 2 }), false,
-      'a part test is never "already passed"');
+    // A part test is recorded under `checkpoints` by its part number, so a
+    // passed one takes the carve-out on `?test=` as it does on `?checkpoint=`.
+    // Before, `?test=` refused it with not_in_plan while `?checkpoint=` served
+    // the same test, and the map offered it as passed and clickable.
+    assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'test', part: 1, from: 1, to: 5 }), true,
+      'a passed part test is already passed under its ?test= name');
+    assert.equal(stepAlreadyPassed(passedCheckpoint, 'nextjs', { kind: 'test', part: 2, from: 6, to: 10 }), false,
+      'a part test never passed still takes the ordinary check');
+    assert.equal(stepAlreadyPassed(passedNext, 'nextjs', { kind: 'test', part: 1, from: 1, to: 2 }), false,
+      'passing the levels a part test spans is not passing the test');
   }
 
   // No plan may be empty, and every plan topic must belong to devShark.
@@ -3769,8 +4111,13 @@ async function main() {
   // Addresses: bounded, and refused when the obviously required parts are
   // missing, before anything is charged.
   assert.equal(validateAddress({}).ok, false);
-  assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'zz' }).ok, true);
+  const lowerCase = validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'cz' });
+  assert.equal(lowerCase.ok && lowerCase.address.country, 'CZ', 'a country code is read in capitals');
   assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country: 'ZZZ' }).ok, false);
+  // Two letters are not enough: the code has to be an assigned ISO 3166-1 one.
+  for (const country of ['ZZ', 'UK', 'EU', 'XK']) {
+    assert.equal(validateAddress({ name: 'A', line1: 'B', city: 'C', postalCode: 'D', country }).ok, false, `${country} is not an ISO 3166-1 code`);
+  }
   assert.equal(validateAddress({ name: 'x'.repeat(200), line1: 'B', city: 'C', postalCode: 'D', country: 'CZ' }).ok, false);
 
   // Tokens follow verified XP only, and the rate is the documented one.
@@ -4336,6 +4683,7 @@ async function main() {
   await quizSubmitScopeContracts();
   await guestChallengeLimitContracts();
   await dailyIntegrityContracts();
+  await dailyOwnerContracts();
   seededShuffleContracts();
   await quizDifficultyContracts();
   await dailySwitchContracts();

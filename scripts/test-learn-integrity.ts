@@ -11,13 +11,17 @@
  *    spaced-mastery fields included, because the browser replaces its copy
  *    with it;
  *  - a topic granted to an account opens its levels as the progress GET
- *    reports it open;
+ *    reports it open, and only once the account's address is confirmed;
  *  - a failed progress read answers 503 rather than refusing the level as if
  *    the learner had not earned it;
  *  - a coding task whose solution was revealed in the attempt does not
  *    complete the level;
  *  - a guest's level passes on its questions with its coding marked
- *    unverified, while an account's still waits for a recorded coding pass.
+ *    unverified, while an account's still waits for a recorded coding pass;
+ *  - a part test already passed in a topic outside the learner's plan is
+ *    served under `?test=` as it is under `?checkpoint=`;
+ *  - a level lost on hearts counts for the streak once, and a database
+ *    without the streak routine (before migration 048) does not fail it.
  *
  * Nothing leaves the machine. */
 
@@ -29,7 +33,15 @@ const LEARNER = { id: '5a0e7c1e-2f7a-4c3d-9a61-5d2f0c9e8a41', email: 'learner@ex
 const OTHER = { id: '9b1f3a2e-5b6d-4e8f-9a0b-1c2d3e4f5a6b', email: 'other@example.invalid', token: 'learn-contract-other' };
 const OWNER = { id: '3c2d1e0f-6a7b-4c8d-9e0f-a1b2c3d4e5f6', email: 'owner@example.invalid', token: 'learn-contract-owner' };
 const BROKEN = { id: '7d6c5b4a-3e2f-4a1b-8c9d-0e1f2a3b4c5d', email: 'broken@example.invalid', token: 'learn-contract-broken' };
-const USERS = [LEARNER, OTHER, OWNER, BROKEN];
+// Someone who signed up with the owner's address and never confirmed it.
+const OWNER_UNCONFIRMED = { id: '4e3d2c1b-7a8b-4c9d-8e0f-b1c2d3e4f5a6', email: OWNER.email, token: 'learn-contract-owner-unconfirmed', unconfirmed: true };
+/** On the backend track, whose plan has no HTML. */
+const BACKEND = {
+  id: '2e4f6a8b-1c3d-4e5f-8a9b-0c1d2e3f4a5b', email: 'backend@example.invalid', token: 'learn-contract-backend',
+  meta: { devquiz_learning_preference_v1: { schemaVersion: 1, baseTrack: 'backend', specialization: null } },
+};
+const HEARTS = { id: '6f5e4d3c-2b1a-4f0e-9d8c-7b6a5f4e3d2c', email: 'hearts@example.invalid', token: 'learn-contract-hearts' };
+const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown>; unconfirmed?: boolean }> = [LEARNER, OTHER, OWNER, BROKEN, OWNER_UNCONFIRMED, BACKEND, HEARTS];
 const PREMIUM = new Set([OWNER.id]);
 const DAY = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
 
@@ -40,6 +52,10 @@ const tables: Record<string, Row[]> = {
   roadmap_attempt_answers: [],
   roadmap_attempt_coding: [],
 };
+/** Every routine the handler called, with its arguments, in order. */
+const rpcCalls: { name: string; args: Row }[] = [];
+/** Answer advance_verified_streak as a database before migration 048 does. */
+let streakRoutineMissing = false;
 
 const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
   let text = '';
@@ -132,12 +148,16 @@ async function startStandIn() {
       const token = String(req.headers.authorization ?? '').replace(/^Bearer\s+/i, '');
       const user = USERS.find((one) => one.token === token);
       if (!user) return send(401, { message: 'invalid token' });
-      return send(200, { id: user.id, email: user.email, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} });
+      return send(200, { id: user.id, email: user.email, ...(user.unconfirmed ? {} : { email_confirmed_at: '2026-09-01T00:00:00Z' }), aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: user.meta ?? {} });
     }
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname);
     if (rpc) {
       const raw = await readBody(req);
       const args = (raw ? JSON.parse(raw) : {}) as Row;
+      rpcCalls.push({ name: rpc[1], args });
+      if (rpc[1] === 'advance_verified_streak' && streakRoutineMissing) {
+        return send(404, { code: 'PGRST202', message: 'Could not find the function public.advance_verified_streak(p_user_id) in the schema cache' });
+      }
       if (rpc[1] === 'record_roadmap_answer_v2') { const out = recordAnswer(args); return send(out.status, out.body); }
       if (rpc[1] === 'complete_verified_roadmap_attempt') { const out = completeAttempt(args); return send(out.status, out.body); }
       if (rpc[1] === 'is_premium') return send(200, PREMIUM.has(String(args.p_user)));
@@ -314,6 +334,12 @@ async function main() {
     assert.equal(grantedLevel.statusCode, 200, `a granted topic serves its first level (${JSON.stringify(grantedLevel.body?.error)})`);
     const notGranted = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OTHER.token);
     assert.equal(notGranted.body?.error?.code, 'topic_locked', 'an account without the grant is still refused');
+    // The grant is keyed on the address, so an unconfirmed one gets nothing.
+    const unconfirmed = await call('GET', { resource: 'progress' }, OWNER_UNCONFIRMED.token);
+    assert.equal(unconfirmed.statusCode, 200, JSON.stringify(unconfirmed.body));
+    assert.ok(!unconfirmed.body.extra.unlocked.includes('system-design'), 'an unconfirmed owner address is not granted the topic');
+    const unconfirmedLevel = await call('GET', { topic: 'system-design', level: '1', lang: 'en' }, OWNER_UNCONFIRMED.token);
+    assert.equal(unconfirmedLevel.body?.error?.code, 'topic_locked', 'nor served its levels');
     console.log('PASS learn: a granted topic opens its levels');
 
     // ── A revealed coding task does not complete the level ─────────────────
@@ -376,6 +402,90 @@ async function main() {
     assert.equal(blip.statusCode, 503, `a progress read that fails answers 503 (${JSON.stringify(blip.body)})`);
     assert.equal(blip.body?.error?.code, 'progress_unavailable');
     console.log('PASS learn: a failed progress read answers 503, not "complete the preceding steps"');
+
+    // ── A passed part test outside the plan is served on both names ────────
+    // HTML is not on the backend track. The map draws a passed part test as
+    // passed and opens it with `?test=`; that answered 403 not_in_plan while
+    // `?checkpoint=`, the older name for the same test, served it.
+    {
+      const map = await call('GET', {});
+      const htmlLevelCount = (map.body.structure.html.levels as unknown[]).length;
+      assert.ok(htmlLevelCount > 3, 'HTML has levels to pass');
+      // Every HTML level passed but the last, and the first part test.
+      const htmlLevels = Object.fromEntries(Array.from({ length: htmlLevelCount - 1 }, (_, i) => [String(i + 1), { passed: true, bestPct: 100 }]));
+      tables.roadmap_progress.push({
+        user_id: BACKEND.id,
+        extra: {},
+        data: { html: { levels: htmlLevels, checkpoints: { '1': { passed: true, bestPct: 95 } } } },
+      });
+      const viaTest = await call('GET', { topic: 'html', test: '1', lang: 'en' }, BACKEND.token);
+      assert.equal(viaTest.statusCode, 200, `a passed part test outside the plan is served under ?test= (${JSON.stringify(viaTest.body?.error)})`);
+      assert.equal(viaTest.body.kind, 'checkpoint');
+      assert.equal(viaTest.body.ref, 1);
+      const viaCheckpoint = await call('GET', { topic: 'html', checkpoint: '1', lang: 'en' }, BACKEND.token);
+      assert.equal(viaCheckpoint.statusCode, 200, 'and still under ?checkpoint=');
+      const notPassed = await call('GET', { topic: 'html', test: '2', lang: 'en' }, BACKEND.token);
+      assert.equal(notPassed.statusCode, 403, 'a part test never passed outside the plan is still refused');
+      assert.equal(notPassed.body?.error?.code, 'not_in_plan');
+      const nextLevel = await call('GET', { topic: 'html', level: String(htmlLevelCount), lang: 'en' }, BACKEND.token);
+      assert.equal(nextLevel.body?.error?.code, 'not_in_plan', 'as is a level never passed');
+    }
+    console.log('PASS learn: a passed part test outside the plan is served under ?test= and ?checkpoint=');
+
+    // ── A level lost on hearts counts for the streak ───────────────────────
+    // Three wrong answers end a level before every question is answered. The
+    // handler closes that attempt itself, without the completion routine that
+    // advances the streak for a passed or failed level, so it advances it.
+    const loseOnHearts = async () => {
+      const level = await call('GET', { topic: 'javascript', level: '1', lang: 'en' }, HEARTS.token);
+      assert.equal(level.statusCode, 200, JSON.stringify(level.body));
+      const session = tokens.decodeSessionEnvelope(level.body.sessionId)!;
+      for (const question of session.questions.slice(0, 3)) {
+        const options = (level.body.questions as Array<{ id: string; options: string[] }>).find((one) => one.id === question.questionId)!.options.length;
+        const wrong = await call('POST', { resource: 'answer' }, HEARTS.token, { sessionId: level.body.sessionId, questionId: question.questionId, selectedIndex: (question.correctAnswer + 1) % options, lang: 'en' });
+        assert.equal(wrong.statusCode, 200, JSON.stringify(wrong.body));
+        assert.equal(wrong.body.isCorrect, false);
+      }
+      rpcCalls.length = 0;
+      const done = await call('POST', { resource: 'complete' }, HEARTS.token, { sessionId: level.body.sessionId });
+      assert.equal(done.statusCode, 200, JSON.stringify(done.body));
+      assert.equal(done.body.passed, false, 'a level lost on hearts is not passed');
+      assert.equal(done.body.applied, true, 'and this request closed it');
+      return level.body.sessionId as string;
+    };
+    {
+      const sessionId = await loseOnHearts();
+      assert.equal(rpcCalls.some((one) => one.name === 'complete_verified_roadmap_attempt'), false, 'the attempt is closed by the handler, not the completion routine');
+      const streaks = rpcCalls.filter((one) => one.name === 'advance_verified_streak');
+      assert.equal(streaks.length, 1, `the streak routine runs once (${JSON.stringify(rpcCalls.map((one) => one.name))})`);
+      assert.deepEqual(streaks[0].args, { p_user_id: HEARTS.id }, 'for the learner who lost the level');
+      // A retried completion finds the attempt closed and counts nothing again.
+      rpcCalls.length = 0;
+      const again = await call('POST', { resource: 'complete' }, HEARTS.token, { sessionId });
+      assert.equal(again.statusCode, 200, JSON.stringify(again.body));
+      assert.equal(again.body.applied, false);
+      assert.equal(rpcCalls.some((one) => one.name === 'advance_verified_streak'), false, 'a retried completion does not count the day again');
+      // A guest's level lost on hearts has no streak to count.
+      const guest = await call('GET', { topic: 'javascript', level: '1', lang: 'en' });
+      const guestSession = tokens.decodeSessionEnvelope(guest.body.sessionId)!;
+      for (const question of guestSession.questions.slice(0, 3)) {
+        const options = (guest.body.questions as Array<{ id: string; options: string[] }>).find((one) => one.id === question.questionId)!.options.length;
+        await call('POST', { resource: 'answer' }, undefined, { sessionId: guest.body.sessionId, questionId: question.questionId, selectedIndex: (question.correctAnswer + 1) % options, lang: 'en' });
+      }
+      rpcCalls.length = 0;
+      const guestDone = await call('POST', { resource: 'complete' }, undefined, { sessionId: guest.body.sessionId });
+      assert.equal(guestDone.statusCode, 200, JSON.stringify(guestDone.body));
+      assert.equal(rpcCalls.some((one) => one.name === 'advance_verified_streak'), false, 'a guest has no streak');
+      // Before migration 048 the routine is missing: the level still closes.
+      streakRoutineMissing = true;
+      try {
+        await loseOnHearts();
+        assert.equal(rpcCalls.filter((one) => one.name === 'advance_verified_streak').length, 1, 'the routine was asked');
+      } finally {
+        streakRoutineMissing = false;
+      }
+    }
+    console.log('PASS learn: a level lost on hearts counts for the streak once, and closes without the routine');
   } finally {
     server.close();
   }

@@ -313,8 +313,10 @@ function ProgressPanel({ done, target, t }: { done: number; target: number; t: T
   );
 }
 
-/* ── target-reached celebration + the day's card pack ─────────────────────── */
+/* ── target reached ───────────────────────────────────────────────────────── */
 
+// Nothing is handed out for the target: the card pack this panel once promised
+// went with the Shark Cards client on 15 September.
 function DonePanel({ t }: { t: TFn }) {
   return (
     <section className="today-done ss-panel">
@@ -323,14 +325,8 @@ function DonePanel({ t }: { t: TFn }) {
         <div>
           <Kicker>{t('today.targetMet')}</Kicker>
           <Heading level={2}>{t('today.done')}</Heading>
+          <DayChangeNote />
         </div>
-      </div>
-      <div className="today-pack">
-        <span className="today-pack__label">
-          <SharkFin size={18} />
-          {t('today.packReady')}
-        </span>
-        <Link to="/collection" className="today-pack__cta">{t('today.openPack')}</Link>
       </div>
     </section>
   );
@@ -396,6 +392,7 @@ function EmptyState({ t }: { t: TFn }) {
       <Heading level={2}>{t('today.emptyTitle')}</Heading>
       <div style={{ marginTop: 4, marginBottom: 18 }}>
         <Text type="supporting" color="secondary">{t('today.emptyBody')}</Text>
+        <DayChangeNote justify="center" />
       </div>
       <Link to="/learn" className="today-empty__cta">{t('nav.learn')}</Link>
     </section>

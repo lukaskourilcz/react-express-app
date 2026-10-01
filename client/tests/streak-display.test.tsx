@@ -1,10 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { StreakCard } from '../src/components/Profile';
 import type { UserStats } from '../src/lib/supabase';
-import { liveStreak, shieldRemaining, type StreakProtection } from '../src/lib/streakFreezes';
+import { liveStreak, shieldRemaining, streakState, type StreakProtection } from '../src/lib/streakFreezes';
 import { localDayChangeTime } from '../src/lib/utcDay';
 import { server } from './mocks/server';
 
@@ -89,6 +89,29 @@ describe('liveStreak', () => {
     expect(liveStreak({ current_streak: 0, last_quiz_date: '2026-09-29' }, none, at('2026-09-29T12:00:00Z'))).toBe(0);
     expect(liveStreak({ current_streak: 5, last_quiz_date: null }, none, at('2026-09-29T12:00:00Z'))).toBe(0);
   });
+
+  it('keeps every shield’s days, not only the latest one’s (migration 052)', () => {
+    // Learnt on the 27th and raised a shield (27th, 28th); still away on the
+    // 29th, raised a second one with the last protection (29th, 30th). The
+    // server keeps both in shieldDays; shieldUntil is only the second.
+    const chained = { remaining: 0, shieldUntil: '2026-10-01T00:00:00Z', shieldDays: ['2026-09-27', '2026-09-28', '2026-09-29', '2026-09-30'] };
+    expect(liveStreak(stats('2026-09-27', 20), chained, at('2026-09-29T09:00:00Z'))).toBe(20);
+    expect(liveStreak(stats('2026-09-27', 20), chained, at('2026-10-01T09:00:00Z'))).toBe(20);
+    // Before 052 the second shield hid the first: the 28th read as missed.
+    expect(liveStreak(stats('2026-09-27', 20), { remaining: 0, shieldUntil: '2026-10-01T00:00:00Z' }, at('2026-09-29T09:00:00Z'))).toBe(0);
+    // A hole in the chain still needs a protection.
+    const holed = { remaining: 0, shieldUntil: '2026-10-01T00:00:00Z', shieldDays: ['2026-09-27', '2026-09-29', '2026-09-30'] };
+    expect(liveStreak(stats('2026-09-26', 20), holed, at('2026-10-01T09:00:00Z'))).toBe(0);
+    expect(liveStreak(stats('2026-09-26', 20), { ...holed, remaining: 1 }, at('2026-10-01T09:00:00Z'))).toBe(20);
+  });
+
+  it('counts the missed days a protection still has to pay for', () => {
+    expect(streakState(stats('2026-09-28'), none, at('2026-09-29T12:00:00Z'))).toEqual({ streak: 12, missed: 0 });
+    expect(streakState(stats('2026-09-27'), { remaining: 1, shieldUntil: null }, at('2026-09-29T12:00:00Z'))).toEqual({ streak: 12, missed: 1 });
+    expect(streakState(stats('2026-09-26'), { remaining: 2, shieldUntil: null, shieldDays: ['2026-09-27'] }, at('2026-09-29T12:00:00Z')))
+      .toEqual({ streak: 12, missed: 1 });
+    expect(streakState(stats('2026-09-20'), { remaining: 2, shieldUntil: null }, at('2026-09-29T12:00:00Z')).streak).toBe(0);
+  });
 });
 
 describe('shieldRemaining', () => {
@@ -108,6 +131,7 @@ describe('shieldRemaining', () => {
 
 // The Profile's streak card, reading the protection state the server returns.
 const utcDate = (daysAgo: number) => new Date(Date.now() - daysAgo * 86_400_000).toISOString().slice(0, 10);
+const utcMidnight = (daysAgo: number) => `${utcDate(daysAgo)}T00:00:00.000Z`;
 const account = (streak: number, lastQuizDaysAgo: number | null): UserStats => ({
   id: 'stats-1', user_id: 'user-1', email: null, name: null, picture: null,
   total_quizzes: 20, total_correct: 150, total_questions: 200,
@@ -117,16 +141,75 @@ const account = (streak: number, lastQuizDaysAgo: number | null): UserStats => (
 });
 const protectionIs = (state: Partial<StreakProtection>) =>
   server.use(http.get('*/api/user/freezes', () => HttpResponse.json({
-    remaining: 2, period: new Date().toISOString().slice(0, 7), used: [], shieldUntil: null, shieldSupported: true, ...state,
+    remaining: 2, period: new Date().toISOString().slice(0, 7), used: [], shieldUntil: null, shieldDays: [], shieldSupported: true, ...state,
   })));
 const currentStreak = () => within(screen.getByRole('group', { name: 'Current streak' }));
 
 describe('the Profile streak card', () => {
-  it('keeps the count a protection still covers, and offers the shield', async () => {
+  // Until migration 052 this card offered the shield here, and pressing it
+  // spent the one protection yesterday needed: the streak ended the moment
+  // the learner came back (review finding RANK-2).
+  it('keeps the count a protection still covers, and says to learn today rather than spend that protection', async () => {
     protectionIs({ remaining: 1 });
+    render(<LanguageProvider><StreakCard stats={account(12, 2)} /></LanguageProvider>);
+    expect(await currentStreak().findByText('Learn today to keep your streak')).toBeVisible();
+    expect(currentStreak().getByText('12')).toBeVisible();
+    expect(currentStreak().queryByRole('button', { name: 'Protect today and tomorrow' })).toBeNull();
+  });
+
+  it('does not offer a shield that two missed days would need both protections for', async () => {
+    protectionIs({ remaining: 2 });
+    render(<LanguageProvider><StreakCard stats={account(12, 3)} /></LanguageProvider>);
+    expect(await currentStreak().findByText('Learn today to keep your streak')).toBeVisible();
+    expect(currentStreak().queryByRole('button', { name: 'Protect today and tomorrow' })).toBeNull();
+  });
+
+  it('offers the shield when a protection is spare after the missed day', async () => {
+    protectionIs({ remaining: 2 });
     render(<LanguageProvider><StreakCard stats={account(12, 2)} /></LanguageProvider>);
     expect(await currentStreak().findByRole('button', { name: 'Protect today and tomorrow' })).toBeVisible();
     expect(currentStreak().getByText('12')).toBeVisible();
+  });
+
+  it('says what the server says when it refuses the shield', async () => {
+    protectionIs({ remaining: 1 });
+    server.use(http.post('*/api/user/freezes', () => HttpResponse.json(
+      { error: { code: 'shield_would_end_streak', message: 'Learn today to keep your streak' } }, { status: 409 },
+    )));
+    render(<LanguageProvider><StreakCard stats={account(12, 1)} /></LanguageProvider>);
+    fireEvent.click(await currentStreak().findByRole('button', { name: 'Protect today and tomorrow' }));
+    expect(await currentStreak().findByRole('alert')).toHaveTextContent('Learn today to keep your streak');
+  });
+
+  it('keeps a streak two shields in a row cover', async () => {
+    protectionIs({ remaining: 0, shieldUntil: utcMidnight(0), shieldDays: [utcDate(4), utcDate(3), utcDate(2), utcDate(1)] });
+    render(<LanguageProvider><StreakCard stats={account(12, 4)} /></LanguageProvider>);
+    expect(await currentStreak().findByText('No protection left this month')).toBeVisible();
+    expect(currentStreak().getByText('12')).toBeVisible();
+  });
+
+  it('shows the streak as unknown when the protection read fails and the gap depends on it', async () => {
+    let asked = 0;
+    server.use(http.get('*/api/user/freezes', () => {
+      asked += 1;
+      return HttpResponse.json({ error: { code: 'db_error', message: 'Could not load streak protection' } }, { status: 500 });
+    }));
+    render(<LanguageProvider><StreakCard stats={account(12, 2)} /></LanguageProvider>);
+    await vi.waitFor(() => expect(asked).toBe(1));
+    expect(await currentStreak().findByLabelText('Unavailable')).toHaveTextContent('—');
+    expect(currentStreak().queryByText('0')).toBeNull();
+  });
+
+  it('still shows a streak whose last day was yesterday when the protection read fails', async () => {
+    let asked = 0;
+    server.use(http.get('*/api/user/freezes', () => {
+      asked += 1;
+      return HttpResponse.json({ error: { code: 'db_error', message: 'Could not load streak protection' } }, { status: 500 });
+    }));
+    render(<LanguageProvider><StreakCard stats={account(12, 1)} /></LanguageProvider>);
+    await vi.waitFor(() => expect(asked).toBe(1));
+    expect(currentStreak().getByText('12')).toBeVisible();
+    expect(currentStreak().queryByLabelText('Unavailable')).toBeNull();
   });
 
   it('shows 0 once nothing covers the gap, and offers no shield', async () => {
@@ -140,7 +223,7 @@ describe('the Profile streak card', () => {
     let asked = 0;
     server.use(http.get('*/api/user/freezes', () => {
       asked += 1;
-      return HttpResponse.json({ remaining: 2, period: '2026-09', used: [], shieldUntil: null, shieldSupported: true });
+      return HttpResponse.json({ remaining: 2, period: '2026-09', used: [], shieldUntil: null, shieldDays: [], shieldSupported: true });
     }));
     render(<LanguageProvider><StreakCard stats={account(0, null)} /></LanguageProvider>);
     await vi.waitFor(() => expect(asked).toBe(1));

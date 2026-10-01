@@ -52,20 +52,27 @@ function canSeeAnswers(match: { mode: string; host_id: string; status: string },
   return match.mode === 'classroom' && sub !== null && sub === match.host_id;
 }
 
-// Strip the answer key — and the explanation, which usually spells the answer
-// out — from a match's question list for viewers who may not see them yet.
-// Shared by join() and state() so the two endpoints can't drift apart.
+// The questions a viewer may read. Whoever may see the answers gets every
+// question with its key. Everyone else gets only the questions already shown
+// (none in the lobby, up to the current one while the room runs), without the
+// answer key and without the explanation, which usually spells the answer
+// out. `question_count` carries the length of the round. Shared by join() and
+// state() so the two endpoints can't drift apart.
 function sanitizeQuestions(
-  match: { mode: string; host_id: string; status: string; questions: unknown },
+  match: { mode: string; host_id: string; status: string; current_index: number | null; questions: unknown },
   sub: string | null,
 ): Array<Record<string, unknown>> {
-  const questions = match.questions as Array<Record<string, unknown>>;
+  const questions = Array.isArray(match.questions) ? (match.questions as Array<Record<string, unknown>>) : [];
   if (canSeeAnswers(match, sub)) return questions;
-  return questions.map((q) => {
+  const shown = match.status === 'running' ? questions.slice(0, (match.current_index ?? 0) + 1) : [];
+  return shown.map((q) => {
     const { correct_index: _ci, explanation: _e, ...rest } = q;
     return rest;
   });
 }
+
+const questionCount = (match: { questions: unknown }): number =>
+  Array.isArray(match.questions) ? match.questions.length : 0;
 
 // Move a running match to its next question — or finish it after the last
 // one. The conditional update (status + current_index must still match what
@@ -345,6 +352,10 @@ async function join(req: VercelRequest, res: VercelResponse) {
       question_started_at: match.question_started_at,
       question_duration_s: match.question_duration_s,
       questions: sanitized,
+      question_count: questionCount(match),
+      // The clients count each question down against the server's clock, so
+      // a device clock that is off neither closes nor reveals a question early.
+      server_now: new Date().toISOString(),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
@@ -461,6 +472,16 @@ async function state(req: VercelRequest, res: VercelResponse) {
       if (expired || allAnswered) {
         const bumped = await tryAdvance(match);
         if (bumped) match = bumped as typeof match;
+        else {
+          // A read or an answer at the same moment moved the room on first.
+          // Send the room as it left it, not the question that just closed:
+          // each client reads once when the clock runs out and would wait
+          // for the next poll on a stale answer.
+          const { data: moved } = await withTimeout(
+            supabase!.from('matches').select(STATE_COLUMNS).eq('id', match.id).maybeSingle(),
+          );
+          if (moved) match = moved as typeof match;
+        }
       }
     }
 
@@ -472,9 +493,10 @@ async function state(req: VercelRequest, res: VercelResponse) {
     );
 
     return res.json({
-      match: { ...match, questions: sanitizeQuestions(match, sub) },
+      match: { ...match, questions: sanitizeQuestions(match, sub), question_count: questionCount(match) },
       participants: participantsRes.data ?? [],
       scoreboard,
+      server_now: new Date().toISOString(),
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';

@@ -611,6 +611,8 @@ async function main() {
   }
   console.log(`Hidden checks: ${cheatTasks} tasks reject a constant answer, ${tables} of them a table of the visible answers too (${((Date.now() - cheatsStarted) / 1000).toFixed(1)} s).`);
 
+  await stagesPromisesAndSignatures({ fail, checker, ts, byId });
+
   /* ── the last hint rung ─────────────────────────────────────────────── */
   // The ladder ends on the task's first reference, or on the documentation
   // page of its first focus tag: official documentation either way.
@@ -860,6 +862,186 @@ async function main() {
 
   const byLabel = CODING_DIFFICULTIES.map((label) => `${label} ${labelCounts.get(label) ?? 0}`).join(', ');
   console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}; ${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+}
+
+/* ── staged levels, new-array promises and typed parameters ─────────── */
+// Three ways to pass a task without doing what its statement asks.
+//  1. A staged family (an evolving project, a short path, a FullStack app)
+//     shows the reference, junior and senior boards once a level is passed.
+//     None of them may pass the next level or its checkpoint as they stand,
+//     or pasting one back earns that level for nothing. React levels prove
+//     the reference only, because their suites take far longer to run.
+//  2. A statement that promises a new array is held to it: the reference
+//     changed to write its result into the array it was given, and hand that
+//     same array back, has to fail a check.
+//  3. A TypeScript signature is held by the type tests: the reference with
+//     every parameter typed `any` has to fail one. A checkpoint is graded on
+//     its smaller contract alone, so only the milestones are held to this.
+type ContentTask = (typeof CODING_TASKS)[number];
+
+/** How many parameters of the top-level functions are typed as something
+ * other than `unknown` or `any`: loosening those shows at the call site. */
+const typedParameterCount = (ts: TypeScriptApi, source: string): number => {
+  let count = 0;
+  const typed = (fn: import('typescript').SignatureDeclarationBase) => {
+    for (const parameter of fn.parameters) {
+      const kind = parameter.type?.kind;
+      if (kind !== undefined && kind !== ts.SyntaxKind.UnknownKeyword && kind !== ts.SyntaxKind.AnyKeyword) count += 1;
+    }
+  };
+  for (const statement of ts.createSourceFile('solution.ts', source, ts.ScriptTarget.Latest, true).statements) {
+    if (ts.isFunctionDeclaration(statement)) typed(statement);
+    if (ts.isVariableStatement(statement)) {
+      for (const declaration of statement.declarationList.declarations) {
+        const value = declaration.initializer;
+        if (value && (ts.isArrowFunction(value) || ts.isFunctionExpression(value))) typed(value);
+      }
+    }
+  }
+  return count;
+};
+
+/** The solution with every function parameter typed `any`, callbacks too so
+ * the loosened code still compiles. Type parameters and return types stay,
+ * and so does every type written inside an annotation. */
+const everyParameterAny = (ts: TypeScriptApi, source: string): string => {
+  const file = ts.createSourceFile('solution.ts', source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
+  const any = (rest: boolean) => {
+    const one = ts.factory.createKeywordTypeNode(ts.SyntaxKind.AnyKeyword);
+    return rest ? ts.factory.createArrayTypeNode(one) : one;
+  };
+  const loosen = (parameters: import('typescript').NodeArray<import('typescript').ParameterDeclaration>) => ts.factory.createNodeArray(parameters.map((one) =>
+    ts.factory.updateParameterDeclaration(one, one.modifiers, one.dotDotDotToken, one.name, one.questionToken, any(Boolean(one.dotDotDotToken)), one.initializer)));
+  const transformer: import('typescript').TransformerFactory<import('typescript').SourceFile> = (context) => {
+    const visit = (node: import('typescript').Node): import('typescript').Node => {
+      // A function type inside an annotation is a type, not a function.
+      if (ts.isTypeNode(node)) return node;
+      const next = ts.visitEachChild(node, visit, context);
+      if (ts.isArrowFunction(next)) return ts.factory.updateArrowFunction(next, next.modifiers, next.typeParameters, loosen(next.parameters), next.type, next.equalsGreaterThanToken, next.body);
+      if (ts.isFunctionExpression(next)) return ts.factory.updateFunctionExpression(next, next.modifiers, next.asteriskToken, next.name, next.typeParameters, loosen(next.parameters), next.type, next.body);
+      if (ts.isFunctionDeclaration(next)) return ts.factory.updateFunctionDeclaration(next, next.modifiers, next.asteriskToken, next.name, next.typeParameters, loosen(next.parameters), next.type, next.body);
+      if (ts.isMethodDeclaration(next)) return ts.factory.updateMethodDeclaration(next, next.modifiers, next.asteriskToken, next.name, next.questionToken, next.typeParameters, loosen(next.parameters), next.type, next.body);
+      return next;
+    };
+    return (sourceFile) => ts.visitNode(sourceFile, visit) as import('typescript').SourceFile;
+  };
+  const result = ts.transform(file, [transformer]);
+  try {
+    return ts.createPrinter().printFile(result.transformed[0]);
+  } finally {
+    result.dispose();
+  }
+};
+
+/** Statements that promise the result is a new array. */
+const NEW_ARRAY = /\bnew (?:array|list)\b/i;
+
+/** The solution changed to work in place: every top-level function that a
+ * check calls with an array literal first writes its result into that array
+ * and hands the same array back, so the values still match. As a `probe` it
+ * throws there instead, which shows whether any check reaches the rewrite; as
+ * a `control` it changes nothing, which shows the wrapping itself is sound.
+ * Null when no check passes a top-level function an array literal first. */
+const inPlaceVariant = (ts: TypeScriptApi, js: string, checks: readonly Check[], mode: 'write' | 'probe' | 'control'): string | null => {
+  const names = topLevelNames(ts, js);
+  const wrapped = new Set<string>();
+  for (const check of checks) {
+    const visit = (node: import('typescript').Node): void => {
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && names.includes(node.expression.text) && node.arguments[0] && ts.isArrayLiteralExpression(node.arguments[0])) wrapped.add(node.expression.text);
+      ts.forEachChild(node, visit);
+    };
+    visit(ts.createSourceFile('call.ts', `(${check.call.trim().replace(/;+$/, '')}\n)`, ts.ScriptTarget.Latest, true));
+  }
+  if (wrapped.size === 0) return null;
+  const write = { write: 'args[0].length = 0; args[0].push(...out); return args[0];', probe: 'throw new Error("in place");', control: '' }[mode];
+  return [
+    `const __original = (() => {\n${js}\n;return { ${names.join(', ')} };\n})();`,
+    ...names.map((name) => wrapped.has(name)
+      ? `function ${name}(...args) { const out = __original.${name}(...args); if (Array.isArray(args[0]) && Array.isArray(out) && out !== args[0]) { ${write} } return out; }`
+      : `const ${name} = __original.${name};`),
+  ].join('\n');
+};
+
+async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
+  fail: (message: string) => void;
+  checker: ReturnType<typeof createTypeScript>;
+  ts: TypeScriptApi;
+  byId: ReadonlyMap<string, ContentTask>;
+}): Promise<void> {
+  const started = Date.now();
+  // The production grader's verdict: the visible checks and, in a fresh
+  // program, the hidden ones.
+  const passesChecks = async (task: ContentTask, code: string): Promise<boolean> => {
+    const run = await withTimeout(runChecks({ code, visible: task.tests ?? [], hidden: solutionFor(task.id)?.hiddenTests ?? [], shuffle: (list) => list }), 8_000, task.id);
+    return allPassed(run.visible) && (!run.hidden || allPassed(run.hidden));
+  };
+  // The same with the type tests (visible and hidden) first for TypeScript,
+  // and the suite with its hidden cases for React.
+  const passesTask = async (task: ContentTask, source: string): Promise<boolean> => {
+    const solution = solutionFor(task.id);
+    if (task.track === 'react') {
+      const run = await withTimeout(runReactSuite({ suite: withHiddenCases(task.suite!, solution?.hiddenSuite), appSource: source }), 20_000, task.id);
+      return !run.compileError && run.failed === 0 && run.total > 0;
+    }
+    if (task.track !== 'typescript') return passesChecks(task, source);
+    if (!typesPassed(checker.check(source, task.typeTests ?? []))) return false;
+    if (solution?.hiddenTypeTests?.length && !typesPassed(checker.check(source, solution.hiddenTypeTests))) return false;
+    return passesChecks(task, checker.toJavaScript(source));
+  };
+
+  // 1. What a pass shows must not pass the next level.
+  let staged = 0;
+  for (const project of EVOLVING_CHALLENGES) {
+    const milestones = project.stages.filter((id) => !id.endsWith('-start'));
+    for (const id of project.stages) {
+      if (!ONLY.test(id)) continue;
+      const earlier = milestones[milestones.indexOf(id.endsWith('-start') ? id.slice(0, -6) : id) - 1];
+      const task = byId.get(id);
+      const before = earlier ? byId.get(earlier) : undefined;
+      const shown = earlier ? solutionFor(earlier) : undefined;
+      if (!task || !before || !shown || task.verify !== 'tests' || task.track !== before.track) continue;
+      const boards: [string, string | undefined][] = task.track === 'react'
+        ? [['reference', shown.solution]]
+        : [['reference', shown.solution], ['junior', shown.junior], ['senior', shown.senior]];
+      for (const [name, source] of boards) {
+        if (!source?.trim()) continue;
+        staged += 1;
+        if (await passesTask(task, source)) fail(`${id}: the ${name} solution of ${earlier}, shown once that level is passed, already passes this one`);
+      }
+    }
+  }
+
+  // 2. A promised new array: an in-place version of the reference must fail.
+  let promises = 0;
+  for (const task of CODING_TASKS) {
+    if (task.verify !== 'tests' || task.track === 'react' || !task.tests || !ONLY.test(task.id) || !NEW_ARRAY.test(task.prompt.en)) continue;
+    const solution = solutionFor(task.id);
+    if (!solution) continue;
+    const js = task.track === 'typescript' ? checker.toJavaScript(solution.solution) : solution.solution;
+    const checks = [...task.tests, ...(solution.hiddenTests ?? [])];
+    const control = inPlaceVariant(ts, js, checks, 'control');
+    if (!control) continue;
+    if (!await passesChecks(task, control)) { fail(`${task.id}: the reference wrapped for the in-place check no longer passes, so that check proves nothing`); continue; }
+    // No call hands back a different array from the one it was given: the
+    // promise is about something the rewrite cannot reach.
+    if (await passesChecks(task, inPlaceVariant(ts, js, checks, 'probe')!)) continue;
+    promises += 1;
+    if (await passesChecks(task, inPlaceVariant(ts, js, checks, 'write')!)) fail(`${task.id}: the statement promises a new array, and a version that changes the array it was given and returns it passes every check`);
+  }
+
+  // 3. A TypeScript signature: every parameter typed any must fail a type test.
+  let signatures = 0;
+  for (const task of CODING_TASKS) {
+    if (task.track !== 'typescript' || task.verify !== 'tests' || !task.tests || task.id.endsWith('-start') || !ONLY.test(task.id)) continue;
+    const solution = solutionFor(task.id);
+    if (!solution || typedParameterCount(ts, solution.solution) === 0) continue;
+    signatures += 1;
+    const loose = everyParameterAny(ts, solution.solution);
+    if (typesPassed(checker.check(loose, task.typeTests ?? [])) && typesPassed(checker.check(loose, solution.hiddenTypeTests ?? []))) {
+      fail(`${task.id}: the reference with every parameter typed any still passes the type tests, so they do not hold the signature the statement gives`);
+    }
+  }
+  console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check (${((Date.now() - started) / 1000).toFixed(1)} s).`);
 }
 
 void main().catch((error) => {

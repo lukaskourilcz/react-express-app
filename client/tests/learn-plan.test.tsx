@@ -353,7 +353,10 @@ describe('a level whose session cannot be used', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Finish the coding task' }));
     expect(await screen.findByRole('heading', { name: 'Level complete' })).toBeInTheDocument();
-    expect(screen.getByText('Coding tasks are checked and saved when you sign in.')).toBeInTheDocument();
+    // Signing in replaces this device's progress with the account's, so the
+    // copy no longer promises the pass is "checked and saved when you sign in".
+    expect(screen.getByText('Coding tasks are not checked while you’re signed out. This pass stays on this device only, and signing in starts from your account’s progress instead.')).toBeInTheDocument();
+    expect(screen.queryByText(/when you sign in/)).toBeNull();
     // The coding was not checked, so the screen does not say it passed.
     expect(screen.queryByText('All coding tasks passed.')).toBeNull();
     expect(screen.queryByText(/still to pass/)).toBeNull();
@@ -371,7 +374,7 @@ describe('a level whose session cannot be used', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Finish the coding task' }));
     expect(await screen.findByRole('heading', { name: 'Not passed' })).toBeInTheDocument();
     expect(screen.getByText('1 coding tasks still to pass')).toBeInTheDocument();
-    expect(screen.queryByText('Coding tasks are checked and saved when you sign in.')).toBeNull();
+    expect(screen.queryByText(/Coding tasks are not checked while you’re signed out/)).toBeNull();
   });
 
   // CODE-4: revealing a solution inside a level completed the attempt at once,

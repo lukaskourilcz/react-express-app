@@ -18,9 +18,16 @@ afterEach(() => { auth.value = { user: null, isAuthenticated: false, isLoading: 
 // a render that suspends has to start inside an awaited act. Each mount is a
 // visit of its own, with a key that stays put while the held render is
 // retried, so each holds as a first visit does.
+//
+// The hold fetches the board into the cache before the screen observes it.
+// With gcTime 0 the cache could drop that unobserved board on a timer that
+// raced React's retried render; on a loaded machine the timer won, the screen
+// drew without its board and asked for it again. The app keeps unobserved
+// data for five minutes (lib/queryClient.ts), so here it is never dropped:
+// each test has a client of its own.
 let visits = 0;
 function mount() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
   return act(async () => render(
     <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[{ pathname: '/leaderboard', key: `visit-${++visits}` }]}>

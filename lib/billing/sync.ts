@@ -19,6 +19,8 @@ import { deploymentSubjectIds } from '../product-scope';
 import { billingConfig, premiumPriceIds, type BillingConfig } from './config';
 import { stripeErrorCode, type StripeApi } from './stripe';
 
+const log = createLogger('user/billing');
+
 export interface BillingDeps {
   supabase: SupabaseClient;
   stripe: StripeApi;
@@ -88,16 +90,49 @@ export function periodStart(sub: Stripe.Subscription): string | null {
   return iso(itemStarts.length ? Math.max(...itemStarts) : typeof legacy === 'number' ? legacy : null);
 }
 
+/** The `product` metadata devShark's checkout writes on every session and
+ * subscription it creates. The Stripe account may sell other things, and
+ * another product may write `supabase_user_id` too; this value is devShark's
+ * alone (finding BILL-1). */
+export const DEVSHARK_PRODUCT = 'devshark';
+
+type WithMetadata = { metadata?: Stripe.Metadata | null };
+
+/** The product the metadata names, or null when it names none, as on
+ * subscriptions made before the marker existed. */
+function markedProduct(object: WithMetadata): string | null {
+  const value = object.metadata?.product;
+  return typeof value === 'string' && value ? value : null;
+}
+
+/** Marked by devShark's checkout itself. */
+export const markedDevshark = (object: WithMetadata): boolean => markedProduct(object) === DEVSHARK_PRODUCT;
+
+/** Made by devShark's checkout: its product marker, or, on a session or
+ * subscription made before the marker, the account id it wrote. Another
+ * product's marker wins over an account id. */
+export function fromDevsharkCheckout(object: WithMetadata): boolean {
+  const product = markedProduct(object);
+  if (product !== null) return product === DEVSHARK_PRODUCT;
+  return typeof object.metadata?.supabase_user_id === 'string' && object.metadata.supabase_user_id.length > 0;
+}
+
 /** Whether the subscription bills a devShark Premium Price. The Stripe account
  * may sell other things, and a subscription for one of them on a customer
- * devShark created must not open Premium (finding integrity-7). With no Price
- * configured at all the question cannot be asked, and the checkout's metadata
- * decides. */
+ * devShark created must not open Premium (finding integrity-7). Another
+ * product's marker says no whatever the Price. With no Price configured at
+ * all the question cannot be asked, and the checkout's metadata decides. */
 export function billsPremium(sub: Stripe.Subscription, config: BillingConfig = billingConfig()): boolean {
+  if (markedProduct(sub) !== null && !markedDevshark(sub)) return false;
   const ours = premiumPriceIds(config);
-  if (ours.size === 0) return typeof sub.metadata?.supabase_user_id === 'string' && sub.metadata.supabase_user_id.length > 0;
+  if (ours.size === 0) return fromDevsharkCheckout(sub);
   return (sub.items?.data ?? []).some((item) => ours.has(idOf(item.price) ?? ''));
 }
+
+/** A devShark subscription: it bills a devShark Premium Price or devShark's
+ * checkout made it. Anything else on a shared Stripe account is left alone. */
+export const isDevsharkSubscription = (sub: Stripe.Subscription, config: BillingConfig = billingConfig()): boolean =>
+  billsPremium(sub, config) || fromDevsharkCheckout(sub);
 
 /** Whether the subscription is set to end instead of renewing. */
 export const endsInsteadOfRenewing = (sub: Stripe.Subscription): boolean =>
@@ -116,6 +151,8 @@ async function rpc<T>(deps: BillingDeps, name: string, args: Record<string, unkn
   if (error) {
     if (isRpcMissing(error)) throw new BillingMigrationError();
     const message = error.message ?? 'db_error';
+    // Migration 053: the account was deleted between the check and the write.
+    if (/\bunknown_account\b/.test(message)) throw new BillingPermanentError('unknown_user', name);
     if (/_conflict/.test(message)) throw new BillingPermanentError(message.match(/[a-z_]+_conflict/)?.[0] ?? 'conflict');
     throw new Error(`db_error: ${name}`);
   }
@@ -130,14 +167,19 @@ export const linkCustomer = (deps: BillingDeps, userId: string, customerId: stri
 
 export interface BillingAccount {
   customerId: string | null;
+  /** A subscription of the account can still charge (migration 053). */
   providerLive: boolean;
+  /** Those subscriptions, oldest first; empty before migration 053. */
+  liveSubscriptionIds: string[];
 }
 
 export async function billingAccount(deps: BillingDeps, userId: string): Promise<BillingAccount> {
   const raw = await rpc<Record<string, unknown> | null>(deps, 'billing_account', { p_user_id: userId });
+  const live = Array.isArray(raw?.liveSubscriptionIds) ? (raw.liveSubscriptionIds as unknown[]) : [];
   return {
     customerId: typeof raw?.customerId === 'string' && raw.customerId ? raw.customerId : null,
     providerLive: raw?.providerLive === true,
+    liveSubscriptionIds: live.filter((id): id is string => typeof id === 'string'),
   };
 }
 
@@ -156,6 +198,55 @@ async function resolveAccount(deps: BillingDeps, sub: Stripe.Subscription, hint:
   }
   if (!(await accountExists(deps.supabase, userId))) throw new BillingPermanentError('unknown_user', sub.id);
   return userId;
+}
+
+/** Whether Auth says this account does not exist: an answer about this very
+ * id. `accountExists` also reads a rejected key ("invalid") as missing, which
+ * is safe for a write it skips but not for a subscription it would end. */
+async function accountGone(deps: BillingDeps, userId: string): Promise<boolean> {
+  try {
+    const { error } = await withTimeout(deps.supabase.auth.admin.getUserById(userId));
+    if (!error) return false;
+    const e = error as unknown as { status?: unknown; code?: unknown; message?: unknown };
+    return e.status === 404 || e.code === 'user_not_found' || /user not found/i.test(String(e.message ?? ''));
+  } catch {
+    return false;
+  }
+}
+
+/** A subscription devShark's checkout made for an account that was deleted
+ * before it was paid (finding BILL-3): nobody can use it and nothing else
+ * would stop it, so it ends at Stripe now, without a new invoice or a
+ * proration. Only the product marker counts here, never an account id alone,
+ * which another product may write too. Nothing is refunded; that is the
+ * owner's call, and the log line says so. */
+async function endOrphanedSubscription(deps: BillingDeps, sub: Stripe.Subscription): Promise<void> {
+  if (!markedDevshark(sub) || !LIVE_SUBSCRIPTION_STATUSES.has(sub.status)) return;
+  const userId = sub.metadata?.supabase_user_id;
+  if (typeof userId !== 'string' || !USER_ID.test(userId) || !(await accountGone(deps, userId))) return;
+  try {
+    await deps.stripe.subscriptions.cancel(sub.id, { invoice_now: false, prorate: false });
+  } catch (error) {
+    if (stripeErrorCode(error).code !== 'resource_missing') throw error;
+  }
+  log({
+    level: 'warn',
+    status: 200,
+    kind: 'orphaned_subscription_ended',
+    subscription: sub.id,
+    action: 'Its account no longer exists. The subscription is cancelled; refund its payment in the Stripe dashboard if one was taken.',
+  });
+}
+
+/** `resolveAccount`, and a devShark subscription whose account is gone is
+ * ended on the way (BILL-3). */
+async function accountFor(deps: BillingDeps, sub: Stripe.Subscription, hint: string | null): Promise<string> {
+  try {
+    return await resolveAccount(deps, sub, hint);
+  } catch (error) {
+    if (error instanceof BillingPermanentError && error.code === 'unknown_user') await endOrphanedSubscription(deps, sub);
+    throw error;
+  }
 }
 
 async function retrieveSubscription(deps: BillingDeps, subscriptionId: string): Promise<Stripe.Subscription> {
@@ -183,17 +274,20 @@ export interface SyncResult {
  * that devShark's checkout created and that no longer bills such a Price (a
  * plan switched to another product) is written as canceled, so Premium ends
  * and a switch back opens it again. Any other subscription is not devShark's:
- * it is refused as permanent, which records the event with the reason. */
+ * it is refused as permanent, which records the event with the reason, and a
+ * revocation does not make it devShark's. A devShark subscription whose
+ * account was deleted is ended at Stripe (BILL-3) and recorded as
+ * unknown_user. */
 export async function syncSubscription(
   deps: BillingDeps,
   subscriptionId: string,
   options: { userHint?: string | null; revoke?: string | null } = {},
 ): Promise<SyncResult> {
   const sub = await retrieveSubscription(deps, subscriptionId);
-  const premium = Boolean(options.revoke) || billsPremium(sub);
-  const fromCheckout = typeof sub.metadata?.supabase_user_id === 'string' && sub.metadata.supabase_user_id.length > 0;
+  const premium = billsPremium(sub);
+  const fromCheckout = fromDevsharkCheckout(sub);
   if (!premium && !fromCheckout) throw new BillingPermanentError('not_devshark_price', sub.id);
-  const userId = await resolveAccount(deps, sub, options.userHint ?? null);
+  const userId = await accountFor(deps, sub, options.userHint ?? null);
   const customerId = idOf(sub.customer);
   if (customerId) await linkCustomer(deps, userId, customerId);
   const status = options.revoke ? 'revoked' : premium ? sub.status : 'canceled';
@@ -247,14 +341,25 @@ export async function subscriptionForPayment(
   return null;
 }
 
-const log = createLogger('user/billing');
-
 /** End a subscription now and revoke its grant: a full refund, a dispute, an
- * early fraud warning or a withdrawal. Cancelling at Stripe stops further
- * charges; the grant is written revoked with the reason in its note. Then
- * what Premium paid out while the subscription was live is taken back. */
-export async function revokeSubscription(deps: BillingDeps, subscriptionId: string, note: string): Promise<SyncResult> {
+ * early fraud warning or a withdrawal. Refunds, disputes and fraud warnings
+ * are events of the whole Stripe account, so nothing happens unless the
+ * subscription is devShark's and its account exists (finding BILL-1); anything
+ * else is refused as permanent before Stripe is asked to change anything.
+ * `before` runs once that is settled and before the cancellation: the refund
+ * of an early fraud warning. Cancelling at Stripe stops further charges; the
+ * grant is written revoked with the reason in its note. Then what Premium
+ * paid out while the subscription was live is taken back. */
+export async function revokeSubscription(
+  deps: BillingDeps,
+  subscriptionId: string,
+  note: string,
+  { before }: { before?: () => Promise<void> } = {},
+): Promise<SyncResult> {
   const sub = await retrieveSubscription(deps, subscriptionId);
+  if (!isDevsharkSubscription(sub)) throw new BillingPermanentError('not_devshark_price', sub.id);
+  await accountFor(deps, sub, null);
+  if (before) await before();
   if (sub.status !== 'canceled' && sub.status !== 'incomplete_expired') {
     try {
       await deps.stripe.subscriptions.cancel(subscriptionId, { invoice_now: false, prorate: false });
@@ -321,6 +426,13 @@ export async function applyCheckoutSession(
   }
   const userId = session.client_reference_id;
   if (!userId || !USER_ID.test(userId)) throw new BillingPermanentError('unknown_user', session.id);
+  if (!(await accountExists(deps.supabase, userId))) {
+    // Deleted after it opened Checkout (finding BILL-3): no customer link and
+    // no consent row for the erased id. Mirroring ends the subscription at
+    // Stripe and records unknown_user.
+    await syncSubscription(deps, subscriptionId, { userHint: userId });
+    throw new BillingPermanentError('unknown_user', session.id);
+  }
   const customerId = idOf(session.customer);
   if (customerId) await linkCustomer(deps, userId, customerId);
   if (session.consent?.terms_of_service === 'accepted') {
@@ -333,6 +445,72 @@ export async function applyCheckoutSession(
     });
   }
   return { status: 'complete', sync: await syncSubscription(deps, subscriptionId, { userHint: userId }) };
+}
+
+/** The customer's devShark subscriptions that can still charge, as Stripe has
+ * them right now, before any webhook about them arrived. A customer Stripe no
+ * longer has holds none. */
+export async function liveDevsharkSubscriptions(deps: BillingDeps, customerId: string): Promise<Stripe.Subscription[]> {
+  try {
+    const subs = await deps.stripe.subscriptions.list({ customer: customerId, status: 'all', limit: 20 });
+    return subs.data.filter((sub) => LIVE_SUBSCRIPTION_STATUSES.has(sub.status) && isDevsharkSubscription(sub));
+  } catch (error) {
+    if (stripeErrorCode(error).code === 'resource_missing') return [];
+    throw error;
+  }
+}
+
+/** Expire the customer's open devShark Checkout Sessions, so none of them can
+ * be paid any more (findings BILL-2 and BILL-3). `completed` says one was paid
+ * between the list and its expiry, in another tab a moment ago. */
+export async function expireOpenCheckouts(deps: BillingDeps, customerId: string): Promise<{ expired: number; completed: boolean }> {
+  let open: Stripe.Checkout.Session[];
+  try {
+    open = (await deps.stripe.checkout.sessions.list({ customer: customerId, status: 'open', limit: 100 })).data;
+  } catch (error) {
+    if (stripeErrorCode(error).code === 'resource_missing') return { expired: 0, completed: false };
+    throw error;
+  }
+  let expired = 0;
+  let completed = false;
+  for (const session of open) {
+    if (session.status !== 'open' || !fromDevsharkCheckout(session)) continue;
+    try {
+      await deps.stripe.checkout.sessions.expire(session.id);
+      expired += 1;
+    } catch (error) {
+      // Stripe refuses to expire a session that is no longer open; anything
+      // else is an outage.
+      const { status } = stripeErrorCode(error);
+      if (status === null || status >= 500) throw error;
+      const now = await deps.stripe.checkout.sessions.retrieve(session.id);
+      if (now.status === 'complete') completed = true;
+      else if (now.status !== 'expired') throw error;
+    }
+  }
+  return { expired, completed };
+}
+
+/** Two subscriptions that can both charge one account: a second checkout was
+ * paid before the first ended (finding BILL-2). Refunding one is the owner's
+ * decision, so this only says so, clearly. A failed read never fails the
+ * event. */
+async function warnOnSecondSubscription(deps: BillingDeps, sync: SyncResult): Promise<void> {
+  if (!LIVE_SUBSCRIPTION_STATUSES.has(sync.status)) return;
+  try {
+    const others = (await billingAccount(deps, sync.userId)).liveSubscriptionIds.filter((id) => id !== sync.subscriptionId);
+    if (others.length === 0) return;
+    log({
+      level: 'warn',
+      status: 200,
+      kind: 'second_subscription',
+      subscription: sync.subscriptionId,
+      others,
+      action: 'This account has more than one subscription that can charge it. Nothing was refunded: check them in the Stripe dashboard.',
+    });
+  } catch {
+    // The subscription is mirrored; the warning is best effort.
+  }
 }
 
 /* ── Webhook events ─────────────────────────────────────────────────────── */
@@ -367,14 +545,18 @@ export async function processBillingEvent(deps: BillingDeps, event: Stripe.Event
       const session = await deps.stripe.checkout.sessions.retrieve(id);
       if (session.mode !== 'subscription') return { outcome: 'ignored', note: 'not_a_subscription' };
       const applied = await applyCheckoutSession(deps, session, event.created);
-      return applied.sync ? { outcome: 'applied', sync: applied.sync } : { outcome: 'ignored', note: `session_${applied.status}` };
+      if (!applied.sync) return { outcome: 'ignored', note: `session_${applied.status}` };
+      await warnOnSecondSubscription(deps, applied.sync);
+      return { outcome: 'applied', sync: applied.sync };
     }
     case 'customer.subscription.created':
     case 'customer.subscription.updated':
     case 'customer.subscription.deleted': {
       const id = idOf(object);
       if (!id) throw new BillingPermanentError('malformed_event');
-      return { outcome: 'applied', sync: await syncSubscription(deps, id) };
+      const sync = await syncSubscription(deps, id);
+      if (event.type === 'customer.subscription.created') await warnOnSecondSubscription(deps, sync);
+      return { outcome: 'applied', sync };
     }
     case 'invoice.paid':
     case 'invoice.payment_failed': {
@@ -410,18 +592,21 @@ export async function processBillingEvent(deps: BillingDeps, event: Stripe.Event
       const subscriptionId = await subscriptionForPayment(deps, idOf(warning.payment_intent), chargeId);
       if (!subscriptionId) return { outcome: 'ignored', note: 'not_a_subscription' };
       // A refund costs less than the dispute that usually follows a warning.
-      if (warning.actionable && chargeId) {
-        try {
-          await deps.stripe.refunds.create(
-            { charge: chargeId, reason: 'fraudulent', metadata: { early_fraud_warning: warning.id } },
-            { idempotencyKey: `devshark-efw-${warning.id}` },
-          );
-        } catch (error) {
-          if (stripeErrorCode(error).code !== 'charge_already_refunded') throw error;
+      // It runs only once the subscription is known to be devShark's.
+      const refund = warning.actionable && chargeId
+        ? async () => {
+          try {
+            await deps.stripe.refunds.create(
+              { charge: chargeId, reason: 'fraudulent', metadata: { early_fraud_warning: warning.id } },
+              { idempotencyKey: `devshark-efw-${warning.id}` },
+            );
+          } catch (error) {
+            if (stripeErrorCode(error).code !== 'charge_already_refunded') throw error;
+          }
         }
-      }
+        : undefined;
       const note = `Revoked: early fraud warning ${warning.id} on charge ${chargeId ?? 'unknown'}, refunded (${day(event.created)}).`;
-      return { outcome: 'applied', sync: await revokeSubscription(deps, subscriptionId, note) };
+      return { outcome: 'applied', sync: await revokeSubscription(deps, subscriptionId, note, { before: refund }) };
     }
     default:
       return { outcome: 'ignored', note: 'unhandled_type' };

@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
 import { createServiceClient, jsonError, withTimeout, requireAuthSub, withRequestContext } from '../lib/http';
-import { enforceRateLimit, RATE_LIMITS } from '../lib/rate-limit';
+import { enforceClassRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 import { deploymentSubjectIds } from '../lib/product-scope';
 import { isScopeSubject, subjectForCategory } from '../shared/subject-catalog';
 import { getEffectiveQuestionsById } from '../lib/questions-store';
@@ -14,6 +14,9 @@ const str = (v: unknown, max: number): string | null =>
   typeof v === 'string' && v.length > 0 && v.length <= max ? v : null;
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
+  // A write takes a class-sized address bucket, then the account's own; the
+  // token is verified once, and `requireAuthSub` below reads the result.
+  if (req.method !== 'GET' && !(await enforceClassRateLimit(req, res, RATE_LIMITS.flashcardMutationAddress, RATE_LIMITS.flashcardMutation))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
 
   const userId = await requireAuthSub(req, res);
@@ -25,7 +28,6 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 400, 'invalid_subject_scope', 'A subject from this deployment is required');
   }
   const subject = rawSubject;
-  if (req.method !== 'GET' && !(await enforceRateLimit(req, res, RATE_LIMITS.flashcardMutation))) return;
 
   try {
     if (req.method === 'GET') {

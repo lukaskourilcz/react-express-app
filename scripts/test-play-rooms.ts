@@ -9,6 +9,7 @@
  * - a classroom host presents: no answers, no scoreboard row;
  * - a multiplayer host (a competitor) cannot read the live answer distribution;
  * - a lobby whose host stopped sending heartbeats is closed;
+ * - a player reads only the questions already shown, and the server's clock;
  * - the Play switch in the app settings turns every action off.
  *
  * Nothing leaves the machine. */
@@ -314,9 +315,12 @@ async function main() {
       assert.equal(retry.body.is_correct, true);
 
       // The expired question moves on at the next read, and the distribution
-      // opens once the match is over.
-      const state = await call('one', 'GET', 'state', { code });
-      assert.equal(state.body.match.current_index, 1, 'the next read advances the expired question');
+      // opens once the match is over. Every client reads once when the clock
+      // runs out, so the reads land together: each one gets the next
+      // question, not only the read that moved the room on.
+      const reads = await Promise.all((['one', 'two', 'host'] as const).map((who) => call(who, 'GET', 'state', { code })));
+      assert.deepEqual(reads.map((read) => read.body.match.current_index), [1, 1, 1], 'every read at the expiry sees the next question');
+      assert.equal(room(code).current_index, 1, 'the room moved on once');
       assert.equal((await call('host', 'POST', 'control', { code, action: 'finish' })).statusCode, 200);
       const after = await call('host', 'GET', 'distribution', { code, q: '0' });
       assert.equal(after.statusCode, 200, 'the host reads the distribution after the end');
@@ -355,10 +359,58 @@ async function main() {
       const code = created.body.code as string;
       await call('one', 'POST', 'join', { code, display_name: 'one' });
       assert.equal((await call('one', 'GET', 'state', { code })).body.match.status, 'lobby', 'a lobby with its host stays open');
+      // A multiplayer host competes: in the lobby they read no more than anyone.
+      const hostLobby = (await call('host', 'GET', 'state', { code })).body.match;
+      assert.deepEqual(hostLobby.questions, [], 'a competing host reads no question in the lobby');
+      assert.equal(hostLobby.question_count, 5);
       room(code).last_heartbeat_at = new Date(Date.now() - 6 * 60_000).toISOString();
       const state = await call('one', 'GET', 'state', { code });
       assert.equal(state.body.match.status, 'finished', 'a lobby the host left is closed');
       assert.equal(state.body.match.started_at ?? null, null, 'and reads as never started');
+    }
+
+    // 6. A player reads only the questions already shown: none in the lobby,
+    //    up to the current one while the room runs, and never the key. The
+    //    round's length travels as `question_count`, and every join and state
+    //    carries the server's clock. `two` hosts this room: the host above has
+    //    opened as many rooms as one account may in a minute.
+    {
+      const created = await call('two', 'POST', 'create', { host_name: 'Two', mode: 'classroom', count: 5, categories: ['javascript'], duration_s: 30 });
+      assert.equal(created.statusCode, 200, `a classroom room opens (${JSON.stringify(created.body)})`);
+      const code = created.body.code as string;
+      const nearNow = (value: unknown, what: string) => {
+        assert.equal(typeof value, 'string', `${what} carries server_now`);
+        assert.ok(Math.abs(Date.parse(value as string) - Date.now()) < 5_000, `${what}: server_now is the server's clock`);
+      };
+      const joined = await call('one', 'POST', 'join', { code, display_name: 'one' });
+      assert.deepEqual(joined.body.questions, [], 'a player joining the lobby receives no question');
+      assert.equal(joined.body.question_count, 5, 'the join says how long the round is');
+      nearNow(joined.body.server_now, 'the join');
+      for (const who of ['one', null] as const) {
+        const lobby = await call(who, 'GET', 'state', { code });
+        assert.deepEqual(lobby.body.match.questions, [], `${who ?? 'an anonymous reader'} reads no question in the lobby`);
+        assert.equal(lobby.body.match.question_count, 5);
+        nearNow(lobby.body.server_now, 'the state');
+      }
+      const presenter = await call('two', 'GET', 'state', { code });
+      assert.equal(presenter.body.match.questions.length, 5, 'the classroom presenter holds the whole round');
+      assert.equal(typeof presenter.body.match.questions[0].correct_index, 'number', 'with its key');
+
+      assert.equal((await call('two', 'POST', 'control', { code, action: 'start' })).statusCode, 200);
+      const shown = (await call('one', 'GET', 'state', { code })).body.match;
+      assert.equal(shown.questions.length, 1, 'the first question is the only one a running room shows');
+      assert.equal(shown.questions[0].id, (room(code).questions as Array<{ id: string }>)[0].id);
+      assert.equal(shown.questions[0].correct_index, undefined, 'without its key');
+      assert.equal(shown.questions[0].explanation, undefined, 'or its explanation');
+      assert.equal(shown.question_count, 5);
+      assert.equal((await call(null, 'GET', 'state', { code })).body.match.questions.length, 1, 'an anonymous reader gets no more');
+      assert.equal((await call('two', 'POST', 'control', { code, action: 'advance' })).statusCode, 200);
+      assert.equal((await call('one', 'GET', 'state', { code })).body.match.questions.length, 2, 'the next question opens with the room');
+
+      assert.equal((await call('two', 'POST', 'control', { code, action: 'finish' })).statusCode, 200);
+      const finished = (await call('one', 'GET', 'state', { code })).body.match;
+      assert.equal(finished.questions.length, 5, 'a finished round shows every question');
+      assert.equal(typeof finished.questions[4].correct_index, 'number', 'with its key');
     }
 
     // 5. The Play switch turns every action off, rooms already open included.
@@ -385,7 +437,7 @@ async function main() {
   } finally {
     server.close();
   }
-  console.log('Play room contracts passed: late answers, the classroom host, the live distribution, abandoned lobbies and the Play switch.');
+  console.log('Play room contracts passed: late answers, the classroom host, the live distribution, abandoned lobbies, the questions a player reads and the Play switch.');
 }
 
 await main();

@@ -4,6 +4,11 @@
 -- routines the app itself calls. After delete_user_data no text or JSON value
 -- in any public table contains its id, and the other accounts' own data stays.
 
+-- The account is still in Auth while delete_user_data runs: the API deletes
+-- the sign-in identity afterwards, and the billing writers refuse an id Auth
+-- does not have (migration 053).
+INSERT INTO auth.users (id) VALUES ('aaaaaaaa-0000-4000-8000-000000000080');
+
 SET LOCAL ROLE service_role;
 
 CREATE TEMP TABLE erasure_ids (name TEXT PRIMARY KEY, id TEXT NOT NULL) ON COMMIT DROP;

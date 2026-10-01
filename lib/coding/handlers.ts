@@ -8,9 +8,9 @@
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
-import { AuthError, tryAuth } from '../auth';
-import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
-import { claimOnce, enforceRateLimit, RATE_LIMITS } from '../rate-limit';
+import { AuthError } from '../auth';
+import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, withTimeout } from '../http';
+import { claimOnce, enforceClassRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
@@ -114,7 +114,7 @@ async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string)
 
 async function optionalUser(req: VercelRequest, res: VercelResponse): Promise<string | null | undefined> {
   try {
-    return (await tryAuth(req))?.sub ?? null;
+    return (await tryAuthOnce(req))?.sub ?? null;
   } catch (error) {
     if (error instanceof AuthError) {
       jsonError(res, error.status, error.code, error.message);
@@ -186,7 +186,7 @@ function submissionAttemptId(session: CodingSession, verdict: CodingOutcome, cod
 
 export async function handleCodingTask(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingTaskAddress, RATE_LIMITS.codingTask))) return;
   const id = req.query.id;
   if (!isCodingTaskId(id)) return jsonError(res, 400, 'bad_request', 'A task id is required');
   const task = codingTaskById(id);
@@ -590,7 +590,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
 
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingRun))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingRunAddress, RATE_LIMITS.codingRun))) return;
   const body = (req.body || {}) as Partial<CodingSubmitRequest> & { lang?: unknown };
   const session = sessionFrom(body.session);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
@@ -709,7 +709,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
 
 export async function handleCodingReveal(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingReveal))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingRevealAddress, RATE_LIMITS.codingReveal))) return;
   const body = (req.body || {}) as Partial<CodingRevealRequest>;
   const session = sessionFrom(body.session);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
@@ -789,7 +789,9 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
     return res.json(out);
   }
   if (req.method === 'POST') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingDraft))) return;
+    // Rate limited as every write to api/user/[op].ts is (`limitUserWrite`):
+    // per account, behind a class-sized address bucket. A second bucket here,
+    // keyed by address alone, held a whole class to one person's saves.
     const code = (req.body as { code?: unknown })?.code;
     if (typeof code !== 'string' || Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 400, 'bad_request', 'code is required and limited to 20 kB');
     const saved = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: id, p_code: code }));

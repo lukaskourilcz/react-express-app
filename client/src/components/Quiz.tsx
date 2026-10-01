@@ -237,7 +237,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const resultHeadingRef = useRef<HTMLHeadingElement | null>(null);
   const fetchAbortRef = useRef<AbortController | null>(null);
 
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   // The saved plan, used only to say whether this topic is part of it.
   const profile = getUserProfile(user);
   const visibleCategoryOptions = visibleCategoryOptionsFor(profile.email);
@@ -503,6 +503,16 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setSearchParams({}, { replace: true });
     void startPersonalizedReview();
   }, [reviewRequested, isAuthenticated, setSearchParams, startPersonalizedReview]);
+
+  // The Home tile and the leaderboard's Today tab link to the daily challenge
+  // the same way. It starts once the sign-in is known, since a daily fetched
+  // signed out is practice and records nothing.
+  const dailyRequested = searchParams.get('mode') === 'daily';
+  useEffect(() => {
+    if (!dailyRequested || authLoading) return;
+    setSearchParams({}, { replace: true });
+    void startDailyChallenge();
+  }, [dailyRequested, authLoading, setSearchParams, startDailyChallenge]);
 
   const handleStart = () => {
     setAttemptedStart(true);

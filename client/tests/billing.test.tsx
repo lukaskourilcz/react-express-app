@@ -350,7 +350,7 @@ describe('the checkout button', () => {
     const button = await screen.findByRole('button', { name: 'Continue with monthly' });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Your Premium subscription is active. Manage it from your profile.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('You already have a Premium subscription. Manage it from your profile.');
   });
 
   it('asks a visitor to sign in and a subscriber to manage billing', async () => {
@@ -380,6 +380,16 @@ describe('the checkout button', () => {
   it('sends a subscriber under a complimentary grant to the portal, not to a second checkout', async () => {
     signIn();
     serve({ plan: { ...PREMIUM, source: 'promo', currentPeriodEnd: null, billingAccount: true, subscriptionLive: true } });
+    renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
+    expect(await screen.findByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Continue with monthly' })).toBeNull();
+  });
+
+  it('sends an account whose subscription can still charge to the portal, though Premium closed', async () => {
+    // Past the grace of a failed renewal, unpaid or paused: the plan reads
+    // Free, and the server reports the subscription live (migration 053).
+    signIn();
+    serve({ plan: { ...FREE, billingAccount: true, subscriptionLive: true } });
     renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
     expect(await screen.findByRole('button', { name: 'Manage billing' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Continue with monthly' })).toBeNull();

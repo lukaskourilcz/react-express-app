@@ -683,7 +683,13 @@ function Roadmap() {
     if (lessonError || !playable) {
       return <LessonError message={lessonError ?? t('roadmap.error')} onRetry={() => open(active)} onExit={exitLesson} t={t} />;
     }
-    const next = nextAfter(active, ranges);
+    const following = nextAfter(active, ranges);
+    // Outside the plan the server serves only steps already passed (a replay),
+    // so "Next" is offered there only when the next step is one of them.
+    const next = following && (
+      inPlan(topic)
+      || (following.kind === 'level' ? isLevelPassed(progress, topic, following.ref) : isPartTestPassed(progress, topic, following.ref))
+    ) ? following : null;
     const nextLabel = !next
       ? ''
       : next.kind === 'test'

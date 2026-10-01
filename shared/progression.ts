@@ -355,7 +355,7 @@ export function isCheckpointUnlocked(
 export type ProgressStep =
   | { kind: 'level'; level: number }
   | { kind: 'checkpoint'; checkpoint: number }
-  | { kind: 'test'; from: number; to: number };
+  | { kind: 'test'; part: number; from: number; to: number };
 
 /**
  * Whether this exact step is already on the learner's record as passed.
@@ -366,9 +366,10 @@ export type ProgressStep =
  * backend would otherwise be told those very levels are not part of the plan
  * they chose.
  *
- * A part test is deliberately never "already passed" here. What gates one is
- * passing the levels it spans, not a record of having sat it, so it keeps the
- * ordinary prerequisite check.
+ * A part test is recorded under `checkpoints` by its part number, so a passed
+ * part test counts as passed whether it is asked for as `?test=` or by its
+ * older `?checkpoint=` name. The map draws it passed and lets the learner open
+ * it again, and the two names must not answer differently.
  */
 export function stepAlreadyPassed(
   progress: VerifiedProgress,
@@ -377,7 +378,7 @@ export function stepAlreadyPassed(
 ): boolean {
   if (step.kind === 'level') return isLevelPassed(progress, topic, step.level);
   if (step.kind === 'checkpoint') return isCheckpointPassed(progress, topic, step.checkpoint);
-  return false;
+  return isCheckpointPassed(progress, topic, step.part);
 }
 
 /** Every available level in the range passed; unavailable ones are stepped

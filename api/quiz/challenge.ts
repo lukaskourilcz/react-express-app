@@ -14,7 +14,7 @@ import { jsonError, createLogger, createServiceClient, withTimeout, isRpcMissing
 import { AuthError, tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions, getEffectiveQuestionsById } from '../../lib/questions-store';
 import { getChallengeLeaderboard, recordChallengeScore } from '../../lib/challenge-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceClassRateLimit, enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
 import { ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
 import { challengeRunXp } from '../../shared/progression';
@@ -82,7 +82,11 @@ export default function handler(req: VercelRequest, res: VercelResponse) {
 }
 
 async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  // A guest's refill is charged to the run its sealed token names, as its
+  // answers are; a new run, an assessment or a token that does not verify is
+  // charged to the address.
+  const refill = typeof req.query.runToken === 'string' && req.query.runToken ? decodeChallengeRun(req.query.runToken) : null;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.quizSessionAddress, RATE_LIMITS.quizSession, refill ? `run:${refill.runId}` : undefined))) return;
   const excludeRaw = typeof req.query.exclude === 'string' ? req.query.exclude : '';
   const excludeSet = new Set(
     excludeRaw
@@ -285,18 +289,24 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   const xp = challengeRunXp(score);
   if (xp <= 0) return res.json({ ok: true, awarded: false, score, xp: 0 });
   // Migration 040's completion step applies the same award under the same id
-  // and also dates the run's answers for the 30-day board. Until it is
-  // installed, fall back to the award alone.
-  const breakdown = await runBreakdown(run.subject, outcomes);
+  // and also dates the run's answers for the 30-day board. From 052 it takes
+  // the answers themselves and dates only the questions the learner had not
+  // answered earlier the same UTC day; before 052 it takes the breakdown
+  // alone. Until 040 is installed, fall back to the award alone.
+  const answers = await runAnswers(run.subject, outcomes);
+  const completion = {
+    p_user_id: auth.sub,
+    p_run_id: run.runId,
+    p_subject: run.subject,
+    p_xp: xp,
+    p_breakdown: answers?.breakdown ?? null,
+  };
   let { data, error } = await withTimeout(
-    supabase.rpc('record_challenge_completion', {
-      p_user_id: auth.sub,
-      p_run_id: run.runId,
-      p_subject: run.subject,
-      p_xp: xp,
-      p_breakdown: breakdown,
-    }),
+    supabase.rpc('record_challenge_completion', answers ? { ...completion, p_outcomes: answers.outcomes } : completion),
   );
+  if (isRpcMissing(error) && answers) {
+    ({ data, error } = await withTimeout(supabase.rpc('record_challenge_completion', completion)));
+  }
   if (isRpcMissing(error)) {
     ({ data, error } = await withTimeout(
       supabase.rpc('record_verified_activity_xp', {
@@ -323,27 +333,34 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
 }
 
 /**
- * A finished run's answers by category, for the dated boards. A score proof
- * names its question and not its category, so the category comes from the
- * server's own bank. A question that has left the bank since the run was
- * served is left out rather than guessed, and a bank that cannot be read
- * leaves the whole breakdown out: the award still applies either way.
+ * A finished run's answers for the dated boards: each answer with its
+ * category (migration 052 counts a question once per UTC day), and the same
+ * answers by category for a database before 052. A score proof names its
+ * question and not its category, so the category comes from the server's own
+ * bank. A question that has left the bank since the run was served is left
+ * out rather than guessed, and a bank that cannot be read leaves the answers
+ * out: the award still applies either way.
  */
-async function runBreakdown(
+async function runAnswers(
   subject: Parameters<typeof getEffectiveQuestionsById>[0],
   outcomes: { questionId: string; isCorrect: boolean }[],
-): Promise<Record<string, { correct: number; total: number }> | null> {
+): Promise<{
+  outcomes: { questionId: string; category: string; isCorrect: boolean }[];
+  breakdown: Record<string, { correct: number; total: number }>;
+} | null> {
   try {
     const bank = await getEffectiveQuestionsById(subject, false);
+    const answered: { questionId: string; category: string; isCorrect: boolean }[] = [];
     const breakdown: Record<string, { correct: number; total: number }> = {};
     for (const outcome of outcomes) {
       const category = bank.get(outcome.questionId)?.category;
       if (!category) continue;
+      answered.push({ questionId: outcome.questionId, category, isCorrect: outcome.isCorrect });
       const entry = (breakdown[category] ??= { correct: 0, total: 0 });
       entry.total += 1;
       if (outcome.isCorrect) entry.correct += 1;
     }
-    return Object.keys(breakdown).length > 0 ? breakdown : null;
+    return answered.length > 0 ? { outcomes: answered, breakdown } : null;
   } catch (error) {
     logEvent({ status: 200, kind: 'complete', warn: 'breakdown_unavailable', error: error instanceof Error ? error.message : 'unknown' });
     return null;

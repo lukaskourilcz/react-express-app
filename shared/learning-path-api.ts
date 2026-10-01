@@ -384,6 +384,10 @@ export const PATH_LIMITS = {
   payloadBytes: 64 * 1024,
   /** Submitted code, matching the existing coding limit. */
   codeBytes: 20 * 1024,
-  draftsPerEnrollment: 20,
+  /** At least every code exercise and artifact of a path, so a learner who
+   * types into all of them is never refused (`npm run test:paths` checks it).
+   * A pass keeps its draft: it is the only copy of the learner's passed code
+   * the server holds. Idle drafts go after 90 days (the retention purge). */
+  draftsPerEnrollment: 60,
   idempotencyKeyPattern: /^[A-Za-z0-9_-]{16,64}$/,
 } as const;
