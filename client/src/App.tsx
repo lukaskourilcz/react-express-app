@@ -1,4 +1,4 @@
-import { NOINDEX_PATHS, PUBLIC_ORIGIN, premiumSchema, publicPage, topicFromPath, topicSchema } from './lib/publicMetadata';
+import { applyRouteHead, readShareHead } from './lib/routeHead';
 import { Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Routes, Route, Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
@@ -28,7 +28,7 @@ import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
-import { CURRENT_PRODUCT, productText } from './lib/products';
+import { CURRENT_PRODUCT } from './lib/products';
 import { CloseIcon, CoinIcon, TrophyIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
 import UpgradeSheetHost from './components/UpgradeSheetHost';
@@ -131,32 +131,9 @@ const ROUTE_TRANSITION = { duration: 0.14, ease: 'easeOut' } as const;
 // the same box, so the loader has the page's room.
 const ROUTE_BOX_STYLE = { flex: '1 0 auto', minWidth: 0, maxWidth: '100%', display: 'flex', flexDirection: 'column' } as const;
 
-const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
-  '/': 'title.home',
-  '/quiz': 'title.quiz',
-  '/learn': 'title.learn',
-  '/roadmap': 'title.roadmap',
-  '/profile': 'title.profile',
-  '/leaderboard': 'title.leaderboard',
-  '/cards': 'title.cards',
-  '/today': 'title.today',
-  '/collection': 'title.collection',
-  '/typing': 'title.typing',
-  '/coding': 'title.coding',
-  '/coding/review': 'title.coding',
-  '/settings/github': 'title.github',
-  '/shop': 'title.shop',
-  '/play': 'title.play',
-  '/challenge': 'title.challenge',
-  '/privacy': 'title.privacy',
-  '/terms': 'title.terms',
-  '/premium': 'title.premium',
-  '/premium/success': 'title.premiumSuccess',
-  '/premium/cancel': 'title.premiumCancel',
-  '/daily': 'title.daily',
-  '/classroom': 'title.classroom',
-  '/dev': 'title.dev',
-};
+// The head a coding task or a dated question of the day arrived with
+// (vite.config.ts), read before any route writes its own (lib/routeHead.ts).
+const SHARE_HEAD = readShareHead();
 
 const MenuIcon = () => (
   <svg aria-hidden="true" focusable="false" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -441,55 +418,7 @@ function App() {
   const showLeaderboardIcon = navItems.some((item) => item.to === '/leaderboard');
 
   useEffect(() => {
-    const publicTopic = topicFromPath(location.pathname);
-    const titleKey = ROUTE_TITLE_KEYS[location.pathname];
-    const translatedTitle = titleKey
-      ? t(titleKey)
-      : location.pathname.startsWith('/play/')
-        ? t('title.playMatch')
-        : location.pathname.startsWith('/daily/')
-        ? t('title.daily')
-        : location.pathname.startsWith('/coding/')
-          ? t('title.coding')
-          : t('title.notFound');
-    document.title = publicTopic ? `${publicTopic.topic.title[publicTopic.locale]} · ${CURRENT_PRODUCT.brand}` : location.pathname === '/'
-      ? productText(CURRENT_PRODUCT.title, lang)
-      : translatedTitle;
-    // /premium and /premium/cancel carry their own description and canonical,
-    // the same ones the build writes into their static HTML.
-    const page = publicPage(location.pathname);
-    const description = publicTopic
-      ? publicTopic.topic.description[publicTopic.locale]
-      : page ? t(page.descriptionKey) : productText(CURRENT_PRODUCT.description, lang);
-    const setMeta = (selector: string, value: string) => {
-      document.querySelector<HTMLMetaElement>(selector)?.setAttribute('content', value);
-    };
-    setMeta('meta[name="description"]', description);
-    setMeta('meta[property="og:title"]', document.title);
-    setMeta('meta[property="og:description"]', description);
-    setMeta('meta[name="twitter:title"]', document.title);
-    setMeta('meta[name="twitter:description"]', description);
-    document.querySelectorAll('link[rel="canonical"], link[hreflang], #public-schema, meta[property="og:url"], meta[name="robots"]').forEach(node => node.remove());
-    const canonical = publicTopic
-      ? PUBLIC_ORIGIN + location.pathname.replace(/\/$/, '')
-      : location.pathname === '/' ? PUBLIC_ORIGIN + '/' : page ? PUBLIC_ORIGIN + page.path : null;
-    if (canonical) {
-      const link = document.createElement('link'); link.rel = 'canonical'; link.href = canonical; document.head.append(link);
-    }
-    if (publicTopic && canonical) {
-      for (const locale of ['en', 'cs']) {
-        const link = document.createElement('link'); link.rel = 'alternate'; link.hreflang = locale;
-        link.href = `${PUBLIC_ORIGIN}${locale === 'cs' ? '/cs' : ''}/topics/${publicTopic.topic.slug}`; document.head.append(link);
-      }
-      const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';
-      schema.textContent = JSON.stringify(topicSchema(document.title, description, canonical, publicTopic.locale)); document.head.append(schema);
-    } else if (page?.schema === 'premium' && canonical) {
-      const schema = document.createElement('script'); schema.id = 'public-schema'; schema.type = 'application/ld+json';
-      schema.textContent = JSON.stringify(premiumSchema(document.title, description, canonical)); document.head.append(schema);
-    } else if (location.pathname.includes('/topics/') || NOINDEX_PATHS.includes(location.pathname)) {
-      const robots = document.createElement('meta'); robots.name = 'robots'; robots.content = 'noindex'; document.head.append(robots);
-    }
-
+    applyRouteHead(location.pathname, t, lang, SHARE_HEAD);
   }, [location.pathname, t, lang]);
 
   useEffect(() => {
