@@ -3,19 +3,26 @@
 // Mirrors the Sentry wiring (lib/sentry.ts): everything here is a no-op until
 // VITE_PUBLIC_POSTHOG_KEY is set, so local/preview builds and forks with no key
 // pay nothing. Unlike Sentry, the SDK is pulled in with a *dynamic* import so
-// posthog-js lands in its own lazy chunk and never touches the initial bundle;
-// it's fetched in the background after first paint.
+// posthog-js lands in its own lazy chunk and never touches the initial bundle.
+//
+// Consent (lib/consent.ts): PostHog runs only after the visitor says yes to
+// analytics. Before that the SDK is not downloaded, nothing is stored and
+// nothing is sent; the current path and the signed-in id wait in memory so
+// the pageview and the identity can follow a yes on the same page. A no, or a
+// later withdrawal, resets PostHog, opts it out and removes every `ph_` /
+// `__ph_` cookie and storage key and the stored campaign, including ones an
+// older build wrote before the banner existed.
 //
 // Privacy / GDPR: we point at PostHog EU Cloud and reverse-proxy every request
 // through our own /ingest path (see vercel.json). That keeps the CSP tight to
 // 'self' (no third-party host) and stops ad-blockers from dropping events.
 // `person_profiles: 'identified_only'` means anonymous visitors don't create
-// person profiles, and `respect_dnt` honours the browser's Do-Not-Track signal.
+// person profiles, and `respect_dnt` honours Do-Not-Track and Global Privacy
+// Control.
 
 import type { PostHog } from 'posthog-js';
-import { readJSON, writeJSON } from './storage';
-
-let loading: Promise<PostHog | null> | null = null;
+import { readJSON, removeStored, writeJSON } from './storage';
+import { hasConsent, subscribeConsent } from './consent';
 
 /* ── campaign attribution (#239) ───────────────────────────────────────── *
  * Social posts link to devShark with `utm_source`, `utm_medium` and
@@ -73,22 +80,30 @@ interface StoredCampaign {
 /** The campaign of this page load, and the browser's first one (kept 30 days). */
 let arrivalCampaign: Campaign = {};
 
+/** Keep this page load's campaign as the browser's first one, unless a
+ * recent one is already kept. Only with analytics consent: before it, the
+ * campaign stays in memory and nothing is written. */
+function keepFirstTouch(now: number): void {
+  if (Object.keys(arrivalCampaign).length === 0 || !hasConsent('analytics')) return;
+  const kept = readJSON<StoredCampaign | null>(CAMPAIGN_STORAGE_KEY, null);
+  if (!kept || typeof kept.savedAt !== 'number' || now - kept.savedAt > CAMPAIGN_MAX_AGE_MS) {
+    writeJSON(CAMPAIGN_STORAGE_KEY, { campaign: arrivalCampaign, savedAt: now } satisfies StoredCampaign);
+  }
+}
+
 /** Read the campaign from the address the visitor arrived at. Runs once, at
  * start-up, before anything takes a parameter out of the address bar. The
- * first campaign a browser saw wins; a later one does not replace it. */
+ * first campaign a browser saw wins; a later one does not replace it. It is
+ * stored only once the visitor has said yes to analytics. */
 export function captureCampaignFromUrl(search: string = window.location.search, now: number = Date.now()): Campaign {
   arrivalCampaign = campaignFrom(search);
-  if (Object.keys(arrivalCampaign).length > 0) {
-    const kept = readJSON<StoredCampaign | null>(CAMPAIGN_STORAGE_KEY, null);
-    if (!kept || typeof kept.savedAt !== 'number' || now - kept.savedAt > CAMPAIGN_MAX_AGE_MS) {
-      writeJSON(CAMPAIGN_STORAGE_KEY, { campaign: arrivalCampaign, savedAt: now } satisfies StoredCampaign);
-    }
-  }
+  keepFirstTouch(now);
   return arrivalCampaign;
 }
 
 /** The browser's first campaign, if it is recent enough to explain a sign-up. */
 export function firstTouchCampaign(now: number = Date.now()): Campaign {
+  if (!hasConsent('analytics')) return {};
   const kept = readJSON<StoredCampaign | null>(CAMPAIGN_STORAGE_KEY, null);
   if (!kept || typeof kept.savedAt !== 'number' || now - kept.savedAt > CAMPAIGN_MAX_AGE_MS || !kept.campaign) return {};
   // Stored by an older build or edited by hand: checked again like a URL.
@@ -121,16 +136,91 @@ function scrubEvent<T extends { properties?: Record<string, unknown>; $set?: Rec
   return event;
 }
 
-/** Load + init PostHog once (no-op without a key, or if already loading). */
-export function initAnalytics(): void {
-  const key = import.meta.env.VITE_PUBLIC_POSTHOG_KEY as string | undefined;
-  if (!key || loading) return;
-  captureCampaignFromUrl();
-  // Default to the same-origin reverse proxy; override only if you must.
-  const apiHost = (import.meta.env.VITE_PUBLIC_POSTHOG_HOST as string | undefined) || '/ingest';
+/* ── consent gate ──────────────────────────────────────────────────────── */
 
-  loading = import('posthog-js')
-    .then(({ default: ph }) => {
+/** The cookie and storage names PostHog writes: `ph_<key>_posthog` (cookie
+ * and localStorage), `__ph_opt_in_out_<key>` (its own consent flag), and
+ * `ph_<key>_window_id` and friends in sessionStorage. Matched by prefix, so
+ * a key from an older build goes too. */
+const POSTHOG_KEY = /^(?:__)?ph_/;
+
+let started = false;
+/** The visitor said yes to analytics and has not withdrawn it. */
+let active = false;
+let sdk: Promise<PostHog | null> | null = null;
+/** The client, once `init` has run. posthog-js is a singleton: it is
+ * initialised once per page and opted in and out after that. */
+let client: PostHog | null = null;
+/** PostHog has been opted in for the current yes. */
+let optedIn = false;
+/** The page the visitor is on, and whether its pageview went out. */
+let currentPath: string | null = null;
+let viewSent = false;
+let firstPageview = true;
+/** The signed-in learner, kept in memory until analytics may run. */
+let identity: { id: string; properties?: Record<string, unknown> } | null = null;
+
+const posthogKey = () => import.meta.env.VITE_PUBLIC_POSTHOG_KEY as string | undefined;
+
+/** Every Domain a cookie for this page can carry: none (this host only),
+ * the host, and each parent. PostHog's cross-subdomain cookie lives on the
+ * site's registrable domain and goes only with that Domain attribute; a
+ * browser ignores the ones it would never have accepted. */
+function cookieDomains(): (string | null)[] {
+  const parts = window.location.hostname.split('.');
+  const domains: (string | null)[] = [null];
+  for (let i = 0; i < parts.length - 1; i++) domains.push(parts.slice(i).join('.'));
+  return domains;
+}
+
+/** Remove what PostHog and the campaign attribution keep in this browser. */
+export function clearAnalyticsStorage(): void {
+  for (const store of ['localStorage', 'sessionStorage'] as const) {
+    try {
+      const storage = window[store];
+      const keys: string[] = [];
+      for (let i = 0; i < storage.length; i++) {
+        const key = storage.key(i);
+        if (key && POSTHOG_KEY.test(key)) keys.push(key);
+      }
+      for (const key of keys) storage.removeItem(key);
+    } catch {
+      // Storage refused: PostHog could not have kept anything there either.
+    }
+  }
+  removeStored(CAMPAIGN_STORAGE_KEY);
+  try {
+    const names = document.cookie
+      .split(';')
+      .map((part) => part.split('=')[0].trim())
+      .filter((name) => POSTHOG_KEY.test(name));
+    for (const name of names) {
+      for (const domain of cookieDomains()) {
+        document.cookie = `${name}=; Path=/; Max-Age=0${domain ? `; Domain=${domain}` : ''}`;
+      }
+    }
+  } catch {
+    // No cookie access: nothing to remove.
+  }
+}
+
+/** The initialised client, or null while analytics may not run. The first
+ * call after a yes loads the SDK, initialises it and opts it in. */
+function ready(): Promise<PostHog | null> {
+  const key = posthogKey();
+  if (!active || !key) return Promise.resolve(null);
+  sdk ??= import('posthog-js')
+    .then(({ default: ph }) => ph)
+    .catch(() => {
+      sdk = null;
+      return null;
+    });
+  return sdk.then((ph) => {
+    // Withdrawn while the SDK was on its way: it is never initialised.
+    if (!ph || !active) return null;
+    if (!client) {
+      // Default to the same-origin reverse proxy; override only if you must.
+      const apiHost = (import.meta.env.VITE_PUBLIC_POSTHOG_HOST as string | undefined) || '/ingest';
       ph.init(key, {
         api_host: apiHost,
         // Where the SDK sends users for the toolbar / links (EU Cloud UI).
@@ -147,29 +237,26 @@ export function initAnalytics(): void {
         // A fragment can carry a token (a cancel confirmation, an OAuth
         // return); PostHog leaves it out of the URLs it records itself.
         disable_capture_url_hashes: true,
+        // Out, and storing nothing, until opted in below. PostHog reads its
+        // own consent flag from storage on every check, so once a withdrawal
+        // has removed that flag it must fall back to "out", never "in".
+        persistence: 'localStorage+cookie',
+        opt_out_capturing_by_default: true,
+        opt_out_persistence_by_default: true,
         before_send: (event) => scrubEvent(event),
       });
-      return ph;
-    })
-    .catch(() => null);
+      client = ph;
+    }
+    if (!optedIn) {
+      ph.opt_in_capturing({ captureEventName: false });
+      optedIn = true;
+    }
+    return ph;
+  });
 }
 
-/** Resolve the live client once loaded, or null if analytics is disabled. */
-function ready(): Promise<PostHog | null> {
-  return loading ?? Promise.resolve(null);
-}
-
-/** Capture a product event (no-op until initAnalytics runs with a key). */
-export function capture(event: string, properties?: Record<string, unknown>): void {
-  void ready().then((ph) => ph?.capture(event, properties));
-}
-
-let firstPageview = true;
-
-/** Record a SPA pageview on route change. The first one of a page load keeps
- * the campaign labels it arrived with, in the URL and as properties, so a
- * click from a social post is attributed; later ones carry the path alone. */
-export function capturePageview(path: string): void {
+function sendPageview(path: string): void {
+  viewSent = true;
   const campaign = firstPageview ? arrivalCampaign : {};
   firstPageview = false;
   void ready().then((ph) =>
@@ -177,16 +264,90 @@ export function capturePageview(path: string): void {
   );
 }
 
-/** Tie subsequent events to a signed-in user (call on auth). The browser's
- * first campaign becomes the person's initial one: set once, never replaced. */
-export function identifyUser(id: string, properties?: Record<string, unknown>): void {
+function sendIdentity(id: string, properties?: Record<string, unknown>): void {
   const campaign = firstTouchCampaign();
   void ready().then((ph) => ph?.identify(id, properties, Object.keys(campaign).length > 0 ? campaign : undefined));
 }
 
-/** Clear the identity + start a fresh anonymous session (call on sign-out). */
+/** A yes: load PostHog, then send the pageview of the page the visitor is on
+ * and the signed-in identity, which waited in memory. */
+function start(): void {
+  if (active) return;
+  active = true;
+  keepFirstTouch(Date.now());
+  if (!posthogKey()) return;
+  void ready();
+  if (currentPath !== null && !viewSent) sendPageview(currentPath);
+  if (identity) sendIdentity(identity.id, identity.properties);
+}
+
+/** A no, or a withdrawal: PostHog stops, forgets the visitor and loses
+ * everything it kept in this browser. reset() comes first because it also
+ * clears PostHog's consent flag; opting out after it leaves PostHog out. */
+function stop(): void {
+  const wasRunning = client !== null && optedIn;
+  active = false;
+  optedIn = false;
+  viewSent = false;
+  if (wasRunning && client) {
+    client.reset();
+    client.opt_out_capturing();
+  }
+  clearAnalyticsStorage();
+}
+
+/** Start analytics under the visitor's consent and follow every change of
+ * it. Runs once, at start-up. Without a key PostHog never loads, but a
+ * browser without consent still loses what an older build stored, from the
+ * time PostHog ran for every visitor. */
+export function initAnalytics(): void {
+  if (started) return;
+  started = true;
+  captureCampaignFromUrl();
+  if (hasConsent('analytics')) start();
+  else stop();
+  subscribeConsent((record) => {
+    if (record?.analytics === true) start();
+    else stop();
+  });
+}
+
+/** Capture a product event (no-op unless analytics may run). */
+export function capture(event: string, properties?: Record<string, unknown>): void {
+  if (!active) return;
+  void ready().then((ph) => ph?.capture(event, properties));
+}
+
+/** Record a SPA pageview on route change. The first one of a page load keeps
+ * the campaign labels it arrived with, in the URL and as properties, so a
+ * click from a social post is attributed; later ones carry the path alone.
+ * Before consent only the path is kept, in memory, so a yes on this page
+ * sends its pageview then. */
+export function capturePageview(path: string): void {
+  currentPath = path;
+  viewSent = false;
+  if (active) sendPageview(path);
+}
+
+/** Tie subsequent events to a signed-in user (call on auth). The browser's
+ * first campaign becomes the person's initial one: set once, never replaced.
+ * Before consent the id waits in memory and is sent after a yes. */
+export function identifyUser(id: string, properties?: Record<string, unknown>): void {
+  identity = { id, properties };
+  if (active) sendIdentity(id, properties);
+}
+
+/** Clear the identity + start a fresh anonymous session (call on sign-out).
+ * reset() also clears PostHog's consent flag, which leaves it opted out
+ * (opt_out_capturing_by_default), so it is opted in again straight after. */
 export function resetAnalytics(): void {
-  void ready().then((ph) => ph?.reset());
+  identity = null;
+  if (!active) return;
+  void ready().then((ph) => {
+    if (!ph) return;
+    ph.reset();
+    ph.opt_in_capturing({ captureEventName: false });
+  });
 }
 
 /* ── learning-path pilot funnel ────────────────────────────────────────── */

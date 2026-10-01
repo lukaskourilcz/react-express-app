@@ -17,6 +17,7 @@ import { AuthProvider } from './lib/auth';
 import { queryClient } from './lib/queryClient';
 import { initSentry } from './lib/sentry';
 import { initAnalytics } from './lib/analytics';
+import { installMarketing } from './lib/marketing';
 import { MotionProvider } from './lib/motion';
 import { installScrollbarActivity } from './lib/scrollbarActivity';
 import { captureReferralFromUrl } from './lib/referral';
@@ -31,9 +32,13 @@ if (import.meta.hot) import.meta.hot.dispose(disposeChunkErrorTracking);
 
 // Start error/performance reporting before anything renders (no-op without a DSN).
 initSentry();
-// Load PostHog product analytics in the background (no-op without a key; the
-// SDK is dynamically imported so it never lands in the initial bundle).
+// PostHog product analytics, only after the visitor's yes to analytics in the
+// cookie banner (lib/consent.ts). Before it the SDK is not downloaded and
+// nothing is stored or sent; a no removes what an older build stored.
 initAnalytics();
+// GA4 and the Meta Pixel are not connected: with no loader this does nothing
+// (lib/marketing.ts says where they go).
+installMarketing();
 // Keep an invite code (`/?ref=<code>`, #228) and take it out of the address
 // bar before the router reads the URL. The server binds it after sign-in.
 captureReferralFromUrl();
