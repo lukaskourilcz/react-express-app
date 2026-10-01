@@ -1,4 +1,4 @@
--- The sign-in log keeps a record for 12 months (migration 058, privacy
+-- The sign-in log keeps a record for 12 months (migration 057, privacy
 -- policy "How long devShark keeps data"). The daily retention routine deletes
 -- older records, keeps newer ones, leaves every account's recent sign-ins in
 -- place, and reports how many it removed. The period does not follow

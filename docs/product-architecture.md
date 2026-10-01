@@ -1110,7 +1110,7 @@ Owner decisions 2 and 4 (1 October 2026).
   name, analytics, marketing, error monitoring, providers and transfers, legal
   bases, a retention table, deletion, rights and changes. The cookie table
   (`COOKIE_ROWS`) names the real keys; change it with them. The sign-in log
-  (`auth_events`) keeps a record 12 months: migration 058 adds that delete to
+  (`auth_events`) keeps a record 12 months: migration 057 adds that delete to
   `purge_expired_learning_data`, which production runs daily through
   pg_cron, and `consentContracts()` in `scripts/test-launch-contracts.ts`
   ties the sentence to the SQL.

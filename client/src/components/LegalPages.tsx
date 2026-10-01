@@ -109,7 +109,7 @@ const COOKIE_ROWS: Cell[][] = [
 ];
 
 /** How long each kind of data stays. The periods are the purge routines in
- * supabase/ (purge_expired_learning_data, 058 for the sign-in log) and the
+ * supabase/ (purge_expired_learning_data, 057 for the sign-in log) and the
  * limits in lib/rate-limit.ts and lib/consent.ts. */
 const RETENTION_ROWS: Cell[][] = [
   ['legal.privacy.retention.account', 'legal.privacy.retention.untilDeletion'],

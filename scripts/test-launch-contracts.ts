@@ -4717,9 +4717,9 @@ function consentContracts() {
   assert.match(read('client/src/components/BrandFooter.tsx'), /onClick=\{openConsentSettings\}/);
   assert.equal(ENGLISH['consent.rejectAll'], 'Reject all');
   assert.equal(ENGLISH['footer.cookieSettings'], 'Cookie settings');
-  // The sign-in log's 12 months is the purge in migration 058.
+  // The sign-in log's 12 months is the purge in migration 057.
   assert.match(ENGLISH['legal.privacy.account.log'], /deletes each record after 12 months/);
-  assert.match(read('supabase/supabase-schema-058.sql'), /DELETE FROM public\.auth_events\s+WHERE created_at < NOW\(\) - INTERVAL '12 months';/, 'the purge the privacy policy promises');
+  assert.match(read('supabase/supabase-schema-057.sql'), /DELETE FROM public\.auth_events\s+WHERE created_at < NOW\(\) - INTERVAL '12 months';/, 'the purge the privacy policy promises');
   // Merchandise is hidden: the policy names no shop that receives data.
   for (const [key, value] of Object.entries(ENGLISH)) {
     if (key.startsWith('legal.privacy.')) assert.doesNotMatch(value, /sprd\.net/, `${key} still names Spreadshop as a recipient`);
