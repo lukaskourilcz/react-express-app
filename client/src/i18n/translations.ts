@@ -1328,7 +1328,7 @@ export const en = {
   'footer.cancelPremium': 'Cancel Premium',
   'error.billingUnavailable': 'The payment provider did not answer. Try again in a few minutes.',
   'error.billingDisabled': 'Premium checkout is not open yet.',
-  'error.alreadyPremium': 'Your Premium subscription is active. Manage it from your profile.',
+  'error.alreadyPremium': 'You already have a Premium subscription. Manage it from your profile.',
   'error.noBillingAccount': 'This account has no billing history yet.',
   'error.badEmail': 'Enter the email address your subscription uses.',
   'error.billingConflict': 'We could not match this payment to your account. Write to the contact on the Terms page.',

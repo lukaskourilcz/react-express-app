@@ -350,7 +350,7 @@ describe('the checkout button', () => {
     const button = await screen.findByRole('button', { name: 'Continue with monthly' });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
-    expect(await screen.findByRole('alert')).toHaveTextContent('Your Premium subscription is active. Manage it from your profile.');
+    expect(await screen.findByRole('alert')).toHaveTextContent('You already have a Premium subscription. Manage it from your profile.');
   });
 
   it('asks a visitor to sign in and a subscriber to manage billing', async () => {
