@@ -42,12 +42,18 @@ vi.mock('../src/lib/trackPref', async (importOriginal) => ({
 }));
 
 // The editor is not what these tests are about: a stand-in that finishes the
-// task the way the real workbench's Continue does.
+// task the way the real workbench's Continue does, or shows the solution the
+// way its reveal does.
 vi.mock('../src/coding/CodingWorkbench', async () => {
-  const { createElement } = await import('react');
+  const { createElement, useState } = await import('react');
   return {
-    CodingWorkbench: ({ onContinue }: { onContinue: () => void }) =>
-      createElement('button', { type: 'button', onClick: onContinue }, 'Finish the coding task'),
+    CodingWorkbench: ({ onContinue, onRevealed }: { onContinue: () => void; onRevealed?: () => void }) => {
+      const [solution, setSolution] = useState<string | null>(null);
+      return createElement('div', null,
+        createElement('button', { type: 'button', onClick: onContinue }, 'Finish the coding task'),
+        createElement('button', { type: 'button', onClick: () => { setSolution('const digitSum = (n) => 42; // the reference'); onRevealed?.(); } }, 'Show the solution'),
+        solution && createElement('pre', null, solution));
+    },
   };
 });
 
@@ -366,5 +372,30 @@ describe('a level whose session cannot be used', () => {
     expect(await screen.findByRole('heading', { name: 'Not passed' })).toBeInTheDocument();
     expect(screen.getByText('1 coding tasks still to pass')).toBeInTheDocument();
     expect(screen.queryByText('Coding tasks are checked and saved when you sign in.')).toBeNull();
+  });
+
+  // CODE-4: revealing a solution inside a level completed the attempt at once,
+  // and the finish screen replaced the solution the learner had just paid for.
+  it('keeps a revealed solution on screen until the learner finishes the level', async () => {
+    signInAs();
+    let completions = 0;
+    answer({
+      playable: { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: { en: 'Digit sum', cs: '' } }, session: 'coding-session-1' }] },
+      complete: () => {
+        completions += 1;
+        return HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: false, applied: true, codingPending: ['js-digit-sum'] });
+      },
+    });
+    await openLevelAndAnswer();
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Show the solution' }));
+    expect(await screen.findByText(/the reference/)).toBeInTheDocument();
+    expect(screen.getByText(/Showing it ended this level attempt/)).toBeInTheDocument();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(completions).toBe(0);
+    expect(screen.getByText(/the reference/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Finish the level' }));
+    expect(await screen.findByRole('heading', { name: 'Not passed' })).toBeInTheDocument();
+    expect(completions).toBe(1);
   });
 });
