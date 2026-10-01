@@ -223,7 +223,7 @@ BEGIN
   v_complete := COALESCE(p_module_complete, FALSE);
   IF NOT v_complete AND p_module_requires IS NOT NULL AND jsonb_array_length(p_module_requires) > 0 THEN
     SELECT COALESCE(bool_and(
-             (req -> 'states') ? COALESCE(v_states -> (req ->> 'activityId') ->> 'state', 'not_started')
+             (req -> 'states') @> to_jsonb(COALESCE(v_states -> (req ->> 'activityId') ->> 'state', 'not_started'))
            ), FALSE)
       INTO v_complete
       FROM jsonb_array_elements(p_module_requires) AS req;
