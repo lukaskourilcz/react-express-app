@@ -11,7 +11,7 @@ export const en = {
   'nav.roadmap': 'Career',
   'nav.play': 'Play',
   'nav.leaderboard': 'Leaderboard',
-  'nav.cards': 'Collection',
+  'nav.cards': 'Shark Cards',
   'collection.heading': 'Collection',
   'coding.discovery.next': 'Your next challenge',
   'coding.discovery.loading': 'Loading progress…',
@@ -39,15 +39,15 @@ export const en = {
   'coding.evolving.progress': '{n} of {total} stages completed',
   'coding.evolving.complete': 'All stages completed',
   'coding.lock.evolving': 'Complete the previous stages while signed in to unlock this stage.',
-  'collection.subtitle': 'Your saved questions and coding challenges, together.',
-  'collection.questions': 'Questions',
+  'collection.subtitle': 'Coding challenges you saved from their pages.',
+  'collection.questions': 'Shark Cards',
   'collection.challenges': 'Coding challenges',
   'collection.cards': 'Shark Cards',
   'collection.empty': 'No challenges saved yet. Save one from its page to keep it here.',
   'collection.unavailable': 'This saved challenge is no longer available.',
   'nav.today': 'Today',
   'title.today': 'Today · devShark',
-  'title.collection': 'Collection · devShark',
+  'title.collection': 'Shark Cards · devShark',
   'title.typing': 'Typing · devShark',
   'nav.shop': 'Coins',
   'nav.challenge': 'Challenge',
@@ -75,7 +75,7 @@ export const en = {
   'roadmapPage.treeIntro': 'Choose Frontend, Backend or Fullstack, then follow it top to bottom, foundations first, production last. Each topic splits into 3 short parts and fills in as you clear them.',
   'title.profile': 'Profile · devShark',
   'title.leaderboard': 'Leaderboard · devShark',
-  'title.cards': 'Cards · devShark',
+  'title.cards': 'Shark Cards · devShark',
   'title.shop': 'Coins · devShark',
   'title.play': 'Play live · devShark',
   'title.playMatch': 'Live match · devShark',
@@ -577,7 +577,7 @@ export const en = {
   'profile.deleteConfirm': 'This permanently deletes your profile, progress, statistics, flashcards, challenge entries and multiplayer records. This action cannot be undone.',
   'profile.deleteAction': 'Delete my account',
   'profile.deleteGithub': 'The devShark app you installed on GitHub keeps access to the repositories you gave it until you uninstall it on GitHub.',
-  'profile.deletePremium': 'Your Premium subscription ends at once and is not refunded. Within 14 days of your first payment, withdraw on the cancellation page first to get that payment back.',
+  'profile.deletePremium': 'Your Premium subscription ends at once and is not refunded. Within 14 days of your first payment, withdraw on the cancellation page first to get that payment back. The refund applies once per account.',
   'common.remove': 'Remove',
 
   // Learning track
@@ -714,7 +714,8 @@ export const en = {
 
   // Generic errors
 
-  // Flashcards (Cards)
+  // Unrendered since Shark Cards replaced the flashcard grid (the sharkCards.*
+  // block below). The keys stay because the retained Czech file has them.
   'card.heading': 'Cards',
   'card.kicker': 'Flashcards',
   'card.practiceAll': 'Practice all {count}',
@@ -732,6 +733,44 @@ export const en = {
   'card.added': 'Saved to Collection',
   'card.removed': 'Removed from Collection',
   'card.syncFailed': 'Saved on this device, but syncing to your Cards failed.',
+
+  // ── Shark Cards (owner decision 12): a question the learner did not know,
+  // saved where its explanation was shown, reviewed later as a card that
+  // explains the topic. The collectible card packs are retired.
+  'sharkCards.title': 'Shark Cards',
+  'sharkCards.kicker': 'Saved questions',
+  'sharkCards.lead': 'Questions you missed and saved. Read the question, answer it in your head, then turn the card for the answer and why.',
+  'sharkCards.save': 'Save as Shark Card',
+  'sharkCards.savedButton': 'Saved as Shark Card',
+  'sharkCards.open': 'Open Shark Cards',
+  'sharkCards.saveFailed': 'Could not save the card.',
+  'sharkCards.removeFailed': 'Could not remove the card.',
+  'sharkCards.loading': 'Loading your Shark Cards…',
+  'sharkCards.signInTitle': 'Sign in to keep Shark Cards',
+  'sharkCards.signInBody': 'Shark Cards are saved to your account, so you can review them on any device.',
+  'sharkCards.emptyTitle': 'No Shark Cards yet',
+  'sharkCards.emptyBody': 'When you miss a question in a quiz, the daily challenge, the question of the day, Learn or the Challenge, choose Save as Shark Card under its explanation. It comes back here as a card that explains the topic.',
+  'sharkCards.emptyQuiz': 'Take a quiz',
+  'sharkCards.emptyLearn': 'Go to Learn',
+  'sharkCards.position': 'Card {n} of {total}',
+  'sharkCards.frontLabel': 'Question',
+  'sharkCards.backLabel': 'Answer',
+  'sharkCards.turn': 'Show the answer',
+  'sharkCards.turnBack': 'Hide the answer',
+  'sharkCards.answerLabel': 'Correct answer',
+  'sharkCards.explanationLabel': 'Why',
+  'sharkCards.learnLevel': 'Learn this topic: {topic}, level {level}',
+  'sharkCards.learnTopic': 'Learn this topic: {topic}',
+  'sharkCards.practiceTopic': 'Practise this topic: {topic}',
+  'sharkCards.previous': 'Previous',
+  'sharkCards.next': 'Next',
+  'sharkCards.gotIt': 'Got it',
+  'sharkCards.gotItHint': 'Got it takes the card out of your deck. The arrow keys move between cards.',
+  'sharkCards.removed': 'Card taken out of your Shark Cards.',
+  'sharkCards.undo': 'Undo',
+  'sharkCards.missedTitle': 'Questions you missed',
+  'sharkCards.missedBody': 'Save the ones you want to come back to. Each becomes a Shark Card with its explanation.',
+  'collection.challengesTitle': 'Saved coding challenges',
 
   // Roadmap ("Learn") mode
   'roadmap.morePathsLater': 'More learning paths will show once you start completing levels',
@@ -1074,9 +1113,10 @@ export const en = {
   'mastery.dueTooltip': 'It’s been a while. A quick review will keep this sharp.',
   'mastery.legendTitle': 'Roadmap key',
 
-  // ── Shark Cards (cosmetic collectible album) ──────────────────────────
+  // Unrendered: the collectible album and its card packs are retired (owner
+  // decision 12). Shark Cards are the sharkCards.* block. The key stays because
+  // the retained Czech file has it.
   'cards.title': 'Shark Cards',
-  // Card rarities — referenced verbatim as card.rarity.<rarity>
 
   // ── Server-synced badges (badge.<id>.label / badge.<id>.desc) ─────────
   'badges.title': 'Badges',
@@ -1404,7 +1444,9 @@ export const en = {
   'premium.page.annualName': 'Yearly',
   'premium.page.perMonth': 'a month',
   'premium.page.perYear': 'a year',
-  'premium.page.annualSaving': 'Two months free',
+  // Worked out from the prices on show (shared/launch-offer.ts annualSaving):
+  // twelve months at the monthly price minus the yearly price.
+  'premium.page.annualSaving': 'Save {saving} {currency} a year',
   'premium.page.monthlyRenews': 'VAT included. Renews every month until you cancel.',
   'premium.page.annualRenews': 'VAT included. Renews every year until you cancel.',
   'premium.page.signedOut': 'Sign in with Google first. You come back here to choose a plan.',
@@ -1414,7 +1456,7 @@ export const en = {
   'premium.page.smallPrint.price': 'Both prices include VAT. Subscriptions are charged in EUR, including outside the euro area. Your bank may apply currency conversion fees.',
   'premium.page.smallPrint.renewal': 'Premium renews automatically at the end of each month or year until you cancel. Cancelling takes effect at the end of the period you paid for, and you are not charged again.',
   'premium.page.smallPrint.waiver': 'At checkout you tick this sentence:',
-  'premium.page.smallPrint.refund': 'You can still withdraw within 14 days of your first payment and get that payment back in full.',
+  'premium.page.smallPrint.refund': 'You can still withdraw within 14 days of your first payment and get that payment back in full, once per account.',
   'premium.page.waiver': 'I want Premium to start now and I understand that I lose my 14-day right of withdrawal for digital content.',
   'premium.page.termsLink': 'Terms of use',
   'premium.page.cancelLink': 'Cancel or withdraw',
@@ -1426,7 +1468,7 @@ export const en = {
   'premium.page.faq.invoiceQ': 'Do I get an invoice?',
   'premium.page.faq.invoiceA': 'Yes. Stripe emails a receipt for every payment, and Manage billing in your profile lists your invoices as PDFs.',
   'premium.page.faq.refundQ': 'Can I withdraw and get my money back?',
-  'premium.page.faq.refundA': 'Yes, within 14 days of your first payment. Choose Withdraw from the contract on the cancellation page and we refund that payment in full; Premium ends at once. After 14 days, the same page cancels at the end of the paid period.',
+  'premium.page.faq.refundA': 'Yes, within 14 days of your first payment, once per account. Choose Withdraw from the contract on the cancellation page and we refund that payment in full; Premium ends at once. After 14 days, or once the refund has been used, the same page cancels at the end of the paid period.',
   'premium.page.faq.switchQ': 'Can I switch between monthly and yearly?',
   'premium.page.faq.switchA': 'Yes. Choose Manage billing in your profile and pick the other plan. Stripe shows the new price and when it starts before you confirm.',
   'premium.page.faq.dataQ': 'Do you sell my data?',
@@ -1471,8 +1513,8 @@ export const en = {
   'legal.terms.trader.title': 'Who runs devShark',
   'legal.terms.trader.body': 'devShark is a web service for learning web development. The trader who provides it:',
   'legal.terms.plans.title': 'The free plan and Premium',
-  'legal.terms.plans.free': 'Every account gets the free plan: the Learn topics HTML, CSS and JavaScript in full, React levels 1 to {level}, stage one of every coding project and short path, and a starter set of coding challenges. Quizzes, the daily challenge, multiplayer rooms, flashcards, the typing racer, leaderboards, streaks and friends are open on both plans.',
-  'legal.terms.plans.premium': 'Premium opens every Learn topic, every coding challenge, every stage of every project and short path, and the FDE and DSA learning paths as each one opens. It doubles the coins verified learning earns and pays milestone coins, and a Premium account can redeem coins for devShark merchandise once redemption opens. Until then, Rewards says that it has not opened.',
+  'legal.terms.plans.free': 'Every account gets the free plan: the Learn topics HTML, CSS and JavaScript in full, React levels 1 to {level}, stage one of every coding project and short path, and a starter set of coding challenges. Quizzes, the daily challenge, multiplayer rooms, Shark Cards, the typing racer, leaderboards, streaks and friends are open on both plans.',
+  'legal.terms.plans.premium': 'Premium opens every Learn topic, every coding challenge, every stage of every project and short path, and the FDE and DSA learning paths as each one opens. It doubles the coins verified learning earns and pays milestone coins.',
   'legal.terms.plans.fair': 'Paying changes which content you can open. It never changes how an answer is graded, the XP an answer earns, your streaks, your rank or your badges.',
   'legal.terms.price.title': 'Price and payment',
   'legal.terms.price.body': 'Premium costs {symbol}{monthly} a month or {symbol}{annual} a year. Both prices include VAT. Subscriptions are charged in EUR, including outside the euro area. Your bank may apply currency conversion fees.',
@@ -1490,7 +1532,7 @@ export const en = {
   'legal.terms.withdrawal.consequence': 'From that moment the legal right of withdrawal no longer covers that purchase. The 14-day refund below still does.',
   'legal.terms.refund.title': '14-day refund on your first payment',
   'legal.terms.refund.body': 'Within 14 days of your first payment you can withdraw anyway, once per account. Choose Withdraw from the contract on the cancellation page and confirm through the link we email to you: we refund the payment in full and Premium ends at once. After 14 days, or once the refund has been used, the same request cancels the subscription at the end of the paid period.',
-  'legal.terms.refund.takeBack': 'A refund, a withdrawal or a payment dispute ends Premium and takes back what it paid out while it was open: merchandise redemptions not yet sent are cancelled and their coins returned, and the milestone coins and the doubled share of coin credits are deducted, as far as your balance goes.',
+  'legal.terms.refund.takeBack': 'A refund, a withdrawal or a payment dispute ends Premium and takes back what it paid out while it was open: the milestone coins and the doubled share of coin credits are deducted, as far as your balance goes.',
   'legal.terms.howTo.title': 'How to withdraw',
   'legal.terms.howTo.body': 'Tell us clearly that you want to withdraw. The cancellation page is the fastest way: choose Withdraw from the contract, enter the email address of your subscription and confirm. You can also send your notice to the email or postal address under Who runs devShark, for example with the model form below. Sending it before the 14 days end is enough.',
   'legal.terms.form.title': 'Model withdrawal form',

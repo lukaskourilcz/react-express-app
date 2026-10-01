@@ -42,6 +42,7 @@ import { RadioCard, RadioCardGroup } from './ui/RadioCards';
 import { CategoryTag } from './ui/CategoryTag';
 import ResultShareActions from './ResultShareActions';
 import ReferralMoment from './ReferralMoment';
+import { SaveSharkCard } from './SaveSharkCard';
 
 // Biggest Shark Challenge: answer as many questions as you can until you
 // collect three strikes. Each question carries its own 90-second clock —
@@ -205,6 +206,9 @@ export default function Challenge() {
   const [current, setCurrent] = useState<Question | null>(null);
   const [selected, setSelected] = useState<number | null>(null);
   const [lastResult, setLastResult] = useState<AnsweredQ | null>(null);
+  // Every graded miss of the run, for the game-over review (owner decision
+  // 12): each can be saved as a Shark Card with its answer and explanation.
+  const [missed, setMissed] = useState<AnsweredQ[]>([]);
   const [submitting, setSubmitting] = useState(false);
   // The Hall of Fame is public. The name box starts empty, and holds the
   // account's name only for a learner who shows their name on the
@@ -388,6 +392,7 @@ export default function Challenge() {
     setSeenIds([]);
     setSelected(null);
     setLastResult(null);
+    setMissed([]);
     setSubmittedScore(false);
     setDeadline(0);
     awardedRef.current = false;
@@ -465,7 +470,7 @@ export default function Challenge() {
       setLastResult({ questionId: question.id, selectedIndex, correctAnswer: -1, isCorrect: false, explanation: '', question, notCounted: 'retired' });
       return;
     }
-    setLastResult({
+    const answered: AnsweredQ = {
       questionId: question.id,
       selectedIndex,
       correctAnswer: graded.correctAnswer,
@@ -473,7 +478,9 @@ export default function Challenge() {
       explanation: graded.explanation,
       question,
       ...(timedOut ? { timedOut: true } : {}),
-    });
+    };
+    setLastResult(answered);
+    if (!graded.isCorrect) setMissed((list) => [...list.filter((one) => one.questionId !== question.id), answered]);
     if (graded.isCorrect) setScore((s) => s + 1);
     else setLivesLost((l) => l + 1);
     if (graded.scoreProof) scoreProofsRef.current.push(graded.scoreProof);
@@ -849,6 +856,27 @@ export default function Challenge() {
               </div>
             ) : (
               <Banner status="success" title={t('challenge.scoreSubmitted')} />
+            )}
+
+            {missed.length > 0 && (
+              <section className="sc-missed" aria-labelledby="challenge-missed">
+                <Heading level={2} id="challenge-missed">{t('sharkCards.missedTitle')}</Heading>
+                <Text type="supporting" color="secondary">{t('sharkCards.missedBody')}</Text>
+                <ol className="sc-missed__list">
+                  {missed.map((one) => (
+                    <li key={one.questionId} className="sc-missed__item">
+                      <div className="sc-missed__question">{renderQuestion(one.question.question)}</div>
+                      {one.correctAnswer >= 0 && (
+                        <Text type="body" size="sm">
+                          {t('quiz.correctLabel')} <strong>{one.question.options[one.correctAnswer]}</strong>
+                        </Text>
+                      )}
+                      {one.explanation && <Text type="body" size="sm" color="secondary">{one.explanation}</Text>}
+                      <SaveSharkCard question={one.question} correctIndex={one.correctAnswer} explanation={one.explanation} />
+                    </li>
+                  ))}
+                </ol>
+              </section>
             )}
 
             {board && board.top.length > 0 && (

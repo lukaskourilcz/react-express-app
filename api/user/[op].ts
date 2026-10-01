@@ -22,7 +22,6 @@ import {
   type ScopeSubjectId,
 } from '../../shared/subject-catalog';
 import { deploymentSubjectIds } from '../../lib/product-scope';
-import { rollPack, subjectCardCount } from '../../shared/cards';
 import { eligibleServerBadges, type BadgeStatsSummary } from '../../shared/badges';
 import { eligibleCodingBadges } from '../../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../../lib/coding/active';
@@ -75,7 +74,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (op === 'xp') return xp(req, res);
   if (op === 'authevent') return authEvent(req, res);
   if (op === 'delete-account') return deleteAccount(req, res);
-  if (op === 'cards') return cards(req, res);
+  if (op === 'cards') return retiredCardPacks(req, res);
   if (op === 'badges') return badges(req, res);
   if (op === 'freezes') return freezes(req, res);
   if (op === 'advisor') return advisor(req, res);
@@ -639,18 +638,21 @@ export async function handleLeaderboardVisibility(
   }
 }
 
-/* ──── daily habit: cards, badges, freezes, advisor ─────────────────────────── */
+/* ──── daily habit: badges, freezes, advisor ──────────────────────────────── */
 
-// Finishing a subject's Today queue is defined as reaching this many verified
-// learning results on a single UTC day (mirrors the client's Today target).
-// Server-authoritative: the pack gate is re-checked here, never trusted from
-// the client.
-const DAILY_TARGET = 3;
+// op=cards granted a collectible card pack for finishing the Today queue. The
+// packs are retired (owner decision 12, 1 October 2026): Shark Cards are now
+// saved questions (/api/flashcards). Nothing grants a pack any more and
+// grant_daily_queue_cards is no longer called; the user_cards rows stay, and
+// delete_user_data still erases them.
+export function retiredCardPacks(_req: VercelRequest, res: VercelResponse) {
+  return jsonError(res, 410, 'gone', 'Card packs are retired. Shark Cards are the questions you save.');
+}
+
 const ADVISOR_MIN_SAMPLE = 4;
 const ADVISOR_MAX_WEAK = 6;
 const ADVISOR_WEEK_DAYS = 7;
 
-const utcToday = (): string => new Date().toISOString().slice(0, 10);
 const utcMonth = (): string => new Date().toISOString().slice(0, 7);
 
 // Resolve the active subject the same way flashcards/submit do: from the query
@@ -660,80 +662,6 @@ function resolveSubject(req: VercelRequest): ScopeSubjectId | null {
     ? req.query.subject
     : (req.body as { subject?: unknown } | undefined)?.subject;
   return isScopeSubject(raw) && deploymentSubjectIds().includes(raw) ? raw : null;
-}
-
-// GET /api/user/[op]?op=cards&subject=… — the collection + a server-verified
-// "a pack is ready" flag. POST claims today's pack once the Today target is met.
-async function cards(req: VercelRequest, res: VercelResponse) {
-  const userId = await requireAuthSub(req, res);
-  if (!userId) return;
-  const subject = resolveSubject(req);
-  if (!subject) return jsonError(res, 400, 'invalid_subject_scope', 'A subject from this deployment is required');
-  const today = utcToday();
-
-  try {
-    if (req.method === 'GET') {
-      const [owned, streakRow, completion] = await Promise.all([
-        withTimeout(
-          supabase!.from('user_cards').select('card_id, count, first_earned_at').eq('user_id', userId).eq('subject', subject),
-        ),
-        withTimeout(supabase!.from('user_streak').select('days').eq('user_id', userId).maybeSingle()),
-        withTimeout(
-          supabase!.from('daily_queue_completions').select('queue_date').eq('user_id', userId).eq('subject', subject).eq('queue_date', today).maybeSingle(),
-        ),
-      ]);
-      if (owned.error) return jsonError(res, 500, 'db_error', 'Could not load cards');
-      const days = (streakRow.data?.days as Record<string, number> | undefined) ?? {};
-      const reachedTarget = Number(days[today] ?? 0) >= DAILY_TARGET;
-      const alreadyClaimed = !completion.error && !!completion.data;
-      return res.json({
-        cards: (owned.data ?? []).map((c) => ({
-          card_id: c.card_id,
-          count: Number(c.count),
-          first_earned_at: c.first_earned_at,
-        })),
-        packAvailable: reachedTarget && !alreadyClaimed,
-        target: DAILY_TARGET,
-        total: subjectCardCount(subject),
-      });
-    }
-
-    if (req.method === 'POST') {
-      const streakRow = await withTimeout(
-        supabase!.from('user_streak').select('days').eq('user_id', userId).maybeSingle(),
-      );
-      if (streakRow.error) return jsonError(res, 500, 'db_error', 'Could not verify daily progress');
-      const days = (streakRow.data?.days as Record<string, number> | undefined) ?? {};
-      if (Number(days[today] ?? 0) < DAILY_TARGET) {
-        return res.json({ status: 'not-yet', target: DAILY_TARGET });
-      }
-      const pack = rollPack(subject, `${userId}:${today}`);
-      if (pack.length === 0) return jsonError(res, 500, 'internal_error', 'Could not roll a card pack');
-      const granted = await withTimeout(
-        supabase!.rpc('grant_daily_queue_cards', {
-          p_user_id: userId,
-          p_subject: subject,
-          p_date: today,
-          p_card_ids: pack,
-        }),
-      );
-      if (granted.error) {
-        if (isRpcMissing(granted.error)) return jsonError(res, 503, 'migration_required', 'Card packs are not configured');
-        logEvent('cards', { status: 500, reason: 'grant_failed', error: granted.error.message });
-        return jsonError(res, 500, 'db_error', 'Could not grant the card pack');
-      }
-      const row = Array.isArray(granted.data) ? granted.data[0] : granted.data;
-      const status = row?.status === 'granted' || row?.status === 'claimed' ? row.status : 'granted';
-      const grantedCards = Array.isArray(row?.granted_cards) ? (row.granted_cards as string[]) : pack;
-      logEvent('cards', { status: 200, op: status, subject });
-      return res.json({ status, cards: grantedCards });
-    }
-
-    res.setHeader('Allow', 'GET, POST');
-    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
-  } catch {
-    return jsonError(res, 500, 'internal_error', 'Internal error');
-  }
 }
 
 // Count Learn levels the learner has mastered in a subject, from the verified

@@ -23,7 +23,7 @@
  * is the only place that says what the free tier includes and what Premium
  * opens; the server refuses locked content with 402 and the client only
  * mirrors it. Premium changes which content a learner may start and nothing
- * else. Coins, the crown, collectible Shark Cards and badges change even less:
+ * else. Coins, the crown, Shark Cards and badges change even less:
  * buying, owning and equipping change no access, no content, no grading, no
  * explanation, no XP amount, no score, no rank, no leaderboard position, no
  * matchmaking and no prerequisite. The crown is a picture.
@@ -51,7 +51,27 @@
  *
  * And the reverse direction is not an exception at all: finishing a whole
  * learning path earns the merchandise package. A reward *for* learning is not a
- * purchase that affects learning, and it changes no progress. */
+ * purchase that affects learning, and it changes no progress. The package is
+ * paused with the rest of merchandise until next quarter (`MERCH_ENABLED`). */
+
+/* ── the switch ────────────────────────────────────────────────────────── */
+
+/**
+ * Merchandise, on or off, for the whole product (owner decision 10, 1 October
+ * 2026). No package has shipped yet and the first one comes next quarter, so
+ * until then nothing shows or sells merchandise: not the shop's merchandise
+ * section, not coin redemption, not the package a finished learning path
+ * earns, not the Premium list, the marketing copy or the Terms. The server
+ * answers every merchandise order and every path-package claim with 404
+ * `merch_unavailable` while it is off, whatever the owner's shop settings say.
+ *
+ * The tables, the routines and the admin console stay as they are, and
+ * account deletion still erases any order. Turning merchandise back on is this
+ * one line, plus the copy and the Terms that were taken out with it.
+ *
+ * Typed `boolean` rather than the literal, so the code behind it stays checked.
+ */
+export const MERCH_ENABLED: boolean = false;
 
 /* ── the catalogue ─────────────────────────────────────────────────────── */
 
@@ -212,11 +232,12 @@ export function merchAvailability(input: {
   return 'available';
 }
 
-/** Whether coin redemption is open: the shop is on and at least one item has
- * a coin price. Pages that mention redeeming coins for merchandise show that
- * line only while this holds (design audit P0.1). */
-export const merchRedemptionOpen = (settings: MerchSettings): boolean =>
-  settings.enabled && Object.values(settings.pricing).some((pricing) => typeof pricing?.tokenPrice === 'number' && pricing.tokenPrice > 0);
+/** Whether coin redemption is open: merchandise is on (`MERCH_ENABLED`), the
+ * shop is on and at least one item has a coin price. Pages that mention
+ * redeeming coins for merchandise show that line only while this holds
+ * (design audit P0.1). */
+export const merchRedemptionOpen = (settings: MerchSettings, merchOn: boolean = MERCH_ENABLED): boolean =>
+  merchOn && settings.enabled && Object.values(settings.pricing).some((pricing) => typeof pricing?.tokenPrice === 'number' && pricing.tokenPrice > 0);
 
 /** Whether the crown can be bought. Cosmetic, so it needs no supplier — only
  * the wallet the price is paid from. */
