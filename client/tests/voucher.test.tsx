@@ -15,15 +15,18 @@ import UpgradeSheet from '../src/components/UpgradeSheet';
 import { closeUpgradeSheet } from '../src/lib/upgradeSheet';
 import { server } from './mocks/server';
 
-const signInWithGoogle = vi.fn(async (_returnTo?: string) => undefined);
 const auth = vi.hoisted(() => ({
   value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false },
 }));
-vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ ...auth.value, signInWithGoogle }) }));
+vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
+// Signing in opens the sign-in dialog, which says itself when it cannot sign
+// in (tests/sign-in-dialog.test.tsx).
+const openSignIn = vi.hoisted(() => vi.fn());
+vi.mock('../src/lib/signInDialog', async (importOriginal) => ({ ...(await importOriginal<object>()), openSignIn }));
 const signIn = () => { auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false }; };
 afterEach(() => {
   auth.value = { user: null, isAuthenticated: false, isLoading: false };
-  signInWithGoogle.mockClear();
+  openSignIn.mockClear();
   closeUpgradeSheet();
 });
 
@@ -107,15 +110,7 @@ describe('/premium while checkout is off', () => {
     expect(within(voucherSection()).getByText('Sign in first. The voucher opens Premium on the account you sign in with.')).toBeInTheDocument();
     expect(within(voucherSection()).queryByRole('textbox')).toBeNull();
     fireEvent.click(within(voucherSection()).getByRole('button', { name: 'Sign in to redeem' }));
-    await waitFor(() => expect(signInWithGoogle).toHaveBeenCalledWith('/premium#voucher'));
-  });
-
-  it('says so when sign-in cannot start', async () => {
-    serve();
-    signInWithGoogle.mockRejectedValueOnce(new Error('Sign-in is not available in this deployment.'));
-    renderAt('/premium', <PremiumPage />);
-    fireEvent.click(within(voucherSection()).getByRole('button', { name: 'Sign in to redeem' }));
-    expect(await within(voucherSection()).findByRole('alert')).toHaveTextContent('Something went wrong. Try again.');
+    await waitFor(() => expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium#voucher' }));
   });
 
   it('waits for the sign-in state instead of flashing a prompt', () => {
@@ -288,7 +283,8 @@ describe('the Terms and the privacy policy', () => {
     const vouchers = screen.getByRole('heading', { level: 2, name: 'Vouchers' }).closest('section')!;
     expect(vouchers).toHaveTextContent('devShark stores your account identifier, the voucher you redeemed and the time you redeemed it');
     expect(vouchers).toHaveTextContent('It does not store the code you type.');
-    expect(screen.getByRole('heading', { level: 2, name: 'Deletion and retention' }).closest('section')).toHaveTextContent('your voucher redemptions');
+    // Round 4 split "Deletion and retention" into a retention table and "Deleting your account".
+    expect(screen.getByRole('heading', { level: 2, name: 'Deleting your account' }).closest('section')).toHaveTextContent('your voucher redemptions');
   });
 });
 

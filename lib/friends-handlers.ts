@@ -5,9 +5,11 @@
  * here. This product has never had a user directory, and it still does not:
  * a handle is opt-in, matching is exact equality on its lower-cased form, and
  * an account without a handle cannot be reached at all. There is no listing,
- * no prefix search and no suggestion. `user_stats.name` and `.email` are the
- * name and address the OAuth provider supplied — things nobody chose to
- * publish — and nothing on this path reads either of them.
+ * no prefix search and no suggestion. The handle is the learner's sharkname
+ * (shared/sharkname.ts rolls one on the Profile). `user_stats.name` and
+ * `.picture` are what Google supplied; friends see them only after the
+ * learner chose so with op=identity (migration 055), and `.email` is read by
+ * nothing on this path.
  *
  * Every routine below is service-role only and reached exactly once, after the
  * caller's own token has been verified. A friend's numbers are assembled by the
@@ -17,40 +19,38 @@
 
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { jsonError, requireAuthSub, withTimeout, createLogger } from './http';
+import { jsonError, requireAuthResult, requireAuthSub, withTimeout, createLogger } from './http';
+import type { AuthResult } from './auth';
 import { defaultDeploymentCategories } from './product-scope';
+import { isValidHandle } from '../shared/handles';
 
 const logEvent = createLogger('friends');
-
-/** The same shape the database enforces, checked before the round trip so a
- * typo costs nothing and the error is the one the learner needs. */
-const HANDLE = /^[A-Za-z0-9][A-Za-z0-9_-]{1,22}[A-Za-z0-9]$/;
 
 /** Errors the routines raise on purpose, mapped to a status and a message the
  * learner can act on. Anything not listed here is a 500: an unexpected
  * database error must not be reported as a user mistake. */
 const KNOWN: Record<string, { status: number; code: string; message: string }> = {
-  invalid_handle: { status: 400, code: 'invalid_handle', message: 'A handle is 3–24 letters, numbers, hyphens or underscores' },
-  handle_taken: { status: 409, code: 'handle_taken', message: 'That handle is already taken' },
-  handle_cooldown: { status: 409, code: 'handle_cooldown', message: 'A handle can be changed once every 30 days' },
-  handle_not_found: { status: 404, code: 'not_found', message: 'No account with that handle' },
-  cannot_friend_self: { status: 400, code: 'bad_request', message: 'That is your own handle' },
+  invalid_handle: { status: 400, code: 'invalid_handle', message: 'A sharkname is 3–32 letters, numbers, hyphens or underscores' },
+  handle_taken: { status: 409, code: 'handle_taken', message: 'That sharkname is already taken' },
+  handle_cooldown: { status: 409, code: 'handle_cooldown', message: 'A sharkname can be changed once every 30 days' },
+  handle_not_found: { status: 404, code: 'not_found', message: 'No account with that sharkname' },
+  cannot_friend_self: { status: 400, code: 'bad_request', message: 'That is your own sharkname' },
   friend_limit_reached: { status: 409, code: 'friend_limit', message: 'You have reached the friend limit' },
   pending_limit_reached: { status: 409, code: 'pending_limit', message: 'You have too many requests waiting for an answer' },
   request_declined: { status: 409, code: 'declined', message: 'That request was declined' },
   no_request: { status: 404, code: 'not_found', message: 'There is no request to answer' },
   invalid_country: { status: 400, code: 'invalid_country', message: 'A country is a two-letter ISO code, or blank for none' },
-  no_handle: { status: 409, code: 'no_handle', message: 'Choose a handle before setting a country' },
+  no_handle: { status: 409, code: 'no_handle', message: 'Choose a sharkname first' },
 };
 
-function rpcError(res: VercelResponse, error: { message?: string } | null, fallback: string) {
+function rpcError(res: VercelResponse, error: { message?: string } | null, fallback: string, migration = '033') {
   const raised = Object.keys(KNOWN).find((key) => error?.message?.includes(key));
   if (raised) {
     const known = KNOWN[raised];
     return jsonError(res, known.status, known.code, known.message);
   }
   if (/does not exist|schema cache/i.test(error?.message ?? '')) {
-    return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-033.sql to enable friends');
+    return jsonError(res, 503, 'migration_required', `Run supabase/supabase-schema-${migration}.sql to enable friends`);
   }
   logEvent({ status: 500, error: error?.message ?? 'unknown' });
   return jsonError(res, 500, 'db_error', fallback);
@@ -58,7 +58,7 @@ function rpcError(res: VercelResponse, error: { message?: string } | null, fallb
 
 const readHandle = (value: unknown): string | null => {
   const handle = typeof value === 'string' ? value.trim() : '';
-  return HANDLE.test(handle) ? handle : null;
+  return isValidHandle(handle) ? handle : null;
 };
 
 export async function handleFriends(
@@ -132,9 +132,11 @@ export async function handleFriends(
   }
 
   // ── looking somebody up ────────────────────────────────────────────────
-  // One handle in, at most one row out, carrying a handle and a relationship
-  // state. No account id, no name, no picture, no crown, no statistic: a
-  // stranger learns only what the other person published by claiming it.
+  // One handle in, at most one row out, carrying a handle, a relationship
+  // state and the name to show. No account id, no picture, no crown, no
+  // statistic, and for anyone but an accepted friend the name is the handle
+  // itself: a stranger learns only what the other person published by
+  // claiming it.
   if (op === 'friends-lookup') {
     if (req.method !== 'GET') {
       res.setHeader('Allow', 'GET');
@@ -148,7 +150,7 @@ export async function handleFriends(
     if (error) return rpcError(res, error, 'Could not search');
     const row = Array.isArray(data) ? data[0] : data;
     if (!row) return res.json({ found: false });
-    return res.json({ found: true, handle: row.handle, state: row.state });
+    return res.json({ found: true, handle: row.handle, state: row.state, displayName: row.display_name ?? row.handle });
   }
 
   // ── asking, answering, removing ────────────────────────────────────────
@@ -206,8 +208,11 @@ export async function handleFriends(
     if (list.error) return rpcError(res, list.error, 'Could not load your friends');
     if (requests.error) return rpcError(res, requests.error, 'Could not load your requests');
     return res.json({
+      // display_name and the gated picture arrive with migration 055; before
+      // it the handle is the name and the picture is the old ungated one.
       friends: (list.data ?? []).map((row: Record<string, unknown>) => ({
         handle: row.handle,
+        displayName: row.display_name ?? row.handle,
         picture: row.picture ?? null,
         country: row.country ?? null,
         crown: row.crown === true,
@@ -220,10 +225,107 @@ export async function handleFriends(
       })),
       requests: (requests.data ?? []).map((row: Record<string, unknown>) => ({
         handle: row.handle,
+        displayName: row.display_name ?? row.handle,
         direction: row.direction,
       })),
     });
   }
 
   return jsonError(res, 404, 'unknown_op', `Unknown friends op: ${op}`);
+}
+
+/** The name and photo Google gave the account, as api/user/[op].ts reads them
+ * (verifiedProfile): null for an email/password account. */
+export type VerifiedProfile = (auth: AuthResult) => Promise<{ name: string | null; picture: string | null }>;
+
+/**
+ * op=identity on `api/user/[op].ts`: what friends see of the caller
+ * (migration 055). GET answers
+ * `{ showRealName, showPhoto, realName, photo }`; PUT takes
+ * `{ showRealName?: boolean, showPhoto?: boolean }`, at least one, and
+ * answers the same. `realName` and `photo` are the caller's own Google name
+ * and photo, so the Profile offers "your name" only to an account that has
+ * one. Switching either on is refused (409) when there is nothing to show,
+ * and first copies the verified name and photo into user_stats, which is
+ * where friend_list and the boards read them. The route's write limit
+ * (limitUserWrite) charges each PUT to the account.
+ */
+export async function handleIdentity(
+  req: VercelRequest,
+  res: VercelResponse,
+  supabase: SupabaseClient | null,
+  profileOf: VerifiedProfile,
+) {
+  if (req.method !== 'GET' && req.method !== 'PUT') {
+    res.setHeader('Allow', 'GET, PUT');
+    return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
+  }
+  const auth = await requireAuthResult(req, res);
+  if (!auth) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Backend is not configured');
+  res.setHeader('Cache-Control', 'private, no-store');
+
+  let showRealName: boolean | null = null;
+  let showPhoto: boolean | null = null;
+  if (req.method === 'PUT') {
+    const body = req.body as Record<string, unknown> | null | undefined;
+    const valid = !!body && typeof body === 'object' && !Array.isArray(body)
+      && (body.showRealName === undefined || typeof body.showRealName === 'boolean')
+      && (body.showPhoto === undefined || typeof body.showPhoto === 'boolean')
+      && (body.showRealName !== undefined || body.showPhoto !== undefined);
+    if (!valid || !body) return jsonError(res, 400, 'bad_request', 'showRealName and showPhoto must be true or false');
+    showRealName = typeof body.showRealName === 'boolean' ? body.showRealName : null;
+    showPhoto = typeof body.showPhoto === 'boolean' ? body.showPhoto : null;
+  }
+
+  try {
+    const profile = await profileOf(auth);
+    const answer = (row: { show_real_name?: unknown; show_photo_to_friends?: unknown } | null | undefined) => res.json({
+      showRealName: row?.show_real_name === true,
+      showPhoto: row?.show_photo_to_friends === true,
+      realName: profile.name,
+      photo: profile.picture,
+    });
+
+    if (req.method === 'GET') {
+      const { data, error } = await withTimeout(
+        supabase.from('user_handles').select('show_real_name, show_photo_to_friends').eq('user_id', auth.sub).maybeSingle(),
+      );
+      if (error) {
+        // 42703: the columns are missing, so migration 055 is not applied yet.
+        if (error.code === '42703') return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-055.sql to enable this setting');
+        logEvent({ status: 500, op: 'identity', reason: 'select_failed', error: error.message });
+        return jsonError(res, 500, 'db_error', 'Could not load what friends see');
+      }
+      return answer(data as { show_real_name?: unknown; show_photo_to_friends?: unknown } | null);
+    }
+
+    if (showRealName === true && !profile.name) {
+      return jsonError(res, 409, 'no_real_name', 'Your account has no Google name to show');
+    }
+    if (showPhoto === true && !profile.picture) {
+      return jsonError(res, 409, 'no_photo', 'Your account has no Google photo to show');
+    }
+    if (showRealName === true || showPhoto === true) {
+      const stats = await withTimeout(
+        supabase.from('user_stats').upsert(
+          { user_id: auth.sub, name: profile.name, picture: profile.picture },
+          { onConflict: 'user_id' },
+        ),
+      );
+      if (stats.error) {
+        logEvent({ status: 500, op: 'identity', reason: 'stats_failed', error: stats.error.message });
+        return jsonError(res, 500, 'db_error', 'Could not save what friends see');
+      }
+    }
+    const { data, error } = await withTimeout(
+      supabase.rpc('set_friend_display', { p_user_id: auth.sub, p_show_real_name: showRealName, p_show_photo: showPhoto }),
+    );
+    if (error) return rpcError(res, error, 'Could not save what friends see', '055');
+    logEvent({ status: 200, op: 'identity', showRealName, showPhoto });
+    return answer(Array.isArray(data) ? data[0] : data);
+  } catch (err) {
+    logEvent({ status: 500, op: 'identity', reason: 'exception', error: err instanceof Error ? err.message : 'unknown' });
+    return jsonError(res, 500, 'internal_error', 'Internal error');
+  }
 }

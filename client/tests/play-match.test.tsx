@@ -204,7 +204,8 @@ describe('the end of a room', () => {
 
 describe('the classroom presenter screen', () => {
   // The teacher's screen is often projected while the class answers, so the
-  // answer key stays off it until the question closes or the teacher reveals it.
+  // answer key stays off it until the question closes. "Reveal answer" closes
+  // it on the server first (migration 056): no answer to it lands any more.
   const KEYED = [
     { ...QUESTIONS[0], correct_index: 1 },
     { ...QUESTIONS[1], correct_index: 0 },
@@ -214,12 +215,18 @@ describe('the classroom presenter screen', () => {
     api.joinMatch.mockResolvedValue(match);
     api.fetchMatchState.mockResolvedValue(stateOf(match));
     api.fetchDistribution.mockResolvedValue({ buckets: [{ selected_idx: 0, count: 3 }, { selected_idx: 1, count: 5 }] });
+    // The server closes the question and the room reads as closed after it.
+    api.controlMatch.mockImplementation(async ({ action }: { action: string }) => {
+      if (action !== 'reveal') throw new Error(`unexpected control ${action}`);
+      api.fetchMatchState.mockResolvedValue(stateOf({ ...match, revealed_idx: match.current_index }));
+      return { ok: true, status: 'running', current_index: match.current_index, revealed_idx: match.current_index };
+    });
     return match;
   };
   const tone = (name: string) => screen.getByRole('radio', { name }).getAttribute('data-tone');
   const histogramKey = () => document.querySelectorAll('[data-correct]');
 
-  it('keeps an untimed question’s answer hidden until the teacher reveals it', async () => {
+  it('keeps an untimed question’s answer hidden until the teacher reveals it, and the reveal closes the question', async () => {
     presenting({ question_duration_s: 0 });
     await mount();
     await screen.findByText('Pick one?');
@@ -230,15 +237,40 @@ describe('the classroom presenter screen', () => {
     expect(tone('alpha')).toBe('default');
     expect(histogramKey()).toHaveLength(0);
     expect(screen.queryByText(/^Correct answer:/)).toBeNull();
-    expect(screen.getByText('The correct answer stays hidden until you reveal it.')).toBeInTheDocument();
+    expect(screen.getByText('The correct answer stays hidden until you reveal it. Revealing it closes the question.')).toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Reveal answer' }));
-    expect(tone('beta')).toBe('success');
+    await waitFor(() => expect(tone('beta')).toBe('success'));
+    expect(api.controlMatch).toHaveBeenCalledWith(expect.objectContaining({ code: 'ABC123', action: 'reveal' }));
+    // Every screen in the room hears that the question closed.
+    expect(live.sent.filter((one) => one.event === 'match_updated'))
+      .toEqual([{ event: 'match_updated', payload: { status: 'running', current_index: 0, revealed_idx: 0 } }]);
     expect(tone('alpha')).toBe('default');
     expect(histogramKey()).toHaveLength(1);
     expect(histogramKey()[0]).toHaveTextContent('B');
     expect(screen.getByText('Correct answer: B. beta')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reveal answer' })).toBeNull();
+  });
+
+  it('keeps the key hidden when the server could not close the question', async () => {
+    presenting({ question_duration_s: 0 });
+    api.controlMatch.mockRejectedValue(new ApiError('Match state changed; refresh and try again', 409, 'stale_state'));
+    await mount();
+    await screen.findByText('Pick one?');
+    fireEvent.click(screen.getByRole('button', { name: 'Reveal answer' }));
+    expect(await screen.findByText('Match state changed; refresh and try again')).toBeInTheDocument();
+    expect(tone('beta')).toBe('default');
+    expect(histogramKey()).toHaveLength(0);
+    expect(screen.getByRole('button', { name: 'Reveal answer' })).toBeEnabled();
+  });
+
+  it('shows a question the teacher closed from another screen as closed', async () => {
+    presenting({ question_duration_s: 0, revealed_idx: 0 });
+    await mount();
+    await screen.findByText('Pick one?');
+    expect(tone('beta')).toBe('success');
+    expect(screen.queryByRole('button', { name: 'Reveal answer' })).toBeNull();
+    expect(screen.getByRole('timer')).toHaveTextContent('Closed');
   });
 
   it('shows a timed question’s answer once the server stops taking answers, without the button', async () => {
@@ -248,7 +280,7 @@ describe('the classroom presenter screen', () => {
     await screen.findByText('Pick one?');
     expect(tone('beta')).toBe('default');
     expect(histogramKey()).toHaveLength(0);
-    expect(screen.getByText('The correct answer stays hidden until time is up or you reveal it.')).toBeInTheDocument();
+    expect(screen.getByText('The correct answer stays hidden until time is up or you reveal it. Revealing it closes the question.')).toBeInTheDocument();
 
     // The clock is out, but an answer sent on the buzzer still counts for
     // two more seconds: the key stays off the projector until then.
@@ -268,9 +300,9 @@ describe('the classroom presenter screen', () => {
     await mount();
     await screen.findByText('Pick one?');
     fireEvent.click(screen.getByRole('button', { name: 'Reveal answer' }));
-    expect(tone('beta')).toBe('success');
+    await waitFor(() => expect(tone('beta')).toBe('success'));
 
-    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1, question_started_at: new Date().toISOString() }));
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, current_index: 1, revealed_idx: 0, question_started_at: new Date().toISOString() }));
     await act(async () => { live.listeners.get('match_updated')!(); });
     await screen.findByText('Next one?');
     expect(tone('gamma')).toBe('default');
@@ -286,6 +318,90 @@ describe('the classroom presenter screen', () => {
     await screen.findByText('Pick one?');
     expect(screen.queryByRole('button', { name: 'Reveal answer' })).toBeNull();
     expect(api.fetchDistribution).not.toHaveBeenCalled();
+  });
+});
+
+describe('a classroom pupil', () => {
+  // The question closes when the teacher reveals the answer (056), and the
+  // scoreboard counts only closed questions, so a pupil's screen says when a
+  // question is closed and nothing in it moves while one is open.
+  const pupilIn = (over: Partial<Match> = {}) => {
+    const match = running({ mode: 'classroom', questions: [QUESTIONS[0]], question_count: 2, ...over });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match, [{ user_id: 'player-1', display_name: 'Petr', correct: 0, score: 0, total_ms: 0 }]));
+    return match;
+  };
+
+  it('closes the options and says so when the teacher reveals the answer', async () => {
+    const match = pupilIn({ question_duration_s: 30 });
+    await mount();
+    await screen.findByText('Pick one?');
+    expect(screen.getByRole('radio', { name: 'beta' })).not.toBeDisabled();
+    expect(screen.getByText('Updates when a question closes: when time runs out or the teacher reveals the answer.')).toBeInTheDocument();
+
+    api.fetchMatchState.mockResolvedValue(stateOf({ ...match, revealed_idx: 0 }));
+    await fire('match_updated', { status: 'running', current_index: 0, revealed_idx: 0 });
+    expect(await screen.findByText('The teacher closed this question. Wait for the next one.')).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'beta' })).toBeDisabled();
+    expect(screen.getByRole('timer')).toHaveTextContent('Closed');
+    fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
+    await settle();
+    expect(api.submitMatchAnswer).not.toHaveBeenCalled();
+  });
+
+  it('says an answer that reached a closed question did not count, and reads the room again', async () => {
+    pupilIn();
+    api.submitMatchAnswer.mockRejectedValue(new ApiError('The teacher closed this question', 409, 'question_closed'));
+    await mount();
+    await screen.findByText('Pick one?');
+    const before = reads();
+    fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
+    expect(await screen.findByText('The teacher closed this question before your answer landed — it didn’t count.')).toBeInTheDocument();
+    await waitFor(() => expect(reads()).toBe(before + 1));
+  });
+
+  it('tells nobody about a single answer, and the teacher reads nothing for one', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    pupilIn();
+    // A classroom answer is acknowledged, never graded back (056).
+    api.submitMatchAnswer.mockResolvedValue({ ok: true, accepted: true, advanced: false });
+    await mount();
+    await screen.findByText('Pick one?');
+    fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
+    await waitFor(() => expect(api.submitMatchAnswer).toHaveBeenCalledTimes(1));
+    // The pupil is told the answer is locked, and no option is marked right.
+    expect(await screen.findByText('Answer locked. Waiting for the instructor to advance…')).toBeInTheDocument();
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('data-tone'))).not.toContain('success');
+    await settle();
+    expect(roomEvents()).toEqual([]);
+  });
+
+  it('reads the room once when a timed question’s clock runs out, for the scoreboard', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    pupilIn({ question_started_at: new Date(Date.now() - 28_000).toISOString(), question_duration_s: 30 });
+    await mount();
+    await screen.findByText('Pick one?');
+    const before = reads();
+    await tick(2_000);
+    expect(reads()).toBe(before);
+    await tick(3_000);
+    expect(reads()).toBe(before + 1);
+  });
+});
+
+describe('a classroom presenter and the answers', () => {
+  it('reads nothing for the class’s answers: the scoreboard waits for the question to close', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const match = running({ mode: 'classroom', host_id: USER.id, questions: KEYED_QUESTIONS });
+    api.joinMatch.mockResolvedValue(match);
+    api.fetchMatchState.mockResolvedValue(stateOf(match));
+    api.fetchDistribution.mockResolvedValue({ buckets: [] });
+    await mount();
+    await screen.findByText('Pick one?');
+    const before = reads();
+    for (let i = 0; i < 12; i += 1) await fire('answered', { question_idx: 0 });
+    await tick(5_000);
+    expect(reads()).toBe(before);
   });
 });
 

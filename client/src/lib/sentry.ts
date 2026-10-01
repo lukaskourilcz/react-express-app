@@ -32,8 +32,15 @@ export function initSentry(): void {
         environment: import.meta.env.MODE,
         // Performance tracing (Web Vitals + transactions) at a low sample rate,
         // without the cost of full sampling or Session Replay.
-        integrations: [Sentry.browserTracingIntegration()],
+        // `linkPreviousTrace: 'in-memory'` is the SDK's default, pinned: the
+        // other setting keeps the last trace in sessionStorage.
+        integrations: [Sentry.browserTracingIntegration({ linkPreviousTrace: 'in-memory' })],
         tracesSampleRate: 0.1,
+        // No IP address, cookies or user context. Error monitoring runs for
+        // every visitor without asking (lib/consent.ts, "necessary") only
+        // because it stores nothing in the browser and carries no identifier
+        // of the person: no cookie, no storage key, no Session Replay, no
+        // setUser. Keep it that way, or put it under analytics consent.
         sendDefaultPii: false,
       });
       sentry = Sentry;

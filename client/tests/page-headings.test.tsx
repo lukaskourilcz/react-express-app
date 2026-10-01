@@ -32,14 +32,14 @@ async function mount(page: ReactNode) {
 describe('the page heading', () => {
   it('is an h1 on /cards signed out', async () => {
     await mount(<Flashcards />);
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Sign in to use Cards');
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('Sign in to keep Shark Cards');
   });
 
   it('is an h1 on /cards with no cards yet', async () => {
     auth.value = { user: { id: 'user-1', user_metadata: {} }, isAuthenticated: true, isLoading: false };
     server.use(http.get('*/api/flashcards', () => HttpResponse.json({ cards: [] })));
     await mount(<Flashcards />);
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('No cards yet');
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent('No Shark Cards yet');
   });
 
   it('is an h1 on /play signed out', async () => {

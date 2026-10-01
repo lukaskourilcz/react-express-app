@@ -8,7 +8,8 @@ import {
   generateMatchCode,
   withTimeout,
 } from '../../lib/play-helpers';
-import { requireAuthSub, isRpcMissing, withRequestContext } from '../../lib/http';
+import { requireAuthResult, requireAuthSub, isRpcMissing, withRequestContext } from '../../lib/http';
+import { roomDisplayName } from '../../lib/public-identity';
 import { tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
@@ -24,7 +25,7 @@ const QUESTION_EXPIRE_GRACE_MS = 2000;
 // Columns re-selected after a lazy server-side advance in state(); must match
 // the state() select list so the refreshed row can replace the original.
 const STATE_COLUMNS =
-  'id, code, mode, subject, host_id, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s, last_heartbeat_at, started_at';
+  'id, code, mode, subject, host_id, host_name, status, current_index, questions, ended_at, question_started_at, question_duration_s, last_heartbeat_at, started_at, revealed_idx';
 
 interface MatchQuestion {
   id: string;
@@ -73,6 +74,39 @@ function sanitizeQuestions(
 
 const questionCount = (match: { questions: unknown }): number =>
   Array.isArray(match.questions) ? match.questions.length : 0;
+
+/** The current question's clock has run out, with the grace an answer sent on
+ * the buzzer gets, on the server's clock. A question with no limit never does. */
+function pastAnswerWindow(
+  match: { question_started_at?: string | null; question_duration_s?: number | null },
+  nowMs: number,
+): boolean {
+  const limitS = match.question_duration_s ?? 0;
+  const startedMs = match.question_started_at ? new Date(match.question_started_at).getTime() : null;
+  return limitS > 0 && startedMs !== null && nowMs > startedMs + limitS * 1000 + QUESTION_EXPIRE_GRACE_MS;
+}
+
+/** While a classroom room runs, its scoreboard counts only the questions that
+ * are closed: every question before the current one, and the current one once
+ * the teacher revealed its answer or its clock ran out. A live count of the
+ * open question would tell a projected room which option scores. Null for
+ * every other room, which counts every answer. */
+function scoreboardBeforeIdx(
+  match: {
+    mode: string;
+    status: string;
+    current_index: number | null;
+    revealed_idx?: number | null;
+    question_started_at?: string | null;
+    question_duration_s?: number | null;
+  },
+  nowMs: number,
+): number | null {
+  if (match.mode !== 'classroom' || match.status !== 'running') return null;
+  const current = match.current_index ?? 0;
+  const closed = match.revealed_idx === current || pastAnswerWindow(match, nowMs);
+  return closed ? current + 1 : current;
+}
 
 // Move a running match to its next question — or finish it after the last
 // one. The conditional update (status + current_index must still match what
@@ -162,12 +196,13 @@ async function create(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const hostSub = await requireAuthSub(req, res);
-  if (!hostSub) return;
+  const hostAuth = await requireAuthResult(req, res);
+  if (!hostAuth) return;
+  const hostSub = hostAuth.sub;
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.playCreatePerUser, `user:${hostSub}`))) return;
 
+  // A body's `host_name` is ignored: the room names its host itself.
   const body = (req.body || {}) as {
-    host_name?: unknown;
     mode?: unknown;
     count?: unknown;
     categories?: unknown;
@@ -176,7 +211,9 @@ async function create(req: VercelRequest, res: VercelResponse) {
   };
 
   const { play: playSettings } = await getGameSettings();
-  const hostName = isShortString(body.host_name, 80) ? body.host_name : 'Host';
+  // The Google name, the sharkname, or "Player" and a number; never anything
+  // from the address (lib/public-identity.ts).
+  const hostName = await roomDisplayName(hostAuth, supabase);
   const mode = body.mode === 'classroom' ? 'classroom' : 'multiplayer';
   const requestedCount = typeof body.count === 'number' ? body.count : 10;
   const count = Math.min(
@@ -297,14 +334,15 @@ async function join(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const sub = await requireAuthSub(req, res);
-  if (!sub) return;
+  const auth = await requireAuthResult(req, res);
+  if (!auth) return;
+  const sub = auth.sub;
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.playJoinPerUser, `user:${sub}`))) return;
 
-  const body = (req.body || {}) as { code?: unknown; display_name?: unknown };
+  // A body's `display_name` is ignored, as the host's is: an older client sent
+  // the part of the address before the @ for an account without a Google name.
+  const body = (req.body || {}) as { code?: unknown };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
-  if (!isShortString(body.display_name, 60))
-    return jsonError(res, 400, 'bad_request', 'display_name required');
 
   const code = body.code.toUpperCase();
   try {
@@ -312,7 +350,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
       supabase!
         .from('matches')
         .select(
-          'id, code, mode, subject, host_id, host_name, status, current_index, questions, question_started_at, question_duration_s',
+          'id, code, mode, subject, host_id, host_name, status, current_index, questions, question_started_at, question_duration_s, revealed_idx',
         )
         .eq('code', code)
         .in('subject', deploymentSubjectIds())
@@ -328,7 +366,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
 
     const participantInsert = await withTimeout(
       supabase!.from('match_participants').upsert(
-        { match_id: match.id, user_id: sub, display_name: body.display_name },
+        { match_id: match.id, user_id: sub, display_name: await roomDisplayName(auth, supabase) },
         { onConflict: 'match_id,user_id' },
       ),
     );
@@ -351,6 +389,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
       current_index: match.current_index,
       question_started_at: match.question_started_at,
       question_duration_s: match.question_duration_s,
+      revealed_idx: match.revealed_idx ?? null,
       questions: sanitized,
       question_count: questionCount(match),
       // The clients count each question down against the server's clock, so
@@ -425,6 +464,10 @@ async function state(req: VercelRequest, res: VercelResponse) {
     const runningMultiplayer = match.status === 'running' && match.mode === 'multiplayer';
     const needAnsweredCount = runningMultiplayer && durationS <= 0;
 
+    // A running classroom counts only its closed questions (056); every
+    // other room counts every answer, through the call as it always was.
+    const beforeIdx = scoreboardBeforeIdx(match, Date.now());
+
     // Fetch participants + scoreboard (+ the answered count when needed)
     // concurrently instead of sequentially.
     const [participantsRes, scoreboardRes, answersCountRes] = await Promise.all([
@@ -435,7 +478,10 @@ async function state(req: VercelRequest, res: VercelResponse) {
           .eq('match_id', match.id)
           .order('joined_at', { ascending: true }),
       ),
-      withTimeout(supabase!.rpc('match_scoreboard', { p_match_id: match.id })),
+      withTimeout(supabase!.rpc(
+        'match_scoreboard',
+        beforeIdx === null ? { p_match_id: match.id } : { p_match_id: match.id, p_before_idx: beforeIdx },
+      )),
       needAnsweredCount
         ? withTimeout(
             supabase!
@@ -458,13 +504,7 @@ async function state(req: VercelRequest, res: VercelResponse) {
     }
 
     if (runningMultiplayer) {
-      const startedMs = match.question_started_at
-        ? new Date(match.question_started_at).getTime()
-        : null;
-      const expired =
-        durationS > 0 &&
-        startedMs !== null &&
-        Date.now() > startedMs + durationS * 1000 + QUESTION_EXPIRE_GRACE_MS;
+      const expired = pastAnswerWindow(match, Date.now());
       const participantCount = participantsRes.data?.length ?? 0;
       const allAnswered =
         participantCount > 0 && (answersCountRes?.count ?? 0) >= participantCount;
@@ -516,17 +556,17 @@ async function control(req: VercelRequest, res: VercelResponse) {
 
   const body = (req.body || {}) as { code?: unknown; action?: unknown };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
-  if (body.action !== 'start' && body.action !== 'advance' && body.action !== 'finish') {
-    return jsonError(res, 400, 'bad_request', 'action must be start | advance | finish');
+  if (body.action !== 'start' && body.action !== 'advance' && body.action !== 'finish' && body.action !== 'reveal') {
+    return jsonError(res, 400, 'bad_request', 'action must be start | advance | finish | reveal');
   }
-  const ctrl = body.action as 'start' | 'advance' | 'finish';
+  const ctrl = body.action as 'start' | 'advance' | 'finish' | 'reveal';
   const code = body.code.toUpperCase();
 
   try {
     const { data: match, error: matchError } = await withTimeout(
       supabase!
         .from('matches')
-        .select('id, host_id, status, current_index, questions')
+        .select('id, mode, host_id, status, current_index, questions')
         .eq('code', code)
         .in('subject', deploymentSubjectIds())
         .maybeSingle(),
@@ -539,6 +579,35 @@ async function control(req: VercelRequest, res: VercelResponse) {
 
     const patch: Record<string, unknown> = {};
     const now = new Date().toISOString();
+
+    // "Reveal answer" closes the classroom question on screen: answer()
+    // refuses it from now on, and the scoreboard counts it (056). Revealing
+    // the same question again changes nothing.
+    if (ctrl === 'reveal') {
+      if (match.mode !== 'classroom') {
+        return jsonError(res, 400, 'bad_request', 'Only a classroom question can be revealed');
+      }
+      if (match.status !== 'running') return jsonError(res, 409, 'bad_state', 'Match is not running');
+      const current = match.current_index ?? 0;
+      const { data: revealed, error: revealError } = await withTimeout(
+        supabase!
+          .from('matches')
+          .update({ revealed_idx: current, last_heartbeat_at: now })
+          .eq('id', match.id)
+          .eq('status', 'running')
+          .eq('current_index', current)
+          .select('id'),
+      );
+      if (revealError) {
+        logEvent('play/control', { status: 500, error: revealError.message, action: ctrl });
+        return jsonError(res, 500, 'db_error', 'Could not update match');
+      }
+      if (!revealed || revealed.length === 0) {
+        return jsonError(res, 409, 'stale_state', 'Match state changed; refresh and try again');
+      }
+      logEvent('play/control', { status: 200, code, action: ctrl });
+      return res.json({ ok: true, status: 'running', current_index: current, revealed_idx: current });
+    }
 
     if (ctrl === 'start') {
       if (match.status !== 'lobby')
@@ -629,7 +698,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     const { data: match } = await withTimeout(
       supabase!
         .from('matches')
-        .select('id, mode, subject, host_id, status, current_index, questions, question_started_at, question_duration_s')
+        .select('id, mode, subject, host_id, status, current_index, questions, question_started_at, question_duration_s, revealed_idx')
         .eq('code', code)
         .in('subject', deploymentSubjectIds())
         .maybeSingle(),
@@ -661,6 +730,17 @@ async function answer(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 403, 'not_participant', 'Join the match before answering');
     }
 
+    // A classroom pupil learns whether an answer scored when the question
+    // closes, from the scoreboard state() serves (056). The answer itself is
+    // only acknowledged, its retry included, so no pupil can tell the room
+    // which option scores while the question is open. A multiplayer player
+    // gets their own result at once, as before.
+    const classroom = match.mode === 'classroom';
+    const reply = (graded: { is_correct: boolean; speed_bonus: number }, advanced: boolean) =>
+      classroom
+        ? { ok: true, accepted: true, advanced: false }
+        : { ok: true, is_correct: graded.is_correct, speed_bonus: graded.speed_bonus, advanced };
+
     // An answer is final. A duplicate submit (network retry, double click)
     // replays the recorded result instead of re-grading, so a player can't
     // keep swapping options after seeing is_correct.
@@ -674,18 +754,17 @@ async function answer(req: VercelRequest, res: VercelResponse) {
         .maybeSingle(),
     );
     if (existingError) return jsonError(res, 503, 'backend_unavailable', 'Could not verify existing answer');
-    if (existing) {
-      return res.json({
-        ok: true,
-        is_correct: existing.is_correct,
-        speed_bonus: existing.speed_bonus,
-        advanced: false,
-      });
-    }
+    if (existing) return res.json(reply(existing, false));
 
     const questionStartMs = match.question_started_at
       ? new Date(match.question_started_at).getTime()
       : null;
+
+    // A classroom question the teacher revealed is closed (056). A retry of
+    // an answer that landed before the reveal was replayed above.
+    if (match.mode === 'classroom' && match.revealed_idx === body.question_idx) {
+      return jsonError(res, 409, 'question_closed', 'The teacher closed this question');
+    }
 
     // A timed question closes when its clock runs out, plus the grace the
     // expiry advance in state() allows an answer sent on the buzzer. A
@@ -693,8 +772,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
     // multiplayer one until someone reads the room, so the clock is checked
     // here rather than inferred from the current index. A retry of an answer
     // that landed in time was replayed above.
-    const limitS = match.question_duration_s ?? 0;
-    if (limitS > 0 && questionStartMs !== null && Date.now() > questionStartMs + limitS * 1000 + QUESTION_EXPIRE_GRACE_MS) {
+    if (pastAnswerWindow(match, Date.now())) {
       return jsonError(res, 409, 'time_up', 'Time ran out for this question');
     }
 
@@ -747,14 +825,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
             .eq('question_idx', body.question_idx)
             .single(),
         );
-        if (!replay.error && replay.data) {
-          return res.json({
-            ok: true,
-            is_correct: replay.data.is_correct,
-            speed_bonus: replay.data.speed_bonus,
-            advanced: false,
-          });
-        }
+        if (!replay.error && replay.data) return res.json(reply(replay.data, false));
       }
       logEvent('play/answer', { status: 500, error: error.message });
       return jsonError(res, 500, 'db_error', 'Could not record answer');
@@ -787,7 +858,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
       bonus: speedBonus,
       advanced,
     });
-    return res.json({ ok: true, is_correct: isCorrect, speed_bonus: speedBonus, advanced });
+    return res.json(reply({ is_correct: isCorrect, speed_bonus: speedBonus }, advanced));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
     logEvent('play/answer', { status: 504, error: message });

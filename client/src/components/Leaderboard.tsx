@@ -1,14 +1,15 @@
 // The leaderboard, Deep End v2.
 //
-// Three boards share one ranked-rows shape. The 30-day board is the default
-// because it is the one a new learner can climb; the all-time board is one tab
-// away and counts the same answers with no window; Today is the daily
-// challenge. Every board ranks by correct answers, then accuracy (Today: by
-// correct answers alone, whatever the time). Nothing here ranks by XP or by
-// streak, and nothing here reorders a board: the server does. The 30-day board
-// arrives with its ranks; the all-time and Today boards arrive in order, and
-// this screen numbers them so equal results share a rank, as the 30-day
-// board's do.
+// Four boards share one ranked-rows shape. The 30-day board is the default
+// because it is the one a new learner can climb; This month ranks the XP
+// earned in the current calendar month (UTC), the board the month's top three
+// are paid from (migration 056); the all-time board counts the same answers as
+// the 30-day one with no window; Today is the daily challenge. The answer
+// boards rank by correct answers, then accuracy (Today: by correct answers
+// alone, whatever the time). Nothing here ranks by streak, and nothing here
+// reorders a board: the server does. The 30-day and month boards arrive with
+// their ranks; the all-time and Today boards arrive in order, and this screen
+// numbers them so equal results share a rank, as the others' do.
 //
 // A row names a learner only if they switched that on (migration 049): the
 // server sends no name and no picture otherwise, and the row reads "Learner"
@@ -43,13 +44,15 @@ import type {
   LeaderboardDailyEntry,
   LeaderboardMe,
   LeaderboardResponse,
+  MonthLeaderboardEntry,
+  MonthLeaderboardMe,
   WindowLeaderboardEntry,
 } from '../lib/play';
 import { visibleCategoryOptionsFor, categoryLabelKey } from '../lib/categories';
 import { useActiveSubject, categoriesForSubject } from '../lib/subjects';
 import './Leaderboard.css';
 
-type Tab = '30d' | 'all' | 'today';
+type Tab = '30d' | 'month' | 'all' | 'today';
 
 /** One drawn row, whichever board it came from. */
 interface Row {
@@ -60,9 +63,9 @@ interface Row {
   /** No name came with the row: the avatar is the default one, not initials. */
   anonymous: boolean;
   picture: string | null;
-  /** The first numeric column: correct answers, or today's score. */
+  /** The first numeric column: correct answers, today's score, or the month's XP. */
   first: string;
-  /** The second numeric column: accuracy, or today's time. */
+  /** The second numeric column: accuracy, or today's time. The month board has none. */
   second: string;
   /** The line under the name on a phone, where the second column has no room. */
   detail: string;
@@ -136,8 +139,9 @@ function Leaderboard() {
   const { lang } = useLanguage();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
-  // Three equal segments leave "Last 30 days" too little room below 400px.
-  const narrow = useMediaQuery('(max-width: 399.95px)');
+  // Four equal segments leave the full labels too little room below 480px:
+  // there the control is the small size, with the short labels.
+  const compact = useMediaQuery('(max-width: 479.95px)');
   const subject = useActiveSubject();
   const { user } = useAuth();
   const profile = getUserProfile(user);
@@ -146,9 +150,12 @@ function Leaderboard() {
   const selectId = useId();
 
   // /leaderboard?tab=today opens on the daily board (the quiz links there
-  // once today's challenge is played).
+  // once today's challenge is played), and ?tab=month on this month's XP.
   const [searchParams] = useSearchParams();
-  const [tab, setTab] = useState<Tab>(() => (searchParams.get('tab') === 'today' ? 'today' : '30d'));
+  const [tab, setTab] = useState<Tab>(() => {
+    const asked = searchParams.get('tab');
+    return asked === 'today' || asked === 'month' ? asked : '30d';
+  });
   // '' is "All topics". The filter applies to the 30-day and all-time boards.
   const [category, setCategory] = useState('');
   const [windowUnavailable, setWindowUnavailable] = useState(false);
@@ -158,6 +165,8 @@ function Leaderboard() {
   const request: LeaderboardRequest =
     tab === '30d'
       ? { period: '30d', category: category || null, viewer: user?.id ?? null }
+      : tab === 'month'
+      ? { period: 'month', categories: subjectCategories, viewer: user?.id ?? null }
       : tab === 'today'
       ? { period: 'daily', date, categories: subjectCategories }
       : category
@@ -199,7 +208,7 @@ function Leaderboard() {
       : readCachedBoard(cacheKey)
     : null;
   const board: LeaderboardResponse | null = offline ? stale?.data ?? null : error ? null : data ?? null;
-  const me: LeaderboardMe | null = !error && !offline && drawTab === '30d' ? data?.me ?? null : null;
+  const me = !error && !offline && (drawTab === '30d' || drawTab === 'month') ? data?.me ?? null : null;
 
   const rows = board ? toRows(drawTab, board, t) : [];
   const viewerListed = rows.some((row) => row.isViewer);
@@ -214,30 +223,46 @@ function Leaderboard() {
           name: ownName ?? t('leaderboard.anonymous'),
           anonymous: ownName === null,
           picture: named === true ? profile.picture ?? null : null,
-          first: String(me.correct),
-          second: `${me.accuracy_pct}%`,
-          detail: t('leaderboard.answersDetail', { answered: me.answered, accuracy: me.accuracy_pct }),
+          ...(drawTab === 'month' ? monthFigures(me as MonthLeaderboardMe, t) : answerFigures(me as LeaderboardMe, t)),
           isViewer: true,
         }
       : null;
   const showNoActivity = !!me && me.rank === null && rows.length > 0;
 
   const periodLabel =
-    drawTab === '30d' ? t('leaderboard.last30') : drawTab === 'all' ? t('leaderboard.allTime') : t('leaderboard.today');
+    drawTab === '30d'
+      ? t('leaderboard.last30')
+      : drawTab === 'month'
+      ? t('leaderboard.thisMonth')
+      : drawTab === 'all'
+      ? t('leaderboard.allTime')
+      : t('leaderboard.today');
   const topicLabel = category ? t(categoryLabelKey(category)) : t('leaderboard.allTopics');
-  const caption = drawTab === 'today' ? periodLabel : t('leaderboard.caption', { period: periodLabel, topic: topicLabel });
+  const caption = drawTab === 'today' || drawTab === 'month' ? periodLabel : t('leaderboard.caption', { period: periodLabel, topic: topicLabel });
   const headers =
     drawTab === 'today'
       ? [t('leaderboard.scoreHeader'), t('leaderboard.timeHeader')]
+      : drawTab === 'month'
+      ? [t('leaderboard.xpHeader')]
       : [t('leaderboard.correctHeader'), t('leaderboard.accuracyHeader')];
   const scope =
-    tab === '30d' ? t('leaderboard.scope30d') : tab === 'all' ? t('leaderboard.scopeAllTime') : t('leaderboard.scopeToday');
+    tab === '30d'
+      ? t('leaderboard.scope30d')
+      : tab === 'month'
+      ? t('leaderboard.scopeMonth')
+      : tab === 'all'
+      ? t('leaderboard.scopeAllTime')
+      : t('leaderboard.scopeToday');
+  // The topic filter narrows the answer boards; XP is not counted per topic.
+  const filtered = tab === '30d' || tab === 'all';
 
   const emptyText =
     tab === '30d'
       ? category
         ? t('leaderboard.empty30dTopic', { label: topicLabel })
         : t('leaderboard.empty30d')
+      : tab === 'month'
+      ? t('leaderboard.emptyMonth')
       : tab === 'all'
       ? category
         ? t('leaderboard.noCategoryAttempts', { label: topicLabel })
@@ -264,7 +289,7 @@ function Leaderboard() {
         ) : (
           <TableBoard rows={rows} pinned={pinned} caption={caption} headers={headers} />
         )}
-        {showNoActivity && <p className="lb-note">{t('leaderboard.noActivity')}</p>}
+        {showNoActivity && <p className="lb-note">{t(drawTab === 'month' ? 'leaderboard.noXpThisMonth' : 'leaderboard.noActivity')}</p>}
       </div>
     );
   }
@@ -278,12 +303,19 @@ function Leaderboard() {
       </header>
 
       <div className="lb-controls">
-        <SegmentedControl value={tab} onChange={(value) => setTab(value as Tab)} label={t('leaderboard.period')} layout={isMobile ? 'fill' : undefined}>
-          <SegmentedControlItem value="30d" label={narrow ? t('leaderboard.last30Short') : t('leaderboard.last30')} />
+        <SegmentedControl
+          value={tab}
+          onChange={(value) => setTab(value as Tab)}
+          label={t('leaderboard.period')}
+          layout={isMobile ? 'fill' : undefined}
+          size={compact ? 'sm' : undefined}
+        >
+          <SegmentedControlItem value="30d" label={compact ? t('leaderboard.last30Short') : t('leaderboard.last30')} />
+          <SegmentedControlItem value="month" label={compact ? t('leaderboard.thisMonthShort') : t('leaderboard.thisMonth')} />
           <SegmentedControlItem value="all" label={t('leaderboard.allTime')} />
           <SegmentedControlItem value="today" label={t('leaderboard.today')} />
         </SegmentedControl>
-        {tab !== 'today' && (
+        {filtered && (
           <div className="lb-filter">
             <label className="ss-field-label" htmlFor={selectId}>
               {t('leaderboard.topic')}
@@ -334,20 +366,43 @@ function sharedRanks<T>(entries: T[], tie: (entry: T) => string): number[] {
   return ranks;
 }
 
+/** The numeric columns of a row on the answer boards. */
+function answerFigures(entry: { correct: number; answered: number; accuracy_pct: number }, t: ReturnType<typeof useT>) {
+  return {
+    first: String(entry.correct),
+    second: `${entry.accuracy_pct}%`,
+    detail: t('leaderboard.answersDetail', { answered: entry.answered, accuracy: entry.accuracy_pct }),
+  };
+}
+
+/** The month board's one figure, the XP, and its unit on a phone. */
+function monthFigures(entry: { xp: number }, t: ReturnType<typeof useT>) {
+  return { first: Number(entry.xp).toLocaleString('en-GB'), second: '', detail: t('leaderboard.xpDetail') };
+}
+
 function toRows(tab: Tab, board: LeaderboardResponse, t: ReturnType<typeof useT>): Row[] {
   // A learner who has not switched their name on arrives with none.
   const who = (entry: { display_name: string | null; picture: string | null }) => {
     const name = entry.display_name?.trim() || null;
     return { name: name ?? t('leaderboard.anonymous'), anonymous: name === null, picture: entry.picture ?? null };
   };
+  if (tab === 'month') {
+    // Ranked by the server, the way the month's top three are paid: equal XP
+    // shares a rank (1, 1, 3).
+    return (board.entries as MonthLeaderboardEntry[]).map((entry, index) => ({
+      key: `${entry.rank}-${index}`,
+      rank: typeof entry.rank === 'number' ? entry.rank : index + 1,
+      ...who(entry),
+      ...monthFigures(entry, t),
+      isViewer: entry.is_viewer === true,
+    }));
+  }
   if (tab === '30d') {
     return (board.entries as WindowLeaderboardEntry[]).map((entry, index) => ({
       key: `${entry.rank}-${index}`,
       rank: typeof entry.rank === 'number' ? entry.rank : index + 1,
       ...who(entry),
-      first: String(entry.correct),
-      second: `${entry.accuracy_pct}%`,
-      detail: t('leaderboard.answersDetail', { answered: entry.answered, accuracy: entry.accuracy_pct }),
+      ...answerFigures(entry, t),
       isViewer: entry.is_viewer === true,
     }));
   }
@@ -427,7 +482,7 @@ function TableBoard({ rows, pinned, caption, headers }: { rows: Row[]; pinned: R
         <Who row={row} />
       </td>
       <td className="lb-num lb-score">{row.first}</td>
-      <td className="lb-num">{row.second}</td>
+      {headers.length > 1 && <td className="lb-num">{row.second}</td>}
     </tr>
   );
   return (
@@ -437,8 +492,9 @@ function TableBoard({ rows, pinned, caption, headers }: { rows: Row[]; pinned: R
         <tr>
           <th scope="col" className="lb-col-rank">{t('leaderboard.rank')}</th>
           <th scope="col">{t('leaderboard.learner')}</th>
-          <th scope="col" className="lb-num lb-col-num">{headers[0]}</th>
-          <th scope="col" className="lb-num lb-col-num">{headers[1]}</th>
+          {headers.map((header) => (
+            <th key={header} scope="col" className="lb-num lb-col-num">{header}</th>
+          ))}
         </tr>
       </thead>
       <tbody>{rows.map(line)}</tbody>

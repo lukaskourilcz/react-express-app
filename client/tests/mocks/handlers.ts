@@ -33,6 +33,17 @@ export const dailyData = {
   entries: [{ display_name: 'Early riser', picture: null, correct: 9, total: 10, duration_ms: 84_000, attempted_at: '2026-09-25T07:12:00Z' }],
 };
 
+// This month's XP (period=month, migration 056): month_xp_leaderboard rows,
+// ranked by the server, equal XP sharing a rank.
+export const monthData = {
+  period: 'month', month: '2026-10', subject: 'webdev',
+  entries: [
+    { rank: 1, display_name: 'Night owl', picture: null, xp: 1240, is_viewer: false },
+    { rank: 1, display_name: 'Early bird', picture: null, xp: 1240, is_viewer: false },
+    { rank: 3, display_name: null, picture: null, xp: 980, is_viewer: false },
+  ],
+};
+
 // A signed-in learner below the visible top: their own line comes back as `me`.
 export const pinnedData = { ...leaderboardData, me: { rank: 14, correct: 3, answered: 6, accuracy_pct: 50 } };
 // A signed-in learner with no answers in the window.
@@ -45,6 +56,7 @@ export function boardFor(request: Request, windowBoard: object = leaderboardData
   if (period === 'global') return allTimeData;
   if (period === 'category') return categoryData(params.get('category') ?? '');
   if (period === 'daily') return { ...dailyData, date: params.get('date') ?? dailyData.date };
+  if (period === 'month') return monthData;
   return { ...windowBoard, category: params.get('category') };
 }
 

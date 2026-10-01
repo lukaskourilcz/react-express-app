@@ -16,6 +16,11 @@
 // its URL, and a tile shows a mockup only when the build found one under
 // client/public/merch.
 //
+// Merchandise is paused until next quarter (owner decision 10): while
+// MERCH_ENABLED in shared/rewards.ts is false the merchandise section, the
+// redemption form and "Orders and claims" do not render, and the orders are
+// never fetched. The crown and streak protection stay.
+//
 // Nothing here changes access, content, XP, scores, ranks or leaderboards.
 // The one exception is bounded in shared/rewards.ts: a streak protection
 // changes the day count of a streak and nothing else. Premium, which decides
@@ -66,7 +71,7 @@ import {
 import { MERCH_IMAGES } from '../lib/merchImages';
 import { MERCH_SHOP } from '../../product-catalog';
 import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
-import { SHIRT_SIZES, type MerchPromo, type MerchSku, type ShippingAddress } from '../../../shared/rewards';
+import { MERCH_ENABLED, SHIRT_SIZES, type MerchPromo, type MerchSku, type ShippingAddress } from '../../../shared/rewards';
 import './Rewards.css';
 
 type TFn = ReturnType<typeof useT>;
@@ -439,7 +444,7 @@ function useRewardsFirstData() {
   useFirstData(`rewards ${user?.id ?? ''}`, () => settled([
     readOnce(queryClient, shopQuery),
     user ? readOnce(queryClient, walletQuery) : null,
-    user ? readOnce(queryClient, ordersQuery) : null,
+    user && MERCH_ENABLED ? readOnce(queryClient, ordersQuery) : null,
     user ? readOnce(queryClient, entitlementQuery(user.id)) : null,
     user ? readOnce(queryClient, referralQuery) : null,
   ]));
@@ -454,7 +459,7 @@ function Shop() {
   const config = useGameConfig();
   const shop = useShop();
   const wallet = useWallet(isAuthenticated);
-  const orders = useOrders(isAuthenticated);
+  const orders = useOrders(isAuthenticated && MERCH_ENABLED);
   const cosmetic = useCosmeticMutation();
   const protection = useProtectionMutation();
   const order = useOrderMutation();
@@ -482,7 +487,8 @@ function Shop() {
   // Links out to the devShark shop on Spreadshop, from client/product-catalog.ts.
   const shopLinked = Boolean(MERCH_SHOP.shopUrl) || Object.values(MERCH_SHOP.products).some(Boolean);
 
-  const merchOpen = shop.data?.enabled === true
+  const merchOpen = MERCH_ENABLED
+    && shop.data?.enabled === true
     && shop.data.items.some((item) => item.availability === 'available' && typeof item.price?.tokenPrice === 'number');
 
   // Merchandise is Premium only. While the plan is still loading the server
@@ -729,7 +735,7 @@ function Shop() {
       )}
 
       {/* Orders and claims: coin redemptions and the learning-path package. */}
-      {isAuthenticated && (orders.data?.orders.length ?? 0) > 0 && (
+      {MERCH_ENABLED && isAuthenticated && (orders.data?.orders.length ?? 0) > 0 && (
         <section className="rw-section" aria-labelledby="rw-orders-title">
           <Kicker as="h2" id="rw-orders-title">{t('shop.ordersSection')}</Kicker>
           <ul className="ss-orders">
