@@ -1,7 +1,11 @@
--- Migration 056: XP for every answer (2026-10-01). Apply after 055.
+-- Migration 056: XP for every answer, and a classroom question that closes
+-- (2026-10-01). Apply after 055.
 --
--- Safe to re-run, and the code running when it is applied keeps working: the
--- routine below keeps its name, arguments and result.
+-- Safe to re-run, and the code running when it is applied keeps working: one
+-- ADD COLUMN IF NOT EXISTS, and routines restated with the same names,
+-- arguments and results. match_scoreboard takes one more DEFAULT argument, so
+-- it is dropped and created again; the whole file is one transaction, so no
+-- caller ever finds it missing.
 --
 --   1. record_verified_quiz_result_v2 pays the receipt's whole XP for every
 --      quiz and daily result, repeated questions included (owner decision 5,
@@ -10,6 +14,13 @@
 --      api/quiz/submit.ts already puts in the receipt's total. The boards and
 --      the category stats still count a question once per learner and UTC
 --      day, as 048 made them: what a repeat earns is XP, never a place.
+--   2. A classroom question closes when the teacher reveals its answer
+--      (owner decision 6). matches.revealed_idx holds the question the
+--      teacher closed; api/play/[action].ts sets it (control action
+--      'reveal') and refuses an answer to that question. match_scoreboard
+--      takes p_before_idx and then counts only the answers to earlier
+--      questions, so while a classroom room runs its scoreboard shows only
+--      closed questions and tells nobody which option is scoring.
 
 BEGIN;
 
@@ -202,5 +213,55 @@ REVOKE ALL ON FUNCTION public.record_verified_quiz_result_v2(TEXT, TEXT, INTEGER
   FROM PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.record_verified_quiz_result_v2(TEXT, TEXT, INTEGER, INTEGER, JSONB, JSONB, TEXT, INTEGER, TEXT, TEXT, TEXT, DATE, INTEGER)
   TO service_role;
+
+-- ---------------------------------------------------------------------------
+-- 2. A classroom question the teacher closed, and a scoreboard of closed
+--    questions.
+-- ---------------------------------------------------------------------------
+-- revealed_idx is the question whose answer the classroom teacher revealed.
+-- Revealing closes it: the handler refuses every later answer to it. A later
+-- question is open again (its index is higher), so the column never needs a
+-- reset. NULL until the first reveal, and in every multiplayer room.
+ALTER TABLE public.matches
+  ADD COLUMN IF NOT EXISTS revealed_idx INTEGER CHECK (revealed_idx >= 0);
+
+COMMENT ON COLUMN public.matches.revealed_idx IS
+  'Classroom only: the question whose answer the teacher revealed, which closes it to answers (migration 056).';
+
+-- Restated from 005 with one argument more and nothing else changed:
+-- p_before_idx counts only the answers to questions before that index. The
+-- handler passes it while a classroom room runs (the questions already closed),
+-- and leaves it out for a multiplayer room and a finished one, which count
+-- every answer as before. A participant with no counted answer keeps a row of
+-- zeros, as before. It now has an empty search_path and is service-role only,
+-- like every routine the API calls.
+DROP FUNCTION IF EXISTS public.match_scoreboard(UUID);
+
+CREATE OR REPLACE FUNCTION public.match_scoreboard(
+  p_match_id   UUID,
+  p_before_idx INTEGER DEFAULT NULL
+)
+RETURNS TABLE (user_id TEXT, display_name TEXT, correct INTEGER, score INTEGER, total_ms BIGINT)
+LANGUAGE sql
+STABLE
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+  SELECT p.user_id,
+         p.display_name,
+         COALESCE(SUM(CASE WHEN a.is_correct THEN 1 ELSE 0 END), 0)::INT AS correct,
+         COALESCE(SUM(CASE WHEN a.is_correct THEN 100 + a.speed_bonus ELSE 0 END), 0)::INT AS score,
+         COALESCE(SUM(a.duration_ms), 0)::BIGINT AS total_ms
+    FROM public.match_participants p
+    LEFT JOIN public.match_answers a
+      ON a.match_id = p.match_id AND a.user_id = p.user_id
+     AND (p_before_idx IS NULL OR a.question_idx < p_before_idx)
+   WHERE p.match_id = p_match_id
+   GROUP BY p.user_id, p.display_name
+   ORDER BY score DESC, total_ms ASC;
+$$;
+
+REVOKE ALL ON FUNCTION public.match_scoreboard(UUID, INTEGER) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.match_scoreboard(UUID, INTEGER) TO service_role;
 
 COMMIT;

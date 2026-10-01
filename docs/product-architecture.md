@@ -249,16 +249,36 @@ count each question down against the server's clock, not the device's; the
 presenter's key appears once the server stops taking answers, the question's
 limit plus a 2 s grace, or when the teacher reveals it.
 
+A classroom question closes when its clock runs out or when the teacher
+presses "Reveal answer" (migration 056, owner decision of 1 October 2026).
+The button is a `control` action, `reveal`: the server stores the question in
+`matches.revealed_idx` and `answer` then refuses it with 409
+`question_closed` (a retry of an answer that landed before the reveal still
+replays it). The presenter's key shows only after the server confirms, and the
+pupils' screens show the question as closed. While a classroom room runs, its
+scoreboard counts only closed questions: `state` passes `match_scoreboard`
+`p_before_idx`, the current index, or the next one once the current question
+is closed. The presenter's projected scoreboard and every pupil's therefore
+move only when a question closes, and a live count never tells the room which
+option scores. A finished room, and every multiplayer room, counts every
+answer as before. A multiplayer scoreboard shows that a player scored on the
+open question, never what they picked, and `answer` already tells each player
+their own result, so it has no such leak and is unchanged.
+
 A class shares one school address, and each state read spends that address's
 bucket. Realtime therefore carries only changes of the room: `match_updated`
 with `{ status, current_index }` on start, next, finish and the answer that
-moves a multiplayer room on, and a screen that already shows that state reads
-nothing. A single answer sends `answered`, which only the host handles, with
-one read at most every 1.5 s for the live scoreboard. A read can move a
+moves a multiplayer room on, plus `revealed_idx` when the teacher closes a
+classroom question, and a screen that already shows that state reads
+nothing. A single multiplayer answer sends `answered`, which only the host
+handles, with one read at most every 1.5 s for the live scoreboard; a
+classroom answer sends nothing, since its scoreboard waits for the question
+to close. A read can move a
 multiplayer room on by itself (an expired question, or the last answers of an
 untimed round racing); the host announces a change their read found, and a
 read that loses that race gets the room as the winner left it. Each screen
-also reads once when a timed multiplayer question expires, and every 30 s as
+also reads once when a timed question expires (a multiplayer room moves on,
+a classroom scoreboard counts the closed question), and every 30 s as
 a healing poll, or every 4 s while Realtime is down.
 
 ## Coding section

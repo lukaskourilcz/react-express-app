@@ -2718,6 +2718,45 @@ async function leaderboardVisibilityContracts() {
   assert.equal(await limit('GET', `visibility-${stamp}-a`), 200, 'reading it is not a write');
 }
 
+/** A classroom question closes on "Reveal answer", and a running classroom's
+ * scoreboard counts only closed questions (migration 056, owner decision 6).
+ * The behaviour runs in scripts/test-play-rooms.ts and
+ * supabase/tests/190-classroom-scoreboard-closed-questions.test.sql; these are
+ * the wiring between the migration, the handler and the screen. */
+function classroomRevealContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const migration = read('supabase/supabase-schema-056.sql');
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS revealed_idx INTEGER/, '056 adds the closed question to the room');
+  const dropped = migration.indexOf('DROP FUNCTION IF EXISTS public.match_scoreboard(UUID);');
+  const created = migration.indexOf('CREATE OR REPLACE FUNCTION public.match_scoreboard(');
+  assert.ok(dropped >= 0 && dropped < created, 'the one-argument scoreboard goes first, so a call by name is never ambiguous');
+  const scoreboard = migration.slice(created, migration.indexOf('$$;', created));
+  assert.match(scoreboard, /p_before_idx INTEGER DEFAULT NULL/, 'the new argument has a default, so the code in production keeps calling it');
+  assert.match(scoreboard, /AND \(p_before_idx IS NULL OR a\.question_idx < p_before_idx\)/, 'the filter sits in the join, so a pupil with nothing counted keeps a row');
+  assert.match(scoreboard, /SECURITY DEFINER\s+SET search_path = ''/);
+  assert.match(migration, /REVOKE ALL ON FUNCTION public\.match_scoreboard\(UUID, INTEGER\) FROM PUBLIC, anon, authenticated;/);
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.match_scoreboard\(UUID, INTEGER\) TO service_role;/);
+
+  const play = read('api/play/[action].ts');
+  assert.match(play, /const STATE_COLUMNS =\s+'[^']*\brevealed_idx\b/, 'state reads the closed question');
+  assert.match(play, /body\.action !== 'reveal'/, 'reveal is a control action');
+  const answer = play.slice(play.indexOf('async function answer('), play.indexOf('async function distribution('));
+  const replay = answer.indexOf('if (existing) {');
+  const closed = answer.indexOf("'question_closed'");
+  const timeUp = answer.indexOf("'time_up'");
+  assert.ok(replay > 0 && replay < closed && closed < timeUp,
+    'an answer to a closed question is refused after a retry of an earlier answer is replayed, like a late one');
+  const state = play.slice(play.indexOf('async function state('), play.indexOf('async function control('));
+  assert.match(state, /p_before_idx: beforeIdx/, 'a running classroom asks for its closed questions only');
+  assert.match(state, /beforeIdx === null \? \{ p_match_id: match\.id \}/, 'every other room makes the call it always made');
+
+  const client = read('client/src/lib/play.ts');
+  assert.match(client, /action: 'start' \| 'advance' \| 'finish' \| 'reveal'/, 'the presenter sends the reveal to the server');
+  const screen = read('client/src/components/Play.tsx');
+  assert.doesNotMatch(screen, /setRevealedIdx/, 'the key no longer shows on a local click alone');
+  assert.match(screen, /onClick=\{onReveal\}/);
+}
+
 async function main() {
   // Code graded below runs on the grader's worker thread, built fresh from the
   // sources under test.
@@ -4689,6 +4728,7 @@ async function main() {
   await dailySwitchContracts();
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
+  classroomRevealContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
 }

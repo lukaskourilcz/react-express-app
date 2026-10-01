@@ -29,6 +29,9 @@ export interface Match {
   started_at?: string | null;
   question_started_at?: string | null;
   question_duration_s?: number;
+  /** Classroom only: the question whose answer the teacher revealed, which
+   * closed it to answers (migration 056). Null before the first reveal. */
+  revealed_idx?: number | null;
 }
 
 export interface Participant {
@@ -161,9 +164,10 @@ export function serverClockOffset(serverNow: string | undefined, sentAt: number,
 export const controlMatch = (input: {
   code: string;
   host_id: string;
-  action: 'start' | 'advance' | 'finish';
+  /** `reveal` closes the classroom question on screen and shows its answer. */
+  action: 'start' | 'advance' | 'finish' | 'reveal';
 }) =>
-  apiFetch<{ ok: true; status?: string; current_index?: number }>('/api/play/control', {
+  apiFetch<{ ok: true; status?: string; current_index?: number; revealed_idx?: number }>('/api/play/control', {
     method: 'POST',
     body: JSON.stringify(input),
   });

@@ -26,6 +26,7 @@ const BROADCAST_LATENCY_MS = 40;
 const room = vi.hoisted(() => ({
   status: 'lobby' as 'lobby' | 'running' | 'finished',
   current_index: 0,
+  revealed_idx: null as number | null,
   question_started_at: null as string | null,
   answers: new Map<number, Map<string, number>>(),
   reads: [] as Array<{ at: number; question: number }>,
@@ -51,6 +52,7 @@ function matchFor(userId: string): Match {
     // classroom question waits for the teacher either way.
     question_started_at: room.question_started_at, question_duration_s: 0,
     started_at: room.status === 'lobby' ? null : new Date(0).toISOString(),
+    revealed_idx: room.revealed_idx,
   };
 }
 const participants = PEOPLE.map((person, n) => ({ user_id: person.id, display_name: person.id, joined_at: new Date(n).toISOString() }));
@@ -69,7 +71,11 @@ vi.mock('../src/lib/play', async (importOriginal) => ({
     room.answers.set(question_idx, answers);
     return later(READ_LATENCY_MS, () => ({ ok: true, is_correct: selected_idx === 1, advanced: false }));
   },
-  controlMatch: ({ action }: { action: 'start' | 'advance' | 'finish' }) => {
+  controlMatch: ({ action }: { action: 'start' | 'advance' | 'finish' | 'reveal' }) => {
+    if (action === 'reveal') {
+      room.revealed_idx = room.current_index;
+      return later(READ_LATENCY_MS, () => ({ ok: true, status: room.status, current_index: room.current_index, revealed_idx: room.current_index }));
+    }
     if (action === 'start') {
       room.status = 'running';
       room.current_index = 0;
@@ -186,9 +192,15 @@ describe('a classroom of thirty behind one address', () => {
         for (const pupil of pupils.slice(first, first + 3)) fireEvent.click(screenOf(pupil).getByText('beta'));
         await tick(1_000);
       }
-      // The teacher gives the class half a minute in all, then moves on.
-      await tick(19_000);
+      // The teacher gives the class half a minute in all, reveals the answer,
+      // which closes the question on every screen within a second, and moves on.
+      await tick(18_000);
       expect(room.answers.get(q)?.size).toBe(PUPILS);
+      fireEvent.click(screenOf(TEACHER).getByRole('button', { name: 'Reveal answer' }));
+      await tick(1_000);
+      for (const pupil of pupils) {
+        if (!screenOf(pupil).queryByText('Closed')) lateScreens.push(`${pupil.id} closing question ${q + 1}`);
+      }
       perQuestion.push(room.reads.length - opened);
       fireEvent.click(screenOf(TEACHER).getByRole('button', { name: q === QUESTION_COUNT - 1 ? 'Show results' : 'Next question →' }));
     }
@@ -201,13 +213,14 @@ describe('a classroom of thirty behind one address', () => {
     console.log(`state reads per question: ${perQuestion.join(', ')}; busiest minute: ${busiestMinute}; broadcasts: ${JSON.stringify(Object.fromEntries(bus.sent))}`);
 
     expect(lateScreens).toEqual([]);
-    // Each screen reads once for the new question and once on its 30 s
-    // healing poll, and the teacher a few more times for the live scoreboard
-    // while the answers come in: about 2 × 31 + 8.
+    // Each screen reads once for the new question, once when the teacher
+    // closes it, and once on its 30 s healing poll: about 3 × 31. A classroom
+    // scoreboard counts only closed questions (056), so the answers coming in
+    // send nothing and set off no read.
     for (const reads of perQuestion) expect(reads).toBeLessThanOrEqual(3 * PEOPLE.length);
     expect(busiestMinute).toBeLessThan(300);
-    // One broadcast per change of question, none per answer.
-    expect(bus.sent.get('match_updated')).toBe(QUESTION_COUNT + 1);
-    expect(bus.sent.get('answered')).toBe(PUPILS * QUESTION_COUNT);
+    // One broadcast per change of question and per reveal, none per answer.
+    expect(bus.sent.get('match_updated')).toBe(2 * QUESTION_COUNT + 1);
+    expect(bus.sent.get('answered')).toBeUndefined();
   }, 60_000); // thirty-one screens in one page
 });
