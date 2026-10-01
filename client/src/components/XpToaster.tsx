@@ -64,7 +64,8 @@ export default function XpToaster() {
         position: 'fixed',
         left: 0,
         right: 0,
-        bottom: isMobile ? 32 : 40,
+        // Above the cookie banner while it shows (CookieConsent.tsx).
+        bottom: `calc(${isMobile ? 32 : 40}px + var(--ss-consent-dock, 0px))`,
         display: 'flex',
         justifyContent: 'center',
         pointerEvents: 'none',

@@ -2166,6 +2166,31 @@ export const en = {
   'coding.design.sessionUsed': 'This walkthrough was already checked. Open it again for a new attempt.',
   'coding.lesson.solutionShown': 'The solution is open in the Solution tab. Showing it ended this level attempt: read it, then finish the level. You can retry the level later.',
   'coding.lesson.finishLevel': 'Finish the level',
+
+  // The cookie banner and cookie settings (owner decision 2, 1 Oct 2026).
+  // "Reject all" reads and weighs the same as "Accept all".
+  'consent.banner.title': 'Cookies on devShark',
+  'consent.banner.body': 'devShark keeps what sign-in, your settings and your progress need in this browser. With your OK it also counts how the site is used, with PostHog in the EU. Marketing tags from Google and Meta are not in use yet.',
+  'consent.banner.policy': 'Read the privacy policy',
+  'consent.acceptAll': 'Accept all',
+  'consent.rejectAll': 'Reject all',
+  'consent.choose': 'Choose',
+  'consent.dialog.title': 'Cookie settings',
+  'consent.dialog.lead': 'Choose what devShark may store and measure in this browser. Change it any time under Cookie settings at the bottom of every page.',
+  'consent.necessary.label': 'Necessary',
+  'consent.necessary.purpose': 'Keeps you signed in and remembers your settings, your progress and this choice.',
+  'consent.necessary.locked': 'Necessary storage is always on.',
+  'consent.necessary.link': 'What necessary storage keeps',
+  'consent.analytics.label': 'Analytics',
+  'consent.analytics.purpose': 'PostHog, in the EU, counts page views and feature use so we can see what helps people learn.',
+  'consent.analytics.link': 'How analytics works',
+  'consent.marketing.label': 'Marketing',
+  'consent.marketing.purpose': 'Google Analytics and the Meta Pixel would measure our ads. Not in use yet: we will ask again before they start.',
+  'consent.marketing.link': 'About marketing tags',
+  'consent.save': 'Save choices',
+  'consent.saved': 'Your cookie choice is saved.',
+  'consent.notStored': 'This browser does not let devShark remember your choice, so analytics stays off and devShark asks again next time.',
+  'footer.cookieSettings': 'Cookie settings',
 } as const;
 
 export type TranslationKey = keyof typeof en;

@@ -5,6 +5,7 @@ import { useColorMode } from '../theme/ColorModeContext';
 import { useSettings } from '../lib/settings';
 import { savePreferredLanguage } from '../lib/languagePref';
 import { useBilling } from '../lib/billing';
+import { openConsentSettings } from '../lib/consent';
 import type { TranslationKey } from '../i18n/translations';
 import { InstagramIcon, LinkedInIcon, ThreadsIcon } from './ui/icons';
 import { SOCIAL_PROFILES } from '../../product-catalog';
@@ -43,6 +44,11 @@ export default function BrandFooter() {
           {/* Dated notes on what changed (#239). */}
           <Link to="/privacy">{t('footer.privacy')}</Link>
           <Link to="/terms">{t('footer.terms')}</Link>
+          {/* Reopens the cookie choice (CookieConsent.tsx). A button: it
+              opens a dialog and goes nowhere. */}
+          <button type="button" className="ss-footer-link" onClick={openConsentSettings} aria-haspopup="dialog">
+            {t('footer.cookieSettings')}
+          </button>
           {billing.known && billing.cancellable && <Link to="/premium/cancel">{t('footer.cancelPremium')}</Link>}
         </nav>
         {social.length > 0 && (

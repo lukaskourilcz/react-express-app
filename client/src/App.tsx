@@ -28,6 +28,7 @@ import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
+import CookieConsent from './components/CookieConsent';
 import { CURRENT_PRODUCT } from './lib/products';
 import { CloseIcon, CoinIcon, TrophyIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
@@ -505,6 +506,10 @@ function App() {
       >
         {t('common.skipToContent')}
       </a>
+
+      {/* The cookie banner comes early in the document, so the keyboard and
+          screen readers meet it first; CSS shows it under <main>. */}
+      <CookieConsent showBanner={showChrome} />
 
       {showChrome && (
         <>

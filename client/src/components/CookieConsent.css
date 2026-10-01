@@ -1,0 +1,127 @@
+/* The cookie banner and settings dialog (CookieConsent.tsx).
+ *
+ * The banner is a flex item of the one-viewport shell (.ss-app-root), placed
+ * early in the document and moved to the bottom with `order`, so <main> gives
+ * up the height instead of the banner covering content or fixed controls. It
+ * stops 30px above the bottom edge, where the ocean overlay draws the
+ * waterline and fins. Card stock as everywhere else: hairline border, a 2px
+ * bottom edge, the paper background. No motion: it is there in the first
+ * frame, so reduced motion needs nothing. Colours are tokens, so light and
+ * dark need nothing either.
+ */
+.ss-consent {
+  order: 1;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  width: 100%;
+  margin: 0 0 30px;
+  /* 16px on a phone, as the content gutter. */
+  padding: 0 var(--ss-space-gutter);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.ss-consent__inner {
+  box-sizing: border-box;
+  max-width: 1000px;
+  margin: 0 auto;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem 1.5rem;
+  padding: 0.875rem 1rem;
+  border: 1px solid var(--ss-card-line);
+  border-bottom: 2px solid var(--ss-card-edge);
+  border-radius: var(--radius-container);
+  background: var(--ss-card-bg);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-low, none);
+}
+.ss-consent__copy {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+.ss-consent__title {
+  margin: 0;
+  font: 750 1rem/1.3 var(--font-family-heading);
+}
+.ss-consent__body {
+  margin: 0.25rem 0 0;
+  max-width: 68ch;
+  color: var(--color-text-secondary);
+  font-size: var(--ss-type-compact);
+  line-height: 1.5;
+}
+.ss-consent__body a {
+  color: var(--brand-accent);
+  font-weight: 700;
+  text-underline-offset: 3px;
+}
+.ss-consent__body a:focus-visible {
+  outline: 3px solid var(--ss-focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-inner);
+}
+/* Three equal actions. Each grows from the same basis, so they share a row
+ * where they fit, and on a narrow phone Accept and Reject share the first row
+ * at equal widths while Choose takes the second. */
+.ss-consent__actions {
+  flex: 1 1 22rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  max-width: 30rem;
+}
+.ss-consent__actions .astryx-button {
+  flex: 1 1 6.5rem;
+  /* 44px targets on every pointer: this is the one decision the site asks
+     for before anything else. !important for the reason app-shell.css gives
+     under "Touch targets". */
+  min-height: 44px !important;
+}
+.ss-consent--compact .ss-consent__copy { flex-basis: 12rem; }
+
+@media (max-width: 599px) {
+  .ss-consent__inner { padding: 0.75rem; gap: 0.5rem; }
+  .ss-consent__actions { max-width: none; }
+}
+
+/* The dialog. Astryx draws the surface, the backdrop, the focus ring and the
+ * motion (frozen under reduced motion by its own tokens). */
+.ss-consent-dialog {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.ss-consent-dialog__list {
+  list-style: none;
+  margin: 0;
+  padding: 0 16px;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+}
+.ss-consent-dialog__row {
+  padding: 0.75rem 0;
+  border-top: 1px solid var(--ss-card-line);
+}
+.ss-consent-dialog__row:first-child { border-top: 0; }
+/* Astryx draws a 40×24 switch whose invisible checkbox is the hit area; it
+ * grows to 44×44 around the track, as on the leaderboard switch. */
+.ss-consent-dialog__row input[role='switch'] {
+  top: -10px !important;
+  left: -2px !important;
+  width: 44px !important;
+  height: 44px !important;
+}
+.ss-consent-dialog__row .ss-text-links { margin: 0.25rem 0 0; }
+.ss-consent-dialog__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  padding: 0.75rem 16px 16px;
+  border-top: 1px solid var(--ss-card-line);
+}
+.ss-consent-dialog__actions .astryx-button {
+  flex: 1 1 8rem;
+  min-height: 44px !important;
+}
