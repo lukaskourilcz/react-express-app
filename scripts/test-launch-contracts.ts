@@ -2328,6 +2328,16 @@ async function quizSubmitScopeContracts() {
   assert.equal(dailyGraded.response.statusCode, 200, JSON.stringify(dailyGraded.body));
   assert.ok((daily.body as { expiresAt: number }).expiresAt <= dailyGraded.session.issuedAt + 60 * 60_000);
   assert.equal(decodeQuizResultReceipt(dailyGraded.body.resultReceipt!)?.purpose, 'daily');
+  // Each outcome carries its question's XP (2 + 2 × difficulty when correct),
+  // which migration 052 pays per fresh question. The daily's 20 XP minimum
+  // stays on the receipt's total.
+  for (const [what, body] of [['quiz', graded.body], ['daily', dailyGraded.body]] as const) {
+    const receipt = decodeQuizResultReceipt(body.resultReceipt!)!;
+    const perQuestion = receipt.outcomes.map((outcome) => outcome.xp);
+    assert.ok(perQuestion.every((xp) => Number.isInteger(xp) && xp! >= 4 && xp! <= 100), `${what}: every correct outcome carries its XP (${perQuestion})`);
+    const sum = perQuestion.reduce((total, xp) => total! + xp!, 0)!;
+    assert.equal(receipt.questXp, what === 'daily' ? Math.max(20, sum) : sum, `${what}: the receipt's XP is the sum of its questions'`);
+  }
 
   // The 20-question assessment.
   const assessment = mockResponse();
@@ -2759,6 +2769,18 @@ async function main() {
   });
   assert.deepEqual(decodeQuizResultReceipt(receipt)?.breakdown, { javascript: { correct: 1, total: 2 } });
   assert.equal(decodeQuizResultReceipt(receipt)?.subject, 'webdev');
+  // A receipt from before 052 has no per-question XP and still decodes; one
+  // with it keeps it, and an XP out of range is refused.
+  assert.deepEqual(decodeQuizResultReceipt(receipt)?.outcomes, [{ questionId: 'closure-1', category: 'javascript', isCorrect: true }]);
+  const withXp = (xp: number) => encodeQuizResultReceipt({
+    userId: 'user-0001', correct: 1, total: 1,
+    breakdown: { javascript: { correct: 1, total: 1 } },
+    outcomes: [{ questionId: 'closure-1', category: 'javascript', isCorrect: true, xp }],
+    subject: 'webdev', questXp: 6, purpose: 'quiz',
+  });
+  assert.equal(decodeQuizResultReceipt(withXp(6))?.outcomes[0].xp, 6);
+  assert.equal(decodeQuizResultReceipt(withXp(101)), null);
+  assert.equal(decodeQuizResultReceipt(withXp(2.5)), null);
 
   const now = Date.UTC(2026, 6, 21);
   const reviewQuestions = [
@@ -3443,7 +3465,10 @@ async function main() {
     // The shared board stays cacheable; a personal one never is.
     const boardHandler = readFileSync(join(process.cwd(), 'api/leaderboard.ts'), 'utf8');
     assert.match(boardHandler, /'private, no-store'/);
-    assert.match(boardHandler, /'public, s-maxage=60, stale-while-revalidate=300'/);
+    assert.match(boardHandler, /'public, s-maxage=60'/);
+    // Never served stale past the minute: a name switched off leaves every
+    // shared board within about a minute (review finding RANK-5).
+    assert.doesNotMatch(boardHandler, /stale-while-revalidate/, 'the shared boards are not served stale');
     assert.match(boardHandler, /RATE_LIMITS\.leaderboardPersonal/);
 
     // The screen: a rank is a number, never a medal colour, and the

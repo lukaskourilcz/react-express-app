@@ -89,7 +89,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         logEvent({ status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load leaderboard');
       }
-      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+      res.setHeader('Cache-Control', 'public, s-maxage=60');
       return res.json({ period: 'global', categories: cats, entries: data });
     }
 
@@ -116,7 +116,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         logEvent({ status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load category leaderboard');
       }
-      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+      res.setHeader('Cache-Control', 'public, s-maxage=60');
       return res.json({ period: 'category', category, min_attempts: minAttempts, entries: data });
     }
 
@@ -146,7 +146,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         logEvent({ status: 500, error: error.message });
         return jsonError(res, 500, 'db_error', 'Could not load daily leaderboard');
       }
-      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+      res.setHeader('Cache-Control', 'public, s-maxage=60');
       return res.json({ period: 'daily', date: dateParam, subject: scope.subject, entries: data });
     }
 
@@ -244,7 +244,10 @@ async function windowBoard(req: VercelRequest, res: VercelResponse, period: stri
       : null;
     res.setHeader('Cache-Control', 'private, no-store');
   } else {
-    res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    // Every shared board is cached for a minute and never served stale past
+    // it, so a learner who switches their name off leaves every board within
+    // about a minute (049).
+    res.setHeader('Cache-Control', 'public, s-maxage=60');
   }
   return res.json(body);
 }

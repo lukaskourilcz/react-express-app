@@ -77,13 +77,23 @@ interface QuizResultReceiptPayload {
   correct: number;
   total: number;
   breakdown: Record<string, { correct: number; total: number }>;
-  outcomes: { questionId: string; category: string; isCorrect: boolean }[];
+  outcomes: QuizResultOutcome[];
   subject: ScopeSubjectId;
   questXp: number;
   daily?: { date: string; durationMs: number };
   purpose: 'quiz' | 'challenge' | 'daily' | 'assessment';
   iat: number;
   exp: number;
+}
+
+/** One graded question on a result receipt. `xp` is what the question earned
+ * (0 when wrong); receipts minted before migration 052 carry none, and the
+ * stats routine then pays the fresh share of the quiz's XP instead. */
+interface QuizResultOutcome {
+  questionId: string;
+  category: string;
+  isCorrect: boolean;
+  xp?: number;
 }
 
 interface AnswerProofPayload {
@@ -381,7 +391,7 @@ export interface QuizResultReceipt {
   correct: number;
   total: number;
   breakdown: Record<string, { correct: number; total: number }>;
-  outcomes: { questionId: string; category: string; isCorrect: boolean }[];
+  outcomes: QuizResultOutcome[];
   subject: ScopeSubjectId;
   questXp: number;
   daily?: { date: string; durationMs: number };
@@ -410,7 +420,13 @@ export function decodeQuizResultReceipt(token: string): QuizResultReceipt | null
   const outcomes: QuizResultReceipt['outcomes'] = [];
   for (const value of payload.outcomes) {
     if (!value || typeof value.questionId !== 'string' || value.questionId.length === 0 || value.questionId.length > 64 || typeof value.category !== 'string' || !/^[a-z0-9-]{1,50}$/.test(value.category) || typeof value.isCorrect !== 'boolean') return null;
-    outcomes.push({ questionId: value.questionId, category: value.category, isCorrect: value.isCorrect });
+    if (value.xp !== undefined && (!Number.isInteger(value.xp) || value.xp < 0 || value.xp > 100)) return null;
+    outcomes.push({
+      questionId: value.questionId,
+      category: value.category,
+      isCorrect: value.isCorrect,
+      ...(value.xp !== undefined ? { xp: value.xp } : {}),
+    });
   }
   return { attemptId: payload.attemptId, userId: payload.userId, correct: payload.correct!, total: payload.total!, breakdown, outcomes, subject: payload.subject, questXp: payload.questXp!, purpose: payload.purpose!, ...(payload.daily ? { daily: payload.daily } : {}) };
 }

@@ -22,7 +22,7 @@ import { computeLearningXp, levelForXp, MAX_RANK } from '../lib/leveling';
 import { useAuth, getUserProfile } from '../lib/auth';
 import { apiFetch, friendlyError } from '../lib/api';
 import { useBookmarks, removeBookmark } from '../lib/bookmarks';
-import { getStreakProtection, activateShield, liveStreak, shieldRemaining, type StreakProtection } from '../lib/streakFreezes';
+import { getStreakProtection, activateShield, streakState, shieldRemaining, type StreakProtection } from '../lib/streakFreezes';
 import { DayChangeNote } from './DayChangeNote';
 import { getAdvice, advisorCategoryKey, type Advice } from '../lib/advisor';
 import { renderQuestion } from './CodeBlock';
@@ -380,9 +380,13 @@ export function StreakCard({
     getStreakProtection().then((next) => { if (active) setProtection(next); });
     return () => { active = false; };
   }, [unavailable]);
-  const currentStreak = liveStreak(stats, protection);
+  // A failed read leaves the shields and protections unknown. A streak whose
+  // last day was today or yesterday needs neither; any other is shown as
+  // unknown rather than as the 0 the no-protection rule would give.
+  const { streak: currentStreak, missed } = streakState(stats, protection?.failed ? null : protection);
+  const streakUnknown = protection?.failed === true && missed > 0;
   const longestStreak = stats?.longest_streak ?? 0;
-  const currentStreakDisplay = unavailable ? '—' : currentStreak;
+  const currentStreakDisplay = unavailable || streakUnknown ? '—' : currentStreak;
   const longestStreakDisplay = unavailable ? '—' : longestStreak;
   const dayUnit = (value: number) => {
     if (lang === 'en') return t(value === 1 ? 'profile.day' : 'profile.days');
@@ -405,11 +409,11 @@ export function StreakCard({
                     <Text
                       size="4xl"
                       weight="bold"
-                      aria-label={unavailable ? t('profile.streakValueUnavailable') : undefined}
+                      aria-label={unavailable || streakUnknown ? t('profile.streakValueUnavailable') : undefined}
                     >
                       {currentStreakDisplay}
                     </Text>
-                    {!unavailable && <Text type="supporting" color="secondary">{dayUnit(currentStreak)}</Text>}
+                    {!unavailable && !streakUnknown && <Text type="supporting" color="secondary">{dayUnit(currentStreak)}</Text>}
                   </span>
                   <Text id={currentLabelId} type="supporting" color="primary" weight="semibold" justify="center">
                     {t('profile.currentStreak')}
@@ -417,7 +421,7 @@ export function StreakCard({
                   {/* Protection lives inside the streak it protects. It used to
                       be a card of its own below, which read as a separate
                       feature rather than as part of this number. */}
-                  {!unavailable && <StreakShield state={protection} streak={currentStreak} onChange={setProtection} />}
+                  {!unavailable && <StreakShield state={protection} streak={currentStreak} missed={missed} onChange={setProtection} />}
                 </VStack>
               </Card>
             </div>
@@ -480,17 +484,23 @@ export function StreakCard({
  * sits open would tell the learner nothing they cannot get by reloading.
  *
  * Without a live streak there is nothing to protect, so the button is not
- * offered: it would spend one of the month's two for nothing. A shield that is
- * already running still shows.
+ * offered: it would spend one of the month's two for nothing. Nor is it when a
+ * missed day still needs the protection the shield would take: spending it
+ * would end the streak the moment the learner came back, so the card says to
+ * learn today instead, as the server does when asked anyway (409
+ * shield_would_end_streak). A shield that is already running still shows.
  */
 function StreakShield({
   state,
   streak,
+  missed,
   onChange,
 }: {
   state: StreakProtection | null;
   /** The live streak, as the card shows it. */
   streak: number;
+  /** Days missed since the last learning day that no shield covered. */
+  missed: number;
   onChange: (next: StreakProtection) => void;
 }) {
   const t = useT();
@@ -520,6 +530,10 @@ function StreakShield({
   }
 
   if (streak <= 0) return null;
+
+  if (state.remaining - 1 < missed) {
+    return <span className="de-shield__meta">{t('profile.shieldLearnToday')}</span>;
+  }
 
   const spend = async () => {
     setPending(true);
