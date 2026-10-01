@@ -95,7 +95,7 @@ function PlayUnavailable() {
     <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
       <Card padding={6} width="100%">
         <VStack gap={2} align="center">
-          <Heading level={2} justify="center">{t('play.unavailableTitle')}</Heading>
+          <Heading level={1} justify="center">{t('play.unavailableTitle')}</Heading>
           <Text color="secondary" justify="center">{t('play.unavailableBody')}</Text>
           <Button variant="primary" label={t('common.back')} onClick={() => navigate('/')} />
         </VStack>
@@ -167,7 +167,7 @@ export function PlayLanding() {
       <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
-            <Heading level={2} justify="center">
+            <Heading level={1} justify="center">
               {t('play.signInTitle')}
             </Heading>
             <Text color="secondary" justify="center">
@@ -329,6 +329,7 @@ export function PlayLanding() {
                         type="button"
                         role="checkbox"
                         aria-checked={selected}
+                        className="play-category-chip"
                         onClick={() => toggleCategory(cat.value)}
                         style={{
                           cursor: 'pointer',
@@ -382,7 +383,7 @@ export function PlayLanding() {
                 <Text type="label" weight="bold" color="secondary">
                   {t('play.timeLimit')}
                 </Text>
-                <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                <div className="play-time-limit" style={{ display: 'flex', flexWrap: 'wrap' }}>
                   <ToggleButtonGroup
                     label={t('play.timeLimit')}
                     type="single"
@@ -825,7 +826,7 @@ export function PlayMatch() {
       <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
-            <Heading level={2} justify="center">{t('play.signInTitle')}</Heading>
+            <Heading level={1} justify="center">{t('play.signInTitle')}</Heading>
             <Text color="secondary" justify="center">{t('play.signInBody')}</Text>
             <Button
               variant="primary"
@@ -850,6 +851,8 @@ export function PlayMatch() {
     return (
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
         <VStack gap={2}>
+          {/* The page's heading, so a match that cannot open still has one. */}
+          <Heading level={1} type="display-3">{t('play.title')}</Heading>
           <Banner status="error" title={error} />
           <HStack gap={1} wrap="wrap">
             <Button

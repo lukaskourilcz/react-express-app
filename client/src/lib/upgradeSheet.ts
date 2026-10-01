@@ -23,13 +23,30 @@ export const ENTITLEMENT_QUERY_ROOT = ['entitlement'] as const;
 
 let current: UpgradeRequest | null = null;
 let counter = 0;
+// What had focus when the sheet opened: the lock that was pressed. The sheet
+// unmounts on close, and a dialog removed from the page drops focus to
+// <body>, so the host gives focus back to this instead.
+let opener: HTMLElement | null = null;
 const listeners = new Set<() => void>();
 const emit = () => listeners.forEach((listener) => listener());
 
 export function openUpgradeSheet(detail: UpgradeDetail = {}): void {
+  // A second request while the sheet is open keeps the first opener: focus
+  // is inside the sheet by then.
+  if (!current && typeof document !== 'undefined') {
+    const active = document.activeElement;
+    opener = active instanceof HTMLElement && active !== document.body ? active : null;
+  }
   counter += 1;
   current = { ...detail, id: counter };
   emit();
+}
+
+/** The element that had focus when the sheet opened, handed out once. */
+export function takeUpgradeOpener(): HTMLElement | null {
+  const element = opener;
+  opener = null;
+  return element;
 }
 
 export function closeUpgradeSheet(): void {

@@ -85,6 +85,9 @@ export const en = {
   'title.classroom': 'Classroom · devShark',
   'title.notFound': 'Page not found · devShark',
   'title.dev': 'Control room · devShark',
+  'title.curation': 'How we curate · devShark',
+  // A learning path's pages; {name} is the path's name.
+  'title.path': '{name} · devShark',
 
   // Home / landing page
   'home.title': 'Lessons, quizzes and coding tasks for web developers.',
@@ -1840,7 +1843,7 @@ export const en = {
   'github.backToProfile': 'Back to profile',
   'github.connectAgain': 'Connect again',
   'home.stripCodingTitle': 'Coding challenges',
-  'home.stripCodingText': 'Loops, array methods, types and components with real tests, plus a GitHub garden.',
+  'home.stripCodingText': 'Loops, array methods, types and components with real tests.',
 
   /* ── Learning paths (devShark: the FDE specialization and DSA Foundations) ── */
   'paths.loading': 'Loading the path',

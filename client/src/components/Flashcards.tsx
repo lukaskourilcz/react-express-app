@@ -89,7 +89,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
       <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 520, margin: '0 auto' }}>
       <Card variant="default" padding={6} width="100%">
         <VStack gap={2} align="center">
-          <Heading level={2} justify="center">{t('card.signInTitle')}</Heading>
+          <Heading level={1} justify="center">{t('card.signInTitle')}</Heading>
           <Text type="body" color="secondary" justify="center">{t('card.signInBody')}</Text>
           <div style={{ marginTop: '0.5rem' }}>
             <Button variant="primary" label={t('auth.logIn')} onClick={() => void signInWithGoogle().catch((err) => setActionError(friendlyError(err)))} />
@@ -113,7 +113,7 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
           <IconTile size={48}>
             <BookmarkIcon size={22} />
           </IconTile>
-          <Heading level={2} justify="center">{t('card.emptyTitle')}</Heading>
+          <Heading level={1} justify="center">{t('card.emptyTitle')}</Heading>
           <Text type="body" color="secondary" justify="center">{t('card.emptyHint')}</Text>
           <div style={{ marginTop: '0.5rem' }}>
             <Button variant="primary" label={t('card.goToQuiz')} onClick={() => navigate('/quiz')} />

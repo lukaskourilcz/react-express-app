@@ -2,6 +2,7 @@
 // invitation and the not-found page. The Terms and the privacy policy live in
 // LegalPages.tsx; the voluntary-support page is retired (#222) and /support
 // redirects to /premium.
+import { useEffect } from 'react';
 import { Button } from '@astryxdesign/core/Button';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
@@ -37,5 +38,14 @@ export function ClassroomPage() {
 
 export function NotFoundPage() {
   const { lang } = useLanguage(); const c = COPY[lang]; const navigate = useNavigate();
+  // A missing page stays out of search results: noindex while it shows, gone
+  // once it does not. The mark keeps the shell's head (lib/routeHead.ts),
+  // which rewrites the robots line on every route, off this one.
+  useEffect(() => {
+    const robots = document.createElement('meta');
+    robots.name = 'robots'; robots.content = 'noindex'; robots.dataset.notFound = '';
+    document.head.append(robots);
+    return () => robots.remove();
+  }, []);
   return <Page title={c.notFoundTitle} lead={c.notFoundLead}><div className="ss-info-actions"><Button variant="primary" label={c.home} onClick={() => navigate('/')} /><Button variant="secondary" label={c.back} onClick={() => navigate(-1)} /></div></Page>;
 }

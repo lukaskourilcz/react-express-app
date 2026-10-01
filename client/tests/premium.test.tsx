@@ -10,6 +10,7 @@ import { closeUpgradeSheet, openUpgradeSheet, useUpgradeRequest } from '../src/l
 import { isBarred, useLocks } from '../src/lib/locks';
 import { buildToday } from '../src/lib/today';
 import UpgradeSheet from '../src/components/UpgradeSheet';
+import UpgradeSheetHost from '../src/components/UpgradeSheetHost';
 import { server } from './mocks/server';
 import { settingsHandler } from './mocks/handlers';
 
@@ -131,6 +132,27 @@ describe('the upgrade sheet', () => {
     expect(screen.getByRole('button', { name: 'Go Premium' })).toBeInTheDocument();
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Not now' })); });
     expect(sheet.result.current).toBeNull();
+  });
+  // The sheet unmounts when it closes, which used to leave focus on <body>.
+  it.each(['Escape', 'Not now'])('gives focus back to the lock that opened it after %s', async (how) => {
+    server.use(settingsHandler);
+    render(
+      <>
+        <button type="button" onClick={() => openUpgradeSheet({ kind: 'learn-level', ref: 'react:13' })}>Level 13 Premium</button>
+        <UpgradeSheetHost />
+      </>,
+      { wrapper },
+    );
+    const lock = screen.getByRole('button', { name: 'Level 13 Premium' });
+    lock.focus();
+    fireEvent.click(lock);
+    const later = await screen.findByRole('button', { name: 'Not now' });
+    // A keyboard learner is inside the sheet by now.
+    later.focus();
+    if (how === 'Escape') fireEvent.keyDown(later, { key: 'Escape' });
+    else fireEvent.click(later);
+    await waitFor(() => expect(screen.queryByRole('button', { name: 'Not now' })).toBeNull());
+    expect(document.activeElement).toBe(lock);
   });
   it('states the launch price with its note while the offer is on', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });

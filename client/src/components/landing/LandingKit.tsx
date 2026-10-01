@@ -132,11 +132,17 @@ export const FinButton = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<
   </button>;
 });
 
-/** Homepage-style fin effects with a stable randomized profile for each button. */
-export function SwimCta({ label, onClick, dir, disabled, size = 'md' }: { label: string; onClick: () => void; dir?: 1 | -1; disabled?: boolean; size?: 'sm' | 'md' | 'lg' }) {
+/**
+ * Homepage-style fin effects with a stable randomized profile for each button.
+ * `unavailable` looks and reads disabled (aria-disabled) but keeps the button
+ * focusable and pressable, so the press can say why (the Quiz start, which
+ * names the missing category in `describedBy`).
+ */
+export function SwimCta({ label, onClick, dir, disabled, unavailable, describedBy, size = 'md' }: { label: string; onClick: () => void; dir?: 1 | -1; disabled?: boolean; unavailable?: boolean; describedBy?: string; size?: 'sm' | 'md' | 'lg' }) {
   const [animation] = useState(() => generateFinHover(Math.random,dir));
+  const off = disabled || unavailable;
   return (
-    <button type="button" onClick={onClick} disabled={disabled}
+    <button type="button" onClick={onClick} disabled={disabled} aria-disabled={unavailable || undefined} aria-describedby={describedBy}
       className={`ss-fin-button ss-swim-cta ss-swim-cta--${size}`}
       style={{
         ...finHoverStyle(animation),
@@ -144,7 +150,7 @@ export function SwimCta({ label, onClick, dir, disabled, size = 'md' }: { label:
         background: 'var(--brand-accent)', color: 'var(--brand-on-accent)', border: 'none',
         borderRadius: 'var(--radius-element)', padding: size === 'lg' ? '13px 26px' : size === 'sm' ? '5px 8px' : '10px 18px', minHeight: 'var(--swim-cta-height, 44px)',
         fontFamily: 'var(--font-family-body)', fontWeight: 600, fontSize: size === 'lg' ? '1rem' : size === 'sm' ? '0.78rem' : '0.95rem',
-        cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? 0.5 : 1,
+        cursor: off ? 'not-allowed' : 'pointer', opacity: off ? 0.5 : 1,
       }}>
       <FinHover animation={animation} /><span className="ss-fin-button__label">{label}</span>
     </button>

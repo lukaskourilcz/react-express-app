@@ -137,6 +137,7 @@
 @media (prefers-reduced-motion: reduce) {
   .rm-node,
   .rm-bob,
+  .rm-current-fin,
   .rm-flow,
   .rm-shimmer::after,
   .rm-shake,

@@ -625,9 +625,28 @@
   .ss-footer-settings button,
   .ss-brand-footer__social a,
   .ss-drawer-brand,
-  .ss-skip-link {
+  .ss-skip-link,
+  .rm-node button {
     min-height: 44px;
     min-width: 44px;
+  }
+  /* The Learn map's Skill check (36px), the career roadmap's part pills (31px)
+     and path links (28px), and Play's category chips (34px). */
+  .rm-skillcheck-cta,
+  .rm-part-pill,
+  .play-category-chip {
+    min-height: 44px;
+  }
+  .lp-module__title a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+  }
+  /* The input itself, not only its box: Astryx sizes it to the box's own
+     height, which stays 36px under the 44px floor above, so the input
+     measured 34px (/premium/cancel, the voucher field). */
+  .astryx-text-input > input {
+    min-height: 44px !important;
   }
 
   /* The footer links are bare text in a wrapped row. Height is what gives
@@ -731,8 +750,8 @@
   transition: transform var(--fin-duration) var(--ss-motion-ease), opacity var(--ss-motion-reveal) ease;
 }
 .ss-fin-hover svg { position: absolute; left: var(--fin-position); bottom: 0; transform: scaleX(var(--fin-flip)); }
-.ss-fin-button:hover:enabled .ss-fin-hover__swimmer,
-.ss-fin-button:focus-visible:enabled .ss-fin-hover__swimmer { opacity: 1; transform: translate(var(--fin-to-x), var(--fin-to-y, 0)) scale(1); }
+.ss-fin-button:hover:enabled:not([aria-disabled='true']) .ss-fin-hover__swimmer,
+.ss-fin-button:focus-visible:enabled:not([aria-disabled='true']) .ss-fin-hover__swimmer { opacity: 1; transform: translate(var(--fin-to-x), var(--fin-to-y, 0)) scale(1); }
 .ss-fin-button:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) {
   .ss-fin-hover__swimmer { transform: none !important; transition: none; }

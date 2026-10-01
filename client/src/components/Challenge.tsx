@@ -12,6 +12,7 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { AppToast } from './ui/AppToast';
+import { CheckCircleIcon } from './ui/icons';
 import { ApiError, apiFetch, friendlyError } from '../lib/api';
 import {
   fetchChallengeBatch,
@@ -728,6 +729,7 @@ export default function Challenge() {
               // column it became a 220px height with empty space below the text.
               style={{ textAlign: 'left', flex: 'none' }}
             >
+              <span className="de-track-card__check" aria-hidden="true"><CheckCircleIcon size={20} /></span>
               <strong>{t('challenge.relaxedPace')}</strong>
               <span>{t('challenge.relaxedHint')}</span>
             </button>

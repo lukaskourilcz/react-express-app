@@ -139,6 +139,37 @@ describe('keyboard shortcuts', () => {
   });
 });
 
+describe('starting', () => {
+  it('keeps Start quiz focusable without a category, and pressing it says what is missing', async () => {
+    localStorage.setItem('devquiz:quiz-setup:v1', JSON.stringify({ count: 10, difficulty: 'mixed', categories: [] }));
+    let fetched = 0;
+    server.use(http.get('*/api/quiz/questions', () => { fetched++; return HttpResponse.json({}); }));
+    renderQuiz();
+    const start = await screen.findByRole('button', { name: /start quiz/i });
+    expect(start).not.toBeDisabled();
+    expect(start).toHaveAttribute('aria-disabled', 'true');
+    start.focus();
+    expect(document.activeElement).toBe(start);
+    fireEvent.click(start);
+    expect(screen.getByRole('alert')).toHaveTextContent('Select at least one category');
+    expect(start).toHaveAccessibleDescription('Select at least one category');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fetched).toBe(0);
+  });
+
+  it('moves focus to the first question, not to the page', async () => {
+    server.use(http.get('*/api/quiz/questions', () => HttpResponse.json({ sessionId: sessionFor('standard'), expiresAt: Date.now() + 3_600_000, questions: [Q('a'), Q('b')] })));
+    renderQuiz();
+    const start = await screen.findByRole('button', { name: /start quiz/i });
+    expect(start).not.toHaveAttribute('aria-disabled');
+    start.focus();
+    fireEvent.click(start);
+    await questionOnScreen();
+    expect(document.activeElement).toHaveTextContent('Question a?');
+    expect(document.activeElement?.id).toBe('question-text-a');
+  });
+});
+
 describe('a question retired while the quiz was open', () => {
   it('reads as not counted, with no answers and no bookmark', async () => {
     server.use(http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a')]), voided: ['b'] })));

@@ -6,6 +6,7 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ApiError } from '../src/lib/api';
 import { DEFAULT_CONFIG, GAME_CONFIG_KEY } from '../src/lib/gameConfig';
 import type { Match, ScoreboardEntry } from '../src/lib/play';
+import { addSheet, declared, mediaRules } from './css';
 
 // A live room as one player sees it, with the play API and the Realtime
 // channel replaced by stand-ins the test drives.
@@ -527,5 +528,26 @@ describe('the Play switch', () => {
     api.fetchMatchState.mockRejectedValue(new ApiError('Live games are switched off', 503, 'feature_disabled'));
     await mount();
     expect(await screen.findByRole('heading', { name: 'Live games are switched off' })).toBeInTheDocument();
+  });
+});
+
+describe('narrow screens and headings', () => {
+  it('names the page in an h1 when no match has that code', async () => {
+    api.joinMatch.mockRejectedValue(new ApiError('No match with that code', 404, 'not_found'));
+    await mount('/play/ZZZZZZ');
+    expect(await screen.findByText('No match with that code')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Play live');
+  });
+
+  // At 320px the time limit's one row ran 53px past the "Host a game" card.
+  it('lets the time limit wrap, and gives a category chip a 44px floor on touch', async () => {
+    const sheet = addSheet('deepEnd');
+    await mount('/play');
+    const group = await screen.findByRole('group', { name: 'Time limit' });
+    expect(getComputedStyle(group).flexWrap).toBe('wrap');
+    const chip = screen.getAllByRole('checkbox')[0];
+    expect(chip).toHaveClass('play-category-chip');
+    expect(declared(mediaRules(addSheet('appShell'), 'pointer: coarse'), '.play-category-chip', 'min-height')).toBe('44px');
+    sheet.ownerNode?.remove();
   });
 });
