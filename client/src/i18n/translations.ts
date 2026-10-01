@@ -464,7 +464,7 @@ export const en = {
   // (migration 049); until then their row reads "Learner" with no photo.
   'leaderboard.anonymous': 'Learner',
   'leaderboard.visibility.label': 'Show my name and photo on leaderboards',
-  'leaderboard.visibility.hint': 'Leaderboards are public. With this off, you appear as “Learner” with no photo.',
+  'leaderboard.visibility.hint': 'Leaderboards are public. With this off, you appear as “Learner” with no photo. A change reaches the public boards within about a minute.',
   'leaderboard.visibility.saveFailed': 'Your leaderboard setting wasn’t saved. Try again.',
   'leaderboard.visibility.loadFailed': 'Your leaderboard setting couldn’t be loaded.',
 
@@ -476,6 +476,8 @@ export const en = {
   'profile.shieldActive': 'Protected · {h} h {m} m left',
   'profile.shieldNone': 'No protection left this month',
   'profile.shieldLeft': '{n} left this month',
+  // A missed day still needs the protection a shield would spend (052).
+  'profile.shieldLearnToday': 'Learn today to keep your streak',
   'friends.tabOverview': 'Overview',
   'friends.tabFriends': 'Friends',
   'friends.loading': 'Loading friends…',
@@ -880,6 +882,8 @@ export const en = {
   'challenge.submitPrompt': 'Save your score:',
   'challenge.nameLabel': 'Your name',
   'challenge.nameRequired': 'Please enter a name',
+  'challenge.namePublicHint': 'Shown publicly on the Hall of Fame.',
+  'challenge.nextQuestionFailed': 'Could not load the next question. Your run and score are kept.',
   'challenge.submitScore': 'Submit score',
   'challenge.scoreSubmitted': 'Score recorded.',
   'challenge.playAgain': 'Play again',
@@ -1136,6 +1140,7 @@ export const en = {
   'error.server': 'Server error. Try again in a moment.',
   'error.serviceUnavailable': 'Learning services are temporarily unavailable. Try again later.',
   'error.signIn': 'You need to sign in to do that.',
+  'error.authUnavailable': 'We couldn’t confirm your sign-in, so nothing was saved. Check your connection and try again.',
   'error.generic': 'Something went wrong. Try again.',
   'error.tooFewQuestions': 'Not enough questions for these topics.',
   'error.stepUnavailable': 'Not enough reviewed questions are available for this step yet.',
@@ -1836,6 +1841,7 @@ export const en = {
   'github.callbackRequestedBody': 'The app must be installed on your own account, not an organisation. Install it on your personal account and try again.',
   'github.signIn': 'Sign in',
   'github.backToProfile': 'Back to profile',
+  'github.connectAgain': 'Connect again',
   'home.stripCodingTitle': 'Coding challenges',
   'home.stripCodingText': 'Loops, array methods, types and components with real tests, plus a GitHub garden.',
 

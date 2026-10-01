@@ -6,10 +6,12 @@ function build(app:FullStackApp,stage:number):string {
  const {amount,endpoint,action}=app;
  const plain=`function normalizeInput(value){if(!value||typeof value!=='object'||Array.isArray(value)||typeof value.name!=='string')return null;const name=value.name.trim(),amount=value.${amount};if(!name||name.length>80||!Number.isInteger(amount)||amount<0||amount>1000)return null;return {name,${amount}:amount}}`;
  if(stage===1)return plain;
- const backend=`type Draft={name:string;${amount}:number};type Item=Draft & {id:number;version:number};type RequestData={method:string;path:string;body?:unknown};type Reply={status:number;body:unknown};
+ // The API types and createApi arrive with stage 3, which asks for them: a
+ // stage-2 reference that carried them would already pass stage 3.
+ const backend=`type Draft={name:string;${amount}:number};type Item=Draft & {id:number;version:number};${stage>=3?'type RequestData={method:string;path:string;body?:unknown};type Reply={status:number;body:unknown};':''}
  function normalizeInput(value:unknown):Draft|null {if(!value||typeof value!=='object'||Array.isArray(value))return null;const v=value as Record<string,unknown>;if(typeof v.name!=='string'||typeof v.${amount}!=='number')return null;const name=v.name.trim(),amount=v.${amount};if(!name||name.length>80||!Number.isInteger(amount)||amount<0||amount>1000)return null;return {name,${amount}:amount}}
  function updateItem(item:Item,patch:unknown):Item|null {if(!patch||typeof patch!=='object'||Array.isArray(patch))return null;const p=patch as Record<string,unknown>;if(!Number.isInteger(p.version)||p.version!==item.version)return null;const draft=normalizeInput({name:item.name,${amount}:p.${amount}});return draft?{...item,${amount}:draft.${amount},version:item.version+1}:null;}
- function createApi(seed:readonly Item[]):(request:RequestData)=>Reply {let rows:Item[]=seed.map(r=>({...r})),nextId=Math.max(0,...rows.map(r=>r.id))+1;return request=>{
+ ${stage>=3?`function createApi(seed:readonly Item[]):(request:RequestData)=>Reply {let rows:Item[]=seed.map(r=>({...r})),nextId=Math.max(0,...rows.map(r=>r.id))+1;return request=>{
  const notFound=():Reply=>({status:404,body:{error:'not_found'}}),invalid=():Reply=>({status:400,body:{error:'invalid'}});
  if(request.path==='${endpoint}'){
  if(request.method==='GET')return {status:200,body:rows.map(r=>({...r}))};
@@ -18,7 +20,7 @@ function build(app:FullStackApp,stage:number):string {
  ${stage>=4?`const suffix=request.path.startsWith('${endpoint}/')?request.path.slice('${endpoint}/'.length):'';if(!/^[1-9][0-9]*$/.test(suffix))return notFound();const id=Number(suffix),index=rows.findIndex(r=>r.id===id);if(index<0)return notFound();
  if(request.method==='DELETE'){rows=rows.filter(r=>r.id!==id);return {status:200,body:{deleted:id}};}
  if(request.method==='PATCH'){const p=request.body;if(!p||typeof p!=='object'||Array.isArray(p)||!Number.isInteger((p as Record<string,unknown>).version)||(p as Record<string,unknown>).version!==rows[index].version)return {status:409,body:{error:'conflict'}};const updated=updateItem(rows[index],p);if(!updated)return invalid();rows[index]=updated;return {status:200,body:{...updated}};}`:''}
- return notFound();};}
+ return notFound();};}`:''}
  `;
  if(stage<5)return backend;
  return backend+`

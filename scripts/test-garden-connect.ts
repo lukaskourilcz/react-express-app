@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import { generateKeyPairSync } from 'node:crypto';
 import { handleGithub } from '../lib/github-handlers';
 import { encodeGithubConnectState } from '../lib/quiz-tokens';
+import { RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 
 // The GitHub garden's connect step, run through the real handler against a
 // stand-in GitHub and a stand-in github_connections table. The state token
@@ -28,6 +29,9 @@ const COLLABORATOR = { id: 7002, login: 'garden-collaborator' };
 const STRANGER = { id: 7003, login: 'garden-stranger' };
 const OWNER_INSTALLATION = 555_001;
 const STRANGER_INSTALLATION = 555_003;
+// An organisation the owner administers, with the app installed on it.
+const ORGANISATION = { id: 7101, login: 'garden-owner-org' };
+const ORGANISATION_INSTALLATION = 555_004;
 
 // One-time codes GitHub would add to the install redirect, and the user each
 // turns into. Every code can be exchanged once, as on GitHub.
@@ -36,6 +40,7 @@ const CODES: Record<string, { token: string; user: typeof OWNER }> = {
   'code-owner-2': { token: 'ghu_owner_token_2', user: OWNER },
   'code-owner-3': { token: 'ghu_owner_token_3', user: OWNER },
   'code-owner-4': { token: 'ghu_owner_token_4', user: OWNER },
+  'code-owner-org': { token: 'ghu_owner_token_org', user: OWNER },
   'code-collaborator': { token: 'ghu_collaborator_token', user: COLLABORATOR },
   'code-stranger': { token: 'ghu_stranger_token', user: STRANGER },
 };
@@ -46,13 +51,14 @@ const usedCodes = new Set<string>();
 // only their own.
 const unrelated = Array.from({ length: 100 }, (_, index) => ({ id: 900_000 + index, account: { login: `org-${index}`, id: 800_000 + index } }));
 const REACHABLE: Record<number, { id: number }[]> = {
-  [OWNER.id]: [...unrelated, { id: OWNER_INSTALLATION }],
+  [OWNER.id]: [...unrelated, { id: OWNER_INSTALLATION }, { id: ORGANISATION_INSTALLATION }],
   [COLLABORATOR.id]: [{ id: OWNER_INSTALLATION }],
   [STRANGER.id]: [{ id: STRANGER_INSTALLATION }],
 };
 const INSTALLATIONS: Record<number, { id: number; account: { login: string; id: number; type: string }; repository_selection: 'selected' }> = {
   [OWNER_INSTALLATION]: { id: OWNER_INSTALLATION, account: { ...OWNER, type: 'User' }, repository_selection: 'selected' },
   [STRANGER_INSTALLATION]: { id: STRANGER_INSTALLATION, account: { ...STRANGER, type: 'User' }, repository_selection: 'selected' },
+  [ORGANISATION_INSTALLATION]: { id: ORGANISATION_INSTALLATION, account: { ...ORGANISATION, type: 'Organization' }, repository_selection: 'selected' },
 };
 
 let oauthAnswer: 'normal' | 'server_error' = 'normal';
@@ -153,12 +159,12 @@ let address = 0;
 function response() {
   return { statusCode: 200, body: null as unknown, headers: {} as Record<string, string>, setHeader(key: string, value: string) { this.headers[key] = value; }, status(code: number) { this.statusCode = code; return this; }, json(body: unknown) { this.body = body; return this; } };
 }
-async function call(op: string, account: string, method: 'GET' | 'POST', body: Record<string, unknown> = {}) {
+async function call(op: string, account: string, method: 'GET' | 'POST', body: Record<string, unknown> = {}, from?: string) {
   const res = response();
   // Without Supabase configured, a Bearer token with a user_id is that account
-  // (lib/auth.ts's local fallback). A fresh address keeps the connect rate
-  // limit out of the way.
-  const req = { method, headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': `203.0.113.${++address}` }, query: { op, user_id: account }, body };
+  // (lib/auth.ts's local fallback). A fresh address keeps the address backstop
+  // out of the way unless a case names one.
+  const req = { method, headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': from ?? `203.0.113.${++address}` }, query: { op, user_id: account }, body };
   await handleGithub(op, req as never, res as never, supabase);
   return res;
 }
@@ -264,6 +270,51 @@ async function main() {
   const foreignState = await call('github-connect-finish', accountB, 'POST', { installationId: OWNER_INSTALLATION, state: encodeGithubConnectState(accountA), code: 'code-owner-6' });
   assert.equal(errorCode(foreignState.body), 'invalid_state', 'another account\'s state is refused');
 
-  console.log('GitHub garden connect passed: the code is required and exchanged once, only the installation\'s own GitHub account can connect it, no user token is kept, and one installation belongs to one devShark account.');
+  // 11. An installation on an organisation, even one the authorizing user
+  //     administers and can list: refused, nothing stored.
+  const accountC = 'aaaaaaaa-0000-4000-8000-00000000c003';
+  const organisation = await call('github-connect-finish', accountC, 'POST', { installationId: ORGANISATION_INSTALLATION, state: encodeGithubConnectState(accountC), code: 'code-owner-org' });
+  assert.equal(organisation.statusCode, 400, 'an organisation installation is refused');
+  assert.equal(errorCode(organisation.body), 'organisation_not_supported');
+  assert.equal(table.has(accountC), false, 'nothing is stored for an organisation installation');
+  assert.ok(![...table.values()].some((row) => row.installation_id === ORGANISATION_INSTALLATION), 'no account holds the organisation installation');
+
+  // 12. Rate limits are each learner's own, with an address backstop that
+  //     holds a class: every seat of a class behind one address spends its
+  //     whole connect and sync budget without a 429, one learner past their
+  //     budget is refused, and the next learner at that address is not.
+  const cases = [
+    { op: 'github-connect-start', per: RATE_LIMITS.githubConnect, net: 1 },
+    { op: 'github-sync', per: RATE_LIMITS.githubSync, net: 2 },
+  ];
+  // The development auth fallback logs a warning on every call; a few hundred
+  // of them would bury the report.
+  const { warn, log } = console;
+  console.warn = () => {};
+  console.log = () => {};
+  const refusals: string[] = [];
+  try {
+    for (const one of cases) {
+      const classroom = `198.51.100.${one.net}`;
+      for (let seat = 0; seat < SHARED_NETWORK_SEATS; seat += 1) {
+        for (let n = 0; n < one.per.capacity; n += 1) {
+          const res = await call(one.op, `aaaaaaaa-0000-4000-8000-${String(seat).padStart(12, '0')}`, 'POST', {}, classroom);
+          if (res.statusCode === 429) refusals.push(`${one.op} seat ${seat}`);
+        }
+      }
+      const desk = `198.51.100.${one.net + 10}`;
+      const first = 'aaaaaaaa-0000-4000-8000-00000000f157';
+      for (let n = 0; n < one.per.capacity; n += 1) await call(one.op, first, 'POST', {}, desk);
+      assert.equal((await call(one.op, first, 'POST', {}, desk)).statusCode, 429, `${one.op}: one learner is bounded by their own budget`);
+      assert.notEqual((await call(one.op, 'aaaaaaaa-0000-4000-8000-00000000ec0d', 'POST', {}, desk)).statusCode, 429,
+        `${one.op}: one learner's spent budget refused another at the same address`);
+    }
+  } finally {
+    console.warn = warn;
+    console.log = log;
+  }
+  assert.deepEqual(refusals, [], `a class of ${SHARED_NETWORK_SEATS} behind one address met 429s`);
+
+  console.log('GitHub garden connect passed: the code is required and exchanged once, only the installation\'s own GitHub account can connect it, an organisation installation is refused, no user token is kept, one installation belongs to one devShark account, and connect and sync limits are each learner\'s own.');
 }
 main().catch((error) => { console.error(error); process.exitCode = 1; });

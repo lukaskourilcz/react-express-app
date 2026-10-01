@@ -4,6 +4,7 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { staleProfileStats } from '../lib/queryClient';
+import { syncXpWithServer } from '../lib/xp';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingApproachesResponse,
@@ -40,6 +41,9 @@ export async function submitCoding(input: CodingSubmitRequest): Promise<CodingVe
   });
   // A recorded pass is a streak day.
   if (result.applied && result.verdict === 'passed') staleProfileStats();
+  // The pass's XP exists only on the server until a sync, and a later silent
+  // sync would mark the rank it crosses as seen: announce it now.
+  if (result.xpAwarded > 0) void syncXpWithServer({ announceRankUp: true });
   return result;
 }
 

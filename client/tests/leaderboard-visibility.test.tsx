@@ -2,13 +2,14 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { LeaderboardVisibilityCard } from '../src/components/Profile';
 import LeaderboardVisibilitySwitch from '../src/components/LeaderboardVisibilitySwitch';
+import { leaderboardQuery } from '../src/lib/queries';
 import { server } from './mocks/server';
-import { visibilityHandler } from './mocks/handlers';
+import { boardFor, visibilityHandler } from './mocks/handlers';
 
 // The Profile's switch for "Show my name and photo on leaderboards"
 // (op=leaderboard-visibility, migration 049). The Leaderboard shows the same
@@ -48,7 +49,7 @@ describe('the Profile’s leaderboard switch', () => {
     const toggle = await screen.findByRole('switch', { name: SWITCH });
     await waitFor(() => expect(toggle).toBeEnabled());
     expect(toggle).not.toBeChecked();
-    expect(screen.getByText('Leaderboards are public. With this off, you appear as “Learner” with no photo.')).toBeInTheDocument();
+    expect(screen.getByText('Leaderboards are public. With this off, you appear as “Learner” with no photo. A change reaches the public boards within about a minute.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument();
   });
 
@@ -114,6 +115,27 @@ describe('the Profile’s leaderboard switch', () => {
     fireEvent.click(within(alert).getByRole('button', { name: /retry/i }));
     const toggle = await screen.findByRole('switch', { name: SWITCH });
     await waitFor(() => expect(toggle).toBeChecked());
+  });
+
+  it('refetches every board the tab has loaded after a save, not only the 30-day one', async () => {
+    server.use(visibilityHandler(false));
+    recordPuts();
+    const asked: string[] = [];
+    server.use(http.get('*/api/leaderboard', ({ request }) => {
+      asked.push(new URL(request.url).searchParams.get('period') ?? '');
+      return HttpResponse.json(boardFor(request));
+    }));
+    function Boards() {
+      useQuery(leaderboardQuery({ period: 'global', categories: ['javascript'] }));
+      useQuery(leaderboardQuery({ period: '30d', category: null, viewer: 'user-1' }));
+      return null;
+    }
+    renderWith(<><Boards /><LeaderboardVisibilitySwitch /></>);
+    await waitFor(() => expect([...asked].sort()).toEqual(['30d', 'global']));
+    const toggle = await screen.findByRole('switch', { name: SWITCH });
+    await waitFor(() => expect(toggle).toBeEnabled());
+    fireEvent.click(toggle);
+    await waitFor(() => expect([...asked].sort()).toEqual(['30d', '30d', 'global', 'global']));
   });
 
   it('stays in step with the Leaderboard’s switch: one read, one state', async () => {

@@ -78,13 +78,28 @@ with verified learning; a learner with no stats row gets one with zero totals
 on their first learning day. Missed days are bridged first by the shield, then
 by the month's protections. A shield covers exactly two UTC dates, the one it
 was raised on and the next: `activate_streak_shield` ends it at 00:00 UTC the
-day after tomorrow, and every reader takes `shield_until - 48 hours` as the
-raise date, which also holds for a shield stored as "raised + 48 hours" before
-048. The server keeps UTC days; the streak card, Today's target, done and
-empty panels, the daily challenge and the cleared-level tooltip say when the
-day changes on the learner's clock (`client/src/lib/utcDay.ts`). Reaching
-Today's target hands out nothing: the panel says the plan is complete and
-when the next day starts.
+day after tomorrow, and `shield_until - 48 hours` is the raise date, which
+also holds for a shield stored as "raised + 48 hours" before 048. From
+`supabase/supabase-schema-052.sql` every date a shield covered in the last 40
+days is kept in `user_streak_freezes.shield_days`, because `shield_until` holds
+only the latest shield: a second shield used to turn the first one's days into
+missed days. A day is shielded when it is in `shield_days` or in the window
+of `shield_until` (all a row from before 052 has); `streak_day_shielded`,
+`streak_missed_days` and `streak_live` are that one rule, used by
+`advance_verified_streak`, `activate_streak_shield`, `friend_list`,
+`settle_coin_milestones` (the Shop's streak milestones) and, in the same
+terms, `liveStreak` on the Profile. `activate_streak_shield` refuses and
+spends nothing when a missed day still needs the protection the shield would
+take (`remaining - 1 < missed`): the handler answers 409
+`shield_would_end_streak`, "Learn today to keep your streak", and the Profile
+does not offer the shield then. The month change restores the two
+protections and never clears a shield (`refresh_streak_freezes`, 052); when
+the Profile cannot read the protections it shows a streak that depends on
+them as "—" rather than 0. The server keeps UTC days; the streak card,
+Today's target, done and empty panels, the daily challenge and the
+cleared-level tooltip say when the day changes on the learner's clock
+(`client/src/lib/utcDay.ts`). Reaching Today's target hands out nothing: the
+panel says the plan is complete and when the next day starts.
 
 ### Question of the day (#239)
 
@@ -119,6 +134,12 @@ lookup tells the client the day is already played. The response is
 `/quiz?mode=daily` starts the daily challenge once the sign-in is known and
 then drops the parameter; the Home "Daily challenge" tile and the empty Today
 leaderboard link there.
+A daily fetched signed in also names that account (`userId` in the session).
+`api/quiz/submit.ts` refuses it with 401 `sign_in_required` when the submit
+carries no credentials and with 409 `session_owner_mismatch` when another
+account sends it, both before anything is claimed, so the day's one attempt is
+never spent as a guest's and the same answers still rank once they come back
+signed in.
 `api/quiz/submit.ts` grades only the sessions it serves (quiz, review, daily,
 question of the day, challenge batch, assessment); a Learn session is refused.
 
@@ -143,14 +164,29 @@ level would otherwise add correct answers without limit. A quiz question
 counts the same way from migration 048: `record_verified_quiz_result_v2` builds
 its category counts (for `user_category_stats` and this board) from the
 outcomes whose question the learner had not answered earlier the same UTC day,
-read from `user_question_history` before the attempt updates it, and scales
-the quiz's XP by that share, `floor(xp × fresh ÷ total)`. The awarded XP is
-kept on the receipt row (`quiz_attempts.quest_xp`) and the stats handler
-credits coins for that amount, also when a retry finds the result already
-recorded after a commit that timed out: the credit is keyed to the attempt
-and pays once, and a NULL amount (a refused second daily) pays nothing.
-`total_quizzes` still counts every quiz.
-Coding passes are not answers and are not counted.
+read from `user_question_history` before the attempt updates it. From
+migration 052 its XP follows the same rule per question: each receipt outcome
+carries the XP its question earned (`api/quiz/submit.ts`: 2 + 2 × difficulty
+when correct, 0 when not), and the routine pays the sum over the fresh
+outcomes, never more than the receipt's total. A question answered earlier
+the same UTC day pays nothing and a fresh correct answer pays in full. The
+daily challenge keeps its minimum of 20 XP when it has at least one question
+not answered earlier that UTC day; a daily whose questions were all answered
+earlier that day pays nothing. A receipt minted before
+052 carries no per-question XP and keeps 048's share formula,
+`floor(xp × fresh ÷ total)`. The awarded XP is kept on the receipt row
+(`quiz_attempts.quest_xp`) and the stats handler credits coins for that
+amount, also when a retry finds the result already recorded after a commit
+that timed out: the credit is keyed to the attempt and pays once, and a NULL
+amount (a refused second daily) pays nothing. `total_quizzes` still counts every quiz. A Biggest Shark Challenge
+answer counts the same way on the boards from 052: the handler sends the
+run's answers with their categories (`p_outcomes`), and
+`record_challenge_completion` dates only the questions the learner had not
+answered earlier the same UTC day and updates `user_question_history`, so a
+replayed run adds nothing. The run's Challenge XP (5 a correct answer) is
+unchanged. Without `p_outcomes` (the handler before 052) it counts the run's
+breakdown in full, as before. Coding passes are not answers and are not
+counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank.
 Since `supabase/supabase-schema-049.sql` the all-time boards
@@ -175,15 +211,53 @@ PUT charged to the account's write limit). Every board routine returns
 `display_name` and `picture` only while the flag is on and NULL otherwise, and
 the screen then shows "Learner" with the default avatar. The viewer's own
 30-day row follows the same rule, so it shows them what everybody else sees:
-a switch refetches their personal board at once, and the shared boards follow
-within the CDN's minute. The privacy policy says the same under
-"Leaderboards".
-`api/leaderboard.ts` serves `period=30d` to everyone with `s-maxage=60`; a
-request with a Bearer token or `me=1` also gets the learner's own line and is
-answered `Cache-Control: private, no-store`. `friend_list` orders friends by
+a switch refetches every board the learner's tab has loaded, their personal
+board at once, and everyone else sees the change within about a minute, which
+the switch's hint says. The privacy policy says the same under
+"Leaderboards". The name and picture stored for a board are the ones on the
+account's Google identity (`identity_data.full_name` or `name`, `avatar_url`
+or `picture`), read in `verifiedProfile` (`api/user/[op].ts`), never
+`user_metadata`, which the account can rewrite from the browser. An account
+without a Google identity has no name there, and the boards say "Learner". The Biggest Shark Challenge's Hall of Fame shows the name a
+learner types when saving a score. That box starts empty: it takes the
+account's name only while this switch is on, fills it once so a cleared box
+stays clear, and says the name is shown publicly on the Hall of Fame.
+`api/leaderboard.ts` serves every shared board (`period=30d`, `global`,
+`category` and `daily`) to everyone with `public, s-maxage=60` and no
+`stale-while-revalidate`, so the CDN never serves a board older than a
+minute; with the five minutes of stale-while-revalidate it had before, a name
+switched off could stay on a board for about six. A request with a Bearer
+token or `me=1` also gets the learner's own line and is answered
+`Cache-Control: private, no-store`. A `limit` is served as the next of 10,
+25, 50, 100 or 200 rows, and a read that reaches the function (the CDN did
+not answer it) takes the address read bucket below. `friend_list` orders friends by
 correct answers and accuracy, shows each friend's live streak by the rule
 above, and marks a friend active today when their last verified learning day
 is today. No board ranks by XP or by streak.
+
+## Live rooms (Play)
+
+`api/play/[action].ts` keeps the answer key on the server. A viewer who may
+not see it (every player while a room runs, a multiplayer host included, and
+anyone reading a lobby) gets only the questions already shown: none in the
+lobby, up to the current one while the room runs. A classroom presenter holds
+the whole round with the key, and everyone sees it once the room is finished.
+`join` and `state` also send `question_count` and `server_now`. The screens
+count each question down against the server's clock, not the device's; the
+presenter's key appears once the server stops taking answers, the question's
+limit plus a 2 s grace, or when the teacher reveals it.
+
+A class shares one school address, and each state read spends that address's
+bucket. Realtime therefore carries only changes of the room: `match_updated`
+with `{ status, current_index }` on start, next, finish and the answer that
+moves a multiplayer room on, and a screen that already shows that state reads
+nothing. A single answer sends `answered`, which only the host handles, with
+one read at most every 1.5 s for the live scoreboard. A read can move a
+multiplayer room on by itself (an expired question, or the last answers of an
+untimed round racing); the host announces a change their read found, and a
+read that loses that race gets the room as the winner left it. Each screen
+also reads once when a timed multiplayer question expires, and every 30 s as
+a healing poll, or every 4 s while Realtime is down.
 
 ## Coding section
 
@@ -231,7 +305,13 @@ recorded pass the solution opens without the warning, since it costs nothing.
 The junior and senior readings shown beside each other after a pass are
 stripped of their authoring comments in `lib/coding/solutions/index.ts`, so the
 boards carry code alone; the content contract executes the stripped text and
-asserts none of it still holds a comment.
+asserts none of it still holds a comment. The contract also holds statements
+to their promises: when a statement promises a new array, a version of the
+reference that writes its result into the array it was given and returns
+that array must fail a check; and when a TypeScript milestone's functions
+take parameters typed as anything but `unknown`, its type tests must fail the
+reference with every parameter typed `any`, so the signature the statement
+gives is the one graded.
 
 The section lists four tracks. Three of them — `javascript`, `typescript` and
 `react` — are also Learn topics. The fourth, `algorithms`, is sixty
@@ -282,18 +362,26 @@ user access token, and accepts the installation only when it appears in that
 user's `GET /user/installations` (every page) and its account is the same
 GitHub user (`GET /user`), which also refuses a collaborator who can see the
 owner's installation. The user token is used for those two reads and dropped.
-A missing code, a refused code or an installation that is not the user's own
-saves nothing, and the callback page asks the learner to install and authorize
-again. A unique index on `github_connections.installation_id` (migration 050)
-keeps one installation to one devShark account; a second account gets 409
+A missing code, a refused code, an organisation installation or an
+installation that is not the user's own saves nothing, and the callback page
+asks the learner to install and authorize again. GitHub's code works once, so
+the callback offers Retry (the same code) only after a failure that never
+reached the check: no connection, 429 or 503. After any other failure it
+offers Connect again, which starts a new connection (`github-connect-start`).
+Connect and sync are limited per learner (`githubConnect`, `githubSync`, keyed
+`user:<id>`) behind a class-sized address backstop (`githubConnectAddress`,
+`githubSyncAddress`). A unique index on `github_connections.installation_id`
+(migration 050) keeps one installation to one devShark account; a second
+account gets 409
 `installation_taken`. No user token is stored; installation
 tokens are minted from the app key on demand, failed commits queue for a later
 sync, and disconnecting deletes the connection and the queue. The feature stays
 hidden, and `github-connection` answers `available: false`, until
 `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`,
 `GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET` all exist on the
-deployment (`isGithubAppConfigured`). `npm run test:garden` runs the connect
-step against a stand-in GitHub.
+deployment (`isGithubAppConfigured`); until then the profile shows no garden
+card at all. `npm run test:garden` runs the connect step against a stand-in
+GitHub.
 
 ## Learning paths
 
@@ -350,6 +438,23 @@ Endpoints are new `resource=`/`op=` branches on existing handlers
 path — `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` — so either
 can launch or pause without the other, and a path opens only when its switch
 is on, its content validates and the migration is installed.
+
+A code exercise or a written piece autosaves one draft per activity, up to
+`PATH_LIMITS.draftsPerEnrollment` (60) per enrollment, which `npm run
+test:paths` keeps at or above every path's code exercises plus artifacts. A
+pass keeps its draft, the only copy of the learner's passed code the server
+holds, so a passed exercise reopens with what the learner wrote;
+`purge_expired_learning_data` removes drafts idle for 90 days.
+`accept_learning_path_result` (migration 054) keeps a verified pass and a
+submitted written piece against any weaker later attempt, which is still stored
+as evidence. It accepts one result per enrollment at a time and decides module
+completion from the module's requirements, which the submit handler sends, so
+two submits finishing a module together still complete it. The merchandise
+package needs every module completed within the one enrollment of the
+curriculum version the deployment publishes (`path_is_complete`, 054). Its
+claim checks the address the way a shop order does (`validateAddress`): a
+field longer than 120 characters is refused rather than cut to fit, and the
+country must be an assigned ISO 3166-1 alpha-2 code.
 
 Completion language is deliberately narrow. The server says "FDE guided path
 completed" only after every required module is complete, and the FDE modules
@@ -766,7 +871,9 @@ production (issue #227, step D8).
   tunes them in `/dev` → Settings → Coins without a deploy. Every account earns
   10 % of verified XP; Premium doubles it at credit time; one account earns at
   most 400 coins a day from XP, counted after the doubling. The welcome grant is
-  200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300), a
+  200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300;
+  "live" as the Profile counts it, a shield or a protection covering the gap
+  since the last learning day, `streak_live` from migration 052), a
   Learn topic with every level passed (100), an evolving project (150) or short
   path (50) with every stage passed, and the top three of a finished calendar
   month on the dated board of migration 040 (300, 200, 100). Milestones sit
@@ -852,6 +959,39 @@ production (issue #227, step D8).
   and `SPREADSHOP_SHOP_ID` are set, and `/api/settings` returns it as
   `merchPromo`; coins never buy a discount.
 
+## Sign-in, caching and limits
+
+- **The token on a request.** `apiFetch` (`client/src/lib/api.ts`) attaches
+  the Supabase access token. When a session is stored in the browser but its
+  token cannot be read within four seconds, or supabase-js answers no session
+  while keeping the stored one (a refresh that failed offline), nothing is
+  sent: the caller gets a retryable `ApiError(0, 'auth_unavailable')`. Only a
+  browser with no stored session sends a request without a token, so a
+  signed-in learner is never graded or refused as a guest.
+- **Log out** ends this browser's session (`signOut({ scope: 'local' })`).
+  Offline or on a 5xx, supabase-js keeps the session, so `lib/auth.tsx` removes
+  the stored session and its code verifier itself, forgets the account's data
+  and signs the page out. Signing out everywhere needs the server and reports a
+  failure. `clearAccountData` moves an account epoch, and a progress sync that
+  started before it writes nothing.
+- **Caching.** `withRequestContext` sets `Cache-Control: private, no-store` on
+  every answer before the handler runs; the public ones (the boards, settings,
+  the Learn map, health) set their own.
+- **Grants by address.** The admin allow-list, the owner's granted Learn paths
+  and the owner's private categories count an email only once Supabase has
+  confirmed it (`confirmedEmail` in `lib/auth.ts`), as billing does. The admin
+  role in `app_metadata` needs no email.
+- **Read limits.** The wallet, badges and a friend lookup in `api/user/[op].ts`
+  and the Learn plan, progress and steps take `limitRead`
+  (`lib/rate-limit.ts`): an address bucket that holds a class behind one NAT,
+  then the verified account's own (120 a minute). A guest has the address
+  bucket alone, which the Learn map and the leaderboard take too. The
+  fulfilment op takes the admin bucket before its gate, GET included.
+- **One-time claims.** `claimOnce` (one grade per placement round, one check
+  per design walkthrough) is held in Upstash. Where Upstash is configured, a
+  claim it cannot record is answered 503 `claim_unavailable` and nothing is
+  graded; only without Upstash does an instance's memory hold it.
+
 ## Account erasure
 
 `DELETE /api/user/delete-account` ends any live Stripe subscription first and
@@ -923,7 +1063,12 @@ completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
 routes, unlocks and progress. The full catalogue contains 770 tasks, and every
 graded code task carries a reference, a junior and a senior solution on the
-server; the last two reach the browser only with a verified pass.
+server; the last two reach the browser only with a verified pass. A stage's
+solutions hold only what that stage asks for: the content contract grades the
+reference, junior and senior solutions of every stage against the next stage
+and its checkpoint (the reference alone for React stages, whose suites are
+slow) and fails when one passes, since a learner can read them after a pass
+and paste them into the next stage.
 
 Since 2026-09-25 the registry also holds fifteen short paths of five levels
 each, marked `short`, with no checkpoints. Twelve are listed on the page of

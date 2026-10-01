@@ -6,10 +6,13 @@ import { useAuth } from '../../lib/auth';
 import { ApiError, friendlyError } from '../../lib/api';
 import { useLanguage } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
-import { codingKeys, finishGithubConnect } from '../../coding/api';
+import { codingKeys, finishGithubConnect, startGithubConnect } from '../../coding/api';
 import { SwimmingFin } from '../SharkFin';
 
-type Phase = { kind: 'working' } | { kind: 'signin' } | { kind: 'error'; message: string; retry: boolean } | { kind: 'requested' };
+/** What an error offers next: sending the same code again, starting a new
+ * connection on GitHub, or neither. */
+type NextStep = 'retry' | 'connect' | null;
+type Phase = { kind: 'working' } | { kind: 'signin' } | { kind: 'error'; message: string; next: NextStep } | { kind: 'requested' };
 
 /** Refusals that asking again cannot fix: GitHub's code works once, and who
  * owns or holds an installation does not change on a retry. */
@@ -19,6 +22,13 @@ const REFUSAL_KEYS: Partial<Record<string, TranslationKey>> = {
   installation_not_yours: 'github.callbackNotYours',
   installation_taken: 'github.callbackTaken',
 };
+
+/** Failures that never reached the check, so the same one-time code can
+ * still be sent: no connection, a rate limit, or the service briefly down.
+ * After any other failure the server may have spent the code, and only a new
+ * connection on GitHub brings a fresh one. */
+const sameCodeMayWork = (error: unknown): boolean =>
+  !(error instanceof ApiError) || error.status === 0 || error.status === 429 || error.status === 503;
 
 /**
  * `/settings/github` is the GitHub App's callback URL. The app requests user
@@ -36,6 +46,7 @@ export function GithubSettingsPage() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [phase, setPhase] = useState<Phase>({ kind: 'working' });
+  const [opening, setOpening] = useState(false);
   const inFlight = useRef(false);
 
   const installationId = params.get('installation_id');
@@ -54,10 +65,24 @@ export function GithubSettingsPage() {
       })
       .catch((error: unknown) => {
         const refusal = error instanceof ApiError && error.code ? REFUSAL_KEYS[error.code] : undefined;
-        setPhase(refusal ? { kind: 'error', message: t(refusal), retry: false } : { kind: 'error', message: friendlyError(error), retry: true });
+        setPhase(refusal
+          ? { kind: 'error', message: t(refusal), next: null }
+          : { kind: 'error', message: friendlyError(error), next: sameCodeMayWork(error) ? 'retry' : 'connect' });
       })
       .finally(() => { inFlight.current = false; });
   }, [installationId, state, code, navigate, queryClient, t]);
+
+  // A new connection: GitHub installs or re-authorizes and returns here with
+  // a fresh code.
+  const connectAgain = useCallback(() => {
+    setOpening(true);
+    startGithubConnect()
+      .then(({ url }) => window.location.assign(url))
+      .catch((error: unknown) => {
+        setOpening(false);
+        setPhase({ kind: 'error', message: friendlyError(error), next: 'connect' });
+      });
+  }, []);
 
   useEffect(() => {
     if (isLoading) return;
@@ -70,8 +95,8 @@ export function GithubSettingsPage() {
     }
     if (!isAuthenticated) return setPhase({ kind: 'signin' });
     if (setupAction === 'request') return setPhase({ kind: 'requested' });
-    if (!installationId || !state) return setPhase({ kind: 'error', message: t('github.callbackMissing'), retry: false });
-    if (!code) return setPhase({ kind: 'error', message: t('github.callbackAuthorize'), retry: false });
+    if (!installationId || !state) return setPhase({ kind: 'error', message: t('github.callbackMissing'), next: null });
+    if (!code) return setPhase({ kind: 'error', message: t('github.callbackAuthorize'), next: null });
     finish();
   }, [finish, installationId, state, code, setupAction, isAuthenticated, isLoading, navigate, t]);
 
@@ -94,7 +119,10 @@ export function GithubSettingsPage() {
       </header>
       <div className="ss-info-actions">
         {phase.kind === 'signin' && <Button variant="primary" label={t('github.signIn')} onClick={() => void signInWithGoogle()} />}
-        {phase.kind === 'error' && phase.retry && <Button variant="primary" label={t('quiz.retry')} onClick={finish} />}
+        {phase.kind === 'error' && phase.next === 'retry' && <Button variant="primary" label={t('quiz.retry')} onClick={finish} />}
+        {phase.kind === 'error' && phase.next === 'connect' && (
+          <Button variant="primary" label={opening ? t('github.connecting') : t('github.connectAgain')} isDisabled={opening} onClick={connectAgain} />
+        )}
         {phase.kind !== 'working' && <Button variant="secondary" label={t('github.backToProfile')} onClick={() => navigate('/profile', { replace: true })} />}
       </div>
     </article>

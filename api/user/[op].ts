@@ -11,9 +11,9 @@ import {
   logEvent as emit,
   withRequestContext,
 } from '../../lib/http';
-import { requireAuth } from '../../lib/auth';
+import { requireAuth, type AuthResult } from '../../lib/auth';
 import { recordAuthEvent } from '../../lib/auth-events-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceRateLimit, limitRead, RATE_LIMITS } from '../../lib/rate-limit';
 import { decodeQuizResultReceipt } from '../../lib/quiz-tokens';
 import {
   SUBJECT_SCOPE_CATALOG,
@@ -66,6 +66,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
 
   const op = String(req.query.op || '').toLowerCase();
   if (!(await limitUserWrite(req, res, op))) return;
+  if (!(await limitUserRead(req, res, op))) return;
   if (op === 'stats') return stats(req, res);
   if (op === 'leaderboard-visibility') return handleLeaderboardVisibility(req, res, supabase);
   if (op === 'category-stats') return categoryStats(req, res);
@@ -128,6 +129,16 @@ export async function limitUserWrite(req: VercelRequest, res: VercelResponse, op
   return callerId
     ? enforceRateLimit(req, res, perCaller, `user:${callerId}`)
     : enforceRateLimit(req, res, perCaller);
+}
+
+/** GETs a script can drive for more than a row: the wallet settles grants,
+ * milestones and invitations as it reads, badges are worked out from the
+ * stats, and a friend lookup searches by handle. They take the two-tier read
+ * limit (`limitRead`). Returns false after sending the 429. */
+const LIMITED_READS: ReadonlySet<string> = new Set(['wallet', 'badges', 'friends-lookup']);
+async function limitUserRead(req: VercelRequest, res: VercelResponse, op: string): Promise<boolean> {
+  if (req.method !== 'GET' || !LIMITED_READS.has(op)) return true;
+  return limitRead(req, res);
 }
 
 export default function handler(req: VercelRequest, res: VercelResponse) {
@@ -361,13 +372,27 @@ function publicPicture(value: unknown): string | null {
   }
 }
 
-function verifiedProfile(payload: Record<string, unknown>): { name: string | null; picture: string | null } {
-  const meta = (payload.user_metadata && typeof payload.user_metadata === 'object'
-    ? payload.user_metadata
+/** The name and picture Google gave the account. Never `user_metadata`: any
+ * signed-in user can rewrite that from the browser (`supabase.auth.updateUser`),
+ * and a board would show whatever they wrote. The Google identity's data is
+ * written by the sign-in alone. The verified user carries its identities; when
+ * it does not, the admin API is asked. No Google identity, no name: the
+ * boards say "Learner". */
+async function verifiedProfile(auth: AuthResult): Promise<{ name: string | null; picture: string | null }> {
+  let identities: unknown = auth.payload.identities;
+  if (!Array.isArray(identities) && supabase) {
+    const fetched = await withTimeout(supabase.auth.admin.getUserById(auth.sub)).catch(() => null);
+    identities = fetched && !fetched.error ? fetched.data.user?.identities : undefined;
+  }
+  const google = Array.isArray(identities)
+    ? (identities as { provider?: unknown; identity_data?: unknown }[]).find((identity) => identity?.provider === 'google')
+    : undefined;
+  const data = (google?.identity_data && typeof google.identity_data === 'object'
+    ? google.identity_data
     : {}) as Record<string, unknown>;
   return {
-    name: publicName(meta.full_name || meta.name),
-    picture: publicPicture(meta.avatar_url || meta.picture),
+    name: publicName(data.full_name || data.name),
+    picture: publicPicture(data.avatar_url || data.picture),
   };
 }
 
@@ -417,7 +442,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         profile?: unknown;
       };
       // Name and picture sent in the body are ignored; see verifiedProfile.
-      const shown = verifiedProfile(auth.payload);
+      const shown = await verifiedProfile(auth);
 
       if (body.result_receipt !== undefined) {
         if (typeof body.result_receipt !== 'string') {
@@ -575,6 +600,7 @@ export async function handleLeaderboardVisibility(
   }
 
   try {
+    const shown = visible === null ? null : await verifiedProfile(auth);
     const result = visible === null
       ? await withTimeout(
           db.from('user_stats').select('show_on_leaderboards').eq('user_id', auth.sub).maybeSingle(),
@@ -586,7 +612,7 @@ export async function handleLeaderboardVisibility(
               {
                 user_id: auth.sub,
                 email: typeof auth.payload.email === 'string' && auth.payload.email.length <= MAX_STR ? auth.payload.email : null,
-                ...verifiedProfile(auth.payload),
+                ...shown,
                 show_on_leaderboards: visible,
               },
               { onConflict: 'user_id' },
@@ -787,10 +813,13 @@ async function badges(req: VercelRequest, res: VercelResponse) {
 }
 
 
-// GET  /api/user/[op]?op=freezes — the monthly protection budget and any
-//                                   active shield.
+// GET  /api/user/[op]?op=freezes — the monthly protection budget, the latest
+//                                   shield, and every date a shield covered in
+//                                   the last 40 days (shieldDays, 052).
 // POST                            — spend one protection to shield the streak
-//                                   today and tomorrow (UTC dates).
+//                                   today and tomorrow (UTC dates). 409
+//                                   shield_would_end_streak when a missed day
+//                                   still needs that protection.
 //
 // The budget, the spend and the expiry are all the server's. A client can ask
 // for a shield; it cannot grant itself one, cannot choose the window and cannot
@@ -818,6 +847,11 @@ async function freezes(req: VercelRequest, res: VercelResponse) {
         return jsonError(res, 500, 'db_error', 'Could not protect the streak');
       }
       const row = Array.isArray(spent.data) ? spent.data[0] : spent.data;
+      // From migration 052 the routine refuses a shield that would spend the
+      // protection a missed day still needs, and charges nothing.
+      if (row?.outcome === 'would_end_streak') {
+        return jsonError(res, 409, 'shield_would_end_streak', 'Learn today to keep your streak');
+      }
       if (row?.granted === false && Number(row?.remaining ?? 0) <= 0 && !row?.shield_until) {
         return jsonError(res, 409, 'no_protection_left', 'No protection left this month');
       }
@@ -826,6 +860,7 @@ async function freezes(req: VercelRequest, res: VercelResponse) {
         period: String(row?.period ?? utcMonth()),
         used: Array.isArray(row?.used) ? (row.used as string[]) : [],
         shieldUntil: row?.shield_until ?? null,
+        shieldDays: shieldDaysOf(row),
         shieldSupported: true,
       });
     }
@@ -846,11 +881,21 @@ async function freezes(req: VercelRequest, res: VercelResponse) {
       period: String(freezeRow?.period ?? utcMonth()),
       used: Array.isArray(freezeRow?.used) ? (freezeRow.used as string[]) : [],
       shieldUntil: shieldSupported ? (freezeRow as { shield_until?: string | null }).shield_until ?? null : null,
+      shieldDays: shieldDaysOf(freezeRow),
       shieldSupported,
     });
   } catch {
     return jsonError(res, 500, 'internal_error', 'Internal error');
   }
+}
+
+/** Every UTC date a shield covered in the last 40 days (migration 052), as
+ * YYYY-MM-DD. Empty before 052: the client then reads shieldUntil alone. */
+function shieldDaysOf(row: unknown): string[] {
+  const days = row && typeof row === 'object' ? (row as { shield_days?: unknown }).shield_days : undefined;
+  return Array.isArray(days)
+    ? days.filter((day): day is string => typeof day === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(day)).slice(-64)
+    : [];
 }
 
 const focusFor = (accuracyPct: number): 'recall' | 'practice' | 'apply' =>

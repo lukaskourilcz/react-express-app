@@ -1,7 +1,9 @@
 /** Server-only additions; each stage retains the preceding reference module. */
 export const ADVANCED_SOLUTIONS: Record<string, string[]> = {
  'js-evolving-calculator': [
- `function calculateWithVariables(expression,variables){let valid=true;const source=expression.replace(/[A-Za-z_][A-Za-z0-9_]*/g,name=>{if(!Object.hasOwn(variables,name)||typeof variables[name]!=='number'||!Number.isFinite(variables[name])){valid=false;return ''}return '('+variables[name]+')'});return valid?calculate(source):null}`,
+ `// calculate reads plain digits only and String(1e-7) is "1e-7", so a value is written out in full before it is substituted.
+function plainDigits(n){const [digits,exponent='0']=String(Math.abs(n)).split('e');const [whole,fraction='']=digits.split('.');const all=whole+fraction,point=whole.length+Number(exponent);const text=point<=0?'0.'+'0'.repeat(-point)+all:point>=all.length?all+'0'.repeat(point-all.length):all.slice(0,point)+'.'+all.slice(point);return (n<0?'-':'')+text}
+function calculateWithVariables(expression,variables){let valid=true;const source=expression.replace(/[A-Za-z_][A-Za-z0-9_]*/g,name=>{if(!Object.hasOwn(variables,name)||typeof variables[name]!=='number'||!Number.isFinite(variables[name])){valid=false;return ''}return '('+plainDigits(variables[name])+')'});return valid?calculate(source):null}`,
  `function runProgram(lines){const variables=Object.create(null),results=[];for(const line of lines){const assignment=/^\\s*([A-Za-z_][A-Za-z0-9_]*)\\s*=([^=]*)$/.exec(line);const value=calculateWithVariables(assignment?assignment[2]:line,variables);if(value===null)return null;if(assignment)variables[assignment[1]]=value;results.push(value)}return {variables,results}}`,
  ],
  'js-evolving-query': [
@@ -43,6 +45,26 @@ function isNamePart(char) {
   return /[A-Za-z0-9_]/.test(char);
 }
 
+function toPlainDigits(value) {
+  const sign = value < 0 ? '-' : '';
+  const parts = String(Math.abs(value)).split('e');
+  if (parts.length === 1) {
+    return sign + parts[0];
+  }
+  const pieces = parts[0].split('.');
+  const whole = pieces[0];
+  const fraction = pieces.length > 1 ? pieces[1] : '';
+  const digits = whole + fraction;
+  const point = whole.length + Number(parts[1]);
+  if (point <= 0) {
+    return sign + '0.' + '0'.repeat(-point) + digits;
+  }
+  if (point >= digits.length) {
+    return sign + digits + '0'.repeat(point - digits.length);
+  }
+  return sign + digits.slice(0, point) + '.' + digits.slice(point);
+}
+
 function calculateWithVariables(expression, variables) {
   let source = '';
   let index = 0;
@@ -61,7 +83,7 @@ function calculateWithVariables(expression, variables) {
     if (!Object.prototype.hasOwnProperty.call(variables, name)) return null;
     const value = variables[name];
     if (typeof value !== 'number' || !Number.isFinite(value)) return null;
-    source = source + '(' + String(value) + ')';
+    source = source + '(' + toPlainDigits(value) + ')';
   }
   return calculate(source);
 }`,
@@ -428,12 +450,24 @@ export const ADVANCED_SENIOR: Record<string, string[]> = {
  'js-evolving-calculator': [
  `const IDENTIFIER = /[A-Za-z_]\\w*/g;
 
+// calculate reads plain digits only, and String(1e-7) is "1e-7".
+const plainDigits = (value) => {
+  const [digits, exponent = '0'] = String(Math.abs(value)).split('e');
+  const [whole, fraction = ''] = digits.split('.');
+  const all = whole + fraction;
+  const point = whole.length + Number(exponent);
+  const text = point <= 0 ? '0.' + '0'.repeat(-point) + all
+    : point >= all.length ? all.padEnd(point, '0')
+    : all.slice(0, point) + '.' + all.slice(point);
+  return value < 0 ? '-' + text : text;
+};
+
 function calculateWithVariables(expression, variables) {
   const known = new Map(Object.entries(variables).filter(([, value]) => Number.isFinite(value)));
   const names = expression.match(IDENTIFIER) ?? [];
   if (!names.every(name => known.has(name))) return null;
   // Parentheses keep a substituted negative from fusing with the operator before it.
-  return calculate(expression.replace(IDENTIFIER, name => '(' + known.get(name) + ')'));
+  return calculate(expression.replace(IDENTIFIER, name => '(' + plainDigits(known.get(name)) + ')'));
 }`,
  `const ASSIGNMENT = /^\\s*(?<name>[A-Za-z_]\\w*)\\s*=(?<source>[^=]*)$/;
 

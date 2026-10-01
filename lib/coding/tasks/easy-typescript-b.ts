@@ -175,6 +175,7 @@ const isComplete = (profile: Profile): profile is Required<Profile> => {
       { code: 'const __p: Profile = { name: "Ada" }; if (isComplete(__p)) { const __e: string = __p.email; }', label: 'a complete profile has an email string' },
       { code: 'const __q: Profile = { name: "Ada" }; const __f: string = __q.email;', label: 'before the check, the email may be missing', rejects: true },
       { code: 'const __r: Required<Profile> = { name: "Ada", email: "ada@example.com" };', label: 'Required<Profile> needs the phone too', rejects: true },
+      { code: 'isComplete({ email: "ada@example.com", phone: "555" });', label: 'only a Profile, with its name, can be checked', rejects: true },
     ],
   },
   {
@@ -1093,6 +1094,7 @@ const readUser = (text: string): User | null => {
       { code: 'const __v: unknown = 1; if (isUser(__v)) { const __n: string = __v.name; }', label: 'a checked value is a User' },
       { code: 'const __w: unknown = 1; const __m: string = __w.name;', label: 'an unchecked value cannot be read', rejects: true },
       { code: 'const __r: User = readUser("{}");', label: 'check for null before using the result', rejects: true },
+      { code: 'readUser({ name: "Ada", age: 36 });', label: 'readUser takes the JSON text, not an object', rejects: true },
     ],
   },
   {

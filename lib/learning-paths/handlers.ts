@@ -55,6 +55,7 @@ import {
   pathGuidedComplete,
   pathInventory,
   artifactTally,
+  SATISFYING_STATES,
   type BaseTrack,
   type EvidenceState,
   type LearningPathId,
@@ -82,6 +83,7 @@ import type {
   SubmitActivityResponse,
 } from '../../shared/learning-path-api';
 import { PATH_LIMITS } from '../../shared/learning-path-api';
+import { MAX_ADDRESS_FIELD, SHIRT_SIZES, validateAddress } from '../../shared/rewards';
 
 const logEvent = createLogger('learning-paths');
 
@@ -773,6 +775,30 @@ function reusedCode(activity: MergedActivity) {
 
 /* ── submitting ───────────────────────────────────────────────────────── */
 
+/**
+ * The state a result leaves on record, folded the way
+ * `accept_learning_path_result` (migration 054) folds it: a verified pass is
+ * never demoted, and a submitted write-up (`self_reviewed`) is replaced only
+ * by a verified pass. The weaker attempt is still stored as evidence.
+ */
+export function recordedState(prior: EvidenceState | undefined, next: EvidenceState): EvidenceState {
+  if (prior === 'verified_pass' && next !== 'verified_pass') return 'verified_pass';
+  if (prior === 'self_reviewed' && (next === 'needs_revision' || next === 'in_progress')) return 'self_reviewed';
+  return next;
+}
+
+/** A module's completion requirements in the shape
+ * `accept_learning_path_result` takes: each required activity with every
+ * state that satisfies it (`SATISFYING_STATES`, the rule `moduleComplete`
+ * applies). An optional module sends none and never completes. */
+export function moduleRequirements(module: MergedPath['modules'][number]): { activityId: string; states: readonly EvidenceState[] }[] {
+  if (module.optional) return [];
+  return module.requires.map((requirement) => ({
+    activityId: requirement.activityId,
+    states: SATISFYING_STATES[requirement.state],
+  }));
+}
+
 /** POST /api/quiz/roadmap?resource=learning-path-submit */
 export async function handleActivitySubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!pathsAvailable()) return notAvailable(res);
@@ -926,13 +952,11 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     if (migrationMissing(res, (error as { supabase?: { message?: string } }).supabase ?? null)) return;
     return jsonError(res, 500, 'db_error', 'Could not load learning-path progress');
   }
-  // A verified pass is never demoted by a later weaker attempt: the learner
-  // keeps what they proved. The RPC applies the same rule, so this projection
-  // matches what the write is about to store.
+  // A verified pass or a submitted write-up is never demoted by a later weaker
+  // attempt. The RPC applies the same rule, so this projection matches what
+  // the write is about to store.
   const states = stateMap(rows);
-  const priorState = states.get(activity.id);
-  const effectiveState: EvidenceState =
-    priorState === 'verified_pass' && state !== 'verified_pass' ? 'verified_pass' : state;
+  const effectiveState = recordedState(states.get(activity.id), state);
   states.set(activity.id, effectiveState);
   const moduleWillComplete = !module.optional && moduleComplete(module, states);
 
@@ -960,7 +984,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     xpAwarded: 0,
   };
 
-  const accepted = await withTimeout(supabase.rpc('accept_learning_path_result', {
+  const acceptParams = {
     p_user_id: userId,
     p_attempt_id: session.attemptId,
     p_idempotency_key: body.idempotencyKey,
@@ -979,7 +1003,19 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     p_artifact: artifact,
     p_module_complete: moduleWillComplete,
     p_result: out,
+  };
+  // moduleWillComplete comes from progress read before this call, so two
+  // submits finishing a module's last activities at once would each miss the
+  // other. With the requirements, the routine (migration 054) decides
+  // completion again from the states it writes, one result at a time. Before
+  // 054 is installed it does not take them, and the call is made without.
+  let accepted = await withTimeout(supabase.rpc('accept_learning_path_result', {
+    ...acceptParams,
+    p_module_requires: moduleRequirements(module),
   }));
+  if (accepted.error && isRpcMissing(accepted.error)) {
+    accepted = await withTimeout(supabase.rpc('accept_learning_path_result', acceptParams));
+  }
   if (accepted.error) {
     if (migrationMissing(res, accepted.error)) return;
     return jsonError(res, 500, 'db_error', 'Could not record the result');
@@ -1012,7 +1048,8 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
  * Computed rather than re-read, so the response the learner sees and the
  * response stored for a replay are the same object. The arithmetic mirrors
  * `accept_learning_path_result`: attempts increment, the best score is kept,
- * and a verified pass is never demoted.
+ * and a verified pass or a submitted write-up is never demoted (`state` is
+ * what `recordedState` folded).
  */
 function projectModuleProgress(
   module: MergedPath['modules'][number],
@@ -1068,13 +1105,25 @@ function projectModuleProgress(
 /** GET/PUT /api/user/[op]?op=learning-path-draft */
 /* ── GET/POST ?op=learning-path-reward ─────────────────────────────────── */
 
+/** What to correct, for each field `validateAddress` refuses. Every field
+ * holds what `merch_orders` holds (migration 028). */
+const REWARD_ADDRESS_ERRORS: Record<string, string> = {
+  name: `Enter the name to post the package to, up to ${MAX_ADDRESS_FIELD} characters`,
+  line1: `Enter the street address, up to ${MAX_ADDRESS_FIELD} characters`,
+  line2: `The second address line holds up to ${MAX_ADDRESS_FIELD} characters`,
+  city: `Enter the town or city, up to ${MAX_ADDRESS_FIELD} characters`,
+  postalCode: `Enter the postcode, up to ${MAX_ADDRESS_FIELD} characters`,
+  country: 'Enter the country as its two-letter ISO code, such as CZ or DE',
+};
+
 /**
  * The merchandise package a finished learning path earns: a t-shirt, a mug and
  * a sticker set.
  *
  * Completion is the server's own reading of the progress rows the graders
- * wrote — `path_is_complete` counts them against the module count this
- * deployment ships — so a client cannot claim a package for a path it did not
+ * wrote — `path_is_complete` counts the completed modules of the enrollment
+ * in the curriculum version this deployment ships against that version's
+ * module count — so a client cannot claim a package for a path it did not
  * finish. The claim is keyed by (learner, path), which is what makes it
  * one-time: completing twice, or two devices reporting the same completion,
  * grants once and the second call reports the first order.
@@ -1101,15 +1150,26 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
   const pathId = typeof req.query.pathId === 'string' ? req.query.pathId : String((req.body as { pathId?: unknown })?.pathId ?? '');
   if (!isLearningPathId(pathId)) return jsonError(res, 400, 'bad_request', 'Unknown path');
   const inventory = inventoryFor(pathId);
-  if (!inventory) return jsonError(res, 404, 'not_found', 'Unknown path');
+  const path = pathById(pathId);
+  if (!inventory || !path) return jsonError(res, 404, 'not_found', 'Unknown path');
 
   const missing = (error: { message?: string } | null) =>
     /does not exist|schema cache/i.test(error?.message ?? '');
 
+  // Every module finished within the enrollment of the curriculum version this
+  // deployment publishes, which `path_is_complete` checks from migration 054.
+  // A database without 054 has neither routine's version parameter, so the
+  // call is made again without it (one enrollment of any version).
+  const atVersion = async (name: 'path_is_complete' | 'claim_path_reward', params: Record<string, unknown>) => {
+    const first = await withTimeout(supabase.rpc(name, { ...params, p_curriculum_version: path.version }));
+    if (!first.error || !isRpcMissing(first.error)) return first;
+    return withTimeout(supabase.rpc(name, params));
+  };
+
   if (req.method === 'GET') {
     const [claim, complete] = await Promise.all([
       withTimeout(supabase.from('path_reward_claims').select('order_id,claimed_at').eq('user_id', userId).eq('path_id', pathId).maybeSingle()),
-      withTimeout(supabase.rpc('path_is_complete', { p_user_id: userId, p_path_id: pathId, p_modules: inventory.modules })),
+      atVersion('path_is_complete', { p_user_id: userId, p_path_id: pathId, p_modules: inventory.modules }),
     ]);
     if (missing(claim.error) || missing(complete.error)) {
       return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-035.sql to enable path rewards');
@@ -1129,25 +1189,28 @@ export async function handlePathReward(req: VercelRequest, res: VercelResponse, 
   }
 
   const body = (req.body || {}) as Record<string, unknown>;
-  const text = (value: unknown, max: number): string =>
-    (typeof value === 'string' ? value.trim() : '').slice(0, max);
+  // Checked here, the same way a shop order is, and refused rather than cut to
+  // fit: a truncated street or a made-up country is a parcel that goes nowhere.
+  const shirt = typeof body.shirt === 'string' ? body.shirt.trim().toUpperCase() : '';
+  if (!(SHIRT_SIZES as readonly string[]).includes(shirt)) return jsonError(res, 400, 'bad_request', 'Pick a shirt size');
+  const checked = validateAddress({
+    name: body.name, line1: body.line1, line2: body.line2, city: body.city, postalCode: body.postal, country: body.country,
+  });
+  if (!checked.ok) return jsonError(res, 400, 'invalid_address', REWARD_ADDRESS_ERRORS[checked.field] ?? REWARD_ADDRESS_ERRORS.name);
+  const address = checked.address;
 
-  // The caps are `merch_orders`' own (migration 028): a longer value would
-  // fail its CHECK inside the claim.
-  const claimed = await withTimeout(
-    supabase.rpc('claim_path_reward', {
-      p_user_id: userId,
-      p_path_id: pathId,
-      p_modules: inventory.modules,
-      p_shirt: text(body.shirt, 3).toUpperCase(),
-      p_name: text(body.name, 120),
-      p_line1: text(body.line1, 120),
-      p_line2: text(body.line2, 120) || null,
-      p_city: text(body.city, 80),
-      p_postal: text(body.postal, 24),
-      p_country: text(body.country, 2).toUpperCase(),
-    }),
-  );
+  const claimed = await atVersion('claim_path_reward', {
+    p_user_id: userId,
+    p_path_id: pathId,
+    p_modules: inventory.modules,
+    p_shirt: shirt,
+    p_name: address.name,
+    p_line1: address.line1,
+    p_line2: address.line2 ?? null,
+    p_city: address.city,
+    p_postal: address.postalCode,
+    p_country: address.country,
+  });
   if (claimed.error) {
     if (missing(claimed.error)) {
       return jsonError(res, 503, 'migration_required', 'Run supabase/supabase-schema-035.sql to enable path rewards');

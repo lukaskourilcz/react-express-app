@@ -185,6 +185,21 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
   }
+  // A session issued to an account (a daily fetched signed in) is graded for
+  // that account only. Graded as a guest's, a submit that arrived without the
+  // token would spend the attempt's one-time claim under nobody's name, and
+  // every retry after it would be refused as already graded. Nothing is
+  // claimed here, so the same answers can be sent again signed in.
+  if (session.userId && !signedIn) {
+    logEvent({ status: 401, reason: 'owner_signed_out', scope: session.scope, latency_ms: Date.now() - started });
+    return jsonError(res, 401, 'sign_in_required', 'Sign in again to submit this. It was started signed in.');
+  }
+  // Another account's session is refused as a Learn step is: graded as
+  // practice, it would still spend its owner's claim for the day.
+  if (session.userId && signedIn && signedIn.sub !== session.userId) {
+    logEvent({ status: 409, reason: 'session_owner_mismatch', scope: session.scope, latency_ms: Date.now() - started });
+    return jsonError(res, 409, 'session_owner_mismatch', 'This was started under a different sign-in. Start it again.');
+  }
   // A signed-in caller is bounded by their account, with room for a Challenge
   // answer every few seconds. A Challenge played without an account is
   // bounded the same way by the run sealed in its session, so a class of
@@ -259,6 +274,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const total = gradable.length;
   const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
   const breakdown: Record<string, { correct: number; total: number }> = {};
+  // Each question's XP, kept on the receipt: from migration 052 the stats
+  // routine pays only the questions not answered earlier the same UTC day.
+  const questionXp = new Map<string, number>();
   let questXp = 0;
   for (const result of results) {
     const question = questionsById.get(result.questionId);
@@ -271,8 +289,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     bucket.total++;
     if (result.isCorrect) bucket.correct++;
     breakdown[category] = bucket;
-    if (result.isCorrect && question) questXp += 2 + 2 * question.difficulty;
+    const earned = result.isCorrect && question ? 2 + 2 * question.difficulty : 0;
+    questionXp.set(result.questionId, earned);
+    questXp += earned;
   }
+  // A daily pays at least 20 XP. Migration 052 keeps this minimum for a daily
+  // with a fresh correct answer (record_verified_quiz_result_v2).
   if (session.scope === 'daily') questXp = Math.max(20, questXp);
   // A receipt needs something graded behind it. An attempt whose every
   // question was retired mid-flight is reported, not recorded.
@@ -285,7 +307,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
         breakdown,
         outcomes: results.flatMap((result) => {
           const category = questionsById.get(result.questionId)?.category;
-          return category ? [{ questionId: result.questionId, category, isCorrect: result.isCorrect }] : [];
+          return category
+            ? [{ questionId: result.questionId, category, isCorrect: result.isCorrect, xp: questionXp.get(result.questionId) ?? 0 }]
+            : [];
         }),
         subject,
         questXp,
