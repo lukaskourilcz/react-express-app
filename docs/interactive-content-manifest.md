@@ -47,12 +47,18 @@ request, accepted orders never leave the server).
 | `js-reverse-string` | 5 | 1 | sequence, api-usage |
 | `js-sum-array` | 7 | 1 | sequence, control-flow |
 | `js-count-vowels` | 8 | 2 | sequence, control-flow, api-usage |
-| `js-word-count` | 8 | 2 | sequence, api-usage |
+| `js-word-count` | 6 | 2 | sequence, api-usage, edge-handling |
 | `js-largest-number` | 8 | 1 | sequence, control-flow, edge-handling |
 | `js-palindrome` | 11 | 4 | sequence, control-flow, edge-handling |
 
 More than one accepted order is normal: independent declarations can swap, and
 insisting on one canonical answer would teach a rule that does not exist.
+Every accepted order, put together, passes its task's own visible and hidden
+checks; the coding content contract runs them.
+
+A puzzle never completes its task, so the puzzle screen offers the same "Use
+the editor on this screen" button as the waiting state below. Without it, a
+task with a puzzle could not be passed on a phone.
 
 **Gaps.** JavaScript only, and only tier 1–2. A task without a puzzle opens in
 the "waiting for a bigger screen" state on a narrow viewport (below 1024 CSS

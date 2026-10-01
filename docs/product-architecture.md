@@ -214,6 +214,8 @@ button's immediate feedback, but the verdict of record is the server's.
 Reference solutions never leave the server:
 `resource=coding-reveal` returns one only after a pass or after the authored
 hint ladder is exhausted, and a reveal ends the current Learn level attempt.
+Inside the level the workbench stays on screen with the solution open, and the
+learner finishes the level when they are done reading.
 A reveal before the task's first pass also costs that task its XP and coins:
 from migration 048 the first pass after a recorded reveal pays nothing, and the
 verdict says so with `xpForfeited` (set only when no XP was paid and the
