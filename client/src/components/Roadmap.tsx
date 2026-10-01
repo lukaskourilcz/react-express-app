@@ -594,8 +594,8 @@ function Roadmap() {
   const layout = useMemo(() => {
     if (!pathWidth || levels.length === 0) return null;
     const nodes = buildFullPath(levels, ranges);
-    // Five levels + their checkpoint per row; under 480px a part takes two
-    // rows of three, since six columns left a phone's labels overlapping.
+    // Six nodes a row; under 480px three, since six columns on a phone left
+    // each label wider than its column and overlapping the next one.
     const cols = pathWidth < 480 ? 3 : 6;
     const cellW = pathWidth / cols;
     // ROW_H must clear the accumulated within-row slope so the lowest node of a

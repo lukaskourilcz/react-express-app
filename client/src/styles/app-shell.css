@@ -643,10 +643,10 @@
     min-height: 44px;
   }
   /* The input itself, not only its box: Astryx sizes it to the box's own
-     height, which stays 36px under the 44px floor above, and a 34px input is
-     what a tap measures. 42px plus the box's two 1px borders. */
+     height, which stays 36px under the 44px floor above, so the input
+     measured 34px (/premium/cancel, the voucher field). */
   .astryx-text-input > input {
-    min-height: 42px !important;
+    min-height: 44px !important;
   }
 
   /* The footer links are bare text in a wrapped row. Height is what gives

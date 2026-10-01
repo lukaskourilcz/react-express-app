@@ -1,6 +1,6 @@
 // The Learn map's serpentine on a phone. Six columns at 390px left each
 // level 65px, under its 72px label, so names overlapped and were cut off; a
-// narrow map now lays a part out in two rows of three. Locked names read in
+// narrow map now lays its nodes out three to a row. Locked names read in
 // the secondary text colour, with the lock glyph as the locked cue.
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, render, screen } from '@testing-library/react';
@@ -51,14 +51,14 @@ async function renderMap(width: number) {
 const nodesInFirstRow = (tops: number[]) => tops.filter((top) => Math.abs(top - tops[0]) < 10).length;
 
 describe('the Learn map at phone width', () => {
-  it.each([320, 390])('lays a part out in rows of three at %ipx, each label inside its column', async (width) => {
+  it.each([320, 390])('lays the map out three to a row at %ipx, each label inside its column', async (width) => {
     const { rowTops, labelWidths } = await renderMap(width);
     expect(rowTops.length).toBeGreaterThan(10); // ten levels and their checkpoints
     expect(nodesInFirstRow(rowTops)).toBe(3);
     for (const labelWidth of labelWidths) expect(labelWidth).toBeLessThanOrEqual(width / 3);
   });
 
-  it('keeps a whole part on one row of six on a wider screen', async () => {
+  it('keeps six to a row on a wider screen', async () => {
     const { rowTops, labelWidths } = await renderMap(800);
     expect(nodesInFirstRow(rowTops)).toBe(6);
     for (const labelWidth of labelWidths) expect(labelWidth).toBeLessThanOrEqual(800 / 6);

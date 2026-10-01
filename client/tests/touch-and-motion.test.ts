@@ -26,8 +26,7 @@ describe('touch targets on a coarse pointer', () => {
 
   it('raises the text input itself, not only its box, so a tap measures 44px', () => {
     expect(declared(coarse, '.astryx-text-input', 'min-height')).toBe('44px');
-    // 42px inside the box's two 1px borders.
-    expect(declared(coarse, '.astryx-text-input > input', 'min-height')).toBe('42px');
+    expect(declared(coarse, '.astryx-text-input > input', 'min-height')).toBe('44px');
   });
 });
 
