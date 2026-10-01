@@ -28,6 +28,7 @@ import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
+import CookieConsent from './components/CookieConsent';
 import { CURRENT_PRODUCT } from './lib/products';
 import { CloseIcon, CoinIcon, TrophyIcon } from './components/ui/icons';
 import ConnectionStatus from './components/ui/ConnectionStatus';
@@ -658,6 +659,12 @@ function App() {
         )}
         </>
       )}
+
+      {/* The cookie banner sits right before <main> in the document: the
+          page focuses <main> on load, so one Shift+Tab reaches the banner,
+          and a screen reader reads it before the page. CSS shows it under
+          <main>. */}
+      <CookieConsent showBanner={showChrome} />
 
       <main
         id="main-content"

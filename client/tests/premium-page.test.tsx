@@ -345,12 +345,14 @@ describe('the Terms and the privacy policy', () => {
     expect(await screen.findByText(/The trader named under Who runs devShark sells Premium to you/)).toBeInTheDocument();
   });
 
-  it('lists Stripe, Link, Spreadshop and the merchandise address in the privacy policy', async () => {
+  // Round 4: merchandise is hidden until next quarter, so the policy no longer
+  // names Spreadshop as a recipient (it receives nothing) or a postal address.
+  it('lists Stripe and Link in the privacy policy, and no merchandise address', async () => {
     serve();
     renderAt('/privacy', <PrivacyPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Privacy policy' })).toBeInTheDocument();
-    expect(screen.getByText(/sprd\.net AG, Gießerstraße 27, 04229 Leipzig, Germany/)).toBeInTheDocument();
-    expect(screen.getByText(/passes them to sprd\.net AG/)).toBeInTheDocument();
+    expect(screen.queryByText(/sprd\.net AG/)).toBeNull();
+    expect(screen.getByText(/does not offer merchandise yet\. It collects no order and no postal address/)).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Link privacy policy' })).toHaveAttribute('href', 'https://link.com/privacy');
     expect(screen.getByRole('link', { name: 'Stripe privacy policy' })).toHaveAttribute('href', 'https://stripe.com/privacy');
     expect(screen.getByText(/devShark has no AI feature/)).toBeInTheDocument();

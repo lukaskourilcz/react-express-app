@@ -190,6 +190,7 @@ import { handleAdminEntitlements, handleEntitlement, parseValidUntil, toEntitlem
 import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
 import { WAIVER_TEXT } from '../lib/billing/sync';
 import { en as ENGLISH } from '../client/src/i18n/translations';
+import { privacyEn as PRIVACY_ENGLISH } from '../client/src/i18n/translations.privacy';
 import { NOINDEX_PATHS, PUBLIC_PAGES, premiumSchema } from '../client/src/lib/publicMetadata';
 import {
   DEFAULT_COIN_SETTINGS,
@@ -880,13 +881,13 @@ function publicCopyContracts() {
   }
   // Coding hints are authored text that nobody has reviewed yet; the privacy
   // policy must not say people wrote them by hand (review finding product-8).
-  assert.doesNotMatch(ENGLISH['legal.privacy.ai.body'], /by hand|people write/i);
-  assert.match(ENGLISH['legal.privacy.ai.body'], /no AI feature/);
+  assert.doesNotMatch(PRIVACY_ENGLISH['legal.privacy.ai.body'], /by hand|people write/i);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.ai.body'], /no AI feature/);
   // The cancellation page stores the address typed there with its request,
   // and the privacy policy says how long (review finding integrity-1): the
   // next request purges every row a day past its expiry.
-  assert.match(ENGLISH['legal.privacy.email.body'], /single-use link that confirms a request, to the address typed on the page/);
-  assert.match(ENGLISH['legal.privacy.email.body'], /deletes both with the first request made on the page once the link has been expired for a day/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.email.body'], /single-use link that confirms a request, to the address typed on the page/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.email.body'], /deletes both with the first request made on the page once the link has been expired for a day/);
   assert.match(read('supabase/supabase-schema-039.sql'), /DELETE FROM public\.billing_cancel_requests WHERE expires_at < NOW\(\) - INTERVAL '1 day';/, 'the purge the privacy policy promises');
   // No urgency, countdowns or fake scarcity on the pages that sell.
   for (const [key, value] of Object.entries(ENGLISH)) {
@@ -1591,9 +1592,9 @@ async function voucherContracts() {
   // policy says what a redemption stores, and that erasure deletes it.
   assert.match(ENGLISH['legal.terms.grants.body'], /through a voucher code you redeem on the Premium page/);
   assert.match(ENGLISH['legal.terms.grants.body'], /counted from the day you redeem it, or with no end date, and an account can redeem each voucher once/);
-  assert.match(ENGLISH['legal.privacy.voucher.body'], /stores your account identifier, the voucher you redeemed and the time you redeemed it/);
-  assert.match(ENGLISH['legal.privacy.voucher.body'], /does not store the code you type/);
-  assert.match(ENGLISH['legal.privacy.deletion.body'], /your voucher redemptions/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.voucher.body'], /stores your account identifier, the voucher you redeemed and the time you redeemed it/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.voucher.body'], /does not store the code you type/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.deletion.body'], /your voucher redemptions/);
   assert.match(read('client/src/components/LegalPages.tsx'), /id: 'vouchers', title: 'legal\.privacy\.voucher\.title'/);
 
   // 4. The redemption against a stand-in database. Log lines are captured to
@@ -5022,12 +5023,52 @@ async function main() {
   await dailySwitchContracts();
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
+  consentContracts();
   classroomRevealContracts();
   monthlyXpContracts();
   await identityContracts();
   await productCleanupContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
+}
+
+/** Cookie consent and the privacy policy (round 4, owner decisions 2 and 4).
+ * PostHog loads only behind analytics consent, no marketing tag ships, and
+ * the retention the policy states is the one the database runs. */
+function consentContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const main = read('client/src/main.tsx');
+  const analytics = read('client/src/lib/analytics.ts');
+  // posthog-js comes in through lib/posthogClient.ts alone, which the
+  // consent gate imports dynamically.
+  assert.doesNotMatch(main, /posthog-js|posthogClient/, 'main.tsx must not import PostHog');
+  assert.doesNotMatch(analytics, /^import (?!type)[^;]*'posthog-js'/m, 'analytics.ts must not import posthog-js at run time');
+  assert.equal(analytics.match(/import\('\.\/posthogClient'\)/g)?.length, 1, 'one dynamic import of the PostHog client');
+  assert.doesNotMatch(analytics, /^import [^;]*'\.\/posthogClient'/m, 'the PostHog client is never imported statically');
+  assert.match(read('client/src/lib/posthogClient.ts'), /opt_out_capturing_by_default: true,\s+opt_out_persistence_by_default: true/);
+  assert.match(analytics, /if \(!active \|\| !key\) return Promise\.resolve\(null\);/, 'PostHog loads only while analytics consent holds');
+  // No marketing tag, ID or host ships until the owner connects one.
+  assert.match(read('client/src/lib/marketingTags.ts'), /export const MARKETING_LOADERS: readonly MarketingLoader\[\] = \[\];/);
+  const csp = read('vercel.json');
+  assert.doesNotMatch(csp, /googletagmanager|google-analytics|connect\.facebook\.net|facebook\.com\/tr/, 'no marketing host in the CSP yet');
+  // The footer reopens the choice; the banner offers Reject all beside Accept all.
+  assert.match(read('client/src/components/BrandFooter.tsx'), /onClick=\{openConsentSettings\}/);
+  assert.equal(ENGLISH['consent.rejectAll'], 'Reject all');
+  assert.equal(ENGLISH['footer.cookieSettings'], 'Cookie settings');
+  // The sign-in log's 12 months is the purge in migration 057.
+  assert.match(PRIVACY_ENGLISH['legal.privacy.account.log'], /deletes each record after 12 months/);
+  assert.match(read('supabase/supabase-schema-057.sql'), /DELETE FROM public\.auth_events\s+WHERE created_at < NOW\(\) - INTERVAL '12 months';/, 'the purge the privacy policy promises');
+  // Merchandise is hidden: the policy names no shop that receives data.
+  // The policy's own dictionary obeys the copy rules the app's does, and
+  // only the legal pages load it.
+  for (const [key, value] of Object.entries(PRIVACY_ENGLISH)) {
+    assert.doesNotMatch(value, /sprd\.net/, `${key} still names Spreadshop as a recipient`);
+    assert.doesNotMatch(value, /free forever|\bis free\b|free, forever|\$0\b|charges for none/i, `${key} still says devShark is free`);
+    assert.doesNotMatch(value, /\{\w+\}/, `${key} takes a placeholder, which LegalPages does not fill`);
+  }
+  assert.ok(!Object.keys(ENGLISH).some((key) => key.startsWith('legal.privacy.')), 'privacy keys live in translations.privacy.ts alone');
+  const legalImporters = ['client/src/App.tsx', 'client/src/main.tsx', 'client/src/i18n/LanguageContext.tsx', 'client/src/components/BrandFooter.tsx', 'client/src/components/CookieConsent.tsx'];
+  for (const file of legalImporters) assert.doesNotMatch(read(file), /translations\.privacy/, `${file} pulls the privacy policy into the shell`);
 }
 
 void main().catch((error) => {
