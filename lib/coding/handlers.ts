@@ -41,6 +41,7 @@ import {
   type CodingTask,
   type CodingTrack,
 } from '../../shared/coding-catalog';
+import { CODING_CODE_LIMIT_BYTES } from '../../shared/coding-api';
 import type {
   CodingDraftResponse,
   CodingGardenStatus,
@@ -60,7 +61,7 @@ import type { EvaluateResult } from '../../shared/coding-evaluate';
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
 
 const logEvent = createLogger('coding');
-const MAX_CODE_BYTES = 20 * 1024;
+const MAX_CODE_BYTES = CODING_CODE_LIMIT_BYTES;
 
 const codingAvailable = () => deploymentSubjectIds().includes('webdev');
 const notAvailable = (res: VercelResponse) => jsonError(res, 404, 'not_available', 'Coding challenges are not part of this product');
@@ -581,6 +582,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     applied: recorded?.applied ?? false,
     github,
     solutions,
+    ...(graded.infra ? { graderUnavailable: true as const } : {}),
   };
 }
 

@@ -138,6 +138,8 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   attempt_expired: 'error.pathAttemptExpired',
   enrollment_paused: 'error.pathPaused',
   path_unavailable: 'error.pathUnavailable',
+  // An evolving challenge's later stage, sent before the earlier ones passed.
+  stage_locked: 'error.stageLocked',
 };
 
 // not_found spans several endpoints whose English server messages are more

@@ -210,7 +210,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   delete process.env.REACT_RUNNER_SNAPSHOT_ID;
   const reactTask = CODING_TASKS.find((task) => task.track === 'react' && task.verify === 'tests' && task.suite && isFreeCodingTask(task.id) && !evolvingStage(task.id))!;
   const before = db.attemptIds.length;
-  const outage = { statusCode: 200, body: null as null | { verdict?: string; applied?: boolean; codeError?: string | null; failureHint?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  const outage = { statusCode: 200, body: null as null | { verdict?: string; applied?: boolean; codeError?: string | null; failureHint?: unknown; graderUnavailable?: boolean }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
   await handleCodingSubmit({
     method: 'POST', headers: { authorization: 'Bearer local-test' }, query: {},
     body: { session: encodeCodingSession({ taskId: reactTask.id, track: 'react', userId: null }), code: solutionFor(reactTask.id)!.solution, user_id: learner },
@@ -220,6 +220,8 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   assert.equal(outage.body?.applied, false);
   assert.match(outage.body?.codeError ?? '', /not recorded/, 'the learner is told nothing was recorded');
   assert.equal(outage.body?.failureHint, null, 'no hint blames the code');
+  // The workbench shows it as a problem to retry, not as a build error (CODE-9).
+  assert.equal(outage.body?.graderUnavailable, true, 'the verdict says the grader could not run');
   assert.equal(db.attemptIds.length, before, 'a runner outage writes no verdict');
   console.log('PASS integrity: a React runner outage is not recorded as the learner\'s error');
 }
