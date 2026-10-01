@@ -235,7 +235,11 @@ function PartPill({
     color: filled ? onCategoryColorText(family) : locked ? 'var(--color-text-disabled)' : 'var(--color-text-primary)',
     textDecoration: 'none',
     cursor: locked ? 'default' : 'pointer',
-    display: 'block',
+    // Flex, so the number stays centred when a touch screen raises the pill
+    // to 44px (app-shell.css).
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
   };
   const label = t('roadmapTree.partPill', { n: part });
   const title = `${t(categoryLabelKey(family))} · ${label} — ${stateLabel}`;
@@ -244,13 +248,13 @@ function PartPill({
     // hear why it's inert.
     return (
       <Tooltip content={title} placement="above">
-        <div role="button" aria-disabled="true" tabIndex={0} style={style} aria-label={title}>{part}</div>
+        <div role="button" aria-disabled="true" tabIndex={0} className="rm-part-pill" style={style} aria-label={title}>{part}</div>
       </Tooltip>
     );
   }
   return (
     <Tooltip content={title} placement="above">
-      <Link to={`/learn?topic=${family}&part=${part}`} style={style} aria-label={title}>
+      <Link to={`/learn?topic=${family}&part=${part}`} className="rm-part-pill" style={style} aria-label={title}>
         {part}
       </Link>
     </Tooltip>

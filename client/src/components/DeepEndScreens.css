@@ -18,6 +18,9 @@
 .de-identity-settings__button:focus-visible{outline:2px solid var(--ss-focus);outline-offset:2px}
 @media(max-width:820px){.de-challenge-grid{grid-template-columns:1fr}.de-page{padding-top:0}.de-hero-panel{padding:20px}.de-card-grid{grid-template-columns:1fr}.de-mode-card{padding:14px}.de-stat-row{gap:16px}}
 @media(prefers-reduced-motion:reduce){.de-flashcard__answer{transform:none}.de-mode-card,.de-flashcard__answer,.de-identity-settings__button{transition:none}}
+/* Play's time limit: the Astryx group is one inline row, which at 320px ran
+   53px past the "Host a game" card. It wraps like the question count. */
+.play-time-limit>.astryx-toggle-button-group{flex-wrap:wrap}
 /* Classroom/multiplayer invite: compact on screen, isolated as a printable
    handout so a teacher can put one code/QR on a wall or projector. */
 .play-invite__qr {
