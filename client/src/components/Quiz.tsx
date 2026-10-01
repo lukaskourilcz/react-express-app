@@ -42,8 +42,7 @@ import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
-import { toggleBookmark as toggleBookmarkLib, useBookmarks } from '../lib/bookmarks';
-import { addFlashcard, removeFlashcard } from '../lib/flashcards';
+import { SaveSharkCard } from './SaveSharkCard';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
@@ -109,12 +108,6 @@ interface PersistedProgress {
 const HintIcon = () => (
   <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z" />
-  </svg>
-);
-
-const BookmarkIcon = ({ filled }: { filled: boolean }) => (
-  <svg aria-hidden="true" focusable="false" width="18" height="18" viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2">
-    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
   </svg>
 );
 
@@ -214,11 +207,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   // new session starts.
   const [hintedIds, setHintedIds] = useState<string[]>([]);
   const [attemptedStart, setAttemptedStart] = useState(false);
-  const { ids: bookmarks } = useBookmarks();
   const [snack, setSnack] = useState<string | null>(null);
-  // The XP the account recorded, when it is less than the result's: from
-  // migration 048 a question answered earlier the same UTC day earns none.
-  const [repeatXp, setRepeatXp] = useState<number | null>(null);
   const dayChange = useDayChangeTime();
   const [mode, setMode] = useState<QuizMode>('standard');
   const [reviewPlan, setReviewPlan] = useState<ReviewWeakArea[]>([]);
@@ -607,7 +596,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
           hinted: hintedIds,
         }),
       });
-      setRepeatXp(null);
       setResult(data);
       setState('submitted');
       clearProgress();
@@ -646,10 +634,7 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             // once the account's verified balance is in. A server from before
             // migration 048 names no amount and awarded the result's.
             const recordedXp = typeof saved.questXp === 'number' ? saved.questXp : data.questXp;
-            if (saved.applied) {
-              announceVerifiedQuestXp(recordedXp);
-              if (recordedXp < data.questXp) setRepeatXp(recordedXp);
-            }
+            if (saved.applied) announceVerifiedQuestXp(recordedXp);
             await syncXpWithServer({ announceRankUp: saved.applied });
           } catch (writeError) {
             console.error('Stat write failed:', writeError);
@@ -689,7 +674,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setState('ready');
     setQuestions([]);
     setResult(null);
-    setRepeatXp(null);
     setAnswers({});
     setHintedIds([]);
     setAnswersLocked(false);
@@ -707,31 +691,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
   const confirmAbandon = () => {
     setLeaveConfirmOpen(false);
     handleRestart();
-  };
-
-  const toggleBookmark = (q: Question, correctIndex: number, explanation: string) => {
-    const added = toggleBookmarkLib({
-      id: q.id,
-      question: q.question,
-      category: q.category,
-      options: q.options,
-      correctIndex,
-      explanation,
-    });
-    setSnack(added ? t('card.added') : t('card.removed'));
-    // Sync to the user's account so it appears in the Cards (flashcards) section.
-    if (isAuthenticated) {
-      const op = added
-        ? addFlashcard({
-            question_id: q.id,
-            question: q.question,
-            category: q.category,
-            correct_answer: q.options[correctIndex],
-            explanation,
-          })
-        : removeFlashcard(q.id);
-      op.then(() => queryClient.invalidateQueries({ queryKey: ['flashcards'] })).catch(() => setSnack(t('card.syncFailed')));
-    }
   };
 
   const handleShare = async () => {
@@ -1038,12 +997,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
               </Text>
             )}
 
-            {repeatXp !== null && (
-              <Text type="supporting" color="secondary" justify="center">
-                {t('quiz.repeatXp', { xp: repeatXp })}
-              </Text>
-            )}
-
             {!isAuthenticated && (
               <Text type="supporting" color="secondary" justify="center">
                 {t('register.deviceOnly')}
@@ -1085,7 +1038,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
         {questions.map((question, index) => {
           const questionResult = resultsById.get(question.id);
           const isCorrect = questionResult?.isCorrect;
-          const isBookmarked = !!bookmarks[question.id];
           // Retired while the quiz was open: graded as void, so there is no
           // verdict and no answer key to show or to bookmark.
           const isVoided = !questionResult && (result.voided ?? []).includes(question.id);
@@ -1107,24 +1059,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                       )}
                     </Text>
                     <HStack gap={0.5} align="center">
-                      {!isVoided && (
-                        <button
-                          type="button"
-                          aria-pressed={isBookmarked}
-                          aria-label={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
-                          title={isBookmarked ? t('quiz.removeBookmark') : t('quiz.addBookmark')}
-                          onClick={() =>
-                            toggleBookmark(
-                              question,
-                              questionResult?.correctAnswer ?? 0,
-                              questionResult?.explanation ?? '',
-                            )
-                          }
-                          style={iconBtnStyle(isBookmarked ? 'var(--brand-accent)' : 'var(--color-text-secondary)')}
-                        >
-                          <BookmarkIcon filled={isBookmarked} />
-                        </button>
-                      )}
                       <button
                         type="button"
                         aria-label={t('quiz.reportAria')}
@@ -1166,6 +1100,15 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
                         {questionResult.explanation}
                       </Text>
                     </div>
+                  )}
+                  {/* Shark Cards (owner decision 12): keep a question to come
+                      back to, with the answer and explanation graded here. */}
+                  {questionResult && !isVoided && (
+                    <SaveSharkCard
+                      question={question}
+                      correctIndex={questionResult.correctAnswer}
+                      explanation={questionResult.explanation ?? ''}
+                    />
                   )}
                 </VStack>
               </Card>

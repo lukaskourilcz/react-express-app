@@ -4,7 +4,7 @@ import { getGameSettings } from '../lib/settings-store';
 import { learningPathCapability } from '../lib/learning-paths/handlers';
 import { publicBillingSettings } from '../lib/billing/config';
 import { getMerchPromo } from '../lib/rewards/spreadshop';
-import { merchRedemptionOpen } from '../shared/rewards';
+import { MERCH_ENABLED, merchRedemptionOpen } from '../shared/rewards';
 
 // Public, read-only subset of the game settings, so the client can render the
 // configured count/time options and hide disabled features. Deliberately omits
@@ -15,7 +15,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
 
-  const [s, merchPromo] = await Promise.all([getGameSettings(), getMerchPromo()]);
+  // While merchandise is paused (MERCH_ENABLED) Spreadshop is not asked.
+  const [s, merchPromo] = await Promise.all([getGameSettings(), MERCH_ENABLED ? getMerchPromo() : Promise.resolve(null)]);
   res.setHeader('Cache-Control', 'public, s-maxage=15, stale-while-revalidate=60');
   return res.json({
     quiz: {

@@ -63,6 +63,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       return await windowBoard(req, res, period, limit);
     }
 
+    if (period === 'month') {
+      return await monthBoard(req, res, limit);
+    }
+
     if (period === 'global') {
       // Per-subject (platform) scoping: ?categories=a,b,c sums each user's
       // dated activity (user_activity_days, no window, migration 049) over
@@ -150,7 +154,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       return res.json({ period: 'daily', date: dateParam, subject: scope.subject, entries: data });
     }
 
-    return jsonError(res, 400, 'bad_request', 'period must be "30d", "7d", "global", "daily", or "category"');
+    return jsonError(res, 400, 'bad_request', 'period must be "30d", "7d", "month", "global", "daily", or "category"');
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
     logEvent({ status: 500, error: message });
@@ -182,15 +186,7 @@ async function windowBoard(req: VercelRequest, res: VercelResponse, period: stri
   res.setHeader('Vary', 'Authorization');
   if (personal && !(await enforceRateLimit(req, res, RATE_LIMITS.leaderboardPersonal))) return;
 
-  let userId: string | null = null;
-  if (hasBearer(req)) {
-    try {
-      userId = (await tryAuth(req))?.sub ?? null;
-    } catch (error) {
-      if (!(error instanceof AuthError)) throw error;
-      userId = null;
-    }
-  }
+  const userId = await verifiedViewer(req);
 
   const [board, mine] = await Promise.all([
     withTimeout(
@@ -250,6 +246,78 @@ async function windowBoard(req: VercelRequest, res: VercelResponse, period: stri
     res.setHeader('Cache-Control', 'public, s-maxage=60');
   }
   return res.json(body);
+}
+
+/**
+ * This month's XP (migration 056): the learners with the most verified XP in
+ * the current calendar month (UTC) for the active subject, ranked the way the
+ * month's top three are paid. Equal XP shares a place, and the rows arrive
+ * with their ranks. `categories` names the subject, as on the daily board.
+ * Personal and cacheable exactly like the windowed boards: a Bearer token or
+ * `me=1` adds the learner's own line and is never stored by a shared cache.
+ */
+async function monthBoard(req: VercelRequest, res: VercelResponse, limit: number) {
+  const catRaw = typeof req.query.categories === 'string' ? req.query.categories : '';
+  const requested = catRaw
+    ? catRaw.split(',').map((value) => value.trim()).filter(Boolean)
+    : defaultDeploymentCategories();
+  const scope = validateCategoryScope(requested.slice(0, 64));
+  if (!scope.ok) {
+    return jsonError(res, 400, 'invalid_subject_scope', 'Categories must belong to this deployment and one subject');
+  }
+
+  const personal = hasBearer(req) || req.query.me === '1';
+  res.setHeader('Vary', 'Authorization');
+  if (personal && !(await enforceRateLimit(req, res, RATE_LIMITS.leaderboardPersonal))) return;
+
+  const userId = await verifiedViewer(req);
+  // The server names the month, so the board and its label always agree.
+  const month = new Date().toISOString().slice(0, 7);
+
+  const [board, mine] = await Promise.all([
+    withTimeout(
+      supabase!.rpc('month_xp_leaderboard', {
+        p_subject: scope.subject,
+        p_limit: limit,
+        p_viewer: userId,
+        p_month: month,
+      }),
+    ),
+    userId
+      ? withTimeout(supabase!.rpc('month_xp_leaderboard_rank', { p_user: userId, p_subject: scope.subject, p_month: month }))
+      : Promise.resolve(null),
+  ]);
+
+  const failure = board.error ?? mine?.error ?? null;
+  if (failure) {
+    if (isRpcMissing(failure)) {
+      return jsonError(res, 503, 'rpc_missing', 'Run supabase/supabase-schema-056.sql to enable the monthly board');
+    }
+    logEvent({ status: 500, error: failure.message });
+    return jsonError(res, 500, 'db_error', 'Could not load leaderboard');
+  }
+
+  const body: Record<string, unknown> = { period: 'month', month, subject: scope.subject, entries: board.data ?? [] };
+  if (personal) {
+    const row = (Array.isArray(mine?.data) ? mine!.data[0] : null) as { rank?: unknown; xp?: unknown } | null;
+    body.me = userId ? { rank: typeof row?.rank === 'number' ? row.rank : null, xp: Number(row?.xp ?? 0) } : null;
+    res.setHeader('Cache-Control', 'private, no-store');
+  } else {
+    res.setHeader('Cache-Control', 'public, s-maxage=60');
+  }
+  return res.json(body);
+}
+
+/** The account a Bearer token verifies, or null: a public read is no place to
+ * fail a session, so an expired or unverifiable token still gets the board. */
+async function verifiedViewer(req: VercelRequest): Promise<string | null> {
+  if (!hasBearer(req)) return null;
+  try {
+    return (await tryAuth(req))?.sub ?? null;
+  } catch (error) {
+    if (!(error instanceof AuthError)) throw error;
+    return null;
+  }
 }
 
 function hasBearer(req: VercelRequest): boolean {

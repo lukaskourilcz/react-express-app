@@ -9,6 +9,8 @@
 import type { ReactNode } from 'react';
 import type { TranslationKey } from '../i18n/translations';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../shared/tiers';
+import { MERCH_ENABLED } from '../../../shared/rewards';
+import { annualSaving } from '../../../shared/launch-offer';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import BrandCase from './BrandCase';
 
@@ -24,8 +26,11 @@ export function premiumVars() {
     level: reactFree + 1,
     freeLevel: reactFree,
     symbol: PREMIUM_PRICE.symbol,
+    currency: PREMIUM_PRICE.currency,
     monthly: PREMIUM_PRICE.monthly,
     annual: PREMIUM_PRICE.annual,
+    /** The yearly saving at the regular prices: "7.89". */
+    saving: annualSaving(PREMIUM_PRICE.monthly, PREMIUM_PRICE.annual),
   };
 }
 
@@ -40,10 +45,11 @@ export const PREMIUM_INCLUDES = [
 ] as const satisfies readonly TranslationKey[];
 
 /** The list as it may be stated today: the merchandise line only while coin
- * redemption is open (design audit P0.1). The static page never knows, so it
- * leaves the line out. */
+ * redemption is open (design audit P0.1), and never while merchandise is
+ * paused (MERCH_ENABLED, owner decision 10). The static page never knows, so
+ * it leaves the line out. */
 export const premiumIncludes = (redemptionOpen: boolean) =>
-  PREMIUM_INCLUDES.filter((key) => redemptionOpen || key !== 'premium.sheet.include6');
+  PREMIUM_INCLUDES.filter((key) => (MERCH_ENABLED && redemptionOpen) || key !== 'premium.sheet.include6');
 
 export function PremiumIncludes({ t, headingId, redemptionOpen = false }: { t: Translate; headingId: string; redemptionOpen?: boolean }) {
   const vars = premiumVars();
@@ -94,7 +100,7 @@ export function PremiumStaticArticle({ t }: { t: Translate }) {
         <h2 id="premium-plans" className="ss-premium-section-title">{t('premium.page.plansTitle')}</h2>
         <ul className="ss-premium-list">
           <li>{t('premium.page.monthlyName')}: {vars.symbol}{vars.monthly} {t('premium.page.perMonth')}. {t('premium.page.monthlyRenews')}</li>
-          <li>{t('premium.page.annualName')}: {vars.symbol}{vars.annual} {t('premium.page.perYear')}. {t('premium.page.annualSaving')}. {t('premium.page.annualRenews')}</li>
+          <li>{t('premium.page.annualName')}: {vars.symbol}{vars.annual} {t('premium.page.perYear')}. {t('premium.page.annualSaving', vars)}. {t('premium.page.annualRenews')}</li>
         </ul>
         <PremiumSmallPrint t={t} link={anchor} headingId="premium-small-print" />
       </section>

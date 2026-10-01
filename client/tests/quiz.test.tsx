@@ -32,6 +32,7 @@ vi.mock('../src/components/LoadingScreen', async (importOriginal) => ({
 import Quiz from '../src/components/Quiz';
 import PendingQuizResults from '../src/components/PendingQuizResults';
 import Leaderboard from '../src/components/Leaderboard';
+import { onXpToast } from '../src/lib/xp';
 
 const LEARNER = { id: 'user-quiz-test-0001', email: 'learner@example.test', user_metadata: {} };
 const PROGRESS_KEY = 'devquiz:in-progress';
@@ -171,8 +172,14 @@ describe('starting', () => {
 });
 
 describe('a question retired while the quiz was open', () => {
-  it('reads as not counted, with no answers and no bookmark', async () => {
-    server.use(http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a')]), voided: ['b'] })));
+  // The bookmark icon became Save as Shark Card (owner decision 12), which
+  // needs an account, so the learner signs in here.
+  it('reads as not counted, with no answers and nothing to save', async () => {
+    signIn();
+    server.use(
+      http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a')]), voided: ['b'] })),
+      http.post('*/api/user/stats', () => HttpResponse.json({ data: null, xp: { quest_xp: 6, quest_xp_by_subject: { webdev: 6 } }, applied: true, questXp: 6 })),
+    );
     await startQuiz();
     answerAll(2);
     fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
@@ -180,7 +187,59 @@ describe('a question retired while the quiz was open', () => {
 
     expect(screen.getByText('Retired, not counted')).toBeInTheDocument();
     expect(screen.queryByText('alpha b')).not.toBeInTheDocument();
-    expect(screen.getAllByRole('button', { name: /bookmark this question/i })).toHaveLength(1);
+    expect(await screen.findAllByRole('button', { name: 'Save as Shark Card' })).toHaveLength(1);
+  });
+});
+
+describe('Shark Cards from the review (owner decision 12)', () => {
+  it('saves a missed question with the answer and explanation the grading returned, and shows it saved', async () => {
+    signIn();
+    const saved: Record<string, unknown>[] = [];
+    server.use(
+      // Question a was missed: the learner picked alpha, the answer is gamma.
+      http.post('*/api/quiz/submit', () => HttpResponse.json({
+        totalQuestions: 1, correctAnswers: 0, percentage: 0, questXp: 0,
+        results: [{ questionId: 'a', selectedIndex: 0, correctAnswer: 2, isCorrect: false, explanation: 'Gamma, because the grader says so.' }],
+        resultReceipt: 'missed-receipt',
+      })),
+      http.post('*/api/user/stats', () => HttpResponse.json({ data: null, xp: { quest_xp: 0, quest_xp_by_subject: { webdev: 0 } }, applied: true, questXp: 0 })),
+      http.post('*/api/flashcards', async ({ request }) => {
+        const body = await request.json() as Record<string, unknown>;
+        saved.push(body);
+        return HttpResponse.json({ card: { ...body, created_at: '2026-10-01T10:00:00Z' } });
+      }),
+    );
+    await startQuiz([Q('a')]);
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    const save = await screen.findByRole('button', { name: 'Save as Shark Card' });
+    expect(save).toHaveAttribute('aria-pressed', 'false');
+    // Before anything is saved, the card asks the server for nothing but the deck.
+    expect(saved).toEqual([]);
+    fireEvent.click(save);
+    await waitFor(() => expect(saved).toHaveLength(1));
+    expect(saved[0]).toEqual({
+      question_id: 'a', question: 'Question a?', category: 'javascript',
+      correct_answer: 'gamma a', explanation: 'Gamma, because the grader says so.', subject: 'webdev',
+    });
+    const savedButton = await screen.findByRole('button', { name: 'Saved as Shark Card' });
+    // Shown at once, and still saved once the save has settled.
+    await waitFor(() => expect(savedButton).toBeEnabled());
+    expect(savedButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Saved as Shark Card' })).toBe(savedButton);
+    expect(screen.getByRole('link', { name: 'Open Shark Cards' })).toHaveAttribute('href', '/collection');
+  });
+
+  it('offers nothing to a signed-out learner, whose cards would have no account to live in', async () => {
+    server.use(http.post('*/api/quiz/submit', () => HttpResponse.json({
+      totalQuestions: 1, correctAnswers: 0, percentage: 0, questXp: 0,
+      results: [{ questionId: 'a', selectedIndex: 0, correctAnswer: 2, isCorrect: false, explanation: 'Why a' }],
+    })));
+    await startQuiz([Q('a')]);
+    fireEvent.keyDown(document.body, { key: '1' });
+    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+    await screen.findByText('Why a');
+    expect(screen.queryByRole('button', { name: /Shark Card/ })).toBeNull();
   });
 });
 
@@ -444,32 +503,30 @@ describe('saving a result to the account', () => {
     expect(pendingStore()).toEqual({});
   });
 
-  it('says so when questions answered earlier today earned less XP than the result', async () => {
+  it('announces the XP the account recorded and never says repeats earn less', async () => {
+    // From migration 056 every answer earns XP, a repeat included, so the
+    // result screen no longer explains a smaller award. A server from before
+    // 056 may still record less than the result (here 6 of 12): the screen
+    // announces what was recorded and adds no note about repeats.
     signIn();
-    server.use(
-      http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a'), Q('b')]), resultReceipt: 'repeat-receipt' })),
-      // The routine counted one of the two questions: half of the result's 12 XP.
-      http.post('*/api/user/stats', () => HttpResponse.json({ data: null, xp: { quest_xp: 6, quest_xp_by_subject: { webdev: 6 } }, applied: true, questXp: 6 })),
-    );
-    await startQuiz([Q('a'), Q('b')]);
-    answerAll(2);
-    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
-    expect(await screen.findByText('You answered some of these questions earlier today. A question counts once a day, so this quiz earned 6 XP.')).toBeInTheDocument();
-  });
-
-  it('adds no such note when the account recorded the whole result', async () => {
-    signIn();
+    const gains: number[] = [];
+    const stop = onXpToast((toast) => { if (toast.kind === 'gain') gains.push(toast.amount); });
     let saved = 0;
     server.use(
-      http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a')]), resultReceipt: 'whole-receipt' })),
+      http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a'), Q('b')]), resultReceipt: 'repeat-receipt' })),
       http.post('*/api/user/stats', () => { saved++; return HttpResponse.json({ data: null, xp: { quest_xp: 6, quest_xp_by_subject: { webdev: 6 } }, applied: true, questXp: 6 }); }),
     );
-    await startQuiz([Q('a')]);
-    fireEvent.keyDown(document.body, { key: '1' });
-    fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
-    await waitFor(() => expect(saved).toBe(1));
-    await act(async () => {});
-    expect(screen.queryByText(/A question counts once a day/)).not.toBeInTheDocument();
+    try {
+      await startQuiz([Q('a'), Q('b')]);
+      answerAll(2);
+      fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+      await waitFor(() => expect(saved).toBe(1));
+      await waitFor(() => expect(gains).toEqual([6]));
+      await act(async () => {});
+      expect(screen.queryByText(/earlier today|counts once a day/)).not.toBeInTheDocument();
+    } finally {
+      stop();
+    }
   });
 
   it('sends waiting results once signed in, and drops the ones too old to record', async () => {

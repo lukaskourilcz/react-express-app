@@ -17,7 +17,15 @@ const auth = vi.hoisted(() => ({ value: { user: null as { id: string } | null, i
 vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
 const signIn = () => { auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false }; };
 const signOut = () => { auth.value = { user: null, isAuthenticated: false, isLoading: false }; };
-afterEach(() => { signOut(); closeUpgradeSheet(); });
+afterEach(() => { signOut(); closeUpgradeSheet(); merch.on = false; });
+// Merchandise is paused until next quarter (owner decision 10). These tests
+// drive the merchandise screens as they come back with the switch on;
+// merch-paused.test.tsx proves that nothing of them renders while it is off.
+const merch = vi.hoisted(() => ({ on: false }));
+vi.mock('../../shared/rewards', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../shared/rewards')>(),
+  get MERCH_ENABLED() { return merch.on; },
+}));
 
 const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 const PREMIUM = { ...FREE, tier: 'premium', source: 'manual' };
@@ -108,6 +116,8 @@ describe('How to earn', () => {
     expect(rows[2].detail).toBe('A streak of 7, 30 and 100 days: 25, 100 and 300 coins.');
     expect(rows[2].figure).toBe('4 of 7 days');
     expect(rows[3].detail).toBe('Every level of a Learn topic: 100 coins. An evolving project: 150. A short path: 50.');
+    // The month's top three by XP, ties sharing the place (migration 056).
+    expect(rows[4].detail).toBe('Finish a calendar month with the most XP — top three earn 300, 200 and 100 coins; ties share the place.');
     expect(rows.some((row) => 'premium' in row)).toBe(false);
   });
 
@@ -142,6 +152,7 @@ describe('ledger lines', () => {
 describe('the Rewards screen', () => {
   it('shows a free account the merchandise with the upgrade sheet, never an address form', async () => {
     signIn();
+    merch.on = true;
     routes({ plan: FREE, shop: pricedShop });
     await mountShop();
     expect(screen.getByRole('heading', { level: 1, name: 'Coins' })).toBeInTheDocument();
@@ -158,6 +169,7 @@ describe('the Rewards screen', () => {
 
   it('keeps the sections in the order of the handoff', async () => {
     signIn();
+    merch.on = true;
     routes({ plan: PREMIUM, shop: pricedShop, wallet: wallet({ earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } }) });
     await mountShop();
     await screen.findByText('1,240');
@@ -179,6 +191,7 @@ describe('the Rewards screen', () => {
 
   it('lets a Premium member redeem once the coins cover the price', async () => {
     signIn();
+    merch.on = true;
     const premiumWallet = (balance: number) => wallet({ balance, earn: { rules: DEFAULT_COIN_SETTINGS, progress: progress({ premium: true }) } });
     routes({ plan: PREMIUM, shop: pricedShop, wallet: premiumWallet(264) });
     const first = await mountShop();

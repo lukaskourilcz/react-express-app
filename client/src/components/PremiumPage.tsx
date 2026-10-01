@@ -77,7 +77,13 @@ function PlanCard({ plan, showAction, offer }: { plan: BillingPlan; showAction: 
         {offer ? <OfferAmount offer={offer} plan={plan} /> : <strong>{vars.symbol}{annual ? vars.annual : vars.monthly}</strong>}{' '}
         <span>{t(annual ? 'premium.page.perYear' : 'premium.page.perMonth')}</span>
       </p>
-      {annual && <p className="ss-premium-plan__saving">{t('premium.page.annualSaving')}</p>}
+      {/* The saving is true for the price shown above it: the launch prices
+          while the offer is on, the regular ones otherwise (owner decision 11). */}
+      {annual && (
+        <p className="ss-premium-plan__saving">
+          {t('premium.page.annualSaving', offer ? { saving: offer.offerAnnualSaving, currency: offer.currency } : vars)}
+        </p>
+      )}
       <p className="ss-premium-plan__terms">{t(annual ? 'premium.page.annualRenews' : 'premium.page.monthlyRenews')}</p>
       {showAction && (
         <div className="ss-premium-plan__action">

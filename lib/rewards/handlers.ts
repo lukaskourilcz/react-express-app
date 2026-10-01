@@ -29,6 +29,7 @@ import { isScopeSubject } from '../../shared/subject-catalog';
 import { settleFinishedMonth, settleMilestones, type MilestoneReport } from './coins';
 import { creditReferral } from './referral';
 import {
+  MERCH_ENABLED,
   crownAvailable,
   streakProtectionAvailable,
   STREAK_PROTECTION_CAP,
@@ -52,6 +53,12 @@ const logEvent = createLogger('rewards');
 const newId = (): string => randomBytes(24).toString('base64url').slice(0, 32);
 const migrationRequired = (res: VercelResponse) =>
   jsonError(res, 503, 'migration_required', 'Rewards migration 028 is not installed');
+
+/** The answer to a merchandise request while `MERCH_ENABLED` is off (owner
+ * decision 10): the path-package claim in lib/learning-paths/handlers.ts gives
+ * the same one. 404 rather than 409, because there is nothing to order. */
+export const merchUnavailable = (res: VercelResponse) =>
+  jsonError(res, 404, 'merch_unavailable', 'Merchandise is not available yet');
 
 /** The subject a wallet belongs to. Wallets are per subject, as they have
  * always been; the deployment decides which one a request may touch. */
@@ -199,8 +206,17 @@ function earnSummary(coins: CoinSettings, report: MilestoneReport | null) {
 /* ── GET ?op=shop ──────────────────────────────────────────────────────── */
 
 /** The catalogue as this deployment can actually sell it: every item with its
- * availability, and a price only where one has been configured. */
-export async function handleShopCatalogue(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+ * availability, and a price only where one has been configured. While
+ * merchandise is paused (`MERCH_ENABLED`) the list is empty and the shop is
+ * reported off: the crown and streak protection are all there is to buy.
+ * `merchOn` is the switch, a parameter only so the contracts can drive the
+ * code that comes back with it. */
+export async function handleShopCatalogue(
+  req: VercelRequest,
+  res: VercelResponse,
+  supabase: SupabaseClient | null,
+  merchOn: boolean = MERCH_ENABLED,
+) {
   if (req.method !== 'GET') {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
@@ -209,7 +225,7 @@ export async function handleShopCatalogue(req: VercelRequest, res: VercelRespons
   const merch = settings.merch;
   const region = typeof req.query.region === 'string' ? req.query.region.toUpperCase() : null;
 
-  const stockRows = supabase
+  const stockRows = supabase && merchOn
     ? await withTimeout(supabase.from('merch_stock').select('sku,variant,on_hand,reserved'))
     : { data: [], error: null };
   const freeStock = new Map<string, number>();
@@ -218,7 +234,7 @@ export async function handleShopCatalogue(req: VercelRequest, res: VercelRespons
   }
 
   const { MERCH_CATALOGUE } = await import('../../shared/rewards');
-  const items = MERCH_CATALOGUE.map((item) => {
+  const items = (merchOn ? MERCH_CATALOGUE : []).map((item) => {
     const pricing = merch.pricing[item.sku];
     const variants = item.variants.length > 0 ? item.variants : [''];
     const stock = variants.reduce((total, variant) => total + (freeStock.get(`${item.sku}|${variant}`) ?? 0), 0);
@@ -248,8 +264,8 @@ export async function handleShopCatalogue(req: VercelRequest, res: VercelRespons
 
   res.setHeader('Cache-Control', 'private, no-store');
   return res.json({
-    enabled: merch.enabled,
-    cashCheckoutEnabled: merch.cashCheckoutEnabled,
+    enabled: merchOn && merch.enabled,
+    cashCheckoutEnabled: merchOn && merch.cashCheckoutEnabled,
     testMode: merch.testMode,
     policyUrl: merch.policyUrl,
     items,
@@ -291,9 +307,20 @@ function parseLines(raw: unknown): RequestedLine[] | null {
   return lines;
 }
 
-export async function handleOrders(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+/** A learner's merchandise orders: list, place, cancel. While merchandise is
+ * paused (`MERCH_ENABLED`, owner decision 10) listing and placing answer 404
+ * `merch_unavailable`; cancelling stays, so an order from before the pause can
+ * still be stopped and its coins returned. `merchOn` is the switch, a
+ * parameter only so the contracts can drive the code that comes back with it. */
+export async function handleOrders(
+  req: VercelRequest,
+  res: VercelResponse,
+  supabase: SupabaseClient | null,
+  merchOn: boolean = MERCH_ENABLED,
+) {
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
+  if (!merchOn && (req.method === 'GET' || req.method === 'POST')) return merchUnavailable(res);
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
 
   if (req.method === 'GET') {

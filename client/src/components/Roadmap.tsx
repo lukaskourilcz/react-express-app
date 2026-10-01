@@ -96,6 +96,7 @@ import { lazyShellPart } from '../lib/routeRecovery';
 import { ShellPartBoundary } from './ShellPartBoundary';
 import ErrorRetry from './ErrorRetry';
 import { localDayChangeTime } from '../lib/utcDay';
+import { SaveSharkCard } from './SaveSharkCard';
 import './Roadmap.css';
 import './DeepEndScreens.css';
 
@@ -1903,6 +1904,11 @@ function LessonRunner({
                 <div style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
                   {grade.explanation}
                 </div>
+                {/* Shark Cards (owner decision 12): a missed question can be
+                    kept with the answer and explanation graded here. */}
+                {!isRight && (
+                  <SaveSharkCard question={question} correctIndex={grade.correctAnswer} explanation={grade.explanation ?? ''} />
+                )}
                 <button
                   type="button"
                   className="rm-accent-btn"

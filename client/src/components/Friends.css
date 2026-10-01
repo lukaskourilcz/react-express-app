@@ -102,3 +102,27 @@
 
 .fr-empty { display: flex; flex-direction: column; gap: 6px; }
 
+
+/* Names (migration 055). A friend's chosen name leads; when it is not their
+   sharkname, the sharkname follows in quieter type, because that is what
+   you would type to find them again. */
+.fr-friend__name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 6px;
+  min-width: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+.fr-handle {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  font-variant-ligatures: none;
+  overflow-wrap: anywhere;
+}
+.fr-item__handle,
+.fr-result__handle { display: inline-flex; flex-wrap: wrap; align-items: baseline; column-gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.fr-row--sharkname { justify-content: space-between; }
+.fr-row--sharkname > .fr-note { flex: 1 1 14rem; min-width: 0; overflow-wrap: anywhere; }

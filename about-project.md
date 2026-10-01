@@ -56,7 +56,8 @@ Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
   **challenge run** (track, count, order) and plan it for a date and time.
 - **Premium and coins**: Premium opens every Learn topic, every coding task and,
   once their switches are on, the FDE and DSA paths. Coins, earned from verified learning, buy the crown
-  and streak protections for every account and merchandise for Premium; an
+  and streak protections for every account, and merchandise for Premium once
+  it returns next quarter (paused behind `MERCH_ENABLED`); an
   invite link pays both friends. Leaderboards rank the last 30 days by default.
 
 ## Tech stack
