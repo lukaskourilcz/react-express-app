@@ -37,6 +37,7 @@ interface Account {
   email: string;
   confirmed: boolean;
   appMetadata?: Record<string, unknown>;
+  identities?: Record<string, unknown>[];
 }
 const A: Account = { id: '1a2b3c4d-0000-4000-8000-00000000000a', token: 'caller-a', email: 'a@example.invalid', confirmed: true };
 const B: Account = { id: '1a2b3c4d-0000-4000-8000-00000000000b', token: 'caller-b', email: 'b@example.invalid', confirmed: true };
@@ -45,7 +46,23 @@ const ADMIN_EMAIL = 'admin@example.invalid';
 const LISTED_UNCONFIRMED: Account = { id: '1a2b3c4d-0000-4000-8000-00000000000c', token: 'listed-unconfirmed', email: ADMIN_EMAIL, confirmed: false };
 const LISTED_CONFIRMED: Account = { id: '1a2b3c4d-0000-4000-8000-00000000000d', token: 'listed-confirmed', email: ADMIN_EMAIL, confirmed: true };
 const ROLE_ADMIN: Account = { id: '1a2b3c4d-0000-4000-8000-00000000000e', token: 'role-admin', email: 'role@example.invalid', confirmed: false, appMetadata: { role: 'admin' } };
-const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN];
+// An account made with an email and password (owner decision 3): no Google
+// identity, so no name or picture, and `email` as its provider.
+const EMAIL: Account = {
+  id: '1a2b3c4d-0000-4000-8000-00000000000f',
+  token: 'email-password',
+  email: 'ada@example.invalid',
+  confirmed: true,
+  appMetadata: { provider: 'email', providers: ['email'] },
+  identities: [{
+    identity_id: '1a2b3c4d-0000-4000-8000-0000000000f1',
+    id: '1a2b3c4d-0000-4000-8000-00000000000f',
+    user_id: '1a2b3c4d-0000-4000-8000-00000000000f',
+    provider: 'email',
+    identity_data: { email: 'ada@example.invalid', email_verified: true, phone_verified: false, sub: '1a2b3c4d-0000-4000-8000-00000000000f' },
+  }],
+};
+const ACCOUNTS = [A, B, LISTED_UNCONFIRMED, LISTED_CONFIRMED, ROLE_ADMIN, EMAIL];
 
 type Row = Record<string, unknown>;
 interface Seen { method: string; path: string; filters: Record<string, string>; body: unknown }
@@ -80,8 +97,14 @@ async function startStandIns() {
         ...(account.confirmed ? { email_confirmed_at: '2026-09-01T00:00:00Z' } : {}),
         app_metadata: account.appMetadata ?? {},
         user_metadata: {},
-        identities: [],
+        identities: account.identities ?? [],
       });
+    }
+    // The admin API deleting a sign-in identity (account erasure).
+    const adminUser = /^\/auth\/v1\/admin\/users\/([\w-]+)$/.exec(url.pathname);
+    if (adminUser && req.method === 'DELETE') {
+      seen.push({ method: 'DELETE', path: url.pathname, filters: {}, body: await readBody(req).then((raw) => raw ? JSON.parse(raw) as unknown : undefined) });
+      return send(200, {});
     }
     const raw = req.method === 'GET' ? '' : await readBody(req);
     const body = raw ? JSON.parse(raw) as unknown : undefined;
@@ -350,6 +373,32 @@ async function main() {
     assert.equal(checked.statusCode, 503, `a design check is not graded without its claim (${JSON.stringify(checked.body)})`);
     assert.equal(errorCode(checked), 'claim_unavailable');
     console.log('PASS verified caller: a one-time claim Upstash cannot record answers 503');
+
+    // ── an account made with an email and password ──────────────────────
+    seen.length = 0;
+    const event = await user('authevent', { method: 'POST', account: EMAIL, body: {} });
+    assert.equal(event.statusCode, 200, JSON.stringify(event.body));
+    const logged = reads('/rest/v1/auth_events').find((one) => one.method === 'POST')?.body as Row | undefined;
+    assert.deepEqual(
+      { user_id: logged?.user_id, email: logged?.email, provider: logged?.provider },
+      { user_id: EMAIL.id, email: EMAIL.email, provider: 'email' },
+      'a sign-in with a password is logged with its provider',
+    );
+    seen.length = 0;
+    const named = await user('leaderboard-visibility', { method: 'PUT', account: EMAIL, body: { visible: true } });
+    assert.equal(named.statusCode, 200, JSON.stringify(named.body));
+    const shownRow = reads('/rest/v1/user_stats').find((one) => one.method === 'POST')?.body as Row | undefined;
+    assert.deepEqual(
+      { name: shownRow?.name, picture: shownRow?.picture, email: shownRow?.email },
+      { name: null, picture: null, email: EMAIL.email },
+      'without a Google identity the boards get no name and no picture, and never the address',
+    );
+    seen.length = 0;
+    const deleted = await user('delete-account', { method: 'DELETE', account: EMAIL, body: { confirmation: 'DELETE' } });
+    assert.equal(deleted.statusCode, 200, `an email account deletes like any other (${JSON.stringify(deleted.body)})`);
+    assert.deepEqual(reads('/rest/v1/rpc/delete_user_data').map((one) => (one.body as Row).p_user_id), [EMAIL.id, EMAIL.id], 'its data is erased, before and after the identity');
+    assert.equal(seen.filter((one) => one.method === 'DELETE' && one.path === `/auth/v1/admin/users/${EMAIL.id}`).length, 1, 'and its sign-in identity is deleted');
+    console.log('PASS verified caller: an email and password account signs in, stays unnamed on boards, and deletes');
 
     console.log('Verified-caller contracts passed: a token acts for its own account whatever user_id says, admin by confirmed address or role, private caching by default, read limits, and one-time claims that fail closed.');
   } finally {
