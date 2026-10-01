@@ -303,6 +303,8 @@ describe('the sign-in dialog', () => {
     ['a failure on Supabase’s side', '/signup', 'signUp', () => authError(500, 'unexpected_failure', 'Error sending confirmation email'), 'The sign-in service had a problem. Try again in a few minutes.'],
     ['email sign-ups switched off', '/signup', 'signUp', () => authError(422, 'signup_disabled', 'Signups not allowed for this instance'), 'Email sign-in is switched off right now. Continue with Google instead.'],
     ['an address Supabase will not use', '/signup', 'signUp', () => authError(400, 'email_address_invalid', 'Email address "ada@example.invalid" is invalid'), 'This email address can’t be used. Check it for typos, or use another one.'],
+    ['an address Supabase cannot read', '/signup', 'signUp', () => authError(400, 'validation_failed', 'Unable to validate email address: invalid format'), 'This email address can’t be used. Check it for typos, or use another one.'],
+    ['a resend inside Supabase’s minute', '/signup', 'signUp', () => authError(429, 'over_email_send_rate_limit', 'For security purposes, you can only request this after 59 seconds.'), 'We’ve already sent emails to this address. Wait a few minutes before asking for another.'],
   ] as const)('says so on %s', async (_label, path, view, answer, message) => {
     server.use(http.post(`${AUTH}${path}`, answer));
     vi.spyOn(console, 'error').mockImplementation(() => {});

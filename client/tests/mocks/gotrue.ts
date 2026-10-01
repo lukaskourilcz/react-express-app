@@ -1,11 +1,12 @@
 import { HttpResponse } from 'msw';
 // Supabase Auth (GoTrue v2) as the browser meets it, for tests that run the
 // real supabase-js against MSW. Invented test data only. The shapes are the
-// ones GoTrue answers with under the API version supabase-js asks for
-// (`X-Supabase-Api-Version: 2024-01-01`): errors carry `code` and `message`,
-// a weak password adds `weak_password.reasons`, a sign-up that needs a
-// confirmation answers with the user alone, and an address that already has
-// a confirmed account answers with a user without identities.
+// ones GoTrue v2.197.0 answered a local run with (1 Oct 2026), under the API
+// version supabase-js asks for (`X-Supabase-Api-Version: 2024-01-01`): errors
+// carry that header, `code` and `message`, a weak password adds
+// `weak_password.reasons`, a sign-up that needs a confirmation answers with
+// the user alone, and an address that already has a confirmed account
+// answers with a user without identities. Successes carry no version header.
 
 export const PROJECT_URL = 'https://testprojectref.supabase.co';
 export const ANON_KEY = 'test-anon-key';
@@ -60,4 +61,4 @@ export function authError(status: number, code: string, message: string, extra: 
   return HttpResponse.json({ code, message, ...extra }, { status, headers: API_VERSION });
 }
 
-export const gotrueOk = (body: unknown) => HttpResponse.json(body as never, { headers: API_VERSION });
+export const gotrueOk = (body: unknown) => HttpResponse.json(body as never);

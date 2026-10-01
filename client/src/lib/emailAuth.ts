@@ -151,6 +151,8 @@ export function authFailure(error: unknown): AuthFailure {
   if (name === 'AuthSessionMissingError') return 'sessionMissing';
   if (typeof code === 'string' && CODES[code]) return CODES[code];
   const text = typeof message === 'string' ? message.toLowerCase() : '';
+  // "Unable to validate email address: invalid format"
+  if (code === 'validation_failed' && text.includes('email')) return 'emailInvalid';
   if (text.includes('invalid login credentials')) return 'invalidCredentials';
   if (text.includes('email not confirmed')) return 'emailNotConfirmed';
   if (status === 429) return 'rateLimited';
