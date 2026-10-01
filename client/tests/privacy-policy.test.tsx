@@ -62,6 +62,8 @@ describe('the privacy policy', () => {
     expect(screen.getByText(/An account without a Google name, such as an email and password account, appears by its sharkname/)).toBeInTheDocument();
     expect(screen.getByText(/You appear on them as “Learner”, without a name or photo/)).toBeInTheDocument();
     expect(screen.getByText(/catch up with a change within about a minute/)).toBeInTheDocument();
+    expect(screen.getByText(/on the This month board your XP total for the current calendar month/)).toBeInTheDocument();
+    expect(screen.getByText(/receive 300, 200 and 100 coins, and learners who tie share the place/)).toBeInTheDocument();
     expect(screen.getByText(/the name you type appears publicly on the Hall of Fame/)).toBeInTheDocument();
     expect(screen.getByText(/records your email address, the sign-in method \(Google or email\) and the time/)).toBeInTheDocument();
     expect(screen.getByText(/It deletes each record after 12 months/)).toBeInTheDocument();
