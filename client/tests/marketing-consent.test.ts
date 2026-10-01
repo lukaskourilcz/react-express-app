@@ -19,6 +19,7 @@ async function load() {
 
 /** The dataLayer entries as plain arrays (gtag pushes `arguments`). */
 const layer = () => (window.dataLayer ?? []).map((entry) => Array.from(entry as ArrayLike<unknown>));
+const lastEntry = () => layer()[layer().length - 1];
 
 beforeEach(() => {
   delete window.dataLayer;
@@ -47,15 +48,15 @@ it('starts a connected tag only after a yes to marketing, with Consent Mode deni
   // Analytics alone is not marketing.
   consent.saveConsent({ analytics: true, marketing: false });
   expect(tag.load).not.toHaveBeenCalled();
-  expect(layer().at(-1)).toEqual(['consent', 'update', marketing.CONSENT_MODE_DEFAULTS]);
+  expect(lastEntry()).toEqual(['consent', 'update', marketing.CONSENT_MODE_DEFAULTS]);
 
   consent.saveConsent({ analytics: false, marketing: true });
   expect(tag.load).toHaveBeenCalledTimes(1);
-  expect(layer().at(-1)).toEqual(['consent', 'update', { ad_storage: 'granted', analytics_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted' }]);
+  expect(lastEntry()).toEqual(['consent', 'update', { ad_storage: 'granted', analytics_storage: 'granted', ad_user_data: 'granted', ad_personalization: 'granted' }]);
 
   consent.rejectAllConsent();
   expect(tag.unload).toHaveBeenCalledTimes(1);
-  expect(layer().at(-1)).toEqual(['consent', 'update', marketing.CONSENT_MODE_DEFAULTS]);
+  expect(lastEntry()).toEqual(['consent', 'update', marketing.CONSENT_MODE_DEFAULTS]);
   stop();
 });
 
@@ -67,7 +68,7 @@ it('starts a connected tag at once for a visitor who said yes on an earlier visi
   marketing.installMarketing([tag]);
   expect(tag.load).toHaveBeenCalledTimes(1);
   expect(layer()[0][1]).toBe('default');
-  expect(layer().at(-1)?.[1]).toBe('update');
+  expect(lastEntry()?.[1]).toBe('update');
 });
 
 it('runs error monitoring without cookies, storage, replay or personal data', async () => {

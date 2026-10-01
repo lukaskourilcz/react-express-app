@@ -166,7 +166,8 @@ it('signs out without leaving PostHog opted out', async () => {
   analytics.resetAnalytics();
   await vi.waitFor(() => expect(client.reset).toHaveBeenCalledTimes(1));
   // reset() drops PostHog's consent flag; the visitor's yes still stands.
-  expect(client.opt_in_capturing.mock.invocationCallOrder.at(-1)).toBeGreaterThan(client.reset.mock.invocationCallOrder[0]);
+  const optIns = client.opt_in_capturing.mock.invocationCallOrder;
+  expect(optIns[optIns.length - 1]).toBeGreaterThan(client.reset.mock.invocationCallOrder[0]);
 });
 
 it('captures activation without allowing raw learner data into its properties', async () => {
