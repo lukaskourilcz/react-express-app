@@ -29,6 +29,9 @@ export interface Match {
   started_at?: string | null;
   question_started_at?: string | null;
   question_duration_s?: number;
+  /** Classroom only: the question whose answer the teacher revealed, which
+   * closed it to answers (migration 056). Null before the first reveal. */
+  revealed_idx?: number | null;
 }
 
 export interface Participant {
@@ -102,17 +105,43 @@ export interface LeaderboardMe {
   accuracy_pct: number;
 }
 
-export type LeaderboardPeriod = '30d' | 'global' | 'daily' | 'category';
+/** One row of the "This month" board (period=month, migration 056): XP earned
+ *  in the current calendar month (UTC). The server ranks it, and equal XP
+ *  shares a rank. */
+export interface MonthLeaderboardEntry {
+  rank: number;
+  display_name: string | null;
+  picture: string | null;
+  xp: number;
+  /** True only on the signed-in learner's own row of a personal request. */
+  is_viewer?: boolean;
+}
+
+/** The signed-in learner's own line on the month board. `rank` is null when
+ *  they have no XP this month. */
+export interface MonthLeaderboardMe {
+  rank: number | null;
+  xp: number;
+}
+
+export type LeaderboardPeriod = '30d' | 'month' | 'global' | 'daily' | 'category';
 
 export interface LeaderboardResponse {
   period: string;
   date?: string;
+  /** `yyyy-mm` of the month board (period=month). */
+  month?: string;
   category?: string | null;
   days?: number;
   min_answers?: number;
-  entries: LeaderboardGlobalEntry[] | LeaderboardDailyEntry[] | CategoryLeaderboardEntry[] | WindowLeaderboardEntry[];
-  /** Present on a personal 30-day request; null when the session was not verified. */
-  me?: LeaderboardMe | null;
+  entries:
+    | LeaderboardGlobalEntry[]
+    | LeaderboardDailyEntry[]
+    | CategoryLeaderboardEntry[]
+    | WindowLeaderboardEntry[]
+    | MonthLeaderboardEntry[];
+  /** Present on a personal 30-day or month request; null when the session was not verified. */
+  me?: LeaderboardMe | MonthLeaderboardMe | null;
 }
 
 export const createMatch = (input: {
@@ -161,9 +190,10 @@ export function serverClockOffset(serverNow: string | undefined, sentAt: number,
 export const controlMatch = (input: {
   code: string;
   host_id: string;
-  action: 'start' | 'advance' | 'finish';
+  /** `reveal` closes the classroom question on screen and shows its answer. */
+  action: 'start' | 'advance' | 'finish' | 'reveal';
 }) =>
-  apiFetch<{ ok: true; status?: string; current_index?: number }>('/api/play/control', {
+  apiFetch<{ ok: true; status?: string; current_index?: number; revealed_idx?: number }>('/api/play/control', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -176,7 +206,10 @@ export const submitMatchAnswer = (input: {
   duration_ms: number;
   client_received_at?: string;
 }) =>
-  apiFetch<{ ok: true; is_correct: boolean; speed_bonus?: number; advanced?: boolean }>('/api/play/answer', {
+  // A multiplayer answer comes back graded. A classroom answer is only
+  // acknowledged (`accepted`): the pupil's result arrives with the scoreboard
+  // once the question closes (migration 056).
+  apiFetch<{ ok: true; is_correct?: boolean; speed_bonus?: number; accepted?: boolean; advanced?: boolean }>('/api/play/answer', {
     method: 'POST',
     body: JSON.stringify(input),
   });
@@ -194,16 +227,16 @@ export const fetchLeaderboard = (
   const qs = new URLSearchParams({ period });
   if (options.date && period === 'daily') qs.set('date', options.date);
   if (options.category && (period === 'category' || period === '30d')) qs.set('category', options.category);
-  // Scope both cumulative and daily boards to the active subject. Subjects'
-  // categories are disjoint, so the server can validate a single owner and
-  // never blend results from two products.
-  if (options.categories?.length && (period === 'global' || period === 'daily')) {
+  // Scope the cumulative, daily and month boards to the active subject.
+  // Subjects' categories are disjoint, so the server can validate a single
+  // owner and never blend results from two products.
+  if (options.categories?.length && (period === 'global' || period === 'daily' || period === 'month')) {
     qs.set('categories', options.categories.join(','));
   }
-  // A signed-in learner's 30-day board carries their own line. `me=1` gives
-  // that personal variant its own URL, so a shared cache never serves the
-  // anonymous board in its place.
-  if (options.personal && period === '30d') qs.set('me', '1');
+  // A signed-in learner's 30-day and month boards carry their own line.
+  // `me=1` gives that personal variant its own URL, so a shared cache never
+  // serves the anonymous board in its place.
+  if (options.personal && (period === '30d' || period === 'month')) qs.set('me', '1');
   return apiFetch<LeaderboardResponse>(`/api/leaderboard?${qs}`, { signal: options.signal });
 };
 

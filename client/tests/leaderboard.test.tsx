@@ -6,7 +6,7 @@ import { http, HttpResponse } from 'msw';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Leaderboard from '../src/components/Leaderboard';
 import { server } from './mocks/server';
-import { boardFor, leaderboardData, leaderboardHandlers, pinnedData, visibilityHandler } from './mocks/handlers';
+import { boardFor, leaderboardData, leaderboardHandlers, monthData, pinnedData, visibilityHandler } from './mocks/handlers';
 import { firstDraw, stretchFirstDataWait } from './firstDraw';
 
 type TestUser = { id: string; user_metadata?: Record<string, unknown> };
@@ -364,4 +364,128 @@ it('puts the switch back and says so when saving it fails', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Your leaderboard setting wasn’t saved. Try again.');
   expect(puts).toEqual([{ visible: true }]);
   await waitFor(() => expect(toggle).not.toBeChecked());
+});
+
+// ── This month (migration 056) ──────────────────────────────────────────────
+//
+// The XP earned in the current calendar month, the board the month's top
+// three are paid from. The server ranks it and equal XP shares a rank.
+
+/** Answers the 30-day board with the usual fixture and the month board with `month`. */
+function monthBoard(month: object, seen: URLSearchParams[] = []) {
+  server.use(http.get('*/api/leaderboard', ({ request }) => {
+    const params = new URL(request.url).searchParams;
+    seen.push(params);
+    return HttpResponse.json(params.get('period') === 'month' ? month : boardFor(request));
+  }));
+  return seen;
+}
+
+it('ranks this month by XP, shows tied ranks as shared and says what it counts', async () => {
+  const seen = monthBoard(monthData);
+  await mount();
+  await screen.findByText('Workshop learner');
+  fireEvent.click(screen.getByRole('radio', { name: 'This month' }));
+  await screen.findByText('Night owl');
+  expect(last(seen).get('period')).toBe('month');
+  expect(last(seen).get('categories')).toBeTruthy();
+  expect(last(seen).get('me')).toBeNull();
+  expect(drawnRanks()).toEqual(['1', '1', '3']);
+  // One figure, the XP, under one header.
+  const table = screen.getByRole('table');
+  expect(within(table).getAllByRole('columnheader').map((header) => header.textContent)).toEqual(['Rank', 'Learner', 'XP']);
+  expect(within(within(table).getAllByRole('row')[1]).getByText('1,240')).toBeVisible();
+  // A learner who has not switched their name on is “Learner”.
+  expect(within(within(table).getAllByRole('row')[3]).getByText('Learner')).toBeVisible();
+  expect(screen.getByText(/Ranked by the XP earned this calendar month \(UTC\)/)).toBeVisible();
+  expect(screen.getByText(/Equal XP shares a place\./)).toBeVisible();
+  // XP is not counted per topic.
+  expect(screen.queryByLabelText('Topic')).toBeNull();
+});
+
+it('opens on this month from ?tab=month', async () => {
+  const seen = monthBoard(monthData);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+  await act(async () => render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={[{ pathname: '/leaderboard', search: '?tab=month', key: `visit-${++visits}` }]}>
+        <LanguageProvider><Leaderboard /></LanguageProvider>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  ));
+  expect(await screen.findByText('Night owl')).toBeVisible();
+  expect(screen.getByRole('radio', { name: 'This month' })).toBeChecked();
+  expect(last(seen).get('period')).toBe('month');
+});
+
+it('pins the learner’s own month line, with their XP, below the list', async () => {
+  auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false };
+  const seen = monthBoard({ ...monthData, me: { rank: 12, xp: 340 } });
+  server.use(visibilityHandler(false));
+  await mount();
+  await screen.findByText('Workshop learner');
+  fireEvent.click(screen.getByRole('radio', { name: 'This month' }));
+  await screen.findByText('Night owl');
+  expect(last(seen).get('me')).toBe('1');
+  const pinned = screen.getByRole('table').querySelector('tfoot tr') as HTMLElement;
+  expect(pinned).toHaveAttribute('aria-current', 'true');
+  expect(within(pinned).getByText('12')).toBeVisible();
+  expect(within(pinned).getByText('340')).toBeVisible();
+  expect(within(pinned).getByText('You')).toBeVisible();
+  expect(within(pinned).getByText('Learner')).toBeVisible();
+});
+
+it('tells a signed-in learner with no XP this month how to appear', async () => {
+  auth.value = { user: { id: 'user-1' }, isAuthenticated: true, isLoading: false };
+  monthBoard({ ...monthData, me: { rank: null, xp: 0 } });
+  server.use(visibilityHandler(false));
+  await mount();
+  await screen.findByText('Workshop learner');
+  fireEvent.click(screen.getByRole('radio', { name: 'This month' }));
+  expect(await screen.findByText('Earn XP this month to appear here.')).toBeVisible();
+});
+
+it('shows an empty month with a way to start earning', async () => {
+  monthBoard({ ...monthData, entries: [] });
+  await mount();
+  await screen.findByText('Workshop learner');
+  fireEvent.click(screen.getByRole('radio', { name: 'This month' }));
+  expect(await screen.findByText('Nobody has earned XP this month yet.')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Start a quiz' })).toBeVisible();
+});
+
+it('recovers this month’s board from a failure through Retry', async () => {
+  let fail = true;
+  server.use(http.get('*/api/leaderboard', ({ request }) => {
+    const params = new URL(request.url).searchParams;
+    if (params.get('period') !== 'month') return HttpResponse.json(boardFor(request));
+    return fail
+      ? HttpResponse.json({ error: { code: 'db_error', message: 'Could not load leaderboard' } }, { status: 500 })
+      : HttpResponse.json(monthData);
+  }));
+  await mount();
+  await screen.findByText('Workshop learner');
+  fireEvent.click(screen.getByRole('radio', { name: 'This month' }));
+  expect(await screen.findByRole('alert')).toBeVisible();
+  fail = false;
+  fireEvent.click(screen.getByRole('button', { name: /retry/i }));
+  expect(await screen.findByText('Night owl')).toBeVisible();
+});
+
+it('fits four periods on a narrow phone: the small control with short labels', async () => {
+  const wide = window.matchMedia;
+  window.matchMedia = ((query: string) => ({
+    matches: /max-width/.test(query), media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  })) as typeof window.matchMedia;
+  try {
+    server.use(leaderboardHandlers.populated);
+    await mount();
+    await screen.findAllByText('Workshop learner');
+    expect(screen.getAllByRole('radio').map((radio) => radio.textContent)).toEqual(['30 days', 'Month', 'All time', 'Today']);
+    // The small control (smaller type and padding) so the four fit at 320px.
+    expect(document.querySelector('.astryx-segmented-control[data-size="sm"]')).not.toBeNull();
+  } finally {
+    window.matchMedia = wide;
+  }
 });

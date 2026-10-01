@@ -57,8 +57,8 @@ out in full in `shared/rewards.ts`: two a month free, extras bought with coins
 earned from verified learning (10% of verified XP, doubled on Premium, plus
 milestones; no cash price), a ceiling that never rises above two, and an
 effect limited to the day count of a streak. No leaderboard in this product
-ranks by streak — every one of them ranks by correct answers and accuracy — so a
-protected streak moves nobody up anything.
+ranks by streak — the answer boards rank by correct answers and accuracy, and
+"This month" by verified XP — so a protected streak moves nobody up anything.
 
 A streak day is a UTC day with verified learning, not only a quiz
 (`supabase/supabase-schema-048.sql`). `advance_verified_streak` is the one place
@@ -169,17 +169,15 @@ level would otherwise add correct answers without limit. A quiz question
 counts the same way from migration 048: `record_verified_quiz_result_v2` builds
 its category counts (for `user_category_stats` and this board) from the
 outcomes whose question the learner had not answered earlier the same UTC day,
-read from `user_question_history` before the attempt updates it. From
-migration 052 its XP follows the same rule per question: each receipt outcome
-carries the XP its question earned (`api/quiz/submit.ts`: 2 + 2 × difficulty
-when correct, 0 when not), and the routine pays the sum over the fresh
-outcomes, never more than the receipt's total. A question answered earlier
-the same UTC day pays nothing and a fresh correct answer pays in full. The
-daily challenge keeps its minimum of 20 XP when it has at least one question
-not answered earlier that UTC day; a daily whose questions were all answered
-earlier that day pays nothing. A receipt minted before
-052 carries no per-question XP and keeps 048's share formula,
-`floor(xp × fresh ÷ total)`. The awarded XP is kept on the receipt row
+read from `user_question_history` before the attempt updates it. XP does
+not follow that rule: from migration 056 every answer earns XP, a repeated
+question included (owner decision of 1 October 2026), so the routine pays the
+receipt's whole XP (`api/quiz/submit.ts`: 2 + 2 × difficulty for each correct
+answer, and at least 20 for the daily challenge). 052 paid only the questions
+not answered earlier the same UTC day, and 048 scaled the quiz by the share of
+such questions. A repeat earns XP and coins, never a place on a board. Each
+receipt outcome still carries its question's XP; the routine no longer reads
+it. The awarded XP is kept on the receipt row
 (`quiz_attempts.quest_xp`) and the stats handler credits coins for that
 amount, also when a retry finds the result already recorded after a commit
 that timed out: the credit is keyed to the attempt and pays once, and a NULL
@@ -246,7 +244,34 @@ token or `me=1` also gets the learner's own line and is answered
 not answer it) takes the address read bucket below. `friend_list` orders friends by
 correct answers and accuracy, shows each friend's live streak by the rule
 above, and marks a friend active today when their last verified learning day
-is today. No board ranks by XP or by streak.
+is today. No board ranks by streak, and only "This month" ranks by XP.
+
+"This month" (`period=month`, migration 056, owner decision of 1 October
+2026) ranks the active subject's current calendar month (UTC) by the verified
+XP each learner earned in it, the ranking the month's top three are paid by.
+`user_xp_days` holds that XP per learner, UTC day and subject, and only
+`add_xp_day` writes it, inside each verified award's own transaction:
+`record_verified_quiz_result_v2` (a quiz or daily result, repeats included),
+`record_verified_activity_xp` (a Biggest Shark Challenge run, a coding
+challenge's first pass) and `complete_verified_roadmap_attempt` (a Learn level
+or part test passed for the first time, at `learn_step_xp`, the numbers of
+`shared/progression.ts`; learning XP is derived from progress and is not in
+`user_xp`). Learning paths award no XP. Guest XP merged at sign-in
+(`merge_user_xp`) does not count, because nothing verified it, and nothing
+from before 056 was copied in: a month counts from the moment 056 was
+applied. A launch contract fails if a routine starts adding to `user_xp`
+without adding to the ledger. `month_xp_ranks` is the one ranking (`RANK()`:
+equal XP shares a place, 1, 1, 3); `month_xp_leaderboard` and
+`month_xp_leaderboard_rank` serve the board and the learner's own line,
+naming a learner with `board_display_name` (055) as every board does and
+showing the photo only behind `show_on_leaderboards`. Any XP that month puts a learner on it. The handler serves it
+like the 30-day board: shared and `public, s-maxage=60` without a session,
+the learner's own line and `private, no-store` with a Bearer token or `me=1`.
+The screen draws the server's ranks, so tied learners show the same number,
+pins the learner's own line under the list, and has no topic filter, since XP
+is not counted per topic. Below 480px the period control is the small size
+with short labels ("30 days", "Month", "All time", "Today") so the four fit
+at 320px.
 
 ### Sharknames and what friends see
 
@@ -286,16 +311,41 @@ count each question down against the server's clock, not the device's; the
 presenter's key appears once the server stops taking answers, the question's
 limit plus a 2 s grace, or when the teacher reveals it.
 
+A classroom question closes when its clock runs out or when the teacher
+presses "Reveal answer" (migration 056, owner decision of 1 October 2026).
+The button is a `control` action, `reveal`: the server stores the question in
+`matches.revealed_idx` and `answer` then refuses it with 409
+`question_closed` (a retry of an answer that landed before the reveal still
+replays it). A classroom answer is only acknowledged (`{ ok, accepted,
+advanced: false }`), its retry included: no `is_correct` or speed bonus comes
+back, so a pupil learns whether they scored from the scoreboard once the
+question closes, and nobody can read the right option off their own reply
+while it is open. A multiplayer answer still comes back graded. The
+presenter's key shows only after the server confirms, and the pupils' screens
+show the question as closed. While a classroom room runs, its
+scoreboard counts only closed questions: `state` passes `match_scoreboard`
+`p_before_idx`, the current index, or the next one once the current question
+is closed. The presenter's projected scoreboard and every pupil's therefore
+move only when a question closes, and a live count never tells the room which
+option scores. A finished room, and every multiplayer room, counts every
+answer as before. A multiplayer scoreboard shows that a player scored on the
+open question, never what they picked, and a multiplayer race tells each
+player their own result at once by design, so it is unchanged.
+
 A class shares one school address, and each state read spends that address's
 bucket. Realtime therefore carries only changes of the room: `match_updated`
 with `{ status, current_index }` on start, next, finish and the answer that
-moves a multiplayer room on, and a screen that already shows that state reads
-nothing. A single answer sends `answered`, which only the host handles, with
-one read at most every 1.5 s for the live scoreboard. A read can move a
+moves a multiplayer room on, plus `revealed_idx` when the teacher closes a
+classroom question, and a screen that already shows that state reads
+nothing. A single multiplayer answer sends `answered`, which only the host
+handles, with one read at most every 1.5 s for the live scoreboard; a
+classroom answer sends nothing, since its scoreboard waits for the question
+to close. A read can move a
 multiplayer room on by itself (an expired question, or the last answers of an
 untimed round racing); the host announces a change their read found, and a
 read that loses that race gets the room as the winner left it. Each screen
-also reads once when a timed multiplayer question expires, and every 30 s as
+also reads once when a timed question expires (a multiplayer room moves on,
+a classroom scoreboard counts the closed question), and every 30 s as
 a healing poll, or every 4 s while Realtime is down.
 
 ## Coding section
@@ -924,13 +974,21 @@ production (issue #227, step D8).
   and the game settings mirror them as `coins`, clamped on read, so the owner
   tunes them in `/dev` → Settings → Coins without a deploy. Every account earns
   10 % of verified XP; Premium doubles it at credit time; one account earns at
-  most 400 coins a day from XP, counted after the doubling. The welcome grant is
+  most 400 coins a day from XP, counted after the doubling. Since every answer
+  earns XP (056), repeated questions included, this cap is what bounds the
+  coins a replayed quiz can earn: 400 coins is 4,000 XP a day on the free plan
+  and 2,000 on Premium. The welcome grant is
   200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300;
   "live" as the Profile counts it, a shield or a protection covering the gap
   since the last learning day, `streak_live` from migration 052), a
   Learn topic with every level passed (100), an evolving project (150) or short
   path (50) with every stage passed, and the top three of a finished calendar
-  month on the dated board of migration 040 (300, 200, 100). Milestones sit
+  month: the learners with the most XP earned in it (UTC), on the ranking of
+  the "This month" board (300, 200, 100; migration 056). A tie shares the
+  place: everyone tied gets that place's coins and the next total takes the
+  place after the tied group (1, 1, 3), so nobody below third is paid. 041
+  ranked correct answers and broke ties by the earlier first active day.
+  Milestones sit
   outside the daily cap. Opening a social profile pays nothing: the server
   stopped issuing the click-through grant in design audit P0.3, and the
   `social` ledger reason stays for the credits already made.
@@ -939,7 +997,8 @@ production (issue #227, step D8).
   `credit_verified_xp_tokens` (`xp:<award id>`, with `token_xp_credits`
   recording each decision, a capped one included), `settle_coin_milestones`
   (`streak:<n>:<account>`, `topic:<id>:<account>`, `project:<id>:<account>`),
-  `settle_month_top3` (`month-top:<yyyy-mm>:<rank>`, once per month in
+  `settle_month_top3` (`month-top:<yyyy-mm>:<place>:<account>` from 056, so
+  learners sharing a place are each paid once; once per month in
   `token_month_settlements`), `grant_signup_tokens` (`signup:<account>`) and
   `credit_social_visit` (`social:<platform>:<account>`). The routines read
   `is_premium()` themselves; none writes a learning, score or streak table.
@@ -956,8 +1015,8 @@ production (issue #227, step D8).
   `learn:<account>:<topic>:L<n>` (or `P<n>`) at 50 × the level's tier or 300 ×
   the part (`shared/progression.ts`); a coding challenge's first pass credits
   `coding:<account>:<task>`, the same id its XP now uses. A quiz's credit is
-  for the XP the routine awarded, which migration 048 can lower below the
-  receipt's. Everything that moves the streak (a verified quiz, a completed
+  for the XP the routine awarded: the receipt's whole XP from migration 056
+  (048 to 055 could pay less), and nothing for a refused second daily. Everything that moves the streak (a verified quiz, a completed
   Learn level or part test, an applied coding pass, an awarded Challenge run)
   then settles the milestones, so a streak milestone reached on a Learn or
   coding day pays at once.
@@ -1052,7 +1111,8 @@ production (issue #227, step D8).
 stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
 which since migration 044 erases every table that holds an account id in one
 routine, including the ones 035 and 039 to 042 added; 045 restates it with the
-voucher redemptions, and 051 with the merchandise the account held. An order
+voucher redemptions, 051 with the merchandise the account held, and 056 with
+the month's XP ledger (`user_xp_days`). An order
 Spreadshop never received gives its stock reservation back (a claimed package
 reserved none): one awaiting payment is deleted, and a paid one is cancelled,
 which takes it off the fulfilment queue, and kept without the person as the

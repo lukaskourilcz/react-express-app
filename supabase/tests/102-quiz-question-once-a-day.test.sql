@@ -1,9 +1,11 @@
--- A quiz question counts once per learner and UTC day (migration 048), as a
--- Learn question does since 040: answered again the same day it adds nothing
--- to the category stats or the 30-day board, and the quiz's XP shrinks by the
--- share of such questions. The next UTC day it counts again. The quiz itself
--- still counts toward total_quizzes, and the XP actually awarded is kept on
--- the attempt receipt for the coin credit.
+-- A quiz question counts once per learner and UTC day on the boards
+-- (migration 048), as a Learn question does since 040: answered again the same
+-- day it adds nothing to the category stats or the 30-day board. The next UTC
+-- day it counts again. Its XP is another matter: from migration 056 every
+-- answer earns XP, a repeat included, so the quiz pays its whole XP whatever
+-- was answered earlier today. The quiz itself still counts toward
+-- total_quizzes, and the XP awarded is kept on the attempt receipt for the
+-- coin credit.
 
 SET LOCAL ROLE service_role;
 
@@ -32,8 +34,8 @@ BEGIN
   SELECT quest_xp INTO v_awarded FROM public.quiz_attempts WHERE attempt_id = 'oncequiz000000000001';
   ASSERT v_awarded = 30, format('a quiz of new questions keeps its XP: expected 30, got %s', v_awarded);
 
-  -- q1 again, answered correctly, and one new question (q4): only q4 counts,
-  -- and the XP is floor(20 * 1 / 2) = 10.
+  -- q1 again, answered correctly, and one new question (q4): only q4 counts
+  -- on the boards, and the quiz pays its whole 20 XP.
   v_applied := public.record_verified_quiz_result_v2(
     v_user, 'oncequiz000000000002', 2, 2,
     '{"javascript":{"correct":1,"total":1},"css":{"correct":1,"total":1}}',
@@ -55,15 +57,16 @@ BEGIN
 
   SELECT quest_xp INTO v_awarded FROM public.quiz_attempts WHERE attempt_id = 'oncequiz000000000002';
   SELECT quest_xp INTO v_xp FROM public.user_xp WHERE user_id = v_user;
-  ASSERT v_awarded = 10 AND v_xp = 40,
-    format('the XP is scaled by the fresh share: expected 10 (total 40), got %s (total %s)', v_awarded, v_xp);
+  ASSERT v_awarded = 20 AND v_xp = 50,
+    format('a repeat still earns its XP: expected 20 (total 50), got %s (total %s)', v_awarded, v_xp);
 
   SELECT total_quizzes INTO v_quizzes FROM public.user_stats WHERE user_id = v_user;
   ASSERT v_quizzes = 2, format('both quizzes count as quizzes, got %s', v_quizzes);
   SELECT times_seen INTO v_seen FROM public.user_question_history WHERE user_id = v_user AND question_id = 'q1';
   ASSERT v_seen = 2, format('the question history still records both answers, got %s', v_seen);
 
-  -- A quiz made only of questions already answered today: nothing counts, no XP.
+  -- A quiz made only of questions already answered today: nothing counts on
+  -- the boards, and it still pays its XP.
   PERFORM public.record_verified_quiz_result_v2(
     v_user, 'oncequiz000000000003', 2, 2,
     '{"javascript":{"correct":2,"total":2}}',
@@ -73,10 +76,10 @@ BEGIN
   SELECT total_questions INTO v_js FROM public.user_category_stats WHERE user_id = v_user AND category = 'javascript';
   SELECT quest_xp INTO v_awarded FROM public.quiz_attempts WHERE attempt_id = 'oncequiz000000000003';
   SELECT quest_xp INTO v_xp FROM public.user_xp WHERE user_id = v_user;
-  ASSERT v_js.total_questions = 2 AND v_awarded = 0 AND v_xp = 40,
-    format('a repeat of today''s questions adds nothing: %s questions, %s XP (total %s)', v_js.total_questions, v_awarded, v_xp);
+  ASSERT v_js.total_questions = 2 AND v_awarded = 20 AND v_xp = 70,
+    format('a repeat of today''s questions adds nothing to the boards and pays its XP: %s questions, %s XP (total %s)', v_js.total_questions, v_awarded, v_xp);
 
-  -- The same question twice in one attempt counts once.
+  -- The same question twice in one attempt counts once on the boards.
   PERFORM public.record_verified_quiz_result_v2(
     v_user, 'oncequiz000000000004', 2, 2,
     '{"html":{"correct":2,"total":2}}',
@@ -85,8 +88,8 @@ BEGIN
     'webdev', 20);
   SELECT total_questions INTO v_answered FROM public.user_category_stats WHERE user_id = v_user AND category = 'html';
   SELECT quest_xp INTO v_awarded FROM public.quiz_attempts WHERE attempt_id = 'oncequiz000000000004';
-  ASSERT v_answered = 1 AND v_awarded = 10,
-    format('a question repeated inside one attempt counts once: %s answered, %s XP', v_answered, v_awarded);
+  ASSERT v_answered = 1 AND v_awarded = 20,
+    format('a question repeated inside one attempt counts once and the attempt pays its XP: %s answered, %s XP', v_answered, v_awarded);
 
   -- The next UTC day: q1 was last answered yesterday, so it counts again.
   UPDATE public.user_question_history SET last_seen_at = last_seen_at - INTERVAL '1 day' WHERE user_id = v_user;

@@ -116,6 +116,8 @@ describe('How to earn', () => {
     expect(rows[2].detail).toBe('A streak of 7, 30 and 100 days: 25, 100 and 300 coins.');
     expect(rows[2].figure).toBe('4 of 7 days');
     expect(rows[3].detail).toBe('Every level of a Learn topic: 100 coins. An evolving project: 150. A short path: 50.');
+    // The month's top three by XP, ties sharing the place (migration 056).
+    expect(rows[4].detail).toBe('Finish a calendar month with the most XP — top three earn 300, 200 and 100 coins; ties share the place.');
     expect(rows.some((row) => 'premium' in row)).toBe(false);
   });
 
