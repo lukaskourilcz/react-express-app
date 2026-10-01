@@ -553,6 +553,51 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   console.log('PASS integrity: React suites compare values the way Jest does');
 }
 
+// ── a form the page lets submit fails its case ───────────────────────────
+// In the preview a submission the component does not cancel reloads the
+// frame and loses what it showed, yet 48 React tasks passed without
+// preventDefault(). The runner fails the case that submitted, whatever the
+// checks read, and the browser harness applies the same rule.
+{
+  const { FORM_SUBMIT_NOT_PREVENTED } = await import('../shared/coding-react-support');
+  const suite = `import React from 'react';
+import { render, screen, fireEvent } from '@testing-library/react';
+import App from './App';
+test('adding shows the item', () => {
+  render(<App />);
+  fireEvent.change(screen.getByLabelText('Item'), { target: { value: 'Tea' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(screen.getByRole('listitem').textContent).toBe('Tea');
+});
+test('a check that fails after a submit', () => {
+  render(<App />);
+  fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+  expect(screen.getAllByRole('listitem')).toHaveLength(2);
+});
+test('the box starts empty', () => {
+  render(<App />);
+  expect(screen.getByLabelText('Item').value).toBe('');
+});`;
+  const page = (handler: string) => `import React, { useState } from 'react';
+export default function App() {
+  const [text, setText] = useState('');
+  const [items, setItems] = useState([]);
+  return <form onSubmit={(event) => { ${handler} setItems([...items, text]); }}>
+    <label>Item <input value={text} onChange={(event) => setText(event.target.value)} /></label>
+    <button>Add</button>
+    <ul>{items.map((item) => <li key={item}>{item}</li>)}</ul>
+  </form>;
+}`;
+  // The middle case fails on its own check, which skips its afterEach hooks;
+  // the watch it leaves open must not reach the case after it.
+  const failed = 'expected length 1 to be 2';
+  const errors = async (handler: string) => (await runReactSuite({ suite, appSource: page(handler) })).cases.map((one) => one.error);
+  assert.deepEqual(await errors('event.preventDefault();'), [null, failed, null], 'a form that cancels its submit passes');
+  assert.deepEqual(await errors(''), [FORM_SUBMIT_NOT_PREVENTED, failed, null], 'a form left to submit fails the case that submitted it');
+  assert.deepEqual(await errors('event.stopPropagation();'), [FORM_SUBMIT_NOT_PREVENTED, failed, null], 'stopping the submit on its way up does not hide it');
+  console.log('PASS integrity: a form the page lets submit fails its case');
+}
+
 // ── Run and Submit agree (CODE-10) ───────────────────────────────────────
 // The browser's Run and the server's Submit have to reach the same verdict:
 // both in strict mode, one clock however the code asks for the time, and a

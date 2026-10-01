@@ -291,7 +291,9 @@ on each run. `lib/coding/react-runner.ts` is trusted test/guest code only and
 must never evaluate learner code inside an API process. Both Coding and
 learning-path React submissions use this boundary. A React challenge can keep
 hidden test cases beside its solution; Submit runs them after the visible suite
-and returns only their count. The ten React capstones at tier 5 that used to be
+and returns only their count. A case during which a form submits without
+`preventDefault()` fails, on Submit and on the Run button alike, because in the
+preview that submission reloads the frame. The ten React capstones at tier 5 that used to be
 checklist tasks, passing any code, are graded by suites like the rest since
 29 September 2026. The grader still accepts a `verify: 'checklist'` task, but
 its pass is only the learner's word: it is recorded as unverified, with no XP

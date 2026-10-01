@@ -826,7 +826,7 @@ test('the tick calls the latest callback', async () => {
   };
   const { rerender } = render(<Probe label="first" />);
   rerender(<Probe label="second" />);
-  await waitFor(() => expect(seen.length > 0).toBe(true), { timeout: 2000 });
+  await waitFor(() => expect(seen.length > 0).toBe(true), { timeout: 1000 });
   expect(seen[0]).toBe('second');
 });
 

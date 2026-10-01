@@ -4,6 +4,7 @@
 
 import type { CodingTaskSource } from '../types';
 import { CAPSTONE_HEADER } from './react-capstone-support';
+import { FAKE_CLOCK } from './easy-react-a';
 
 export const REACT_TASKS: CodingTaskSource[] = [
   {
@@ -2074,11 +2075,13 @@ return (
     ],
     verify: "tests",
     estimatedMinutes: 20,
+    // On the hand-moved clock of FAKE_CLOCK: a second passes when the check
+    // says so, not after a real second on a machine that may be busy.
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import App from './App';
-
+${FAKE_CLOCK}
 const control = (container, label) =>
   [...container.querySelectorAll('button')].find(b => new RegExp(label, 'i').test(b.textContent));
 const elapsed = container => container.querySelector('p').textContent;
@@ -2088,24 +2091,26 @@ test('starts on zero seconds', () => {
   expect(elapsed(container)).toContain('0');
 });
 
-test('counts up once Start is pressed', async () => {
+test('counts up once Start is pressed', () => withClock(async clock => {
   const { container } = render(<App />);
   fireEvent.click(control(container, 'start'));
-  await waitFor(() => expect(elapsed(container)).toContain('1'), { timeout: 5000 });
-});
+  await clock.tick(1000);
+  expect(elapsed(container)).toContain('1');
+}));
 
-test('Stop freezes the count and Reset clears it', async () => {
+test('Stop freezes the count and Reset clears it', () => withClock(async clock => {
   const { container } = render(<App />);
   fireEvent.click(control(container, 'start'));
-  await waitFor(() => expect(elapsed(container)).toContain('1'), { timeout: 5000 });
+  await clock.tick(1000);
+  expect(elapsed(container)).toContain('1');
   fireEvent.click(control(container, 'stop'));
   const frozen = elapsed(container);
-  await new Promise(resolve => setTimeout(resolve, 1200));
+  await clock.tick(1200);
   expect(elapsed(container)).toBe(frozen);
   fireEvent.click(control(container, 'reset'));
   expect(elapsed(container)).toContain('0');
   expect(container.textContent).not.toContain('1');
-});
+}));
 `,
   },
   {
@@ -2698,9 +2703,13 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
+// The fixture answers at once, so a page that got its todos lists them within
+// milliseconds; one that never will fails each check in 300 ms, not 1 s.
+const soon = { timeout: 300 };
+
 test('loads the todos and shows the title and the state of each one', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   const items = container.querySelectorAll('li');
   expect(items[0].textContent).toContain('Todo one');
   expect(items[0].textContent).toContain('to do');
@@ -2711,7 +2720,7 @@ test('loads the todos and shows the title and the state of each one', async () =
 
 test('adding a todo appends it as unfinished and moves the counts', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.change(container.querySelector('input'), { target: { value: 'Write tests' } });
   fireEvent.click(screen.getByText('Add'));
   const items = container.querySelectorAll('li');
@@ -2723,7 +2732,7 @@ test('adding a todo appends it as unfinished and moves the counts', async () => 
 
 test('removing drops that todo and nothing else', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.click(container.querySelectorAll('li button')[0]);
   expect(container.querySelectorAll('li')).toHaveLength(2);
   expect(container.textContent).not.toContain('Todo one');
@@ -2733,7 +2742,7 @@ test('removing drops that todo and nothing else', async () => {
 
 test('an empty box adds nothing', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.click(screen.getByText('Add'));
   expect(container.querySelectorAll('li')).toHaveLength(3);
 });
@@ -2810,9 +2819,13 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
+// The fixture answers at once, so a page that got its products lists them
+// within milliseconds; one that never will fails each check in 300 ms, not 1 s.
+const soon = { timeout: 300 };
+
 test('loads the products and shows the title, price and category of each', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   const first = container.querySelectorAll('li')[0];
   expect(first.textContent).toContain('Laptop');
   expect(first.textContent).toContain('900');
@@ -2822,7 +2835,7 @@ test('loads the products and shows the title, price and category of each', async
 
 test('searching by title narrows the list and the total follows it', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.change(container.querySelector('input'), { target: { value: 'lap' } });
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Laptop');
@@ -2831,7 +2844,7 @@ test('searching by title narrows the list and the total follows it', async () =>
 
 test('searching by category finds a product whose title does not match', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.change(container.querySelector('input'), { target: { value: 'tech' } });
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Laptop');
@@ -2840,7 +2853,7 @@ test('searching by category finds a product whose title does not match', async (
 
 test('the search ignores case', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.change(container.querySelector('input'), { target: { value: 'MUG' } });
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Total: 10');
@@ -2848,7 +2861,7 @@ test('the search ignores case', async () => {
 
 test('clearing the search brings everything back', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   const box = container.querySelector('input');
   fireEvent.change(box, { target: { value: 'desk' } });
   expect(container.querySelectorAll('li')).toHaveLength(1);
@@ -3095,6 +3108,10 @@ const POSTS = [
   { id: 6, userId: 2, title: 'Post six', body: 'Body six' },
   { id: 7, userId: 2, title: 'Post seven', body: 'Body seven' },
 ];
+// The posts listed: items that do not hold a user's button, so the buttons
+// may sit in a list of their own.
+const postItems = container => [...container.querySelectorAll('li')].filter(item => !item.querySelector('button'));
+const postTexts = container => postItems(container).map(item => item.textContent);
 const userButtons = container => [...container.querySelectorAll('button')].filter(button => button.textContent.trim().startsWith('User '));
 const buttonTexts = container => userButtons(container).map(button => button.textContent.trim());
 const choose = (container, label) => fireEvent.click(userButtons(container).find(button => button.textContent.trim() === label));
@@ -3122,20 +3139,20 @@ test('asks for the posts once and shows Loading until they arrive', () => withSe
 test('one button per user, lowest id first, with the number of posts, and nothing listed yet', () => withServer(async calls => {
   const container = await loaded(calls);
   expect(buttonTexts(container)).toEqual(['User 1 (3)', 'User 2 (4)']);
-  expect(container.querySelectorAll('li')).toHaveLength(0);
+  expect(postItems(container)).toHaveLength(0);
 }));
 
 test('choosing a user lists only their posts, in the order they arrived', () => withServer(async calls => {
   const container = await loaded(calls);
   choose(container, 'User 2 (4)');
-  expectItems(itemTexts(container), ['Post four', 'Post five', 'Post six', 'Post seven']);
+  expectItems(postTexts(container), ['Post four', 'Post five', 'Post six', 'Post seven']);
 }));
 
 test('choosing another user replaces the list', () => withServer(async calls => {
   const container = await loaded(calls);
   choose(container, 'User 2 (4)');
   choose(container, 'User 1 (3)');
-  expectItems(itemTexts(container), ['Post one', 'Post two', 'Post three']);
+  expectItems(postTexts(container), ['Post one', 'Post two', 'Post three']);
 }));
 
 test('the chosen button is marked with aria-pressed', () => withServer(async calls => {
@@ -3714,7 +3731,7 @@ const withRequests = async body => {
   globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
     calls.push({
       url: String(url),
-      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
       fail: error => reject(error),
     });
   });
@@ -3725,6 +3742,13 @@ const withRequests = async body => {
   }
 };
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
+// The words of every alert on the page; an empty live region says nothing.
+const alertText = () => screen.queryAllByRole('alert').map(node => node.textContent).join(' ').trim();
+// A line that reads exactly this, even with part of it in an element of its
+// own, such as a temperature in a <strong>.
+const expectLine = text => {
+  if (![...document.body.querySelectorAll('*')].some(node => node.textContent.trim() === text)) throw new Error('Unable to find a line reading: ' + text);
+};
 // Answer a request with a temperature, or break it off, and let the page catch up.
 const answer = (call, temperature, status = 200) => act(async () => {
   call.respond({ current: { temperature_2m: temperature } }, status);
@@ -3778,8 +3802,8 @@ test('lowest and highest come from the recent searches', () => withRequests(asyn
   search('Vienna');
   await answer(calls[2], 15);
   expect(recent()).toEqual(['Vienna: 15 °C', 'Brno: 8 °C', 'Prague: 12.5 °C']);
-  expect(screen.getByText('Lowest: 8 °C')).toBeTruthy();
-  expect(screen.getByText('Highest: 15 °C')).toBeTruthy();
+  expectLine('Lowest: 8 °C');
+  expectLine('Highest: 15 °C');
 }));
 
 test('a city searched again moves to the front with its new reading', () => withRequests(async calls => {
@@ -3791,7 +3815,7 @@ test('a city searched again moves to the front with its new reading', () => with
   expect(asked(calls[2])).toEqual([FORECAST, 50.08, 14.44, 'temperature_2m']);
   await answer(calls[2], 10);
   expect(recent()).toEqual(['Prague: 10 °C', 'Brno: 8 °C']);
-  expect(screen.getByText('Highest: 10 °C')).toBeTruthy();
+  expectLine('Highest: 10 °C');
 }));
 
 test('an unknown city asks nothing', () => withRequests(async calls => {
@@ -3806,12 +3830,12 @@ test('an unknown city asks nothing', () => withRequests(async calls => {
 test('a failed request offers Retry, which asks for the same city', () => withRequests(async calls => {
   render(<App />);
   await breakOff(calls[0]);
-  expect(screen.getByRole('alert').textContent).toBe('Could not load the weather');
+  expect(alertText()).toBe('Could not load the weather');
   expect(screen.queryByText('Loading…')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
   expect(calls).toHaveLength(2);
   expect(calls[1].url).toBe(calls[0].url);
-  expect(screen.queryByRole('alert')).toBeNull();
+  expect(alertText()).toBe('');
   await answer(calls[1], 11);
   expect(recent()).toEqual(['Prague: 11 °C']);
 }));
@@ -3900,7 +3924,7 @@ const withRequests = async body => {
   globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
     calls.push({
       url: String(url),
-      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
       fail: error => reject(error),
     });
   });
@@ -3920,8 +3944,10 @@ const breakOff = call => act(async () => {
   await settle();
 });
 // Each day on the page: its heading, then each notification as its text and
-// whether it still has a Mark as read button.
-const groups = () => [...document.querySelectorAll('section')].map(section => [
+// whether it still has a Mark as read button. A day is a section with an h3
+// and no section of its own inside, so a section around a summary or around
+// all the days is not one.
+const groups = () => [...document.querySelectorAll('section')].filter(section => section.querySelector('h3') && !section.querySelector(':scope section h3')).map(section => [
   section.querySelector('h3').textContent,
   ...[...section.querySelectorAll('li')].map(item => {
     const copy = item.cloneNode(true);
@@ -3936,6 +3962,11 @@ const markRead = text => {
   fireEvent.click(within(item).getByRole('button', { name: 'Mark as read' }));
 };
 const unreadOnly = () => fireEvent.click(screen.getByLabelText('Unread only'));
+// A line that reads exactly this, even with part of it in an element of its
+// own, such as the count in a <strong>.
+const expectLine = text => {
+  if (![...document.body.querySelectorAll('*')].some(node => node.textContent.trim() === text)) throw new Error('Unable to find a line reading: ' + text);
+};
 const NOTIFICATIONS = [
   { id: 1, text: 'Ana replied to your comment', date: '2026-09-28', read: false },
   { id: 2, text: 'Your export is ready', date: '2026-09-28', read: true },
@@ -3955,7 +3986,7 @@ test('notifications load on mount, grouped by day, newest day first', () => with
     ['2026-09-27', ['Bo started following you', 'unread']],
     ['2026-09-25', ['Weekly summary', 'read']],
   ]);
-  expect(screen.getByText('Unread: 2')).toBeTruthy();
+  expectLine('Unread: 2');
 }));
 
 test('Mark as read marks that one notification and lowers the count', () => withRequests(async calls => {
@@ -3967,7 +3998,7 @@ test('Mark as read marks that one notification and lowers the count', () => with
     ['2026-09-27', ['Bo started following you', 'read']],
     ['2026-09-25', ['Weekly summary', 'read']],
   ]);
-  expect(screen.getByText('Unread: 1')).toBeTruthy();
+  expectLine('Unread: 1');
 }));
 
 test('Unread only hides read notifications and the days left empty', () => withRequests(async calls => {
@@ -3991,7 +4022,7 @@ test('with Unread only ticked, a notification marked read leaves the list', () =
   markRead('Bo started following you');
   expect(groups()).toEqual([]);
   expect(screen.getByText('No unread notifications')).toBeTruthy();
-  expect(screen.getByText('Unread: 0')).toBeTruthy();
+  expectLine('Unread: 0');
 }));
 
 test('a failed request shows an alert', () => withRequests(async calls => {
@@ -4095,7 +4126,7 @@ const withRequests = async body => {
       url: String(url),
       method: String(options.method || 'GET').toUpperCase(),
       body: options.body,
-      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
       fail: error => reject(error),
     });
   });
@@ -4120,6 +4151,8 @@ const slots = () => screen.queryAllByRole('listitem').map(item => {
   return [button.textContent, button.disabled ? 'booked' : button.getAttribute('aria-pressed') === 'true' ? 'selected' : 'free'];
 });
 const pick = title => fireEvent.click(screen.getByRole('button', { name: title }));
+// The words of every alert on the page; an empty live region says nothing.
+const alertText = () => screen.queryAllByRole('alert').map(node => node.textContent).join(' ').trim();
 const bookButton = () => screen.getByRole('button', { name: 'Book' });
 const SLOTS = [
   { id: 1, userId: 1, title: 'Mon 09:00', completed: false },
@@ -4157,7 +4190,7 @@ test('Book sends one PATCH for the selected slot and cannot send it twice', () =
   pick('Mon 11:00');
   fireEvent.click(bookButton());
   expect(calls).toHaveLength(2);
-  expect([calls[1].url, calls[1].method, JSON.parse(calls[1].body).completed]).toEqual(['https://jsonplaceholder.typicode.com/todos/3', 'PATCH', true]);
+  expect([calls[1].url, calls[1].method, JSON.parse(calls[1].body)]).toEqual(['https://jsonplaceholder.typicode.com/todos/3', 'PATCH', { completed: true }]);
   const waiting = screen.getByRole('button', { name: 'Booking…' });
   expect(waiting.disabled).toBe(true);
   fireEvent.click(waiting);
@@ -4181,7 +4214,7 @@ test('a 409 answer means someone else was first', () => withRequests(async calls
   pick('Mon 11:00');
   fireEvent.click(bookButton());
   await answer(calls[1], { error: 'Slot already booked' }, 409);
-  expect(screen.getByRole('alert').textContent).toBe('Mon 11:00 was just booked by someone else');
+  expect(alertText()).toBe('Mon 11:00 was just booked by someone else');
   expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'booked']]);
   expect(bookButton().disabled).toBe(true);
 }));
@@ -4192,7 +4225,7 @@ test('a failed booking keeps the slot free and selected for another try', () => 
   pick('Mon 09:00');
   fireEvent.click(bookButton());
   await breakOff(calls[1]);
-  expect(screen.getByRole('alert').textContent).toBe('Could not book Mon 09:00');
+  expect(alertText()).toBe('Could not book Mon 09:00');
   expect(slots()).toEqual([['Mon 09:00', 'selected'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'free']]);
   fireEvent.click(bookButton());
   expect(calls).toHaveLength(3);
@@ -4274,7 +4307,7 @@ const withRequests = async body => {
   globalThis.fetch = (url, options = {}) => new Promise((resolve, reject) => {
     calls.push({
       url: String(url),
-      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
       fail: error => reject(error),
     });
   });
@@ -4301,6 +4334,11 @@ const chooseType = text => {
   fireEvent.change(select, { target: { value: option.value } });
 };
 const setDate = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
+// A line that reads exactly this, even with part of it in an element of its
+// own, such as a count in a <b>.
+const expectLine = text => {
+  if (![...document.body.querySelectorAll('*')].some(node => node.textContent.trim() === text)) throw new Error('Unable to find a line reading: ' + text);
+};
 const EVENTS = [
   { id: 1, type: 'visit', date: '2026-09-01' },
   { id: 2, type: 'signup', date: '2026-09-01' },
@@ -4318,7 +4356,7 @@ test('events load on mount and one card per type counts them', () => withRequest
   await answer(calls[0], EVENTS);
   expect(screen.queryByText('Loading…')).toBeNull();
   expect(cards()).toEqual([['purchase', '1'], ['signup', '2'], ['visit', '3']]);
-  expect(screen.getByText('Showing 6 of 6 events')).toBeTruthy();
+  expectLine('Showing 6 of 6 events');
 }));
 
 test('the type filter keeps one type, and All types brings the rest back', () => withRequests(async calls => {
@@ -4326,7 +4364,7 @@ test('the type filter keeps one type, and All types brings the rest back', () =>
   await answer(calls[0], EVENTS);
   chooseType('visit');
   expect(cards()).toEqual([['visit', '3']]);
-  expect(screen.getByText('Showing 3 of 6 events')).toBeTruthy();
+  expectLine('Showing 3 of 6 events');
   chooseType('All types');
   expect(cards()).toEqual([['purchase', '1'], ['signup', '2'], ['visit', '3']]);
 }));
@@ -4336,7 +4374,7 @@ test('From keeps that day and the days after it', () => withRequests(async calls
   await answer(calls[0], EVENTS);
   setDate('From', '2026-09-03');
   expect(cards()).toEqual([['purchase', '1'], ['signup', '1'], ['visit', '1']]);
-  expect(screen.getByText('Showing 3 of 6 events')).toBeTruthy();
+  expectLine('Showing 3 of 6 events');
 }));
 
 test('To keeps that day and the days before it, and both make a range', () => withRequests(async calls => {
@@ -4346,7 +4384,7 @@ test('To keeps that day and the days before it, and both make a range', () => wi
   expect(cards()).toEqual([['signup', '1'], ['visit', '2']]);
   setDate('From', '2026-09-02');
   expect(cards()).toEqual([['visit', '1']]);
-  expect(screen.getByText('Showing 1 of 6 events')).toBeTruthy();
+  expectLine('Showing 1 of 6 events');
 }));
 
 test('the filters combine, and nothing left says so', () => withRequests(async calls => {
@@ -4356,7 +4394,7 @@ test('the filters combine, and nothing left says so', () => withRequests(async c
   setDate('From', '2026-09-04');
   expect(cards()).toEqual([]);
   expect(screen.getByText('No events match these filters')).toBeTruthy();
-  expect(screen.getByText('Showing 0 of 6 events')).toBeTruthy();
+  expectLine('Showing 0 of 6 events');
 }));
 
 test('a failed request shows an alert', () => withRequests(async calls => {
@@ -4461,7 +4499,7 @@ const withRequests = async body => {
       url: String(url),
       method: String(options.method || 'GET').toUpperCase(),
       body: options.body,
-      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data) }),
+      respond: (data, status = 200) => resolve({ ok: status >= 200 && status < 300, status, json: () => Promise.resolve(data), text: () => Promise.resolve(JSON.stringify(data)) }),
       fail: error => reject(error),
     });
   });
@@ -4481,6 +4519,13 @@ const breakOff = call => act(async () => {
   await settle();
 });
 const POSTS_URL = 'https://jsonplaceholder.typicode.com/posts';
+// The words of every alert on the page; an empty live region says nothing.
+const alertText = () => screen.queryAllByRole('alert').map(node => node.textContent).join(' ').trim();
+// A line that reads exactly this, even with part of it in an element of its
+// own, such as a count in a <strong>.
+const expectLine = text => {
+  if (![...document.body.querySelectorAll('*')].some(node => node.textContent.trim() === text)) throw new Error('Unable to find a line reading: ' + text);
+};
 const titles = () => screen.queryAllByRole('listitem').map(item => item.textContent);
 const typeIn = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
 const chooseAuthor = text => {
@@ -4503,8 +4548,8 @@ test('the posts load on mount with their stats', () => withRequests(async calls 
   await answer(calls[0], POSTS);
   expect(screen.queryByText('Loading posts…')).toBeNull();
   expect(titles()).toEqual(['Hooks in practice', 'Testing React forms', 'Why keys matter', 'Practical hooks recipes']);
-  expect(screen.getByText('Showing 4 of 4 posts')).toBeTruthy();
-  expect(screen.getByText('Authors: 3')).toBeTruthy();
+  expectLine('Showing 4 of 4 posts');
+  expectLine('Authors: 3');
 }));
 
 test('Search keeps the titles that contain the text, ignoring case', () => withRequests(async calls => {
@@ -4512,8 +4557,8 @@ test('Search keeps the titles that contain the text, ignoring case', () => withR
   await answer(calls[0], POSTS);
   typeIn('Search', 'HOOKS');
   expect(titles()).toEqual(['Hooks in practice', 'Practical hooks recipes']);
-  expect(screen.getByText('Showing 2 of 4 posts')).toBeTruthy();
-  expect(screen.getByText('Authors: 2')).toBeTruthy();
+  expectLine('Showing 2 of 4 posts');
+  expectLine('Authors: 2');
 }));
 
 test('the author filter narrows the list and works with the search', () => withRequests(async calls => {
@@ -4521,10 +4566,10 @@ test('the author filter narrows the list and works with the search', () => withR
   await answer(calls[0], POSTS);
   chooseAuthor('User 1');
   expect(titles()).toEqual(['Hooks in practice', 'Why keys matter']);
-  expect(screen.getByText('Authors: 1')).toBeTruthy();
+  expectLine('Authors: 1');
   typeIn('Search', 'keys');
   expect(titles()).toEqual(['Why keys matter']);
-  expect(screen.getByText('Showing 1 of 4 posts')).toBeTruthy();
+  expectLine('Showing 1 of 4 posts');
 }));
 
 test('Add post sends the trimmed title and appends the post the server returns', () => withRequests(async calls => {
@@ -4539,7 +4584,7 @@ test('Add post sends the trimmed title and appends the post the server returns',
   await answer(calls[1], { id: 201, userId: 1, title: 'New idea', body: '' });
   expect(titles()).toEqual(['Hooks in practice', 'Testing React forms', 'Why keys matter', 'Practical hooks recipes', 'New idea']);
   expect(screen.getByLabelText('Title').value).toBe('');
-  expect(screen.getByText('Showing 5 of 5 posts')).toBeTruthy();
+  expectLine('Showing 5 of 5 posts');
 }));
 
 test('a blank title sends nothing', () => withRequests(async calls => {
@@ -4554,7 +4599,7 @@ test('a blank title sends nothing', () => withRequests(async calls => {
 test('a failed load shows an alert', () => withRequests(async calls => {
   render(<App />);
   await breakOff(calls[0]);
-  expect(screen.getByRole('alert').textContent).toBe('Could not load posts');
+  expect(alertText()).toBe('Could not load posts');
   expect(screen.queryByText('Loading posts…')).toBeNull();
   expect(titles()).toEqual([]);
 }));
