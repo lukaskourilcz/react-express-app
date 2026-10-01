@@ -594,7 +594,7 @@ const IDS = ['js-fullstack-links', 'ts-fullstack-links', 'ts-fullstack-links', '
 /** Hidden checks for the API levels. The React levels re-run every API check
  * through their suite's prelude, so they carry none of their own. */
 const HIDDEN: [string, unknown][][] = [
-  [['normalizeLink({url: "https://a.io", slug: "a-b-c"})', { url: 'https://a.io', slug: 'a-b-c' }], ['normalizeLink({url: "https://a.io", slug: "x".repeat(21)})', null], ['normalizeLink({url: "https://" + "a".repeat(193), slug: "abc"})', null], ['normalizeLink({url: "https://a.io"})', null]],
+  [['normalizeLink({url: "https://a.io", slug: "a-b-c"})', { url: 'https://a.io', slug: 'a-b-c' }], ['normalizeLink({url: "https://a.io", slug: "x".repeat(21)})', null], ['normalizeLink({url: "https://" + "a".repeat(193), slug: "abc"})', null], ['normalizeLink({url: "https://a.io"})', null], ['normalizeLink({url: "https://" + "a".repeat(192), slug: "abc"})', { url: 'https://' + 'a'.repeat(192), slug: 'abc' }]],
   [['createApi([])({method: "PUT", path: "/api/links"})', { status: 404, body: { error: 'not_found' } }], ['(() => { const api = createApi([]); api({method: "POST", path: "/api/links", body: {url: "https://a.io", slug: "one"}}); return api({method: "POST", path: "/api/links", body: {url: "https://b.io", slug: " ONE "}}).status; })()', 409]],
   [['createApi([{url: "https://a.io", slug: "abc", visits: 0}])({method: "DELETE", path: "/api/links/abc/visit"})', { status: 404, body: { error: 'not_found' } }], ['createApi([{url: "https://a.io", slug: "abc", visits: 0}])({method: "POST", path: "/api/links/abc/visit/again"})', { status: 404, body: { error: 'not_found' } }]],
 ];

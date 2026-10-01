@@ -305,7 +305,13 @@ recorded pass the solution opens without the warning, since it costs nothing.
 The junior and senior readings shown beside each other after a pass are
 stripped of their authoring comments in `lib/coding/solutions/index.ts`, so the
 boards carry code alone; the content contract executes the stripped text and
-asserts none of it still holds a comment.
+asserts none of it still holds a comment. The contract also holds statements
+to their promises: when a statement promises a new array, a version of the
+reference that writes its result into the array it was given and returns
+that array must fail a check; and when a TypeScript milestone's functions
+take parameters typed as anything but `unknown`, its type tests must fail the
+reference with every parameter typed `any`, so the signature the statement
+gives is the one graded.
 
 The section lists four tracks. Three of them — `javascript`, `typescript` and
 `react` — are also Learn topics. The fourth, `algorithms`, is sixty
@@ -1057,7 +1063,12 @@ completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
 routes, unlocks and progress. The full catalogue contains 770 tasks, and every
 graded code task carries a reference, a junior and a senior solution on the
-server; the last two reach the browser only with a verified pass.
+server; the last two reach the browser only with a verified pass. A stage's
+solutions hold only what that stage asks for: the content contract grades the
+reference, junior and senior solutions of every stage against the next stage
+and its checkpoint (the reference alone for React stages, whose suites are
+slow) and fails when one passes, since a learner can read them after a pass
+and paste them into the next stage.
 
 Since 2026-09-25 the registry also holds fifteen short paths of five levels
 each, marked `short`, with no checkpoints. Twelve are listed on the page of
