@@ -56,8 +56,8 @@ out in full in `shared/rewards.ts`: two a month free, extras bought with coins
 earned from verified learning (10% of verified XP, doubled on Premium, plus
 milestones; no cash price), a ceiling that never rises above two, and an
 effect limited to the day count of a streak. No leaderboard in this product
-ranks by streak — every one of them ranks by correct answers and accuracy — so a
-protected streak moves nobody up anything.
+ranks by streak — the answer boards rank by correct answers and accuracy, and
+"This month" by verified XP — so a protected streak moves nobody up anything.
 
 A streak day is a UTC day with verified learning, not only a quiz
 (`supabase/supabase-schema-048.sql`). `advance_verified_streak` is the one place
@@ -235,7 +235,34 @@ token or `me=1` also gets the learner's own line and is answered
 not answer it) takes the address read bucket below. `friend_list` orders friends by
 correct answers and accuracy, shows each friend's live streak by the rule
 above, and marks a friend active today when their last verified learning day
-is today. No board ranks by XP or by streak.
+is today. No board ranks by streak, and only "This month" ranks by XP.
+
+"This month" (`period=month`, migration 056, owner decision of 1 October
+2026) ranks the active subject's current calendar month (UTC) by the verified
+XP each learner earned in it, the ranking the month's top three are paid by.
+`user_xp_days` holds that XP per learner, UTC day and subject, and only
+`add_xp_day` writes it, inside each verified award's own transaction:
+`record_verified_quiz_result_v2` (a quiz or daily result, repeats included),
+`record_verified_activity_xp` (a Biggest Shark Challenge run, a coding
+challenge's first pass) and `complete_verified_roadmap_attempt` (a Learn level
+or part test passed for the first time, at `learn_step_xp`, the numbers of
+`shared/progression.ts`; learning XP is derived from progress and is not in
+`user_xp`). Learning paths award no XP. Guest XP merged at sign-in
+(`merge_user_xp`) does not count, because nothing verified it, and nothing
+from before 056 was copied in: a month counts from the moment 056 was
+applied. A launch contract fails if a routine starts adding to `user_xp`
+without adding to the ledger. `month_xp_ranks` is the one ranking (`RANK()`:
+equal XP shares a place, 1, 1, 3); `month_xp_leaderboard` and
+`month_xp_leaderboard_rank` serve the board and the learner's own line, with
+the name and photo behind `show_on_leaderboards` in one `CASE`, as on the
+other boards. Any XP that month puts a learner on it. The handler serves it
+like the 30-day board: shared and `public, s-maxage=60` without a session,
+the learner's own line and `private, no-store` with a Bearer token or `me=1`.
+The screen draws the server's ranks, so tied learners show the same number,
+pins the learner's own line under the list, and has no topic filter, since XP
+is not counted per topic. Below 480px the period control is the small size
+with short labels ("30 days", "Month", "All time", "Today") so the four fit
+at 320px.
 
 ## Live rooms (Play)
 
@@ -915,7 +942,12 @@ production (issue #227, step D8).
   since the last learning day, `streak_live` from migration 052), a
   Learn topic with every level passed (100), an evolving project (150) or short
   path (50) with every stage passed, and the top three of a finished calendar
-  month on the dated board of migration 040 (300, 200, 100). Milestones sit
+  month: the learners with the most XP earned in it (UTC), on the ranking of
+  the "This month" board (300, 200, 100; migration 056). A tie shares the
+  place: everyone tied gets that place's coins and the next total takes the
+  place after the tied group (1, 1, 3), so nobody below third is paid. 041
+  ranked correct answers and broke ties by the earlier first active day.
+  Milestones sit
   outside the daily cap. Opening a social profile pays nothing: the server
   stopped issuing the click-through grant in design audit P0.3, and the
   `social` ledger reason stays for the credits already made.
@@ -924,7 +956,8 @@ production (issue #227, step D8).
   `credit_verified_xp_tokens` (`xp:<award id>`, with `token_xp_credits`
   recording each decision, a capped one included), `settle_coin_milestones`
   (`streak:<n>:<account>`, `topic:<id>:<account>`, `project:<id>:<account>`),
-  `settle_month_top3` (`month-top:<yyyy-mm>:<rank>`, once per month in
+  `settle_month_top3` (`month-top:<yyyy-mm>:<place>:<account>` from 056, so
+  learners sharing a place are each paid once; once per month in
   `token_month_settlements`), `grant_signup_tokens` (`signup:<account>`) and
   `credit_social_visit` (`social:<platform>:<account>`). The routines read
   `is_premium()` themselves; none writes a learning, score or streak table.
@@ -1037,7 +1070,8 @@ production (issue #227, step D8).
 stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
 which since migration 044 erases every table that holds an account id in one
 routine, including the ones 035 and 039 to 042 added; 045 restates it with the
-voucher redemptions, and 051 with the merchandise the account held. An order
+voucher redemptions, 051 with the merchandise the account held, and 056 with
+the month's XP ledger (`user_xp_days`). An order
 Spreadshop never received gives its stock reservation back (a claimed package
 reserved none): one awaiting payment is deleted, and a paid one is cancelled,
 which takes it off the fulfilment queue, and kept without the person as the

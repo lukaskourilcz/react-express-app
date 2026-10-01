@@ -46,14 +46,15 @@ export function useRoadmapStructureFirst({ plan }: { plan: boolean }) {
 /** What one board needs from the server. The 30-day board is the default. */
 export type LeaderboardRequest =
   | { period: '30d'; category: string | null; viewer: string | null }
+  | { period: 'month'; categories: string[]; viewer: string | null }
   | { period: 'global'; categories: string[] }
   | { period: 'category'; category: string }
   | { period: 'daily'; date: string; categories: string[] };
 
 /** One board, as one set of options the hook and the page's first-data
  *  prefetch share, so the two cannot ask for different keys. The key holds only
- *  the inputs that change the result, plus the viewer on the 30-day board,
- *  whose response carries their own line. */
+ *  the inputs that change the result, plus the viewer on the 30-day and month
+ *  boards, whose responses carry their own line. */
 export function leaderboardQuery(request: LeaderboardRequest) {
   const period: LeaderboardPeriod = request.period;
   return queryOptions({
@@ -65,16 +66,16 @@ export function leaderboardQuery(request: LeaderboardRequest) {
       period,
       request.period === 'daily' ? request.date : null,
       request.period === 'category' || request.period === '30d' ? request.category : null,
-      request.period === 'global' || request.period === 'daily' ? request.categories.join(',') : null,
-      request.period === '30d' ? request.viewer : null,
+      request.period === 'global' || request.period === 'daily' || request.period === 'month' ? request.categories.join(',') : null,
+      request.period === '30d' || request.period === 'month' ? request.viewer : null,
     ],
     queryFn: ({ signal }) =>
       fetchLeaderboard(period, {
         signal,
         date: request.period === 'daily' ? request.date : undefined,
         category: request.period === 'category' || request.period === '30d' ? request.category : undefined,
-        categories: request.period === 'global' || request.period === 'daily' ? request.categories : undefined,
-        personal: request.period === '30d' && !!request.viewer,
+        categories: request.period === 'global' || request.period === 'daily' || request.period === 'month' ? request.categories : undefined,
+        personal: (request.period === '30d' || request.period === 'month') && !!request.viewer,
       }),
     staleTime: 30_000,
   });

@@ -1044,11 +1044,22 @@ function coinsContracts() {
     assert.ok(milestones.includes(key), `milestone event ${key} is one per account`);
   }
   assert.match(milestones, /v_premium := public\.is_premium\(p_user_id\);/, 'milestones read the plan in the database');
-  const month = routine('settle_month_top3');
+  // The month's top three are its learners with the most XP (migration 056,
+  // owner decision 8), ties sharing the place: 056 restates 041's routine,
+  // which ranked correct answers and gave each place one holder.
+  const migration056 = read('supabase/supabase-schema-056.sql');
+  const monthStart = migration056.indexOf('CREATE OR REPLACE FUNCTION public.settle_month_top3(');
+  assert.ok(monthStart >= 0, 'migration 056 restates settle_month_top3');
+  const month = migration056.slice(monthStart, migration056.indexOf('$$;', monthStart));
   assert.match(month, /ON CONFLICT \(month\) DO NOTHING;[\s\S]*IF v_inserted = 0 THEN/, 'a month settles once');
-  assert.ok(month.includes("'month-top:' || p_month || ':' || v_row.rnk"), 'one event per month and rank');
-  assert.match(month, /ORDER BY SUM\(a\.correct\) DESC, SUM\(a\.answered\) ASC/, 'the month board ranks like every other board');
-  assert.doesNotMatch(month, /streak|quest_xp|user_xp/i, 'the month board never ranks by streak or XP');
+  assert.ok(month.includes("'month-top:' || p_month || ':' || v_row.rank || ':' || public.token_account_key(v_row.user_id)"),
+    'one event per month, place and learner, so learners sharing a place are each paid once');
+  assert.match(month, /FROM public\.month_xp_ranks\(p_subject, v_start\) r\s+WHERE r\.rank <= LEAST\(3,/, 'the month is ranked by its XP, and nobody below third is paid');
+  const ranks = migration056.slice(migration056.indexOf('CREATE OR REPLACE FUNCTION public.month_xp_ranks('));
+  assert.match(ranks.slice(0, ranks.indexOf('$$;')), /RANK\(\) OVER \(ORDER BY SUM\(d\.xp\) DESC\)/, 'equal XP shares a place (1, 1, 3)');
+  assert.doesNotMatch(month, /streak/i, 'the month never ranks by streak');
+  assert.match(migration056, /REVOKE ALL ON FUNCTION public\.settle_month_top3\(TEXT, TEXT, INTEGER\[\], INTEGER\) FROM PUBLIC, anon, authenticated;/);
+  assert.match(migration056, /GRANT EXECUTE ON FUNCTION public\.settle_month_top3\(TEXT, TEXT, INTEGER\[\], INTEGER\) TO service_role;/);
   assert.match(routine('credit_social_visit'), /IF p_amount = 0 THEN RETURN FALSE;/, 'a zero grant credits nothing');
   assert.match(routine('record_coding_verdict'), /'coding:' \|\| public\.token_account_key\(p_user_id\) \|\| ':' \|\| p_task_id/,
     'coding XP is awarded once per account and task, not once per task');
@@ -2755,6 +2766,85 @@ function classroomRevealContracts() {
   const screen = read('client/src/components/Play.tsx');
   assert.doesNotMatch(screen, /setRevealedIdx/, 'the key no longer shows on a local click alone');
   assert.match(screen, /onClick=\{onReveal\}/);
+}
+
+/** The month's XP ledger and the top three it pays (migration 056, owner
+ * decision 8). user_xp_days must hear of every verified award, so every
+ * routine whose newest definition adds to user_xp also adds to the ledger,
+ * except merge_user_xp: guest XP merged at sign-in was never verified. The
+ * behaviour runs in supabase/tests/191 to 194. */
+function monthlyXpContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const files = readdirSync(join(process.cwd(), 'supabase'))
+    .filter((name) => /^supabase-schema-\d{3}\.sql$/.test(name))
+    .sort();
+  // The newest definition of every routine.
+  const newest = new Map<string, { file: string; body: string }>();
+  for (const file of files) {
+    const sql = read(`supabase/${file}`);
+    for (const match of sql.matchAll(/CREATE OR REPLACE FUNCTION public\.([a-z0-9_]+)\(/g)) {
+      const start = match.index!;
+      const bodyStart = sql.indexOf('$$', start);
+      const body = sql.slice(start, sql.indexOf('$$', bodyStart + 2));
+      newest.set(match[1], { file, body });
+    }
+  }
+  const writers = [...newest.entries()].filter(([, { body }]) => /INSERT INTO public\.user_xp \(/.test(body));
+  assert.deepEqual(writers.map(([name]) => name).sort(), ['merge_user_xp', 'record_verified_activity_xp', 'record_verified_quiz_result_v2'],
+    'the routines that add XP to an account');
+  for (const [name, { file, body }] of writers) {
+    if (name === 'merge_user_xp') {
+      assert.doesNotMatch(body, /add_xp_day/, 'merged guest XP is not verified and does not count toward a month');
+      continue;
+    }
+    assert.match(body, /PERFORM public\.add_xp_day\(p_user_id, p_subject, /, `${name} (${file}) adds its award to the month's XP`);
+  }
+  // Learning XP lives in verified progress, not in user_xp: a first pass adds it.
+  const learn = newest.get('complete_verified_roadmap_attempt')!;
+  assert.equal(learn.file, 'supabase-schema-056.sql', 'the Learn completion that credits the month is the one that runs');
+  assert.match(learn.body, /IF p_user_id IS NOT NULL AND v_passed AND NOT v_was_passed THEN\s+PERFORM public\.add_xp_day\(p_user_id, v_attempt\.subject, public\.learn_step_xp\(v_attempt\.kind, v_attempt\.ref\)\);/,
+    'only a first pass earns a step its learning XP');
+  // learn_step_xp is shared/progression.ts in SQL.
+  const progression = read('shared/progression.ts');
+  assert.match(progression, /export const LEVEL_XP_PER_DIFFICULTY = 50;/);
+  assert.match(progression, /export const CHECKPOINT_XP_PER_PART = 300;/);
+  assert.match(progression, /Math\.min\(5, Math\.max\(1, Math\.ceil\(level \/ 5\)\)\)/);
+  const stepXp = newest.get('learn_step_xp')!.body;
+  assert.match(stepXp, /WHEN p_kind = 'level' THEN 50 \* LEAST\(5, GREATEST\(1, CEIL\(p_ref \/ 5\.0\)::INTEGER\)\)/, 'a level is 50 × its tier, as learnLevelXp says');
+  assert.match(stepXp, /WHEN p_kind = 'checkpoint' THEN 300 \* p_ref/, 'part test n is 300 × n, as learnCheckpointXp says');
+  // Nothing else writes the ledger, and the browser cannot.
+  for (const [name, { body }] of newest) {
+    if (name === 'add_xp_day') continue;
+    assert.doesNotMatch(body, /(INSERT INTO|UPDATE) public\.user_xp_days/, `${name} writes the ledger only through add_xp_day`);
+  }
+  const migration = read('supabase/supabase-schema-056.sql');
+  assert.match(migration, /ALTER TABLE public\.user_xp_days ENABLE ROW LEVEL SECURITY;/);
+  assert.match(migration, /REVOKE ALL ON public\.user_xp_days FROM PUBLIC, anon, authenticated;\s+GRANT SELECT ON public\.user_xp_days TO authenticated;/);
+  assert.match(migration, /ON public\.user_xp_days FOR SELECT TO authenticated\s+USING \(user_id = \(SELECT auth\.uid\(\)::TEXT\)\);/);
+  for (const routine of ['add_xp_day(TEXT, TEXT, INTEGER)', 'learn_step_xp(TEXT, INTEGER)', 'month_xp_ranks(TEXT, DATE)',
+    'month_xp_leaderboard(TEXT, INTEGER, TEXT, TEXT)', 'month_xp_leaderboard_rank(TEXT, TEXT, TEXT)']) {
+    const escaped = routine.replace(/[()]/g, '\\$&');
+    assert.match(migration, new RegExp(`REVOKE ALL ON FUNCTION public\\.${escaped} FROM PUBLIC, anon, authenticated;`), `${routine} is revoked from browsers`);
+    assert.match(migration, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${escaped} TO service_role;`), `${routine} is service-role only`);
+  }
+  // Erasure takes the ledger with the account.
+  const erasure = newest.get('delete_user_data')!;
+  assert.match(erasure.body, /DELETE FROM public\.user_xp_days WHERE user_id = p_user_id;/, 'deleting an account deletes its month XP');
+  // The board names a learner in one place, behind the consent switch (049).
+  const board = newest.get('month_xp_leaderboard')!.body;
+  assert.equal(board.match(/u\.show_on_leaderboards/g)?.length, 2, 'the name and the photo are projected once, behind the switch');
+  assert.match(board, /CASE WHEN u\.show_on_leaderboards THEN NULLIF\(BTRIM\(u\.name\), ''\) END/);
+  assert.match(board, /FROM public\.month_xp_ranks\(/, 'the board ranks as the settlement pays');
+  // The API serves it like the other boards.
+  const handler = read('api/leaderboard.ts');
+  const month = handler.slice(handler.indexOf('async function monthBoard('), handler.indexOf('async function verifiedViewer('));
+  assert.match(month, /RATE_LIMITS\.leaderboardPersonal/);
+  assert.match(month, /'private, no-store'/);
+  assert.match(month, /'public, s-maxage=60'/);
+  assert.match(month, /validateCategoryScope\(/, 'the month board is one subject\'s');
+  // The Shop says what the month pays.
+  assert.match(read('client/src/i18n/translations.ts'),
+    /'rewards\.earn\.monthTopDetail': 'Finish a calendar month with the most XP — top three earn \{first\}, \{second\} and \{third\} coins; ties share the place\.'/);
 }
 
 async function main() {
@@ -4729,6 +4819,7 @@ async function main() {
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
   classroomRevealContracts();
+  monthlyXpContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
 }

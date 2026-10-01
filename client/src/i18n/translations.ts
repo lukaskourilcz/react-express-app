@@ -257,7 +257,7 @@ export const en = {
   'rewards.earn.finishedCount': '{n} finished',
   'rewards.earn.received': 'Received',
   'rewards.earn.monthTop': 'Top three of the month',
-  'rewards.earn.monthTopDetail': 'End a calendar month in the top three of the leaderboard: {first}, {second} or {third} coins.',
+  'rewards.earn.monthTopDetail': 'Finish a calendar month with the most XP — top three earn {first}, {second} and {third} coins; ties share the place.',
   'rewards.earn.done': 'Earned',
   'rewards.earn.coins': '+{n}',
   'rewards.earn.premiumNote': 'Premium milestones pay Premium members. Learning coins and the welcome coins go to every account.',
@@ -460,6 +460,15 @@ export const en = {
   'leaderboard.offline': 'You’re offline. Reconnect and try again.',
   'leaderboard.offlineStale': 'You’re offline. This is the board as it was at {time}.',
   'leaderboard.windowUnavailable': 'The 30-day board isn’t switched on yet, so this is the all-time board.',
+  // This month (migration 056): XP earned in the current calendar month, the
+  // board the month's top three are paid from. Equal XP shares a place.
+  'leaderboard.thisMonth': 'This month',
+  'leaderboard.thisMonthShort': 'Month',
+  'leaderboard.scopeMonth': 'Ranked by the XP earned this calendar month (UTC) from quizzes, the daily challenge, Learn, coding challenges and the Biggest Shark Challenge. Equal XP shares a place. The board starts again on the 1st.',
+  'leaderboard.xpHeader': 'XP',
+  'leaderboard.xpDetail': 'XP this month',
+  'leaderboard.emptyMonth': 'Nobody has earned XP this month yet.',
+  'leaderboard.noXpThisMonth': 'Earn XP this month to appear here.',
   // A learner is named on the public boards only after switching this on
   // (migration 049); until then their row reads "Learner" with no photo.
   'leaderboard.anonymous': 'Learner',
