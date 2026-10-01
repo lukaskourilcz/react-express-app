@@ -7,6 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider, useLanguage } from '../src/i18n/LanguageContext';
 import { applyRouteHead, readShareHead, type ShareHead } from '../src/lib/routeHead';
 import { NotFoundPage } from '../src/components/PublicInfoPages';
+import { codingShareDescription } from '../src/lib/publicMetadata';
 
 const { result: language } = renderHook(() => useLanguage(), { wrapper: LanguageProvider });
 const visit = (pathname: string, shareHead: ShareHead | null = null) => {
@@ -124,5 +125,13 @@ describe('the not-found page', () => {
     expect(robots()).toEqual([]);
     visit('/quiz');
     expect(robots()).toEqual([]);
+  });
+});
+
+describe('a coding task’s share description', () => {
+  // 462 Easy task pages used to read "A easy JavaScript coding challenge".
+  it.each([['Easy', 'An easy'], ['Medium', 'A medium'], ['Hard', 'A hard']])('%s reads "%s …"', (difficulty, start) => {
+    expect(codingShareDescription({ difficulty, track: 'JavaScript', brand: 'devShark', free: 120, total: 770 }))
+      .toBe(`${start} JavaScript coding challenge on devShark, graded on the server. 120 of 770 coding tasks are free.`);
   });
 });
