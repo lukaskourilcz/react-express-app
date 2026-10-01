@@ -99,7 +99,7 @@ describe('the privacy policy', () => {
   it('shows the banner compact on the policy, so it never hides the text', () => {
     renderPolicy();
     const banner = screen.getByRole('region', { name: 'Cookies on devShark' });
-    expect(within(banner).queryByText(/counts how the site is used/)).toBeNull();
+    expect(within(banner).queryByText(/measures visits/)).toBeNull();
     expect(screen.getByRole('heading', { level: 1, name: 'Privacy policy' })).toBeInTheDocument();
   });
 });

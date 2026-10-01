@@ -59,7 +59,7 @@ describe('the cookie banner', () => {
     mount();
     const region = banner();
     expect(region).not.toBeNull();
-    expect(within(region!).getByText(/counts how the site is used, with PostHog in the EU/)).toBeInTheDocument();
+    expect(within(region!).getByText(/With your OK it also measures visits with PostHog \(EU\)/)).toBeInTheDocument();
     expect(within(region!).getByRole('link', { name: 'Read the privacy policy' })).toHaveAttribute('href', '/privacy#cookies');
     const actions = within(region!).getAllByRole('button');
     expect(actions.map((button) => button.textContent)).toEqual(['Accept all', 'Reject all', 'Choose']);
@@ -95,7 +95,7 @@ describe('the cookie banner', () => {
   it('keeps out of the reading space on the legal pages', () => {
     mount(<CookieConsent />, '/privacy');
     const region = banner()!;
-    expect(within(region).queryByText(/counts how the site is used/)).toBeNull();
+    expect(within(region).queryByText(/measures visits/)).toBeNull();
     expect(within(region).getAllByRole('button')).toHaveLength(3);
   });
 

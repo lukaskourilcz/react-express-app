@@ -2268,7 +2268,7 @@ export const en = {
   // The cookie banner and cookie settings (owner decision 2, 1 Oct 2026).
   // "Reject all" reads and weighs the same as "Accept all".
   'consent.banner.title': 'Cookies on devShark',
-  'consent.banner.body': 'devShark keeps what sign-in, your settings and your progress need in this browser. With your OK it also counts how the site is used, with PostHog in the EU. Marketing tags from Google and Meta are not in use yet.',
+  'consent.banner.body': 'devShark keeps what sign-in, settings and progress need in this browser. With your OK it also measures visits with PostHog (EU). Ad tags from Google and Meta are not in use yet.',
   'consent.banner.policy': 'Read the privacy policy',
   'consent.acceptAll': 'Accept all',
   'consent.rejectAll': 'Reject all',

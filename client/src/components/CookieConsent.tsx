@@ -4,9 +4,10 @@
 // The banner asks once per browser (and again when the wording's version
 // changes, lib/consent.ts). It does not block the page: it sits in the
 // shell's column under <main>, which gives up the height, so it covers no
-// content and no fixed control. Its place in the document is right after the
-// skip link, so keyboard and screen-reader users meet it early; CSS puts it
-// at the bottom of the screen. "Accept all", "Reject all" and "Choose" have
+// content and no fixed control. Its place in the document is right before
+// <main>: the page focuses <main> on load, so one Shift+Tab reaches the
+// banner and a screen reader reads it before the page. CSS puts it at the
+// bottom of the screen. "Accept all", "Reject all" and "Choose" have
 // the same size and style, so saying no is as easy as saying yes.
 //
 // "Choose" and the footer's "Cookie settings" open one dialog

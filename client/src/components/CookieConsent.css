@@ -1,7 +1,7 @@
 /* The cookie banner (CookieConsent.tsx); the dialog has CookieConsentDialog.css.
  *
  * The banner is a flex item of the one-viewport shell (.ss-app-root), placed
- * early in the document and moved to the bottom with `order`, so <main> gives
+ * before <main> in the document and moved to the bottom with `order`, so <main> gives
  * up the height instead of the banner covering content or fixed controls. It
  * stops 30px above the bottom edge, where the ocean overlay draws the
  * waterline and fins. Card stock as everywhere else: hairline border, a 2px
@@ -71,7 +71,9 @@
   max-width: 30rem;
 }
 .ss-consent__actions .astryx-button {
-  flex: 1 1 6.5rem;
+  /* Three to a row from a 360px screen; on a narrower one Accept and Reject
+     share the first row at equal widths and Choose takes the second. */
+  flex: 1 1 5.75rem;
   /* 44px targets on every pointer: this is the one decision the site asks
      for before anything else. !important for the reason app-shell.css gives
      under "Touch targets". */
@@ -82,4 +84,8 @@
 @media (max-width: 599px) {
   .ss-consent__inner { padding: 0.75rem; gap: 0.5rem; }
   .ss-consent__actions { max-width: none; }
+}
+@media (max-width: 379px) {
+  .ss-consent__inner { padding: 0.625rem 0.75rem; }
+  .ss-consent__body { font-size: var(--ss-type-meta); line-height: 1.45; }
 }

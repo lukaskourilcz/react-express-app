@@ -1057,10 +1057,11 @@ Owner decisions 2 and 4 (1 October 2026).
   banner closes for the page, nothing optional runs, and the next visit asks
   again. A choice made in another tab applies through the `storage` event.
 - **The banner and the dialog** (`client/src/components/CookieConsent.tsx`,
-  `CookieConsentDialog.tsx`). The shell mounts the banner right after the skip
-  link; CSS (`order`) draws the
-  banner under `<main>` and 30px above the bottom edge, so `<main>` gives up
-  the height and nothing is covered. Accept all, Reject all and Choose are the
+  `CookieConsentDialog.tsx`). The shell mounts the banner right before
+  `<main>`, which the page focuses on load, so one Shift+Tab reaches it and a
+  screen reader reads it before the page; CSS (`order`) draws it under
+  `<main>` and 30px above the bottom edge, so `<main>` gives up the height and
+  nothing is covered. Accept all, Reject all and Choose are the
   same Astryx secondary button, 44px tall. On `/privacy` and `/terms` the
   banner shows its title and actions only. It is hidden where the shell hides
   its chrome (`/dev`, a running quiz). Choose and the footer's "Cookie

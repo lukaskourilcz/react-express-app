@@ -507,10 +507,6 @@ function App() {
         {t('common.skipToContent')}
       </a>
 
-      {/* The cookie banner comes early in the document, so the keyboard and
-          screen readers meet it first; CSS shows it under <main>. */}
-      <CookieConsent showBanner={showChrome} />
-
       {showChrome && (
         <>
         <header className="ss-header">
@@ -663,6 +659,12 @@ function App() {
         )}
         </>
       )}
+
+      {/* The cookie banner sits right before <main> in the document: the
+          page focuses <main> on load, so one Shift+Tab reaches the banner,
+          and a screen reader reads it before the page. CSS shows it under
+          <main>. */}
+      <CookieConsent showBanner={showChrome} />
 
       <main
         id="main-content"

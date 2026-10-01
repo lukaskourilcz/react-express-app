@@ -28,7 +28,9 @@
   width: 44px !important;
   height: 44px !important;
 }
-.ss-consent-dialog__row .ss-text-links { margin: 0.25rem 0 0; }
+/* The policy link sits under the switch's own text, quieter than it. */
+.ss-consent-dialog__row .ss-text-links { margin: 0; padding-left: 48px; }
+.ss-consent-dialog__row .ss-text-links a { font-size: var(--ss-type-meta); font-weight: 600; }
 .ss-consent-dialog__actions {
   display: flex;
   flex-wrap: wrap;
