@@ -106,7 +106,11 @@ panel says the plan is complete and when the next day starts.
 `/daily` and `/daily/<date>` show one public question a day. The track is a
 pure function of the date (`shared/daily-question.ts`, fifteen served
 categories in rotation from `QOTD_EPOCH`), so the build writes each day's page
-head and share image (`client/src/og/ogImages.ts`) ahead of the day. The
+head and share image (`client/src/og/ogImages.ts`) ahead of the day, as it does
+for every coding task. The app keeps such a head once it starts:
+`client/src/lib/routeHead.ts` reads it before the first route writes one, so a
+dated page or a task page keeps its own title, description and canonical URL
+instead of the generic "Coding" or "Question of the day" head. The
 question itself comes from `GET /api/quiz/daily?qotd=<date|today>`
 (`lib/daily-question.ts`, inside the daily handler so the count stays at
 twelve): a seeded pick from that track in the served bank, options shuffled by
@@ -836,7 +840,8 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   build prerenders `/premium` and `/premium/cancel` into static HTML listed in
   the sitemap (`PUBLIC_PAGES` in `client/src/lib/publicMetadata.ts`); `/premium`
   carries `isAccessibleForFree: false` with both prices as offers, the topic
-  guides keep `true`, and `/premium/success` is `noindex`.
+  guides keep `true`, and `/premium/success` is `noindex`, as is any address
+  the not-found page answers, for as long as that page shows.
 - **Stripe environment:** `BILLING_ENABLED`, `STRIPE_SECRET_KEY`,
   `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_PREMIUM_MONTHLY`,
   `STRIPE_PRICE_PREMIUM_ANNUAL`, `STRIPE_MANAGED_PAYMENTS` (`true` or `false`,
