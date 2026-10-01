@@ -5,7 +5,7 @@
 import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { jsonError, requireAuthSub, withTimeout, createLogger } from './http';
-import { enforceRateLimit, RATE_LIMITS } from './rate-limit';
+import { enforceRateLimit, RATE_LIMITS, type RateLimitConfig } from './rate-limit';
 import { deploymentSubjectIds } from './product-scope';
 import { decodeGithubConnectState, encodeGithubConnectState } from './quiz-tokens';
 import {
@@ -70,6 +70,19 @@ function installationTaken(res: VercelResponse) {
   return jsonError(res, 409, 'installation_taken', 'Another devShark account is already connected to this GitHub installation');
 }
 
+/** Two tiers: an address backstop that holds a class connecting behind one
+ * NAT, then the learner's own bucket, so one learner's retries never use up
+ * a classmate's. */
+async function withinLimits(
+  req: VercelRequest,
+  res: VercelResponse,
+  address: RateLimitConfig,
+  perUser: RateLimitConfig,
+  userId: string,
+): Promise<boolean> {
+  return (await enforceRateLimit(req, res, address)) && enforceRateLimit(req, res, perUser, `user:${userId}`);
+}
+
 function gate(req: VercelRequest, res: VercelResponse): boolean {
   if (!deploymentSubjectIds().includes('webdev')) {
     jsonError(res, 404, 'not_available', 'The GitHub garden is not part of this product');
@@ -105,14 +118,14 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
     if (req.method !== 'POST') { res.setHeader('Allow', 'POST'); return jsonError(res, 405, 'method_not_allowed', 'Method not allowed'); }
 
     if (op === 'github-connect-start') {
-      if (!(await enforceRateLimit(req, res, RATE_LIMITS.githubConnect))) return;
+      if (!(await withinLimits(req, res, RATE_LIMITS.githubConnectAddress, RATE_LIMITS.githubConnect, userId))) return;
       const state = encodeGithubConnectState(userId);
       const out: GithubConnectStartResponse = { url: `https://github.com/apps/${encodeURIComponent(githubAppSlug())}/installations/new?state=${encodeURIComponent(state)}` };
       return res.json(out);
     }
 
     if (op === 'github-connect-finish') {
-      if (!(await enforceRateLimit(req, res, RATE_LIMITS.githubConnect))) return;
+      if (!(await withinLimits(req, res, RATE_LIMITS.githubConnectAddress, RATE_LIMITS.githubConnect, userId))) return;
       const body = (req.body || {}) as { installationId?: unknown; state?: unknown; code?: unknown };
       const installationId = Number(body.installationId);
       if (!Number.isInteger(installationId) || installationId <= 0 || typeof body.state !== 'string') return jsonError(res, 400, 'bad_request', 'installationId and state are required');
@@ -178,7 +191,7 @@ export async function handleGithub(op: string, req: VercelRequest, res: VercelRe
     }
 
     if (op === 'github-sync') {
-      if (!(await enforceRateLimit(req, res, RATE_LIMITS.githubSync))) return;
+      if (!(await withinLimits(req, res, RATE_LIMITS.githubSyncAddress, RATE_LIMITS.githubSync, userId))) return;
       const row = await readConnection(supabase, userId);
       if (!row) return jsonError(res, 409, 'not_connected', 'Connect GitHub first');
       if (row.status === 'broken') {

@@ -356,18 +356,26 @@ user access token, and accepts the installation only when it appears in that
 user's `GET /user/installations` (every page) and its account is the same
 GitHub user (`GET /user`), which also refuses a collaborator who can see the
 owner's installation. The user token is used for those two reads and dropped.
-A missing code, a refused code or an installation that is not the user's own
-saves nothing, and the callback page asks the learner to install and authorize
-again. A unique index on `github_connections.installation_id` (migration 050)
-keeps one installation to one devShark account; a second account gets 409
+A missing code, a refused code, an organisation installation or an
+installation that is not the user's own saves nothing, and the callback page
+asks the learner to install and authorize again. GitHub's code works once, so
+the callback offers Retry (the same code) only after a failure that never
+reached the check: no connection, 429 or 503. After any other failure it
+offers Connect again, which starts a new connection (`github-connect-start`).
+Connect and sync are limited per learner (`githubConnect`, `githubSync`, keyed
+`user:<id>`) behind a class-sized address backstop (`githubConnectAddress`,
+`githubSyncAddress`). A unique index on `github_connections.installation_id`
+(migration 050) keeps one installation to one devShark account; a second
+account gets 409
 `installation_taken`. No user token is stored; installation
 tokens are minted from the app key on demand, failed commits queue for a later
 sync, and disconnecting deletes the connection and the queue. The feature stays
 hidden, and `github-connection` answers `available: false`, until
 `GITHUB_APP_ID`, `GITHUB_APP_SLUG`, `GITHUB_APP_PRIVATE_KEY`,
 `GITHUB_APP_CLIENT_ID` and `GITHUB_APP_CLIENT_SECRET` all exist on the
-deployment (`isGithubAppConfigured`). `npm run test:garden` runs the connect
-step against a stand-in GitHub.
+deployment (`isGithubAppConfigured`); until then the profile shows no garden
+card at all. `npm run test:garden` runs the connect step against a stand-in
+GitHub.
 
 ## Learning paths
 
@@ -424,6 +432,23 @@ Endpoints are new `resource=`/`op=` branches on existing handlers
 path — `LEARNING_PATH_DSA_ENABLED` and `LEARNING_PATH_FDE_ENABLED` — so either
 can launch or pause without the other, and a path opens only when its switch
 is on, its content validates and the migration is installed.
+
+A code exercise or a written piece autosaves one draft per activity, up to
+`PATH_LIMITS.draftsPerEnrollment` (60) per enrollment, which `npm run
+test:paths` keeps at or above every path's code exercises plus artifacts. A
+pass keeps its draft, the only copy of the learner's passed code the server
+holds, so a passed exercise reopens with what the learner wrote;
+`purge_expired_learning_data` removes drafts idle for 90 days.
+`accept_learning_path_result` (migration 054) keeps a verified pass and a
+submitted written piece against any weaker later attempt, which is still stored
+as evidence. It accepts one result per enrollment at a time and decides module
+completion from the module's requirements, which the submit handler sends, so
+two submits finishing a module together still complete it. The merchandise
+package needs every module completed within the one enrollment of the
+curriculum version the deployment publishes (`path_is_complete`, 054). Its
+claim checks the address the way a shop order does (`validateAddress`): a
+field longer than 120 characters is refused rather than cut to fit, and the
+country must be an assigned ISO 3166-1 alpha-2 code.
 
 Completion language is deliberately narrow. The server says "FDE guided path
 completed" only after every required module is complete, and the FDE modules

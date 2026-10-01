@@ -45,12 +45,16 @@ export function GithubGardenCard() {
   const [toast, setToast] = useState<Toast>(null);
   const [confirm, setConfirm] = useState<ConfirmRequest | null>(null);
   const anchorRef = useRef<HTMLHeadingElement>(null);
+  // The garden stays out of sight until the server says this deployment has
+  // it: a deployment without the GitHub App answers `available: false`, and
+  // every profile would otherwise show a card for a feature that is not there.
+  const hidden = query.isLoading || query.data?.available === false;
 
   // The setup callback returns to `/profile#github-garden`; lazy routes mount
   // after the browser's own hash jump, so bring the card into view here.
   useEffect(() => {
-    if (window.location.hash === '#github-garden') anchorRef.current?.scrollIntoView({ block: 'start' });
-  }, []);
+    if (!hidden && window.location.hash === '#github-garden') anchorRef.current?.scrollIntoView({ block: 'start' });
+  }, [hidden]);
 
   const setConnection = (next: GithubConnectionResponse) => queryClient.setQueryData(codingKeys.github(), next);
 
@@ -119,13 +123,13 @@ export function GithubGardenCard() {
     });
   };
 
+  if (hidden) return null;
+
   const data = query.data;
   const dateFormat = new Intl.DateTimeFormat(lang === 'cs' ? 'cs-CZ' : 'en-GB', { dateStyle: 'medium', timeStyle: 'short' });
 
   let body: ReactNode;
-  if (query.isLoading) {
-    body = <Text type="supporting" size="sm" color="secondary" role="status">{t('common.loading')}</Text>;
-  } else if (query.isError || !data) {
+  if (query.isError || !data) {
     body = (
       <Banner
         status="warning"
@@ -134,8 +138,6 @@ export function GithubGardenCard() {
         endContent={<Button variant="ghost" size="sm" label={t('quiz.retry')} onClick={() => void query.refetch()} />}
       />
     );
-  } else if (!data.available) {
-    body = <Text type="supporting" size="sm" color="secondary">{t('github.unavailable')}</Text>;
   } else if (data.status === 'not_connected') {
     body = (
       <>

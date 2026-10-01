@@ -194,6 +194,12 @@ export const RATE_LIMITS = {
   // meets either.
   readAddress: { key: 'read_address', capacity: SHARED_NETWORK_SEATS * 60, refillPerSecond: (SHARED_NETWORK_SEATS * 60) / 60 },
   readPerUser: { key: 'read_user', capacity: 120, refillPerSecond: 120 / 60 },
+  // The GitHub garden's address backstops. githubConnect and githubSync above
+  // are keyed by the verified account (`user:<id>`), so each learner keeps
+  // the budget one whole address used to share (a connect is a start and a
+  // finish, so five an hour); these hold a class connecting behind one NAT.
+  githubConnectAddress: { key: 'github_connect_address', capacity: SHARED_NETWORK_SEATS * 10, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 3600 },
+  githubSyncAddress: { key: 'github_sync_address', capacity: SHARED_NETWORK_SEATS * 6, refillPerSecond: (SHARED_NETWORK_SEATS * 6) / 3600 },
 } satisfies Record<string, RateLimitConfig>;
 
 const buckets = new Map<string, Bucket>();
