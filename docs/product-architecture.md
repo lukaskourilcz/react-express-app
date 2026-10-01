@@ -261,9 +261,9 @@ from before 056 was copied in: a month counts from the moment 056 was
 applied. A launch contract fails if a routine starts adding to `user_xp`
 without adding to the ledger. `month_xp_ranks` is the one ranking (`RANK()`:
 equal XP shares a place, 1, 1, 3); `month_xp_leaderboard` and
-`month_xp_leaderboard_rank` serve the board and the learner's own line, with
-the name and photo behind `show_on_leaderboards` in one `CASE`, as on the
-other boards. Any XP that month puts a learner on it. The handler serves it
+`month_xp_leaderboard_rank` serve the board and the learner's own line,
+naming a learner with `board_display_name` (055) as every board does and
+showing the photo only behind `show_on_leaderboards`. Any XP that month puts a learner on it. The handler serves it
 like the 30-day board: shared and `public, s-maxage=60` without a session,
 the learner's own line and `private, no-store` with a Bearer token or `me=1`.
 The screen draws the server's ranks, so tied learners show the same number,

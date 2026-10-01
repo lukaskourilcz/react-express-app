@@ -2832,10 +2832,12 @@ function monthlyXpContracts() {
   // Erasure takes the ledger with the account.
   const erasure = newest.get('delete_user_data')!;
   assert.match(erasure.body, /DELETE FROM public\.user_xp_days WHERE user_id = p_user_id;/, 'deleting an account deletes its month XP');
-  // The board names a learner in one place, behind the consent switch (049).
+  // The board names a learner as every board does (board_display_name, 055),
+  // and shows the photo only behind the consent switch (049).
   const board = newest.get('month_xp_leaderboard')!.body;
-  assert.equal(board.match(/u\.show_on_leaderboards/g)?.length, 2, 'the name and the photo are projected once, behind the switch');
-  assert.match(board, /CASE WHEN u\.show_on_leaderboards THEN NULLIF\(BTRIM\(u\.name\), ''\) END/);
+  assert.match(board, /public\.board_display_name\(r\.user_id\)/, 'one naming rule for every board');
+  assert.doesNotMatch(board, /u\.name/, 'the name is never projected here');
+  assert.match(board, /CASE WHEN u\.show_on_leaderboards THEN u\.picture END/, 'the photo only behind the switch');
   assert.match(board, /FROM public\.month_xp_ranks\(/, 'the board ranks as the settlement pays');
   // The API serves it like the other boards.
   const handler = read('api/leaderboard.ts');

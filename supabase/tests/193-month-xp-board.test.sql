@@ -1,10 +1,12 @@
 -- The "This month" board (migration 056; api/leaderboard.ts, period=month)
 -- ranks one subject's current calendar month (UTC) by XP, with the ranking the
--- settlement pays: equal XP shares a place (1, 1, 3). A learner is named only
--- after switching on show_on_leaderboards (049), the viewer's own row is
--- marked under the same rule, and month_xp_leaderboard_rank gives the
--- viewer's own place, or nothing without XP this month. Last month's XP and
--- another subject's are not on it.
+-- settlement pays: equal XP shares a place (1, 1, 3). A learner is named as on
+-- every board (board_display_name, 055): nobody until they switch on
+-- show_on_leaderboards, then their sharkname, or their Google name without
+-- one. The photo follows the switch. The viewer's own row is marked under the
+-- same rule, and month_xp_leaderboard_rank gives the viewer's own place, or
+-- nothing without XP this month. Last month's XP and another subject's are
+-- not on it.
 
 SET LOCAL ROLE service_role;
 
@@ -56,6 +58,11 @@ BEGIN
   ASSERT v_count = 2, format('the limit holds: %s', v_count);
   SELECT string_agg(format('%s:%s', rank, xp), ' ') INTO v_board FROM public.month_xp_leaderboard('math', 100, NULL);
   ASSERT v_board = '1:9000', format('a subject''s board is its own: %s', v_board);
+
+  -- A sharkname is the name on the board.
+  PERFORM public.set_user_handle(v_ada, 'thirsty-sharkie');
+  SELECT display_name INTO v_board FROM public.month_xp_leaderboard('webdev', 100, NULL) WHERE xp = 500 AND display_name IS NOT NULL;
+  ASSERT v_board = 'thirsty-sharkie', format('the board shows the sharkname: %s', v_board);
 
   -- Switching the name off takes it off at once.
   UPDATE public.user_stats SET show_on_leaderboards = FALSE WHERE user_id = v_ada;

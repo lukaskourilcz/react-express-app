@@ -31,7 +31,7 @@
 --      credit it (restated from 022 and 048).
 --   6. month_xp_ranks ranks a subject's calendar month by XP, ties sharing a
 --      place; month_xp_leaderboard and month_xp_leaderboard_rank serve the
---      "This month" board.
+--      "This month" board, naming learners with 055's board_display_name.
 --   7. settle_month_top3 pays the month's top three by that ranking (owner
 --      decision 8): everyone tied at a place gets its coins, and the next
 --      total takes the place after the tied group.
@@ -652,9 +652,10 @@ REVOKE ALL ON FUNCTION public.month_xp_ranks(TEXT, DATE) FROM PUBLIC, anon, auth
 GRANT EXECUTE ON FUNCTION public.month_xp_ranks(TEXT, DATE) TO service_role;
 
 -- The "This month" board (api/leaderboard.ts, period=month): the current UTC
--- month unless p_month ('yyyy-mm') names another. A learner's name and photo
--- appear only after they switched on show_on_leaderboards (049); the
--- projection is the CASE below and nowhere else. The viewer's own row is
+-- month unless p_month ('yyyy-mm') names another. A learner is named as on
+-- every other board: board_display_name (055) gives NULL until they switched
+-- on show_on_leaderboards, then their sharkname or the Google name they chose,
+-- and the photo follows show_on_leaderboards alone. The viewer's own row is
 -- marked, and follows the same rule.
 CREATE OR REPLACE FUNCTION public.month_xp_leaderboard(
   p_subject TEXT,
@@ -675,7 +676,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
   SELECT r.rank,
-         CASE WHEN u.show_on_leaderboards THEN NULLIF(BTRIM(u.name), '') END,
+         public.board_display_name(r.user_id),
          CASE WHEN u.show_on_leaderboards THEN u.picture END,
          r.xp,
          (p_viewer IS NOT NULL AND r.user_id = p_viewer)
