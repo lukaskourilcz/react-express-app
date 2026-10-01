@@ -283,7 +283,8 @@ describe('the Terms and the privacy policy', () => {
     const vouchers = screen.getByRole('heading', { level: 2, name: 'Vouchers' }).closest('section')!;
     expect(vouchers).toHaveTextContent('devShark stores your account identifier, the voucher you redeemed and the time you redeemed it');
     expect(vouchers).toHaveTextContent('It does not store the code you type.');
-    expect(screen.getByRole('heading', { level: 2, name: 'Deletion and retention' }).closest('section')).toHaveTextContent('your voucher redemptions');
+    // Round 4 split "Deletion and retention" into a retention table and "Deleting your account".
+    expect(screen.getByRole('heading', { level: 2, name: 'Deleting your account' }).closest('section')).toHaveTextContent('your voucher redemptions');
   });
 });
 

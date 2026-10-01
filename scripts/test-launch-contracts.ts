@@ -184,10 +184,13 @@ import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
 import { handleLeaderboardVisibility, limitUserWrite } from '../api/user/[op]';
+import { handleFriends, handleIdentity } from '../lib/friends-handlers';
+import { isValidHandle } from '../shared/handles';
 import { handleAdminEntitlements, handleEntitlement, parseValidUntil, toEntitlementResponse } from '../lib/entitlements';
 import { DEFAULT_PUBLIC_ORIGIN, publicBillingSettings } from '../lib/billing/config';
 import { WAIVER_TEXT } from '../lib/billing/sync';
 import { en as ENGLISH } from '../client/src/i18n/translations';
+import { privacyEn as PRIVACY_ENGLISH } from '../client/src/i18n/translations.privacy';
 import { NOINDEX_PATHS, PUBLIC_PAGES, premiumSchema } from '../client/src/lib/publicMetadata';
 import {
   DEFAULT_COIN_SETTINGS,
@@ -204,6 +207,7 @@ import { MERCH_CATALOGUE, SHIRT_SIZES } from '../shared/rewards';
 import { generateVoucherCode, handleAdminVouchers, handleVoucherRedeem, parseVoucherForm, toAdminVoucher, voucherHash } from '../lib/vouchers';
 import { VOUCHER_ALPHABET, formatVoucherCode, normalizeVoucherCode, voucherHint, voucherState } from '../shared/vouchers';
 import adminHandler from '../api/admin/[op]';
+import { productCleanupContracts } from './product-cleanup-contracts';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -831,7 +835,10 @@ function publicCopyContracts() {
     assert.match(ENGLISH[key], /once redemption opens/, `${key} qualifies the merchandise claim`);
   }
   assert.match(read('client/src/components/landing/ComparisonTable.tsx'), /labelKey: 'landing\.compare\.rowCoins', free: NO, premium: \{ mark: 'yes', key: 'landing\.compare\.premiumCoins' \}/);
-  assert.match(ENGLISH['legal.terms.plans.premium'], /redeem coins for devShark merchandise once redemption opens/);
+  // Merchandise is paused until next quarter (owner decision 10), so the
+  // Terms name the coin benefit and no merchandise.
+  assert.match(ENGLISH['legal.terms.plans.premium'], /doubles the coins verified learning earns and pays milestone coins\.$/);
+  assert.doesNotMatch(ENGLISH['legal.terms.plans.premium'], /merchandise/);
   // Design audit P0.4: grading and end states are stated, not cheered. No
   // exclamation mark and no "Well done" in any verdict, result or end key.
   for (const [key, value] of Object.entries(ENGLISH)) {
@@ -864,7 +871,7 @@ function publicCopyContracts() {
     assert.match(table, /premiumPaths' \}, when: 'paths' \}/);
     assert.doesNotMatch(table, /rowNoAds/);
     assert.match(ENGLISH['landing.compare.footnote'], /No ads on either plan\./);
-    assert.match(read('client/src/components/PremiumFacts.tsx'), /redemptionOpen \|\| key !== 'premium\.sheet\.include6'/);
+    assert.match(read('client/src/components/PremiumFacts.tsx'), /\(MERCH_ENABLED && redemptionOpen\) \|\| key !== 'premium\.sheet\.include6'/);
     assert.match(read('api/settings.ts'), /merch: \{ redemptionOpen: merchRedemptionOpen\(s\.merch\) \}/);
     assert.equal(merchRedemptionOpen(DEFAULT_MERCH_SETTINGS), false, 'redemption ships closed');
     const shop = read('client/src/components/Shop.tsx');
@@ -874,13 +881,13 @@ function publicCopyContracts() {
   }
   // Coding hints are authored text that nobody has reviewed yet; the privacy
   // policy must not say people wrote them by hand (review finding product-8).
-  assert.doesNotMatch(ENGLISH['legal.privacy.ai.body'], /by hand|people write/i);
-  assert.match(ENGLISH['legal.privacy.ai.body'], /no AI feature/);
+  assert.doesNotMatch(PRIVACY_ENGLISH['legal.privacy.ai.body'], /by hand|people write/i);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.ai.body'], /no AI feature/);
   // The cancellation page stores the address typed there with its request,
   // and the privacy policy says how long (review finding integrity-1): the
   // next request purges every row a day past its expiry.
-  assert.match(ENGLISH['legal.privacy.email.body'], /single-use link that confirms a request, to the address typed on the page/);
-  assert.match(ENGLISH['legal.privacy.email.body'], /deletes both with the first request made on the page once the link has been expired for a day/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.email.body'], /single-use link that confirms a request, to the address typed on the page/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.email.body'], /deletes both with the first request made on the page once the link has been expired for a day/);
   assert.match(read('supabase/supabase-schema-039.sql'), /DELETE FROM public\.billing_cancel_requests WHERE expires_at < NOW\(\) - INTERVAL '1 day';/, 'the purge the privacy policy promises');
   // No urgency, countdowns or fake scarcity on the pages that sell.
   for (const [key, value] of Object.entries(ENGLISH)) {
@@ -1051,11 +1058,22 @@ function coinsContracts() {
     assert.ok(milestones.includes(key), `milestone event ${key} is one per account`);
   }
   assert.match(milestones, /v_premium := public\.is_premium\(p_user_id\);/, 'milestones read the plan in the database');
-  const month = routine('settle_month_top3');
+  // The month's top three are its learners with the most XP (migration 056,
+  // owner decision 8), ties sharing the place: 056 restates 041's routine,
+  // which ranked correct answers and gave each place one holder.
+  const migration056 = read('supabase/supabase-schema-056.sql');
+  const monthStart = migration056.indexOf('CREATE OR REPLACE FUNCTION public.settle_month_top3(');
+  assert.ok(monthStart >= 0, 'migration 056 restates settle_month_top3');
+  const month = migration056.slice(monthStart, migration056.indexOf('$$;', monthStart));
   assert.match(month, /ON CONFLICT \(month\) DO NOTHING;[\s\S]*IF v_inserted = 0 THEN/, 'a month settles once');
-  assert.ok(month.includes("'month-top:' || p_month || ':' || v_row.rnk"), 'one event per month and rank');
-  assert.match(month, /ORDER BY SUM\(a\.correct\) DESC, SUM\(a\.answered\) ASC/, 'the month board ranks like every other board');
-  assert.doesNotMatch(month, /streak|quest_xp|user_xp/i, 'the month board never ranks by streak or XP');
+  assert.ok(month.includes("'month-top:' || p_month || ':' || v_row.rank || ':' || public.token_account_key(v_row.user_id)"),
+    'one event per month, place and learner, so learners sharing a place are each paid once');
+  assert.match(month, /FROM public\.month_xp_ranks\(p_subject, v_start\) r\s+WHERE r\.rank <= LEAST\(3,/, 'the month is ranked by its XP, and nobody below third is paid');
+  const ranks = migration056.slice(migration056.indexOf('CREATE OR REPLACE FUNCTION public.month_xp_ranks('));
+  assert.match(ranks.slice(0, ranks.indexOf('$$;')), /RANK\(\) OVER \(ORDER BY SUM\(d\.xp\) DESC\)/, 'equal XP shares a place (1, 1, 3)');
+  assert.doesNotMatch(month, /streak/i, 'the month never ranks by streak');
+  assert.match(migration056, /REVOKE ALL ON FUNCTION public\.settle_month_top3\(TEXT, TEXT, INTEGER\[\], INTEGER\) FROM PUBLIC, anon, authenticated;/);
+  assert.match(migration056, /GRANT EXECUTE ON FUNCTION public\.settle_month_top3\(TEXT, TEXT, INTEGER\[\], INTEGER\) TO service_role;/);
   assert.match(routine('credit_social_visit'), /IF p_amount = 0 THEN RETURN FALSE;/, 'a zero grant credits nothing');
   assert.match(routine('record_coding_verdict'), /'coding:' \|\| public\.token_account_key\(p_user_id\) \|\| ':' \|\| p_task_id/,
     'coding XP is awarded once per account and task, not once per task');
@@ -1581,9 +1599,9 @@ async function voucherContracts() {
   // policy says what a redemption stores, and that erasure deletes it.
   assert.match(ENGLISH['legal.terms.grants.body'], /through a voucher code you redeem on the Premium page/);
   assert.match(ENGLISH['legal.terms.grants.body'], /counted from the day you redeem it, or with no end date, and an account can redeem each voucher once/);
-  assert.match(ENGLISH['legal.privacy.voucher.body'], /stores your account identifier, the voucher you redeemed and the time you redeemed it/);
-  assert.match(ENGLISH['legal.privacy.voucher.body'], /does not store the code you type/);
-  assert.match(ENGLISH['legal.privacy.deletion.body'], /your voucher redemptions/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.voucher.body'], /stores your account identifier, the voucher you redeemed and the time you redeemed it/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.voucher.body'], /does not store the code you type/);
+  assert.match(PRIVACY_ENGLISH['legal.privacy.deletion.body'], /your voucher redemptions/);
   assert.match(read('client/src/components/LegalPages.tsx'), /id: 'vouchers', title: 'legal\.privacy\.voucher\.title'/);
 
   // 4. The redemption against a stand-in database. Log lines are captured to
@@ -2337,8 +2355,8 @@ async function quizSubmitScopeContracts() {
   assert.ok((daily.body as { expiresAt: number }).expiresAt <= dailyGraded.session.issuedAt + 60 * 60_000);
   assert.equal(decodeQuizResultReceipt(dailyGraded.body.resultReceipt!)?.purpose, 'daily');
   // Each outcome carries its question's XP (2 + 2 × difficulty when correct),
-  // which migration 052 pays per fresh question. The daily's 20 XP minimum
-  // stays on the receipt's total.
+  // and the receipt's total, which migration 056 pays whole, repeats
+  // included, is their sum. The daily's 20 XP minimum is in that total.
   for (const [what, body] of [['quiz', graded.body], ['daily', dailyGraded.body]] as const) {
     const receipt = decodeQuizResultReceipt(body.resultReceipt!)!;
     const perQuestion = receipt.outcomes.map((outcome) => outcome.xp);
@@ -2723,6 +2741,322 @@ async function leaderboardVisibilityContracts() {
   assert.equal(await limit('PUT', `visibility-${stamp}-a`), 429, 'one account is bounded at the per-account write rate');
   assert.equal(await limit('PUT', `visibility-${stamp}-b`), 200, 'which spends nobody else\'s budget');
   assert.equal(await limit('GET', `visibility-${stamp}-a`), 200, 'reading it is not a write');
+}
+
+/** A classroom question closes on "Reveal answer", and a running classroom's
+ * scoreboard counts only closed questions (migration 056, owner decision 6).
+ * The behaviour runs in scripts/test-play-rooms.ts and
+ * supabase/tests/190-classroom-scoreboard-closed-questions.test.sql; these are
+ * the wiring between the migration, the handler and the screen. */
+function classroomRevealContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const migration = read('supabase/supabase-schema-056.sql');
+  assert.match(migration, /ADD COLUMN IF NOT EXISTS revealed_idx INTEGER/, '056 adds the closed question to the room');
+  const dropped = migration.indexOf('DROP FUNCTION IF EXISTS public.match_scoreboard(UUID);');
+  const created = migration.indexOf('CREATE OR REPLACE FUNCTION public.match_scoreboard(');
+  assert.ok(dropped >= 0 && dropped < created, 'the one-argument scoreboard goes first, so a call by name is never ambiguous');
+  const scoreboard = migration.slice(created, migration.indexOf('$$;', created));
+  assert.match(scoreboard, /p_before_idx INTEGER DEFAULT NULL/, 'the new argument has a default, so the code in production keeps calling it');
+  assert.match(scoreboard, /AND \(p_before_idx IS NULL OR a\.question_idx < p_before_idx\)/, 'the filter sits in the join, so a pupil with nothing counted keeps a row');
+  assert.match(scoreboard, /SECURITY DEFINER\s+SET search_path = ''/);
+  assert.match(migration, /REVOKE ALL ON FUNCTION public\.match_scoreboard\(UUID, INTEGER\) FROM PUBLIC, anon, authenticated;/);
+  assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.match_scoreboard\(UUID, INTEGER\) TO service_role;/);
+
+  const play = read('api/play/[action].ts');
+  assert.match(play, /const STATE_COLUMNS =\s+'[^']*\brevealed_idx\b/, 'state reads the closed question');
+  assert.match(play, /body\.action !== 'reveal'/, 'reveal is a control action');
+  const answer = play.slice(play.indexOf('async function answer('), play.indexOf('async function distribution('));
+  const replay = answer.indexOf('if (existing) return res.json(reply(existing, false));');
+  const closed = answer.indexOf("'question_closed'");
+  const timeUp = answer.indexOf("'time_up'");
+  assert.ok(replay > 0 && replay < closed && closed < timeUp,
+    'an answer to a closed question is refused after a retry of an earlier answer is replayed, like a late one');
+  // A classroom answer is acknowledged, never graded back: every reply goes
+  // through the one function, whose classroom branch carries no result.
+  assert.match(answer, /classroom\s+\? \{ ok: true, accepted: true, advanced: false \}/, 'a classroom reply carries no is_correct or speed bonus');
+  assert.equal(answer.match(/res\.json\(\{ ok: true, is_correct/g), null, 'no reply grades an answer outside reply()');
+  const state = play.slice(play.indexOf('async function state('), play.indexOf('async function control('));
+  assert.match(state, /p_before_idx: beforeIdx/, 'a running classroom asks for its closed questions only');
+  assert.match(state, /beforeIdx === null \? \{ p_match_id: match\.id \}/, 'every other room makes the call it always made');
+
+  const client = read('client/src/lib/play.ts');
+  assert.match(client, /action: 'start' \| 'advance' \| 'finish' \| 'reveal'/, 'the presenter sends the reveal to the server');
+  const screen = read('client/src/components/Play.tsx');
+  assert.doesNotMatch(screen, /setRevealedIdx/, 'the key no longer shows on a local click alone');
+  assert.match(screen, /onClick=\{onReveal\}/);
+}
+
+/** The month's XP ledger and the top three it pays (migration 056, owner
+ * decision 8). user_xp_days must hear of every verified award, so every
+ * routine whose newest definition adds to user_xp also adds to the ledger,
+ * except merge_user_xp: guest XP merged at sign-in was never verified. The
+ * behaviour runs in supabase/tests/191 to 194. */
+function monthlyXpContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const files = readdirSync(join(process.cwd(), 'supabase'))
+    .filter((name) => /^supabase-schema-\d{3}\.sql$/.test(name))
+    .sort();
+  // The newest definition of every routine.
+  const newest = new Map<string, { file: string; body: string }>();
+  for (const file of files) {
+    const sql = read(`supabase/${file}`);
+    for (const match of sql.matchAll(/CREATE OR REPLACE FUNCTION public\.([a-z0-9_]+)\(/g)) {
+      const start = match.index!;
+      const bodyStart = sql.indexOf('$$', start);
+      const body = sql.slice(start, sql.indexOf('$$', bodyStart + 2));
+      newest.set(match[1], { file, body });
+    }
+  }
+  const writers = [...newest.entries()].filter(([, { body }]) => /INSERT INTO public\.user_xp \(/.test(body));
+  assert.deepEqual(writers.map(([name]) => name).sort(), ['merge_user_xp', 'record_verified_activity_xp', 'record_verified_quiz_result_v2'],
+    'the routines that add XP to an account');
+  for (const [name, { file, body }] of writers) {
+    if (name === 'merge_user_xp') {
+      assert.doesNotMatch(body, /add_xp_day/, 'merged guest XP is not verified and does not count toward a month');
+      continue;
+    }
+    assert.match(body, /PERFORM public\.add_xp_day\(p_user_id, p_subject, /, `${name} (${file}) adds its award to the month's XP`);
+  }
+  // Learning XP lives in verified progress, not in user_xp: a first pass adds it.
+  const learn = newest.get('complete_verified_roadmap_attempt')!;
+  assert.equal(learn.file, 'supabase-schema-056.sql', 'the Learn completion that credits the month is the one that runs');
+  assert.match(learn.body, /IF p_user_id IS NOT NULL AND v_passed AND NOT v_was_passed THEN\s+PERFORM public\.add_xp_day\(p_user_id, v_attempt\.subject, public\.learn_step_xp\(v_attempt\.kind, v_attempt\.ref\)\);/,
+    'only a first pass earns a step its learning XP');
+  // learn_step_xp is shared/progression.ts in SQL.
+  const progression = read('shared/progression.ts');
+  assert.match(progression, /export const LEVEL_XP_PER_DIFFICULTY = 50;/);
+  assert.match(progression, /export const CHECKPOINT_XP_PER_PART = 300;/);
+  assert.match(progression, /Math\.min\(5, Math\.max\(1, Math\.ceil\(level \/ 5\)\)\)/);
+  const stepXp = newest.get('learn_step_xp')!.body;
+  assert.match(stepXp, /WHEN p_kind = 'level' THEN 50 \* LEAST\(5, GREATEST\(1, CEIL\(p_ref \/ 5\.0\)::INTEGER\)\)/, 'a level is 50 × its tier, as learnLevelXp says');
+  assert.match(stepXp, /WHEN p_kind = 'checkpoint' THEN 300 \* p_ref/, 'part test n is 300 × n, as learnCheckpointXp says');
+  // Nothing else writes the ledger, and the browser cannot.
+  for (const [name, { body }] of newest) {
+    if (name === 'add_xp_day') continue;
+    assert.doesNotMatch(body, /(INSERT INTO|UPDATE) public\.user_xp_days/, `${name} writes the ledger only through add_xp_day`);
+  }
+  const migration = read('supabase/supabase-schema-056.sql');
+  assert.match(migration, /ALTER TABLE public\.user_xp_days ENABLE ROW LEVEL SECURITY;/);
+  assert.match(migration, /REVOKE ALL ON public\.user_xp_days FROM PUBLIC, anon, authenticated;\s+GRANT SELECT ON public\.user_xp_days TO authenticated;/);
+  assert.match(migration, /ON public\.user_xp_days FOR SELECT TO authenticated\s+USING \(user_id = \(SELECT auth\.uid\(\)::TEXT\)\);/);
+  for (const routine of ['add_xp_day(TEXT, TEXT, INTEGER)', 'learn_step_xp(TEXT, INTEGER)', 'month_xp_ranks(TEXT, DATE)',
+    'month_xp_leaderboard(TEXT, INTEGER, TEXT, TEXT)', 'month_xp_leaderboard_rank(TEXT, TEXT, TEXT)']) {
+    const escaped = routine.replace(/[()]/g, '\\$&');
+    assert.match(migration, new RegExp(`REVOKE ALL ON FUNCTION public\\.${escaped} FROM PUBLIC, anon, authenticated;`), `${routine} is revoked from browsers`);
+    assert.match(migration, new RegExp(`GRANT EXECUTE ON FUNCTION public\\.${escaped} TO service_role;`), `${routine} is service-role only`);
+  }
+  // Erasure takes the ledger with the account.
+  const erasure = newest.get('delete_user_data')!;
+  assert.match(erasure.body, /DELETE FROM public\.user_xp_days WHERE user_id = p_user_id;/, 'deleting an account deletes its month XP');
+  // The board names a learner as every board does (board_display_name, 055),
+  // and shows the photo only behind the consent switch (049).
+  const board = newest.get('month_xp_leaderboard')!.body;
+  assert.match(board, /public\.board_display_name\(r\.user_id\)/, 'one naming rule for every board');
+  assert.doesNotMatch(board, /u\.name/, 'the name is never projected here');
+  assert.match(board, /CASE WHEN u\.show_on_leaderboards THEN u\.picture END/, 'the photo only behind the switch');
+  assert.match(board, /FROM public\.month_xp_ranks\(/, 'the board ranks as the settlement pays');
+  // The API serves it like the other boards.
+  const handler = read('api/leaderboard.ts');
+  const month = handler.slice(handler.indexOf('async function monthBoard('), handler.indexOf('async function verifiedViewer('));
+  assert.match(month, /RATE_LIMITS\.leaderboardPersonal/);
+  assert.match(month, /'private, no-store'/);
+  assert.match(month, /'public, s-maxage=60'/);
+  assert.match(month, /validateCategoryScope\(/, 'the month board is one subject\'s');
+  // The Shop says what the month pays.
+  assert.match(read('client/src/i18n/translations.ts'),
+    /'rewards\.earn\.monthTopDetail': 'Finish a calendar month with the most XP — top three earn \{first\}, \{second\} and \{third\} coins; ties share the place\.'/);
+}
+
+/** op=identity (migration 055): what friends see of a learner, the sharkname
+ * or the Google name, and an initials avatar or the Google photo. Plus the
+ * 32-character handle rule and the display name the friends ops pass on. Run
+ * against stand-ins for the tables and routines. */
+async function identityContracts() {
+  const route = readFileSync(join(process.cwd(), 'api/user/[op].ts'), 'utf8');
+  const limited = route.indexOf('if (!(await limitUserWrite(req, res, op))) return;');
+  const branch = route.indexOf("if (op === 'identity') return handleIdentity(req, res, supabase, verifiedProfile);");
+  assert.ok(limited > 0 && branch > limited, 'op=identity is a branch of api/user/[op].ts after the write limit, given the verified Google profile');
+  assert.ok(branch < route.indexOf("if (op.startsWith('friends-'))"), 'and it is reached before the friends- prefix');
+
+  // Google gave Ada a name and a photo; Bo signed up with an email and has neither.
+  const profiles: Record<string, { name: string | null; picture: string | null }> = {
+    'contract-identity-ada': { name: 'Ada Lovelace', picture: 'https://lh3.googleusercontent.com/a/ada' },
+    'contract-identity-bo': { name: null, picture: null },
+  };
+  const handles = new Map<string, { show_real_name: boolean; show_photo_to_friends: boolean }>([
+    ['contract-identity-ada', { show_real_name: false, show_photo_to_friends: false }],
+    ['contract-identity-bo', { show_real_name: false, show_photo_to_friends: false }],
+  ]);
+  const statsWrites: { row: Record<string, unknown>; onConflict?: string }[] = [];
+  const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
+  let missingColumn = false;
+  const db = {
+    from(table: string) {
+      if (table === 'user_stats') {
+        return {
+          async upsert(row: Record<string, unknown>, options?: { onConflict?: string }) {
+            statsWrites.push({ row, onConflict: options?.onConflict });
+            return { data: null, error: null };
+          },
+        };
+      }
+      assert.equal(table, 'user_handles');
+      let userId = '';
+      const query = {
+        select(columns: string) { assert.equal(columns, 'show_real_name, show_photo_to_friends'); return query; },
+        eq(column: string, value: string) { assert.equal(column, 'user_id'); userId = value; return query; },
+        async maybeSingle() {
+          return missingColumn
+            ? { data: null, error: { code: '42703', message: 'column user_handles.show_real_name does not exist' } }
+            : { data: handles.get(userId) ?? null, error: null };
+        },
+      };
+      return query;
+    },
+    async rpc(name: string, args: Record<string, unknown>) {
+      rpcCalls.push({ name, args });
+      assert.equal(name, 'set_friend_display');
+      const row = handles.get(String(args.p_user_id));
+      if (!row) return { data: null, error: { message: 'no_handle' } };
+      if (typeof args.p_show_real_name === 'boolean') row.show_real_name = args.p_show_real_name;
+      if (typeof args.p_show_photo === 'boolean') row.show_photo_to_friends = args.p_show_photo;
+      return { data: [{ ...row }], error: null };
+    },
+  };
+  const call = async (method: string, options: { user?: string | null; body?: unknown } = {}) => {
+    const user = options.user === undefined ? 'contract-identity-ada' : options.user;
+    const res = mockResponse();
+    await handleIdentity({
+      method,
+      headers: {},
+      query: { op: 'identity', ...(user ? { user_id: user } : {}) },
+      body: options.body,
+    } as never, res as never, db as never, async (auth) => profiles[auth.sub] ?? { name: null, picture: null });
+    return res;
+  };
+  const code = (res: { body: unknown }) => (res.body as { error?: { code?: string } }).error?.code;
+
+  // Signed in only, GET and PUT only.
+  assert.equal((await call('GET', { user: null })).statusCode, 401, 'a guest cannot read it');
+  assert.equal((await call('PUT', { user: null, body: { showRealName: true } })).statusCode, 401, 'a guest cannot set it');
+  const post = await call('POST', { body: { showRealName: true } });
+  assert.equal(post.statusCode, 405);
+  assert.equal(post.headers.get('allow'), 'GET, PUT');
+
+  // Both off by default; the learner's own Google name and photo come along
+  // so the Profile can offer them, and nothing is cached.
+  const first = await call('GET');
+  assert.equal(first.statusCode, 200);
+  assert.deepEqual(first.body, { showRealName: false, showPhoto: false, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' });
+  assert.equal(first.headers.get('cache-control'), 'private, no-store');
+  assert.deepEqual((await call('GET', { user: 'contract-identity-none' })).body,
+    { showRealName: false, showPhoto: false, realName: null, photo: null }, 'an account without a handle reads as off');
+
+  // The body is `{ showRealName?, showPhoto? }` with booleans, at least one.
+  for (const body of [undefined, null, {}, [true], { showRealName: 'true' }, { showPhoto: 1 }, { showRealName: null }, { showRealName: true, showPhoto: 'no' }]) {
+    const refused = await call('PUT', { body });
+    assert.equal(refused.statusCode, 400, `${JSON.stringify(body)} is refused`);
+    assert.equal(code(refused), 'bad_request');
+  }
+  assert.equal(statsWrites.length + rpcCalls.length, 0, 'a refused body writes nothing');
+
+  // An email account has no Google name or photo to show: refused, nothing written.
+  const noName = await call('PUT', { user: 'contract-identity-bo', body: { showRealName: true } });
+  assert.equal(noName.statusCode, 409);
+  assert.equal(code(noName), 'no_real_name');
+  const noPhoto = await call('PUT', { user: 'contract-identity-bo', body: { showPhoto: true } });
+  assert.equal(noPhoto.statusCode, 409);
+  assert.equal(code(noPhoto), 'no_photo');
+  assert.equal(statsWrites.length + rpcCalls.length, 0, 'nothing is written for a name or photo the account does not have');
+  // Choosing the sharkname needs nothing from Google.
+  const bo = await call('PUT', { user: 'contract-identity-bo', body: { showRealName: false } });
+  assert.deepEqual(bo.body, { showRealName: false, showPhoto: false, realName: null, photo: null });
+
+  // Ada shows her name: the verified name and photo are copied to the stats
+  // row first, never anything from the body.
+  const on = await call('PUT', { body: { showRealName: true, name: 'Someone Else', picture: 'https://example.com/me.png' } });
+  assert.equal(on.statusCode, 200);
+  assert.deepEqual(on.body, { showRealName: true, showPhoto: false, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' });
+  assert.deepEqual(statsWrites.at(-1), {
+    row: { user_id: 'contract-identity-ada', name: 'Ada Lovelace', picture: 'https://lh3.googleusercontent.com/a/ada' },
+    onConflict: 'user_id',
+  });
+  assert.deepEqual(rpcCalls.at(-1), { name: 'set_friend_display', args: { p_user_id: 'contract-identity-ada', p_show_real_name: true, p_show_photo: null } },
+    'only the switch sent changes; the other is NULL, which the routine leaves alone');
+
+  // Turning the photo on and then off: off writes no stats row.
+  assert.deepEqual((await call('PUT', { body: { showPhoto: true } })).body,
+    { showRealName: true, showPhoto: true, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' });
+  const writesBefore = statsWrites.length;
+  assert.deepEqual((await call('PUT', { body: { showPhoto: false } })).body,
+    { showRealName: true, showPhoto: false, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' });
+  assert.equal(statsWrites.length, writesBefore, 'switching off copies nothing');
+  assert.deepEqual((await call('GET')).body,
+    { showRealName: true, showPhoto: false, realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.com/a/ada' }, 'the choice is stored');
+
+  // No sharkname yet: the routine says no_handle and the learner is told to choose one.
+  profiles['contract-identity-new'] = { name: 'New Person', picture: null };
+  const noHandle = await call('PUT', { user: 'contract-identity-new', body: { showRealName: true } });
+  assert.equal(noHandle.statusCode, 409);
+  assert.equal(code(noHandle), 'no_handle');
+
+  // Before migration 055 the columns are missing: say so rather than 500.
+  missingColumn = true;
+  const missing = await call('GET');
+  assert.equal(missing.statusCode, 503);
+  assert.equal(code(missing), 'migration_required');
+  missingColumn = false;
+
+  // Each PUT is charged to the account by the route's write limit; a GET is not.
+  const stamp = Date.now();
+  const limit = async (method: string, userId: string) => {
+    const res = mockResponse();
+    const req = { method, headers: { 'x-forwarded-for': `identity-${stamp}` }, query: { op: 'identity' }, body: { user_id: userId, showPhoto: false }, socket: {} };
+    return (await limitUserWrite(req as never, res as never, 'identity')) ? 200 : res.statusCode;
+  };
+  for (let n = 0; n < RATE_LIMITS.userMutation.capacity; n += 1) {
+    assert.equal(await limit('PUT', `identity-${stamp}-a`), 200, `switch ${n + 1} is allowed`);
+  }
+  assert.equal(await limit('PUT', `identity-${stamp}-a`), 429, 'one account is bounded at the per-account write rate');
+  assert.equal(await limit('PUT', `identity-${stamp}-b`), 200, 'which spends nobody else\'s budget');
+  assert.equal(await limit('GET', `identity-${stamp}-a`), 200, 'reading it is not a write');
+
+  // The handle rule is 3–32 characters (it was 24), the same in the API and
+  // the client, and the friends ops pass the display name on.
+  const friendCalls: { name: string; args: Record<string, unknown> }[] = [];
+  const friendsDb = {
+    async rpc(name: string, args: Record<string, unknown>) {
+      friendCalls.push({ name, args });
+      if (name === 'set_user_handle') return { data: args.p_handle, error: null };
+      if (name === 'friend_lookup') return { data: [{ handle: 'thirsty-sharkie', state: 'accepted', display_name: 'Ada Lovelace' }], error: null };
+      if (name === 'friend_list') return { data: [{ handle: 'thirsty-sharkie', display_name: 'Ada Lovelace', picture: null, current_streak: 3 }], error: null };
+      if (name === 'friend_requests') return { data: [{ handle: 'fin-de-fiesta', direction: 'incoming', display_name: 'Dee Example' }], error: null };
+      throw new Error(`unexpected rpc ${name}`);
+    },
+  };
+  const friends = async (op: string, method: string, options: { body?: unknown; query?: Record<string, string> } = {}) => {
+    const res = mockResponse();
+    await handleFriends(op, { method, headers: {}, query: { op, user_id: 'contract-identity-ada', ...options.query }, body: options.body } as never, res as never, friendsDb as never);
+    return res;
+  };
+  const longest = 'shark-so-fat-it-cant-swim-at-all';
+  assert.equal(longest.length, 32);
+  assert.deepEqual((await friends('friends-handle', 'PUT', { body: { handle: longest } })).body, { handle: longest }, 'a 32-character sharkname is accepted');
+  for (const handle of [`${longest}x`, 'ab', '-sharkie', 'Shark', 'thirsty sharkie']) {
+    const refused = await friends('friends-handle', 'PUT', { body: { handle } });
+    assert.equal(refused.statusCode, 400, `${handle} is refused before the database`);
+    assert.equal(code(refused), 'invalid_handle');
+    assert.match((refused.body as { error: { message: string } }).error.message, /3–32/);
+  }
+  assert.equal(friendCalls.filter((one) => one.name === 'set_user_handle').length, 1, 'only the valid sharkname reached set_user_handle');
+  assert.match(readFileSync(join(process.cwd(), 'client/src/lib/friends.ts'), 'utf8'), /from '\.\.\/\.\.\/\.\.\/shared\/handles'/, 'the client checks the same rule as the API, from shared/handles.ts');
+  assert.ok(isValidHandle(longest) && !isValidHandle(`${longest}x`));
+
+  assert.deepEqual((await friends('friends-lookup', 'GET', { query: { handle: 'thirsty-sharkie' } })).body,
+    { found: true, handle: 'thirsty-sharkie', state: 'accepted', displayName: 'Ada Lovelace' });
+  const list = (await friends('friends-list', 'GET')).body as { friends: { handle: string; displayName: string; picture: string | null }[]; requests: unknown[] };
+  assert.deepEqual([list.friends[0].handle, list.friends[0].displayName, list.friends[0].picture], ['thirsty-sharkie', 'Ada Lovelace', null]);
+  assert.deepEqual(list.requests, [{ handle: 'fin-de-fiesta', displayName: 'Dee Example', direction: 'incoming' }]);
 }
 
 async function main() {
@@ -4696,8 +5030,52 @@ async function main() {
   await dailySwitchContracts();
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
+  consentContracts();
+  classroomRevealContracts();
+  monthlyXpContracts();
+  await identityContracts();
+  await productCleanupContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
+}
+
+/** Cookie consent and the privacy policy (round 4, owner decisions 2 and 4).
+ * PostHog loads only behind analytics consent, no marketing tag ships, and
+ * the retention the policy states is the one the database runs. */
+function consentContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const main = read('client/src/main.tsx');
+  const analytics = read('client/src/lib/analytics.ts');
+  // posthog-js comes in through lib/posthogClient.ts alone, which the
+  // consent gate imports dynamically.
+  assert.doesNotMatch(main, /posthog-js|posthogClient/, 'main.tsx must not import PostHog');
+  assert.doesNotMatch(analytics, /^import (?!type)[^;]*'posthog-js'/m, 'analytics.ts must not import posthog-js at run time');
+  assert.equal(analytics.match(/import\('\.\/posthogClient'\)/g)?.length, 1, 'one dynamic import of the PostHog client');
+  assert.doesNotMatch(analytics, /^import [^;]*'\.\/posthogClient'/m, 'the PostHog client is never imported statically');
+  assert.match(read('client/src/lib/posthogClient.ts'), /opt_out_capturing_by_default: true,\s+opt_out_persistence_by_default: true/);
+  assert.match(analytics, /if \(!active \|\| !key\) return Promise\.resolve\(null\);/, 'PostHog loads only while analytics consent holds');
+  // No marketing tag, ID or host ships until the owner connects one.
+  assert.match(read('client/src/lib/marketingTags.ts'), /export const MARKETING_LOADERS: readonly MarketingLoader\[\] = \[\];/);
+  const csp = read('vercel.json');
+  assert.doesNotMatch(csp, /googletagmanager|google-analytics|connect\.facebook\.net|facebook\.com\/tr/, 'no marketing host in the CSP yet');
+  // The footer reopens the choice; the banner offers Reject all beside Accept all.
+  assert.match(read('client/src/components/BrandFooter.tsx'), /onClick=\{openConsentSettings\}/);
+  assert.equal(ENGLISH['consent.rejectAll'], 'Reject all');
+  assert.equal(ENGLISH['footer.cookieSettings'], 'Cookie settings');
+  // The sign-in log's 12 months is the purge in migration 057.
+  assert.match(PRIVACY_ENGLISH['legal.privacy.account.log'], /deletes each record after 12 months/);
+  assert.match(read('supabase/supabase-schema-057.sql'), /DELETE FROM public\.auth_events\s+WHERE created_at < NOW\(\) - INTERVAL '12 months';/, 'the purge the privacy policy promises');
+  // Merchandise is hidden: the policy names no shop that receives data.
+  // The policy's own dictionary obeys the copy rules the app's does, and
+  // only the legal pages load it.
+  for (const [key, value] of Object.entries(PRIVACY_ENGLISH)) {
+    assert.doesNotMatch(value, /sprd\.net/, `${key} still names Spreadshop as a recipient`);
+    assert.doesNotMatch(value, /free forever|\bis free\b|free, forever|\$0\b|charges for none/i, `${key} still says devShark is free`);
+    assert.doesNotMatch(value, /\{\w+\}/, `${key} takes a placeholder, which LegalPages does not fill`);
+  }
+  assert.ok(!Object.keys(ENGLISH).some((key) => key.startsWith('legal.privacy.')), 'privacy keys live in translations.privacy.ts alone');
+  const legalImporters = ['client/src/App.tsx', 'client/src/main.tsx', 'client/src/i18n/LanguageContext.tsx', 'client/src/components/BrandFooter.tsx', 'client/src/components/CookieConsent.tsx'];
+  for (const file of legalImporters) assert.doesNotMatch(read(file), /translations\.privacy/, `${file} pulls the privacy policy into the shell`);
 }
 
 void main().catch((error) => {

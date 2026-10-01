@@ -13,9 +13,8 @@ import { CODING_INDEX } from '../../../shared/coding-index';
 import { difficultyOf } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from '../coding/DifficultyBadge';
 import LoadingScreen from './LoadingScreen';
-// Static, not lazy: the questions tab is what /collection opens on, and a lazy
-// Flashcards drew the page first, then a loader in its body, then the cards.
-// Its own chunk is 2KB gzipped.
+// Static, not lazy: the Shark Cards tab is what /collection opens on, and a
+// lazy deck drew the page first, then a loader in its body, then the cards.
 import Flashcards from './Flashcards';
 import { Kicker } from './landing/LandingKit';
 import '../coding/Coding.css';
@@ -69,8 +68,15 @@ export default function Collection() {
   const tabs = ['questions', 'challenges'] as const;
   const selected: Tab = tabs.find(tab => tab === params.get('tab')) ?? 'questions';
   useCollectionFirstData(selected);
+  // Shark Cards first (owner decision 12): the page is named after the open
+  // tab, and the nav calls it Shark Cards.
+  const cards = selected === 'questions';
   return <div className="cd-page ss-pop">
-    <header><Kicker>{t('collection.heading')}</Kicker><h1>{t('collection.heading')}</h1><p className="cd-lead">{t('collection.subtitle')}</p></header>
+    <header>
+      <Kicker>{t(cards ? 'sharkCards.kicker' : 'collection.heading')}</Kicker>
+      <h1>{t(cards ? 'sharkCards.title' : 'collection.challengesTitle')}</h1>
+      <p className="cd-lead">{t(cards ? 'sharkCards.lead' : 'collection.subtitle')}</p>
+    </header>
     <nav className="cd-actions" aria-label={t('collection.heading')}>{tabs.map(tab => <Button key={tab} variant={selected === tab ? 'primary' : 'secondary'} aria-current={selected === tab ? 'page' : undefined} onClick={() => setParams({ tab })} label={t(`collection.${tab}`)} />)}</nav>
     {selected === 'questions' ? <Flashcards embedded /> : <SavedChallenges />}
   </div>;

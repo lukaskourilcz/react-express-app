@@ -1,21 +1,23 @@
 /**
  * The Friends tab.
  *
- * Three things, in the order a learner meets them: your own handle (without one
- * nobody can find you), anyone waiting for an answer, and the people you have
- * already added.
+ * Three things, in the order a learner meets them: your own sharkname (without
+ * one nobody can find you), anyone waiting for an answer, and the people you
+ * have already added. The sharkname is the handle: it is chosen, rolled and
+ * saved in "Your sharkname" on the Overview tab (SharknameCard), which this
+ * tab links to rather than repeating.
  *
  * There is no directory and no browsing. You reach somebody by typing the
  * handle they chose, exactly. That is the whole discovery model, and the copy
  * says so rather than leaving it to be discovered by a search that finds
  * nothing.
  *
- * A friend is identified by their avatar, their flag and — if they own one —
- * their crown. Not by a name: `user_stats.name` is whatever an OAuth provider
- * handed us and nobody chose to publish it, and the handle is an address you
- * type, not a label to hang on somebody. The handle stays as the accessible
- * name of the row's controls, so the list is still operable and unambiguous to
- * a screen reader and on hover.
+ * A friend is shown by the name they chose for friends (migration 055): their
+ * sharkname, or their Google name if they switched that on. Their avatar is
+ * their Google photo only if they switched that on too, and their initials on
+ * an ocean ink otherwise. Beside it sit their flag and, if they own one, their
+ * crown. Where the name shown is not the sharkname, the sharkname follows it,
+ * since that is what you would type to find them.
  *
  * Every number on a friend's row comes from the server. The crown is a picture
  * somebody spent earned tokens on: it is shown and it changes nothing, least of
@@ -25,13 +27,13 @@
  */
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Avatar } from '@astryxdesign/core/Avatar';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { friendlyError } from '../lib/api';
 import { CrownBadge } from './ui/Crown';
 import { CountryFlag, countryOptions } from './ui/CountryFlag';
+import { InitialsAvatar } from './ui/InitialsAvatar';
 import {
-  getHandle, setHandle as saveHandle, setDiscoverable, setCountry,
+  getHandle, setDiscoverable, setCountry,
   lookupFriend, requestFriend, respondFriend, removeFriend, listFriends,
   isValidHandle,
   type Friend, type FriendRequest, type HandleState, type LookupResult,
@@ -39,10 +41,11 @@ import {
 import './Friends.css';
 import { Button } from '@astryxdesign/core/Button';
 import LoadingScreen from './LoadingScreen';
+import { HANDLE_MAX_LENGTH } from '../../../shared/handles';
 
 type Load = 'loading' | 'ready' | 'unavailable';
 
-export function FriendsPanel() {
+export function FriendsPanel({ onEditSharkname }: { onEditSharkname?: () => void } = {}) {
   const t = useT();
   const [state, setState] = useState<Load>('loading');
   const [handle, setHandleState] = useState<HandleState | null>(null);
@@ -82,7 +85,7 @@ export function FriendsPanel() {
 
   return (
     <div className="fr">
-      <HandleCard state={handle} onChanged={refresh} />
+      <HandleCard state={handle} onChanged={refresh} onEditSharkname={onEditSharkname} />
       {handle?.handle && <FindFriend onChanged={refresh} ownHandle={handle.handle} />}
       {requests.length > 0 && <Requests requests={requests} onChanged={refresh} />}
       <FriendList friends={friends} hasHandle={Boolean(handle?.handle)} onChanged={refresh} />
@@ -90,30 +93,21 @@ export function FriendsPanel() {
   );
 }
 
-/* ── your own handle ────────────────────────────────────────────────────── */
+/* ── your own sharkname ─────────────────────────────────────────────────── */
 
-function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged: () => void }) {
+function HandleCard({
+  state,
+  onChanged,
+  onEditSharkname,
+}: {
+  state: HandleState | null;
+  onChanged: () => void;
+  onEditSharkname?: () => void;
+}) {
   const t = useT();
   const { lang } = useLanguage();
   const inputId = useId();
-  const [draft, setDraft] = useState(state?.handle ?? '');
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [saved, setSaved] = useState(false);
-
-  const submit = async () => {
-    if (!isValidHandle(draft)) { setError(t('friends.handleInvalid')); return; }
-    setSaving(true); setError(null); setSaved(false);
-    try {
-      await saveHandle(draft);
-      setSaved(true);
-      onChanged();
-    } catch (err) {
-      setError(friendlyError(err));
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const toggleDiscoverable = async (next: boolean) => {
     setError(null);
@@ -128,30 +122,26 @@ function HandleCard({ state, onChanged }: { state: HandleState | null; onChanged
   };
 
   // 249 codes named and sorted in the reader's language. Memoised because that
-  // is 249 Intl lookups and a collated sort, and neither depends on the draft
-  // handle being typed one character at a time.
+  // is 249 Intl lookups and a collated sort.
   const countries = useMemo(() => countryOptions(lang), [lang]);
 
   return (
     <section className="fr-card ss-panel" aria-labelledby={`${inputId}-title`}>
       <h3 id={`${inputId}-title`} className="fr-card__title">{t('friends.handleTitle')}</h3>
-      <p className="fr-note">{t('friends.handleHelp')}</p>
-      <div className="fr-row">
-        <label className="ss-sr-only" htmlFor={inputId}>{t('friends.handleTitle')}</label>
-        <input
-          id={inputId}
-          className="fr-input"
-          value={draft}
-          maxLength={24}
-          autoComplete="off"
-          spellCheck={false}
-          placeholder={t('friends.handlePlaceholder')}
-          onChange={(event) => { setDraft(event.target.value); setSaved(false); }}
-          onKeyDown={(event) => { if (event.key === 'Enter') { event.preventDefault(); void submit(); } }}
-        />
-        <Button variant="primary" isDisabled={saving || draft.trim() === (state?.handle ?? '')} onClick={() => void submit()} label={saving ? t('friends.saving') : t('friends.handleSave')} />
+      <div className="fr-row fr-row--sharkname">
+        <p className="fr-note">
+          {state?.handle
+            ? t('friends.sharknameIs', { handle: state.handle })
+            : t('friends.sharknameNone')}
+        </p>
+        {onEditSharkname && (
+          <Button
+            variant={state?.handle ? 'secondary' : 'primary'}
+            onClick={onEditSharkname}
+            label={state?.handle ? t('friends.sharknameChange') : t('friends.sharknamePick')}
+          />
+        )}
       </div>
-      {saved && <p className="fr-note fr-note--ok" role="status">{t('friends.handleSaved')}</p>}
       {error && <p className="fr-note fr-note--error" role="alert">{error}</p>}
       {state?.handle && (
         <>
@@ -240,8 +230,9 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
           id={inputId}
           className="fr-input"
           value={query}
-          maxLength={24}
+          maxLength={HANDLE_MAX_LENGTH}
           autoComplete="off"
+          autoCapitalize="none"
           spellCheck={false}
           placeholder={t('friends.findPlaceholder')}
           onChange={(event) => { setQuery(event.target.value); setResult(null); }}
@@ -255,7 +246,10 @@ function FindFriend({ ownHandle, onChanged }: { ownHandle: string; onChanged: ()
       )}
       {result?.found && result.handle && (
         <div className="fr-result" role="status">
-          <span className="fr-result__handle">{result.handle}</span>
+          <span className="fr-result__handle">
+            {result.displayName ?? result.handle}
+            {result.displayName && result.displayName !== result.handle && <span className="fr-handle">{result.handle}</span>}
+          </span>
           {result.state === 'none' && (
             <Button variant="primary" isDisabled={busy} onClick={() => void ask(result.handle!)} label={t('friends.add')} />
           )}
@@ -299,16 +293,19 @@ function Requests({ requests, onChanged }: { requests: FriendRequest[]; onChange
       <ul className="fr-list">
         {incoming.map((one) => (
           <li key={one.handle} className="fr-item">
-            <span className="fr-item__handle">{one.handle}</span>
+            <span className="fr-item__handle">
+              {one.displayName}
+              {one.displayName !== one.handle && <span className="fr-handle">{one.handle}</span>}
+            </span>
             <span className="fr-item__actions">
-              <Button variant="primary" isDisabled={busy === one.handle} onClick={() => void answer(one.handle, true)} label={t('friends.accept')} />
-              <Button variant="secondary" isDisabled={busy === one.handle} onClick={() => void answer(one.handle, false)} label={t('friends.decline')} />
+              <Button variant="primary" isDisabled={busy === one.handle} aria-label={t('friends.acceptOne', { name: one.displayName })} onClick={() => void answer(one.handle, true)} label={t('friends.accept')} />
+              <Button variant="secondary" isDisabled={busy === one.handle} aria-label={t('friends.declineOne', { name: one.displayName })} onClick={() => void answer(one.handle, false)} label={t('friends.decline')} />
             </span>
           </li>
         ))}
         {outgoing.map((one) => (
           <li key={one.handle} className="fr-item">
-            <span className="fr-item__handle">{one.handle}</span>
+            <span className="fr-item__handle">{one.displayName}</span>
             <span className="fr-note">{t('friends.requestSent')}</span>
           </li>
         ))}
@@ -343,11 +340,13 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
         <ul className="fr-list">
           {friends.map((friend) => (
             <li key={friend.handle} className="fr-friend">
-              {/* The avatar carries the handle as its alt text: it is the one
-                  place a reader can find out who this row is, without the list
-                  turning into a column of names. */}
-              <Avatar src={friend.picture ?? undefined} name={friend.handle} alt={friend.handle} size="small" />
+              {/* The name is written beside it, so the avatar is decoration. */}
+              <InitialsAvatar name={friend.displayName} src={friend.picture} size={36} />
               <span className="fr-friend__who">
+                <span className="fr-friend__name">
+                  {friend.displayName}
+                  {friend.displayName !== friend.handle && <span className="fr-handle">{friend.handle}</span>}
+                </span>
                 <span className="fr-friend__marks">
                   <CountryFlag code={friend.country} locale={lang} size={16} />
                   {/* Owned and worn. It says nothing about anybody's learning
@@ -364,7 +363,7 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
                   {friend.activeToday && <> {' · '}<span className="fr-today">{t('friends.today')}</span></>}
                 </span>
               </span>
-              <Button variant="secondary" isDisabled={busy === friend.handle} aria-label={t('friends.removeOne', { handle: friend.handle })} onClick={() => void drop(friend.handle)} label={t('friends.remove')} />
+              <Button variant="secondary" isDisabled={busy === friend.handle} aria-label={t('friends.removeOne', { name: friend.displayName })} onClick={() => void drop(friend.handle)} label={t('friends.remove')} />
             </li>
           ))}
         </ul>

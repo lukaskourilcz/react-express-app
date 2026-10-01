@@ -46,6 +46,7 @@ import { BrandedConfirmDialog, type ConfirmRequest } from './ui/BrandedConfirmDi
 import { GithubGardenCard } from './coding/GithubGardenCard';
 import PlanLine from './PlanLine';
 import LeaderboardVisibilitySwitch from './LeaderboardVisibilitySwitch';
+import SharknameCard from './SharknameCard';
 import { useEntitlement } from '../lib/entitlement';
 import { clearAccountData } from '../lib/accountData';
 import { useGithubConnection } from '../coding/api';
@@ -204,6 +205,8 @@ function ProfileBody({
   // An account made with an email and password has no name from Google: the
   // heading falls back to the address's first part, never to an empty h1.
   const shownName = user.name || user.email?.split('@')[0] || t('auth.account');
+  // The Friends tab's "Change sharkname" opens the Overview at the card.
+  const [focusSharkname, setFocusSharkname] = useState(false);
 
   return (
     <div className="de-page" style={{ maxWidth: 1000 }}>
@@ -279,7 +282,7 @@ function ProfileBody({
           <div role="tabpanel" id="profile-panel-friends" aria-labelledby="profile-tab-friends">
             <Suspense fallback={null}>
               <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('friends.loadFailed')} onRetry={retry} busy={busy} />}>
-                <FriendsPanel />
+                <FriendsPanel onEditSharkname={() => { setTab('overview'); setFocusSharkname(true); }} />
               </ShellPartBoundary>
             </Suspense>
           </div>
@@ -352,6 +355,10 @@ function ProfileBody({
             <AdvisorCard />
 
             <GithubGardenCard />
+
+            {/* The sharkname is what friends and, with the switch below on,
+                the boards show; the two sit together. */}
+            <SharknameCard focus={focusSharkname} onFocused={() => setFocusSharkname(false)} />
 
             <LeaderboardVisibilityCard />
 

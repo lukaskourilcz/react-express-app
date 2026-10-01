@@ -83,7 +83,7 @@ import type {
   SubmitActivityResponse,
 } from '../../shared/learning-path-api';
 import { PATH_LIMITS } from '../../shared/learning-path-api';
-import { MAX_ADDRESS_FIELD, SHIRT_SIZES, validateAddress } from '../../shared/rewards';
+import { MAX_ADDRESS_FIELD, MERCH_ENABLED, SHIRT_SIZES, validateAddress } from '../../shared/rewards';
 
 const logEvent = createLogger('learning-paths');
 
@@ -1137,10 +1137,22 @@ const REWARD_ADDRESS_ERRORS: Record<string, string> = {
  * the table the owner ships from. And the package is an order, not a parcel:
  * merchandise is still unconfigured — no supplier, no stock, no postage — so
  * what a claim produces is something waiting for the owner to fulfil.
+ *
+ * Paused until next quarter with the rest of merchandise (owner decision 10,
+ * `MERCH_ENABLED` in shared/rewards.ts): reading and claiming both answer 404
+ * `merch_unavailable`, as a shop order does, and nothing reaches the database.
+ * `merchOn` is the switch, a parameter only so the contracts can drive the
+ * code that comes back with it.
  */
-export async function handlePathReward(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+export async function handlePathReward(
+  req: VercelRequest,
+  res: VercelResponse,
+  supabase: SupabaseClient | null,
+  merchOn: boolean = MERCH_ENABLED,
+) {
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
+  if (!merchOn) return jsonError(res, 404, 'merch_unavailable', 'Merchandise is not available yet');
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
   if (!deploymentSubjectIds().includes('webdev')) {
     return jsonError(res, 404, 'not_available', 'Learning paths are not part of this product');

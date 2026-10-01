@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
@@ -16,6 +16,14 @@ import { server } from './mocks/server';
 const auth = vi.hoisted(() => ({ value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false } }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
 afterEach(() => { auth.value = { user: null, isAuthenticated: false, isLoading: false }; });
+// Merchandise is paused until next quarter (owner decision 10). These tests
+// drive the merchandise screens as they come back with the switch on;
+// merch-paused.test.tsx proves that nothing of them renders while it is off.
+const merch = vi.hoisted(() => ({ on: false }));
+vi.mock('../../shared/rewards', async (importOriginal) => ({
+  ...await importOriginal<typeof import('../../shared/rewards')>(),
+  get MERCH_ENABLED() { return merch.on; },
+}));
 
 function wrapper({ children }: { children: ReactNode }) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -122,6 +130,8 @@ describe("Spreadshop's promotion", () => {
 });
 
 describe('the Rewards merchandise section', () => {
+  beforeEach(() => { merch.on = true; });
+  afterEach(() => { merch.on = false; });
   const PREMIUM = { tier: 'premium', source: 'manual', currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
   const shop = {
     enabled: true, cashCheckoutEnabled: false, testMode: false, policyUrl: '',

@@ -37,6 +37,7 @@ import {
 import { useLoc } from './localized';
 import type { LearningPathId } from '../../../../shared/learning-paths';
 import type { PathCatalogEntry } from '../../../../shared/learning-path-api';
+import { MERCH_ENABLED } from '../../../../shared/rewards';
 import './LearningPaths.css';
 import { Button } from '@astryxdesign/core/Button';
 
@@ -264,8 +265,9 @@ export default function LearningPathsCard() {
                 </span>
               </Link>
               {/* Only ever visible once the server says the path is finished,
-                  so a learner mid-path is not shown a prize they cannot take. */}
-              {enrollment && (
+                  so a learner mid-path is not shown a prize they cannot take,
+                  and never while merchandise is paused (MERCH_ENABLED). */}
+              {MERCH_ENABLED && enrollment && (
                 <Suspense fallback={null}>
                   <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('paths.rewardLoadFailed')} onRetry={retry} busy={busy} />}>
                     <PathRewardClaim pathId={manifest.id} />

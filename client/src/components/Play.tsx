@@ -68,8 +68,9 @@ const ANSWERED_READ_MS = 1500;
 // differs by this much, so the countdown does not jitter with each read.
 const CLOCK_STEP_MS = 500;
 
-/** What a `match_updated` broadcast carries: the room's phase and question. */
-type RoomState = Pick<Match, 'status' | 'current_index'>;
+/** What a `match_updated` broadcast carries: the room's phase and question,
+ * and in a classroom whether the teacher closed that question (056). */
+type RoomState = Pick<Match, 'status' | 'current_index' | 'revealed_idx'>;
 
 /** The room state in a broadcast, or null for one without it (a tab still
  * running the build from before broadcasts carried it). */
@@ -77,13 +78,19 @@ function roomStateIn(payload: unknown): RoomState | null {
   const value = payload as Partial<RoomState> | null | undefined;
   if (!value || !['lobby', 'running', 'finished'].includes(value.status as string)) return null;
   if (typeof value.current_index !== 'number' || !Number.isInteger(value.current_index)) return null;
-  return { status: value.status as Match['status'], current_index: value.current_index };
+  const room: RoomState = { status: value.status as Match['status'], current_index: value.current_index };
+  if (typeof value.revealed_idx === 'number' && Number.isInteger(value.revealed_idx)) room.revealed_idx = value.revealed_idx;
+  return room;
 }
 
-/** Whether two room states show the same screen: the question only matters
- * while the room runs. */
+/** The question on screen is one the teacher closed. */
+const closedNow = (room: RoomState): boolean => room.revealed_idx === room.current_index;
+
+/** Whether two room states show the same screen: the question, and whether it
+ * is closed, only matter while the room runs. */
 const sameRoom = (a: RoomState | null | undefined, b: RoomState | null | undefined): boolean =>
-  !!a && !!b && a.status === b.status && (a.status !== 'running' || a.current_index === b.current_index);
+  !!a && !!b && a.status === b.status &&
+  (a.status !== 'running' || (a.current_index === b.current_index && closedNow(a) === closedNow(b)));
 
 /** The Play switch in /dev → Settings is off, and the server says so. */
 const isPlayOff = (err: unknown) => err instanceof ApiError && err.code === 'feature_disabled';
@@ -517,7 +524,11 @@ export function PlayMatch() {
   // announced, never a single answer: each broadcast sets off a state read on
   // every client that does not show that state yet.
   const announce = useCallback((room: RoomState) => {
-    handledRef.current = { status: room.status, current_index: room.current_index };
+    handledRef.current = {
+      status: room.status,
+      current_index: room.current_index,
+      ...(room.status === 'running' && closedNow(room) ? { revealed_idx: room.current_index } : {}),
+    };
     void channelRef.current?.send('match_updated', handledRef.current).catch(() => undefined);
   }, []);
   // Records when the local client first observed the current question_started_at,
@@ -636,11 +647,12 @@ export function PlayMatch() {
       void refresh();
     });
     // Each player's answer reaches the host alone, whose live scoreboard
-    // follows the class: one read at most every ANSWERED_READ_MS, however
-    // many answers land.
+    // follows the room: one read at most every ANSWERED_READ_MS, however
+    // many answers land. A classroom scoreboard changes only when a question
+    // closes (056), so a classroom answer sets off no read.
     const answeredRead = trailingThrottle(() => void refresh(), ANSWERED_READ_MS);
     channel.subscribe('answered', () => {
-      if (isHostRef.current) answeredRead.request();
+      if (isHostRef.current && matchRef.current?.mode !== 'classroom') answeredRead.request();
     });
     const stopStatus = channel.onStatus((status) => {
       realtimeReady = status === 'SUBSCRIBED';
@@ -670,20 +682,20 @@ export function PlayMatch() {
     };
   }, [code, user?.id, refresh, playOn, noteServerClock, announce]);
 
-  // Read the room once just after a timed multiplayer question's clock (and
-  // the server's expiry grace) runs out, so everyone moves on without waiting
-  // for a poll. A classroom question stays until the teacher moves on.
-  const matchMode = match?.mode;
+  // Read the room once just after a timed question's clock (and the server's
+  // expiry grace) runs out: a multiplayer room moves on without waiting for
+  // a poll, and a classroom scoreboard counts the question that just closed.
+  // A classroom question itself stays until the teacher moves on.
   const matchStatus = match?.status;
   const questionStartedAt = match?.question_started_at;
   const questionDurationS = match?.question_duration_s ?? 0;
   useEffect(() => {
-    if (matchMode !== 'multiplayer' || matchStatus !== 'running' || !questionStartedAt || questionDurationS <= 0) return;
+    if (matchStatus !== 'running' || !questionStartedAt || questionDurationS <= 0) return;
     const serverNow = Date.now() + clockOffsetMs;
     const dueIn = new Date(questionStartedAt).getTime() + questionDurationS * 1000 + EXPIRY_RESYNC_MS - serverNow;
     const id = window.setTimeout(() => void refresh(), Math.max(0, dueIn));
     return () => window.clearTimeout(id);
-  }, [matchMode, matchStatus, match?.current_index, questionStartedAt, questionDurationS, clockOffsetMs, refresh]);
+  }, [matchStatus, match?.current_index, questionStartedAt, questionDurationS, clockOffsetMs, refresh]);
 
   // Reset per-question UI when the index changes.
   useEffect(() => {
@@ -716,20 +728,27 @@ export function PlayMatch() {
     };
   }, [isHost, user?.id, code, match?.status]);
 
-  const runHostControl = async (action: 'start' | 'advance' | 'finish') => {
+  const runHostControl = async (action: 'start' | 'advance' | 'finish' | 'reveal') => {
     if (!user?.id || !match || controlPending) return;
     setControlPending(true);
     try {
       const result = await controlMatch({ code, host_id: user.id, action });
+      if (action === 'reveal') {
+        // The server closed the question: its key and its points can show.
+        const revealed = typeof result.revealed_idx === 'number' ? result.revealed_idx : match.current_index;
+        setMatch((current) => (current && current.current_index === revealed ? { ...current, revealed_idx: revealed } : current));
+      }
       announce(
         action === 'start'
           ? { status: 'running', current_index: 0 }
           : action === 'finish'
             ? { status: 'finished', current_index: match.current_index }
-            : {
-                status: result.status === 'finished' ? 'finished' : 'running',
-                current_index: typeof result.current_index === 'number' ? result.current_index : match.current_index + 1,
-              },
+            : action === 'reveal'
+              ? { status: 'running', current_index: match.current_index, revealed_idx: match.current_index }
+              : {
+                  status: result.status === 'finished' ? 'finished' : 'running',
+                  current_index: typeof result.current_index === 'number' ? result.current_index : match.current_index + 1,
+                },
       );
       // The broadcast reaches this client too, but names the state it
       // announced, so the host reads the room here. The controls stay
@@ -745,6 +764,7 @@ export function PlayMatch() {
   const startMatch = () => void runHostControl('start');
   const advance = () => void runHostControl('advance');
   const finish = () => void runHostControl('finish');
+  const reveal = () => void runHostControl('reveal');
 
   // Selection is only mutable until the first submit locks it in.
   const selectOption = (i: number) => {
@@ -780,15 +800,17 @@ export function PlayMatch() {
             : { status: 'running', current_index: next },
         );
         await refresh();
-      } else {
+      } else if (match.mode !== 'classroom') {
         // One answer changes no one's screen but the host's live scoreboard.
+        // A classroom scoreboard waits for the question to close (056).
         void channelRef.current?.send('answered', { question_idx: match.current_index }).catch(() => undefined);
       }
     } catch (err) {
-      if (err instanceof ApiError && (err.code === 'wrong_question' || err.code === 'time_up')) {
-        // The clock ran out (or the match moved past this question) before
-        // the answer landed. Tell the player it didn't count, then resync.
-        setError(t('play.tooLate'));
+      if (err instanceof ApiError && (err.code === 'wrong_question' || err.code === 'time_up' || err.code === 'question_closed')) {
+        // The clock ran out, the teacher closed the question, or the match
+        // moved past it before the answer landed. Tell the player it didn't
+        // count, then resync.
+        setError(t(err.code === 'question_closed' ? 'play.closedBeforeAnswer' : 'play.tooLate'));
         await refresh();
         return;
       }
@@ -920,6 +942,7 @@ export function PlayMatch() {
             onAnswer={submitAnswer}
             onAdvance={advance}
             onFinish={finish}
+            onReveal={reveal}
             controlPending={controlPending}
             scoreboard={scoreboard}
             participants={participants}
@@ -1107,6 +1130,7 @@ function RunningQuestion({
   onAnswer,
   onAdvance,
   onFinish,
+  onReveal,
   controlPending,
   scoreboard,
   participants,
@@ -1126,6 +1150,8 @@ function RunningQuestion({
   onAnswer: (i: number) => void;
   onAdvance: () => void;
   onFinish: () => void;
+  /** Classroom presenter: close the question and show its answer. */
+  onReveal: () => void;
   controlPending: boolean;
   scoreboard: ScoreboardEntry[];
   participants: Participant[];
@@ -1205,23 +1231,25 @@ function RunningQuestion({
   // The server still takes an answer sent on the buzzer for a moment after
   // that; only then is the question closed for everyone.
   const answersClosed = !noLimit && startedMs !== null && serverNow >= startedMs + durationS * 1000 + ANSWER_GRACE_MS;
+  // "Reveal answer" closes a classroom question on the server (056): no
+  // answer to it lands any more, and the scoreboard counts it. The room says
+  // which question the teacher closed, so the next one opens again.
+  const closedByTeacher = mode === 'classroom' && match.revealed_idx === questionIdx;
   // The presenter's screen is often projected while pupils answer, so the
-  // answer key stays hidden until the question is closed or the teacher
-  // reveals it (an untimed question waits for the button). Keyed by the
-  // question, so the next question starts hidden again.
-  const [revealedIdx, setRevealedIdx] = useState<number | null>(null);
+  // answer key stays hidden until the question is closed: its clock ran out
+  // or the teacher revealed it (an untimed question waits for the button).
   const hasKey = isPresenter && typeof q.correct_index === 'number';
-  const showKey = hasKey && (answersClosed || revealedIdx === questionIdx);
+  const showKey = hasKey && (answersClosed || closedByTeacher);
 
   // Time-up auto-lock: clicking locks instantly, so this only catches a
   // keyboard user who arrow-browsed to an option but never pressed Enter.
   useEffect(() => {
-    if (!noLimit && isPlayer && !submitted && remainingMs === 0 && selected !== null) {
+    if (!noLimit && isPlayer && !submitted && !closedByTeacher && remainingMs === 0 && selected !== null) {
       onAnswer(selected);
     }
-  }, [remainingMs, noLimit, isPlayer, submitted, selected, onAnswer]);
+  }, [remainingMs, noLimit, isPlayer, submitted, closedByTeacher, selected, onAnswer]);
 
-  const timerColor = noLimit
+  const timerColor = noLimit || closedByTeacher
     ? 'var(--astryx-color-text-secondary, currentColor)'
     : remainingS <= 5
       ? 'var(--ss-error)'
@@ -1243,7 +1271,7 @@ function RunningQuestion({
             })}
           </Text>
           <span style={visuallyHidden} aria-live="polite">
-            {!noLimit && remainingS === 10 ? t('play.timeWarning') : ''}
+            {!noLimit && !closedByTeacher && remainingS === 10 ? t('play.timeWarning') : ''}
           </span>
           <span
             style={{
@@ -1257,22 +1285,22 @@ function RunningQuestion({
               borderRadius: 999,
               color: timerColor,
               background:
-                !noLimit && remainingS <= 5
+                !noLimit && !closedByTeacher && remainingS <= 5
                   ? 'color-mix(in srgb, var(--ss-error) 15%, transparent)'
                   : 'color-mix(in srgb, var(--brand-accent) 12%, transparent)',
             }}
             role="timer"
-            aria-label={noLimit ? t('play.timeLimitNone') : t('play.timeRemaining', { n: remainingS })}
+            aria-label={closedByTeacher ? t('play.closed') : noLimit ? t('play.timeLimitNone') : t('play.timeRemaining', { n: remainingS })}
           >
-            {noLimit ? '∞' : `${remainingS}s`}
+            {closedByTeacher ? t('play.closed') : noLimit ? '∞' : `${remainingS}s`}
           </span>
         </HStack>
 
         <ProgressBar
           label={t('play.timeLimit')}
           isLabelHidden
-          value={pctLeft}
-          variant={!noLimit && remainingS <= 5 ? 'error' : 'accent'}
+          value={closedByTeacher ? 0 : pctLeft}
+          variant={!noLimit && !closedByTeacher && remainingS <= 5 ? 'error' : 'accent'}
         />
 
         <div id={questionLabelId}>{renderQuestion(q.question)}</div>
@@ -1283,7 +1311,7 @@ function RunningQuestion({
           // One click locks the answer in — no confirm button. Arrow keys
           // still browse without committing; Enter/Space commits.
           onActivate={(v) => {
-            if (isPlayer && !submitted && !timeUp) onAnswer(v as number);
+            if (isPlayer && !submitted && !timeUp && !closedByTeacher) onAnswer(v as number);
           }}
           labelledBy={questionLabelId}
         >
@@ -1300,7 +1328,7 @@ function RunningQuestion({
                   index={i}
                   label={opt}
                   padding={2}
-                  disabled={submitted || timeUp}
+                  disabled={submitted || timeUp || closedByTeacher}
                   tone={isCorrect ? 'success' : 'default'}
                 >
                   <Text>{opt}</Text>
@@ -1312,7 +1340,7 @@ function RunningQuestion({
 
         {isPlayer && !submitted && (
           <Text type="supporting" size="xsm" color="secondary">
-            {timeUp ? t('play.timeUp') : t('play.tapToLock')}
+            {closedByTeacher ? t('play.questionClosed') : timeUp ? t('play.timeUp') : t('play.tapToLock')}
           </Text>
         )}
         {isPlayer && submitted && (
@@ -1357,7 +1385,7 @@ function RunningQuestion({
                 <Text type="supporting" size="xsm" color="secondary">
                   {noLimit ? t('play.answerHiddenUntimed') : t('play.answerHiddenTimed')}
                 </Text>
-                <Button variant="secondary" label={t('play.revealAnswer')} onClick={() => setRevealedIdx(questionIdx)} />
+                <Button variant="secondary" label={t('play.revealAnswer')} isDisabled={controlPending} onClick={onReveal} />
               </HStack>
             ))}
 
@@ -1378,14 +1406,14 @@ function RunningQuestion({
         )}
 
         <Divider />
-        <ScoreboardList scoreboard={scoreboard} />
+        <ScoreboardList scoreboard={scoreboard} note={mode === 'classroom' ? t('play.scoreboardOnClose') : undefined} />
       </VStack>
     </Card>
     </div>
   );
 }
 
-function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
+function ScoreboardList({ scoreboard, note }: { scoreboard: ScoreboardEntry[]; note?: string }) {
   const t = useT();
   if (scoreboard.length === 0) return null;
   return (
@@ -1393,6 +1421,11 @@ function ScoreboardList({ scoreboard }: { scoreboard: ScoreboardEntry[] }) {
       <Text type="label" weight="bold" color="secondary">
         {t('play.liveScoreboard')}
       </Text>
+      {note && (
+        <Text type="supporting" size="xsm" color="secondary">
+          {note}
+        </Text>
+      )}
       <ol
         aria-label={t('play.liveScoreboard')}
         style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: 0, padding: 0, listStyle: 'none' }}

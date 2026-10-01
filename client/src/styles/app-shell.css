@@ -337,6 +337,11 @@
 .ss-brand-footer a { color: inherit; text-underline-offset: 3px; }
 .ss-brand-footer a:hover { color: var(--brand-accent); }
 .ss-brand-footer a:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; border-radius: 3px; }
+/* "Cookie settings" opens a dialog, so it is a button; it reads as the links
+   beside it. */
+.ss-brand-footer .ss-footer-link { padding: 0; border: 0; background: none; color: inherit; font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.ss-brand-footer .ss-footer-link:hover { color: var(--brand-accent); }
+.ss-brand-footer .ss-footer-link:focus-visible { outline: 2px solid var(--brand-accent); outline-offset: 3px; border-radius: 3px; }
 .ss-brand-footer__social a { display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; }
 .ss-footer-settings { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
 .ss-footer-settings button {
@@ -651,7 +656,8 @@
 
   /* The footer links are bare text in a wrapped row. Height is what gives
      them a target; the row's own gap keeps them from touching. */
-  .ss-brand-footer__meta a {
+  .ss-brand-footer__meta a,
+  .ss-brand-footer__meta .ss-footer-link {
     display: inline-flex;
     align-items: center;
     min-height: 44px;

@@ -234,6 +234,17 @@ async function main() {
     assert.equal((upsert?.body as Row | undefined)?.email, A.email, 'with the token\'s email');
     console.log('PASS verified caller: leaderboard visibility reads and writes the token\'s account');
 
+    // What friends see (op=identity, migration 055) is the token's account's too.
+    seen.length = 0;
+    const identityGet = await user('identity', { account: A, query: { user_id: B.id } });
+    assert.equal(identityGet.statusCode, 200, JSON.stringify(identityGet.body));
+    assert.deepEqual(reads('/rest/v1/user_handles').map((one) => one.filters.user_id), [A.id], 'what friends see is read for the token\'s account');
+    seen.length = 0;
+    const identityPut = await user('identity', { method: 'PUT', account: A, query: { user_id: B.id }, body: { showRealName: false, user_id: B.id } });
+    assert.equal(identityPut.statusCode, 200, JSON.stringify(identityPut.body));
+    assert.deepEqual(reads('/rest/v1/rpc/set_friend_display').map((one) => (one.body as Row).p_user_id), [A.id], 'and written for it');
+    console.log('PASS verified caller: what friends see reads and writes the token\'s account');
+
     const codingTask = CODING_TASKS.find((task) => task.track === 'javascript')!;
     seen.length = 0;
     const draft = await user('coding-draft', { method: 'POST', account: A, query: { user_id: B.id }, body: { id: codingTask.id, code: 'const mine = 1;', user_id: B.id } });
@@ -348,6 +359,38 @@ async function main() {
       assert.equal((reads('/rest/v1/rpc/subject_leaderboard')[0]?.body as Row | undefined)?.p_limit, served, `limit=${asked} is served as ${served}`);
     }
     console.log('PASS verified caller: a leaderboard limit is one of a few sizes');
+
+    // ── this month's XP board (migration 056) ───────────────────────────
+    // Shared and cached for a minute without a session; with one it is the
+    // token's own line, never the account a query names, and private.
+    seen.length = 0;
+    const monthShared = await call(leaderboard as Handler, { query: { period: 'month' } });
+    assert.equal(monthShared.statusCode, 200, JSON.stringify(monthShared.body));
+    assert.match(monthShared.headers['cache-control'] ?? '', /^public, s-maxage=60$/, 'the shared month board is cached for a minute');
+    const sharedBody = monthShared.body as { period: string; month: string; subject: string; me?: unknown };
+    assert.equal(sharedBody.period, 'month');
+    assert.match(sharedBody.month, /^\d{4}-(0[1-9]|1[0-2])$/, 'the board names its month');
+    assert.equal(sharedBody.month, new Date().toISOString().slice(0, 7), 'the current UTC month');
+    assert.equal(sharedBody.subject, 'webdev');
+    assert.equal('me' in sharedBody, false, 'a shared board carries nobody\'s own line');
+    const sharedRead = reads('/rest/v1/rpc/month_xp_leaderboard')[0]?.body as Row | undefined;
+    assert.deepEqual(sharedRead, { p_subject: 'webdev', p_limit: 100, p_viewer: null, p_month: sharedBody.month },
+      'the board asks for the subject\'s month, for nobody in particular');
+    assert.equal(reads('/rest/v1/rpc/month_xp_leaderboard_rank').length, 0, 'and no own place');
+
+    seen.length = 0;
+    const monthMine = await call(leaderboard as Handler, { account: A, query: { period: 'month', me: '1', user_id: B.id } });
+    assert.equal(monthMine.statusCode, 200, JSON.stringify(monthMine.body));
+    assert.equal(monthMine.headers['cache-control'], 'private, no-store', 'a personal month board stays out of shared caches');
+    assert.equal(monthMine.headers.vary, 'Authorization');
+    assert.deepEqual((monthMine.body as { me?: unknown }).me, { rank: null, xp: 0 }, 'no XP this month, no place');
+    assert.equal((reads('/rest/v1/rpc/month_xp_leaderboard')[0]?.body as Row | undefined)?.p_viewer, A.id, 'the viewer is the token\'s account');
+    assert.equal((reads('/rest/v1/rpc/month_xp_leaderboard_rank')[0]?.body as Row | undefined)?.p_user, A.id, 'and so is the own place');
+
+    const foreign = await call(leaderboard as Handler, { query: { period: 'month', categories: 'javascript,geography-capitals' } });
+    assert.equal(foreign.statusCode, 400, 'a month board for another subject is refused');
+    assert.equal(errorCode(foreign), 'invalid_subject_scope');
+    console.log('PASS verified caller: this month\'s XP board is shared without a session and the token\'s own with one');
 
     // ── one-time claims with Upstash configured and failing ──────────────
     upstashCommands.length = 0;

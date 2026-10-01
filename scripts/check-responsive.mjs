@@ -59,6 +59,8 @@ const DEFAULT_ROUTES = [
   '/today',
   '/challenge',
   '/leaderboard',
+  // This month's XP board, the fourth period (migration 056).
+  '/leaderboard?tab=month',
   '/shop',
   '/play',
   '/cards',
@@ -126,6 +128,16 @@ const WINDOW_BOARD = {
     { rank: 2, display_name: 'Harbour reader', picture: null, correct: 6, answered: 9, accuracy_pct: 67, is_viewer: false },
   ],
 };
+// This month's XP (period=month, month_xp_leaderboard rows), with a shared
+// first place as the server ranks it.
+const MONTH_BOARD = {
+  period: 'month', month: '2026-10', subject: 'webdev',
+  entries: [
+    { rank: 1, display_name: 'Night owl', picture: null, xp: 1240, is_viewer: false },
+    { rank: 1, display_name: 'Early bird', picture: null, xp: 1240, is_viewer: false },
+    { rank: 3, display_name: null, picture: null, xp: 980, is_viewer: false },
+  ],
+};
 // GET /api/user/[op]?op=shop: redemption closed, as the launched settings say.
 const SHOP = {
   enabled: false, cashCheckoutEnabled: false, testMode: false, policyUrl: '',
@@ -166,6 +178,7 @@ API_FIXTURES.push(
   },
   { method: 'GET', match: (url) => url.pathname === '/api/quiz/challenge' && url.searchParams.get('resource') === 'leaderboard', body: () => CHALLENGE_BOARD },
   { method: 'GET', match: (url) => url.pathname === '/api/leaderboard' && url.searchParams.get('period') === '30d', body: (url) => ({ ...WINDOW_BOARD, category: url.searchParams.get('category') }) },
+  { method: 'GET', match: (url) => url.pathname === '/api/leaderboard' && url.searchParams.get('period') === 'month', body: () => MONTH_BOARD },
   { method: 'GET', match: (url) => decodeURIComponent(url.pathname) === '/api/user/[op]' && url.searchParams.get('op') === 'shop', body: () => SHOP },
 );
 
