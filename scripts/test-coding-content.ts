@@ -666,6 +666,56 @@ async function main() {
     }
   }
 
+  /* ── React suites inside the grader's time limit ────────────────────── */
+  // The isolated grader stops a React run after 10 s, node start-up and the
+  // page runtime included (lib/coding/react-isolated.ts), and a run it stops
+  // reports no case at all: the learner reads a timeout instead of the checks
+  // that failed. So a whole suite, visible and hidden cases together, has to
+  // stay well inside that for the pages learners submit on the way to a pass:
+  // one that renders nothing, the untouched starter, and for a task with an
+  // API one that asks for its data and shows none of it. These run with
+  // Testing Library's own wait, not the shortened wait of the probes above,
+  // and add up the time the cases take.
+  const REACT_CASE_BUDGET_MS = 6_000;
+  for (const task of CODING_TASKS) {
+    if (task.track !== 'react' || task.verify !== 'tests' || !task.suite || !ONLY.test(task.id)) continue;
+    const solution = solutionFor(task.id);
+    if (!solution) continue;
+    const suite = withHiddenCases(task.suite, solution.hiddenSuite);
+    const url = task.api?.url;
+    const pages: [string, string][] = [
+      ['a page that renders nothing', 'const App = () => null;'],
+      ['the untouched starter', task.starter],
+    ];
+    if (url) pages.push(['a page that asks for its data and shows none of it', `import React, { useEffect } from 'react';\nexport default function App() {\n  useEffect(() => { fetch(${JSON.stringify(url)}).catch(() => {}); }, []);\n  return null;\n}\n`]);
+    for (const [page, source] of pages) {
+      const run = await runReactSuite({ suite, appSource: source });
+      const spent = run.cases.reduce((sum, one) => sum + one.durationMs, 0);
+      if (spent > REACT_CASE_BUDGET_MS) fail(`${task.id}: ${page} spends ${spent} ms in the suite's cases; the grader stops a run at 10 s with start-up, so keep it under ${REACT_CASE_BUDGET_MS} ms`);
+    }
+  }
+
+  /* ── React forms cancel their submit ────────────────────────────────── */
+  // In the preview a form the component lets submit reloads the frame and
+  // loses what it showed, so the runner fails the case
+  // (watchFormSubmits in shared/coding-react-support.ts). Every task whose
+  // reference handles a submit proves that its checks submit the form: the
+  // reference with each preventDefault() call taken out fails, and says why.
+  const { FORM_SUBMIT_NOT_PREVENTED } = await import('../shared/coding-react-support');
+  for (const task of CODING_TASKS) {
+    if (task.track !== 'react' || task.verify !== 'tests' || !task.suite || !ONLY.test(task.id)) continue;
+    const solution = solutionFor(task.id);
+    if (!solution || !solution.solution.includes('onSubmit')) continue;
+    const careless = solution.solution.replace(/[\w$]+\??\.preventDefault\(\)/g, 'void 0');
+    if (careless === solution.solution) {
+      fail(`${task.id}: the reference handles a submit without preventDefault()`);
+      continue;
+    }
+    const run = await runReactSuite({ suite: withHiddenCases(task.suite, solution.hiddenSuite), appSource: careless });
+    if (run.compileError) fail(`${task.id}: the reference without preventDefault() did not run: ${run.compileError}`);
+    else if (!run.cases.some((one) => one.error === FORM_SUBMIT_NOT_PREVENTED)) fail(`${task.id}: the reference without preventDefault() trips no check, so no check submits its form`);
+  }
+
   if (failures.length > 0) {
     console.error(`Coding content contract: ${failures.length} problem(s)\n  - ${failures.join('\n  - ')}`);
     process.exitCode = 1;
