@@ -725,6 +725,17 @@ async function answer(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 403, 'not_participant', 'Join the match before answering');
     }
 
+    // A classroom pupil learns whether an answer scored when the question
+    // closes, from the scoreboard state() serves (056). The answer itself is
+    // only acknowledged, its retry included, so no pupil can tell the room
+    // which option scores while the question is open. A multiplayer player
+    // gets their own result at once, as before.
+    const classroom = match.mode === 'classroom';
+    const reply = (graded: { is_correct: boolean; speed_bonus: number }, advanced: boolean) =>
+      classroom
+        ? { ok: true, accepted: true, advanced: false }
+        : { ok: true, is_correct: graded.is_correct, speed_bonus: graded.speed_bonus, advanced };
+
     // An answer is final. A duplicate submit (network retry, double click)
     // replays the recorded result instead of re-grading, so a player can't
     // keep swapping options after seeing is_correct.
@@ -738,14 +749,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
         .maybeSingle(),
     );
     if (existingError) return jsonError(res, 503, 'backend_unavailable', 'Could not verify existing answer');
-    if (existing) {
-      return res.json({
-        ok: true,
-        is_correct: existing.is_correct,
-        speed_bonus: existing.speed_bonus,
-        advanced: false,
-      });
-    }
+    if (existing) return res.json(reply(existing, false));
 
     const questionStartMs = match.question_started_at
       ? new Date(match.question_started_at).getTime()
@@ -816,14 +820,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
             .eq('question_idx', body.question_idx)
             .single(),
         );
-        if (!replay.error && replay.data) {
-          return res.json({
-            ok: true,
-            is_correct: replay.data.is_correct,
-            speed_bonus: replay.data.speed_bonus,
-            advanced: false,
-          });
-        }
+        if (!replay.error && replay.data) return res.json(reply(replay.data, false));
       }
       logEvent('play/answer', { status: 500, error: error.message });
       return jsonError(res, 500, 'db_error', 'Could not record answer');
@@ -856,7 +853,7 @@ async function answer(req: VercelRequest, res: VercelResponse) {
       bonus: speedBonus,
       advanced,
     });
-    return res.json({ ok: true, is_correct: isCorrect, speed_bonus: speedBonus, advanced });
+    return res.json(reply({ is_correct: isCorrect, speed_bonus: speedBonus }, advanced));
   } catch (err) {
     const message = err instanceof Error ? err.message : 'unknown';
     logEvent('play/answer', { status: 504, error: message });

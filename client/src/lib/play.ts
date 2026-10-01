@@ -206,7 +206,10 @@ export const submitMatchAnswer = (input: {
   duration_ms: number;
   client_received_at?: string;
 }) =>
-  apiFetch<{ ok: true; is_correct: boolean; speed_bonus?: number; advanced?: boolean }>('/api/play/answer', {
+  // A multiplayer answer comes back graded. A classroom answer is only
+  // acknowledged (`accepted`): the pupil's result arrives with the scoreboard
+  // once the question closes (migration 056).
+  apiFetch<{ ok: true; is_correct?: boolean; speed_bonus?: number; accepted?: boolean; advanced?: boolean }>('/api/play/answer', {
     method: 'POST',
     body: JSON.stringify(input),
   });

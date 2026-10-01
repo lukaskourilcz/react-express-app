@@ -69,7 +69,8 @@ vi.mock('../src/lib/play', async (importOriginal) => ({
     const answers = room.answers.get(question_idx) ?? new Map<string, number>();
     answers.set(user_id, selected_idx);
     room.answers.set(question_idx, answers);
-    return later(READ_LATENCY_MS, () => ({ ok: true, is_correct: selected_idx === 1, advanced: false }));
+    // A classroom answer is acknowledged, never graded back (056).
+    return later(READ_LATENCY_MS, () => ({ ok: true, accepted: true, advanced: false }));
   },
   controlMatch: ({ action }: { action: 'start' | 'advance' | 'finish' | 'reveal' }) => {
     if (action === 'reveal') {

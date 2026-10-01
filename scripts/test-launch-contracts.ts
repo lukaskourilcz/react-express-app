@@ -2754,11 +2754,15 @@ function classroomRevealContracts() {
   assert.match(play, /const STATE_COLUMNS =\s+'[^']*\brevealed_idx\b/, 'state reads the closed question');
   assert.match(play, /body\.action !== 'reveal'/, 'reveal is a control action');
   const answer = play.slice(play.indexOf('async function answer('), play.indexOf('async function distribution('));
-  const replay = answer.indexOf('if (existing) {');
+  const replay = answer.indexOf('if (existing) return res.json(reply(existing, false));');
   const closed = answer.indexOf("'question_closed'");
   const timeUp = answer.indexOf("'time_up'");
   assert.ok(replay > 0 && replay < closed && closed < timeUp,
     'an answer to a closed question is refused after a retry of an earlier answer is replayed, like a late one');
+  // A classroom answer is acknowledged, never graded back: every reply goes
+  // through the one function, whose classroom branch carries no result.
+  assert.match(answer, /classroom\s+\? \{ ok: true, accepted: true, advanced: false \}/, 'a classroom reply carries no is_correct or speed bonus');
+  assert.equal(answer.match(/res\.json\(\{ ok: true, is_correct/g), null, 'no reply grades an answer outside reply()');
   const state = play.slice(play.indexOf('async function state('), play.indexOf('async function control('));
   assert.match(state, /p_before_idx: beforeIdx/, 'a running classroom asks for its closed questions only');
   assert.match(state, /beforeIdx === null \? \{ p_match_id: match\.id \}/, 'every other room makes the call it always made');

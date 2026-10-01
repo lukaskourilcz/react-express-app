@@ -363,11 +363,15 @@ describe('a classroom pupil', () => {
   it('tells nobody about a single answer, and the teacher reads nothing for one', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     pupilIn();
-    api.submitMatchAnswer.mockResolvedValue({ ok: true, is_correct: true, advanced: false });
+    // A classroom answer is acknowledged, never graded back (056).
+    api.submitMatchAnswer.mockResolvedValue({ ok: true, accepted: true, advanced: false });
     await mount();
     await screen.findByText('Pick one?');
     fireEvent.click(screen.getByRole('radio', { name: 'beta' }));
     await waitFor(() => expect(api.submitMatchAnswer).toHaveBeenCalledTimes(1));
+    // The pupil is told the answer is locked, and no option is marked right.
+    expect(await screen.findByText('Answer locked. Waiting for the instructor to advance…')).toBeInTheDocument();
+    expect(screen.getAllByRole('radio').map((radio) => radio.getAttribute('data-tone'))).not.toContain('success');
     await settle();
     expect(roomEvents()).toEqual([]);
   });

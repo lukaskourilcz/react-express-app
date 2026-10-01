@@ -315,16 +315,21 @@ presses "Reveal answer" (migration 056, owner decision of 1 October 2026).
 The button is a `control` action, `reveal`: the server stores the question in
 `matches.revealed_idx` and `answer` then refuses it with 409
 `question_closed` (a retry of an answer that landed before the reveal still
-replays it). The presenter's key shows only after the server confirms, and the
-pupils' screens show the question as closed. While a classroom room runs, its
+replays it). A classroom answer is only acknowledged (`{ ok, accepted,
+advanced: false }`), its retry included: no `is_correct` or speed bonus comes
+back, so a pupil learns whether they scored from the scoreboard once the
+question closes, and nobody can read the right option off their own reply
+while it is open. A multiplayer answer still comes back graded. The
+presenter's key shows only after the server confirms, and the pupils' screens
+show the question as closed. While a classroom room runs, its
 scoreboard counts only closed questions: `state` passes `match_scoreboard`
 `p_before_idx`, the current index, or the next one once the current question
 is closed. The presenter's projected scoreboard and every pupil's therefore
 move only when a question closes, and a live count never tells the room which
 option scores. A finished room, and every multiplayer room, counts every
 answer as before. A multiplayer scoreboard shows that a player scored on the
-open question, never what they picked, and `answer` already tells each player
-their own result, so it has no such leak and is unchanged.
+open question, never what they picked, and a multiplayer race tells each
+player their own result at once by design, so it is unchanged.
 
 A class shares one school address, and each state read spends that address's
 bucket. Realtime therefore carries only changes of the room: `match_updated`

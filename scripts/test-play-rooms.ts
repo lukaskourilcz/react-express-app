@@ -10,8 +10,9 @@
  * - a multiplayer host (a competitor) cannot read the live answer distribution;
  * - a lobby whose host stopped sending heartbeats is closed;
  * - a player reads only the questions already shown, and the server's clock;
- * - a classroom scoreboard counts only closed questions, and "Reveal answer"
- *   closes the question (migration 056); a multiplayer one counts every answer;
+ * - a classroom scoreboard counts only closed questions, "Reveal answer"
+ *   closes the question, and a pupil's answer is acknowledged, never graded
+ *   back (migration 056); a multiplayer one counts every answer;
  * - the Play switch in the app settings turns every action off.
  *
  * Nothing leaves the machine. */
@@ -443,9 +444,12 @@ async function main() {
         return (state.body.scoreboard as Array<{ user_id: string; score: number }>).find((row) => row.user_id === USERS[who].id)!.score;
       };
 
+      // The answer is acknowledged, not graded: nothing in the reply says
+      // whether it scored, while the question is open or after.
+      const ACK = { ok: true, accepted: true, advanced: false };
       const first = await call('two', 'POST', 'answer', { code, question_idx: 0, selected_idx: correctIndex(code, 0) });
       assert.equal(first.statusCode, 200);
-      assert.equal(first.body.is_correct, true);
+      assert.deepEqual(first.body, ACK, 'a classroom answer is only acknowledged');
       assert.equal(await scoreOf('host', 'two'), 0, 'a pupil sees no points for the open question');
       assert.equal(await scoreOf('one', 'two'), 0, 'nor does the projected presenter screen');
       assert.equal(scoreboardCalls.at(-1)?.p_before_idx, 0, 'the scoreboard is asked for the questions before the open one');
@@ -466,7 +470,8 @@ async function main() {
       assert.equal(tables.match_answers.filter((a) => a.user_id === USERS.host.id).length, 0, 'and not recorded');
       const retry = await call('two', 'POST', 'answer', { code, question_idx: 0, selected_idx: correctIndex(code, 0) });
       assert.equal(retry.statusCode, 200, 'a retry of an answer sent before the reveal replays it');
-      assert.equal(retry.body.is_correct, true);
+      assert.deepEqual(retry.body, ACK, 'with the same acknowledgement');
+      // The pupil learns the result from the scoreboard once the question closed.
       const counted = await scoreOf('two', 'two');
       assert.ok(counted >= 100, `the closed question counts at once: ${counted}`);
       assert.equal(await scoreOf('one', 'two'), counted, 'on the presenter screen too');
@@ -478,11 +483,16 @@ async function main() {
       assert.equal((await call('one', 'POST', 'control', { code, action: 'advance' })).statusCode, 200);
       const second = await call('two', 'POST', 'answer', { code, question_idx: 1, selected_idx: correctIndex(code, 1) });
       assert.equal(second.statusCode, 200, 'the next question takes answers');
+      // A wrong answer gets the very same reply as a right one.
+      const wrong = await call('host', 'POST', 'answer', { code, question_idx: 1, selected_idx: (correctIndex(code, 1) + 1) % 4 });
+      assert.equal(wrong.statusCode, 200);
+      assert.deepEqual([second.body, wrong.body], [ACK, ACK], 'a right and a wrong answer cannot be told apart');
       assert.equal(await scoreOf('host', 'two'), counted, 'the open question adds nothing');
       rewind(code, 31_000);
       assert.equal(await scoreOf('host', 'two'), counted, 'nor inside the grace');
       rewind(code, 33_000);
       assert.ok(await scoreOf('host', 'two') >= counted + 100, 'a question whose clock ran out counts');
+      assert.equal(await scoreOf('host', 'host'), 0, 'and the wrong answer scored nothing, which the pupil now sees');
 
       // Once the round is over, every answer counts and the call is the one
       // it always was.
@@ -503,7 +513,10 @@ async function main() {
       const reveal = await call('two', 'POST', 'control', { code, action: 'reveal' });
       assert.equal(reveal.statusCode, 400, 'a multiplayer room has no reveal');
       assert.equal(room(code).revealed_idx ?? null, null);
-      assert.equal((await call('one', 'POST', 'answer', { code, question_idx: 0, selected_idx: correctIndex(code, 0) })).statusCode, 200);
+      const graded = await call('one', 'POST', 'answer', { code, question_idx: 0, selected_idx: correctIndex(code, 0) });
+      assert.equal(graded.statusCode, 200);
+      assert.equal(graded.body.is_correct, true, 'a multiplayer player gets their own result at once, as before');
+      assert.equal(typeof graded.body.speed_bonus, 'number');
       const board = (await call('two', 'GET', 'state', { code })).body.scoreboard as Array<{ user_id: string; score: number }>;
       assert.ok(board.find((row) => row.user_id === USERS.one.id)!.score >= 100, 'the open question counts in multiplayer, as before');
       assert.equal('p_before_idx' in (scoreboardCalls.at(-1) ?? {}), false, 'with the call it always made');
