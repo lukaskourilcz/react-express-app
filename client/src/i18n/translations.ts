@@ -2268,8 +2268,6 @@ export const en = {
   'authPage.opening': 'Opening…',
   'authPage.resetExpiredTitle': 'This reset link has expired',
   'authPage.resetExpiredLead': 'Reset links work once and expire after a while. Ask for a new one below.',
-  'authPage.requestTitle': 'Reset your password',
-  'authPage.requestLead': 'Enter the email you use for devShark. We’ll send you a link to set a new password.',
   'authPage.resetRequestTitle': 'Send a reset link',
 } as const;
 

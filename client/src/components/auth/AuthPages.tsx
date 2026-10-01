@@ -286,7 +286,7 @@ export function ResetPasswordPage() {
 
   if (tokenLink && (!verifyFailure || verifyFailure === 'network' || verifyFailure === 'serviceError')) {
     return (
-      <Page kicker={t('authPage.kicker')} title={t('authPage.requestTitle')} lead={t('authPage.resetTokenLead')}>
+      <Page kicker={t('authPage.kicker')} title={t('auth.dialog.forgotTitle')} lead={t('authPage.resetTokenLead')}>
         <section className="ss-info-card ss-auth-page">
           <div className="ss-auth">
             {verifyFailure && <FailureBanner failure={verifyFailure} />}
@@ -308,8 +308,8 @@ export function ResetPasswordPage() {
   return (
     <Page
       kicker={t('authPage.kicker')}
-      title={t(expired ? 'authPage.resetExpiredTitle' : 'authPage.requestTitle')}
-      lead={t(expired ? 'authPage.resetExpiredLead' : 'authPage.requestLead')}
+      title={t(expired ? 'authPage.resetExpiredTitle' : 'auth.dialog.forgotTitle')}
+      lead={t(expired ? 'authPage.resetExpiredLead' : 'auth.dialog.forgotSubtitle')}
     >
       <EmailLinkRequest purpose="reset" />
     </Page>
