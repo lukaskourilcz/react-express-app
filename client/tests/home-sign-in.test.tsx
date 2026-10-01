@@ -54,3 +54,29 @@ it('opens the daily challenge from the Daily challenge tile', async () => {
   fireEvent.click(screen.getByRole('button', { name: /^Daily challenge/ }));
   expect(await screen.findByTestId('location')).toHaveTextContent('/quiz?mode=daily');
 });
+
+// The landing page told every visitor "Progress saves to your account." A
+// guest's progress stays in this browser, and the GitHub garden is off.
+it('says where progress is kept, for a guest and for an account, and promises no garden', async () => {
+  server.use(settingsHandler);
+  const renderHome = () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+    return render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+  };
+  const guest = renderHome();
+  expect(screen.getByText('You’re not signed in, so this progress stays on this device only. Signing in starts from your account’s progress instead.')).toBeInTheDocument();
+  expect(screen.queryByText('Progress saves to your account.')).toBeNull();
+  expect(screen.getByText('Loops, array methods, types and components with real tests.')).toBeInTheDocument();
+  expect(screen.queryByText(/GitHub garden/)).toBeNull();
+  guest.unmount();
+
+  const signedOut = auth.value;
+  auth.value = { ...signedOut, user: { id: 'user-1' } as never, isAuthenticated: true };
+  try {
+    renderHome();
+    expect(screen.getByText('Progress saves to your account.')).toBeInTheDocument();
+    expect(screen.queryByText(/stays on this device only/)).toBeNull();
+  } finally {
+    auth.value = signedOut;
+  }
+});

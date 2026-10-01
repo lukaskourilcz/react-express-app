@@ -107,6 +107,8 @@ function TopicCard({
 
 function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () => void }) {
   const t = useT();
+  // Only an account keeps progress; a guest's stays in this browser.
+  const { isAuthenticated, isLoading } = useAuth();
   return (
     <section
       aria-label={t('home.insideTopic', { name: topic.name })}
@@ -146,7 +148,9 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
       </PathStrip>
       <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
         <SwimCta label={t('home.startLevel1', { name: topic.name })} onClick={onStart} dir={-1} />
-        <span style={{ fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t('home.roadmapNote')}</span>
+        {!isLoading && (
+          <span style={{ fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t(isAuthenticated ? 'home.roadmapNote' : 'register.deviceOnly')}</span>
+        )}
       </div>
     </section>
   );
