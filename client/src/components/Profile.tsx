@@ -201,6 +201,9 @@ function ProfileBody({
   const flair = useEquippedFlair();
   const { questions: bookmarkedQuestions } = useBookmarks();
   const [tab, setTab] = useState<'overview' | 'friends'>('overview');
+  // An account made with an email and password has no name from Google: the
+  // heading falls back to the address's first part, never to an empty h1.
+  const shownName = user.name || user.email?.split('@')[0] || t('auth.account');
 
   return (
     <div className="de-page" style={{ maxWidth: 1000 }}>
@@ -222,14 +225,14 @@ function ProfileBody({
                         : null),
                     }}
                   >
-                    <Avatar src={user.picture} name={user.name} alt="" size={64} />
+                    <Avatar src={user.picture} name={shownName} alt="" size={64} />
                   </div>
                   {/* min-width 0 lets a long name or email ellipsise inside
                       the card instead of running past it. */}
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <VStack gap={0.5}>
                       <Heading level={1} maxLines={1}>
-                        {flair ? `${flair} ` : ''}{user.name}
+                        {flair ? `${flair} ` : ''}{shownName}
                       </Heading>
                       <Text type="supporting" color="secondary" maxLines={1}>
                         {user.email}
