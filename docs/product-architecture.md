@@ -1199,7 +1199,10 @@ Owner decisions 2 and 4 (1 October 2026).
   pinned to `in-memory`), `sendDefaultPii: false`, no Session Replay, no
   `setUser`. Adding any of those moves it under analytics consent.
 - **The privacy policy** (`PRIVACY` in `client/src/components/LegalPages.tsx`,
-  keys `legal.privacy.*`) covers sign-in (Google or email and password),
+  keys `legal.privacy.*` in `client/src/i18n/translations.privacy.ts`, which
+  only the legal pages' chunk imports, so the policy stays out of the shell's
+  bundle; LegalPages looks a key up there first and in `translations.ts`
+  otherwise) covers sign-in (Google or email and password),
   learning data and Shark Cards, the sharkname and what friends see, the
   boards, the Hall of Fame, Play rooms, invitations, reports, payments,
   vouchers, merchandise (not offered), email, cookies with a table of every

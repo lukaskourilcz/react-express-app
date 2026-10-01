@@ -30,7 +30,7 @@ Generative-media production uses `.claude/skills/generated-media-production/SKIL
 
 - Client/routes: `client/src/App.tsx`, `client/src/components/`
 - Tokens/shell: `client/src/styles/astryx-theme.css`, `client/src/styles/app-shell.css`
-- Copy: `client/src/i18n/translations.ts` (`translations.cs.ts` is retained, unshipped Czech)
+- Copy: `client/src/i18n/translations.ts` (`translations.cs.ts` is retained, unshipped Czech); the privacy policy's `legal.privacy.*` keys live in `translations.privacy.ts`, which only the legal pages load
 - API: `api/`, `lib/`, `shared/`
 - Supabase: `supabase/supabase-schema*.sql`
 - Design guidance: `docs/design/`

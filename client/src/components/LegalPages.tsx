@@ -8,10 +8,11 @@
 // page says they are missing rather than guessing. The owner's lawyer reviews
 // the wording (NEEDED.md). The EU online dispute platform closed on 20 July
 // 2025, so the page names the Czech out-of-court body and no ODR link.
-import { useEffect, useId, type ReactNode } from 'react';
+import { useCallback, useEffect, useId, type ReactNode } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
+import { privacyEn, type PrivacyKey } from '../i18n/translations.privacy';
 import { useBilling } from '../lib/billing';
 import { openConsentSettings } from '../lib/consent';
 import { useLaunchOffer } from '../lib/launchOffer';
@@ -28,23 +29,37 @@ const STRIPE_PRIVACY_URL = 'https://stripe.com/privacy';
 const LINK_PRIVACY_URL = 'https://link.com/privacy';
 
 type Seller = 'link' | 'trader' | null;
-interface LinkSpec { to: string; label: TranslationKey; external?: boolean; when?: (seller: Seller) => boolean }
+
+/** A key of either dictionary: the app's (translations.ts) or the privacy
+ * policy's own (translations.privacy.ts), which only this chunk loads. */
+type CopyKey = TranslationKey | PrivacyKey;
+const isPrivacyKey = (key: CopyKey): key is PrivacyKey => Object.prototype.hasOwnProperty.call(privacyEn, key);
+
+/** `t` for the legal pages: the privacy dictionary first, then the app's. */
+function useCopy() {
+  const { t } = useLanguage();
+  return useCallback(
+    (key: CopyKey, vars?: Parameters<typeof t>[1]): string => (isPrivacyKey(key) ? privacyEn[key] : t(key, vars)),
+    [t],
+  );
+}
+interface LinkSpec { to: string; label: CopyKey; external?: boolean; when?: (seller: Seller) => boolean }
 type Block =
-  | { kind: 'p'; key: TranslationKey }
-  | { kind: 'seller'; link: TranslationKey; trader: TranslationKey; unknown: TranslationKey }
+  | { kind: 'p'; key: CopyKey }
+  | { kind: 'seller'; link: CopyKey; trader: CopyKey; unknown: CopyKey }
   | { kind: 'waiver' }
   | { kind: 'links'; links: LinkSpec[] }
   | { kind: 'trader' }
   | { kind: 'form' }
   // The launch price paragraph: rendered only while the offer is on.
   | { kind: 'launch' }
-  | { kind: 'list'; items: TranslationKey[] }
-  | { kind: 'table'; caption: TranslationKey; head: TranslationKey[]; rows: Cell[][] }
+  | { kind: 'list'; items: CopyKey[] }
+  | { kind: 'table'; caption: CopyKey; head: CopyKey[]; rows: Cell[][] }
   // Opens the cookie settings dialog (CookieConsent.tsx).
   | { kind: 'consent' };
-interface Section { id: string; title: TranslationKey; blocks: Block[] }
+interface Section { id: string; title: CopyKey; blocks: Block[] }
 
-const p = (key: TranslationKey): Block => ({ kind: 'p', key });
+const p = (key: CopyKey): Block => ({ kind: 'p', key });
 
 const TERMS: Section[] = [
   { id: 'trader', title: 'legal.terms.trader.title', blocks: [p('legal.terms.trader.body'), { kind: 'trader' }] },
@@ -90,7 +105,7 @@ const TERMS: Section[] = [
 ];
 
 /** A table cell: words from the dictionary, or a storage name shown as code. */
-type Cell = TranslationKey | { code: string; where: TranslationKey };
+type Cell = CopyKey | { code: string; where: CopyKey };
 
 /** What devShark keeps in the browser (the cookie table). The names are the
  * real keys: lib/consent.ts, lib/supabaseClient.ts, lib/analytics.ts and the
@@ -280,7 +295,7 @@ function WithdrawalForm() {
 }
 
 function LinkRow({ links, seller }: { links: LinkSpec[]; seller: Seller }) {
-  const { t } = useLanguage();
+  const t = useCopy();
   const shown = links.filter((link) => !link.when || link.when(seller));
   return (
     <p className="ss-text-links">
@@ -291,8 +306,8 @@ function LinkRow({ links, seller }: { links: LinkSpec[]; seller: Seller }) {
   );
 }
 
-function LegalTable({ caption, head, rows }: { caption: TranslationKey; head: TranslationKey[]; rows: Cell[][] }) {
-  const { t } = useLanguage();
+function LegalTable({ caption, head, rows }: { caption: CopyKey; head: CopyKey[]; rows: Cell[][] }) {
+  const t = useCopy();
   const captionId = useId();
   // A wide table scrolls inside its own box on a phone, never the page; the
   // box takes focus so a keyboard can scroll it too.
@@ -325,8 +340,8 @@ function LegalTable({ caption, head, rows }: { caption: TranslationKey; head: Tr
   );
 }
 
-function LegalDocument({ title, lead, sections }: { title: TranslationKey; lead: TranslationKey; sections: Section[] }) {
-  const { t } = useLanguage();
+function LegalDocument({ title, lead, sections }: { title: CopyKey; lead: CopyKey; sections: Section[] }) {
+  const t = useCopy();
   const billing = useBilling();
   const { hash } = useLocation();
   // Until the settings arrive, the seller sentence stays neutral.
