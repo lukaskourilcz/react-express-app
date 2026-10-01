@@ -13,6 +13,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useBilling } from '../lib/billing';
+import { openConsentSettings } from '../lib/consent';
 import { useLaunchOffer } from '../lib/launchOffer';
 import { TRADER } from '../../product-catalog';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../shared/tiers';
@@ -20,7 +21,7 @@ import { Page } from './PublicInfoPages';
 import './LegalPages.css';
 
 /** The date of the current wording. Change it with the words. */
-export const LEGAL_UPDATED = '2026-09-29';
+export const LEGAL_UPDATED = '2026-10-01';
 
 const ADR_URL = 'https://coi.gov.cz/en/information-about-adr/';
 const STRIPE_PRIVACY_URL = 'https://stripe.com/privacy';
@@ -36,7 +37,11 @@ type Block =
   | { kind: 'trader' }
   | { kind: 'form' }
   // The launch price paragraph: rendered only while the offer is on.
-  | { kind: 'launch' };
+  | { kind: 'launch' }
+  | { kind: 'list'; items: TranslationKey[] }
+  | { kind: 'table'; caption: TranslationKey; head: TranslationKey[]; rows: Cell[][] }
+  // Opens the cookie settings dialog (CookieConsent.tsx).
+  | { kind: 'consent' };
 interface Section { id: string; title: TranslationKey; blocks: Block[] }
 
 const p = (key: TranslationKey): Block => ({ kind: 'p', key });
@@ -84,14 +89,57 @@ const TERMS: Section[] = [
   { id: 'complaints', title: 'legal.terms.complaints.title', blocks: [p('legal.terms.complaints.body')] },
 ];
 
+/** A table cell: words from the dictionary, or a storage name shown as code. */
+type Cell = TranslationKey | { code: string; where: TranslationKey };
+
+/** What devShark keeps in the browser (the cookie table). The names are the
+ * real keys: lib/consent.ts, lib/supabaseClient.ts, lib/analytics.ts and the
+ * PostHog SDK. Keep the table in step with them. */
+const COOKIE_ROWS: Cell[][] = [
+  [{ code: 'devshark_consent', where: 'legal.privacy.cookies.cookie' }, 'legal.privacy.cookies.consentCookie', 'legal.privacy.cookies.months12', 'legal.privacy.cookies.necessary'],
+  [{ code: 'devshark:consent', where: 'legal.privacy.cookies.local' }, 'legal.privacy.cookies.consentLocal', 'legal.privacy.cookies.months12Ask', 'legal.privacy.cookies.necessary'],
+  [{ code: 'sb-…-auth-token', where: 'legal.privacy.cookies.local' }, 'legal.privacy.cookies.signIn', 'legal.privacy.cookies.untilSignOut', 'legal.privacy.cookies.necessary'],
+  [{ code: 'sb-…-auth-token-code-verifier', where: 'legal.privacy.cookies.local' }, 'legal.privacy.cookies.verifier', 'legal.privacy.cookies.untilSignedIn', 'legal.privacy.cookies.necessary'],
+  [{ code: 'devquiz:…, devshark:…', where: 'legal.privacy.cookies.local' }, 'legal.privacy.cookies.app', 'legal.privacy.cookies.untilCleared', 'legal.privacy.cookies.necessary'],
+  [{ code: 'devquiz:…, devshark:…', where: 'legal.privacy.cookies.session' }, 'legal.privacy.cookies.tab', 'legal.privacy.cookies.untilTabCloses', 'legal.privacy.cookies.necessary'],
+  [{ code: 'devshark:campaign', where: 'legal.privacy.cookies.local' }, 'legal.privacy.cookies.campaign', 'legal.privacy.cookies.days30', 'legal.privacy.cookies.analytics'],
+  [{ code: 'ph_…_posthog', where: 'legal.privacy.cookies.cookieAndLocal' }, 'legal.privacy.cookies.posthog', 'legal.privacy.cookies.months12', 'legal.privacy.cookies.analytics'],
+  [{ code: '__ph_opt_in_out_…', where: 'legal.privacy.cookies.local' }, 'legal.privacy.cookies.posthogConsent', 'legal.privacy.cookies.untilWithdraw', 'legal.privacy.cookies.analytics'],
+  [{ code: 'ph_…_window_id', where: 'legal.privacy.cookies.session' }, 'legal.privacy.cookies.posthogTab', 'legal.privacy.cookies.untilTabCloses', 'legal.privacy.cookies.analytics'],
+];
+
+/** How long each kind of data stays. The periods are the purge routines in
+ * supabase/ (purge_expired_learning_data, 058 for the sign-in log) and the
+ * limits in lib/rate-limit.ts and lib/consent.ts. */
+const RETENTION_ROWS: Cell[][] = [
+  ['legal.privacy.retention.account', 'legal.privacy.retention.untilDeletion'],
+  ['legal.privacy.retention.answers', 'legal.privacy.retention.days90'],
+  ['legal.privacy.retention.coding', 'legal.privacy.retention.codingHow'],
+  ['legal.privacy.retention.signIn', 'legal.privacy.retention.months12'],
+  ['legal.privacy.retention.reports', 'legal.privacy.retention.reportsHow'],
+  ['legal.privacy.retention.rooms', 'legal.privacy.retention.roomsHow'],
+  ['legal.privacy.retention.hallOfFame', 'legal.privacy.retention.hallOfFameHow'],
+  ['legal.privacy.retention.cancel', 'legal.privacy.retention.cancelHow'],
+  ['legal.privacy.retention.rateLimits', 'legal.privacy.retention.hours2'],
+  ['legal.privacy.retention.consent', 'legal.privacy.retention.consentHow'],
+  ['legal.privacy.retention.analytics', 'legal.privacy.retention.analyticsHow'],
+  ['legal.privacy.retention.backups', 'legal.privacy.retention.days7'],
+];
+
 const PRIVACY: Section[] = [
   {
     id: 'controller',
     title: 'legal.privacy.controller.title',
     blocks: [p('legal.privacy.controller.body'), { kind: 'links', links: [{ to: '/terms#trader', label: 'legal.link.terms' }] }],
   },
-  { id: 'account', title: 'legal.privacy.account.title', blocks: [p('legal.privacy.account.body')] },
-  { id: 'leaderboards', title: 'legal.privacy.leaderboards.title', blocks: [p('legal.privacy.leaderboards.body')] },
+  { id: 'account', title: 'legal.privacy.account.title', blocks: [p('legal.privacy.account.body'), p('legal.privacy.account.log')] },
+  { id: 'learning', title: 'legal.privacy.learning.title', blocks: [p('legal.privacy.learning.body'), p('legal.privacy.learning.month'), p('legal.privacy.learning.guest')] },
+  { id: 'friends', title: 'legal.privacy.friends.title', blocks: [p('legal.privacy.friends.body'), p('legal.privacy.friends.see')] },
+  { id: 'leaderboards', title: 'legal.privacy.leaderboards.title', blocks: [p('legal.privacy.leaderboards.body'), p('legal.privacy.leaderboards.month')] },
+  { id: 'hall-of-fame', title: 'legal.privacy.hallOfFame.title', blocks: [p('legal.privacy.hallOfFame.body')] },
+  { id: 'play', title: 'legal.privacy.play.title', blocks: [p('legal.privacy.play.body')] },
+  { id: 'invitations', title: 'legal.privacy.referrals.title', blocks: [p('legal.privacy.referrals.body'), p('legal.privacy.referrals.deletion')] },
+  { id: 'reports', title: 'legal.privacy.reports.title', blocks: [p('legal.privacy.reports.body')] },
   {
     id: 'payments',
     title: 'legal.privacy.payments.title',
@@ -108,14 +156,62 @@ const PRIVACY: Section[] = [
     ],
   },
   { id: 'vouchers', title: 'legal.privacy.voucher.title', blocks: [p('legal.privacy.voucher.body')] },
-  { id: 'merchandise', title: 'legal.privacy.merch.title', blocks: [p('legal.privacy.merch.shop'), p('legal.privacy.merch.redeem')] },
+  { id: 'merchandise', title: 'legal.privacy.merch.title', blocks: [p('legal.privacy.merch.body')] },
   { id: 'email', title: 'legal.privacy.email.title', blocks: [p('legal.privacy.email.body')] },
-  { id: 'providers', title: 'legal.privacy.providers.title', blocks: [p('legal.privacy.providers.body')] },
-  { id: 'analytics', title: 'legal.privacy.analytics.title', blocks: [p('legal.privacy.analytics.body')] },
+  {
+    id: 'cookies',
+    title: 'legal.privacy.cookies.title',
+    blocks: [
+      p('legal.privacy.cookies.body'),
+      { kind: 'consent' },
+      {
+        kind: 'table',
+        caption: 'legal.privacy.cookies.caption',
+        head: ['legal.privacy.cookies.colName', 'legal.privacy.cookies.colPurpose', 'legal.privacy.cookies.colLifetime', 'legal.privacy.cookies.colCategory'],
+        rows: COOKIE_ROWS,
+      },
+      p('legal.privacy.cookies.others'),
+    ],
+  },
+  { id: 'analytics', title: 'legal.privacy.analytics.title', blocks: [p('legal.privacy.analytics.body'), p('legal.privacy.analytics.withdraw')] },
+  { id: 'marketing', title: 'legal.privacy.marketing.title', blocks: [p('legal.privacy.marketing.body')] },
+  { id: 'errors', title: 'legal.privacy.errors.title', blocks: [p('legal.privacy.errors.body')] },
+  {
+    id: 'providers',
+    title: 'legal.privacy.providers.title',
+    blocks: [
+      p('legal.privacy.providers.body'),
+      {
+        kind: 'list',
+        items: [
+          'legal.privacy.providers.supabase',
+          'legal.privacy.providers.vercel',
+          'legal.privacy.providers.upstash',
+          'legal.privacy.providers.stripe',
+          'legal.privacy.providers.resend',
+          'legal.privacy.providers.posthog',
+          'legal.privacy.providers.sentry',
+          'legal.privacy.providers.github',
+        ],
+      },
+      p('legal.privacy.providers.transfers'),
+    ],
+  },
   { id: 'ai', title: 'legal.privacy.ai.title', blocks: [p('legal.privacy.ai.body')] },
   { id: 'github', title: 'legal.privacy.github.title', blocks: [p('legal.privacy.github.body')] },
-  { id: 'deletion', title: 'legal.privacy.deletion.title', blocks: [p('legal.privacy.deletion.body')] },
+  {
+    id: 'legal-bases',
+    title: 'legal.privacy.bases.title',
+    blocks: [{ kind: 'list', items: ['legal.privacy.bases.contract', 'legal.privacy.bases.interest', 'legal.privacy.bases.consent', 'legal.privacy.bases.law'] }],
+  },
+  {
+    id: 'retention',
+    title: 'legal.privacy.retention.title',
+    blocks: [{ kind: 'table', caption: 'legal.privacy.retention.caption', head: ['legal.privacy.retention.colWhat', 'legal.privacy.retention.colHow'], rows: RETENTION_ROWS }],
+  },
+  { id: 'deletion', title: 'legal.privacy.deletion.title', blocks: [p('legal.privacy.deletion.body'), p('legal.privacy.deletion.kept')] },
   { id: 'rights', title: 'legal.privacy.rights.title', blocks: [p('legal.privacy.rights.body')] },
+  { id: 'changes', title: 'legal.privacy.changes.title', blocks: [p('legal.privacy.changes.body')] },
   {
     id: 'contact',
     title: 'legal.privacy.contact.title',
@@ -195,6 +291,40 @@ function LinkRow({ links, seller }: { links: LinkSpec[]; seller: Seller }) {
   );
 }
 
+function LegalTable({ caption, head, rows }: { caption: TranslationKey; head: TranslationKey[]; rows: Cell[][] }) {
+  const { t } = useLanguage();
+  const captionId = useId();
+  // A wide table scrolls inside its own box on a phone, never the page; the
+  // box takes focus so a keyboard can scroll it too.
+  return (
+    <div className="ss-legal-table" role="region" aria-labelledby={captionId} tabIndex={0}>
+      <table>
+        <caption id={captionId}>{t(caption)}</caption>
+        <thead>
+          <tr>{head.map((key) => <th key={key} scope="col">{t(key)}</th>)}</tr>
+        </thead>
+        <tbody>
+          {rows.map((row, index) => (
+            <tr key={index}>
+              {row.map((cell, column) => {
+                if (typeof cell !== 'string') {
+                  return (
+                    <th key={column} scope="row">
+                      <code>{cell.code}</code>
+                      <span className="ss-legal-table__where">{t(cell.where)}</span>
+                    </th>
+                  );
+                }
+                return column === 0 ? <th key={column} scope="row">{t(cell)}</th> : <td key={column}>{t(cell)}</td>;
+              })}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 function LegalDocument({ title, lead, sections }: { title: TranslationKey; lead: TranslationKey; sections: Section[] }) {
   const { t } = useLanguage();
   const billing = useBilling();
@@ -226,6 +356,13 @@ function LegalDocument({ title, lead, sections }: { title: TranslationKey; lead:
       case 'trader': return <TraderDetails key={index} />;
       case 'form': return <WithdrawalForm key={index} />;
       case 'launch': return offer ? <p key={index}>{t('legal.terms.price.launch', offer)}</p> : null;
+      case 'list': return <ul key={index} className="ss-legal-list">{block.items.map((key) => <li key={key}>{t(key)}</li>)}</ul>;
+      case 'table': return <LegalTable key={index} caption={block.caption} head={block.head} rows={block.rows} />;
+      case 'consent': return (
+        <p key={index} className="ss-text-links">
+          <button type="button" onClick={openConsentSettings} aria-haspopup="dialog">{t('legal.privacy.cookies.change')}</button>
+        </p>
+      );
     }
   };
 

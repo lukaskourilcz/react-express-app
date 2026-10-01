@@ -4689,8 +4689,38 @@ async function main() {
   await dailySwitchContracts();
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
+  consentContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
+}
+
+/** Cookie consent and the privacy policy (round 4, owner decisions 2 and 4).
+ * PostHog loads only behind analytics consent, no marketing tag ships, and
+ * the retention the policy states is the one the database runs. */
+function consentContracts() {
+  const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
+  const main = read('client/src/main.tsx');
+  const analytics = read('client/src/lib/analytics.ts');
+  // posthog-js is imported in one place, dynamically, inside the consent gate.
+  assert.doesNotMatch(main, /posthog-js/, 'main.tsx must not import PostHog');
+  assert.equal(analytics.match(/import\('posthog-js'\)/g)?.length, 1, 'one dynamic import of posthog-js');
+  assert.match(analytics, /opt_out_capturing_by_default: true/);
+  assert.match(analytics, /if \(!active \|\| !key\) return Promise\.resolve\(null\);/, 'PostHog loads only while analytics consent holds');
+  // No marketing tag, ID or host ships until the owner connects one.
+  assert.match(read('client/src/lib/marketing.ts'), /const MARKETING_LOADERS: readonly MarketingLoader\[\] = \[\];/);
+  const csp = read('vercel.json');
+  assert.doesNotMatch(csp, /googletagmanager|google-analytics|connect\.facebook\.net|facebook\.com\/tr/, 'no marketing host in the CSP yet');
+  // The footer reopens the choice; the banner offers Reject all beside Accept all.
+  assert.match(read('client/src/components/BrandFooter.tsx'), /onClick=\{openConsentSettings\}/);
+  assert.equal(ENGLISH['consent.rejectAll'], 'Reject all');
+  assert.equal(ENGLISH['footer.cookieSettings'], 'Cookie settings');
+  // The sign-in log's 12 months is the purge in migration 058.
+  assert.match(ENGLISH['legal.privacy.account.log'], /deletes each record after 12 months/);
+  assert.match(read('supabase/supabase-schema-058.sql'), /DELETE FROM public\.auth_events\s+WHERE created_at < NOW\(\) - INTERVAL '12 months';/, 'the purge the privacy policy promises');
+  // Merchandise is hidden: the policy names no shop that receives data.
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    if (key.startsWith('legal.privacy.')) assert.doesNotMatch(value, /sprd\.net/, `${key} still names Spreadshop as a recipient`);
+  }
 }
 
 void main().catch((error) => {
