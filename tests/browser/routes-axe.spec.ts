@@ -10,7 +10,9 @@ import AxeBuilder from '@axe-core/playwright';
 //
 // The app ships English only (ENABLED_LANGS), so there is one locale to scan.
 
-const ROUTES = ['/profile', '/today', '/leaderboard', '/challenge'];
+// A signed-out /profile sends the visitor home, so the home page is scanned
+// under its own name rather than as "/profile".
+const ROUTES = ['/', '/today', '/leaderboard', '/challenge'];
 const WIDTHS = [
   { width: 390, height: 844 },
   { width: 1280, height: 800 },
@@ -18,7 +20,7 @@ const WIDTHS = [
 const TAGS = ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'];
 // Dark mode also covers the surfaces the pre-launch design audit reworked
 // (P1.9): the homepage, Coins, Coding and the quiz setup.
-const DARK_ROUTES = ['/', '/profile', '/today', '/leaderboard', '/shop', '/coding', '/quiz', '/challenge'];
+const DARK_ROUTES = ['/', '/today', '/leaderboard', '/shop', '/coding', '/quiz', '/challenge'];
 
 /**
  * axe reads the colours a pixel has, so scanning during an entry fade measures
@@ -56,7 +58,7 @@ for (const theme of ['light', 'dark']) {
       ).toEqual([]);
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
     }
-    await page.screenshot({ path: info.outputPath('profile.png'), fullPage: true });
+    await page.screenshot({ path: info.outputPath('last-route.png'), fullPage: true });
   });
 }
 
@@ -67,7 +69,7 @@ test('the accent chip takes its colour from the derived on-tint token', async ({
   await page.addInitScript(() => {
     try { localStorage.setItem('devquiz:color-mode', 'light'); } catch {}
   });
-  await page.goto('/profile');
+  await page.goto('/');
   await settled(page);
   const chip = page.locator('.ss-panel span').first();
   await expect(chip).toBeVisible();
@@ -93,7 +95,7 @@ test('the accent chip takes its colour from the derived on-tint token', async ({
 
 test('the levels strip is a keyboard-reachable scroll region', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto('/profile');
+  await page.goto('/');
   await settled(page);
   const strip = page.locator('.ss-scroll-strip');
   await expect(strip).toHaveCount(1);

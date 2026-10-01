@@ -46,25 +46,30 @@ const CHROME = resolveChrome();
 const IS_LINUX = platform() === 'linux';
 const DEFAULT_BASE = 'http://localhost:4173';
 // The routes that render their page on the preview server with the fixtures
-// below. Left out until the sweep has fixtures for their data, because
-// without them they are measured on an error or empty state:
-//   /learn, /today, /roadmap, /roadmap/paths/dsa-foundations(/dsa-v1-d01),
-//   /roadmap/specializations/fde(/fde-v1-m01), /coding/javascript/js-double-numbers,
-//   /coding/algorithms/alg-two-sum (GET /api/quiz/roadmap); /challenge
-//   (GET /api/quiz/challenge); /leaderboard (GET /api/leaderboard); /shop
-//   (GET /api/user/*); /curation (GET /api/quiz/questions); /dev
-//   (GET /api/admin/settings).
-// Also left out: /play, /play/EXPIRED and /cards, whose signed-out gate has no
-// <h1>, so the sweep cannot tell it rendered.
+// below, all signed out. Left out until the sweep has fixtures for their
+// data, because without them they are measured on an error or empty state:
+//   /roadmap (GET /api/user/* for the learner's profile); /curation
+//   (GET /api/quiz/questions); /dev (GET /api/admin/settings); /play/EXPIRED
+//   (signed out it is the same sign-in gate as /play).
 const DEFAULT_ROUTES = [
   '/',
   '/quiz',
   '/daily',
+  '/learn',
+  '/today',
+  '/challenge',
+  '/leaderboard',
+  '/shop',
+  '/play',
+  '/cards',
   '/coding',
   '/coding/javascript',
   '/coding/algorithms',
   '/coding/system-design',
   '/coding/review',
+  '/coding/javascript/js-double-numbers',
+  '/roadmap/paths/dsa-foundations',
+  '/roadmap/specializations/fde',
   '/settings/github',
   '/profile',
   '/premium',
@@ -77,6 +82,7 @@ const DEFAULT_ROUTES = [
   '/not-found-responsive-check',
 ];
 const DEFAULT_VIEWPORTS = [
+  { label: '320x700', width: 320, height: 700, mobile: true },
   { label: '360x800', width: 360, height: 800, mobile: true },
   { label: '390x844', width: 390, height: 844, mobile: true },
   { label: '430x932', width: 430, height: 932, mobile: true },
@@ -92,6 +98,42 @@ const DEFAULT_VIEWPORTS = [
 // The launched deployment's public settings, which every page reads; the same
 // body the client tests use, checked against api/settings.ts by test:launch.
 const SETTINGS = JSON.parse(readFileSync(new URL('../tests/fixtures/api-settings.json', import.meta.url), 'utf8'));
+// The roadmap structure, the path catalog and a coding task, built from the
+// server's own modules (scripts/responsive-fixtures.ts), bundled once here.
+const SERVER = await loadServerFixtures();
+async function loadServerFixtures() {
+  const { build } = await import('esbuild');
+  const out = await build({
+    entryPoints: [new URL('./responsive-fixtures.ts', import.meta.url).pathname],
+    bundle: true, platform: 'node', format: 'esm', write: false, logLevel: 'error',
+  });
+  return import(`data:text/javascript;base64,${Buffer.from(out.outputFiles[0].text).toString('base64')}`);
+}
+const ROADMAP = '/api/quiz/roadmap';
+// The Biggest Shark Challenge board (lib/challenge-store.ts) and the 30-day
+// board (window_leaderboard rows): invented learners in the real shapes, the
+// same ones the client tests use.
+const CHALLENGE_BOARD = {
+  top: [{ id: 'run-1', name: 'Harbour reader', score: 42, createdAt: '2026-09-25T10:00:00Z' }],
+  champion: { id: 'run-1', name: 'Harbour reader', score: 42, createdAt: '2026-09-25T10:00:00Z' },
+};
+const WINDOW_BOARD = {
+  period: '30d', days: 30, category: null, min_answers: 5,
+  entries: [
+    { rank: 1, display_name: 'Workshop learner', picture: null, correct: 8, answered: 10, accuracy_pct: 80, is_viewer: false },
+    { rank: 2, display_name: 'Harbour reader', picture: null, correct: 6, answered: 9, accuracy_pct: 67, is_viewer: false },
+  ],
+};
+// GET /api/user/[op]?op=shop: redemption closed, as the launched settings say.
+const SHOP = {
+  enabled: false, cashCheckoutEnabled: false, testMode: false, policyUrl: '',
+  items: [
+    { sku: 'mug', variants: [], availability: 'unconfigured', price: null, variantStock: [{ variant: '', free: 0 }] },
+    { sku: 't-shirt', variants: ['S', 'M'], availability: 'unconfigured', price: null, variantStock: [] },
+  ],
+  crown: { available: true, tokenPrice: 1200 },
+  protection: { available: true, tokenPrice: 250, cap: 2 },
+};
 
 const API_FIXTURES = [
   { method: 'GET', match: (url) => url.pathname === '/api/settings', body: () => SETTINGS },
@@ -111,6 +153,19 @@ const API_FIXTURES = [
     }),
   },
 ];
+
+API_FIXTURES.push(
+  { method: 'GET', match: (url) => url.pathname === ROADMAP && !url.searchParams.has('resource'), body: () => SERVER.roadmapStructure() },
+  { method: 'GET', match: (url) => url.pathname === ROADMAP && url.searchParams.get('resource') === 'learning-path-catalog', body: () => SERVER.pathCatalog() },
+  {
+    method: 'GET',
+    match: (url) => url.pathname === ROADMAP && url.searchParams.get('resource') === 'coding-task' && SERVER.codingTask(url.searchParams.get('id') ?? '') !== null,
+    body: (url) => SERVER.codingTask(url.searchParams.get('id') ?? ''),
+  },
+  { method: 'GET', match: (url) => url.pathname === '/api/quiz/challenge' && url.searchParams.get('resource') === 'leaderboard', body: () => CHALLENGE_BOARD },
+  { method: 'GET', match: (url) => url.pathname === '/api/leaderboard' && url.searchParams.get('period') === '30d', body: (url) => ({ ...WINDOW_BOARD, category: url.searchParams.get('category') }) },
+  { method: 'GET', match: (url) => decodeURIComponent(url.pathname) === '/api/user/[op]' && url.searchParams.get('op') === 'shop', body: () => SHOP },
+);
 
 function apiFixture(method, url) {
   const fixture = API_FIXTURES.find((one) => one.method === method && one.match(url));
@@ -558,7 +613,7 @@ async function openBrowser(seed, baseUrl) {
       const { requestId, request } = msg.params;
       const url = new URL(request.url);
       const fixture = apiFixture(request.method, url);
-      apiRequests.push({ request: `${request.method} ${url.pathname}`, answered: Boolean(fixture) });
+      apiRequests.push({ request: `${request.method} ${url.pathname}${url.search}`, answered: Boolean(fixture) });
       const { status, body } = fixture
         ?? { status: 503, body: { error: { code: 'not_configured', message: 'The responsive sweep has no fixture for this request' } } };
       call('Fetch.fulfillRequest', {
