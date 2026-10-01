@@ -22,6 +22,7 @@ import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
 import { getGameSettings } from '../settings-store';
 import { requireAdmin } from '../admin-auth';
+import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { refuseLocked } from '../access';
 import { isScopeSubject } from '../../shared/subject-catalog';
@@ -717,8 +718,12 @@ interface FulfilmentRow {
  * shows an operator what they need to pack a parcel and nothing more. Addresses
  * are returned here because a picking list needs them, and they are never
  * logged or sent to analytics.
+ *
+ * The admin gate's own bucket comes first, as in api/admin: the route's write
+ * limit skips a GET, and the gate can fall back to the legacy password.
  */
 export async function handleFulfilment(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.admin))) return;
   if (!(await requireAdmin(req, res))) return;
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account storage is not configured');
 

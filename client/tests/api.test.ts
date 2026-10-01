@@ -12,6 +12,15 @@ describe('real API transport with MSW', () => {
     expect(error.status).toBe(status);
     expect(friendlyError(error)).toMatch(/sign in/i);
   });
+  it.each([
+    ['not_in_plan', 'Not part of the track you chose. Change your track on the Roadmap page to open it.'],
+    ['topic_locked', 'This topic is still locked. Finish the topics it builds on first.'],
+    ['prerequisite_not_met', 'Pass the steps before this one first.'],
+  ])('says what a signed-in learner’s Learn refusal %s means, not "sign in"', async (code, copy) => {
+    server.use(http.get('*/api/test', () => HttpResponse.json({ error: { code, message: 'server wording' } }, { status: 403 })));
+    const error = await apiFetch('/api/test').catch(e => e);
+    expect(friendlyError(error)).toBe(copy);
+  });
   it('does not expose a gateway HTML error as learner-facing copy', async () => {
     server.use(http.get('*/api/test', () => new HttpResponse('<h1>gateway</h1>', { status: 502 })));
     const error = await apiFetch('/api/test').catch(e => e);

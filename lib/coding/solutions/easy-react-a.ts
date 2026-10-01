@@ -199,7 +199,7 @@ test('a reminder can be set again after a cancel', async () => {
   press('Remind me');
   press('Cancel');
   press('Remind me');
-  await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 2000 });
+  await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 1000 });
 });`,
   },
 

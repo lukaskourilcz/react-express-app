@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { SupabaseClient, User } from '@supabase/supabase-js';
 import {
+  forgetStoredSession,
   getSupabaseSession,
   hasStoredSession,
   loadSupabase,
@@ -44,6 +45,12 @@ function reportSignIn(): void {
   }
   // Fire-and-forget: never let logging affect the sign-in UX.
   void apiFetch('/api/user/authevent', { method: 'POST', body: '{}' }).catch(() => {});
+}
+/** supabase-js's AuthRetryableFetchError (no answer, or a 502/503/504) or any
+ * other 5xx: the server did not decide anything. Read by name and status, as
+ * importing supabase-js here would put it back in the first page load. */
+function serverUnreachable(error: { name?: string; status?: number }): boolean {
+  return error.name === 'AuthRetryableFetchError' || (typeof error.status === 'number' && (error.status === 0 || error.status >= 500));
 }
 function clearSignInReport(): void {
   try {
@@ -222,13 +229,39 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     await startSignIn(true);
   };
 
+  // Log out of this browser without the server: what supabase-js's SIGNED_OUT
+  // would have done here, since it announces none.
+  const forgetSessionHere = () => {
+    forgetStoredSession();
+    cachedAccessToken = null;
+    clearSignInReport();
+    clearAccountData();
+    accountSignedIn = false;
+    setUser(null);
+  };
+
   // supabase-js signs out every device by default. Log out means this
   // browser; signing out everywhere is its own, explicit action.
+  //
+  // Offline, or while the sign-in service answers 5xx, supabase-js refuses a
+  // local sign-out and keeps the session, so Log out did nothing. Ending the
+  // session on this device needs nothing from the server, so it ends here
+  // anyway; the server's copy of this session lapses with its refresh token.
+  // Signing out everywhere does need the server, and still says it failed.
   const signOut = async (scope: SignOutScope = 'local') => {
     const client = await supabaseForSession();
-    if (!client) return;
+    if (!client) {
+      // supabase-js could not load (offline, a failed download).
+      if (scope === 'local' && hasStoredSession()) forgetSessionHere();
+      return;
+    }
     const { error } = await client.auth.signOut({ scope });
-    if (error) throw error;
+    if (!error) return;
+    if (scope === 'local' && serverUnreachable(error)) {
+      forgetSessionHere();
+      return;
+    }
+    throw error;
   };
 
   return (

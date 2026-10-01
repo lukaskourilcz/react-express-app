@@ -23,9 +23,10 @@ export const leaderboardVisibilityQuery = (userId: string) => queryOptions({
 /**
  * The signed-in learner's setting and the way to change it. `setVisible`
  * shows the new state at once and puts the old one back if the save fails;
- * pass `onError` to tell the learner. A save, successful or not, refetches the
- * learner's own 30-day board, whose line for them is uncached, so their view
- * of it follows at once. The shared boards are CDN-cached for up to a minute.
+ * pass `onError` to tell the learner. A save, successful or not, refetches
+ * every board this tab has loaded: the learner's own 30-day board, whose line
+ * for them is uncached, follows at once, and the shared boards follow as soon
+ * as the CDN's copy expires, within a minute (they are never served stale).
  */
 export function useLeaderboardVisibility() {
   const { user } = useAuth();
@@ -50,7 +51,7 @@ export function useLeaderboardVisibility() {
     onSuccess: (saved) => {
       queryClient.setQueryData(options.queryKey, saved);
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: ['leaderboard', '30d'] }),
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ['leaderboard'] }),
   });
 
   return {

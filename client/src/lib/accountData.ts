@@ -43,8 +43,20 @@ function clear(storage: Storage): void {
   for (const key of keys) if (key && isAccountKey(key)) storage.removeItem(key);
 }
 
+// Which account's data this page holds: a count that moves every time the
+// data is forgotten. Work started for one account (a progress sync still in
+// flight at sign-out) reads it before and after, and writes nothing when it
+// moved, so the account that left does not come back into the browser.
+let epoch = 0;
+
+/** The current account epoch; see above. */
+export function accountEpoch(): number {
+  return epoch;
+}
+
 /** Forget the account's data on this device and refresh what shows it. */
 export function clearAccountData(): void {
+  epoch += 1;
   try { clear(localStorage); } catch { /* storage may be disabled */ }
   try { clear(sessionStorage); } catch { /* storage may be disabled */ }
   emitAllStores();

@@ -3,11 +3,12 @@
 // until a pass, and the runner does not invent them. A pass shows the whole
 // walkthrough.
 import { expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { DesignRunner } from '../src/coding/DesignRunner';
 import { submitCoding } from '../src/coding/api';
+import { ApiError } from '../src/lib/api';
 import type { CodingVerdictResponse, DesignStepVerdict } from '../../shared/coding-api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 
@@ -128,4 +129,31 @@ it('says a pass after a revealed solution earned no XP', async () => {
   const heading = await answerAndSubmit();
   expect(heading).toHaveTextContent('Passed — no XP because the solution was revealed');
   expect(heading).not.toHaveTextContent('+');
+});
+
+// TEST-1: the server claims a design session before it grades and records.
+// When that first check failed after the claim (a 500, or an answer lost on
+// the way), every retry of the session met 409 design_session_used, and the
+// runner kept saying "check your connection" with Submit still on.
+it('says a used walkthrough must be opened again, offers Try again, and stops resending it', async () => {
+  vi.mocked(submitCoding).mockReset();
+  vi.mocked(submitCoding)
+    .mockRejectedValueOnce(new ApiError('Could not record the verdict', 500, 'db_error'))
+    .mockRejectedValue(new ApiError('This walkthrough was already checked. Open it again for a new attempt.', 409, 'design_session_used'));
+  const onRetry = mount();
+  fireEvent.click(screen.getByRole('radio', { name: 'Reads dominate' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'Only the code' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Next question' }));
+  fireEvent.click(screen.getByRole('radio', { name: 'A cache' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Submit answers' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('Server error. Try again in a moment.');
+  expect(screen.queryByRole('button', { name: 'Try again' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Submit answers' }));
+  await waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('This walkthrough was already checked. Open it again for a new attempt.'));
+  expect(screen.getByRole('button', { name: 'Submit answers' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: 'Submit answers' }));
+  expect(submitCoding).toHaveBeenCalledTimes(2);
+  fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+  expect(onRetry).toHaveBeenCalledTimes(1);
 });

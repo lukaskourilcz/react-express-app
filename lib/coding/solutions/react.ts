@@ -2431,9 +2431,10 @@ const App = () => {
     </main>
   );
 };`,
-    // On the hand-moved clock of FAKE_CLOCK, so each second is exact and a
-    // second interval shows as a count that runs ahead.
-    hiddenSuite: `${FAKE_CLOCK}${NUMBERS_SHOWN}
+    // On the hand-moved clock of FAKE_CLOCK, which the visible suite declares,
+    // so each second is exact and a second interval shows as a count that
+    // runs ahead.
+    hiddenSuite: `${NUMBERS_SHOWN}
 const secondsShown = container => numbersShown(container.querySelector('p'));
 
 test('Start counts exactly one per second from 0', () => withClock(async clock => {
@@ -3248,7 +3249,7 @@ test('shows the first three todos the server holds, each with its state, and the
   const request = requestTo(calls, '/todos');
   expect(Boolean(request)).toBe(true);
   answerLikeTheApi(request);
-  await waitFor(() => expect(container.querySelectorAll('li').length > 0).toBe(true));
+  await waitFor(() => expect(container.querySelectorAll('li').length > 0).toBe(true), soon);
   const items = container.querySelectorAll('li');
   expect(items).toHaveLength(3);
   expect(items[0].textContent).toContain('Pack the tent');
@@ -3262,7 +3263,7 @@ test('shows the first three todos the server holds, each with its state, and the
 
 test('Remove drops the todo it belongs to, not the first one', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   const second = container.querySelectorAll('li')[1];
   fireEvent.click([...second.querySelectorAll('button')].find(b => /remove/i.test(b.textContent)));
   const items = container.querySelectorAll('li');
@@ -3647,6 +3648,26 @@ test('an answer that is not ok is a failure even with users in its body', () => 
   const { container } = render(<App />);
   gets(calls, USERS_URL)[0].respond(DIRECTORY, 503);
   await expectFailure(container);
+}));
+
+test('the search reads the name only, not the city or the email', () => withServer(async calls => {
+  const container = await loaded(calls, DIRECTORY);
+  search(container, 'porto');
+  expect(container.querySelectorAll('li')).toHaveLength(0);
+  expect(says(container, 'No users match')).toBe(true);
+}));
+
+test('a city keeps the users of that city only, not of a city whose name contains it', () => withServer(async calls => {
+  const container = await loaded(calls, [...DIRECTORY, { id: 36, name: 'Rafael Costa', email: 'rafael@sul.example', address: { city: 'Porto Alegre' } }]);
+  chooseCity(container, 'Porto');
+  expectItems(itemTexts(container), ['Ines Duarte', 'Ana Maya']);
+}));
+
+test('filtering never asks the server again', () => withServer(async calls => {
+  const container = await loaded(calls, DIRECTORY);
+  search(container, 'lars');
+  chooseCity(container, 'Bergen');
+  expect(calls).toHaveLength(1);
 }));`,
   },
   "react-posts-dashboard": {
@@ -3865,21 +3886,21 @@ const FEED = [
 test('the buttons come from the answer, lowest user id first, and nothing is listed yet', () => withServer(async calls => {
   const container = await loaded(calls, FEED);
   expect(buttonTexts(container)).toEqual(['User 3 (1)', 'User 7 (3)', 'User 12 (2)']);
-  expect(container.querySelectorAll('li')).toHaveLength(0);
+  expect(postItems(container)).toHaveLength(0);
 }));
 
 test('user 12 sees exactly their posts, in the order they arrived', () => withServer(async calls => {
   const container = await loaded(calls, FEED);
   choose(container, 'User 12 (2)');
-  expectItems(itemTexts(container), ['Harbour lights', 'Night crossing']);
+  expectItems(postTexts(container), ['Harbour lights', 'Night crossing']);
 }));
 
 test('moving from user 7 to user 3 replaces the list and moves the pressed mark', () => withServer(async calls => {
   const container = await loaded(calls, FEED);
   choose(container, 'User 7 (3)');
-  expectItems(itemTexts(container), ['Tide tables', 'Knots for beginners', 'Reading the swell']);
+  expectItems(postTexts(container), ['Tide tables', 'Knots for beginners', 'Reading the swell']);
   choose(container, 'User 3 (1)');
-  expectItems(itemTexts(container), ['Mending nets']);
+  expectItems(postTexts(container), ['Mending nets']);
   expect(userButtons(container).map(button => button.getAttribute('aria-pressed'))).toEqual(['true', 'false', 'false']);
 }));
 
@@ -3895,6 +3916,14 @@ test('an answer that is not ok is a failure even with posts in its body', () => 
   gets(calls, POSTS_URL)[0].respond(FEED, 500);
   await expectFailure(container);
   expect(userButtons(container)).toHaveLength(0);
+}));
+
+test('choosing users never asks the server again', () => withServer(async calls => {
+  const container = await loaded(calls, FEED);
+  choose(container, 'User 7 (3)');
+  choose(container, 'User 12 (2)');
+  expectItems(postTexts(container), ['Harbour lights', 'Night crossing']);
+  expect(calls).toHaveLength(1);
 }));`,
   },
   "react-todo-client": {
@@ -4213,9 +4242,35 @@ test('a POST the server refuses adds nothing and shows an alert', () => withServ
   const container = await loaded(calls, SERVER_TODOS);
   add(container, 'Buy stamps');
   posts(calls)[0].respond({ message: 'Server error' }, 500);
-  await waitFor(() => expect(Boolean(alertIn(container))).toBe(true));
+  await waitFor(() => expect(alertText(container).length > 0).toBe(true));
   expect(container.querySelectorAll('li')).toHaveLength(5);
   expect(says(container, 'Completed: 3 of 5')).toBe(true);
+}));
+
+test('a POST that never reaches the server adds nothing and shows an alert', () => withServer(async calls => {
+  const container = await loaded(calls, SERVER_TODOS);
+  add(container, 'Buy stamps');
+  posts(calls)[0].fail(new TypeError('Failed to fetch'));
+  await waitFor(() => expect(alertText(container).length > 0).toBe(true));
+  expect(container.querySelectorAll('li')).toHaveLength(5);
+  expect(says(container, 'Completed: 3 of 5')).toBe(true);
+}));
+
+test('the list shows the todo the server sent back, not the text typed', () => withServer(async calls => {
+  const container = await loaded(calls, SERVER_TODOS);
+  add(container, 'post the letter');
+  expect(JSON.parse(posts(calls)[0].options.body).title).toBe('post the letter');
+  posts(calls)[0].respond({ id: 778, title: 'Post the letter', completed: false, userId: 1 }, 201);
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(6));
+  expect(itemTexts(container)[5]).toContain('Post the letter');
+}));
+
+test('ticking and deleting never ask the server', () => withServer(async calls => {
+  const container = await loaded(calls, SERVER_TODOS);
+  fireEvent.click(boxes(container)[0]);
+  fireEvent.click(buttonNamed(container.querySelectorAll('li')[1], 'Delete'));
+  expect(says(container, 'Completed: 2 of 4')).toBe(true);
+  expect(calls).toHaveLength(1);
 }));
 
 test('a load that throws shows an alert and no todos', () => withServer(async calls => {
@@ -4561,6 +4616,29 @@ test('a request that throws shows an alert and no products', () => withServer(as
   const { container } = render(<App />);
   gets(calls, PRODUCTS_URL)[0].fail(new TypeError('Failed to fetch'));
   await expectFailure(container);
+}));
+
+test('no match still reads Page 1 of 1, with both buttons disabled', () => withServer(async calls => {
+  const container = await loaded(calls, CATALOGUE);
+  press(container, 'Next');
+  search(container, 'zzz');
+  expect(says(container, 'Page 1 of 1')).toBe(true);
+  expect(buttonNamed(container, 'Previous').disabled).toBe(true);
+  expect(buttonNamed(container, 'Next').disabled).toBe(true);
+}));
+
+test('the average always shows two decimals', () => withServer(async calls => {
+  const container = await loaded(calls, [{ id: 91, title: 'Mug', price: 10 }, { id: 92, title: 'Mug rack', price: 20.4 }]);
+  expect(says(container, 'Average price: 15.20')).toBe(true);
+}));
+
+test('searching, sorting and paging never ask the server again', () => withServer(async calls => {
+  const container = await loaded(calls, CATALOGUE);
+  search(container, 'desk');
+  sortBy(container, 'price-asc');
+  search(container, '');
+  press(container, 'Next');
+  expect(calls).toHaveLength(1);
 }));`,
   },
   "react-comments-viewer": {
@@ -4868,6 +4946,13 @@ test('a request that throws shows an alert and no comments', () => withServer(as
   const { container } = render(<App />);
   gets(calls, COMMENTS_URL)[0].fail(new TypeError('Failed to fetch'));
   await expectFailure(container);
+}));
+
+test('filtering never asks the server again', () => withServer(async calls => {
+  const container = await loaded(calls, THREAD);
+  filterEmail(container, 'ken');
+  choosePost(container, '9');
+  expect(calls).toHaveLength(1);
 }));`,
   },
   "react-weather-style-dashboard": {
@@ -5217,8 +5302,8 @@ export default App;`,
   search('BRNO');
   await answer(calls[2], 0);
   expect(recent()).toEqual(['Brno: 0 °C', 'Ostrava: -7.25 °C', 'Prague: -3.5 °C']);
-  expect(screen.getByText('Lowest: -7.25 °C')).toBeTruthy();
-  expect(screen.getByText('Highest: 0 °C')).toBeTruthy();
+  expectLine('Lowest: -7.25 °C');
+  expectLine('Highest: 0 °C');
 }));
 
 test('three cities stay, and one that drops off stops counting', () => withRequests(async calls => {
@@ -5232,8 +5317,8 @@ test('three cities stay, and one that drops off stops counting', () => withReque
   expect(asked(calls[3])).toEqual([FORECAST, 52.52, 13.41, 'temperature_2m']);
   await answer(calls[3], 7);
   expect(recent()).toEqual(['Berlin: 7 °C', 'Vienna: 6 °C', 'Brno: 5 °C']);
-  expect(screen.getByText('Lowest: 5 °C')).toBeTruthy();
-  expect(screen.getByText('Highest: 7 °C')).toBeTruthy();
+  expectLine('Lowest: 5 °C');
+  expectLine('Highest: 7 °C');
 }));
 
 test('an answer that is not ok is a failure, and Retry asks for the city that failed', () => withRequests(async calls => {
@@ -5241,12 +5326,12 @@ test('an answer that is not ok is a failure, and Retry asks for the city that fa
   await answer(calls[0], 12.5);
   search('Berlin');
   await answer(calls[1], 99, 503);
-  expect(screen.getByRole('alert').textContent).toBe('Could not load the weather');
+  expect(alertText()).toBe('Could not load the weather');
   expect(recent()).toEqual(['Prague: 12.5 °C']);
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
   expect(calls).toHaveLength(3);
   expect(asked(calls[2])).toEqual([FORECAST, 52.52, 13.41, 'temperature_2m']);
-  expect(screen.queryByRole('alert')).toBeNull();
+  expect(alertText()).toBe('');
   await answer(calls[2], 9);
   expect(recent()).toEqual(['Berlin: 9 °C', 'Prague: 12.5 °C']);
 }));
@@ -5258,11 +5343,11 @@ test('a new search clears the alert, and no reading means no lowest or highest',
   expect(screen.queryByText('Lowest', { exact: false })).toBeNull();
   expect(screen.queryByText('Highest', { exact: false })).toBeNull();
   search('vienna');
-  expect(screen.queryByRole('alert')).toBeNull();
+  expect(alertText()).toBe('');
   await answer(calls[1], 14);
   expect(recent()).toEqual(['Vienna: 14 °C']);
-  expect(screen.getByText('Lowest: 14 °C')).toBeTruthy();
-  expect(screen.getByText('Highest: 14 °C')).toBeTruthy();
+  expectLine('Lowest: 14 °C');
+  expectLine('Highest: 14 °C');
 }));
 
 test('the next search removes the unknown-city message', () => withRequests(async calls => {
@@ -5274,6 +5359,15 @@ test('the next search removes the unknown-city message', () => withRequests(asyn
   search(' ostrava');
   expect(screen.queryByText('Unknown city: Gotham')).toBeNull();
   expect(asked(calls[1])).toEqual([FORECAST, 49.83, 18.29, 'temperature_2m']);
+}));
+
+test('only a whole city name matches, not the start of one', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], 12.5);
+  search('Pra');
+  expect(screen.getByText('Unknown city: Pra')).toBeTruthy();
+  expect(calls).toHaveLength(1);
+  expect(recent()).toEqual(['Prague: 12.5 °C']);
 }));`,
   },
   "react-notification-center": {
@@ -5596,7 +5690,7 @@ test('days come newest first even when the server sends them out of order', () =
     ['2026-10-01', ['Cara mentioned you', 'unread']],
     ['2026-09-30', ['Invoice paid', 'read']],
   ]);
-  expect(screen.getByText('Unread: 3')).toBeTruthy();
+  expectLine('Unread: 3');
 }));
 
 test('Mark as read marks the notification it belongs to, not the first of its day', () => withRequests(async calls => {
@@ -5604,7 +5698,7 @@ test('Mark as read marks the notification it belongs to, not the first of its da
   await answer(calls[0], FRESH);
   markRead('Backup completed');
   expect(groups()[0]).toEqual(['2026-10-02', ['Deploy finished', 'unread'], ['New sign-in from Linux', 'read'], ['Backup completed', 'read']]);
-  expect(screen.getByText('Unread: 2')).toBeTruthy();
+  expectLine('Unread: 2');
 }));
 
 test('no notifications at all says so', () => withRequests(async calls => {
@@ -5612,7 +5706,7 @@ test('no notifications at all says so', () => withRequests(async calls => {
   await answer(calls[0], []);
   expect(groups()).toEqual([]);
   expect(screen.getByText('No notifications')).toBeTruthy();
-  expect(screen.getByText('Unread: 0')).toBeTruthy();
+  expectLine('Unread: 0');
 }));
 
 test('an answer that is not ok is a failure', () => withRequests(async calls => {
@@ -5634,7 +5728,7 @@ test('unticking Unread only brings back what was marked read meanwhile', () => w
     ['2026-10-01', ['Cara mentioned you', 'read']],
     ['2026-09-30', ['Invoice paid', 'read']],
   ]);
-  expect(screen.getByText('Unread: 2')).toBeTruthy();
+  expectLine('Unread: 2');
 }));`,
   },
   "react-booking-prototype": {
@@ -6014,11 +6108,11 @@ test('an answer that is not ok is a failure, and a retry that works clears the a
   pick('Mon 11:00');
   fireEvent.click(bookButton());
   await answer(calls[1], { ...SLOTS[2], completed: true }, 500);
-  expect(screen.getByRole('alert').textContent).toBe('Could not book Mon 11:00');
+  expect(alertText()).toBe('Could not book Mon 11:00');
   expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'selected']]);
   fireEvent.click(bookButton());
   expect(calls).toHaveLength(3);
-  expect(screen.queryByRole('alert')).toBeNull();
+  expect(alertText()).toBe('');
   await answer(calls[2], { ...SLOTS[2], completed: true });
   expect(statusText()).toBe('Booked: Mon 11:00');
   expect(slots()).toEqual([['Mon 09:00', 'free'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'booked']]);
@@ -6027,7 +6121,7 @@ test('an answer that is not ok is a failure, and a retry that works clears the a
 test('slots that fail to load show an alert', () => withRequests(async calls => {
   render(<App />);
   await breakOff(calls[0]);
-  expect(screen.getByRole('alert').textContent).toBe('Could not load slots');
+  expect(alertText()).toBe('Could not load slots');
   expect(screen.queryByText('Loading slots…')).toBeNull();
   expect(slots()).toEqual([]);
 }));
@@ -6035,7 +6129,7 @@ test('slots that fail to load show an alert', () => withRequests(async calls => 
 test('a slot list answered with a status that is not ok is a failure too', () => withRequests(async calls => {
   render(<App />);
   await answer(calls[0], SLOTS, 503);
-  expect(screen.getByRole('alert').textContent).toBe('Could not load slots');
+  expect(alertText()).toBe('Could not load slots');
   expect(slots()).toEqual([]);
 }));
 
@@ -6051,7 +6145,7 @@ test('a new booking clears the last status, and a 409 after a success books both
   expect(statusText()).toBe('');
   expect(calls[2].url).toBe('https://jsonplaceholder.typicode.com/todos/3');
   await answer(calls[2], { error: 'Slot already booked' }, 409);
-  expect(screen.getByRole('alert').textContent).toBe('Mon 11:00 was just booked by someone else');
+  expect(alertText()).toBe('Mon 11:00 was just booked by someone else');
   expect(statusText()).toBe('');
   expect(slots()).toEqual([['Mon 09:00', 'booked'], ['Mon 10:00', 'booked'], ['Mon 11:00', 'booked']]);
   expect(bookButton().disabled).toBe(true);
@@ -6346,7 +6440,7 @@ test('the type options and the cards come from the events themselves', () => wit
   await answer(calls[0], FRESH);
   expect(typeOptions()).toEqual(['All types', 'download', 'refund', 'visit']);
   expect(cards()).toEqual([['download', '3'], ['refund', '1'], ['visit', '1']]);
-  expect(screen.getByText('Showing 5 of 5 events')).toBeTruthy();
+  expectLine('Showing 5 of 5 events');
 }));
 
 test('emptying a date box removes that limit', () => withRequests(async calls => {
@@ -6354,7 +6448,7 @@ test('emptying a date box removes that limit', () => withRequests(async calls =>
   await answer(calls[0], FRESH);
   setDate('From', '2026-10-03');
   expect(cards()).toEqual([['download', '1'], ['refund', '1'], ['visit', '1']]);
-  expect(screen.getByText('Showing 3 of 5 events')).toBeTruthy();
+  expectLine('Showing 3 of 5 events');
   setDate('From', '');
   expect(cards()).toEqual([['download', '3'], ['refund', '1'], ['visit', '1']]);
 }));
@@ -6366,7 +6460,7 @@ test('a type and a range work together', () => withRequests(async calls => {
   setDate('From', '2026-10-02');
   setDate('To', '2026-10-05');
   expect(cards()).toEqual([['download', '2']]);
-  expect(screen.getByText('Showing 2 of 5 events')).toBeTruthy();
+  expectLine('Showing 2 of 5 events');
 }));
 
 test('an answer that is not ok is a failure', () => withRequests(async calls => {
@@ -6381,8 +6475,16 @@ test('no events at all', () => withRequests(async calls => {
   await answer(calls[0], []);
   expect(typeOptions()).toEqual(['All types']);
   expect(cards()).toEqual([]);
-  expect(screen.getByText('Showing 0 of 0 events')).toBeTruthy();
+  expectLine('Showing 0 of 0 events');
   expect(screen.getByText('No events match these filters')).toBeTruthy();
+}));
+
+test('the type options list every type loaded, whatever the dates', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], FRESH);
+  setDate('To', '2026-10-02');
+  expect(cards()).toEqual([['download', '2']]);
+  expect(typeOptions()).toEqual(['All types', 'download', 'refund', 'visit']);
 }));`,
   },
   "react-interview-mini-project": {
@@ -6736,13 +6838,13 @@ test('the author options come from the posts, in number order', () => withReques
   render(<App />);
   await answer(calls[0], FRESH);
   expect(authorOptions()).toEqual(['All authors', 'User 4', 'User 9', 'User 10']);
-  expect(screen.getByText('Showing 4 of 4 posts')).toBeTruthy();
-  expect(screen.getByText('Authors: 3')).toBeTruthy();
+  expectLine('Showing 4 of 4 posts');
+  expectLine('Authors: 3');
   chooseAuthor('User 10');
   expect(titles()).toEqual(['Scaling the feed', 'Queues for writes']);
   typeIn('Search', 'FEED');
   expect(titles()).toEqual(['Scaling the feed']);
-  expect(screen.getByText('Showing 1 of 4 posts')).toBeTruthy();
+  expectLine('Showing 1 of 4 posts');
 }));
 
 test('a POST answered with a status that is not ok keeps the title, and the next attempt clears the alert', () => withRequests(async calls => {
@@ -6751,12 +6853,12 @@ test('a POST answered with a status that is not ok keeps the title, and the next
   typeIn('Title', 'Draft idea');
   fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
   await answer(calls[1], { id: 202, userId: 1, title: 'Draft idea', body: '' }, 500);
-  expect(screen.getByRole('alert').textContent).toBe('Could not add the post');
+  expect(alertText()).toBe('Could not add the post');
   expect(screen.getByLabelText('Title').value).toBe('Draft idea');
   expect(titles()).toHaveLength(4);
   fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
   expect(calls).toHaveLength(3);
-  expect(screen.queryByRole('alert')).toBeNull();
+  expect(alertText()).toBe('');
   await answer(calls[2], { id: 202, userId: 1, title: 'Draft idea', body: '' });
   expect(titles()[4]).toBe('Draft idea');
   expect(screen.getByLabelText('Title').value).toBe('');
@@ -6765,7 +6867,7 @@ test('a POST answered with a status that is not ok keeps the title, and the next
 test('a list answered with a status that is not ok is a failure', () => withRequests(async calls => {
   render(<App />);
   await answer(calls[0], POSTS, 500);
-  expect(screen.getByRole('alert').textContent).toBe('Could not load posts');
+  expect(alertText()).toBe('Could not load posts');
   expect(titles()).toEqual([]);
 }));
 
@@ -6777,7 +6879,7 @@ test('a new post counts in the total even while a filter hides it', () => withRe
   fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
   await answer(calls[1], { id: 203, userId: 1, title: 'Hidden gem', body: '' });
   expect(titles()).toEqual(['Testing React forms']);
-  expect(screen.getByText('Showing 1 of 5 posts')).toBeTruthy();
+  expectLine('Showing 1 of 5 posts');
   chooseAuthor('All authors');
   expect(titles()).toHaveLength(5);
   expect(titles()[4]).toBe('Hidden gem');
@@ -6793,6 +6895,29 @@ test('a second click while a post is on its way sends nothing', () => withReques
   await answer(calls[1], { id: 204, userId: 1, title: 'Once only', body: '' });
   expect(titles().filter(title => title === 'Once only')).toHaveLength(1);
   expect(screen.getByRole('button', { name: 'Add post' }).disabled).toBe(false);
+}));
+
+test('a POST that never reaches the server shows the alert and frees the button', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], POSTS);
+  typeIn('Title', 'Offline idea');
+  fireEvent.click(screen.getByRole('button', { name: 'Add post' }));
+  await breakOff(calls[1]);
+  expect(alertText()).toBe('Could not add the post');
+  expect(screen.getByLabelText('Title').value).toBe('Offline idea');
+  expect(titles()).toHaveLength(4);
+  expect(screen.getByRole('button', { name: 'Add post' }).disabled).toBe(false);
+}));
+
+test('Search reads the titles only, not the bodies', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], [
+    { id: 61, userId: 2, title: 'Release notes', body: 'Covers the caching layer' },
+    { id: 62, userId: 3, title: 'Caching layer design', body: 'Diagrams inside' },
+  ]);
+  typeIn('Search', 'caching');
+  expect(titles()).toEqual(['Caching layer design']);
+  expectLine('Showing 1 of 2 posts');
 }));`,
   },
 };

@@ -11,7 +11,10 @@ import { QOTD_BEFORE_START, QOTD_NOT_YET, type QotdResponse } from '../../../sha
 export const dailyQuestionQuery = (date: string | 'today') =>
   queryOptions({
     queryKey: ['daily-question', date] as const,
-    queryFn: ({ signal }) => apiFetch<QotdResponse>(`/api/quiz/daily?qotd=${encodeURIComponent(date)}`, { signal }),
+    // Each read seals a fresh session and one check claims it, so a read must
+    // reach the server: a response the browser kept (the server sent
+    // max-age=300 before) would hand back a session already claimed.
+    queryFn: ({ signal }) => apiFetch<QotdResponse>(`/api/quiz/daily?qotd=${encodeURIComponent(date)}`, { signal, cache: 'no-store' }),
     // The session inside expires after an hour; a stale question is fetched
     // again rather than graded with a dead session.
     staleTime: 10 * 60_000,

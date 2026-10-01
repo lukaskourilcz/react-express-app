@@ -153,3 +153,83 @@ export function asRunnableModule(source: string): string {
     needsExport ? 'export default App;' : '',
   ].filter(Boolean).join('\n');
 }
+
+/** What a case that let a form submit is told. */
+export const FORM_SUBMIT_NOT_PREVENTED =
+  'A form was submitted without event.preventDefault(), so a browser would reload the page and lose what it showed';
+
+interface SubmitEventLike { defaultPrevented: boolean; preventDefault(): void }
+type SubmitListener = (event: SubmitEventLike) => void;
+/** The page's window, or anything else a submit event bubbles up to. */
+export interface FormSubmitTarget {
+  addEventListener(type: 'submit', listener: SubmitListener, capture: boolean): void;
+  removeEventListener(type: 'submit', listener: SubmitListener, capture: boolean): void;
+}
+
+/**
+ * Watches the form submissions of one case, for both React runners (the
+ * grader's jsdom page and the browser harness). In the preview a submission
+ * the component does not cancel reloads the frame and throws its state away,
+ * whatever the checks read before that happened, so a case during which one
+ * happened fails.
+ *
+ * A capture listener on the window sees every submission first. A bubbling one
+ * runs after the component's own handler (React listens on its root, inside
+ * the window), notes a submission still not cancelled and cancels it, so the
+ * run goes on instead of navigating. A handler that stops the event on its way
+ * up and does not cancel it is caught as well: that submission reaches the
+ * capture listener and never the bubbling one. Returns the function that stops
+ * watching and names the problem, or null.
+ */
+export function watchFormSubmits(page: FormSubmitTarget): () => string | null {
+  const seen: SubmitEventLike[] = [];
+  const reachedTop = new Set<SubmitEventLike>();
+  let leftToBrowser = 0;
+  const first: SubmitListener = (event) => { seen.push(event); };
+  const last: SubmitListener = (event) => {
+    reachedTop.add(event);
+    if (event.defaultPrevented) return;
+    leftToBrowser += 1;
+    event.preventDefault();
+  };
+  page.addEventListener('submit', first, true);
+  page.addEventListener('submit', last, false);
+  return () => {
+    page.removeEventListener('submit', first, true);
+    page.removeEventListener('submit', last, false);
+    const stopped = seen.filter((event) => !reachedTop.has(event) && !event.defaultPrevented).length;
+    return leftToBrowser + stopped > 0 ? FORM_SUBMIT_NOT_PREVENTED : null;
+  };
+}
+
+/** The `beforeEach` and `afterEach` a suite registers its hooks with. */
+interface CaseHooks {
+  beforeEach(body: () => void): void;
+  afterEach(body: () => void): void;
+}
+
+/**
+ * Watches every case of a suite with `watchFormSubmits`, through the suite's
+ * own hooks: each case starts a watch, and an `afterEach` ends it and fails
+ * the case with the reason. A case that has already failed skips its
+ * `afterEach` hooks, so the next case, and the function returned here once
+ * the run is over, close a watch it left open. Register after the suite's
+ * module has run, so this `afterEach` comes after the suite's own.
+ */
+export function failUncancelledSubmits(hooks: CaseHooks, page: FormSubmitTarget): () => void {
+  let finish: (() => string | null) | null = null;
+  const stop = (): string | null => {
+    const problem = finish ? finish() : null;
+    finish = null;
+    return problem;
+  };
+  hooks.beforeEach(() => {
+    stop();
+    finish = watchFormSubmits(page);
+  });
+  hooks.afterEach(() => {
+    const problem = stop();
+    if (problem) throw new Error(problem);
+  });
+  return () => { stop(); };
+}

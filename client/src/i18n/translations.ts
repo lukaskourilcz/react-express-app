@@ -85,6 +85,9 @@ export const en = {
   'title.classroom': 'Classroom · devShark',
   'title.notFound': 'Page not found · devShark',
   'title.dev': 'Control room · devShark',
+  'title.curation': 'How we curate · devShark',
+  // A learning path's pages; {name} is the path's name.
+  'title.path': '{name} · devShark',
 
   // Home / landing page
   'home.title': 'Lessons, quizzes and coding tasks for web developers.',
@@ -151,7 +154,7 @@ export const en = {
   'register.cta': 'Sign in',
   'register.dismiss': 'Not now',
   // Under a guest's Learn map and quiz result: sign-in does not carry it over.
-  'register.deviceOnly': 'You’re not signed in, so this progress is saved on this device only.',
+  'register.deviceOnly': 'You’re not signed in, so this progress stays on this device only. Signing in starts from your account’s progress instead.',
 
   // Rewards (the /shop route). The unit is coins; code keeps `token` (#227).
   'shop.merchSection': 'Merchandise',
@@ -461,7 +464,7 @@ export const en = {
   // (migration 049); until then their row reads "Learner" with no photo.
   'leaderboard.anonymous': 'Learner',
   'leaderboard.visibility.label': 'Show my name and photo on leaderboards',
-  'leaderboard.visibility.hint': 'Leaderboards are public. With this off, you appear as “Learner” with no photo.',
+  'leaderboard.visibility.hint': 'Leaderboards are public. With this off, you appear as “Learner” with no photo. A change reaches the public boards within about a minute.',
   'leaderboard.visibility.saveFailed': 'Your leaderboard setting wasn’t saved. Try again.',
   'leaderboard.visibility.loadFailed': 'Your leaderboard setting couldn’t be loaded.',
 
@@ -473,6 +476,8 @@ export const en = {
   'profile.shieldActive': 'Protected · {h} h {m} m left',
   'profile.shieldNone': 'No protection left this month',
   'profile.shieldLeft': '{n} left this month',
+  // A missed day still needs the protection a shield would spend (052).
+  'profile.shieldLearnToday': 'Learn today to keep your streak',
   'friends.tabOverview': 'Overview',
   'friends.tabFriends': 'Friends',
   'friends.loading': 'Loading friends…',
@@ -877,6 +882,8 @@ export const en = {
   'challenge.submitPrompt': 'Save your score:',
   'challenge.nameLabel': 'Your name',
   'challenge.nameRequired': 'Please enter a name',
+  'challenge.namePublicHint': 'Shown publicly on the Hall of Fame.',
+  'challenge.nextQuestionFailed': 'Could not load the next question. Your run and score are kept.',
   'challenge.submitScore': 'Submit score',
   'challenge.scoreSubmitted': 'Score recorded.',
   'challenge.playAgain': 'Play again',
@@ -1013,6 +1020,8 @@ export const en = {
   'today.progress': '{done}/{target} done',
   'today.targetMet': 'Target reached',
   'today.done': 'Today’s plan is complete',
+  // Unrendered: Today no longer promises a card pack, since no screen opens
+  // one. The keys stay because the retained Czech file still has them.
   'today.packReady': 'Card pack ready',
   'today.openPack': 'Open your pack',
   'today.emptyTitle': 'Nothing queued',
@@ -1131,6 +1140,7 @@ export const en = {
   'error.server': 'Server error. Try again in a moment.',
   'error.serviceUnavailable': 'Learning services are temporarily unavailable. Try again later.',
   'error.signIn': 'You need to sign in to do that.',
+  'error.authUnavailable': 'We couldn’t confirm your sign-in, so nothing was saved. Check your connection and try again.',
   'error.generic': 'Something went wrong. Try again.',
   'error.tooFewQuestions': 'Not enough questions for these topics.',
   'error.stepUnavailable': 'Not enough reviewed questions are available for this step yet.',
@@ -1321,7 +1331,7 @@ export const en = {
   'footer.cancelPremium': 'Cancel Premium',
   'error.billingUnavailable': 'The payment provider did not answer. Try again in a few minutes.',
   'error.billingDisabled': 'Premium checkout is not open yet.',
-  'error.alreadyPremium': 'Your Premium subscription is active. Manage it from your profile.',
+  'error.alreadyPremium': 'You already have a Premium subscription. Manage it from your profile.',
   'error.noBillingAccount': 'This account has no billing history yet.',
   'error.badEmail': 'Enter the email address your subscription uses.',
   'error.billingConflict': 'We could not match this payment to your account. Write to the contact on the Terms page.',
@@ -1329,6 +1339,8 @@ export const en = {
   'error.pathAttemptExpired': 'This attempt expired. Try again to start a new one.',
   'error.pathPaused': 'This path is paused. Resume it on the path page to carry on.',
   'error.pathUnavailable': 'This path is not open right now. Everything you did in it is kept.',
+  'error.topicLocked': 'This topic is still locked. Finish the topics it builds on first.',
+  'error.prerequisiteNotMet': 'Pass the steps before this one first.',
   // ── end of Billing ──────────────────────────────────────────────────────
   // ── Premium page, plan table and legal pages (issue #222) ───────────────
   // Section 4 of the second handoff. The landing keys above keep their names
@@ -1752,7 +1764,7 @@ export const en = {
   'coding.lesson.intro': 'The questions are done. Now write the code.',
   'coding.lesson.pending': '{n} coding tasks still to pass',
   'coding.lesson.allPassed': 'All coding tasks passed.',
-  'coding.lesson.guestUnverified': 'Coding tasks are checked and saved when you sign in.',
+  'coding.lesson.guestUnverified': 'Coding tasks are not checked while you’re signed out. This pass stays on this device only, and signing in starts from your account’s progress instead.',
   'coding.lesson.giveUpNote': 'Showing a solution ends this level attempt, and that task then earns no XP or coins when you pass it. You can retry the level later.',
   'coding.lesson.continue': 'Continue',
   'coding.lesson.mapGlyph': 'Includes a coding task',
@@ -1829,8 +1841,9 @@ export const en = {
   'github.callbackRequestedBody': 'The app must be installed on your own account, not an organisation. Install it on your personal account and try again.',
   'github.signIn': 'Sign in',
   'github.backToProfile': 'Back to profile',
+  'github.connectAgain': 'Connect again',
   'home.stripCodingTitle': 'Coding challenges',
-  'home.stripCodingText': 'Loops, array methods, types and components with real tests, plus a GitHub garden.',
+  'home.stripCodingText': 'Loops, array methods, types and components with real tests.',
 
   /* ── Learning paths (devShark: the FDE specialization and DSA Foundations) ── */
   'paths.loading': 'Loading the path',
@@ -2144,6 +2157,15 @@ export const en = {
   'coding.verdict.passedNoXp': 'Passed — no XP because the solution was revealed',
   'coding.design.yourAnswer': 'Your answer',
   'coding.design.failedNote': 'The correct answers and explanations appear once you pass. Try again: the options come back in a new order.',
+
+  // The coding workbench says why a Submit failed, and a revealed solution
+  // in a Learn level stays on screen until the learner finishes the level.
+  'coding.verdict.tooLarge': 'Your code is over 20 kB, the most one Submit takes. Shorten it and submit again.',
+  'coding.verdict.graderUnavailable': 'The checker could not run just now, so this Submit was not recorded. Try again in a moment.',
+  'error.stageLocked': 'Pass the earlier stages of this challenge first.',
+  'coding.design.sessionUsed': 'This walkthrough was already checked. Open it again for a new attempt.',
+  'coding.lesson.solutionShown': 'The solution is open in the Solution tab. Showing it ended this level attempt: read it, then finish the level. You can retry the level later.',
+  'coding.lesson.finishLevel': 'Finish the level',
 } as const;
 
 export type TranslationKey = keyof typeof en;

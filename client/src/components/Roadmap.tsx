@@ -594,9 +594,9 @@ function Roadmap() {
   const layout = useMemo(() => {
     if (!pathWidth || levels.length === 0) return null;
     const nodes = buildFullPath(levels, ranges);
-    // Five levels + their checkpoint per row on desktop, three + checkpoint
-    // on narrow screens — the compact rhythm from the Deep End handoff.
-    const cols = 6;
+    // Six nodes a row; under 480px three, since six columns on a phone left
+    // each label wider than its column and overlapping the next one.
+    const cols = pathWidth < 480 ? 3 : 6;
     const cellW = pathWidth / cols;
     // ROW_H must clear the accumulated within-row slope so the lowest node of a
     // row doesn't collide with the next row's start node (same column at a turn) —
@@ -683,7 +683,13 @@ function Roadmap() {
     if (lessonError || !playable) {
       return <LessonError message={lessonError ?? t('roadmap.error')} onRetry={() => open(active)} onExit={exitLesson} t={t} />;
     }
-    const next = nextAfter(active, ranges);
+    const following = nextAfter(active, ranges);
+    // Outside the plan the server serves only steps already passed (a replay),
+    // so "Next" is offered there only when the next step is one of them.
+    const next = following && (
+      inPlan(topic)
+      || (following.kind === 'level' ? isLevelPassed(progress, topic, following.ref) : isPartTestPassed(progress, topic, following.ref))
+    ) ? following : null;
     const nextLabel = !next
       ? ''
       : next.kind === 'test'
@@ -1047,7 +1053,8 @@ function LevelNode({
   const label = unlocked
     ? `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}${passed ? `, ${masteryText}${due ? `, ${t('mastery.dueForReview')}` : ''}, ${best}%` : ''}${coding ? `, ${t('coding.lesson.mapGlyph')}` : ''}`
     : `${t('roadmap.levelLabel', { n: displayNum })}: ${meta.title}, ${unavailable ? t('roadmap.unavailable') : t('roadmap.locked')}`;
-  const labelWidth = Math.max(72, Math.min(150, cellW - 10));
+  // Never wider than the cell, so neighbouring labels cannot overlap.
+  const labelWidth = Math.min(cellW - 4, Math.max(72, Math.min(150, cellW - 10)));
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
@@ -1087,7 +1094,9 @@ function LevelNode({
           fontSize: '0.75rem',
           fontWeight: isCurrent ? 700 : 500,
           fontStyle: unavailable ? 'italic' : undefined,
-          color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
+          // Secondary, not disabled: the lock glyph says it is locked, and the
+          // name still has to be readable (3.34:1 in light mode before).
+          color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
           maxWidth: labelWidth,
           textAlign: 'center',
           lineHeight: 1.15,
@@ -1122,7 +1131,7 @@ function PartTestNode({
   const label = unlocked
     ? `${title}${passed ? ` — ${t('roadmap.passed')} ${best}%` : ''}`
     : `${title}: ${unavailable ? t('roadmap.unavailable') : t('roadmap.locked')}`;
-  const labelWidth = Math.max(84, Math.min(160, cellW - 8));
+  const labelWidth = Math.min(cellW - 4, Math.max(84, Math.min(160, cellW - 8)));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
       <div className={isCurrent ? 'rm-bob' : undefined}>
@@ -1159,7 +1168,7 @@ function PartTestNode({
         style={{
           fontSize: '0.75rem',
           fontWeight: 700,
-          color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-disabled)',
+          color: unlocked ? 'var(--color-text-primary)' : 'var(--color-text-secondary)',
           textAlign: 'center',
           lineHeight: 1.15,
           maxWidth: labelWidth,
@@ -1211,7 +1220,7 @@ function PremiumNode({ shape, label, title, cellW, onClick, t }: {
           fontSize: '0.75rem',
           fontWeight: shape === 'test' ? 700 : 500,
           color: 'var(--color-text-secondary)',
-          maxWidth: Math.max(72, Math.min(150, cellW - 10)),
+          maxWidth: Math.min(cellW - 4, Math.max(72, Math.min(150, cellW - 10))),
           textAlign: 'center',
           lineHeight: 1.15,
           // One line of title, so the "Premium" line fits the row's label band.
@@ -1330,6 +1339,9 @@ function LessonRunner({
   const [codingIndex, setCodingIndex] = useState(0);
   const [codingPassed, setCodingPassed] = useState<string[]>([]);
   const [codingPending, setCodingPending] = useState<string[]>([]);
+  // The learner showed the current task's solution, which ends the attempt.
+  // The workbench stays, with the solution open, until they finish the level.
+  const [solutionShown, setSolutionShown] = useState(false);
   // Signed out, the server passes a level on its questions and says its
   // coding tasks went unchecked; the finish screen says when they count.
   const [codingUnverified, setCodingUnverified] = useState(false);
@@ -1592,7 +1604,7 @@ function LessonRunner({
                   setCodingPassed((prev) => (prev.includes(current.task.id) ? prev : [...prev, current.task.id]));
                 }
               }}
-              onRevealed={() => void complete()}
+              onRevealed={() => setSolutionShown(true)}
               onContinue={() => {
                 if (codingIndex < codingTasks.length - 1) setCodingIndex((i) => i + 1);
                 else void complete();
@@ -1600,6 +1612,16 @@ function LessonRunner({
             />
           </ShellPartBoundary>
         </Suspense>
+        {/* The solution the learner asked for stays on screen: the attempt
+            ends when they finish the level, not the moment it opens. */}
+        {solutionShown && (
+          <div className="cd-note" role="status">
+            <p style={{ margin: '0 0 12px' }}>{t('coding.lesson.solutionShown')}</p>
+            <button type="button" className="rm-accent-btn" onClick={() => void complete()} disabled={completing} style={accentFill}>
+              {t('coding.lesson.finishLevel')}
+            </button>
+          </div>
+        )}
         <span className="cd-visually-hidden" aria-live="polite">{t('coding.lesson.pending', { n: codingTasks.length - codingPassed.length })}: {title}</span>
       </div>
     );

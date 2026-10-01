@@ -10,11 +10,11 @@ import {
   type Question,
 } from '../../lib/quiz-runtime';
 import { encodeSession, quizSessionExpiresAt } from '../../lib/quiz-tokens';
-import { tryAuth } from '../../lib/auth';
-import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext } from '../../lib/http';
+import { confirmedEmail } from '../../lib/auth';
+import { createServiceClient, jsonError, createLogger, withTimeout, withRequestContext, tryAuthOnce } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceClassRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
 import { selectPersonalizedReview, selectDueItems, DUE_SHARE } from '../../lib/review-selection';
@@ -40,7 +40,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'GET');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.quizSessionAddress, RATE_LIMITS.quizSession))) return;
 
   // How much of the deliverable pool has a current review record. Answered
   // before any quiz parameter is parsed, because it selects nothing and needs
@@ -87,7 +87,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (resource === 'due') {
     let dueAuth;
     try {
-      dueAuth = await tryAuth(req);
+      dueAuth = await tryAuthOnce(req);
     } catch {
       return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
     }
@@ -119,12 +119,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (selectedCategories.some((c) => PRIVATE_CATEGORIES.includes(c))) {
     let auth;
     try {
-      auth = await tryAuth(req);
+      auth = await tryAuthOnce(req);
     } catch {
       return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
     }
-    const emailClaim = auth?.payload?.email;
-    const email = typeof emailClaim === 'string' ? emailClaim.toLowerCase() : null;
+    // Only a confirmed address is the owner's.
+    const email = auth ? confirmedEmail(auth.payload)?.toLowerCase() ?? null : null;
     if (email !== ownerEmail) {
       selectedCategories = selectedCategories.filter((c) => !PRIVATE_CATEGORIES.includes(c));
       if (selectedCategories.length === 0) {
@@ -163,7 +163,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   if (resource === 'review') {
     let auth;
     try {
-      auth = await tryAuth(req);
+      auth = await tryAuthOnce(req);
     } catch {
       return jsonError(res, 401, 'unauthorized', 'Invalid sign-in session');
     }

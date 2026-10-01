@@ -24,6 +24,69 @@ export interface GuestInput {
  * starts with a line break, so nothing printed before it can join it. */
 export const guestResultLine = (nonce: string, json: string): string => `\n${nonce} ${json}\n`;
 
+// Captured when this module loads, which in the guest is before any learner
+// code runs. The serializer below uses nothing else.
+const ownDescriptor = Reflect.getOwnPropertyDescriptor;
+const hasOwn = Object.hasOwn;
+const isArray = Array.isArray;
+const quote = JSON.stringify;
+const isFiniteNumber = Number.isFinite;
+
+/** An own data property, or undefined. Never runs a getter and never looks
+ * at the prototype chain. */
+const ownData = (target: unknown, key: string | number): unknown => {
+  if ((typeof target !== 'object' && typeof target !== 'function') || target === null) return undefined;
+  const descriptor = ownDescriptor(target, key);
+  return descriptor !== undefined && hasOwn(descriptor, 'value') ? descriptor.value : undefined;
+};
+
+const text = (value: unknown): string | null => (typeof value === 'string' ? value : null);
+/** A string as JSON. JSON.stringify on a primitive string consults no
+ * `toJSON`, so this cannot run anything else. */
+const jsonText = (value: string): string => quote(value) as string;
+const jsonNullableText = (value: unknown): string => (typeof value === 'string' ? jsonText(value) : 'null');
+
+/**
+ * The guest's verdict as a JSON string, built by hand from the result's own
+ * data properties.
+ *
+ * The component under test can reach objects of the grader's realm (React's
+ * exports, jsdom), and through them the realm's `Object.prototype` and
+ * `Array.prototype`. `JSON.stringify(result)` asks every object and array in
+ * the result for a `toJSON` up that chain, so a component that put one there
+ * rewrote the printed verdict: every case, hidden ones included, passed. This
+ * reads each field by descriptor with functions captured before any learner
+ * code ran, accepts only the outcome's shape (anything else throws, which the
+ * guest reports as a failed run), and writes the JSON itself.
+ */
+export function serializeGuestResult(result: unknown): string {
+  const cases = ownData(result, 'cases');
+  if (!isArray(cases)) throw new Error('Malformed result');
+  const length = ownData(cases, 'length');
+  if (typeof length !== 'number' || length > 500) throw new Error('Malformed result');
+  let json = '{"cases":[';
+  let passed = 0;
+  for (let index = 0; index < length; index++) {
+    const one = ownData(cases, index);
+    const name = text(ownData(one, 'name'));
+    const status = ownData(one, 'status');
+    const error = ownData(one, 'error');
+    const durationMs = ownData(one, 'durationMs');
+    if (name === null || (status !== 'pass' && status !== 'fail') || (error !== null && typeof error !== 'string')) {
+      throw new Error('Malformed result');
+    }
+    if (status === 'pass') passed++;
+    json += `${index > 0 ? ',' : ''}{"name":${jsonText(name)},"status":"${status}","error":${jsonNullableText(error)},"durationMs":${typeof durationMs === 'number' && isFiniteNumber(durationMs) ? `${durationMs}` : '0'}}`;
+  }
+  const compileError = ownData(result, 'compileError');
+  const timedOut = ownData(result, 'timedOut');
+  if ((compileError !== null && typeof compileError !== 'string') || typeof timedOut !== 'boolean') throw new Error('Malformed result');
+  // Counts follow the cases, as readGuestResult recomputes them anyway.
+  const total = length > 0 ? length : 1;
+  json += `],"passed":${passed},"failed":${total - passed},"total":${total},"compileError":${jsonNullableText(compileError)},"timedOut":${timedOut ? 'true' : 'false'}}`;
+  return json;
+}
+
 /**
  * Reads the verdict out of the guest's stdout. Only a line that starts with
  * this run's nonce counts, and there must be exactly one; the JSON must have

@@ -414,7 +414,7 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
     ui(
       'Create default-exported App with a form, controlled "Email" input and "Next" button. Start with an empty email; typing updates the value. Prevent browser navigation on submit.',
       'Vytvoř App s default exportem, formulářem, řízeným vstupem "Email" a tlačítkem "Next". Začni prázdným e-mailem; psaní mění hodnotu. Při odeslání zabraň navigaci prohlížeče.',
-      `render(<App/>);const input=screen.getByLabelText('Email');expect(input.value).toBe('');fireEvent.change(input,{target:{value:'a@b.cz'}});expect(input.value).toBe('a@b.cz');expect(screen.getByRole('button',{name:'Next',exact:true})).toBeTruthy();`,
+      `render(<App/>);const input=screen.getByLabelText('Email');expect(input.value).toBe('');fireEvent.change(input,{target:{value:'a@b.cz'}});expect(input.value).toBe('a@b.cz');fireEvent.click(screen.getByRole('button',{name:'Next',exact:true}));`,
     ),
     ui(
       'After email acceptance show a second step with a controlled "Name" input and "Back" / "Next" buttons. Keep "Email accepted" visible and preserve email when going Back.',
@@ -472,7 +472,7 @@ function fullstackCheckpoints(slug: string): Record<string, Checkpoint> {
     '6': ui(
       `Add a form with controlled 'Name' and '${amount}' inputs and a 'Create' button. Wire input changes and prevent navigation on submit; sending POST is the next step.`,
       `Přidej formulář s řízenými vstupy 'Name' a '${amount}' a tlačítkem 'Create'. Zapoj změny vstupů a zabraň navigaci při odeslání; POST přijde v další etapě.`,
-      `render(<App/>);await settle();fireEvent.change(screen.getByLabelText('Name'),{target:{value:'New'}});fireEvent.change(screen.getByLabelText('${amount}',{exact:true}),{target:{value:'3'}});expect(screen.getByLabelText('Name').value).toBe('New');expect(screen.getByLabelText('${amount}',{exact:true}).value).toBe('3');expect(screen.getByRole('button',{name:'Create',exact:true})).toBeTruthy();`,
+      `render(<App/>);await settle();fireEvent.change(screen.getByLabelText('Name'),{target:{value:'New'}});fireEvent.change(screen.getByLabelText('${amount}',{exact:true}),{target:{value:'3'}});expect(screen.getByLabelText('Name').value).toBe('New');expect(screen.getByLabelText('${amount}',{exact:true}).value).toBe('3');fireEvent.click(screen.getByRole('button',{name:'Create',exact:true}));`,
     ),
     '8': ui(
       `Add client-side 'Search' and 'Available only' filters. Search uses trimmed case-insensitive name substrings; available means ${amount}>0. Combine filters without changing API records.`,

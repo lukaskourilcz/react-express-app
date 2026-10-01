@@ -8,9 +8,9 @@
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
-import { AuthError, tryAuth } from '../auth';
-import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
-import { claimOnce, enforceRateLimit, RATE_LIMITS } from '../rate-limit';
+import { AuthError } from '../auth';
+import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, withTimeout } from '../http';
+import { claimOnce, enforceClassRateLimit, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
@@ -21,6 +21,7 @@ import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
 import { nodeTypeScriptChecker } from './ts-check-node';
+import { checkTypes, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
@@ -40,6 +41,7 @@ import {
   type CodingTask,
   type CodingTrack,
 } from '../../shared/coding-catalog';
+import { CODING_CODE_LIMIT_BYTES } from '../../shared/coding-api';
 import type {
   CodingDraftResponse,
   CodingGardenStatus,
@@ -59,7 +61,7 @@ import type { EvaluateResult } from '../../shared/coding-evaluate';
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
 
 const logEvent = createLogger('coding');
-const MAX_CODE_BYTES = 20 * 1024;
+const MAX_CODE_BYTES = CODING_CODE_LIMIT_BYTES;
 
 const codingAvailable = () => deploymentSubjectIds().includes('webdev');
 const notAvailable = (res: VercelResponse) => jsonError(res, 404, 'not_available', 'Coding challenges are not part of this product');
@@ -112,7 +114,7 @@ async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string)
 
 async function optionalUser(req: VercelRequest, res: VercelResponse): Promise<string | null | undefined> {
   try {
-    return (await tryAuth(req))?.sub ?? null;
+    return (await tryAuthOnce(req))?.sub ?? null;
   } catch (error) {
     if (error instanceof AuthError) {
       jsonError(res, error.status, error.code, error.message);
@@ -184,7 +186,7 @@ function submissionAttemptId(session: CodingSession, verdict: CodingOutcome, cod
 
 export async function handleCodingTask(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingTaskAddress, RATE_LIMITS.codingTask))) return;
   const id = req.query.id;
   if (!isCodingTaskId(id)) return jsonError(res, 400, 'bad_request', 'A task id is required');
   const task = codingTaskById(id);
@@ -341,14 +343,24 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
   let hiddenTypeTotal = 0;
   let codeToRun = code;
   if (task.track === 'typescript') {
-    const checker = nodeTypeScriptChecker();
-    check = checker.check(code, task.typeTests ?? []);
-    if (solution?.hiddenTypeTests?.length) {
-      const hiddenCheck = checker.check(code, solution.hiddenTypeTests);
+    // The compiler runs on a worker thread with a deadline: a few hundred
+    // bytes of recursive types kept it busy for half a minute on this thread.
+    const hiddenTypeTests = solution?.hiddenTypeTests ?? [];
+    const typed = await checkTypes(code, hiddenTypeTests.length ? [task.typeTests ?? [], hiddenTypeTests] : [task.typeTests ?? []]);
+    if (typed.stopped) {
+      const graded: Graded = {
+        verdict: 'timeout', results: [], check: null, logs: [], codeError: TYPE_CHECK_STOPPED_MESSAGE, design: null, designReference: null,
+        hidden: hiddenTests.length + hiddenTypeTests.length > 0 ? { passed: 0, total: hiddenTests.length + hiddenTypeTests.length } : null,
+      };
+      return { ...graded, failureHint: hintForFailure(task, { ...graded, timedOut: true }) };
+    }
+    check = typed.results[0];
+    const hiddenCheck = typed.results[1];
+    if (hiddenCheck) {
       hiddenTypeTotal = hiddenCheck.typeTests.length;
       hiddenTypeFailures = hiddenCheck.typeTests.filter((one) => !one.pass).length;
     }
-    codeToRun = checker.toJavaScript(code);
+    codeToRun = nodeTypeScriptChecker().toJavaScript(code);
   }
   // Only the visible checks' console output comes back: a learner who logs
   // inside their function must not read the hidden checks' inputs. The hidden
@@ -570,6 +582,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     applied: recorded?.applied ?? false,
     github,
     solutions,
+    ...(graded.infra ? { graderUnavailable: true as const } : {}),
   };
 }
 
@@ -577,7 +590,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
 
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingRun))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingRunAddress, RATE_LIMITS.codingRun))) return;
   const body = (req.body || {}) as Partial<CodingSubmitRequest> & { lang?: unknown };
   const session = sessionFrom(body.session);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
@@ -696,7 +709,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
 
 export async function handleCodingReveal(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingReveal))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingRevealAddress, RATE_LIMITS.codingReveal))) return;
   const body = (req.body || {}) as Partial<CodingRevealRequest>;
   const session = sessionFrom(body.session);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
@@ -776,7 +789,9 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
     return res.json(out);
   }
   if (req.method === 'POST') {
-    if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingDraft))) return;
+    // Rate limited as every write to api/user/[op].ts is (`limitUserWrite`):
+    // per account, behind a class-sized address bucket. A second bucket here,
+    // keyed by address alone, held a whole class to one person's saves.
     const code = (req.body as { code?: unknown })?.code;
     if (typeof code !== 'string' || Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 400, 'bad_request', 'code is required and limited to 20 kB');
     const saved = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: id, p_code: code }));

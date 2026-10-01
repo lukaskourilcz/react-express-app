@@ -9,7 +9,7 @@ import type { VercelRequest, VercelResponse } from './vercel-types.js';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { AuthError, requireAuth, type AuthResult } from './auth';
+import { AuthError, getBearer, requireAuth, type AuthResult } from './auth';
 import { SUBJECT_SCOPE_CATALOG } from '../shared/subject-catalog';
 import { gatedRef, PREMIUM_REQUIRED, type GatedContent, type GatedKind, type PremiumRequiredBody } from '../shared/tiers';
 
@@ -42,6 +42,11 @@ export function withRequestContext<T>(
 ): Promise<Awaited<T> | VercelResponse | void> {
   const requestId = incomingRequestId(req);
   res.setHeader('X-Request-Id', requestId);
+  // Most answers are about the caller (stats, XP, a wallet, a room's host view
+  // with its answers), so none is stored by a shared cache unless its handler
+  // says so: the public boards, settings and structure set their own header,
+  // which replaces this one.
+  res.setHeader('Cache-Control', 'private, no-store');
   const started = Date.now();
   return requestContext.run({ requestId }, async () => {
     try {
@@ -49,6 +54,7 @@ export function withRequestContext<T>(
     } catch (error) {
       // A refusal of locked content is an answer, not a failure.
       if (error instanceof PremiumRequiredError && !res.headersSent) return jsonPremiumRequired(res, error);
+      if (error instanceof ServiceUnavailableError && !res.headersSent) return jsonError(res, 503, error.code, error.message);
       logEvent('request', {
         level: 'error',
         method: req.method ?? 'UNKNOWN',
@@ -116,6 +122,18 @@ export class PremiumRequiredError extends Error {
     this.name = 'PremiumRequiredError';
     this.kind = content.kind;
     this.ref = gatedRef(content);
+  }
+}
+
+/** Thrown where going on would be unsafe while a service is down, such as a
+ * one-time claim that could not be recorded (lib/rate-limit.ts `claimOnce`).
+ * `withRequestContext` answers it with HTTP 503 and its code. */
+export class ServiceUnavailableError extends Error {
+  readonly code: string;
+  constructor(code: string, message: string) {
+    super(message);
+    this.name = 'ServiceUnavailableError';
+    this.code = code;
   }
 }
 
@@ -213,6 +231,18 @@ function verifyOnce(req: VercelRequest): Promise<AuthResult | AuthError> {
 export async function verifiedCallerId(req: VercelRequest): Promise<string | null> {
   const outcome = await verifyOnce(req).catch(() => null);
   return outcome && !(outcome instanceof AuthError) ? outcome.sub : null;
+}
+
+/** `tryAuth` (lib/auth.ts), verified at most once per request: null for a
+ * caller who presented no credentials, the verified caller otherwise, and
+ * refused credentials throw their AuthError as `tryAuth`'s do. A route whose
+ * rate limit already verified the caller (`enforceClassRateLimit`) reads that
+ * result here instead of asking Supabase Auth again. */
+export async function tryAuthOnce(req: VercelRequest): Promise<AuthResult | null> {
+  if (!getBearer(req)) return null;
+  const outcome = await verifyOnce(req);
+  if (outcome instanceof AuthError) throw outcome;
+  return outcome;
 }
 
 /**

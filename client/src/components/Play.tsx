@@ -25,12 +25,14 @@ import {
   submitMatchAnswer,
   fetchDistribution,
   sendHeartbeat,
+  questionCountOf,
+  serverClockOffset,
   type Match,
   type Participant,
   type ScoreboardEntry,
   type DistributionBucket,
 } from '../lib/play';
-import { coalesceReads, joinMatchChannel, type CoalescedRead, type RealtimeChannel } from '../lib/realtime';
+import { coalesceReads, joinMatchChannel, trailingThrottle, type CoalescedRead, type RealtimeChannel } from '../lib/realtime';
 import { visibleCategoryOptionsFor } from '../lib/categories';
 import { useActiveSubject } from '../lib/subjects';
 import type { CategoryType } from '../types/quiz';
@@ -49,10 +51,38 @@ import { visuallyHidden } from '../theme/MuiTheme';
 const POLL_FALLBACK_MS = 4000;
 const REALTIME_HEALING_POLL_MS = 30_000;
 const DEFAULT_DURATION_S = 60;
-// A timed question that runs out moves on when someone reads the room: the
-// server advances it lazily, 2 s past the limit. With Realtime up the next
-// read could be the 30 s healing poll, so each client reads once just after.
+// A timed multiplayer question that runs out moves on when someone reads the
+// room: the server advances it lazily, 2 s past the limit. With Realtime up
+// the next read could be the 30 s healing poll, so each client reads once just
+// after.
 const EXPIRY_RESYNC_MS = 2500;
+// The server still takes an answer this long past a timed question's limit
+// (QUESTION_EXPIRE_GRACE_MS in api/play/[action].ts), so the presenter's
+// screen keeps the answer key hidden until then.
+const ANSWER_GRACE_MS = 2000;
+// The host reads the room this long after a player's answer, and the answers
+// that land meanwhile join that read.
+const ANSWERED_READ_MS = 1500;
+// A new estimate of the server's clock replaces the one in use only when it
+// differs by this much, so the countdown does not jitter with each read.
+const CLOCK_STEP_MS = 500;
+
+/** What a `match_updated` broadcast carries: the room's phase and question. */
+type RoomState = Pick<Match, 'status' | 'current_index'>;
+
+/** The room state in a broadcast, or null for one without it (a tab still
+ * running the build from before broadcasts carried it). */
+function roomStateIn(payload: unknown): RoomState | null {
+  const value = payload as Partial<RoomState> | null | undefined;
+  if (!value || !['lobby', 'running', 'finished'].includes(value.status as string)) return null;
+  if (typeof value.current_index !== 'number' || !Number.isInteger(value.current_index)) return null;
+  return { status: value.status as Match['status'], current_index: value.current_index };
+}
+
+/** Whether two room states show the same screen: the question only matters
+ * while the room runs. */
+const sameRoom = (a: RoomState | null | undefined, b: RoomState | null | undefined): boolean =>
+  !!a && !!b && a.status === b.status && (a.status !== 'running' || a.current_index === b.current_index);
 
 /** The Play switch in /dev → Settings is off, and the server says so. */
 const isPlayOff = (err: unknown) => err instanceof ApiError && err.code === 'feature_disabled';
@@ -65,7 +95,7 @@ function PlayUnavailable() {
     <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
       <Card padding={6} width="100%">
         <VStack gap={2} align="center">
-          <Heading level={2} justify="center">{t('play.unavailableTitle')}</Heading>
+          <Heading level={1} justify="center">{t('play.unavailableTitle')}</Heading>
           <Text color="secondary" justify="center">{t('play.unavailableBody')}</Text>
           <Button variant="primary" label={t('common.back')} onClick={() => navigate('/')} />
         </VStack>
@@ -137,7 +167,7 @@ export function PlayLanding() {
       <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
-            <Heading level={2} justify="center">
+            <Heading level={1} justify="center">
               {t('play.signInTitle')}
             </Heading>
             <Text color="secondary" justify="center">
@@ -299,6 +329,7 @@ export function PlayLanding() {
                         type="button"
                         role="checkbox"
                         aria-checked={selected}
+                        className="play-category-chip"
                         onClick={() => toggleCategory(cat.value)}
                         style={{
                           cursor: 'pointer',
@@ -352,7 +383,7 @@ export function PlayLanding() {
                 <Text type="label" weight="bold" color="secondary">
                   {t('play.timeLimit')}
                 </Text>
-                <div style={{ display: 'flex', flexWrap: 'wrap' }}>
+                <div className="play-time-limit" style={{ display: 'flex', flexWrap: 'wrap' }}>
                   <ToggleButtonGroup
                     label={t('play.timeLimit')}
                     type="single"
@@ -467,9 +498,39 @@ export function PlayMatch() {
   const [questionShownAt, setQuestionShownAt] = useState<number>(Date.now());
   const [connectionState, setConnectionState] = useState<'live' | 'polling' | 'stale'>('polling');
   const refreshFailures = useRef(0);
+  // How far the server's clock runs ahead of this device's. Each question is
+  // counted down against the server's clock, so a device clock that is off
+  // neither closes a question early for a player nor reveals it early on the
+  // presenter's screen.
+  const [clockOffsetMs, setClockOffsetMs] = useState(0);
+  const noteServerClock = useCallback((serverNow: string | undefined, sentAt: number) => {
+    const offset = serverClockOffset(serverNow, sentAt, Date.now());
+    if (offset === null) return;
+    setClockOffsetMs((current) => (Math.abs(offset - current) >= CLOCK_STEP_MS ? Math.round(offset) : current));
+  }, []);
 
   const channelRef = useRef<RealtimeChannel | null>(null);
   const isHost = !!(user?.id && match?.host_id === user.id);
+  // The broadcast handlers are set up once per match, so they read the room
+  // and the host flag through refs.
+  const matchRef = useRef<Match | null>(null);
+  const isHostRef = useRef(false);
+  useEffect(() => {
+    matchRef.current = match;
+  }, [match]);
+  useEffect(() => {
+    isHostRef.current = isHost;
+  }, [isHost]);
+  // The last room state this client went to read: one it announced, or one a
+  // broadcast named. A broadcast of the same state again needs no new read.
+  const handledRef = useRef<RoomState | null>(null);
+  // Tell every client the room changed phase or question. Only a change is
+  // announced, never a single answer: each broadcast sets off a state read on
+  // every client that does not show that state yet.
+  const announce = useCallback((room: RoomState) => {
+    handledRef.current = { status: room.status, current_index: room.current_index };
+    void channelRef.current?.send('match_updated', handledRef.current).catch(() => undefined);
+  }, []);
   // Records when the local client first observed the current question_started_at,
   // so a slow broadcast doesn't unfairly penalise the speed bonus.
   const clientReceivedAtRef = useRef<string | null>(null);
@@ -485,12 +546,15 @@ export function PlayMatch() {
     (async () => {
       try {
         let joined: Match | null = null;
+        let sentAt = Date.now();
         try {
-          joined = await joinMatch({
+          const { server_now: serverNow, ...room } = await joinMatch({
             code,
             user_id: user.id,
             display_name: displayNameFromProfile(profile, t('play.playerFallback')),
           });
+          noteServerClock(serverNow, sentAt);
+          joined = room;
         } catch (err) {
           // A finished room takes no new players, but its results are still
           // there to read: reopening it shows them instead of an error.
@@ -498,8 +562,10 @@ export function PlayMatch() {
         }
         if (cancelled) return;
         if (joined) setMatch(joined);
+        sentAt = Date.now();
         const state = await fetchMatchState(code, user.id);
         if (cancelled) return;
+        noteServerClock(state.server_now, sentAt);
         if (!joined) setMatch(state.match);
         setParticipants(state.participants);
         setScoreboard(state.scoreboard);
@@ -531,10 +597,15 @@ export function PlayMatch() {
     // flight for this match writes nothing afterwards.
     let active = true;
     let realtimeReady = false;
+    handledRef.current = null;
     const reader = coalesceReads(async () => {
       try {
+        const sentAt = Date.now();
         const state = await fetchMatchState(code, userId);
         if (!active) return;
+        noteServerClock(state.server_now, sentAt);
+        const before = matchRef.current;
+        matchRef.current = state.match;
         setMatch(state.match);
         setParticipants(state.participants);
         setScoreboard(state.scoreboard);
@@ -542,8 +613,18 @@ export function PlayMatch() {
         // A read that works again clears the "could not refresh" warning,
         // even while Realtime stayed connected throughout.
         setConnectionState(realtimeReady ? 'live' : 'polling');
+        // A read can move the room on itself (a timed question past its
+        // grace, the last answers of an untimed one), and then no answer or
+        // control announces it. The host announces a change they read that
+        // no broadcast named.
+        if (isHostRef.current && before && !sameRoom(before, state.match) && !sameRoom(handledRef.current, state.match)) {
+          announce(state.match);
+        }
       } catch (err) {
         if (!active) return;
+        // The state a broadcast named was not read: the next broadcast of it
+        // reads again.
+        handledRef.current = null;
         if (isPlayOff(err)) {
           setPlayOff(true);
           return;
@@ -557,7 +638,21 @@ export function PlayMatch() {
     channelRef.current = channel;
 
     channel.subscribe('participant_joined', refresh);
-    channel.subscribe('match_updated', refresh);
+    channel.subscribe('match_updated', (payload: unknown) => {
+      const room = roomStateIn(payload);
+      // A broadcast of the room this client shows, or already went to read,
+      // changes nothing here.
+      if (room && (sameRoom(room, matchRef.current) || sameRoom(room, handledRef.current))) return;
+      if (room) handledRef.current = room;
+      void refresh();
+    });
+    // Each player's answer reaches the host alone, whose live scoreboard
+    // follows the class: one read at most every ANSWERED_READ_MS, however
+    // many answers land.
+    const answeredRead = trailingThrottle(() => void refresh(), ANSWERED_READ_MS);
+    channel.subscribe('answered', () => {
+      if (isHostRef.current) answeredRead.request();
+    });
     const stopStatus = channel.onStatus((status) => {
       realtimeReady = status === 'SUBSCRIBED';
       setConnectionState(realtimeReady ? 'live' : 'polling');
@@ -577,25 +672,29 @@ export function PlayMatch() {
     return () => {
       active = false;
       reader.cancel();
+      answeredRead.cancel();
       if (readerRef.current === reader) readerRef.current = null;
       window.clearInterval(healing);
       window.clearInterval(fallback);
       stopStatus();
       channel.unsubscribe();
     };
-  }, [code, user?.id, refresh, playOn]);
+  }, [code, user?.id, refresh, playOn, noteServerClock, announce]);
 
-  // Read the room once just after a timed question's clock (and the server's
-  // expiry grace) runs out, so everyone moves on without waiting for a poll.
+  // Read the room once just after a timed multiplayer question's clock (and
+  // the server's expiry grace) runs out, so everyone moves on without waiting
+  // for a poll. A classroom question stays until the teacher moves on.
+  const matchMode = match?.mode;
   const matchStatus = match?.status;
   const questionStartedAt = match?.question_started_at;
   const questionDurationS = match?.question_duration_s ?? 0;
   useEffect(() => {
-    if (matchStatus !== 'running' || !questionStartedAt || questionDurationS <= 0) return;
-    const dueIn = new Date(questionStartedAt).getTime() + questionDurationS * 1000 + EXPIRY_RESYNC_MS - Date.now();
+    if (matchMode !== 'multiplayer' || matchStatus !== 'running' || !questionStartedAt || questionDurationS <= 0) return;
+    const serverNow = Date.now() + clockOffsetMs;
+    const dueIn = new Date(questionStartedAt).getTime() + questionDurationS * 1000 + EXPIRY_RESYNC_MS - serverNow;
     const id = window.setTimeout(() => void refresh(), Math.max(0, dueIn));
     return () => window.clearTimeout(id);
-  }, [matchStatus, match?.current_index, questionStartedAt, questionDurationS, refresh]);
+  }, [matchMode, matchStatus, match?.current_index, questionStartedAt, questionDurationS, clockOffsetMs, refresh]);
 
   // Reset per-question UI when the index changes.
   useEffect(() => {
@@ -628,16 +727,25 @@ export function PlayMatch() {
     };
   }, [isHost, user?.id, code, match?.status]);
 
-  const broadcastUpdate = () => {
-    channelRef.current?.send('match_updated', { at: Date.now() });
-  };
-
   const runHostControl = async (action: 'start' | 'advance' | 'finish') => {
     if (!user?.id || !match || controlPending) return;
     setControlPending(true);
     try {
-      await controlMatch({ code, host_id: user.id, action });
-      broadcastUpdate();
+      const result = await controlMatch({ code, host_id: user.id, action });
+      announce(
+        action === 'start'
+          ? { status: 'running', current_index: 0 }
+          : action === 'finish'
+            ? { status: 'finished', current_index: match.current_index }
+            : {
+                status: result.status === 'finished' ? 'finished' : 'running',
+                current_index: typeof result.current_index === 'number' ? result.current_index : match.current_index + 1,
+              },
+      );
+      // The broadcast reaches this client too, but names the state it
+      // announced, so the host reads the room here. The controls stay
+      // disabled until the new question is on screen.
+      await refresh();
     } catch (err) {
       setError(friendlyError(err));
     } finally {
@@ -672,11 +780,21 @@ export function PlayMatch() {
         duration_ms: Date.now() - questionShownAt,
         client_received_at: clientReceivedAtRef.current ?? new Date().toISOString(),
       });
-      broadcastUpdate();
-      // In multiplayer the server advances as soon as the last player locks
-      // in. Pull fresh state right away so this client jumps to the next
-      // question (or the results screen) without waiting for the poll.
-      if (result.advanced) await refresh();
+      if (result.advanced) {
+        // In multiplayer the server advances as soon as the last player locks
+        // in. Tell everyone, and pull fresh state right away so this client
+        // jumps to the next question (or the results) without waiting.
+        const next = match.current_index + 1;
+        announce(
+          next >= questionCountOf(match)
+            ? { status: 'finished', current_index: match.current_index }
+            : { status: 'running', current_index: next },
+        );
+        await refresh();
+      } else {
+        // One answer changes no one's screen but the host's live scoreboard.
+        void channelRef.current?.send('answered', { question_idx: match.current_index }).catch(() => undefined);
+      }
     } catch (err) {
       if (err instanceof ApiError && (err.code === 'wrong_question' || err.code === 'time_up')) {
         // The clock ran out (or the match moved past this question) before
@@ -708,7 +826,7 @@ export function PlayMatch() {
       <div className="ss-raised ss-pop" style={{ display: 'flex', width: '100%', maxWidth: 480, margin: '0 auto' }}>
         <Card padding={6} width="100%">
           <VStack gap={2} align="center">
-            <Heading level={2} justify="center">{t('play.signInTitle')}</Heading>
+            <Heading level={1} justify="center">{t('play.signInTitle')}</Heading>
             <Text color="secondary" justify="center">{t('play.signInBody')}</Text>
             <Button
               variant="primary"
@@ -733,6 +851,8 @@ export function PlayMatch() {
     return (
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
         <VStack gap={2}>
+          {/* The page's heading, so a match that cannot open still has one. */}
+          <Heading level={1} type="display-3">{t('play.title')}</Heading>
           <Banner status="error" title={error} />
           <HStack gap={1} wrap="wrap">
             <Button
@@ -752,7 +872,7 @@ export function PlayMatch() {
   }
   if (!match) return null;
 
-  const totalQuestions = match.questions.length;
+  const totalQuestions = questionCountOf(match);
   const currentQuestion = match.questions[match.current_index];
 
   return (
@@ -816,6 +936,7 @@ export function PlayMatch() {
             participants={participants}
             hostSub={user?.id}
             code={code}
+            clockOffsetMs={clockOffsetMs}
           />
         )}
 
@@ -972,7 +1093,7 @@ function Lobby({
             <Button
               variant="primary"
               size="lg"
-              label={t('play.startWithCount', { count: match.questions.length })}
+              label={t('play.startWithCount', { count: questionCountOf(match) })}
               isDisabled={participants.length < 1 || startPending}
               onClick={onStart}
             />
@@ -1002,6 +1123,7 @@ function RunningQuestion({
   participants,
   hostSub,
   code,
+  clockOffsetMs,
 }: {
   match: Match;
   questionIdx: number;
@@ -1020,6 +1142,8 @@ function RunningQuestion({
   participants: Participant[];
   hostSub?: string;
   code: string;
+  /** The server's clock minus this device's. */
+  clockOffsetMs: number;
 }) {
   const t = useT();
   const lastQuestion = questionIdx >= total - 1;
@@ -1065,8 +1189,9 @@ function RunningQuestion({
     [participants, match.host_id],
   );
 
-  // Countdown derived from question_started_at + question_duration_s.
-  // A duration of 0 (or missing) means the host chose "no time limit".
+  // Countdown derived from question_started_at + question_duration_s, on the
+  // server's clock. A duration of 0 (or missing) means the host chose "no
+  // time limit".
   const durationS = match.question_duration_s ?? DEFAULT_DURATION_S;
   const noLimit = durationS <= 0;
   const startedMs = match.question_started_at ? new Date(match.question_started_at).getTime() : null;
@@ -1078,22 +1203,26 @@ function RunningQuestion({
     const id = window.setInterval(() => setNow(Date.now()), 1000);
     return () => window.clearInterval(id);
   }, [noLimit]);
+  const serverNow = now + clockOffsetMs;
   const remainingMs = noLimit
     ? Infinity
     : startedMs
-      ? Math.max(0, startedMs + durationS * 1000 - now)
+      ? Math.max(0, startedMs + durationS * 1000 - serverNow)
       : durationS * 1000;
   const remainingS = Math.ceil(remainingMs / 1000);
   const pctLeft = noLimit ? 100 : startedMs ? (remainingMs / (durationS * 1000)) * 100 : 100;
   // The clock is out: the server refuses a new answer, so none can be picked.
   const timeUp = !noLimit && remainingMs === 0;
+  // The server still takes an answer sent on the buzzer for a moment after
+  // that; only then is the question closed for everyone.
+  const answersClosed = !noLimit && startedMs !== null && serverNow >= startedMs + durationS * 1000 + ANSWER_GRACE_MS;
   // The presenter's screen is often projected while pupils answer, so the
-  // answer key stays hidden until the time is up or the teacher reveals it
-  // (an untimed question waits for the button). Keyed by the question, so the
-  // next question starts hidden again.
+  // answer key stays hidden until the question is closed or the teacher
+  // reveals it (an untimed question waits for the button). Keyed by the
+  // question, so the next question starts hidden again.
   const [revealedIdx, setRevealedIdx] = useState<number | null>(null);
   const hasKey = isPresenter && typeof q.correct_index === 'number';
-  const showKey = hasKey && (timeUp || revealedIdx === questionIdx);
+  const showKey = hasKey && (answersClosed || revealedIdx === questionIdx);
 
   // Time-up auto-lock: clicking locks instantly, so this only catches a
   // keyboard user who arrow-browsed to an option but never pressed Enter.
@@ -1441,7 +1570,7 @@ function Finished({
               {t('play.winner', {
                 name: top.display_name,
                 correct: top.correct,
-                total: match.questions.length,
+                total: questionCountOf(match),
               })}
             </div>
           )}

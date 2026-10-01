@@ -21,7 +21,7 @@ import { encodeSession } from './quiz-tokens';
 import { localizeQuestion, PRIVATE_CATEGORIES } from './quiz-runtime';
 import { jsonError } from './http';
 import { getEffectiveQuestions } from './questions-store';
-import { enforceRateLimit, RATE_LIMITS } from './rate-limit';
+import { enforceClassRateLimit, RATE_LIMITS } from './rate-limit';
 import {
   isIsoDate,
   qotdAvailability,
@@ -120,7 +120,7 @@ export function pickQuestionOfTheDay(
 }
 
 export async function handleQuestionOfTheDay(req: VercelRequest, res: VercelResponse) {
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.quizSessionAddress, RATE_LIMITS.quizSession))) return;
   const raw = typeof req.query.qotd === 'string' ? req.query.qotd : '';
   const today = utcToday();
   const date = raw === '' || raw === 'today' ? today : raw;
@@ -142,9 +142,11 @@ export async function handleQuestionOfTheDay(req: VercelRequest, res: VercelResp
 
   const { correctAnswer, ...answer } = picked;
   const sessionId = encodeSession([{ questionId: picked.question.id, correctAnswer }], { scope: 'qotd', date, subject: 'webdev' });
-  // The body carries a sealed session; keep it out of shared caches like the
-  // daily challenge's.
-  res.setHeader('Cache-Control', 'private, max-age=300');
+  // The body carries a sealed session, which one check claims. Keep it out of
+  // every cache: a browser that kept it for five minutes answered "Load it
+  // again" after a 409 with the same claimed session, and the page stayed on
+  // the expired banner.
+  res.setHeader('Cache-Control', 'private, no-store');
   const body: QotdResponse = { ...answer, sessionId };
   return res.json(body);
 }

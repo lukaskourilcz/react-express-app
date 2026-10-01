@@ -19,13 +19,15 @@ import type { TraceFrame } from '../../../../shared/learning-path-api';
 
 /** Counts index reads on a plain array by proxying it, so a learner writes
  * ordinary JavaScript and the grade still sees how often they touched the
- * input. Appended after the learner's code, so it cannot be shadowed. */
+ * input. Appended after the learner's code, so it cannot be shadowed, and it
+ * counts with the built-ins taken before that code ran (`__probe`,
+ * shared/coding-evaluate.ts), so replacing `Proxy` changes nothing. */
 const READ_PROBE = `
 var __countReads = function (values, run) {
   var reads = 0;
-  var proxy = new Proxy(values, {
+  var proxy = new __probe.Proxy(values, {
     get: function (target, prop) {
-      if (typeof prop === 'string' && /^[0-9]+$/.test(prop)) reads += 1;
+      if (typeof prop === 'string' && __probe.isIndex(prop)) reads += 1;
       return target[prop];
     },
   });

@@ -48,6 +48,14 @@ export default function DailyQuestionPage() {
   const valid = isIsoDate(date);
   const availability = valid ? qotdAvailability(date, today) : 'before-start';
   const query = useQuery({ ...dailyQuestionQuery(dateParam ?? 'today'), enabled: valid && availability === 'open' });
+  // "Load it again" after a claimed or expired session starts the question
+  // over once the fresh session is here. Counted rather than left to the
+  // session id, so the expired banner cannot outlive a reload.
+  const [reloads, setReloads] = useState(0);
+  const reload = async () => {
+    await query.refetch();
+    setReloads((count) => count + 1);
+  };
 
   const shownDate = query.data?.date ?? date;
   const track = query.data?.track ?? (valid ? qotdTrack(date) : null);
@@ -75,7 +83,7 @@ export default function DailyQuestionPage() {
       ) : query.isError ? (
         <Unavailable problem={qotdProblem(query.error)} date={date} onRetry={() => void query.refetch()} />
       ) : (
-        <DailyQuestion key={query.data.sessionId} data={query.data} onReload={() => void query.refetch()} />
+        <DailyQuestion key={`${query.data.sessionId}:${reloads}`} data={query.data} onReload={() => void reload()} />
       )}
 
       {valid && (

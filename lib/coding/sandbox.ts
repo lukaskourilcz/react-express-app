@@ -18,7 +18,7 @@ import { Worker } from 'node:worker_threads';
 import { newQuickJSWASMModuleFromVariant, shouldInterruptAfterDeadline, type QuickJSWASMModule, type QuickJSHandle } from 'quickjs-emscripten';
 import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
-import { LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, MAX_LOGS, TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
+import { LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, MAX_LOGS, PROBE_IS_INDEX_SOURCE, PROBE_LINE, TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
 import { CONSOLE_SOURCE } from '../../shared/coding-console';
 
 let modulePromise: Promise<QuickJSWASMModule> | null = null;
@@ -45,6 +45,15 @@ const MAX_TICKS = 10_000;
 /** What a learner sees when their call chain ran out of stack. Named rather
  * than inlined so the message reads the same wherever the overflow surfaces. */
 const STACK_MESSAGE = 'The call stack ran out of room: the recursion went too deep, or a base case is never reached.';
+const NEVER_SETTLED_MESSAGE = 'A call never settled: a promise or timer is still pending.';
+const STOPPED_MESSAGE = 'The run stopped unexpectedly.';
+const OUT_OF_MEMORY_MESSAGE = 'Out of memory.';
+/** The messages a hidden run may pass on to the learner. Each names what
+ * stopped the run; none carries text the program produced, which could spell
+ * out a hidden input. */
+const HIDDEN_RUN_MESSAGES: ReadonlySet<string> = new Set([TIMEOUT_MESSAGE, STACK_MESSAGE, NEVER_SETTLED_MESSAGE, STOPPED_MESSAGE, OUT_OF_MEMORY_MESSAGE]);
+/** What a hidden run that failed any other way reports. */
+export const HIDDEN_RUN_FAILED_MESSAGE = 'A hidden check could not run.';
 
 // The learner is compiled in a separate strict function scope. This controller
 // stays in an inaccessible closure held by the host, never in VM globals.
@@ -54,8 +63,11 @@ function program(code: string, calls: string[], shownCalls: number): string {
 'use strict';
 const apply = Reflect.apply, keys = Object.keys, isArray = Array.isArray;
 const setPrototype = Object.setPrototypeOf, stringify = JSON.stringify;
-const NativeFunction = Function, nativeThen = Promise.prototype.then;
+const NativeFunction = Function;
 const string = String, number = Number, is = Object.is;
+// What a check's probe counts with, taken before the learner's code runs
+// (see PROBE_LINE).
+const probe = Object.freeze({ Proxy, get: Reflect.get, isIndex: ${PROBE_IS_INDEX_SOURCE} });
 const makeArray = () => setPrototype([], null);
 const packet = (...values) => setPrototype(values, null);
 let now = 0, nextId = 1, timers = makeArray(), logs = makeArray();
@@ -177,20 +189,23 @@ globalThis.structuredClone = value => {
   return copy(value);
 };
 globalThis.console = (${CONSOLE_SOURCE})(emit, format, () => now);
-const evaluate = NativeFunction(${JSON.stringify('"use strict";\n' + code + '\n;return [' + calls.map(call => '() => (' + call.trim().replace(/;+$/, '') + '\n)').join(',') + '];')})();
+const evaluate = NativeFunction(${JSON.stringify(PROBE_LINE + '\n' + code + '\n;return [' + calls.map(call => '() => (' + call.trim().replace(/;+$/, '') + '\n)').join(',') + '];')})(probe);
 const outcomes = makeArray();
+// Each call counts itself done. The controller never calls \`then\` on a
+// promise: that reads the promise's \`constructor\`, which learner code can
+// replace with a getter that throws, and a throw there, after a hidden call
+// had run, carried the hidden inputs out as the run's error.
 const launch = (from, to, next) => {
   let remaining = to - from;
   if (!remaining) { next(); return; }
+  const settled = () => { remaining--; if (!remaining) next(); };
   for (let i = from; i < to; i++) {
     const invoke = async () => {
       try { outcomes[i] = packet('value', encode(await evaluate[i]())); }
       catch (error) { outcomes[i] = packet('error', message(error)); }
+      settled();
     };
-    apply(nativeThen, invoke(), [() => {
-      remaining--;
-      if (!remaining) next();
-    }]);
+    invoke();
   }
 };
 // The shown calls run together; the hidden ones start after they settle, so
@@ -348,7 +363,7 @@ function runOnWorker(file: string, input: SandboxInput): Promise<EvaluateResult>
     // A thread that dies mid-run (its heap limit, a WebAssembly abort) took
     // the learner's program with it, and says so like any other failed run.
     // One that dies before it picked the run up is the host's problem.
-    const onFailure = () => (started ? finish(stopped('The run stopped unexpectedly.', false)) : unavailable('sandbox_worker_failed'));
+    const onFailure = () => (started ? finish(stopped(STOPPED_MESSAGE, false)) : unavailable('sandbox_worker_failed'));
     worker.on('message', onMessage);
     worker.on('error', onFailure);
     worker.on('exit', onFailure);
@@ -442,7 +457,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
       if (!didFire && !runtime.hasPendingJob()) {
         // Nothing left to run and the calls have not settled: a promise that
         // never resolves. Report it instead of waiting for the deadline.
-        return failure('A call never settled: a promise or timer is still pending.');
+        return failure(NEVER_SETTLED_MESSAGE);
       }
     }
 
@@ -464,7 +479,7 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
     const message = String((error as Error)?.message ?? error);
     if (isInterrupt(message)) return failure(TIMEOUT_MESSAGE, true);
     if (isStackOverflow(message)) return failure(STACK_MESSAGE);
-    return failure(message.includes('memory') ? 'Out of memory.' : message);
+    return failure(message.includes('memory') ? OUT_OF_MEMORY_MESSAGE : message);
   } finally {
     // Disposal can fail after a run that exhausted the stack: QuickJS asserts
     // its object list is empty and aborts the whole WebAssembly instance.
@@ -495,8 +510,9 @@ export interface SandboxCheck {
  * every submission. So an answer cannot be served by counting calls (`A[k++]`
  * handed the hidden checks their answers in authored order when every call
  * shared one program), and the hidden pass count cannot be read position by
- * position. Nothing a hidden check prints comes back. Hidden results return
- * in authored order.
+ * position. Nothing a hidden check prints comes back, and its run's error
+ * only when it is a fixed message (a timeout, a stack overflow, a call that
+ * never settled). Hidden results return in authored order.
  */
 export async function runChecks(input: {
   code: string;
@@ -524,5 +540,9 @@ export async function runChecks(input: {
   });
   const results: EvaluateResult['results'] = [];
   if (!run.codeError && !run.timedOut) order.forEach((original, position) => { results[original] = run.results[position]; });
-  return { visible, hidden: { results, logs: [], codeError: run.codeError, timedOut: run.timedOut } };
+  // The hidden run's error goes back only when it is one of the fixed
+  // messages. Anything else is text the program produced after it had seen
+  // the hidden inputs.
+  const codeError = run.codeError === null ? null : HIDDEN_RUN_MESSAGES.has(run.codeError) ? run.codeError : HIDDEN_RUN_FAILED_MESSAGE;
+  return { visible, hidden: { results, logs: [], codeError, timedOut: run.timedOut } };
 }

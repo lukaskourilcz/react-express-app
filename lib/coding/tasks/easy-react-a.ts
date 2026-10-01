@@ -251,7 +251,7 @@ const wait = ms => act(() => new Promise(resolve => setTimeout(resolve, ms)));
 test('the reminder appears after the wait', async () => {
   const { container } = render(<App />);
   press('Remind me');
-  await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 2000 });
+  await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 1000 });
 });
 
 test('Cancel stops a waiting reminder', async () => {
@@ -266,7 +266,7 @@ test('Cancel with nothing waiting does no harm', async () => {
   const { container } = render(<App />);
   press('Cancel');
   press('Remind me');
-  await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 2000 });
+  await waitFor(() => expect(container.textContent).toContain('Time to stretch'), { timeout: 1000 });
 });
 `,
   },

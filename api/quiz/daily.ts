@@ -2,12 +2,12 @@ import type { VercelRequest, VercelResponse } from '../../lib/vercel-types.js';
 import { createHash } from 'node:crypto';
 import { encodeSession, quizSessionExpiresAt, stableAttemptId } from '../../lib/quiz-tokens';
 import { localizeQuestion, normalizeLang, PRIVATE_CATEGORIES, type Question } from '../../lib/quiz-runtime';
-import { createLogger, createServiceClient, jsonError, withRequestContext, withTimeout } from '../../lib/http';
+import { createLogger, createServiceClient, jsonError, tryAuthOnce, withRequestContext, withTimeout } from '../../lib/http';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
-import { enforceRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
+import { enforceClassRateLimit, RATE_LIMITS } from '../../lib/rate-limit';
 import { defaultDeploymentCategories, validateCategoryScope } from '../../lib/product-scope';
-import { AuthError, tryAuth } from '../../lib/auth';
+import { AuthError } from '../../lib/auth';
 import { dailySeededShuffle, handleQuestionOfTheDay } from '../../lib/daily-question';
 import type { ScopeSubjectId } from '../../shared/subject-catalog';
 
@@ -76,7 +76,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // The public question of the day (#239) shares this function so the
   // handler count stays at twelve: GET /api/quiz/daily?qotd=<date|today>.
   if (req.query.qotd !== undefined) return handleQuestionOfTheDay(req, res);
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession))) return;
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.quizSessionAddress, RATE_LIMITS.quizSession))) return;
 
   const settings = await getGameSettings();
   // The /dev switch. The question of the day above is its own feature and
@@ -120,7 +120,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const lang = normalizeLang(req.query.lang);
   let auth;
   try {
-    auth = await tryAuth(req);
+    auth = await tryAuthOnce(req);
   } catch (error) {
     if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
     throw error;
@@ -177,6 +177,10 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     subject: scope.subject,
     ...(attemptId ? { attemptId } : {}),
     ...(start.startedAt !== null ? { startedAt: start.startedAt } : {}),
+    // The account it was fetched for: quiz/submit grades it for that account
+    // only, so a submit that arrives without the token is refused instead of
+    // spending the day's one claim as a guest's.
+    userId: auth?.sub ?? null,
   });
 
   // The response embeds an opaque, authenticated session token bound to the

@@ -24,6 +24,8 @@ import { solutionFor as codingSolutionFor } from '../lib/coding/solutions';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedPath } from '../lib/learning-paths/types';
 import { codingTaskById } from '../lib/coding/active';
 import { moduleComplete, nextActivityId, pathInventory, type EvidenceState } from '../shared/learning-paths';
+import { PATH_LIMITS } from '../shared/learning-path-api';
+import { moduleRequirements, recordedState } from '../lib/learning-paths/handlers';
 import { handlerContracts } from './learning-path-handler-contracts';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
@@ -93,6 +95,39 @@ async function main() {
       const exercises = inventory.moduleCodeExercises + inventory.finalCodeExercises;
       if (exercises < target.codeExercises) {
         fail(`${where}: ${exercises} coding exercises, the curriculum commits to ${target.codeExercises}`);
+      }
+    }
+
+    /* ── a learner can hold a draft of every exercise and write-up ─────── */
+    // Every code exercise and artifact autosaves a draft, one per activity.
+    // With a cap below their number, a learner who typed into all of them was
+    // refused from the next one on (DSA has 30 and the cap was 20).
+    const draftable = inventory.codeExercises + inventory.artifacts;
+    if (draftable > PATH_LIMITS.draftsPerEnrollment) {
+      fail(`${where}: ${draftable} activities keep drafts, but an enrollment holds at most ${PATH_LIMITS.draftsPerEnrollment}`);
+    }
+
+    /* ── the database completes a module by moduleComplete's rule ──────── */
+    // accept_learning_path_result (migration 054) decides completion from the
+    // requirement lists a submit sends. For every module they must agree with
+    // moduleComplete: nothing recorded, every requirement met at its own state
+    // (and a verified pass for a write-up), and each requirement missed alone.
+    for (const module of path.modules) {
+      const requirements = moduleRequirements(module);
+      const databaseSays = (states: Map<string, EvidenceState>) => requirements.length > 0
+        && requirements.every((one) => one.states.includes(states.get(one.activityId) ?? 'not_started'));
+      const met = new Map(module.requires.map((one) => [one.activityId, one.state]));
+      const cases = [
+        new Map<string, EvidenceState>(),
+        met,
+        new Map(module.requires.map((one) => [one.activityId, 'verified_pass' as EvidenceState])),
+        ...module.requires.map((one) => new Map([...met, [one.activityId, 'needs_revision' as EvidenceState]])),
+      ];
+      for (const states of cases) {
+        const expected = !module.optional && moduleComplete(module, states);
+        if (databaseSays(states) !== expected) {
+          fail(`${where}/${module.id}: the requirements sent to the database say ${!expected} where moduleComplete says ${expected} for ${JSON.stringify([...states])}`);
+        }
       }
     }
 
@@ -272,6 +307,80 @@ async function main() {
     );
     for (const id of solutionIds()) {
       if (!known.has(id)) fail(`solutions: ${id} does not match any activity`);
+    }
+  }
+
+  /* ── the probes, the hidden run and the type check (PATH-1, CODE-2) ─── */
+  const dsaPath = LEARNING_PATHS.find((path) => path.id === 'dsa-foundations');
+  const dsaActivity = (id: string) => dsaPath?.modules.flatMap((module) => module.activities).find((activity) => activity.id === id);
+  if (!SKIP_RUN && dsaPath) {
+    // The DSA method checks count array reads through a Proxy. Code that
+    // replaced the global Proxy, or RegExp.prototype.test, made every count
+    // zero, so a linear scan passed the binary-search and one-pass budgets.
+    const tamperings = [
+      ['Proxy replaced', 'var Proxy = function (target) { return target; };'],
+      ['RegExp test replaced', 'RegExp.prototype.test = function () { return false; };'],
+    ] as const;
+    const binary = dsaActivity('dsa-v1-d07-binary-search');
+    const linear = dsaActivity('dsa-v1-d07-linear-search');
+    if (!binary?.reuseTaskId || !linear?.code) {
+      fail('dsa-foundations: the D07 search exercises are missing');
+    } else {
+      const binaryCode = codeFromReusedTask(codingTaskById(binary.reuseTaskId)!);
+      const scan = 'const binarySearch = (sorted, target) => { for (let i = 0; i < sorted.length; i++) if (sorted[i] === target) return i; return -1; };';
+      const runOn = 'const linearSearch = (values, target) => { let found = -1; for (let i = values.length - 1; i >= 0; i--) if (values[i] === target) found = i; return found; };';
+      for (const [name, tamper] of tamperings) {
+        const scanned = await gradePathCode(binary, binaryCode, `${tamper}\n${scan}`);
+        if (scanned.state === 'verified_pass') fail(`dsa-v1-d07-binary-search: a linear scan passes with the ${name}`);
+        const ranOn = await gradePathCode(linear, linear.code, `${tamper}\n${runOn}`);
+        if (ranOn.state === 'verified_pass') fail(`dsa-v1-d07-linear-search: a scan past the match passes with the ${name}`);
+      }
+    }
+    // The hidden assertions run in a fresh program, in a shuffled order, as
+    // in the coding section: a table of every expected answer served by call
+    // count passed them when they ran in the same program after the visible
+    // ones.
+    const digits = codingTaskById('js-digit-sum')!;
+    const table = [...digits.tests!, ...codingSolutionFor(digits.id)!.hiddenTests!].map((test) => test.expected);
+    const byCount = await gradePathCode(
+      { ...binary!, id: 'synthetic-digit-sum', reuseTaskId: digits.id },
+      codeFromReusedTask(digits),
+      `let k = 0; const table = ${JSON.stringify(table)}; const digitSum = () => table[k++];`,
+    );
+    if (byCount.code.results.some((result) => result.pass !== true)) fail('the call-count table should pass the visible assertions');
+    if (byCount.state === 'verified_pass') fail('a table of answers served by call count passes the hidden assertions');
+    // A type check that runs past its deadline is stopped on its worker
+    // thread and graded as a timeout, as in the coding section.
+    const typed = LEARNING_PATHS.flatMap(codeActivities).find(({ activity }) => activity.code?.language === 'typescript');
+    if (typed) {
+      const recursive = "type B<N extends number, E, A extends unknown[] = []> = A['length'] extends N ? A : B<N, E, [...A, E]>;\n"
+        + Array.from({ length: 30 }, (_, index) => `const q${index}: B<999, 'k${index}'>['length'] = 999;\n`).join('');
+      const started = Date.now();
+      const stopped = await gradePathCode(typed.activity, typed.activity.code!, recursive);
+      const took = Date.now() - started;
+      if (stopped.code.outcome !== 'timeout' || stopped.state !== 'needs_revision') fail(`a runaway type check grades as ${stopped.code.outcome}/${stopped.state}, not a timeout`);
+      if (took > 15_000) fail(`a runaway type check took ${took} ms to stop`);
+    } else {
+      fail('no TypeScript path activity to check the type-check deadline with');
+    }
+  }
+
+  /* ── what a later, weaker result leaves on record ──────────────────── */
+  // The rule accept_learning_path_result applies (migration 054): a verified
+  // pass is never demoted, and a submitted write-up only by a verified pass.
+  {
+    const folds: Array<[EvidenceState | undefined, EvidenceState, EvidenceState]> = [
+      ['self_reviewed', 'needs_revision', 'self_reviewed'],
+      ['self_reviewed', 'in_progress', 'self_reviewed'],
+      ['self_reviewed', 'verified_pass', 'verified_pass'],
+      ['verified_pass', 'needs_revision', 'verified_pass'],
+      ['verified_pass', 'self_reviewed', 'verified_pass'],
+      ['needs_revision', 'self_reviewed', 'self_reviewed'],
+      [undefined, 'needs_revision', 'needs_revision'],
+    ];
+    for (const [prior, next, kept] of folds) {
+      const got = recordedState(prior, next);
+      if (got !== kept) fail(`${next} after ${prior ?? 'nothing'} leaves ${got} on record, not ${kept}`);
     }
   }
 

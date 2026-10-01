@@ -18,7 +18,12 @@ export interface Match {
   host_name: string;
   status: 'lobby' | 'running' | 'finished';
   current_index: number;
+  /** A player gets only the questions already shown: none in the lobby, up
+   * to the current one while the room runs, all of them once it is over. */
   questions: MatchQuestion[];
+  /** How many questions the round has. Absent from a server before it sent
+   * only the questions already shown, whose `questions` held all of them. */
+  question_count?: number;
   ended_at?: string | null;
   /** Null while the room is a lobby, and for a lobby closed before it started. */
   started_at?: string | null;
@@ -127,16 +132,31 @@ export const createMatch = (input: {
     body: JSON.stringify(input),
   });
 
+/** The number of questions in the round: the server's count, or, from a
+ * server that still sent every question, the length of the list. */
+export const questionCountOf = (match: Pick<Match, 'questions' | 'question_count'>): number =>
+  match.question_count ?? match.questions.length;
+
+/** `server_now` is the server's clock when it answered (ISO). */
 export const joinMatch = (input: { code: string; user_id: string; display_name: string }) =>
-  apiFetch<Match>('/api/play/join', {
+  apiFetch<Match & { server_now?: string }>('/api/play/join', {
     method: 'POST',
     body: JSON.stringify(input),
   });
 
 export const fetchMatchState = (code: string, user_id?: string) =>
-  apiFetch<{ match: Match; participants: Participant[]; scoreboard: ScoreboardEntry[] }>(
+  apiFetch<{ match: Match; participants: Participant[]; scoreboard: ScoreboardEntry[]; server_now?: string }>(
     `/api/play/state?code=${encodeURIComponent(code)}${user_id ? `&user_id=${encodeURIComponent(user_id)}` : ''}`,
   );
+
+/** How far the server's clock runs ahead of this device's, in ms, from a
+ * response that carries `server_now`. The server read its clock about halfway
+ * through the round trip. Null when the response has no clock. */
+export function serverClockOffset(serverNow: string | undefined, sentAt: number, receivedAt: number): number | null {
+  const server = typeof serverNow === 'string' ? Date.parse(serverNow) : Number.NaN;
+  if (!Number.isFinite(server)) return null;
+  return server - (sentAt + receivedAt) / 2;
+}
 
 export const controlMatch = (input: {
   code: string;

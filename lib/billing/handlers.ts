@@ -28,7 +28,10 @@ import {
   billingAccount,
   BillingMigrationError,
   BillingPermanentError,
+  DEVSHARK_PRODUCT,
+  expireOpenCheckouts,
   linkCustomer,
+  liveDevsharkSubscriptions,
   processBillingEvent,
   WAIVER_TEXT,
   type BillingDeps,
@@ -121,13 +124,17 @@ export function checkoutSessionParams(
   // code field returns when the offer ends.
   const coupon = launchCoupon(config, now);
   const offer: Record<string, string> = coupon ? { offer: LAUNCH_OFFER.id } : {};
+  // `product` marks the session and the subscription as devShark's, so the
+  // webhook never acts on another product sold from the same Stripe account
+  // (finding BILL-1).
+  const metadata = { product: DEVSHARK_PRODUCT, supabase_user_id: userId, plan, ...offer };
   return {
     mode: 'subscription',
     customer: customerId,
     client_reference_id: userId,
     line_items: [{ price, quantity: 1 }],
-    subscription_data: { metadata: { supabase_user_id: userId, plan, ...offer } },
-    metadata: { supabase_user_id: userId, plan, ...offer },
+    subscription_data: { metadata },
+    metadata,
     success_url: `${config.origin}/premium/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${config.origin}/premium`,
     ...(coupon
@@ -174,12 +181,22 @@ async function startCheckout(req: VercelRequest, res: VercelResponse, supabase: 
   }
   const deps = depsFor(config, supabase)!;
   const email = typeof auth.payload.email === 'string' ? auth.payload.email : null;
+  // A second subscription would charge twice (finding BILL-2): the account is
+  // sent to the portal while any subscription of it can still charge.
+  const subscribed = (reason: string) => {
+    log({ status: 409, kind: 'checkout', reason });
+    return jsonError(res, 409, 'already_premium', 'You already have a Premium subscription. Manage it from your profile.');
+  };
   try {
     const account = await billingAccount(deps, userId);
-    if (account.providerLive) {
-      return jsonError(res, 409, 'already_premium', 'Your Premium subscription is active. Manage it from your profile.');
-    }
+    if (account.providerLive) return subscribed('subscription_live');
     let customerId = account.customerId ?? (await createCustomer(deps, userId, email, false));
+    // Stripe may know before the webhook arrives: a subscription just created,
+    // or a session paid in another tab a moment ago. Every session still open
+    // is expired, so only the one made now can be paid.
+    if ((await liveDevsharkSubscriptions(deps, customerId)).length > 0) return subscribed('subscription_live_at_stripe');
+    const open = await expireOpenCheckouts(deps, customerId);
+    if (open.completed) return subscribed('session_completed');
     // One instant decides the offer for both attempts and the log line.
     const now = Date.now();
     let session: Stripe.Checkout.Session;
@@ -193,7 +210,7 @@ async function startCheckout(req: VercelRequest, res: VercelResponse, supabase: 
       session = await deps.stripe.checkout.sessions.create(checkoutSessionParams(config, plan as BillingPlan, userId, customerId, now));
     }
     if (!session.url) throw new Error('checkout_without_url');
-    log({ status: 200, kind: 'checkout', plan, managed: config.managedPayments, offer: launchCoupon(config, now) ? LAUNCH_OFFER.id : null });
+    log({ status: 200, kind: 'checkout', plan, managed: config.managedPayments, offer: launchCoupon(config, now) ? LAUNCH_OFFER.id : null, expired_sessions: open.expired });
     res.setHeader('Cache-Control', 'no-store');
     return res.json({ url: session.url });
   } catch (error) {
@@ -494,9 +511,10 @@ async function handleCancelLink(req: VercelRequest, res: VercelResponse, supabas
 
 /* ── Account deletion ───────────────────────────────────────────────────── */
 
-/** Before an account is deleted, end its subscriptions at Stripe so it is
- * never charged again. True when nothing is left to charge; false when Stripe
- * could not be reached, and the deletion should stop. */
+/** Before an account is deleted, end its subscriptions at Stripe and expire
+ * its open Checkout Sessions, so it is never charged again. True when nothing
+ * is left to charge; false when Stripe could not be reached, and the deletion
+ * should stop. */
 export async function endBillingForDeletedAccount(supabase: SupabaseClient, userId: string): Promise<boolean> {
   const config = billingConfig();
   const deps = depsFor(config, supabase);
@@ -504,8 +522,8 @@ export async function endBillingForDeletedAccount(supabase: SupabaseClient, user
   try {
     const account = await billingAccount(deps, userId);
     if (!account.customerId) return true;
-    const ended = await cancelForDeletedAccount(deps, config, account.customerId);
-    log({ status: 200, kind: 'account_deleted', ended });
+    const { ended, expired } = await cancelForDeletedAccount(deps, config, account.customerId);
+    log({ status: 200, kind: 'account_deleted', ended, expired_sessions: expired });
     return true;
   } catch (error) {
     if (error instanceof BillingMigrationError) return true;

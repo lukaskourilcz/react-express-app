@@ -184,19 +184,28 @@ export function createMiniJest() {
   };
   const expect = (actual: unknown) => buildExpect(actual, false);
 
-  const run = async (options: { afterEach?: () => void | Promise<void>; timeoutMs?: number } = {}): Promise<MiniJestRun> => {
+  /**
+   * `follow` says how to wait for what a case body or hook returned. By
+   * default the value is awaited, which calls its `then`. The React runner
+   * passes one built on the page realm's own `then`, captured before any
+   * suite or component code ran: a component that replaced
+   * `Promise.prototype.then` in that realm otherwise settled every async case
+   * at once, as a pass, whatever the case went on to do.
+   */
+  const run = async (options: { afterEach?: () => void | Promise<void>; timeoutMs?: number; follow?: (value: unknown) => unknown } = {}): Promise<MiniJestRun> => {
     const timeoutMs = options.timeoutMs ?? 5_000;
+    const follow = options.follow ?? ((value: unknown) => value);
     const results: MiniJestCase[] = [];
     for (const one of cases) {
       const started = Date.now();
       let error: string | null = null;
       try {
-        for (const hook of before) await hook();
+        for (const hook of before) await follow(hook());
         await Promise.race([
-          Promise.resolve().then(one.body),
+          Promise.resolve().then(() => follow(one.body())),
           new Promise((_, reject) => setTimeout(() => reject(new Error(`timed out after ${timeoutMs} ms`)), timeoutMs)),
         ]);
-        for (const hook of after) await hook();
+        for (const hook of after) await follow(hook());
       } catch (caught) {
         error = String((caught as { message?: unknown })?.message ?? caught).split('\n')[0];
       }

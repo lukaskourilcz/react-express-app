@@ -8,7 +8,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
-import { ApiError, isPremiumRequired } from '../lib/api';
+import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
 import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, type RunOutcome, type RunPhase } from './runner/run-tests';
@@ -24,7 +24,7 @@ import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
 import { useIsNarrowForEditor } from '../lib/useMediaQuery';
-import { SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
+import { CODING_CODE_LIMIT_BYTES, SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding, useCodingApproaches } from './api';
 import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
@@ -157,12 +157,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const harness = useReactHarness();
   // What a narrow screen gets instead of an editor: the task's puzzle when it
   // has one, and an honest pending state when it does not. Neither is a pass.
-  // The pending state offers the editor anyway, so it is never a dead end.
+  // Both offer the editor anyway, so neither is a dead end: a puzzle never
+  // completes its task, and without the editor a phone could not pass it.
   const narrow = useIsNarrowForEditor();
   const [editorHere, setEditorHere] = useState(readNarrowEditor);
   const editorPaneRef = useRef<HTMLElement | null>(null);
   const focusEditorPane = useRef(false);
-  const puzzleMode = narrow && Boolean(task.puzzle) && mode === 'section';
+  const puzzleMode = narrow && Boolean(task.puzzle) && mode === 'section' && !editorHere;
   const pendingOnDesktop = narrow && !task.puzzle && !editorHere;
   const chooseEditorHere = useCallback(() => {
     try { sessionStorage.setItem(NARROW_EDITOR_KEY, '1'); } catch { /* the choice then lasts for this page only */ }
@@ -172,10 +173,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // The button that made the choice is gone, so focus goes to the pane that
   // replaced it rather than back to the top of the page.
   useEffect(() => {
-    if (pendingOnDesktop || !focusEditorPane.current) return;
+    if (pendingOnDesktop || puzzleMode || !focusEditorPane.current) return;
     focusEditorPane.current = false;
     editorPaneRef.current?.focus();
-  }, [pendingOnDesktop]);
+  }, [pendingOnDesktop, puzzleMode]);
 
   const rungs = useMemo(() => ladderRungs(task, lang), [task, lang]);
   const taken = Math.min(hintsTaken, rungs.length);
@@ -267,9 +268,20 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     }
   }, [phase, isReact, harness, files, task.suite, task.tests, task.typeTests, codeTrack, code, onDraft]);
 
+  /** What a failed request says: the server's reason in the learner's words.
+   * Only a request that never arrived is a connection problem. */
+  const submitFailure = useCallback((error: unknown): string => (
+    error instanceof ApiError && error.code === 'too_large' ? t('coding.verdict.tooLarge') : friendlyError(error)
+  ), [t]);
+
   const submit = useCallback(async () => {
     if (phase !== 'idle' || !session) return;
     onDraft?.(code);
+    // The server takes 20 kB of code; say so before sending more.
+    if (new TextEncoder().encode(code).length > CODING_CODE_LIMIT_BYTES) {
+      setSubmitError(t('coding.verdict.tooLarge'));
+      return;
+    }
     setPhase('submitting');
     setSubmitError(null);
     setFormatError(null);
@@ -310,6 +322,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         const typesBroken = result.check && (result.check.codeErrors.length > 0 || result.check.typeTests.some((one) => !one.pass));
         setTab(result.codeError ? 'results' : typesBroken ? 'types' : 'results');
       }
+      // The grader itself could not run. Nothing was recorded and nothing
+      // was said about the code, so it reads as a problem to retry, not as a
+      // build error or a failed attempt.
+      if (result.graderUnavailable) {
+        setServerChecked(false);
+        setSubmitError(t('coding.verdict.graderUnavailable'));
+        return;
+      }
       if (result.verdict !== 'passed') setFailedRun(true);
       setVerdict(result);
       onVerdict?.(result, code);
@@ -317,12 +337,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       if (error instanceof ApiError && error.code === 'invalid_session') setSubmitError(t('coding.verdict.sessionExpired'));
       // The upgrade sheet is already open; the line beside the button says why.
       else if (isPremiumRequired(error)) setSubmitError(t('error.premiumRequired'));
-      else setSubmitError(t('coding.verdict.submitError'));
+      else setSubmitError(submitFailure(error));
     } finally {
       setRunPhase(null);
       setPhase('idle');
     }
-  }, [phase, session, isReact, checklist, checked, code, runCount, taken, harness, files, codeTrack, task.tests, task.typeTests, onVerdict, onDraft, t]);
+  }, [phase, session, isReact, checklist, checked, code, runCount, taken, harness, files, codeTrack, task.tests, task.typeTests, onVerdict, onDraft, t, submitFailure]);
 
   const format = useCallback(async () => {
     try {
@@ -349,11 +369,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setVerdict(result);
       onVerdict?.(result);
     } catch (error) {
-      setSubmitError(isPremiumRequired(error) ? t('error.premiumRequired') : error instanceof ApiError ? error.message : t('coding.verdict.submitError'));
+      setSubmitError(isPremiumRequired(error) ? t('error.premiumRequired') : submitFailure(error));
     } finally {
       setPhase('idle');
     }
-  }, [session, phase, runCount, taken, onVerdict, t]);
+  }, [session, phase, runCount, taken, onVerdict, t, submitFailure]);
 
   const reset = useCallback(() => {
     setCode(task.starter);
@@ -390,9 +410,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     } catch (error) {
       setSubmitError(error instanceof ApiError && error.code === 'reveal_locked'
         ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) })
-        : isPremiumRequired(error) ? t('error.premiumRequired') : t('coding.verdict.submitError'));
+        : isPremiumRequired(error) ? t('error.premiumRequired') : submitFailure(error));
     }
-  }, [session, taken, onRevealed, rungs.length, t]);
+  }, [session, taken, onRevealed, rungs.length, t, submitFailure]);
 
   const attemptReady = attemptStarted({ code, starter: task.starter, elapsedMs: Date.now() - startedAt.current, failedRun });
   const nextRung: LadderRung | null = rungs[taken] ?? null;
@@ -423,16 +443,17 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     ? verdict.verdict === 'passed' && verdict.xpForfeited === true ? t('coding.verdict.passedNoXp') : t(`coding.verdict.${verdict.verdict}` as never)
     : '';
 
+  const busy = phase !== 'idle';
+  const submitDisabled = busy || !session || !online || Boolean(solution);
+
+  // The shortcut does what the button would: nothing, while Submit is off.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
     if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
       event.preventDefault();
-      if (event.shiftKey) void submit();
+      if (event.shiftKey) { if (!submitDisabled) void submit(); }
       else void runLocal();
     }
   };
-
-  const busy = phase !== 'idle';
-  const submitDisabled = busy || !session || !online || Boolean(solution);
   const formatDisabled = busy || !code.trim() || formatSource !== code || code === formattedCode;
   const resetDisabled = busy || (code === task.starter && taken === 0);
   const tierLabel = t(`coding.tier.${CODING_TIERS[task.tier]}` as never);
@@ -780,7 +801,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       ) : (
         verdict.verdict === 'passed' && verdict.progress && <p className="cd-verdict__row">{verdict.firstPass ? t('coding.verdict.firstPass') : t('coding.verdict.again')}</p>
       )}
-      {verdict.verdict === 'passed' && !verdict.progress && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
+      {verdict.verdict === 'passed' && !verdict.progress && !verdict.puzzle && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
       {verdict.github && verdict.github.status !== 'not_connected' && (
         <p className="cd-verdict__row">
           {verdict.github.status === 'committed' && verdict.github.url ? <a className="cd-link" href={verdict.github.url} target="_blank" rel="noreferrer">{t('coding.github.committed', { repo: verdict.github.url.replace(/^https:\/\/github\.com\//, '').split('/').slice(0, 2).join('/') })}</a>
@@ -916,6 +937,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   over rather than being graded under the new one. */}
               <CodePuzzle key={session ?? task.id} puzzle={task.puzzle} busy={busy} onSubmit={(order) => void submitOrder(order)} />
               {submitError && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+              <div className="cd-actions">
+                <Button variant="secondary" onClick={chooseEditorHere} label={t('coding.pendingDesktopUseEditor')} />
+              </div>
               {actionBar}
             </section>
           )}

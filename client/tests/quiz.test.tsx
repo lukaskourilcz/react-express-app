@@ -55,10 +55,10 @@ function LocationProbe() {
   return <p data-testid="location">{location.pathname + location.search}</p>;
 }
 
-function renderQuiz() {
-  return render(
+function quizTree(path = '/quiz') {
+  return (
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/quiz']}>
+      <MemoryRouter initialEntries={[path]}>
         <LanguageProvider>
           <Routes>
             <Route path="/quiz" element={<><Quiz /><PendingQuizResults /></>} />
@@ -66,8 +66,11 @@ function renderQuiz() {
           </Routes>
         </LanguageProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+}
+function renderQuiz(path = '/quiz') {
+  return render(quizTree(path));
 }
 
 const counter = () => screen.getAllByText(/^Question \d+ of \d+$/)[0].textContent;
@@ -133,6 +136,37 @@ describe('keyboard shortcuts', () => {
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(submits).toBe(0);
     expect(counter()).toBe('Question 2 of 2');
+  });
+});
+
+describe('starting', () => {
+  it('keeps Start quiz focusable without a category, and pressing it says what is missing', async () => {
+    localStorage.setItem('devquiz:quiz-setup:v1', JSON.stringify({ count: 10, difficulty: 'mixed', categories: [] }));
+    let fetched = 0;
+    server.use(http.get('*/api/quiz/questions', () => { fetched++; return HttpResponse.json({}); }));
+    renderQuiz();
+    const start = await screen.findByRole('button', { name: /start quiz/i });
+    expect(start).not.toBeDisabled();
+    expect(start).toHaveAttribute('aria-disabled', 'true');
+    start.focus();
+    expect(document.activeElement).toBe(start);
+    fireEvent.click(start);
+    expect(screen.getByRole('alert')).toHaveTextContent('Select at least one category');
+    expect(start).toHaveAccessibleDescription('Select at least one category');
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(fetched).toBe(0);
+  });
+
+  it('moves focus to the first question, not to the page', async () => {
+    server.use(http.get('*/api/quiz/questions', () => HttpResponse.json({ sessionId: sessionFor('standard'), expiresAt: Date.now() + 3_600_000, questions: [Q('a'), Q('b')] })));
+    renderQuiz();
+    const start = await screen.findByRole('button', { name: /start quiz/i });
+    expect(start).not.toHaveAttribute('aria-disabled');
+    start.focus();
+    fireEvent.click(start);
+    await questionOnScreen();
+    expect(document.activeElement).toHaveTextContent('Question a?');
+    expect(document.activeElement?.id).toBe('question-text-a');
   });
 });
 
@@ -231,6 +265,48 @@ describe('the daily challenge', () => {
     fireEvent.click(await screen.findByRole('button', { name: /^retry$/i }));
     await waitFor(() => expect(hits).toHaveLength(2));
     expect(hits).toEqual(['daily', 'daily']);
+  });
+
+  // The Home "Daily challenge" tile opened the survival Challenge, and the
+  // leaderboard's empty Today board opened a plain quiz. Both link here now.
+  it('starts from the leaderboard’s empty Today board, once, and drops the parameter', async () => {
+    const hits: string[] = [];
+    server.use(
+      http.get('*/api/leaderboard', ({ request }) => HttpResponse.json({ period: new URL(request.url).searchParams.get('period'), subject: 'webdev', entries: [] })),
+      http.get('*/api/quiz/daily', () => { hits.push('daily'); return HttpResponse.json({ date: '2026-09-29', sessionId: sessionFor('daily'), questions: [Q('d1')] }); }),
+    );
+    await act(async () => render(
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/leaderboard?tab=today']}>
+          <LanguageProvider>
+            <Routes>
+              <Route path="/leaderboard" element={<Leaderboard />} />
+              <Route path="/quiz" element={<><Quiz /><LocationProbe /></>} />
+            </Routes>
+          </LanguageProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    ));
+    expect(await screen.findByText('Nobody has finished today’s daily challenge yet.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Today’s challenge' }));
+    expect(await screen.findByText('Question d1?')).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/quiz$/);
+    await act(async () => {});
+    expect(hits).toEqual(['daily']);
+  });
+
+  it('waits for the sign-in before starting a linked daily, so it is not fetched as practice', async () => {
+    const hits: string[] = [];
+    server.use(http.get('*/api/quiz/daily', () => { hits.push('daily'); return HttpResponse.json({ date: '2026-09-29', sessionId: sessionFor('daily'), questions: [Q('d1')] }); }));
+    auth.value = { user: null, isAuthenticated: false, isLoading: true };
+    const view = renderQuiz('/quiz?mode=daily');
+    await screen.findByRole('button', { name: /start quiz/i });
+    await act(async () => {});
+    expect(hits).toEqual([]);
+    signIn();
+    view.rerender(quizTree('/quiz?mode=daily'));
+    expect(await screen.findByText('Question d1?')).toBeInTheDocument();
+    expect(hits).toEqual(['daily']);
   });
 
   it('is hidden when the /dev switch turns it off', async () => {

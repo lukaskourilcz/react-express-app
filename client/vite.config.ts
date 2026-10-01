@@ -9,7 +9,7 @@ import { PRODUCT_CATALOG, resolveCatalogProductId } from './product-catalog';
 import { createElement } from 'react';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { TopicArticle, topicPath } from './src/components/topics/TopicArticle';
-import { PUBLIC_ORIGIN, PUBLIC_PAGES, premiumSchema, topicSchema } from './src/lib/publicMetadata';
+import { PUBLIC_ORIGIN, PUBLIC_PAGES, codingShareDescription, premiumSchema, topicSchema } from './src/lib/publicMetadata';
 import { TOPIC_LANDINGS } from './src/lib/topicCatalog';
 import { PremiumCancelStaticArticle, PremiumStaticArticle, type Translate } from './src/components/PremiumFacts';
 import { en, type TranslationKey } from './src/i18n/translations';
@@ -277,7 +277,7 @@ function productMetadata(env: Record<string, string>): Plugin {
         const pagePath = `/coding/${task.track}/${task.id}`;
         const image = `/og/coding/${task.id}.png`;
         const pageTitle = `${task.title.en} · ${track} coding challenge · ${product.brand}`;
-        const description = `A ${difficulty.toLowerCase()} ${track} coding challenge on ${product.brand}, graded on the server. ${coding.free} of ${coding.total} coding tasks are free.`;
+        const description = codingShareDescription({ difficulty, track, brand: product.brand, ...coding });
         if ((await writeOgCard(path.join(outDir, image), {
           kind: 'coding', title: task.title.en, track, difficulty, free: task.free === true, freeCount: coding.free, totalCount: coding.total,
         })) === 'drawn') drawn++;

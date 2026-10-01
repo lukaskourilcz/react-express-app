@@ -1,4 +1,4 @@
-import { getSupabaseSession, mayHaveSession } from './supabaseClient';
+import { getSupabaseSession, hasStoredSession, mayHaveSession } from './supabaseClient';
 import { getStoredLang, translateStatic } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { openUpgradeSheet } from './upgradeSheet';
@@ -24,17 +24,39 @@ type Options = RequestInit & { timeoutMs?: number; signal?: AbortSignal };
 // session sends no token and never downloads that client
 // (lib/supabaseClient.ts); for a returning visitor whose download is still
 // running, the same four-second limit covers it.
+//
+// A session stored in this browser whose token cannot be read (a refresh
+// slower than the limit, a refresh that failed offline, a download that
+// failed) is still a signed-in learner, not a guest. Sent without the token,
+// the request would be answered as a guest's: a quiz graded under nobody's
+// name with its one-time claim spent, a Learn step refused as someone else's,
+// Premium content locked. So nothing is sent, and the caller gets a retryable
+// `auth_unavailable`. Only a browser with no stored session sends no token.
+const TOKEN_READ_LIMIT_MS = 4_000;
+
 async function getAccessToken(): Promise<string | null> {
   if (!mayHaveSession()) return null;
+  let timer: number | undefined;
+  let session: Awaited<ReturnType<typeof getSupabaseSession>> = null;
   try {
-    const session = await Promise.race([
+    session = await Promise.race([
       getSupabaseSession(),
-      new Promise<never>((_, reject) => window.setTimeout(() => reject(new Error('auth_timeout')), 4_000)),
+      new Promise<never>((_, reject) => {
+        timer = window.setTimeout(() => reject(new Error('auth_timeout')), TOKEN_READ_LIMIT_MS);
+      }),
     ]);
-    return session?.access_token ?? null;
   } catch {
-    return null;
+    session = null;
+  } finally {
+    window.clearTimeout(timer);
   }
+  if (session?.access_token) return session.access_token;
+  // supabase-js removes a session it can no longer refresh; one it keeps is
+  // waiting for the network.
+  if (hasStoredSession()) {
+    throw new ApiError(translateStatic('error.authUnavailable'), 0, 'auth_unavailable');
+  }
+  return null;
 }
 
 /** The server refused locked content; the upgrade sheet is already open. */
@@ -52,9 +74,10 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
     else signal.addEventListener('abort', forwardAbort, { once: true });
   }
 
-  const token = await getAccessToken();
-
   try {
+    // Inside the try, so a token that cannot be read settles like any other
+    // failure: the timer and the abort listener are released below.
+    const token = await getAccessToken();
     const res = await fetch(url, {
       ...rest,
       signal: controller.signal,
@@ -116,6 +139,9 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
 const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   timeout: 'error.timeout',
   cancelled: 'error.cancelled',
+  // Minted in getAccessToken above, and the server's answer when it cannot
+  // reach the sign-in service: either way nothing was recorded.
+  auth_unavailable: 'error.authUnavailable',
   too_few_questions: 'error.tooFewQuestions',
   finished: 'error.matchFinished',
   rate_limited: 'error.rateLimited',
@@ -138,6 +164,13 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   attempt_expired: 'error.pathAttemptExpired',
   enrollment_paused: 'error.pathPaused',
   path_unavailable: 'error.pathUnavailable',
+  // Learn refusals for a signed-in learner (403, and 409 at completion). Left
+  // to the status fallback they read "You need to sign in to do that."
+  not_in_plan: 'roadmap.notInPlanHint',
+  topic_locked: 'error.topicLocked',
+  prerequisite_not_met: 'error.prerequisiteNotMet',
+  // An evolving challenge's later stage, sent before the earlier ones passed.
+  stage_locked: 'error.stageLocked',
 };
 
 // not_found spans several endpoints whose English server messages are more

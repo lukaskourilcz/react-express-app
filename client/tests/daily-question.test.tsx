@@ -115,17 +115,59 @@ describe('/daily', () => {
     expect(screen.getByText('There is no question of the day for that date.')).toBeInTheDocument();
   });
 
-  it('offers to load the question again when its session has expired', async () => {
+  // The server seals a fresh session on every read and one check claims it.
+  // The old mock answered every read with the same session, so the test
+  // passed while a reload that got the claimed session back stayed stuck on
+  // the expired banner.
+  it.each([
+    ['has expired', 'invalid_session', 400],
+    ['was already checked', 'attempt_already_graded', 409],
+  ])('loads the question again, with a fresh session, when its session %s', async (_, code, status) => {
+    const reads: RequestCache[] = [];
+    const checkedWith: string[] = [];
+    server.use(
+      http.get('*/api/quiz/daily', ({ request }) => {
+        reads.push(request.cache);
+        return HttpResponse.json({ ...QUESTION, sessionId: `sealed-session-${reads.length}` });
+      }),
+      http.post('*/api/quiz/submit', async ({ request }) => {
+        const { sessionId } = await request.json() as { sessionId: string };
+        checkedWith.push(sessionId);
+        if (sessionId === 'sealed-session-1') return HttpResponse.json({ error: { code, message: 'That session cannot be checked' } }, { status });
+        return HttpResponse.json({
+          totalQuestions: 1, correctAnswers: 1, percentage: 100,
+          results: [{ questionId: 'q-1', selectedIndex: 1, correctAnswer: 1, isCorrect: true, explanation: '`typeof null` is "object", a quirk kept for compatibility.' }],
+        });
+      }),
+    );
+    renderAt('/daily');
+    fireEvent.click((await screen.findAllByRole('radio'))[1]);
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Load it again' }));
+    // The question is back, unanswered, and checks against the new session.
+    fireEvent.click((await screen.findAllByRole('radio'))[1]);
+    expect(screen.queryByRole('button', { name: 'Load it again' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
+    expect(await screen.findByText('Right answer')).toBeInTheDocument();
+    expect(checkedWith).toEqual(['sealed-session-1', 'sealed-session-2']);
+    // Each read goes to the server, never to a response the browser kept.
+    expect(reads).toEqual(['no-store', 'no-store']);
+  });
+
+  it('starts the question over even if a reload brings back the same session', async () => {
+    // What a browser that still holds a cached response hands back.
     let reads = 0;
     server.use(
       http.get('*/api/quiz/daily', () => { reads++; return HttpResponse.json(QUESTION); }),
-      http.post('*/api/quiz/submit', () => HttpResponse.json({ error: { code: 'invalid_session', message: 'Quiz session expired or invalid' } }, { status: 400 })),
+      http.post('*/api/quiz/submit', () => HttpResponse.json({ error: { code: 'attempt_already_graded', message: 'already graded' } }, { status: 409 })),
     );
     renderAt('/daily');
     fireEvent.click((await screen.findAllByRole('radio'))[1]);
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Load it again' }));
     await waitFor(() => expect(reads).toBe(2));
+    expect(await screen.findByRole('button', { name: 'Check answer' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Load it again' })).toBeNull();
   });
 
   it('shows an alert with Retry when the question cannot load', async () => {

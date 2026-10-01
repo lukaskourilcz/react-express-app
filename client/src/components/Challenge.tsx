@@ -12,6 +12,7 @@ import { Banner } from '@astryxdesign/core/Banner';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { AppToast } from './ui/AppToast';
+import { CheckCircleIcon } from './ui/icons';
 import { ApiError, apiFetch, friendlyError } from '../lib/api';
 import {
   fetchChallengeBatch,
@@ -24,6 +25,7 @@ import { readOnce, settled, useFirstData } from '../lib/routeData';
 import type { Question, QuizResult } from '../types/quiz';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth, getUserProfile } from '../lib/auth';
+import { useLeaderboardVisibility } from '../lib/leaderboardVisibility';
 import { useActiveSubject, useSubject } from '../lib/subjects';
 import { useIsMobile } from '../lib/useMediaQuery';
 import { visuallyHidden } from '../theme/MuiTheme';
@@ -204,12 +206,21 @@ export default function Challenge() {
   const [selected, setSelected] = useState<number | null>(null);
   const [lastResult, setLastResult] = useState<AnsweredQ | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [name, setName] = useState<string>(profile.name ?? '');
+  // The Hall of Fame is public. The name box starts empty, and holds the
+  // account's name only for a learner who shows their name on the
+  // leaderboards; it is filled once, so a cleared box stays clear.
+  const leaderboardVisibility = useLeaderboardVisibility();
+  const [name, setName] = useState('');
+  const namePrefilled = useRef(false);
   const [submittedScore, setSubmittedScore] = useState(false);
   const [snack, setSnack] = useState<string | null>(null);
-  // Seconds remaining on the current question; reset to TIME_LIMIT_S each time
-  // a new question is shown, and the countdown effect drives it down.
-  const [timeLeft, setTimeLeft] = useState(timeLimitS);
+  // The question's deadline, set when it is shown. The clock counts down to
+  // it rather than counting ticks, so time the page spends in the background
+  // (a phone switched to another app) counts too. `clockNow` is when the
+  // clock was last read; it stops while the feedback card is up.
+  const [deadline, setDeadline] = useState(0);
+  const [clockNow, setClockNow] = useState(() => Date.now());
+  const timeLeft = deadline > 0 ? Math.max(0, Math.ceil((deadline - clockNow) / 1000)) : timeLimitS;
 
   // Buffered question batches: we always keep one round of questions ready so
   // the next question appears instantly after each grade.
@@ -219,7 +230,22 @@ export default function Challenge() {
   const currentSessionRef = useRef('');
   const runTokenRef = useRef('');
   const scoreProofsRef = useRef<string[]>([]);
-  const topupInFlight = useRef<Promise<void> | null>(null);
+  // A refill in flight resolves to null when its batch landed, or to the
+  // message of the error that stopped it.
+  const topupInFlight = useRef<Promise<string | null> | null>(null);
+  // Bumped by every new run. A refill that returns after its run ended ("Play
+  // again" pressed while it was in flight) carries the old run's token and
+  // questions, and is dropped.
+  const runGeneration = useRef(0);
+  // Set when the queue ran dry and the refill failed: the run is kept, and
+  // Retry asks for the batch again under the same run.
+  const [refillError, setRefillError] = useState<string | null>(null);
+  const [refilling, setRefilling] = useState(false);
+  // The picks sent for the question on screen, in order. The server grades a
+  // question once: when the response to a graded pick is lost, another pick
+  // (or the timeout) is refused as already graded, and sending the earlier
+  // pick again replays its grade and proof.
+  const sentPicks = useRef<{ questionId: string; picks: number[] }>({ questionId: '', picks: [] });
   // Guards the once-per-run XP/token payout on game over.
   const awardedRef = useRef(false);
   // The timeout strike goes out once per question. A refusal worth retrying
@@ -244,8 +270,11 @@ export default function Challenge() {
     rewardSync.current = rewardSync.current.then(async () => {
       const { kept, xp } = await sendPendingRewards(userId);
       if (xp > 0) {
-        await syncXpWithServer();
+        // The gain first, then the rank it crosses, in Quiz's order. The
+        // run's XP exists only on the server until this sync, so the sync
+        // announces the rank-up; a silent one marked it seen unannounced.
         announceVerifiedQuestXp(xp);
+        await syncXpWithServer({ announceRankUp: true });
       }
       if (kept > 0) setSnack(t('challenge.rewardPending'));
     });
@@ -267,15 +296,19 @@ export default function Challenge() {
   const refreshLeaderboard = boardQuery.refetch;
 
   useEffect(() => {
-    if (profile.name && !name) setName(profile.name);
-  }, [profile.name, name]);
+    if (namePrefilled.current || leaderboardVisibility.visible !== true || !profile.name) return;
+    namePrefilled.current = true;
+    const accountName = profile.name;
+    setName((typed) => typed || accountName);
+  }, [leaderboardVisibility.visible, profile.name]);
 
   /* ─── question buffer ───────────────────────────────────────── */
 
   const ensureBufferTopUp = useCallback(
-    async (excluded: string[]) => {
+    async (excluded: string[]): Promise<string | null> => {
       if (topupInFlight.current) return topupInFlight.current;
-      const p = (async () => {
+      const generation = runGeneration.current;
+      const p = (async (): Promise<string | null> => {
         try {
           const batch = await fetchChallengeBatch({
             exclude: excluded,
@@ -283,6 +316,7 @@ export default function Challenge() {
             runToken: runTokenRef.current || undefined,
             ranked: !relaxedPace,
           });
+          if (generation !== runGeneration.current) return null;
           runTokenRef.current = batch.runToken;
           // Append to what is still queued. Each question keeps the session
           // that issued it, and is graded against that session.
@@ -297,19 +331,23 @@ export default function Challenge() {
                 .map((question) => ({ question, sessionId: batch.sessionId, receivedAt })),
             ],
           };
+          return null;
         } catch (err) {
-          // Surface the first failure; on later refills we just keep what we have.
+          if (generation !== runGeneration.current) return null;
+          // A run that has no question yet cannot start: say why. Later
+          // refills keep what is queued, and a dry queue offers Retry.
           if (!buffer.current) {
             setPhase('error');
             setError(friendlyError(err));
           }
+          return friendlyError(err);
         }
       })();
       topupInFlight.current = p;
       try {
-        await p;
+        return await p;
       } finally {
-        topupInFlight.current = null;
+        if (topupInFlight.current === p) topupInFlight.current = null;
       }
     },
     [lang, relaxedPace],
@@ -327,21 +365,31 @@ export default function Challenge() {
   const showQuestion = useCallback((next: BufferedQuestion) => {
     clearStrikeRetry();
     currentSessionRef.current = next.sessionId;
+    sentPicks.current = { questionId: next.question.id, picks: [] };
     setCurrent(next.question);
-  }, [clearStrikeRetry]);
+    // Fresh question, fresh clock.
+    const shownAt = Date.now();
+    setDeadline(shownAt + timeLimitS * 1000);
+    setClockNow(shownAt);
+  }, [clearStrikeRetry, timeLimitS]);
 
   /* ─── game flow ─────────────────────────────────────────────── */
 
   const startRun = useCallback(async () => {
+    runGeneration.current += 1;
+    const generation = runGeneration.current;
+    // A refill still in flight belongs to the run that ended.
+    topupInFlight.current = null;
     setPhase('loading');
     setError(null);
+    setRefillError(null);
     setScore(0);
     setLivesLost(0);
     setSeenIds([]);
     setSelected(null);
     setLastResult(null);
     setSubmittedScore(false);
-    setTimeLeft(timeLimitS);
+    setDeadline(0);
     awardedRef.current = false;
     runTokenRef.current = '';
     scoreProofsRef.current = [];
@@ -349,6 +397,7 @@ export default function Challenge() {
     const startedAt = Date.now();
     await ensureBufferTopUp([]);
     await holdLoadingScreen(startedAt);
+    if (generation !== runGeneration.current) return;
     if (!buffer.current) return; // ensureBufferTopUp already set the error phase
     const next = popNext();
     if (!next) {
@@ -359,7 +408,7 @@ export default function Challenge() {
     showQuestion(next);
     setSeenIds([next.question.id]);
     setPhase('playing');
-  }, [ensureBufferTopUp, popNext, showQuestion, t, timeLimitS]);
+  }, [ensureBufferTopUp, popNext, showQuestion, t]);
 
   const advance = useCallback(
     async (becameGameOver: boolean) => {
@@ -367,6 +416,8 @@ export default function Challenge() {
         setPhase('gameover');
         return;
       }
+      if (refilling) return;
+      const generation = runGeneration.current;
       // Eagerly refill so the next question is ready before we render it.
       const remaining = buffer.current?.queue.length ?? 0;
       if (remaining <= LOW_BATCH_THRESHOLD && !topupInFlight.current) {
@@ -374,16 +425,25 @@ export default function Challenge() {
         void ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
       }
       let next = popNext();
+      let failure: string | null = null;
       if (!next) {
         // Buffer ran dry while topping up — await it.
-        await ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
+        setRefilling(true);
+        try {
+          failure = await ensureBufferTopUp([...seenIds, ...queuedIds(buffer.current)]);
+        } finally {
+          setRefilling(false);
+        }
+        if (generation !== runGeneration.current) return;
         next = popNext();
       }
       if (!next) {
-        setPhase('error');
-        setError(t('challenge.noQuestions'));
+        // Offline, rate limited or a server fault. The run, its score and
+        // its proofs stay; the graded card stays up and Retry asks again.
+        setRefillError(failure ?? t('challenge.noQuestions'));
         return;
       }
+      setRefillError(null);
       showQuestion(next);
       // Cap the seen-ids list so a long run doesn't grow the `exclude`
       // query string without bound. The server caps at 500 already; we keep
@@ -392,10 +452,8 @@ export default function Challenge() {
       setSeenIds((prev) => [...prev, next!.question.id].slice(-300));
       setSelected(null);
       setLastResult(null);
-      // Fresh question, fresh clock.
-      setTimeLeft(timeLimitS);
     },
-    [ensureBufferTopUp, popNext, seenIds, showQuestion, t, timeLimitS],
+    [ensureBufferTopUp, popNext, refilling, seenIds, showQuestion, t],
   );
 
   // Record the server's grade for the question on screen. A question retired
@@ -431,20 +489,47 @@ export default function Challenge() {
     setLastResult({ questionId: question.id, selectedIndex, correctAnswer: -1, isCorrect: false, explanation: '', question, notCounted: 'expired' });
   }, []);
 
+  // Grade a pick (-1 is the timeout). When the server already graded an
+  // earlier pick for this question, whose response never arrived, it refuses
+  // this one; the earlier picks are sent again, first one first, and the one
+  // the server replays is the grade that counts, with its proof.
+  const gradeOrReplay = useCallback(async (sessionId: string, question: Question, pick: number) => {
+    const sent = sentPicks.current.questionId === question.id ? sentPicks.current : { questionId: question.id, picks: [] };
+    sentPicks.current = sent;
+    const earlier = sent.picks.filter((one) => one !== pick);
+    if (!sent.picks.includes(pick)) sent.picks.push(pick);
+    const alreadyGraded = (err: unknown) => err instanceof ApiError && err.code === 'attempt_already_graded';
+    try {
+      return { pick, result: await gradeChallengeAnswer(sessionId, question.id, pick, lang) };
+    } catch (err) {
+      if (!alreadyGraded(err)) throw err;
+      for (const one of earlier) {
+        try {
+          return { pick: one, result: await gradeChallengeAnswer(sessionId, question.id, one, lang) };
+        } catch (again) {
+          if (!alreadyGraded(again)) throw again;
+        }
+      }
+      throw err;
+    }
+  }, [lang]);
+
   const submitAnswer = useCallback(async () => {
     if (selected == null || !current || submitting || timeLeft <= 0) return;
     const question = current;
     const sessionId = currentSessionRef.current;
     setSubmitting(true);
     try {
-      applyGrade(question, selected, await gradeChallengeAnswer(sessionId, question.id, selected, lang), false);
+      const { pick, result } = await gradeOrReplay(sessionId, question, selected);
+      if (pick !== selected) setSelected(pick);
+      applyGrade(question, pick, result, false);
     } catch (err) {
       if (isSessionRefusal(err)) expireQuestion(question, selected, sessionId);
       else setSnack(friendlyError(err));
     } finally {
       setSubmitting(false);
     }
-  }, [selected, current, lang, submitting, timeLeft, applyGrade, expireQuestion]);
+  }, [selected, current, submitting, timeLeft, applyGrade, expireQuestion, gradeOrReplay]);
 
   const onContinue = useCallback(() => {
     const willGameOver = lastResult ? !lastResult.notCounted && !lastResult.isCorrect && livesLost >= MAX_LIVES : false;
@@ -463,7 +548,11 @@ export default function Challenge() {
     try {
       // A timeout is graded as an explicit server-proven strike. This prevents
       // ranked clients from omitting timeouts from the final proof set.
-      applyGrade(question, -1, await gradeChallengeAnswer(sessionId, question.id, -1, lang), true);
+      // A pick the server graded before the clock ran out is replayed and
+      // counts as that answer, not as a timeout.
+      const { pick, result } = await gradeOrReplay(sessionId, question, -1);
+      if (pick !== -1) setSelected(pick);
+      applyGrade(question, pick, result, pick === -1);
       setStrikeWaiting(false);
     } catch (err) {
       if (isSessionRefusal(err)) {
@@ -490,7 +579,7 @@ export default function Challenge() {
     } finally {
       setSubmitting(false);
     }
-  }, [current, lastResult, submitting, lang, applyGrade, expireQuestion]);
+  }, [current, lastResult, submitting, applyGrade, expireQuestion, gradeOrReplay]);
 
   /* ─── leaderboard submit on game over ───────────────────────── */
 
@@ -521,20 +610,24 @@ export default function Challenge() {
 
   /* ─── countdown clock ───────────────────────────────────────── */
 
-  // Each question is capped at TIME_LIMIT_S. Tick once per second while the
-  // learner is still working on the current question; pause once it's graded
-  // (the feedback card is up) so reading the explanation doesn't burn the next
-  // question's time. When the clock hits zero unanswered, it's a timeout strike;
-  // handleTimeout sends it once, and `strikeWake` brings a delayed retry here.
+  // Each question is capped at TIME_LIMIT_S from the moment it is shown. Read
+  // the clock each time the shown second changes while the learner is still
+  // working on the current question; pause once it's graded (the feedback
+  // card is up) so reading the explanation doesn't burn the next question's
+  // time. The time left is counted from the deadline, so a page whose timers
+  // were held in the background reads the right time when it comes back.
+  // When the clock hits zero unanswered, it's a timeout strike; handleTimeout
+  // sends it once, and `strikeWake` brings a delayed retry here.
   useEffect(() => {
     if (phase !== 'playing' || lastResult) return;
     if (timeLeft <= 0) {
       void handleTimeout();
       return;
     }
-    const id = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
+    const untilNextSecond = deadline - Date.now() - (timeLeft - 1) * 1000;
+    const id = setTimeout(() => setClockNow(Date.now()), Math.max(0, untilNextSecond));
     return () => clearTimeout(id);
-  }, [phase, timeLeft, lastResult, handleTimeout, strikeWake]);
+  }, [phase, timeLeft, lastResult, handleTimeout, strikeWake, deadline, clockNow]);
 
   /* ─── reward on game over ───────────────────────────────────── */
 
@@ -636,6 +729,7 @@ export default function Challenge() {
               // column it became a 220px height with empty space below the text.
               style={{ textAlign: 'left', flex: 'none' }}
             >
+              <span className="de-track-card__check" aria-hidden="true"><CheckCircleIcon size={20} /></span>
               <strong>{t('challenge.relaxedPace')}</strong>
               <span>{t('challenge.relaxedHint')}</span>
             </button>
@@ -737,6 +831,7 @@ export default function Challenge() {
                     <div style={{ flex: '1 1 auto' }}>
                       <TextInput
                         label={t('challenge.nameLabel')}
+                        description={t('challenge.namePublicHint')}
                         value={name}
                         onChange={(v) => setName(v.slice(0, 40))}
                         onEnter={() => void onSubmitScore()}
@@ -1014,6 +1109,12 @@ export default function Challenge() {
         </div>
       )}
 
+      {lastResult && refillError !== null && (
+        <div style={{ marginTop: 12, flexShrink: 0 }}>
+          <Banner status="warning" title={t('challenge.nextQuestionFailed')} description={refillError} />
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12, gap: 8, flexShrink: 0 }}>
         {!lastResult ? (
           <Button
@@ -1026,7 +1127,15 @@ export default function Challenge() {
         ) : (
           <Button
             variant="primary"
-            label={livesLost >= MAX_LIVES ? t('challenge.seeResult') : t('challenge.nextQuestion')}
+            label={
+              refillError !== null
+                ? t('quiz.retry')
+                : livesLost >= MAX_LIVES
+                  ? t('challenge.seeResult')
+                  : t('challenge.nextQuestion')
+            }
+            isDisabled={refilling}
+            isLoading={refilling}
             onClick={onContinue}
           />
         )}

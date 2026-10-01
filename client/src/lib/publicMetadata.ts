@@ -26,6 +26,13 @@ export type PublicPage = (typeof PUBLIC_PAGES)[number];
 export const publicPage = (pathname: string): PublicPage | null =>
   PUBLIC_PAGES.find((page) => page.path === pathname.replace(/(.)\/$/, '$1')) ?? null;
 
+/** The description in a coding task's share page head (vite.config.ts, #239):
+ * "An easy JavaScript coding challenge…", "A medium…". */
+export function codingShareDescription({ difficulty, track, brand, free, total }: { difficulty: string; track: string; brand: string; free: number; total: number }): string {
+  const level = difficulty.toLowerCase();
+  return `${/^[aeiou]/.test(level) ? 'An' : 'A'} ${level} ${track} coding challenge on ${brand}, graded on the server. ${free} of ${total} coding tasks are free.`;
+}
+
 /** App routes that must stay out of search results: a Stripe return carries a
  * checkout id and means nothing to anyone else. */
 export const NOINDEX_PATHS: readonly string[] = ['/premium/success'];
