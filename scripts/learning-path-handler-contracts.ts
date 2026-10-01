@@ -9,9 +9,10 @@
 //   * a resubmitted write-up keeps its submission, and a submit sends the
 //     module's requirements so the database decides completion
 //   * a preference save that cannot read the saved answers writes nothing
-//   * a path reward: the address is checked, not cut to fit, completion is
-//     read for the published curriculum version, a raced second claim, a
-//     refused field
+//   * a path reward: paused with merchandise (MERCH_ENABLED), so a read and a
+//     claim answer 404 merch_unavailable and touch nothing; with the switch
+//     on, the address is checked, not cut to fit, completion is read for the
+//     published curriculum version, a raced second claim, a refused field
 //   * rate limits are the learner's own, with a class-sized address backstop
 
 import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
@@ -28,6 +29,7 @@ import { requestMemo, withRequestContext } from '../lib/http';
 import { encodeLearningPathSession } from '../lib/quiz-tokens';
 import { RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { LEARNER_PROFILE_META_KEY } from '../shared/learning-paths';
+import { MERCH_ENABLED } from '../shared/rewards';
 import type { SubmitActivityResponse } from '../shared/learning-path-api';
 
 type Fail = (message: string) => void;
@@ -259,9 +261,37 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     {
       const claims: Record<string, unknown>[] = [];
       const claim = { user_id: learner, pathId: 'dsa-foundations', shirt: ' m ', name: ' Ann ', line1: 'x'.repeat(120), line2: 'y'.repeat(120), city: 'Brno', postal: '60200', country: 'cz' };
+
+      // Merchandise is paused until next quarter (owner decision 10). A
+      // finished path's read and claim both answer 404 merch_unavailable, and
+      // neither reaches the database, whatever the progress rows say.
+      if (MERCH_ENABLED) fail('merchandise ships switched off until next quarter (MERCH_ENABLED)');
+      for (const [method, body, extra] of [
+        ['GET', { user_id: learner }, { query: { pathId: 'dsa-foundations' } }],
+        ['POST', claim, {}],
+      ] as const) {
+        const touched: string[] = [];
+        const paused = response();
+        await handlePathReward(request(method, `reward-paused-${stamp}`, body, extra), paused as never, fakeSupabase({
+          rows: { path_reward_claims: { order_id: 'reward-0123456789abcdef01234567' } },
+          rpc: (name) => { touched.push(name); return { data: [{ granted: true, reward_order_id: 'reward-x', already: false }] }; },
+        }));
+        if (paused.statusCode !== 404 || code(paused) !== 'merch_unavailable' || touched.length > 0) {
+          fail(`a ${method} path-reward request while merchandise is paused answers ${paused.statusCode} ${code(paused)} after ${touched.length} database calls, not 404 merch_unavailable`);
+        }
+      }
+      // A signed-out request is still asked to sign in first.
+      {
+        const anonymous = response();
+        await handlePathReward(request('POST', `reward-anon-${stamp}`, { pathId: 'dsa-foundations' }), anonymous as never, fakeSupabase({}));
+        if (anonymous.statusCode !== 401) fail(`a signed-out path-reward claim answers ${anonymous.statusCode}, not 401`);
+      }
+
+      // The rest drives the claim as it comes back with the switch on.
+      const pathRewardOn = (...args: Parameters<typeof handlePathReward>) => handlePathReward(args[0], args[1], args[2], true);
       // A second claim that lost the race to the first one's claim row.
       let res = response();
-      await handlePathReward(request('POST', `reward-${stamp}`, claim), res as never, fakeSupabase({
+      await pathRewardOn(request('POST', `reward-${stamp}`, claim), res as never, fakeSupabase({
         rows: { path_reward_claims: { order_id: 'reward-0123456789abcdef01234567' } },
         rpc: (_name, params) => {
           claims.push(params);
@@ -298,7 +328,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       for (const [label, change, expected, message] of refusals) {
         const called: string[] = [];
         res = response();
-        await handlePathReward(request('POST', `reward-${stamp}`, { ...claim, ...change }), res as never, fakeSupabase({
+        await pathRewardOn(request('POST', `reward-${stamp}`, { ...claim, ...change }), res as never, fakeSupabase({
           rpc: (name) => { called.push(name); return { data: [{ granted: true, reward_order_id: 'reward-x', already: false }] }; },
         }));
         const error = (res.body as { error?: { code?: string; message?: string } } | undefined)?.error;
@@ -311,7 +341,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       // made again without it.
       const tried: Record<string, unknown>[] = [];
       res = response();
-      await handlePathReward(request('GET', `reward-${stamp}`, { user_id: learner }, { query: { pathId: 'dsa-foundations' } }), res as never, fakeSupabase({
+      await pathRewardOn(request('GET', `reward-${stamp}`, { user_id: learner }, { query: { pathId: 'dsa-foundations' } }), res as never, fakeSupabase({
         rpc: (_name, params) => {
           tried.push(params);
           return 'p_curriculum_version' in params
@@ -324,7 +354,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       }
       // A field the table's CHECK refuses is the learner's address, not a 500.
       res = response();
-      await handlePathReward(request('POST', `reward-${stamp}`, claim), res as never, fakeSupabase({
+      await pathRewardOn(request('POST', `reward-${stamp}`, claim), res as never, fakeSupabase({
         rpc: () => ({ error: { code: '23514', message: 'new row for relation "merch_orders" violates check constraint "merch_orders_ship_postal_check"' } }),
       }));
       if (res.statusCode !== 400 || code(res) !== 'invalid_address') {

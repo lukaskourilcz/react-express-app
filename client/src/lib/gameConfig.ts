@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
 import { setRankThresholds, DEFAULT_RANK_THRESHOLDS } from './leveling';
 import { queryClient } from './queryClient';
-import { DEFAULT_COIN_SETTINGS, type CoinSettings, type MerchPromo } from '../../../shared/rewards';
+import { DEFAULT_COIN_SETTINGS, MERCH_ENABLED, type CoinSettings, type MerchPromo } from '../../../shared/rewards';
 
 // Public, read-only game configuration (from /api/settings) that the UI uses to
 // render the configured count/time options and hide disabled features. Backed by
@@ -145,8 +145,9 @@ export function useGameConfigStatus(): { config: GameConfig; fromServer: boolean
   };
 }
 
-/** Whether coin redemption for merchandise is open. */
-export const redemptionOpen = (config: GameConfig): boolean => config.merch?.redemptionOpen === true;
+/** Whether coin redemption for merchandise is open: never while merchandise
+ * is paused (MERCH_ENABLED), whatever a cached settings answer says. */
+export const redemptionOpen = (config: GameConfig): boolean => MERCH_ENABLED && config.merch?.redemptionOpen === true;
 
 /** Whether any learning path is open. */
 export const anyLearningPathOpen = (config: GameConfig): boolean =>

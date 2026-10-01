@@ -177,7 +177,10 @@ describe('the plan table', () => {
     expect(screen.getByRole('link', { name: 'Start free' })).toHaveAttribute('href', '/learn');
   });
 
-  it('adds the path and coin rows once their switches are on', async () => {
+  // Merchandise is paused until next quarter (owner decision 10): the coin row
+  // stays out even when a settings answer says redemption is open. It used to
+  // appear here; merch-paused.test.tsx covers the paused page in full.
+  it('adds the path row once its switch is on, and no coin row while merchandise is paused', async () => {
     server.use(http.get('*/api/settings', () => HttpResponse.json({
       merch: { redemptionOpen: true },
       learningPaths: { paths: { fde: { enabled: false }, 'dsa-foundations': { enabled: true } } },
@@ -185,7 +188,7 @@ describe('the plan table', () => {
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
     expect(await within(table).findByRole('rowheader', { name: 'FDE and DSA learning paths' })).toBeInTheDocument();
-    expect(within(table).getByRole('rowheader', { name: 'Coins for merchandise' })).toBeInTheDocument();
+    expect(within(table).queryByRole('rowheader', { name: 'Coins for merchandise' })).toBeNull();
   });
 });
 

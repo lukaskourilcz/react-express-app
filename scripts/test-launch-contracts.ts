@@ -204,6 +204,7 @@ import { MERCH_CATALOGUE, SHIRT_SIZES } from '../shared/rewards';
 import { generateVoucherCode, handleAdminVouchers, handleVoucherRedeem, parseVoucherForm, toAdminVoucher, voucherHash } from '../lib/vouchers';
 import { VOUCHER_ALPHABET, formatVoucherCode, normalizeVoucherCode, voucherHint, voucherState } from '../shared/vouchers';
 import adminHandler from '../api/admin/[op]';
+import { productCleanupContracts } from './product-cleanup-contracts';
 
 function apiFiles(dir: string): string[] {
   return readdirSync(dir).flatMap((name) => {
@@ -831,7 +832,10 @@ function publicCopyContracts() {
     assert.match(ENGLISH[key], /once redemption opens/, `${key} qualifies the merchandise claim`);
   }
   assert.match(read('client/src/components/landing/ComparisonTable.tsx'), /labelKey: 'landing\.compare\.rowCoins', free: NO, premium: \{ mark: 'yes', key: 'landing\.compare\.premiumCoins' \}/);
-  assert.match(ENGLISH['legal.terms.plans.premium'], /redeem coins for devShark merchandise once redemption opens/);
+  // Merchandise is paused until next quarter (owner decision 10), so the
+  // Terms name the coin benefit and no merchandise.
+  assert.match(ENGLISH['legal.terms.plans.premium'], /doubles the coins verified learning earns and pays milestone coins\.$/);
+  assert.doesNotMatch(ENGLISH['legal.terms.plans.premium'], /merchandise/);
   // Design audit P0.4: grading and end states are stated, not cheered. No
   // exclamation mark and no "Well done" in any verdict, result or end key.
   for (const [key, value] of Object.entries(ENGLISH)) {
@@ -864,7 +868,7 @@ function publicCopyContracts() {
     assert.match(table, /premiumPaths' \}, when: 'paths' \}/);
     assert.doesNotMatch(table, /rowNoAds/);
     assert.match(ENGLISH['landing.compare.footnote'], /No ads on either plan\./);
-    assert.match(read('client/src/components/PremiumFacts.tsx'), /redemptionOpen \|\| key !== 'premium\.sheet\.include6'/);
+    assert.match(read('client/src/components/PremiumFacts.tsx'), /\(MERCH_ENABLED && redemptionOpen\) \|\| key !== 'premium\.sheet\.include6'/);
     assert.match(read('api/settings.ts'), /merch: \{ redemptionOpen: merchRedemptionOpen\(s\.merch\) \}/);
     assert.equal(merchRedemptionOpen(DEFAULT_MERCH_SETTINGS), false, 'redemption ships closed');
     const shop = read('client/src/components/Shop.tsx');
@@ -4689,6 +4693,7 @@ async function main() {
   await dailySwitchContracts();
   await webdevBankContracts();
   await leaderboardVisibilityContracts();
+  await productCleanupContracts();
 
   console.log('Launch contracts passed: product identity, scope, token confidentiality, stable attempts, fairness-neutral rewards, rate limiting, health, 12-function budget, the free tier and Premium, billing, the launch price, the public Premium copy, the retired support settings, the progression graph, failure hints, retired sections, curation claims, the content-audit gate, spaced practice, interleaving, challenge runs, lesson figures, an unconfigured shop, coins, invitations, merchandise through Spreadshop, one erasure routine, Premium vouchers, the question of the day, and the webdev-bank contract BoardlessAI imports.');
 }

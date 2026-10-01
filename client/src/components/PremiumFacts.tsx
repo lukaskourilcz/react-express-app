@@ -9,6 +9,7 @@
 import type { ReactNode } from 'react';
 import type { TranslationKey } from '../i18n/translations';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../shared/tiers';
+import { MERCH_ENABLED } from '../../../shared/rewards';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import BrandCase from './BrandCase';
 
@@ -40,10 +41,11 @@ export const PREMIUM_INCLUDES = [
 ] as const satisfies readonly TranslationKey[];
 
 /** The list as it may be stated today: the merchandise line only while coin
- * redemption is open (design audit P0.1). The static page never knows, so it
- * leaves the line out. */
+ * redemption is open (design audit P0.1), and never while merchandise is
+ * paused (MERCH_ENABLED, owner decision 10). The static page never knows, so
+ * it leaves the line out. */
 export const premiumIncludes = (redemptionOpen: boolean) =>
-  PREMIUM_INCLUDES.filter((key) => redemptionOpen || key !== 'premium.sheet.include6');
+  PREMIUM_INCLUDES.filter((key) => (MERCH_ENABLED && redemptionOpen) || key !== 'premium.sheet.include6');
 
 export function PremiumIncludes({ t, headingId, redemptionOpen = false }: { t: Translate; headingId: string; redemptionOpen?: boolean }) {
   const vars = premiumVars();
