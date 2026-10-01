@@ -1,9 +1,9 @@
 import { Button } from '@astryxdesign/core/Button';
 import { useSearchParams, Link } from 'react-router-dom';
-import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../i18n/LanguageContext';
 import { useAuth } from '../lib/auth';
+import { openSignIn } from '../lib/signInDialog';
 import { getSupabaseSession } from '../lib/supabaseClient';
 import { flashcardsQuery } from '../lib/queries';
 import { readOnce, useFirstData } from '../lib/routeData';
@@ -22,11 +22,10 @@ import '../coding/Coding.css';
 
 function SavedChallenges() {
   const { t, lang } = useLanguage();
-  const { isAuthenticated, signInWithGoogle } = useAuth();
+  const { isAuthenticated } = useAuth();
   const query = useBookmarks(isAuthenticated, { held: true });
   const save = useSaveChallenge();
-  const [authError, setAuthError] = useState(false);
-  if (!isAuthenticated) return <div className="cd-note"><p>{t('coding.signInHint')}</p><Button variant="secondary" label={t('auth.logIn')} onClick={() => { void signInWithGoogle().catch(() => setAuthError(true)); }} />{authError && <p role="alert">{t('auth.signInFailed')}</p>}</div>;
+  if (!isAuthenticated) return <div className="cd-note"><p>{t('coding.signInHint')}</p><Button variant="secondary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} /></div>;
   if (query.isPending) return <LoadingScreen label={t('common.loading')} />;
   if (query.isError) return <div role="alert"><p>{t('coding.loadError')}</p><Button variant="secondary" label={t('coding.retry')} onClick={() => void query.refetch()} /></div>;
   return <section aria-label={t('collection.challenges')}>

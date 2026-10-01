@@ -16,6 +16,7 @@ import { Badge } from '@astryxdesign/core/Badge';
 import { Card } from '@astryxdesign/core/Card';
 import { Button } from '@astryxdesign/core/Button';
 import { useAuth } from '../lib/auth';
+import { openSignIn } from '../lib/signInDialog';
 import { useT } from '../i18n/LanguageContext';
 import { CATEGORY_LOOKUP, categoryLabelKey } from '../lib/categories';
 import type { CategoryType } from '../types/quiz';
@@ -44,7 +45,7 @@ const TrashIcon = () => (
 function Flashcards({ embedded = false }: { embedded?: boolean }) {
   const t = useT();
   const navigate = useNavigate();
-  const { isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const subject = useActiveSubject();
   const flashcardsKey = ['flashcards', subject.id] as const;
   const firstCardRef = useRef<HTMLButtonElement>(null);
@@ -92,9 +93,8 @@ function Flashcards({ embedded = false }: { embedded?: boolean }) {
           <Heading level={1} justify="center">{t('card.signInTitle')}</Heading>
           <Text type="body" color="secondary" justify="center">{t('card.signInBody')}</Text>
           <div style={{ marginTop: '0.5rem' }}>
-            <Button variant="primary" label={t('auth.logIn')} onClick={() => void signInWithGoogle().catch((err) => setActionError(friendlyError(err)))} />
+            <Button variant="primary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} />
           </div>
-          {actionError && <ErrorRetry message={actionError} onRetry={() => void signInWithGoogle().catch((err) => setActionError(friendlyError(err)))} />}
         </VStack>
       </Card>
       </div>

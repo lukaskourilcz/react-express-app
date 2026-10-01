@@ -908,7 +908,14 @@ function publicCopyContracts() {
   for (const page of PUBLIC_PAGES) {
     assert.ok(rewrites.some((rule) => rule.source === page.path && rule.destination === `${page.path}/index.html`), `${page.path} serves its static HTML`);
   }
-  assert.deepEqual([...NOINDEX_PATHS], ['/premium/success']);
+  assert.deepEqual([...NOINDEX_PATHS], ['/premium/success', '/auth/confirmed', '/reset-password']);
+  // The pages the confirmation and reset emails open are client routes (no
+  // handler of their own), and the catch-all rewrite serves them the app.
+  const catchAll = rewrites.find((rule) => rule.destination === '/index.html');
+  for (const path of ['/auth/confirmed', '/reset-password']) {
+    assert.match(app, new RegExp(`<Route path="${path}" element=`), `${path} is a route`);
+    assert.ok(catchAll && new RegExp(`^${catchAll.source}$`).test(path), `${path} opens the app on Vercel`);
+  }
   const schema = premiumSchema('Premium', 'Premium', 'https://devshark.app/premium');
   assert.equal(schema.isAccessibleForFree, false, 'Premium is not free to access');
   assert.ok(schema.offers.every((offer) => offer.priceSpecification.valueAddedTaxIncluded), 'the offers include VAT');
