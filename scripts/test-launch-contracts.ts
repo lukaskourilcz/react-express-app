@@ -32,7 +32,7 @@ import {
   stableAttemptId,
 } from '../lib/quiz-tokens';
 import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
-import { buildQueue, parseScheduledFor } from '../lib/coding/practice-handlers';
+import { buildQueue, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
@@ -4240,6 +4240,15 @@ async function main() {
     assert.ok('at' in later && later.at?.toISOString() === '2026-09-20T18:00:00.000Z', 'a future moment is kept');
     assert.ok('error' in parseScheduledFor('2027-01-01T00:00:00Z', now), 'a moment past the horizon is refused');
     assert.ok('error' in parseScheduledFor('not a time', now) && 'error' in parseScheduledFor(12345, now), 'a non-time is refused');
+
+    // CODE-10: Skip told the learner a task "is part of your level, so it
+    // will come back" for every task with a level number, 392 of which no
+    // Learn level issues. Only a task in its level's quota comes back.
+    const inQuota = levelCodingTasks('javascript', 1)[0];
+    assert.ok(inQuota && skipPostpones(inQuota.id), `${inQuota?.id}: a task its level issues comes back after a skip`);
+    const outside = codingTaskById('js-count-multiples');
+    assert.ok(outside && outside.level > 0 && !levelCodingTasks(outside.topic, outside.level).some((one) => one.id === outside.id), 'js-count-multiples has a level number but no level issues it');
+    assert.equal(skipPostpones('js-count-multiples'), false, 'a task outside every quota is optional');
   }
 
   // ── the payment webhook believes the order, not the event ───────────────
