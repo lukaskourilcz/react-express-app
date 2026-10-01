@@ -32,6 +32,8 @@ export function SaveSharkCard({
   if (saved === null || correctIndex < 0) return null;
 
   const busy = save.isPending || remove.isPending;
+  // The press shows at once; a refusal puts it back and says so.
+  const pressed = save.isPending ? true : remove.isPending ? false : saved;
   const failure = save.isError ? save.error : remove.isError ? remove.error : null;
   const toggle = () => {
     save.reset();
@@ -41,22 +43,22 @@ export function SaveSharkCard({
   };
 
   return (
-    <div className="sc-save" data-saved={saved ? 'true' : 'false'}>
+    <div className="sc-save" data-saved={pressed ? 'true' : 'false'}>
       <Button
         variant="secondary"
         size="sm"
-        aria-pressed={saved}
-        icon={saved ? <CheckCircleIcon size={16} /> : <BookmarkIcon size={16} />}
-        label={saved ? t('sharkCards.savedButton') : t('sharkCards.save')}
+        aria-pressed={pressed}
+        icon={pressed ? <CheckCircleIcon size={16} /> : <BookmarkIcon size={16} />}
+        label={pressed ? t('sharkCards.savedButton') : t('sharkCards.save')}
         isDisabled={busy}
         onClick={toggle}
       />
-      {saved && (
+      {pressed && (
         <Link className="sc-save__link" to="/collection">{t('sharkCards.open')}</Link>
       )}
       {failure && (
         <p className="sc-save__error" role="alert">
-          {saved ? t('sharkCards.removeFailed') : t('sharkCards.saveFailed')} {friendlyError(failure)}
+          {save.isError ? t('sharkCards.saveFailed') : t('sharkCards.removeFailed')} {friendlyError(failure)}
         </p>
       )}
     </div>

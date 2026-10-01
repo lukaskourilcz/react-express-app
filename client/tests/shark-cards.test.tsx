@@ -231,7 +231,9 @@ describe('a wrong Learn answer', () => {
         question_id: 'rm-html-3', question: QUESTION.question, category: 'html',
         correct_answer: '<title>', explanation: 'The title element names the page.', subject: 'webdev',
       });
-      expect(await screen.findByRole('button', { name: 'Saved as Shark Card' })).toBeInTheDocument();
+      const savedButton = await screen.findByRole('button', { name: 'Saved as Shark Card' });
+      await waitFor(() => expect(savedButton).toBeEnabled());
+      expect(savedButton).toHaveAttribute('aria-pressed', 'true');
     } finally {
       window.history.replaceState({}, '', '/');
       vi.unstubAllGlobals();
@@ -248,7 +250,9 @@ describe('Save as Shark Card', () => {
     await mount(<SaveSharkCard question={question} correctIndex={0} explanation="z-index orders positioned boxes." />);
     const save = await screen.findByRole('button', { name: 'Save as Shark Card' });
     fireEvent.click(save);
-    expect(await screen.findByRole('button', { name: 'Saved as Shark Card' })).toHaveAttribute('aria-pressed', 'true');
+    const savedButton = await screen.findByRole('button', { name: 'Saved as Shark Card' });
+    await waitFor(() => expect(savedButton).toBeEnabled());
+    expect(savedButton).toHaveAttribute('aria-pressed', 'true');
     expect(sent[0]).toEqual({
       method: 'POST',
       body: { question_id: 'rm-css-9', question: question.question, category: 'css', correct_answer: 'z-index', explanation: 'z-index orders positioned boxes.', subject: 'webdev' },

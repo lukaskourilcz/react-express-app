@@ -130,7 +130,9 @@ describe('/daily', () => {
     fireEvent.click((await screen.findAllByRole('radio'))[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Save as Shark Card' }));
-    expect(await screen.findByRole('button', { name: 'Saved as Shark Card' })).toBeInTheDocument();
+    const savedButton = await screen.findByRole('button', { name: 'Saved as Shark Card' });
+    await waitFor(() => expect(savedButton).toBeEnabled());
+    expect(savedButton).toHaveAttribute('aria-pressed', 'true');
     expect(saved[0]).toMatchObject({ question_id: 'q-1', correct_answer: '"object"', explanation: 'It is "object".', category: QUESTION.question.category });
   });
 

@@ -383,7 +383,9 @@ describe('the run reward', () => {
       question_id: 'b1-q2', question: 'Batch 1 question 2?', category: 'javascript',
       correct_answer: 'right', explanation: 'Because.', subject: 'webdev',
     });
-    expect(await within(items[0]).findByRole('button', { name: 'Saved as Shark Card' })).toHaveAttribute('aria-pressed', 'true');
+    const savedButton = await within(items[0]).findByRole('button', { name: 'Saved as Shark Card' });
+    await waitFor(() => expect(savedButton).toBeEnabled());
+    expect(savedButton).toHaveAttribute('aria-pressed', 'true');
     // A new run starts with nothing missed.
     fireEvent.click(screen.getByRole('button', { name: 'Play again' }));
     await screen.findByText(/^Batch \d+ question \d+\?$/);

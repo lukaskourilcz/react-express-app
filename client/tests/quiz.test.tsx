@@ -221,7 +221,11 @@ describe('Shark Cards from the review (owner decision 12)', () => {
       question_id: 'a', question: 'Question a?', category: 'javascript',
       correct_answer: 'gamma a', explanation: 'Gamma, because the grader says so.', subject: 'webdev',
     });
-    expect(await screen.findByRole('button', { name: 'Saved as Shark Card' })).toHaveAttribute('aria-pressed', 'true');
+    const savedButton = await screen.findByRole('button', { name: 'Saved as Shark Card' });
+    // Shown at once, and still saved once the save has settled.
+    await waitFor(() => expect(savedButton).toBeEnabled());
+    expect(savedButton).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Saved as Shark Card' })).toBe(savedButton);
     expect(screen.getByRole('link', { name: 'Open Shark Cards' })).toHaveAttribute('href', '/collection');
   });
 
