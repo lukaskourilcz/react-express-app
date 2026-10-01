@@ -682,7 +682,6 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
     setState('ready');
     setQuestions([]);
     setResult(null);
-    setRepeatXp(null);
     setAnswers({});
     setHintedIds([]);
     setAnswersLocked(false);
