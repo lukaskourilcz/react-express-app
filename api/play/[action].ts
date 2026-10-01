@@ -8,7 +8,8 @@ import {
   generateMatchCode,
   withTimeout,
 } from '../../lib/play-helpers';
-import { requireAuthSub, isRpcMissing, withRequestContext } from '../../lib/http';
+import { requireAuthResult, requireAuthSub, isRpcMissing, withRequestContext } from '../../lib/http';
+import { roomDisplayName } from '../../lib/public-identity';
 import { tryAuth } from '../../lib/auth';
 import { getEffectiveQuestions } from '../../lib/questions-store';
 import { getGameSettings } from '../../lib/settings-store';
@@ -195,12 +196,13 @@ async function create(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const hostSub = await requireAuthSub(req, res);
-  if (!hostSub) return;
+  const hostAuth = await requireAuthResult(req, res);
+  if (!hostAuth) return;
+  const hostSub = hostAuth.sub;
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.playCreatePerUser, `user:${hostSub}`))) return;
 
+  // A body's `host_name` is ignored: the room names its host itself.
   const body = (req.body || {}) as {
-    host_name?: unknown;
     mode?: unknown;
     count?: unknown;
     categories?: unknown;
@@ -209,7 +211,9 @@ async function create(req: VercelRequest, res: VercelResponse) {
   };
 
   const { play: playSettings } = await getGameSettings();
-  const hostName = isShortString(body.host_name, 80) ? body.host_name : 'Host';
+  // The Google name, the sharkname, or "Player" and a number; never anything
+  // from the address (lib/public-identity.ts).
+  const hostName = await roomDisplayName(hostAuth, supabase);
   const mode = body.mode === 'classroom' ? 'classroom' : 'multiplayer';
   const requestedCount = typeof body.count === 'number' ? body.count : 10;
   const count = Math.min(
@@ -330,14 +334,15 @@ async function join(req: VercelRequest, res: VercelResponse) {
     res.setHeader('Allow', 'POST');
     return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
   }
-  const sub = await requireAuthSub(req, res);
-  if (!sub) return;
+  const auth = await requireAuthResult(req, res);
+  if (!auth) return;
+  const sub = auth.sub;
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.playJoinPerUser, `user:${sub}`))) return;
 
-  const body = (req.body || {}) as { code?: unknown; display_name?: unknown };
+  // A body's `display_name` is ignored, as the host's is: an older client sent
+  // the part of the address before the @ for an account without a Google name.
+  const body = (req.body || {}) as { code?: unknown };
   if (!isShortString(body.code, 16)) return jsonError(res, 400, 'bad_request', 'code required');
-  if (!isShortString(body.display_name, 60))
-    return jsonError(res, 400, 'bad_request', 'display_name required');
 
   const code = body.code.toUpperCase();
   try {
@@ -361,7 +366,7 @@ async function join(req: VercelRequest, res: VercelResponse) {
 
     const participantInsert = await withTimeout(
       supabase!.from('match_participants').upsert(
-        { match_id: match.id, user_id: sub, display_name: body.display_name },
+        { match_id: match.id, user_id: sub, display_name: await roomDisplayName(auth, supabase) },
         { onConflict: 'match_id,user_id' },
       ),
     );

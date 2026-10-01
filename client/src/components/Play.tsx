@@ -16,7 +16,7 @@ import { ProgressBar } from '@astryxdesign/core/ProgressBar';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { ToggleButton } from '@astryxdesign/core/ToggleButton';
 import { ToggleButtonGroup } from '@astryxdesign/core/ToggleButton';
-import { useAuth, getUserProfile, displayNameFromProfile } from '../lib/auth';
+import { useAuth, getUserProfile } from '../lib/auth';
 import { openSignIn } from '../lib/signInDialog';
 import {
   createMatch,
@@ -197,7 +197,6 @@ export function PlayLanding() {
     try {
       const m = await createMatch({
         host_id: user.id,
-        host_name: displayNameFromProfile(profile, t('play.hostFallback')),
         mode: mode === 'classroom' ? 'classroom' : 'multiplayer',
         count,
         // "No selection" means every topic of the ACTIVE subject — sending the
@@ -231,7 +230,6 @@ export function PlayLanding() {
       await joinMatch({
         code,
         user_id: user.id,
-        display_name: displayNameFromProfile(profile, t('play.playerFallback')),
       });
       capture('classroom_or_match_joined');
       navigate(`/play/${code}`);
@@ -476,7 +474,6 @@ export function PlayMatch() {
   const t = useT();
   const config = useGameConfig();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
-  const profile = getUserProfile(user);
 
   const [playOff, setPlayOff] = useState(false);
   const playOn = config.features.multiplayer && !playOff;
@@ -551,7 +548,6 @@ export function PlayMatch() {
           const { server_now: serverNow, ...room } = await joinMatch({
             code,
             user_id: user.id,
-            display_name: displayNameFromProfile(profile, t('play.playerFallback')),
           });
           noteServerClock(serverNow, sentAt);
           joined = room;

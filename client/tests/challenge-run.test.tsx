@@ -24,7 +24,7 @@ const api = vi.hoisted(() => ({
   grade: null as Grade | null,
   completions: [] as { runToken: string; proofs: string[]; status: number }[],
   completeStatus: (_runToken: string): { status: number; code?: string } => ({ status: 200 }),
-  auth: { user: null as null | { id: string; user_metadata?: Record<string, string> }, isAuthenticated: false, isLoading: false },
+  auth: { user: null as null | { id: string; email?: string; user_metadata?: Record<string, unknown> }, isAuthenticated: false, isLoading: false },
   /** Refuses the nth batch request (1-based) when it returns a status. */
   batchRefusal: null as null | ((n: number) => { status: number; code: string } | null),
   /** The nth batch request waits for `release()`. */
@@ -577,6 +577,18 @@ describe('the Hall of Fame name', () => {
     fireEvent.change(box(), { target: { value: 'Reef runner' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit score' }));
     await waitFor(() => expect(api.scores).toEqual([{ name: 'Reef runner', runToken: 'RUN-1' }]));
+  });
+
+  // An account made with an email and password has no name: the box never
+  // takes the address in its place, even with the leaderboard switch on.
+  it('starts empty for an account without a Google name, whatever the switch says', async () => {
+    api.auth = { user: { id: 'learner-2', email: 'ada.lovelace@example.com', user_metadata: { email: 'ada.lovelace@example.com', email_verified: true } }, isAuthenticated: true, isLoading: false };
+    api.visible = true;
+    await mount();
+    await start();
+    await strikeOutNow();
+    await settle();
+    expect((screen.getByLabelText('Your name') as HTMLInputElement).value).toBe('');
   });
 });
 

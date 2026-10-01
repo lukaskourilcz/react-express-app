@@ -8,11 +8,13 @@ import { act, fireEvent, render, screen, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { getUserProfile } from '../src/lib/auth';
 import Profile from '../src/components/Profile';
 import Leaderboard from '../src/components/Leaderboard';
+import { PlayLanding } from '../src/components/Play';
+import { DEFAULT_CONFIG, GAME_CONFIG_KEY } from '../src/lib/gameConfig';
 import { server } from './mocks/server';
 import { emailUser } from './mocks/gotrue';
 import { leaderboardHandlers, settingsHandler, visibilityHandler } from './mocks/handlers';
@@ -35,8 +37,10 @@ const STATS = {
 };
 const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 const NOT_CONNECTED = { available: true, status: 'not_connected', accountLogin: null, repoFullName: null, defaultBranch: null, lastCommitAt: null, queued: 0, lastError: null };
+// A friend as friend_list returns them since migration 055: by the name they
+// chose for friends, their sharkname here.
 const FRIENDS = {
-  friends: [{ handle: 'grace_h', picture: null, country: 'GB', crown: false, currentStreak: 5, longestStreak: 9, totalCorrect: 140, totalQuestions: 180, accuracyPct: 78, activeToday: true }],
+  friends: [{ handle: 'gracias-sharkie', displayName: 'gracias-sharkie', picture: null, country: 'GB', crown: false, currentStreak: 5, longestStreak: 9, totalCorrect: 140, totalQuestions: 180, accuracyPct: 78, activeToday: true }],
   requests: [],
 };
 
@@ -50,7 +54,9 @@ function serveAccount(visible: boolean) {
       remaining: 2, period: '2026-10', used: [], shieldUntil: null, shieldDays: [], shieldSupported: true,
     })),
     http.get('*/api/user/advisor', () => HttpResponse.json({ weakAreas: [], suggestedWeek: [], generatedAt: '2026-10-01T09:00:00Z' })),
-    http.get('*/api/user/friends-handle', () => HttpResponse.json({ handle: 'ada_l', discoverable: true, country: null, canChangeAt: null })),
+    http.get('*/api/user/friends-handle', () => HttpResponse.json({ handle: 'el-tiburon-loco', discoverable: true, country: null, canChangeAt: null })),
+    // op=identity: no Google name or photo to offer friends.
+    http.get('*/api/user/identity', () => HttpResponse.json({ showRealName: false, showPhoto: false, realName: null, photo: null })),
     http.get('*/api/user/friends-list', () => HttpResponse.json(FRIENDS)),
     http.get('*/api/quiz/roadmap', ({ request }) => {
       const resource = new URL(request.url).searchParams.get('resource');
@@ -96,9 +102,11 @@ describe('an account made with an email and password', () => {
     expect(document.querySelector('img[src*="googleusercontent"]')).toBeNull();
 
     fireEvent.click(screen.getByRole('tab', { name: 'Friends' }));
-    // A friend's row names them by handle, never by a Google name.
-    expect(await screen.findByRole('button', { name: /grace_h/ })).toBeInTheDocument();
-    expect(screen.getByDisplayValue('ada_l')).toBeInTheDocument();
+    // A friend's row names them by the name they chose: a sharkname here.
+    expect(await screen.findByText('gracias-sharkie')).toBeInTheDocument();
+    // The learner's own sharkname, which friends see, is on the Overview.
+    fireEvent.click(screen.getByRole('tab', { name: 'Overview' }));
+    expect((await screen.findAllByText('el-tiburon-loco')).length).toBeGreaterThan(0);
   });
 
   it('stays “Learner” on the boards, even with the name switch on, and its address never shows', async () => {
@@ -110,5 +118,51 @@ describe('an account made with an email and password', () => {
     expect(within(pinned).getByText('You')).toBeVisible();
     expect(within(pinned).queryByRole('img')).toBeNull();
     expect(document.body).not.toHaveTextContent(/ada\.lovelace|@example\.com/);
+  });
+
+  // A live room names its players on the server (lib/public-identity.ts):
+  // this account's sharkname, or "Player" and a number. The client used to
+  // send the part of the address before the @, and anyone with the code saw it.
+  it('opens and joins a live room without sending any part of its address', async () => {
+    serveAccount(false);
+    const sent: { path: string; body: Record<string, unknown> }[] = [];
+    server.use(
+      http.post('*/api/play/create', async ({ request }) => {
+        sent.push({ path: 'create', body: await request.json() as Record<string, unknown> });
+        return HttpResponse.json({ id: 'm1', code: 'ABC123', mode: 'multiplayer', host_id: USER.id, host_name: 'el-tiburon-loco', status: 'lobby' });
+      }),
+      http.post('*/api/play/join', async ({ request }) => {
+        sent.push({ path: 'join', body: await request.json() as Record<string, unknown> });
+        return HttpResponse.json({ id: 'm2', code: 'XYZ789', mode: 'multiplayer', host_id: 'host-1', host_name: 'Grace Hopper', status: 'lobby', current_index: 0, questions: [] });
+      }),
+    );
+    auth.value = { user: USER, isAuthenticated: true, isLoading: false };
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: Infinity } } });
+    client.setQueryData(GAME_CONFIG_KEY, { ...DEFAULT_CONFIG, features: { ...DEFAULT_CONFIG.features, multiplayer: true } });
+    const view = () => render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={['/play']}>
+          <LanguageProvider>
+            <Routes>
+              <Route path="/play" element={<PlayLanding />} />
+              <Route path="*" element={<p>in the room</p>} />
+            </Routes>
+          </LanguageProvider>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+    const first = view();
+    fireEvent.click(await screen.findByRole('button', { name: 'Create multiplayer match' }));
+    expect(await screen.findByText('in the room')).toBeInTheDocument();
+    first.unmount();
+    view();
+    fireEvent.change(await screen.findByLabelText('Match code'), { target: { value: 'xyz789' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Join →' }));
+    expect(await screen.findByText('in the room')).toBeInTheDocument();
+
+    expect(sent.map((one) => one.path)).toEqual(['create', 'join']);
+    expect(sent[0].body).not.toHaveProperty('host_name');
+    expect(sent[1].body).toEqual({ code: 'XYZ789', user_id: USER.id });
+    expect(JSON.stringify(sent)).not.toMatch(/ada\.lovelace|@example\.com/);
   });
 });

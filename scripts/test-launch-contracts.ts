@@ -4042,7 +4042,9 @@ async function main() {
       assert.ok(playSource.includes(`RATE_LIMITS.${cfg}, \`user:\${${subject}}\``), `play must consume ${cfg} keyed by a verified ${subject}`);
     }
     assert.match(playSource, /RATE_LIMITS\.playStateAnonymous\)/, 'the anonymous state branch must keep its own address bucket');
-    for (const [fn, cfg, verify] of [['create', 'playCreatePerUser', 'requireAuthSub'], ['join', 'playJoinPerUser', 'requireAuthSub'],
+    // create and join verify with requireAuthResult: they name the player
+    // from the verified identity (lib/public-identity.ts).
+    for (const [fn, cfg, verify] of [['create', 'playCreatePerUser', 'requireAuthResult'], ['join', 'playJoinPerUser', 'requireAuthResult'],
                                      ['state', 'playStatePerUser', 'tryAuth'], ['state', 'playStateAnonymous', 'tryAuth'],
                                      ['control', 'playMutationPerUser', 'requireAuthSub'], ['answer', 'playMutationPerUser', 'requireAuthSub'],
                                      ['distribution', 'playDistributionPerUser', 'requireAuthSub'], ['heartbeat', 'playMutationPerUser', 'requireAuthSub']] as const) {

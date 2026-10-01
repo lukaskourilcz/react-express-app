@@ -306,6 +306,13 @@ not see it (every player while a room runs, a multiplayer host included, and
 anyone reading a lobby) gets only the questions already shown: none in the
 lobby, up to the current one while the room runs. A classroom presenter holds
 the whole round with the key, and everyone sees it once the room is finished.
+`create` and `join` name the host and each player on the server
+(`roomDisplayName` in `lib/public-identity.ts`): the account's Google name
+from its verified identity, else its sharkname, else "Player" and four digits
+taken from the account id, the same in every room. A name in the request body
+is ignored, and the client sends none: until round 4 it sent the part of the
+address before the @ for every account without a Google name, and anyone with
+the room code saw it (`npm run test:launch`, play-rooms suite).
 `join` and `state` also send `question_count` and `server_now`. The screens
 count each question down against the server's clock, not the device's; the
 presenter's key appears once the server stops taking answers, the question's
@@ -1120,7 +1127,8 @@ production (issue #227, step D8).
   of search (`NOINDEX_PATHS`), with no handler of their own.
 - **An account without Google.** It has no name or picture. Its header and
   Profile show the first part of its address, which only the learner sees;
-  the boards and Friends never show the address (handles and "Learner"),
+  friends, the boards and live rooms never show the address (its sharkname,
+  "Learner", or "Player" and a number), the Hall of Fame box starts empty,
   and deleting it works as for any account: nothing in
   `delete-account` reads a Google identity (`npm run test:launch`,
   verified-caller suite).
