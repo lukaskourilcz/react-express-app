@@ -2703,9 +2703,13 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
+// The fixture answers at once, so a page that got its todos lists them within
+// milliseconds; one that never will fails each check in 300 ms, not 1 s.
+const soon = { timeout: 300 };
+
 test('loads the todos and shows the title and the state of each one', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   const items = container.querySelectorAll('li');
   expect(items[0].textContent).toContain('Todo one');
   expect(items[0].textContent).toContain('to do');
@@ -2716,7 +2720,7 @@ test('loads the todos and shows the title and the state of each one', async () =
 
 test('adding a todo appends it as unfinished and moves the counts', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.change(container.querySelector('input'), { target: { value: 'Write tests' } });
   fireEvent.click(screen.getByText('Add'));
   const items = container.querySelectorAll('li');
@@ -2728,7 +2732,7 @@ test('adding a todo appends it as unfinished and moves the counts', async () => 
 
 test('removing drops that todo and nothing else', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.click(container.querySelectorAll('li button')[0]);
   expect(container.querySelectorAll('li')).toHaveLength(2);
   expect(container.textContent).not.toContain('Todo one');
@@ -2738,7 +2742,7 @@ test('removing drops that todo and nothing else', async () => {
 
 test('an empty box adds nothing', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.click(screen.getByText('Add'));
   expect(container.querySelectorAll('li')).toHaveLength(3);
 });
@@ -2815,9 +2819,13 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
+// The fixture answers at once, so a page that got its products lists them
+// within milliseconds; one that never will fails each check in 300 ms, not 1 s.
+const soon = { timeout: 300 };
+
 test('loads the products and shows the title, price and category of each', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   const first = container.querySelectorAll('li')[0];
   expect(first.textContent).toContain('Laptop');
   expect(first.textContent).toContain('900');
@@ -2827,7 +2835,7 @@ test('loads the products and shows the title, price and category of each', async
 
 test('searching by title narrows the list and the total follows it', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.change(container.querySelector('input'), { target: { value: 'lap' } });
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Laptop');
@@ -2836,7 +2844,7 @@ test('searching by title narrows the list and the total follows it', async () =>
 
 test('searching by category finds a product whose title does not match', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.change(container.querySelector('input'), { target: { value: 'tech' } });
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Laptop');
@@ -2845,7 +2853,7 @@ test('searching by category finds a product whose title does not match', async (
 
 test('the search ignores case', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   fireEvent.change(container.querySelector('input'), { target: { value: 'MUG' } });
   expect(container.querySelectorAll('li')).toHaveLength(1);
   expect(container.textContent).toContain('Total: 10');
@@ -2853,7 +2861,7 @@ test('the search ignores case', async () => {
 
 test('clearing the search brings everything back', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   const box = container.querySelector('input');
   fireEvent.change(box, { target: { value: 'desk' } });
   expect(container.querySelectorAll('li')).toHaveLength(1);

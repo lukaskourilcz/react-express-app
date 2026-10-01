@@ -416,12 +416,12 @@ const wait = ms => act(() => new Promise(resolve => setTimeout(resolve, ms)));
 
 test('counts up while it runs', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(count(container) >= 2).toBe(true), { timeout: 2000 });
+  await waitFor(() => expect(count(container) >= 2).toBe(true), { timeout: 1000 });
 });
 
 test('Pause stops the count', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(count(container) >= 1).toBe(true), { timeout: 2000 });
+  await waitFor(() => expect(count(container) >= 1).toBe(true), { timeout: 1000 });
   fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
   const paused = count(container);
   await wait(350);
@@ -430,11 +430,11 @@ test('Pause stops the count', async () => {
 
 test('Resume carries on from the paused count', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(count(container) >= 1).toBe(true), { timeout: 2000 });
+  await waitFor(() => expect(count(container) >= 1).toBe(true), { timeout: 1000 });
   fireEvent.click(screen.getByRole('button', { name: 'Pause' }));
   const paused = count(container);
   fireEvent.click(screen.getByRole('button', { name: 'Resume' }));
-  await waitFor(() => expect(count(container) > paused).toBe(true), { timeout: 2000 });
+  await waitFor(() => expect(count(container) > paused).toBe(true), { timeout: 1000 });
 });
 `,
   },

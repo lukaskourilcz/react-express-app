@@ -3249,7 +3249,7 @@ test('shows the first three todos the server holds, each with its state, and the
   const request = requestTo(calls, '/todos');
   expect(Boolean(request)).toBe(true);
   answerLikeTheApi(request);
-  await waitFor(() => expect(container.querySelectorAll('li').length > 0).toBe(true));
+  await waitFor(() => expect(container.querySelectorAll('li').length > 0).toBe(true), soon);
   const items = container.querySelectorAll('li');
   expect(items).toHaveLength(3);
   expect(items[0].textContent).toContain('Pack the tent');
@@ -3263,7 +3263,7 @@ test('shows the first three todos the server holds, each with its state, and the
 
 test('Remove drops the todo it belongs to, not the first one', async () => {
   const { container } = render(<App />);
-  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3));
+  await waitFor(() => expect(container.querySelectorAll('li')).toHaveLength(3), soon);
   const second = container.querySelectorAll('li')[1];
   fireEvent.click([...second.querySelectorAll('button')].find(b => /remove/i.test(b.textContent)));
   const items = container.querySelectorAll('li');
