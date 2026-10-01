@@ -38,6 +38,11 @@ function mount(node: ReactNode = <CookieConsent />, path = '/') {
 const banner = () => screen.queryByRole('region', { name: BANNER });
 const dialog = () => screen.getByRole('dialog', { hidden: true });
 const dialogOpen = () => dialog().hasAttribute('open');
+/** The dialog's code is a chunk of its own: it arrives a moment after the press. */
+const openDialog = async () => {
+  await waitFor(() => expect(screen.getByRole('dialog', { hidden: true })).toHaveAttribute('open'));
+  return dialog();
+};
 
 beforeEach(() => {
   localStorage.clear();
@@ -105,18 +110,17 @@ describe('the cookie banner', () => {
     fireEvent.click(within(banner()!).getByRole('button', { name: 'Accept all' }));
     expect(banner()).toBeNull();
     expect(getConsent()).toMatchObject({ analytics: false, marketing: false, stored: false });
-    expect(await screen.findByRole('status')).toHaveTextContent('does not let devShark remember your choice');
+    expect(await screen.findByRole('status')).toHaveTextContent('This browser will not keep your choice');
   });
 });
 
 describe('the cookie settings dialog', () => {
-  it('opens from Choose with every optional switch off and focus on the first one', () => {
+  it('opens from Choose with every optional switch off and focus on the first one', async () => {
     mount();
     const choose = within(banner()!).getByRole('button', { name: 'Choose' });
     choose.focus();
     fireEvent.click(choose);
-    expect(dialogOpen()).toBe(true);
-    const box = dialog();
+    const box = await openDialog();
     expect(box).toHaveAccessibleName(DIALOG);
     const analytics = within(box).getByRole('switch', { name: 'Analytics' });
     const marketing = within(box).getByRole('switch', { name: 'Marketing' });
@@ -134,12 +138,12 @@ describe('the cookie settings dialog', () => {
     expect(within(box).getByRole('link', { name: 'What necessary storage keeps' })).toHaveAttribute('href', '/privacy#cookies');
   });
 
-  it('keeps Tab inside the dialog and returns focus to Choose on Escape', () => {
+  it('keeps Tab inside the dialog and returns focus to Choose on Escape', async () => {
     mount();
     const choose = within(banner()!).getByRole('button', { name: 'Choose' });
     choose.focus();
     fireEvent.click(choose);
-    const box = dialog();
+    const box = await openDialog();
     const save = within(box).getByRole('button', { name: 'Save choices' });
     const close = within(box).getByRole('button', { name: 'Close' });
     save.focus();
@@ -154,10 +158,10 @@ describe('the cookie settings dialog', () => {
     expect(document.activeElement).toBe(choose);
   });
 
-  it('saves the switches as chosen and closes the banner with it', () => {
+  it('saves the switches as chosen and closes the banner with it', async () => {
     mount();
     fireEvent.click(within(banner()!).getByRole('button', { name: 'Choose' }));
-    const box = dialog();
+    const box = await openDialog();
     fireEvent.click(within(box).getByRole('switch', { name: 'Analytics' }));
     fireEvent.click(within(box).getByRole('button', { name: 'Save choices' }));
     expect(getConsent()).toMatchObject({ analytics: true, marketing: false });
@@ -167,10 +171,10 @@ describe('the cookie settings dialog', () => {
     expect(document.activeElement).toBe(document.getElementById('main-content'));
   });
 
-  it('offers Reject all and Accept all inside the dialog too', () => {
+  it('offers Reject all and Accept all inside the dialog too', async () => {
     mount();
     fireEvent.click(within(banner()!).getByRole('button', { name: 'Choose' }));
-    fireEvent.click(within(dialog()).getByRole('button', { name: 'Reject all' }));
+    fireEvent.click(within(await openDialog()).getByRole('button', { name: 'Reject all' }));
     expect(getConsent()).toMatchObject({ analytics: false, marketing: false });
     expect(JSON.parse(localStorage.getItem(CONSENT_STORAGE_KEY)!)).toMatchObject({ analytics: false, marketing: false });
   });
@@ -182,8 +186,7 @@ describe('the cookie settings dialog', () => {
     const link = screen.getByRole('button', { name: 'Cookie settings' });
     link.focus();
     fireEvent.click(link);
-    const box = dialog();
-    expect(dialogOpen()).toBe(true);
+    const box = await openDialog();
     expect(within(box).getByRole('switch', { name: 'Analytics' })).toBeChecked();
     expect(within(box).getByRole('switch', { name: 'Marketing' })).not.toBeChecked();
     // Withdraw analytics.
@@ -196,5 +199,26 @@ describe('the cookie settings dialog', () => {
     act(() => { fireEvent.click(link); });
     await waitFor(() => expect(dialogOpen()).toBe(true));
     expect(within(dialog()).getByRole('switch', { name: 'Analytics' })).not.toBeChecked();
+  });
+});
+
+describe('a dialog whose code cannot load', () => {
+  it('closes with a toast and leaves the banner working', async () => {
+    vi.resetModules();
+    vi.doMock('../src/components/CookieConsentDialog', () => {
+      throw new TypeError('Failed to fetch dynamically imported module: /assets/CookieConsentDialog.js');
+    });
+    // Fresh modules all round: the context the banner reads must be the one rendered.
+    const { default: Fresh } = await import('../src/components/CookieConsent');
+    const consent = await import('../src/lib/consent');
+    const { LanguageProvider: FreshLanguage } = await import('../src/i18n/LanguageContext');
+    render(<MemoryRouter><FreshLanguage><Fresh /></FreshLanguage></MemoryRouter>);
+    fireEvent.click(within(banner()!).getByRole('button', { name: 'Choose' }));
+    // Vitest wraps the import error, so the toast may take the generic line.
+    expect(await screen.findByRole('alert')).toHaveTextContent(/Network error\. Check your connection and try again\.|Something went wrong\. Try again\./);
+    expect(screen.queryByRole('dialog', { hidden: true })).toBeNull();
+    fireEvent.click(within(banner()!).getByRole('button', { name: 'Reject all' }));
+    expect(consent.getConsent()).toMatchObject({ analytics: false, marketing: false });
+    vi.doUnmock('../src/components/CookieConsentDialog');
   });
 });

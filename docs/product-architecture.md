@@ -1056,14 +1056,17 @@ Owner decisions 2 and 4 (1 October 2026).
   12 months. A browser that refuses storage counts as not consented: the
   banner closes for the page, nothing optional runs, and the next visit asks
   again. A choice made in another tab applies through the `storage` event.
-- **The banner and the dialog** (`client/src/components/CookieConsent.tsx`).
-  The shell mounts them right after the skip link; CSS (`order`) draws the
+- **The banner and the dialog** (`client/src/components/CookieConsent.tsx`,
+  `CookieConsentDialog.tsx`). The shell mounts the banner right after the skip
+  link; CSS (`order`) draws the
   banner under `<main>` and 30px above the bottom edge, so `<main>` gives up
   the height and nothing is covered. Accept all, Reject all and Choose are the
   same Astryx secondary button, 44px tall. On `/privacy` and `/terms` the
   banner shows its title and actions only. It is hidden where the shell hides
   its chrome (`/dev`, a running quiz). Choose and the footer's "Cookie
-  settings" button (`openConsentSettings`) open one Astryx dialog: a switch
+  settings" button (`openConsentSettings`) open one Astryx dialog, whose code
+  is a chunk of its own (fetched in the background while the banner shows; a
+  failed load closes with a toast and the next press asks again): a switch
   per category with its purpose and a link to the policy section, Necessary
   locked on, Reject all, Accept all and Save choices. The native modal makes
   the page inert, `useFocusTrap` wraps Tab, Escape closes, and focus returns
@@ -1071,7 +1074,9 @@ Owner decisions 2 and 4 (1 October 2026).
   privacy policy's cookie section has the same button. While the banner
   shows, `--ss-consent-dock` lifts `AppToast` and `XpToaster` above it.
 - **PostHog** (`client/src/lib/analytics.ts`). `initAnalytics()` follows the
-  consent store. Without a yes, posthog-js is not downloaded and nothing is
+  consent store. posthog-js, its settings and the URL scrubber live in
+  `lib/posthogClient.ts`, which only a yes imports. Without a yes, posthog-js
+  is not downloaded and nothing is
   stored or sent; the current path and the signed-in id wait in memory and
   go out after a yes on the same page, and the first-touch campaign
   (`devshark:campaign`) is written only then. PostHog is initialised with
@@ -1084,8 +1089,9 @@ Owner decisions 2 and 4 (1 October 2026).
   agreed. Sign-out calls `reset()` and opts back in. The URL scrubbing
   (`before_send`) is unchanged.
 - **Marketing readiness** (`client/src/lib/marketing.ts`). `MARKETING_LOADERS`
-  is empty, so `installMarketing()` does nothing: no `dataLayer`, no script,
-  no CSP change. A loader added there starts only after a yes to marketing,
+  (`lib/marketingTags.ts`) is empty, so `main.tsx` never loads `marketing.ts`
+  and nothing runs: no `dataLayer`, no script, no CSP change. A loader added
+  there starts only after a yes to marketing,
   behind Google Consent Mode v2 defaults (`ad_storage`, `analytics_storage`,
   `ad_user_data`, `ad_personalization` denied; a yes grants all four, since
   GA4 sits under marketing). Connecting a tag also needs its hosts in the CSP

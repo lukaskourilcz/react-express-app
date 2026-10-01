@@ -110,32 +110,6 @@ export function firstTouchCampaign(now: number = Date.now()): Campaign {
   return campaignFrom(campaignQuery(kept.campaign as Campaign));
 }
 
-/** A URL or referrer property as analytics may see it. PostHog's `$direct`
- * (no referrer) is a label, not an address, and stays. */
-const scrubUrlValue = (value: string): string => (value === '$direct' ? value : scrubUrl(value, true));
-
-/** Every event PostHog sends passes here: URLs lose every parameter but the
- * campaign labels, so no code, id or address reaches analytics. That covers
- * every property PostHog fills from an address on its own (`$current_url`,
- * `$session_entry_url`, `$referrer`, `$session_entry_referrer`, their
- * `$initial_` copies) and the `u`/`r` pair in `$initial_person_info`. */
-function scrubEvent<T extends { properties?: Record<string, unknown>; $set?: Record<string, unknown>; $set_once?: Record<string, unknown> } | null>(event: T): T {
-  if (!event) return event;
-  for (const bag of [event.properties, event.$set, event.$set_once, event.properties?.$set as Record<string, unknown> | undefined, event.properties?.$set_once as Record<string, unknown> | undefined]) {
-    if (!bag || typeof bag !== 'object') continue;
-    for (const key of Object.keys(bag)) {
-      const value = bag[key];
-      if (/(_url|referrer)$/.test(key) && typeof value === 'string') bag[key] = scrubUrlValue(value);
-      if (key === '$initial_person_info' && value && typeof value === 'object') {
-        const info = value as { u?: unknown; r?: unknown };
-        if (typeof info.u === 'string') info.u = scrubUrlValue(info.u);
-        if (typeof info.r === 'string') info.r = scrubUrlValue(info.r);
-      }
-    }
-  }
-  return event;
-}
-
 /* ── consent gate ──────────────────────────────────────────────────────── */
 
 /** The cookie and storage names PostHog writes: `ph_<key>_posthog` (cookie
@@ -147,7 +121,7 @@ const POSTHOG_KEY = /^(?:__)?ph_/;
 let started = false;
 /** The visitor said yes to analytics and has not withdrawn it. */
 let active = false;
-let sdk: Promise<PostHog | null> | null = null;
+let sdk: Promise<{ startPostHog: (key: string, apiHost: string) => PostHog } | null> | null = null;
 /** The client, once `init` has run. posthog-js is a singleton: it is
  * initialised once per page and opted in and out after that. */
 let client: PostHog | null = null;
@@ -209,44 +183,16 @@ export function clearAnalyticsStorage(): void {
 function ready(): Promise<PostHog | null> {
   const key = posthogKey();
   if (!active || !key) return Promise.resolve(null);
-  sdk ??= import('posthog-js')
-    .then(({ default: ph }) => ph)
-    .catch(() => {
-      sdk = null;
-      return null;
-    });
-  return sdk.then((ph) => {
+  sdk ??= import('./posthogClient').catch(() => {
+    sdk = null;
+    return null;
+  });
+  return sdk.then((module) => {
     // Withdrawn while the SDK was on its way: it is never initialised.
-    if (!ph || !active) return null;
-    if (!client) {
-      // Default to the same-origin reverse proxy; override only if you must.
-      const apiHost = (import.meta.env.VITE_PUBLIC_POSTHOG_HOST as string | undefined) || '/ingest';
-      ph.init(key, {
-        api_host: apiHost,
-        // Where the SDK sends users for the toolbar / links (EU Cloud UI).
-        ui_host: 'https://eu.posthog.com',
-        person_profiles: 'identified_only',
-        // We drive SPA pageviews manually from the router (capturePageview),
-        // but let PostHog measure how long each view was open.
-        capture_pageview: false,
-        capture_pageleave: true,
-        respect_dnt: true,
-        autocapture: false,
-        disable_session_recording: true,
-        capture_dead_clicks: false,
-        // A fragment can carry a token (a cancel confirmation, an OAuth
-        // return); PostHog leaves it out of the URLs it records itself.
-        disable_capture_url_hashes: true,
-        // Out, and storing nothing, until opted in below. PostHog reads its
-        // own consent flag from storage on every check, so once a withdrawal
-        // has removed that flag it must fall back to "out", never "in".
-        persistence: 'localStorage+cookie',
-        opt_out_capturing_by_default: true,
-        opt_out_persistence_by_default: true,
-        before_send: (event) => scrubEvent(event),
-      });
-      client = ph;
-    }
+    if (!module || !active) return null;
+    // Default to the same-origin reverse proxy; override only if you must.
+    client ??= module.startPostHog(key, (import.meta.env.VITE_PUBLIC_POSTHOG_HOST as string | undefined) || '/ingest');
+    const ph = client;
     if (!optedIn) {
       ph.opt_in_capturing({ captureEventName: false });
       optedIn = true;

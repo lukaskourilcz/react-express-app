@@ -17,7 +17,7 @@ import { AuthProvider } from './lib/auth';
 import { queryClient } from './lib/queryClient';
 import { initSentry } from './lib/sentry';
 import { initAnalytics } from './lib/analytics';
-import { installMarketing } from './lib/marketing';
+import { MARKETING_LOADERS } from './lib/marketingTags';
 import { MotionProvider } from './lib/motion';
 import { installScrollbarActivity } from './lib/scrollbarActivity';
 import { captureReferralFromUrl } from './lib/referral';
@@ -36,9 +36,10 @@ initSentry();
 // cookie banner (lib/consent.ts). Before it the SDK is not downloaded and
 // nothing is stored or sent; a no removes what an older build stored.
 initAnalytics();
-// GA4 and the Meta Pixel are not connected: with no loader this does nothing
-// (lib/marketing.ts says where they go).
-installMarketing();
+// GA4 and the Meta Pixel are not connected. Once a loader exists, its code
+// and Google Consent Mode load here and start only after a yes to marketing
+// (lib/marketing.ts says how to connect one).
+if (MARKETING_LOADERS.length > 0) void import('./lib/marketing').then(({ installMarketing }) => installMarketing());
 // Keep an invite code (`/?ref=<code>`, #228) and take it out of the address
 // bar before the router reads the URL. The server binds it after sign-in.
 captureReferralFromUrl();

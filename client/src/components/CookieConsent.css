@@ -1,4 +1,4 @@
-/* The cookie banner and settings dialog (CookieConsent.tsx).
+/* The cookie banner (CookieConsent.tsx); the dialog has CookieConsentDialog.css.
  *
  * The banner is a flex item of the one-viewport shell (.ss-app-root), placed
  * early in the document and moved to the bottom with `order`, so <main> gives
@@ -82,46 +82,4 @@
 @media (max-width: 599px) {
   .ss-consent__inner { padding: 0.75rem; gap: 0.5rem; }
   .ss-consent__actions { max-width: none; }
-}
-
-/* The dialog. Astryx draws the surface, the backdrop, the focus ring and the
- * motion (frozen under reduced motion by its own tokens). */
-.ss-consent-dialog {
-  display: flex;
-  flex-direction: column;
-  min-height: 0;
-}
-.ss-consent-dialog__list {
-  list-style: none;
-  margin: 0;
-  padding: 0 16px;
-  display: flex;
-  flex-direction: column;
-  overflow-y: auto;
-}
-.ss-consent-dialog__row {
-  padding: 0.75rem 0;
-  border-top: 1px solid var(--ss-card-line);
-}
-.ss-consent-dialog__row:first-child { border-top: 0; }
-/* Astryx draws a 40×24 switch whose invisible checkbox is the hit area; it
- * grows to 44×44 around the track, as on the leaderboard switch. */
-.ss-consent-dialog__row input[role='switch'] {
-  top: -10px !important;
-  left: -2px !important;
-  width: 44px !important;
-  height: 44px !important;
-}
-.ss-consent-dialog__row .ss-text-links { margin: 0.25rem 0 0; }
-.ss-consent-dialog__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.5rem;
-  padding: 0.75rem 16px 16px;
-  border-top: 1px solid var(--ss-card-line);
-}
-.ss-consent-dialog__actions .astryx-button {
-  flex: 1 1 8rem;
-  min-height: 44px !important;
 }

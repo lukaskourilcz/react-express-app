@@ -1595,7 +1595,6 @@ export const en = {
   'legal.privacy.retention.coding': 'Coding attempts, and unfinished coding and path drafts',
   'legal.privacy.retention.codingHow': 'Attempts 180 days; drafts 90 days after your last change',
   'legal.privacy.retention.signIn': 'Sign-in log (email address, method, time)',
-  'legal.privacy.retention.months12': '12 months',
   'legal.privacy.retention.reports': 'Question reports',
   'legal.privacy.retention.reportsHow': 'Until we close the report or you delete your account',
   'legal.privacy.retention.rooms': 'Play rooms, their answers and scores',
@@ -1607,7 +1606,6 @@ export const en = {
   'legal.privacy.retention.rateLimits': 'Rate-limit counts at Upstash',
   'legal.privacy.retention.hours2': 'Two hours at most',
   'legal.privacy.retention.consent': 'Your cookie choice',
-  'legal.privacy.retention.consentHow': '12 months, then devShark asks again',
   'legal.privacy.retention.analytics': 'Analytics events at PostHog (with consent)',
   'legal.privacy.retention.analyticsHow': 'Until you ask us to delete them, or until PostHog’s retention period for devShark ends',
   'legal.privacy.retention.backups': 'Database backups',
@@ -2289,7 +2287,7 @@ export const en = {
   'consent.marketing.link': 'About marketing tags',
   'consent.save': 'Save choices',
   'consent.saved': 'Your cookie choice is saved.',
-  'consent.notStored': 'This browser does not let devShark remember your choice, so analytics stays off and devShark asks again next time.',
+  'consent.notStored': 'This browser will not keep your choice, so analytics stays off and devShark asks again next visit.',
   'footer.cookieSettings': 'Cookie settings',
 } as const;
 

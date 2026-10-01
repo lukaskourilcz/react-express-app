@@ -1,16 +1,17 @@
 // Marketing tags: Google Analytics 4 and the Meta Pixel (owner decision 2).
 //
-// NOT CONNECTED. No script, measurement ID or pixel ID ships today, and with
-// no loader registered `installMarketing()` does nothing: no `dataLayer`, no
-// `gtag`, no request, no storage. This file is the one place the tags will
-// go, so they start under the visitor's `marketing` consent and nothing else.
+// NOT CONNECTED. No script, measurement ID or pixel ID ships today.
+// MARKETING_LOADERS (lib/marketingTags.ts) is empty, so main.tsx never loads
+// this file, and with no loader `installMarketing()` does nothing anyway: no
+// `dataLayer`, no `gtag`, no request, no storage. The tags start here and
+// nowhere else, under the visitor's `marketing` consent.
 //
 // To connect one (NEEDED.md lists what the owner provides):
-//   1. Add its loader to MARKETING_LOADERS below. `load()` injects the tag's
-//      script (gtag.js with the GA4 measurement ID, or fbevents.js with the
-//      pixel ID); `unload()` stops it and removes its cookies (`_ga`,
-//      `_ga_<id>`, `_fbp`, `_fbc`) the way clearAnalyticsStorage removes
-//      PostHog's.
+//   1. Add its loader to MARKETING_LOADERS in lib/marketingTags.ts. `load()`
+//      injects the tag's script (gtag.js with the GA4 measurement ID, or
+//      fbevents.js with the pixel ID); `unload()` stops it and removes its
+//      cookies (`_ga`, `_ga_<id>`, `_fbp`, `_fbc`) the way
+//      clearAnalyticsStorage removes PostHog's.
 //   2. Add the tag's hosts to the CSP in vercel.json (script-src, connect-src,
 //      img-src) and to the checks in scripts/check-security.mjs.
 //   3. Raise CONSENT_VERSION in lib/consent.ts and update the privacy
@@ -24,6 +25,7 @@
 // `analytics_storage` follows the marketing choice too.
 
 import { getConsent, subscribeConsent, type ConsentRecord } from './consent';
+import { MARKETING_LOADERS, type MarketingLoader } from './marketingTags';
 
 type ConsentSignal = 'granted' | 'denied';
 
@@ -46,18 +48,6 @@ export function consentModeFor(record: ConsentRecord | null): ConsentModeSignals
   const signal: ConsentSignal = record?.marketing === true ? 'granted' : 'denied';
   return { ad_storage: signal, analytics_storage: signal, ad_user_data: signal, ad_personalization: signal };
 }
-
-/** One marketing tag. `load` runs after a yes to marketing, `unload` after a
- * withdrawal; neither runs for a visitor who never said yes. */
-export interface MarketingLoader {
-  id: 'ga4' | 'meta-pixel';
-  load: () => void;
-  unload: () => void;
-}
-
-/** The connected tags. Empty until the owner provides the IDs: the GA4 and
- * Meta Pixel loaders go here. */
-const MARKETING_LOADERS: readonly MarketingLoader[] = [];
 
 declare global {
   interface Window {

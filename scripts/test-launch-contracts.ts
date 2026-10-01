@@ -4701,13 +4701,16 @@ function consentContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
   const main = read('client/src/main.tsx');
   const analytics = read('client/src/lib/analytics.ts');
-  // posthog-js is imported in one place, dynamically, inside the consent gate.
-  assert.doesNotMatch(main, /posthog-js/, 'main.tsx must not import PostHog');
-  assert.equal(analytics.match(/import\('posthog-js'\)/g)?.length, 1, 'one dynamic import of posthog-js');
-  assert.match(analytics, /opt_out_capturing_by_default: true/);
+  // posthog-js comes in through lib/posthogClient.ts alone, which the
+  // consent gate imports dynamically.
+  assert.doesNotMatch(main, /posthog-js|posthogClient/, 'main.tsx must not import PostHog');
+  assert.doesNotMatch(analytics, /^import (?!type)[^;]*'posthog-js'/m, 'analytics.ts must not import posthog-js at run time');
+  assert.equal(analytics.match(/import\('\.\/posthogClient'\)/g)?.length, 1, 'one dynamic import of the PostHog client');
+  assert.doesNotMatch(analytics, /^import [^;]*'\.\/posthogClient'/m, 'the PostHog client is never imported statically');
+  assert.match(read('client/src/lib/posthogClient.ts'), /opt_out_capturing_by_default: true,\s+opt_out_persistence_by_default: true/);
   assert.match(analytics, /if \(!active \|\| !key\) return Promise\.resolve\(null\);/, 'PostHog loads only while analytics consent holds');
   // No marketing tag, ID or host ships until the owner connects one.
-  assert.match(read('client/src/lib/marketing.ts'), /const MARKETING_LOADERS: readonly MarketingLoader\[\] = \[\];/);
+  assert.match(read('client/src/lib/marketingTags.ts'), /export const MARKETING_LOADERS: readonly MarketingLoader\[\] = \[\];/);
   const csp = read('vercel.json');
   assert.doesNotMatch(csp, /googletagmanager|google-analytics|connect\.facebook\.net|facebook\.com\/tr/, 'no marketing host in the CSP yet');
   // The footer reopens the choice; the banner offers Reject all beside Accept all.
