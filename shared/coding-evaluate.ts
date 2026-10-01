@@ -20,6 +20,34 @@ export const MAX_LOG_CHARS = 64_000;
 export const LOG_LINE_CUT = ' … (line cut)';
 export const LOG_OUTPUT_CUT = '… (output cut)';
 
+/**
+ * The built-ins a check's probe counts with. A check that grades how code
+ * touches its input (a binary search's reads, a one-pass budget) wraps the
+ * input in a `Proxy` and counts the index reads it sees. Code that replaced
+ * the global `Proxy` (`var Proxy = function (t) { return t; };`) or
+ * `RegExp.prototype.test` made every count zero, and a linear scan passed a
+ * binary-search budget. Both runners take these before the learner's code
+ * runs and hand them to it as the constant `__probe`, declared on the first
+ * line (PROBE_LINE), which the code cannot redeclare; the object is frozen.
+ * Checks and path harnesses write `new __probe.Proxy(...)`,
+ * `__probe.isIndex(key)` and `__probe.get(...)`.
+ */
+export const PROBE_LINE = '"use strict"; const __probe = arguments[arguments.length - 1];';
+/** Whether a property key is an array index, with no built-in method. The
+ * grading sandbox embeds the same function as source (PROBE_IS_INDEX_SOURCE). */
+const isProbeIndex = (key: unknown): boolean => {
+  if (typeof key !== 'string' || key.length === 0) return false;
+  for (let i = 0; i < key.length; i++) {
+    const c = key[i];
+    if (c < '0' || c > '9') return false;
+  }
+  return true;
+};
+export const PROBE_IS_INDEX_SOURCE =
+  "(key) => { if (typeof key !== 'string' || key.length === 0) return false; for (let i = 0; i < key.length; i++) { const c = key[i]; if (c < '0' || c > '9') return false; } return true; }";
+/** Taken when this module loads, before any learner code in this realm. */
+const PROBE = Object.freeze({ Proxy, get: Reflect.get, isIndex: isProbeIndex });
+
 export interface CallOutcome {
   /** null when the run was not graded (the Run button). */
   pass: boolean | null;
@@ -98,13 +126,15 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   const sink = learnerConsoleFactory()(emit, formatArg, () => (typeof performance === 'undefined' ? Date.now() : performance.now()));
   const grading = Array.isArray(input.expectations);
 
-  let evaluate: (calls: string[], console: typeof sink) => Promise<{ ok: boolean; value?: unknown; error?: string }[]>;
+  let evaluate: (calls: string[], console: typeof sink, probe: typeof PROBE) => Promise<{ ok: boolean; value?: unknown; error?: string }[]>;
   try {
     // Declarations from the learner's code are in scope for the direct eval of
     // each call, so a suite sees the functions the code defines. Strict mode,
     // as in the grading sandbox: an undeclared assignment that Run let through
-    // as a stray global would otherwise fail only on Submit.
-    evaluate = new Function('__calls__', 'console', `"use strict";\n${input.code}\n${[
+    // as a stray global would otherwise fail only on Submit. The first line
+    // also declares `__probe` (PROBE_LINE), on the line "use strict" had, so
+    // the learner's line numbers stay as they were.
+    evaluate = new Function('__calls__', 'console', `${PROBE_LINE}\n${input.code}\n${[
       'return Promise.all(__calls__.map(async source => {',
       '  try { return { ok: true, value: await eval(source) }; }',
       '  catch (error) { return { ok: false, error: String((error && error.message) || error) }; }',
@@ -115,7 +145,7 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   }
 
   try {
-    const outcomes = await evaluate(input.calls, sink);
+    const outcomes = await evaluate(input.calls, sink, PROBE);
     const results = outcomes.map((outcome, index): CallOutcome => {
       if (!outcome.ok) return { pass: false, actual: null, error: outcome.error ?? 'Error' };
       return {

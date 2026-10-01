@@ -19,16 +19,18 @@ import type { ModuleSource } from '../../types';
  * and writes are counted, `push` is counted once per call, and the
  * element-moving methods are simply absent, so `shift` cannot be reached and
  * a hand-written slide shows up in the counter. Appended after the learner's
- * code, so it cannot be shadowed. */
+ * code, so it cannot be shadowed, and it counts with the built-ins taken
+ * before that code ran (`__probe`, shared/coding-evaluate.ts), so replacing
+ * `Proxy` changes nothing. */
 const QUEUE_PROBE = `
 var __bufferOps = 0;
 var __buffersMade = 0;
 var newQueueBuffer = function () {
   var data = [];
   __buffersMade += 1;
-  return new Proxy(data, {
+  return new __probe.Proxy(data, {
     get: function (target, prop) {
-      if (typeof prop === 'string' && /^[0-9]+$/.test(prop)) {
+      if (typeof prop === 'string' && __probe.isIndex(prop)) {
         __bufferOps += 1;
         return target[prop];
       }
@@ -43,7 +45,7 @@ var newQueueBuffer = function () {
       return undefined;
     },
     set: function (target, prop, value) {
-      if (typeof prop === 'string' && /^[0-9]+$/.test(prop)) __bufferOps += 1;
+      if (typeof prop === 'string' && __probe.isIndex(prop)) __bufferOps += 1;
       target[prop] = value;
       return true;
     },

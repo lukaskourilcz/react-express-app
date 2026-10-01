@@ -3,6 +3,7 @@ import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
+import { submitCoding } from '../src/coding/api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 
 vi.mock('../src/coding/Editor', () => ({
@@ -65,4 +66,50 @@ it('opens the editor with Run and Submit on a narrow screen when the learner ask
   expect(screen.getByLabelText('Test editor')).toBeVisible();
   expect(screen.queryByRole('button', { name: 'Use the editor on this screen' })).toBeNull();
   expect(screen.getByRole('button', { name: 'Submit' })).toBeVisible();
+});
+
+// CODE-5: a section task with a puzzle showed only the puzzle on a narrow
+// screen. Arranging lines never completes a task, so five free tasks could
+// not be passed on a phone.
+const puzzle = {
+  taskId: 'js-narrow-puzzle', variantId: 'v1',
+  lines: [{ id: 'b1', code: '}' }, { id: 'b2', code: 'const one = () => {' }, { id: 'b3', code: '  return 1;' }],
+  competencies: ['sequence' as const], claim: { en: 'Arranged correctly.', cs: 'Seřazeno.' },
+};
+const mountPuzzle = () => render(
+  <MemoryRouter><LanguageProvider>
+    <CodingWorkbench initialCode={null} task={{ ...task, id: 'js-narrow-puzzle', puzzle }} session="test-session" locked={null} signedIn mode="section" />
+  </LanguageProvider></MemoryRouter>,
+);
+
+it('offers the editor beside a puzzle, and an earlier choice of the editor opens it straight away', () => {
+  mountPuzzle();
+  expect(screen.getByRole('button', { name: /Check the order/ })).toBeVisible();
+  expect(screen.getByLabelText('Test editor')).not.toBeVisible();
+  fireEvent.click(screen.getByRole('button', { name: 'Use the editor on this screen' }));
+  const editor = screen.getByLabelText('Test editor');
+  expect(editor).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Submit' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: /Check the order/ })).toBeNull();
+  expect(document.activeElement).toBe(editor.closest('.cd-pane--editor'));
+
+  cleanup();
+  mountPuzzle();
+  expect(screen.getByLabelText('Test editor')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Submit' })).toBeVisible();
+});
+
+// CODE-11: an accepted order is never recorded, for anyone, so a signed-in
+// learner was wrongly told to sign in to keep it.
+it('does not tell a signed-in learner to sign in after an accepted order', async () => {
+  vi.mocked(submitCoding).mockResolvedValue({
+    verdict: 'passed', results: [], hidden: null, check: null, logs: [], codeError: null, design: null, designReference: null,
+    failureHint: null, puzzle: { accepted: true, competencies: ['sequence'], claim: { en: 'Arranged correctly.', cs: 'Seřazeno.' } },
+    progress: null, firstPass: false, xpAwarded: 0, xpForfeited: false, applied: false, github: null, solutions: null,
+  });
+  mountPuzzle();
+  fireEvent.click(screen.getByRole('button', { name: /Check the order/ }));
+  expect(await screen.findByText('That order works.')).toBeVisible();
+  expect(screen.getByText('Arranged correctly.')).toBeVisible();
+  expect(screen.queryByText('Checked, not recorded: sign in to keep passes.')).toBeNull();
 });

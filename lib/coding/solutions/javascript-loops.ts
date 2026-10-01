@@ -1214,7 +1214,7 @@ const zip = (left, right) => Array.from({ length: Math.min(left.length, right.le
   return -1;
 };`,
     hiddenTests: [
-      { call: "(() => { let reads = 0; const big = Array.from({ length: 1000 }, (_, index) => index * 2); const watched = new Proxy(big, { get: (list, key) => { if (typeof key === \"string\" && /^\\d+$/.test(key)) reads += 1; return list[key]; } }); const index = binarySearch(watched, 1998); return [index, reads < 30]; })()", expected: [999, true] },
+      { call: "(() => { let reads = 0; const big = Array.from({ length: 1000 }, (_, index) => index * 2); const watched = new __probe.Proxy(big, { get: (list, key) => { if (__probe.isIndex(key)) reads += 1; return list[key]; } }); const index = binarySearch(watched, 1998); return [index, reads < 30]; })()", expected: [999, true] },
       { call: "binarySearch([-9,-4,0,3,8,12,20], -4)", expected: 1 },
       { call: "binarySearch([10,20,30], 25)", expected: -1 },
     ],

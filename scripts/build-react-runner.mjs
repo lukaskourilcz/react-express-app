@@ -5,10 +5,14 @@ import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 // The QuickJS grader's worker thread (lib/coding/sandbox.ts).
 await buildSandboxWorker();
 
+// The grader's own code runs in strict mode, as its ES module sources were
+// written: a stack trace the component reads then hands out no grader
+// function or receiver.
 await build({
   entryPoints: ['scripts/react-sandbox-entry.ts'],
   outfile: 'lib/coding/generated/react-sandbox.cjs',
   bundle: true, platform: 'node', format: 'cjs', packages: 'external', target: 'node24',
+  banner: { js: '"use strict";' },
 });
 
 // The SDK's transitive dependencies include ESM-only packages. Vercel's

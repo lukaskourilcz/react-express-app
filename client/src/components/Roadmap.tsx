@@ -1336,6 +1336,9 @@ function LessonRunner({
   const [codingIndex, setCodingIndex] = useState(0);
   const [codingPassed, setCodingPassed] = useState<string[]>([]);
   const [codingPending, setCodingPending] = useState<string[]>([]);
+  // The learner showed the current task's solution, which ends the attempt.
+  // The workbench stays, with the solution open, until they finish the level.
+  const [solutionShown, setSolutionShown] = useState(false);
   // Signed out, the server passes a level on its questions and says its
   // coding tasks went unchecked; the finish screen says when they count.
   const [codingUnverified, setCodingUnverified] = useState(false);
@@ -1598,7 +1601,7 @@ function LessonRunner({
                   setCodingPassed((prev) => (prev.includes(current.task.id) ? prev : [...prev, current.task.id]));
                 }
               }}
-              onRevealed={() => void complete()}
+              onRevealed={() => setSolutionShown(true)}
               onContinue={() => {
                 if (codingIndex < codingTasks.length - 1) setCodingIndex((i) => i + 1);
                 else void complete();
@@ -1606,6 +1609,16 @@ function LessonRunner({
             />
           </ShellPartBoundary>
         </Suspense>
+        {/* The solution the learner asked for stays on screen: the attempt
+            ends when they finish the level, not the moment it opens. */}
+        {solutionShown && (
+          <div className="cd-note" role="status">
+            <p style={{ margin: '0 0 12px' }}>{t('coding.lesson.solutionShown')}</p>
+            <button type="button" className="rm-accent-btn" onClick={() => void complete()} disabled={completing} style={accentFill}>
+              {t('coding.lesson.finishLevel')}
+            </button>
+          </div>
+        )}
         <span className="cd-visually-hidden" aria-live="polite">{t('coding.lesson.pending', { n: codingTasks.length - codingPassed.length })}: {title}</span>
       </div>
     );

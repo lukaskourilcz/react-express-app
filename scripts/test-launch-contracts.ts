@@ -32,7 +32,7 @@ import {
   stableAttemptId,
 } from '../lib/quiz-tokens';
 import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
-import { buildQueue, parseScheduledFor } from '../lib/coding/practice-handlers';
+import { buildQueue, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
@@ -45,10 +45,11 @@ import { solutionFor } from '../lib/coding/solutions';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
 import { giveUpAfter as clientGiveUpAfter } from '../client/src/coding/hint-ladder';
 import { runInSandbox, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
+import { TS_CHECK_WORKER_FILE } from '../lib/coding/ts-check-pool';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
-import { GUEST_NODE_FLAGS, readGuestResult } from '../lib/coding/react-guest';
+import { GUEST_NODE_FLAGS, readGuestResult, serializeGuestResult } from '../lib/coding/react-guest';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -2880,6 +2881,10 @@ async function main() {
   assert.match(readFileSync(join(process.cwd(), 'scripts', 'build-react-runner.mjs'), 'utf8'), /await buildSandboxWorker\(\)/, 'the build writes the grader worker bundle');
   const roadmapFunction = (JSON.parse(readFileSync(join(process.cwd(), 'vercel.json'), 'utf8')) as { functions: Record<string, { includeFiles?: string }> }).functions['api/quiz/roadmap.ts'];
   assert.ok(roadmapFunction?.includeFiles?.includes('lib/coding/generated/*.cjs') && SANDBOX_WORKER_FILE.startsWith('lib/coding/generated/') && SANDBOX_WORKER_FILE.endsWith('.cjs'), 'the roadmap function ships the grader worker bundle');
+  // So does the type checker's thread (CODE-2); the compiler it loads is the
+  // roadmap function's own node_modules/typescript.
+  assert.ok(TS_CHECK_WORKER_FILE.startsWith('lib/coding/generated/') && TS_CHECK_WORKER_FILE.endsWith('.cjs'), 'the roadmap function ships the type checker worker bundle');
+  assert.match(readFileSync(join(process.cwd(), 'scripts', 'build-sandbox-worker.mjs'), 'utf8'), /scripts\/ts-check-worker-entry\.ts/, 'the build writes the type checker worker bundle');
   const graded = await runInSandbox({ code: doubleSolution!.solution, calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });
   assert.equal(codeOutcome({ visible: graded, hidden: null, check: null }), 'passed', 'the reference solution passes in the sandbox');
   const wrong = await runInSandbox({ code: 'const double = ns => ns;', calls: doubleTask!.tests!.map((t) => t.call), expectations: doubleTask!.tests!.map((t) => t.expected) });
@@ -3145,6 +3150,68 @@ async function main() {
   assert.deepEqual(escape.left, [], 'a host function gave the component nothing to write with');
   const escapeResult = readGuestResult(escape.stdout, escape.nonce, guestSuite);
   assert.ok(escapeResult.passed === 0 && /Code generation from strings disallowed/.test(escapeResult.compileError ?? ''), JSON.stringify(escapeResult));
+
+  // CODE-1: the component reaches the grader realm's built-ins through
+  // React's exports. With a toJSON on Object.prototype it rewrote the printed
+  // verdict and passed every case, hidden ones included; with String.prototype
+  // .split or Object.is it could pass them before the verdict was printed.
+  // The guest freezes those built-ins before the component loads, so each
+  // attempt throws and nothing passes.
+  const hostBuiltIns = [
+    "import React from 'react';",
+    'const HostObject = Object.getPrototypeOf(React).constructor;',
+    'const hostObjectPrototype = Object.getPrototypeOf(React);',
+    'const hostArrayPrototype = Object.getPrototypeOf(HostObject.keys(React));',
+    "const hostStringPrototype = Object.getPrototypeOf(HostObject('x'));",
+  ].join('\n');
+  const passAll = "function () { if (this && Array.isArray(this.cases) && 'timedOut' in this) { const cases = this.cases.map((one) => ({ name: one.name, status: 'pass', error: null, durationMs: 0 })); return { cases, passed: cases.length, failed: 0, total: cases.length, compileError: null, timedOut: false }; } return this; }";
+  const hostForgeries: [string, string][] = [
+    ['Object.prototype.toJSON', `Object.defineProperty(hostObjectPrototype, 'toJSON', { configurable: true, writable: true, value: ${passAll} });`],
+    ['Array.prototype.toJSON', "Object.defineProperty(hostArrayPrototype, 'toJSON', { configurable: true, writable: true, value: function () { return this.map((one) => (one && typeof one === 'object' && 'status' in one ? { name: one.name, status: 'pass', error: null, durationMs: 0 } : one)); } });"],
+    ['Object.prototype getters', "Object.defineProperty(hostObjectPrototype, 'status', { configurable: true, get() { return 'pass'; } }); Object.defineProperty(hostObjectPrototype, 'compileError', { configurable: true, get() { return null; } });"],
+    ['String.prototype.split', 'hostStringPrototype.split = function () { return [null]; };'],
+    ['Object.is', 'HostObject.is = () => true;'],
+  ];
+  for (const [name, attack] of hostForgeries) {
+    const attempt = guest(guestSuite, `${hostBuiltIns}\n${attack}\nexport default function App() { return null; }`);
+    assert.equal(attempt.status, 0, `${name}: the guest printed a verdict`);
+    const verdict = readGuestResult(attempt.stdout, attempt.nonce, guestSuite);
+    assert.equal(verdict.passed, 0, `${name}: forged ${verdict.passed} passing case(s): ${JSON.stringify(verdict)}`);
+    assert.match(verdict.compileError ?? '', /not extensible|read only|Cannot (?:define|redefine|assign|add)/, `${name}: the built-in refused the change: ${verdict.compileError}`);
+  }
+  // In its own realm the component may replace Promise.prototype.then. The
+  // runner follows a case's promise with the then it captured before the
+  // suite ran, so an async case that fails still fails.
+  const asyncSuite = [
+    "import React from 'react';",
+    "import { render } from '@testing-library/react';",
+    "import App from './App';",
+    "test('an async case that fails', async () => { render(<App />); await Promise.resolve(); throw new Error('the async case failed'); });",
+    "test('an async case that passes', async () => { render(<App />); await new Promise((resolve) => setTimeout(resolve, 5)); expect(1).toBe(1); });",
+  ].join('\n');
+  const pageThen = guest(asyncSuite, 'Promise.prototype.then = function (resolve) { if (typeof resolve === \'function\') resolve(); return this; };\nexport default function App() { return null; }');
+  const pageThenResult = readGuestResult(pageThen.stdout, pageThen.nonce, asyncSuite);
+  assert.deepEqual(pageThenResult.cases.map((one) => one.status), ['fail', 'pass'], `a replaced then passes no failing case: ${JSON.stringify(pageThenResult)}`);
+  assert.match(pageThenResult.cases[0].error ?? '', /the async case failed/);
+  // The verdict is written from the result's own data: no toJSON, getter or
+  // inherited field is consulted, and a result of any other shape is refused.
+  const poisonedCases = Object.setPrototypeOf(
+    [{ name: 'visible', status: 'fail', error: 'expected 1 to be 2', durationMs: 3 }],
+    Object.create(Array.prototype, { toJSON: { value: () => [] } }),
+  );
+  const poisonedResult = Object.create(
+    { toJSON: () => ({ cases: [], passed: 1, failed: 0, total: 1, compileError: null, timedOut: false }) },
+    { cases: { value: poisonedCases, enumerable: true }, compileError: { value: null, enumerable: true }, timedOut: { value: false, enumerable: true } },
+  );
+  assert.deepEqual(JSON.parse(serializeGuestResult(poisonedResult)), {
+    cases: [{ name: 'visible', status: 'fail', error: 'expected 1 to be 2', durationMs: 3 }],
+    passed: 0, failed: 1, total: 1, compileError: null, timedOut: false,
+  }, 'no toJSON rewrites the verdict');
+  const withGetter = { cases: [Object.defineProperty({ name: 'visible', error: null, durationMs: 0 }, 'status', { get: () => 'pass', enumerable: true })], compileError: null, timedOut: false };
+  assert.throws(() => serializeGuestResult(withGetter), /Malformed/, 'a status read through a getter is refused');
+  assert.throws(() => serializeGuestResult(Object.create({ timedOut: false }, { cases: { value: [], enumerable: true }, compileError: { value: null, enumerable: true } })), /Malformed/, 'an inherited field is refused');
+  const holed = Object.setPrototypeOf([, { name: 'b', status: 'fail', error: null, durationMs: 0 }], Object.create(Array.prototype, { 0: { value: { name: 'a', status: 'pass', error: null, durationMs: 0 } } }));
+  assert.throws(() => serializeGuestResult({ cases: holed, compileError: null, timedOut: false }), /Malformed/, 'a case read from the prototype chain is refused');
 
   const qualityIssues = inspectQuestionQuality([{
     ...reviewQuestions[0],
@@ -4520,6 +4587,15 @@ async function main() {
     assert.ok('at' in later && later.at?.toISOString() === '2026-09-20T18:00:00.000Z', 'a future moment is kept');
     assert.ok('error' in parseScheduledFor('2027-01-01T00:00:00Z', now), 'a moment past the horizon is refused');
     assert.ok('error' in parseScheduledFor('not a time', now) && 'error' in parseScheduledFor(12345, now), 'a non-time is refused');
+
+    // CODE-10: Skip told the learner a task "is part of your level, so it
+    // will come back" for every task with a level number, 392 of which no
+    // Learn level issues. Only a task in its level's quota comes back.
+    const inQuota = levelCodingTasks('javascript', 1)[0];
+    assert.ok(inQuota && skipPostpones(inQuota.id), `${inQuota?.id}: a task its level issues comes back after a skip`);
+    const outside = codingTaskById('js-count-multiples');
+    assert.ok(outside && outside.level > 0 && !levelCodingTasks(outside.topic, outside.level).some((one) => one.id === outside.id), 'js-count-multiples has a level number but no level issues it');
+    assert.equal(skipPostpones('js-count-multiples'), false, 'a task outside every quota is optional');
   }
 
   // ── the payment webhook believes the order, not the event ───────────────

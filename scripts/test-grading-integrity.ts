@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import { runChecks, runInSandbox } from '../lib/coding/sandbox';
+import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInSandbox } from '../lib/coding/sandbox';
+import { checkTypes, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
@@ -10,7 +11,7 @@ import { evolvingStage } from '../shared/evolving';
 import { createMiniJest } from '../shared/coding-mini-jest';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { withHiddenCases } from '../lib/coding/react-hidden';
-import { allPassed, evaluateCalls, LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS } from '../shared/coding-evaluate';
+import { allPassed, evaluateCalls, LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, TIMEOUT_MESSAGE } from '../shared/coding-evaluate';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 // Every run below goes through the grader's worker thread, built fresh from
@@ -209,7 +210,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   delete process.env.REACT_RUNNER_SNAPSHOT_ID;
   const reactTask = CODING_TASKS.find((task) => task.track === 'react' && task.verify === 'tests' && task.suite && isFreeCodingTask(task.id) && !evolvingStage(task.id))!;
   const before = db.attemptIds.length;
-  const outage = { statusCode: 200, body: null as null | { verdict?: string; applied?: boolean; codeError?: string | null; failureHint?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  const outage = { statusCode: 200, body: null as null | { verdict?: string; applied?: boolean; codeError?: string | null; failureHint?: unknown; graderUnavailable?: boolean }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
   await handleCodingSubmit({
     method: 'POST', headers: { authorization: 'Bearer local-test' }, query: {},
     body: { session: encodeCodingSession({ taskId: reactTask.id, track: 'react', userId: null }), code: solutionFor(reactTask.id)!.solution, user_id: learner },
@@ -219,6 +220,8 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   assert.equal(outage.body?.applied, false);
   assert.match(outage.body?.codeError ?? '', /not recorded/, 'the learner is told nothing was recorded');
   assert.equal(outage.body?.failureHint, null, 'no hint blames the code');
+  // The workbench shows it as a problem to retry, not as a build error (CODE-9).
+  assert.equal(outage.body?.graderUnavailable, true, 'the verdict says the grader could not run');
   assert.equal(db.attemptIds.length, before, 'a runner outage writes no verdict');
   console.log('PASS integrity: a React runner outage is not recorded as the learner\'s error');
 }
@@ -671,4 +674,88 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   const after = await runInSandbox({ code: 'const f = () => 1;', calls: ['f()'], expectations: [1] });
   assert.equal(after.results[0]?.pass, true, 'the next run gets a working thread');
   console.log(`PASS integrity: a runaway run is stopped in ${took} ms without blocking the request thread`);
+}
+
+// ── type checking runs off the request thread (CODE-2) ───────────────────
+// The compiler checks types synchronously. A kilobyte and a half of
+// recursive conditional types kept it busy for about half a minute on the
+// request thread, which also serves Learn. The check now runs on a worker
+// thread, is stopped at its deadline, and the verdict says so.
+{
+  const recursive = "type B<N extends number, E, A extends unknown[] = []> = A['length'] extends N ? A : B<N, E, [...A, E]>;\n"
+    + Array.from({ length: 30 }, (_, index) => `const q${index}: B<999, 'k${index}'>['length'] = 999;\n`).join('');
+  const submit = async (code: string) => {
+    const out = { statusCode: 200, body: null as null | { verdict?: string; codeError?: string | null; solutions?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+    await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: encodeCodingSession({ taskId: 'ts-typed-slug', track: 'typescript', userId: null }), code } } as never, out as never, null);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body!;
+  };
+  // A first check loads the compiler on the thread before its clock starts.
+  assert.equal((await submit(solutionFor('ts-typed-slug')!.solution)).verdict, 'passed', 'the reference passes on the worker thread');
+  let worstLag = 0;
+  let last = Date.now();
+  const beat = setInterval(() => { const now = Date.now(); worstLag = Math.max(worstLag, now - last - 20); last = now; }, 20);
+  const started = Date.now();
+  const stuck = await submit(recursive + solutionFor('ts-typed-slug')!.solution);
+  const took = Date.now() - started;
+  clearInterval(beat);
+  assert.equal(stuck.verdict, 'timeout', JSON.stringify(stuck));
+  assert.equal(stuck.codeError, TYPE_CHECK_STOPPED_MESSAGE);
+  assert.equal(stuck.solutions, null, 'a stopped check releases no solutions');
+  assert.ok(took < TYPE_CHECK_DEADLINE_MS + 3_000, `the check was stopped near its deadline (${took} ms)`);
+  // On this thread the same check held the event loop for half a minute; the
+  // bound leaves room for a loaded CI machine.
+  assert.ok(worstLag < 2_000, `the request thread kept answering (worst lag ${worstLag} ms)`);
+  assert.equal((await submit(solutionFor('ts-typed-slug')!.solution)).verdict, 'passed', 'the next check gets a working thread');
+  // The pool reports a stop the same way for every caller.
+  const direct = await checkTypes(recursive, [[]], 300);
+  assert.equal(direct.stopped, true);
+  console.log(`PASS integrity: a runaway type check is stopped in ${took} ms without blocking the request thread`);
+}
+
+// ── a hidden run's error carries nothing the program wrote (CODE-3) ──────
+// The controller called `then` on each call's promise after the call had
+// run. Code that put a throwing getter on Promise.prototype.constructor
+// threw there, during the hidden run, with the hidden inputs in the message,
+// and the verdict returned it as the error.
+{
+  const leak = 'const seen = []; const digitSum = n => { seen.push(n); return 0; }; const visible = [493, 1234, 0, 7, 1000]; let reads = 0; Object.defineProperty(Promise.prototype, "constructor", { configurable: true, get() { reads++; if (seen.some(n => !visible.includes(n)) && reads === 3) throw new Error("HIDDEN " + JSON.stringify(seen)); return Promise; } });';
+  const out = { statusCode: 200, body: null as null | { verdict?: string; codeError?: string | null; hidden?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+  await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: encodeCodingSession({ taskId: 'js-digit-sum', track: 'javascript', userId: null }), code: leak } } as never, out as never, null);
+  assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+  assert.doesNotMatch(JSON.stringify(out.body), /HIDDEN|99999|305/, `no hidden input comes back: ${JSON.stringify(out.body)}`);
+  assert.equal(out.body?.verdict, 'failed');
+  // Whatever else stops a hidden run, only a fixed message comes back: here a
+  // hidden call that does not compile, which the visible run never sees.
+  const garbled = await runChecks({ code: 'const f = (x) => x;', visible: [{ call: 'f(1)', expected: 1 }], hidden: [{ call: 'f(', expected: 2 }], shuffle: (list) => list });
+  assert.equal(garbled.visible.codeError, null);
+  assert.equal(garbled.hidden?.codeError, HIDDEN_RUN_FAILED_MESSAGE);
+  const hung = await runChecks({ code: 'const f = (x) => { if (x === 2) while (true) {} return x; };', visible: [{ call: 'f(1)', expected: 1 }], hidden: [{ call: 'f(2)', expected: 2 }], shuffle: (list) => list });
+  assert.equal(hung.hidden?.timedOut, true);
+  assert.equal(hung.hidden?.codeError, TIMEOUT_MESSAGE, 'a fixed message still comes back');
+  console.log('PASS integrity: a hidden run reports no text the program wrote');
+}
+
+// ── a probe counts with the built-ins it started with (PATH-1) ───────────
+// js-binary-search's hidden check counts array reads through a Proxy. Code
+// that replaced the global Proxy, or RegExp.prototype.test, made every count
+// zero, so a linear scan passed the binary-search budget.
+{
+  const task = CODING_TASKS.find((one) => one.id === 'js-binary-search')!;
+  const hidden = solutionFor(task.id)!.hiddenTests!;
+  const linear = 'const binarySearch = (sorted, target) => { for (let i = 0; i < sorted.length; i++) if (sorted[i] === target) return i; return -1; };';
+  for (const [name, tamper] of [
+    ['no tampering', ''],
+    ['Proxy replaced', 'var Proxy = function (target) { return target; };'],
+    ['global Proxy replaced', 'globalThis.Proxy = function (target) { return target; };'],
+    ['RegExp test replaced', 'RegExp.prototype.test = function () { return false; };'],
+  ] as const) {
+    const run = await runChecks({ code: `${tamper}\n${linear}`, visible: task.tests!, hidden, shuffle: (list) => list });
+    assert.ok(!allPassed(run.hidden!), `${name}: a linear scan passes the read budget`);
+  }
+  const reference = await runChecks({ code: solutionFor(task.id)!.solution, visible: task.tests!, hidden, shuffle: (list) => list });
+  assert.ok(allPassed(reference.visible) && allPassed(reference.hidden!), 'the reference still passes');
+  const redeclared = await runInSandbox({ code: 'var __probe = { Proxy: function (target) { return target; } };', calls: ['1'], expectations: [1] });
+  assert.match(redeclared.codeError ?? '', /^SyntaxError: .*redefinition/, `the probe cannot be redeclared: ${redeclared.codeError}`);
+  console.log('PASS integrity: a replaced Proxy or RegExp test does not zero a read count');
 }

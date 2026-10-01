@@ -266,9 +266,18 @@ garden are additive. The server owns grading: JavaScript and
 TypeScript submissions run in a QuickJS WebAssembly sandbox on a worker thread
 of `api/quiz/roadmap.ts` (`resource=coding-submit`) with a 2.5 s deadline, which
 the host enforces by stopping the thread 1.5 s past it, and virtual timers;
-hidden checks run in a fresh program in a per-submission shuffled order;
-TypeScript type tests run through the real compiler, each in its own file; and
+hidden checks run in a fresh program in a per-submission shuffled order, and
+a hidden run's error comes back only when it is a fixed message (a timeout, a
+stack overflow, a call that never settled), never as text the program wrote;
+checks that count how code touches its input use a `Proxy` and helpers taken
+before the learner's code runs (`__probe`, `shared/coding-evaluate.ts`), so
+replacing the global `Proxy` changes no count; TypeScript type tests run
+through the real compiler, each in its own file, on a worker thread of their
+own (`lib/coding/ts-check-pool.ts`) that is stopped 4 s into the check, which
+the learner sees as a timeout; and
 system-design answers are graded against a key sealed in the coding session.
+Learning-path code activities use the same QuickJS sandbox, type-check thread
+and hidden-check program as coding tasks.
 A failed or partly right system-design submission returns, per step, only
 whether it was right and the learner's own answer (`gradeDesign`): the correct
 options, orders and ranges, the explanations (which name the right option) and
@@ -294,6 +303,8 @@ button's immediate feedback, but the verdict of record is the server's.
 Reference solutions never leave the server:
 `resource=coding-reveal` returns one only after a pass or after the authored
 hint ladder is exhausted, and a reveal ends the current Learn level attempt.
+Inside the level the workbench stays on screen with the solution open, and the
+learner finishes the level when they are done reading.
 A reveal before the task's first pass also costs that task its XP and coins:
 from migration 048 the first pass after a recorded reveal pays nothing, and the
 verdict says so with `xpForfeited` (set only when no XP was paid and the
