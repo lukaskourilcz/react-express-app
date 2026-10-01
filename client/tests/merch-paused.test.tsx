@@ -13,7 +13,7 @@ import { en } from '../src/i18n/translations';
 import Shop from '../src/components/Shop';
 import PremiumPage from '../src/components/PremiumPage';
 import { TermsPage } from '../src/components/LegalPages';
-import { premiumIncludes } from '../src/components/PremiumFacts';
+import { PremiumStaticArticle, premiumIncludes } from '../src/components/PremiumFacts';
 import { DEFAULT_COIN_SETTINGS, MERCH_ENABLED, SHIRT_SIZES } from '../../shared/rewards';
 import { server } from './mocks/server';
 
@@ -114,6 +114,14 @@ describe('while merchandise is paused (owner decision 10)', () => {
     render(<TermsPage />, { wrapper });
     expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/merchandise|redeem coins/i);
+  });
+
+  it('prints the static /premium with the exact yearly saving and no merchandise', () => {
+    const t = (key: keyof typeof en, vars?: Record<string, string | number>) =>
+      en[key].replace(/\{(\w+)\}/g, (_, name: string) => String(vars?.[name] ?? `{${name}}`));
+    render(<PremiumStaticArticle t={t} />);
+    expect(screen.getByText(/Save 7\.89 EUR a year/)).toBeInTheDocument();
+    expect(document.body.textContent).not.toMatch(/months? free|merchandise|\{saving\}/i);
   });
 
   it('tells the owner in /dev that merchandise is off', async () => {

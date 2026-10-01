@@ -1,9 +1,10 @@
-// Owner decision 10 (1 October 2026), run by `npm run test:launch`.
+// Owner decisions 10 and 11 (1 October 2026), run by `npm run test:launch`.
 //
 //   * merchandise is paused until next quarter: one switch (MERCH_ENABLED in
 //     shared/rewards.ts), and with it off every merchandise order and listing
 //     answers 404 merch_unavailable, the shop lists no item and the settings
 //     say redemption is closed, even with the owner's shop settings all on
+//   * the yearly saving on /premium is worked out from the prices on show
 //
 // The handlers are called directly against stand-ins for Supabase, under the
 // local development auth fallback (a `user_id` in the query or body).
@@ -14,6 +15,8 @@ import { DEFAULT_SETTINGS, setGameSettingsForTests } from '../lib/settings-store
 import settingsHandler from '../api/settings';
 import { DEFAULT_MERCH_SETTINGS, MERCH_ENABLED, merchRedemptionOpen, type MerchSettings } from '../shared/rewards';
 import { en as ENGLISH } from '../client/src/i18n/translations';
+import { annualSaving, launchOfferDisplay } from '../shared/launch-offer';
+import { PREMIUM_PRICE } from '../shared/tiers';
 
 function mockResponse() {
   const headers = new Map<string, string>();
@@ -182,6 +185,30 @@ async function merchPausedContracts() {
   }
 }
 
+/** Owner decision 11: the yearly saving is worked out from the prices on show,
+ * and the refund promise says it applies once per account. */
+function premiumCopyContracts() {
+  assert.equal(annualSaving('3.99', '39.99'), '7.89', '3.99 × 12 − 39.99');
+  assert.equal(annualSaving('1.80', '18.00'), '3.60', '1.80 × 12 − 18.00 at the launch price');
+  assert.equal(annualSaving('5.00', '70.00'), '0.00', 'a yearly plan dearer than twelve months saves nothing, never a negative amount');
+  assert.equal(annualSaving(PREMIUM_PRICE.monthly, PREMIUM_PRICE.annual), '7.89');
+  const offer = launchOfferDisplay();
+  assert.equal(offer.offerAnnualSaving, annualSaving(offer.offerMonthly, offer.offerAnnual));
+  assert.equal(offer.offerAnnualSaving, '3.60');
+  assert.equal(offer.currency, 'EUR');
+  // The sentence carries no amount of its own and no "months free".
+  assert.equal(ENGLISH['premium.page.annualSaving'], 'Save {saving} {currency} a year');
+  for (const [key, value] of Object.entries(ENGLISH)) {
+    assert.doesNotMatch(value, /months? free/i, `${key} promises free months the prices do not give`);
+  }
+  // Every promise of the 14-day refund says once per account, as the Terms
+  // and claimRefund (lib/billing/cancel.ts) do.
+  for (const key of ['premium.page.smallPrint.refund', 'premium.page.faq.refundA', 'profile.deletePremium', 'legal.terms.refund.body', 'billing.cancel.optionWithdrawBody'] as const) {
+    assert.match(ENGLISH[key], /once per account/, `${key} says the refund applies once per account`);
+  }
+}
+
 export async function productCleanupContracts() {
   await merchPausedContracts();
+  premiumCopyContracts();
 }

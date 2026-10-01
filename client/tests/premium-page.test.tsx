@@ -65,7 +65,11 @@ describe('/premium', () => {
     expect(within(plans).getByRole('heading', { level: 3, name: 'Monthly' })).toBeInTheDocument();
     expect(within(plans).getByText('€3.99')).toBeInTheDocument();
     expect(within(plans).getByText('€39.99')).toBeInTheDocument();
-    expect(within(plans).getByText('Two months free')).toBeInTheDocument();
+    // Owner decision 11: the exact saving at the prices shown, 3.99 × 12 − 39.99.
+    expect(within(plans).getByText('Save 7.89 EUR a year')).toBeInTheDocument();
+    expect(screen.queryByText(/months? free/i)).toBeNull();
+    // The refund promise says what the Terms and the code say: once per account.
+    expect(within(plans).getByText(/withdraw within 14 days of your first payment and get that payment back in full, once per account\./)).toBeInTheDocument();
     expect(within(plans).getAllByText(/VAT included\. Renews every (month|year) until you cancel\./)).toHaveLength(2);
     expect(within(plans).getByText(/renews automatically at the end of each month or year/)).toBeInTheDocument();
     expect(within(plans).getByText(en['premium.page.waiver'])).toBeInTheDocument();
@@ -153,6 +157,10 @@ describe('/premium', () => {
     expect(container.querySelectorAll('details.ss-premium-faq__item')).toHaveLength(6);
     expect(screen.getByText('Can I switch between monthly and yearly?')).toBeInTheDocument();
     expect(screen.getByText('Do you sell my data?')).toBeInTheDocument();
+    // The refund answer says once per account, as the Terms and claimRefund do.
+    const refund = screen.getByText('Can I withdraw and get my money back?').closest('details')!;
+    expect(refund).toHaveTextContent('Yes, within 14 days of your first payment, once per account.');
+    expect(refund).toHaveTextContent('After 14 days, or once the refund has been used, the same page cancels at the end of the paid period.');
   });
 });
 
@@ -203,6 +211,7 @@ describe('the launch price (4 Oct to 2 Nov 2026, Prague)', () => {
     const plans = screen.getByRole('region', { name: 'Choose a plan' });
     expect(within(plans).getByText('€3.99')).toBeInTheDocument();
     expect(within(plans).getByText('€39.99')).toBeInTheDocument();
+    expect(within(plans).getByText('Save 7.89 EUR a year')).toBeInTheDocument();
     expect(document.querySelector('s, [data-offer]')).toBeNull();
     expect(screen.queryByText(/launch price/i)).toBeNull();
     expect(screen.queryByText(/1\.80|18\.00/)).toBeNull();
@@ -224,6 +233,10 @@ describe('the launch price (4 Oct to 2 Nov 2026, Prague)', () => {
     const annual = plans.querySelector('[data-plan="annual"] .ss-offer-amount')!;
     expect(annual.querySelector('s')).toHaveTextContent('€39.99');
     expect(annual.querySelector('strong')).toHaveTextContent('€18.00');
+    // The saving is true for the price shown: 1.80 × 12 − 18.00, not the
+    // regular 7.89 (owner decision 11).
+    expect(within(plans.querySelector('[data-plan="annual"]') as HTMLElement).getByText('Save 3.60 EUR a year')).toBeInTheDocument();
+    expect(within(plans).queryByText('Save 7.89 EUR a year')).toBeNull();
     const note = within(plans).getByRole('group', { name: 'Launch price €1.80 a month · €18.00 a year' });
     expect(note).toHaveTextContent('55% below the regular price of €3.99 a month · €39.99 a year, which applies from 3 Nov 2026');
     expect(note).toHaveTextContent('Kept for the lifetime of your subscription · cancel anytime');

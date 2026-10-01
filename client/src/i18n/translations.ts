@@ -546,7 +546,7 @@ export const en = {
   'profile.deleteConfirm': 'This permanently deletes your profile, progress, statistics, flashcards, challenge entries and multiplayer records. This action cannot be undone.',
   'profile.deleteAction': 'Delete my account',
   'profile.deleteGithub': 'The devShark app you installed on GitHub keeps access to the repositories you gave it until you uninstall it on GitHub.',
-  'profile.deletePremium': 'Your Premium subscription ends at once and is not refunded. Within 14 days of your first payment, withdraw on the cancellation page first to get that payment back.',
+  'profile.deletePremium': 'Your Premium subscription ends at once and is not refunded. Within 14 days of your first payment, withdraw on the cancellation page first to get that payment back. The refund applies once per account.',
   'common.remove': 'Remove',
 
   // Learning track
@@ -1373,7 +1373,9 @@ export const en = {
   'premium.page.annualName': 'Yearly',
   'premium.page.perMonth': 'a month',
   'premium.page.perYear': 'a year',
-  'premium.page.annualSaving': 'Two months free',
+  // Worked out from the prices on show (shared/launch-offer.ts annualSaving):
+  // twelve months at the monthly price minus the yearly price.
+  'premium.page.annualSaving': 'Save {saving} {currency} a year',
   'premium.page.monthlyRenews': 'VAT included. Renews every month until you cancel.',
   'premium.page.annualRenews': 'VAT included. Renews every year until you cancel.',
   'premium.page.signedOut': 'Sign in with Google first. You come back here to choose a plan.',
@@ -1383,7 +1385,7 @@ export const en = {
   'premium.page.smallPrint.price': 'Both prices include VAT. Subscriptions are charged in EUR, including outside the euro area. Your bank may apply currency conversion fees.',
   'premium.page.smallPrint.renewal': 'Premium renews automatically at the end of each month or year until you cancel. Cancelling takes effect at the end of the period you paid for, and you are not charged again.',
   'premium.page.smallPrint.waiver': 'At checkout you tick this sentence:',
-  'premium.page.smallPrint.refund': 'You can still withdraw within 14 days of your first payment and get that payment back in full.',
+  'premium.page.smallPrint.refund': 'You can still withdraw within 14 days of your first payment and get that payment back in full, once per account.',
   'premium.page.waiver': 'I want Premium to start now and I understand that I lose my 14-day right of withdrawal for digital content.',
   'premium.page.termsLink': 'Terms of use',
   'premium.page.cancelLink': 'Cancel or withdraw',
@@ -1395,7 +1397,7 @@ export const en = {
   'premium.page.faq.invoiceQ': 'Do I get an invoice?',
   'premium.page.faq.invoiceA': 'Yes. Stripe emails a receipt for every payment, and Manage billing in your profile lists your invoices as PDFs.',
   'premium.page.faq.refundQ': 'Can I withdraw and get my money back?',
-  'premium.page.faq.refundA': 'Yes, within 14 days of your first payment. Choose Withdraw from the contract on the cancellation page and we refund that payment in full; Premium ends at once. After 14 days, the same page cancels at the end of the paid period.',
+  'premium.page.faq.refundA': 'Yes, within 14 days of your first payment, once per account. Choose Withdraw from the contract on the cancellation page and we refund that payment in full; Premium ends at once. After 14 days, or once the refund has been used, the same page cancels at the end of the paid period.',
   'premium.page.faq.switchQ': 'Can I switch between monthly and yearly?',
   'premium.page.faq.switchA': 'Yes. Choose Manage billing in your profile and pick the other plan. Stripe shows the new price and when it starts before you confirm.',
   'premium.page.faq.dataQ': 'Do you sell my data?',
