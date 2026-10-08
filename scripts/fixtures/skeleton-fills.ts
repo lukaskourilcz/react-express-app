@@ -175,6 +175,43 @@ export const SKELETON_FILLS: Record<string, string> = {
   return letters.reverse().join("");
 };
 `,
+  'react-abort-a-request': `import React, { useEffect, useState } from 'react';
+
+const App = () => {
+  const API_URL = 'https://jsonplaceholder.typicode.com/posts';
+  const [items, setItems] = useState([]);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const controller = new AbortController();
+    const loadItems = async () => {
+      try {
+        const response = await fetch(API_URL, { signal: controller.signal });
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        setItems(data);
+      } catch (requestError) {
+        if (requestError.name === 'AbortError') return;
+        setError(requestError.message);
+      }
+    };
+
+    loadItems();
+
+    return () => controller.abort();
+  }, []);
+
+  return (
+    <main>
+      <h2>Abort a request</h2>
+      {error && <p role="alert">{error}</p>}
+      <p>{items.length} posts</p>
+    </main>
+  );
+};
+
+export default App;
+`,
   'react-accordion': `import React, { useState } from 'react';
 
 const sections = [
@@ -290,6 +327,49 @@ const App = () => {
       <ul>
         {visibleItems.map(item => (
           <li key={item.id}>{item.title}</li>
+        ))}
+      </ul>
+    </main>
+  );
+};
+
+export default App;
+`,
+  'react-fetch-error-state': `import React, { useEffect, useState } from 'react';
+
+const App = () => {
+  const API_URL = 'https://jsonplaceholder.typicode.com/users';
+  const [items, setItems] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const loadItems = async () => {
+      try {
+        const response = await fetch(API_URL);
+        if (!response.ok) throw new Error('Request failed');
+        const data = await response.json();
+        setItems(data);
+      } catch (requestError) {
+        setError(requestError.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadItems();
+  }, []);
+  const visibleItems = items;
+
+  if (error) return <p>Could not load the users: {error}</p>;
+
+  return (
+    <main>
+      <h2>Fetch error state</h2>
+      {loading && <p>Loading…</p>}
+      <ul>
+        {visibleItems.map(item => (
+          <li key={item.id}>{item.name}</li>
         ))}
       </ul>
     </main>
@@ -439,6 +519,57 @@ const App = () => {
       </ul>
     </main>
   );
+};
+
+export default App;
+`,
+  'react-mh-wait-for-export': `import React, { useEffect, useState } from 'react';
+
+const App = () => {
+  const [jobId, setJobId] = useState(null);
+  const [job, setJob] = useState(null);
+  const [starting, setStarting] = useState(false);
+
+  const start = () => {
+    setJob(null);
+    setStarting(true);
+    fetch('/api/exports', { method: 'POST' })
+      .then((response) => response.json())
+      .then((answer) => {
+        setStarting(false);
+        setJobId(answer.id);
+      });
+  };
+
+  useEffect(() => {
+    if (jobId === null) return;
+    let stopped = false;
+    let timer;
+    const ask = () => {
+      fetch('/api/exports/' + jobId)
+        .then((response) => response.json())
+        .then((answer) => {
+          if (stopped) return;
+          setJob(answer);
+          if (answer.status === 'running') timer = setTimeout(ask, 200);
+        });
+    };
+    ask();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+    };
+  }, [jobId]);
+
+  const running = starting || (jobId !== null && (job === null || job.status === 'running'));
+
+  return <main>
+    <h2>Export the report</h2>
+    <button type="button" onClick={start} disabled={running}>Export</button>
+    {job && job.status === 'running' && <p>Preparing… {job.progress}%</p>}
+    {job && job.status === 'done' && <a href={job.url}>Download the export</a>}
+    {job && job.status === 'failed' && <p role="alert">The export failed</p>}
+  </main>;
 };
 
 export default App;
@@ -629,6 +760,42 @@ const App = () => {
 
 export default App;
 `,
+  'react-stopwatch': `import React, { useEffect, useState } from 'react';
+
+const App = () => {
+  const [seconds, setSeconds] = useState(0);
+  const timerRef = React.useRef(null);
+
+  const start = () => {
+    if (timerRef.current) return;
+    timerRef.current = setInterval(() => setSeconds(current => current + 1), 1000);
+  };
+
+  const stop = () => {
+    clearInterval(timerRef.current);
+    timerRef.current = null;
+  };
+
+  const reset = () => {
+    stop();
+    setSeconds(0);
+  };
+
+  useEffect(() => stop, []);
+
+  return (
+    <main>
+      <h2>Stopwatch</h2>
+      <p>{seconds}s</p>
+      <button onClick={start}>Start</button>
+      <button onClick={stop}>Stop</button>
+      <button onClick={reset}>Reset</button>
+    </main>
+  );
+};
+
+export default App;
+`,
   'react-tabs': `import React, { useState } from 'react';
 
 const tabs = [
@@ -653,6 +820,33 @@ const App = () => {
       </div>
       <div role="tabpanel">{active.panel}</div>
     </main>
+  );
+};
+
+export default App;
+`,
+  'react-theme-context': `import React, { useEffect, useState } from 'react';
+
+const ThemeContext = React.createContext(null);
+
+const ThemeToggle = () => {
+  const { theme, toggleTheme } = React.useContext(ThemeContext);
+  return <button onClick={toggleTheme}>Theme: {theme}</button>;
+};
+
+const Toolbar = () => <section><ThemeToggle /></section>;
+
+const App = () => {
+  const [theme, setTheme] = useState('light');
+  const toggleTheme = () => setTheme(current => (current === 'light' ? 'dark' : 'light'));
+
+  return (
+    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+      <main>
+        <h2>Theme context</h2>
+        <Toolbar />
+      </main>
+    </ThemeContext.Provider>
   );
 };
 

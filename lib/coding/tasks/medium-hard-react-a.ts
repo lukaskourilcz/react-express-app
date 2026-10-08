@@ -1053,7 +1053,7 @@ export default App;
 }, [jobId]);
 
 // running: "Preparing… n%"; done: the link; failed: the alert
-// the button is disabled while a job has started and is not done or failed`,
+// Export is disabled from the click on: a starting flag until the POST answers, then while the job runs`,
     hints: [
       'A `setTimeout` started inside the answer handler, not a `setInterval`, is what keeps the questions from piling up: the next one is only planned once the last one has been answered.',
       'The cleanup runs when the job id changes and when the page closes. Clearing the timeout stops the next question, and a `stopped` flag makes an answer that arrives afterwards change nothing.',
@@ -1062,7 +1062,7 @@ export default App;
       'Export posts, reads `{ id }` and stores the id; starting a new export clears the last job’s answer.',
       'In an effect on the id, write `ask()`: fetch the job, store the answer, and schedule the next `ask` 200 ms later only while it is running.',
       'Return a cleanup that sets a stopped flag and clears the timeout.',
-      'Render the progress, the link or the alert from the last answer, and disable Export while a job runs.',
+      'Render the progress, the link or the alert from the last answer, and disable Export from the click on: while the POST is on its way, and then while the job runs.',
     ],
     verify: 'tests',
     estimatedMinutes: 25,

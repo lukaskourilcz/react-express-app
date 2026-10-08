@@ -1031,11 +1031,13 @@ useEffect(() => {
 }, []);
 const visibleItems = items;
 
-{visibleItems.map(item => (
-  <button key={item.id}>
-    {/* render an item field */}
-  </button>
-))}`,
+if (error) return /* a short message instead of the list */;
+
+<ul>
+  {visibleItems.map(item => (
+    <li key={item.id}>{/* the user's name */}</li>
+  ))}
+</ul>`,
     hints: ["Check response.ok and throw an Error before reading JSON."],
     approach: [
       "Keep an error string in useState next to the users array, both starting empty.",
@@ -1576,11 +1578,10 @@ export default App;
 `,
     skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/posts';
 const [items, setItems] = useState([]);
-const [loading, setLoading] = useState(true);
 const [error, setError] = useState('');
 
 useEffect(() => {
-    const controller = new AbortController();
+  const controller = new AbortController();
   const loadItems = async () => {
     try {
       const response = await fetch(API_URL, { signal: controller.signal });
@@ -1588,23 +1589,17 @@ useEffect(() => {
       const data = await response.json();
       setItems(data);
     } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
+      // an AbortError is the cancel you asked for: no state update after it
+      // anything else goes into error
     }
   };
 
   loadItems();
 
-    return () => controller.abort();
+  return () => controller.abort();
 }, []);
-const visibleItems = items;
 
-{visibleItems.map(item => (
-  <button key={item.id}>
-    {/* render an item field */}
-  </button>
-))}`,
+<p>{items.length} posts</p>`,
     hints: ["Create the controller inside the effect and call controller.abort() in cleanup."],
     approach: [
       "Create a new AbortController inside the effect body, not outside it, so each run owns its own controller.",
@@ -2059,17 +2054,23 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [seconds, setSeconds] = useState(0);
+const timerRef = React.useRef(null);
 
-const handleAction = () => {
-  setValue(currentValue => /* return the next value */);
+const start = () => {
+  if (timerRef.current) return;
+  timerRef.current = setInterval(/* add one second to seconds */, 1000);
 };
 
-return (
-  <main>
-    {/* render value and connect handleAction to an event */}
-  </main>
-);`,
+const stop = () => {
+  // clear the interval in timerRef, then forget its id
+};
+
+const reset = () => {
+  // stop, then put seconds back to 0
+};
+
+useEffect(() => stop, []);`,
     hints: ["Keep the interval id in a ref so Stop can clear the interval Start created."],
     approach: [
       "Keep the elapsed seconds in state, and keep the interval id in a ref so it survives re-renders without causing one.",
@@ -2542,17 +2543,20 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const ThemeContext = React.createContext(null);
 
-const handleAction = () => {
-  setValue(currentValue => /* return the next value */);
+const ThemeToggle = () => {
+  const { theme, toggleTheme } = React.useContext(ThemeContext);
+  return <button onClick={toggleTheme}>Theme: {/* the current theme */}</button>;
 };
 
-return (
-  <main>
-    {/* render value and connect handleAction to an event */}
-  </main>
-);`,
+// in App:
+const [theme, setTheme] = useState('light');
+const toggleTheme = () => setTheme(/* the other theme */);
+
+<ThemeContext.Provider value={{ theme, toggleTheme }}>
+  {/* a child that renders ThemeToggle, not App itself */}
+</ThemeContext.Provider>`,
     hints: ["Put the value and its setter in one provider value so any depth can reach both."],
     approach: [
       "Create the context outside the component so every consumer shares one object rather than a new one per render.",
