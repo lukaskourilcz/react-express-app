@@ -464,7 +464,7 @@ export function FullStackScreen() {
 export function CodingTrackScreen() {
   useCodingFirstData('bookmarks');
   useWarmWorkbench();
-  const { t } = useLanguage();
+  const { t, lang } = useLanguage();
   const { track: trackParam } = useParams();
   const [params, setParams] = useSearchParams();
   const { isAuthenticated } = useAuth();
@@ -498,9 +498,10 @@ export function CodingTrackScreen() {
       if (!task.focus.some((tag) => tags.includes(tag))) return false;
     }
     if (needle) {
-      // Title in either language, plus the technique tags: the words a learner
-      // actually remembers about a challenge.
-      const haystack = `${task.title.en} ${task.title.cs} ${task.focus.join(' ')}`.toLowerCase();
+      // The title as the row shows it, plus the technique tags: the words a
+      // learner actually remembers about a challenge. Never a title in a
+      // language the page is not in (C3-13).
+      const haystack = `${task.title[lang] || task.title.en} ${task.focus.join(' ')}`.toLowerCase();
       if (!haystack.includes(needle)) return false;
     }
     if (difficulty !== 'all' && task.difficulty !== difficulty) return false;
@@ -517,7 +518,7 @@ export function CodingTrackScreen() {
     if (statusFilter === 'passed') return status === 'passed';
     if (statusFilter === 'due') return status === 'due';
     return status === 'open' || status === 'in_progress' || status === 'revealed';
-  }), [tasks, group, needle, difficulty, duration, format, savedOnly, savedIds, statusFilter, statusOf]);
+  }), [tasks, group, needle, lang, difficulty, duration, format, savedOnly, savedIds, statusFilter, statusOf]);
   const filtersOn = Boolean(group) || needle !== '' || difficulty !== 'all' || duration !== 'all'
     || format !== 'all' || savedOnly || statusFilter !== 'all';
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
