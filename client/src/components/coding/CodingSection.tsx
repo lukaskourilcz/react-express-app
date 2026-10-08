@@ -281,6 +281,7 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
  * home holds the long projects only. `listedChallenges` decides. */
 function EvolvingGallery({ passed, premiumOf, category, track }: { passed: ReadonlySet<string>; premiumOf: (taskId: string) => LockState; category?: EvolvingCategory; track?: CodingTrack }) {
   const { t, lang } = useLanguage();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const navigate = useNavigate();
   const listRef = useRef<HTMLDivElement>(null);
   const fullstack = category === 'fullstack';
@@ -306,7 +307,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
   return <section className="cd-projects" aria-labelledby={titleId}>
     <div className="cd-projects__intro">
     <Kicker as="h2" id={titleId}>{t(titleKey)}</Kicker>
-    <p className="cd-lead">{t(bodyKey)}</p>
+    <p className="cd-lead">{t(bodyKey)}{(bodyKey === 'coding.evolving.body' || bodyKey === 'coding.evolving.pathsBody') && !authLoading && !isAuthenticated && <> {t('coding.evolving.signIn')}</>}</p>
     </div>
     <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;

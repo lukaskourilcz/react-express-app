@@ -20,14 +20,16 @@ export const en = {
   'coding.discovery.fullstack': 'A five-level link shortener, then three twelve-stage apps.',
   'coding.discovery.explore': 'Explore FullStack projects',
   'coding.evolving.title': 'Evolving challenges',
-  'coding.evolving.body': 'Projects of 10–12 stages, each building on your code. Sign in to save progress.',
+  'coding.evolving.body': 'Projects of 10–12 stages, each building on your code.',
+  // Said only to a visitor who is signed out (audit C5-7).
+  'coding.evolving.signIn': 'Sign in to save progress.',
   'coding.evolving.previous': 'Requirements from earlier stages',
   'coding.evolving.stageShort': 'Stage {n}',
   // Debugging paths (#225): three short paths replace the one long project.
   'coding.evolving.debugging': 'Debugging paths',
   'coding.evolving.debuggingBody': 'Three five-level paths that start from code that runs and gives the wrong answer.',
   'coding.evolving.paths': 'Paths',
-  'coding.evolving.pathsBody': 'Up to five levels of about ten minutes. Each adds to the same code, and earlier checks run again. Sign in to save progress.',
+  'coding.evolving.pathsBody': 'Up to five levels of about ten minutes. Each adds to the same code, and earlier checks run again.',
   'coding.evolving.level': 'Level {n} of {total}',
   'coding.evolving.levelShort': 'Level {n}',
   'coding.evolving.levels': 'Levels',
