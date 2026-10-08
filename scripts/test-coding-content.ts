@@ -39,8 +39,8 @@ import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
 import { runChecks, runInSandbox } from '../lib/coding/sandbox';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
-import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder } from '../lib/coding/puzzles';
-import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
+import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder, type AuthoredPuzzle } from '../lib/coding/puzzles';
+import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES, type PuzzleLine } from '../shared/coding-puzzle';
 import { evaluateCalls, allPassed, deepEqual } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { prepareReactRuntime, runReactSuite } from '../lib/coding/react-runner';
@@ -127,6 +127,76 @@ const topLevelNames = (ts: TypeScriptApi, source: string): string[] => {
     }
   }
   return [...names];
+};
+
+/** Every arrangement of a puzzle's lines whose code passes `checks`, found
+ * without trying them all. The function's own first and last lines stay
+ * first and last; any body line without a brace may also stand outside the
+ * function, before or after it (a loop or a branch out there cannot see the
+ * parameters). Arrangements grow line by line, and whenever the lines placed
+ * so far close every block they open, they run on their own as the whole
+ * body: a check they already throw on or answer wrongly fails every way of
+ * finishing them, so that branch stops there. */
+const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): string[][] => {
+  const depthOf = (code: string) => {
+    const bare = code.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '');
+    return (bare.match(/\{/g)?.length ?? 0) - (bare.match(/\}/g)?.length ?? 0);
+  };
+  const header = puzzle.lines[0];
+  const footer = puzzle.lines[puzzle.lines.length - 1];
+  const body = puzzle.lines.slice(1, -1);
+  const name = /^\s*function\s+([A-Za-z_$][\w$]*)\s*\(.*\{\s*$/.exec(header.code)?.[1];
+  assert.ok(name && footer.code.trim() === '}', 'a puzzle is one function: its first line opens it and its last line closes it');
+  // A body cut short reads as the start of the full one only while nothing
+  // later in it is hoisted.
+  assert.ok(body.every((line) => !/\b(var|function)\b/.test(line.code)), 'a puzzle body declares nothing with var or function');
+  // Every loop gets a step budget, so an arrangement that never leaves one fails instead of hanging.
+  const guard = (code: string) => (/^\s*(while|for|do)\b.*\{\s*$/.test(code) ? `${code} __step();` : code);
+  const callers = checks.map((check) => new Function(name, `"use strict"; return (${check.call});`) as (fn: unknown) => unknown);
+  const END = Symbol('end');
+  // `open`: the body stops early, and falling off its end returns END.
+  const run = (top: PuzzleLine[], placed: PuzzleLine[], open: boolean): 'pass' | 'fail' | 'open' => {
+    const code = [...top, header, ...placed].map((line) => guard(line.code)).concat(open ? ['return __end;'] : [], footer.code).join('\n');
+    let fn: unknown;
+    let reset: () => void;
+    try {
+      [fn, reset] = new Function('__end', `"use strict"; let __steps = 0; const __step = () => { if (++__steps > 10000) throw new Error('steps'); };\n${code}\nreturn [${name}, () => { __steps = 0; }];`)(END);
+    } catch { return 'fail'; }
+    let undecided = false;
+    for (const [index, call] of callers.entries()) {
+      reset();
+      let value: unknown;
+      try { value = call(fn); } catch { return 'fail'; }
+      if (value === END) undecided = true;
+      else if (!deepEqual(value, checks[index].expected)) return 'fail';
+    }
+    return undecided ? 'open' : 'pass';
+  };
+  const permutations = <T>(items: T[]): T[][] => (items.length <= 1 ? [items] : items.flatMap((item, i) => permutations([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [item, ...rest])));
+  const flat = body.filter((line) => !/[{}]/.test(line.code));
+  const found: string[][] = [];
+  for (let mask = 0; mask < 1 << flat.length; mask++) {
+    const outside = flat.filter((_, i) => mask & (1 << i));
+    const inside = body.filter((line) => !outside.includes(line));
+    for (const top of permutations(outside)) {
+      const walk = (placed: PuzzleLine[], rest: PuzzleLine[], depth: number): void => {
+        if (rest.length === 0) {
+          // Function declarations hoist, so the outside lines run the same wherever they split around it.
+          if (depth === 1 && run(top, placed, false) === 'pass') {
+            for (let split = 0; split <= top.length; split++) found.push([...top.slice(0, split), header, ...placed, footer, ...top.slice(split)].map((line) => line.id));
+          }
+          return;
+        }
+        if (placed.length > 0 && depth === 1 && run(top, placed, true) === 'fail') return;
+        for (const [i, line] of rest.entries()) {
+          const next = depth + depthOf(line.code);
+          if (next >= 1) walk([...placed, line], [...rest.slice(0, i), ...rest.slice(i + 1)], next);
+        }
+      };
+      walk([], inside, 1);
+    }
+  }
+  return found;
 };
 
 // Every string a suite mentions: quoted literals (minus module names and ARIA
@@ -759,6 +829,8 @@ async function main() {
   // that puzzle's own lines; no puzzle is short enough to be guessed; and each
   // one declares what arranging it demonstrates.
   const puzzleIds = puzzleCoverage();
+  const puzzlesStarted = Date.now();
+  let puzzleOrders = 0;
   assert.ok(puzzleIds.length > 0, 'the puzzle manifest must cover something');
   for (const id of puzzleIds) {
     const task = CODING_TASKS.find((one) => one.id === id);
@@ -788,6 +860,15 @@ async function main() {
       const run = await runInSandbox({ code, calls: checks.map((one) => one.call), expectations: checks.map((one) => one.expected) });
       assert.ok(allPassed(run), `${id}: the accepted order ${order.join('')} fails the task's checks: ${run.codeError ?? JSON.stringify(run.results.filter((one) => one.pass !== true))}`);
     }
+    // ...and every order that passes them is accepted: a learner who arranged
+    // working code is not told it is wrong. js-largest-number accepted one of
+    // the six that pass. The enumeration must also find each accepted order,
+    // or it no longer covers the arrangements a puzzle allows.
+    const passing = passingArrangements(puzzle, checks).map((order) => order.join(''));
+    const acceptedOrders = new Set(puzzle.accepted.map((order) => order.join('')));
+    for (const order of passing) assert.ok(acceptedOrders.has(order), `${id}: the order ${order} passes the task's checks and is not accepted`);
+    for (const order of acceptedOrders) assert.ok(passing.includes(order), `${id}: the enumeration does not reach the accepted order ${order}`);
+    puzzleOrders += passing.length;
     // What the browser sees carries no authored id, and sorting what it sees
     // never produces an accepted order — the ids say nothing about the answer.
     const reversed = <T>(list: T[]) => [...list].reverse();
@@ -803,6 +884,7 @@ async function main() {
       assert.deepEqual(resolvePuzzleOrder(['zz', 'b0', 'b99'], presented.map), [null, null, null], `${id}: ids never issued resolve to nothing`);
     }
   }
+  console.log(`Puzzles: ${puzzleIds.length} accept exactly the ${puzzleOrders} arrangements that pass their checks (${((Date.now() - puzzlesStarted) / 1000).toFixed(1)} s).`);
 
   // ── the debugging format (#163) ────────────────────────────────────────
   // A debugging task must actually start from broken code: its starter has to
