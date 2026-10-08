@@ -9,6 +9,7 @@
 // clocks say. Once it has moved, another device (or this one, earlier) saved
 // it, and the two times decide. A device copy from before the times were kept
 // stands, as every device copy used to.
+import { queryOptions } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { readJSON, readString, removeStored, writeJSON, writeString } from '../lib/storage';
 import { CODING_CODE_LIMIT_BYTES, type CodingDraftResponse } from '../../../shared/coding-api';
@@ -87,3 +88,13 @@ export function saveDraft(id: string, code: string, { signedIn, base, keepOnDevi
 export function fetchCodingDraft(id: string, signal?: AbortSignal): Promise<CodingDraftResponse> {
   return apiFetch<CodingDraftResponse>(`/api/user/[op]?op=coding-draft&id=${encodeURIComponent(id)}`, { signal });
 }
+
+/** The account draft, read fresh each time a screen opens the task. One
+ * that cannot load is not retried: the screen opens the device copy. */
+export const codingDraftQuery = (id: string) => queryOptions({
+  queryKey: ['coding', 'draft', id] as const,
+  queryFn: ({ signal }) => fetchCodingDraft(id, signal),
+  staleTime: 0,
+  gcTime: 0,
+  retry: false,
+});

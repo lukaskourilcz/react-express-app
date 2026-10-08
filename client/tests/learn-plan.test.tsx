@@ -42,14 +42,17 @@ vi.mock('../src/lib/trackPref', async (importOriginal) => ({
 }));
 
 // The editor is not what these tests are about: a stand-in that finishes the
-// task the way the real workbench's Continue does, or shows the solution the
-// way its reveal does.
+// task the way the real workbench's Continue does, shows the solution the
+// way its reveal does, says which code it opened with, and saves code the way
+// Run does.
 vi.mock('../src/coding/CodingWorkbench', async () => {
   const { createElement, useState } = await import('react');
   return {
-    CodingWorkbench: ({ onContinue, onRevealed }: { onContinue: () => void; onRevealed?: () => void }) => {
+    CodingWorkbench: ({ onContinue, onRevealed, initialCode, onDraft }: { onContinue: () => void; onRevealed?: () => void; initialCode?: string | null; onDraft?: (code: string) => void }) => {
       const [solution, setSolution] = useState<string | null>(null);
       return createElement('div', null,
+        createElement('output', { 'aria-label': 'Opened with' }, initialCode ?? 'the starter'),
+        createElement('button', { type: 'button', onClick: () => onDraft?.('// written in the level') }, 'Run the code'),
         createElement('button', { type: 'button', onClick: onContinue }, 'Finish the coding task'),
         createElement('button', { type: 'button', onClick: () => { setSolution('const digitSum = (n) => 42; // the reference'); onRevealed?.(); } }, 'Show the solution'),
         solution && createElement('pre', null, solution));
@@ -403,5 +406,84 @@ describe('a level whose session cannot be used', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Finish the level' }));
     expect(await screen.findByRole('heading', { name: 'Not passed' })).toBeInTheDocument();
     expect(completions).toBe(1);
+  });
+});
+
+// C5-6: the coding step read only this device's copy, so a draft saved in
+// the Coding section (or on another device) never opened in a level, and
+// what the learner ran there never reached the account.
+describe('the coding step and the account draft', () => {
+  const WITH_CODE = { ...PLAYABLE, coding: [{ task: { id: 'js-digit-sum', title: { en: 'Digit sum', cs: '' } }, session: 'coding-session-1' }] };
+  function drafts(draft: { code: string | null; updatedAt: string | null }) {
+    const seen = { reads: 0, saves: [] as unknown[] };
+    server.use(
+      http.get('*/api/user/*', ({ request }) => {
+        const params = new URL(request.url).searchParams;
+        if (params.get('op') === 'entitlement') return HttpResponse.json(FREE);
+        if (params.get('op') === 'coding-draft' && params.get('id') === 'js-digit-sum') {
+          seen.reads += 1;
+          return HttpResponse.json(draft);
+        }
+        return HttpResponse.json({ error: { code: 'not_found', message: 'Not found' } }, { status: 404 });
+      }),
+      http.post('*/api/user/*', async ({ request }) => {
+        if (new URL(request.url).searchParams.get('op') !== 'coding-draft') return HttpResponse.json({ error: { code: 'not_found', message: 'Not found' } }, { status: 404 });
+        seen.saves.push(await request.json());
+        return HttpResponse.json({ ok: true });
+      }),
+    );
+    return seen;
+  }
+  async function openCodingStep() {
+    await mountAt('/learn', <Roadmap />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Continue — Level 1' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Start the level' }, { timeout: 3000 }));
+    fireEvent.click(screen.getByRole('radio', { name: /Option A/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
+    return screen.findByLabelText('Opened with');
+  }
+
+  it('opens the draft the account holds', async () => {
+    signInAs();
+    answer({ playable: WITH_CODE });
+    const seen = drafts({ code: '// account draft from the section', updatedAt: '2026-10-09T10:00:00.000Z' });
+    expect(await openCodingStep()).toHaveTextContent('// account draft from the section');
+    expect(seen.reads).toBe(1);
+    expect(screen.queryByText(/newer/)).toBeNull();
+  });
+
+  it('opens a newer copy on this device over the account draft, and says so', async () => {
+    signInAs();
+    answer({ playable: WITH_CODE });
+    localStorage.setItem('devshark:coding:draft:js-digit-sum', '// typed here after the last save');
+    localStorage.setItem('devshark:coding:draft-time:js-digit-sum', JSON.stringify({ at: Date.parse('2026-10-09T11:00:00Z'), base: null }));
+    drafts({ code: '// account draft from the section', updatedAt: '2026-10-09T10:00:00.000Z' });
+    expect(await openCodingStep()).toHaveTextContent('// typed here after the last save');
+    expect(screen.getByText(/The code on this device is newer than the draft saved to your account/)).toBeInTheDocument();
+  });
+
+  it('saves what the learner runs to the account as well as this device', async () => {
+    signInAs();
+    answer({ playable: WITH_CODE });
+    const seen = drafts({ code: null, updatedAt: null });
+    expect(await openCodingStep()).toHaveTextContent('the starter');
+    fireEvent.click(screen.getByRole('button', { name: 'Run the code' }));
+    await waitFor(() => expect(seen.saves).toEqual([{ id: 'js-digit-sum', code: '// written in the level' }]));
+    // The account holds it now, so the copy here goes, as in the Coding section.
+    await waitFor(() => expect(localStorage.getItem('devshark:coding:draft:js-digit-sum')).toBeNull());
+  });
+
+  it('opens this device’s copy for a visitor and asks the account for nothing', async () => {
+    answer({
+      playable: WITH_CODE,
+      complete: () => HttpResponse.json({ correctAnswers: 1, totalQuestions: 1, percentage: 100, passed: true, applied: true, codingPending: [], codingUnverified: true }),
+    });
+    localStorage.setItem('devshark:coding:draft:js-digit-sum', '// a visitor’s code');
+    const seen = drafts({ code: '// not theirs', updatedAt: '2026-10-09T10:00:00.000Z' });
+    expect(await openCodingStep()).toHaveTextContent('// a visitor’s code');
+    fireEvent.click(screen.getByRole('button', { name: 'Run the code' }));
+    expect(localStorage.getItem('devshark:coding:draft:js-digit-sum')).toBe('// written in the level');
+    expect(seen.reads).toBe(0);
+    expect(seen.saves).toEqual([]);
   });
 });
