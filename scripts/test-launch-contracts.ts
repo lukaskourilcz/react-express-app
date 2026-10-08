@@ -166,6 +166,7 @@ import { assessmentUnlocks, roadmapEndedOnHearts, ROADMAP_MAX_HEARTS } from '../
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
 import { ROADMAP_TOPICS, isRoadmapTopic, topicLevelCount, ROADMAP_LEVELS } from '../lib/roadmap';
 import type { Question } from '../lib/quiz-runtime';
+import type { CodingTaskResponse, CodingVerdictResponse } from '../shared/coding-api';
 import {
   FREE_CODING_SHARE,
   FREE_CODING_TASK_IDS,
@@ -227,6 +228,16 @@ function mockResponse() {
     end() { return this; },
     headers,
   };
+}
+
+/** Where a browser payload still carries Czech: the path of every `{ en, cs }`
+ * pair whose Czech slot is not empty. The app ships English only (C4-6). */
+function czechIn(value: unknown, at = ''): string[] {
+  if (Array.isArray(value)) return value.flatMap((one, index) => czechIn(one, `${at}[${index}]`));
+  if (!value || typeof value !== 'object') return [];
+  const record = value as Record<string, unknown>;
+  if ('en' in record && 'cs' in record) return (record.cs as string | string[]).length > 0 ? [at || '.'] : [];
+  return Object.entries(record).flatMap(([key, one]) => czechIn(one, at ? `${at}.${key}` : key));
 }
 
 /** Every script and source file under `dir` (relative to the repository),
@@ -748,6 +759,21 @@ async function tierContracts() {
       assert.equal(revealed.statusCode, 402, `a guest reveal for ${label} is refused`);
       assert.equal(JSON.stringify(revealed.body ?? {}).includes('solution'), false, 'nothing of the solution comes back');
     }
+
+    // C4-6: the app ships English only, so a task, its puzzle and a failed
+    // verdict's hint reach the browser without the retained Czech copy.
+    const bilingual = codingTaskById('js-reverse-string')!;
+    assert.ok(bilingual.prompt.cs && bilingual.hints.cs.length, 'js-reverse-string keeps its Czech overlay on the server');
+    const opened = mockResponse();
+    await roadmapHandler(guest({ resource: 'coding-task', id: bilingual.id }) as never, opened as never);
+    assert.equal(opened.statusCode, 200, 'a guest opens js-reverse-string');
+    const openedBody = opened.body as CodingTaskResponse;
+    assert.ok(openedBody.task.puzzle && openedBody.session, 'the task travels with its puzzle and a session');
+    assert.deepEqual(czechIn(openedBody), [], 'the task payload carries no Czech');
+    const failed = mockResponse();
+    await roadmapHandler(post('coding-submit', { session: openedBody.session, code: 'throw new Error("not yet");' }) as never, failed as never);
+    assert.equal((failed.body as CodingVerdictResponse).failureHint?.category, 'runtime', 'a throwing submit gets the runtime hint');
+    assert.deepEqual(czechIn(failed.body), [], 'the verdict carries no Czech');
 
     // A deploy that lands before migration 039, against a PostgREST that has
     // none of its routines: the plan reads free instead of failing, and the
@@ -3312,6 +3338,7 @@ async function main() {
   assert.equal(gardenPathFor({ id: 'dd-requests-per-second', track: 'system-design', level: 0 }), 'system-design/00-requests-per-second.md');
   assert.ok(CODING_INDEX.length > 0, 'the browser index exists (freshness is enforced by npm run test:coding)');
   assert.ok(CODING_INDEX.every((row) => !('tests' in row) && !('prompt' in row)), 'the browser index carries no task bodies');
+  assert.deepEqual(czechIn(CODING_INDEX), [], 'the browser index carries no Czech titles (C4-6)');
   const ladderBase = { track: 'javascript' as const, progress: { passed: new Set<string>() }, tasks: CODING_INDEX, javascriptLevelsCleared: 0 };
   assert.equal(tierUnlocked({ ...ladderBase, tier: 1 }), true);
   assert.equal(tierUnlocked({ ...ladderBase, tier: 3 }), false);

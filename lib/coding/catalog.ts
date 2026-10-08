@@ -140,6 +140,19 @@ export function levelTaskQuota(level: number): number {
   return 3;
 }
 
+/** Copy as a browser receives it. The app ships English only (`ENABLED_LANGS`
+ * in the client's LanguageContext), so the retained Czech overlays stay on the
+ * server: every `{ en, cs }` pair goes out with its Czech slot empty, which the
+ * client already reads as "no translation" and answers in English. Drop this
+ * the day Czech ships again. For copy only: a test's `expected` value is data
+ * and never passes through here. */
+export function englishOnly<T>(copy: T): T {
+  if (Array.isArray(copy)) return copy.map(englishOnly) as T;
+  if (!copy || typeof copy !== 'object') return copy;
+  if ('en' in copy && 'cs' in copy) return { ...copy, cs: Array.isArray(copy.cs) ? [] : '' };
+  return Object.fromEntries(Object.entries(copy).map(([key, value]) => [key, englishOnly(value)])) as T;
+}
+
 export function summarize(task: CodingTask): CodingTaskSummary {
   return {
     id: task.id,
@@ -148,7 +161,7 @@ export function summarize(task: CodingTask): CodingTaskSummary {
     tier: task.tier,
     difficulty: difficultyOf(task),
     focus: task.focus,
-    title: task.title,
+    title: englishOnly(task.title),
     verify: task.verify,
     ...(task.format ? { format: task.format } : {}),
     estimatedMinutes: task.estimatedMinutes,
@@ -157,7 +170,8 @@ export function summarize(task: CodingTask): CodingTaskSummary {
 }
 
 /** Strip everything a learner must not see before submitting: design answers,
- * drill keys and orders. Visible tests are part of the task and stay. */
+ * drill keys and orders. Visible tests are part of the task and stay. The copy
+ * goes out in English only (`englishOnly`). */
 export function playable(task: CodingTask): PlayableCodingTask {
   const out: PlayableCodingTask = {
     ...summarize(task),
@@ -189,5 +203,8 @@ export function playable(task: CodingTask): PlayableCodingTask {
     const { format, scenario, prompt, unit, options, steps } = task.drill;
     out.drill = { format, scenario, prompt, ...(unit ? { unit } : {}), ...(options ? { options } : {}), ...(steps ? { steps } : {}) };
   }
-  return out;
+  // Everything but the visible tests is copy or code; a test's expected value
+  // is data, so only its label is projected.
+  const { tests, ...copy } = out;
+  return { ...englishOnly(copy), ...(tests ? { tests: tests.map((test) => (test.label ? { ...test, label: englishOnly(test.label) } : test)) } : {}) };
 }

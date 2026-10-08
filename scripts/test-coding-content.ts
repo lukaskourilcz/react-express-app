@@ -75,6 +75,16 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
 // cases each run registered.
 const hiddenCaseCount = suiteCaseCount;
 
+// Where a browser payload still carries Czech: the path of every `{ en, cs }`
+// pair whose Czech slot is not empty. The app ships English only (C4-6).
+const czechIn = (value: unknown, at = ''): string[] => {
+  if (Array.isArray(value)) return value.flatMap((one, index) => czechIn(one, `${at}[${index}]`));
+  if (!value || typeof value !== 'object') return [];
+  const record = value as Record<string, unknown>;
+  if ('en' in record && 'cs' in record) return (record.cs as string | string[]).length > 0 ? [at || '.'] : [];
+  return Object.entries(record).flatMap(([key, one]) => czechIn(one, at ? `${at}.${key}` : key));
+};
+
 // The hosts a hint ladder may end on: official documentation, never a blog.
 const OFFICIAL_DOCS = new Set(['developer.mozilla.org', 'www.typescriptlang.org', 'react.dev']);
 
@@ -303,7 +313,10 @@ async function main() {
         fail(`${where}: unknown verify mode ${String(task.verify)}`);
     }
 
-    // The playable projection must never carry an answer.
+    // The playable projection must never carry an answer, nor the retained
+    // Czech copy while the app ships English only.
+    const czech = czechIn(playable(task));
+    if (czech.length > 0) fail(`${where}: playable payload carries Czech at ${czech.slice(0, 3).join(', ')}`);
     const play = JSON.stringify(playable(task));
     if (task.design) {
       if (play.includes('"correct"') || play.includes(task.design.reference.en.slice(0, 40))) fail(`${where}: playable payload leaks the design answers`);
@@ -401,6 +414,7 @@ async function main() {
   }
 
   /* ── index freshness ────────────────────────────────────────────────── */
+  for (const summary of CODING_SUMMARIES) if (czechIn(summary).length > 0) fail(`${summary.id}: the browser index carries a Czech title`);
   const indexPath = path.join(process.cwd(), 'shared', 'coding-index.ts');
   if (!SKIP_INDEX && (!existsSync(indexPath) || readFileSync(indexPath, 'utf8') !== renderCodingIndex(CODING_SUMMARIES))) {
     fail('shared/coding-index.ts is stale: run npm run build:coding-index');
