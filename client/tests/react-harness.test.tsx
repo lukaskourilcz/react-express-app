@@ -60,3 +60,19 @@ it('settles runs on unmount and ignores messages from other frames', async () =>
   expect(settled).toBe(true);
   h.frame.remove();
 });
+
+// Audit C3-2: the frame posts compile-error and then an empty done. The done
+// replaced the error, so a build error read "0 of 0 passing".
+it('keeps a build error when the frame closes the run with an empty done', async () => {
+  const h = mountHarness();
+  h.message({type:'ready'});
+  let run!: ReturnType<typeof h.result.current.start>;
+  await act(async () => {run = h.result.current.start({}, {tests:true, preview:true});});
+  const token = h.result.current.run!.token;
+  h.message({type:'compile-error', token, message:"Unexpected token, expected ';'"});
+  h.message({type:'done', token, passed:0, failed:0, total:0});
+  expect((await run).status).toBe('compile-error');
+  expect(h.result.current.run).toMatchObject({status:'compile-error', compileError:"Unexpected token, expected ';'"});
+  h.unmount();
+  h.frame.remove();
+});

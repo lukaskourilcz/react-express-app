@@ -102,6 +102,9 @@ export function useReactHarness(): HarnessHandle {
           settle({ ...active, previewError: String(data.message ?? 'Render error') });
           return;
         case 'done':
+          // The frame closes a build error with an empty `done`; the error is
+          // the result, so the count of no cases must not replace it.
+          if (active.status === 'compile-error') return;
           settle({ ...active, status: 'done', passed: Number(data.passed ?? 0), failed: Number(data.failed ?? 0), total: Number(data.total ?? 0), ran: data.ran !== false });
           return;
         default:
