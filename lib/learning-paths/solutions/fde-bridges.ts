@@ -193,6 +193,29 @@ const operatorReducer = (state, action) => {
         expected: { status: 'loading', requestId: 1, proposal: null, error: null, abandoned: [] },
         criterion: 'stale-responses',
       },
+      // The other two responses check the id as well: a failure or an
+      // approval from a superseded request changes nothing.
+      {
+        call: "__view(__run([{ type: 'load', requestId: 2 }, { type: 'failed', requestId: 1, message: 'late' }]))",
+        expected: { status: 'loading', requestId: 2, proposal: null, error: null, abandoned: [] },
+        criterion: 'stale-responses',
+      },
+      {
+        call: "__view(__run([{ type: 'load', requestId: 1 }, { type: 'loaded', requestId: 1, proposal: __proposal }, { type: 'approve', requestId: 2 }, { type: 'approved', requestId: 1 }]))",
+        expected: {
+          status: 'approving',
+          requestId: 2,
+          proposal: { ticketId: 'BP-4821', action: 'refund', amountCents: 12500 },
+          error: null,
+          abandoned: [],
+        },
+        criterion: 'stale-responses',
+      },
+      // No transition writes into the state it was given.
+      {
+        call: "(function () { var state = JSON.parse(JSON.stringify(initialOperatorState)); var steps = [{ type: 'load', requestId: 1 }, { type: 'failed', requestId: 1, message: 'ticket service timed out' }, { type: 'load', requestId: 2 }, { type: 'loaded', requestId: 2, proposal: __proposal }, { type: 'approve', requestId: 3 }, { type: 'cancel' }, { type: 'load', requestId: 4 }, { type: 'loaded', requestId: 4, proposal: __proposal }, { type: 'approve', requestId: 5 }, { type: 'approved', requestId: 5 }]; var changed = []; steps.forEach(function (action) { var before = JSON.stringify(state); var next = operatorReducer(state, action); if (JSON.stringify(state) !== before) changed.push(action.type); state = next; }); return changed; })()",
+        expected: [],
+      },
       {
         call: "__view(__run([{ type: 'load', requestId: 1 }, { type: 'cancel' }, { type: 'failed', requestId: 1, message: 'ticket service timed out' }]))",
         expected: { status: 'idle', requestId: null, proposal: null, error: null, abandoned: [1] },
