@@ -37,17 +37,16 @@ import './DeepEndScreens.css';
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 
-// The four sections only a signed-in learner sees, each in a chunk of its own
+// The three sections only a signed-in learner sees, each in a chunk of its own
 // so a visitor never loads them: concepts due for review, the open challenge
-// run (planned or under way), coding tasks due for a second pass, and the next
-// activity of each active learning path. Signed in, their code and their data
-// load inside the page's first-data hold, so they draw with the plan instead
-// of under it a beat later.
+// run (planned or under way), and the next activity of each active learning
+// path. A coding pass is permanent, so no coding task comes back for review.
+// Signed in, their code and their data load inside the page's first-data
+// hold, so they draw with the plan instead of under it a beat later.
 const ConceptDue = lazyPart(() => import('./ConceptDueSection').then((m) => m.ConceptDueSection));
 const ChallengeRun = lazyPart(() => import('./coding/ChallengeRunSection').then((m) => m.ChallengeRunSection));
-const CodingDue = lazyPart(() => import('./coding/CodingDueSection').then((m) => m.CodingDueSection));
 const PathResume = lazyPart(() => import('./paths/PathResumeSection').then((m) => m.PathResumeSection));
-const SIGNED_IN_PARTS = [ConceptDue, ChallengeRun, CodingDue, PathResume];
+const SIGNED_IN_PARTS = [ConceptDue, ChallengeRun, PathResume];
 
 // The plan is priority-ordered; render it grouped under these headings.
 const SECTION_ORDER: TodayKind[] = ['unfinished', 'review', 'new'];
@@ -118,12 +117,12 @@ function doneToday(progress: RoadmapProgress, subject: SubjectId, target: number
   return Math.min(seen.size, target);
 }
 
-/** The structure and, signed in, the plan, the four sections' code and what
+/** The structure and, signed in, the plan, the three sections' code and what
  * they read, in the cache before the first render. The sections used to
  * arrive under the plan after it, one by one. A path's next activity needs its
- * enrollment first, so that read waits for the list. The run's and the coding
- * progress's query options load beside the sections' code, so a visitor, who
- * reads neither, never downloads them. */
+ * enrollment first, so that read waits for the list. The run's query options
+ * load beside the sections' code, so a visitor, who reads none of it, never
+ * downloads them. */
 function useTodayFirstData() {
   const queryClient = useQueryClient();
   const { user } = useAuth();
@@ -139,7 +138,6 @@ function useTodayFirstData() {
           ...SIGNED_IN_PARTS.map((part) => part.load()),
           readOnce(queryClient, conceptDueQuery),
           import('../coding/practice').then(({ practiceSessionQuery }) => readOnce(queryClient, practiceSessionQuery)),
-          import('../coding/api').then(({ codingProgressQuery }) => readOnce(queryClient, codingProgressQuery)),
           readOnce(queryClient, enrollmentsQuery(user.id)).then(({ enrollments }) => {
             const active = enrollments.filter((one) => one.status === 'active');
             return settled(active.length
@@ -265,7 +263,6 @@ export default function Today() {
         <>
           <ConceptDue.Part />
           <ChallengeRun.Part />
-          <CodingDue.Part />
           <PathResume.Part />
         </>
       )}

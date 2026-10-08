@@ -1,4 +1,5 @@
-// The Coding section: home, one track, one task, and the review queue.
+// The Coding section: home, one track and one task. The review queue is
+// retired (a pass is permanent); /coding/review only redirects home.
 // devShark-only routes; the App gates them like /roadmap and /typing.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
@@ -55,7 +56,7 @@ import '../../coding/Coding.css';
 import { Button } from '@astryxdesign/core/Button';
 import { LockedButton } from '../ui/LockedButton';
 
-type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'due' | 'locked' | 'premium';
+type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'locked' | 'premium';
 
 /** Premium opens this task and the account holds the free plan: open the upgrade sheet. */
 const askForPremium = (taskId: string) => {
@@ -132,7 +133,7 @@ const GROUPS = Object.keys(CODING_TECHNIQUE_GROUPS) as CodingTechniqueGroup[];
 
 // Everything the section offers. System design tasks stay in CODING_INDEX so a
 // passed one keeps its record and the FDE specialization can still assign it;
-// they simply never appear in discovery, counts, filters or the review queue.
+// they simply never appear in discovery, counts or filters.
 const SECTION_INDEX = CODING_INDEX.filter((task) => isCodingSectionTrack(task.track) && !evolvingStage(task.id));
 const INDEX_BY_ID = new Map(CODING_INDEX.map((task) => [task.id, task]));
 const TIERS: readonly CodingTier[] = [1, 2, 3, 4, 5];
@@ -168,7 +169,6 @@ function RetiredTrackNotice({ track }: { track: CodingTrack }) {
 
 function useStatuses(progress: CodingProgressResponse | undefined) {
   const passed = useMemo(() => new Set(Object.entries(progress?.tasks ?? {}).filter(([, p]) => p.status === 'passed').map(([id]) => id)), [progress]);
-  const due = useMemo(() => new Set(progress?.due ?? []), [progress]);
   const cleared = progress?.javascriptLevelsCleared ?? 0;
   const { lockOf, loading: planLoading, failed: planFailed, refetch: retryPlan, signedIn } = useLocks();
   /** The Premium state of a task. A task already passed stays open on any plan. */
@@ -178,12 +178,11 @@ function useStatuses(progress: CodingProgressResponse | undefined) {
   const statusOf = useCallback((task: CodingTaskSummary): Status => {
     if (isBarred(premiumOf(task.id))) return 'premium';
     if (!unlocked(task)) return 'locked';
-    if (due.has(task.id)) return 'due';
     const row: CodingTaskProgress | undefined = progress?.tasks[task.id];
     if (!row) return 'open';
     return row.status;
-  }, [unlocked, due, progress, premiumOf]);
-  return { passed, due, statusOf, unlocked, lockReason, premiumOf, planLoading, planFailed: signedIn && planFailed, retryPlan };
+  }, [unlocked, progress, premiumOf]);
+  return { passed, statusOf, unlocked, lockReason, premiumOf, planLoading, planFailed: signedIn && planFailed, retryPlan };
 }
 
 /** A signed-in account's plan and progress (and, where the screen shows them,
@@ -205,7 +204,7 @@ function useCodingFirstData(extra: 'session' | 'bookmarks' | null) {
 const nextOpenTask = (tasks: readonly CodingTaskSummary[], statusOf: (t: CodingTaskSummary) => Status, after?: string): CodingTaskSummary | null => {
   const start = after ? tasks.findIndex((t) => t.id === after) + 1 : 0;
   const ordered = [...tasks.slice(start), ...tasks.slice(0, start)];
-  return ordered.find((t) => { const s = statusOf(t); return s === 'open' || s === 'in_progress' || s === 'due'; }) ?? null;
+  return ordered.find((t) => { const s = statusOf(t); return s === 'open' || s === 'in_progress'; }) ?? null;
 };
 
 function StatusText({ status }: { status: Status }) {
@@ -474,7 +473,9 @@ export function CodingTrackScreen() {
   const { passed, statusOf, lockReason, premiumOf, planLoading, planFailed, retryPlan } = useStatuses(progress.data);
   const track = isCodingTrack(trackParam) ? trackParam : null;
   const group = params.get('group');
-  const statusFilter = params.get('status') ?? 'all';
+  // An old ?status=due link (the retired review queue) lists everything.
+  const statusParam = params.get('status');
+  const statusFilter = statusParam === 'open' || statusParam === 'passed' ? statusParam : 'all';
   // Every filter lives in the URL, so a filtered list is a link a learner can
   // keep, share with themselves on another device, or reload without losing.
   const query = params.get('q') ?? '';
@@ -517,7 +518,6 @@ export function CodingTrackScreen() {
     if (statusFilter === 'all') return true;
     const status = statusOf(task);
     if (statusFilter === 'passed') return status === 'passed';
-    if (statusFilter === 'due') return status === 'due';
     return status === 'open' || status === 'in_progress' || status === 'revealed';
   }), [tasks, group, needle, difficulty, duration, format, savedOnly, savedIds, statusFilter, statusOf]);
   const filtersOn = Boolean(group) || needle !== '' || difficulty !== 'all' || duration !== 'all'
@@ -567,9 +567,9 @@ export function CodingTrackScreen() {
       </div>
       {isAuthenticated && (
         <div className="cd-chips" role="group" aria-label={t('coding.filter.status')}>
-          {(['all', 'open', 'passed', 'due'] as const).map((value) => (
+          {(['all', 'open', 'passed'] as const).map((value) => (
             <button key={value} type="button" className="cd-chip" aria-pressed={statusFilter === value} onClick={() => setFilter('status', value === 'all' ? null : value)}>
-              {value === 'all' ? t('coding.filter.all') : value === 'open' ? t('coding.status.open') : value === 'passed' ? t('coding.status.passed') : t('coding.status.due')}
+              {value === 'all' ? t('coding.filter.all') : value === 'open' ? t('coding.status.open') : t('coding.status.passed')}
             </button>
           ))}
           <button type="button" className="cd-chip" aria-pressed={savedOnly} onClick={() => setFilter('saved', savedOnly ? null : '1')}>

@@ -6,7 +6,6 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { preloadPath } from '../src/lib/routePreload';
 import { CodingTaskScreen, CodingTrackScreen } from '../src/components/coding/CodingSection';
-import { CodingDueSection } from '../src/components/coding/CodingDueSection';
 import Collection from '../src/components/Collection';
 import { DifficultyBadge } from '../src/coding/DifficultyBadge';
 import { CODING_INDEX } from '../../shared/coding-index';
@@ -15,11 +14,11 @@ import { EVOLVING_CHALLENGES, evolvingStage } from '../../shared/evolving';
 // Signed out unless a case says otherwise: no progress, no bookmarks, no run.
 // The lists and labels come from the generated index alone, which is what
 // the browser really reads.
-const state = vi.hoisted(() => ({ signedIn: false, saved: [] as string[], due: [] as string[] }));
+const state = vi.hoisted(() => ({ signedIn: false, saved: [] as string[] }));
 // The task screen loads its editor beside the task; load it once up front
 // so each screen draws the (mocked) workbench on its first render.
 beforeAll(() => preloadPath('/coding/javascript/js-digit-sum'));
-beforeEach(() => { state.signedIn = false; state.saved = []; state.due = []; });
+beforeEach(() => { state.signedIn = false; state.saved = []; });
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: state.signedIn, signInWithGoogle: vi.fn() }) }));
 vi.mock('../src/coding/practice', () => ({
   useBookmarks: () => (state.signedIn ? { data: { saved: state.saved }, isPending: false, isError: false } : { data: undefined }),
@@ -30,7 +29,7 @@ vi.mock('../src/coding/practice', () => ({
 vi.mock('../src/coding/api', () => ({
   codingKeys: { task: (id: string) => ['task', id], progress: () => ['progress'] },
   saveCodingDraft: vi.fn(),
-  useCodingProgress: () => ({ data: state.due.length ? { tasks: {}, due: state.due, javascriptLevelsCleared: 0 } : undefined }),
+  useCodingProgress: () => ({ data: undefined }),
   useCodingTask: (id: string) => ({ data: {
     task: { id, track: 'javascript', tier: 2, starter: '// starter' },
     draft: null, signedIn: false, locked: null, session: null,
@@ -139,12 +138,5 @@ describe('difficulty labels where a signed-in learner lists challenges', () => {
       'Double numbersDifficulty EasyJavaScript',
       'Expression engine · 8Difficulty HardJavaScript',
     ]);
-  });
-
-  it('names the label on a Today review card', () => {
-    state.due = ['js-double-numbers'];
-    mount('/', <CodingDueSection />, '/');
-    const card = screen.getByRole('link', { name: 'Review: JavaScript · Double numbers, Easy' });
-    expect(within(card).getByText('Easy')).toBeInTheDocument();
   });
 });

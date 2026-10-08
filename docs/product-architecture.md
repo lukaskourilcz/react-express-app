@@ -444,7 +444,9 @@ that device and says coding tasks are checked and saved after sign-in. The Easy-
 Hard waves (`MEDIUM_HARD_BAND`), so adding them leaves every level's coding
 tasks as they were. Coding completion is permanent: the API ignores legacy review
 dates, returns an empty due queue, and never selects passed tasks for scheduled
-coding review. Question/concept review is unchanged. Tiers
+coding review. The browser shows no coding review either: no "Due for review"
+filter on a track, no coding card on Today, and `/coding/review` redirects to
+`/coding`. Question/concept review is unchanged. Tiers
 open in order (`tierUnlocked`) except in the unladdered tracks — system design
 is drilled rather than climbed, and `algorithms` is interview preparation a
 learner arrives at with a date in the diary, where a locked tier would withhold
