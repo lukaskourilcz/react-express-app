@@ -395,6 +395,10 @@ const readLog = (text, minLevel) => {
         call: 'printTree(["z/last/deep/file.md", "z/last/deep/other.md", "a.txt"])',
         expected: ['.', '├── z', '│   └── last', '│       └── deep', '│           ├── file.md', '│           └── other.md', '└── a.txt'],
       },
+      {
+        call: 'printTree(["src/b.js", "lib/a.js"])',
+        expected: ['.', '├── lib', '│   └── a.js', '└── src', '    └── b.js'],
+      },
     ],
   },
   /* ── structures behind a small API ────────────────────────────────── */
@@ -597,6 +601,11 @@ const readLog = (text, minLevel) => {
       {
         call: '(() => { const board = createLeaderboard(3); board.add("A", 50); board.add("B", 40); return [board.add("B", 40), board.add("B", 45), board.top()]; })()',
         expected: [2, 2, [{ name: 'A', score: 50 }, { name: 'B', score: 45 }]],
+      },
+      // An improvement that keeps its place takes out the old entry only, not the one below it.
+      {
+        call: '(() => { const board = createLeaderboard(3); board.add("A", 30); board.add("B", 20); board.add("C", 10); return [board.add("B", 25), board.top()]; })()',
+        expected: [2, [{ name: 'A', score: 30 }, { name: 'B', score: 25 }, { name: 'C', score: 10 }]],
       },
     ],
   },
