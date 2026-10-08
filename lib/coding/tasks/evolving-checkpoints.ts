@@ -9,6 +9,7 @@ import { text, test } from './evolving';
 import { DEBUG_CHECKPOINTS } from './evolving-debug';
 import { FULLSTACK_APPS, fullstackSeed, fullstackSpec } from './fullstack';
 import { FULLSTACK_PATH_PRELUDES } from './paths-fullstack';
+import { checkpointLadder } from './evolving-checkpoint-hints';
 
 interface Checkpoint {
   prompt: Localized;
@@ -527,6 +528,7 @@ export function expandEvolvingTasks(tasks: CodingTask[]): CodingTask[] {
           ...base,
           id: `${id}-start`,
           prompt: checkpoint.prompt,
+          ...checkpointLadder(`${id}-start`),
           previousRequirements: [...prompts],
           estimatedMinutes: 5,
           title: stageTitle(project.title, prompts.length + 1),
