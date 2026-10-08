@@ -48,7 +48,8 @@ export function AppToast({
         position: 'fixed',
         left: 0,
         right: 0,
-        bottom: 'max(1rem, env(safe-area-inset-bottom))',
+        // Above the cookie banner while it shows (CookieConsent.tsx).
+        bottom: 'calc(max(1rem, env(safe-area-inset-bottom)) + var(--ss-consent-dock, 0px))',
         display: 'flex',
         justifyContent: 'center',
         pointerEvents: 'none',

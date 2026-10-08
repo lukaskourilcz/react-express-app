@@ -23,6 +23,7 @@ import { TextInput } from '@astryxdesign/core/TextInput';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ApiError, friendlyError } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { openSignIn } from '../lib/signInDialog';
 import { entitlementKeys, useEntitlement } from '../lib/entitlement';
 import {
   cancelLinkToken,
@@ -66,13 +67,12 @@ export function PremiumSuccessPage() {
   const navigate = useNavigate();
   const sessionId = params.get('session_id') ?? '';
   const validSession = SESSION_ID.test(sessionId);
-  const { isAuthenticated, isLoading: authLoading, signInWithGoogle, user } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const plan = useEntitlement();
   const queryClient = useQueryClient();
   const [state, setState] = useState<SuccessState>({ kind: 'checking' });
   // An expired checkout offers both plans again, at the launch price while it is on.
   const offer = useLaunchOffer();
-  const [signInError, setSignInError] = useState<string | null>(null);
   const rechecks = useRef(0);
   const started = useRef(false);
 
@@ -150,7 +150,6 @@ export function PremiumSuccessPage() {
         </div>
         {view.kind === 'expired' && offer && <LaunchOfferNote offer={offer} compact />}
         {view.kind === 'error' && <Banner status="error" title={view.message} />}
-        {signInError && <Banner status="error" title={signInError} />}
         <div className="ss-info-actions">
           {view.kind === 'done' && (
             <>
@@ -175,12 +174,9 @@ export function PremiumSuccessPage() {
             <Button
               variant="primary"
               label={t('auth.logIn')}
-              onClick={() => {
-                setSignInError(null);
-                // Come back to this checkout after the Google round trip.
-                void signInWithGoogle(`/premium/success?session_id=${encodeURIComponent(sessionId)}`)
-                  .catch((error) => setSignInError(friendlyError(error)));
-              }}
+              aria-haspopup="dialog"
+              // Come back to this checkout after signing in.
+              onClick={() => openSignIn({ returnTo: `/premium/success?session_id=${encodeURIComponent(sessionId)}` })}
             />
           )}
         </div>
@@ -207,7 +203,7 @@ export function PremiumCancelPage() {
   const [params] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, isAuthenticated, signInWithGoogle } = useAuth();
+  const { user, isAuthenticated } = useAuth();
   // Until the settings arrive the form stays usable and the server decides;
   // it is closed only when the server says billing is not set up.
   const billing = useBilling();
@@ -403,9 +399,10 @@ export function PremiumCancelPage() {
               <Button
                 variant="primary"
                 label={t('auth.logIn')}
+                aria-haspopup="dialog"
                 onClick={() => {
                   setError(null);
-                  void signInWithGoogle(`/premium/cancel?action=${action}`).catch((err) => setError(friendlyError(err)));
+                  openSignIn({ returnTo: `/premium/cancel?action=${action}`, email: email.trim() });
                 }}
               />
               <Button variant="secondary" label={t('billing.cancel.back')} onClick={startAgain} />

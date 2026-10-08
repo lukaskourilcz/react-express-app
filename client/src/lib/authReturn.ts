@@ -1,16 +1,26 @@
-// Where to go after the Google sign-in round trip.
+// Where to go after a sign-in: the Google round trip, or an email sign-in in
+// the dialog that a page asked for with a path of its own.
 //
-// Supabase sends every sign-in back to the site's origin, because that is the
-// one redirect URL the project allow-lists. A sign-in records the page it was
-// pressed on (a page may name another: the checkout success page names itself
-// with its session id); the app shell reads it once the account arrives and
-// goes back there.
+// Supabase sends every Google sign-in back to the site's origin. A sign-in
+// records the page it was pressed on (a page may name another: the checkout
+// success page names itself with its session id); the app shell reads it once
+// the account arrives and goes back there. A confirmation email opens in
+// another tab, often on another device, so its link carries the page itself
+// (`/auth/confirmed?next=`, lib/emailAuth.ts) instead of this record.
 //
 // The record lives in sessionStorage (this tab only), accepts same-origin
 // paths only, and goes stale after fifteen minutes, so an abandoned sign-in
 // never hijacks a later one.
 
 const KEY = 'devshark:auth-return';
+
+/** Where a confirmation email's link lands (lib/emailAuth.ts). */
+export const CONFIRMED_PATH = '/auth/confirmed';
+/** Where a password-reset email's link lands. */
+export const RESET_PASSWORD_PATH = '/reset-password';
+/** Pages an email link lands on. They say what happened themselves and offer
+ * the way on, so the app shell sends nobody away from them after a sign-in. */
+export const AUTH_LANDING_PATHS: readonly string[] = [CONFIRMED_PATH, RESET_PASSWORD_PATH];
 const MAX_AGE_MS = 15 * 60_000;
 
 /** A path on this origin: one leading slash, no scheme, no backslash, no

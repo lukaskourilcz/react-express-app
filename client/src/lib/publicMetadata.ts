@@ -34,8 +34,9 @@ export function codingShareDescription({ difficulty, track, brand, free, total }
 }
 
 /** App routes that must stay out of search results: a Stripe return carries a
- * checkout id and means nothing to anyone else. */
-export const NOINDEX_PATHS: readonly string[] = ['/premium/success'];
+ * checkout id and means nothing to anyone else, and the pages an email link
+ * opens mean something only to whoever got the email. */
+export const NOINDEX_PATHS: readonly string[] = ['/premium/success', '/auth/confirmed', '/reset-password'];
 
 /** Structured data for /premium. The guides above stay free to read
  * (`isAccessibleForFree: true`); Premium is the paid subscription, so it says

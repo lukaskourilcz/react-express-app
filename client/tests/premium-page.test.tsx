@@ -15,13 +15,15 @@ import { server } from './mocks/server';
 import { settingsHandler } from './mocks/handlers';
 import { firstDraw, headings } from './firstDraw';
 
-const signInWithGoogle = vi.fn(async (_returnTo?: string) => undefined);
 const auth = vi.hoisted(() => ({
   value: { user: null as { id: string } | null, isAuthenticated: false, isLoading: false },
 }));
-vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ ...auth.value, signInWithGoogle }) }));
+vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
+// Signing in opens the sign-in dialog (Google, or an email and password).
+const openSignIn = vi.hoisted(() => vi.fn());
+vi.mock('../src/lib/signInDialog', async (importOriginal) => ({ ...(await importOriginal<object>()), openSignIn }));
 const signIn = () => { auth.value = { ...auth.value, user: { id: 'user-1' }, isAuthenticated: true }; };
-afterEach(() => { auth.value = { ...auth.value, user: null, isAuthenticated: false }; signInWithGoogle.mockClear(); });
+afterEach(() => { auth.value = { ...auth.value, user: null, isAuthenticated: false }; openSignIn.mockClear(); });
 
 const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 const PAYING = { ...FREE, tier: 'premium', source: 'provider', currentPeriodEnd: '2026-11-12T10:00:00.000Z' };
@@ -65,7 +67,11 @@ describe('/premium', () => {
     expect(within(plans).getByRole('heading', { level: 3, name: 'Monthly' })).toBeInTheDocument();
     expect(within(plans).getByText('€3.99')).toBeInTheDocument();
     expect(within(plans).getByText('€39.99')).toBeInTheDocument();
-    expect(within(plans).getByText('Two months free')).toBeInTheDocument();
+    // Owner decision 11: the exact saving at the prices shown, 3.99 × 12 − 39.99.
+    expect(within(plans).getByText('Save 7.89 EUR a year')).toBeInTheDocument();
+    expect(screen.queryByText(/months? free/i)).toBeNull();
+    // The refund promise says what the Terms and the code say: once per account.
+    expect(within(plans).getByText(/withdraw within 14 days of your first payment and get that payment back in full, once per account\./)).toBeInTheDocument();
     expect(within(plans).getAllByText(/VAT included\. Renews every (month|year) until you cancel\./)).toHaveLength(2);
     expect(within(plans).getByText(/renews automatically at the end of each month or year/)).toBeInTheDocument();
     expect(within(plans).getByText(en['premium.page.waiver'])).toBeInTheDocument();
@@ -78,11 +84,11 @@ describe('/premium', () => {
     renderAt('/premium', <PremiumPage />);
     const buttons = await screen.findAllByRole('button', { name: 'Sign in to continue' });
     expect(buttons).toHaveLength(2);
-    expect(screen.getByText('Sign in with Google first. You come back here to choose a plan.')).toBeInTheDocument();
+    expect(screen.getByText('Sign in first. You come back here to choose a plan.')).toBeInTheDocument();
     // The button waits for the billing settings before it acts.
     await waitFor(() => expect(screen.getAllByRole('button', { name: 'Sign in to continue' })[0]).toBeEnabled());
     fireEvent.click(screen.getAllByRole('button', { name: 'Sign in to continue' })[0]);
-    await waitFor(() => expect(signInWithGoogle).toHaveBeenCalledWith('/premium'));
+    await waitFor(() => expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium' }));
   });
 
   it('offers both checkouts to a free account', async () => {
@@ -153,6 +159,10 @@ describe('/premium', () => {
     expect(container.querySelectorAll('details.ss-premium-faq__item')).toHaveLength(6);
     expect(screen.getByText('Can I switch between monthly and yearly?')).toBeInTheDocument();
     expect(screen.getByText('Do you sell my data?')).toBeInTheDocument();
+    // The refund answer says once per account, as the Terms and claimRefund do.
+    const refund = screen.getByText('Can I withdraw and get my money back?').closest('details')!;
+    expect(refund).toHaveTextContent('Yes, within 14 days of your first payment, once per account.');
+    expect(refund).toHaveTextContent('After 14 days, or once the refund has been used, the same page cancels at the end of the paid period.');
   });
 });
 
@@ -177,7 +187,10 @@ describe('the plan table', () => {
     expect(screen.getByRole('link', { name: 'Start free' })).toHaveAttribute('href', '/learn');
   });
 
-  it('adds the path and coin rows once their switches are on', async () => {
+  // Merchandise is paused until next quarter (owner decision 10): the coin row
+  // stays out even when a settings answer says redemption is open. It used to
+  // appear here; merch-paused.test.tsx covers the paused page in full.
+  it('adds the path row once its switch is on, and no coin row while merchandise is paused', async () => {
     server.use(http.get('*/api/settings', () => HttpResponse.json({
       merch: { redemptionOpen: true },
       learningPaths: { paths: { fde: { enabled: false }, 'dsa-foundations': { enabled: true } } },
@@ -185,7 +198,7 @@ describe('the plan table', () => {
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
     expect(await within(table).findByRole('rowheader', { name: 'FDE and DSA learning paths' })).toBeInTheDocument();
-    expect(within(table).getByRole('rowheader', { name: 'Coins for merchandise' })).toBeInTheDocument();
+    expect(within(table).queryByRole('rowheader', { name: 'Coins for merchandise' })).toBeNull();
   });
 });
 
@@ -200,6 +213,7 @@ describe('the launch price (4 Oct to 2 Nov 2026, Prague)', () => {
     const plans = screen.getByRole('region', { name: 'Choose a plan' });
     expect(within(plans).getByText('€3.99')).toBeInTheDocument();
     expect(within(plans).getByText('€39.99')).toBeInTheDocument();
+    expect(within(plans).getByText('Save 7.89 EUR a year')).toBeInTheDocument();
     expect(document.querySelector('s, [data-offer]')).toBeNull();
     expect(screen.queryByText(/launch price/i)).toBeNull();
     expect(screen.queryByText(/1\.80|18\.00/)).toBeNull();
@@ -221,6 +235,10 @@ describe('the launch price (4 Oct to 2 Nov 2026, Prague)', () => {
     const annual = plans.querySelector('[data-plan="annual"] .ss-offer-amount')!;
     expect(annual.querySelector('s')).toHaveTextContent('€39.99');
     expect(annual.querySelector('strong')).toHaveTextContent('€18.00');
+    // The saving is true for the price shown: 1.80 × 12 − 18.00, not the
+    // regular 7.89 (owner decision 11).
+    expect(within(plans.querySelector('[data-plan="annual"]') as HTMLElement).getByText('Save 3.60 EUR a year')).toBeInTheDocument();
+    expect(within(plans).queryByText('Save 7.89 EUR a year')).toBeNull();
     const note = within(plans).getByRole('group', { name: 'Launch price €1.80 a month · €18.00 a year' });
     expect(note).toHaveTextContent('55% below the regular price of €3.99 a month · €39.99 a year, which applies from 3 Nov 2026');
     expect(note).toHaveTextContent('Kept for the lifetime of your subscription · cancel anytime');
@@ -329,12 +347,14 @@ describe('the Terms and the privacy policy', () => {
     expect(await screen.findByText(/The trader named under Who runs devShark sells Premium to you/)).toBeInTheDocument();
   });
 
-  it('lists Stripe, Link, Spreadshop and the merchandise address in the privacy policy', async () => {
+  // Round 4: merchandise is hidden until next quarter, so the policy no longer
+  // names Spreadshop as a recipient (it receives nothing) or a postal address.
+  it('lists Stripe and Link in the privacy policy, and no merchandise address', async () => {
     serve();
     renderAt('/privacy', <PrivacyPage />);
     expect(screen.getByRole('heading', { level: 1, name: 'Privacy policy' })).toBeInTheDocument();
-    expect(screen.getByText(/sprd\.net AG, Gießerstraße 27, 04229 Leipzig, Germany/)).toBeInTheDocument();
-    expect(screen.getByText(/passes them to sprd\.net AG/)).toBeInTheDocument();
+    expect(screen.queryByText(/sprd\.net AG/)).toBeNull();
+    expect(screen.getByText(/does not offer merchandise yet\. It collects no order and no postal address/)).toBeInTheDocument();
     expect(await screen.findByRole('link', { name: 'Link privacy policy' })).toHaveAttribute('href', 'https://link.com/privacy');
     expect(screen.getByRole('link', { name: 'Stripe privacy policy' })).toHaveAttribute('href', 'https://stripe.com/privacy');
     expect(screen.getByText(/devShark has no AI feature/)).toBeInTheDocument();

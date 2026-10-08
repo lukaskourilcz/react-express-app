@@ -15,6 +15,7 @@ import { Text } from '@astryxdesign/core/Text';
 import { m, AnimatePresence, useReducedMotion, stillIfReduced } from '../lib/motion';
 import { useIsMobile } from '../lib/useMediaQuery';
 import { useAuth } from '../lib/auth';
+import { openSignIn, useSignInRequest } from '../lib/signInDialog';
 import { useT } from '../i18n/LanguageContext';
 import { useGameConfig } from '../lib/gameConfig';
 import { SharkFin } from './SharkFin';
@@ -47,14 +48,21 @@ function markDismissed(): void {
 
 function RegisterPromptSnackbar() {
   const reduce = useReducedMotion();
-  const { isAuthenticated, isLoading, signInWithGoogle } = useAuth();
+  const { isAuthenticated, isLoading } = useAuth();
   const t = useT();
   // The welcome coins as the owner configured them (#227); 0 drops the offer.
   const welcomeCoins = useGameConfig().coins.welcomeGrant;
   const isMobile = useIsMobile();
   const location = useLocation();
   const [open, setOpen] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // A visitor who opened the sign-in dialog, from here or anywhere, has found
+  // it: the prompt never comes up behind it or after it this session.
+  const signInOpen = useSignInRequest() !== null;
+  useEffect(() => {
+    if (!signInOpen) return;
+    markDismissed();
+    setOpen(false);
+  }, [signInOpen]);
 
   useEffect(() => {
     if (location.pathname !== '/' || isLoading || isAuthenticated) {
@@ -68,7 +76,7 @@ function RegisterPromptSnackbar() {
     let timer: ReturnType<typeof setTimeout> | undefined;
     const interacted = () => {
       if (timer !== undefined) return;
-      timer = setTimeout(() => setOpen(true), SHOW_DELAY_MS);
+      timer = setTimeout(() => { if (!readDismissed()) setOpen(true); }, SHOW_DELAY_MS);
     };
     window.addEventListener('pointerdown', interacted, { once: true });
     window.addEventListener('keydown', interacted, { once: true });
@@ -79,24 +87,16 @@ function RegisterPromptSnackbar() {
     };
   }, [location.pathname, isLoading, isAuthenticated]);
 
-  // Auto-hide the error toast (was the Snackbar's autoHideDuration).
-  useEffect(() => {
-    if (!error) return;
-    const id = window.setTimeout(() => setError(null), 8000);
-    return () => window.clearTimeout(id);
-  }, [error]);
-
   const handleClose = () => {
     setOpen(false);
     markDismissed();
   };
 
-  const handleSignIn = async () => {
-    try {
-      await signInWithGoogle();
-    } catch {
-      setError(t('auth.signInFailed'));
-    }
+  // The sign-in dialog takes over from here (Google, or an email and
+  // password), so the prompt steps aside for this session.
+  const handleSignIn = () => {
+    handleClose();
+    openSignIn();
   };
 
   if (isAuthenticated) return null;
@@ -188,31 +188,6 @@ function RegisterPromptSnackbar() {
               <Button size="sm" variant="ghost" label={t('register.dismiss')} onClick={handleClose} />
               <Button size="sm" variant="primary" label={t('register.cta')} onClick={handleSignIn} />
             </div>
-          </m.div>
-        )}
-      </AnimatePresence>
-      <AnimatePresence>
-        {error && (
-          <m.div
-            key="register-error"
-            role="alert"
-            aria-live="assertive"
-            initial={stillIfReduced(reduce, { opacity: 0, x: 40 })}
-            animate={stillIfReduced(reduce, { opacity: 1, x: 0 })}
-            exit={stillIfReduced(reduce, { opacity: 0, x: 40 })}
-            transition={{ duration: 0.24, ease: [0.16, 1, 0.3, 1] }}
-            style={{
-              pointerEvents: 'auto',
-              backgroundColor: 'var(--ss-error-soft)',
-              color: 'var(--ss-error)',
-              border: '1px solid color-mix(in srgb, var(--ss-error) 28%, transparent)',
-              borderRadius: 'var(--radius-element)',
-              padding: '10px 16px',
-              fontSize: '0.85rem',
-              maxWidth: 320,
-            }}
-          >
-            {error}
           </m.div>
         )}
       </AnimatePresence>

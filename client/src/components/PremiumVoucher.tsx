@@ -28,8 +28,8 @@ import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { TextInput } from '@astryxdesign/core/TextInput';
 import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
-import { friendlyError } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { openSignIn } from '../lib/signInDialog';
 import { entitlementKeys } from '../lib/entitlement';
 import {
   forgetVoucherPrefill,
@@ -66,7 +66,7 @@ const BANNER_REFUSALS: Partial<Record<VoucherRefusal, TranslationKey>> = {
 
 export default function PremiumVoucher({ billingClosed }: { billingClosed: boolean }) {
   const { t, lang } = useLanguage();
-  const { user, isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const queryClient = useQueryClient();
   const location = useLocation();
   const navigate = useNavigate();
@@ -76,7 +76,6 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
   const [code, setCode] = useState(() => voucherFromSearch(location.search) ?? readVoucherPrefill() ?? '');
   const [step, setStep] = useState<Step>({ kind: 'form' });
   const [busy, setBusy] = useState(false);
-  const [signInError, setSignInError] = useState<string | null>(null);
   const input = useRef<HTMLInputElement | null>(null);
   const doneHeading = useRef<HTMLHeadingElement>(null);
   const section = useRef<HTMLElement>(null);
@@ -151,10 +150,7 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
     }
   };
 
-  const signIn = () => {
-    setSignInError(null);
-    void signInWithGoogle(VOUCHER_PATH).catch((error) => setSignInError(friendlyError(error)));
-  };
+  const signIn = () => openSignIn({ returnTo: VOUCHER_PATH });
 
   const refusal = step.kind === 'form' ? step.refusal : undefined;
   const fieldMessage = refusal && FIELD_REFUSALS[refusal] ? t(FIELD_REFUSALS[refusal]!) : null;
@@ -197,9 +193,8 @@ export default function PremiumVoucher({ billingClosed }: { billingClosed: boole
             <>
               <p className="ss-premium-note">{t('premium.voucher.signedOut')}</p>
               <div className="ss-info-actions">
-                <Button variant="primary" label={t('premium.voucher.signIn')} onClick={signIn} />
+                <Button variant="primary" label={t('premium.voucher.signIn')} aria-haspopup="dialog" onClick={signIn} />
               </div>
-              {signInError && <Banner status="error" title={signInError} />}
             </>
           ) : (
             <form className="ss-premium-voucher__form" noValidate onSubmit={(event) => void submit(event)}>

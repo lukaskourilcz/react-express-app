@@ -10,7 +10,13 @@
  * - a multiplayer host (a competitor) cannot read the live answer distribution;
  * - a lobby whose host stopped sending heartbeats is closed;
  * - a player reads only the questions already shown, and the server's clock;
- * - the Play switch in the app settings turns every action off.
+ * - a classroom scoreboard counts only closed questions, "Reveal answer"
+ *   closes the question, and a pupil's answer is acknowledged, never graded
+ *   back (migration 056); a multiplayer one counts every answer;
+ * - the Play switch in the app settings turns every action off;
+ * - a room names each player itself: the Google name, else the sharkname,
+ *   else "Player" and a number, never the part of the address before the @
+ *   an older client sent for an account without a Google name.
  *
  * Nothing leaves the machine. */
 
@@ -21,21 +27,32 @@ import type { AddressInfo } from 'node:net';
 
 type Row = Record<string, unknown>;
 
+// The host signs in with Google; one and two made their accounts with an
+// email and a password, so they have no name, and only one has a sharkname.
+const googleIdentity = (fullName: string) => ({ provider: 'google', identity_data: { full_name: fullName, email: 'grace@example.com' } });
+const emailIdentity = (email: string) => ({ provider: 'email', identity_data: { email, email_verified: true } });
 const USERS = {
-  host: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e01', token: 'play-contract-host' },
-  one: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e02', token: 'play-contract-one' },
-  two: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e03', token: 'play-contract-two' },
+  host: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e01', token: 'play-contract-host', email: 'grace@example.com', identities: [googleIdentity('Grace Hopper')] },
+  one: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e02', token: 'play-contract-one', email: 'ada.lovelace@example.com', identities: [emailIdentity('ada.lovelace@example.com')] },
+  two: { id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e03', token: 'play-contract-two', email: 'alan.turing@example.com', identities: [emailIdentity('alan.turing@example.com')] },
 } as const;
 type Who = keyof typeof USERS;
 
-const tables: Record<string, Row[]> = { matches: [], match_participants: [], match_answers: [], app_settings: [] };
+const tables: Record<string, Row[]> = {
+  matches: [], match_participants: [], match_answers: [], app_settings: [],
+  // Migration 055's sharknames: only `one` has one.
+  user_handles: [{ user_id: '5d0c6a52-3f7e-4b8e-9c1a-0a1b2c3d4e02', handle: 'el-tiburon-loco' }],
+};
 const UNIQUE: Record<string, string[][]> = {
   matches: [['id'], ['code']],
   match_participants: [['match_id', 'user_id']],
   match_answers: [['match_id', 'user_id', 'question_idx']],
   app_settings: [['key']],
+  user_handles: [['user_id']],
 };
 let clock = 0;
+/** The arguments of every match_scoreboard call, in order. */
+const scoreboardCalls: Row[] = [];
 
 const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
   let text = '';
@@ -46,7 +63,7 @@ const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
 /** The PostgREST filters the handler uses: eq, in and is. */
 function matches(row: Row, params: URLSearchParams): boolean {
   for (const [column, raw] of params) {
-    if (['select', 'order', 'limit', 'on_conflict', 'columns'].includes(column)) continue;
+    if (['select', 'order', 'limit', 'offset', 'on_conflict', 'columns'].includes(column)) continue;
     const value = String(row[column] ?? 'null');
     if (raw.startsWith('eq.')) {
       if (value !== raw.slice(3)) return false;
@@ -85,11 +102,14 @@ function reply(req: IncomingMessage, res: ServerResponse, rows: Row[], params: U
   res.end(req.method === 'HEAD' ? undefined : JSON.stringify(shaped));
 }
 
-function scoreboard(matchId: string): Row[] {
+/** match_scoreboard of migration 056: with p_before_idx it counts only the
+ * answers to earlier questions. */
+function scoreboard(matchId: string, beforeIdx: number | null = null): Row[] {
   return tables.match_participants
     .filter((p) => p.match_id === matchId)
     .map((p) => {
-      const answers = tables.match_answers.filter((a) => a.match_id === matchId && a.user_id === p.user_id);
+      const answers = tables.match_answers.filter((a) => a.match_id === matchId && a.user_id === p.user_id &&
+        (beforeIdx === null || Number(a.question_idx) < beforeIdx));
       return {
         user_id: p.user_id,
         display_name: p.display_name,
@@ -124,14 +144,18 @@ async function handle(req: IncomingMessage, res: ServerResponse) {
       res.end(JSON.stringify({ message: 'invalid token' }));
       return;
     }
-    res.end(JSON.stringify({ id: user.id, aud: 'authenticated', role: 'authenticated', app_metadata: {}, user_metadata: {} }));
+    res.end(JSON.stringify({ id: user.id, aud: 'authenticated', role: 'authenticated', email: user.email, app_metadata: {}, user_metadata: {}, identities: user.identities }));
     return;
   }
 
   const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname);
   if (rpc) {
     const args = JSON.parse((await readBody(req)) || '{}') as Record<string, unknown>;
-    if (rpc[1] === 'match_scoreboard') return void res.end(JSON.stringify(scoreboard(String(args.p_match_id))));
+    if (rpc[1] === 'match_scoreboard') {
+      scoreboardCalls.push(args);
+      const before = typeof args.p_before_idx === 'number' ? args.p_before_idx : null;
+      return void res.end(JSON.stringify(scoreboard(String(args.p_match_id), before)));
+    }
     if (rpc[1] === 'match_question_distribution') {
       return void res.end(JSON.stringify(distribution(String(args.p_match_id), Number(args.p_question_idx))));
     }
@@ -413,6 +437,103 @@ async function main() {
       assert.equal(typeof finished.questions[4].correct_index, 'number', 'with its key');
     }
 
+    // 7. While a classroom room runs, its scoreboard counts only closed
+    //    questions: the ones before the current one, and the current one once
+    //    the teacher revealed it or its clock ran out (056). "Reveal answer"
+    //    closes the question: a later answer to it is refused. `one` presents
+    //    this room; `two` and `host` are the class.
+    {
+      const created = await call('one', 'POST', 'create', { host_name: 'One', mode: 'classroom', count: 5, categories: ['javascript'], duration_s: 30 });
+      assert.equal(created.statusCode, 200, `a classroom room opens (${JSON.stringify(created.body)})`);
+      const code = created.body.code as string;
+      for (const who of ['two', 'host'] as const) {
+        assert.equal((await call(who, 'POST', 'join', { code, display_name: who })).statusCode, 200, `${who} joins the class`);
+      }
+      assert.equal((await call('one', 'POST', 'control', { code, action: 'start' })).statusCode, 200);
+      const scoreOf = async (reader: Who, who: Who) => {
+        const state = await call(reader, 'GET', 'state', { code });
+        assert.equal(state.statusCode, 200);
+        return (state.body.scoreboard as Array<{ user_id: string; score: number }>).find((row) => row.user_id === USERS[who].id)!.score;
+      };
+
+      // The answer is acknowledged, not graded: nothing in the reply says
+      // whether it scored, while the question is open or after.
+      const ACK = { ok: true, accepted: true, advanced: false };
+      const first = await call('two', 'POST', 'answer', { code, question_idx: 0, selected_idx: correctIndex(code, 0) });
+      assert.equal(first.statusCode, 200);
+      assert.deepEqual(first.body, ACK, 'a classroom answer is only acknowledged');
+      assert.equal(await scoreOf('host', 'two'), 0, 'a pupil sees no points for the open question');
+      assert.equal(await scoreOf('one', 'two'), 0, 'nor does the projected presenter screen');
+      assert.equal(scoreboardCalls.at(-1)?.p_before_idx, 0, 'the scoreboard is asked for the questions before the open one');
+
+      // Only the presenter reveals, and only in a classroom.
+      const pupilReveal = await call('two', 'POST', 'control', { code, action: 'reveal' });
+      assert.equal(pupilReveal.statusCode, 403, 'a pupil cannot reveal');
+      assert.equal(room(code).revealed_idx ?? null, null);
+      const reveal = await call('one', 'POST', 'control', { code, action: 'reveal' });
+      assert.equal(reveal.statusCode, 200, `the presenter reveals (${JSON.stringify(reveal.body)})`);
+      assert.deepEqual(reveal.body, { ok: true, status: 'running', current_index: 0, revealed_idx: 0 });
+      assert.equal(room(code).revealed_idx, 0, 'the room records the closed question');
+      assert.equal((await call('one', 'POST', 'control', { code, action: 'reveal' })).statusCode, 200, 'revealing again changes nothing');
+
+      const closed = await call('host', 'POST', 'answer', { code, question_idx: 0, selected_idx: correctIndex(code, 0) });
+      assert.equal(closed.statusCode, 409, `an answer after the reveal is refused (${JSON.stringify(closed.body)})`);
+      assert.equal(closed.body.error.code, 'question_closed');
+      assert.equal(tables.match_answers.filter((a) => a.user_id === USERS.host.id).length, 0, 'and not recorded');
+      const retry = await call('two', 'POST', 'answer', { code, question_idx: 0, selected_idx: correctIndex(code, 0) });
+      assert.equal(retry.statusCode, 200, 'a retry of an answer sent before the reveal replays it');
+      assert.deepEqual(retry.body, ACK, 'with the same acknowledgement');
+      // The pupil learns the result from the scoreboard once the question closed.
+      const counted = await scoreOf('two', 'two');
+      assert.ok(counted >= 100, `the closed question counts at once: ${counted}`);
+      assert.equal(await scoreOf('one', 'two'), counted, 'on the presenter screen too');
+      const joined = await call('host', 'POST', 'join', { code, display_name: 'host' });
+      assert.equal(joined.body.revealed_idx, 0, 'a pupil joining again learns the question is closed');
+
+      // The next question is open: its answer adds nothing until it closes,
+      // here by its clock (30 s and the 2 s grace, on the server's clock).
+      assert.equal((await call('one', 'POST', 'control', { code, action: 'advance' })).statusCode, 200);
+      const second = await call('two', 'POST', 'answer', { code, question_idx: 1, selected_idx: correctIndex(code, 1) });
+      assert.equal(second.statusCode, 200, 'the next question takes answers');
+      // A wrong answer gets the very same reply as a right one.
+      const wrong = await call('host', 'POST', 'answer', { code, question_idx: 1, selected_idx: (correctIndex(code, 1) + 1) % 4 });
+      assert.equal(wrong.statusCode, 200);
+      assert.deepEqual([second.body, wrong.body], [ACK, ACK], 'a right and a wrong answer cannot be told apart');
+      assert.equal(await scoreOf('host', 'two'), counted, 'the open question adds nothing');
+      rewind(code, 31_000);
+      assert.equal(await scoreOf('host', 'two'), counted, 'nor inside the grace');
+      rewind(code, 33_000);
+      assert.ok(await scoreOf('host', 'two') >= counted + 100, 'a question whose clock ran out counts');
+      assert.equal(await scoreOf('host', 'host'), 0, 'and the wrong answer scored nothing, which the pupil now sees');
+
+      // Once the round is over, every answer counts and the call is the one
+      // it always was.
+      assert.equal((await call('one', 'POST', 'control', { code, action: 'finish' })).statusCode, 200);
+      assert.ok(await scoreOf('two', 'two') >= counted + 100);
+      assert.equal('p_before_idx' in (scoreboardCalls.at(-1) ?? {}), false, 'a finished room counts every answer');
+    }
+
+    // A multiplayer room has no reveal, and its scoreboard counts every
+    // answer, the open question's included: a player learns that someone
+    // scored, never which option. `two` opens it.
+    {
+      const created = await call('two', 'POST', 'create', { host_name: 'Two', mode: 'multiplayer', count: 5, categories: ['javascript'], duration_s: 30 });
+      assert.equal(created.statusCode, 200, `a multiplayer room opens (${JSON.stringify(created.body)})`);
+      const code = created.body.code as string;
+      assert.equal((await call('one', 'POST', 'join', { code, display_name: 'one' })).statusCode, 200);
+      assert.equal((await call('two', 'POST', 'control', { code, action: 'start' })).statusCode, 200);
+      const reveal = await call('two', 'POST', 'control', { code, action: 'reveal' });
+      assert.equal(reveal.statusCode, 400, 'a multiplayer room has no reveal');
+      assert.equal(room(code).revealed_idx ?? null, null);
+      const graded = await call('one', 'POST', 'answer', { code, question_idx: 0, selected_idx: correctIndex(code, 0) });
+      assert.equal(graded.statusCode, 200);
+      assert.equal(graded.body.is_correct, true, 'a multiplayer player gets their own result at once, as before');
+      assert.equal(typeof graded.body.speed_bonus, 'number');
+      const board = (await call('two', 'GET', 'state', { code })).body.scoreboard as Array<{ user_id: string; score: number }>;
+      assert.ok(board.find((row) => row.user_id === USERS.one.id)!.score >= 100, 'the open question counts in multiplayer, as before');
+      assert.equal('p_before_idx' in (scoreboardCalls.at(-1) ?? {}), false, 'with the call it always made');
+    }
+
     // 5. The Play switch turns every action off, rooms already open included.
     {
       const code = await open('multiplayer', ['one']);
@@ -434,10 +555,39 @@ async function main() {
       await settings.saveGameSettings(settings.DEFAULT_SETTINGS);
       assert.equal((await call('one', 'GET', 'state', { code })).statusCode, 200, 'switching Play back on reopens the room');
     }
+
+    // 6. A room names its players itself (round 4): the Google name, else the
+    //    sharkname, else "Player" and a number. What the body says is ignored:
+    //    an older client sent the part of the address before the @.
+    {
+      const created = await call('one', 'POST', 'create', { host_name: 'ada.lovelace', mode: 'classroom', count: 5, categories: ['javascript'], duration_s: 30 });
+      assert.equal(created.statusCode, 200, JSON.stringify(created.body));
+      const code = created.body.code as string;
+      assert.equal(created.body.host_name, 'el-tiburon-loco', 'a host without a Google name is named by their sharkname, not the body');
+      assert.equal((await call('host', 'POST', 'join', { code, display_name: 'grace' })).statusCode, 200);
+      // A client that sends no name at all joins too.
+      assert.equal((await call('two', 'POST', 'join', { code })).statusCode, 200, 'a join needs no display_name');
+      const state = (await call('one', 'GET', 'state', { code })).body as { match: { host_name: string }; participants: { user_id: string; display_name: string }[] };
+      const named = Object.fromEntries(state.participants.map((p) => [p.user_id, p.display_name]));
+      assert.equal(state.match.host_name, 'el-tiburon-loco');
+      assert.equal(named[USERS.one.id], 'el-tiburon-loco', 'an email account is named by its sharkname');
+      assert.equal(named[USERS.host.id], 'Grace Hopper', 'a Google account by its Google name');
+      assert.match(named[USERS.two.id], /^Player \d{4}$/, 'an email account without a sharkname is "Player" and a number');
+      // The same number in every room, as a host too.
+      const again = await call('two', 'POST', 'create', { mode: 'multiplayer', count: 5, categories: ['javascript'], duration_s: 30 });
+      assert.equal(again.statusCode, 200, JSON.stringify(again.body));
+      assert.equal(again.body.host_name, named[USERS.two.id], 'a player keeps their number across rooms');
+      // No part of any address reaches a room.
+      const stored = JSON.stringify([tables.matches, tables.match_participants]);
+      for (const user of Object.values(USERS)) {
+        const local = user.email.split('@')[0];
+        assert.ok(!stored.includes(local), `${local} is not stored in a room`);
+      }
+    }
   } finally {
     server.close();
   }
-  console.log('Play room contracts passed: late answers, the classroom host, the live distribution, abandoned lobbies, the questions a player reads and the Play switch.');
+  console.log('Play room contracts passed: late answers, the classroom host, the live distribution, abandoned lobbies, the questions a player reads, the classroom reveal and scoreboard, the Play switch, and room names that never come from an address.');
 }
 
 await main();

@@ -89,7 +89,7 @@ test('a stored session downloads supabase-js and restores the account', async ({
   expect(signInReports).toEqual([]);
 });
 
-test('signing in downloads supabase-js on the click, then leaves for the provider', async ({ page }) => {
+test('signing in downloads supabase-js on the Google press, then leaves for the provider', async ({ page }) => {
   await desktop(page);
   await offlineApi(page);
   await localAuth(page);
@@ -99,7 +99,13 @@ test('signing in downloads supabase-js on the click, then leaves for the provide
   await expect(logIn).toBeVisible();
   await page.waitForLoadState('networkidle');
   expect(await libraryRequests(page, seen.chunks)).toEqual([]);
+  // "Log in" opens the sign-in dialog: Google first, then an email and
+  // password. Opening it downloads nothing of supabase-js.
   await logIn.click();
+  const google = page.getByRole('dialog').getByRole('button', { name: 'Continue with Google' });
+  await expect(google).toBeVisible();
+  expect(await libraryRequests(page, seen.chunks)).toEqual([]);
+  await google.click();
   await page.waitForURL((url) => url.hostname === projectUrl.hostname);
   const authorize = new URL(page.url());
   expect(authorize.pathname).toBe('/auth/v1/authorize');
@@ -129,9 +135,10 @@ test('a second sign-in press after a failed download reloads, leaves for the pro
 
   // The voucher's sign-in records where to come back to (/premium#voucher).
   await page.goto('/premium');
-  const signIn = page.getByRole('button', { name: 'Sign in to redeem' });
+  await page.getByRole('button', { name: 'Sign in to redeem' }).click();
+  const signIn = page.getByRole('dialog').getByRole('button', { name: 'Continue with Google' });
   await signIn.click();
-  await expect(page.getByText('Something went wrong. Try again.')).toBeVisible();
+  await expect(page.getByRole('dialog').getByRole('alert')).toContainText('We couldn’t reach the sign-in service. Check your connection and try again.');
   expect(library).toEqual(['dropped']);
   expect(documents).toEqual(['/premium']);
 

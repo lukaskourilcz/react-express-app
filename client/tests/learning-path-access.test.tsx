@@ -305,4 +305,22 @@ describe('the Profile picker', () => {
     expect((state.saves[0] as [unknown, { specialization: unknown }])[1].specialization).toBeNull();
     expect(state.sheet).toHaveBeenCalledWith({ kind: 'learning-path', ref: 'fde' });
   });
+
+  // Owner decision 10: merchandise is paused until next quarter, so a finished
+  // path shows no package and the card never asks the server for one.
+  it('shows no package for a finished path while merchandise is paused, and never asks for one', async () => {
+    let asked = 0;
+    server.use(http.get('*/api/user/learning-path-reward', () => {
+      asked += 1;
+      return HttpResponse.json({ eligible: true, claimed: false, orderId: null });
+    }));
+    state.enrollments = [enrolled('dsa-foundations')];
+    await card();
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 50)); });
+    expect(screen.getByText('DSA Foundations')).toBeInTheDocument();
+    expect(screen.queryByText('Your package is ready to claim')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Claim the package' })).toBeNull();
+    expect(document.body.textContent).not.toMatch(/package|t-shirt|merch/i);
+    expect(asked).toBe(0);
+  });
 });

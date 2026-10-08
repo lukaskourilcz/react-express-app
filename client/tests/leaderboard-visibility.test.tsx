@@ -49,7 +49,8 @@ describe('the Profile’s leaderboard switch', () => {
     const toggle = await screen.findByRole('switch', { name: SWITCH });
     await waitFor(() => expect(toggle).toBeEnabled());
     expect(toggle).not.toBeChecked();
-    expect(screen.getByText('Leaderboards are public. With this off, you appear as “Learner” with no photo. A change reaches the public boards within about a minute.')).toBeInTheDocument();
+    // The name a board shows follows "Friends see" (migration 055).
+    expect(screen.getByText('Leaderboards are public. When on, they show your sharkname (or your name, if friends see your name) and your photo; without a sharkname, your name. When off, you appear as “Learner” with no photo. A change reaches the public boards within about a minute.')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Leaderboard' })).toBeInTheDocument();
   });
 

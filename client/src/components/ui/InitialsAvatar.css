@@ -1,0 +1,33 @@
+/* Initials avatar (InitialsAvatar.tsx). A disc of one of the eight ocean inks
+ * with the initials in --ss-on-avatar; a faint inner ring keeps its edge
+ * visible on the dark card, where the inks sit close to the surface. */
+
+.ss-initials-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--ss-avatar-1);
+  color: var(--ss-on-avatar);
+  box-shadow: inset 0 0 0 1px light-dark(rgba(var(--ss-ink-rgb), 0.08), rgba(232, 238, 240, 0.16));
+  font-family: var(--font-family-heading, inherit);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+.ss-initials-avatar[data-tone='2'] { background: var(--ss-avatar-2); }
+.ss-initials-avatar[data-tone='3'] { background: var(--ss-avatar-3); }
+.ss-initials-avatar[data-tone='4'] { background: var(--ss-avatar-4); }
+.ss-initials-avatar[data-tone='5'] { background: var(--ss-avatar-5); }
+.ss-initials-avatar[data-tone='6'] { background: var(--ss-avatar-6); }
+.ss-initials-avatar[data-tone='7'] { background: var(--ss-avatar-7); }
+.ss-initials-avatar[data-tone='8'] { background: var(--ss-avatar-8); }
+
+/* Forced colours drop the fill; a border keeps the disc. */
+@media (forced-colors: active) {
+  .ss-initials-avatar { border: 1px solid CanvasText; }
+}
+
+.ss-initials-avatar__photo { display: inline-flex; flex-shrink: 0; }

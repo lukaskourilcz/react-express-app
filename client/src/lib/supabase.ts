@@ -42,9 +42,9 @@ export async function createOrUpdateUserStats(
   return data;
 }
 
-/** `questXp` is the XP the account recorded for this result, which from
- * migration 048 can be less than the graded result's (a question answered
- * earlier the same UTC day earns none). Absent from an older server. */
+/** `questXp` is the XP the account recorded for this result: the graded
+ * result's whole XP from migration 056, repeated questions included, and
+ * nothing for a refused second daily. Absent from an older server. */
 export async function recordQuizResult(
   resultReceipt: string,
   profile: { email?: string; name?: string; picture?: string },

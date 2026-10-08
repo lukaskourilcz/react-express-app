@@ -34,6 +34,8 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/classroom': 'title.classroom',
   '/curation': 'title.curation',
   '/dev': 'title.dev',
+  '/auth/confirmed': 'title.emailConfirmed',
+  '/reset-password': 'title.resetPassword',
 };
 
 // A learning path's pages, its overview and every module, carry the path's

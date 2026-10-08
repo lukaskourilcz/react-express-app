@@ -18,6 +18,7 @@ import { TextInput } from '@astryxdesign/core/TextInput';
 import { Switch } from '@astryxdesign/core/Switch';
 import { Button } from '@astryxdesign/core/Button';
 import { Badge } from '@astryxdesign/core/Badge';
+import { Banner } from '@astryxdesign/core/Banner';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
 import { AppToast } from '../ui/AppToast';
@@ -37,6 +38,7 @@ import {
 } from '../../lib/devApi';
 import {
   DEFAULT_MERCH_SETTINGS,
+  MERCH_ENABLED,
   MERCH_CATALOGUE,
   MERCH_SKUS,
   merchMarginMinor,
@@ -151,6 +153,17 @@ export default function DevMerch() {
   const [snack, setSnack] = useState<string | null>(null);
   return (
     <div style={{ maxWidth: 960 }}>
+      {/* Owner decision 10: merchandise is off until next quarter. The console
+          stays so quotes and caps can be prepared, and says that nothing here
+          reaches a learner yet. */}
+      {!MERCH_ENABLED && (
+        <Banner
+          status="warning"
+          title="Merchandise is off until next quarter"
+          description="Learners see no merchandise, no coin redemption and no learning-path package, and the server refuses orders and package claims with merch_unavailable, whatever is saved here. Turn it on with MERCH_ENABLED in shared/rewards.ts."
+          style={{ marginBottom: 16 }}
+        />
+      )}
       <p style={{ ...captionStyle, marginTop: 0, marginBottom: 16 }}>
         Spreadshop prints, sells and ships the merchandise. Anyone buys with money in the devShark shop there; Premium
         members redeem coins here, and you order each redemption at base price from the Spreadshop preview (Order product

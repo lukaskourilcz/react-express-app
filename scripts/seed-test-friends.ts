@@ -30,6 +30,11 @@
 /* ── the ten, as profiles ──────────────────────────────────────────────── */
 
 interface Profile {
+  /** The account id is `seed-friend-<slug>`. The slug was the first handle,
+   * and stays the id so a re-run updates the same ten accounts. */
+  slug: string;
+  /** A sharkname from shared/sharkname.ts, the one migration 055 gave the
+   * production accounts. 24 characters at most. */
   handle: string;
   /** ISO 3166-1 alpha-2. Shown as a flag, ranked nowhere. */
   country: string;
@@ -53,61 +58,61 @@ interface Profile {
  * the file itself rather than only in the database. */
 const PROFILES: readonly Profile[] = [
   {
-    handle: 'pablo-r', country: 'AR', initials: 'PR', ink: '#4a5a6a',
+    slug: 'pablo-r', handle: 'kale-no-bueno-tiburon', country: 'AR', initials: 'KN', ink: '#4a5a6a',
     currentStreak: 0, longestStreak: 1, lastSeenDaysAgo: 6,
     questions: 20, accuracyPct: 55, questXp: 60,
     levels: { html: 1 }, crown: false,
   },
   {
-    handle: 'mia-dev', country: 'CZ', initials: 'MD', ink: '#3f6b7a',
+    slug: 'mia-dev', handle: 'fin-de-siesta', country: 'CZ', initials: 'FD', ink: '#3f6b7a',
     currentStreak: 0, longestStreak: 2, lastSeenDaysAgo: 3,
     questions: 40, accuracyPct: 62, questXp: 120,
     levels: { html: 2, css: 1 }, crown: false,
   },
   {
-    handle: 'tomas-h', country: 'SK', initials: 'TH', ink: '#5a6b4a',
+    slug: 'tomas-h', handle: 'stealthy-cat-shark', country: 'SK', initials: 'SC', ink: '#5a6b4a',
     currentStreak: 3, longestStreak: 5, lastSeenDaysAgo: 0,
     questions: 150, accuracyPct: 71, questXp: 480,
     levels: { html: 3, css: 2, javascript: 1 }, crown: false,
   },
   {
-    handle: 'ravi-p', country: 'IN', initials: 'RP', ink: '#6b5a3f',
+    slug: 'ravi-p', handle: 'deployed-lantern-shark', country: 'IN', initials: 'DL', ink: '#6b5a3f',
     currentStreak: 1, longestStreak: 9, lastSeenDaysAgo: 0,
     questions: 300, accuracyPct: 69, questXp: 900,
     levels: { html: 4, css: 3, javascript: 2, git: 1 }, crown: false,
   },
   {
-    handle: 'jonas-b', country: 'SE', initials: 'JB', ink: '#40607a',
+    slug: 'jonas-b', handle: 'sharky-mc-burritoface', country: 'SE', initials: 'SM', ink: '#40607a',
     currentStreak: 7, longestStreak: 11, lastSeenDaysAgo: 0,
     questions: 360, accuracyPct: 74, questXp: 1100,
     levels: { html: 5, css: 4, javascript: 3, git: 2 }, crown: false,
   },
   {
-    handle: 'lena-k', country: 'DE', initials: 'LK', ink: '#6a4a5a',
+    slug: 'lena-k', handle: 'muy-thirsty-sharkie', country: 'DE', initials: 'MT', ink: '#6a4a5a',
     currentStreak: 12, longestStreak: 14, lastSeenDaysAgo: 0,
     questions: 420, accuracyPct: 78, questXp: 1450,
     levels: { html: 5, css: 5, javascript: 4, git: 3, react: 1 }, crown: true,
   },
   {
-    handle: 'nina-v', country: 'NL', initials: 'NV', ink: '#3f6a5f',
+    slug: 'nina-v', handle: 'mucho-drama-fin', country: 'NL', initials: 'MD', ink: '#3f6a5f',
     currentStreak: 9, longestStreak: 9, lastSeenDaysAgo: 0,
     questions: 520, accuracyPct: 76, questXp: 1900,
     levels: { html: 6, css: 5, javascript: 5, git: 3, react: 2 }, crown: true,
   },
   {
-    handle: 'yuki-t', country: 'JP', initials: 'YT', ink: '#54506b',
+    slug: 'yuki-t', handle: 'mucho-nap-chomper', country: 'JP', initials: 'MN', ink: '#54506b',
     currentStreak: 2, longestStreak: 30, lastSeenDaysAgo: 0,
     questions: 850, accuracyPct: 81, questXp: 3100,
     levels: { html: 6, css: 6, javascript: 6, git: 4, react: 4, nodejs: 2 }, crown: false,
   },
   {
-    handle: 'sofia-m', country: 'ES', initials: 'SM', ink: '#7a5540',
+    slug: 'sofia-m', handle: 'gracias-sharkie', country: 'ES', initials: 'GS', ink: '#7a5540',
     currentStreak: 21, longestStreak: 21, lastSeenDaysAgo: 0,
     questions: 700, accuracyPct: 84, questXp: 2600,
     levels: { html: 6, css: 6, javascript: 6, git: 5, react: 3, nodejs: 1 }, crown: true,
   },
   {
-    handle: 'amara-o', country: 'NG', initials: 'AO', ink: '#2f5a63',
+    slug: 'amara-o', handle: 'el-tiburon-tremendo', country: 'NG', initials: 'ET', ink: '#2f5a63',
     currentStreak: 45, longestStreak: 45, lastSeenDaysAgo: 0,
     questions: 1400, accuracyPct: 88, questXp: 5200,
     levels: { html: 6, css: 6, javascript: 6, git: 6, react: 6, nodejs: 5, typescript: 3 }, crown: true,
@@ -198,7 +203,7 @@ function seedSql(owner: string): string {
   const categories: string[] = [];
 
   for (const profile of PROFILES) {
-    const id = `${ID_PREFIX}${profile.handle}`;
+    const id = `${ID_PREFIX}${profile.slug}`;
     const rows = splitAnswers(profile);
     const correct = rows.reduce((sum, row) => sum + row.correct, 0);
     const questions = rows.reduce((sum, row) => sum + row.questions, 0);

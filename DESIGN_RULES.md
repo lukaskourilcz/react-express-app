@@ -185,7 +185,7 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   arrives with the first page instead of sitting under the first-load loader. `tests/browser/first-load.spec.ts` holds the page's code
   back and fails when the header, `<main>` or the footer moves.
 - A shell part that fails keeps the shell too. A lazy part outside the route
-  boundary (the account widget, the upgrade sheet) is a `lazyShellPart` inside
+  boundary (the account widget, the upgrade sheet, the sign-in dialog) is a `lazyShellPart` inside
   a `ShellPartBoundary`, which sits inside the part's `Suspense` for the same
   reason the route boundary does. Its fallback is quiet and keeps the part's
   box: the account retry stands in the widget's 56px row, and a sheet that
@@ -194,8 +194,9 @@ directional `--ss-motion-swim-*` tokens. Ambient keyframes live once in
   `reloadOnPress` (`lib/routeRecovery.ts`), and only while the browser is
   online and the server answers. The Coding workbench's Try again and a
   second sign-in press after a failed supabase-js download follow the same
-  rule, and so does a second press for the upgrade sheet: that reload opens
-  the sheet in the next document. A 402 nobody pressed for never reloads.
+  rule, and so does a second press for the upgrade sheet or the sign-in
+  dialog: that reload opens it in the next document. A 402 nobody pressed
+  for never reloads.
 - A part inside a page that loads its own code and is not in the page's hold
   (the Learn workbench, the friends tab, a path's reward, the code
   highlighter) fails alone. It is a `lazyShellPart` inside a

@@ -37,6 +37,13 @@ export const toggleBookmark = (q: Omit<BookmarkedQuestion, 'bookmarkedAt'>): boo
   return added;
 };
 
+/** Keep a question on this device's list (a Shark Card was saved for it).
+ * Saving twice keeps one entry. */
+export const addBookmark = (q: Omit<BookmarkedQuestion, 'bookmarkedAt'>) => {
+  if (readIds()[q.id]) return;
+  toggleBookmark(q);
+};
+
 export const removeBookmark = (id: string) => {
   const ids = readIds();
   delete ids[id];

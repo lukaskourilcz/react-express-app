@@ -15,6 +15,7 @@ import { Button } from '@astryxdesign/core/Button';
 import { useLanguage } from '../i18n/LanguageContext';
 import { friendlyError } from '../lib/api';
 import { useAuth } from '../lib/auth';
+import { openSignIn } from '../lib/signInDialog';
 import { openBillingPortal, startCheckout, useBilling, type BillingPlan } from '../lib/billing';
 import { useEntitlement } from '../lib/entitlement';
 import { useClearOnPageRestore } from '../lib/pageRestore';
@@ -22,12 +23,12 @@ import { useClearOnPageRestore } from '../lib/pageRestore';
 export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   const { t } = useLanguage();
   const billing = useBilling();
-  const { isAuthenticated, isLoading: authLoading, signInWithGoogle } = useAuth();
+  const { isAuthenticated, isLoading: authLoading } = useAuth();
   const entitlement = useEntitlement();
   const location = useLocation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Back from Google or Stripe can bring this page back from the cache busy.
+  // Back from Stripe can bring this page back from the cache busy.
   useClearOnPageRestore(setBusy);
 
   const run = async (action: () => Promise<void>) => {
@@ -53,16 +54,18 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
     : paying
       ? t('profile.plan.manage')
       : t(plan === 'annual' ? 'billing.checkout.annual' : 'billing.checkout.monthly');
-  const action = !isAuthenticated
-    ? () => signInWithGoogle(location.pathname + location.search)
-    : paying ? openBillingPortal : () => startCheckout(plan);
+  // Signed out, the press opens the sign-in dialog, which comes back to this
+  // page; signed in, it leaves for Stripe and stays busy until it does.
+  const press = !isAuthenticated
+    ? () => openSignIn({ returnTo: location.pathname + location.search })
+    : () => void run(paying ? openBillingPortal : () => startCheckout(plan));
 
   return (
     <>
       <Button
         variant={paying ? 'secondary' : 'primary'}
         label={label}
-        onClick={() => void run(action)}
+        onClick={press}
         isLoading={busy || waiting}
         isDisabled={busy || waiting}
       />

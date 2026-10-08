@@ -78,6 +78,15 @@ export function discountedPrice(regular: string, percentOff: number = LAUNCH_OFF
   return fromCents(cents - Math.round((cents * percentOff) / 100));
 }
 
+/** What the yearly plan saves against twelve months of the monthly plan, as
+ * a price string: 3.99 × 12 − 39.99 = 7.89 at the regular prices, and
+ * 1.80 × 12 − 18.00 = 3.60 at the launch prices. Worked out in cents, so no
+ * float holds money, and never below zero. /premium prints it next to the
+ * yearly price it is true for (owner decision 11). */
+export function annualSaving(monthly: string, annual: string): string {
+  return fromCents(Math.max(0, toCents(monthly) * 12 - toCents(annual)));
+}
+
 /** A date in the offer's time zone: "2 Nov 2026" (short) or "2 November 2026". */
 export function launchDate(instant: number, month: 'short' | 'long' = 'short'): string {
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month, year: 'numeric', timeZone: LAUNCH_OFFER.timeZone }).format(instant);
@@ -94,13 +103,18 @@ export function launchDate(instant: number, month: 'short' | 'long' = 'short'): 
  * the launch price and name the regular price as the one that applies to
  * subscriptions started from 3 November 2026. */
 export function launchOfferDisplay() {
+  const offerMonthly = discountedPrice(PREMIUM_PRICE.monthly);
+  const offerAnnual = discountedPrice(PREMIUM_PRICE.annual);
   return {
     percent: LAUNCH_OFFER.percentOff,
     symbol: PREMIUM_PRICE.symbol,
+    currency: PREMIUM_PRICE.currency,
     monthly: PREMIUM_PRICE.monthly,
     annual: PREMIUM_PRICE.annual,
-    offerMonthly: discountedPrice(PREMIUM_PRICE.monthly),
-    offerAnnual: discountedPrice(PREMIUM_PRICE.annual),
+    offerMonthly,
+    offerAnnual,
+    /** The yearly saving at the launch prices: "3.60". */
+    offerAnnualSaving: annualSaving(offerMonthly, offerAnnual),
     /** "4 October 2026" */
     startDate: launchDate(LAUNCH_OFFER.startsAt, 'long'),
     /** "2 November 2026" */

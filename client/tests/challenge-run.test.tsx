@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -24,7 +24,7 @@ const api = vi.hoisted(() => ({
   grade: null as Grade | null,
   completions: [] as { runToken: string; proofs: string[]; status: number }[],
   completeStatus: (_runToken: string): { status: number; code?: string } => ({ status: 200 }),
-  auth: { user: null as null | { id: string; user_metadata?: Record<string, string> }, isAuthenticated: false, isLoading: false },
+  auth: { user: null as null | { id: string; email?: string; user_metadata?: Record<string, unknown> }, isAuthenticated: false, isLoading: false },
   /** Refuses the nth batch request (1-based) when it returns a status. */
   batchRefusal: null as null | ((n: number) => { status: number; code: string } | null),
   /** The nth batch request waits for `release()`. */
@@ -35,6 +35,8 @@ const api = vi.hoisted(() => ({
   /** "Show my name and photo on leaderboards". */
   visible: false,
   scores: [] as { name: string; runToken: string }[],
+  /** The learner's Shark Cards (GET/POST /api/flashcards). */
+  cards: [] as Record<string, unknown>[],
 }));
 
 vi.mock('../src/lib/api', async (importOriginal) => {
@@ -102,6 +104,12 @@ vi.mock('../src/lib/api', async (importOriginal) => {
       return { data: { quest_xp: api.accountXp, by_subject: api.accountXp ? { webdev: api.accountXp } : {} } };
     }
     if (parsed.pathname === '/api/user/leaderboard-visibility') return { visible: api.visible };
+    if (parsed.pathname === '/api/flashcards') {
+      if ((opts.method ?? 'GET') === 'GET') return { cards: api.cards };
+      const card = JSON.parse(String(opts.body)) as Record<string, unknown>;
+      api.cards.push(card);
+      return { card };
+    }
     return fail(404, 'not_found');
   };
   return { ...actual, apiFetch };
@@ -173,6 +181,7 @@ beforeEach(() => {
   api.accountXp = 0;
   api.visible = false;
   api.scores.length = 0;
+  api.cards.length = 0;
 });
 afterEach(() => vi.useRealTimers());
 
@@ -353,6 +362,35 @@ describe('the run reward', () => {
     } finally {
       stop();
     }
+  });
+
+  // Owner decision 12: the game-over screen reviews the run's misses, and each
+  // can be kept as a Shark Card with the answer and explanation graded here.
+  it('lists the questions the run missed at game over, each with Save as Shark Card', async () => {
+    api.auth = { user: { id: 'learner-1' }, isAuthenticated: true, isLoading: false };
+    await mount();
+    await start();
+    await strikeOut(1);
+    const review = await screen.findByRole('region', { name: 'Questions you missed' });
+    const items = within(review).getAllByRole('listitem');
+    expect(items).toHaveLength(3);
+    expect(within(items[0]).getByText('Batch 1 question 2?')).toBeInTheDocument();
+    expect(within(items[0]).getByText('right')).toBeInTheDocument();
+    expect(within(items[0]).getByText('Because.')).toBeInTheDocument();
+    fireEvent.click(within(items[0]).getByRole('button', { name: 'Save as Shark Card' }));
+    await waitFor(() => expect(api.cards).toHaveLength(1));
+    expect(api.cards[0]).toEqual({
+      question_id: 'b1-q2', question: 'Batch 1 question 2?', category: 'javascript',
+      correct_answer: 'right', explanation: 'Because.', subject: 'webdev',
+    });
+    const savedButton = await within(items[0]).findByRole('button', { name: 'Saved as Shark Card' });
+    await waitFor(() => expect(savedButton).toBeEnabled());
+    expect(savedButton).toHaveAttribute('aria-pressed', 'true');
+    // A new run starts with nothing missed.
+    fireEvent.click(screen.getByRole('button', { name: 'Play again' }));
+    await screen.findByText(/^Batch \d+ question \d+\?$/);
+    await strikeOut();
+    expect(within(await screen.findByRole('region', { name: 'Questions you missed' })).getAllByRole('listitem')).toHaveLength(3);
   });
 
   it('calls the board what it is: all-time top scores', async () => {
@@ -539,6 +577,18 @@ describe('the Hall of Fame name', () => {
     fireEvent.change(box(), { target: { value: 'Reef runner' } });
     fireEvent.click(screen.getByRole('button', { name: 'Submit score' }));
     await waitFor(() => expect(api.scores).toEqual([{ name: 'Reef runner', runToken: 'RUN-1' }]));
+  });
+
+  // An account made with an email and password has no name: the box never
+  // takes the address in its place, even with the leaderboard switch on.
+  it('starts empty for an account without a Google name, whatever the switch says', async () => {
+    api.auth = { user: { id: 'learner-2', email: 'ada.lovelace@example.com', user_metadata: { email: 'ada.lovelace@example.com', email_verified: true } }, isAuthenticated: true, isLoading: false };
+    api.visible = true;
+    await mount();
+    await start();
+    await strikeOutNow();
+    await settle();
+    expect((screen.getByLabelText('Your name') as HTMLInputElement).value).toBe('');
   });
 });
 
