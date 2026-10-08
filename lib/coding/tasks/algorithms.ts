@@ -276,15 +276,17 @@ console.log(isPalindrome("A man, a plan, a canal: Panama"));
   let right = text.length - 1;
 
   while (left < right) {
-    // skip anything that is not a letter or digit at either end, then compare
+    // not a letter or digit at left: step left on and go round again
+    // the same at right: step right back and go round again
+    // otherwise compare the two in lower case, then move both in
   }
 
   return true;
 };`,
-    hints: ['Lowercase both characters before comparing, and move each pointer past anything that is not a letter or a digit before you compare at all.'],
+    hints: ['Lowercase both characters before comparing, and move each pointer past anything that is not a letter or a digit before you compare at all — but never let a pointer cross the other, or a string of punctuation runs off the end.'],
     approach: [
       'Start one pointer at each end and move them towards each other.',
-      'Before comparing, walk each pointer past any character that is not a letter or a digit — a regular expression test or a character-code check both do it.',
+      'Before comparing, step a pointer past a character that is not a letter or a digit and go round the loop again, so `left < right` is checked before every step — a regular expression test or a character-code check tells you which characters to skip.',
       'Compare the two characters with their case folded; a mismatch settles it immediately.',
       'The pointers meeting means every pair matched, which is also why an empty or punctuation-only string comes out true.',
     ],
@@ -1222,7 +1224,7 @@ retryWithBackoff(async () => "ok", 3).then(result => console.log(result));
 
   throw lastError;
 };`,
-    hints: ['The delay before attempt number i is 100 × 2^(i - 1) for i counting from one, so the first attempt waits nothing and each later one doubles.'],
+    hints: ['Count the attempts from zero, as the loop does: attempt 0 waits nothing, and attempt k after it waits 100 × 2^(k - 1) ms, which is 100, 200, 400 and so on, each wait twice the one before.'],
     approach: [
       'Write a wait helper that resolves a promise from a setTimeout.',
       'Loop over the attempt budget, keeping the last error you saw so a total failure can report it.',

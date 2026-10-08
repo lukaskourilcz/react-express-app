@@ -95,7 +95,7 @@ export default function App({ loadUsers = sampleUsers }) {
       en('Add `.catch(() => setStatus("error"))`. A retry is easiest as a counter in state that the effect depends on: Retry sets the status back to "loading" and bumps the counter, and the effect runs again.'),
       en('Keep only the search text in state. `users.filter((user) => user.name.toLowerCase().includes(query.trim().toLowerCase()))` during render gives the visible list.'),
       en('`useEffect(() => { let ignore = false; loadUsers().then((list) => { if (!ignore) setUsers(list); }); return () => { ignore = true; }; }, [loadUsers, attempt]);` React runs the cleanup before the effect runs again and when the component unmounts.'),
-      en('Two effects: one with `[]` dependencies saves `document.title` when `App` mounts and puts it back in its cleanup; another, depending on the user count, sets the new title once the users are loaded.'),
+      en('Two effects: one with `[]` dependencies saves `document.title` when `App` mounts and puts it back in its cleanup; another, depending on the status and the user count (`[status, users.length]`), sets the new title once the status is "ready". The count alone would miss an empty answer: it stays 0, so the effect would never run again.'),
     ],
     approaches: [
       [en('Keep the users and a status ("loading" or "ready") in state.'), en('In an effect with an empty dependency list, call `loadUsers()` and store the result.'), en('Render the status, "No users", or the list, depending on the state.')],
