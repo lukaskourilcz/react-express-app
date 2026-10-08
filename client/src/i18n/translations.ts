@@ -1778,6 +1778,8 @@ export const en = {
   'coding.results.error': 'Error',
   'coding.results.edge': 'edge case',
   'coding.results.timeout': 'Timed out. Check for an infinite loop.',
+  'coding.results.typeCheckStopped': 'Type checking stopped before it finished: it ran out of time, memory or stack. A type that keeps recursing, or one that builds very large unions or tuples, can do this.',
+  'coding.results.runnerUnavailable': 'The runner did not load, so your code did not run. Check your connection and run again.',
   'coding.results.stale': 'The code changed since this run.',
   'coding.results.codeError': 'Your code could not run.',
   'coding.results.serverNote': 'Checked on the server.',

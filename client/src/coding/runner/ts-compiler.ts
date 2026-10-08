@@ -15,6 +15,9 @@ const bundledLibs = {
 const libs = Object.fromEntries(Object.entries(bundledLibs).map(([path, text]) => [path.replace(/^.*\//, ''), text]));
 
 const checker = createTypeScript({ ts, libs });
+// Parse and bind the lib files now, while the caller's clock still counts the
+// download: the check budget that follows is for the learner's types only.
+checker.check('', []);
 
 /** What the workbench needs from one pass: the type verdict and the JavaScript
  * to run. Type errors do not block running: seeing what a half-typed attempt

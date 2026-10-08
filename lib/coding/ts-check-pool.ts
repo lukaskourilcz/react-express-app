@@ -28,8 +28,7 @@ export const TS_CHECK_WORKER_FILE = 'lib/coding/generated/ts-check-worker.cjs';
  * finish in well under a second on a warm thread. */
 export const TYPE_CHECK_DEADLINE_MS = 4_000;
 /** What the learner reads when the checker was stopped. */
-export const TYPE_CHECK_STOPPED_MESSAGE =
-  'Type checking stopped before it finished: it ran out of time, memory or stack. A type that keeps recursing, or one that builds very large unions or tuples, can do this.';
+export { TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 /** How long a new thread may take to load the compiler and parse its libs. */
 const WORKER_BOOT_MS = 20_000;
 /** Threads checking at once; further checks wait for one to finish. */
