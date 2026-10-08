@@ -114,7 +114,10 @@ head and share image (`client/src/og/ogImages.ts`) ahead of the day, as it does
 for every coding task. The app keeps such a head once it starts:
 `client/src/lib/routeHead.ts` reads it before the first route writes one, so a
 dated page or a task page keeps its own title, description and canonical URL
-instead of the generic "Coding" or "Question of the day" head. The
+instead of the generic "Coding" or "Question of the day" head. The Coding home
+and its track pages (`/coding`, `/coding/<track>`, `/coding/fullstack`) get a
+head the same way, outside the sitemap; `/coding/review` names `/coding` as
+canonical and the retired `/coding/system-design` names none. The
 question itself comes from `GET /api/quiz/daily?qotd=<date|today>`
 (`lib/daily-question.ts`, inside the daily handler so the count stays at
 twelve): a seeded pick from that track in the served bank, options shuffled by
