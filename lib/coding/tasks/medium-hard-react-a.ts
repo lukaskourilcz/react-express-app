@@ -262,6 +262,12 @@ useEffect(() => { load(1); }, []);
 const photos = (from, count) => Array.from({ length: count }, (_, i) => ({ id: from + i, title: 'Photo ' + (from + i) }));
 const titles = () => screen.queryAllByRole('listitem').map(li => li.textContent);
 const press = label => fireEvent.click(screen.getByRole('button', { name: label }));
+// The alert's own words: a Try again button may sit inside it.
+const alertMessage = () => {
+  const copy = screen.getByRole('alert').cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return copy.textContent.trim();
+};
 
 test('the first page is asked for on mount and listed', () => withFetch(async calls => {
   render(<App />);
@@ -303,7 +309,7 @@ test('a failure keeps the photos and Try again asks for the same page', () => wi
   await act(async () => { calls[0].respond(photos(1, 3)); });
   press('Load more');
   await act(async () => { calls[1].fail(new TypeError('Failed to fetch')); });
-  expect(screen.getByRole('alert').textContent).toBe('Could not load photos');
+  expect(alertMessage()).toBe('Could not load photos');
   expect(titles()).toHaveLength(3);
   press('Try again');
   expect(calls[2].url).toBe('/api/photos?page=2');
@@ -1704,6 +1710,14 @@ const type = value => fireEvent.change(field(), { target: { value } });
 const wait = ms => act(() => new Promise(resolve => setTimeout(resolve, ms)));
 const titles = () => screen.queryAllByRole('listitem').map(li => li.textContent);
 const DUNE = [{ id: 1, title: 'Dune' }, { id: 2, title: 'Dune Messiah' }];
+// The alert's own words: a Try again button may sit inside it.
+const alertMessage = () => {
+  const copy = screen.getByRole('alert').cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return copy.textContent.trim();
+};
+// An element that reads exactly this, even with part of it in an element of its own.
+const hasLine = text => [...document.body.querySelectorAll('*')].some(node => node.textContent.replace(/\\s+/g, ' ').trim() === text);
 
 // The clock moves only when the check moves it, so a busy machine cannot let
 // the request go out before the check that expects none.
@@ -1753,7 +1767,7 @@ test('an empty answer says so', () => withFetch(async calls => {
   type('dune');
   await wait(150);
   await act(async () => { calls[0].respond([]); });
-  expect(screen.getByText('No books match “dune”')).toBeTruthy();
+  expect(hasLine('No books match “dune”')).toBe(true);
 }));
 
 test('a failed search offers Try again, which asks at once', () => withFetch(async calls => {
@@ -1761,7 +1775,7 @@ test('a failed search offers Try again, which asks at once', () => withFetch(asy
   type('dune');
   await wait(150);
   await act(async () => { calls[0].fail(new TypeError('Failed to fetch')); });
-  expect(screen.getByRole('alert').textContent).toBe('Search failed');
+  expect(alertMessage()).toBe('Search failed');
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(calls).toHaveLength(2);
   expect(calls[1].url).toBe('/api/books?q=dune');
@@ -1859,6 +1873,12 @@ const note = () => screen.getByLabelText('Note');
 const type = value => fireEvent.change(note(), { target: { value } });
 const status = () => screen.getByRole('status').textContent;
 const wait = ms => act(() => new Promise(resolve => setTimeout(resolve, ms)));
+// The alert's own words: a Retry button may sit inside it.
+const alertMessage = () => {
+  const copy = screen.getByRole('alert').cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return copy.textContent.trim();
+};
 
 test('it starts with everything saved', () => withSaves(async calls => {
   render(<App />);
@@ -1909,7 +1929,7 @@ test('a failed save offers Retry', () => withSaves(async calls => {
   type('Buy bread');
   await wait(200);
   await act(async () => { calls[0].fail(); });
-  expect(screen.getByRole('alert').textContent).toBe('Could not save');
+  expect(alertMessage()).toBe('Could not save');
   expect(status()).toBe('Unsaved changes');
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
   expect(calls).toHaveLength(2);

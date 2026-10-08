@@ -5354,10 +5354,10 @@ test('the next search removes the unknown-city message', () => withRequests(asyn
   render(<App />);
   await answer(calls[0], 12.5);
   search('Gotham');
-  expect(screen.getByText('Unknown city: Gotham')).toBeTruthy();
+  expectLine('Unknown city: Gotham');
   expect(calls).toHaveLength(1);
   search(' ostrava');
-  expect(screen.queryByText('Unknown city: Gotham')).toBeNull();
+  expect(hasLine('Unknown city: Gotham')).toBe(false);
   expect(asked(calls[1])).toEqual([FORECAST, 49.83, 18.29, 'temperature_2m']);
 }));
 
@@ -5365,7 +5365,7 @@ test('only a whole city name matches, not the start of one', () => withRequests(
   render(<App />);
   await answer(calls[0], 12.5);
   search('Pra');
-  expect(screen.getByText('Unknown city: Pra')).toBeTruthy();
+  expectLine('Unknown city: Pra');
   expect(calls).toHaveLength(1);
   expect(recent()).toEqual(['Prague: 12.5 °C']);
 }));`,

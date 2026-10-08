@@ -588,7 +588,7 @@ test('after a retry that works, Load more asks for the page after it', () => wit
 test('a failed first page can be tried again', () => withFetch(async calls => {
   render(<App />);
   await act(async () => { calls[0].fail(new TypeError('Failed to fetch')); });
-  expect(screen.getByRole('alert').textContent).toBe('Could not load photos');
+  expect(alertMessage()).toBe('Could not load photos');
   press('Try again');
   expect(calls[1].url).toBe('/api/photos?page=1');
   await act(async () => { calls[1].respond(photos(1, 2)); });
@@ -2264,12 +2264,13 @@ test('the progress follows each answer', () => withFetch(async calls => {
   expect(screen.queryByText('Preparing… 10%')).toBeNull();
 }));
 
-test('Export is disabled from the click on', () => withFetch(async calls => {
+test('Export stays disabled while the job reports running, and a click on it asks nothing', () => withFetch(async calls => {
   render(<App />);
-  fireEvent.click(exportButton());
+  await begin(calls);
+  await act(async () => { calls[1].respond({ status: 'running', progress: 5 }); });
   expect(exportButton().disabled).toBe(true);
   fireEvent.click(exportButton());
-  expect(calls).toHaveLength(1);
+  expect(calls).toHaveLength(2);
 }));`,
   },
 
@@ -4140,7 +4141,7 @@ test('an answer that is not ok is a failure too', () => withSaves(async calls =>
   type('Buy bread');
   await wait(200);
   await act(async () => { calls[0].error(); });
-  expect(screen.getByRole('alert').textContent).toBe('Could not save');
+  expect(alertMessage()).toBe('Could not save');
   expect(status()).toBe('Unsaved changes');
 }));
 
