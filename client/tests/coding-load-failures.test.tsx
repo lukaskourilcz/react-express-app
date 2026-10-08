@@ -11,7 +11,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { ChallengeRunPlanner } from '../src/components/coding/ChallengeRunPlanner';
-import { CodingTaskScreen, FullStackScreen } from '../src/components/coding/CodingSection';
+import { CodingTaskScreen, CodingTrackScreen, FullStackScreen } from '../src/components/coding/CodingSection';
 import Collection from '../src/components/Collection';
 import { preloadPath } from '../src/lib/routePreload';
 import { server } from './mocks/server';
@@ -112,4 +112,21 @@ it('says the saved challenges could not load in Collection, not that a task did 
   const alert = await screen.findByRole('alert');
   expect(alert).toHaveTextContent('Could not load your saved challenges.');
   expect(alert).not.toHaveTextContent('Could not load this task.');
+});
+
+it('says a track page’s progress could not load instead of showing nothing passed', async () => {
+  answer(['GET coding-progress']);
+  await mountAt('/coding/javascript', '/coding/:track', <CodingTrackScreen />);
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent('Could not load your progress.');
+  expect(screen.getByRole('heading', { level: 1, name: 'JavaScript' })).toBeInTheDocument();
+  // No count, no rows: either would claim "0 passed" and "Open" for a passed task.
+  expect(screen.queryByText(/\d+ of \d+ passed/)).toBeNull();
+  expect(screen.queryByRole('link', { name: /Digit sum/ })).toBeNull();
+  answer([]);
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Try again' })));
+  const row = await screen.findByRole('link', { name: /Digit sum/ });
+  expect(row).toHaveTextContent('Passed');
+  expect(screen.getAllByText(/^1 of \d+ passed$/).length).toBeGreaterThan(0);
+  expect(screen.queryByRole('alert')).toBeNull();
 });

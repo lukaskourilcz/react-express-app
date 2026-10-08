@@ -554,6 +554,23 @@ export function CodingTrackScreen() {
   // The plan decides which rows carry the Premium mark, so the list waits for
   // it, as the Coding home does; a plan that cannot load says so.
   if (planLoading) return <LoadingScreen label={t('coding.loading')} />;
+  // Without the learner's progress the list would read "0 passed", every
+  // passed task "Open" and later tiers locked. It says the read failed
+  // instead, as the Coding home does, and offers it again.
+  if (isAuthenticated && progress.isError && !progress.data) {
+    return (
+      <div className="cd-page ss-pop">
+        <header>
+          <Kicker>{t('coding.kicker')} · <Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
+          <h1>{t(`coding.track.${track}` as never)}</h1>
+          <p className="cd-lead">{t(`coding.trackBlurb.${track}` as never)}</p>
+        </header>
+        <p className="cd-note cd-note--error" role="alert">
+          {t('coding.discovery.failed')} <Button variant="secondary" onClick={() => void progress.refetch()} isLoading={progress.isFetching} isInterruptible label={t('coding.retry')} />
+        </p>
+      </div>
+    );
+  }
   const done = tasks.filter((task) => passed.has(task.id)).length;
   // Easy, then Medium, then Hard; inside each, the tiers that fall in it, so
   // a tier's lock line stays beside the challenges it locks.
