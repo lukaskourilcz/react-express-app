@@ -576,6 +576,7 @@ const EFFECTS: Boards = { reference: levels(effectsReference), junior: levels(ef
 const EFFECTS_HIDDEN: { from: number; suite: string }[] = [
   { from: 1, suite: `test('No users appears only after an empty answer, never while loading',async()=>{let finish;render(<App loadUsers={()=>new Promise((resolve)=>{finish=resolve;})}/>);expect(screen.queryByText('No users')).toBeNull();finish([{id:1,name:'Ada'}]);await screen.findByText('Ada',{},soon);expect(screen.queryByText('No users')).toBeNull();});` },
   { from: 3, suite: `test('the search matches inside a name, not only its start',async()=>{render(<App loadUsers={()=>Promise.resolve([{id:1,name:'Ada'},{id:2,name:'Linus'}])}/>);await screen.findByText('Linus',{},soon);fireEvent.change(screen.getByLabelText('Search'),{target:{value:'nus'}});expect(names()).toEqual(['Linus']);});` },
+  { from: 4, suite: `test('a late failure from the old loader is ignored',async()=>{let failOld;const {rerender}=render(<App loadUsers={()=>new Promise((_resolve,reject)=>{failOld=reject;})}/>);rerender(<App loadUsers={()=>Promise.resolve([{id:9,name:'Grace'}])}/>);await screen.findByText('Grace',{},soon);failOld(new Error('late'));await new Promise((resolve)=>setTimeout(resolve,30));expect(screen.queryByRole('alert')).toBeNull();expect(names()).toEqual(['Grace']);});` },
 ];
 
 const withHidden = (entries: [string, CodingSolution][], hidden: { from: number; suite: string }[]): [string, CodingSolution][] =>

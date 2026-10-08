@@ -3080,6 +3080,22 @@ const App = () => {
     </main>
   );
 };`,
+    // On the hand-moved clock of FAKE_CLOCK, so any delay above 10 ms works:
+    // a key every 10 ms never lets a value settle, and a debounce without
+    // clearTimeout lets the first value through after its delay anyway.
+    hiddenSuite: `${FAKE_CLOCK}
+test('a value replaced before the delay never reaches the list', () => withClock(async clock => {
+  const { container } = render(<App />);
+  const input = container.querySelector('input');
+  for (let key = 0; key < 200; key += 1) {
+    fireEvent.change(input, { target: { value: key % 2 === 0 ? 'che' : 'ban' } });
+    await clock.tick(10);
+    expect(container.querySelectorAll('li')).toHaveLength(3);
+  }
+  await clock.tick(5000);
+  expect(container.querySelectorAll('li')).toHaveLength(1);
+  expect(container.textContent).toContain('Banana');
+}));`,
   },
   "react-todo-dashboard": {
     solution: `const App = () => {
@@ -4953,6 +4969,16 @@ test('filtering never asks the server again', () => withServer(async calls => {
   filterEmail(container, 'ken');
   choosePost(container, '9');
   expect(calls).toHaveLength(1);
+}));
+
+test('an email in capitals matches a lowercase filter', () => withServer(async calls => {
+  const container = await loaded(calls, [
+    { id: 1, postId: 1, name: 'Shouting', email: 'ANA@EXAMPLE.COM', body: 'x' },
+    { id: 2, postId: 1, name: 'Quiet', email: 'bo@example.com', body: 'y' },
+  ]);
+  filterEmail(container, 'ana@');
+  expect(entries('Comments')).toHaveLength(1);
+  expect(entries('Comments')[0]).toContain('ANA@EXAMPLE.COM');
 }));`,
   },
   "react-weather-style-dashboard": {
@@ -5729,6 +5755,14 @@ test('unticking Unread only brings back what was marked read meanwhile', () => w
     ['2026-09-30', ['Invoice paid', 'read']],
   ]);
   expectLine('Unread: 2');
+}));
+
+test('a page with notifications never says there are none', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], NOTIFICATIONS);
+  expect(document.body.textContent).not.toContain('No notifications');
+  unreadOnly();
+  expect(document.body.textContent).not.toContain('No unread notifications');
 }));`,
   },
   "react-booking-prototype": {
