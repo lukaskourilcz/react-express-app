@@ -238,7 +238,7 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
             )}
           </fieldset>
           <div className="cd-actions">
-            <SwimCta size="sm" label={start.isPending ? t('coding.submitting') : t(later ? 'coding.run.plan' : 'coding.run.start')} disabled={start.isPending} onClick={() => { /* submitted by the form */ }} />
+            <SwimCta type="submit" size="sm" label={start.isPending ? t('coding.submitting') : t(later ? 'coding.run.plan' : 'coding.run.start')} disabled={start.isPending} />
           </div>
           {error && <p className="cd-note cd-note--error" role="alert">{error}</p>}
         </form>
