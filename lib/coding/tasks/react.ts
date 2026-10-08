@@ -208,17 +208,10 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [text, setText] = useState('');
 
-const handleAction = () => {
-  setValue(currentValue => /* return the next value */);
-};
-
-return (
-  <main>
-    {/* render value and connect handleAction to an event */}
-  </main>
-);`,
+<input value={text} onChange={event => setText(/* what the input holds now */)} />
+<p>{/* the same text */}</p>`,
     hints: ["Use one state value for both the input value and paragraph text."],
     approach: [
       "Keep one useState string as the single source of truth for both the input and the paragraph.",
@@ -268,16 +261,12 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [items, setItems] = useState([]);
-
-const addItem = newItem => {
-  setItems(currentItems => [...currentItems, newItem]);
-};
-
-{items.map(item => (
-  <div key={item.id}>{/* render item */}</div>
-))}`,
-    hints: ["Map over data. Return one LI for each person and use a stable value as key."],
+    skeleton: `<ul>
+  {people.map(person => (
+    <li key={/* the person's stable id */}>{/* name and age */}</li>
+  ))}
+</ul>`,
+    hints: ["Map over people. Return one LI for each person and use its id as the key."],
     approach: [
       "Start from the supplied people array; no state is needed because nothing on the screen ever changes.",
       "Map over that array inside the list element and return one list item per person.",
@@ -381,15 +370,20 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [items, setItems] = useState([]);
+    skeleton: `const [text, setText] = useState('');
+const [todos, setTodos] = useState([]);
 
-const addItem = newItem => {
-  setItems(currentItems => [...currentItems, newItem]);
+const addTodo = () => {
+  // append { id: a new unique id, text } in a new array, then empty text
 };
 
-{items.map(item => (
-  <div key={item.id}>{/* render item */}</div>
-))}`,
+<input value={text} onChange={event => setText(/* the typed text */)} />
+<button onClick={addTodo}>Add</button>
+<ul>
+  {todos.map(todo => (
+    <li key={todo.id}>{/* the todo's text */}</li>
+  ))}
+</ul>`,
     hints: ["Keep input and todos in separate state. Create a new array when adding."],
     approach: [
       "Use two separate useState values: one string for the input text and one array for the todos.",
@@ -454,16 +448,19 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [query, setQuery] = useState('');
-const [items, setItems] = useState([]);
+    skeleton: `const [todos, setTodos] = useState(initialTodos);
 
-const visibleItems = items.filter(item =>
-  /* return true when item matches query */
-);
+const removeTodo = id => {
+  setTodos(current => current.filter(todo => /* keep every todo whose id is not id */));
+};
 
-{visibleItems.map(item => (
-  <div key={item.id}>{/* render item */}</div>
-))}`,
+<ul>
+  {todos.map(todo => (
+    <li key={todo.id}>
+      {todo.text} <button onClick={/* remove this todo */}>Remove</button>
+    </li>
+  ))}
+</ul>`,
     hints: ["Filter out the item whose id matches the clicked button."],
     approach: [
       "Hold the todos in useState so removing an item can trigger a re-render.",
@@ -516,15 +513,14 @@ const App = () => {
 export default App;
 `,
     skeleton: `const [query, setQuery] = useState('');
-const [items, setItems] = useState([]);
+const visibleNames = names.filter(name => /* name includes query, both in lower case */);
 
-const visibleItems = items.filter(item =>
-  /* return true when item matches query */
-);
-
-{visibleItems.map(item => (
-  <div key={item.id}>{/* render item */}</div>
-))}`,
+<input value={query} onChange={event => setQuery(event.target.value)} />
+<ul>
+  {visibleNames.map(name => (
+    <li key={name}>{name}</li>
+  ))}
+</ul>`,
     hints: ["Store only the query. Derive filtered names during render."],
     approach: [
       "Store only the query string in useState; the names list is a constant that never changes.",
@@ -881,11 +877,11 @@ useEffect(() => {
 }, []);
 const visibleItems = items;
 
-{visibleItems.map(item => (
-  <button key={item.id}>
-    {/* render an item field */}
-  </button>
-))}`,
+<ul>
+  {visibleItems.map(item => (
+    <li key={item.id}>{/* the user's name */}</li>
+  ))}
+</ul>`,
     hints: ["Start with an empty array so users.map is always safe."],
     approach: [
       "Initialise the users state as an empty array so mapping over it is safe on the very first render.",
@@ -956,11 +952,13 @@ useEffect(() => {
 }, []);
 const visibleItems = items;
 
-{visibleItems.map(item => (
-  <button key={item.id}>
-    {/* render an item field */}
-  </button>
-))}`,
+if (loading) return /* a paragraph reading Loading… */;
+
+<ul>
+  {visibleItems.map(item => (
+    <li key={item.id}>{/* the user's name */}</li>
+  ))}
+</ul>`,
     hints: ["Set loading false in finally so success and failure both finish loading."],
     approach: [
       "Add a second useState boolean for loading that starts true, alongside the users array state.",
@@ -1205,14 +1203,15 @@ useEffect(() => {
   loadItems();
 }, []);
 const visibleItems = items.filter(item =>
-  /* return true when the item matches query */
+  /* the user's name includes query, both in lower case */
 );
 
-{visibleItems.map(item => (
-  <button key={item.id}>
-    {/* render an item field */}
-  </button>
-))}`,
+<input value={query} onChange={event => setQuery(event.target.value)} />
+<ul>
+  {visibleItems.map(item => (
+    <li key={item.id}>{/* the user's name */}</li>
+  ))}
+</ul>`,
     hints: ["Fetch once. Filter locally from users and query—do not fetch on every keystroke."],
     approach: [
       "Fetch the users once in an effect with an empty dependency array; the query must not be a dependency.",
@@ -1682,11 +1681,13 @@ useEffect(() => {
 
 const pageItems = items.slice((page - 1) * pageSize, page * pageSize);
 
-{pageItems.map(item => (
-  <article key={item.id}>{/* render item */}</article>
-))}
+<ul>
+  {pageItems.map(item => (
+    <li key={item.id}>{/* the post's title */}</li>
+  ))}
+</ul>
 
-// Connect Previous/Next buttons to setPage.`,
+// Connect Previous/Next buttons to setPage, and disable each one at its end.`,
     hints: ["Keep page in state. Calculate start index, then slice the fetched array."],
     approach: [
       "Fetch every post once in a mount effect and keep the full array in state.",
@@ -1769,12 +1770,15 @@ useEffect(() => {
 }, [selectedId]);
 const visibleItems = items;
 
-{visibleItems.map(item => (
-  <button key={item.id}>
-    {/* render an item field */}
-  </button>
-))}`,
-    hints: ["Run the posts effect whenever selectedUserId changes."],
+<select value={selectedId} onChange={event => setSelectedId(/* the chosen value, as a number */)}>
+  {/* an option with the value 1, and one with the value 2 */}
+</select>
+<ul>
+  {visibleItems.map(item => (
+    <li key={item.id}>{/* the post's title */}</li>
+  ))}
+</ul>`,
+    hints: ["Run the posts effect whenever selectedId changes."],
     approach: [
       "Hold the selected user id in state and change it from a controlled select of users.",
       "Write one effect that fetches posts filtered by that id through a query-string parameter on the URL.",
@@ -2135,17 +2139,20 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const useLocalStorage = (key, initial) => {
+  const [value, setValue] = useState(() => {
+    // read key from localStorage: nothing stored gives initial, otherwise JSON.parse what is there
+  });
 
-const handleAction = () => {
-  setValue(currentValue => /* return the next value */);
+  useEffect(() => {
+    // write JSON.stringify(value) under key
+  }, [key, value]);
+
+  return [value, setValue];
 };
 
-return (
-  <main>
-    {/* render value and connect handleAction to an event */}
-  </main>
-);`,
+// In App, call it exactly as you would call useState:
+const [count, setCount] = useLocalStorage('count', 0);`,
     hints: ["Read the stored value when state is first created and write it back whenever it changes."],
     approach: [
       "Write a function whose name starts with use, taking a key and an initial value and returning the current value with its setter.",
@@ -2215,17 +2222,17 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [activeId, setActiveId] = useState(/* the first tab's id */);
+const active = tabs.find(tab => /* the tab whose id is activeId */);
 
-const handleAction = () => {
-  setValue(currentValue => /* return the next value */);
-};
-
-return (
-  <main>
-    {/* render value and connect handleAction to an event */}
-  </main>
-);`,
+<div role="tablist">
+  {tabs.map(tab => (
+    <button key={tab.id} role="tab" aria-selected={/* is this the active tab */} onClick={() => setActiveId(tab.id)}>
+      {tab.label}
+    </button>
+  ))}
+</div>
+<div role="tabpanel">{/* the active tab's panel */}</div>`,
     hints: ["Store the active tab id, and give the tabs role tab with aria-selected."],
     approach: [
       "Describe the three tabs as an array of objects, each carrying an id, a visible label and the content of its panel.",
@@ -2294,17 +2301,18 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [openId, setOpenId] = useState(null);
 
-const handleAction = () => {
-  setValue(currentValue => /* return the next value */);
+const toggle = id => {
+  setOpenId(current => /* null when id is already open, otherwise id */);
 };
 
-return (
-  <main>
-    {/* render value and connect handleAction to an event */}
-  </main>
-);`,
+{sections.map(section => (
+  <section key={section.id}>
+    <button onClick={() => toggle(section.id)}>{section.title}</button>
+    {/* the body in a paragraph, only while section.id is openId */}
+  </section>
+))}`,
     hints: ["Store the id of the single open section rather than a flag on every one."],
     approach: [
       "Keep one state value holding the id of the open section, starting as null because every section begins closed.",
@@ -2367,23 +2375,24 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [rating, setRating] = useState(0);
+const [hovered, setHovered] = useState(0);
+const shown = /* hovered while there is one, otherwise rating */;
 
-const handleAction = () => {
-  setValue(currentValue => /* return the next value */);
-};
-
-return (
-  <main>
-    {/* render value and connect handleAction to an event */}
-  </main>
-);`,
+<div onMouseLeave={() => setHovered(0)}>
+  {stars.map(star => (
+    <button key={star} onMouseEnter={/* preview star */} onClick={/* commit star */}>
+      {/* ★ when star is at most shown, otherwise ☆ */}
+    </button>
+  ))}
+</div>
+<p>Rating: {rating}</p>`,
     hints: ["Keep the hovered value and the committed value apart, and display whichever applies."],
     approach: [
       "Hold two numbers in state: the committed rating and the star currently under the pointer, both starting at zero.",
       "Derive how many stars look filled during render, preferring the hovered number and falling back to the committed rating.",
-      "Give each star a pointer-enter handler that records its position and a click handler that commits that position as the rating.",
-      "Reset the hovered number to zero when the pointer leaves the row, so the display falls back to whatever was last clicked.",
+      "Give each star an onMouseEnter handler that records its position and an onClick handler that commits that position as the rating.",
+      "Reset the hovered number to zero in an onMouseLeave on the row, so the display falls back to whatever was last clicked.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -2445,17 +2454,26 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [open, setOpen] = useState(false);
+const close = () => setOpen(false);
 
-const handleAction = () => {
-  setValue(currentValue => /* return the next value */);
-};
+useEffect(() => {
+  if (!open) return;
+  const onKeyDown = event => {
+    // close when event.key is 'Escape'
+  };
+  document.addEventListener('keydown', onKeyDown);
+  return () => /* remove the same listener */;
+}, [open]);
 
-return (
-  <main>
-    {/* render value and connect handleAction to an event */}
-  </main>
-);`,
+<button onClick={() => setOpen(true)}>Open</button>
+{open && (
+  <div className="backdrop" onClick={close}>
+    <div role="dialog" onClick={event => /* keep a click inside from reaching the backdrop */}>
+      <button onClick={close}>Close</button>
+    </div>
+  </div>
+)}`,
     hints: ["Add the key listener in an effect while the dialog is open and remove it in the cleanup."],
     approach: [
       "Keep a single boolean in state for whether the dialog is open, and render the overlay only while that boolean is true.",
@@ -2660,33 +2678,39 @@ const App = () => {
 export default App;
 `,
     skeleton: `const API_URL = 'https://jsonplaceholder.typicode.com/todos?_limit=3';
-const [items, setItems] = useState([]);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState('');
+const [todos, setTodos] = useState([]);
+const [title, setTitle] = useState('');
 
 useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(data);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
+  const loadTodos = async () => {
+    const response = await fetch(API_URL);
+    setTodos(await response.json());
   };
 
-  loadItems();
+  loadTodos();
 }, []);
-const visibleItems = items;
 
-{visibleItems.map(item => (
-  <button key={item.id}>
-    {/* render an item field */}
-  </button>
-))}`,
+const done = /* how many todos are completed, counted from todos */;
+
+const add = () => {
+  // a blank title adds nothing; otherwise append { id, title, completed: false } in a new array and empty the input
+};
+
+const remove = id => {
+  // a new array without the todo whose id is id
+};
+
+<p>Done: {done} of {todos.length}</p>
+<input value={title} onChange={event => setTitle(event.target.value)} />
+<button onClick={add}>Add</button>
+<ul>
+  {todos.map(todo => (
+    <li key={todo.id}>
+      {/* the title, then "done" or "to do" */}
+      <button onClick={() => remove(todo.id)}>Remove</button>
+    </li>
+  ))}
+</ul>`,
     hints: [
       "One state array holds the todos, whichever way they arrived. Adding, removing and counting are all derivations of it.",
     ],
@@ -2776,33 +2800,30 @@ const App = () => {
 export default App;
 `,
     skeleton: `const API_URL = 'https://dummyjson.com/products';
-const [items, setItems] = useState([]);
-const [loading, setLoading] = useState(true);
-const [error, setError] = useState('');
+const [products, setProducts] = useState([]);
+const [search, setSearch] = useState('');
 
 useEffect(() => {
-  const loadItems = async () => {
-    try {
-      const response = await fetch(API_URL);
-      if (!response.ok) throw new Error('Request failed');
-      const data = await response.json();
-      setItems(data);
-    } catch (requestError) {
-      setError(requestError.message);
-    } finally {
-      setLoading(false);
-    }
+  const loadProducts = async () => {
+    const response = await fetch(API_URL);
+    const data = await response.json();
+    setProducts(/* the array nested inside data, not data itself */);
   };
 
-  loadItems();
+  loadProducts();
 }, []);
-const visibleItems = items;
 
-{visibleItems.map(item => (
-  <button key={item.id}>
-    {/* render an item field */}
-  </button>
-))}`,
+const term = search.toLowerCase();
+const shown = products.filter(product => /* the title or the category, in lower case, includes term */);
+const total = /* the summed price of shown */;
+
+<p>Total: {total}</p>
+<input value={search} onChange={event => setSearch(event.target.value)} />
+<ul>
+  {shown.map(product => (
+    <li key={product.id}>{/* title, price and category */}</li>
+  ))}
+</ul>`,
     hints: [
       "Keep the fetched list and the search text in separate state, and work out what is shown from both during render rather than storing a second list.",
     ],
@@ -3208,19 +3229,24 @@ const [error, setError] = useState('');
 const [title, setTitle] = useState('');
 
 useEffect(() => {
-  // GET TODOS_URL + '?_limit=5', check response.ok, store the array
+  // GET TODOS_URL + '?_limit=5' inside try/catch: check response.ok and store the array,
+  // put any failure in error, and stop loading in finally
 }, []);
 
 const addTodo = async event => {
   event.preventDefault();
   const text = title.trim();
   if (!text) return;
-  const response = await fetch(TODOS_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ title: text, completed: false, userId: 1 }),
-  });
-  // check response.ok, then append what the server sent back
+  try {
+    const response = await fetch(TODOS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: text, completed: false, userId: 1 }),
+    });
+    // check response.ok, then append what the server sent back and empty the input
+  } catch (requestError) {
+    // a refused or unreachable POST adds nothing: put the message in error
+  }
 };
 
 const toggle = id => setTodos(current => current.map(todo => todo.id === id ? { ...todo, completed: !todo.completed } : todo));
