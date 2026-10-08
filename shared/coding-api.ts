@@ -30,6 +30,10 @@ export interface CodingTaskResponse {
   locked: CodingLockReason | null;
   progress: CodingTaskProgress | null;
   draft: string | null;
+  /** When `draft` was saved, when it is this task's own draft (not an
+   * evolving stage's start made from the stage before). The browser opens
+   * the newer of it and the copy on the device. */
+  draftUpdatedAt?: string | null;
   /** True when the learner is signed in; anonymous visitors may run, not submit. */
   signedIn: boolean;
 }

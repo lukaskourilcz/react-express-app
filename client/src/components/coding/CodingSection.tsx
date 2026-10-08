@@ -6,13 +6,13 @@ import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-r
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
-import { readString, removeStored, writeString } from '../../lib/storage';
 import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
 import type { CodingWorkbench as CodingWorkbenchView } from '../../coding/CodingWorkbench';
 import { DesignRunner } from '../../coding/DesignRunner';
-import { codingKeys, codingProgressQuery, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
+import { codingKeys, codingProgressQuery, useCodingProgress, useCodingTask } from '../../coding/api';
+import { deviceDraft, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
 import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
 import { ChallengeRunPlanner, taskHref } from './ChallengeRunPlanner';
 import { CategoryGlyph } from '../ui/techIcons';
@@ -63,8 +63,6 @@ const askForPremium = (taskId: string) => {
   const content = codingContent(taskId);
   openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) });
 };
-
-const draftKey = (id: string) => `devshark:coding:draft:${id}`;
 
 // The editor, the test runner and the hint ladder serve a task and nothing
 // else, and with CodeMirror they are most of the section's code. The lists no
@@ -774,18 +772,14 @@ export function CodingTaskScreen() {
     if (task.data && track && task.data.task.track !== track) navigate(`/coding/${task.data.task.track}/${task.data.task.id}`, { replace: true });
   }, [task.data, track, navigate]);
 
-  // Runs on Run and Submit, silently. The device copy is written first so a
-  // failed account save still leaves the code recoverable here; a successful
-  // one lets the device copy go, since the account now holds it.
+  // Runs on Run and Submit, silently (coding/drafts.ts). Evolving code is
+  // also the offline starting point of the next stage, so it stays on the
+  // device after the account takes it.
+  const draftBase = task.data?.draftUpdatedAt ?? null;
   const onDraft = useCallback((code: string) => {
     if (!taskId) return;
-    writeString(draftKey(taskId), code);
-    if (!isAuthenticated) return;
-    saveCodingDraft(taskId, code).then(() => {
-      // Evolving code is also the offline starting point of the next stage.
-      if (!evolvingStage(taskId) && readString(draftKey(taskId)) === code) removeStored(draftKey(taskId));
-    }).catch(() => { /* the device copy above stands */ });
-  }, [taskId, isAuthenticated]);
+    saveDraft(taskId, code, { signedIn: isAuthenticated, base: draftBase, keepOnDevice: Boolean(evolvingStage(taskId)) });
+  }, [taskId, isAuthenticated, draftBase]);
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
     if (verdict.progress) void queryClient.invalidateQueries({ queryKey: codingKeys.progress() });
@@ -799,17 +793,25 @@ export function CodingTaskScreen() {
         // Capture the submitted snapshot synchronously, before Next can navigate
         // and before the account save started by Submit settles. Never seed
         // over a next-stage draft.
-        if (submittedCode !== undefined) writeString(draftKey(taskId), submittedCode);
+        if (submittedCode !== undefined) keepDeviceDraft(taskId, submittedCode, draftBase);
         if (stage.next) queryClient.removeQueries({queryKey:codingKeys.task(stage.next), exact:true, type:'inactive'});
-      } else removeStored(draftKey(taskId));
+      } else forgetDeviceDraft(taskId);
     }
-  }, [queryClient, taskId, activeRun, runIndex, advanceRun]);
+  }, [queryClient, taskId, activeRun, runIndex, advanceRun, draftBase]);
 
   const onRetry = useCallback(() => {
     if (workbench.reloading) return;
     void task.refetch();
     setAttempt((n) => n + 1);
   }, [task, workbench.reloading]);
+
+  // The code the editor opens with, decided once per load of the task: the
+  // newer of this device's copy and the account draft. When the account's
+  // was newer, the older copy here goes; either way the page says which won.
+  const opening = useMemo(() => task.data ? openingDraft(task.data.task.id, task.data.draft, task.data.draftUpdatedAt) : null, [task.data]);
+  useEffect(() => {
+    if (opening?.conflict === 'account' && task.data) forgetDeviceDraft(task.data.task.id);
+  }, [opening, task.data]);
 
   if (retired && track) return <RetiredTrackNotice track={track} />;
   if (!track || !taskId) return <CodingNotFound what="track" track={null} />;
@@ -865,9 +867,8 @@ export function CodingTaskScreen() {
       ? stage.next ? `/coding/${evolvingTaskTrack(stage.next)}/${stage.next}` : null
       : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
   const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
-  const localDraft = readString(draftKey(data.task.id));
-  const previousLocal = stage?.previous ? readString(draftKey(stage.previous)) : null;
-  const initialCode = localDraft ?? data.draft ?? (stage && previousLocal !== null
+  const previousLocal = stage?.previous ? deviceDraft(stage.previous) : null;
+  const initialCode = opening?.code ?? (stage && previousLocal !== null
     ? prepareEvolvingDraft(previousLocal, stage.challenge, stage.index)
     : null);
 
@@ -883,6 +884,7 @@ export function CodingTaskScreen() {
           not save says so, and the star itself is the way to try again. */}
       {bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
       {save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
+      {opening?.conflict && <p className="cd-note" role="status">{t(opening.conflict === 'account' ? 'coding.draft.accountNewer' : 'coding.draft.deviceNewer')}</p>}
       {stage && stage.challenge.stages.length > 1 && isBarred(premiumOf(stage.challenge.stages[1])) && (
         <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(stage.challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>
       )}

@@ -1618,6 +1618,8 @@ export const en = {
   'coding.signInHint': 'Sign in to keep your progress. Any task can be run without an account.',
   'coding.loading': 'Loading task…',
   'coding.loadError': 'Could not load this task.',
+  'coding.draft.accountNewer': 'A newer draft from your account is open. It replaced the older copy on this device.',
+  'coding.draft.deviceNewer': 'The code on this device is newer than the draft saved to your account, so it is open here. Run or Submit to save it to your account.',
   'coding.retry': 'Try again',
   'coding.planFailed': 'We could not load your plan, so no challenge here carries the Premium mark. Opening one checks your plan.',
   'coding.offline': 'You are offline. Run still works; Submit needs a connection.',
