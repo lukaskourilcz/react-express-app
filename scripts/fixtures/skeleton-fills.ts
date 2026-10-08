@@ -269,6 +269,28 @@ const App = () => {
 
 export default App;
 `,
+  'react-color-selector': `import React, { useState } from 'react';
+
+const colors = ['Red', 'Blue', 'Green'];
+
+const App = () => {
+  const [color, setColor] = useState(colors[0]);
+
+  return (
+    <main>
+      <h2>Color selector</h2>
+      <select value={color} onChange={event => setColor(event.target.value)}>
+        {colors.map(one => (
+          <option key={one}>{one}</option>
+        ))}
+      </select>
+      <p>You have selected: {color}</p>
+    </main>
+  );
+};
+
+export default App;
+`,
   'react-data-list': `import React from 'react';
 
 const people = [
@@ -971,6 +993,44 @@ const App = () => {
             {todo.title} — {todo.completed ? 'done' : 'to do'}
             <button onClick={() => remove(todo.id)}>Remove</button>
           </li>
+        ))}
+      </ul>
+    </main>
+  );
+};
+
+export default App;
+`,
+  'react-usedebounce-hook': `import React, { useEffect, useState } from 'react';
+
+const fruits = ['Apple', 'Banana', 'Cherry'];
+
+const useDebounce = (value, delay) => {
+  const [settled, setSettled] = useState(value);
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSettled(value), delay);
+
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [value, delay]);
+
+  return settled;
+};
+
+const App = () => {
+  const [query, setQuery] = useState('');
+  const settledQuery = useDebounce(query, 300);
+  const visible = fruits.filter(fruit => fruit.toLowerCase().includes(settledQuery.toLowerCase()));
+
+  return (
+    <main>
+      <h2>useDebounce hook</h2>
+      <input value={query} onChange={event => setQuery(event.target.value)} />
+      <ul>
+        {visible.map(fruit => (
+          <li key={fruit}>{fruit}</li>
         ))}
       </ul>
     </main>

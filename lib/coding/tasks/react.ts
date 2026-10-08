@@ -31,17 +31,14 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const [color, setColor] = useState(/* the first colour */);
 
-const handleAction = () => {
-  setValue(currentValue => /* return the next value */);
-};
-
-return (
-  <main>
-    {/* render value and connect handleAction to an event */}
-  </main>
-);`,
+<select value={color} onChange={event => setColor(/* the chosen option */)}>
+  {colors.map(one => (
+    <option key={one}>{one}</option>
+  ))}
+</select>
+<p>You have selected: {/* the colour in state */}</p>`,
     hints: ["Keep the selected color in state. Bind value and onChange to the select."],
     approach: [
       "Keep the chosen colour in a state value that starts as Red.",
@@ -2612,15 +2609,22 @@ const App = () => {
 
 export default App;
 `,
-    skeleton: `const [value, setValue] = useState(/* initial value */);
+    skeleton: `const useDebounce = (value, delay) => {
+  const [settled, setSettled] = useState(value);
 
-useEffect(() => {
-  // run the side effect here
+  useEffect(() => {
+    // after delay, copy value into settled
 
-  return () => {
-    // cancel timers, listeners, or requests here
-  };
-}, [/* values used by the effect */]);`,
+    return () => {
+      // cancel that timeout, so a newer value replaces it
+    };
+  }, [value, delay]);
+
+  return settled;
+};
+
+// In App, filter fruits with what the hook returns, not with what was typed:
+const settledQuery = useDebounce(query, 300);`,
     hints: ["Every new value schedules a timeout, and the cleanup cancels the previous one."],
     approach: [
       "Write a hook taking a value and a delay that keeps its own state holding the most recently settled copy of that value.",
