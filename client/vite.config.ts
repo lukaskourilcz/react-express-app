@@ -17,6 +17,7 @@ import { MERCH_SKUS } from '../shared/rewards';
 import { DailyStaticArticle } from './src/components/DailyStaticArticle';
 import { writeOgCard } from './src/og/ogImages';
 import { CODING_INDEX } from '../shared/coding-index';
+import { CODING_SECTION_TRACKS } from '../shared/coding-catalog';
 import { freeCodingCounts } from '../shared/tiers';
 import { addDays, qotdImagePath, qotdPath, qotdTrack, utcToday, QOTD_EPOCH } from '../shared/daily-question';
 
@@ -179,7 +180,7 @@ function productMetadata(env: Record<string, string>): Plugin {
         const [pathname, search] = (req.url || '').split('?');
         if (/^\/(?:cs\/)?topics\/[a-z0-9-]+\/?$/.test(pathname) || /^\/premium(?:\/cancel)?\/?$/.test(pathname)) {
           req.url = `${pathname.replace(/\/$/, '')}/index.html${search ? `?${search}` : ''}`;
-        } else if (/^\/(?:daily(?:\/\d{4}-\d{2}-\d{2})?|coding\/[a-z-]+\/[a-z0-9-]+)\/?$/.test(pathname)) {
+        } else if (/^\/(?:daily(?:\/\d{4}-\d{2}-\d{2})?|coding(?:\/[a-z-]+(?:\/[a-z0-9-]+)?)?)\/?$/.test(pathname)) {
           // #239: only when the build wrote that page, as on Vercel; any
           // other path falls through to the app.
           const file = `${pathname.replace(/\/$/, '')}/index.html`;
@@ -209,13 +210,14 @@ function productMetadata(env: Record<string, string>): Plugin {
           .replace(/(<meta (?:property|name)="(?:og:image|twitter:image)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(image) + end)
           .replace('</head>', `<meta property="og:image:alt" content="${escape(alt)}" /></head>`)
         : html;
-      /** The shell with a page's own title, description, canonical URL and image. */
-      const pageHead = (html: string, page: { title: string; description: string; url: string; image: string; imageAlt: string }) =>
+      /** The shell with a page's own title, description, canonical URL and
+       * image. No URL writes no canonical; no image keeps the shell's. */
+      const pageHead = (html: string, page: { title: string; description: string; url: string | null; image: string | null; imageAlt: string }) =>
         withImage(html, page.image, page.imageAlt)
           .replace(/<title>[^<]*<\/title>/, `<title>${escape(page.title)}</title>`)
           .replace(/(<meta (?:name|property)="(?:description|og:description|twitter:description)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(page.description) + end)
           .replace(/(<meta (?:name|property)="(?:og:title|twitter:title)" content=")[^"]*(" \/>)/g, (_, start, end) => start + escape(page.title) + end)
-          .replace('</head>', `<link rel="canonical" href="${page.url}" /><meta property="og:url" content="${page.url}" /></head>`);
+          .replace('</head>', page.url ? `<link rel="canonical" href="${page.url}" /><meta property="og:url" content="${page.url}" /></head>` : '</head>');
       const writePage = async (pagePath: string, html: string) => {
         const dir = path.join(outDir, pagePath);
         await mkdir(dir, { recursive: true });
@@ -284,6 +286,27 @@ function productMetadata(env: Record<string, string>): Plugin {
         await writePage(pagePath, pageHead(indexHtml, { title: pageTitle, description, url: origin + pagePath, image: origin + image, imageAlt: `${task.title.en}: ${track}, ${difficulty}` })
           .replace('<div id="root"></div>', `<div id="root"><noscript><main class="ss-public-fallback ss-info-page"><h1>${escape(task.title.en)}</h1><p>${escape(description)}</p></main></noscript></div>`));
       }
+      // C4-4: the Coding home and its track pages get a head of their own the
+      // same way, so a crawler or a link preview that runs no JavaScript stops
+      // reading them as copies of the home page. Like the task pages they are
+      // the app and stay out of the sitemap. /coding/review opens /coding, so
+      // it names that page as canonical; the retired system design track
+      // names none.
+      const sectionTracks = [...CODING_SECTION_TRACKS.map((track) => ({
+        path: `/coding/${track}`, name: en[`coding.track.${track}` as TranslationKey], description: en[`coding.trackBlurb.${track}` as TranslationKey],
+      })), { path: '/coding/fullstack', name: en['coding.evolving.fullstack'], description: en['coding.evolving.fullstackBody'] }];
+      const sectionLinks = `<ul class="ss-topic-links">${sectionTracks.map((page) => `<li><a href="${page.path}">${escape(page.name)}</a></li>`).join('')}</ul>`;
+      const sectionHome = { name: en['coding.title'], title: `${en['coding.title']} · ${product.brand}`, description: en['coding.subtitle'], canonical: '/coding' };
+      const sectionPages = [
+        { path: '/coding', ...sectionHome },
+        { path: '/coding/review', ...sectionHome },
+        ...sectionTracks.map((page) => ({ ...page, title: `${page.name} coding challenges · ${product.brand}`, canonical: page.path })),
+        { path: '/coding/system-design', name: en['coding.track.system-design'], title: `${en['coding.track.system-design']} · ${product.brand}`, description: en['coding.retired.body'], canonical: null },
+      ];
+      for (const page of sectionPages) {
+        await writePage(page.path, pageHead(indexHtml, { title: page.title, description: page.description, url: page.canonical && origin + page.canonical, image: null, imageAlt: page.title })
+          .replace('<div id="root"></div>', `<div id="root"><noscript><main class="ss-public-fallback ss-info-page"><h1>${escape(page.name)}</h1><p>${escape(page.description)}</p>${sectionLinks}</main></noscript></div>`));
+      }
       // #239: the question of the day, one page head and image per day. The
       // head names the day and its track; the question itself comes from
       // the server when the page runs, so no question or answer is here.
@@ -303,7 +326,7 @@ function productMetadata(env: Record<string, string>): Plugin {
           .replace('<div id="root"></div>', `<div id="root"><main class="ss-public-fallback">${body}</main></div>`));
         days++;
       }
-      this.info(`share pages: ${CODING_INDEX.length} coding tasks, ${days} days of the question of the day, ${drawn} images drawn (the rest from cache)`);
+      this.info(`share pages: ${CODING_INDEX.length} coding tasks, ${sectionPages.length} Coding section pages, ${days} days of the question of the day, ${drawn} images drawn (the rest from cache)`);
 
       const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug, 'en')}">${escape(topic.title.en)}</a></li>`).join('')}</ul></main>`;
       await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /><meta property="og:url" content="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root"><noscript>${fallback}</noscript></div>`));

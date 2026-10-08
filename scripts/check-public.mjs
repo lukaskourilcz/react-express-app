@@ -79,6 +79,29 @@ for (const { id, track } of tasks) {
   assert(!/solution|expected|hiddenTests/i.test(html.slice(html.indexOf('<div id="root">'))), `${id}: no task body in the HTML`);
   assert(existsSync(path.join(dir, 'og', 'coding', `${id}.png`)), `${id}: its image exists`);
 }
+// C4-4: the Coding home and its track pages carry a head of their own, not
+// the home page's: /coding/review opens /coding and names it, retired system
+// design names no canonical. Like the task pages they stay out of the sitemap.
+const home = new JSDOM(readFileSync(`${dir}/index.html`, 'utf8')).window.document;
+const homeDescription = home.querySelector('meta[name="description"]').getAttribute('content');
+const SECTION_PAGES = {
+  '/coding': '/coding', '/coding/review': '/coding', '/coding/system-design': null,
+  ...Object.fromEntries(['javascript', 'typescript', 'react', 'algorithms', 'fullstack'].map(track => [`/coding/${track}`, `/coding/${track}`])),
+};
+for (const [pagePath, canonicalPath] of Object.entries(SECTION_PAGES)) {
+  const doc = new JSDOM(readFileSync(path.join(dir, pagePath, 'index.html'), 'utf8')).window.document;
+  const canonical = canonicalPath && `https://devshark.app${canonicalPath}`;
+  assert.equal(doc.querySelector('link[rel="canonical"]')?.getAttribute('href') ?? null, canonical, `${pagePath}: canonical`);
+  assert.equal(doc.querySelector('meta[property="og:url"]')?.getAttribute('content') ?? null, canonical, `${pagePath}: og:url matches the canonical`);
+  assert.notEqual(doc.title, home.title, `${pagePath}: its own title`);
+  assert.equal(doc.querySelector('meta[property="og:title"]').getAttribute('content'), doc.title, `${pagePath}: og:title is the title`);
+  assert.notEqual(doc.querySelector('meta[name="description"]').getAttribute('content'), homeDescription, `${pagePath}: its own description`);
+  assert(!urls.some(url => url.pathname === pagePath), `${pagePath}: not in the sitemap`);
+}
+const rewrites = JSON.parse(readFileSync('vercel.json', 'utf8')).rewrites;
+for (const source of ['/coding', '/coding/:track']) {
+  assert(rewrites.some(rule => rule.source === source && rule.destination === `${source}/index.html`), `${source} serves its own HTML on Vercel`);
+}
 const days = readdirSync(`${dir}/daily`).filter((name) => /^\d{4}-\d{2}-\d{2}$/.test(name));
 assert(days.length >= 30, 'the question of the day has dated pages');
 for (const day of days) {
@@ -90,4 +113,4 @@ for (const day of days) {
 assert(readFileSync(`${dir}/robots.txt`, 'utf8').includes(`Sitemap: ${urls[0].origin}/sitemap.xml`));
 assert(!existsSync(`${dir}/mockServiceWorker.js`), 'Mocks must never ship with the app');
 assert(!readdirSync(`${dir}/assets`).some(file => /storybook|mocks|\.stories\./i.test(file)));
-console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content, the Premium terms, ${tasks.length} coding share pages and ${days.length} question-of-the-day pages.`);
+console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content, the Premium terms, ${tasks.length} coding share pages, ${Object.keys(SECTION_PAGES).length} Coding section pages and ${days.length} question-of-the-day pages.`);

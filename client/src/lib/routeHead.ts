@@ -63,10 +63,11 @@ export function routeTitle(pathname: string, t: Translate, lang: Lang): string {
 //
 // The build writes a head of its own for every coding task and every dated
 // question of the day (vite.config.ts, #239): the task's title, a line about
-// it, its canonical URL. The app keeps that head when it starts on such a
-// page instead of writing the generic "Coding" one over it.
+// it, its canonical URL. So it does for the Coding home and its track pages
+// (C4-4). The app keeps that head when it starts on such a page instead of
+// writing the generic "Coding" one over it.
 
-const SHARE_PAGE_PATH = /^\/(?:daily\/\d{4}-\d{2}-\d{2}|coding\/[a-z-]+\/[a-z0-9-]+)$/;
+const SHARE_PAGE_PATH = /^\/(?:daily\/\d{4}-\d{2}-\d{2}|coding(?:\/[a-z-]+(?:\/[a-z0-9-]+)?)?)$/;
 const SHARED_META = [
   'meta[name="description"]',
   'meta[property="og:title"]',
