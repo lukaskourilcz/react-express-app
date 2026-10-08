@@ -41,6 +41,24 @@ const clean = await runInSandbox({code:'function answer(){return 1}',calls:['ans
 assert.equal(clean.results[0]?.pass, true, 'an attack must not poison the next run');
 console.log('PASS integrity: lossless values and fresh run');
 
+// Correct arithmetic can produce -0 (`-a - b` with both zero), and no check
+// asks for a sign of zero: both graders take -0 for 0, and when a result is
+// wrong for another reason its -0 is shown as -0, not as the 0 it was not.
+const zeroes = { code: 'function answer(){return [[-0, 0], -0]}\nfunction wrong(){return [-0, 1]}', calls: ['answer()', 'answer()[1]', 'wrong()'], expectations: [[[0, 0], 0], 0, [0, 2]] };
+for (const [grader, run] of [['server', await runInSandbox(zeroes)], ['browser', await evaluateCalls(zeroes)]] as const) {
+  assert.deepEqual(run.results.map((result) => result.pass), [true, true, false], `${grader}: -0 equals 0`);
+  assert.deepEqual(run.results.map((result) => result.actual), ['[[-0,0],-0]', '-0', '[-0,1]'], `${grader}: -0 is shown as -0`);
+}
+// The case that found it: a correct alg-mh-three-sum that computes the third
+// number as -sorted[i] - sorted[j] returned [[-0,0,0]] for [0,0,0].
+const threeSum = CODING_TASKS.find((task) => task.id === 'alg-mh-three-sum')!;
+const threeSumRun = await runChecks({
+  code: 'function threeSum(numbers) {\n  const sorted = [...numbers].sort((a, b) => a - b);\n  const seen = new Set();\n  const triples = [];\n  for (let i = 0; i < sorted.length - 2; i++) {\n    if (i > 0 && sorted[i] === sorted[i - 1]) continue;\n    const lookup = new Set();\n    for (let j = i + 1; j < sorted.length; j++) {\n      const need = -sorted[i] - sorted[j];\n      if (lookup.has(need)) {\n        const triple = [sorted[i], need, sorted[j]];\n        const key = triple.join(",");\n        if (!seen.has(key)) {\n          seen.add(key);\n          triples.push(triple);\n        }\n      }\n      lookup.add(sorted[j]);\n    }\n  }\n  return triples.sort((a, b) => a[0] - b[0] || a[1] - b[1]);\n}',
+  visible: threeSum.tests!, hidden: solutionFor(threeSum.id)!.hiddenTests!, shuffle: (list) => list,
+});
+assert.ok(allPassed(threeSumRun.visible) && threeSumRun.hidden && allPassed(threeSumRun.hidden), 'alg-mh-three-sum: a correct answer that computes -0 passes');
+console.log('PASS integrity: -0 equals 0 and shows as -0');
+
 // Hidden checks run in the same program as the visible ones. What they print
 // must never reach the learner: a console.log inside the function would
 // otherwise hand back every hidden input after Submit.
