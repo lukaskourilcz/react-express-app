@@ -975,11 +975,18 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
+// The page's text without its headings: the starter's heading says "Loading state".
+const pageText = container => {
+  const copy = container.cloneNode(true);
+  copy.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => heading.remove());
+  return copy.textContent;
+};
+
 test('shows loading first, then the users', async () => {
   const { container } = render(<App />);
-  expect(container.textContent).toContain('Loading');
+  expect(pageText(container)).toContain('Loading');
   await waitFor(() => expect(container.textContent).toContain('Leanne Graham'));
-  expect(container.textContent).not.toContain('Loading');
+  expect(pageText(container)).not.toContain('Loading');
 });
 `,
     api: {

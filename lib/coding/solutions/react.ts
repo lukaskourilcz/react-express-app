@@ -989,11 +989,11 @@ test('Loading stays while the request is in flight, then one item per user repla
   const request = requestTo(calls, '/users');
   expect(Boolean(request)).toBe(true);
   await new Promise(resolve => setTimeout(resolve, 30));
-  expect(container.textContent).toContain('Loading');
+  expect(pageText(container)).toContain('Loading');
   expect(container.querySelectorAll('li').length).toBe(0);
   request.respond(FRESH_USERS);
   await waitFor(() => expect(container.querySelectorAll('li').length).toBe(4));
-  expect(container.textContent).not.toContain('Loading');
+  expect(pageText(container)).not.toContain('Loading');
   const items = namesInItems(container);
   FRESH_USERS.forEach((user, index) => expect(items[index]).toContain(user.name));
 }));`,
