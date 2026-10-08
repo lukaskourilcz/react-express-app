@@ -26,7 +26,7 @@ function SavedChallenges() {
   const save = useSaveChallenge();
   if (!isAuthenticated) return <div className="cd-note"><p>{t('coding.signInHint')}</p><Button variant="secondary" label={t('auth.logIn')} aria-haspopup="dialog" onClick={() => openSignIn()} /></div>;
   if (query.isPending) return <LoadingScreen label={t('common.loading')} />;
-  if (query.isError) return <div role="alert"><p>{t('coding.loadError')}</p><Button variant="secondary" label={t('coding.retry')} onClick={() => void query.refetch()} /></div>;
+  if (query.isError) return <div role="alert"><p>{t('coding.saved.loadFailed')}</p><Button variant="secondary" label={t('coding.retry')} onClick={() => void query.refetch()} /></div>;
   return <section aria-label={t('collection.challenges')}>
     {save.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.collections.failed')}</p>}
     {!query.data.saved.length && <p className="cd-note">{t('collection.empty')}</p>}
