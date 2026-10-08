@@ -779,6 +779,8 @@ export const FULLSTACK_SOLUTIONS:Record<string,CodingSolution> = Object.fromEntr
  return project.stages.filter(id => !id.endsWith('-start')).map((id,i)=>[id,{solution:build(app,i+1),junior:buildJunior(app,i+1),senior:buildSenior(app,i+1),...(i>=6?{hiddenSuite:mutationHiddenSuite(app)}:{}),...(i<4?{hiddenTests:[
   {call:`normalizeInput({name:'x'.repeat(81),${app.amount}:1})`,expected:null},
   {call:`normalizeInput({name:'A',${app.amount}:1001})`,expected:null},
+  // A missing or non-string name and a value that is not an object are refused, not read.
+  {call:`[{${app.amount}:2},{name:42,${app.amount}:2},'${app.first}'].map(value=>normalizeInput(value))`,expected:[null,null,null]},
   // Stage 1 only: from stage 2 on, the checkpoint shows these as visible checks.
   ...(i===0?[
    {call:`normalizeInput({name:'Plan',${app.amount}:5})`,expected:{name:'Plan',[app.amount]:5}},
@@ -795,5 +797,16 @@ export const FULLSTACK_SOLUTIONS:Record<string,CodingSolution> = Object.fromEntr
    {call:`[null,5,'patch'].map(patch=>updateItem(${JSON.stringify(row)},patch))`,expected:[null,null,null]},
   ]:[]),
   ...(i>=2?[{call:`(()=>{const seed=${JSON.stringify(fullstackSeed(app))};const api=createApi(seed);seed[0].name='changed';const first=api({method:'GET',path:'${app.endpoint}'});first.body[0].name='mutated';return api({method:'GET',path:'${app.endpoint}'}).body[0].name})()`,expected:app.first}]:[]),
+  // From stage 3: a POST stores the row it answers with, its reply is a copy,
+  // and a method other than GET or POST on the collection is not found.
+  ...(i>=2?[
+   {call:`(()=>{const api=createApi([]);const reply=api({method:'POST',path:'${app.endpoint}',body:{name:'A',${app.amount}:1}});reply.body.${app.amount}=99;return api({method:'GET',path:'${app.endpoint}'}).body})()`,expected:[{name:'A',[app.amount]:1,id:1,version:1}]},
+   {call:`(()=>{const api=createApi([]);return [api({method:'PUT',path:'${app.endpoint}',body:{name:'A',${app.amount}:1}}),api({method:'GET',path:'${app.endpoint}'}).body.length]})()`,expected:[{status:404,body:{error:'not_found'}},0]},
+  ]:[]),
+  // Stage 4: DELETE removes the row, and PATCH stores the new version behind a copied reply.
+  ...(i>=3?[
+   {call:`(()=>{const api=createApi(${JSON.stringify(fullstackSeed(app))});const reply=api({method:'DELETE',path:'${app.endpoint}/2'});return [reply,api({method:'GET',path:'${app.endpoint}'}).body.map(item=>item.id)]})()`,expected:[{status:200,body:{deleted:2}},[1,3]]},
+   {call:`(()=>{const api=createApi(${JSON.stringify(fullstackSeed(app))});const reply=api({method:'PATCH',path:'${app.endpoint}/1',body:{version:1,${app.amount}:1}});reply.body.${app.amount}=99;return api({method:'GET',path:'${app.endpoint}'}).body[0]})()`,expected:{...row,[app.amount]:1,version:2}},
+  ]:[]),
  ]}:{})}]);
 }));
