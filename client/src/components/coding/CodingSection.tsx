@@ -414,9 +414,11 @@ export function CodingHome() {
         <div className="cd-stack-path" aria-hidden><span>JS</span><i>→</i><span>TS</span><i>→</i><span>API</span><i>→</i><span>React</span></div>
       </Link>
       {/* Ten technique groups, each one a row that says what it is rather than
-          a pill that says only its name and a number. The tag count is the
-          honest measure of breadth; the sentence is what makes the name mean
-          something to a learner who has not met it yet. */}
+          a pill that says only its name and a number. A row opens the track
+          with the most of that technique, filtered to it, and counts that
+          track's challenges, so the number is the one the list shows; the
+          sentence is what makes the name mean something to a learner who has
+          not met it yet. */}
       <section aria-labelledby="cd-techniques">
         <Kicker as="h2" id="cd-techniques">{t('coding.techniques')}</Kicker>
         <p className="cd-lead">{t('coding.techniquesLead')}</p>
@@ -427,12 +429,12 @@ export function CodingHome() {
             for (const task of SECTION_INDEX) if (task.focus.some((tag) => tags.includes(tag))) counts.set(task.track, (counts.get(task.track) ?? 0) + 1);
             const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
             if (!best) return null;
-            const total = [...counts.values()].reduce((a, b) => a + b, 0);
+            const [track, count] = best;
             return (
-              <Link key={group} className="cd-technique" to={`/coding/${best[0]}?group=${group}`}>
+              <Link key={group} className="cd-technique" to={`/coding/${track}?group=${group}`}>
                 <span className="cd-technique__head">
                   <span className="cd-technique__name">{t(`coding.group.${group}` as never)}</span>
-                  <span className="cd-technique__count">{t('coding.techniqueCount', { n: total })}</span>
+                  <span className="cd-technique__count">{t('coding.techniqueCount', { n: count, track: t(`coding.track.${track}` as never) })}</span>
                 </span>
                 <span className="cd-technique__blurb">{t(`coding.groupBlurb.${group}` as never)}</span>
               </Link>

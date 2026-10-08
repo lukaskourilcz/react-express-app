@@ -1586,7 +1586,7 @@ export const en = {
   'coding.techniques': 'Techniques',
   'coding.techniques.all': 'All techniques',
   'coding.techniquesLead': 'Filter a track by the technique it practises.',
-  'coding.techniqueCount': '{n} challenges',
+  'coding.techniqueCount': '{n} challenges in {track}',
   'coding.groupBlurb.loops': 'Walking a sequence once, and knowing when to stop.',
   'coding.groupBlurb.array-methods': 'map, filter and reduce — and which one the shape of the answer asks for.',
   'coding.groupBlurb.strings': 'Splitting, matching and rebuilding text without losing a character.',
