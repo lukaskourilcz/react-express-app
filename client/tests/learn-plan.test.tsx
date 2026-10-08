@@ -393,7 +393,10 @@ describe('a level whose session cannot be used', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'Finish' }));
     fireEvent.click(await screen.findByRole('button', { name: 'Show the solution' }));
     expect(await screen.findByText(/the reference/)).toBeInTheDocument();
-    expect(screen.getByText(/Showing it ended this level attempt/)).toBeInTheDocument();
+    // It points at the workbench's "Reference solution" block under the hints
+    // (learn-reveal-message.test.tsx); a level has no Solution tab (C3-14).
+    expect(screen.getByText(/Showing it ended this level attempt/)).toHaveTextContent(/^The reference solution is open under the hints\./);
+    expect(screen.queryByText(/Solution tab/)).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 50));
     expect(completions).toBe(0);
     expect(screen.getByText(/the reference/)).toBeInTheDocument();
