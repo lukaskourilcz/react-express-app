@@ -34,6 +34,7 @@ import {
   type Difficulty,
 } from '../shared/coding-catalog';
 import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
+import { KNOWN_RIGHT_CODE, KNOWN_WRONG_CODE, type KnownAnswer } from './coding-known-answers';
 import { docsFor, taskResources } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
@@ -1091,7 +1092,28 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
       fail(`${task.id}: the reference with every parameter typed any still passes the type tests, so they do not hold the signature the statement gives`);
     }
   }
-  console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check (${((Date.now() - started) / 1000).toFixed(1)} s).`);
+  // 4. Known answers: a mistake a hidden case was added for still fails, and
+  // a correct answer a check once refused still passes.
+  const knownSource = (known: KnownAnswer): string | null => {
+    let source = known.code ?? solutionFor(known.id)?.solution ?? '';
+    for (const [from, to] of known.replace ?? []) {
+      if (!source.includes(from)) return null;
+      source = source.split(from).join(to);
+    }
+    return source || null;
+  };
+  let knownAnswers = 0;
+  for (const [list, expected] of [[KNOWN_WRONG_CODE, false], [KNOWN_RIGHT_CODE, true]] as const) {
+    for (const known of list) {
+      if (!ONLY.test(known.id)) continue;
+      const task = byId.get(known.id);
+      const source = knownSource(known);
+      if (!task || source === null) { fail(`${known.id}: the known answer "${known.label}" no longer applies to the reference; rewrite it in scripts/coding-known-answers.ts`); continue; }
+      knownAnswers += 1;
+      if (await passesTask(task, source) !== expected) fail(`${known.id}: ${known.label} ${expected ? 'fails a check the statement does not ask for' : 'passes every check'}`);
+    }
+  }
+  console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check, and ${knownAnswers} known answers keep their verdict (${((Date.now() - started) / 1000).toFixed(1)} s).`);
 }
 
 void main().catch((error) => {
