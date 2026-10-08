@@ -222,7 +222,11 @@ A verified pass opens a Solution tab beside Resources with two more ways to
 write the task, labelled juniorDev and seniorDev. Every graded code task
 carries both on the server, proven against its visible and hidden checks by
 `npm run test:coding`, and they travel only with a passing verdict or, on a
-return visit, with a recorded pass.
+return visit, with a recorded pass. A checkpoint (`…-start`) is the exception:
+it has its own reference, the previous stage's code plus the checkpoint's one
+step, and no junior or senior board, so neither a pass nor a reveal there
+hands over code for the milestone that follows. The contract fails when a
+checkpoint's reference passes that milestone.
 
 `generateFinHover` generates a stable per-button fin profile: shade, size,
 direction, speed, position and swim/rise/dive/fade/diagonal entrance. Coding

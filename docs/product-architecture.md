@@ -1319,7 +1319,11 @@ solutions hold only what that stage asks for: the content contract grades the
 reference, junior and senior solutions of every stage against the next stage
 and its checkpoint (the reference alone for React stages, whose suites are
 slow) and fails when one passes, since a learner can read them after a pass
-and paste them into the next stage.
+and paste them into the next stage. A checkpoint carries its own reference,
+the previous stage's code plus the checkpoint's one step, and no junior or
+senior board; the contract fails when that reference passes the milestone the
+checkpoint leads to, since it opens on giving up there and for free after a
+pass.
 
 Since 2026-09-25 the registry also holds fifteen short paths of five levels
 each, marked `short`, with no checkpoints. Twelve are listed on the page of

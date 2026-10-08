@@ -498,13 +498,15 @@ async function main() {
 
   // Every graded code task carries three solutions — the reference the
   // learner can give up to, and the junior and senior versions shown after a
-  // pass — and all three have to pass the same visible and hidden checks.
+  // pass — and all three have to pass the same visible and hidden checks. An
+  // evolving project's checkpoint (`…-start`) carries its reference alone.
   const variants = (solution: NonNullable<ReturnType<typeof solutionFor>>, where: string): [string, string][] => {
     const out: [string, string][] = [['reference', solution.solution]];
+    const boards = !where.endsWith('-start');
     if (typeof solution.junior === 'string' && solution.junior.trim()) out.push(['junior', solution.junior]);
-    else fail(`${where}: missing the junior solution`);
+    else if (boards) fail(`${where}: missing the junior solution`);
     if (typeof solution.senior === 'string' && solution.senior.trim()) out.push(['senior', solution.senior]);
-    else fail(`${where}: missing the senior solution`);
+    else if (boards) fail(`${where}: missing the senior solution`);
     if (solution.junior && solution.senior && solution.junior.trim() === solution.senior.trim()) fail(`${where}: the junior and senior solutions are the same code`);
     return out;
   };
@@ -1061,6 +1063,26 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
     }
   }
 
+  // 1b. What a checkpoint shows must not pass the milestone it leads to. Its
+  // reference opens on giving up there, and for free once it is passed (any
+  // boards with the pass), while the milestone is still to do: pasted into
+  // the milestone, with its hidden checks, it has to fail. The proofs above
+  // show it passes the checkpoint itself.
+  let checkpoints = 0;
+  for (const project of EVOLVING_CHALLENGES) {
+    for (const id of project.stages) {
+      if (!id.endsWith('-start') || !ONLY.test(id)) continue;
+      const milestone = byId.get(id.slice(0, -6));
+      const shown = solutionFor(id);
+      if (!milestone || !shown || milestone.verify !== 'tests') continue;
+      for (const [name, source] of [['reference', shown.solution], ['junior', shown.junior], ['senior', shown.senior]] as const) {
+        if (!source?.trim()) continue;
+        checkpoints += 1;
+        if (await passesTask(milestone, source)) fail(`${id}: its ${name} solution, shown on giving up or after a pass, already passes ${milestone.id}`);
+      }
+    }
+  }
+
   // 2. A promised new array: an in-place version of the reference must fail.
   let promises = 0;
   for (const task of CODING_TASKS) {
@@ -1091,7 +1113,7 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
       fail(`${task.id}: the reference with every parameter typed any still passes the type tests, so they do not hold the signature the statement gives`);
     }
   }
-  console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check (${((Date.now() - started) / 1000).toFixed(1)} s).`);
+  console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${checkpoints} checkpoint solutions fail their milestone, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check (${((Date.now() - started) / 1000).toFixed(1)} s).`);
 }
 
 void main().catch((error) => {

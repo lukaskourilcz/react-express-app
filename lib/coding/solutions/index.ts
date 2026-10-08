@@ -1,7 +1,6 @@
 /** Server-only access to reference solutions and hidden tests. The launch
  * contracts assert that nothing under `client/` imports this directory. */
 
-import { EVOLVING_CHALLENGES } from '../../../shared/evolving';
 import type { CodingSolution } from '../types';
 import { stripComments } from './strip-comments';
 import { JAVASCRIPT_SOLUTIONS } from './javascript';
@@ -60,6 +59,10 @@ const AUTHORED: Record<string, CodingSolution> = {
 // API boundary means the content contract proves the exact text that ships.
 // The reference solution keeps its comments: it is the answer a learner reads
 // after giving up, where the reasoning is the point.
+//
+// An evolving project's checkpoint (`…-start`) carries its own reference,
+// authored beside its milestones, and no boards: a pass or a reveal there
+// must never hand over code that already passes the milestone after it.
 const ALL: Record<string, CodingSolution> = Object.fromEntries(
   Object.entries(AUTHORED).map(([id, record]) => [id, {
     ...record,
@@ -67,16 +70,6 @@ const ALL: Record<string, CodingSolution> = Object.fromEntries(
     ...(record.senior ? { senior: stripComments(record.senior) } : {}),
   }]),
 );
-
-for (const id of EVOLVING_CHALLENGES.flatMap(project => project.stages).filter(id => id.endsWith('-start'))) {
-  // A checkpoint checks only its smaller public contract, never future hidden requirements.
-  const milestone = ALL[id.slice(0,-6)];
-  ALL[id] = {
-    solution: milestone.solution,
-    ...(milestone.junior ? { junior: milestone.junior } : {}),
-    ...(milestone.senior ? { senior: milestone.senior } : {}),
-  };
-}
 
 export const solutionFor = (id: string): CodingSolution | undefined => ALL[id];
 export const solutionIds = (): string[] => Object.keys(ALL);
