@@ -247,23 +247,35 @@ export async function handleCodingSkip(req: VercelRequest, res: VercelResponse, 
   // A plan that cannot be read suggests from the free set, which only narrows.
   const passed = await passedTaskIds(supabase, userId);
   const plan = await resolveTier(userId).catch((): Tier => 'free');
-  const next = SECTION_TASKS.find((one) =>
-    one.id !== task.id
-    && !evolvingStage(one.id)
-    && one.track === task.track
-    && !passed.has(one.id)
-    && tierUnlocked({ track: one.track, tier: one.tier, progress: { passed }, tasks: SECTION_TASKS, javascriptLevelsCleared: 0 })
-    && planOpens(plan, passed, one.id),
-  ) ?? null;
+  const next = nextAfterSkip(task.id, passed, plan);
 
   logEvent({ status: 200, kind: 'skip_recorded', reason: body.reason });
   res.setHeader('Cache-Control', 'private, no-store');
   const answer: CodingSkipResponse = {
     recorded: true,
-    next: next?.id ?? null,
+    next,
     required: skipPostpones(task.id),
   };
   return res.json(answer);
+}
+
+/** What to offer after a skip: the first task the learner can open that comes
+ * after the skipped one in its track, wrapping round to the start, as Next
+ * does after a pass. Searching from the top offered a task the learner had
+ * already walked past (js-digit-sum after skipping js-count-multiples). */
+export function nextAfterSkip(taskId: string, passed: ReadonlySet<string>, plan: Tier): string | null {
+  const task = SECTION_TASKS.find((one) => one.id === taskId);
+  if (!task) return null;
+  const track = SECTION_TASKS.filter((one) => one.track === task.track);
+  const after = track.findIndex((one) => one.id === task.id) + 1;
+  const next = [...track.slice(after), ...track.slice(0, after)].find((one) =>
+    one.id !== task.id
+    && !evolvingStage(one.id)
+    && !passed.has(one.id)
+    && tierUnlocked({ track: one.track, tier: one.tier, progress: { passed }, tasks: SECTION_TASKS, javascriptLevelsCleared: 0 })
+    && planOpens(plan, passed, one.id),
+  );
+  return next?.id ?? null;
 }
 
 /** Whether a skip only postpones a task: a Learn level's coding phase needs
