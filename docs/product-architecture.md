@@ -457,7 +457,10 @@ position; the label gates and pays nothing (see
 the five coding badges join the shared badge sync for `webdev`. All storage is
 in `supabase/supabase-schema-025.sql`, whose track constraints and routines
 `supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last
-hint rung is a documentation link from `shared/coding-docs.ts`.
+hint rung is a documentation link from `shared/coding-docs.ts`. The skeleton
+rung before it is written for its task: `npm run test:coding` fills in the
+skeletons listed in `scripts/fixtures/skeleton-fills.ts` and requires the
+filling to keep every skeleton line and pass every visible and hidden check.
 
 The GitHub garden is an optional GitHub App integration (`lib/github-app.ts`,
 `lib/github-handlers.ts`): the learner installs the app on one repository they
@@ -1307,7 +1310,9 @@ reference solution is a documentation link (`shared/coding-docs.ts`).
 
 The fourteen projects now contain 146 stages: ten focused stages per single-track
 project, twelve per full-stack project. New `-start` checkpoints separate setup,
-data loading and form wiring from subsequent behavior. Earlier requirements and
+data loading and form wiring from subsequent behavior, each with a hint ladder
+of its own (`lib/coding/tasks/evolving-checkpoint-hints.ts`) rather than its
+milestone's. Earlier requirements and
 tests remain cumulative, and each stage lists its own checks first so Results
 opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
