@@ -44,7 +44,7 @@ import {
 } from '../../../../shared/coding-catalog';
 import type { CodingProgressResponse, CodingTaskProgress, CodingVerdictResponse } from '../../../../shared/coding-api';
 import { Badge } from '@astryxdesign/core/Badge';
-import { isPremiumRequired } from '../../lib/api';
+import { ApiError, isPremiumRequired } from '../../lib/api';
 import { isBarred, useLocks, type LockState } from '../../lib/locks';
 import { entitlementQuery } from '../../lib/entitlement';
 import { readOnce, settled, useFirstData } from '../../lib/routeData';
@@ -162,6 +162,32 @@ function RetiredTrackNotice({ track }: { track: CodingTrack }) {
         <Button variant="primary" as={Link} href="/learn?topic=system-design" label={t('coding.retired.toLearn')} />
         <Button variant="secondary" as={Link} href="/roadmap/specializations/fde" label={t('coding.retired.toFde')} />
         <Button variant="secondary" as={Link} href="/coding" label={t('coding.retired.toCoding')} />
+      </div>
+    </div>
+  );
+}
+
+/** A track, or a challenge, that does not exist (or no longer does): a
+ * heading that says so and a way back, never the raw error. Kept out of
+ * search results while it shows, as the app's own not-found page is. */
+function CodingNotFound({ what, track }: { what: 'track' | 'task' | 'retired'; track: CodingTrack | null }) {
+  const { t } = useLanguage();
+  useEffect(() => {
+    const robots = document.createElement('meta');
+    robots.name = 'robots'; robots.content = 'noindex'; robots.dataset.notFound = '';
+    document.head.append(robots);
+    return () => robots.remove();
+  }, []);
+  return (
+    <div className="cd-page ss-pop">
+      <header>
+        <Kicker><Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
+        <h1>{t(`coding.notFound.${what}`)}</h1>
+      </header>
+      <p className="cd-lead">{t('coding.notFound.body')}</p>
+      <div className="cd-actions">
+        {track && <Button variant="primary" as={Link} href={`/coding/${track}`} label={t('coding.verdict.back')} />}
+        <Button variant={track ? 'secondary' : 'primary'} as={Link} href="/coding" label={t('coding.retired.toCoding')} />
       </div>
     </div>
   );
@@ -524,7 +550,7 @@ export function CodingTrackScreen() {
     || format !== 'all' || savedOnly || statusFilter !== 'all';
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
   if (track && isRetiredSectionTrack(track)) return <RetiredTrackNotice track={track} />;
-  if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Button variant="secondary" as={Link} href="/coding" label={t('coding.verdict.back')} /></div>;
+  if (!track) return <CodingNotFound what="track" track={null} />;
   // The plan decides which rows carry the Premium mark, so the list waits for
   // it, as the Coding home does; a plan that cannot load says so.
   if (planLoading) return <LoadingScreen label={t('coding.loading')} />;
@@ -769,7 +795,7 @@ export function CodingTaskScreen() {
   }, [task, workbench.reloading]);
 
   if (retired && track) return <RetiredTrackNotice track={track} />;
-  if (!track || !taskId) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p></div>;
+  if (!track || !taskId) return <CodingNotFound what="track" track={null} />;
   // One loading state until the task and, for a code task, its editor are both in.
   if (task.isLoading || (!task.isError && task.data?.task.track !== 'system-design' && !workbench.View && !workbench.failed)) {
     return <LoadingScreen label={t('coding.loading')} />;
@@ -791,6 +817,11 @@ export function CodingTaskScreen() {
         </div>
       </div>
     );
+  }
+  // An id the catalogue does not hold, or no longer does. The task screen
+  // shows no workbench and no retry: asking again gives the same answer.
+  if (task.isError && task.error instanceof ApiError && (task.error.status === 404 || task.error.status === 410)) {
+    return <CodingNotFound what={task.error.status === 410 ? 'retired' : 'task'} track={track} />;
   }
   const CodingWorkbench = workbench.View;
   if (task.isError || !task.data || (task.data.task.track !== 'system-design' && !CodingWorkbench)) {

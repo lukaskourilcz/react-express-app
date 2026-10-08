@@ -172,6 +172,15 @@ export function vercelRoutingContracts(): void {
   for (const path of ['/', '/coding', '/coding/javascript/js-double-numbers', '/assets', '/profile']) {
     assert.ok(rewriteSourcePattern(fallback.source).test(path), `the SPA fallback still serves ${path}`);
   }
+  // A task page the build did not prerender (an id that does not exist) still
+  // gets the app, which says so (C3-17). A rewrite is a `check: true` route:
+  // when its file is missing, Vercel carries on with the rewritten path, and
+  // the SPA fallback after it has to catch that path.
+  const taskRewrite = rewrites.find((rewrite) => rewrite.source === '/coding/:track/:taskId');
+  assert.ok(taskRewrite, 'coding task pages keep their prerender rewrite');
+  assert.ok(rewrites.indexOf(taskRewrite) < rewrites.indexOf(fallback), 'the task rewrite runs before the SPA fallback');
+  const missingTask = taskRewrite.destination.replace(':track', 'javascript').replace(':taskId', 'no-such-task');
+  assert.ok(rewriteSourcePattern(fallback.source).test(missingTask), `a task page with no prerendered file (${missingTask}) falls through to the app`);
 
   // Documents stay revalidated, or a deploy would never reach anyone.
   for (const path of DOCUMENTS) {
