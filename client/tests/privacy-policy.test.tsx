@@ -51,7 +51,7 @@ describe('the privacy policy', () => {
     ]) {
       expect(screen.getByRole('heading', { level: 2, name: heading })).toBeInTheDocument();
     }
-    expect(screen.getByText(/Last updated on 1 October 2026/)).toBeInTheDocument();
+    expect(screen.getByText(/Last updated on 9 October 2026/)).toBeInTheDocument();
   });
 
   it('says what friends, the boards and the sign-in log see and keep', () => {

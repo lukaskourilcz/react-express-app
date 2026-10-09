@@ -408,13 +408,12 @@ async function main() {
     assert.equal(graded.statusCode, 503, `a placement round is not graded without its claim (${JSON.stringify(graded.body)})`);
     assert.equal(errorCode(graded), 'claim_unavailable');
 
+    // The design walkthrough's one-check claim is not reachable any more:
+    // system design is hidden (owner decision, 9 Oct 2026), so its task does
+    // not open and no walkthrough session is dealt.
     const design = CODING_TASKS.find((task) => task.track === 'system-design' && task.design)!;
     const opened = await call(roadmap as Handler, { account: A, query: { resource: 'coding-task', id: design.id } });
-    assert.equal(opened.statusCode, 200, JSON.stringify(opened.body));
-    const walkthrough = opened.body as { session: string; task: { design: { steps: unknown[] } } };
-    const checked = await call(roadmap as Handler, { method: 'POST', account: A, query: { resource: 'coding-submit' }, body: { session: walkthrough.session, answers: walkthrough.task.design.steps.map(() => 0) } });
-    assert.equal(checked.statusCode, 503, `a design check is not graded without its claim (${JSON.stringify(checked.body)})`);
-    assert.equal(errorCode(checked), 'claim_unavailable');
+    assert.equal(opened.statusCode, 404, JSON.stringify(opened.body));
     console.log('PASS verified caller: a one-time claim Upstash cannot record answers 503');
 
     // ── an account made with an email and password ──────────────────────

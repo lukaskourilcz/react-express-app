@@ -195,6 +195,8 @@ Privacy: the server stores the installation id, account login and id, repository
 
 interview-prepper's system-design track moves as the fourth Coding track, `system-design`. It has no editor; it is answered by choosing.
 
+*9 October 2026:* the owner hid the track until its tasks have been reviewed again (`NEEDED.md`). Nothing issues, lists or grades a system-design task, its pages are a noindex not-found page, and the tasks and graders described here stay in the repository for that review (`docs/product-architecture.md`).
+
 - **Guided walkthroughs** (`src/challenges/designs/guided.js`, five systems): a scenario and a brief, then five multiple-choice questions in the order an interviewer asks them (scope, data, request flow, failure, scale), each with an explanation, and a reference answer shown at the end. A walkthrough passes at four of five.
 - **Drills** (`src/challenges/designDrills.js`, forty): one question each in four formats: `estimate` (a number graded against an accepted band), `tradeoff` and `bottleneck` (one option), `sequence` (steps to order). Graded instantly with the explanation.
 

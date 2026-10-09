@@ -10,7 +10,6 @@ import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
 import type { CodingWorkbench as CodingWorkbenchView } from '../../coding/CodingWorkbench';
-import { DesignRunner } from '../../coding/DesignRunner';
 import { codingKeys, codingProgressQuery, useCodingProgress, useCodingTask } from '../../coding/api';
 import { deviceDraft, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
 import { DraftNote, useDraftChoice } from '../../coding/DraftNote';
@@ -31,9 +30,7 @@ import {
   hasLearnLevel,
   isCodingSectionTrack,
   isCodingTier,
-  isCodingTrack,
   isDifficulty,
-  isRetiredSectionTrack,
   stageDifficulty,
   tierLockReason,
   tierUnlocked,
@@ -130,9 +127,8 @@ function useWarmWorkbench() {
 
 const GROUPS = Object.keys(CODING_TECHNIQUE_GROUPS) as CodingTechniqueGroup[];
 
-// Everything the section offers. System design tasks stay in CODING_INDEX so a
-// passed one keeps its record and the FDE specialization can still assign it;
-// they simply never appear in discovery, counts or filters.
+// Everything the section lists. CODING_INDEX holds only the tracks the section
+// offers: system design is hidden, and no task of it ships (CODING_SECTION_TRACKS).
 const SECTION_INDEX = CODING_INDEX.filter((task) => isCodingSectionTrack(task.track) && !evolvingStage(task.id));
 const INDEX_BY_ID = new Map(CODING_INDEX.map((task) => [task.id, task]));
 const TIERS: readonly CodingTier[] = [1, 2, 3, 4, 5];
@@ -146,29 +142,11 @@ function difficultyParam(params: URLSearchParams): Difficulty | 'all' {
   return isCodingTier(tier) ? TIER_DIFFICULTY[tier] : 'all';
 }
 
-/** Shown instead of a retired track's list or task. It explains where the
- * material went and links there — it never opens the exercise. */
-function RetiredTrackNotice({ track }: { track: CodingTrack }) {
-  const { t } = useLanguage();
-  return (
-    <div className="cd-page ss-pop">
-      <header>
-        <Kicker><Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
-        <h1>{t(`coding.track.${track}` as never)}</h1>
-      </header>
-      <p className="cd-note" role="status">{t('coding.retired.body')}</p>
-      <div className="cd-actions">
-        <Button variant="primary" as={Link} href="/learn?topic=system-design" label={t('coding.retired.toLearn')} />
-        <Button variant="secondary" as={Link} href="/roadmap/specializations/fde" label={t('coding.retired.toFde')} />
-        <Button variant="secondary" as={Link} href="/coding" label={t('coding.retired.toCoding')} />
-      </div>
-    </div>
-  );
-}
-
 /** A track, or a challenge, that does not exist (or no longer does): a
  * heading that says so and a way back, never the raw error. Kept out of
- * search results while it shows, as the app's own not-found page is. */
+ * search results while it shows, as the app's own not-found page is. A hidden
+ * track (system design) and anything under it read as a track that does not
+ * exist, and the task behind it is never asked for. */
 function CodingNotFound({ what, track }: { what: 'track' | 'task' | 'retired'; track: CodingTrack | null }) {
   const { t } = useLanguage();
   useEffect(() => {
@@ -296,6 +274,18 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
   );
 }
 
+/** On the free plan: which stages of a project, or levels of a short path,
+ * come with it. The numbers are the index's projected flags, so they are
+ * shared/tiers.ts's rule: stages 1, 2 and 9 of a ten-stage project, 1 and 11
+ * of a FullStack app, level 1 of a short path. */
+function PremiumStagesNote({ stages, short }: { stages: readonly string[]; short: boolean }) {
+  const { t } = useLanguage();
+  const free = stages.flatMap((id, index) => (INDEX_BY_ID.get(id)?.free ? [index + 1] : []));
+  const list = free.length > 1 ? `${free.slice(0, -1).join(', ')} and ${free[free.length - 1]}` : String(free[0] ?? 1);
+  const note = short ? t('premium.levelsNote') : t(free.length > 1 ? 'premium.stagesNote' : 'premium.stageNote', { stages: list });
+  return <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {note}</p>;
+}
+
 /* ── /coding ──────────────────────────────────────────────────────────── */
 /** The evolving projects of one category (the plain ones, the FullStack
  * builds or the debugging paths), or with `track`, the short paths of one
@@ -336,8 +326,8 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
     <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
       const resumeId = evolvingResume(challenge, passed);
-      // Stage one comes with the free plan; on a free account the later stages read "Premium".
-      const laterLocked = challenge.stages.length > 1 && isBarred(premiumOf(challenge.stages[1]));
+      // Stage one, and a few more in a long project, come with the free plan; on a free account the others read "Premium".
+      const laterLocked = challenge.stages.some((id) => isBarred(premiumOf(id)));
       return <article key={challenge.id} className="cd-project">
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
         <div className="cd-project__name">
@@ -348,7 +338,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
         <div className="cd-project__progress">
           <div className="cd-stage-meter" aria-hidden>{challenge.stages.map(id => <span key={id} data-complete={evolvingPassed(id, passed)} />)}</div>
           <p>{t(challenge.short ? 'coding.evolving.levelsProgress' : 'coding.evolving.progress', { n: completed, total: challenge.stages.length })}</p>
-          {laterLocked && <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>}
+          {laterLocked && <PremiumStagesNote stages={challenge.stages} short={challenge.short === true} />}
         </div>
         <SwimCta label={completed === challenge.stages.length ? t(challenge.short ? 'coding.evolving.levelsComplete' : 'coding.evolving.complete') : t('coding.continue')} onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
       </article>;
@@ -497,7 +487,7 @@ export function CodingTrackScreen() {
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { passed, statusOf, lockReason, premiumOf, planLoading, planFailed, retryPlan } = useStatuses(progress.data);
-  const track = isCodingTrack(trackParam) ? trackParam : null;
+  const track = isCodingSectionTrack(trackParam) ? trackParam : null;
   const group = params.get('group');
   // An old ?status=due link (the retired review queue) lists everything.
   const statusParam = params.get('status');
@@ -550,7 +540,6 @@ export function CodingTrackScreen() {
   const filtersOn = Boolean(group) || needle !== '' || difficulty !== 'all' || duration !== 'all'
     || format !== 'all' || savedOnly || statusFilter !== 'all';
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
-  if (track && isRetiredSectionTrack(track)) return <RetiredTrackNotice track={track} />;
   if (!track) return <CodingNotFound what="track" track={null} />;
   // The plan decides which rows carry the Premium mark, so the list waits for
   // it, as the Coding home does; a plan that cannot load says so.
@@ -754,14 +743,12 @@ export function CodingTaskScreen() {
   const { isAuthenticated } = useAuth();
   const progress = useCodingProgress(isAuthenticated);
   const { statusOf, premiumOf, passed: passedIds } = useStatuses(progress.data);
-  const track = isCodingTrack(trackParam) ? trackParam : null;
-  // A retired track's deep link explains where the material went. The task is
-  // never fetched, so no session is issued and nothing is started.
-  const retired = track !== null && isRetiredSectionTrack(track);
-  const task = useCodingTask(retired ? undefined : taskId);
+  // A track the section does not offer (system design is hidden) is not
+  // found. Its task is never fetched, so no session is issued.
+  const track = isCodingSectionTrack(trackParam) ? trackParam : null;
+  const task = useCodingTask(track ? taskId : undefined);
   const [attempt, setAttempt] = useState(0);
-  // System design tasks run in the DesignRunner, which ships with the section.
-  const workbench = useWorkbench(!retired && trackParam !== 'system-design', attempt);
+  const workbench = useWorkbench(track !== null, attempt);
   const bookmarks = useBookmarks(isAuthenticated);
   const save = useSaveChallenge();
   // An active challenge run carries the learner from one queued task to the
@@ -817,10 +804,9 @@ export function CodingTaskScreen() {
   const opening = useMemo(() => task.data ? openingDraft(task.data.task.id, task.data.draft, task.data.draftUpdatedAt) : null, [task.data]);
   const choice = useDraftChoice(task.data?.task.id ?? null, opening, task.data?.draftUpdatedAt);
 
-  if (retired && track) return <RetiredTrackNotice track={track} />;
   if (!track || !taskId) return <CodingNotFound what="track" track={null} />;
-  // One loading state until the task and, for a code task, its editor are both in.
-  if (task.isLoading || (!task.isError && task.data?.task.track !== 'system-design' && !workbench.View && !workbench.failed)) {
+  // One loading state until the task and its editor are both in.
+  if (task.isLoading || (!task.isError && !workbench.View && !workbench.failed)) {
     return <LoadingScreen label={t('coding.loading')} />;
   }
   // Premium opens this task and the account holds the free plan. The API
@@ -847,7 +833,7 @@ export function CodingTaskScreen() {
     return <CodingNotFound what={task.error.status === 410 ? 'retired' : 'task'} track={track} />;
   }
   const CodingWorkbench = workbench.View;
-  if (task.isError || !task.data || (task.data.task.track !== 'system-design' && !CodingWorkbench)) {
+  if (task.isError || !task.data || !CodingWorkbench) {
     return (
       <div className="cd-page">
         <p className="cd-note cd-note--error" role="alert">{t('coding.loadError')}</p>
@@ -861,7 +847,6 @@ export function CodingTaskScreen() {
   }
   const data = task.data;
   const stage = evolvingStage(data.task.id);
-  if (isRetiredSectionTrack(data.task.track)) return <RetiredTrackNotice track={data.task.track} />;
   const trackTasks = SECTION_INDEX.filter((one) => one.track === data.task.track);
   const next = nextOpenTask(trackTasks, statusOf, data.task.id);
   const runNext = runIndex >= 0 && activeRun ? activeRun.queue[runIndex + 1] ?? null : null;
@@ -889,13 +874,11 @@ export function CodingTaskScreen() {
       {bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
       {save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
       <DraftNote opening={opening} restored={choice.restored} onRestore={choice.restore} />
-      {stage && stage.challenge.stages.length > 1 && isBarred(premiumOf(stage.challenge.stages[1])) && (
-        <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(stage.challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>
+      {stage && stage.challenge.stages.some((id) => isBarred(premiumOf(id))) && (
+        <PremiumStagesNote stages={stage.challenge.stages} short={stage.challenge.short === true} />
       )}
       {stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} premiumOf={premiumOf} />}
-      {data.task.track === 'system-design'
-        ? <DesignRunner key={`${data.task.id}-${attempt}`} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} mode="section" onVerdict={onVerdict} onRetry={onRetry} nextHref={nextHref} backHref={backHref} />
-        : CodingWorkbench && <CodingWorkbench
+      {CodingWorkbench && <CodingWorkbench
             key={`${data.task.id}-${attempt}${choice.restored ? '-device' : ''}`}
             task={data.task}
             session={data.session}

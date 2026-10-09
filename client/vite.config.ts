@@ -36,6 +36,9 @@ const STATIC_PAGE_IMAGES: Partial<Record<keyof typeof STATIC_PAGE_BODIES, string
  * rewrite, so Vercel goes on to the app's catch-all rewrite and the app opens
  * it with the generic head (checked on a preview deployment, 28 Sep 2026). */
 const QOTD_PAST_DAYS = 120;
+/** The hidden system design track: one noindex not-found page, served by
+ * vercel.json for this path and every path under it. */
+const HIDDEN_CODING_PATH = '/coding/system-design';
 const QOTD_FUTURE_DAYS = 45;
 const dailyDateLabel = (iso: string) =>
   new Intl.DateTimeFormat('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${iso}T12:00:00Z`));
@@ -180,6 +183,9 @@ function productMetadata(env: Record<string, string>): Plugin {
         const [pathname, search] = (req.url || '').split('?');
         if (/^\/(?:cs\/)?topics\/[a-z0-9-]+\/?$/.test(pathname) || /^\/premium(?:\/cancel)?\/?$/.test(pathname)) {
           req.url = `${pathname.replace(/\/$/, '')}/index.html${search ? `?${search}` : ''}`;
+        } else if (pathname === HIDDEN_CODING_PATH || pathname.startsWith(`${HIDDEN_CODING_PATH}/`)) {
+          // vercel.json: the hidden track and everything under it.
+          req.url = `${HIDDEN_CODING_PATH}/index.html${search ? `?${search}` : ''}`;
         } else if (/^\/(?:daily(?:\/\d{4}-\d{2}-\d{2})?|coding(?:\/[a-z-]+(?:\/[a-z0-9-]+)?)?)\/?$/.test(pathname)) {
           // #239: only when the build wrote that page, as on Vercel; any
           // other path falls through to the app.
@@ -270,7 +276,9 @@ function productMetadata(env: Record<string, string>): Plugin {
       // #239: a page head and a share image for every coding task, so a shared
       // task link previews that task. Only the head differs from the app
       // shell; the body is the app, with a line for a visitor without
-      // JavaScript. Not in the sitemap: the pages are the app itself.
+      // JavaScript. Not in the sitemap: the pages are the app itself. The
+      // index holds only the tracks the section offers, so a hidden track
+      // (system design) gets no page and no image.
       const coding = freeCodingCounts(CODING_INDEX.map((task) => task.id));
       let drawn = 0;
       for (const task of CODING_INDEX) {
@@ -288,10 +296,10 @@ function productMetadata(env: Record<string, string>): Plugin {
       }
       // C4-4: the Coding home and its track pages get a head of their own the
       // same way, so a crawler or a link preview that runs no JavaScript stops
-      // reading them as copies of the home page. Like the task pages they are
-      // the app and stay out of the sitemap. /coding/review opens /coding, so
-      // it names that page as canonical; the retired system design track
-      // names none.
+      // reading them as copies of the home page. The home and the five track
+      // pages are in the sitemap (owner decision, 9 Oct 2026); the task pages
+      // are not. /coding/review opens /coding, so it names that page as
+      // canonical and stays out.
       const sectionTracks = [...CODING_SECTION_TRACKS.map((track) => ({
         path: `/coding/${track}`, name: en[`coding.track.${track}` as TranslationKey], description: en[`coding.trackBlurb.${track}` as TranslationKey],
       })), { path: '/coding/fullstack', name: en['coding.evolving.fullstack'], description: en['coding.evolving.fullstackBody'] }];
@@ -301,12 +309,21 @@ function productMetadata(env: Record<string, string>): Plugin {
         { path: '/coding', ...sectionHome },
         { path: '/coding/review', ...sectionHome },
         ...sectionTracks.map((page) => ({ ...page, title: `${page.name} coding challenges · ${product.brand}`, canonical: page.path })),
-        { path: '/coding/system-design', name: en['coding.track.system-design'], title: `${en['coding.track.system-design']} · ${product.brand}`, description: en['coding.retired.body'], canonical: null },
       ];
       for (const page of sectionPages) {
-        await writePage(page.path, pageHead(indexHtml, { title: page.title, description: page.description, url: page.canonical && origin + page.canonical, image: null, imageAlt: page.title })
+        await writePage(page.path, pageHead(indexHtml, { title: page.title, description: page.description, url: origin + page.canonical, image: null, imageAlt: page.title })
           .replace('<div id="root"></div>', `<div id="root"><noscript><main class="ss-public-fallback ss-info-page"><h1>${escape(page.name)}</h1><p>${escape(page.description)}</p>${sectionLinks}</main></noscript></div>`));
+        if (page.path === page.canonical) urls.push(origin + page.path);
       }
+      // System design is hidden (owner decision, 9 Oct 2026): /coding/system-design
+      // and every address under it (vercel.json sends them all here) are the
+      // Coding not-found page, marked noindex in the HTML itself, so a crawler
+      // that runs no JavaScript drops the old pages too. No canonical, no
+      // image of its own, not in the sitemap.
+      const hiddenTrack = { title: en['title.notFound'], name: en['coding.notFound.track'], description: en['coding.notFound.body'] };
+      await writePage(HIDDEN_CODING_PATH, pageHead(indexHtml, { title: hiddenTrack.title, description: hiddenTrack.description, url: null, image: null, imageAlt: hiddenTrack.title })
+        .replace('</head>', '<meta name="robots" content="noindex" /></head>')
+        .replace('<div id="root"></div>', `<div id="root"><noscript><main class="ss-public-fallback ss-info-page"><h1>${escape(hiddenTrack.name)}</h1><p>${escape(hiddenTrack.description)}</p><p><a href="/coding">${escape(en['coding.retired.toCoding'])}</a></p></main></noscript></div>`));
       // #239: the question of the day, one page head and image per day. The
       // head names the day and its track; the question itself comes from
       // the server when the page runs, so no question or answer is here.
@@ -326,7 +343,7 @@ function productMetadata(env: Record<string, string>): Plugin {
           .replace('<div id="root"></div>', `<div id="root"><main class="ss-public-fallback">${body}</main></div>`));
         days++;
       }
-      this.info(`share pages: ${CODING_INDEX.length} coding tasks, ${sectionPages.length} Coding section pages, ${days} days of the question of the day, ${drawn} images drawn (the rest from cache)`);
+      this.info(`share pages: ${CODING_INDEX.length} coding tasks, ${sectionPages.length} Coding section pages and the hidden system design page, ${days} days of the question of the day, ${drawn} images drawn (the rest from cache)`);
 
       const fallback = `<main class="ss-public-fallback ss-info-page"><h1>${escape(title)}</h1><p>${escape(description)}</p><ul class="ss-topic-links">${topics.map(topic => `<li><a href="${topicPath(topic.slug, 'en')}">${escape(topic.title.en)}</a></li>`).join('')}</ul></main>`;
       await writeFile(path.join(outDir, 'index.html'), indexHtml.replace('</head>', `<link rel="canonical" href="${origin}/" /><meta property="og:url" content="${origin}/" /></head>`).replace('<div id="root"></div>', `<div id="root"><noscript>${fallback}</noscript></div>`));

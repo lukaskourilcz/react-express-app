@@ -6,7 +6,9 @@ import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SL
 import { GRADING_PER_CALLER, GraderBusyError } from '../lib/coding/grader-capacity';
 import { SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
-import { encodeCodingSession } from '../lib/quiz-tokens';
+import { encodeCodingSession, type CodingDesignKey } from '../lib/quiz-tokens';
+import { gradeDesign, prepareDesign } from '../lib/coding/grade';
+import type { DesignAnswer } from '../shared/coding-api';
 import { solutionFor } from '../lib/coding/solutions';
 import { puzzleFor } from '../lib/coding/puzzles';
 import { CODING_TASKS } from '../lib/coding/catalog';
@@ -342,28 +344,24 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
 // A failed or partly right submission says which answers were wrong and
 // nothing of the key: no correct option, order or range, no explanation and
 // no reference answer. Otherwise the key could be read, the task reopened
-// under a new shuffle and passed for full XP. A pass carries all of it. The
-// learner below has passed these tasks before, which keeps the Premium tasks
-// open for review; the grading does not depend on that.
+// under a new shuffle and passed for full XP. A pass carries all of it.
+// System design is hidden (owner decision, 9 Oct 2026): no handler opens or
+// grades one, so the grader is proven here directly, as the handlers called
+// it, against every kind of design task, for the review before it returns.
 {
   type Step = { correct: boolean; given: unknown; correctIndex?: number; correctOrder?: number[]; acceptedRange?: unknown; explanation?: { en: string } };
   type Verdict = { verdict?: string; design?: Step[] | null; designReference?: { en: string } | null };
-  type Opened = { session: string; task: { design?: { steps: { options: { en: string }[] }[] }; drill?: { options?: { en: string }[]; steps?: { en: string }[] } } };
-  const db = codingDatabase();
-  const learner = 'user-cccc-3333';
-  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.22' };
-  const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
-  const open = async (id: string) => {
-    const out = reply();
-    await handleCodingTask({ method: 'GET', headers: auth, query: { id, user_id: learner } } as never, out as never, db.client as never);
-    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
-    return out.body as Opened;
+  type Opened = { key: CodingDesignKey; task: { design?: { steps: { options: { en: string }[] }[] }; drill?: { options?: { en: string }[]; steps?: { en: string }[] } } };
+  // A fresh shuffle per opening, as the task resource deals one per request.
+  let deal = 0;
+  const shuffle = <T,>(list: T[]): T[] => { deal += 1; return list.map((_, index) => list[(index + deal) % list.length]); };
+  const open = (id: string): Opened => {
+    const prepared = prepareDesign(byId(id), shuffle);
+    return { key: prepared.key, task: { design: prepared.design, drill: prepared.drill } };
   };
-  const submit = async (session: string, answers: unknown[]) => {
-    const out = reply();
-    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session, answers, user_id: learner } } as never, out as never, db.client as never);
-    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
-    return out.body as Verdict;
+  const submit = (opened: Opened, id: string, answers: unknown[]): Verdict => {
+    const graded = gradeDesign(byId(id), opened.key, answers as DesignAnswer[]);
+    return { verdict: graded.outcome, design: graded.verdicts as Step[], designReference: graded.reference };
   };
   const withheld = (verdict: Verdict, secrets: string[], label: string) => {
     assert.equal(verdict.designReference, null, `${label}: no reference answer`);
@@ -378,42 +376,49 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   const estimate = CODING_TASKS.find((task) => task.drill?.format === 'estimate')!;
   const choice = CODING_TASKS.find((task) => task.drill?.format === 'tradeoff')!;
   const sequence = CODING_TASKS.find((task) => task.drill?.format === 'sequence')!;
-  for (const task of [guided, estimate, choice, sequence]) db.progress.set(`${learner}:${task.id}`, { status: 'passed', passes: 1, revealCount: 0 });
+
+  // None of them opens, and a sealed session for one is refused before
+  // anything is graded.
+  {
+    const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+    const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.22' };
+    for (const task of [guided, estimate, choice, sequence]) {
+      const asked = reply();
+      await handleCodingTask({ method: 'GET', headers: auth, query: { id: task.id, user_id: 'user-cccc-3333' } } as never, asked as never, codingDatabase().client as never);
+      assert.equal(asked.statusCode, 404, `${task.id}: not found`);
+      const prepared = prepareDesign(task, (list) => list);
+      const graded = reply();
+      const session = encodeCodingSession({ taskId: task.id, track: 'system-design', userId: 'user-cccc-3333', key: prepared.key });
+      await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session, answers: [0], user_id: 'user-cccc-3333' } } as never, graded as never, codingDatabase().client as never);
+      assert.equal(graded.statusCode, 400, `${task.id}: Submit refuses it`);
+      assert.equal((graded.body as { error?: { code?: string } }).error?.code, 'invalid_session');
+    }
+  }
 
   // A guided walkthrough: all wrong, then one short of the pass mark.
   const design = guided.design!;
   const secrets = [...design.steps.map((step) => step.explanation.en), design.reference.en];
   const rightFor = (opened: Opened) => opened.task.design!.steps.map((step, index) =>
     step.options.findIndex((option) => option.en === design.steps[index].options[design.steps[index].correct].en));
-  const first = await open(guided.id);
+  const first = open(guided.id);
   const right = rightFor(first);
   assert.ok(right.every((index) => index >= 0));
   const wrong = right.map((index, step) => (index + 1) % design.steps[step].options.length);
-  const allWrong = await submit(first.session, wrong);
+  const allWrong = submit(first, guided.id, wrong);
   assert.equal(allWrong.verdict, 'failed');
   assert.deepEqual(allWrong.design?.map((step) => step.correct), right.map(() => false));
   assert.deepEqual(allWrong.design?.map((step) => step.given), wrong, 'the learner\'s own answers come back');
   withheld(allWrong, secrets, 'all wrong');
-  // The same session is checked once: sending it again, even with the right
-  // answers, is refused, so the key cannot be read off it step by step.
-  {
-    const out = reply();
-    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session: first.session, answers: right, user_id: learner } } as never, out as never, db.client as never);
-    assert.equal(out.statusCode, 409, JSON.stringify(out.body));
-    assert.equal((out.body as { error?: { code?: string } }).error?.code, 'design_session_used');
-    const wire = JSON.stringify(out.body);
-    for (const secret of secrets) assert.ok(!wire.includes(secret.slice(0, 60)), 'a refused resubmission carries no key');
-  }
-  const second = await open(guided.id);
+  const second = open(guided.id);
   const secondRight = rightFor(second);
   const shortBy = design.passMark - 1;
-  const partly = await submit(second.session, secondRight.map((index, step) => (step < shortBy ? index : (index + 1) % design.steps[step].options.length)));
+  const partly = submit(second, guided.id, secondRight.map((index, step) => (step < shortBy ? index : (index + 1) % design.steps[step].options.length)));
   assert.equal(partly.verdict, 'failed');
   assert.equal(partly.design?.filter((step) => step.correct).length, shortBy, 'the right steps are marked right');
   withheld(partly, secrets, 'partly right');
-  const third = await open(guided.id);
+  const third = open(guided.id);
   const thirdRight = rightFor(third);
-  const pass = await submit(third.session, thirdRight);
+  const pass = submit(third, guided.id, thirdRight);
   assert.equal(pass.verdict, 'passed');
   assert.deepEqual(pass.design?.map((step) => step.correctIndex), thirdRight, 'a pass carries the correct options');
   assert.deepEqual(pass.design?.map((step) => step.explanation?.en), design.steps.map((step) => step.explanation.en), 'and the explanations');
@@ -421,43 +426,43 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
 
   // An estimate drill.
   const band = byId(estimate.id).drill!;
-  const estimateOpened = await open(estimate.id);
+  const estimateOpened = open(estimate.id);
   const tooHigh = (band.max ?? 0) * 10 + 1;
-  const missed = await submit(estimateOpened.session, [tooHigh]);
+  const missed = submit(estimateOpened, estimate.id, [tooHigh]);
   assert.equal(missed.verdict, 'failed');
   assert.deepEqual(missed.design, [{ correct: false, given: tooHigh }]);
   withheld(missed, [band.explanation.en], 'estimate');
-  const inBand = await submit((await open(estimate.id)).session, [band.answer!]);
+  const inBand = submit(open(estimate.id), estimate.id, [band.answer!]);
   assert.equal(inBand.verdict, 'passed');
   assert.deepEqual(inBand.design?.[0].acceptedRange, { min: band.min, max: band.max, answer: band.answer }, 'a pass carries the accepted range');
   assert.equal(inBand.design?.[0].explanation?.en, band.explanation.en);
 
   // A trade-off drill.
   const pick = byId(choice.id).drill!;
-  const choiceOpened = await open(choice.id);
+  const choiceOpened = open(choice.id);
   const choiceRight = choiceOpened.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en);
   const choiceWrong = (choiceRight + 1) % pick.options!.length;
-  const wrongPick = await submit(choiceOpened.session, [choiceWrong]);
+  const wrongPick = submit(choiceOpened, choice.id, [choiceWrong]);
   assert.deepEqual(wrongPick.design, [{ correct: false, given: choiceWrong }]);
   withheld(wrongPick, [pick.explanation.en], 'trade-off');
-  const choiceAgain = await open(choice.id);
-  const rightPick = await submit(choiceAgain.session, [choiceAgain.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en)]);
+  const choiceAgain = open(choice.id);
+  const rightPick = submit(choiceAgain, choice.id, [choiceAgain.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en)]);
   assert.equal(rightPick.verdict, 'passed');
   assert.equal(typeof rightPick.design?.[0].correctIndex, 'number', 'a pass carries the correct option');
 
   // A sequence drill.
   const order = byId(sequence.id).drill!;
   const orderFor = (opened: Opened) => order.steps!.map((step) => opened.task.drill!.steps!.findIndex((shown) => shown.en === step.en));
-  const sequenceOpened = await open(sequence.id);
+  const sequenceOpened = open(sequence.id);
   const reversed = [...orderFor(sequenceOpened)].reverse();
-  const outOfOrder = await submit(sequenceOpened.session, [reversed]);
+  const outOfOrder = submit(sequenceOpened, sequence.id, [reversed]);
   assert.deepEqual(outOfOrder.design, [{ correct: false, given: reversed }]);
   withheld(outOfOrder, [order.explanation.en], 'sequence');
-  const sequenceAgain = await open(sequence.id);
-  const inOrder = await submit(sequenceAgain.session, [orderFor(sequenceAgain)]);
+  const sequenceAgain = open(sequence.id);
+  const inOrder = submit(sequenceAgain, sequence.id, [orderFor(sequenceAgain)]);
   assert.equal(inOrder.verdict, 'passed');
   assert.deepEqual(inOrder.design?.[0].correctOrder, orderFor(sequenceAgain), 'a pass carries the correct order');
-  console.log('PASS integrity: a failed system-design submission carries no key, a pass carries all of it');
+  console.log('PASS integrity: system design opens nowhere; its grader still gives a failed submission no key and a pass all of it');
 }
 
 // ── a checklist pass is the learner's word, and pays nothing ─────────────
