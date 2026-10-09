@@ -53,6 +53,7 @@ import { gradeDesign, prepareDesign } from '../lib/coding/grade';
 import type { DesignAnswer } from '../shared/coding-api';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, isEvolvingCheckpoint, listedChallenges } from '../shared/evolving';
 import { SKELETON_FILLS } from './fixtures/skeleton-fills';
+import { isFreeCodingTask } from '../shared/tiers';
 import { evaluateInRunRealm } from './run-realm-node';
 
 // The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
@@ -1379,6 +1380,10 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
   // was the only way to stay short of them, and it turned a failure into a
   // success; the narrowing their hints ask for already keeps a failure apart,
   // which is all the milestones add. The same owner's call applies.
+  // Such a checkpoint's reference opens wherever the checkpoint does, so it
+  // may be free only when its milestone is: the first two lead to a free
+  // milestone, and the fourth is Premium with its milestone. A free
+  // checkpoint whose reference passes a Premium milestone fails here.
   const SAME_AS_MILESTONE = new Set(['ts-evolving-store-1-start', 'ts-evolving-result-1-start', 'ts-evolving-result-4-start']);
   let checkpoints = 0;
   for (const project of EVOLVING_CHALLENGES) {
@@ -1388,6 +1393,7 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
         const milestone = byId.get(id.slice(0, -6));
         const shown = solutionFor(id);
         if (!milestone || !shown || !await passesTask(milestone, shown.solution)) fail(`${id}: no longer matches its milestone; drop it from SAME_AS_MILESTONE`);
+        else if (isFreeCodingTask(id) && !isFreeCodingTask(milestone.id)) fail(`${id}: free, and its reference passes ${milestone.id}, which is Premium`);
         continue;
       }
       const milestone = byId.get(id.slice(0, -6));
