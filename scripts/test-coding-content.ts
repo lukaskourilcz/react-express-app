@@ -35,6 +35,7 @@ import {
 } from '../shared/coding-catalog';
 import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
 import { KNOWN_RIGHT_CODE, KNOWN_WRONG_CODE, type KnownAnswer } from './coding-known-answers';
+import { REACT_VARIANTS } from './coding-react-variants';
 import { docsFor, taskResources } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
@@ -878,6 +879,37 @@ async function main() {
     const run = await runReactSuite({ suite: withHiddenCases(task.suite, solution.hiddenSuite), appSource: careless });
     if (run.compileError) fail(`${task.id}: the reference without preventDefault() did not run: ${run.compileError}`);
     else if (!run.cases.some((one) => one.error === FORM_SUBMIT_NOT_PREVENTED)) fail(`${task.id}: the reference without preventDefault() trips no check, so no check submits its form`);
+  }
+
+  /* ── React suites judge what the prompt says ────────────────────────── */
+  // A page the prompt allows passes the server's suite and a wrong one fails
+  // it. Each variant is the task's reference with a few exact edits
+  // (scripts/coding-react-variants.ts).
+  for (const variant of REACT_VARIANTS) {
+    if (!ONLY.test(variant.id)) continue;
+    const task = CODING_TASKS.find((one) => one.id === variant.id);
+    const solution = solutionFor(variant.id);
+    if (task?.track !== 'react' || !task.suite || !solution) {
+      fail(`${variant.id}: a React variant names a task with no suite or reference`);
+      continue;
+    }
+    let source = solution.solution;
+    let lost: string | null = null;
+    for (const [from, to] of variant.edits) {
+      if (!source.includes(from)) {
+        lost = from;
+        break;
+      }
+      source = source.split(from).join(to);
+    }
+    if (lost !== null) {
+      fail(`${variant.id} (${variant.note}): the reference no longer contains ${JSON.stringify(lost.slice(0, 60))}`);
+      continue;
+    }
+    const run = await runReactSuite({ suite: withHiddenCases(task.suite, solution.hiddenSuite), appSource: source });
+    const passed = !run.compileError && run.failed === 0 && run.total > 0;
+    if (variant.correct && !passed) fail(`${variant.id}: a correct page that ${variant.note} fails the suite: ${run.compileError ?? run.cases.filter((one) => one.status === 'fail').map((one) => `${one.name}: ${one.error}`).join('; ')}`);
+    if (!variant.correct && passed) fail(`${variant.id}: a wrong page that ${variant.note} passes the suite`);
   }
 
   if (failures.length > 0) {

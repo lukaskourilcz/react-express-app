@@ -89,7 +89,7 @@ test('the message is sent after the wait', async () => {
   const { container } = render(<App />);
   type('Hi');
   send();
-  await wait(500);
+  await wait(350);
   expect(line(container)).toBe('Sent: Hi');
 });
 
@@ -98,7 +98,7 @@ test('text typed during the wait is sent', async () => {
   type('Hi');
   send();
   type('Hi there');
-  await wait(500);
+  await wait(350);
   expect(line(container)).toBe('Sent: Hi there');
 });
 `,
@@ -517,7 +517,7 @@ test('the request carries a signal', () => withFetch(async calls => {
 test('a slow request gives up after the wait', () => withFetch(async calls => {
   const { container } = render(<App />);
   load();
-  await wait(500);
+  await wait(350);
   expect(calls[0].signal.aborted).toBe(true);
   expect(status(container)).toBe('The server is taking too long');
 }));

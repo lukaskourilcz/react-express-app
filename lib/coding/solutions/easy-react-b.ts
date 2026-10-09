@@ -120,7 +120,7 @@ export default App;`,
   send();
   type('ab');
   type('abc');
-  await wait(500);
+  await wait(350);
   expect(line(container)).toBe('Sent: abc');
 });
 
@@ -129,7 +129,7 @@ test('a field emptied during the wait sends nothing', async () => {
   type('Hi');
   send();
   type('');
-  await wait(500);
+  await wait(350);
   expect(line(container)).toBe('');
 });
 
@@ -137,11 +137,11 @@ test('text typed after a send waits for the next one', async () => {
   const { container } = render(<App />);
   type('first');
   send();
-  await wait(500);
+  await wait(350);
   type('second');
   expect(line(container)).toBe('Sent: first');
   send();
-  await wait(500);
+  await wait(350);
   expect(line(container)).toBe('Sent: second');
 });`,
   },
@@ -968,7 +968,7 @@ export default App;`,
   const { container } = render(<App />);
   load();
   await act(async () => { calls[0].respond({ name: 'Ada' }); });
-  await wait(500);
+  await wait(350);
   expect(calls[0].signal.aborted).toBe(false);
   expect(status(container)).toBe('Hello, Ada');
 }));
@@ -983,7 +983,7 @@ test('another failure keeps its own message', () => withFetch(async calls => {
 test('a second load gets a controller of its own', () => withFetch(async calls => {
   const { container } = render(<App />);
   load();
-  await wait(500);
+  await wait(350);
   load();
   expect(calls[1].signal.aborted).toBe(false);
   await act(async () => { calls[1].respond({ name: 'Grace' }); });
@@ -993,7 +993,7 @@ test('a second load gets a controller of its own', () => withFetch(async calls =
 test('an answer after the give-up changes nothing', () => withFetch(async calls => {
   const { container } = render(<App />);
   load();
-  await wait(500);
+  await wait(350);
   await act(async () => { calls[0].respond({ name: 'Ada' }); });
   expect(status(container)).toBe('The server is taking too long');
 }));`,

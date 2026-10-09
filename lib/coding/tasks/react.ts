@@ -970,11 +970,18 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
+// The page's text without its headings: the starter's heading says "Loading state".
+const pageText = container => {
+  const copy = container.cloneNode(true);
+  copy.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => heading.remove());
+  return copy.textContent;
+};
+
 test('shows loading first, then the users', async () => {
   const { container } = render(<App />);
-  expect(container.textContent).toContain('Loading');
+  expect(pageText(container)).toContain('Loading');
   await waitFor(() => expect(container.textContent).toContain('Leanne Graham'));
-  expect(container.textContent).not.toContain('Loading');
+  expect(pageText(container)).not.toContain('Loading');
 });
 `,
     api: {
@@ -1612,19 +1619,20 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
 test('aborts the in-flight request when unmounted', async () => {
-  const original = AbortController.prototype.abort;
-  let aborts = 0;
-  AbortController.prototype.abort = function patched(...args) {
-    aborts += 1;
-    return original.apply(this, args);
+  const working = globalThis.fetch;
+  const requests = [];
+  // No answer ever comes, so the page unmounts while the request is on its way.
+  globalThis.fetch = (url, options = {}) => {
+    requests.push({ url: String(url), signal: options.signal });
+    return new Promise(() => {});
   };
   try {
-    const { container, unmount } = render(<App />);
-    await waitFor(() => expect(container.textContent).toContain('posts'));
+    const { unmount } = render(<App />);
+    await waitFor(() => expect(requests.some(request => request.url.includes('/posts'))).toBe(true));
     unmount();
-    expect(aborts > 0).toBe(true);
+    expect(requests.every(request => Boolean(request.signal) && request.signal.aborted)).toBe(true);
   } finally {
-    AbortController.prototype.abort = original;
+    globalThis.fetch = working;
   }
 });
 `,
@@ -2399,34 +2407,38 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
-const filled = container =>
-  [...container.querySelectorAll('button')].filter(star => star.textContent.includes('\\u2605')).length;
+// How each star looks. Nothing is rated on the first render, so a star that
+// looks different later is filled, whether a character, a class or an
+// attribute shows it.
+const looks = container => [...container.querySelectorAll('button')].map(star => star.outerHTML);
+const filled = (container, unrated) => looks(container).filter((look, index) => look !== unrated[index]).length;
 
 test('starts with nothing rated', () => {
   const { container } = render(<App />);
   expect(container.querySelectorAll('button')).toHaveLength(5);
-  expect(filled(container)).toBe(0);
   expect(container.textContent).toContain('Rating: 0');
 });
 
 test('previews the hovered star without committing it', () => {
   const { container } = render(<App />);
+  const unrated = looks(container);
   const stars = [...container.querySelectorAll('button')];
   fireEvent.mouseOver(stars[2]);
-  expect(filled(container)).toBe(3);
+  expect(filled(container, unrated)).toBe(3);
   expect(container.textContent).toContain('Rating: 0');
   fireEvent.mouseOut(stars[2]);
-  expect(filled(container)).toBe(0);
+  expect(filled(container, unrated)).toBe(0);
 });
 
 test('keeps the rating that was clicked', () => {
   const { container } = render(<App />);
+  const unrated = looks(container);
   const stars = [...container.querySelectorAll('button')];
   fireEvent.mouseOver(stars[3]);
   fireEvent.click(stars[3]);
   fireEvent.mouseOut(stars[3]);
   expect(container.textContent).toContain('Rating: 4');
-  expect(filled(container)).toBe(4);
+  expect(filled(container, unrated)).toBe(4);
 });
 `,
   },
@@ -2636,7 +2648,7 @@ const settledQuery = useDebounce(query, 300);`,
     estimatedMinutes: 20,
     suite: `import './fetchStub';
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 import App from './App';
 
 test('shows every item before anything is typed', () => {
@@ -3776,12 +3788,18 @@ const withRequests = async body => {
   }
 };
 const settle = () => new Promise(resolve => setTimeout(resolve, 0));
-// The words of every alert on the page; an empty live region says nothing.
-const alertText = () => screen.queryAllByRole('alert').map(node => node.textContent).join(' ').trim();
+// The words of every alert on the page, without a Retry button inside one; an
+// empty live region says nothing.
+const alertText = () => screen.queryAllByRole('alert').map(node => {
+  const copy = node.cloneNode(true);
+  copy.querySelectorAll('button').forEach(button => button.remove());
+  return copy.textContent;
+}).join(' ').trim();
 // A line that reads exactly this, even with part of it in an element of its
 // own, such as a temperature in a <strong>.
+const hasLine = text => [...document.body.querySelectorAll('*')].some(node => node.textContent.trim() === text);
 const expectLine = text => {
-  if (![...document.body.querySelectorAll('*')].some(node => node.textContent.trim() === text)) throw new Error('Unable to find a line reading: ' + text);
+  if (!hasLine(text)) throw new Error('Unable to find a line reading: ' + text);
 };
 // Answer a request with a temperature, or break it off, and let the page catch up.
 const answer = (call, temperature, status = 200) => act(async () => {
@@ -3856,7 +3874,7 @@ test('an unknown city asks nothing', () => withRequests(async calls => {
   render(<App />);
   await answer(calls[0], 12.5);
   search(' Atlantis ');
-  expect(screen.getByText('Unknown city: Atlantis')).toBeTruthy();
+  expectLine('Unknown city: Atlantis');
   expect(calls).toHaveLength(1);
   expect(recent()).toEqual(['Prague: 12.5 °C']);
 }));
