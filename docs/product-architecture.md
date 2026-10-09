@@ -420,16 +420,23 @@ request thread.
 Learning-path code activities use the same QuickJS sandbox, type-check thread
 and hidden-check program as coding tasks.
 Run and Submit give learner code the same realm (owner decisions, 9 October
-2026). Local time is Europe/Prague, with summer time from 01:00 UTC on the last
-Sunday of March to 01:00 UTC on the last Sunday of October, whatever the
-server's or the learner's own zone: one prelude
-(`shared/coding-prague-time.ts`) rewrites `Date`'s local constructor forms,
-`Date.parse` of local strings, the local getters and setters,
-`getTimezoneOffset`, `toString` and the `toLocale*String` methods in QuickJS,
-in the Run worker, in the React frame and in the React guest's page realm (the
-guest also runs with `TZ=Europe/Prague`); the server process itself stays in
-UTC. `toLocaleString`, `localeCompare` and their kin print and sort as an
-en-US browser does, from one shared implementation
+2026). Local time is UTC, with no summer time, whatever the server's or the
+learner's own zone (the afternoon's decision, which replaced the morning's
+Europe/Prague): the local getters read what the UTC getters read,
+`getTimezoneOffset()` is 0 all year, `toString` ends in "GMT+0000
+(Coordinated Universal Time)", and `toLocale*String` formats in UTC unless the
+code names a zone. One prelude (`shared/coding-utc-time.ts`) rewrites `Date`'s
+local constructor forms, `Date.parse` of local strings, the local getters and
+setters, `getTimezoneOffset`, `toString` and the `toLocale*String` methods in
+QuickJS, in the Run worker, in the React frame and in the React guest's page
+realm (the guest also runs with `TZ=UTC`, for the dates jsdom makes); the
+server process itself stays in UTC. Where `Intl` exists (the two React
+runners) a named zone formats as `Intl` does; where it does not (QuickJS, and
+Run, which hides `Intl` to match), a named UTC or Europe/Prague zone formats
+as before and any other is refused with a message. No task's check depends on
+the zone: `test:coding` runs every board of a task that uses calendar dates in
+four other zones. `toLocaleString`, `localeCompare` and their kin print and
+sort as an en-US browser does, from one shared implementation
 (`shared/coding-locale.ts`). The grader adds `URL`, `URLSearchParams`,
 `TextEncoder`, `TextDecoder`, `atob` and `btoa`
 (`lib/coding/sandbox-web-apis.ts`); `URL` is parsed by the host's WHATWG
