@@ -105,10 +105,11 @@ export function createAnonClient(): SupabaseClient | null {
     : null;
 }
 
-/** Send the app's standard `{ error: { code, message } }` JSON error response. */
-export function jsonError(res: VercelResponse, status: number, code: string, message: string) {
+/** Send the app's standard `{ error: { code, message } }` JSON error response.
+ * `detail` adds fields a client acts on (a 409's stored time). */
+export function jsonError(res: VercelResponse, status: number, code: string, message: string, detail?: Record<string, unknown>) {
   return res.status(status).json({
-    error: { code, message, ...(requestContext.getStore()?.requestId ? { requestId: requestContext.getStore()!.requestId } : {}) },
+    error: { ...detail, code, message, ...(requestContext.getStore()?.requestId ? { requestId: requestContext.getStore()!.requestId } : {}) },
   });
 }
 

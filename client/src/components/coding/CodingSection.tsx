@@ -11,7 +11,7 @@ import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
 import type { CodingWorkbench as CodingWorkbenchView } from '../../coding/CodingWorkbench';
 import { codingKeys, codingProgressQuery, useCodingProgress, useCodingTask } from '../../coding/api';
-import { deviceDraft, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
+import { autosaveDraft, deviceDraft, draftStoredBySubmit, flushAutosave, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
 import { DraftNote, useDraftChoice } from '../../coding/DraftNote';
 import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
 import { ChallengeRunPlanner, taskHref } from './ChallengeRunPlanner';
@@ -762,13 +762,31 @@ export function CodingTaskScreen() {
     if (task.data && track && task.data.task.track !== track) navigate(`/coding/${task.data.task.track}/${task.data.task.id}`, { replace: true });
   }, [task.data, track, navigate]);
 
-  // Runs on Run and Submit, silently (coding/drafts.ts). Evolving code is
-  // also the offline starting point of the next stage, so it stays on the
-  // device after the account takes it.
-  const draftBase = task.data?.draftUpdatedAt ?? null;
+  // The code the editor opens with, decided once per load of the task: this
+  // device's copy or the account draft. The page says which opened when they
+  // differ, and a copy from this device that did not open is offered back.
+  const opening = useMemo(() => task.data ? openingDraft(task.data.task.id, task.data.draft, task.data.draftUpdatedAt) : null, [task.data]);
+  const keepOnDevice = Boolean(taskId && evolvingStage(taskId));
+  const choice = useDraftChoice(task.data?.task.id ?? null, opening, task.data?.draftUpdatedAt, { signedIn: isAuthenticated, keepOnDevice });
+  const { base: draftBase, epoch: draftEpoch } = choice;
+
+  // A device copy a second after typing stops, and the account draft on Run
+  // and Submit, silently (coding/drafts.ts). Evolving code is also the
+  // offline starting point of the next stage, so it stays on the device after
+  // the account takes it.
   const onDraft = useCallback((code: string) => (
-    taskId ? saveDraft(taskId, code, { signedIn: isAuthenticated, base: draftBase, keepOnDevice: Boolean(evolvingStage(taskId)) }) : null
-  ), [taskId, isAuthenticated, draftBase]);
+    taskId ? saveDraft(taskId, code, { signedIn: isAuthenticated, base: draftBase, epoch: draftEpoch, keepOnDevice }) : null
+  ), [taskId, isAuthenticated, draftBase, draftEpoch, keepOnDevice]);
+  const onEdit = useCallback((code: string) => { if (taskId) autosaveDraft(taskId, code, draftBase, draftEpoch); }, [taskId, draftBase, draftEpoch]);
+  // Leaving the task writes what is still waiting.
+  useEffect(() => () => { if (taskId) flushAutosave(taskId); }, [taskId]);
+  // Signed in on this page (the sign-in dialog, another tab): the task is
+  // read again for the account, and the editor reopens on whichever copy the
+  // rules choose, the code kept at a sign-out the learner did not choose
+  // included (lib/accountData.ts).
+  const fetchedSignedIn = task.data?.signedIn;
+  const refetchTask = task.refetch;
+  useEffect(() => { if (fetchedSignedIn === false && isAuthenticated) void refetchTask(); }, [fetchedSignedIn, isAuthenticated, refetchTask]);
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
     if (verdict.progress) void queryClient.invalidateQueries({ queryKey: codingKeys.progress() });
@@ -786,23 +804,20 @@ export function CodingTaskScreen() {
         // Capture the submitted snapshot synchronously, before Next can navigate
         // and before the account save started by Submit settles. Never seed
         // over a next-stage draft.
-        if (submittedCode !== undefined) keepDeviceDraft(taskId, submittedCode, draftBase);
+        if (submittedCode !== undefined) keepDeviceDraft(taskId, submittedCode, draftBase, draftEpoch);
         if (stage.next) queryClient.removeQueries({queryKey:codingKeys.task(stage.next), exact:true, type:'inactive'});
-      } else forgetDeviceDraft(taskId);
+      } else forgetDeviceDraft(taskId, draftEpoch);
     }
-  }, [queryClient, taskId, activeRun, runIndex, advanceRun, draftBase]);
+    // An evolving stage's Submit stored its code as the stage draft: the next
+    // save from here builds on that time.
+    if (taskId && verdict.draftUpdatedAt) draftStoredBySubmit(taskId, verdict.draftUpdatedAt, draftEpoch);
+  }, [queryClient, taskId, activeRun, runIndex, advanceRun, draftBase, draftEpoch]);
 
   const onRetry = useCallback(() => {
     if (workbench.reloading) return;
     void task.refetch();
     setAttempt((n) => n + 1);
   }, [task, workbench.reloading]);
-
-  // The code the editor opens with, decided once per load of the task: this
-  // device's copy or the account draft. The page says which opened when they
-  // differ, and a copy from this device that did not open is offered back.
-  const opening = useMemo(() => task.data ? openingDraft(task.data.task.id, task.data.draft, task.data.draftUpdatedAt) : null, [task.data]);
-  const choice = useDraftChoice(task.data?.task.id ?? null, opening, task.data?.draftUpdatedAt);
 
   if (!track || !taskId) return <CodingNotFound what="track" track={null} />;
   // One loading state until the task and its editor are both in.
@@ -873,13 +888,13 @@ export function CodingTaskScreen() {
           not save says so, and the star itself is the way to try again. */}
       {bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
       {save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
-      <DraftNote opening={opening} restored={choice.restored} onRestore={choice.restore} />
+      <DraftNote choice={choice} />
       {stage && stage.challenge.stages.some((id) => isBarred(premiumOf(id))) && (
         <PremiumStagesNote stages={stage.challenge.stages} short={stage.challenge.short === true} />
       )}
       {stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} premiumOf={premiumOf} />}
       {CodingWorkbench && <CodingWorkbench
-            key={`${data.task.id}-${attempt}${choice.restored ? '-device' : ''}`}
+            key={`${data.task.id}-${attempt}-${choice.version}-${data.signedIn}`}
             task={data.task}
             session={data.session}
             locked={data.locked}
@@ -888,6 +903,7 @@ export function CodingTaskScreen() {
             initialCode={initialCode}
             mode="section"
             onDraft={onDraft}
+            onEdit={onEdit}
             onVerdict={onVerdict}
             nextHref={nextHref}
             backHref={backHref}

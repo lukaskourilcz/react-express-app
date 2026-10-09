@@ -249,7 +249,7 @@ async function main() {
     seen.length = 0;
     const draft = await user('coding-draft', { method: 'POST', account: A, query: { user_id: B.id }, body: { id: codingTask.id, code: 'const mine = 1;', user_id: B.id } });
     assert.equal(draft.statusCode, 200, JSON.stringify(draft.body));
-    assert.deepEqual(reads('/rest/v1/rpc/save_coding_draft').map((one) => (one.body as Row).p_user_id), [A.id], 'a draft is saved for the token\'s account');
+    assert.deepEqual(reads('/rest/v1/rpc/save_coding_draft_v2').map((one) => (one.body as Row).p_user_id), [A.id], 'a draft is saved for the token\'s account');
     seen.length = 0;
     const progress = await user('coding-progress', { account: A, query: { user_id: B.id } });
     assert.equal(progress.statusCode, 200, JSON.stringify(progress.body));

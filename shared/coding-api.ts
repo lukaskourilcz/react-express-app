@@ -117,6 +117,10 @@ export interface CodingVerdictResponse {
    * start). The verdict says nothing about the code and nothing was
    * recorded; the learner can submit again. */
   graderUnavailable?: true;
+  /** An evolving stage's Submit by an account stores the submitted code as
+   * the stage's draft: the time it did, so the browser's next draft save
+   * builds on it rather than meeting it as a conflict. */
+  draftUpdatedAt?: string;
 }
 
 /** One graded step of a walkthrough, or the one answer of a drill.
@@ -167,11 +171,31 @@ export interface CodingDraftResponse {
   updatedAt: string | null;
 }
 
+/** POST /api/user/[op]?op=coding-draft. `base` is the account draft's
+ * `updatedAt` the code builds on, null for none: the save is refused with 409
+ * `draft_conflict` (`CodingDraftConflict`) when the account holds a draft
+ * saved since. A request without `base` (a client from before migration 059)
+ * writes whatever the account holds, as every save used to. */
+export interface CodingDraftSaveRequest {
+  id: string;
+  code: string;
+  base?: string | null;
+}
+
 /** POST /api/user/[op]?op=coding-draft: the time the account now holds the
  * code just sent, or null when it cannot say (another save landed first). */
 export interface CodingDraftSaveResponse {
   ok: true;
   updatedAt: string | null;
+}
+
+/** The `error` of a 409 `draft_conflict`: the time of the draft the account
+ * holds, saved since the base the request named. Its code is not sent; the
+ * client reads it with GET coding-draft when the learner asks for it. */
+export interface CodingDraftConflict {
+  code: 'draft_conflict';
+  message: string;
+  updatedAt: string;
 }
 
 /* ── GitHub garden ─────────────────────────────────────────────────────── */

@@ -650,17 +650,129 @@ describe('signing out', () => {
     expect(screen.getByTestId('auth')).toHaveTextContent('signed-out');
   });
 
-  it('forgets the data of an account whose stored session supabase-js finds expired', async () => {
+  it('forgets the data of an account whose stored session supabase-js finds expired, and keeps its coding drafts for it', async () => {
     freshPageLoad('held');
     localStorage.setItem(KEY, JSON.stringify(STORED));
     seed(localStorage, ACCOUNT_LOCAL);
-    await mountAuth();
+    const { current } = await mountAuth();
     // supabase-js cannot refresh the stored session: it removes it and signs out.
     localStorage.removeItem(KEY);
     await releaseDownload();
     await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('signed-out'));
     act(() => sb.clients[0].emit('SIGNED_OUT', null));
     expect(kept(localStorage, ACCOUNT_LOCAL)).toEqual([]);
+    // Read from the stored session before supabase-js removed it.
+    expect(keptDrafts()).toEqual({ userId: 'user-stored', drafts: { 'devshark:coding:draft:html-forms-1': 'const mine = true;' } });
+    expect(current().draftsKept).toBe(true);
+  });
+
+  // Owner decision 4 (C5-1): a session that ended on its own (a refresh
+  // refused because it expired, was revoked, or the password changed on
+  // another device) erased every coding draft here without a word, as a
+  // chosen Log out does.
+  const DRAFTS = {
+    'devshark:coding:draft:js-digit-sum': '// twenty minutes of work',
+    'devshark:coding:draft-time:js-digit-sum': '{"base":"2026-10-09T10:00:00.000Z"}',
+  };
+  const keptDrafts = () => JSON.parse(localStorage.getItem('devshark:coding:kept:v1') ?? 'null') as unknown;
+  /** Signed in as the stored account, with its drafts on the device; then
+   * supabase-js signs out on its own, as when a refresh is refused. */
+  async function sessionEnds() {
+    recordSignInReports();
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    seed(localStorage, { ...ACCOUNT_LOCAL, ...DRAFTS, ...DEVICE_LOCAL });
+    const auth = await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    localStorage.removeItem(KEY);
+    act(() => sb.clients[0].emit('SIGNED_OUT', null));
+    return auth;
+  }
+  const signIn = (userId: string) => act(() => {
+    const session = sb.sessionFor(`${userId}-token`, userId);
+    localStorage.setItem(KEY, JSON.stringify(session));
+    sb.clients[0].emit('SIGNED_IN', session);
+  });
+
+  it('keeps the coding drafts for the account when its session ends on its own, out of sight, and says so', async () => {
+    const { current } = await sessionEnds();
+    expect(screen.getByTestId('auth')).toHaveTextContent('signed-out');
+    // Nothing of the account is left in sight, drafts included.
+    expect(kept(localStorage, { ...ACCOUNT_LOCAL, ...DRAFTS })).toEqual([]);
+    expect(kept(localStorage, DEVICE_LOCAL)).toEqual(Object.keys(DEVICE_LOCAL));
+    expect(keptDrafts()).toEqual({ userId: 'user-stored', drafts: { 'devshark:coding:draft:html-forms-1': 'const mine = true;', ...DRAFTS } });
+    expect(current().draftsKept).toBe(true);
+  });
+
+  /** A coding task opens, which takes back what was kept for the account
+   * signed in (coding/drafts.ts). */
+  const openTask = async () => (await import('../src/coding/drafts')).openingDraft('js-digit-sum', null, null);
+
+  it('gives the drafts back when the same account signs in again and opens a coding task', async () => {
+    const { current } = await sessionEnds();
+    await signIn('user-stored');
+    expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored');
+    expect(current().draftsKept).toBe(false);
+    expect((await openTask()).code).toBe('// twenty minutes of work');
+    expect(Object.fromEntries(Object.keys(DRAFTS).map((key) => [key, localStorage.getItem(key)]))).toEqual(DRAFTS);
+    expect(keptDrafts()).toBeNull();
+  });
+
+  it('deletes them unread when another account signs in on this device', async () => {
+    await sessionEnds();
+    await signIn('user-other');
+    expect(screen.getByTestId('auth')).toHaveTextContent('user:user-other');
+    expect(keptDrafts()).toBeNull();
+    expect((await openTask()).code).toBeNull();
+    expect(kept(localStorage, DRAFTS)).toEqual([]);
+  });
+
+  it('opens nothing kept for the account to a guest', async () => {
+    await sessionEnds();
+    expect((await openTask()).code).toBeNull();
+    expect(keptDrafts()).not.toBeNull();
+  });
+
+  it('sets a guest’s copy written since aside, beside the account’s, when the account comes back', async () => {
+    await sessionEnds();
+    localStorage.setItem('devshark:coding:draft:js-digit-sum', '// typed as a guest since');
+    localStorage.setItem('devshark:coding:draft-time:js-digit-sum', '{"base":null}');
+    await signIn('user-stored');
+    expect(await openTask()).toMatchObject({ code: '// twenty minutes of work', setAside: '// typed as a guest since' });
+    expect(localStorage.getItem('devshark:coding:draft-time:js-digit-sum')).toBe('{"base":"2026-10-09T10:00:00.000Z"}');
+    expect(localStorage.getItem('devshark:coding:draft-aside:js-digit-sum')).toBe('// typed as a guest since');
+  });
+
+  it('erases the drafts on a Log out the learner pressed, in this tab or another', async () => {
+    recordSignInReports();
+    localStorage.setItem(KEY, JSON.stringify(STORED));
+    seed(localStorage, DRAFTS);
+    const { current } = await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('user:user-stored'));
+    await act(() => current().signOut());
+    expect(kept(localStorage, DRAFTS)).toEqual([]);
+    expect(keptDrafts()).toBeNull();
+    expect(current().draftsKept).toBe(false);
+
+    // Another tab's Log out reaches this one as supabase-js's own SIGNED_OUT,
+    // with the mark that tab left.
+    await signIn('user-stored');
+    seed(localStorage, DRAFTS);
+    localStorage.setItem('devshark:signed-out-by-choice', String(Date.now()));
+    localStorage.removeItem(KEY);
+    act(() => sb.clients[0].emit('SIGNED_OUT', null));
+    expect(kept(localStorage, DRAFTS)).toEqual([]);
+    expect(keptDrafts()).toBeNull();
+    expect(current().draftsKept).toBe(false);
+  });
+
+  it('keeps a guest’s drafts through a failed OAuth return, as before', async () => {
+    seed(localStorage, DRAFTS);
+    window.history.replaceState(null, '', '/#error=access_denied&error_description=The+user+denied+the+request');
+    await mountAuth();
+    await waitFor(() => expect(screen.getByTestId('auth')).toHaveTextContent('signed-out'));
+    act(() => sb.clients[0].emit('SIGNED_OUT', null));
+    expect(kept(localStorage, DRAFTS)).toEqual(Object.keys(DRAFTS));
+    expect(keptDrafts()).toBeNull();
   });
 });
 
