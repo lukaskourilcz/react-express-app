@@ -4972,10 +4972,14 @@ test('filtering never asks the server again', () => withServer(async calls => {
 }));
 
 test('an email in capitals matches a lowercase filter', () => withServer(async calls => {
-  const container = await loaded(calls, [
+  const { container } = render(<App />);
+  // Loading shows first, so a page that shows nothing fails here without waiting.
+  expect(says(container, 'loading')).toBe(true);
+  gets(calls, COMMENTS_URL)[0].respond([
     { id: 1, postId: 1, name: 'Shouting', email: 'ANA@EXAMPLE.COM', body: 'x' },
     { id: 2, postId: 1, name: 'Quiet', email: 'bo@example.com', body: 'y' },
   ]);
+  await waitFor(() => expect(entries('Comments')).toHaveLength(2));
   filterEmail(container, 'ana@');
   expect(entries('Comments')).toHaveLength(1);
   expect(entries('Comments')[0]).toContain('ANA@EXAMPLE.COM');
