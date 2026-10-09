@@ -825,19 +825,24 @@ disappears when checkout cannot apply the coupon or the offer has expired.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
   and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
-  stage one of every evolving project and short path (`FREE_EVOLVING_STAGES`,
-  `freeStageCount`), which in a project with checkpoints is the checkpoint
-  and the first milestone, the last checkpoint of each of the fourteen
-  projects that have checkpoints (`FREE_CHECKPOINT_IDS`), and a starter set of
-  standalone coding challenges listed once in `FREE_CODING_TASK_IDS`. In the
-  stage numbers a learner sees, that is stages 1, 2 and 9 of a ten-stage
-  project, 1 and 11 of a twelve-stage FullStack app and level 1 of a short
-  path (owner decision, 9 Oct 2026, audit C2-13; until then only stage 1).
-  Stages still open in order, so a free account reaches a free checkpoint only
-  after the stages before it. `npm run build:coding-index` projects all of it
+  the opening stages of every evolving project and short path
+  (`FREE_EVOLVING_STAGES`, `freeStageCount`), and a starter set of standalone
+  coding challenges listed once in `FREE_CODING_TASK_IDS`. The opening stages
+  are stage one, which in a project with checkpoints is the checkpoint and the
+  first milestone, and the checkpoint after it that opens the next milestone.
+  In the stage numbers a learner sees, that is stages 1, 2 and 3 of a ten-stage
+  project, 1 and 2 of a twelve-stage FullStack app and level 1 of a short
+  path. The owner opened the whole first stage on 9 Oct 2026 (audit C2-13;
+  until then only stage 1) together with the last checkpoint of each of the
+  fourteen projects with checkpoints. Stages open in order and the stages
+  before those checkpoints were Premium, so no free account could reach one;
+  that afternoon the owner moved the fourteen to the checkpoint after stage
+  one. The free stages are now always the head of the list, and the launch
+  contracts walk every project as a free account to prove each one opens
+  after free passes only. `npm run build:coding-index` projects all of it
   into `shared/coding-index.ts` as `free: true`, about 19 % of the issued
   catalogue (`FREE_CODING_SHARE`, held between 16 and 22 % by the launch
-  contracts; 141 of 725 today: JavaScript 68, TypeScript 29, React 33,
+  contracts; 141 of 725 today: JavaScript 68, TypeScript 32, React 30,
   Algorithms 11). Every free task reads Easy except two debugging paths whose
   authored level 1 is Medium. Re-pick the list, not the task files,
   when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
@@ -848,7 +853,7 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   data. The module imports nothing from `lib/`, so the browser draws its locks
   and the server refuses with the same function. A signed-out visitor holds
   the free tier, unsaved: the landing sample question ("Try one, no signup")
-  runs in the browser, stage one of every project and path is free, and every
+  runs in the browser, the opening stages of every project and path are free, and every
   Premium level, part test, challenge and stage is refused to a guest with the
   same 402 as to a free account. Before the review of 2026-09-26 a request
   without a token skipped every gate, so signing out opened all of Premium
@@ -1475,7 +1480,10 @@ and paste them into the next stage. A checkpoint carries its own reference,
 the previous stage's code plus the checkpoint's one step, and no junior or
 senior board; the contract fails when that reference passes the milestone the
 checkpoint leads to, since it opens on giving up there and for free after a
-pass.
+pass. The three checkpoints whose honest reference already does the
+milestone's work are listed in `SAME_AS_MILESTONE` (`scripts/test-coding-content.ts`),
+and the contract lets one be on the free plan only when its milestone is, so
+a free account is never handed a pass of a Premium milestone.
 
 Since 2026-09-25 the registry also holds fifteen short paths of five levels
 each, marked `short`, with no checkpoints. Twelve are listed on the page of
