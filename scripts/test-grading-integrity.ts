@@ -19,6 +19,7 @@ import { allPassed, evaluateCalls, hiddenGlobalMessage, LOG_LINE_CUT, LOG_OUTPUT
 import { CHECKER_GLOBALS, CHECKER_MEMBERS } from '../shared/coding-checker-globals';
 import { nodeTypeScriptChecker } from '../lib/coding/ts-check-node';
 import { evaluateInRunRealm } from './run-realm-node';
+import { PRAGUE_REACT_APP, PRAGUE_REACT_SUITE } from './fixtures/prague-react';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 // Every run below goes through the grader's worker thread, built fresh from
@@ -802,6 +803,21 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
     assert.deepEqual(ran.results.map((one) => one.pass), graded.hidden!.results.map((one) => one.pass), `fillDays stepping with ${step}: Run agrees on the hidden inputs`);
   }
   console.log('PASS integrity: Run and Submit read Prague time, across both clock changes, on any host');
+
+  // React: the page realm the guest grades in reads Prague time too, and its
+  // Intl formats in Prague, whatever the host's zone.
+  const zoneBefore = process.env.TZ;
+  try {
+    for (const zone of ['UTC', 'America/New_York']) {
+      process.env.TZ = zone;
+      const react = await runReactSuite({ suite: PRAGUE_REACT_SUITE, appSource: PRAGUE_REACT_APP });
+      assert.ok(react.compileError === null && react.failed === 0 && react.passed === 2, `${zone}: ${JSON.stringify(react.cases)}`);
+    }
+  } finally {
+    if (zoneBefore === undefined) delete process.env.TZ;
+    else process.env.TZ = zoneBefore;
+  }
+  console.log('PASS integrity: the React page realm reads Prague time on any host');
 }
 
 // ── the grader has the browser's URL, encoders and base64 (owner decision 2, C1-3) ──

@@ -1,7 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 import { solutionFor } from '../../lib/coding/solutions';
-import { TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
+import { hiddenGlobalMessage, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
+import { runInQuickJS } from '../../lib/coding/sandbox';
+import { PRAGUE_REACT_APP, PRAGUE_REACT_SUITE } from '../../scripts/fixtures/prague-react';
 import { localAuth, storeFakeSession } from './fake-session';
 
 // The coding workbench in the built app with a real editor, a real runner
@@ -208,4 +210,79 @@ test('signed in: Start the run starts a challenge run and opens its first task (
   expect(seen.practiceStarts[0]).toMatchObject({ order: 'sequential' });
   await expect(page).toHaveURL(/\/coding\/javascript\/js-sum-array$/);
   await expect(page.getByRole('link', { name: 'Challenge run · 1 of 3' })).toBeVisible();
+});
+
+// Owner decisions of 9 October 2026: learner code reads Europe/Prague time
+// in Run as in Submit, the grader has the browser's URL, URLSearchParams,
+// encoders and base64, and Run has nothing else the grader lacks. Run here is
+// the real worker in a browser told it is in Los Angeles; Submit is the
+// grader's QuickJS, in this process.
+test.describe('Run and Submit share a clock and built-ins (C1-2, C1-3)', () => {
+  test.use({ timezoneId: 'America/Los_Angeles' });
+
+  const AGREE = [
+    '[new Date(2026, 0, 15).getTimezoneOffset(), new Date(2026, 6, 15).getTimezoneOffset()]',
+    '[new Date(2026, 2, 29, 2, 30).toISOString(), new Date(2026, 9, 25, 2, 30).toISOString(), new Date(2026, 2, 29).toISOString()]',
+    '[1774745999999, 1774746000000, 1792889999999, 1792890000000].map((t) => { const d = new Date(t); return [d.getDate(), d.getHours(), d.getTimezoneOffset()]; })',
+    '(() => { const d = new Date(2026, 2, 28, 12); d.setDate(d.getDate() + 1); return [d.toISOString(), d.toString(), Date.parse("2026-10-25T02:30")]; })()',
+    'new Date(Date.UTC(2026, 9, 25, 1, 30)).toLocaleString()',
+    'Object.fromEntries(new URLSearchParams("?a=1&b=x+y&c=%E2%9C%93"))',
+    '(() => { const u = new URL("../b?q=1#h", "https://example.com/a/c"); u.searchParams.append("r", "é"); return [u.href, u.origin, u.pathname]; })()',
+    '[...new TextEncoder().encode("é✓🐟")].concat(new TextDecoder().decode(new Uint8Array([0xF0, 0x9F, 0x90, 0x9F])))',
+    '[btoa("hi there"), atob("aGkgdGhlcmU=")]',
+    '[(1234567.891).toLocaleString(), (1234.5).toLocaleString("en-US", { style: "currency", currency: "EUR" }), ["b", "A", "a", "B"].sort((x, y) => x.localeCompare(y))]',
+    '[typeof Intl, typeof crypto, typeof fetch, typeof structuredClone, typeof URL]',
+  ];
+  const LACKING = ['Intl.NumberFormat', 'crypto.randomUUID()', 'fetch("/x")'];
+
+  test('the real worker agrees with the grader', async ({ page }) => {
+    test.setTimeout(120_000);
+    await prepare(page);
+    const started = page.waitForEvent('worker');
+    await openTask(page, '/coding/javascript/js-count-multiples');
+    const workerUrl = (await started).url();
+    const run = (calls: string[]) => page.evaluate(({ url, calls }) => new Promise<{ results: { actual: string | null; error: string | null }[] }>((resolve) => {
+      const worker = new Worker(url, { type: 'module' });
+      worker.onmessage = (event) => { if (event.data.phase === 'done') { worker.terminate(); resolve(event.data); } };
+      worker.postMessage({ track: 'javascript', code: '', calls, expectations: null });
+    }), { url: workerUrl, calls });
+    // The page itself is in Los Angeles; only learner code reads Prague.
+    expect(await page.evaluate(() => new Date(2026, 6, 15).getTimezoneOffset())).toBe(420);
+    const browser = await run(AGREE);
+    const grader = await runInQuickJS({ code: '', calls: AGREE, expectations: null });
+    expect(browser.results.map((one) => one.error)).toEqual(AGREE.map(() => null));
+    expect(browser.results.map((one) => one.actual)).toEqual(grader.results.map((one) => one.actual));
+    const lacking = await run(LACKING);
+    expect(lacking.results.map((one) => one.error)).toEqual([hiddenGlobalMessage('Intl'), hiddenGlobalMessage('crypto'), hiddenGlobalMessage('fetch')]);
+    const graderLacking = await runInQuickJS({ code: '', calls: LACKING, expectations: null });
+    expect(graderLacking.results.every((one) => one.error !== null)).toBe(true);
+  });
+
+  test('Run passes a query read with URLSearchParams and names what the checker lacks', async ({ page }) => {
+    await prepare(page);
+    await openTask(page, '/coding/javascript/js-easy3-read-query');
+    const run = page.getByRole('button', { name: 'Run', exact: true });
+    await fillEditor(page, 'const parseQuery = query => Object.fromEntries(new URLSearchParams(query));');
+    await run.click();
+    const total = CODING_TASKS.find((one) => one.id === 'js-easy3-read-query')!.tests!.length;
+    await expect(announced(page)).toHaveText(`${total} of ${total} passing`, { timeout: 30_000 });
+    await fillEditor(page, 'const parseQuery = query => new Intl.Locale(query) && {};');
+    await run.click();
+    await expect(announced(page)).toHaveText(/passing$/, { timeout: 30_000 });
+    await expect(page.getByRole('tabpanel').getByText(hiddenGlobalMessage('Intl')).first()).toBeVisible();
+  });
+
+  test('the React frame reads Prague time too', async ({ page }) => {
+    await page.goto('/sandbox/index.html');
+    const outcome = await page.evaluate(({ app, suite }) => new Promise<{ passed: number; failed: number; errors: (string | null)[] }>((resolve) => {
+      const errors: (string | null)[] = [];
+      window.addEventListener('message', (event) => {
+        const data = event.data as { type?: string; error?: string | null; passed?: number; failed?: number };
+        if (data.type === 'test') errors.push(data.error ?? null);
+        if (data.type === 'done') resolve({ passed: data.passed!, failed: data.failed!, errors });
+      });
+      window.postMessage({ type: 'run', token: 'prague', files: { '/App.js': app, '/App.test.js': suite }, preview: false, tests: true }, '*');
+    }), { app: PRAGUE_REACT_APP, suite: PRAGUE_REACT_SUITE });
+    expect(outcome).toEqual({ passed: 2, failed: 0, errors: [null, null] });
+  });
 });

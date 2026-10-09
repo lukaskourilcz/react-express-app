@@ -50,6 +50,7 @@ import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { GUEST_CRASHED_MESSAGE, GUEST_ENV, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
+import { PRAGUE_REACT_APP, PRAGUE_REACT_SUITE } from './fixtures/prague-react';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -3494,13 +3495,13 @@ async function main() {
   // VM. It deletes its input before learner code runs, only the stdout line
   // with this run's nonce counts, and the case count has to match the suite.
   execFileSync(process.execPath, ['scripts/build-react-runner.mjs'], { stdio: 'ignore' });
-  const guest = (suite: string, appSource: string) => {
+  const guest = (suite: string, appSource: string, env: Record<string, string> = {}) => {
     const dir = mkdtempSync(join(tmpdir(), 'react-guest-'));
     const input = join(dir, 'input.json');
     const nonce = randomBytes(24).toString('hex');
     writeFileSync(input, JSON.stringify({ suite, appSource, nonce }));
     const command = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), input], {
-      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, ...GUEST_ENV },
+      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, ...GUEST_ENV, ...env },
     });
     const left = readdirSync(dir);
     rmSync(dir, { recursive: true, force: true });
@@ -3556,6 +3557,13 @@ async function main() {
   const exhaustedResult = readGuestRun(exhausted.exitCode, exhausted.stdout, exhausted.nonce, guestSuite);
   assert.ok(exhaustedResult.passed === 0 && exhaustedResult.failed > 0, JSON.stringify(exhaustedResult));
   assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'the learner reads that their code stopped the runner');
+  // The guest reads Prague time: the API starts it with TZ=Europe/Prague,
+  // and its page realm installs Prague time whatever the process zone is.
+  for (const env of [{}, { TZ: 'America/New_York' }] as Record<string, string>[]) {
+    const pragueGuest = guest(PRAGUE_REACT_SUITE, PRAGUE_REACT_APP, env);
+    const pragueResult = readGuestRun(pragueGuest.exitCode, pragueGuest.stdout, pragueGuest.nonce, PRAGUE_REACT_SUITE);
+    assert.ok(pragueResult.compileError === null && pragueResult.failed === 0 && pragueResult.passed === 2, `the React guest reads Prague time (${JSON.stringify(env)}): ${JSON.stringify(pragueResult.cases)}`);
+  }
   const missingInput = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), join(tmpdir(), 'no-such-guest-input.json')], { encoding: 'utf8', timeout: 30_000 });
   assert.notEqual(missingInput.status, 0);
   assert.throws(() => readGuestRun(missingInput.status, missingInput.stdout, randomBytes(24).toString('hex'), guestSuite), /exited unsuccessfully/, 'a guest that ended before learner code ran is a runner failure');
