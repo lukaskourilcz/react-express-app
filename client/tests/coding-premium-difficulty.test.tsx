@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { preloadPath } from '../src/lib/routePreload';
-import { CodingTaskScreen, CodingTrackScreen } from '../src/components/coding/CodingSection';
+import { CodingTaskScreen, CodingTrackScreen, FullStackScreen } from '../src/components/coding/CodingSection';
 import { CODING_INDEX } from '../../shared/coding-index';
 import { EVOLVING_CHALLENGES } from '../../shared/evolving';
 
@@ -60,25 +60,47 @@ beforeEach(() => {
 describe('the stage list on the free plan', () => {
   const project = EVOLVING_CHALLENGES.find((one) => one.stages.length === 10 && !one.short && one.stages[0].startsWith('js-'))!;
 
-  it('keeps the difficulty runs and draws every later stage as Premium that opens the sheet', () => {
+  it('names the free stages, labels checkpoints by their size and draws the rest as Premium that opens the sheet', () => {
     mount(`/coding/javascript/${project.stages[0]}`, <CodingTaskScreen />, '/coding/:track/:taskId');
-    expect(screen.getByText('Stage 1 comes with the free plan. Premium opens the stages after it.')).toBeInTheDocument();
+    // Owner decision of 9 Oct 2026: the checkpoint and the first milestone
+    // (stages 1 and 2) and the last checkpoint (stage 9) are free.
+    expect(screen.getByText('Stages 1, 2 and 9 come with the free plan. Premium opens the others.')).toBeInTheDocument();
     const nav = screen.getByRole('navigation');
     const groups = within(nav).getAllByRole('group');
-    expect(groups.map((group) => within(group).getByText(/^(Easy|Medium|Hard)$/).textContent)).toEqual(['Easy', 'Medium', 'Hard']);
+    // The milestones keep their position bands; every checkpoint (the odd
+    // stages) is a five-minute step and reads Easy wherever it sits.
+    expect(groups.map((group) => within(group).getByText(/^(Easy|Medium|Hard)$/).textContent))
+      .toEqual(['Easy', 'Medium', 'Easy', 'Medium', 'Easy', 'Hard', 'Easy', 'Hard']);
 
-    // Stage one is where the learner is; the other nine are Premium.
+    // Stage one is where the learner is. Stages 2 and 9 are free and wait for
+    // the stages before them; the other seven are Premium.
     const current = within(nav).getByRole('link');
     expect(current).toHaveAttribute('aria-current', 'step');
-    const premium = within(nav).getAllByRole('button');
-    expect(premium).toHaveLength(9);
+    const buttons = within(nav).getAllByRole('button');
+    expect(buttons).toHaveLength(9);
+    const premium = buttons.filter((button) => /, Premium$/.test(button.getAttribute('aria-label') ?? ''));
+    expect(premium.map((button) => button.textContent)).toEqual(['3', '4', '5', '6', '7', '8', '10']);
     for (const button of premium) {
       expect(button).toHaveAttribute('aria-disabled', 'true');
       expect(button).not.toBeDisabled();
-      expect(button.getAttribute('aria-label')).toMatch(/, Premium$/);
     }
+    const waiting = buttons.filter((button) => !premium.includes(button));
+    expect(waiting.map((button) => button.textContent)).toEqual(['2', '9']);
+    for (const button of waiting) {
+      expect(button).toHaveAttribute('aria-disabled', 'true');
+      fireEvent.click(button);
+    }
+    expect(sheet.open).not.toHaveBeenCalled();
     fireEvent.click(premium[0]);
-    expect(sheet.open).toHaveBeenCalledWith({ kind: 'evolving-stage', ref: `${project.id}:2` });
+    expect(sheet.open).toHaveBeenCalledWith({ kind: 'evolving-stage', ref: `${project.id}:3` });
+  });
+});
+
+describe('the project cards on the free plan', () => {
+  it('name the stages the free plan opens: 1 and 11 of a FullStack app, level 1 of a short path', () => {
+    mount('/coding/fullstack', <FullStackScreen />, '/coding/fullstack');
+    expect(screen.getAllByText('Stages 1 and 11 come with the free plan. Premium opens the others.')).toHaveLength(3);
+    expect(screen.getByText('Level 1 comes with the free plan. Premium opens the levels after it.')).toBeInTheDocument();
   });
 });
 

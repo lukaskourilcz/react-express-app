@@ -49,7 +49,7 @@ import { prepareReactRuntime, runReactSuite } from '../lib/coding/react-runner';
 import { lockDownRealm } from '../lib/coding/realm-lockdown';
 import { HIDDEN_CASE_PREFIX, splitHiddenCases, suiteCaseCount, withHiddenCases } from '../lib/coding/react-hidden';
 import { renderCodingIndex } from './build-coding-index';
-import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
+import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, isEvolvingCheckpoint, listedChallenges } from '../shared/evolving';
 import { SKELETON_FILLS } from './fixtures/skeleton-fills';
 
 // The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
@@ -498,22 +498,32 @@ async function main() {
   for (const [label, tier] of refused) assert.equal(difficultyFitsTier(label, tier), false, `an ${label} override cannot sit at tier ${tier}`);
   for (const tier of [1, 2, 3, 4, 5] as CodingTier[]) assert.equal(difficultyFitsTier('medium', tier), true, `a Medium override fits tier ${tier}`);
   assert.equal(difficultyOf({ id: 'js-count-multiples', tier: 3, difficulty: 'medium' }), 'medium', 'an authored label wins');
-  // Stages and levels read their position, in the bands the handoff fixed.
+  // Milestones and levels read their position, in the bands the handoff fixed.
   const bandOf = (length: number) => Array.from({ length }, (_, index) => stageDifficulty(index, length)[0].toUpperCase()).join('');
   assert.equal(bandOf(5), 'EEMMH', 'five-level paths: 1–2 Easy, 3–4 Medium, 5 Hard');
   assert.equal(bandOf(10), 'EEEMMMMHHH', 'ten-stage projects: 1–3, 4–7, 8–10');
   assert.equal(bandOf(12), 'EEEEMMMMMHHH', 'twelve-stage FullStack apps: 1–4, 5–9, 10–12');
+  // A checkpoint reads its tier, as a standalone task does: it is a
+  // five-minute step wherever it sits (owner decision, 9 Oct 2026). The bands
+  // used to call the last checkpoint of every project Hard (audit C2-13).
   const byId = new Map(CODING_TASKS.map((task) => [task.id, task]));
+  let checkpoints = 0;
   for (const project of EVOLVING_CHALLENGES) {
     const length = project.stages.length;
     if (!STAGE_DIFFICULTY_BANDS[length]) { fail(`${project.id}: no difficulty band for a path of ${length} stages; add one to STAGE_DIFFICULTY_BANDS`); continue; }
     project.stages.forEach((id, index) => {
       const task = byId.get(id);
       if (!task || task.difficulty) return; // missing stages fail above; an authored label is bounded by its tier
-      const expected = stageDifficulty(index, length);
-      if (difficultyOf(task) !== expected) fail(`${id}: stage ${index + 1} of ${length} should be ${expected}, not ${difficultyOf(task)}`);
+      const checkpoint = isEvolvingCheckpoint(id);
+      if (checkpoint) {
+        checkpoints++;
+        if (task.estimatedMinutes !== 5) fail(`${id}: a checkpoint is a five-minute step, not ${task.estimatedMinutes}`);
+      }
+      const expected = checkpoint ? TIER_DIFFICULTY[task.tier] : stageDifficulty(index, length);
+      if (difficultyOf(task) !== expected) fail(`${id}: ${checkpoint ? 'a checkpoint at tier ' + task.tier : `stage ${index + 1} of ${length}`} should be ${expected}, not ${difficultyOf(task)}`);
     });
   }
+  if (checkpoints !== 64) fail(`expected the 64 checkpoints of the 14 checkpointed projects, found ${checkpoints}`);
   // Standalone tasks read their tier: 1–2 Easy, 3 Medium, 4–5 Hard.
   for (const task of CODING_TASKS) {
     if (evolvingStage(task.id) || task.difficulty) continue;

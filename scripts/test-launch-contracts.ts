@@ -168,19 +168,20 @@ import { ROADMAP_TOPICS, isRoadmapTopic, topicLevelCount, ROADMAP_LEVELS } from 
 import type { Question } from '../lib/quiz-runtime';
 import type { CodingTaskResponse, CodingVerdictResponse } from '../shared/coding-api';
 import {
+  FREE_CHECKPOINT_IDS,
   FREE_CODING_SHARE,
   FREE_CODING_TASK_IDS,
-  FREE_EVOLVING_STAGES,
   FREE_LEARN_LEVELS,
   FREE_LEARN_TOPICS,
   PREMIUM_REQUIRED,
   codingContent,
   contentTier,
+  freeStageCount,
   isFreeCodingTask,
   isOpenTo,
 } from '../shared/tiers';
-import { EVOLVING_CHALLENGES, evolvingStage } from '../shared/evolving';
-import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, tierLockReason } from '../shared/coding-catalog';
+import { EVOLVING_CHALLENGES, evolvingStage, isEvolvingCheckpoint } from '../shared/evolving';
+import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, stageDifficulty, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
@@ -536,12 +537,52 @@ async function tierContracts() {
     CODING_INDEX.filter((task) => task.free).map((task) => task.id),
     'the server summaries and the browser index open the same tasks',
   );
-  // Stage one of every evolving project and short path is open; stage two never is.
+  // Stage one of every evolving project and short path is open, and in a
+  // project with checkpoints that is the checkpoint and the first milestone
+  // (owner decision, 9 Oct 2026). Beyond it, only the listed checkpoints are.
+  // In the stage numbers a learner sees: 1, 2 and 9 of a ten-stage project,
+  // 1 and 11 of a FullStack app, level 1 of a short path. The Terms say so.
+  const freeStages = (stages: readonly string[]) => stages.flatMap((id, at) => (contentTier({ kind: 'coding-task', taskId: id }, index) === 'free' ? [at + 1] : []));
   for (const challenge of EVOLVING_CHALLENGES) {
-    assert.equal(contentTier({ kind: 'coding-task', taskId: challenge.stages[0] }, index), 'free', `${challenge.id} stage one`);
-    if (challenge.stages[FREE_EVOLVING_STAGES]) {
-      assert.equal(contentTier({ kind: 'coding-task', taskId: challenge.stages[FREE_EVOLVING_STAGES] }, index), 'premium', `${challenge.id} stage two`);
+    const firstMilestone = challenge.stages.findIndex((id) => !isEvolvingCheckpoint(id)) + 1;
+    assert.equal(freeStageCount(challenge.stages), firstMilestone, `${challenge.id}: stage one ends at the first milestone`);
+    const expected = challenge.short ? [1] : challenge.stages.length === 10 ? [1, 2, 9] : [1, 11];
+    assert.ok(challenge.short || challenge.stages.length === 10 || challenge.stages.length === 12, `${challenge.id}: a project length the copy names`);
+    assert.deepEqual(freeStages(challenge.stages), expected, `${challenge.id}: the free stages`);
+    // The stage after stage one is Premium, by kind and by the tier rule.
+    const next = challenge.stages[freeStageCount(challenge.stages)];
+    assert.equal(contentTier({ kind: 'evolving-stage', challengeId: challenge.id, stage: freeStageCount(challenge.stages) + 1 }, index), 'premium', `${challenge.id}: the stage after stage one`);
+    assert.equal(isFreeCodingTask(next), false, `${challenge.id}: ${next} is Premium`);
+    for (const [at, id] of challenge.stages.entries()) {
+      assert.equal(contentTier({ kind: 'evolving-stage', challengeId: challenge.id, stage: at + 1 }, index), contentTier({ kind: 'coding-task', taskId: id }, index), `${id}: a stage and its task agree`);
     }
+  }
+  assert.match(ENGLISH['legal.terms.plans.free'], /stages 1, 2 and 9 of every ten-stage coding project, stages 1 and 11 of every twelve-stage FullStack app, level 1 of every short path/, 'the Terms name the free stages the rule opens');
+  // The fourteen checkpoints: exactly the five-minute tier-2 checkpoints the
+  // position bands used to label Hard (audit C2-13), the last checkpoint of
+  // every project that has checkpoints. Each now reads Easy from its tier.
+  const byTask = new Map(CODING_TASKS.map((task) => [task.id, task]));
+  const bandedHard = EVOLVING_CHALLENGES.flatMap((challenge) => challenge.stages.filter((id, at) =>
+    isEvolvingCheckpoint(id) && stageDifficulty(at, challenge.stages.length) === 'hard'));
+  assert.deepEqual([...FREE_CHECKPOINT_IDS].sort(), [...bandedHard].sort(), 'the free checkpoints are the ones the bands called Hard');
+  assert.equal(FREE_CHECKPOINT_IDS.length, 14);
+  for (const challenge of EVOLVING_CHALLENGES.filter((one) => one.stages.some(isEvolvingCheckpoint))) {
+    assert.ok(FREE_CHECKPOINT_IDS.includes(challenge.stages.filter(isEvolvingCheckpoint).at(-1)!), `${challenge.id}: its last checkpoint is free`);
+  }
+  for (const id of FREE_CHECKPOINT_IDS) {
+    const task = byTask.get(id)!;
+    assert.ok(task && indexIds.has(id), `${id} is issued`);
+    assert.equal(task.estimatedMinutes, 5, `${id}: a five-minute checkpoint`);
+    assert.equal(task.tier, 2, `${id}: tier 2`);
+    assert.equal(CODING_INDEX.find((one) => one.id === id)?.difficulty, 'easy', `${id}: reads Easy, not Hard`);
+  }
+  assert.deepEqual(FREE_CODING_TASK_IDS.filter((id) => evolvingStage(id)), [], 'the starter set lists standalone tasks only');
+  // Every free task reads Easy, except a level whose authors set its label
+  // (two debugging paths open on a Medium level 1). It replaces "every listed
+  // free task is Easy", which the opened milestones and checkpoints keep.
+  for (const task of CODING_INDEX.filter((one) => one.free)) {
+    if (byTask.get(task.id)?.difficulty) continue;
+    assert.equal(task.difficulty, 'easy', `${task.id}: a free task with a derived label reads Easy`);
   }
   // Each tier-1 technique group of every section track has its first task open.
   for (const track of ['javascript', 'typescript', 'react', 'algorithms'] as const) {
@@ -758,6 +799,52 @@ async function tierContracts() {
       await roadmapHandler(post('coding-reveal', { session, hintsUsed: 20 }) as never, revealed as never);
       assert.equal(revealed.statusCode, 402, `a guest reveal for ${label} is refused`);
       assert.equal(JSON.stringify(revealed.body ?? {}).includes('solution'), false, 'nothing of the solution comes back');
+    }
+
+    // Owner decision 6 (9 Oct 2026) at the server's gate: a free account and a
+    // guest open the first milestone of every ten-stage project and the
+    // fourteen last checkpoints, and are refused the stage after each. The
+    // gate is refuseLocked over shared/tiers.ts; nothing else decides it.
+    // Each request is its own caller, so no rate-limit bucket fills up.
+    let caller = 0;
+    const opens = async (id: string, as: 'account' | 'guest') => {
+      const out = mockResponse();
+      caller += 1;
+      const headers = { 'x-forwarded-for': `198.18.${caller >> 8}.${caller & 255}`, ...(as === 'account' ? { authorization: 'Bearer contract' } : {}) };
+      await roadmapHandler({ method: 'GET', headers, query: { resource: 'coding-task', id, ...(as === 'account' ? { user_id: `contract-free-${caller}` } : {}) } } as never, out as never);
+      return out;
+    };
+    const tenStage = EVOLVING_CHALLENGES.filter((one) => one.stages.length === 10 && !one.short);
+    assert.equal(tenStage.length, 11, 'eleven ten-stage projects');
+    const newlyFree = [...tenStage.map((one) => one.stages[1]), ...FREE_CHECKPOINT_IDS];
+    for (const id of newlyFree) {
+      const stage = evolvingStage(id)!;
+      const after = stage.next!;
+      for (const as of ['account', 'guest'] as const) {
+        const opened = await opens(id, as);
+        assert.equal(opened.statusCode, 200, `${as}: ${id} opens on the free tier (${JSON.stringify(opened.body)})`);
+        const refused = await opens(after, as);
+        assert.equal(refused.statusCode, 402, `${as}: ${after}, the stage after ${id}, stays Premium`);
+        assert.deepEqual((refused.body as { error: { kind: string; ref: string } }).error, {
+          ...(refused.body as { error: object }).error, kind: 'evolving-stage', ref: `${stage.challenge.id}:${stage.index + 2}`,
+        });
+      }
+    }
+    // Opened is not a session: stages still unlock in order, so with nothing
+    // passed the first milestone is held until its checkpoint is.
+    assert.equal(((await opens('js-evolving-calculator-1', 'account')).body as CodingTaskResponse).locked, 'evolving');
+    // Submit follows the same gate: a guest's session for a newly free stage is
+    // graded (its reference passes), and one for the stage after it is refused.
+    for (const id of ['js-evolving-calculator-1', 'js-evolving-calculator-5-start']) {
+      const graded = mockResponse();
+      const session = encodeCodingSession({ taskId: id, track: 'javascript', userId: null });
+      await roadmapHandler({ ...post('coding-submit', { session, code: solutionFor(id)!.solution, lang: 'en' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, graded as never);
+      assert.equal(graded.statusCode, 200, `${id}: a guest submit is graded (${JSON.stringify(graded.body)})`);
+      assert.equal((graded.body as CodingVerdictResponse).verdict, 'passed', `${id}: its reference passes`);
+      const next = evolvingStage(id)!.next!;
+      const refused = mockResponse();
+      await roadmapHandler({ ...post('coding-submit', { session: encodeCodingSession({ taskId: next, track: 'javascript', userId: null }), code: solutionFor(next)!.solution, lang: 'en' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, refused as never);
+      assert.equal(refused.statusCode, 402, `${next}: a guest submit is refused`);
     }
 
     // C4-6: the app ships English only, so a task, its puzzle and a failed

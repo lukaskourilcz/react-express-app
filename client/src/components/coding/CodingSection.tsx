@@ -296,6 +296,18 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
   );
 }
 
+/** On the free plan: which stages of a project, or levels of a short path,
+ * come with it. The numbers are the index's projected flags, so they are
+ * shared/tiers.ts's rule: stages 1, 2 and 9 of a ten-stage project, 1 and 11
+ * of a FullStack app, level 1 of a short path. */
+function PremiumStagesNote({ stages, short }: { stages: readonly string[]; short: boolean }) {
+  const { t } = useLanguage();
+  const free = stages.flatMap((id, index) => (INDEX_BY_ID.get(id)?.free ? [index + 1] : []));
+  const list = free.length > 1 ? `${free.slice(0, -1).join(', ')} and ${free[free.length - 1]}` : String(free[0] ?? 1);
+  const note = short ? t('premium.levelsNote') : t(free.length > 1 ? 'premium.stagesNote' : 'premium.stageNote', { stages: list });
+  return <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {note}</p>;
+}
+
 /* ── /coding ──────────────────────────────────────────────────────────── */
 /** The evolving projects of one category (the plain ones, the FullStack
  * builds or the debugging paths), or with `track`, the short paths of one
@@ -336,8 +348,8 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
     <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
       const resumeId = evolvingResume(challenge, passed);
-      // Stage one comes with the free plan; on a free account the later stages read "Premium".
-      const laterLocked = challenge.stages.length > 1 && isBarred(premiumOf(challenge.stages[1]));
+      // Stage one, and a few more in a long project, come with the free plan; on a free account the others read "Premium".
+      const laterLocked = challenge.stages.some((id) => isBarred(premiumOf(id)));
       return <article key={challenge.id} className="cd-project">
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
         <div className="cd-project__name">
@@ -348,7 +360,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
         <div className="cd-project__progress">
           <div className="cd-stage-meter" aria-hidden>{challenge.stages.map(id => <span key={id} data-complete={evolvingPassed(id, passed)} />)}</div>
           <p>{t(challenge.short ? 'coding.evolving.levelsProgress' : 'coding.evolving.progress', { n: completed, total: challenge.stages.length })}</p>
-          {laterLocked && <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>}
+          {laterLocked && <PremiumStagesNote stages={challenge.stages} short={challenge.short === true} />}
         </div>
         <SwimCta label={completed === challenge.stages.length ? t(challenge.short ? 'coding.evolving.levelsComplete' : 'coding.evolving.complete') : t('coding.continue')} onClick={() => { if (isBarred(premiumOf(resumeId))) askForPremium(resumeId); else navigate(`/coding/${evolvingTaskTrack(resumeId)}/${resumeId}`); }} />
       </article>;
@@ -889,8 +901,8 @@ export function CodingTaskScreen() {
       {bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
       {save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
       <DraftNote opening={opening} restored={choice.restored} onRestore={choice.restore} />
-      {stage && stage.challenge.stages.length > 1 && isBarred(premiumOf(stage.challenge.stages[1])) && (
-        <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(stage.challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>
+      {stage && stage.challenge.stages.some((id) => isBarred(premiumOf(id))) && (
+        <PremiumStagesNote stages={stage.challenge.stages} short={stage.challenge.short === true} />
       )}
       {stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} premiumOf={premiumOf} />}
       {data.task.track === 'system-design'

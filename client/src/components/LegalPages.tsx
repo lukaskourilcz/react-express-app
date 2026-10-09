@@ -22,7 +22,7 @@ import { Page } from './PublicInfoPages';
 import './LegalPages.css';
 
 /** The date of the current wording. Change it with the words. */
-export const LEGAL_UPDATED = '2026-10-01';
+export const LEGAL_UPDATED = '2026-10-09';
 
 const ADR_URL = 'https://coi.gov.cz/en/information-about-adr/';
 const STRIPE_PRIVACY_URL = 'https://stripe.com/privacy';
