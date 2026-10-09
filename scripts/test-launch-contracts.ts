@@ -3,7 +3,7 @@ import './launch-test-env';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
+import { constants as osConstants, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   MERCH_SHOP,
@@ -49,7 +49,7 @@ import { TS_CHECK_WORKER_FILE } from '../lib/coding/ts-check-pool';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
-import { GUEST_NODE_FLAGS, readGuestResult, serializeGuestResult } from '../lib/coding/react-guest';
+import { GUEST_CRASHED_MESSAGE, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -3443,6 +3443,19 @@ async function main() {
     appSource: "export default function App() { throw new Error(''); }",
   });
   assert.ok(emptyThrow.passed === 0 && emptyThrow.failed === 1, JSON.stringify(emptyThrow));
+  // C1-6: so has a case that threw a value with no message to read. Reading
+  // `message` from Object.create(null), or through a getter that throws,
+  // threw out of the runner's catch and ended the whole run, which the
+  // learner read as a grader outage.
+  for (const thrown of ['Object.create(null)', "new (class extends Error { get message() { throw new Error('no message'); } })()"]) {
+    const unreadable = await runReactSuite({
+      suite: "import React from 'react';\nimport { render } from '@testing-library/react';\nimport App from './App';\ntest('renders', () => { render(<App />); });\ntest('runs', () => { expect(1).toBe(1); });",
+      appSource: `export default function App() { throw ${thrown}; }`,
+    });
+    assert.equal(unreadable.compileError, null, JSON.stringify(unreadable));
+    assert.deepEqual(unreadable.cases.map((one) => one.status), ['fail', 'pass'], `${thrown}: the case that threw fails and the run goes on: ${JSON.stringify(unreadable)}`);
+    assert.ok(unreadable.cases[0].error, `${thrown}: the failure says something`);
+  }
 
   // The real guest bundle, started with the flags the API passes, outside any
   // VM. It deletes its input before learner code runs, only the stdout line
@@ -3458,7 +3471,9 @@ async function main() {
     });
     const left = readdirSync(dir);
     rmSync(dir, { recursive: true, force: true });
-    return { status: command.status, stdout: command.stdout, nonce, left };
+    // The exit code a shell, and the Sandbox, reports for a signal: 128 + its number.
+    const exitCode = command.status ?? (command.signal ? 128 + osConstants.signals[command.signal] : null);
+    return { status: command.status, exitCode, stdout: command.stdout, nonce, left };
   };
   const guestTask = codingTaskById('react-easy2-disclosure')!;
   const guestSuite = withHiddenCases(guestTask.suite!, solutionFor(guestTask.id)!.hiddenSuite);
@@ -3491,6 +3506,26 @@ async function main() {
   assert.deepEqual(escape.left, [], 'a host function gave the component nothing to write with');
   const escapeResult = readGuestResult(escape.stdout, escape.nonce, guestSuite);
   assert.ok(escapeResult.passed === 0 && /Code generation from strings disallowed/.test(escapeResult.compileError ?? ''), JSON.stringify(escapeResult));
+
+  // C1-6: a guest the learner's code ended is that code's error, not a grader
+  // outage. A component that throws a value with no readable message now
+  // fails its cases; one that uses up the heap still ends the guest, after
+  // the line the guest prints before any learner code runs, so the API reads
+  // an error verdict, recorded like any other. A guest that ends before that
+  // line is still a runner failure: the Submit is not recorded.
+  assert.deepEqual(readGuestRun(honest.exitCode, honest.stdout, honest.nonce, guestSuite), honestResult, 'a clean run reads as before');
+  const nullThrow = guest(guestSuite, 'export default function App() { throw Object.create(null); }');
+  assert.equal(nullThrow.status, 0, 'a thrown null-prototype object no longer ends the guest');
+  const nullThrowResult = readGuestRun(nullThrow.exitCode, nullThrow.stdout, nullThrow.nonce, guestSuite);
+  assert.ok(nullThrowResult.passed === 0 && nullThrowResult.compileError === null, JSON.stringify(nullThrowResult));
+  const exhausted = guest(guestSuite, 'export default function App() { const held = []; for (;;) held.push(new Array(1e6).fill(0)); }');
+  assert.notEqual(exhausted.exitCode, 0, 'a component that uses up the heap ends the guest');
+  const exhaustedResult = readGuestRun(exhausted.exitCode, exhausted.stdout, exhausted.nonce, guestSuite);
+  assert.ok(exhaustedResult.passed === 0 && exhaustedResult.failed > 0, JSON.stringify(exhaustedResult));
+  assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'the learner reads that their code stopped the runner');
+  const missingInput = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), join(tmpdir(), 'no-such-guest-input.json')], { encoding: 'utf8', timeout: 30_000 });
+  assert.notEqual(missingInput.status, 0);
+  assert.throws(() => readGuestRun(missingInput.status, missingInput.stdout, randomBytes(24).toString('hex'), guestSuite), /exited unsuccessfully/, 'a guest that ended before learner code ran is a runner failure');
 
   // CODE-1: the component reaches the grader realm's built-ins through
   // React's exports. With a toJSON on Object.prototype it rewrote the printed

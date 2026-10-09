@@ -8,7 +8,7 @@ const { Sandbox } = createRequire(join(process.cwd(), 'package.json'))(
   './lib/coding/generated/vercel-sandbox.cjs',
 ) as typeof import('@vercel/sandbox');
 import type { ReactSuiteOutcome } from './react-runner';
-import { GUEST_NODE_FLAGS, readGuestResult, type GuestInput } from './react-guest';
+import { GUEST_NODE_FLAGS, readGuestRun, type GuestInput } from './react-guest';
 
 // Keep operational diagnostics useful without logging learner code, SDK request
 // bodies, credentials, or arbitrary error messages.
@@ -86,11 +86,10 @@ export async function runIsolatedReactSuite(input: {
       signal,
     });
     if (command.exitCode === 137 || command.exitCode === 124) return deadline();
-    if (command.exitCode !== 0)
-      throw new Error('Isolated React runner exited unsuccessfully');
-    // The verdict is the stdout line marked with this run's nonce
-    // (react-guest.ts). Nothing is read from the VM's filesystem.
-    return readGuestResult(await command.stdout({ signal }), nonce, input.suite);
+    // The verdict is the stdout line marked with this run's nonce, and a
+    // guest that crashed after it started the learner's code was crashed by
+    // that code (react-guest.ts). Nothing is read from the VM's filesystem.
+    return readGuestRun(command.exitCode, await command.stdout({ signal }), nonce, input.suite);
   } catch (error) {
     if (signal.aborted) return deadline();
     throw runnerFailure('Execution', error);
