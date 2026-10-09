@@ -1,17 +1,18 @@
-// The Coding section: home, one track, one task, and the review queue.
+// The Coding section: home, one track and one task. The review queue is
+// retired (a pass is permanent); /coding/review only redirects home.
 // devShark-only routes; the App gates them like /roadmap and /typing.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { useLanguage } from '../../i18n/LanguageContext';
 import { useAuth } from '../../lib/auth';
-import { readString, removeStored, writeString } from '../../lib/storage';
 import { Kicker } from '../landing/LandingKit';
 import { WaterlineProgress } from '../SharkFin';
 import LoadingScreen from '../LoadingScreen';
 import type { CodingWorkbench as CodingWorkbenchView } from '../../coding/CodingWorkbench';
 import { DesignRunner } from '../../coding/DesignRunner';
-import { codingKeys, codingProgressQuery, saveCodingDraft, useCodingProgress, useCodingTask } from '../../coding/api';
+import { codingKeys, codingProgressQuery, useCodingProgress, useCodingTask } from '../../coding/api';
+import { deviceDraft, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
 import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
 import { ChallengeRunPlanner, taskHref } from './ChallengeRunPlanner';
 import { CategoryGlyph } from '../ui/techIcons';
@@ -43,7 +44,7 @@ import {
 } from '../../../../shared/coding-catalog';
 import type { CodingProgressResponse, CodingTaskProgress, CodingVerdictResponse } from '../../../../shared/coding-api';
 import { Badge } from '@astryxdesign/core/Badge';
-import { isPremiumRequired } from '../../lib/api';
+import { ApiError, isPremiumRequired } from '../../lib/api';
 import { isBarred, useLocks, type LockState } from '../../lib/locks';
 import { entitlementQuery } from '../../lib/entitlement';
 import { readOnce, settled, useFirstData } from '../../lib/routeData';
@@ -55,15 +56,13 @@ import '../../coding/Coding.css';
 import { Button } from '@astryxdesign/core/Button';
 import { LockedButton } from '../ui/LockedButton';
 
-type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'due' | 'locked' | 'premium';
+type Status = 'open' | 'in_progress' | 'passed' | 'revealed' | 'locked' | 'premium';
 
 /** Premium opens this task and the account holds the free plan: open the upgrade sheet. */
 const askForPremium = (taskId: string) => {
   const content = codingContent(taskId);
   openUpgradeSheet({ kind: content.kind, ref: gatedRef(content) });
 };
-
-const draftKey = (id: string) => `devshark:coding:draft:${id}`;
 
 // The editor, the test runner and the hint ladder serve a task and nothing
 // else, and with CodeMirror they are most of the section's code. The lists no
@@ -132,7 +131,7 @@ const GROUPS = Object.keys(CODING_TECHNIQUE_GROUPS) as CodingTechniqueGroup[];
 
 // Everything the section offers. System design tasks stay in CODING_INDEX so a
 // passed one keeps its record and the FDE specialization can still assign it;
-// they simply never appear in discovery, counts, filters or the review queue.
+// they simply never appear in discovery, counts or filters.
 const SECTION_INDEX = CODING_INDEX.filter((task) => isCodingSectionTrack(task.track) && !evolvingStage(task.id));
 const INDEX_BY_ID = new Map(CODING_INDEX.map((task) => [task.id, task]));
 const TIERS: readonly CodingTier[] = [1, 2, 3, 4, 5];
@@ -166,9 +165,34 @@ function RetiredTrackNotice({ track }: { track: CodingTrack }) {
   );
 }
 
+/** A track, or a challenge, that does not exist (or no longer does): a
+ * heading that says so and a way back, never the raw error. Kept out of
+ * search results while it shows, as the app's own not-found page is. */
+function CodingNotFound({ what, track }: { what: 'track' | 'task' | 'retired'; track: CodingTrack | null }) {
+  const { t } = useLanguage();
+  useEffect(() => {
+    const robots = document.createElement('meta');
+    robots.name = 'robots'; robots.content = 'noindex'; robots.dataset.notFound = '';
+    document.head.append(robots);
+    return () => robots.remove();
+  }, []);
+  return (
+    <div className="cd-page ss-pop">
+      <header>
+        <Kicker><Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
+        <h1>{t(`coding.notFound.${what}`)}</h1>
+      </header>
+      <p className="cd-lead">{t('coding.notFound.body')}</p>
+      <div className="cd-actions">
+        {track && <Button variant="primary" as={Link} href={`/coding/${track}`} label={t('coding.verdict.back')} />}
+        <Button variant={track ? 'secondary' : 'primary'} as={Link} href="/coding" label={t('coding.retired.toCoding')} />
+      </div>
+    </div>
+  );
+}
+
 function useStatuses(progress: CodingProgressResponse | undefined) {
   const passed = useMemo(() => new Set(Object.entries(progress?.tasks ?? {}).filter(([, p]) => p.status === 'passed').map(([id]) => id)), [progress]);
-  const due = useMemo(() => new Set(progress?.due ?? []), [progress]);
   const cleared = progress?.javascriptLevelsCleared ?? 0;
   const { lockOf, loading: planLoading, failed: planFailed, refetch: retryPlan, signedIn } = useLocks();
   /** The Premium state of a task. A task already passed stays open on any plan. */
@@ -178,12 +202,11 @@ function useStatuses(progress: CodingProgressResponse | undefined) {
   const statusOf = useCallback((task: CodingTaskSummary): Status => {
     if (isBarred(premiumOf(task.id))) return 'premium';
     if (!unlocked(task)) return 'locked';
-    if (due.has(task.id)) return 'due';
     const row: CodingTaskProgress | undefined = progress?.tasks[task.id];
     if (!row) return 'open';
     return row.status;
-  }, [unlocked, due, progress, premiumOf]);
-  return { passed, due, statusOf, unlocked, lockReason, premiumOf, planLoading, planFailed: signedIn && planFailed, retryPlan };
+  }, [unlocked, progress, premiumOf]);
+  return { passed, statusOf, unlocked, lockReason, premiumOf, planLoading, planFailed: signedIn && planFailed, retryPlan };
 }
 
 /** A signed-in account's plan and progress (and, where the screen shows them,
@@ -205,7 +228,7 @@ function useCodingFirstData(extra: 'session' | 'bookmarks' | null) {
 const nextOpenTask = (tasks: readonly CodingTaskSummary[], statusOf: (t: CodingTaskSummary) => Status, after?: string): CodingTaskSummary | null => {
   const start = after ? tasks.findIndex((t) => t.id === after) + 1 : 0;
   const ordered = [...tasks.slice(start), ...tasks.slice(0, start)];
-  return ordered.find((t) => { const s = statusOf(t); return s === 'open' || s === 'in_progress' || s === 'due'; }) ?? null;
+  return ordered.find((t) => { const s = statusOf(t); return s === 'open' || s === 'in_progress'; }) ?? null;
 };
 
 function StatusText({ status }: { status: Status }) {
@@ -414,9 +437,11 @@ export function CodingHome() {
         <div className="cd-stack-path" aria-hidden><span>JS</span><i>→</i><span>TS</span><i>→</i><span>API</span><i>→</i><span>React</span></div>
       </Link>
       {/* Ten technique groups, each one a row that says what it is rather than
-          a pill that says only its name and a number. The tag count is the
-          honest measure of breadth; the sentence is what makes the name mean
-          something to a learner who has not met it yet. */}
+          a pill that says only its name and a number. A row opens the track
+          with the most of that technique, filtered to it, and counts that
+          track's challenges, so the number is the one the list shows; the
+          sentence is what makes the name mean something to a learner who has
+          not met it yet. */}
       <section aria-labelledby="cd-techniques">
         <Kicker as="h2" id="cd-techniques">{t('coding.techniques')}</Kicker>
         <p className="cd-lead">{t('coding.techniquesLead')}</p>
@@ -427,12 +452,12 @@ export function CodingHome() {
             for (const task of SECTION_INDEX) if (task.focus.some((tag) => tags.includes(tag))) counts.set(task.track, (counts.get(task.track) ?? 0) + 1);
             const best = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
             if (!best) return null;
-            const total = [...counts.values()].reduce((a, b) => a + b, 0);
+            const [track, count] = best;
             return (
-              <Link key={group} className="cd-technique" to={`/coding/${best[0]}?group=${group}`}>
+              <Link key={group} className="cd-technique" to={`/coding/${track}?group=${group}`}>
                 <span className="cd-technique__head">
                   <span className="cd-technique__name">{t(`coding.group.${group}` as never)}</span>
-                  <span className="cd-technique__count">{t('coding.techniqueCount', { n: total })}</span>
+                  <span className="cd-technique__count">{t('coding.techniqueCount', { n: count, track: t(`coding.track.${track}` as never) })}</span>
                 </span>
                 <span className="cd-technique__blurb">{t(`coding.groupBlurb.${group}` as never)}</span>
               </Link>
@@ -455,7 +480,7 @@ export function FullStackScreen() {
   return <div className="cd-page ss-pop">
     <Link className="cd-link" to="/coding">{t('coding.title')}</Link>
     <h1>{t('coding.evolving.title')}</h1>
-    {isAuthenticated && progress.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.collections.failed')} <Button variant="secondary" onClick={()=>void progress.refetch()} label={t('coding.retry')} /></p>}
+    {isAuthenticated && progress.isError && <p className="cd-note cd-note--error" role="alert">{t('coding.discovery.failed')} <Button variant="secondary" onClick={()=>void progress.refetch()} label={t('coding.retry')} /></p>}
     <EvolvingGallery passed={passed} premiumOf={premiumOf} category="fullstack" />
   </div>;
 }
@@ -472,7 +497,9 @@ export function CodingTrackScreen() {
   const { passed, statusOf, lockReason, premiumOf, planLoading, planFailed, retryPlan } = useStatuses(progress.data);
   const track = isCodingTrack(trackParam) ? trackParam : null;
   const group = params.get('group');
-  const statusFilter = params.get('status') ?? 'all';
+  // An old ?status=due link (the retired review queue) lists everything.
+  const statusParam = params.get('status');
+  const statusFilter = statusParam === 'open' || statusParam === 'passed' ? statusParam : 'all';
   // Every filter lives in the URL, so a filtered list is a link a learner can
   // keep, share with themselves on another device, or reload without losing.
   const query = params.get('q') ?? '';
@@ -516,17 +543,33 @@ export function CodingTrackScreen() {
     if (statusFilter === 'all') return true;
     const status = statusOf(task);
     if (statusFilter === 'passed') return status === 'passed';
-    if (statusFilter === 'due') return status === 'due';
     return status === 'open' || status === 'in_progress' || status === 'revealed';
   }), [tasks, group, needle, lang, difficulty, duration, format, savedOnly, savedIds, statusFilter, statusOf]);
   const filtersOn = Boolean(group) || needle !== '' || difficulty !== 'all' || duration !== 'all'
     || format !== 'all' || savedOnly || statusFilter !== 'all';
   const groupsHere = useMemo(() => GROUPS.filter((g) => tasks.some((task) => task.focus.some((tag) => (CODING_TECHNIQUE_GROUPS[g] as readonly string[]).includes(tag)))), [tasks]);
   if (track && isRetiredSectionTrack(track)) return <RetiredTrackNotice track={track} />;
-  if (!track) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p><Button variant="secondary" as={Link} href="/coding" label={t('coding.verdict.back')} /></div>;
+  if (!track) return <CodingNotFound what="track" track={null} />;
   // The plan decides which rows carry the Premium mark, so the list waits for
   // it, as the Coding home does; a plan that cannot load says so.
   if (planLoading) return <LoadingScreen label={t('coding.loading')} />;
+  // Without the learner's progress the list would read "0 passed", every
+  // passed task "Open" and later tiers locked. It says the read failed
+  // instead, as the Coding home does, and offers it again.
+  if (isAuthenticated && progress.isError && !progress.data) {
+    return (
+      <div className="cd-page ss-pop">
+        <header>
+          <Kicker>{t('coding.kicker')} · <Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
+          <h1>{t(`coding.track.${track}` as never)}</h1>
+          <p className="cd-lead">{t(`coding.trackBlurb.${track}` as never)}</p>
+        </header>
+        <p className="cd-note cd-note--error" role="alert">
+          {t('coding.discovery.failed')} <Button variant="secondary" onClick={() => void progress.refetch()} isLoading={progress.isFetching} isInterruptible label={t('coding.retry')} />
+        </p>
+      </div>
+    );
+  }
   const done = tasks.filter((task) => passed.has(task.id)).length;
   // Easy, then Medium, then Hard; inside each, the tiers that fall in it, so
   // a tier's lock line stays beside the challenges it locks.
@@ -566,9 +609,9 @@ export function CodingTrackScreen() {
       </div>
       {isAuthenticated && (
         <div className="cd-chips" role="group" aria-label={t('coding.filter.status')}>
-          {(['all', 'open', 'passed', 'due'] as const).map((value) => (
+          {(['all', 'open', 'passed'] as const).map((value) => (
             <button key={value} type="button" className="cd-chip" aria-pressed={statusFilter === value} onClick={() => setFilter('status', value === 'all' ? null : value)}>
-              {value === 'all' ? t('coding.filter.all') : value === 'open' ? t('coding.status.open') : value === 'passed' ? t('coding.status.passed') : t('coding.status.due')}
+              {value === 'all' ? t('coding.filter.all') : value === 'open' ? t('coding.status.open') : t('coding.status.passed')}
             </button>
           ))}
           <button type="button" className="cd-chip" aria-pressed={savedOnly} onClick={() => setFilter('saved', savedOnly ? null : '1')}>
@@ -730,18 +773,14 @@ export function CodingTaskScreen() {
     if (task.data && track && task.data.task.track !== track) navigate(`/coding/${task.data.task.track}/${task.data.task.id}`, { replace: true });
   }, [task.data, track, navigate]);
 
-  // Runs on Run and Submit, silently. The device copy is written first so a
-  // failed account save still leaves the code recoverable here; a successful
-  // one lets the device copy go, since the account now holds it.
+  // Runs on Run and Submit, silently (coding/drafts.ts). Evolving code is
+  // also the offline starting point of the next stage, so it stays on the
+  // device after the account takes it.
+  const draftBase = task.data?.draftUpdatedAt ?? null;
   const onDraft = useCallback((code: string) => {
     if (!taskId) return;
-    writeString(draftKey(taskId), code);
-    if (!isAuthenticated) return;
-    saveCodingDraft(taskId, code).then(() => {
-      // Evolving code is also the offline starting point of the next stage.
-      if (!evolvingStage(taskId) && readString(draftKey(taskId)) === code) removeStored(draftKey(taskId));
-    }).catch(() => { /* the device copy above stands */ });
-  }, [taskId, isAuthenticated]);
+    saveDraft(taskId, code, { signedIn: isAuthenticated, base: draftBase, keepOnDevice: Boolean(evolvingStage(taskId)) });
+  }, [taskId, isAuthenticated, draftBase]);
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
     if (verdict.progress) void queryClient.invalidateQueries({ queryKey: codingKeys.progress() });
@@ -755,11 +794,11 @@ export function CodingTaskScreen() {
         // Capture the submitted snapshot synchronously, before Next can navigate
         // and before the account save started by Submit settles. Never seed
         // over a next-stage draft.
-        if (submittedCode !== undefined) writeString(draftKey(taskId), submittedCode);
+        if (submittedCode !== undefined) keepDeviceDraft(taskId, submittedCode, draftBase);
         if (stage.next) queryClient.removeQueries({queryKey:codingKeys.task(stage.next), exact:true, type:'inactive'});
-      } else removeStored(draftKey(taskId));
+      } else forgetDeviceDraft(taskId);
     }
-  }, [queryClient, taskId, activeRun, runIndex, advanceRun]);
+  }, [queryClient, taskId, activeRun, runIndex, advanceRun, draftBase]);
 
   const onRetry = useCallback(() => {
     if (workbench.reloading) return;
@@ -767,8 +806,16 @@ export function CodingTaskScreen() {
     setAttempt((n) => n + 1);
   }, [task, workbench.reloading]);
 
+  // The code the editor opens with, decided once per load of the task: the
+  // newer of this device's copy and the account draft. When the account's
+  // was newer, the older copy here goes; either way the page says which won.
+  const opening = useMemo(() => task.data ? openingDraft(task.data.task.id, task.data.draft, task.data.draftUpdatedAt) : null, [task.data]);
+  useEffect(() => {
+    if (opening?.conflict === 'account' && task.data) forgetDeviceDraft(task.data.task.id);
+  }, [opening, task.data]);
+
   if (retired && track) return <RetiredTrackNotice track={track} />;
-  if (!track || !taskId) return <div className="cd-page"><p className="cd-note cd-note--error">{t('error.notFound')}</p></div>;
+  if (!track || !taskId) return <CodingNotFound what="track" track={null} />;
   // One loading state until the task and, for a code task, its editor are both in.
   if (task.isLoading || (!task.isError && task.data?.task.track !== 'system-design' && !workbench.View && !workbench.failed)) {
     return <LoadingScreen label={t('coding.loading')} />;
@@ -790,6 +837,11 @@ export function CodingTaskScreen() {
         </div>
       </div>
     );
+  }
+  // An id the catalogue does not hold, or no longer does. The task screen
+  // shows no workbench and no retry: asking again gives the same answer.
+  if (task.isError && task.error instanceof ApiError && (task.error.status === 404 || task.error.status === 410)) {
+    return <CodingNotFound what={task.error.status === 410 ? 'retired' : 'task'} track={track} />;
   }
   const CodingWorkbench = workbench.View;
   if (task.isError || !task.data || (task.data.task.track !== 'system-design' && !CodingWorkbench)) {
@@ -816,9 +868,8 @@ export function CodingTaskScreen() {
       ? stage.next ? `/coding/${evolvingTaskTrack(stage.next)}/${stage.next}` : null
       : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
   const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
-  const localDraft = readString(draftKey(data.task.id));
-  const previousLocal = stage?.previous ? readString(draftKey(stage.previous)) : null;
-  const initialCode = localDraft ?? data.draft ?? (stage && previousLocal !== null
+  const previousLocal = stage?.previous ? deviceDraft(stage.previous) : null;
+  const initialCode = opening?.code ?? (stage && previousLocal !== null
     ? prepareEvolvingDraft(previousLocal, stage.challenge, stage.index)
     : null);
 
@@ -830,7 +881,11 @@ export function CodingTaskScreen() {
         {stage && <span>{stage.challenge.title[lang]} — {t(stage.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: stage.index + 1, total: stage.challenge.stages.length })}</span>}
         {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
       </div>}
-      {(bookmarks.isError || save.isError) && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
+      {/* A list that did not load offers to load it again; a star that did
+          not save says so, and the star itself is the way to try again. */}
+      {bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
+      {save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
+      {opening?.conflict && <p className="cd-note" role="status">{t(opening.conflict === 'account' ? 'coding.draft.accountNewer' : 'coding.draft.deviceNewer')}</p>}
       {stage && stage.challenge.stages.length > 1 && isBarred(premiumOf(stage.challenge.stages[1])) && (
         <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(stage.challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>
       )}

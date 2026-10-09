@@ -26,7 +26,6 @@ afterEach(() => { auth.value = { user: null, isAuthenticated: false, isLoading: 
 beforeAll(() => Promise.all([
   import('../src/components/ConceptDueSection'),
   import('../src/components/coding/ChallengeRunSection'),
-  import('../src/components/coding/CodingDueSection'),
   import('../src/components/paths/PathResumeSection'),
   import('../src/components/paths/PathDiscovery'),
 ]));
@@ -128,6 +127,24 @@ describe('/today', () => {
     await mountAt('/today', <Today />);
     expect(drawn()).toEqual(expect.arrayContaining(['Today', 'Due for review', 'Challenge run', 'Learning paths']));
     expect(screen.getByText('Where you start')).toBeInTheDocument();
+  });
+
+  // The coding review queue is retired (C3-11): a pass is permanent, so Today
+  // neither reads coding progress nor offers a coding task to review.
+  it('reads no coding progress and offers no coding review', async () => {
+    signIn();
+    const accountReads = answer(PREMIUM);
+    server.use(http.get('*/api/user/*', ({ request }) => {
+      const op = new URL(request.url).searchParams.get('op') ?? '';
+      accountReads.push(op);
+      if (op === 'coding-progress') return HttpResponse.json({ tasks: {}, due: ['js-double-numbers'], javascriptLevelsCleared: 0, passedByTrack: {} });
+      return undefined;
+    }));
+    await mountAt('/today', <Today />);
+    await screen.findByRole('heading', { name: 'Learning paths' });
+    expect(accountReads).not.toContain('coding-progress');
+    expect(screen.queryByText(/Double numbers/)).toBeNull();
+    expect(screen.queryByRole('link', { name: /due for review/i })).toBeNull();
   });
 
   it('asks nothing of a visitor’s account and draws no signed-in section', async () => {

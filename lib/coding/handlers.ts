@@ -204,6 +204,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
 
   let progress: CodingTaskProgress | null = null;
   let draft: string | null = null;
+  let draftUpdatedAt: string | null = null;
   let locked: CodingTaskResponse['locked'] = null;
   let passedIds: ReadonlySet<string> = new Set();
   if (userId && supabase) {
@@ -211,13 +212,14 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       const [rows, cleared, draftRow] = await Promise.all([
         loadProgressRows(supabase, userId),
         javascriptLevelsCleared(supabase, userId),
-        withTimeout(supabase.from('coding_drafts').select('code').eq('user_id', userId).eq('task_id', task.id).maybeSingle()),
+        withTimeout(supabase.from('coding_drafts').select('code,updated_at').eq('user_id', userId).eq('task_id', task.id).maybeSingle()),
       ]);
       const passed = new Set(rows.filter((row) => row.status === 'passed').map((row) => row.task_id));
       passedIds = passed;
       const mine = rows.find((row) => row.task_id === task.id);
       progress = mine ? toProgress(mine) : null;
       draft = typeof draftRow.data?.code === 'string' ? draftRow.data.code : null;
+      draftUpdatedAt = draft !== null && typeof draftRow.data?.updated_at === 'string' ? draftRow.data.updated_at : null;
       locked = tierLockReason({ track: task.track, tier: task.tier, progress: { passed }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: cleared });
       const stage = evolvingStage(task.id);
       if (stage) {
@@ -285,7 +287,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   const session = locked ? null : encodeCodingSession({ taskId: task.id, track: task.track, userId, ...(key ? { key } : {}) });
 
   res.setHeader('Cache-Control', 'private, no-store');
-  const body: CodingTaskResponse = { task: play, session, locked, progress, draft, signedIn: Boolean(userId) };
+  const body: CodingTaskResponse = { task: play, session, locked, progress, draft, draftUpdatedAt, signedIn: Boolean(userId) };
   return res.json(body);
 }
 
