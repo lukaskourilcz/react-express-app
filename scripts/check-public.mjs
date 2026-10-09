@@ -110,7 +110,20 @@ for (const day of days) {
   assert(existsSync(`${dir}/og/daily/${day}.png`), `${day}: its image exists`);
   assert(!/ss-radio-card|correctAnswer|explanation/.test(html), `${day}: no question in the HTML`);
 }
+// V3-6: the app ships English only, so the code a coding screen loads carries
+// no Czech. A chunk counts as coding when its source map lists a module of the
+// coding client or a shared coding module (the build emits hidden maps).
+const CZECH = /[áčďéěíňóřšťúůýžÁČĎÉĚÍŇÓŘŠŤÚŮÝŽ]/g;
+const CODING_SOURCE = /(?:^|\/)(?:src\/coding\/|src\/components\/coding\/|shared\/coding-)/;
+const codingChunks = readdirSync(`${dir}/assets`, { recursive: true })
+  .filter((file) => file.endsWith('.js') && existsSync(`${dir}/assets/${file}.map`))
+  .filter((file) => JSON.parse(readFileSync(`${dir}/assets/${file}.map`, 'utf8')).sources.some((source) => CODING_SOURCE.test(source)));
+assert(codingChunks.some((file) => /^CodingWorkbench-/.test(file)), 'the workbench chunk was found by its source map');
+for (const file of codingChunks) {
+  const found = readFileSync(`${dir}/assets/${file}`, 'utf8').match(CZECH) ?? [];
+  assert.equal(found.length, 0, `${file}: ${found.length} Czech characters in a coding chunk`);
+}
 assert(readFileSync(`${dir}/robots.txt`, 'utf8').includes(`Sitemap: ${urls[0].origin}/sitemap.xml`));
 assert(!existsSync(`${dir}/mockServiceWorker.js`), 'Mocks must never ship with the app');
 assert(!readdirSync(`${dir}/assets`).some(file => /storybook|mocks|\.stories\./i.test(file)));
-console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content, the Premium terms, ${tasks.length} coding share pages, ${Object.keys(SECTION_PAGES).length} Coding section pages and ${days.length} question-of-the-day pages.`);
+console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content, the Premium terms, ${tasks.length} coding share pages, ${Object.keys(SECTION_PAGES).length} Coding section pages, ${days.length} question-of-the-day pages, and no Czech in ${codingChunks.length} coding chunks.`);
