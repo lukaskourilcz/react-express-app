@@ -1,5 +1,6 @@
 import { apiFetch } from './api';
 import { getSubject, deliveryCategoriesForSubject } from './subjects';
+import type { QuestionXpHeld } from '../../../shared/repeat-xp';
 
 // API calls for stats, the daily challenge and question reports. The browser
 // Supabase client itself lives in supabaseClient.ts, which loads it on demand.
@@ -42,14 +43,16 @@ export async function createOrUpdateUserStats(
   return data;
 }
 
-/** `questXp` is the XP the account recorded for this result: the graded
- * result's whole XP from migration 056, repeated questions included, and
- * nothing for a refused second daily. Absent from an older server. */
+/** `questXp` is the XP the account recorded for this result: from migration
+ * 058 the graded result's XP less that of each correct answer whose question
+ * paid XP less than an hour ago, and nothing for a refused second daily.
+ * `xpHeld` names those answers and when they pay again (060). Both are
+ * absent from an older server. */
 export async function recordQuizResult(
   resultReceipt: string,
   profile: { email?: string; name?: string; picture?: string },
-): Promise<{ data: UserStats | null; applied: boolean; questXp?: number }> {
-  const result = await apiFetch<{ data: UserStats | null; applied: boolean; questXp?: number }>('/api/user/stats', {
+): Promise<{ data: UserStats | null; applied: boolean; questXp?: number; xpHeld?: QuestionXpHeld }> {
+  const result = await apiFetch<{ data: UserStats | null; applied: boolean; questXp?: number; xpHeld?: QuestionXpHeld }>('/api/user/stats', {
     method: 'POST',
     body: JSON.stringify({
       result_receipt: resultReceipt,

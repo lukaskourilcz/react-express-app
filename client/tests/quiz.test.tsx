@@ -529,6 +529,43 @@ describe('saving a result to the account', () => {
     }
   });
 
+  // Migration 060: a correct answer whose question paid XP less than an hour
+  // ago pays nothing (058), and the stats write names those answers and when
+  // the last of them pays again. The learner hears it after the gain.
+  for (const mode of ['quiz', 'daily'] as const) {
+    it(`tells the learner in a toast which ${mode} answers the hour held back, and when they pay again`, async () => {
+      signIn();
+      const toasts: unknown[] = [];
+      const stop = onXpToast((toast) => toasts.push(toast));
+      const availableAt = '2026-10-09T14:32:00.000Z';
+      server.use(
+        http.get('*/api/quiz/daily', () => HttpResponse.json({ date: '2026-10-09', sessionId: sessionFor('daily'), questions: [Q('a'), Q('b')] })),
+        http.post('*/api/quiz/submit', () => HttpResponse.json({ ...graded([Q('a'), Q('b')]), resultReceipt: `${mode}-held-receipt` })),
+        http.post('*/api/user/stats', () => HttpResponse.json({
+          data: null, xp: { quest_xp: 6, quest_xp_by_subject: { webdev: 6 } }, applied: true, questXp: 6,
+          xpHeld: { questions: 1, availableAt },
+        })),
+      );
+      try {
+        if (mode === 'quiz') {
+          await startQuiz([Q('a'), Q('b')]);
+        } else {
+          renderQuiz();
+          fireEvent.click(await screen.findByRole('button', { name: /today’s challenge/i }));
+          await questionOnScreen();
+        }
+        answerAll(2);
+        fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
+        await waitFor(() => expect(toasts).toEqual([
+          { kind: 'gain', amount: 6, source: 'quiz' },
+          { kind: 'held', hold: { on: 'questions', count: 1, availableAt } },
+        ]));
+      } finally {
+        stop();
+      }
+    });
+  }
+
   it('sends waiting results once signed in, and drops the ones too old to record', async () => {
     signIn();
     localStorage.setItem(PENDING_KEY, JSON.stringify({

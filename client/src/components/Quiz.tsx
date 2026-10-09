@@ -47,7 +47,7 @@ import { useLanguage } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { useSettings, playCorrect, playComplete } from '../lib/settings';
 import { recordPerfectQuiz } from '../lib/achievements';
-import { announceVerifiedQuestXp, awardQuestXp, syncXpWithServer } from '../lib/xp';
+import { announceVerifiedQuestXp, announceXpHeld, awardQuestXp, syncXpWithServer } from '../lib/xp';
 import { useGameConfig } from '../lib/gameConfig';
 import { ReportDialog } from './ReportDialog';
 import { capture } from '../lib/analytics';
@@ -635,6 +635,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
             // migration 048 names no amount and awarded the result's.
             const recordedXp = typeof saved.questXp === 'number' ? saved.questXp : data.questXp;
             if (saved.applied) announceVerifiedQuestXp(recordedXp);
+            // The answers whose question paid XP less than an hour ago, and
+            // when they pay again (migration 060).
+            if (saved.xpHeld) announceXpHeld({ on: 'questions', count: saved.xpHeld.questions, availableAt: saved.xpHeld.availableAt });
             await syncXpWithServer({ announceRankUp: saved.applied });
           } catch (writeError) {
             console.error('Stat write failed:', writeError);
