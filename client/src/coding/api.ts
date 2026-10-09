@@ -11,6 +11,8 @@ import type {
   CodingDraftSaveRequest,
   CodingDraftSaveResponse,
   CodingProgressResponse,
+  CodingResetRequest,
+  CodingResetResponse,
   CodingRevealRequest,
   CodingRevealResponse,
   CodingSubmitRequest,
@@ -51,6 +53,12 @@ export async function submitCoding(input: CodingSubmitRequest): Promise<CodingVe
 
 export function revealCoding(input: CodingRevealRequest): Promise<CodingRevealResponse> {
   return apiFetch<CodingRevealResponse>(`${ROADMAP}?resource=coding-reveal`, { method: 'POST', body: JSON.stringify(input) });
+}
+
+/** The workbench's Reset, signed in: it opens the task's XP again for a pass
+ * an hour after the task last paid it (migration 058). */
+export function resetCoding(input: CodingResetRequest): Promise<CodingResetResponse> {
+  return apiFetch<CodingResetResponse>(`${ROADMAP}?resource=coding-reset`, { method: 'POST', body: JSON.stringify(input) });
 }
 
 export function fetchCodingProgress(signal?: AbortSignal): Promise<CodingProgressResponse> {

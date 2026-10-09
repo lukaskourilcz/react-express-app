@@ -31,7 +31,7 @@ import {
   createChallengeRun,
   stableAttemptId,
 } from '../lib/quiz-tokens';
-import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
@@ -68,7 +68,7 @@ import dailyHandler from '../api/quiz/daily';
 import questionsHandler from '../api/quiz/questions';
 import challengeHandler from '../api/quiz/challenge';
 import flashcardsHandler from '../api/flashcards';
-import { handleCodingDraft } from '../lib/coding/handlers';
+import { handleCodingDraft, handleCodingTask } from '../lib/coding/handlers';
 import { decodeSessionEnvelope } from '../lib/quiz-tokens';
 import { dailySeededShuffle, pickQuestionOfTheDay, UNBIASED_SHUFFLE_FROM } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
@@ -2251,7 +2251,9 @@ async function classroomLimitContracts() {
     { name: 'a skill check', handler: roadmapHandler, method: 'POST', query: { resource: 'skill-check' }, body: {}, ...learnComplete },
     { name: 'a progress sync', handler: roadmapHandler, method: 'PUT', query: {}, body: {}, perPerson: 20, own: 'roadmapMutation', address: 'roadmapMutationAddress' },
     { name: 'a coding task', handler: roadmapHandler, method: 'GET', query: { resource: 'coding-task', id: freeTask.id }, perPerson: 20, own: 'codingTask', address: 'codingTaskAddress' },
-    { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: 'x' }, perPerson: 30, own: 'codingRun', address: 'codingRunAddress' },
+    // A Submit's own budget is per task (owner decision 9), so it carries a
+    // session for one; with no code it is refused after the limits.
+    { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: encodeCodingSession({ taskId: freeTask.id, track: freeTask.track, userId: null }) }, perPerson: 30, own: 'codingSubmit', address: 'codingSubmitAddress' },
     { name: 'a coding reveal', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-reveal' }, body: { session: 'x' }, perPerson: 10, own: 'codingReveal', address: 'codingRevealAddress' },
     { name: 'a flashcard write', handler: flashcardsHandler, method: 'POST', query: {}, body: { subject: 'webdev', question_id: 'q1', question: 'Q?', correct_answer: 'A' }, perPerson: 20, own: 'flashcardMutation', address: 'flashcardMutationAddress' },
   ];
@@ -2409,6 +2411,35 @@ async function classroomLimitContracts() {
     }
     assert.deepEqual(statuses, { 200: PUPILS * perPupil }, 'every Challenge answer from a class behind one address is graded');
     assert.equal(RATE_LIMITS.quizSubmit.capacity, SHARED_NETWORK_SEATS * perPupil, 'grading\'s address bucket holds a class answering the Challenge');
+  }
+
+  // 11. A coding Submit is limited per task (owner decision 9, 9 October
+  //     2026), beneath a ceiling per caller across every task: an account,
+  //     or a guest's address. A caller who spent one task's budget still
+  //     submits on the next task, and nobody submits past the ceiling by
+  //     spreading submits over many tasks.
+  {
+    const tasks = CODING_INDEX.filter((task) => task.free && task.track === 'javascript').slice(0, 6);
+    const { codingSubmit: perTask, codingSubmitCeiling: ceiling } = RATE_LIMITS;
+    assert.ok(tasks.length * perTask.capacity > ceiling.capacity + tasks.length, 'enough tasks to reach the ceiling without spending any one task');
+    const submitOn = (taskId: string): Route => ({ ...routes.find((one) => one.name === 'a coding Submit')!, body: { session: encodeCodingSession({ taskId, track: 'javascript', userId: null }) } });
+    for (const user of [`per-task-${stamp}`, undefined]) {
+      const who = user ? 'an account' : 'a guest';
+      const address = school();
+      const spent = await throughUntilRefused(async () => (await call(submitOn(tasks[0].id), address, user)).statusCode, perTask.capacity, perTask.refillPerSecond);
+      assert.ok(spent >= perTask.capacity, `${who} gets one task's whole budget (${spent})`);
+      assert.notEqual((await call(submitOn(tasks[1].id), address, user)).statusCode, 429, `${who}: one task's spent budget does not refuse the next task`);
+    }
+    for (const user of [`ceiling-${stamp}`, undefined]) {
+      const who = user ? 'an account' : 'a guest';
+      const address = school();
+      let sent = 0;
+      const through = await throughUntilRefused(async () => (await call(submitOn(tasks[sent++ % tasks.length].id), address, user)).statusCode, ceiling.capacity, ceiling.refillPerSecond);
+      assert.ok(through >= ceiling.capacity, `${who} submits up to the ceiling across tasks (${through})`);
+      assert.ok(Math.ceil(sent / tasks.length) < perTask.capacity, `${who}: the ceiling refused it, not one task's budget`);
+    }
+    assert.ok(ceiling.capacity >= 4 * perTask.capacity, 'the ceiling holds four tasks\' whole budgets');
+    assert.equal(RATE_LIMITS.codingSubmitAddress.capacity, SHARED_NETWORK_SEATS * perTask.capacity, 'the address holds a class at the per-task rate');
   }
 
   // 10. A coding draft save is a write to api/user/[op].ts and takes its two
@@ -3960,8 +3991,8 @@ async function main() {
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue loader must not import the solutions');
   const pathCatalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(pathCatalogSource, /from '\.\/solutions/, 'the learning-path catalogue must not import the solutions');
-  for (const key of ['codingRun', 'codingReveal', 'githubConnect', 'githubSync',
-                     'learningPathStart', 'learningPathSubmit', 'learningPathDraft', 'learningPathEnroll']) {
+  for (const key of ['codingSubmit', 'codingSubmitCeiling', 'codingReveal', 'githubConnect', 'githubSync',
+                     'learningPathStart', 'learningPathSubmit', 'learningPathSubmitCeiling', 'learningPathDraft', 'learningPathEnroll']) {
     assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
   }
 
@@ -4146,6 +4177,49 @@ async function main() {
   assert.equal(rateRes.statusCode, 429);
   assert.ok(rateRes.headers.has('retry-after'));
   assert.equal(isDistributedRateLimitEnabled(), false, 'test environment exercises the safe local fallback');
+
+  // Grader limits are per task (owner decision 9, 9 October 2026). A Submit
+  // takes its task's bucket, then a ceiling across every task; a refusal on
+  // one task spends nothing of the ceiling. Grading in flight is counted the
+  // same way: per task, beneath a ceiling, and an ended submit frees exactly
+  // its own slot.
+  {
+    const stamp = Date.now();
+    const perItem = { key: `item-${stamp}`, capacity: 2, refillPerSecond: 0.0001 };
+    const ceiling = { key: `item-ceiling-${stamp}`, capacity: 3, refillPerSecond: 0.0001 };
+    const guest = { headers: { 'x-forwarded-for': `per-item-${stamp}` }, socket: {} } as never;
+    const take = async (item: string, req = guest) => {
+      const res = mockResponse();
+      return { ok: await enforcePerItemRateLimit(req, res as never, perItem, ceiling, item), status: res.statusCode };
+    };
+    assert.ok((await take('task:a')).ok && (await take('task:a')).ok, 'one task takes its whole budget');
+    assert.deepEqual(await take('task:a'), { ok: false, status: 429 }, 'and is then refused');
+    assert.ok((await take('task:b')).ok, 'one task\'s spent budget does not refuse another task, and its refusal spent none of the ceiling');
+    assert.deepEqual(await take('task:c'), { ok: false, status: 429 }, 'the ceiling holds across tasks');
+    assert.ok((await take('task:c', { headers: { 'x-forwarded-for': `per-item-other-${stamp}` }, socket: {} } as never)).ok, 'another caller keeps its own buckets');
+
+    const scope = `grading-${stamp}`;
+    const on = (item: string) => ({ item, perItem: 2, perCaller: 3 });
+    const a1 = enterInFlight(guest, scope, on('task:a'));
+    const a2 = enterInFlight(guest, scope, on('task:a'));
+    assert.ok(a1 && a2, 'two of one caller\'s submits grade at once on one task');
+    assert.equal(enterInFlight(guest, scope, on('task:a')), null, 'a third waits');
+    const b1 = enterInFlight(guest, scope, on('task:b'));
+    assert.ok(b1, 'a full task holds up no other task');
+    assert.equal(enterInFlight(guest, scope, on('task:c')), null, 'the ceiling holds across tasks');
+    const elsewhere = enterInFlight(guest, scope, on('task:c'), `user:in-flight-${stamp}`);
+    assert.ok(elsewhere, 'another caller has counts of its own');
+    elsewhere();
+    a1();
+    a1();
+    const c1 = enterInFlight(guest, scope, on('task:c'));
+    assert.ok(c1, 'an ended submit frees its slot');
+    assert.equal(enterInFlight(guest, scope, on('task:d')), null, 'and only its own: ending it twice freed nothing more');
+    for (const done of [a2, b1, c1]) done();
+    const again = ['task:a', 'task:b', 'task:a'].map((item) => enterInFlight(guest, scope, on(item)));
+    assert.ok(again.every(Boolean), 'once every submit has ended the caller has its whole count back');
+    for (const done of again) done?.();
+  }
 
   // A classroom round is thirty pupils joining one room from one school
   // address. Every `play` bucket used to be keyed by address alone and sized
@@ -4348,6 +4422,14 @@ async function main() {
         if (limit.endsWith('PerUser')) assert.match(body, new RegExp(`RATE_LIMITS\\.${limit}, \`user:\\$\\{\\w+\\.sub\\}\``), `${limit} is keyed by the verified account`);
       }
     }
+    // A question's XP waits an hour (owner decision of 9 Oct 2026, migration
+    // 058). A finished run names each answer's XP, so record_challenge_completion
+    // can leave out the answers whose question paid XP less than an hour ago,
+    // and the coins and the XP the learner is told follow what was awarded.
+    const complete = bodyOf(challengeSource, 'handleCompleteRun');
+    assert.match(complete, /creditVerifiedXp\(supabase, \{[^\n]*xp: awardedXp \}\)/, 'coins follow the XP the run was awarded');
+    assert.match(complete, /xp: data === true \? awardedXp : xp/, 'the learner is told the XP the run was awarded');
+    assert.match(bodyOf(challengeSource, 'runAnswers'), /xp: outcome\.isCorrect \? challengeRunXp\(1\) : 0/, 'each answer carries its XP to the routine');
   }
 
   // Writes to api/user/[op].ts take the same two tiers. Thirty pupils behind
@@ -5160,14 +5242,14 @@ async function main() {
     // Through the handlers, against a stand-in database whose roadmap row has
     // the ten levels cleared. The plan is Premium for this request.
     const learner = 'practice-learner-0001';
-    const practiceDb = () => {
+    const practiceDb = (passedIds: ReadonlySet<string> = swept) => {
       const levels = Object.fromEntries(Array.from({ length: CODING_FOUNDATION_LEVELS }, (_, index) => [String(index + 1), { passed: true }]));
       const started: Record<string, unknown>[] = [];
       const from = (table: string) => {
         const chain = {
           select: () => chain, eq: () => chain, in: () => chain, order: () => chain, limit: () => chain,
           maybeSingle: () => Promise.resolve({ data: table === 'roadmap_progress' ? { data: { javascript: { levels } } } : null, error: null }),
-          then: (resolve: (value: unknown) => unknown) => resolve({ data: table === 'coding_progress' ? [...swept].map((task_id) => ({ task_id, status: 'passed' })) : [], error: null }),
+          then: (resolve: (value: unknown) => unknown) => resolve({ data: table === 'coding_progress' ? [...passedIds].map((task_id) => ({ task_id, status: 'passed' })) : [], error: null }),
         };
         return chain;
       };
@@ -5194,6 +5276,48 @@ async function main() {
     assert.equal(skipped.statusCode, 200, JSON.stringify(skipped.body));
     const next = (skipped.body as { next?: string | null }).next;
     assert.ok(next && tierOf(next) === 3, `a skip suggests a tier-3 task the Learn levels opened, not nothing: ${next}`);
+
+    // The task page agrees: it opens the tier-3 task the run holds.
+    const taskPage = async (id: string, db: ReturnType<typeof practiceDb>) => {
+      const req = { method: 'GET', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '198.51.100.81' }, query: { resource: 'coding-task', id, user_id: learner } };
+      const res = mockResponse();
+      await withRequestContext(req as never, res as never, async () => {
+        await requestMemo(`tier:${learner}`, async () => 'premium');
+        await handleCodingTask(req as never, res as never, db.client as never);
+      });
+      assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      return res.body as { locked?: string | null; session?: string | null };
+    };
+    assert.equal((await taskPage(opened.find((id) => tierOf(id) === 3)!, practiceDb())).locked, null, 'the task page opens the tier-3 task the run holds');
+
+    // Owner decision 7 (9 October 2026): the ten JavaScript Learn levels open
+    // tier 3 of JavaScript only. `tierUnlocked` asked for them whatever the
+    // track, so they opened TypeScript's and React's tier 3 too. The same
+    // learner, with TypeScript or React passed but for one task of tiers 1
+    // and 2, finds that tier 3 locked, with the reason that names the sweep
+    // alone, in a run, in a skip's suggestion and on the task page. The
+    // browser asks the same rule (client/tests/coding-learn-unlock.test.tsx).
+    for (const track of ['typescript', 'react'] as const) {
+      const tiers = CODING_SUMMARIES.filter((task) => task.track === track && !evolvingStage(task.id));
+      const last = tiers.find((task) => task.tier === 2)!;
+      const almost = new Set(tiers.filter((task) => task.tier <= 2 && task.id !== last.id).map((task) => task.id));
+      const ladder = { track, tier: 3 as const, progress: { passed: almost }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: CODING_FOUNDATION_LEVELS };
+      assert.equal(tierUnlocked(ladder), false, `${track}: the JavaScript Learn levels leave tier 3 locked`);
+      assert.equal(tierLockReason(ladder), 'sweep', `${track}: the lock names the sweep alone, not the Learn levels`);
+      assert.equal(tierUnlocked({ ...ladder, progress: { passed: new Set([...almost, last.id]) }, javascriptLevelsCleared: 0 }), true, `${track}: its own sweep opens tier 3`);
+      assert.deepEqual(buildQueue({ ...laddered, topic: track, passed: almost, javascriptLevelsCleared: CODING_FOUNDATION_LEVELS }), [last.id], `${track}: a run offers no tier 3 for the Learn levels`);
+      const trackDb = practiceDb(almost);
+      const trackRun = await asPremium(handlePracticeSession, { count: 5, order: 'sequential', topic: track }, trackDb);
+      assert.equal(trackRun.statusCode, 200, JSON.stringify(trackRun.body));
+      assert.deepEqual(trackDb.started[0]?.p_queue, [last.id], `${track}: the run the handler starts holds no tier 3`);
+      const trackSkip = await asPremium(handleCodingSkip, { taskId: last.id, reason: 'too-hard' }, practiceDb(almost));
+      assert.equal(trackSkip.statusCode, 200, JSON.stringify(trackSkip.body));
+      assert.equal((trackSkip.body as { next?: string | null }).next, null, `${track}: a skip suggests no tier-3 task`);
+      const page = await taskPage(tiers.find((task) => task.tier === 3)!.id, practiceDb(almost));
+      assert.equal(page.locked, 'sweep', `${track}: the task page locks tier 3 and says the sweep opens it`);
+      assert.equal(page.session, null, `${track}: and seals no session for it`);
+    }
+    assert.equal(tierLockReason({ track: 'javascript', tier: 3, progress: { passed: new Set() }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: 0 }), 'foundations', 'JavaScript tier 3 names both ways in');
 
     // Audit C3-18: the next challenge after a skip came from the top of the
     // track, so skipping js-count-multiples offered js-digit-sum, a task

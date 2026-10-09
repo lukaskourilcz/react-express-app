@@ -1267,6 +1267,7 @@ export const en = {
   'coding.difficulty.hard': 'Hard',
   'coding.difficulty.prefix': 'Difficulty',
   'coding.lock.foundations': 'Opens after Learn JavaScript levels 1–10, or after every task of the first two tiers in this track.',
+  'coding.lock.sweep': 'Opens after every task of the first two tiers in this track.',
   'coding.lock.tier3': 'Opens after 80 % of the Combine tier.',
   'coding.lock.tier4': 'Opens after 80 % of the Interview tier.',
   // ── Free tier and Premium (shared/tiers.ts, issue #220) ─────────────────
@@ -1640,6 +1641,10 @@ export const en = {
   'coding.format': 'Format',
   'coding.reset': 'Reset',
   'coding.resetConfirm': 'Replace your code with the starter?',
+  'coding.resetConfirmXp': 'Replace your code with the starter? Solving it again earns its XP again, an hour after you last earned it.',
+  'coding.repeat.next': 'Reset the task to earn its XP again from {time}.',
+  'coding.repeat.needsReset': 'No XP this time: reset the task first.',
+  'coding.repeat.cooldown': 'No XP this time: its XP opens again at {time}. Reset the task then.',
   'coding.resetCancel': 'Keep my code',
   'coding.shortcuts': 'Ctrl+Enter runs, Ctrl+Shift+Enter submits. Escape then Tab leaves the editor.',
   'coding.hint': 'Hint',

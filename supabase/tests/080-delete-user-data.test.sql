@@ -31,7 +31,7 @@ BEGIN
   -- Learning: quiz, daily, Learn level, skill check, coding, practice.
   PERFORM public.record_verified_quiz_result_v2(v_gone, 'eraseattempt00000001', 8, 10,
     '{"javascript":{"correct":8,"total":10}}',
-    '[{"questionId":"q1","category":"javascript","isCorrect":true}]',
+    '[{"questionId":"q1","category":"javascript","isCorrect":true,"xp":4}]',
     'webdev', 80, 'gone@example.com', 'Gone Learner', NULL, v_today, 60000);
   PERFORM public.record_verified_quiz_result_v2(v_bob, 'eraseattempt00000002', 9, 10,
     '{"javascript":{"correct":9,"total":10}}', NULL, 'webdev', 90, 'bob@example.com', 'Bob');

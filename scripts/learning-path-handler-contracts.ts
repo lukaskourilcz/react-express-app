@@ -14,7 +14,9 @@
 //     on, the address is checked, not cut to fit, completion is read for the
 //     published curriculum version, a raced second claim, a refused field
 //   * rate limits are the learner's own, with a class-sized address backstop
-//   * a learner with submits already grading is told the grader is busy
+//   * a learner with submits already grading on an activity, or on enough
+//     of them, is told the grader is busy; another activity is not held up
+//   * a submit is limited per activity, beneath a ceiling per learner
 
 import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
 import {
@@ -29,7 +31,7 @@ import {
 import { requestMemo, withRequestContext } from '../lib/http';
 import { encodeLearningPathSession } from '../lib/quiz-tokens';
 import { enterInFlight, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
-import { GRADING_PER_CALLER } from '../lib/coding/grader-capacity';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, gradingItem } from '../lib/coding/grader-capacity';
 import { LEARNER_PROFILE_META_KEY } from '../shared/learning-paths';
 import { MERCH_ENABLED } from '../shared/rewards';
 import type { SubmitActivityResponse } from '../shared/learning-path-api';
@@ -150,26 +152,29 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     }
 
     /* ── a burst is refused before it reaches the grader ──────────────── */
-    // The coding section's grader threads take path code too, and one
-    // learner may have GRADING_PER_CALLER submits grading at once (C1-1).
-    // One more is a 429 `grader_busy`, recorded nowhere; once one of theirs
-    // is answered the next is graded.
+    // The coding section's grader threads take path code too. One learner may
+    // have GRADING_PER_TASK submits grading at once on one activity (C1-1;
+    // per activity since owner decision 9), and GRADING_PER_CALLER across
+    // them all. One more is a 429 `grader_busy`, recorded nowhere. A full
+    // activity holds up no other activity, and once one of the learner's
+    // submits is answered the next is graded.
     try {
       process.env.LEARNING_PATH_DSA_ENABLED = 'true';
       const burster = `user-paths-burst-${stamp}`;
-      const burstBody = {
+      const otherCode = dsa.modules.flatMap((module) => module.activities).find((activity) => activity.kind === 'code' && activity.id !== codeActivity.id)!;
+      const bodyFor = (activity: typeof codeActivity) => ({
         ...submitBody,
         user_id: burster,
         session: encodeLearningPathSession({
           attemptId: `BURST${stamp}`.padEnd(20, 'a'), enrollmentId, userId: burster, pathId: 'dsa-foundations',
-          activityId: codeActivity.id, activityKind: codeActivity.kind, purpose: codeActivity.purpose,
+          activityId: activity.id, activityKind: activity.kind, purpose: activity.purpose,
           curriculumVersion: dsa.version, rubricVersion: dsa.rubric.version,
         }).token,
-      };
+      });
       const written: string[] = [];
-      const submitAsPremium = async () => {
+      const submitAsPremium = async (activity = codeActivity) => {
         const res = response();
-        const req = request('POST', `burst-${stamp}`, burstBody);
+        const req = request('POST', `burst-${stamp}`, bodyFor(activity));
         await withRequestContext(req, res as never, async () => {
           await requestMemo(`tier:${burster}`, async () => 'premium');
           await handleActivitySubmit(req, res as never, fakeSupabase({
@@ -179,14 +184,24 @@ export async function handlerContracts(fail: Fail): Promise<void> {
         });
         return res;
       };
-      const grading = Array.from({ length: GRADING_PER_CALLER }, () => enterInFlight(request('POST', `burst-${stamp}`, burstBody), 'grading', GRADING_PER_CALLER, `user:${burster}`));
+      const graded = (res: Captured) => res.statusCode === 200 && Boolean((res.body as SubmitActivityResponse | undefined)?.code);
+      const hold = (activityId: string) => enterInFlight(request('POST', `burst-${stamp}`, {}), 'grading',
+        { item: gradingItem.activity('dsa-foundations', activityId), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, `user:${burster}`);
+      const grading = Array.from({ length: GRADING_PER_TASK }, () => hold(codeActivity.id));
       let res = await submitAsPremium();
-      if (res.statusCode !== 429 || code(res) !== 'grader_busy') fail(`a submit past the learner's grading limit answers ${res.statusCode} ${code(res)}, not 429 grader_busy`);
+      if (res.statusCode !== 429 || code(res) !== 'grader_busy') fail(`a submit past the learner's grading limit on one activity answers ${res.statusCode} ${code(res)}, not 429 grader_busy`);
       if (written.length > 0) fail(`a submit the grader did not take wrote ${written.join(', ')}`);
+      res = await submitAsPremium(otherCode);
+      if (!graded(res)) fail(`a full activity held up a submit on another activity: ${res.statusCode} ${code(res)}`);
+      // The ceiling: GRADING_PER_CALLER grading across two activities.
+      const more = Array.from({ length: GRADING_PER_CALLER - GRADING_PER_TASK }, () => hold(otherCode.id));
+      res = await submitAsPremium(otherCode);
+      if (res.statusCode !== 429 || code(res) !== 'grader_busy') fail(`a submit past the learner's grading ceiling answers ${res.statusCode} ${code(res)}, not 429 grader_busy`);
       grading[0]?.();
       res = await submitAsPremium();
-      if (res.statusCode !== 200 || !(res.body as SubmitActivityResponse | undefined)?.code) fail(`once one of the learner's submits is answered the next is graded, not ${res.statusCode} ${code(res)}`);
+      if (!graded(res)) fail(`once one of the learner's submits is answered the next is graded, not ${res.statusCode} ${code(res)}`);
       grading[1]?.();
+      for (const done of more) done?.();
     } finally {
       if (switchBefore === undefined) delete process.env.LEARNING_PATH_DSA_ENABLED;
       else process.env.LEARNING_PATH_DSA_ENABLED = switchBefore;
@@ -410,6 +425,19 @@ export async function handlerContracts(fail: Fail): Promise<void> {
     /* ── rate limits are the learner's own ────────────────────────────── */
     // A class works through one address. Each learner's budget is their own,
     // one learner is still bounded, and the address backstop holds the class.
+    // A submit's budget is per activity (owner decision 9), so its calls
+    // carry a session for the activity.
+    const activities = dsa.modules.flatMap((module) => module.activities);
+    const sessionFor = (user: string, activity: (typeof activities)[number]) => encodeLearningPathSession({
+      attemptId: `RATE${stamp}`.padEnd(20, 'a'), enrollmentId, userId: user, pathId: 'dsa-foundations',
+      activityId: activity.id, activityKind: activity.kind, purpose: activity.purpose,
+      curriculumVersion: dsa.version, rubricVersion: dsa.rubric.version,
+    }).token;
+    const submitOn = async (user: string, address: string, activity = codeActivity) => {
+      const res = response();
+      await handleActivitySubmit(request('POST', address, { user_id: user, session: sessionFor(user, activity) }), res as never, null);
+      return res.statusCode;
+    };
     type Call = (user: string, address: string) => Promise<number>;
     const cases: { name: string; per: { capacity: number }; call: Call }[] = [
       {
@@ -420,7 +448,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       {
         name: 'submit',
         per: RATE_LIMITS.learningPathSubmit,
-        call: async (user, address) => { const res = response(); await handleActivitySubmit(request('POST', address, { user_id: user }), res as never, null); return res.statusCode; },
+        call: (user, address) => submitOn(user, address),
       },
       {
         name: 'draft',
@@ -449,6 +477,25 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       for (let call = 0; call < one.per.capacity; call += 1) await one.call(`user-first-${one.name}-${stamp}`, desk);
       if ((await one.call(`user-first-${one.name}-${stamp}`, desk)) !== 429) fail(`${one.name}: one learner is not bounded by their own budget`);
       if ((await one.call(`user-second-${one.name}-${stamp}`, desk)) === 429) fail(`${one.name}: one learner's spent budget refused another learner on the same address`);
+    }
+
+    // Per activity, beneath a ceiling: a learner who spent one activity's
+    // submits still submits another, and no learner submits past the ceiling
+    // across all of them.
+    {
+      const desk = `desk-per-activity-${stamp}`;
+      const user = `user-per-activity-${stamp}`;
+      for (let call = 0; call < RATE_LIMITS.learningPathSubmit.capacity; call += 1) await submitOn(user, desk);
+      if ((await submitOn(user, desk)) !== 429) fail('one activity\'s submits are not bounded');
+      if ((await submitOn(user, desk, activities.find((activity) => activity.id !== codeActivity.id)!)) === 429) fail('one activity\'s spent submits refused another activity');
+      const { capacity: ceiling, refillPerSecond } = RATE_LIMITS.learningPathSubmitCeiling;
+      if (activities.length * RATE_LIMITS.learningPathSubmit.capacity <= ceiling) fail('the path has too few activities to reach the ceiling');
+      const started = Date.now();
+      let through = 0;
+      while (through <= ceiling + 20 && (await submitOn(`user-ceiling-${stamp}`, `desk-ceiling-${stamp}`, activities[through % activities.length])) !== 429) through += 1;
+      // A slow run may refill a token or two.
+      const slack = Math.ceil(((Date.now() - started) / 1000) * refillPerSecond) + 1;
+      if (through < ceiling || through > ceiling + slack) fail(`submits spread across activities stop at the ceiling of ${ceiling}, not after ${through}`);
     }
   });
 }

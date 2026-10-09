@@ -156,7 +156,7 @@ Difficulty ladder:
 | --- | --- |
 | 1 Foundations | always |
 | 2 Fluency | always |
-| 3 Combine | Learn `javascript` levels 1–10 cleared, or every tier 1–2 task of that track passed |
+| 3 Combine | every tier 1–2 task of that track passed; for JavaScript only, also Learn `javascript` levels 1–10 cleared |
 | 4 Interview | 80 % of tier 3 passed in that track |
 | 5 Capstones (React) | tier 4 of `react` 80 % passed |
 
@@ -345,7 +345,7 @@ create table github_commits (
 );
 ```
 
-RLS: owners read their own rows; all writes go through service-role RPCs. New RPCs: `record_coding_verdict(user, task, outcome, verified, attempt_id)` (idempotent per attempt, updates progress and review scheduling, awards XP through `record_verified_activity_xp` only when `verified`), `save_coding_draft`, `schedule_coding_review`. `complete_verified_roadmap_attempt` checks `roadmap_attempt_coding`. `delete_user_data` and `purge_expired_learning_data` cover the four tables (attempts after 180 days, drafts after 90 idle days). Rate limits in `lib/rate-limit.ts`: a task load (`codingTask`) 20 a minute, Submit (`codingRun`) 30 per 10 min and reveal (`codingReveal`) 10 per hour, each per account, or per address for a guest, behind an address bucket that holds a class (`SHARED_NETWORK_SEATS` times the rate); a draft save takes the write limit of `api/user/[op].ts`; `githubConnect` 10 per hour, `githubSync` 6 per hour. `purge_expired_learning_data` also drops `github_commits` rows older than 180 days. `scripts/test-launch-contracts.ts` asserts the migration content.
+RLS: owners read their own rows; all writes go through service-role RPCs. New RPCs: `record_coding_verdict(user, task, outcome, verified, attempt_id)` (idempotent per attempt, updates progress and review scheduling, awards XP through `record_verified_activity_xp` only when `verified`), `save_coding_draft`, `schedule_coding_review`. `complete_verified_roadmap_attempt` checks `roadmap_attempt_coding`. `delete_user_data` and `purge_expired_learning_data` cover the four tables (attempts after 180 days, drafts after 90 idle days). Rate limits in `lib/rate-limit.ts`: a task load (`codingTask`) 20 a minute and reveal (`codingReveal`) 10 per hour, each per account, or per address for a guest, behind an address bucket that holds a class (`SHARED_NETWORK_SEATS` times the rate); Submit 30 per 10 min per caller and task (`codingSubmit`, owner decision of 9 October 2026) beneath 120 per 10 min per caller across tasks (`codingSubmitCeiling`), behind a class-sized address bucket at the per-task rate (`codingSubmitAddress`); a draft save takes the write limit of `api/user/[op].ts`; `githubConnect` 10 per hour, `githubSync` 6 per hour. `purge_expired_learning_data` also drops `github_commits` rows older than 180 days. `scripts/test-launch-contracts.ts` asserts the migration content.
 
 API surface (twelve handlers unchanged):
 

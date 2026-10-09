@@ -3,13 +3,15 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
-import { GRADING_PER_CALLER, GraderBusyError } from '../lib/coding/grader-capacity';
-import { SHARED_NETWORK_SEATS } from '../lib/rate-limit';
-import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../lib/coding/grader-capacity';
+import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession, type CodingDesignKey } from '../lib/quiz-tokens';
 import { gradeDesign, prepareDesign } from '../lib/coding/grade';
 import type { DesignAnswer } from '../shared/coding-api';
 import { solutionFor } from '../lib/coding/solutions';
+import { codingAwardId } from '../lib/rewards/coins';
+import { CODING_TASK_XP } from '../shared/coding-catalog';
 import { puzzleFor } from '../lib/coding/puzzles';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { isFreeCodingTask } from '../shared/tiers';
@@ -118,9 +120,11 @@ console.log('PASS integrity: Submit shows the visible checks\' console only');
 // zero, and a level link that only ever turns true. Every routine call is
 // kept, with its arguments. `record_coding_reveal` counts a reveal the way
 // migration 038 does, and `forfeitAfterReveal` adds migration 048's rule: a
-// first pass after a reveal pays no XP.
-type ProgressFake = { status: 'in_progress' | 'passed' | 'revealed'; passes: number; revealCount: number };
-function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
+// first pass after a reveal pays no XP. `firstVerifiedPass` is migration 058:
+// the first verified pass pays even after an unverified one, and the routine
+// says itself whether a reveal cost it the XP.
+type ProgressFake = { status: 'in_progress' | 'passed' | 'revealed'; passes: number; revealCount: number; verified?: boolean };
+function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPass?: boolean } = {}) {
   const attempts = new Set<string>();
   const progress = new Map<string, ProgressFake>();
   const links = new Map<string, boolean>();
@@ -176,19 +180,26 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
     const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
     let firstPass = false;
     let xpAwarded = false;
+    let xpForfeited = false;
     if (args.p_outcome === 'passed') {
-      firstPass = row.passes === 0;
+      const firstVerified = options.firstVerifiedPass === true && args.p_verified === true && row.verified !== true;
+      firstPass = row.passes === 0 || firstVerified;
       row.status = 'passed';
       row.passes += 1;
+      row.verified = row.verified === true || args.p_verified === true;
       const forfeited = options.forfeitAfterReveal === true && row.revealCount > 0;
-      if (firstPass && !forfeited && !xp.has(key) && Number(args.p_xp) > 0) { xp.add(key); xpAwarded = true; }
+      const pays = options.firstVerifiedPass === true ? firstVerified : firstPass;
+      if (pays && !xp.has(key) && Number(args.p_xp) > 0) {
+        if (forfeited) xpForfeited = true;
+        else { xp.add(key); xpAwarded = true; }
+      }
     }
     progress.set(key, row);
     if (args.p_roadmap_attempt_id) {
       const link = `${args.p_roadmap_attempt_id}:${args.p_task_id}`;
       links.set(link, links.get(link) === true || args.p_outcome === 'passed');
     }
-    return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass });
+    return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass, ...(options.firstVerifiedPass ? { xpForfeited } : {}) });
   };
   return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls };
 }
@@ -338,6 +349,137 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   assert.equal(unpaid.xpAwarded, 0);
   assert.equal(unpaid.xpForfeited, false, 'no reveal, no claim');
   console.log('PASS integrity: a pass after a reveal says it earned no XP, and nothing else does');
+}
+
+// ── an old unverified pass no longer blocks the XP (C1-7) ───────────────
+// React passes reported by the browser (3-29 September) and checklist
+// capstones were recorded unverified, and the routine paid only a task's
+// first pass, so the first pass the server checked never paid. Migration 058
+// (owner decision 3) pays the first verified pass, once, and its coins with
+// it under the same award id; the old pass stays on record. A reveal before
+// it still forfeits the XP, which only the routine can tell: the row already
+// reads 'passed'.
+{
+  type Verdict = { verdict?: string; firstPass?: boolean; xpAwarded?: number; xpForfeited?: boolean };
+  const id = 'js-double-numbers';
+  const reference = solutionFor(id)!;
+  const taskXp = CODING_TASK_XP[CODING_TASKS.find((task) => task.id === id)!.tier];
+  const db = codingDatabase({ forfeitAfterReveal: true, firstVerifiedPass: true });
+  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.71' };
+  const submit = async (learner: string, code: string) => {
+    const out = { statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session: encodeCodingSession({ taskId: id, track: 'javascript', userId: null }), code, user_id: learner } } as never, out as never, db.client as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Verdict;
+  };
+  const coinCredits = (learner: string) => db.rpcCalls.filter((call) => call.name === 'credit_verified_xp_tokens' && call.args.p_user_id === learner);
+
+  const legacy = 'user-legacy-0001';
+  db.progress.set(`${legacy}:${id}`, { status: 'passed', passes: 1, revealCount: 0, verified: false });
+  const paid = await submit(legacy, reference.solution);
+  assert.equal(paid.verdict, 'passed');
+  assert.equal(paid.firstPass, true, 'the first verified pass reads as the first pass');
+  assert.equal(paid.xpAwarded, taskXp, 'it pays the task XP although an unverified pass came first');
+  assert.equal(paid.xpForfeited, false);
+  assert.deepEqual(coinCredits(legacy).map((call) => call.args.p_award_id), [codingAwardId(legacy, id)], 'its coins are credited once, under the task award id');
+  const again = await submit(legacy, reference.senior!);
+  assert.equal(again.xpAwarded, 0, 'a later verified pass pays nothing');
+  assert.equal(coinCredits(legacy).length, 1, 'and credits no more coins');
+  assert.equal(db.progress.get(`${legacy}:${id}`)?.passes, 3, 'the old pass stays on record');
+
+  const revealed = 'user-legacy-0002';
+  db.progress.set(`${revealed}:${id}`, { status: 'passed', passes: 1, revealCount: 1, verified: false });
+  const forfeited = await submit(revealed, reference.solution);
+  assert.equal(forfeited.xpAwarded, 0, 'a reveal before the first verified pass still costs its XP');
+  assert.equal(forfeited.xpForfeited, true, 'and the verdict says so, though the row already read passed');
+  assert.equal(coinCredits(revealed).length, 0, 'no coins either');
+  console.log('PASS integrity: an old unverified pass no longer blocks the first verified pass\'s XP and coins');
+}
+
+// ── a task's XP again, after a reset and an hour (migration 058) ─────────
+// Signed in, Reset tells the server (coding-reset); a pass the routine pays as
+// a repeat is XP only, so the handler credits no coins for it, and the verdict
+// carries when the XP opens again. A reveal after a pass reaches the routine
+// that forfeits the open reset's XP, and never the one that would end a Learn
+// level. A guest's reset records nothing.
+{
+  type Verdict = { verdict?: string; firstPass?: boolean; xpAwarded?: number; repeatXp?: unknown; error?: { code?: string } };
+  const id = 'js-double-numbers';
+  const reference = solutionFor(id)!;
+  const taskXp = CODING_TASK_XP[CODING_TASKS.find((task) => task.id === id)!.tier];
+  const learner = 'user-repeat-0007';
+  const availableAt = '2026-10-09T13:32:00.000Z';
+  const calls: { name: string; args: Record<string, unknown> }[] = [];
+  let verdictData: Record<string, unknown> = {};
+  const row = { task_id: id, track: 'javascript', status: 'passed', passes: 1, review_stage: 0, next_review_at: null, reveal_count: 0, best_passed_at: null };
+  const db = {
+    from: () => {
+      const chain = {
+        select: () => chain, eq: () => chain,
+        maybeSingle: () => Promise.resolve({ data: row, error: null }),
+        then: (resolve: (value: unknown) => unknown) => resolve({ data: [row], error: null }),
+      };
+      return chain;
+    },
+    rpc: (name: string, args: Record<string, unknown>) => {
+      calls.push({ name, args });
+      if (name === 'record_coding_verdict') return Promise.resolve({ data: verdictData, error: null });
+      if (name === 'record_coding_reset') return Promise.resolve({ data: { recorded: true, availableAt: '2026-10-09T15:32:00+02:00' }, error: null });
+      return Promise.resolve({ data: name === 'record_coding_repeat_reveal' ? true : null, error: null });
+    },
+  };
+  const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+  const auth = (user?: string) => ({ 'x-forwarded-for': '203.0.113.72', ...(user ? { authorization: 'Bearer local-test' } : {}) });
+  const session = encodeCodingSession({ taskId: id, track: 'javascript', userId: null });
+  const submit = async () => {
+    const out = reply();
+    await handleCodingSubmit({ method: 'POST', headers: auth(learner), query: {}, body: { session, code: reference.solution, user_id: learner } } as never, out as never, db as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Verdict;
+  };
+  const coins = () => calls.filter((call) => call.name === 'credit_verified_xp_tokens').length;
+
+  verdictData = { applied: true, firstPass: false, xpAwarded: true, xpKind: 'repeat', xpForfeited: false,
+    repeatXp: { availableAt: '2026-10-09T15:32:00+02:00', needsReset: true, withheld: null } };
+  const repeat = await submit();
+  assert.equal(repeat.xpAwarded, taskXp, 'a repeat pays the task\'s XP');
+  assert.equal(repeat.firstPass, false);
+  assert.deepEqual(repeat.repeatXp, { availableAt, needsReset: true, withheld: null }, 'the verdict says when the XP opens again');
+  assert.equal(coins(), 0, 'a repeat credits no coins');
+
+  verdictData = { applied: true, firstPass: true, xpAwarded: true, xpKind: 'first', xpForfeited: false,
+    repeatXp: { availableAt, needsReset: true, withheld: null } };
+  await submit();
+  assert.equal(coins(), 1, 'a first pass still credits its coins');
+
+  verdictData = { applied: true, firstPass: false, xpAwarded: false, xpKind: null, xpForfeited: false,
+    repeatXp: { availableAt, needsReset: true, withheld: 'reset' } };
+  const withheld = await submit();
+  assert.equal(withheld.xpAwarded, 0);
+  assert.deepEqual(withheld.repeatXp, { availableAt, needsReset: true, withheld: 'reset' }, 'and why a pass paid nothing');
+
+  // Reset, signed in: recorded for the account and the session's task.
+  const reset = reply();
+  await handleCodingReset({ method: 'POST', headers: auth(learner), query: {}, body: { session, user_id: learner } } as never, reset as never, db as never);
+  assert.equal(reset.statusCode, 200, JSON.stringify(reset.body));
+  assert.deepEqual(reset.body, { recorded: true, availableAt }, 'the reset answers when the XP opens');
+  assert.deepEqual(calls.filter((call) => call.name === 'record_coding_reset').map((call) => call.args), [{ p_user_id: learner, p_task_id: id }]);
+  // A guest's reset, and another account's session, record nothing.
+  const guest = reply();
+  await handleCodingReset({ method: 'POST', headers: auth(), query: {}, body: { session } } as never, guest as never, db as never);
+  assert.equal(guest.statusCode, 401, 'a guest earns no XP, so its reset is not recorded');
+  const foreign = reply();
+  await handleCodingReset({ method: 'POST', headers: auth(learner), query: {}, body: { session: encodeCodingSession({ taskId: id, track: 'javascript', userId: 'user-someone-else' }), user_id: learner } } as never, foreign as never, db as never);
+  assert.equal(foreign.statusCode, 403);
+  assert.equal(calls.filter((call) => call.name === 'record_coding_reset').length, 1, 'neither reached the routine');
+
+  // A reveal after the pass forfeits the open reset's XP, and nothing else.
+  const revealed = reply();
+  await handleCodingReveal({ method: 'POST', headers: auth(learner), query: {}, body: { session, hintsUsed: 0, user_id: learner } } as never, revealed as never, db as never);
+  assert.equal(revealed.statusCode, 200, JSON.stringify(revealed.body));
+  assert.deepEqual(calls.filter((call) => call.name.startsWith('record_coding_re') && call.name !== 'record_coding_reset').map((call) => call.name), ['record_coding_repeat_reveal'],
+    'a reveal after a pass is recorded against the open reset, not as a level-ending reveal');
+  console.log('PASS integrity: a task\'s repeat XP takes a reset, pays no coins, and says when it opens again');
 }
 
 // ── a failed system-design submission carries no key ────────────────────
@@ -1156,9 +1298,10 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
 // thirty submits at once. Thirty runaway programs held every thread while
 // another learner's correct Submit waited behind them: half a minute for
 // JavaScript, and past the function's 45 s limit (a 504) for TypeScript. A
-// caller now has at most GRADING_PER_CALLER submits grading at once, and the
-// rest of a burst is refused at once with 429 `grader_busy`. That is not a
-// verdict: nothing is recorded, so it costs no XP and no streak day.
+// caller now has at most GRADING_PER_TASK submits grading at once on one task
+// and GRADING_PER_CALLER across tasks, and the rest of a burst is refused at
+// once with 429 `grader_busy`. That is not a verdict: nothing is recorded, so
+// it costs no XP and no streak day.
 type Answer = {
   statusCode: number;
   headers: Record<string, string>;
@@ -1213,17 +1356,17 @@ const timed = <T>(run: Promise<T>) => {
   // threads at 2.5 s each.
   assert.ok(waited < 5_000, `another learner's Submit did not wait behind the burst (${waited} ms)`);
   const refused = answers.filter((out) => out.statusCode === 429);
-  assert.equal(refused.length, answers.length - GRADING_PER_CALLER, `all but ${GRADING_PER_CALLER} of the burst are refused: ${answers.map((out) => out.statusCode).join(',')}`);
+  assert.equal(refused.length, answers.length - GRADING_PER_TASK, `all but ${GRADING_PER_TASK} of the burst are refused: ${answers.map((out) => out.statusCode).join(',')}`);
   for (const out of refused) {
     assert.equal(out.body?.error?.code, 'grader_busy');
     assert.ok(Number(out.headers['retry-after']) >= 1, 'a refusal says when to try again');
   }
   assert.ok(answers.filter((out) => out.statusCode === 200).every((out) => out.body?.verdict === 'timeout'), 'the submits it took are graded as usual');
   const recorded = db.rpcCalls.filter((call) => call.name === 'record_coding_verdict' && call.args.p_user_id === flooder);
-  assert.equal(recorded.length, GRADING_PER_CALLER, 'a refused submit records nothing');
+  assert.equal(recorded.length, GRADING_PER_TASK, 'a refused submit records nothing');
   const again = await submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: solutionFor('js-double-numbers')!.solution, address: '203.0.113.41', account: flooder, db });
   assert.equal(again.body?.verdict, 'passed', 'once its submits are answered the caller may submit again');
-  console.log(`PASS integrity: a burst of runaway submits holds ${GRADING_PER_CALLER} threads and another learner is answered in ${waited} ms`);
+  console.log(`PASS integrity: a burst of runaway submits holds ${GRADING_PER_TASK} threads and another learner is answered in ${waited} ms`);
 }
 {
   const flood = Array.from({ length: 24 }, () => submitCode({ taskId: 'ts-typed-slug', track: 'typescript', code: runawayTypes + solutionFor('ts-typed-slug')!.solution, address: '203.0.113.43' }));
@@ -1237,9 +1380,61 @@ const timed = <T>(run: Promise<T>) => {
   // learner waits for one runaway check to be stopped, then for a new thread
   // to load the compiler, which a loaded machine takes its time over.
   assert.ok(waited < 30_000, `another learner's TypeScript Submit was answered in time (${waited} ms)`);
-  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_CALLER);
+  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_TASK);
   assert.ok(answers.filter((out) => out.statusCode === 200).every((out) => out.body?.verdict === 'timeout'));
   console.log(`PASS integrity: a burst of runaway type checks leaves another learner's TypeScript Submit answered in ${waited} ms`);
+}
+
+// ── grading in flight is counted per task (owner decision 9) ────────────
+// The count was per caller, so a learner's submit still grading on one task
+// refused their Submit on the next task. It is per task now, beneath a
+// ceiling across tasks, and every answered submit gives its slot back.
+{
+  const free = CODING_TASKS.filter((task) => task.track === 'javascript' && isFreeCodingTask(task.id) && !evolvingStage(task.id) && task.tests && solutionFor(task.id)?.solution)
+    .map((task) => task.id).filter((id) => id !== 'js-double-numbers').slice(0, 2);
+  const [taskB, taskC] = free;
+  assert.ok(taskB && taskC, 'two more free JavaScript tasks with a reference solution');
+  const correct = (taskId: string) => solutionFor(taskId)!.solution;
+
+  // One learner's runaway burst on task A, and their correct Submit on task B
+  // sent with it: B is graded while A's two run, the rest of A is refused.
+  const db = codingDatabase();
+  const learner = 'user-two-tasks-0005';
+  const address = '203.0.113.46';
+  const runaway = "for (;;) { 'x'.repeat(2e6); }";
+  const burst = Array.from({ length: 6 }, () => submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: runaway, address, account: learner, db }));
+  const onB = await submitCode({ taskId: taskB, track: 'javascript', code: correct(taskB), address, account: learner, db });
+  const answers = await Promise.all(burst);
+  assert.equal(onB.statusCode, 200, JSON.stringify(onB.body));
+  assert.equal(onB.body?.verdict, 'passed', 'a burst still grading on one task does not hold up the same learner\'s Submit on another');
+  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_TASK,
+    `all but ${GRADING_PER_TASK} of the burst on one task are refused: ${answers.map((out) => out.statusCode).join(',')}`);
+
+  // The ceiling: with GRADING_PER_CALLER of the learner's submits grading
+  // across two tasks, a Submit on a third is refused and records nothing.
+  const ceilingDb = codingDatabase();
+  const busy = 'user-ceiling-0006';
+  const hold = (taskId: string) => enterInFlight({ headers: { 'x-forwarded-for': address }, socket: {} } as never, 'grading',
+    { item: gradingItem.task(taskId), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, `user:${busy}`);
+  const held = Array.from({ length: GRADING_PER_CALLER }, (_, n) => hold(n < GRADING_PER_TASK ? 'js-double-numbers' : taskB));
+  assert.ok(held.every(Boolean), 'the learner\'s submits fill the ceiling across two tasks');
+  const refused = await submitCode({ taskId: taskC, track: 'javascript', code: correct(taskC), address, account: busy, db: ceilingDb });
+  assert.equal(refused.statusCode, 429, JSON.stringify(refused.body));
+  assert.equal(refused.body?.error?.code, 'grader_busy');
+  assert.equal(ceilingDb.attemptIds.length, 0, 'a Submit past the ceiling records nothing');
+  for (const done of held) done?.();
+  const graded = await submitCode({ taskId: taskC, track: 'javascript', code: correct(taskC), address, account: busy, db: ceilingDb });
+  assert.equal(graded.body?.verdict, 'passed', 'once those are answered the third task is graded');
+
+  // Every answered submit gives its slot back, a timeout as well as a pass:
+  // more of them one after another than the ceiling holds are all graded.
+  const verdicts: string[] = [];
+  for (let n = 0; n <= GRADING_PER_CALLER; n += 1) {
+    const out = await submitCode({ taskId: taskB, track: 'javascript', code: n === 0 ? runaway : correct(taskB), address, account: busy, db: ceilingDb });
+    verdicts.push(`${out.statusCode} ${out.body?.verdict ?? out.body?.error?.code}`);
+  }
+  assert.deepEqual(verdicts, ['200 timeout', ...Array.from({ length: GRADING_PER_CALLER }, () => '200 passed')], 'no slot is kept after its submit is answered');
+  console.log(`PASS integrity: grading in flight is counted per task, ${GRADING_PER_TASK} a task beneath ${GRADING_PER_CALLER} a learner, and every answered submit frees its slot`);
 }
 
 // ── a class submitting at once is graded, not turned away ───────────────

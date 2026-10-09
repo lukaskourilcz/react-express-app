@@ -274,8 +274,9 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const total = gradable.length;
   const percentage = total > 0 ? Math.round((correct / total) * 100) : 0;
   const breakdown: Record<string, { correct: number; total: number }> = {};
-  // Each question's XP, kept on the receipt beside the total. From migration
-  // 056 the stats routine pays the total, repeated questions included.
+  // Each question's XP, kept on the receipt beside the total. The stats
+  // routine pays the total less the XP of each correct answer whose question
+  // paid this account XP less than an hour ago (migration 058).
   const questionXp = new Map<string, number>();
   let questXp = 0;
   for (const result of results) {
@@ -293,8 +294,8 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     questionXp.set(result.questionId, earned);
     questXp += earned;
   }
-  // A daily pays at least 20 XP; record_verified_quiz_result_v2 pays this
-  // total as it is (056).
+  // A daily pays at least 20 XP, which record_verified_quiz_result_v2 keeps
+  // whatever its questions' cooldowns take off (058).
   if (session.scope === 'daily') questXp = Math.max(20, questXp);
   // A receipt needs something graded behind it. An attempt whose every
   // question was retired mid-flight is reported, not recorded.

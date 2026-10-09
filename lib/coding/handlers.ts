@@ -10,7 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError } from '../auth';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, withTimeout } from '../http';
-import { claimOnce, enforceClassRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
+import { claimOnce, enforceClassRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
@@ -21,7 +21,7 @@ import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
-import { GRADING_PER_CALLER, GraderBusyError } from './grader-capacity';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, isSyntaxError, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
@@ -49,6 +49,9 @@ import type {
   CodingGardenStatus,
   CodingOutcome,
   CodingProgressResponse,
+  CodingRepeatXp,
+  CodingResetRequest,
+  CodingResetResponse,
   CodingRevealRequest,
   CodingRevealResponse,
   CodingSubmitRequest,
@@ -496,6 +499,7 @@ interface Recorded {
   firstPass: boolean;
   xpAwarded: number;
   xpForfeited: boolean;
+  repeatXp: CodingRepeatXp | null;
   applied: boolean;
   codeChanged: boolean;
 }
@@ -518,7 +522,8 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     if (!attempt.error && attempt.data) roadmapAttemptId = session.roadmapAttemptId;
   }
   // Whether the solution was revealed before this pass, read before the pass
-  // is written. Only a pass can forfeit XP, so nothing else pays for the read.
+  // is written, for a database without migration 058, whose routine says it
+  // itself. Only a pass can forfeit XP, so nothing else pays for the read.
   let revealedBefore = false;
   if (input.verdict === 'passed') {
     try {
@@ -551,11 +556,15 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     jsonError(res, 500, 'db_error', 'Could not record the verdict');
     return null;
   }
-  const data = (saved.data ?? {}) as { applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; codeChanged?: boolean };
+  const data = (saved.data ?? {}) as {
+    applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; xpForfeited?: boolean; codeChanged?: boolean;
+    xpKind?: 'first' | 'repeat' | null; repeatXp?: CodingRepeatXp | null;
+  };
   // Coins follow the XP the routine just awarded, under the same award id
   // (#227). The last stage of a project or short path is a Premium milestone.
+  // A task's repeat XP (058) is XP only: it credits no coins.
   const xpAwarded = data.xpAwarded === true && xp > 0;
-  if (xpAwarded) {
+  if (xpAwarded && data.xpKind !== 'repeat') {
     await creditVerifiedXp(supabase, {
       userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
     });
@@ -573,9 +582,27 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     // reveal. Before 048 the routine still pays it: xpAwarded is then true and
     // this stays false, so the verdict never claims a forfeit that did not
     // happen. An unverified (checklist) pass never pays, so it claims none.
-    xpForfeited: revealedBefore && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
+    // From 058 the first verified pass pays even after an old unverified one,
+    // whose row already reads 'passed', and the routine says whether a reveal
+    // cost it the XP (C1-7).
+    xpForfeited: typeof data.xpForfeited === 'boolean'
+      ? data.xpForfeited && data.applied === true && !xpAwarded && xp > 0
+      : revealedBefore && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
+    repeatXp: repeatXpOf(data.repeatXp),
     applied: data.applied === true,
     codeChanged: data.codeChanged === true,
+  };
+}
+
+/** The routine's `repeatXp` (058), kept only in the shape the client reads. */
+function repeatXpOf(value: unknown): CodingRepeatXp | null {
+  if (!value || typeof value !== 'object') return null;
+  const one = value as { availableAt?: unknown; needsReset?: unknown; withheld?: unknown };
+  const at = typeof one.availableAt === 'string' && !Number.isNaN(Date.parse(one.availableAt)) ? new Date(one.availableAt).toISOString() : null;
+  return {
+    availableAt: at,
+    needsReset: one.needsReset === true,
+    withheld: one.withheld === 'reset' || one.withheld === 'cooldown' ? one.withheld : null,
   };
 }
 
@@ -603,6 +630,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     firstPass: recorded?.firstPass ?? false,
     xpAwarded: recorded?.xpAwarded ?? 0,
     xpForfeited: recorded?.xpForfeited ?? false,
+    repeatXp: recorded?.repeatXp ?? null,
     applied: recorded?.applied ?? false,
     github,
     solutions,
@@ -624,12 +652,15 @@ function graderBusy(res: VercelResponse, status: 429 | 503, error: GraderBusyErr
 
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingRunAddress, RATE_LIMITS.codingRun))) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingSubmitAddress))) return;
   const body = (req.body || {}) as Partial<CodingSubmitRequest> & { lang?: unknown };
   const session = sessionFrom(body.session);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
   const task = codingTaskById(session.taskId);
   if (!task || task.track !== session.track) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
+  // Per task, beneath a ceiling per caller (owner decision, 9 October 2026):
+  // a learner who spent one task's budget still submits on the next one.
+  if (!(await enforcePerItemRateLimit(req, res, RATE_LIMITS.codingSubmit, RATE_LIMITS.codingSubmitCeiling, gradingItem.task(task.id)))) return;
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
   if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
@@ -690,7 +721,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
     code = body.code;
-    const done = enterInFlight(req, 'grading', GRADING_PER_CALLER, userId ? `user:${userId}` : undefined);
+    const done = enterInFlight(req, 'grading', { item: gradingItem.task(task.id), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, userId ? `user:${userId}` : undefined);
     if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'), task.track, Boolean(userId));
     try {
       graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
@@ -754,6 +785,39 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   return res.json(out);
 }
 
+/* ── POST ?resource=coding-reset ─────────────────────────────────────── */
+
+/** The workbench's Reset, signed in: the code went back to the starter, which
+ * opens the task's repeat XP (migration 058). A pass from an hour after the
+ * task last paid its XP, with no reveal in between, pays it once more. A guest
+ * earns no XP, so a guest's reset records nothing. */
+export async function handleCodingReset(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  if (!codingAvailable()) return notAvailable(res);
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingTaskAddress, RATE_LIMITS.codingTask))) return;
+  const body = (req.body || {}) as Partial<CodingResetRequest>;
+  const session = sessionFrom(body.session);
+  if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
+  const task = codingTaskById(session.taskId);
+  if (!task) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
+  const userId = await optionalUser(req, res);
+  if (userId === undefined) return;
+  if (!userId) return jsonError(res, 401, 'unauthorized', 'Sign in to earn XP for a task again');
+  if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
+  const saved = await withTimeout(supabase.rpc('record_coding_reset', { p_user_id: userId, p_task_id: task.id }));
+  if (saved.error) {
+    if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Coding repeat migration 058 is not installed');
+    return jsonError(res, 500, 'db_error', 'Could not record the reset');
+  }
+  const data = (saved.data ?? {}) as { recorded?: unknown; availableAt?: unknown };
+  res.setHeader('Cache-Control', 'private, no-store');
+  const out: CodingResetResponse = {
+    recorded: data.recorded === true,
+    availableAt: repeatXpOf({ availableAt: data.availableAt })?.availableAt ?? null,
+  };
+  return res.json(out);
+}
+
 /* ── POST ?resource=coding-reveal ────────────────────────────────────── */
 
 export async function handleCodingReveal(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
@@ -786,6 +850,12 @@ export async function handleCodingReveal(req: VercelRequest, res: VercelResponse
       return jsonError(res, 500, 'db_error', 'Could not record the reveal');
     }
     try { progress = await loadProgressRow(supabase, userId, task.id); } catch { /* the reveal itself succeeded */ }
+  } else if (userId && supabase) {
+    // After a pass the solution opens without the ladder, and costs only the
+    // repeat XP of a reset the learner has open (058): that attempt then pays
+    // nothing. Before 058 there is no repeat XP to forfeit.
+    const marked = await withTimeout(supabase.rpc('record_coding_repeat_reveal', { p_user_id: userId, p_task_id: task.id }));
+    if (marked.error && !isRpcMissing(marked.error)) return jsonError(res, 500, 'db_error', 'Could not record the reveal');
   }
   const solution = solutionFor(task.id)?.solution ?? '';
   const reference = task.design?.reference ?? task.drill?.explanation ?? null;
