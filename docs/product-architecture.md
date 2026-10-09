@@ -384,12 +384,24 @@ The same thread transpiles the TypeScript, so code nested too deeply for the
 compiler is an `error` verdict rather than an HTTP 500. Both thread pools bound
 how long a run may wait for a thread, and their queues hold a class of 32
 submitting at once twice over, so a burst of correct submits is graded and the
-length only bounds memory. One caller (an
-account, or an address for a guest) has at most two submits grading at once
-(`lib/coding/grader-capacity.ts`, `enterInFlight` in `lib/rate-limit.ts`). A
-Submit the grader cannot take is answered `grader_busy` with a Retry-After,
-429 for the caller's own limit and 503 for full threads, and is recorded
-nowhere. A thread that will not start is tried again after a pause that grows
+length only bounds memory. Grader limits are per task (owner decision of 9
+October 2026). One caller (an account, or an address for a guest) has at most
+two submits grading at once on one coding task or learning-path activity, and
+three across all of them, one fewer than an instance's four QuickJS threads
+(`GRADING_PER_TASK`, `GRADING_PER_CALLER` in `lib/coding/grader-capacity.ts`,
+`enterInFlight` in `lib/rate-limit.ts`); a submit still grading on one task
+never refuses another task's. A Submit the grader cannot take is answered
+`grader_busy` with a Retry-After, 429 for the caller's own limit and 503 for
+full threads, and is recorded nowhere. The Submit rate limits are per task in
+the same way (`enforcePerItemRateLimit`): 30 in ten minutes for one caller on
+one task (`codingSubmit`; a learning-path activity, `learningPathSubmit`),
+beneath a ceiling of 120 in ten minutes across every task
+(`codingSubmitCeiling`, `learningPathSubmitCeiling`), a Submit every five
+seconds, which bounds what one account or guest address spends on graders
+and React sandboxes. The address backstop holds a class of 32 at the per-task
+rate (960 in ten minutes). A spent task answers 429 `rate_limited`, which the
+workbench reads as "Too many requests. Wait a moment and try again."; one
+token comes back every 20 seconds, and another task is open at once. A thread that will not start is tried again after a pause that grows
 from one second to thirty; on a deployment no run ever falls back to the
 request thread.
 Learning-path code activities use the same QuickJS sandbox, type-check thread
