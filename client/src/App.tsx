@@ -250,7 +250,7 @@ function App() {
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
-  const { user, isLoading: authLoading, signInResumeFailed, passwordRecovery } = useAuth();
+  const { user, isLoading: authLoading, signInResumeFailed, passwordRecovery, draftsKept, dismissDraftsKept } = useAuth();
   const [signupBonusOpen, setSignupBonusOpen] = useState(false);
   // A sign-in pressed before a reload (lib/auth.tsx) failed in this document,
   // where the button that was pressed is gone: the shell says so.
@@ -863,6 +863,7 @@ function App() {
         autoHideDuration={6000}
         message={t('auth.signupBonusToast', { tokens: wallet.data?.welcome?.coins ?? 0, brand: CURRENT_PRODUCT.brand })}
       />
+      <AppToast open={draftsKept} onClose={dismissDraftsKept} autoHideDuration={10000} message={t('auth.signedOutKept')} />
       <AppToast
         open={resumeFailedOpen}
         onClose={closeResumeFailed}

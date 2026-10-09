@@ -74,6 +74,6 @@ it('keeps code over 20 kB on this device only, on Submit or Run, says so, and sa
 
   fireEvent.change(editor, { target: { value: 'const one = () => 1;\n' } });
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Run' })));
-  expect(saveCodingDraft).toHaveBeenCalledWith('js-test-limit', 'const one = () => 1;\n');
+  expect(saveCodingDraft).toHaveBeenCalledWith('js-test-limit', 'const one = () => 1;\n', null);
   expect(screen.queryByText(kept)).toBeNull();
 });

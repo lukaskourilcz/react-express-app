@@ -31,7 +31,7 @@ import {
   createChallengeRun,
   stableAttemptId,
 } from '../lib/quiz-tokens';
-import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
@@ -49,7 +49,8 @@ import { TS_CHECK_WORKER_FILE } from '../lib/coding/ts-check-pool';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
-import { GUEST_CRASHED_MESSAGE, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
+import { GUEST_CRASHED_MESSAGE, GUEST_ENV, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
+import { PRAGUE_REACT_APP, PRAGUE_REACT_SUITE } from './fixtures/prague-react';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -67,7 +68,7 @@ import dailyHandler from '../api/quiz/daily';
 import questionsHandler from '../api/quiz/questions';
 import challengeHandler from '../api/quiz/challenge';
 import flashcardsHandler from '../api/flashcards';
-import { handleCodingDraft } from '../lib/coding/handlers';
+import { handleCodingDraft, handleCodingTask } from '../lib/coding/handlers';
 import { decodeSessionEnvelope } from '../lib/quiz-tokens';
 import { dailySeededShuffle, pickQuestionOfTheDay, UNBIASED_SHUFFLE_FROM } from '../lib/daily-question';
 import { addDays, qotdAvailability, qotdTrack, utcToday, QOTD_EPOCH, QOTD_TRACKS } from '../shared/daily-question';
@@ -168,19 +169,20 @@ import { ROADMAP_TOPICS, isRoadmapTopic, topicLevelCount, ROADMAP_LEVELS } from 
 import type { Question } from '../lib/quiz-runtime';
 import type { CodingTaskResponse, CodingVerdictResponse } from '../shared/coding-api';
 import {
+  FREE_CHECKPOINT_IDS,
   FREE_CODING_SHARE,
   FREE_CODING_TASK_IDS,
-  FREE_EVOLVING_STAGES,
   FREE_LEARN_LEVELS,
   FREE_LEARN_TOPICS,
   PREMIUM_REQUIRED,
   codingContent,
   contentTier,
+  freeStageCount,
   isFreeCodingTask,
   isOpenTo,
 } from '../shared/tiers';
-import { EVOLVING_CHALLENGES, evolvingStage } from '../shared/evolving';
-import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, tierLockReason } from '../shared/coding-catalog';
+import { EVOLVING_CHALLENGES, evolvingStage, isEvolvingCheckpoint } from '../shared/evolving';
+import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, stageDifficulty, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
@@ -536,12 +538,52 @@ async function tierContracts() {
     CODING_INDEX.filter((task) => task.free).map((task) => task.id),
     'the server summaries and the browser index open the same tasks',
   );
-  // Stage one of every evolving project and short path is open; stage two never is.
+  // Stage one of every evolving project and short path is open, and in a
+  // project with checkpoints that is the checkpoint and the first milestone
+  // (owner decision, 9 Oct 2026). Beyond it, only the listed checkpoints are.
+  // In the stage numbers a learner sees: 1, 2 and 9 of a ten-stage project,
+  // 1 and 11 of a FullStack app, level 1 of a short path. The Terms say so.
+  const freeStages = (stages: readonly string[]) => stages.flatMap((id, at) => (contentTier({ kind: 'coding-task', taskId: id }, index) === 'free' ? [at + 1] : []));
   for (const challenge of EVOLVING_CHALLENGES) {
-    assert.equal(contentTier({ kind: 'coding-task', taskId: challenge.stages[0] }, index), 'free', `${challenge.id} stage one`);
-    if (challenge.stages[FREE_EVOLVING_STAGES]) {
-      assert.equal(contentTier({ kind: 'coding-task', taskId: challenge.stages[FREE_EVOLVING_STAGES] }, index), 'premium', `${challenge.id} stage two`);
+    const firstMilestone = challenge.stages.findIndex((id) => !isEvolvingCheckpoint(id)) + 1;
+    assert.equal(freeStageCount(challenge.stages), firstMilestone, `${challenge.id}: stage one ends at the first milestone`);
+    const expected = challenge.short ? [1] : challenge.stages.length === 10 ? [1, 2, 9] : [1, 11];
+    assert.ok(challenge.short || challenge.stages.length === 10 || challenge.stages.length === 12, `${challenge.id}: a project length the copy names`);
+    assert.deepEqual(freeStages(challenge.stages), expected, `${challenge.id}: the free stages`);
+    // The stage after stage one is Premium, by kind and by the tier rule.
+    const next = challenge.stages[freeStageCount(challenge.stages)];
+    assert.equal(contentTier({ kind: 'evolving-stage', challengeId: challenge.id, stage: freeStageCount(challenge.stages) + 1 }, index), 'premium', `${challenge.id}: the stage after stage one`);
+    assert.equal(isFreeCodingTask(next), false, `${challenge.id}: ${next} is Premium`);
+    for (const [at, id] of challenge.stages.entries()) {
+      assert.equal(contentTier({ kind: 'evolving-stage', challengeId: challenge.id, stage: at + 1 }, index), contentTier({ kind: 'coding-task', taskId: id }, index), `${id}: a stage and its task agree`);
     }
+  }
+  assert.match(ENGLISH['legal.terms.plans.free'], /stages 1, 2 and 9 of every ten-stage coding project, stages 1 and 11 of every twelve-stage FullStack app, level 1 of every short path/, 'the Terms name the free stages the rule opens');
+  // The fourteen checkpoints: exactly the five-minute tier-2 checkpoints the
+  // position bands used to label Hard (audit C2-13), the last checkpoint of
+  // every project that has checkpoints. Each now reads Easy from its tier.
+  const byTask = new Map(CODING_TASKS.map((task) => [task.id, task]));
+  const bandedHard = EVOLVING_CHALLENGES.flatMap((challenge) => challenge.stages.filter((id, at) =>
+    isEvolvingCheckpoint(id) && stageDifficulty(at, challenge.stages.length) === 'hard'));
+  assert.deepEqual([...FREE_CHECKPOINT_IDS].sort(), [...bandedHard].sort(), 'the free checkpoints are the ones the bands called Hard');
+  assert.equal(FREE_CHECKPOINT_IDS.length, 14);
+  for (const challenge of EVOLVING_CHALLENGES.filter((one) => one.stages.some(isEvolvingCheckpoint))) {
+    assert.ok(FREE_CHECKPOINT_IDS.includes(challenge.stages.filter(isEvolvingCheckpoint).at(-1)!), `${challenge.id}: its last checkpoint is free`);
+  }
+  for (const id of FREE_CHECKPOINT_IDS) {
+    const task = byTask.get(id)!;
+    assert.ok(task && indexIds.has(id), `${id} is issued`);
+    assert.equal(task.estimatedMinutes, 5, `${id}: a five-minute checkpoint`);
+    assert.equal(task.tier, 2, `${id}: tier 2`);
+    assert.equal(CODING_INDEX.find((one) => one.id === id)?.difficulty, 'easy', `${id}: reads Easy, not Hard`);
+  }
+  assert.deepEqual(FREE_CODING_TASK_IDS.filter((id) => evolvingStage(id)), [], 'the starter set lists standalone tasks only');
+  // Every free task reads Easy, except a level whose authors set its label
+  // (two debugging paths open on a Medium level 1). It replaces "every listed
+  // free task is Easy", which the opened milestones and checkpoints keep.
+  for (const task of CODING_INDEX.filter((one) => one.free)) {
+    if (byTask.get(task.id)?.difficulty) continue;
+    assert.equal(task.difficulty, 'easy', `${task.id}: a free task with a derived label reads Easy`);
   }
   // Each tier-1 technique group of every section track has its first task open.
   for (const track of ['javascript', 'typescript', 'react', 'algorithms'] as const) {
@@ -758,6 +800,52 @@ async function tierContracts() {
       await roadmapHandler(post('coding-reveal', { session, hintsUsed: 20 }) as never, revealed as never);
       assert.equal(revealed.statusCode, 402, `a guest reveal for ${label} is refused`);
       assert.equal(JSON.stringify(revealed.body ?? {}).includes('solution'), false, 'nothing of the solution comes back');
+    }
+
+    // Owner decision 6 (9 Oct 2026) at the server's gate: a free account and a
+    // guest open the first milestone of every ten-stage project and the
+    // fourteen last checkpoints, and are refused the stage after each. The
+    // gate is refuseLocked over shared/tiers.ts; nothing else decides it.
+    // Each request is its own caller, so no rate-limit bucket fills up.
+    let caller = 0;
+    const opens = async (id: string, as: 'account' | 'guest') => {
+      const out = mockResponse();
+      caller += 1;
+      const headers = { 'x-forwarded-for': `198.18.${caller >> 8}.${caller & 255}`, ...(as === 'account' ? { authorization: 'Bearer contract' } : {}) };
+      await roadmapHandler({ method: 'GET', headers, query: { resource: 'coding-task', id, ...(as === 'account' ? { user_id: `contract-free-${caller}` } : {}) } } as never, out as never);
+      return out;
+    };
+    const tenStage = EVOLVING_CHALLENGES.filter((one) => one.stages.length === 10 && !one.short);
+    assert.equal(tenStage.length, 11, 'eleven ten-stage projects');
+    const newlyFree = [...tenStage.map((one) => one.stages[1]), ...FREE_CHECKPOINT_IDS];
+    for (const id of newlyFree) {
+      const stage = evolvingStage(id)!;
+      const after = stage.next!;
+      for (const as of ['account', 'guest'] as const) {
+        const opened = await opens(id, as);
+        assert.equal(opened.statusCode, 200, `${as}: ${id} opens on the free tier (${JSON.stringify(opened.body)})`);
+        const refused = await opens(after, as);
+        assert.equal(refused.statusCode, 402, `${as}: ${after}, the stage after ${id}, stays Premium`);
+        assert.deepEqual((refused.body as { error: { kind: string; ref: string } }).error, {
+          ...(refused.body as { error: object }).error, kind: 'evolving-stage', ref: `${stage.challenge.id}:${stage.index + 2}`,
+        });
+      }
+    }
+    // Opened is not a session: stages still unlock in order, so with nothing
+    // passed the first milestone is held until its checkpoint is.
+    assert.equal(((await opens('js-evolving-calculator-1', 'account')).body as CodingTaskResponse).locked, 'evolving');
+    // Submit follows the same gate: a guest's session for a newly free stage is
+    // graded (its reference passes), and one for the stage after it is refused.
+    for (const id of ['js-evolving-calculator-1', 'js-evolving-calculator-5-start']) {
+      const graded = mockResponse();
+      const session = encodeCodingSession({ taskId: id, track: 'javascript', userId: null });
+      await roadmapHandler({ ...post('coding-submit', { session, code: solutionFor(id)!.solution, lang: 'en' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, graded as never);
+      assert.equal(graded.statusCode, 200, `${id}: a guest submit is graded (${JSON.stringify(graded.body)})`);
+      assert.equal((graded.body as CodingVerdictResponse).verdict, 'passed', `${id}: its reference passes`);
+      const next = evolvingStage(id)!.next!;
+      const refused = mockResponse();
+      await roadmapHandler({ ...post('coding-submit', { session: encodeCodingSession({ taskId: next, track: 'javascript', userId: null }), code: solutionFor(next)!.solution, lang: 'en' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, refused as never);
+      assert.equal(refused.statusCode, 402, `${next}: a guest submit is refused`);
     }
 
     // C4-6: the app ships English only, so a task, its puzzle and a failed
@@ -2163,7 +2251,9 @@ async function classroomLimitContracts() {
     { name: 'a skill check', handler: roadmapHandler, method: 'POST', query: { resource: 'skill-check' }, body: {}, ...learnComplete },
     { name: 'a progress sync', handler: roadmapHandler, method: 'PUT', query: {}, body: {}, perPerson: 20, own: 'roadmapMutation', address: 'roadmapMutationAddress' },
     { name: 'a coding task', handler: roadmapHandler, method: 'GET', query: { resource: 'coding-task', id: freeTask.id }, perPerson: 20, own: 'codingTask', address: 'codingTaskAddress' },
-    { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: 'x' }, perPerson: 30, own: 'codingRun', address: 'codingRunAddress' },
+    // A Submit's own budget is per task (owner decision 9), so it carries a
+    // session for one; with no code it is refused after the limits.
+    { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: encodeCodingSession({ taskId: freeTask.id, track: freeTask.track, userId: null }) }, perPerson: 30, own: 'codingSubmit', address: 'codingSubmitAddress' },
     { name: 'a coding reveal', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-reveal' }, body: { session: 'x' }, perPerson: 10, own: 'codingReveal', address: 'codingRevealAddress' },
     { name: 'a flashcard write', handler: flashcardsHandler, method: 'POST', query: {}, body: { subject: 'webdev', question_id: 'q1', question: 'Q?', correct_answer: 'A' }, perPerson: 20, own: 'flashcardMutation', address: 'flashcardMutationAddress' },
   ];
@@ -2321,6 +2411,35 @@ async function classroomLimitContracts() {
     }
     assert.deepEqual(statuses, { 200: PUPILS * perPupil }, 'every Challenge answer from a class behind one address is graded');
     assert.equal(RATE_LIMITS.quizSubmit.capacity, SHARED_NETWORK_SEATS * perPupil, 'grading\'s address bucket holds a class answering the Challenge');
+  }
+
+  // 11. A coding Submit is limited per task (owner decision 9, 9 October
+  //     2026), beneath a ceiling per caller across every task: an account,
+  //     or a guest's address. A caller who spent one task's budget still
+  //     submits on the next task, and nobody submits past the ceiling by
+  //     spreading submits over many tasks.
+  {
+    const tasks = CODING_INDEX.filter((task) => task.free && task.track === 'javascript').slice(0, 6);
+    const { codingSubmit: perTask, codingSubmitCeiling: ceiling } = RATE_LIMITS;
+    assert.ok(tasks.length * perTask.capacity > ceiling.capacity + tasks.length, 'enough tasks to reach the ceiling without spending any one task');
+    const submitOn = (taskId: string): Route => ({ ...routes.find((one) => one.name === 'a coding Submit')!, body: { session: encodeCodingSession({ taskId, track: 'javascript', userId: null }) } });
+    for (const user of [`per-task-${stamp}`, undefined]) {
+      const who = user ? 'an account' : 'a guest';
+      const address = school();
+      const spent = await throughUntilRefused(async () => (await call(submitOn(tasks[0].id), address, user)).statusCode, perTask.capacity, perTask.refillPerSecond);
+      assert.ok(spent >= perTask.capacity, `${who} gets one task's whole budget (${spent})`);
+      assert.notEqual((await call(submitOn(tasks[1].id), address, user)).statusCode, 429, `${who}: one task's spent budget does not refuse the next task`);
+    }
+    for (const user of [`ceiling-${stamp}`, undefined]) {
+      const who = user ? 'an account' : 'a guest';
+      const address = school();
+      let sent = 0;
+      const through = await throughUntilRefused(async () => (await call(submitOn(tasks[sent++ % tasks.length].id), address, user)).statusCode, ceiling.capacity, ceiling.refillPerSecond);
+      assert.ok(through >= ceiling.capacity, `${who} submits up to the ceiling across tasks (${through})`);
+      assert.ok(Math.ceil(sent / tasks.length) < perTask.capacity, `${who}: the ceiling refused it, not one task's budget`);
+    }
+    assert.ok(ceiling.capacity >= 4 * perTask.capacity, 'the ceiling holds four tasks\' whole budgets');
+    assert.equal(RATE_LIMITS.codingSubmitAddress.capacity, SHARED_NETWORK_SEATS * perTask.capacity, 'the address holds a class at the per-task rate');
   }
 
   // 10. A coding draft save is a write to api/user/[op].ts and takes its two
@@ -3303,6 +3422,45 @@ async function main() {
       if (activity.reuseTaskId) assert.notEqual(codingTaskById(activity.reuseTaskId)?.track, 'system-design', `${activity.id} reuses no system-design task`);
     }
   }
+  // System design is hidden (owner decision, 9 Oct 2026). Its tasks and graders
+  // stay authored, and the walkthrough and drill grading above still runs
+  // against them, but nothing issues one: no summary, no browser index, no
+  // Learn level, no run, no skip suggestion; the task resource answers 404 (as
+  // for an id that never existed, not 410), and Submit and the reveal refuse a
+  // sealed session for one before anything is graded.
+  {
+    const hidden = CODING_TASKS.filter((task) => task.track === 'system-design');
+    assert.equal(hidden.length, 45, 'the 45 system design tasks stay in the repository for their review');
+    assert.ok(hidden.every((task) => solutionFor(task.id) !== undefined || task.design || task.drill), 'with their answer keys');
+    assert.deepEqual(CODING_SUMMARIES.filter((task) => !isCodingSectionTrack(task.track)).map((task) => task.id), [], 'no summary is on a hidden track');
+    assert.deepEqual(CODING_INDEX.filter((task) => !isCodingSectionTrack(task.track)).map((task) => task.id), [], 'the browser index holds no hidden task');
+    let caller = 0;
+    const guestAsk = (resource: string, query: Record<string, unknown>, body?: Record<string, unknown>) => {
+      caller += 1;
+      return { method: body ? 'POST' : 'GET', headers: { 'x-forwarded-for': `198.20.${caller >> 8}.${caller & 255}` }, query: { resource, ...query }, ...(body ? { body } : {}) };
+    };
+    for (const task of hidden) {
+      assert.equal(codingTaskById(task.id), undefined, `${task.id} is not issued`);
+      const asked = mockResponse();
+      await roadmapHandler(guestAsk('coding-task', { id: task.id }) as never, asked as never);
+      assert.equal(asked.statusCode, 404, `${task.id}: the task resource answers 404`);
+      assert.equal((asked.body as { error: { code: string } }).error.code, 'not_found');
+      assert.equal(nextAfterSkip(task.id, new Set(), 'premium'), null, `${task.id}: a skip suggests nothing from it`);
+    }
+    const sealed = encodeCodingSession({ taskId: designTask!.id, track: 'system-design', userId: null, key: prepared.key });
+    const submitted = mockResponse();
+    await roadmapHandler(guestAsk('coding-submit', {}, { session: sealed, answers: prepared.key.steps }) as never, submitted as never);
+    assert.equal(submitted.statusCode, 400, `a sealed system design session is refused at Submit (${JSON.stringify(submitted.body)})`);
+    assert.equal((submitted.body as { error: { code: string } }).error.code, 'invalid_session');
+    assert.ok(!JSON.stringify(submitted.body).includes(designTask!.design!.reference.en.slice(0, 40)), 'and nothing of the key comes back');
+    const revealed = mockResponse();
+    await roadmapHandler(guestAsk('coding-reveal', {}, { session: sealed, hintsUsed: 20 }) as never, revealed as never);
+    assert.equal(revealed.statusCode, 400, 'and at the reveal');
+    for (const plan of ['free', 'premium'] as const) {
+      const run = buildQueue({ minutes: 120, topic: null, plan, passed: new Set<string>(), due: new Set<string>(), count: 20, order: 'sequential' });
+      assert.ok(run.every((id) => isCodingSectionTrack(codingTaskById(id)?.track)), `a ${plan} run holds no hidden task`);
+    }
+  }
   // The solution opens once half the ladder is spent, never before two rungs
   // (or the whole ladder, when it is shorter). The browser shows the same number.
   assert.equal(ladderLength(doubleTask!), 5, 'js-double-numbers offers five rungs: a hint, two approach steps, the skeleton and the docs link');
@@ -3494,13 +3652,13 @@ async function main() {
   // VM. It deletes its input before learner code runs, only the stdout line
   // with this run's nonce counts, and the case count has to match the suite.
   execFileSync(process.execPath, ['scripts/build-react-runner.mjs'], { stdio: 'ignore' });
-  const guest = (suite: string, appSource: string) => {
+  const guest = (suite: string, appSource: string, env: Record<string, string> = {}) => {
     const dir = mkdtempSync(join(tmpdir(), 'react-guest-'));
     const input = join(dir, 'input.json');
     const nonce = randomBytes(24).toString('hex');
     writeFileSync(input, JSON.stringify({ suite, appSource, nonce }));
     const command = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), input], {
-      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, NODE_ENV: 'development' },
+      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, ...GUEST_ENV, ...env },
     });
     const left = readdirSync(dir);
     rmSync(dir, { recursive: true, force: true });
@@ -3556,6 +3714,13 @@ async function main() {
   const exhaustedResult = readGuestRun(exhausted.exitCode, exhausted.stdout, exhausted.nonce, guestSuite);
   assert.ok(exhaustedResult.passed === 0 && exhaustedResult.failed > 0, JSON.stringify(exhaustedResult));
   assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'the learner reads that their code stopped the runner');
+  // The guest reads Prague time: the API starts it with TZ=Europe/Prague,
+  // and its page realm installs Prague time whatever the process zone is.
+  for (const env of [{}, { TZ: 'America/New_York' }] as Record<string, string>[]) {
+    const pragueGuest = guest(PRAGUE_REACT_SUITE, PRAGUE_REACT_APP, env);
+    const pragueResult = readGuestRun(pragueGuest.exitCode, pragueGuest.stdout, pragueGuest.nonce, PRAGUE_REACT_SUITE);
+    assert.ok(pragueResult.compileError === null && pragueResult.failed === 0 && pragueResult.passed === 2, `the React guest reads Prague time (${JSON.stringify(env)}): ${JSON.stringify(pragueResult.cases)}`);
+  }
   const missingInput = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), join(tmpdir(), 'no-such-guest-input.json')], { encoding: 'utf8', timeout: 30_000 });
   assert.notEqual(missingInput.status, 0);
   assert.throws(() => readGuestRun(missingInput.status, missingInput.stdout, randomBytes(24).toString('hex'), guestSuite), /exited unsuccessfully/, 'a guest that ended before learner code ran is a runner failure');
@@ -3826,8 +3991,8 @@ async function main() {
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue loader must not import the solutions');
   const pathCatalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(pathCatalogSource, /from '\.\/solutions/, 'the learning-path catalogue must not import the solutions');
-  for (const key of ['codingRun', 'codingReveal', 'githubConnect', 'githubSync',
-                     'learningPathStart', 'learningPathSubmit', 'learningPathDraft', 'learningPathEnroll']) {
+  for (const key of ['codingSubmit', 'codingSubmitCeiling', 'codingReveal', 'githubConnect', 'githubSync',
+                     'learningPathStart', 'learningPathSubmit', 'learningPathSubmitCeiling', 'learningPathDraft', 'learningPathEnroll']) {
     assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
   }
 
@@ -4012,6 +4177,49 @@ async function main() {
   assert.equal(rateRes.statusCode, 429);
   assert.ok(rateRes.headers.has('retry-after'));
   assert.equal(isDistributedRateLimitEnabled(), false, 'test environment exercises the safe local fallback');
+
+  // Grader limits are per task (owner decision 9, 9 October 2026). A Submit
+  // takes its task's bucket, then a ceiling across every task; a refusal on
+  // one task spends nothing of the ceiling. Grading in flight is counted the
+  // same way: per task, beneath a ceiling, and an ended submit frees exactly
+  // its own slot.
+  {
+    const stamp = Date.now();
+    const perItem = { key: `item-${stamp}`, capacity: 2, refillPerSecond: 0.0001 };
+    const ceiling = { key: `item-ceiling-${stamp}`, capacity: 3, refillPerSecond: 0.0001 };
+    const guest = { headers: { 'x-forwarded-for': `per-item-${stamp}` }, socket: {} } as never;
+    const take = async (item: string, req = guest) => {
+      const res = mockResponse();
+      return { ok: await enforcePerItemRateLimit(req, res as never, perItem, ceiling, item), status: res.statusCode };
+    };
+    assert.ok((await take('task:a')).ok && (await take('task:a')).ok, 'one task takes its whole budget');
+    assert.deepEqual(await take('task:a'), { ok: false, status: 429 }, 'and is then refused');
+    assert.ok((await take('task:b')).ok, 'one task\'s spent budget does not refuse another task, and its refusal spent none of the ceiling');
+    assert.deepEqual(await take('task:c'), { ok: false, status: 429 }, 'the ceiling holds across tasks');
+    assert.ok((await take('task:c', { headers: { 'x-forwarded-for': `per-item-other-${stamp}` }, socket: {} } as never)).ok, 'another caller keeps its own buckets');
+
+    const scope = `grading-${stamp}`;
+    const on = (item: string) => ({ item, perItem: 2, perCaller: 3 });
+    const a1 = enterInFlight(guest, scope, on('task:a'));
+    const a2 = enterInFlight(guest, scope, on('task:a'));
+    assert.ok(a1 && a2, 'two of one caller\'s submits grade at once on one task');
+    assert.equal(enterInFlight(guest, scope, on('task:a')), null, 'a third waits');
+    const b1 = enterInFlight(guest, scope, on('task:b'));
+    assert.ok(b1, 'a full task holds up no other task');
+    assert.equal(enterInFlight(guest, scope, on('task:c')), null, 'the ceiling holds across tasks');
+    const elsewhere = enterInFlight(guest, scope, on('task:c'), `user:in-flight-${stamp}`);
+    assert.ok(elsewhere, 'another caller has counts of its own');
+    elsewhere();
+    a1();
+    a1();
+    const c1 = enterInFlight(guest, scope, on('task:c'));
+    assert.ok(c1, 'an ended submit frees its slot');
+    assert.equal(enterInFlight(guest, scope, on('task:d')), null, 'and only its own: ending it twice freed nothing more');
+    for (const done of [a2, b1, c1]) done();
+    const again = ['task:a', 'task:b', 'task:a'].map((item) => enterInFlight(guest, scope, on(item)));
+    assert.ok(again.every(Boolean), 'once every submit has ended the caller has its whole count back');
+    for (const done of again) done?.();
+  }
 
   // A classroom round is thirty pupils joining one room from one school
   // address. Every `play` bucket used to be keyed by address alone and sized
@@ -4214,6 +4422,14 @@ async function main() {
         if (limit.endsWith('PerUser')) assert.match(body, new RegExp(`RATE_LIMITS\\.${limit}, \`user:\\$\\{\\w+\\.sub\\}\``), `${limit} is keyed by the verified account`);
       }
     }
+    // A question's XP waits an hour (owner decision of 9 Oct 2026, migration
+    // 058). A finished run names each answer's XP, so record_challenge_completion
+    // can leave out the answers whose question paid XP less than an hour ago,
+    // and the coins and the XP the learner is told follow what was awarded.
+    const complete = bodyOf(challengeSource, 'handleCompleteRun');
+    assert.match(complete, /creditVerifiedXp\(supabase, \{[^\n]*xp: awardedXp \}\)/, 'coins follow the XP the run was awarded');
+    assert.match(complete, /xp: data === true \? awardedXp : xp/, 'the learner is told the XP the run was awarded');
+    assert.match(bodyOf(challengeSource, 'runAnswers'), /xp: outcome\.isCorrect \? challengeRunXp\(1\) : 0/, 'each answer carries its XP to the routine');
   }
 
   // Writes to api/user/[op].ts take the same two tiers. Thirty pupils behind
@@ -5026,14 +5242,14 @@ async function main() {
     // Through the handlers, against a stand-in database whose roadmap row has
     // the ten levels cleared. The plan is Premium for this request.
     const learner = 'practice-learner-0001';
-    const practiceDb = () => {
+    const practiceDb = (passedIds: ReadonlySet<string> = swept) => {
       const levels = Object.fromEntries(Array.from({ length: CODING_FOUNDATION_LEVELS }, (_, index) => [String(index + 1), { passed: true }]));
       const started: Record<string, unknown>[] = [];
       const from = (table: string) => {
         const chain = {
           select: () => chain, eq: () => chain, in: () => chain, order: () => chain, limit: () => chain,
           maybeSingle: () => Promise.resolve({ data: table === 'roadmap_progress' ? { data: { javascript: { levels } } } : null, error: null }),
-          then: (resolve: (value: unknown) => unknown) => resolve({ data: table === 'coding_progress' ? [...swept].map((task_id) => ({ task_id, status: 'passed' })) : [], error: null }),
+          then: (resolve: (value: unknown) => unknown) => resolve({ data: table === 'coding_progress' ? [...passedIds].map((task_id) => ({ task_id, status: 'passed' })) : [], error: null }),
         };
         return chain;
       };
@@ -5060,6 +5276,48 @@ async function main() {
     assert.equal(skipped.statusCode, 200, JSON.stringify(skipped.body));
     const next = (skipped.body as { next?: string | null }).next;
     assert.ok(next && tierOf(next) === 3, `a skip suggests a tier-3 task the Learn levels opened, not nothing: ${next}`);
+
+    // The task page agrees: it opens the tier-3 task the run holds.
+    const taskPage = async (id: string, db: ReturnType<typeof practiceDb>) => {
+      const req = { method: 'GET', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '198.51.100.81' }, query: { resource: 'coding-task', id, user_id: learner } };
+      const res = mockResponse();
+      await withRequestContext(req as never, res as never, async () => {
+        await requestMemo(`tier:${learner}`, async () => 'premium');
+        await handleCodingTask(req as never, res as never, db.client as never);
+      });
+      assert.equal(res.statusCode, 200, JSON.stringify(res.body));
+      return res.body as { locked?: string | null; session?: string | null };
+    };
+    assert.equal((await taskPage(opened.find((id) => tierOf(id) === 3)!, practiceDb())).locked, null, 'the task page opens the tier-3 task the run holds');
+
+    // Owner decision 7 (9 October 2026): the ten JavaScript Learn levels open
+    // tier 3 of JavaScript only. `tierUnlocked` asked for them whatever the
+    // track, so they opened TypeScript's and React's tier 3 too. The same
+    // learner, with TypeScript or React passed but for one task of tiers 1
+    // and 2, finds that tier 3 locked, with the reason that names the sweep
+    // alone, in a run, in a skip's suggestion and on the task page. The
+    // browser asks the same rule (client/tests/coding-learn-unlock.test.tsx).
+    for (const track of ['typescript', 'react'] as const) {
+      const tiers = CODING_SUMMARIES.filter((task) => task.track === track && !evolvingStage(task.id));
+      const last = tiers.find((task) => task.tier === 2)!;
+      const almost = new Set(tiers.filter((task) => task.tier <= 2 && task.id !== last.id).map((task) => task.id));
+      const ladder = { track, tier: 3 as const, progress: { passed: almost }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: CODING_FOUNDATION_LEVELS };
+      assert.equal(tierUnlocked(ladder), false, `${track}: the JavaScript Learn levels leave tier 3 locked`);
+      assert.equal(tierLockReason(ladder), 'sweep', `${track}: the lock names the sweep alone, not the Learn levels`);
+      assert.equal(tierUnlocked({ ...ladder, progress: { passed: new Set([...almost, last.id]) }, javascriptLevelsCleared: 0 }), true, `${track}: its own sweep opens tier 3`);
+      assert.deepEqual(buildQueue({ ...laddered, topic: track, passed: almost, javascriptLevelsCleared: CODING_FOUNDATION_LEVELS }), [last.id], `${track}: a run offers no tier 3 for the Learn levels`);
+      const trackDb = practiceDb(almost);
+      const trackRun = await asPremium(handlePracticeSession, { count: 5, order: 'sequential', topic: track }, trackDb);
+      assert.equal(trackRun.statusCode, 200, JSON.stringify(trackRun.body));
+      assert.deepEqual(trackDb.started[0]?.p_queue, [last.id], `${track}: the run the handler starts holds no tier 3`);
+      const trackSkip = await asPremium(handleCodingSkip, { taskId: last.id, reason: 'too-hard' }, practiceDb(almost));
+      assert.equal(trackSkip.statusCode, 200, JSON.stringify(trackSkip.body));
+      assert.equal((trackSkip.body as { next?: string | null }).next, null, `${track}: a skip suggests no tier-3 task`);
+      const page = await taskPage(tiers.find((task) => task.tier === 3)!.id, practiceDb(almost));
+      assert.equal(page.locked, 'sweep', `${track}: the task page locks tier 3 and says the sweep opens it`);
+      assert.equal(page.session, null, `${track}: and seals no session for it`);
+    }
+    assert.equal(tierLockReason({ track: 'javascript', tier: 3, progress: { passed: new Set() }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: 0 }), 'foundations', 'JavaScript tier 3 names both ways in');
 
     // Audit C3-18: the next challenge after a skip came from the top of the
     // track, so skipping js-count-multiples offered js-digit-sum, a task

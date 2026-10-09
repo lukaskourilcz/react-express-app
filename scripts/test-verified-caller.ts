@@ -249,7 +249,7 @@ async function main() {
     seen.length = 0;
     const draft = await user('coding-draft', { method: 'POST', account: A, query: { user_id: B.id }, body: { id: codingTask.id, code: 'const mine = 1;', user_id: B.id } });
     assert.equal(draft.statusCode, 200, JSON.stringify(draft.body));
-    assert.deepEqual(reads('/rest/v1/rpc/save_coding_draft').map((one) => (one.body as Row).p_user_id), [A.id], 'a draft is saved for the token\'s account');
+    assert.deepEqual(reads('/rest/v1/rpc/save_coding_draft_v2').map((one) => (one.body as Row).p_user_id), [A.id], 'a draft is saved for the token\'s account');
     seen.length = 0;
     const progress = await user('coding-progress', { account: A, query: { user_id: B.id } });
     assert.equal(progress.statusCode, 200, JSON.stringify(progress.body));
@@ -408,13 +408,12 @@ async function main() {
     assert.equal(graded.statusCode, 503, `a placement round is not graded without its claim (${JSON.stringify(graded.body)})`);
     assert.equal(errorCode(graded), 'claim_unavailable');
 
+    // The design walkthrough's one-check claim is not reachable any more:
+    // system design is hidden (owner decision, 9 Oct 2026), so its task does
+    // not open and no walkthrough session is dealt.
     const design = CODING_TASKS.find((task) => task.track === 'system-design' && task.design)!;
     const opened = await call(roadmap as Handler, { account: A, query: { resource: 'coding-task', id: design.id } });
-    assert.equal(opened.statusCode, 200, JSON.stringify(opened.body));
-    const walkthrough = opened.body as { session: string; task: { design: { steps: unknown[] } } };
-    const checked = await call(roadmap as Handler, { method: 'POST', account: A, query: { resource: 'coding-submit' }, body: { session: walkthrough.session, answers: walkthrough.task.design.steps.map(() => 0) } });
-    assert.equal(checked.statusCode, 503, `a design check is not graded without its claim (${JSON.stringify(checked.body)})`);
-    assert.equal(errorCode(checked), 'claim_unavailable');
+    assert.equal(opened.statusCode, 404, JSON.stringify(opened.body));
     console.log('PASS verified caller: a one-time claim Upstash cannot record answers 503');
 
     // ── an account made with an email and password ──────────────────────

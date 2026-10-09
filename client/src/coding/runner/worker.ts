@@ -2,8 +2,17 @@
 // hung loop is terminated by the caller instead of freezing the page. The
 // worker is served from its own path with a policy that allows `new Function`
 // (see vercel.json); the page itself keeps its strict policy.
+//
+// Each worker serves one run. Just before the learner's code runs, its realm
+// becomes the grader's (shared/coding-run-realm.ts): Prague time, the
+// grader's locale methods, and none of the globals the grader lacks, so Run
+// and Submit agree.
 import { evaluateCalls } from '../../../../shared/coding-evaluate';
+import { prepareRunRealm } from '../../../../shared/coding-run-realm';
 import type { TypeTestInput } from '../../../../shared/coding-ts-check';
+
+// Taken now: the run removes `self` and `postMessage` from this realm.
+const post = self.postMessage.bind(self) as (message: unknown) => void;
 
 export interface RunnerRequest {
   track: 'javascript' | 'typescript';
@@ -37,14 +46,16 @@ self.onmessage = async (event: MessageEvent<RunnerRequest>) => {
       self.postMessage({ phase: 'checking' });
       const compiled = compiler.compileTypeScript(request.code, request.typeTests ?? []);
       self.postMessage({ phase: 'running' });
-      const run = await evaluateCalls({ code: compiled.js, calls: request.calls, expectations: request.expectations });
-      self.postMessage({ phase: 'done', ...run, check: compiled.check });
+      const hidden = prepareRunRealm(self);
+      const run = await evaluateCalls({ code: compiled.js, calls: request.calls, expectations: request.expectations, hidden });
+      post({ phase: 'done', ...run, check: compiled.check });
       return;
     }
     self.postMessage({ phase: 'running' });
-    const run = await evaluateCalls({ code: request.code, calls: request.calls, expectations: request.expectations });
-    self.postMessage({ phase: 'done', ...run, check: null });
+    const hidden = prepareRunRealm(self);
+    const run = await evaluateCalls({ code: request.code, calls: request.calls, expectations: request.expectations, hidden });
+    post({ phase: 'done', ...run, check: null });
   } catch (error) {
-    self.postMessage({ phase: 'done', results: [], logs: [], codeError: String((error as Error)?.message ?? error), check: null });
+    post({ phase: 'done', results: [], logs: [], codeError: String((error as Error)?.message ?? error), check: null });
   }
 };

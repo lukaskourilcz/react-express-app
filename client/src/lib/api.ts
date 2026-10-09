@@ -9,10 +9,13 @@ const DEFAULT_TIMEOUT_MS = 15_000;
 export class ApiError extends Error {
   status: number;
   code?: string;
-  constructor(message: string, status: number, code?: string) {
+  /** The rest of the server's `error` (a 409 draft_conflict's `updatedAt`). */
+  detail?: Record<string, unknown>;
+  constructor(message: string, status: number, code?: string, detail?: Record<string, unknown>) {
     super(message);
     this.status = status;
     this.code = code;
+    this.detail = detail;
   }
 }
 
@@ -107,6 +110,7 @@ export async function apiFetch<T>(url: string, opts: Options = {}): Promise<T> {
         body?.error?.message || translateStatic('error.generic'),
         res.status,
         body?.error?.code,
+        body?.error,
       );
     }
 

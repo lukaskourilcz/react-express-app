@@ -56,6 +56,24 @@ test('a track that does not exist has a heading, a way back and no index', async
   await expect(page.getByRole('heading', { level: 1, name: 'Coding challenges' })).toBeVisible();
 });
 
+// System design is hidden (owner decision, 9 Oct 2026): its track and an old
+// task address read as a track that does not exist, and the task is never
+// asked for.
+for (const path of ['/coding/system-design', '/coding/system-design/sd-url-shortener']) {
+  test(`${path} is a track that does not exist, kept out of search`, async ({ page }) => {
+    const asked: string[] = [];
+    await answer(page, { task: (route) => { asked.push(new URL(route.request().url()).searchParams.get('id') ?? ''); return unknownTask(route); } });
+    await page.goto(path);
+    await expect(page.getByRole('heading', { level: 1, name: 'That track does not exist.' })).toBeVisible();
+    await expect(page.locator('meta[name="robots"][content="noindex"]')).toHaveCount(1);
+    await expect(page.locator('link[rel="canonical"]')).toHaveCount(0);
+    await expect(page.getByText(/system design/i)).toHaveCount(0);
+    expect(asked).toEqual([]);
+    await page.getByRole('link', { name: 'Back to Coding' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'Coding challenges' })).toBeVisible();
+  });
+}
+
 for (const id of ['no-such-task', 'js_digit_sum']) {
   test(`a task that does not exist (${id}), loaded directly, says so and leads back to its track`, async ({ page }) => {
     const asked: string[] = [];

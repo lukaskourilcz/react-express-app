@@ -105,6 +105,10 @@ export function evolvingStage(id: string) {
   return { challenge, index, previous: challenge.stages[index - 1] ?? null, next: challenge.stages[index + 1] ?? null };
 }
 
+/** A checkpoint: the five-minute step (`…-start`) a project inserts before
+ * each of its milestones. Short paths have none. */
+export const isEvolvingCheckpoint = (id: string): boolean => id.endsWith('-start');
+
 export function evolvingResume(challenge: EvolvingChallenge, passed: ReadonlySet<string>): string {
   return challenge.stages.find(id => !evolvingPassed(id, passed)) ?? challenge.stages[challenge.stages.length - 1];
 }
@@ -112,7 +116,7 @@ export function evolvingResume(challenge: EvolvingChallenge, passed: ReadonlySet
 /** Existing milestone passes cover their newly separated prerequisite.
  * This preserves earned progress without inventing XP receipts or database rows. */
 export function evolvingPassed(id: string, passed: ReadonlySet<string>): boolean {
-  return passed.has(id) || (id.endsWith('-start') && passed.has(id.slice(0, -6)));
+  return passed.has(id) || (isEvolvingCheckpoint(id) && passed.has(id.slice(0, -6)));
 }
 
 export function evolvingUnlocked(id: string, passed: ReadonlySet<string>): boolean {

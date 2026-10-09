@@ -149,19 +149,31 @@ export const RATE_LIMITS = {
   // `quizSession`. A draft save is a write to `api/user/[op].ts` and takes
   // `userMutation`'s two tiers there.
   codingTask: { key: 'coding_task', capacity: 20, refillPerSecond: 20 / 60 },
-  codingRun: { key: 'coding_run', capacity: 30, refillPerSecond: 30 / 600 },
   codingReveal: { key: 'coding_reveal', capacity: 10, refillPerSecond: 10 / 3600 },
   codingTaskAddress: { key: 'coding_task_address', capacity: SHARED_NETWORK_SEATS * 20, refillPerSecond: (SHARED_NETWORK_SEATS * 20) / 60 },
-  codingRunAddress: { key: 'coding_run_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },
   codingRevealAddress: { key: 'coding_reveal_address', capacity: SHARED_NETWORK_SEATS * 10, refillPerSecond: (SHARED_NETWORK_SEATS * 10) / 3600 },
+  // A coding Submit is limited per task (owner decision, 9 October 2026):
+  // thirty in ten minutes for one caller on one task, what one caller had for
+  // every task together before, so a learner moving on to the next task
+  // starts with a full bucket. Beneath it a ceiling per caller across every
+  // task, 120 in ten minutes (a Submit every five seconds), which no learner
+  // working through tasks meets and which bounds what one account or one
+  // guest address can spend on graders and React sandboxes. Both are keyed by
+  // the account, or by the address for a guest (`enforcePerItemRateLimit`).
+  // The address backstop holds a class at the per-task rate, as before.
+  codingSubmit: { key: 'coding_submit_task', capacity: 30, refillPerSecond: 30 / 600 },
+  codingSubmitCeiling: { key: 'coding_submit', capacity: 120, refillPerSecond: 120 / 600 },
+  codingSubmitAddress: { key: 'coding_submit_address', capacity: SHARED_NETWORK_SEATS * 30, refillPerSecond: (SHARED_NETWORK_SEATS * 30) / 600 },
   githubConnect: { key: 'github_connect', capacity: 10, refillPerSecond: 10 / 3600 },
   githubSync: { key: 'github_sync', capacity: 6, refillPerSecond: 6 / 3600 },
   // Learning paths: starting an activity is cheap, submitting one runs the
   // sandbox, and a draft autosave fires while the learner types. These four
   // are keyed by the verified account (`user:<id>`), because a class works
-  // through one address.
+  // through one address. A submit is limited per activity, like a coding
+  // Submit per task, beneath a ceiling per account across every activity.
   learningPathStart: { key: 'learning_path_start', capacity: 30, refillPerSecond: 30 / 600 },
-  learningPathSubmit: { key: 'learning_path_submit', capacity: 30, refillPerSecond: 30 / 600 },
+  learningPathSubmit: { key: 'learning_path_submit_activity', capacity: 30, refillPerSecond: 30 / 600 },
+  learningPathSubmitCeiling: { key: 'learning_path_submit', capacity: 120, refillPerSecond: 120 / 600 },
   learningPathDraft: { key: 'learning_path_draft', capacity: 60, refillPerSecond: 60 / 600 },
   learningPathEnroll: { key: 'learning_path_enroll', capacity: 10, refillPerSecond: 10 / 600 },
   // Their address backstops, taken before the token is verified: a whole class
@@ -418,6 +430,31 @@ export async function enforceClassRateLimit(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Per task, beneath a ceiling                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Enforce a limit kept per caller and per item (a coding task, a learning-path
+ * activity), beneath a ceiling per caller across every item. The caller is the
+ * verified account (`user:<id>`), or the client address for a caller without
+ * one, as in `enforceClassRateLimit`. The item's bucket is taken first, so a
+ * submit refused on one task spends nothing of the ceiling, and another task
+ * starts with its own full bucket. Returns false after sending the 429.
+ */
+export async function enforcePerItemRateLimit(
+  req: VercelRequest,
+  res: VercelResponse,
+  perItem: RateLimitConfig,
+  ceiling: RateLimitConfig,
+  item: string,
+): Promise<boolean> {
+  const callerId = await verifiedCallerId(req);
+  const caller = callerId ? `user:${callerId}` : clientIp(req);
+  if (!(await enforceRateLimit(req, res, perItem, `${caller}|${item}`))) return false;
+  return enforceRateLimit(req, res, ceiling, caller);
+}
+
+/* -------------------------------------------------------------------------- */
 /* Work in flight                                                             */
 /* -------------------------------------------------------------------------- */
 
@@ -429,25 +466,38 @@ export async function enforceClassRateLimit(
 
 const inFlight = new Map<string, number>();
 
+/** How much of one scope's work a caller may have running at once. */
+export interface InFlightLimits {
+  /** The piece of work this is: a coding task or a learning-path activity. */
+  item: string;
+  /** At most this many of the caller's on that item. */
+  perItem: number;
+  /** At most this many of the caller's across every item: the ceiling. */
+  perCaller: number;
+}
+
 /**
  * Admit one more piece of `scope`'s work for this caller while fewer than
- * `max` are running on this instance. The caller is `identity` (`user:<id>`),
+ * `limits.perItem` are running on its item and fewer than `limits.perCaller`
+ * on all its items, on this instance. The caller is `identity` (`user:<id>`),
  * or the client address when it is omitted. Returns the function that ends the
- * work, which must be called once it is done, or null when the caller already
- * has `max` running; the handler then answers 429 with a Retry-After.
+ * work, which must be called once it is done, or null when either count is
+ * full; the handler then answers 429 with a Retry-After.
  */
-export function enterInFlight(req: VercelRequest, scope: string, max: number, identity?: string): (() => void) | null {
-  const key = `${scope}:${identity ?? clientIp(req)}`;
-  const running = inFlight.get(key) ?? 0;
-  if (running >= max) return null;
-  inFlight.set(key, running + 1);
+export function enterInFlight(req: VercelRequest, scope: string, limits: InFlightLimits, identity?: string): (() => void) | null {
+  const callerKey = `${scope}:${identity ?? clientIp(req)}`;
+  const itemKey = `${callerKey}|${limits.item}`;
+  if ((inFlight.get(itemKey) ?? 0) >= limits.perItem || (inFlight.get(callerKey) ?? 0) >= limits.perCaller) return null;
+  for (const key of [itemKey, callerKey]) inFlight.set(key, (inFlight.get(key) ?? 0) + 1);
   let ended = false;
   return () => {
     if (ended) return;
     ended = true;
-    const left = (inFlight.get(key) ?? 1) - 1;
-    if (left > 0) inFlight.set(key, left);
-    else inFlight.delete(key);
+    for (const key of [itemKey, callerKey]) {
+      const left = (inFlight.get(key) ?? 1) - 1;
+      if (left > 0) inFlight.set(key, left);
+      else inFlight.delete(key);
+    }
   };
 }
 

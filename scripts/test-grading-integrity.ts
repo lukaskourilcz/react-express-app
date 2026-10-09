@@ -1,13 +1,17 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
+import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
-import { GRADING_PER_CALLER, GraderBusyError } from '../lib/coding/grader-capacity';
-import { SHARED_NETWORK_SEATS } from '../lib/rate-limit';
-import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
-import { encodeCodingSession } from '../lib/quiz-tokens';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../lib/coding/grader-capacity';
+import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
+import { encodeCodingSession, type CodingDesignKey } from '../lib/quiz-tokens';
+import { gradeDesign, prepareDesign } from '../lib/coding/grade';
+import type { DesignAnswer } from '../shared/coding-api';
 import { solutionFor } from '../lib/coding/solutions';
+import { codingAwardId } from '../lib/rewards/coins';
+import { CODING_TASK_XP } from '../shared/coding-catalog';
 import { puzzleFor } from '../lib/coding/puzzles';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { isFreeCodingTask } from '../shared/tiers';
@@ -15,7 +19,11 @@ import { evolvingStage } from '../shared/evolving';
 import { createMiniJest } from '../shared/coding-mini-jest';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { withHiddenCases } from '../lib/coding/react-hidden';
-import { allPassed, evaluateCalls, LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, TIMEOUT_MESSAGE } from '../shared/coding-evaluate';
+import { allPassed, evaluateCalls, hiddenGlobalMessage, LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, TIMEOUT_MESSAGE } from '../shared/coding-evaluate';
+import { CHECKER_GLOBALS, CHECKER_MEMBERS } from '../shared/coding-checker-globals';
+import { nodeTypeScriptChecker } from '../lib/coding/ts-check-node';
+import { evaluateInRunRealm } from './run-realm-node';
+import { PRAGUE_REACT_APP, PRAGUE_REACT_SUITE } from './fixtures/prague-react';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 // Every run below goes through the grader's worker thread, built fresh from
@@ -112,9 +120,11 @@ console.log('PASS integrity: Submit shows the visible checks\' console only');
 // zero, and a level link that only ever turns true. Every routine call is
 // kept, with its arguments. `record_coding_reveal` counts a reveal the way
 // migration 038 does, and `forfeitAfterReveal` adds migration 048's rule: a
-// first pass after a reveal pays no XP.
-type ProgressFake = { status: 'in_progress' | 'passed' | 'revealed'; passes: number; revealCount: number };
-function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
+// first pass after a reveal pays no XP. `firstVerifiedPass` is migration 058:
+// the first verified pass pays even after an unverified one, and the routine
+// says itself whether a reveal cost it the XP.
+type ProgressFake = { status: 'in_progress' | 'passed' | 'revealed'; passes: number; revealCount: number; verified?: boolean };
+function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPass?: boolean } = {}) {
   const attempts = new Set<string>();
   const progress = new Map<string, ProgressFake>();
   const links = new Map<string, boolean>();
@@ -170,19 +180,26 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
     const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
     let firstPass = false;
     let xpAwarded = false;
+    let xpForfeited = false;
     if (args.p_outcome === 'passed') {
-      firstPass = row.passes === 0;
+      const firstVerified = options.firstVerifiedPass === true && args.p_verified === true && row.verified !== true;
+      firstPass = row.passes === 0 || firstVerified;
       row.status = 'passed';
       row.passes += 1;
+      row.verified = row.verified === true || args.p_verified === true;
       const forfeited = options.forfeitAfterReveal === true && row.revealCount > 0;
-      if (firstPass && !forfeited && !xp.has(key) && Number(args.p_xp) > 0) { xp.add(key); xpAwarded = true; }
+      const pays = options.firstVerifiedPass === true ? firstVerified : firstPass;
+      if (pays && !xp.has(key) && Number(args.p_xp) > 0) {
+        if (forfeited) xpForfeited = true;
+        else { xp.add(key); xpAwarded = true; }
+      }
     }
     progress.set(key, row);
     if (args.p_roadmap_attempt_id) {
       const link = `${args.p_roadmap_attempt_id}:${args.p_task_id}`;
       links.set(link, links.get(link) === true || args.p_outcome === 'passed');
     }
-    return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass });
+    return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass, ...(options.firstVerifiedPass ? { xpForfeited } : {}) });
   };
   return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls };
 }
@@ -334,32 +351,159 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   console.log('PASS integrity: a pass after a reveal says it earned no XP, and nothing else does');
 }
 
+// ── an old unverified pass no longer blocks the XP (C1-7) ───────────────
+// React passes reported by the browser (3-29 September) and checklist
+// capstones were recorded unverified, and the routine paid only a task's
+// first pass, so the first pass the server checked never paid. Migration 058
+// (owner decision 3) pays the first verified pass, once, and its coins with
+// it under the same award id; the old pass stays on record. A reveal before
+// it still forfeits the XP, which only the routine can tell: the row already
+// reads 'passed'.
+{
+  type Verdict = { verdict?: string; firstPass?: boolean; xpAwarded?: number; xpForfeited?: boolean };
+  const id = 'js-double-numbers';
+  const reference = solutionFor(id)!;
+  const taskXp = CODING_TASK_XP[CODING_TASKS.find((task) => task.id === id)!.tier];
+  const db = codingDatabase({ forfeitAfterReveal: true, firstVerifiedPass: true });
+  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.71' };
+  const submit = async (learner: string, code: string) => {
+    const out = { statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session: encodeCodingSession({ taskId: id, track: 'javascript', userId: null }), code, user_id: learner } } as never, out as never, db.client as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Verdict;
+  };
+  const coinCredits = (learner: string) => db.rpcCalls.filter((call) => call.name === 'credit_verified_xp_tokens' && call.args.p_user_id === learner);
+
+  const legacy = 'user-legacy-0001';
+  db.progress.set(`${legacy}:${id}`, { status: 'passed', passes: 1, revealCount: 0, verified: false });
+  const paid = await submit(legacy, reference.solution);
+  assert.equal(paid.verdict, 'passed');
+  assert.equal(paid.firstPass, true, 'the first verified pass reads as the first pass');
+  assert.equal(paid.xpAwarded, taskXp, 'it pays the task XP although an unverified pass came first');
+  assert.equal(paid.xpForfeited, false);
+  assert.deepEqual(coinCredits(legacy).map((call) => call.args.p_award_id), [codingAwardId(legacy, id)], 'its coins are credited once, under the task award id');
+  const again = await submit(legacy, reference.senior!);
+  assert.equal(again.xpAwarded, 0, 'a later verified pass pays nothing');
+  assert.equal(coinCredits(legacy).length, 1, 'and credits no more coins');
+  assert.equal(db.progress.get(`${legacy}:${id}`)?.passes, 3, 'the old pass stays on record');
+
+  const revealed = 'user-legacy-0002';
+  db.progress.set(`${revealed}:${id}`, { status: 'passed', passes: 1, revealCount: 1, verified: false });
+  const forfeited = await submit(revealed, reference.solution);
+  assert.equal(forfeited.xpAwarded, 0, 'a reveal before the first verified pass still costs its XP');
+  assert.equal(forfeited.xpForfeited, true, 'and the verdict says so, though the row already read passed');
+  assert.equal(coinCredits(revealed).length, 0, 'no coins either');
+  console.log('PASS integrity: an old unverified pass no longer blocks the first verified pass\'s XP and coins');
+}
+
+// ── a task's XP again, after a reset and an hour (migration 058) ─────────
+// Signed in, Reset tells the server (coding-reset); a pass the routine pays as
+// a repeat is XP only, so the handler credits no coins for it, and the verdict
+// carries when the XP opens again. A reveal after a pass reaches the routine
+// that forfeits the open reset's XP, and never the one that would end a Learn
+// level. A guest's reset records nothing.
+{
+  type Verdict = { verdict?: string; firstPass?: boolean; xpAwarded?: number; repeatXp?: unknown; error?: { code?: string } };
+  const id = 'js-double-numbers';
+  const reference = solutionFor(id)!;
+  const taskXp = CODING_TASK_XP[CODING_TASKS.find((task) => task.id === id)!.tier];
+  const learner = 'user-repeat-0007';
+  const availableAt = '2026-10-09T13:32:00.000Z';
+  const calls: { name: string; args: Record<string, unknown> }[] = [];
+  let verdictData: Record<string, unknown> = {};
+  const row = { task_id: id, track: 'javascript', status: 'passed', passes: 1, review_stage: 0, next_review_at: null, reveal_count: 0, best_passed_at: null };
+  const db = {
+    from: () => {
+      const chain = {
+        select: () => chain, eq: () => chain,
+        maybeSingle: () => Promise.resolve({ data: row, error: null }),
+        then: (resolve: (value: unknown) => unknown) => resolve({ data: [row], error: null }),
+      };
+      return chain;
+    },
+    rpc: (name: string, args: Record<string, unknown>) => {
+      calls.push({ name, args });
+      if (name === 'record_coding_verdict') return Promise.resolve({ data: verdictData, error: null });
+      if (name === 'record_coding_reset') return Promise.resolve({ data: { recorded: true, availableAt: '2026-10-09T15:32:00+02:00' }, error: null });
+      return Promise.resolve({ data: name === 'record_coding_repeat_reveal' ? true : null, error: null });
+    },
+  };
+  const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+  const auth = (user?: string) => ({ 'x-forwarded-for': '203.0.113.72', ...(user ? { authorization: 'Bearer local-test' } : {}) });
+  const session = encodeCodingSession({ taskId: id, track: 'javascript', userId: null });
+  const submit = async () => {
+    const out = reply();
+    await handleCodingSubmit({ method: 'POST', headers: auth(learner), query: {}, body: { session, code: reference.solution, user_id: learner } } as never, out as never, db as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Verdict;
+  };
+  const coins = () => calls.filter((call) => call.name === 'credit_verified_xp_tokens').length;
+
+  verdictData = { applied: true, firstPass: false, xpAwarded: true, xpKind: 'repeat', xpForfeited: false,
+    repeatXp: { availableAt: '2026-10-09T15:32:00+02:00', needsReset: true, withheld: null } };
+  const repeat = await submit();
+  assert.equal(repeat.xpAwarded, taskXp, 'a repeat pays the task\'s XP');
+  assert.equal(repeat.firstPass, false);
+  assert.deepEqual(repeat.repeatXp, { availableAt, needsReset: true, withheld: null }, 'the verdict says when the XP opens again');
+  assert.equal(coins(), 0, 'a repeat credits no coins');
+
+  verdictData = { applied: true, firstPass: true, xpAwarded: true, xpKind: 'first', xpForfeited: false,
+    repeatXp: { availableAt, needsReset: true, withheld: null } };
+  await submit();
+  assert.equal(coins(), 1, 'a first pass still credits its coins');
+
+  verdictData = { applied: true, firstPass: false, xpAwarded: false, xpKind: null, xpForfeited: false,
+    repeatXp: { availableAt, needsReset: true, withheld: 'reset' } };
+  const withheld = await submit();
+  assert.equal(withheld.xpAwarded, 0);
+  assert.deepEqual(withheld.repeatXp, { availableAt, needsReset: true, withheld: 'reset' }, 'and why a pass paid nothing');
+
+  // Reset, signed in: recorded for the account and the session's task.
+  const reset = reply();
+  await handleCodingReset({ method: 'POST', headers: auth(learner), query: {}, body: { session, user_id: learner } } as never, reset as never, db as never);
+  assert.equal(reset.statusCode, 200, JSON.stringify(reset.body));
+  assert.deepEqual(reset.body, { recorded: true, availableAt }, 'the reset answers when the XP opens');
+  assert.deepEqual(calls.filter((call) => call.name === 'record_coding_reset').map((call) => call.args), [{ p_user_id: learner, p_task_id: id }]);
+  // A guest's reset, and another account's session, record nothing.
+  const guest = reply();
+  await handleCodingReset({ method: 'POST', headers: auth(), query: {}, body: { session } } as never, guest as never, db as never);
+  assert.equal(guest.statusCode, 401, 'a guest earns no XP, so its reset is not recorded');
+  const foreign = reply();
+  await handleCodingReset({ method: 'POST', headers: auth(learner), query: {}, body: { session: encodeCodingSession({ taskId: id, track: 'javascript', userId: 'user-someone-else' }), user_id: learner } } as never, foreign as never, db as never);
+  assert.equal(foreign.statusCode, 403);
+  assert.equal(calls.filter((call) => call.name === 'record_coding_reset').length, 1, 'neither reached the routine');
+
+  // A reveal after the pass forfeits the open reset's XP, and nothing else.
+  const revealed = reply();
+  await handleCodingReveal({ method: 'POST', headers: auth(learner), query: {}, body: { session, hintsUsed: 0, user_id: learner } } as never, revealed as never, db as never);
+  assert.equal(revealed.statusCode, 200, JSON.stringify(revealed.body));
+  assert.deepEqual(calls.filter((call) => call.name.startsWith('record_coding_re') && call.name !== 'record_coding_reset').map((call) => call.name), ['record_coding_repeat_reveal'],
+    'a reveal after a pass is recorded against the open reset, not as a level-ending reveal');
+  console.log('PASS integrity: a task\'s repeat XP takes a reset, pays no coins, and says when it opens again');
+}
+
 // ── a failed system-design submission carries no key ────────────────────
 // A failed or partly right submission says which answers were wrong and
 // nothing of the key: no correct option, order or range, no explanation and
 // no reference answer. Otherwise the key could be read, the task reopened
-// under a new shuffle and passed for full XP. A pass carries all of it. The
-// learner below has passed these tasks before, which keeps the Premium tasks
-// open for review; the grading does not depend on that.
+// under a new shuffle and passed for full XP. A pass carries all of it.
+// System design is hidden (owner decision, 9 Oct 2026): no handler opens or
+// grades one, so the grader is proven here directly, as the handlers called
+// it, against every kind of design task, for the review before it returns.
 {
   type Step = { correct: boolean; given: unknown; correctIndex?: number; correctOrder?: number[]; acceptedRange?: unknown; explanation?: { en: string } };
   type Verdict = { verdict?: string; design?: Step[] | null; designReference?: { en: string } | null };
-  type Opened = { session: string; task: { design?: { steps: { options: { en: string }[] }[] }; drill?: { options?: { en: string }[]; steps?: { en: string }[] } } };
-  const db = codingDatabase();
-  const learner = 'user-cccc-3333';
-  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.22' };
-  const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
-  const open = async (id: string) => {
-    const out = reply();
-    await handleCodingTask({ method: 'GET', headers: auth, query: { id, user_id: learner } } as never, out as never, db.client as never);
-    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
-    return out.body as Opened;
+  type Opened = { key: CodingDesignKey; task: { design?: { steps: { options: { en: string }[] }[] }; drill?: { options?: { en: string }[]; steps?: { en: string }[] } } };
+  // A fresh shuffle per opening, as the task resource deals one per request.
+  let deal = 0;
+  const shuffle = <T,>(list: T[]): T[] => { deal += 1; return list.map((_, index) => list[(index + deal) % list.length]); };
+  const open = (id: string): Opened => {
+    const prepared = prepareDesign(byId(id), shuffle);
+    return { key: prepared.key, task: { design: prepared.design, drill: prepared.drill } };
   };
-  const submit = async (session: string, answers: unknown[]) => {
-    const out = reply();
-    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session, answers, user_id: learner } } as never, out as never, db.client as never);
-    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
-    return out.body as Verdict;
+  const submit = (opened: Opened, id: string, answers: unknown[]): Verdict => {
+    const graded = gradeDesign(byId(id), opened.key, answers as DesignAnswer[]);
+    return { verdict: graded.outcome, design: graded.verdicts as Step[], designReference: graded.reference };
   };
   const withheld = (verdict: Verdict, secrets: string[], label: string) => {
     assert.equal(verdict.designReference, null, `${label}: no reference answer`);
@@ -374,42 +518,49 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   const estimate = CODING_TASKS.find((task) => task.drill?.format === 'estimate')!;
   const choice = CODING_TASKS.find((task) => task.drill?.format === 'tradeoff')!;
   const sequence = CODING_TASKS.find((task) => task.drill?.format === 'sequence')!;
-  for (const task of [guided, estimate, choice, sequence]) db.progress.set(`${learner}:${task.id}`, { status: 'passed', passes: 1, revealCount: 0 });
+
+  // None of them opens, and a sealed session for one is refused before
+  // anything is graded.
+  {
+    const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+    const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.22' };
+    for (const task of [guided, estimate, choice, sequence]) {
+      const asked = reply();
+      await handleCodingTask({ method: 'GET', headers: auth, query: { id: task.id, user_id: 'user-cccc-3333' } } as never, asked as never, codingDatabase().client as never);
+      assert.equal(asked.statusCode, 404, `${task.id}: not found`);
+      const prepared = prepareDesign(task, (list) => list);
+      const graded = reply();
+      const session = encodeCodingSession({ taskId: task.id, track: 'system-design', userId: 'user-cccc-3333', key: prepared.key });
+      await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session, answers: [0], user_id: 'user-cccc-3333' } } as never, graded as never, codingDatabase().client as never);
+      assert.equal(graded.statusCode, 400, `${task.id}: Submit refuses it`);
+      assert.equal((graded.body as { error?: { code?: string } }).error?.code, 'invalid_session');
+    }
+  }
 
   // A guided walkthrough: all wrong, then one short of the pass mark.
   const design = guided.design!;
   const secrets = [...design.steps.map((step) => step.explanation.en), design.reference.en];
   const rightFor = (opened: Opened) => opened.task.design!.steps.map((step, index) =>
     step.options.findIndex((option) => option.en === design.steps[index].options[design.steps[index].correct].en));
-  const first = await open(guided.id);
+  const first = open(guided.id);
   const right = rightFor(first);
   assert.ok(right.every((index) => index >= 0));
   const wrong = right.map((index, step) => (index + 1) % design.steps[step].options.length);
-  const allWrong = await submit(first.session, wrong);
+  const allWrong = submit(first, guided.id, wrong);
   assert.equal(allWrong.verdict, 'failed');
   assert.deepEqual(allWrong.design?.map((step) => step.correct), right.map(() => false));
   assert.deepEqual(allWrong.design?.map((step) => step.given), wrong, 'the learner\'s own answers come back');
   withheld(allWrong, secrets, 'all wrong');
-  // The same session is checked once: sending it again, even with the right
-  // answers, is refused, so the key cannot be read off it step by step.
-  {
-    const out = reply();
-    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session: first.session, answers: right, user_id: learner } } as never, out as never, db.client as never);
-    assert.equal(out.statusCode, 409, JSON.stringify(out.body));
-    assert.equal((out.body as { error?: { code?: string } }).error?.code, 'design_session_used');
-    const wire = JSON.stringify(out.body);
-    for (const secret of secrets) assert.ok(!wire.includes(secret.slice(0, 60)), 'a refused resubmission carries no key');
-  }
-  const second = await open(guided.id);
+  const second = open(guided.id);
   const secondRight = rightFor(second);
   const shortBy = design.passMark - 1;
-  const partly = await submit(second.session, secondRight.map((index, step) => (step < shortBy ? index : (index + 1) % design.steps[step].options.length)));
+  const partly = submit(second, guided.id, secondRight.map((index, step) => (step < shortBy ? index : (index + 1) % design.steps[step].options.length)));
   assert.equal(partly.verdict, 'failed');
   assert.equal(partly.design?.filter((step) => step.correct).length, shortBy, 'the right steps are marked right');
   withheld(partly, secrets, 'partly right');
-  const third = await open(guided.id);
+  const third = open(guided.id);
   const thirdRight = rightFor(third);
-  const pass = await submit(third.session, thirdRight);
+  const pass = submit(third, guided.id, thirdRight);
   assert.equal(pass.verdict, 'passed');
   assert.deepEqual(pass.design?.map((step) => step.correctIndex), thirdRight, 'a pass carries the correct options');
   assert.deepEqual(pass.design?.map((step) => step.explanation?.en), design.steps.map((step) => step.explanation.en), 'and the explanations');
@@ -417,43 +568,43 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
 
   // An estimate drill.
   const band = byId(estimate.id).drill!;
-  const estimateOpened = await open(estimate.id);
+  const estimateOpened = open(estimate.id);
   const tooHigh = (band.max ?? 0) * 10 + 1;
-  const missed = await submit(estimateOpened.session, [tooHigh]);
+  const missed = submit(estimateOpened, estimate.id, [tooHigh]);
   assert.equal(missed.verdict, 'failed');
   assert.deepEqual(missed.design, [{ correct: false, given: tooHigh }]);
   withheld(missed, [band.explanation.en], 'estimate');
-  const inBand = await submit((await open(estimate.id)).session, [band.answer!]);
+  const inBand = submit(open(estimate.id), estimate.id, [band.answer!]);
   assert.equal(inBand.verdict, 'passed');
   assert.deepEqual(inBand.design?.[0].acceptedRange, { min: band.min, max: band.max, answer: band.answer }, 'a pass carries the accepted range');
   assert.equal(inBand.design?.[0].explanation?.en, band.explanation.en);
 
   // A trade-off drill.
   const pick = byId(choice.id).drill!;
-  const choiceOpened = await open(choice.id);
+  const choiceOpened = open(choice.id);
   const choiceRight = choiceOpened.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en);
   const choiceWrong = (choiceRight + 1) % pick.options!.length;
-  const wrongPick = await submit(choiceOpened.session, [choiceWrong]);
+  const wrongPick = submit(choiceOpened, choice.id, [choiceWrong]);
   assert.deepEqual(wrongPick.design, [{ correct: false, given: choiceWrong }]);
   withheld(wrongPick, [pick.explanation.en], 'trade-off');
-  const choiceAgain = await open(choice.id);
-  const rightPick = await submit(choiceAgain.session, [choiceAgain.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en)]);
+  const choiceAgain = open(choice.id);
+  const rightPick = submit(choiceAgain, choice.id, [choiceAgain.task.drill!.options!.findIndex((option) => option.en === pick.options![pick.correct!].en)]);
   assert.equal(rightPick.verdict, 'passed');
   assert.equal(typeof rightPick.design?.[0].correctIndex, 'number', 'a pass carries the correct option');
 
   // A sequence drill.
   const order = byId(sequence.id).drill!;
   const orderFor = (opened: Opened) => order.steps!.map((step) => opened.task.drill!.steps!.findIndex((shown) => shown.en === step.en));
-  const sequenceOpened = await open(sequence.id);
+  const sequenceOpened = open(sequence.id);
   const reversed = [...orderFor(sequenceOpened)].reverse();
-  const outOfOrder = await submit(sequenceOpened.session, [reversed]);
+  const outOfOrder = submit(sequenceOpened, sequence.id, [reversed]);
   assert.deepEqual(outOfOrder.design, [{ correct: false, given: reversed }]);
   withheld(outOfOrder, [order.explanation.en], 'sequence');
-  const sequenceAgain = await open(sequence.id);
-  const inOrder = await submit(sequenceAgain.session, [orderFor(sequenceAgain)]);
+  const sequenceAgain = open(sequence.id);
+  const inOrder = submit(sequenceAgain, sequence.id, [orderFor(sequenceAgain)]);
   assert.equal(inOrder.verdict, 'passed');
   assert.deepEqual(inOrder.design?.[0].correctOrder, orderFor(sequenceAgain), 'a pass carries the correct order');
-  console.log('PASS integrity: a failed system-design submission carries no key, a pass carries all of it');
+  console.log('PASS integrity: system design opens nowhere; its grader still gives a failed submission no key and a pass all of it');
 }
 
 // ── a checklist pass is the learner's word, and pays nothing ─────────────
@@ -658,7 +809,7 @@ export default function App() {
   };
   const agree = async (id: string, code: string) => {
     const { calls, expectations, shown } = checks(id);
-    const run = await evaluateCalls({ code, calls: calls.slice(0, shown), expectations: expectations.slice(0, shown) });
+    const run = await evaluateInRunRealm({ code, calls: calls.slice(0, shown), expectations: expectations.slice(0, shown) });
     const submit = await runInSandbox({ code, calls, expectations, shownCalls: shown });
     assert.deepEqual(submit.results.slice(0, shown).map((one) => one.pass), run.results.map((one) => one.pass), `${id}: Run and Submit disagree`);
     return { run, submit };
@@ -683,6 +834,293 @@ export default function App() {
   });
   assert.deepEqual(semantics.results.map((one) => one.pass), [true, true, true, true, true, true], JSON.stringify(semantics.results));
   console.log('PASS integrity: Run and Submit agree on strict mode, the clock and structuredClone');
+}
+
+// ── Run and Submit read Prague time (owner decision 1, C1-2) ─────────────
+// Submit graded on a UTC server and Run in the learner's zone: code that read
+// local hours passed on Submit and failed on Run in Prague, and the hidden
+// checks that cross a clock change could never fail on the server. Learner
+// code now reads Europe/Prague time in both, whatever the host's zone.
+{
+  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Prague', hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', weekday: 'short' });
+  const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  /** [year, month, date, hours, minutes, seconds, day, offset] in Prague, from Intl. */
+  const prague = (t: number) => {
+    const field = (type: string) => parts.formatToParts(t).find((one) => one.type === type)!.value;
+    const wall = Date.UTC(+field('year'), +field('month') - 1, +field('day'), +field('hour'), +field('minute'), +field('second'));
+    return [+field('year'), +field('month') - 1, +field('day'), +field('hour'), +field('minute'), +field('second'), WEEKDAYS.indexOf(field('weekday')), -(wall - Math.floor(t / 1000) * 1000) / 60_000];
+  };
+  // Both clock changes of 2026 and 2027 (01:00 UTC on the last Sunday of
+  // March and of October), a millisecond either side, local midnight on and
+  // after each change day, and a winter and a summer noon.
+  const instants = [
+    '2026-03-29T00:59:59.999Z', '2026-03-29T01:00:00.000Z', '2026-10-25T00:59:59.999Z', '2026-10-25T01:00:00.000Z',
+    '2027-03-28T00:59:59.999Z', '2027-03-28T01:00:00.000Z', '2027-10-31T00:59:59.999Z', '2027-10-31T01:00:00.000Z',
+    '2026-03-28T23:00:00.000Z', '2026-03-29T22:00:00.000Z', '2026-10-24T22:00:00.000Z', '2026-10-25T23:00:00.000Z',
+    '2026-01-15T11:00:00.000Z', '2026-07-15T10:00:00.000Z',
+  ].map((text) => Date.parse(text));
+  const fieldCalls = instants.map((t) => `(() => { const d = new Date(${t}); return [d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getDay(), d.getTimezoneOffset()]; })()`);
+  const known: [string, unknown][] = [
+    // The hour the spring change skips reads as summer time; the hour the
+    // autumn change repeats reads as its first (summer-time) pass.
+    ['new Date(2026, 2, 29, 2, 30).toISOString()', '2026-03-29T01:30:00.000Z'],
+    ['new Date(2026, 9, 25, 2, 30).toISOString()', '2026-10-25T00:30:00.000Z'],
+    ['new Date(2026, 2, 29).toISOString()', '2026-03-28T23:00:00.000Z'],
+    ['new Date(2026, 2, 30).toISOString()', '2026-03-29T22:00:00.000Z'],
+    ['new Date(2026, 9, 26).toISOString()', '2026-10-25T23:00:00.000Z'],
+    ['new Date("2026-07-01T12:00").toISOString()', '2026-07-01T10:00:00.000Z'],
+    ['Date.parse("2026-10-25T02:30")', Date.parse('2026-10-25T00:30:00Z')],
+    ['new Date("2026-01-01").toISOString()', '2026-01-01T00:00:00.000Z'],
+    ['(() => { const d = new Date(2026, 2, 28, 12); d.setDate(d.getDate() + 1); return d.toISOString(); })()', '2026-03-29T10:00:00.000Z'],
+    ['(() => { const d = new Date(2026, 9, 24, 12); d.setHours(d.getHours() + 24); return d.toISOString(); })()', '2026-10-25T11:00:00.000Z'],
+    ['[new Date(2026, 0, 15).getTimezoneOffset(), new Date(2026, 6, 15).getTimezoneOffset()]', [-60, -120]],
+    ['new Date(Date.UTC(2026, 2, 29, 1, 30)).toString()', 'Sun Mar 29 2026 03:30:00 GMT+0200 (Central European Summer Time)'],
+    ['new Date(0).toTimeString()', '01:00:00 GMT+0100 (Central European Standard Time)'],
+    ['new Date(Date.UTC(2026, 9, 25, 0, 30)).toLocaleString("en-US")', '10/25/2026, 2:30:00 AM'],
+    ['new Date(Date.UTC(2026, 9, 25, 1, 30)).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" })', '02:30 AM GMT+1'],
+    ['new Date(Date.UTC(2026, 0, 1, 23, 30)).toLocaleDateString("en-US", { timeZone: "UTC", dateStyle: "long" })', 'January 1, 2026'],
+  ];
+  const calls = [...fieldCalls, ...known.map(([call]) => call)];
+  const expectations = [...instants.map(prague), ...known.map(([, value]) => value)];
+  const submit = await runInSandbox({ code: '', calls, expectations });
+  const run = await evaluateInRunRealm({ code: '', calls, expectations });
+  const failing = (result: { results: { pass: boolean | null; actual: string | null; error: string | null }[] }) =>
+    result.results.flatMap((one, index) => (one.pass ? [] : [`${calls[index]} -> ${one.actual ?? one.error}, expected ${JSON.stringify(expectations[index])}`]));
+  assert.deepEqual(failing(submit), [], 'Submit reads Prague time');
+  assert.deepEqual(failing(run), [], 'Run reads Prague time');
+  // The host's own zone changes nothing. QuickJS used to take its local time
+  // from the process (TZ=UTC on Vercel).
+  const hostZone = process.env.TZ;
+  try {
+    for (const zone of ['UTC', 'America/Los_Angeles', 'Asia/Tokyo', 'Australia/Lord_Howe']) {
+      process.env.TZ = zone;
+      assert.deepEqual(failing(await runInQuickJS({ code: '', calls, expectations })), [], `Submit on a host in ${zone}`);
+      assert.deepEqual(failing(await evaluateInRunRealm({ code: '', calls, expectations })), [], `Run in a browser in ${zone}`);
+    }
+  } finally {
+    if (hostZone === undefined) delete process.env.TZ;
+    else process.env.TZ = hostZone;
+  }
+
+  // C1-2: the two tasks whose hidden checks cross a clock change. Code that
+  // works in local time now fails them, on Submit and on Run alike.
+  const ordersTask = CODING_TASKS.find((task) => task.tests?.some((one) => one.call.startsWith('ordersPerDay(')))!;
+  const localDays = `const pad = (n) => String(n).padStart(2, "0");
+function ordersPerDay(timestamps) {
+  const counts = {};
+  for (const stamp of timestamps) {
+    const at = new Date(stamp);
+    const day = at.getFullYear() + "-" + pad(at.getMonth() + 1) + "-" + pad(at.getDate());
+    counts[day] = (counts[day] ?? 0) + 1;
+  }
+  return counts;
+}`;
+  const ordersCode = solutionFor(ordersTask.id)!.solution.replace(/function ordersPerDay[\s\S]*?\n}\n?/, `${localDays}\n`);
+  assert.notEqual(ordersCode, solutionFor(ordersTask.id)!.solution, 'the local-day version replaced the reference');
+  const ordersChecks = { calls: ordersTask.tests!.map((one) => one.call), expectations: ordersTask.tests!.map((one) => one.expected) };
+  const ordersSubmit = await runChecks({ code: ordersCode, visible: ordersTask.tests!, hidden: solutionFor(ordersTask.id)!.hiddenTests ?? [], shuffle: (list) => list });
+  const ordersRun = await evaluateInRunRealm({ code: ordersCode, ...ordersChecks });
+  assert.ok(!allPassed(ordersSubmit.visible), `${ordersTask.id}: counting local days fails Submit`);
+  assert.deepEqual(ordersRun.results.map((one) => one.pass), ordersSubmit.visible.results.map((one) => one.pass), `${ordersTask.id}: Run fails the same checks`);
+  const fill = CODING_TASKS.find((task) => task.id === 'ts-mh-fill-missing-days')!;
+  const fillHidden = solutionFor(fill.id)!.hiddenTests!;
+  const stepLocal = (step: string) => `type Reading = [date: string, value: number];
+const fillDays = (readings: readonly Reading[]): Reading[] => {
+  const totals = new Map<string, number>();
+  for (const [date, value] of readings) totals.set(date, (totals.get(date) ?? 0) + value);
+  const days = [...totals.keys()].sort();
+  if (days.length === 0) return [];
+  const filled: Reading[] = [];
+  const day = new Date(days[0] + "T00:00:00Z");
+  const last = days[days.length - 1];
+  let text = days[0];
+  while (text <= last) {
+    filled.push([text, totals.get(text) ?? 0]);
+    ${step}
+    text = day.toISOString().slice(0, 10);
+  }
+  return filled;
+};`;
+  const springCheck = fillHidden.findIndex((one) => one.call.includes('2026-03-28'));
+  for (const [step, shouldPass] of [['day.setDate(day.getDate() + 1);', false], ['day.setUTCDate(day.getUTCDate() + 1);', true]] as const) {
+    const js = nodeTypeScriptChecker().toJavaScript(stepLocal(step));
+    const graded = await runChecks({ code: js, visible: fill.tests!, hidden: fillHidden, shuffle: (list) => list });
+    const ran = await evaluateInRunRealm({ code: js, calls: fillHidden.map((one) => one.call), expectations: fillHidden.map((one) => one.expected) });
+    assert.equal(graded.hidden!.results[springCheck].pass, shouldPass, `fillDays stepping with ${step}: the hidden check across 29 March 2026 ${shouldPass ? 'passes' : 'fails'}`);
+    assert.deepEqual(ran.results.map((one) => one.pass), graded.hidden!.results.map((one) => one.pass), `fillDays stepping with ${step}: Run agrees on the hidden inputs`);
+  }
+  console.log('PASS integrity: Run and Submit read Prague time, across both clock changes, on any host');
+
+  // React: the page realm the guest grades in reads Prague time too, and its
+  // Intl formats in Prague, whatever the host's zone.
+  const zoneBefore = process.env.TZ;
+  try {
+    for (const zone of ['UTC', 'America/New_York']) {
+      process.env.TZ = zone;
+      const react = await runReactSuite({ suite: PRAGUE_REACT_SUITE, appSource: PRAGUE_REACT_APP });
+      assert.ok(react.compileError === null && react.failed === 0 && react.passed === 2, `${zone}: ${JSON.stringify(react.cases)}`);
+    }
+  } finally {
+    if (zoneBefore === undefined) delete process.env.TZ;
+    else process.env.TZ = zoneBefore;
+  }
+  console.log('PASS integrity: the React page realm reads Prague time on any host');
+}
+
+// ── the grader has the browser's URL, encoders and base64 (owner decision 2, C1-3) ──
+// Each built-in the grader adds, evaluated by the grader and by Node's own
+// implementation of the same standard, on the inputs learners use.
+{
+  const builtIns: Record<string, string[]> = {
+    URL: [
+      'new URL("https://user:pw@example.com:8080/p/../a b?q=1 2#h é").href',
+      'new URL("/path?x=1", "https://example.com/base/").href',
+      'new URL("../up", "https://example.com/a/b/c").pathname',
+      'new URL("HTTP://EXAMPLE.COM:80/").href',
+      'new URL("https://example.com").origin',
+      'new URL("https://例え.jp/").hostname',
+      'new URL("http://[::1]:3000/x").host',
+      'new URL("http://0x7f.1/").hostname',
+      'new URL("mailto:someone@example.com").pathname',
+      'new URL("file:///C:/x/../y").href',
+      '(() => { const u = new URL("https://x.dev/p"); u.searchParams.set("q", "a&b=c"); u.hash = "top"; u.port = "8443"; u.pathname = "/a b"; return [u.href, u.search, u.host]; })()',
+      '(() => { const u = new URL("https://x.dev/?a=1"); u.search = "?b=2"; return [u.searchParams.get("a"), u.searchParams.get("b"), u.href]; })()',
+      '(() => { const u = new URL("https://a.b/?x=1"); u.searchParams.delete("x"); return u.href; })()',
+      '(() => { const u = new URL("https://a.b/"); u.port = "nope"; u.protocol = "ftp"; return u.href; })()',
+      '(() => { const u = new URL("https://a.b/"); u.href = "http://c.d/e?f#g"; return [u.host, u.searchParams.toString(), u.hash]; })()',
+      '[URL.canParse("not a url"), URL.canParse("/x", "https://a.b"), URL.parse("nope"), URL.parse("/y", "https://a.b").href]',
+      '(() => { try { new URL("not a url"); return "parsed"; } catch (error) { return error.name; } })()',
+      'JSON.stringify({ u: new URL("https://a.b/c") }) + String(new URL("https://a.b/c d"))',
+    ],
+    URLSearchParams: [
+      'new URLSearchParams("?a=1&b=2&a=3").getAll("a")',
+      'new URLSearchParams({ q: "x y", n: 1 }).toString()',
+      'new URLSearchParams([["a", "1"], ["b", "2"]]).toString()',
+      'new URLSearchParams("a=%20&b=%zz&c=+&d=%E2%9C%93&e=%F0%9F%90%9F").toString()',
+      '[[...new URLSearchParams("a=1&b=2").keys()], [...new URLSearchParams("a=1&b=2").values()], [...new URLSearchParams("a=1&b=2")]]',
+      '(() => { const p = new URLSearchParams("c=3&a=1&b=2&a=0"); p.sort(); return p.toString(); })()',
+      '(() => { const p = new URLSearchParams("a=1&a=2&b=3"); p.set("a", "9"); p.append("z", "é ✓"); p.delete("b"); return [p.toString(), p.size, p.has("a", "9"), p.has("a", "1")]; })()',
+      'Object.fromEntries(new URLSearchParams("x=1&y=&z&w=a=b"))',
+      'new URLSearchParams("&&a=1&&").toString() + "|" + new URLSearchParams("q=\\ud800").toString()',
+      '(() => { const out = []; new URLSearchParams("a=1&b=2").forEach((value, key) => out.push(key + value)); return out; })()',
+      '[Object.prototype.toString.call(new URLSearchParams()), Object.prototype.toString.call(new URLSearchParams().entries()), new URLSearchParams("a=1").get("b")]',
+      '(() => { try { new URLSearchParams([["a"]]); return "built"; } catch (error) { return error.name; } })()',
+    ],
+    TextEncoder: [
+      '[...new TextEncoder().encode("héllo ✓ 🐟")]',
+      '[...new TextEncoder().encode("\\ud800x")]',
+      '[new TextEncoder().encoding, new TextEncoder().encode().length]',
+      '(() => { const out = new Uint8Array(5); const r = new TextEncoder().encodeInto("a✓🐟", out); return [r.read, r.written, [...out]]; })()',
+    ],
+    TextDecoder: [
+      'new TextDecoder().decode(new Uint8Array([104, 195, 169, 0xE2, 0x9C, 0x93]))',
+      'new TextDecoder().decode(new Uint8Array([0xEF, 0xBB, 0xBF, 65])).length',
+      'new TextDecoder("utf-8", { ignoreBOM: true }).decode(new Uint8Array([0xEF, 0xBB, 0xBF, 65])).length',
+      '[...new TextDecoder().decode(new Uint8Array([0xC3, 0x28, 0xF0, 0x9F, 0x90, 0xA0, 0xFF, 0xE2, 0x82, 0xED, 0xA0, 0x80, 0xF0, 0x80]))].map((c) => c.codePointAt(0))',
+      '(() => { try { new TextDecoder("utf-8", { fatal: true }).decode(new Uint8Array([0xFF])); return "decoded"; } catch (error) { return error.name; } })()',
+      '(() => { const d = new TextDecoder(); let s = ""; for (const b of new TextEncoder().encode("a✓🐟b")) s += d.decode(new Uint8Array([b]), { stream: true }); return s + d.decode(); })()',
+      '[new TextDecoder().decode(new Uint8Array([97, 98]).buffer), new TextDecoder().decode(new DataView(new Uint8Array([99]).buffer)), new TextDecoder().decode(), new TextDecoder("UTF8").encoding]',
+    ],
+    atob: [
+      'atob("aGVsbG8gd29ybGQ=")', 'atob(" aG k= ")', 'atob("YQ")', 'atob("")',
+      '[...atob("AP+A")].map((c) => c.charCodeAt(0))',
+      '["abc*", "YQ=", "Y", "a=b="].map((text) => { try { return atob(text); } catch (error) { return error.name; } })',
+    ],
+    btoa: [
+      'btoa("hello world")', 'btoa("")', 'btoa(12345)', 'btoa(String.fromCharCode(0, 255, 128))',
+      '(() => { try { return btoa("✓"); } catch (error) { return error.name; } })()',
+    ],
+  };
+  for (const [name, calls] of Object.entries(builtIns)) {
+    const grader = await runInSandbox({ code: '', calls, expectations: null });
+    const node = await evaluateCalls({ code: '', calls, expectations: null });
+    assert.equal(grader.codeError, null, `${name}: ${grader.codeError}`);
+    calls.forEach((call, index) => {
+      const mine = grader.results[index], theirs = node.results[index];
+      assert.equal(mine.error, null, `${name}: ${call} threw ${mine.error}`);
+      assert.equal(mine.actual, theirs.actual, `${name}: ${call}`);
+    });
+    console.log(`PASS integrity: the grader's ${name} behaves as the browser's (${calls.length} cases)`);
+  }
+
+  // C1-3: reading a query with URLSearchParams passed Run and failed Submit.
+  const query = CODING_TASKS.find((task) => task.id === 'js-easy3-read-query')!;
+  const viaParams = 'const parseQuery = query => Object.fromEntries(new URLSearchParams(query));';
+  const querySubmit = await runChecks({ code: viaParams, visible: query.tests!, hidden: solutionFor(query.id)!.hiddenTests ?? [], shuffle: (list) => list });
+  const queryRun = await evaluateInRunRealm({ code: viaParams, calls: query.tests!.map((one) => one.call), expectations: query.tests!.map((one) => one.expected) });
+  assert.ok(allPassed(querySubmit.visible) && (!querySubmit.hidden || allPassed(querySubmit.hidden)), `URLSearchParams passes Submit: ${JSON.stringify(querySubmit)}`);
+  assert.ok(allPassed(queryRun), 'and Run');
+
+  // The host's URL parser is no global, answers strings only, and a URL is
+  // the VM's own object. A huge URL is refused before the host sees it, and
+  // a loop of URLs stops at the deadline like any other.
+  const host = await runInSandbox({
+    code: '',
+    calls: [
+      'Object.getOwnPropertyNames(globalThis).filter((name) => /host|devshark/i.test(name))',
+      '[typeof __devsharkHostURL, typeof hostURL]',
+      '(() => { const u = new URL("https://a.b/?q=1"); return [Object.getPrototypeOf(u) === URL.prototype, Object.getPrototypeOf(u.searchParams) === URLSearchParams.prototype, Object.getOwnPropertyNames(u).length, u.constructor.constructor("return typeof process")()]; })()',
+      '(() => { try { new URL("https://a.b/" + "x".repeat(70000)); return "parsed"; } catch (error) { return error.name + ": " + /longer than the checker reads/.test(error.message); } })()',
+      '(() => { let seen = ""; new URL({ toString() { seen += "once"; return "https://a.b/"; } }); return seen; })()',
+    ],
+    expectations: [[], ['undefined', 'undefined'], [true, true, 0, 'undefined'], 'TypeError: true', 'once'],
+  });
+  assert.deepEqual(host.results.map((one) => one.pass), [true, true, true, true, true], JSON.stringify(host.results));
+  const loop = await runInSandbox({ code: 'const f = () => { for (;;) new URL("https://a.b/?" + Math.random()); };', calls: ['f()'], expectations: [1], deadlineMs: 400 });
+  assert.equal(loop.timedOut, true, 'a URL loop stops at the deadline');
+  console.log('PASS integrity: the host URL parser gives the VM strings only and keeps the limits');
+}
+
+// ── Run hides what the grader lacks, and both format alike (owner decision 2) ──
+{
+  // The grader's realm is what shared/coding-checker-globals.ts lists, which
+  // is what the Run worker keeps.
+  const listing = await runInSandbox({
+    code: '',
+    calls: [`(() => {
+      void Date; void URL; (1).toLocaleString();
+      const own = (o) => Object.getOwnPropertyNames(o).sort().join(' ');
+      const members = {};
+      for (const name of Object.getOwnPropertyNames(globalThis)) {
+        if (name === 'globalThis' || name === 'console') continue;
+        const value = globalThis[name];
+        if (value === null || (typeof value !== 'object' && typeof value !== 'function')) continue;
+        members[name] = own(value);
+        if (typeof value === 'function' && value.prototype && typeof value.prototype === 'object') members[name + '.prototype'] = own(value.prototype);
+      }
+      const typed = Object.getPrototypeOf(Uint8Array);
+      members['%TypedArray%'] = own(typed);
+      members['%TypedArray%.prototype'] = own(typed.prototype);
+      return [Object.getOwnPropertyNames(globalThis).sort(), members];
+    })()`],
+    expectations: null,
+  });
+  const [globals, members] = JSON.parse(listing.results[0].actual!) as [string[], Record<string, string>];
+  assert.deepEqual(globals, [...CHECKER_GLOBALS].sort(), 'CHECKER_GLOBALS lists the grader\'s globals');
+  assert.deepEqual(members, CHECKER_MEMBERS, 'CHECKER_MEMBERS lists the grader\'s built-in members');
+  // Using what the grader lacks fails on Run too, and says why.
+  const missing = ['Intl.NumberFormat', 'crypto.randomUUID()', 'fetch("/x")', 'new BroadcastChannel("x")', 'Array.fromAsync([1])'];
+  const lacking = await evaluateInRunRealm({ code: '', calls: missing, expectations: null });
+  const lackingSubmit = await runInSandbox({ code: '', calls: missing, expectations: null });
+  assert.deepEqual(lacking.results.map((one) => one.error), [hiddenGlobalMessage('Intl'), hiddenGlobalMessage('crypto'), hiddenGlobalMessage('fetch'), hiddenGlobalMessage('BroadcastChannel'), lacking.results[4].error], JSON.stringify(lacking.results));
+  assert.ok(lacking.results.every((one) => one.pass === false) && lackingSubmit.results.every((one) => one.pass === false), 'each fails on Run and on Submit');
+  const probe = await evaluateInRunRealm({ code: '', calls: ['[typeof Intl, typeof crypto, typeof structuredClone, typeof queueMicrotask, typeof URL, typeof atob, Object.keys(performance).join()]'], expectations: null });
+  const probeSubmit = await runInSandbox({ code: '', calls: ['[typeof Intl, typeof crypto, typeof structuredClone, typeof queueMicrotask, typeof URL, typeof atob, Object.keys(performance).join()]'], expectations: null });
+  assert.equal(probe.results[0].actual, probeSubmit.results[0].actual, 'feature checks read the same in Run and Submit');
+  // The locale-sensitive methods print and sort the same in both.
+  const locale = [
+    '(1234567.891).toLocaleString()', '(1234.5).toLocaleString("en-US", { style: "currency", currency: "USD" })', '(0.256).toLocaleString("en-US", { style: "percent" })',
+    '(1234).toLocaleString("en-US", { notation: "compact" })', '(1234567n).toLocaleString()', '[1234.5, 0.5].toLocaleString()',
+    '["b", "A", "a", "B", "á", "_x", "10", "9"].sort((x, y) => x.localeCompare(y))', '["item10", "item2"].sort((x, y) => x.localeCompare(y, undefined, { numeric: true }))',
+    '"a".localeCompare("A", undefined, { sensitivity: "base" })', 'new Date(Date.UTC(2026, 0, 15, 8, 5)).toLocaleString()',
+    '(() => { try { return (1).toLocaleString("en-US", { style: "unit", unit: "meter" }); } catch (error) { return error.name; } })()',
+  ];
+  const localeRun = await evaluateInRunRealm({ code: '', calls: locale, expectations: null });
+  const localeSubmit = await runInSandbox({ code: '', calls: locale, expectations: null });
+  const localeNode = await evaluateCalls({ code: '', calls: locale.slice(0, 9), expectations: null });
+  assert.deepEqual(localeRun.results.map((one) => one.actual ?? one.error), localeSubmit.results.map((one) => one.actual ?? one.error), 'Run and Submit format and sort alike');
+  assert.deepEqual(localeSubmit.results.slice(0, 9).map((one) => one.actual), localeNode.results.map((one) => one.actual), 'as an en-US browser does');
+  console.log('PASS integrity: Run lacks what the grader lacks, says so, and formats as the grader does');
 }
 
 // ── console output is capped by size (CODE-13) ───────────────────────────
@@ -860,9 +1298,10 @@ export default function App() {
 // thirty submits at once. Thirty runaway programs held every thread while
 // another learner's correct Submit waited behind them: half a minute for
 // JavaScript, and past the function's 45 s limit (a 504) for TypeScript. A
-// caller now has at most GRADING_PER_CALLER submits grading at once, and the
-// rest of a burst is refused at once with 429 `grader_busy`. That is not a
-// verdict: nothing is recorded, so it costs no XP and no streak day.
+// caller now has at most GRADING_PER_TASK submits grading at once on one task
+// and GRADING_PER_CALLER across tasks, and the rest of a burst is refused at
+// once with 429 `grader_busy`. That is not a verdict: nothing is recorded, so
+// it costs no XP and no streak day.
 type Answer = {
   statusCode: number;
   headers: Record<string, string>;
@@ -917,17 +1356,17 @@ const timed = <T>(run: Promise<T>) => {
   // threads at 2.5 s each.
   assert.ok(waited < 5_000, `another learner's Submit did not wait behind the burst (${waited} ms)`);
   const refused = answers.filter((out) => out.statusCode === 429);
-  assert.equal(refused.length, answers.length - GRADING_PER_CALLER, `all but ${GRADING_PER_CALLER} of the burst are refused: ${answers.map((out) => out.statusCode).join(',')}`);
+  assert.equal(refused.length, answers.length - GRADING_PER_TASK, `all but ${GRADING_PER_TASK} of the burst are refused: ${answers.map((out) => out.statusCode).join(',')}`);
   for (const out of refused) {
     assert.equal(out.body?.error?.code, 'grader_busy');
     assert.ok(Number(out.headers['retry-after']) >= 1, 'a refusal says when to try again');
   }
   assert.ok(answers.filter((out) => out.statusCode === 200).every((out) => out.body?.verdict === 'timeout'), 'the submits it took are graded as usual');
   const recorded = db.rpcCalls.filter((call) => call.name === 'record_coding_verdict' && call.args.p_user_id === flooder);
-  assert.equal(recorded.length, GRADING_PER_CALLER, 'a refused submit records nothing');
+  assert.equal(recorded.length, GRADING_PER_TASK, 'a refused submit records nothing');
   const again = await submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: solutionFor('js-double-numbers')!.solution, address: '203.0.113.41', account: flooder, db });
   assert.equal(again.body?.verdict, 'passed', 'once its submits are answered the caller may submit again');
-  console.log(`PASS integrity: a burst of runaway submits holds ${GRADING_PER_CALLER} threads and another learner is answered in ${waited} ms`);
+  console.log(`PASS integrity: a burst of runaway submits holds ${GRADING_PER_TASK} threads and another learner is answered in ${waited} ms`);
 }
 {
   const flood = Array.from({ length: 24 }, () => submitCode({ taskId: 'ts-typed-slug', track: 'typescript', code: runawayTypes + solutionFor('ts-typed-slug')!.solution, address: '203.0.113.43' }));
@@ -941,9 +1380,61 @@ const timed = <T>(run: Promise<T>) => {
   // learner waits for one runaway check to be stopped, then for a new thread
   // to load the compiler, which a loaded machine takes its time over.
   assert.ok(waited < 30_000, `another learner's TypeScript Submit was answered in time (${waited} ms)`);
-  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_CALLER);
+  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_TASK);
   assert.ok(answers.filter((out) => out.statusCode === 200).every((out) => out.body?.verdict === 'timeout'));
   console.log(`PASS integrity: a burst of runaway type checks leaves another learner's TypeScript Submit answered in ${waited} ms`);
+}
+
+// ── grading in flight is counted per task (owner decision 9) ────────────
+// The count was per caller, so a learner's submit still grading on one task
+// refused their Submit on the next task. It is per task now, beneath a
+// ceiling across tasks, and every answered submit gives its slot back.
+{
+  const free = CODING_TASKS.filter((task) => task.track === 'javascript' && isFreeCodingTask(task.id) && !evolvingStage(task.id) && task.tests && solutionFor(task.id)?.solution)
+    .map((task) => task.id).filter((id) => id !== 'js-double-numbers').slice(0, 2);
+  const [taskB, taskC] = free;
+  assert.ok(taskB && taskC, 'two more free JavaScript tasks with a reference solution');
+  const correct = (taskId: string) => solutionFor(taskId)!.solution;
+
+  // One learner's runaway burst on task A, and their correct Submit on task B
+  // sent with it: B is graded while A's two run, the rest of A is refused.
+  const db = codingDatabase();
+  const learner = 'user-two-tasks-0005';
+  const address = '203.0.113.46';
+  const runaway = "for (;;) { 'x'.repeat(2e6); }";
+  const burst = Array.from({ length: 6 }, () => submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: runaway, address, account: learner, db }));
+  const onB = await submitCode({ taskId: taskB, track: 'javascript', code: correct(taskB), address, account: learner, db });
+  const answers = await Promise.all(burst);
+  assert.equal(onB.statusCode, 200, JSON.stringify(onB.body));
+  assert.equal(onB.body?.verdict, 'passed', 'a burst still grading on one task does not hold up the same learner\'s Submit on another');
+  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_TASK,
+    `all but ${GRADING_PER_TASK} of the burst on one task are refused: ${answers.map((out) => out.statusCode).join(',')}`);
+
+  // The ceiling: with GRADING_PER_CALLER of the learner's submits grading
+  // across two tasks, a Submit on a third is refused and records nothing.
+  const ceilingDb = codingDatabase();
+  const busy = 'user-ceiling-0006';
+  const hold = (taskId: string) => enterInFlight({ headers: { 'x-forwarded-for': address }, socket: {} } as never, 'grading',
+    { item: gradingItem.task(taskId), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, `user:${busy}`);
+  const held = Array.from({ length: GRADING_PER_CALLER }, (_, n) => hold(n < GRADING_PER_TASK ? 'js-double-numbers' : taskB));
+  assert.ok(held.every(Boolean), 'the learner\'s submits fill the ceiling across two tasks');
+  const refused = await submitCode({ taskId: taskC, track: 'javascript', code: correct(taskC), address, account: busy, db: ceilingDb });
+  assert.equal(refused.statusCode, 429, JSON.stringify(refused.body));
+  assert.equal(refused.body?.error?.code, 'grader_busy');
+  assert.equal(ceilingDb.attemptIds.length, 0, 'a Submit past the ceiling records nothing');
+  for (const done of held) done?.();
+  const graded = await submitCode({ taskId: taskC, track: 'javascript', code: correct(taskC), address, account: busy, db: ceilingDb });
+  assert.equal(graded.body?.verdict, 'passed', 'once those are answered the third task is graded');
+
+  // Every answered submit gives its slot back, a timeout as well as a pass:
+  // more of them one after another than the ceiling holds are all graded.
+  const verdicts: string[] = [];
+  for (let n = 0; n <= GRADING_PER_CALLER; n += 1) {
+    const out = await submitCode({ taskId: taskB, track: 'javascript', code: n === 0 ? runaway : correct(taskB), address, account: busy, db: ceilingDb });
+    verdicts.push(`${out.statusCode} ${out.body?.verdict ?? out.body?.error?.code}`);
+  }
+  assert.deepEqual(verdicts, ['200 timeout', ...Array.from({ length: GRADING_PER_CALLER }, () => '200 passed')], 'no slot is kept after its submit is answered');
+  console.log(`PASS integrity: grading in flight is counted per task, ${GRADING_PER_TASK} a task beneath ${GRADING_PER_CALLER} a learner, and every answered submit frees its slot`);
 }
 
 // ── a class submitting at once is graded, not turned away ───────────────

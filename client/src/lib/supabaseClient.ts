@@ -103,6 +103,17 @@ export function hasStoredSession(): boolean {
   return Boolean(sessionKey && readStorage(sessionKey));
 }
 
+/** The account of the session stored in this browser, current or expired,
+ * read before supabase-js removes one it can no longer refresh. */
+export function storedSessionUserId(): string | null {
+  try {
+    const id = (JSON.parse((sessionKey && readStorage(sessionKey)) || 'null') as { user?: { id?: unknown } } | null)?.user?.id;
+    return typeof id === 'string' ? id : null;
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Forget the session stored in this browser, and a sign-in's code verifier,
  * without the server: what supabase-js's own local sign-out removes. For Log

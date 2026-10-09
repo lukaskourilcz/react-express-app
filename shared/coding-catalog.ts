@@ -10,7 +10,7 @@
 import type { FailureCategory } from './coding-failure';
 import type { PuzzleView } from './coding-puzzle';
 import type { PublicItemReview } from './curation';
-import { evolvingStage } from './evolving';
+import { evolvingStage, isEvolvingCheckpoint } from './evolving';
 
 export type CodingTrack = 'javascript' | 'typescript' | 'react' | 'system-design' | 'algorithms';
 export type CodingTier = 1 | 2 | 3 | 4 | 5;
@@ -40,18 +40,19 @@ export const CODING_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript'
 export const isCodingTrack = (value: unknown): value is CodingTrack =>
   typeof value === 'string' && (CODING_TRACKS as readonly string[]).includes(value);
 
-/** The tracks the Coding section offers as practice. System design is taught in
- * the Learn curriculum and inside the FDE specialization, not practised as a
- * coding challenge, so discovery never lists it — but its tasks, grader,
- * sessions and every record already earned against them stay exactly as they
- * are. `CODING_TRACKS` remains the full grading vocabulary; only this list
- * decides what the section shows. */
+/** The tracks the Coding section offers, and the only ones anything issues.
+ *
+ * System design is hidden until its tasks have been reviewed again (owner
+ * decision, 9 Oct 2026; `NEEDED.md`): `lib/coding/active.ts` issues no task of
+ * a track missing here, so no list, search, run, skip, Learn level, browser
+ * index or share page holds one, the task resource answers 404 for it and
+ * Submit refuses it. Its tasks, graders and sealed keys stay in `lib/coding`,
+ * and `npm run test:coding` keeps proving them, for that review. Records
+ * already earned against them stay in the database. `CODING_TRACKS` remains
+ * the full authoring vocabulary. */
 export const CODING_SECTION_TRACKS: readonly CodingTrack[] = ['javascript', 'typescript', 'react', 'algorithms'];
 export const isCodingSectionTrack = (value: unknown): value is CodingTrack =>
   typeof value === 'string' && (CODING_SECTION_TRACKS as readonly string[]).includes(value);
-/** A track that still grades and still owns history, but has left the section. */
-export const isRetiredSectionTrack = (value: unknown): value is CodingTrack =>
-  isCodingTrack(value) && !isCodingSectionTrack(value);
 
 /** Tracks whose `level` is a Learn level, and so worth naming to the learner.
  * System design carries no level at all, and `algorithms` carries one only to
@@ -88,9 +89,10 @@ export const TIER_DIFFICULTY: Record<CodingTier, Difficulty> = { 1: 'easy', 2: '
 
 /** Where Easy and Medium end in a stage list, by its length: the last Easy
  * position and the last Medium position, one-based. Every project stage and
- * short-path level is tier 2 today, so a stage's label comes from how far along
- * its path it sits. Five-level paths split 2/2/1, ten-stage projects 3/4/3 and
- * the twelve-stage FullStack apps 4/5/3. */
+ * short-path level is tier 2 today, so a milestone's label comes from how far
+ * along its path it sits. Five-level paths split 2/2/1, ten-stage projects
+ * 3/4/3 and the twelve-stage FullStack apps 4/5/3. A checkpoint reads no band:
+ * see `difficultyOf`. */
 export const STAGE_DIFFICULTY_BANDS: Readonly<Record<number, readonly [number, number]>> = {
   5: [2, 4],
   10: [3, 7],
@@ -114,12 +116,18 @@ export const difficultyFitsTier = (difficulty: Difficulty, tier: CodingTier): bo
   difficulty === 'easy' ? tier <= 2 : difficulty === 'hard' ? tier >= 3 : true;
 
 /** The label for a task or summary. An authored `difficulty` wins (the index
- * carries the resolved one); otherwise a project stage or path level reads its
- * position and a standalone task reads its tier. */
+ * carries the resolved one); otherwise a project milestone or path level reads
+ * its position, and a standalone task or a checkpoint reads its tier.
+ *
+ * A checkpoint is the five-minute step a project inserts before a milestone,
+ * and it stays that size wherever it sits, so its label comes from the task
+ * and not from its place in the list (owner decision, 9 Oct 2026): the
+ * position bands called the last checkpoint of each project Hard and the
+ * middle ones Medium. */
 export function difficultyOf(task: { id: string; tier: CodingTier; difficulty?: Difficulty }): Difficulty {
   if (task.difficulty) return task.difficulty;
   const stage = evolvingStage(task.id);
-  if (stage) return stageDifficulty(stage.index, stage.challenge.stages.length);
+  if (stage && !isEvolvingCheckpoint(task.id)) return stageDifficulty(stage.index, stage.challenge.stages.length);
   return TIER_DIFFICULTY[task.tier];
 }
 
@@ -330,7 +338,8 @@ export const METHOD_TAGS: readonly string[] = CODING_TECHNIQUE_GROUPS['array-met
  * so a foundation task is worth half a level. */
 export const CODING_TASK_XP: Record<CodingTier, number> = { 1: 25, 2: 35, 3: 50, 4: 75, 5: 120 };
 
-/** Learn levels of the `javascript` topic that count as the foundations. */
+/** Learn levels of the `javascript` topic that count as the foundations.
+ * Clearing them opens JavaScript tier 3, and no other track's. */
 export const CODING_FOUNDATION_LEVELS = 10;
 
 export interface CodingProgressSummary {
@@ -362,10 +371,13 @@ const tierPassRatio = (tier: CodingTier, input: CodingLadderInput): number => {
  * Both still grade, award XP and record history exactly like any other task. */
 const UNLADDERED_TRACKS: readonly CodingTrack[] = ['system-design', 'algorithms'];
 
-/** The difficulty ladder. Tiers 1 and 2 are always open; 3 opens after the
- * Learn foundations or a clean sweep of tiers 1–2 in that track; 4 after 80 %
- * of tier 3; 5 (React capstones) after 80 % of tier 4. The unladdered tracks
- * have no ladder: every one of their challenges is open. */
+/** The difficulty ladder. Tiers 1 and 2 are always open; 3 opens after a
+ * clean sweep of tiers 1–2 in that track, and JavaScript's also after the
+ * JavaScript Learn foundations (owner decision, 9 October 2026: the Learn
+ * levels teach JavaScript, so they open no other track); 4 after 80 % of
+ * tier 3; 5 (React capstones) after 80 % of tier 4. The unladdered tracks
+ * have no ladder: every one of their challenges is open. The task page, a
+ * practice run, a skip's suggestion and the browser all ask this one rule. */
 export function tierUnlocked(input: CodingLadderInput): boolean {
   if (UNLADDERED_TRACKS.includes(input.track)) return true;
   switch (input.tier) {
@@ -373,7 +385,7 @@ export function tierUnlocked(input: CodingLadderInput): boolean {
     case 2:
       return true;
     case 3:
-      return input.javascriptLevelsCleared >= CODING_FOUNDATION_LEVELS ||
+      return (input.track === 'javascript' && input.javascriptLevelsCleared >= CODING_FOUNDATION_LEVELS) ||
         (tierPassRatio(1, input) >= 1 && tierPassRatio(2, input) >= 1);
     case 4:
       return tierPassRatio(3, input) >= 0.8;
@@ -384,10 +396,12 @@ export function tierUnlocked(input: CodingLadderInput): boolean {
   }
 }
 
-/** Why a tier is locked, as a translation-key suffix (`coding.lock.<reason>`). */
-export function tierLockReason(input: CodingLadderInput): 'foundations' | 'tier3' | 'tier4' | null {
+/** Why a tier is locked, as a translation-key suffix (`coding.lock.<reason>`).
+ * JavaScript tier 3 names both ways in (`foundations`); every other track's
+ * names the sweep alone (`sweep`). */
+export function tierLockReason(input: CodingLadderInput): 'foundations' | 'sweep' | 'tier3' | 'tier4' | null {
   if (tierUnlocked(input)) return null;
-  if (input.tier === 3) return 'foundations';
+  if (input.tier === 3) return input.track === 'javascript' ? 'foundations' : 'sweep';
   if (input.tier === 4) return 'tier3';
   return 'tier4';
 }

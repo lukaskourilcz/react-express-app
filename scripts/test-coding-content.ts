@@ -49,8 +49,11 @@ import { prepareReactRuntime, runReactSuite } from '../lib/coding/react-runner';
 import { lockDownRealm } from '../lib/coding/realm-lockdown';
 import { HIDDEN_CASE_PREFIX, splitHiddenCases, suiteCaseCount, withHiddenCases } from '../lib/coding/react-hidden';
 import { renderCodingIndex } from './build-coding-index';
-import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
+import { gradeDesign, prepareDesign } from '../lib/coding/grade';
+import type { DesignAnswer } from '../shared/coding-api';
+import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, isEvolvingCheckpoint, listedChallenges } from '../shared/evolving';
 import { SKELETON_FILLS } from './fixtures/skeleton-fills';
+import { evaluateInRunRealm } from './run-realm-node';
 
 // The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
 // so Czech copy is retained work rather than a shipped surface and a new task
@@ -498,22 +501,33 @@ async function main() {
   for (const [label, tier] of refused) assert.equal(difficultyFitsTier(label, tier), false, `an ${label} override cannot sit at tier ${tier}`);
   for (const tier of [1, 2, 3, 4, 5] as CodingTier[]) assert.equal(difficultyFitsTier('medium', tier), true, `a Medium override fits tier ${tier}`);
   assert.equal(difficultyOf({ id: 'js-count-multiples', tier: 3, difficulty: 'medium' }), 'medium', 'an authored label wins');
-  // Stages and levels read their position, in the bands the handoff fixed.
+  // Milestones and levels read their position, in the bands the handoff fixed.
   const bandOf = (length: number) => Array.from({ length }, (_, index) => stageDifficulty(index, length)[0].toUpperCase()).join('');
   assert.equal(bandOf(5), 'EEMMH', 'five-level paths: 1–2 Easy, 3–4 Medium, 5 Hard');
   assert.equal(bandOf(10), 'EEEMMMMHHH', 'ten-stage projects: 1–3, 4–7, 8–10');
   assert.equal(bandOf(12), 'EEEEMMMMMHHH', 'twelve-stage FullStack apps: 1–4, 5–9, 10–12');
+  // A checkpoint reads its tier, as a standalone task does: it is a
+  // five-minute step wherever it sits (owner decision, 9 Oct 2026). The bands
+  // used to call the last checkpoint of every project Hard (audit C2-13).
   const byId = new Map(CODING_TASKS.map((task) => [task.id, task]));
+  let checkpoints = 0;
   for (const project of EVOLVING_CHALLENGES) {
     const length = project.stages.length;
     if (!STAGE_DIFFICULTY_BANDS[length]) { fail(`${project.id}: no difficulty band for a path of ${length} stages; add one to STAGE_DIFFICULTY_BANDS`); continue; }
     project.stages.forEach((id, index) => {
       const task = byId.get(id);
       if (!task || task.difficulty) return; // missing stages fail above; an authored label is bounded by its tier
-      const expected = stageDifficulty(index, length);
-      if (difficultyOf(task) !== expected) fail(`${id}: stage ${index + 1} of ${length} should be ${expected}, not ${difficultyOf(task)}`);
+      const checkpoint = isEvolvingCheckpoint(id);
+      if (checkpoint) {
+        checkpoints++;
+        if (task.estimatedMinutes !== 5) fail(`${id}: a checkpoint is a five-minute step, not ${task.estimatedMinutes}`);
+      }
+      const expected = checkpoint ? TIER_DIFFICULTY[task.tier] : stageDifficulty(index, length);
+      if (difficultyOf(task) !== expected) fail(`${id}: ${checkpoint ? 'a checkpoint at tier ' + task.tier : `stage ${index + 1} of ${length}`} should be ${expected}, not ${difficultyOf(task)}`);
     });
   }
+  const authoredCheckpoints = EVOLVING_CHALLENGES.flatMap((project) => project.stages).filter(isEvolvingCheckpoint);
+  if (checkpoints !== authoredCheckpoints.length) fail(`${authoredCheckpoints.length - checkpoints} checkpoint(s) carry an authored label instead of their tier`);
   // Standalone tasks read their tier: 1–2 Easy, 3 Medium, 4–5 Hard.
   for (const task of CODING_TASKS) {
     if (evolvingStage(task.id) || task.difficulty) continue;
@@ -557,6 +571,36 @@ async function main() {
       const chosen = levelCodingTasks(topic, level);
       if (chosen.some((t) => t.verify === 'checklist')) fail(`${topic} level ${level} would gate on a checklist task`);
     }
+  }
+
+  /* ── hidden tracks ──────────────────────────────────────────────────── */
+  // System design is hidden until its tasks are reviewed again (owner
+  // decision, 9 Oct 2026). Every one of them is still authored and proven
+  // above, and its grader still passes the right answers and fails wrong ones
+  // here, but none is issued: not summarised, so not in the browser index,
+  // not in a Learn level, and not in any list.
+  {
+    const hidden = CODING_TASKS.filter((task) => !CODING_SECTION_TRACKS.includes(task.track));
+    if (hidden.some((task) => task.track !== 'system-design')) fail('only system design is hidden');
+    const issued = new Set(CODING_SUMMARIES.map((summary) => summary.id));
+    for (const task of hidden) {
+      if (issued.has(task.id)) fail(`${task.id}: a hidden task is issued`);
+      const prepared = prepareDesign(task, (list) => [...list].reverse());
+      const right = task.design ? prepared.key.steps!
+        : prepared.key.band ? [prepared.key.band.answer]
+          : prepared.key.order ? [prepared.key.order]
+            : [prepared.key.correct!];
+      const wrong = task.design ? prepared.key.steps!.map((index, step) => (index + 1) % task.design!.steps[step].options.length)
+        : prepared.key.band ? [prepared.key.band.max * 10 + 1]
+          : prepared.key.order ? [[...prepared.key.order].reverse()]
+            : [(prepared.key.correct! + 1) % task.drill!.options!.length];
+      if (gradeDesign(task, prepared.key, right as DesignAnswer[]).outcome !== 'passed') fail(`${task.id}: its grader fails the right answers`);
+      if (gradeDesign(task, prepared.key, wrong as DesignAnswer[]).outcome !== 'failed') fail(`${task.id}: its grader passes wrong answers`);
+    }
+    for (const topic of ['javascript', 'typescript', 'react', 'system-design', 'algorithms'] as const) {
+      for (let level = 0; level <= 25; level++) if (tasksForLevel(topic, level).some((task) => !CODING_SECTION_TRACKS.includes(task.track))) fail(`${topic} level ${level} holds a hidden task`);
+    }
+    if (EVOLVING_CHALLENGES.some((project) => !CODING_SECTION_TRACKS.includes(project.track))) fail('a project sits on a hidden track');
   }
 
   /* ── index freshness ────────────────────────────────────────────────── */
@@ -699,7 +743,9 @@ async function main() {
         }
         code = checker.toJavaScript(source);
       }
-      const run = await withTimeout(evaluateCalls({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
+      // The Run button's realm: Prague time, the grader's built-ins and none
+      // of the browser's others (scripts/run-realm-node.ts).
+      const run = await withTimeout(evaluateInRunRealm({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
       // The production grader: the hidden checks in a fresh program and, here,
       // in reverse order, so no solution leans on the order they run in or on
       // state the visible calls left behind.
@@ -710,7 +756,7 @@ async function main() {
         fail(`${label}: solution fails visible tests: ${run.codeError ?? wrong.join('; ')}`);
       }
       if (solution.hiddenTests?.length) {
-        const hidden = await withTimeout(evaluateCalls({ code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, label);
+        const hidden = await withTimeout(evaluateInRunRealm({ code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, label);
         if (!allPassed(hidden)) fail(`${label}: solution fails hidden tests: ${hidden.codeError ?? hidden.results.map((r, i) => (r.pass ? null : solution.hiddenTests![i].call)).filter(Boolean).join('; ')}`);
       }
     }
@@ -976,7 +1022,7 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}`).join(', ');
+  const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}${CODING_SECTION_TRACKS.includes(track) ? '' : ' hidden'}`).join(', ');
   // ── approach comparisons (#158) ────────────────────────────────────────
   // Every covered id is a real task; every comparison has at least two
   // approaches, both languages throughout, and a stated cost. Nothing here
@@ -1168,7 +1214,7 @@ async function main() {
   assert.deepEqual(timed.logs, ['wait: 100ms'], 'console.time reads the sandbox\'s virtual clock');
 
   const byLabel = CODING_DIFFICULTIES.map((label) => `${label} ${labelCounts.get(label) ?? 0}`).join(', ');
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}; ${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), ${CODING_SUMMARIES.length} issued (${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 /* ── staged levels, new-array promises and typed parameters ─────────── */

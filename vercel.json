@@ -121,6 +121,14 @@
       "destination": "/coding/index.html"
     },
     {
+      "source": "/coding/system-design",
+      "destination": "/coding/system-design/index.html"
+    },
+    {
+      "source": "/coding/system-design/(.*)",
+      "destination": "/coding/system-design/index.html"
+    },
+    {
       "source": "/coding/:track",
       "destination": "/coding/:track/index.html"
     },

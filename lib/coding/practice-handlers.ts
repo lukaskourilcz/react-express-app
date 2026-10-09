@@ -20,7 +20,8 @@ import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } fr
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { resolveTier, serverContentIndex } from '../access';
-import { CODING_SUMMARIES, codingTaskById, levelCodingTasks } from './active';
+import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask, levelCodingTasks } from './active';
+import { codingTaskForHistory } from './catalog';
 import { javascriptLevelsCleared } from './handlers';
 import { evolvingStage } from '../../shared/evolving';
 import { codingContent, isOpenTo, type Tier } from '../../shared/tiers';
@@ -88,13 +89,16 @@ async function readBookmarks(supabase: SupabaseClient, userId: string): Promise<
     list.push(String(row.task_id));
     byCollection.set(row.collection_id, list);
   }
+  // A star saved on a hidden track (system design) stays in the table and
+  // never comes back: nothing of that track is shown, not even its id.
+  const shown = (id: string) => { const task = codingTaskForHistory(id); return !task || !isHiddenCodingTask(task); };
   return {
-    saved: (saved.data ?? []).map((row) => String(row.task_id)),
+    saved: (saved.data ?? []).map((row) => String(row.task_id)).filter(shown),
     collections: (collections.data ?? []).map((row): CodingCollection => ({
       collectionId: String(row.collection_id),
       name: String(row.name),
       position: Number(row.position ?? 0),
-      taskIds: byCollection.get(String(row.collection_id)) ?? [],
+      taskIds: (byCollection.get(String(row.collection_id)) ?? []).filter(shown),
     })),
   };
 }

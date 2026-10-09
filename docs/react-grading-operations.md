@@ -30,7 +30,10 @@ the suite with its hidden cases, and a random nonce made for this run.
    and the fetch fixtures but not Testing Library, which it could otherwise
    reconfigure (an `asyncWrapper` that skips every `waitFor`, for example).
    Both consoles it can reach, its own and jsdom's `window.console`, go
-   nowhere.
+   nowhere. Its `Date` reads Europe/Prague time and its `Intl` formats in that
+   zone (`shared/coding-prague-time.ts`), as the browser's React frame does,
+   and the guest runs with `TZ=Europe/Prague` (`GUEST_ENV`) for the dates
+   jsdom makes in the grader's realm.
 3. The component still reaches objects of the grader's own realm: React's
    exports, jsdom's document, the timers. One step up their prototype chains
    are the built-ins that the test runner, the matchers and the result

@@ -54,3 +54,18 @@ test('the Coding home and a track page serve their own head', async ({ request }
     expect(html).not.toContain('<link rel="canonical" href="https://devshark.app/" />');
   }
 });
+// Owner decision of 9 Oct 2026: the Coding home and its five track pages are
+// in the sitemap, the task pages are not, and system design is hidden: its
+// track page and every old task address under it are one not-found page,
+// noindex in the HTML itself, with no canonical.
+test('the sitemap lists the Coding pages, and system design is a noindex page', async ({ request }) => {
+  const sitemap = await (await request.get('/sitemap.xml')).text();
+  const coding = [...sitemap.matchAll(/<loc>https:\/\/devshark\.app(\/coding[^<]*)<\/loc>/g)].map((match) => match[1]);
+  expect(coding).toEqual(['/coding', '/coding/javascript', '/coding/typescript', '/coding/react', '/coding/algorithms', '/coding/fullstack']);
+  for (const path of ['/coding/system-design', '/coding/system-design/sd-url-shortener', '/coding/system-design/dd-requests-per-second']) {
+    const html = await (await request.get(path)).text();
+    expect(html).toContain('<meta name="robots" content="noindex" />');
+    expect(html).not.toContain('rel="canonical"');
+    expect(html).toContain('That track does not exist.');
+  }
+});

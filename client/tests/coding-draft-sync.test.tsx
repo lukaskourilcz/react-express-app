@@ -9,12 +9,16 @@
 // offered back. The workbench is a stand-in that shows the code it opened
 // with and saves on request, as Run and Submit do.
 import { useState } from 'react';
-import { beforeAll, beforeEach, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { http, HttpResponse } from 'msw';
+import { server } from './mocks/server';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { preloadPath } from '../src/lib/routePreload';
+import { ApiError } from '../src/lib/api';
+import { clearAccountData } from '../src/lib/accountData';
 import { CodingTaskScreen } from '../src/components/coding/CodingSection';
 import type { CodingWorkbenchProps } from '../src/coding/CodingWorkbench';
 import type { CodingTaskResponse } from '../../shared/coding-api';
@@ -22,9 +26,9 @@ import type { CodingTaskResponse } from '../../shared/coding-api';
 const mocks = vi.hoisted(() => ({
   signedIn: true,
   response: null as unknown,
-  save: vi.fn(async (_id: string, _code: string): Promise<{ ok: true; updatedAt: string | null }> => ({ ok: true, updatedAt: null })),
+  save: vi.fn(async (_id: string, _code: string, _base: string | null): Promise<{ ok: true; updatedAt: string | null }> => ({ ok: true, updatedAt: null })),
 }));
-vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: mocks.signedIn }) }));
+vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: mocks.signedIn }), signedInAccount: () => (mocks.signedIn ? 'user-1' : null) }));
 vi.mock('../src/coding/practice', () => ({
   useBookmarks: () => ({ data: { saved: [] } }),
   useSaveChallenge: () => ({ mutate: vi.fn() }),
@@ -39,10 +43,10 @@ vi.mock('../src/coding/api', () => ({
   useCodingTask: () => ({ data: mocks.response }),
 }));
 vi.mock('../src/coding/CodingWorkbench', () => ({
-  CodingWorkbench: ({ initialCode, task, onDraft }: CodingWorkbenchProps) => {
+  CodingWorkbench: ({ initialCode, task, onDraft, onEdit }: CodingWorkbenchProps) => {
     const [code, setCode] = useState(initialCode ?? task.starter);
     return <>
-      <textarea aria-label="Code" value={code} onChange={(event) => setCode(event.target.value)} />
+      <textarea aria-label="Code" value={code} onChange={(event) => { setCode(event.target.value); onEdit?.(event.target.value); }} />
       <button onClick={() => onDraft?.(code)}>Run</button>
     </>;
   },
@@ -106,7 +110,11 @@ beforeEach(() => {
   mocks.signedIn = true;
   mocks.save.mockClear();
   mocks.save.mockImplementation(async () => ({ ok: true, updatedAt: null }));
+  // What a tab remembers of the account's saves starts over, as it does when
+  // the account changes.
+  clearAccountData();
 });
+afterEach(() => vi.useRealTimers());
 
 it('opens an account draft saved elsewhere since this device’s copy, keeps the copy, and opens it on request', async () => {
   // This browser's save of A3 failed; another browser saved B2 since.
@@ -189,7 +197,8 @@ it('opens the newer code after a slow first save and a refused second one', asyn
   expect(mocks.save).toHaveBeenCalledTimes(1);
   const landed = iso(Date.now() + 2_500);
   await firstLands(landed);
-  await waitFor(() => expect(mocks.save).toHaveBeenNthCalledWith(2, ID, '// V2'));
+  // Sent built on the time the first save returned.
+  await waitFor(() => expect(mocks.save).toHaveBeenNthCalledWith(2, ID, '// V2', landed));
   expect(localStorage.getItem(COPY)).toBe('// V2');
   expect(time()?.base).toBe(landed);
 
@@ -278,7 +287,7 @@ it('saves a run on this device with its time, then to the account, and lets the 
   serve(null, null);
   mount();
   await run('// ran');
-  expect(mocks.save).toHaveBeenCalledWith(ID, '// ran');
+  expect(mocks.save).toHaveBeenCalledWith(ID, '// ran', null);
   expect(localStorage.getItem(COPY)).toBeNull();
 
   mocks.save.mockRejectedValueOnce(new Error('offline'));
@@ -296,4 +305,155 @@ it('keeps code the account would refuse on this device, and sends it nowhere', a
   await run(oversize);
   expect(mocks.save).not.toHaveBeenCalled();
   expect(localStorage.getItem(COPY)).toBe(oversize);
+});
+
+// Owner decision 5: typing keeps a device copy a second after the learner
+// stops, without Run, and sends nothing to the account. A reload opens it.
+it('keeps typed code on this device a second after typing stops, sends nothing, and opens it after a reload', () => {
+  vi.useFakeTimers();
+  const saved = iso(NOW - minutes(5));
+  serve('// account draft', saved);
+  const view = mount();
+  fireEvent.change(screen.getByLabelText('Code'), { target: { value: '// typed, a' } });
+  vi.advanceTimersByTime(600);
+  fireEvent.change(screen.getByLabelText('Code'), { target: { value: '// typed, ab' } });
+  // A keystroke restarts the wait: nothing is written while the learner types.
+  vi.advanceTimersByTime(999);
+  expect(localStorage.getItem(COPY)).toBeNull();
+  vi.advanceTimersByTime(1);
+  expect(localStorage.getItem(COPY)).toBe('// typed, ab');
+  // Built on the account draft the editor opened, never on a time of its own.
+  expect(time()?.base).toBe(saved);
+  expect(mocks.save).not.toHaveBeenCalled();
+
+  view.unmount();
+  serve('// account draft', saved);
+  mount();
+  expect(screen.getByLabelText('Code')).toHaveValue('// typed, ab');
+  expect(screen.getByRole('status')).toHaveTextContent(DEVICE_NEWER);
+});
+
+it('writes typed code at once when the page goes away before the second is up', () => {
+  vi.useFakeTimers();
+  serve(null, null);
+  mount();
+  fireEvent.change(screen.getByLabelText('Code'), { target: { value: '// typed just before a reload' } });
+  expect(localStorage.getItem(COPY)).toBeNull();
+  window.dispatchEvent(new Event('pagehide'));
+  expect(localStorage.getItem(COPY)).toBe('// typed just before a reload');
+});
+
+// Owner decision 10: the account refused a save built on a draft another
+// device saved since. Nothing is lost: the code stays on this device, and the
+// learner keeps it over the other draft or opens the other one.
+const CONFLICT = 'Your account’s draft of this task changed on another device since this page opened, so this code was not saved to your account. It is kept on this device.';
+const refuse = (updatedAt: string) => mocks.save.mockRejectedValueOnce(new ApiError('Your account holds a draft of this task saved since this code was opened', 409, 'draft_conflict', { code: 'draft_conflict', updatedAt }));
+const conflictNote = () => screen.queryByText(CONFLICT);
+
+it('says so when another device saved the draft since, and saves this code over it on request, built on that draft', async () => {
+  const loaded = iso(NOW - minutes(10));
+  const other = '2026-10-09T11:59:00.123456+00:00';
+  serve('// loaded', loaded);
+  mount();
+  refuse(other);
+  await run('// mine');
+  await waitFor(() => expect(conflictNote()).toBeInTheDocument());
+  expect(mocks.save).toHaveBeenLastCalledWith(ID, '// mine', loaded);
+  // The copy here stays, still built on what this page loaded.
+  expect(localStorage.getItem(COPY)).toBe('// mine');
+  expect(time()?.base).toBe(loaded);
+
+  mocks.save.mockResolvedValueOnce({ ok: true, updatedAt: '2026-10-09T12:01:00.5+00:00' });
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Save this code instead' })));
+  expect(mocks.save).toHaveBeenLastCalledWith(ID, '// mine', other);
+  await waitFor(() => expect(conflictNote()).toBeNull());
+  expect(localStorage.getItem(COPY)).toBeNull();
+  // The next save builds on the time that one returned.
+  await run('// mine, later');
+  expect(mocks.save).toHaveBeenLastCalledWith(ID, '// mine, later', '2026-10-09T12:01:00.5+00:00');
+});
+
+it('opens the other device’s draft on request, and keeps this code on this device to take back', async () => {
+  const loaded = iso(NOW - minutes(10));
+  const other = '2026-10-09T11:59:00.123456+00:00';
+  serve('// loaded', loaded);
+  let asked = 0;
+  server.use(http.get('*/api/user/*', ({ request }) => {
+    expect(new URL(request.url).searchParams.get('op')).toBe('coding-draft');
+    asked += 1;
+    return HttpResponse.json({ code: '// from the other device', updatedAt: other });
+  }));
+  mount();
+  refuse(other);
+  await run('// mine');
+  await waitFor(() => expect(conflictNote()).toBeInTheDocument());
+  // The other code is fetched only when the learner asks for it.
+  expect(asked).toBe(0);
+  await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Open the other draft' })));
+  await waitFor(() => expect(screen.getByLabelText('Code')).toHaveValue('// from the other device'));
+  expect(asked).toBe(1);
+  expect(conflictNote()).toBeNull();
+  expect(note()).toHaveTextContent(ACCOUNT_NEWER);
+
+  // Typing in the other draft does not lose this device's code: it is set aside.
+  vi.useFakeTimers();
+  fireEvent.change(screen.getByLabelText('Code'), { target: { value: '// from the other device, edited' } });
+  vi.advanceTimersByTime(1_000);
+  vi.useRealTimers();
+  expect(localStorage.getItem(COPY)).toBe('// from the other device, edited');
+  expect(time()?.base).toBe(other);
+  expect(localStorage.getItem(`devshark:coding:draft-aside:${ID}`)).toBe('// mine');
+
+  fireEvent.click(screen.getByRole('button', { name: 'Open the code from this device' }));
+  expect(screen.getByLabelText('Code')).toHaveValue('// mine');
+  expect(localStorage.getItem(COPY)).toBe('// mine');
+  // Taken back over the draft now open: the next save builds on it.
+  await run('// mine');
+  expect(mocks.save).toHaveBeenLastCalledWith(ID, '// mine', other);
+});
+
+it('offers back a copy set aside on an earlier visit until a Run saves', async () => {
+  const saved = iso(NOW - minutes(1));
+  localStorage.setItem(`devshark:coding:draft-aside:${ID}`, '// set aside before');
+  serve('// account draft', saved);
+  mount();
+  expect(screen.getByLabelText('Code')).toHaveValue('// account draft');
+  expect(note()).toHaveTextContent('Other code for this task is kept on this device until you Run or Submit.');
+  mocks.save.mockResolvedValueOnce({ ok: true, updatedAt: iso(NOW) });
+  await run('// account draft, run');
+  await waitFor(() => expect(localStorage.getItem(`devshark:coding:draft-aside:${ID}`)).toBeNull());
+});
+
+// Owner decision 4: signed out by the session, not by choice. The code kept
+// for the account is not opened for whoever is at the device now; the page
+// says it is kept and offers the sign-in that brings it back.
+it('tells a learner the session signed out that this task’s code is kept for their account, without opening it', () => {
+  mocks.signedIn = false;
+  localStorage.setItem('devshark:coding:kept:v1', JSON.stringify({ userId: 'user-1', drafts: { [COPY]: '// kept for the account' } }));
+  serve(null, null);
+  mount();
+  expect(screen.getByLabelText('Code')).toHaveValue('// starter');
+  expect(screen.getByText('You were signed out, so the code for this task is kept for your account. Sign in to open it.')).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Log in' })).toBeVisible();
+  expect(screen.queryByText(/kept for the account/)).toBeNull();
+});
+
+it('gives the code kept at that sign-out back when the same account opens the task signed in, beside a guest’s copy written since', () => {
+  localStorage.setItem('devshark:coding:kept:v1', JSON.stringify({ userId: 'user-1', drafts: { [COPY]: '// kept for the account', [TIME]: JSON.stringify({ base: null }) } }));
+  localStorage.setItem(COPY, '// typed as a guest since');
+  serve(null, null);
+  mount();
+  expect(screen.getByLabelText('Code')).toHaveValue('// kept for the account');
+  expect(localStorage.getItem('devshark:coding:kept:v1')).toBeNull();
+  expect(note()).toHaveTextContent('Other code for this task is kept on this device until you Run or Submit.');
+  fireEvent.click(screen.getByRole('button', { name: 'Open the code from this device' }));
+  expect(screen.getByLabelText('Code')).toHaveValue('// typed as a guest since');
+});
+
+it('never opens code kept for another account', () => {
+  localStorage.setItem('devshark:coding:kept:v1', JSON.stringify({ userId: 'user-2', drafts: { [COPY]: '// kept for someone else' } }));
+  serve(null, null);
+  mount();
+  expect(screen.getByLabelText('Code')).toHaveValue('// starter');
+  expect(screen.queryByText(/kept for someone else/)).toBeNull();
 });

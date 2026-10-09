@@ -21,7 +21,7 @@
  * short path is free content. */
 
 import type { CodingTaskSummary } from './coding-catalog';
-import { EVOLVING_CHALLENGES, type EvolvingChallenge } from './evolving';
+import { EVOLVING_CHALLENGES, isEvolvingCheckpoint, type EvolvingChallenge } from './evolving';
 import type { LearningPathId } from './learning-paths';
 import { partRanges } from './progression';
 
@@ -32,10 +32,16 @@ export const isTier = (value: unknown): value is Tier => value === 'free' || val
 export const FREE_LEARN_TOPICS = ['html', 'css', 'javascript'] as const;
 /** Topics open up to a level; React has 25 levels, so 12 is the first half. */
 export const FREE_LEARN_LEVELS: Readonly<Partial<Record<string, number>>> = { react: 12 };
-/** Stage or level one of every evolving project and short path stays open. */
+/** Stage one of every evolving project and short path stays open: its first
+ * milestone, or a short path's first level, together with the checkpoint a
+ * project puts before it (`freeStageCount`). In the eleven ten-stage projects
+ * that is `…-1-start` and `…-1`, the whole first stage (owner decision,
+ * 9 Oct 2026); until then a free account got only the checkpoint. */
 export const FREE_EVOLVING_STAGES = 1;
-/** Share of the whole coding catalogue that carries `free: true`; the launch contract asserts it. */
-export const FREE_CODING_SHARE = { target: 0.15, min: 0.12, max: 0.18 } as const;
+/** Share of the issued coding catalogue that carries `free: true`; the launch
+ * contract asserts it. It was 15 % (12–18 %) until the owner opened the whole
+ * first stage of the ten-stage projects and fourteen checkpoints on 9 Oct 2026. */
+export const FREE_CODING_SHARE = { target: 0.19, min: 0.16, max: 0.22 } as const;
 /** The prices shown to a learner, VAT included. Billing charges the provider's
  * Price objects (section 3.1 of the second handoff); this is the display copy
  * and must match them. */
@@ -47,7 +53,8 @@ export const PREMIUM_PRICE = { currency: 'EUR', symbol: '€', monthly: '3.99', 
  * `npm run build:coding-index`, so no task file carries the flag and a content
  * wave never has to edit this contract to add a task. Stage one of every
  * evolving project and short path is free as well; that part is derived from
- * `FREE_EVOLVING_STAGES` rather than listed.
+ * `FREE_EVOLVING_STAGES` rather than listed. The checkpoints opened beyond it
+ * are listed in `FREE_CHECKPOINT_IDS`.
  *
  * The pick: every tier-1 technique group of every track has its first task
  * open. The rest are Easy standalone tasks chosen so each track's free set
@@ -55,9 +62,11 @@ export const PREMIUM_PRICE = { currency: 'EUR', symbol: '€', monthly: '3.99', 
  * strings, objects, functions and async in JavaScript; types, objects and
  * array methods in TypeScript; rendering, hooks and async in React; loops,
  * objects, sorting and recursion in Algorithms). JavaScript 41, TypeScript 18,
- * React 19, Algorithms 9: with stage one of the 29 projects and short paths,
- * 116 of the 770 tasks, 15.1 %. The second block of each track came with the
- * Easy waves of #226. The third came with its Medium and Hard waves, which
+ * React 19, Algorithms 9: with stage one of the 29 projects and short paths
+ * (two tasks in each of the eleven ten-stage projects) and the fourteen
+ * checkpoints, 141 of the 725 issued tasks, 19.4 % (JavaScript 68,
+ * TypeScript 29, React 33, Algorithms 11). The second block of each track
+ * came with the Easy waves of #226. The third came with its Medium and Hard waves, which
  * added no Easy task: it opens an Easy task for the techniques those
  * challenges combine most and the free set had least of (closures, recursion,
  * promises, while and sort in JavaScript; utility types and records in
@@ -160,6 +169,33 @@ export const FREE_CODING_TASK_IDS: readonly string[] = [
 ];
 const FREE_CODING_TASKS = new Set(FREE_CODING_TASK_IDS);
 
+/** Checkpoints open on the free tier beyond stage one (owner decision,
+ * 9 Oct 2026): the last checkpoint of each of the fourteen projects that have
+ * checkpoints, eleven ten-stage projects and three FullStack apps. They are
+ * the five-minute tier-2 steps the position bands used to label Hard, which is
+ * how the Coding audit (C2-13) found them; they read Easy now, from their tier
+ * (`difficultyOf`). Stages still open in order (`evolvingUnlocked`), so a free
+ * account reaches one only after passing the stages before it. Listed rather
+ * than derived, like the starter set: a new project opens none of its stages
+ * beyond stage one until it is added here. */
+export const FREE_CHECKPOINT_IDS: readonly string[] = [
+  'js-evolving-calculator-5-start',
+  'js-evolving-query-5-start',
+  'js-evolving-events-5-start',
+  'js-evolving-graph-5-start',
+  'js-evolving-debug-5-start',
+  'ts-evolving-result-5-start',
+  'ts-evolving-store-5-start',
+  'ts-evolving-schema-5-start',
+  'react-evolving-board-5-start',
+  'react-evolving-catalog-5-start',
+  'react-evolving-form-5-start',
+  'react-fullstack-planner-8-start',
+  'react-fullstack-stockroom-8-start',
+  'react-fullstack-workshops-8-start',
+];
+const FREE_CHECKPOINTS = new Set(FREE_CHECKPOINT_IDS);
+
 /** Something a learner starts. `stage` is one-based. */
 export type GatedContent =
   | { kind: 'learn-level'; topic: string; level: number }
@@ -196,17 +232,37 @@ export function evolvingStageNumber(
   return null;
 }
 
-/** Whether the free tier includes a coding task: the starter set, plus stage one
- * of every evolving project and short path. `build:coding-index` projects this
- * into the index; everything else reads the projected flag. */
+/** How many stages at the head of a stage list the free tier opens: through
+ * its first `FREE_EVOLVING_STAGES` milestones, with the checkpoints before
+ * them. Two in a ten-stage project (`…-1-start`, `…-1`), one in a FullStack
+ * app, whose first stage has no checkpoint, and one in a short path. */
+export function freeStageCount(stages: readonly string[]): number {
+  let milestones = 0;
+  for (let index = 0; index < stages.length; index++) {
+    if (!isEvolvingCheckpoint(stages[index]) && ++milestones >= FREE_EVOLVING_STAGES) return index + 1;
+  }
+  return stages.length;
+}
+
+/** Whether the free tier opens a one-based stage of an evolving project or path. */
+function evolvingStageFree(challengeId: string, stage: number, evolving: ContentIndex['evolving']): boolean {
+  const challenge = evolving.find((one) => one.id === challengeId);
+  if (!challenge || !Number.isInteger(stage) || stage < 1 || stage > challenge.stages.length) return false;
+  return stage <= freeStageCount(challenge.stages) || FREE_CHECKPOINTS.has(challenge.stages[stage - 1]);
+}
+
+/** Whether the free tier includes a coding task: the starter set, stage one of
+ * every evolving project and short path, and the listed checkpoints.
+ * `build:coding-index` projects this into the index; everything else reads the
+ * projected flag. */
 export function isFreeCodingTask(taskId: string): boolean {
   if (FREE_CODING_TASKS.has(taskId)) return true;
   const stage = evolvingStageNumber(taskId);
-  return stage !== null && stage.stage <= FREE_EVOLVING_STAGES;
+  return stage !== null && evolvingStageFree(stage.challengeId, stage.stage, EVOLVING_CHALLENGES);
 }
 
 /** How many of these coding tasks the free tier opens, and of how many: the
- * "116 of 770 tasks free" that share images and copy print (#239). Pass the
+ * "141 of 725 tasks free" that share images and copy print (#239). Pass the
  * catalogue's ids; the count is this module's rule, not a stored number. */
 export function freeCodingCounts(taskIds: readonly string[]): { free: number; total: number } {
   return { free: taskIds.filter(isFreeCodingTask).length, total: taskIds.length };
@@ -251,10 +307,7 @@ export function contentTier(content: GatedContent, index: ContentIndex): Tier {
       return stage ? contentTier({ kind: 'evolving-stage', ...stage }, index) : 'premium';
     }
     case 'evolving-stage':
-      return index.evolving.some((challenge) => challenge.id === content.challengeId) &&
-        Number.isInteger(content.stage) && content.stage >= 1 && content.stage <= FREE_EVOLVING_STAGES
-        ? 'free'
-        : 'premium';
+      return evolvingStageFree(content.challengeId, content.stage, index.evolving) ? 'free' : 'premium';
     case 'learning-path':
       // The FDE and DSA paths are Premium in full, once their switches are on.
       return 'premium';

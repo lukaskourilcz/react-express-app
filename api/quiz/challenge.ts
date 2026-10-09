@@ -321,15 +321,29 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     if (isRpcMissing(error)) return jsonError(res, 503, 'migration_required', 'Verified progression migration is not installed');
     return jsonError(res, 500, 'db_error', 'Could not record challenge progress');
   }
+  // From migration 058 a correct answer whose question paid this account XP
+  // less than an hour ago pays nothing, so the run may be awarded less than
+  // its score: the award row says how much. Without 058, or when the row
+  // cannot be read, the run was awarded in full.
+  const awardedXp = data === true ? await awardedRunXp(run.runId, xp) : 0;
   // Tokens follow verified XP, keyed to the same award. A replay credits
   // nothing, and a wallet that cannot be reached never fails the learning.
   if (data === true) {
-    await creditVerifiedXp(supabase, { userId: auth.sub, awardId: `challenge:${run.runId}`, subject: run.subject, xp });
+    await creditVerifiedXp(supabase, { userId: auth.sub, awardId: `challenge:${run.runId}`, subject: run.subject, xp: awardedXp });
     // From migration 048 an awarded run is a streak day, so a Premium streak
     // milestone may have just been reached. Idempotent; a failure costs nothing.
     await settleMilestones(supabase, auth.sub, run.subject);
   }
-  return res.json({ ok: true, awarded: data === true, score, xp });
+  return res.json({ ok: true, awarded: data === true, score, xp: data === true ? awardedXp : xp });
+}
+
+/** The XP a completed run was awarded (verified_activity_awards). */
+async function awardedRunXp(runId: string, runXp: number): Promise<number> {
+  const row = await withTimeout(
+    supabase!.from('verified_activity_awards').select('xp').eq('award_id', `challenge:${runId}`).maybeSingle(),
+  ).catch(() => null);
+  const value = (row?.data as { xp?: unknown } | null | undefined)?.xp;
+  return !row || row.error || typeof value !== 'number' || !Number.isInteger(value) ? runXp : Math.min(value, runXp);
 }
 
 /**
@@ -345,17 +359,19 @@ async function runAnswers(
   subject: Parameters<typeof getEffectiveQuestionsById>[0],
   outcomes: { questionId: string; isCorrect: boolean }[],
 ): Promise<{
-  outcomes: { questionId: string; category: string; isCorrect: boolean }[];
+  outcomes: { questionId: string; category: string; isCorrect: boolean; xp: number }[];
   breakdown: Record<string, { correct: number; total: number }>;
 } | null> {
   try {
     const bank = await getEffectiveQuestionsById(subject, false);
-    const answered: { questionId: string; category: string; isCorrect: boolean }[] = [];
+    const answered: { questionId: string; category: string; isCorrect: boolean; xp: number }[] = [];
     const breakdown: Record<string, { correct: number; total: number }> = {};
     for (const outcome of outcomes) {
       const category = bank.get(outcome.questionId)?.category;
       if (!category) continue;
-      answered.push({ questionId: outcome.questionId, category, isCorrect: outcome.isCorrect });
+      // Each answer's XP, so migration 058 can leave out the answers whose
+      // question paid XP less than an hour ago.
+      answered.push({ questionId: outcome.questionId, category, isCorrect: outcome.isCorrect, xp: outcome.isCorrect ? challengeRunXp(1) : 0 });
       const entry = (breakdown[category] ??= { correct: 0, total: 0 });
       entry.total += 1;
       if (outcome.isCorrect) entry.correct += 1;

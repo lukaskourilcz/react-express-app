@@ -27,7 +27,8 @@ import { CodePuzzle } from './CodePuzzle';
 import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { CODING_CODE_LIMIT_BYTES, SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint, isSyntaxError } from '../../../shared/coding-failure';
-import { revealCoding, submitCoding, useCodingApproaches } from './api';
+import { resetCoding, revealCoding, submitCoding, useCodingApproaches } from './api';
+import { RepeatXpNote } from './RepeatXpNote';
 import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
@@ -70,10 +71,13 @@ export interface CodingWorkbenchProps {
   /** The parent's save-for-later control, rendered beside the report flag. */
   saveAction?: ReactNode;
   /** Called with the current code when the learner presses Run or Submit —
-   * the two moments they have said the code is worth keeping. Nothing is
-   * saved while they type, and nothing when they leave. 'tooLarge': the code
-   * was kept on this device only, too large for the account. */
+   * the two moments they have said the code is worth keeping for the
+   * account. 'tooLarge': the code was kept on this device only, too large
+   * for the account. */
   onDraft?: (code: string) => 'tooLarge' | null | void;
+  /** Called with the code after every edit (typing, Reset, Format). The
+   * parent keeps a device copy once the learner pauses (coding/drafts.ts). */
+  onEdit?: (code: string) => void;
   onVerdict?: (verdict: CodingVerdictResponse, submittedCode?: string) => void;
   onRevealed?: () => void;
   nextHref?: string | null;
@@ -137,7 +141,7 @@ function useOnline(): boolean {
 }
 
 export function CodingWorkbench(props: CodingWorkbenchProps) {
-  const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction } = props;
+  const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onEdit, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction } = props;
   const evolution = evolvingStage(task.id);
   const { t, lang } = useLanguage();
   const [reportOpen, setReportOpen] = useState(false);
@@ -150,6 +154,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const checklist = task.verify === 'checklist';
 
   const [code, setCode] = useState<string>(initialCode ?? task.starter);
+  const shownCode = useRef(code);
+  shownCode.current = code;
   const [formattedCode, setFormattedCode] = useState<string>(task.starter);
   const [formatSource, setFormatSource] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -276,10 +282,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const onCodeChange = useCallback((next: string) => {
     setCode(next);
+    onEdit?.(next);
     if (run || harness.run) setStale(true);
     if (verdict) setVerdictStale(true);
     setServerChecked(false);
-  }, [run, harness.run, verdict]);
+  }, [run, harness.run, verdict, onEdit]);
 
   const files = useCallback(() => ({ '/App.js': code, '/App.test.js': task.suite ?? '' }), [code, task.suite]);
 
@@ -415,12 +422,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     try {
       const formatted = await formatCode(code, task.track);
       setCode(current => current === code ? formatted : current);
+      // Kept as typed code is, unless the learner typed on meanwhile.
+      if (shownCode.current === code) onEdit?.(formatted);
       setFormattedCode(formatted);
       setFormatError(null);
     } catch (error) {
       setFormatError(String((error as Error)?.message ?? error).split('\n')[0]);
     }
-  }, [code, task.track]);
+  }, [code, task.track, onEdit]);
 
   /** Send an arrangement. It goes through the same submit route as code, and
    * the server grades it the same from any device — the viewport decided what
@@ -446,16 +455,21 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const reset = useCallback(() => {
     setCode(task.starter);
+    onEdit?.(task.starter);
     setFormattedCode(task.starter);
     setRun(null);
     setStale(false);
     setVerdictStale(true);
     setHintsTaken(0);
     setConfirming(null);
+    // Signed in, the reset opens the task's XP again (migration 058). A reset
+    // the server missed only means the next pass pays nothing, which its
+    // verdict says.
+    if (signedIn && session) void resetCoding({ session }).catch(() => {});
     // Reset is off now (there is nothing left to reset), so focus goes to the
     // code that was just replaced rather than to the page.
     editorPaneRef.current?.querySelector<HTMLElement>('.cm-content')?.focus();
-  }, [task.starter]);
+  }, [task.starter, onEdit, signedIn, session]);
 
   const confirmSkip = useCallback(async () => {
     if (skipSubmitting) return;
@@ -909,6 +923,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         <span>{verdictLabel}</span>
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
+      <RepeatXpNote verdict={verdict} />
       {verdictStale && <p className="cd-verdict__row">{t('coding.verdict.stale')}</p>}
       {verdict.verdict === 'failed' && verdict.hidden && verdict.hidden.passed < verdict.hidden.total && visiblePassed && <p className="cd-verdict__row">{t('coding.verdict.hiddenFailed')}</p>}
       {verdict.puzzle ? (
@@ -1205,7 +1220,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               </div>}
               {confirming === 'reset' && (
                 <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.reset')} onKeyDown={onConfirmKeyDown}>
-                  <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
+                  <p style={{ margin: '0 0 8px' }}>{t(signedIn && (progress?.status === 'passed' || verdict?.verdict === 'passed') ? 'coding.resetConfirmXp' : 'coding.resetConfirm')}</p>
                   <div className="cd-actions">
                     <Button variant="primary" onClick={reset} label={t('coding.reset')} />
                     <Button variant="secondary" onClick={cancelConfirm} ref={focusOnMount} label={t('coding.resetCancel')} />

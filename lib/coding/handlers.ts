@@ -10,18 +10,18 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError } from '../auth';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, withTimeout } from '../http';
-import { claimOnce, enforceClassRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
+import { claimOnce, enforceClassRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
 import { codingTaskForHistory, englishOnly, playable } from './catalog';
-import { CODING_SUMMARIES, codingTaskById } from './active';
+import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask } from './active';
 import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
-import { GRADING_PER_CALLER, GraderBusyError } from './grader-capacity';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, isSyntaxError, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
@@ -44,10 +44,14 @@ import {
 import { CODING_CODE_LIMIT_BYTES } from '../../shared/coding-api';
 import type {
   CodingDraftResponse,
+  CodingDraftSaveRequest,
   CodingDraftSaveResponse,
   CodingGardenStatus,
   CodingOutcome,
   CodingProgressResponse,
+  CodingRepeatXp,
+  CodingResetRequest,
+  CodingResetResponse,
   CodingRevealRequest,
   CodingRevealResponse,
   CodingSubmitRequest,
@@ -199,8 +203,10 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   if (!task) {
     // A task that exists but is withheld by the content gate is told apart
     // from an unknown id, so a stale bookmark gets an honest answer rather
-    // than a "not found" it will keep retrying.
-    if (codingTaskForHistory(id)) return jsonError(res, 410, 'task_retired', 'This challenge was retired from the active catalogue');
+    // than a "not found" it will keep retrying. A task on a hidden track
+    // (system design) is answered as unknown: nothing of it is reachable.
+    const authored = codingTaskForHistory(id);
+    if (authored && !isHiddenCodingTask(authored)) return jsonError(res, 410, 'task_retired', 'This challenge was retired from the active catalogue');
     return jsonError(res, 404, 'not_found', 'Unknown task');
   }
 
@@ -493,6 +499,7 @@ interface Recorded {
   firstPass: boolean;
   xpAwarded: number;
   xpForfeited: boolean;
+  repeatXp: CodingRepeatXp | null;
   applied: boolean;
   codeChanged: boolean;
 }
@@ -515,7 +522,8 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     if (!attempt.error && attempt.data) roadmapAttemptId = session.roadmapAttemptId;
   }
   // Whether the solution was revealed before this pass, read before the pass
-  // is written. Only a pass can forfeit XP, so nothing else pays for the read.
+  // is written, for a database without migration 058, whose routine says it
+  // itself. Only a pass can forfeit XP, so nothing else pays for the read.
   let revealedBefore = false;
   if (input.verdict === 'passed') {
     try {
@@ -548,11 +556,15 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     jsonError(res, 500, 'db_error', 'Could not record the verdict');
     return null;
   }
-  const data = (saved.data ?? {}) as { applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; codeChanged?: boolean };
+  const data = (saved.data ?? {}) as {
+    applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; xpForfeited?: boolean; codeChanged?: boolean;
+    xpKind?: 'first' | 'repeat' | null; repeatXp?: CodingRepeatXp | null;
+  };
   // Coins follow the XP the routine just awarded, under the same award id
   // (#227). The last stage of a project or short path is a Premium milestone.
+  // A task's repeat XP (058) is XP only: it credits no coins.
   const xpAwarded = data.xpAwarded === true && xp > 0;
-  if (xpAwarded) {
+  if (xpAwarded && data.xpKind !== 'repeat') {
     await creditVerifiedXp(supabase, {
       userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
     });
@@ -570,9 +582,27 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     // reveal. Before 048 the routine still pays it: xpAwarded is then true and
     // this stays false, so the verdict never claims a forfeit that did not
     // happen. An unverified (checklist) pass never pays, so it claims none.
-    xpForfeited: revealedBefore && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
+    // From 058 the first verified pass pays even after an old unverified one,
+    // whose row already reads 'passed', and the routine says whether a reveal
+    // cost it the XP (C1-7).
+    xpForfeited: typeof data.xpForfeited === 'boolean'
+      ? data.xpForfeited && data.applied === true && !xpAwarded && xp > 0
+      : revealedBefore && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
+    repeatXp: repeatXpOf(data.repeatXp),
     applied: data.applied === true,
     codeChanged: data.codeChanged === true,
+  };
+}
+
+/** The routine's `repeatXp` (058), kept only in the shape the client reads. */
+function repeatXpOf(value: unknown): CodingRepeatXp | null {
+  if (!value || typeof value !== 'object') return null;
+  const one = value as { availableAt?: unknown; needsReset?: unknown; withheld?: unknown };
+  const at = typeof one.availableAt === 'string' && !Number.isNaN(Date.parse(one.availableAt)) ? new Date(one.availableAt).toISOString() : null;
+  return {
+    availableAt: at,
+    needsReset: one.needsReset === true,
+    withheld: one.withheld === 'reset' || one.withheld === 'cooldown' ? one.withheld : null,
   };
 }
 
@@ -600,6 +630,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     firstPass: recorded?.firstPass ?? false,
     xpAwarded: recorded?.xpAwarded ?? 0,
     xpForfeited: recorded?.xpForfeited ?? false,
+    repeatXp: recorded?.repeatXp ?? null,
     applied: recorded?.applied ?? false,
     github,
     solutions,
@@ -621,12 +652,15 @@ function graderBusy(res: VercelResponse, status: 429 | 503, error: GraderBusyErr
 
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingRunAddress, RATE_LIMITS.codingRun))) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingSubmitAddress))) return;
   const body = (req.body || {}) as Partial<CodingSubmitRequest> & { lang?: unknown };
   const session = sessionFrom(body.session);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
   const task = codingTaskById(session.taskId);
   if (!task || task.track !== session.track) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
+  // Per task, beneath a ceiling per caller (owner decision, 9 October 2026):
+  // a learner who spent one task's budget still submits on the next one.
+  if (!(await enforcePerItemRateLimit(req, res, RATE_LIMITS.codingSubmit, RATE_LIMITS.codingSubmitCeiling, gradingItem.task(task.id)))) return;
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
   if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
@@ -687,7 +721,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
     code = body.code;
-    const done = enterInFlight(req, 'grading', GRADING_PER_CALLER, userId ? `user:${userId}` : undefined);
+    const done = enterInFlight(req, 'grading', { item: gradingItem.task(task.id), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, userId ? `user:${userId}` : undefined);
     if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'), task.track, Boolean(userId));
     try {
       graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
@@ -708,6 +742,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
 
   let recorded: Recorded | null = null;
   let github: CodingGardenStatus | null = null;
+  let draftUpdatedAt: string | null = null;
   if (userId) {
     if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
     if (evolvingStage(task.id)) {
@@ -715,10 +750,13 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
       const passed = new Set(rows.filter(row => row.status === 'passed').map(row => row.task_id));
       if (!evolvingUnlocked(task.id, passed)) return jsonError(res, 403, 'stage_locked', 'Complete earlier stages first');
       // Persist the exact submitted code before publishing completion. A next
-      // stage can then resume from this draft even on another device.
+      // stage can then resume from this draft even on another device. It is
+      // written whatever the draft holds, and the time goes back with the
+      // verdict, so the browser's next save builds on it.
       if (code !== null) {
-        const draft = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: task.id, p_code: code }));
-        if (draft.error) return jsonError(res, 500, 'db_error', 'Could not save stage code');
+        const draft = await storeDraft(supabase, userId, task.id, code, 'force');
+        if (!draft || draft === 'missing') return jsonError(res, 500, 'db_error', 'Could not save stage code');
+        if (draft.saved && draft.updatedAt) draftUpdatedAt = draft.updatedAt;
       }
     }
     recorded = await recordVerdict({ supabase, userId, task, session, verdict: graded.verdict, verified: graded.unverified !== true, code, runCount: body.runCount, hintsUsed: body.hintsUsed, durationMs: body.durationMs }, res);
@@ -742,7 +780,42 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   // moment ago in this same request, which is the only reason they are here;
   // an unverified pass checked nothing, so it opens nothing.
   const checkedPass = graded.verdict === 'passed' && code !== null && graded.unverified !== true;
-  return res.json(verdictBody(graded, recorded, github, checkedPass ? solutionPairFor(task.id) : null));
+  const out: CodingVerdictResponse = verdictBody(graded, recorded, github, checkedPass ? solutionPairFor(task.id) : null);
+  if (draftUpdatedAt) out.draftUpdatedAt = draftUpdatedAt;
+  return res.json(out);
+}
+
+/* ── POST ?resource=coding-reset ─────────────────────────────────────── */
+
+/** The workbench's Reset, signed in: the code went back to the starter, which
+ * opens the task's repeat XP (migration 058). A pass from an hour after the
+ * task last paid its XP, with no reveal in between, pays it once more. A guest
+ * earns no XP, so a guest's reset records nothing. */
+export async function handleCodingReset(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  if (!codingAvailable()) return notAvailable(res);
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingTaskAddress, RATE_LIMITS.codingTask))) return;
+  const body = (req.body || {}) as Partial<CodingResetRequest>;
+  const session = sessionFrom(body.session);
+  if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
+  const task = codingTaskById(session.taskId);
+  if (!task) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
+  const userId = await optionalUser(req, res);
+  if (userId === undefined) return;
+  if (!userId) return jsonError(res, 401, 'unauthorized', 'Sign in to earn XP for a task again');
+  if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
+  const saved = await withTimeout(supabase.rpc('record_coding_reset', { p_user_id: userId, p_task_id: task.id }));
+  if (saved.error) {
+    if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Coding repeat migration 058 is not installed');
+    return jsonError(res, 500, 'db_error', 'Could not record the reset');
+  }
+  const data = (saved.data ?? {}) as { recorded?: unknown; availableAt?: unknown };
+  res.setHeader('Cache-Control', 'private, no-store');
+  const out: CodingResetResponse = {
+    recorded: data.recorded === true,
+    availableAt: repeatXpOf({ availableAt: data.availableAt })?.availableAt ?? null,
+  };
+  return res.json(out);
 }
 
 /* ── POST ?resource=coding-reveal ────────────────────────────────────── */
@@ -777,6 +850,12 @@ export async function handleCodingReveal(req: VercelRequest, res: VercelResponse
       return jsonError(res, 500, 'db_error', 'Could not record the reveal');
     }
     try { progress = await loadProgressRow(supabase, userId, task.id); } catch { /* the reveal itself succeeded */ }
+  } else if (userId && supabase) {
+    // After a pass the solution opens without the ladder, and costs only the
+    // repeat XP of a reset the learner has open (058): that attempt then pays
+    // nothing. Before 058 there is no repeat XP to forfeit.
+    const marked = await withTimeout(supabase.rpc('record_coding_repeat_reveal', { p_user_id: userId, p_task_id: task.id }));
+    if (marked.error && !isRpcMissing(marked.error)) return jsonError(res, 500, 'db_error', 'Could not record the reveal');
   }
   const solution = solutionFor(task.id)?.solution ?? '';
   const reference = task.design?.reference ?? task.drill?.explanation ?? null;
@@ -815,6 +894,39 @@ export async function handleCodingProgress(req: VercelRequest, res: VercelRespon
 
 /* ── GET/POST ?op=coding-draft&id=… ──────────────────────────────────── */
 
+/** An account draft's updated_at as Postgres hands it out, ISO 8601 with up
+ * to microseconds: kept as a string, since a Date would drop them. */
+const isDraftTime = (value: unknown): value is string =>
+  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}(:?\d{2})?)$/.test(value) && !Number.isNaN(Date.parse(value));
+
+type StoredDraft = { saved: true; updatedAt: string | null } | { saved: false; updatedAt: string };
+
+/** Write a task's draft: only while the account's draft still has `base`
+ * (null: none yet), or whatever it holds with 'force'. Migration 059's
+ * save_coding_draft_v2 decides under a row lock. Before that migration the
+ * save goes through save_coding_draft (025), which always writes, and the
+ * time is read back: none when another save overtook it. Null for a database
+ * error, 'missing' when neither routine exists. */
+async function storeDraft(supabase: SupabaseClient, userId: string, taskId: string, code: string, base: string | null | 'force'): Promise<StoredDraft | 'missing' | null> {
+  const force = base === 'force';
+  const result = await withTimeout(supabase.rpc('save_coding_draft_v2', { p_user_id: userId, p_task_id: taskId, p_code: code, p_base: force ? null : base, p_force: force }));
+  if (!result.error) {
+    const answer = result.data as { saved?: unknown; conflict?: unknown; updatedAt?: unknown } | null;
+    const updatedAt = typeof answer?.updatedAt === 'string' ? answer.updatedAt : null;
+    if (answer?.saved === false && answer.conflict === true && updatedAt) return { saved: false, updatedAt };
+    return { saved: true, updatedAt };
+  }
+  if (!isRpcMissing(result.error)) return null;
+  const saved = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: taskId, p_code: code }));
+  if (saved.error) return isRpcMissing(saved.error) ? 'missing' : null;
+  let updatedAt: string | null = null;
+  try {
+    const row = await withTimeout(supabase.from('coding_drafts').select('code,updated_at').eq('user_id', userId).eq('task_id', taskId).maybeSingle());
+    if (!row.error && row.data?.code === code && typeof row.data.updated_at === 'string') updatedAt = row.data.updated_at;
+  } catch { /* saved all the same; the browser learns no time */ }
+  return { saved: true, updatedAt };
+}
+
 export async function handleCodingDraft(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {
   if (!codingAvailable()) return notAvailable(res);
   const userId = await requireAuthSub(req, res);
@@ -832,24 +944,23 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
     // Rate limited as every write to api/user/[op].ts is (`limitUserWrite`):
     // per account, behind a class-sized address bucket. A second bucket here,
     // keyed by address alone, held a whole class to one person's saves.
-    const code = (req.body as { code?: unknown })?.code;
+    const body = (req.body ?? {}) as Partial<Record<keyof CodingDraftSaveRequest, unknown>>;
+    const code = body.code;
     if (typeof code !== 'string' || Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 400, 'bad_request', 'code is required and limited to 20 kB');
-    const saved = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: id, p_code: code }));
-    if (saved.error) {
-      if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
-      return jsonError(res, 500, 'db_error', 'Could not save the draft');
-    }
-    // The time the account now holds this code, so the browser can tell its
-    // own save from another device's when the task next opens
-    // (client/src/coding/drafts.ts). save_coding_draft returns nothing, so the
-    // row is read back; if another save landed in between, the row holds other
-    // code and its time is not this save's, so none is given.
-    let updatedAt: string | null = null;
-    try {
-      const row = await withTimeout(supabase.from('coding_drafts').select('code,updated_at').eq('user_id', userId).eq('task_id', id).maybeSingle());
-      if (!row.error && row.data?.code === code && typeof row.data.updated_at === 'string') updatedAt = row.data.updated_at;
-    } catch { /* saved all the same; the browser learns no time */ }
-    const out: CodingDraftSaveResponse = { ok: true, updatedAt };
+    // The account draft's time this code builds on (owner decision 10). A
+    // client from before it sends none and writes as it always did.
+    const base = !('base' in body) ? 'force' : body.base === null ? null : isDraftTime(body.base) ? body.base : undefined;
+    if (base === undefined) return jsonError(res, 400, 'bad_request', 'base must be a draft time or null');
+    const saved = await storeDraft(supabase, userId, id, code, base);
+    if (!saved) return jsonError(res, 500, 'db_error', 'Could not save the draft');
+    if (saved === 'missing') return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
+    // Saved from another device or tab since: nothing was written, and the
+    // browser asks the learner which code to keep. The other code stays on
+    // the server until the browser asks for it.
+    if (!saved.saved) return jsonError(res, 409, 'draft_conflict', 'Your account holds a draft of this task saved since this code was opened', { updatedAt: saved.updatedAt });
+    // The time the account now holds this code, so the browser's next save
+    // builds on it (client/src/coding/drafts.ts).
+    const out: CodingDraftSaveResponse = { ok: true, updatedAt: saved.updatedAt };
     return res.json(out);
   }
   res.setHeader('Allow', 'GET, POST');

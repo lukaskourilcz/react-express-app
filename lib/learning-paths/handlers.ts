@@ -18,11 +18,11 @@ import { randomBytes } from 'node:crypto';
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
 import { refuseLocked } from '../access';
-import { enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
+import { enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { shuffleWithOrder } from '../coding/grade';
-import { GRADING_PER_CALLER, GraderBusyError } from '../coding/grader-capacity';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../coding/grader-capacity';
 import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../quiz-tokens';
 import {
@@ -819,8 +819,6 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmitAddress))) return;
   const userId = await requireAuthSub(req, res);
   if (!userId) return;
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.learningPathSubmit, `user:${userId}`))) return;
-  if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');
 
   const body = (req.body || {}) as Partial<SubmitActivityRequest>;
   if (typeof body.session !== 'string' || body.session.length > 16_384) {
@@ -830,6 +828,11 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   if (!session) return jsonError(res, 410, 'session_expired', 'This attempt expired or is no longer valid. Start it again.');
   // Token binding: a session minted for another account is not this caller's.
   if (session.userId !== userId) return jsonError(res, 403, 'forbidden', 'This attempt belongs to another account');
+  // Per activity, beneath a ceiling per account, as a coding Submit is per
+  // task (owner decision, 9 October 2026).
+  if (!(await enforcePerItemRateLimit(req, res, RATE_LIMITS.learningPathSubmit, RATE_LIMITS.learningPathSubmitCeiling,
+    gradingItem.activity(session.pathId, session.activityId)))) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning-path storage is not configured');
   if (typeof body.idempotencyKey !== 'string' || !PATH_LIMITS.idempotencyKeyPattern.test(body.idempotencyKey)) {
     return jsonError(res, 400, 'bad_request', 'An idempotencyKey is required');
   }
@@ -927,7 +930,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       // The coding section's grader threads, under the same limits
       // (lib/coding/grader-capacity.ts): a busy grader is a retry, never a
       // recorded result.
-      const done = enterInFlight(req, 'grading', GRADING_PER_CALLER, `user:${userId}`);
+      const done = enterInFlight(req, 'grading', { item: gradingItem.activity(path.id, activity.id), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, `user:${userId}`);
       if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'));
       let graded;
       try {

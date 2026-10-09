@@ -20,7 +20,7 @@ export interface CodingTaskProgress {
   bestPassedAt: string | null;
 }
 
-export type CodingLockReason = 'foundations' | 'tier3' | 'tier4' | 'evolving';
+export type CodingLockReason = 'foundations' | 'sweep' | 'tier3' | 'tier4' | 'evolving';
 
 /** GET ?resource=coding-task&id=… */
 export interface CodingTaskResponse {
@@ -108,6 +108,12 @@ export interface CodingVerdictResponse {
    * no XP and no coins. False whenever XP was paid, so a database that still
    * pays for such a pass never makes the verdict claim otherwise. */
   xpForfeited: boolean;
+  /** When this task's XP can be earned again (migration 058), on a verified
+   * pass that offered XP: a reset of the task to its starter, then a pass
+   * from `availableAt` on, pays the task's XP once more. `withheld` says why
+   * this pass paid nothing: no reset since the last award, or the hour since
+   * it is not up. Null on every other verdict, and on a database without 058. */
+  repeatXp?: CodingRepeatXp | null;
   applied: boolean;
   github: CodingGardenStatus | null;
   /** The junior and senior solutions, on a passed code submission. Null on
@@ -117,6 +123,10 @@ export interface CodingVerdictResponse {
    * start). The verdict says nothing about the code and nothing was
    * recorded; the learner can submit again. */
   graderUnavailable?: true;
+  /** An evolving stage's Submit by an account stores the submitted code as
+   * the stage's draft: the time it did, so the browser's next draft save
+   * builds on it rather than meeting it as a conflict. */
+  draftUpdatedAt?: string;
 }
 
 /** One graded step of a walkthrough, or the one answer of a drill.
@@ -136,6 +146,26 @@ export interface DesignStepVerdict {
   correctOrder?: number[];
   acceptedRange?: { min: number; max: number; answer: number };
   explanation?: Localized;
+}
+
+/** When a task's XP opens again (`CodingVerdictResponse.repeatXp`). */
+export interface CodingRepeatXp {
+  /** ISO time from which a pass after a reset pays the XP again. */
+  availableAt: string | null;
+  /** True when the task must be reset before its XP can be earned again. */
+  needsReset: boolean;
+  /** Why this pass paid nothing, when that is the reason. */
+  withheld: 'reset' | 'cooldown' | null;
+}
+
+/** POST ?resource=coding-reset: the workbench's Reset, signed in. */
+export interface CodingResetRequest {
+  session: string;
+}
+export interface CodingResetResponse {
+  /** False when there was nothing to reset: the account never opened the task. */
+  recorded: boolean;
+  availableAt: string | null;
 }
 
 /** POST ?resource=coding-reveal */
@@ -167,11 +197,31 @@ export interface CodingDraftResponse {
   updatedAt: string | null;
 }
 
+/** POST /api/user/[op]?op=coding-draft. `base` is the account draft's
+ * `updatedAt` the code builds on, null for none: the save is refused with 409
+ * `draft_conflict` (`CodingDraftConflict`) when the account holds a draft
+ * saved since. A request without `base` (a client from before migration 059)
+ * writes whatever the account holds, as every save used to. */
+export interface CodingDraftSaveRequest {
+  id: string;
+  code: string;
+  base?: string | null;
+}
+
 /** POST /api/user/[op]?op=coding-draft: the time the account now holds the
  * code just sent, or null when it cannot say (another save landed first). */
 export interface CodingDraftSaveResponse {
   ok: true;
   updatedAt: string | null;
+}
+
+/** The `error` of a 409 `draft_conflict`: the time of the draft the account
+ * holds, saved since the base the request named. Its code is not sent; the
+ * client reads it with GET coding-draft when the learner asks for it. */
+export interface CodingDraftConflict {
+  code: 'draft_conflict';
+  message: string;
+  updatedAt: string;
 }
 
 /* ── GitHub garden ─────────────────────────────────────────────────────── */

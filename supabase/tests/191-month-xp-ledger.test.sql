@@ -1,8 +1,9 @@
 -- The month's XP ledger (migration 056). user_xp_days holds the verified XP a
 -- learner earned per UTC day and subject, so a calendar month's XP can decide
 -- its top three (owner decision 8). Every verified award writes it in its own
--- transaction: a quiz and a daily result (repeats included, as 056 pays
--- them), a Biggest Shark Challenge run, a coding challenge's first pass and a
+-- transaction: a quiz and a daily result (a repeated question once its hour
+-- is up, 058), a Biggest Shark Challenge run, a coding challenge's first pass
+-- or repeat XP (058) and a
 -- Learn level or part test passed for the first time, at the XP
 -- shared/progression.ts gives it. A replayed award, a later pass, a failed
 -- level, a run that earned nothing and guest XP merged at sign-in
@@ -21,7 +22,8 @@ DECLARE
   v_result JSONB;
   v_done   BOOLEAN;
 BEGIN
-  -- A quiz worth 12 XP, then the same questions again: both pay, both count.
+  -- Two quizzes worth 12 XP each: both pay, both count. (The same questions
+  -- again within the hour would pay nothing: 156-quiz-xp-question-cooldown.)
   PERFORM public.record_verified_quiz_result_v2(
     v_user, 'monthledgerquiz00001', 2, 2, NULL,
     '[{"questionId":"q1","category":"javascript","isCorrect":true,"xp":4},
@@ -29,8 +31,8 @@ BEGIN
     'webdev', 12);
   PERFORM public.record_verified_quiz_result_v2(
     v_user, 'monthledgerquiz00002', 2, 2, NULL,
-    '[{"questionId":"q1","category":"javascript","isCorrect":true,"xp":4},
-      {"questionId":"q2","category":"javascript","isCorrect":true,"xp":8}]',
+    '[{"questionId":"q3","category":"javascript","isCorrect":true,"xp":4},
+      {"questionId":"q4","category":"javascript","isCorrect":true,"xp":8}]',
     'webdev', 12);
   -- The receipt replayed: refused, nothing more.
   PERFORM public.record_verified_quiz_result_v2(

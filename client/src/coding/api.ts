@@ -8,8 +8,11 @@ import { syncXpWithServer } from '../lib/xp';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingApproachesResponse,
+  CodingDraftSaveRequest,
   CodingDraftSaveResponse,
   CodingProgressResponse,
+  CodingResetRequest,
+  CodingResetResponse,
   CodingRevealRequest,
   CodingRevealResponse,
   CodingSubmitRequest,
@@ -52,12 +55,20 @@ export function revealCoding(input: CodingRevealRequest): Promise<CodingRevealRe
   return apiFetch<CodingRevealResponse>(`${ROADMAP}?resource=coding-reveal`, { method: 'POST', body: JSON.stringify(input) });
 }
 
+/** The workbench's Reset, signed in: it opens the task's XP again for a pass
+ * an hour after the task last paid it (migration 058). */
+export function resetCoding(input: CodingResetRequest): Promise<CodingResetResponse> {
+  return apiFetch<CodingResetResponse>(`${ROADMAP}?resource=coding-reset`, { method: 'POST', body: JSON.stringify(input) });
+}
+
 export function fetchCodingProgress(signal?: AbortSignal): Promise<CodingProgressResponse> {
   return apiFetch<CodingProgressResponse>(`${USER}?op=coding-progress`, { signal });
 }
 
-export function saveCodingDraft(id: string, code: string): Promise<CodingDraftSaveResponse> {
-  return apiFetch<CodingDraftSaveResponse>(`${USER}?op=coding-draft`, { method: 'POST', body: JSON.stringify({ id, code }) });
+/** `base`: the account draft's time the code builds on, null for none. The
+ * server refuses the save with 409 draft_conflict when its draft moved since. */
+export function saveCodingDraft(id: string, code: string, base: string | null): Promise<CodingDraftSaveResponse> {
+  return apiFetch<CodingDraftSaveResponse>(`${USER}?op=coding-draft`, { method: 'POST', body: JSON.stringify({ id, code, base } satisfies CodingDraftSaveRequest) });
 }
 
 export function fetchGithubConnection(signal?: AbortSignal): Promise<GithubConnectionResponse> {

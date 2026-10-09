@@ -116,8 +116,11 @@ for every coding task. The app keeps such a head once it starts:
 dated page or a task page keeps its own title, description and canonical URL
 instead of the generic "Coding" or "Question of the day" head. The Coding home
 and its track pages (`/coding`, `/coding/<track>`, `/coding/fullstack`) get a
-head the same way, outside the sitemap; `/coding/review` names `/coding` as
-canonical and the retired `/coding/system-design` names none. The
+head the same way and are in the sitemap (owner decision, 9 Oct 2026); the
+task pages are not. `/coding/review` names `/coding` as canonical and stays
+out. `/coding/system-design` and every address under it are one prerendered
+not-found page, `noindex` in the HTML and with no canonical (`vercel.json`
+sends them all there), because system design is hidden. The
 question itself comes from `GET /api/quiz/daily?qotd=<date|today>`
 (`lib/daily-question.ts`, inside the daily handler so the count stays at
 twelve): a seeded pick from that track in the served bank, options shuffled by
@@ -175,15 +178,19 @@ level would otherwise add correct answers without limit. A quiz question
 counts the same way from migration 048: `record_verified_quiz_result_v2` builds
 its category counts (for `user_category_stats` and this board) from the
 outcomes whose question the learner had not answered earlier the same UTC day,
-read from `user_question_history` before the attempt updates it. XP does
-not follow that rule: from migration 056 every answer earns XP, a repeated
-question included (owner decision of 1 October 2026), so the routine pays the
-receipt's whole XP (`api/quiz/submit.ts`: 2 + 2 × difficulty for each correct
-answer, and at least 20 for the daily challenge). 052 paid only the questions
-not answered earlier the same UTC day, and 048 scaled the quiz by the share of
-such questions. A repeat earns XP and coins, never a place on a board. Each
-receipt outcome still carries its question's XP; the routine no longer reads
-it. The awarded XP is kept on the receipt row
+read from `user_question_history` before the attempt updates it. XP has its
+own rule: a correct answer pays its XP (`api/quiz/submit.ts`: 2 + 2 ×
+difficulty) again once the account's last XP for that question is at least
+60 minutes old (migration 058, owner decision of 9 October 2026). Each
+receipt outcome carries its question's XP; the routine claims each correct
+answer's question in `user_question_xp` (`question_xp_claim`, one upsert, so
+two results paying one question at once pay it once) and pays the receipt's
+XP less that of the answers whose question is still inside its hour. The
+daily challenge keeps its minimum of 20. A receipt without per-question XP
+(minted before 052) is paid as it is. 056 paid every repeat (owner decision
+of 1 October), 052 only the questions not answered earlier the same UTC day,
+and 048 scaled the quiz by the share of such questions. A repeat after its
+hour earns XP and coins, never a place on a board. The awarded XP is kept on the receipt row
 (`quiz_attempts.quest_xp`) and the stats handler credits coins for that
 amount, also when a retry finds the result already recorded after a commit
 that timed out: the credit is keyed to the attempt and pays once, and a NULL
@@ -192,9 +199,15 @@ answer counts the same way on the boards from 052: the handler sends the
 run's answers with their categories (`p_outcomes`), and
 `record_challenge_completion` dates only the questions the learner had not
 answered earlier the same UTC day and updates `user_question_history`, so a
-replayed run adds nothing. The run's Challenge XP (5 a correct answer) is
-unchanged. Without `p_outcomes` (the handler before 052) it counts the run's
-breakdown in full, as before. Coding passes are not answers and are not
+replayed run adds nothing. The run's Challenge XP is 5 a correct answer, and
+from 058 the handler names each answer's XP in `p_outcomes`: an answer whose
+question paid this account XP (in a quiz or a run) less than an hour ago pays
+nothing, the run is awarded the rest, and a run whose every correct answer is
+inside its hour is awarded nothing, like a run with none right. The handler
+credits coins for, and announces, the XP the award row holds. Without
+`p_outcomes` (the handler before 052) it counts the run's breakdown in full,
+as before, and an answer without its own XP (the handler before 058) is paid
+as before. Coding passes are not answers and are not
 counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank.
@@ -257,9 +270,9 @@ is today. No board ranks by streak, and only "This month" ranks by XP.
 XP each learner earned in it, the ranking the month's top three are paid by.
 `user_xp_days` holds that XP per learner, UTC day and subject, and only
 `add_xp_day` writes it, inside each verified award's own transaction:
-`record_verified_quiz_result_v2` (a quiz or daily result, repeats included),
-`record_verified_activity_xp` (a Biggest Shark Challenge run, a coding
-challenge's first pass) and `complete_verified_roadmap_attempt` (a Learn level
+`record_verified_quiz_result_v2` (a quiz or daily result, a repeated question
+once its hour is up), `record_verified_activity_xp` (a Biggest Shark Challenge
+run, a coding challenge's first pass or repeat XP) and `complete_verified_roadmap_attempt` (a Learn level
 or part test passed for the first time, at `learn_step_xp`, the numbers of
 `shared/progression.ts`; learning XP is derived from progress and is not in
 `user_xp`). Learning paths award no XP. Guest XP merged at sign-in
@@ -384,16 +397,48 @@ The same thread transpiles the TypeScript, so code nested too deeply for the
 compiler is an `error` verdict rather than an HTTP 500. Both thread pools bound
 how long a run may wait for a thread, and their queues hold a class of 32
 submitting at once twice over, so a burst of correct submits is graded and the
-length only bounds memory. One caller (an
-account, or an address for a guest) has at most two submits grading at once
-(`lib/coding/grader-capacity.ts`, `enterInFlight` in `lib/rate-limit.ts`). A
-Submit the grader cannot take is answered `grader_busy` with a Retry-After,
-429 for the caller's own limit and 503 for full threads, and is recorded
-nowhere. A thread that will not start is tried again after a pause that grows
+length only bounds memory. Grader limits are per task (owner decision of 9
+October 2026). One caller (an account, or an address for a guest) has at most
+two submits grading at once on one coding task or learning-path activity, and
+three across all of them, one fewer than an instance's four QuickJS threads
+(`GRADING_PER_TASK`, `GRADING_PER_CALLER` in `lib/coding/grader-capacity.ts`,
+`enterInFlight` in `lib/rate-limit.ts`); a submit still grading on one task
+never refuses another task's. A Submit the grader cannot take is answered
+`grader_busy` with a Retry-After, 429 for the caller's own limit and 503 for
+full threads, and is recorded nowhere. The Submit rate limits are per task in
+the same way (`enforcePerItemRateLimit`): 30 in ten minutes for one caller on
+one task (`codingSubmit`; a learning-path activity, `learningPathSubmit`),
+beneath a ceiling of 120 in ten minutes across every task
+(`codingSubmitCeiling`, `learningPathSubmitCeiling`), a Submit every five
+seconds, which bounds what one account or guest address spends on graders
+and React sandboxes. The address backstop holds a class of 32 at the per-task
+rate (960 in ten minutes). A spent task answers 429 `rate_limited`, which the
+workbench reads as "Too many requests. Wait a moment and try again."; one
+token comes back every 20 seconds, and another task is open at once. A thread that will not start is tried again after a pause that grows
 from one second to thirty; on a deployment no run ever falls back to the
 request thread.
 Learning-path code activities use the same QuickJS sandbox, type-check thread
 and hidden-check program as coding tasks.
+Run and Submit give learner code the same realm (owner decisions, 9 October
+2026). Local time is Europe/Prague, with summer time from 01:00 UTC on the last
+Sunday of March to 01:00 UTC on the last Sunday of October, whatever the
+server's or the learner's own zone: one prelude
+(`shared/coding-prague-time.ts`) rewrites `Date`'s local constructor forms,
+`Date.parse` of local strings, the local getters and setters,
+`getTimezoneOffset`, `toString` and the `toLocale*String` methods in QuickJS,
+in the Run worker, in the React frame and in the React guest's page realm (the
+guest also runs with `TZ=Europe/Prague`); the server process itself stays in
+UTC. `toLocaleString`, `localeCompare` and their kin print and sort as an
+en-US browser does, from one shared implementation
+(`shared/coding-locale.ts`). The grader adds `URL`, `URLSearchParams`,
+`TextEncoder`, `TextDecoder`, `atob` and `btoa`
+(`lib/coding/sandbox-web-apis.ts`); `URL` is parsed by the host's WHATWG
+parser through a function that takes and returns strings only. Just before
+learner code runs, the Run worker removes every global and built-in member
+the grader lacks (`shared/coding-checker-globals.ts`, `Intl`, `crypto`,
+`fetch` and some two hundred more), and using one reads "`Intl` isn't
+available in the checker. Submit runs without it." React tasks keep the full
+browser and Node built-ins, in both of their runners.
 A failed or partly right system-design submission returns, per step, only
 whether it was right and the learner's own answer (`gradeDesign`): the correct
 options, orders and ranges, the explanations (which name the right option) and
@@ -414,7 +459,14 @@ checklist tasks, passing any code, are graded by suites like the rest since
 29 September 2026. The grader still accepts a `verify: 'checklist'` task, but
 its pass is only the learner's word: it is recorded as unverified, with no XP
 and so no coins, no link to a Learn level attempt, and no junior and senior
-solutions. See
+solutions. Such an old pass, or a React pass the browser reported between 3
+and 29 September, no longer blocks the task's XP (migration 058, owner
+decision of 9 October 2026): the first verified pass pays it and its coins,
+once per account and task, and the old pass stays on record. An account
+already paid for the task, under `coding:<account>:<task>` or the
+`coding:<task>` id of 025-038, is not paid again, and a reveal recorded
+before that pass still forfeits it. Like any pass, the old one still opens
+the approaches and the solution. See
 [`react-grading-operations.md`](./react-grading-operations.md). The
 self-hosted `client/sandbox/` iframe stays for the preview and for the Run
 button's immediate feedback, but the verdict of record is the server's.
@@ -425,9 +477,11 @@ Inside the level the workbench stays on screen with the solution open, and the
 learner finishes the level when they are done reading.
 A reveal before the task's first pass also costs that task its XP and coins:
 from migration 048 the first pass after a recorded reveal pays nothing, and the
-verdict says so with `xpForfeited` (set only when no XP was paid and the
-progress row showed a reveal before the pass, so a database without 048, which
-still pays, never reads as a forfeit). The workbench says this in the reveal
+verdict says so with `xpForfeited`. From migration 058 the routine reports it
+itself, which also covers a first verified pass after an old unverified one;
+without 058 the API sets it only when no XP was paid and the progress row
+showed a reveal before the pass, so a database without 048, which still pays,
+never reads as a forfeit. The workbench says this in the reveal
 confirmation for a signed-in learner who has not passed the task, and shows
 "Passed — no XP because the solution was revealed" on such a pass; after a
 recorded pass the solution opens without the warning, since it costs nothing.
@@ -451,8 +505,17 @@ XP and one-award-per-task ledger, but a topic of its own, so
 none of its challenges can be drawn into a Learn level's quota. Its `level` is
 an ordering key rather than a Learn level, which `hasLearnLevel` is what the
 row, the workbench and the GitHub commit message read before naming one.
-System design still grades and still owns its history but has left the section
-(`CODING_SECTION_TRACKS`).
+System design is hidden until its tasks have been reviewed again (owner
+decision, 9 Oct 2026; `NEEDED.md`). `lib/coding/active.ts` issues no task of a
+track missing from `CODING_SECTION_TRACKS`, so none of its 45 tasks is in a
+list, a search, a challenge run, a skip suggestion, a Learn level, the browser
+index or a share page; the task resource answers 404 for one, Submit and the
+reveal refuse a sealed session for one, and a star saved on one is not listed.
+In the browser `/coding/system-design` and its old task addresses are the
+Coding not-found page. The tasks, their sealed-key graders and the
+`DesignRunner` stay in the repository, and `npm run test:coding` keeps proving
+them, for that review; records already earned against them stay in the
+database.
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
 three coding tasks sealed into the level session; for an account, completion
@@ -466,24 +529,65 @@ tasks as they were. Coding completion is permanent: the API ignores legacy revie
 dates, returns an empty due queue, and never selects passed tasks for scheduled
 coding review. The browser shows no coding review either: no "Due for review"
 filter on a track, no coding card on Today, and `/coding/review` redirects to
-`/coding`. Question/concept review is unchanged. A task's code is saved when
-the learner presses Run or Submit, never while they type: on the device first,
-then, signed in, as the account draft (`?op=coding-draft`, 20 kB at most;
-larger code is not saved anywhere). A task in the section and a Learn level's
-coding step both open the newer of the two copies (`client/src/coding/drafts.ts`):
-the device copy records when it was written and the account draft's
-`updated_at` it was written against, the task response carries
-`draftUpdatedAt`, and when the copies differ the page says which one is open.
+`/coding`. Question/concept review is unchanged. A task's code is kept on
+the device about a second after the learner stops typing (nothing is written
+while they type; leaving the page writes what is waiting), and on Run and
+Submit; code over 20 kB is kept there too. Signed in, Run and Submit also save
+it as the account draft (`?op=coding-draft`, 20 kB at most), never typing
+(owner decision 5, 9 Oct 2026). A task in the section and a Learn level's
+coding step follow the same rules (`client/src/coding/drafts.ts`). The device
+copy records the account draft's `updated_at` it builds on (the task response
+carries `draftUpdatedAt`): the time the screen opened, or one a save from this
+tab returned; typing never moves it. When the copies differ the page says
+which one is open, and a device copy that did not open is set aside and
+offered back ("Open the code from this device") until the learner takes it or
+the account confirms a save. A save sends that time as `base`, and
+`save_coding_draft_v2` (migration 059) writes only while the account draft
+still has it, so an open tab can no longer overwrite a draft saved since on
+another device: the server answers 409 `draft_conflict` with the stored time
+(never its code), and the page asks whether to save this code over it or open
+the other draft, keeping this device's code either way (owner decision 10).
+An evolving stage's Submit writes the stage draft through the same routine,
+forced, and returns its time, so the next save is not a false conflict. A
+sign-out the learner chooses (Log out, here or in another tab, or deleting the
+account) forgets the drafts with the rest of the account's data. A session that
+ends on its own (a refused refresh: expired, revoked, the password changed
+elsewhere) keeps the drafts under the account's id and out of sight, says "You
+were signed out — sign in to keep your code" (and, on the task, that its code
+is kept), and gives them back when the same account signs in and opens a
+coding task; a guest's copy written meanwhile is set aside beside them.
+Another account signing in deletes them unread (`client/src/lib/accountData.ts`,
+owner decision 4). A guest's drafts behave as before.
 Tiers
-open in order (`tierUnlocked`) except in the unladdered tracks — system design
-is drilled rather than climbed, and `algorithms` is interview preparation a
+open in order (`tierUnlocked`): 1 and 2 at once, 3 after every task of tiers
+1 and 2 of that track, and JavaScript's 3 also after the ten JavaScript Learn
+levels, which open no other track's (owner decision of 9 October 2026); 4
+after 80 % of tier 3 and 5 after 80 % of tier 4. The task page, a practice
+run, a skip's suggestion and the browser all ask that one rule, except in the
+unladdered tracks — system design (hidden today) is drilled rather than
+climbed, and `algorithms` is interview preparation a
 learner arrives at with a date in the diary, where a locked tier would withhold
 the very challenge they came for. Each challenge also carries Easy, Medium or
-Hard (`difficultyOf`), projected from its tier, or for a project stage from its
-position; the label gates and pays nothing (see
-`docs/interactive-content-manifest.md`). Of the 770 tasks in
-`shared/coding-index.ts`, 462 are Easy, 199 Medium and 109 Hard; by track,
-316 JavaScript, 156 TypeScript, 183 React, 70 Algorithms and 45 system design. XP follows `CODING_TASK_XP` once per task, and
+Hard (`difficultyOf`), projected from its tier, or for a project milestone or
+path level from its position; a checkpoint reads its tier like a standalone
+task, so every checkpoint is Easy (owner decision, 9 Oct 2026). The label
+gates and pays nothing (see `docs/interactive-content-manifest.md`). Of the
+725 tasks in `shared/coding-index.ts`, 459 are Easy, 171 Medium and 95 Hard; by
+track, 316 JavaScript, 156 TypeScript, 183 React and 70 Algorithms. The 45
+hidden system design tasks are authored but not issued. XP follows `CODING_TASK_XP` on a task's first verified pass, and
+again ("repeat XP", migration 058, owner decision of 9 October 2026) on a
+verified pass after the learner reset the task to its starter (the
+workbench's Reset calls `?resource=coding-reset`, which records it with
+`record_coding_reset`), at least 60 minutes after the task last paid its XP
+or a reveal forfeited it, with no reveal since the reset (a reveal after a
+pass is recorded by `record_coding_repeat_reveal`). Any verified pass closes
+the reset, so each payment takes a reset of its own and two Submits after one
+reset pay once. A repeat is XP only, under its own award id
+(`coding:<account>:<task>:r<n>`), into the balance and the month's ledger: no
+coins and no first-pass flag. The verdict's `repeatXp` says when the XP opens
+again and why a pass paid nothing; the workbench says it under the verdict.
+Guests earn no XP, so a guest's Reset stays in the browser. A Learn step
+still pays once, on its first pass. And
 the five coding badges join the shared badge sync for `webdev`. All storage is
 in `supabase/supabase-schema-025.sql`, whose track constraints and routines
 `supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last
@@ -721,13 +825,21 @@ disappears when checkout cannot apply the coupon or the offer has expired.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
   and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
-  stage one of every evolving project and short path (`FREE_EVOLVING_STAGES`),
-  and a starter set of standalone coding challenges listed once in
-  `FREE_CODING_TASK_IDS`. `npm run build:coding-index` projects that list and
-  stage one of every path into `shared/coding-index.ts` as `free: true`, about
-  15 % of the catalogue (`FREE_CODING_SHARE`, held between 12 and 18 % by the
-  launch contracts; 116 of 770 today, re-picked after the Easy and the Medium
-  and Hard waves of #226). Re-pick the list, not the task files,
+  stage one of every evolving project and short path (`FREE_EVOLVING_STAGES`,
+  `freeStageCount`), which in a project with checkpoints is the checkpoint
+  and the first milestone, the last checkpoint of each of the fourteen
+  projects that have checkpoints (`FREE_CHECKPOINT_IDS`), and a starter set of
+  standalone coding challenges listed once in `FREE_CODING_TASK_IDS`. In the
+  stage numbers a learner sees, that is stages 1, 2 and 9 of a ten-stage
+  project, 1 and 11 of a twelve-stage FullStack app and level 1 of a short
+  path (owner decision, 9 Oct 2026, audit C2-13; until then only stage 1).
+  Stages still open in order, so a free account reaches a free checkpoint only
+  after the stages before it. `npm run build:coding-index` projects all of it
+  into `shared/coding-index.ts` as `free: true`, about 19 % of the issued
+  catalogue (`FREE_CODING_SHARE`, held between 16 and 22 % by the launch
+  contracts; 141 of 725 today: JavaScript 68, TypeScript 29, React 33,
+  Algorithms 11). Every free task reads Easy except two debugging paths whose
+  authored level 1 is Medium. Re-pick the list, not the task files,
   when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
   Challenge, multiplayer, flashcards, the typing racer, leaderboards, streaks,
   friends and the token shop stay open: no quiz category is gated, so nothing
@@ -1017,9 +1129,10 @@ production (issue #227, step D8).
   and the game settings mirror them as `coins`, clamped on read, so the owner
   tunes them in `/dev` → Settings → Coins without a deploy. Every account earns
   10 % of verified XP; Premium doubles it at credit time; one account earns at
-  most 400 coins a day from XP, counted after the doubling. Since every answer
-  earns XP (056), repeated questions included, this cap is what bounds the
-  coins a replayed quiz can earn: 400 coins is 4,000 XP a day on the free plan
+  most 400 coins a day from XP, counted after the doubling. While 056 paid
+  every repeated question, this cap was what bounded the coins a replayed quiz
+  could earn; from 058 a question pays again only after an hour, and the cap
+  bounds the rest: 400 coins is 4,000 XP a day on the free plan
   and 2,000 on Premium. The welcome grant is
   200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300;
   "live" as the Profile counts it, a shield or a protection covering the gap
@@ -1350,7 +1463,8 @@ tests remain cumulative, and each stage lists its own checks first so Results
 opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 770 tasks, and every
+routes, unlocks and progress. The full catalogue contains 770 tasks (725
+issued, with system design hidden), and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass. A stage's
 solutions hold only what that stage asks for: the content contract grades the

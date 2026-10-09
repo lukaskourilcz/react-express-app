@@ -122,15 +122,18 @@ describe('difficulty labels on the stage list', () => {
   const fullstack = EVOLVING_CHALLENGES.find((one) => one.stages.length === 12)!;
   const short = EVOLVING_CHALLENGES.find((one) => one.short && one.stages.length === 5)!;
 
+  // Milestones and path levels read their position; a checkpoint is a
+  // five-minute step and reads Easy wherever it sits (owner decision,
+  // 9 Oct 2026), so it splits the Medium and Hard runs of a long project.
   it.each([
-    [project.id, project, [3, 4, 3]],
-    [fullstack.id, fullstack, [4, 5, 3]],
-    [short.id, short, [2, 2, 1]],
-  ] as const)('labels the stages of %s by position', (_id, challenge, sizes) => {
+    [project.id, project, ['Easy', 'Medium', 'Easy', 'Medium', 'Easy', 'Hard', 'Easy', 'Hard'], [3, 1, 1, 1, 1, 1, 1, 1]],
+    [fullstack.id, fullstack, ['Easy', 'Medium', 'Easy', 'Medium', 'Easy', 'Medium', 'Hard', 'Easy', 'Hard'], [4, 1, 1, 1, 1, 1, 1, 1, 1]],
+    [short.id, short, ['Easy', 'Medium', 'Hard'], [2, 2, 1]],
+  ] as const)('labels the stages of %s: milestones by position, checkpoints Easy', (_id, challenge, labels, sizes) => {
     mount(`/coding/javascript/${challenge.stages[0]}`, <CodingTaskScreen />, '/coding/:track/:taskId');
     const nav = screen.getByRole('navigation');
     const groups = within(nav).getAllByRole('group');
-    expect(groups.map((group) => within(group).getByText(/^(Easy|Medium|Hard)$/).textContent)).toEqual(['Easy', 'Medium', 'Hard']);
+    expect(groups.map((group) => within(group).getByText(/^(Easy|Medium|Hard)$/).textContent)).toEqual(labels);
     expect(groups.map((group) => group.getAttribute('aria-labelledby'))).toEqual(groups.map((group) => group.querySelector('.cd-stage-group__label')!.id));
     expect(groups.map((group) => within(group).queryAllByRole('link').length + within(group).queryAllByRole('button').length)).toEqual(sizes);
   });
