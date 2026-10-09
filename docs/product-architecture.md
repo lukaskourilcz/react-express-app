@@ -491,6 +491,9 @@ hint rung is a documentation link from `shared/coding-docs.ts`. The skeleton
 rung before it is written for its task: `npm run test:coding` fills in the
 skeletons listed in `scripts/fixtures/skeleton-fills.ts` and requires the
 filling to keep every skeleton line and pass every visible and hidden check.
+A skeleton left unfilled must fail them: the same command runs each
+JavaScript and TypeScript skeleton as it is, and pastes each React skeleton
+into its starter.
 
 The GitHub garden is an optional GitHub App integration (`lib/github-app.ts`,
 `lib/github-handlers.ts`): the learner installs the app on one repository they

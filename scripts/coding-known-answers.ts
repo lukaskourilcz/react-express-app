@@ -36,6 +36,7 @@ const fullstackWrong = FULLSTACK_APPS.flatMap((app): KnownAnswer[] => {
     { id: `ts-fullstack-${slug}-4`, label: 'a DELETE and a PATCH that answer correctly and change nothing', replace: [["if(request.method==='DELETE'){rows=rows.filter(r=>r.id!==id);", "if(request.method==='DELETE'){"], ['rows[index]=updated;', '']] },
     { id: `ts-fullstack-${slug}-4`, label: 'no DELETE branch at all', replace: [["if(request.method==='DELETE'){rows=rows.filter(r=>r.id!==id);return {status:200,body:{deleted:id}};}", '']] },
     { id: `ts-fullstack-${slug}-4`, label: 'a PATCH that answers with the stored row itself', replace: [['rows[index]=updated;return {status:200,body:{...updated}};', 'rows[index]=updated;return {status:200,body:updated};']] },
+    { id: `ts-fullstack-${slug}-4`, label: 'any method but DELETE on an item running the PATCH branch', replace: [["if(request.method==='PATCH'){const p=request.body;", '{const p=request.body;']] },
   ];
 });
 
@@ -44,6 +45,8 @@ export const KNOWN_WRONG_CODE: readonly KnownAnswer[] = [
   { id: 'ts-fullstack-links-2', label: 'a POST that answers with the stored link itself', replace: [['return reply(201, { ...link });', 'return reply(201, link);']] },
   { id: 'ts-fullstack-links-3', label: 'a POST and a visit that answer with the stored link itself', replace: [['return reply(201, { ...link });', 'return reply(201, link);'], ['return reply(200, { ...link });', 'return reply(200, link);']] },
   { id: 'ts-fullstack-links-3', label: 'any method on /api/links/SLUG deleting the link', replace: [['if (link && parts.length === 4 && method === "DELETE") {', 'if (link && parts.length === 4) {']] },
+  { id: 'ts-fullstack-links-2', label: 'a POST with no body reading the fields of undefined', replace: [['if (typeof value !== "object" || value === null || Array.isArray(value)) return null;', 'if (value === null || Array.isArray(value)) return null;']] },
+  { id: 'ts-fullstack-links-3', label: 'any last path segment counting a visit', replace: [['if (link && parts.length === 5 && parts[4] === "visit" && method === "POST") {', 'if (link && parts.length === 5 && method === "POST") {']] },
   { id: 'js-mh-match-route', label: 'never comparing literal segments', replace: [['if (!fits) return null;', '']] },
   { id: 'js-mh-match-route', label: 'a comparator that adds the ranks', replace: [['return left[i] - right[i];', 'return left[i] + right[i];']] },
   { id: 'alg-retry-backoff', label: 'a linear backoff', replace: [['await wait(100 * Math.pow(2, attempt - 1));', 'await wait(100 * attempt);']] },

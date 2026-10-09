@@ -597,11 +597,15 @@ const HIDDEN: [string, unknown][][] = [
   [['normalizeLink({url: "https://a.io", slug: "a-b-c"})', { url: 'https://a.io', slug: 'a-b-c' }], ['normalizeLink({url: "https://a.io", slug: "x".repeat(21)})', null], ['normalizeLink({url: "https://" + "a".repeat(193), slug: "abc"})', null], ['normalizeLink({url: "https://a.io"})', null], ['normalizeLink({url: "https://" + "a".repeat(192), slug: "abc"})', { url: 'https://' + 'a'.repeat(192), slug: 'abc' }]],
   [['createApi([])({method: "PUT", path: "/api/links"})', { status: 404, body: { error: 'not_found' } }], ['(() => { const api = createApi([]); api({method: "POST", path: "/api/links", body: {url: "https://a.io", slug: "one"}}); return api({method: "POST", path: "/api/links", body: {url: "https://b.io", slug: " ONE "}}).status; })()', 409],
     // The created link comes back as a copy.
-    ['(() => { const api = createApi([]); const reply = api({method: "POST", path: "/api/links", body: {url: "https://a.io", slug: "abc"}}); reply.body.visits = 99; return api({method: "GET", path: "/api/links"}).body[0].visits; })()', 0]],
+    ['(() => { const api = createApi([]); const reply = api({method: "POST", path: "/api/links", body: {url: "https://a.io", slug: "abc"}}); reply.body.visits = 99; return api({method: "GET", path: "/api/links"}).body[0].visits; })()', 0],
+    // A POST with no body at all is an invalid body.
+    ['createApi([])({method: "POST", path: "/api/links"})', { status: 400, body: { error: 'invalid' } }]],
   [['createApi([{url: "https://a.io", slug: "abc", visits: 0}])({method: "DELETE", path: "/api/links/abc/visit"})', { status: 404, body: { error: 'not_found' } }], ['createApi([{url: "https://a.io", slug: "abc", visits: 0}])({method: "POST", path: "/api/links/abc/visit/again"})', { status: 404, body: { error: 'not_found' } }],
     // A visit answers with a copy, and only DELETE removes a link.
     ['(() => { const api = createApi([{url: "https://a.io", slug: "abc", visits: 3}]); const reply = api({method: "POST", path: "/api/links/abc/visit"}); reply.body.visits = 99; return api({method: "GET", path: "/api/links"}).body[0].visits; })()', 4],
-    ['(() => { const api = createApi([{url: "https://a.io", slug: "abc", visits: 3}]); const reply = api({method: "PUT", path: "/api/links/abc"}); return [reply, api({method: "GET", path: "/api/links"}).body.length]; })()', [{ status: 404, body: { error: 'not_found' } }, 1]]],
+    ['(() => { const api = createApi([{url: "https://a.io", slug: "abc", visits: 3}]); const reply = api({method: "PUT", path: "/api/links/abc"}); return [reply, api({method: "GET", path: "/api/links"}).body.length]; })()', [{ status: 404, body: { error: 'not_found' } }, 1]],
+    // Only /visit counts a visit: any other last segment is not found.
+    ['(() => { const api = createApi([{url: "https://a.io", slug: "abc", visits: 3}]); const reply = api({method: "POST", path: "/api/links/abc/like"}); return [reply, api({method: "GET", path: "/api/links"}).body[0].visits]; })()', [{ status: 404, body: { error: 'not_found' } }, 3]]],
 ];
 
 export const FULLSTACK_PATH_SOLUTIONS: Record<string, CodingSolution> = Object.fromEntries(
