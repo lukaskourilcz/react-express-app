@@ -70,6 +70,11 @@ for (const lang of ['en']) for (const theme of ['light', 'dark']) {
     await expect(page).toHaveURL(/\/react-evolving-form-1$/);
     await expect(main).toBeFocused();
     await expect(page.locator('.cm-content')).toContainText('useState');
+    // The handoff carries the checkpoint's code, and a checkpoint's code
+    // never passes its milestone (audit C2-1): its own solution does.
+    await editor.focus();
+    await expect(page.locator('.cm-editor')).toHaveClass(/\bcm-focused\b/);
+    await editor.fill(solutionFor('react-evolving-form-1')!.solution);
     await run.click();
     await expect(page.getByRole('tab',{name:/2\/2/})).toBeVisible({timeout:25_000});
     await page.getByRole('tab',{name:lang==='en'?'Preview':'Náhled',exact:true}).click();

@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
 import { retirementOf } from '../../../shared/retired-content';
 import { Heading } from '@astryxdesign/core/Heading';
@@ -22,6 +23,7 @@ import type {
   RoadmapStructure,
   Question,
 } from '../types/quiz';
+import type { PlayableCodingTask } from '../../../shared/coding-catalog';
 import {
   fetchRoadmapLevel,
   fetchRoadmapPartTest,
@@ -81,7 +83,8 @@ import { openUpgradeSheet } from '../lib/upgradeSheet';
 import { gatedRef, type GatedContent } from '../../../shared/tiers';
 import { reportQuestion } from '../lib/supabase';
 import { shuffleDifferentFrom } from '../lib/shuffle';
-import { readString, removeStored, writeString } from '../lib/storage';
+import { readString, writeString } from '../lib/storage';
+import { codingDraftQuery, forgetDeviceDraft, openingDraft, saveDraft } from '../coding/drafts';
 import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
 import { LessonFigures } from './ui/LessonFigure';
@@ -106,7 +109,6 @@ import './DeepEndScreens.css';
 // level stays on screen with "Could not load this task." and a Try again that
 // asks again, or reloads when the same failure comes straight back.
 const CodingWorkbench = lazyShellPart(() => import('../coding/CodingWorkbench').then((m) => ({ default: m.CodingWorkbench })));
-const codingDraftKey = (id: string) => `devshark:coding:draft:${id}`;
 
 type TFn = (key: TranslationKey, vars?: Record<string, string | number>) => string;
 // `ref` is the GLOBAL level number for a level, or the part number for a test.
@@ -1281,6 +1283,57 @@ function sessionRestartFor(error: unknown): SessionRestart | null {
   return null;
 }
 
+/** One coding task of a level. It opens on the newer of this device's copy
+ * and the account draft and saves to both on Run and Submit, as a task in
+ * the Coding section does (coding/drafts.ts). The workbench reads its code
+ * once, so it waits for the account's draft; a draft that cannot load leaves
+ * this device's copy. */
+function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onContinue }: {
+  task: PlayableCodingTask;
+  session: string;
+  signedIn: boolean;
+  onPassed: () => void;
+  onRevealed: () => void;
+  onContinue: () => void;
+}) {
+  const { t } = useLanguage();
+  const draft = useQuery({ ...codingDraftQuery(task.id), enabled: signedIn });
+  const waiting = signedIn && draft.isLoading;
+  const opening = useMemo(() => (waiting ? null : openingDraft(task.id, draft.data?.code ?? null, draft.data?.updatedAt)), [waiting, task.id, draft.data]);
+  useEffect(() => {
+    if (opening?.conflict === 'account') forgetDeviceDraft(task.id);
+  }, [opening, task.id]);
+  const base = draft.data?.updatedAt ?? null;
+  const loading = <div className="cd-note" role="status">{t('common.loading')}</div>;
+  if (!opening) return loading;
+  return (
+    <>
+      {opening.conflict && <p className="cd-note" role="status">{t(opening.conflict === 'account' ? 'coding.draft.accountNewer' : 'coding.draft.deviceNewer')}</p>}
+      <Suspense fallback={loading}>
+        <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={busy} />}>
+          <CodingWorkbench
+            task={task}
+            session={session}
+            locked={null}
+            signedIn={signedIn}
+            initialCode={opening.code}
+            mode="lesson"
+            onDraft={(code) => saveDraft(task.id, code, { signedIn, base })}
+            onVerdict={(verdict) => {
+              if (verdict.verdict === 'passed') {
+                forgetDeviceDraft(task.id);
+                onPassed();
+              }
+            }}
+            onRevealed={onRevealed}
+            onContinue={onContinue}
+          />
+        </ShellPartBoundary>
+      </Suspense>
+    </>
+  );
+}
+
 function LessonRunner({
   playable, firstLevelPass = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
 }: {
@@ -1588,31 +1641,18 @@ function LessonRunner({
         </div>
         <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>{t('coding.lesson.intro')} {t('coding.lesson.giveUpNote')}</p>
         {answerError && <div role="alert" className="cd-note cd-note--error">{answerError}</div>}
-        <Suspense fallback={<div className="cd-note" role="status">{t('common.loading')}</div>}>
-          <ShellPartBoundary key={current.task.id} fallback={(retry, busy) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={busy} />}>
-            <CodingWorkbench
-              key={current.task.id}
-              task={current.task}
-              session={current.session}
-              locked={null}
-              signedIn={Boolean(user)}
-              initialCode={readString(codingDraftKey(current.task.id))}
-              mode="lesson"
-              onDraft={(code) => writeString(codingDraftKey(current.task.id), code)}
-              onVerdict={(verdict) => {
-                if (verdict.verdict === 'passed') {
-                  removeStored(codingDraftKey(current.task.id));
-                  setCodingPassed((prev) => (prev.includes(current.task.id) ? prev : [...prev, current.task.id]));
-                }
-              }}
-              onRevealed={() => setSolutionShown(true)}
-              onContinue={() => {
-                if (codingIndex < codingTasks.length - 1) setCodingIndex((i) => i + 1);
-                else void complete();
-              }}
-            />
-          </ShellPartBoundary>
-        </Suspense>
+        <LessonCodingTask
+          key={current.task.id}
+          task={current.task}
+          session={current.session}
+          signedIn={Boolean(user)}
+          onPassed={() => setCodingPassed((prev) => (prev.includes(current.task.id) ? prev : [...prev, current.task.id]))}
+          onRevealed={() => setSolutionShown(true)}
+          onContinue={() => {
+            if (codingIndex < codingTasks.length - 1) setCodingIndex((i) => i + 1);
+            else void complete();
+          }}
+        />
         {/* The solution the learner asked for stays on screen: the attempt
             ends when they finish the level, not the moment it opens. */}
         {solutionShown && (

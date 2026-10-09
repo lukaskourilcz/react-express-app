@@ -134,13 +134,13 @@ console.log(sum([2,3,4]));
 console.log(longest(["cat","elephant","dog"]));
 `,
     skeleton: `const longest = words => {
-  const result = /* initial result */;
+  let best = /* what an empty list returns */;
 
-  for (const item of words) {
-    // inspect item and update result
+  for (const word of words) {
+    // replace best only when word is strictly longer
   }
 
-  return result;
+  return best;
 };`,
     hints: [
       "Walk the list keeping the best candidate found so far, and replace it only when the new word is strictly longer. That “strictly” is what leaves a tie on the earlier word.",
@@ -188,13 +188,13 @@ console.log(longest(["cat","elephant","dog"]));
 console.log(countVowels("hello"));
 `,
     skeleton: `const countVowels = text => {
-  const result = /* initial result */;
+  let count = 0;
 
-  for (const item of text) {
-    // inspect item and update result
+  for (const letter of /* text, in lower case */) {
+    // add one to count when "aeiou" includes letter
   }
 
-  return result;
+  return count;
 };`,
     hints: ["Loop through lowercase letters and check \"aeiou\"."],
     approach: [
@@ -230,13 +230,9 @@ console.log(countVowels("hello"));
 console.log(reverse("cat"));
 `,
     skeleton: `const reverse = text => {
-  const result = /* initial result */;
-
-  for (const item of text) {
-    // inspect item and update result
-  }
-
-  return result;
+  const letters = /* the characters of text, as an array */;
+  // reverse letters, then join them back into one string
+  return /* the joined string */;
 };`,
     hints: ["Add each letter to the front of a result string."],
     approach: [
@@ -348,13 +344,13 @@ console.log(squares([2,3]));
 console.log(largest([4,9,2]));
 `,
     skeleton: `const largest = numbers => {
-  const result = /* initial result */;
+  let best = /* the first number, never zero */;
 
-  for (const item of numbers) {
-    // inspect item and update result
+  for (const number of numbers) {
+    // keep number in best when it is bigger
   }
 
-  return result;
+  return best;
 };`,
     hints: ["Compare every value with the largest seen."],
     approach: [
@@ -380,7 +376,7 @@ console.log(largest([4,9,2]));
     tier: 1,
     focus: ["for"],
     title: "Fizz values",
-    prompt: "Write `fizz(n)`, returning an array counting 1 to n where every multiple of 3 is replaced by the string `Fizz` — `fizz(5)` gives `[1, 2, “Fizz”, 4, 5]`. `fizz(0)` gives an empty array.",
+    prompt: "Write `fizz(n)`, returning an array counting 1 to n where every multiple of 3 is replaced by the string `Fizz` — `fizz(5)` gives `[1, 2, \"Fizz\", 4, 5]`. `fizz(0)` gives an empty array.",
     starter: `const fizz = n => {
   
 };
@@ -389,13 +385,8 @@ console.log(largest([4,9,2]));
 console.log(fizz(5));
 `,
     skeleton: `const fizz = n => {
-  const result = /* initial result */;
-
-  for (const item of n) {
-    // inspect item and update result
-  }
-
-  return result;
+  const numbers = /* the numbers 1 through n, in an array */;
+  return numbers.map(number => /* "Fizz" when number divides by 3, otherwise number */);
 };`,
     hints: [
       "Count from 1 up to n, and for each number decide whether it divides by three before you decide what to put in the array.",
@@ -433,10 +424,10 @@ console.log(fizz(5));
 console.log(countDown(3));
 `,
     skeleton: `const countDown = n => {
-  const result = /* initial result */;
+  const result = [];
 
-  for (const item of n) {
-    // inspect item and update result
+  while (/* n is still positive */) {
+    // push n, then decrease it by one
   }
 
   return result;
@@ -832,7 +823,7 @@ console.log(oddSum([1,2,3]));
     tier: 2,
     focus: ["for", "strings"],
     title: "Repeat word",
-    prompt: "Write `repeat(word, times)`, returning the word repeated that many times with single spaces between — `repeat(“hi”, 3)` gives `hi hi hi`. Once means no space at all, and zero times gives an empty string.",
+    prompt: "Write `repeat(word, times)`, returning the word repeated that many times with single spaces between — `repeat(\"hi\", 3)` gives `hi hi hi`. Once means no space at all, and zero times gives an empty string.",
     starter: `const repeat = (word, times) => {
   
 };
@@ -841,13 +832,13 @@ console.log(oddSum([1,2,3]));
 console.log(repeat("hi",3));
 `,
     skeleton: `const repeat = (word, times) => {
-  const result = /* initial result */;
+  const copies = [];
 
-  for (const item of word) {
-    // inspect item and update result
+  for (let count = 0; count < times; count += 1) {
+    // add one copy of word to copies
   }
 
-  return result;
+  return /* copies joined with single spaces */;
 };`,
     hints: [
       "Build the pieces first and let the joining put the separators between them, rather than adding a space each time and trimming one off the end.",
@@ -883,10 +874,10 @@ console.log(repeat("hi",3));
 console.log(range(2,4));
 `,
     skeleton: `const range = (start, end) => {
-  const result = /* initial result */;
+  const result = [];
 
-  for (const item of start) {
-    // inspect item and update result
+  for (let value = start; /* value has not gone past end */; value += 1) {
+    // add value to result
   }
 
   return result;
@@ -925,10 +916,11 @@ console.log(range(2,4));
 // Scratch pad — change this and press Run.
 console.log(average([2,4,6]));
 `,
-    skeleton: `const average = numbers =>
-  numbers.reduce((accumulator, item) => {
-    return /* next accumulator */;
-  }, /* initial value */);`,
+    skeleton: `const average = numbers => {
+  if (/* there are no numbers */) return 0;
+  const total = numbers.reduce((sum, number) => /* the running total plus number */, 0);
+  return /* total divided by how many numbers there are */;
+};`,
     hints: [
       "A mean is a total divided by a count, so the only real decision here is what to hand back when the count is zero.",
     ],
@@ -1161,7 +1153,7 @@ console.log(isPalindrome("level"));
     tier: 2,
     focus: ["for-of", "objects"],
     title: "Letter counts",
-    prompt: "Write `countLetters(text)`, returning an object mapping each character to how many times it appears — `countLetters(“aba”)` gives `{ a: 2, b: 1 }`. An empty string gives an empty object.",
+    prompt: "Write `countLetters(text)`, returning an object mapping each character to how many times it appears — `countLetters(\"aba\")` gives `{ a: 2, b: 1 }`. An empty string gives an empty object.",
     starter: `const countLetters = text => {
   
 };
@@ -1170,13 +1162,13 @@ console.log(isPalindrome("level"));
 console.log(countLetters("aba"));
 `,
     skeleton: `const countLetters = text => {
-  const result = /* initial result */;
+  const counts = {};
 
-  for (const item of text) {
-    // inspect item and update result
+  for (const letter of text) {
+    // store one more than counts[letter], counting a missing letter as zero
   }
 
-  return result;
+  return counts;
 };`,
     hints: [
       "Walk the characters building an object up as you go, treating a character you have not seen yet as though its count were already zero.",
@@ -1637,10 +1629,17 @@ console.log(flatten([[1,2],[3]]));
 // Scratch pad — uncomment once your function returns something.
 // promiseAll([Promise.resolve(1), Promise.resolve(2)]).then(values => console.log(values));
 `,
-    skeleton: `const promiseAll = async promises => {
-  // await the work, and decide what happens when it rejects
-  return /* resolved value */;
-};`,
+    skeleton: `const promiseAll = promises => new Promise((resolve, reject) => {
+  const results = [];
+  let arrived = 0;
+  if (/* there is nothing to wait for */) resolve(results);
+
+  promises.forEach((promise, index) => {
+    Promise.resolve(promise).then(value => {
+      // store value at index, count it, and resolve once every input has arrived
+    }, /* what a rejection does */);
+  });
+});`,
     hints: ["Store each value by its index and resolve once they have all arrived."],
     approach: [
       "Return a new promise, and inside it keep an array for the results plus a count of how many have arrived.",
@@ -2032,13 +2031,14 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
 console.log(LRUCache(["A","B","C","D","A","E","D","Z"]));
 `,
     skeleton: `const LRUCache = strArr => {
-  const result = /* initial result */;
+  const cache = [];
 
-  for (const item of strArr) {
-    // inspect item and update result
+  for (const letter of strArr) {
+    // take letter out of cache if it is already there, then push it on the end
+    // drop from the front while cache holds more than 5 letters
   }
 
-  return result;
+  return /* cache joined with hyphens */;
 };`,
     hints: [
       "Keep the cache as an array with the most recently used letter last. A letter you have seen before is removed from where it was before being pushed back on.",

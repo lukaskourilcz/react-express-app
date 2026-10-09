@@ -34,13 +34,15 @@ import {
   type Difficulty,
 } from '../shared/coding-catalog';
 import { COVERAGE_ENFORCED, COVERAGE_MIN_EASY, coverageGaps, renderCoverage, techniqueCoverage } from './coding-coverage';
+import { KNOWN_RIGHT_CODE, KNOWN_WRONG_CODE, type KnownAnswer } from './coding-known-answers';
+import { REACT_VARIANTS } from './coding-react-variants';
 import { docsFor, taskResources } from '../shared/coding-docs';
 import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
 import { runChecks, runInSandbox } from '../lib/coding/sandbox';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
-import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder } from '../lib/coding/puzzles';
-import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
+import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder, type AuthoredPuzzle } from '../lib/coding/puzzles';
+import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES, type PuzzleLine } from '../shared/coding-puzzle';
 import { evaluateCalls, allPassed, deepEqual } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { prepareReactRuntime, runReactSuite } from '../lib/coding/react-runner';
@@ -48,6 +50,7 @@ import { lockDownRealm } from '../lib/coding/realm-lockdown';
 import { HIDDEN_CASE_PREFIX, splitHiddenCases, suiteCaseCount, withHiddenCases } from '../lib/coding/react-hidden';
 import { renderCodingIndex } from './build-coding-index';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
+import { SKELETON_FILLS } from './fixtures/skeleton-fills';
 
 // The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
 // so Czech copy is retained work rather than a shipped surface and a new task
@@ -74,6 +77,16 @@ const withTimeout = <T>(promise: Promise<T>, ms: number, label: string): Promise
 // server counts them. The React proofs below check the count against the
 // cases each run registered.
 const hiddenCaseCount = suiteCaseCount;
+
+// Where a browser payload still carries Czech: the path of every `{ en, cs }`
+// pair whose Czech slot is not empty. The app ships English only (C4-6).
+const czechIn = (value: unknown, at = ''): string[] => {
+  if (Array.isArray(value)) return value.flatMap((one, index) => czechIn(one, `${at}[${index}]`));
+  if (!value || typeof value !== 'object') return [];
+  const record = value as Record<string, unknown>;
+  if ('en' in record && 'cs' in record) return (record.cs as string | string[]).length > 0 ? [at || '.'] : [];
+  return Object.entries(record).flatMap(([key, one]) => czechIn(one, at ? `${at}.${key}` : key));
+};
 
 // The hosts a hint ladder may end on: official documentation, never a blog.
 const OFFICIAL_DOCS = new Set(['developer.mozilla.org', 'www.typescriptlang.org', 'react.dev']);
@@ -117,6 +130,25 @@ const lookupTable = (ts: TypeScriptApi, visible: readonly Check[]): string | nul
   ].join('\n');
 };
 
+/** The first line of a skeleton that `filled` does not keep, or null when
+ * every one is there, in order. A blank line, a line comment and a comment
+ * alone on its line (in JSX braces or not) are holes the filling may replace
+ * with any number of lines; inside a line, a comment stands for any text. */
+const skeletonLineMissing = (skeleton: string, filled: string): string | null => {
+  const literally = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const lines = filled.split('\n').map((line) => line.trim());
+  let at = 0;
+  for (const raw of skeleton.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('//') || /^\{?\/\*.*\*\/\}?$/.test(line)) continue;
+    const pattern = new RegExp(`^${line.split(/\/\*.*?\*\//).map(literally).join('.*')}$`);
+    while (at < lines.length && !pattern.test(lines[at])) at += 1;
+    if (at === lines.length) return line;
+    at += 1;
+  }
+  return null;
+};
+
 /** The names a solution declares at its top level. */
 const topLevelNames = (ts: TypeScriptApi, source: string): string[] => {
   const names = new Set<string>();
@@ -127,6 +159,76 @@ const topLevelNames = (ts: TypeScriptApi, source: string): string[] => {
     }
   }
   return [...names];
+};
+
+/** Every arrangement of a puzzle's lines whose code passes `checks`, found
+ * without trying them all. The function's own first and last lines stay
+ * first and last; any body line without a brace may also stand outside the
+ * function, before or after it (a loop or a branch out there cannot see the
+ * parameters). Arrangements grow line by line, and whenever the lines placed
+ * so far close every block they open, they run on their own as the whole
+ * body: a check they already throw on or answer wrongly fails every way of
+ * finishing them, so that branch stops there. */
+const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): string[][] => {
+  const depthOf = (code: string) => {
+    const bare = code.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '');
+    return (bare.match(/\{/g)?.length ?? 0) - (bare.match(/\}/g)?.length ?? 0);
+  };
+  const header = puzzle.lines[0];
+  const footer = puzzle.lines[puzzle.lines.length - 1];
+  const body = puzzle.lines.slice(1, -1);
+  const name = /^\s*function\s+([A-Za-z_$][\w$]*)\s*\(.*\{\s*$/.exec(header.code)?.[1];
+  assert.ok(name && footer.code.trim() === '}', 'a puzzle is one function: its first line opens it and its last line closes it');
+  // A body cut short reads as the start of the full one only while nothing
+  // later in it is hoisted.
+  assert.ok(body.every((line) => !/\b(var|function)\b/.test(line.code)), 'a puzzle body declares nothing with var or function');
+  // Every loop gets a step budget, so an arrangement that never leaves one fails instead of hanging.
+  const guard = (code: string) => (/^\s*(while|for|do)\b.*\{\s*$/.test(code) ? `${code} __step();` : code);
+  const callers = checks.map((check) => new Function(name, `"use strict"; return (${check.call});`) as (fn: unknown) => unknown);
+  const END = Symbol('end');
+  // `open`: the body stops early, and falling off its end returns END.
+  const run = (top: PuzzleLine[], placed: PuzzleLine[], open: boolean): 'pass' | 'fail' | 'open' => {
+    const code = [...top, header, ...placed].map((line) => guard(line.code)).concat(open ? ['return __end;'] : [], footer.code).join('\n');
+    let fn: unknown;
+    let reset: () => void;
+    try {
+      [fn, reset] = new Function('__end', `"use strict"; let __steps = 0; const __step = () => { if (++__steps > 10000) throw new Error('steps'); };\n${code}\nreturn [${name}, () => { __steps = 0; }];`)(END);
+    } catch { return 'fail'; }
+    let undecided = false;
+    for (const [index, call] of callers.entries()) {
+      reset();
+      let value: unknown;
+      try { value = call(fn); } catch { return 'fail'; }
+      if (value === END) undecided = true;
+      else if (!deepEqual(value, checks[index].expected)) return 'fail';
+    }
+    return undecided ? 'open' : 'pass';
+  };
+  const permutations = <T>(items: T[]): T[][] => (items.length <= 1 ? [items] : items.flatMap((item, i) => permutations([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [item, ...rest])));
+  const flat = body.filter((line) => !/[{}]/.test(line.code));
+  const found: string[][] = [];
+  for (let mask = 0; mask < 1 << flat.length; mask++) {
+    const outside = flat.filter((_, i) => mask & (1 << i));
+    const inside = body.filter((line) => !outside.includes(line));
+    for (const top of permutations(outside)) {
+      const walk = (placed: PuzzleLine[], rest: PuzzleLine[], depth: number): void => {
+        if (rest.length === 0) {
+          // Function declarations hoist, so the outside lines run the same wherever they split around it.
+          if (depth === 1 && run(top, placed, false) === 'pass') {
+            for (let split = 0; split <= top.length; split++) found.push([...top.slice(0, split), header, ...placed, footer, ...top.slice(split)].map((line) => line.id));
+          }
+          return;
+        }
+        if (placed.length > 0 && depth === 1 && run(top, placed, true) === 'fail') return;
+        for (const [i, line] of rest.entries()) {
+          const next = depth + depthOf(line.code);
+          if (next >= 1) walk([...placed, line], [...rest.slice(0, i), ...rest.slice(i + 1)], next);
+        }
+      };
+      walk([], inside, 1);
+    }
+  }
+  return found;
 };
 
 // Every string a suite mentions: quoted literals (minus module names and ARIA
@@ -202,6 +304,13 @@ async function main() {
       assert.ok(task, `${id}: authored task exists`);
       assert.equal(task.track, evolvingTaskTrack(id));
       assert.ok(task.references?.length && task.references.every(ref=>ref.title.en && (!REQUIRE_CS || ref.title.cs) && ref.url.startsWith('https://')), 'each stage has localized references');
+      // A checkpoint is built from its milestone. Its hint ladder has to be
+      // its own, or it advises work the checkpoint has not asked for yet.
+      if (id.endsWith('-start')) {
+        const milestone = CODING_TASKS.find(one => one.id === id.slice(0, -6))!;
+        if (!task.hints.en[0] || task.hints.en[0] === milestone.hints.en[0]) fail(`${id}: a checkpoint needs a first hint of its own, not its milestone's`);
+        if (milestone.approach && JSON.stringify(task.approach?.en) === JSON.stringify(milestone.approach.en)) fail(`${id}: a checkpoint needs method steps of its own, not its milestone's`);
+      }
       assert.equal(evolvingResume(project, passed), id, 'resume is the first unfinished stage');
       assert.equal(evolvingUnlocked(id, passed), true, 'earlier verified passes unlock the next stage');
       if (index > 0) assert.equal(evolvingUnlocked(id, new Set()), false, 'deep links cannot skip prerequisites');
@@ -265,6 +374,13 @@ async function main() {
     if (!(task.estimatedMinutes > 0)) fail(`${where}: estimatedMinutes must be positive`);
     if (task.hints.en.length === 0 && task.verify !== 'drill' && task.verify !== 'guided') fail(`${where}: needs a hint`);
     assert.ok(docsFor(task.focus).url.startsWith('https://'), `${where}: docs link`);
+    // A code example in the brief, the hints or the method steps gets copied
+    // into the editor, where `repeat(“hi”, 3)` is a SyntaxError.
+    for (const text of [task.prompt.en, ...task.hints.en, ...(task.approach?.en ?? [])]) {
+      for (const span of text.split('`').filter((_, index) => index % 2 === 1)) {
+        if (/[“”‘’]/.test(span)) fail(`${where}: the code example \`${span}\` uses curly quotes, which do not run`);
+      }
+    }
     assert.match(gardenPathFor(task), /^[a-z-]+\/\d{2}-[a-z0-9-]+\.(js|ts|jsx|md)$/, `${where}: garden path`);
 
     switch (task.verify) {
@@ -303,7 +419,10 @@ async function main() {
         fail(`${where}: unknown verify mode ${String(task.verify)}`);
     }
 
-    // The playable projection must never carry an answer.
+    // The playable projection must never carry an answer, nor the retained
+    // Czech copy while the app ships English only.
+    const czech = czechIn(playable(task));
+    if (czech.length > 0) fail(`${where}: playable payload carries Czech at ${czech.slice(0, 3).join(', ')}`);
     const play = JSON.stringify(playable(task));
     if (task.design) {
       if (play.includes('"correct"') || play.includes(task.design.reference.en.slice(0, 40))) fail(`${where}: playable payload leaks the design answers`);
@@ -401,6 +520,7 @@ async function main() {
   }
 
   /* ── index freshness ────────────────────────────────────────────────── */
+  for (const summary of CODING_SUMMARIES) if (czechIn(summary).length > 0) fail(`${summary.id}: the browser index carries a Czech title`);
   const indexPath = path.join(process.cwd(), 'shared', 'coding-index.ts');
   if (!SKIP_INDEX && (!existsSync(indexPath) || readFileSync(indexPath, 'utf8') !== renderCodingIndex(CODING_SUMMARIES))) {
     fail('shared/coding-index.ts is stale: run npm run build:coding-index');
@@ -498,13 +618,15 @@ async function main() {
 
   // Every graded code task carries three solutions — the reference the
   // learner can give up to, and the junior and senior versions shown after a
-  // pass — and all three have to pass the same visible and hidden checks.
+  // pass — and all three have to pass the same visible and hidden checks. An
+  // evolving project's checkpoint (`…-start`) carries its reference alone.
   const variants = (solution: NonNullable<ReturnType<typeof solutionFor>>, where: string): [string, string][] => {
     const out: [string, string][] = [['reference', solution.solution]];
+    const boards = !where.endsWith('-start');
     if (typeof solution.junior === 'string' && solution.junior.trim()) out.push(['junior', solution.junior]);
-    else fail(`${where}: missing the junior solution`);
+    else if (boards) fail(`${where}: missing the junior solution`);
     if (typeof solution.senior === 'string' && solution.senior.trim()) out.push(['senior', solution.senior]);
-    else fail(`${where}: missing the senior solution`);
+    else if (boards) fail(`${where}: missing the senior solution`);
     if (solution.junior && solution.senior && solution.junior.trim() === solution.senior.trim()) fail(`${where}: the junior and senior solutions are the same code`);
     return out;
   };
@@ -616,9 +738,17 @@ async function main() {
   /* ── the last hint rung ─────────────────────────────────────────────── */
   // The ladder ends on the task's first reference, or on the documentation
   // page of its first focus tag: official documentation either way.
+  // A page about one array or string method, or about Map or Set, is the
+  // right last rung only when a solution of the task uses it: Set tasks
+  // ended on the Map page, and a page the server cuts ended on Array.slice.
   for (const task of CODING_TASKS) {
     const url = task.references?.[0]?.url ?? docsFor(task.focus).url;
     if (!OFFICIAL_DOCS.has(new URL(url).host)) fail(`${task.id}: the hint ladder ends on ${url}, not on official documentation`);
+    const solution = solutionFor(task.id);
+    const api = /\/Global_Objects\/(?:(?:Array|String)\/([a-z]\w*)|(Map|Set))$/.exec(url);
+    if (!solution || !api) continue;
+    const code = [solution.solution, solution.junior ?? '', solution.senior ?? ''].join('\n');
+    if (!new RegExp(api[1] ? `\\.${api[1]}\\(` : `\\b${api[2]}\\b`).test(code)) fail(`${task.id}: the hint ladder ends on ${url}, which none of the task's solutions uses`);
   }
 
   /* ── React solutions ────────────────────────────────────────────────── */
@@ -676,6 +806,31 @@ async function main() {
     }
   }
 
+  /* ── skeletons a learner can follow to a pass ───────────────────────── */
+  // The skeleton is the last rung before the documentation, so it has to
+  // lead somewhere a pass can follow. Each entry of SKELETON_FILLS is one
+  // skeleton filled in: it has to keep every line of the skeleton and pass
+  // every visible and hidden check. A skeleton that declares a const the task
+  // has to reassign, loops over a number, or renders rows the suite does not
+  // count has no such filling.
+  for (const [id, filled] of Object.entries(SKELETON_FILLS)) {
+    if (!ONLY.test(id)) continue;
+    const task = byId.get(id);
+    const solution = solutionFor(id);
+    if (!task?.skeleton || !solution) { fail(`${id}: a skeleton filling names a task with no skeleton`); continue; }
+    const missing = skeletonLineMissing(task.skeleton, filled);
+    if (missing !== null) fail(`${id}: the skeleton filling does not keep the skeleton's line "${missing}"`);
+    if (task.track === 'react') {
+      const run = await withTimeout(runReactSuite({ suite: withHiddenCases(task.suite!, solution.hiddenSuite), appSource: filled }), 20_000, id);
+      if (run.compileError || run.failed > 0 || run.total === 0) fail(`${id}: the filled-in skeleton fails its suite: ${run.compileError ?? run.cases.filter((c) => c.status === 'fail').map((c) => `${c.name}: ${c.error}`).join('; ')}`);
+    } else {
+      const typed = task.track !== 'typescript' || (typesPassed(checker.check(filled, task.typeTests ?? [])) && typesPassed(checker.check(filled, solution.hiddenTypeTests ?? [])));
+      const code = task.track === 'typescript' ? checker.toJavaScript(filled) : filled;
+      const server = await runChecks({ code, visible: task.tests ?? [], hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
+      if (!typed || !allPassed(server.visible) || (server.hidden && !allPassed(server.hidden))) fail(`${id}: the filled-in skeleton fails its checks: ${JSON.stringify(server).slice(0, 400)}`);
+    }
+  }
+
   /* ── React suites inside the grader's time limit ────────────────────── */
   // The isolated grader stops a React run after 10 s, node start-up and the
   // page runtime included (lib/coding/react-isolated.ts), and a run it stops
@@ -726,6 +881,37 @@ async function main() {
     else if (!run.cases.some((one) => one.error === FORM_SUBMIT_NOT_PREVENTED)) fail(`${task.id}: the reference without preventDefault() trips no check, so no check submits its form`);
   }
 
+  /* ── React suites judge what the prompt says ────────────────────────── */
+  // A page the prompt allows passes the server's suite and a wrong one fails
+  // it. Each variant is the task's reference with a few exact edits
+  // (scripts/coding-react-variants.ts).
+  for (const variant of REACT_VARIANTS) {
+    if (!ONLY.test(variant.id)) continue;
+    const task = CODING_TASKS.find((one) => one.id === variant.id);
+    const solution = solutionFor(variant.id);
+    if (task?.track !== 'react' || !task.suite || !solution) {
+      fail(`${variant.id}: a React variant names a task with no suite or reference`);
+      continue;
+    }
+    let source = solution.solution;
+    let lost: string | null = null;
+    for (const [from, to] of variant.edits) {
+      if (!source.includes(from)) {
+        lost = from;
+        break;
+      }
+      source = source.split(from).join(to);
+    }
+    if (lost !== null) {
+      fail(`${variant.id} (${variant.note}): the reference no longer contains ${JSON.stringify(lost.slice(0, 60))}`);
+      continue;
+    }
+    const run = await runReactSuite({ suite: withHiddenCases(task.suite, solution.hiddenSuite), appSource: source });
+    const passed = !run.compileError && run.failed === 0 && run.total > 0;
+    if (variant.correct && !passed) fail(`${variant.id}: a correct page that ${variant.note} fails the suite: ${run.compileError ?? run.cases.filter((one) => one.status === 'fail').map((one) => `${one.name}: ${one.error}`).join('; ')}`);
+    if (!variant.correct && passed) fail(`${variant.id}: a wrong page that ${variant.note} passes the suite`);
+  }
+
   if (failures.length > 0) {
     console.error(`Coding content contract: ${failures.length} problem(s)\n  - ${failures.join('\n  - ')}`);
     process.exitCode = 1;
@@ -757,6 +943,8 @@ async function main() {
   // that puzzle's own lines; no puzzle is short enough to be guessed; and each
   // one declares what arranging it demonstrates.
   const puzzleIds = puzzleCoverage();
+  const puzzlesStarted = Date.now();
+  let puzzleOrders = 0;
   assert.ok(puzzleIds.length > 0, 'the puzzle manifest must cover something');
   for (const id of puzzleIds) {
     const task = CODING_TASKS.find((one) => one.id === id);
@@ -786,6 +974,15 @@ async function main() {
       const run = await runInSandbox({ code, calls: checks.map((one) => one.call), expectations: checks.map((one) => one.expected) });
       assert.ok(allPassed(run), `${id}: the accepted order ${order.join('')} fails the task's checks: ${run.codeError ?? JSON.stringify(run.results.filter((one) => one.pass !== true))}`);
     }
+    // ...and every order that passes them is accepted: a learner who arranged
+    // working code is not told it is wrong. js-largest-number accepted one of
+    // the six that pass. The enumeration must also find each accepted order,
+    // or it no longer covers the arrangements a puzzle allows.
+    const passing = passingArrangements(puzzle, checks).map((order) => order.join(''));
+    const acceptedOrders = new Set(puzzle.accepted.map((order) => order.join('')));
+    for (const order of passing) assert.ok(acceptedOrders.has(order), `${id}: the order ${order} passes the task's checks and is not accepted`);
+    for (const order of acceptedOrders) assert.ok(passing.includes(order), `${id}: the enumeration does not reach the accepted order ${order}`);
+    puzzleOrders += passing.length;
     // What the browser sees carries no authored id, and sorting what it sees
     // never produces an accepted order — the ids say nothing about the answer.
     const reversed = <T>(list: T[]) => [...list].reverse();
@@ -801,6 +998,7 @@ async function main() {
       assert.deepEqual(resolvePuzzleOrder(['zz', 'b0', 'b99'], presented.map), [null, null, null], `${id}: ids never issued resolve to nothing`);
     }
   }
+  console.log(`Puzzles: ${puzzleIds.length} accept exactly the ${puzzleOrders} arrangements that pass their checks (${((Date.now() - puzzlesStarted) / 1000).toFixed(1)} s).`);
 
   // ── the debugging format (#163) ────────────────────────────────────────
   // A debugging task must actually start from broken code: its starter has to
@@ -1061,6 +1259,38 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
     }
   }
 
+  // 1b. What a checkpoint shows must not pass the milestone it leads to. Its
+  // reference opens on giving up there, and for free once it is passed (any
+  // boards with the pass), while the milestone is still to do: pasted into
+  // the milestone, with its hidden checks, it has to fail. The proofs above
+  // show it passes the checkpoint itself.
+  // The store's first checkpoint asks for get and set, and its milestone only
+  // adds false, 0 and null, which any closure that stores the value already
+  // keeps. An honest reference passes both; only reshaping the two stages can
+  // change that, which is the owner's call. Its reference is still proven to
+  // pass the milestone, so this entry goes stale once the stages differ.
+  const SAME_AS_MILESTONE = new Set(['ts-evolving-store-1-start']);
+  let checkpoints = 0;
+  for (const project of EVOLVING_CHALLENGES) {
+    for (const id of project.stages) {
+      if (!id.endsWith('-start') || !ONLY.test(id)) continue;
+      if (SAME_AS_MILESTONE.has(id)) {
+        const milestone = byId.get(id.slice(0, -6));
+        const shown = solutionFor(id);
+        if (!milestone || !shown || !await passesTask(milestone, shown.solution)) fail(`${id}: no longer matches its milestone; drop it from SAME_AS_MILESTONE`);
+        continue;
+      }
+      const milestone = byId.get(id.slice(0, -6));
+      const shown = solutionFor(id);
+      if (!milestone || !shown || milestone.verify !== 'tests') continue;
+      for (const [name, source] of [['reference', shown.solution], ['junior', shown.junior], ['senior', shown.senior]] as const) {
+        if (!source?.trim()) continue;
+        checkpoints += 1;
+        if (await passesTask(milestone, source)) fail(`${id}: its ${name} solution, shown on giving up or after a pass, already passes ${milestone.id}`);
+      }
+    }
+  }
+
   // 2. A promised new array: an in-place version of the reference must fail.
   let promises = 0;
   for (const task of CODING_TASKS) {
@@ -1091,7 +1321,28 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
       fail(`${task.id}: the reference with every parameter typed any still passes the type tests, so they do not hold the signature the statement gives`);
     }
   }
-  console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check (${((Date.now() - started) / 1000).toFixed(1)} s).`);
+  // 4. Known answers: a mistake a hidden case was added for still fails, and
+  // a correct answer a check once refused still passes.
+  const knownSource = (known: KnownAnswer): string | null => {
+    let source = known.code ?? solutionFor(known.id)?.solution ?? '';
+    for (const [from, to] of known.replace ?? []) {
+      if (!source.includes(from)) return null;
+      source = source.split(from).join(to);
+    }
+    return source || null;
+  };
+  let knownAnswers = 0;
+  for (const [list, expected] of [[KNOWN_WRONG_CODE, false], [KNOWN_RIGHT_CODE, true]] as const) {
+    for (const known of list) {
+      if (!ONLY.test(known.id)) continue;
+      const task = byId.get(known.id);
+      const source = knownSource(known);
+      if (!task || source === null) { fail(`${known.id}: the known answer "${known.label}" no longer applies to the reference; rewrite it in scripts/coding-known-answers.ts`); continue; }
+      knownAnswers += 1;
+      if (await passesTask(task, source) !== expected) fail(`${known.id}: ${known.label} ${expected ? 'fails a check the statement does not ask for' : 'passes every check'}`);
+    }
+  }
+  console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${checkpoints} checkpoint solutions fail their milestone, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check, and ${knownAnswers} known answers keep their verdict (${((Date.now() - started) / 1000).toFixed(1)} s).`);
 }
 
 void main().catch((error) => {

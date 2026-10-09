@@ -217,7 +217,7 @@ console.log(addSongs(["Intro"], ["Wave", "Tide"]));
     tier: 2,
     focus: ['join', 'slice'],
     title: 'A list in words',
-    prompt: 'Write `inWords(items)`, joining a list of words the way a sentence does: commas between the items, and `and` before the last one. Use `slice` and `join`. `inWords(["tea", "coffee", "juice"])` gives `"tea, coffee and juice"`, and `inWords(["salt", "pepper"])` gives `"salt and pepper"`. A single item comes back on its own, and an empty list gives an empty string.',
+    prompt: 'Write `inWords(items)`, joining a list of words the way a sentence does: commas between the items, and `and` before the last one. Use `slice` and `join`. `inWords(["tea", "coffee", "juice"])` gives `"tea, coffee and juice"`, and `inWords(["salt", "pepper"])` gives `"salt and pepper"`. A single item comes back on its own, and an empty list gives an empty string. Leave `items` as it was.',
     starter: `const inWords = items => {
 
 };

@@ -3,7 +3,7 @@ import './launch-test-env';
 import assert from 'node:assert/strict';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
-import { tmpdir } from 'node:os';
+import { constants as osConstants, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import {
   MERCH_SHOP,
@@ -32,7 +32,7 @@ import {
   stableAttemptId,
 } from '../lib/quiz-tokens';
 import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
-import { buildQueue, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
+import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
@@ -49,7 +49,7 @@ import { TS_CHECK_WORKER_FILE } from '../lib/coding/ts-check-pool';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
-import { GUEST_NODE_FLAGS, readGuestResult, serializeGuestResult } from '../lib/coding/react-guest';
+import { GUEST_CRASHED_MESSAGE, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -166,6 +166,7 @@ import { assessmentUnlocks, roadmapEndedOnHearts, ROADMAP_MAX_HEARTS } from '../
 import { grantedTopicsFor, withGrantedTopics } from '../lib/topic-grants';
 import { ROADMAP_TOPICS, isRoadmapTopic, topicLevelCount, ROADMAP_LEVELS } from '../lib/roadmap';
 import type { Question } from '../lib/quiz-runtime';
+import type { CodingTaskResponse, CodingVerdictResponse } from '../shared/coding-api';
 import {
   FREE_CODING_SHARE,
   FREE_CODING_TASK_IDS,
@@ -178,11 +179,11 @@ import {
   isFreeCodingTask,
   isOpenTo,
 } from '../shared/tiers';
-import { EVOLVING_CHALLENGES } from '../shared/evolving';
-import { techniqueGroup, CODING_SECTION_TRACKS } from '../shared/coding-catalog';
+import { EVOLVING_CHALLENGES, evolvingStage } from '../shared/evolving';
+import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
-import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
+import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
 import { handleLeaderboardVisibility, limitUserWrite } from '../api/user/[op]';
 import { handleFriends, handleIdentity } from '../lib/friends-handlers';
 import { isValidHandle } from '../shared/handles';
@@ -227,6 +228,16 @@ function mockResponse() {
     end() { return this; },
     headers,
   };
+}
+
+/** Where a browser payload still carries Czech: the path of every `{ en, cs }`
+ * pair whose Czech slot is not empty. The app ships English only (C4-6). */
+function czechIn(value: unknown, at = ''): string[] {
+  if (Array.isArray(value)) return value.flatMap((one, index) => czechIn(one, `${at}[${index}]`));
+  if (!value || typeof value !== 'object') return [];
+  const record = value as Record<string, unknown>;
+  if ('en' in record && 'cs' in record) return (record.cs as string | string[]).length > 0 ? [at || '.'] : [];
+  return Object.entries(record).flatMap(([key, one]) => czechIn(one, at ? `${at}.${key}` : key));
 }
 
 /** Every script and source file under `dir` (relative to the repository),
@@ -748,6 +759,21 @@ async function tierContracts() {
       assert.equal(revealed.statusCode, 402, `a guest reveal for ${label} is refused`);
       assert.equal(JSON.stringify(revealed.body ?? {}).includes('solution'), false, 'nothing of the solution comes back');
     }
+
+    // C4-6: the app ships English only, so a task, its puzzle and a failed
+    // verdict's hint reach the browser without the retained Czech copy.
+    const bilingual = codingTaskById('js-reverse-string')!;
+    assert.ok(bilingual.prompt.cs && bilingual.hints.cs.length, 'js-reverse-string keeps its Czech overlay on the server');
+    const opened = mockResponse();
+    await roadmapHandler(guest({ resource: 'coding-task', id: bilingual.id }) as never, opened as never);
+    assert.equal(opened.statusCode, 200, 'a guest opens js-reverse-string');
+    const openedBody = opened.body as CodingTaskResponse;
+    assert.ok(openedBody.task.puzzle && openedBody.session, 'the task travels with its puzzle and a session');
+    assert.deepEqual(czechIn(openedBody), [], 'the task payload carries no Czech');
+    const failed = mockResponse();
+    await roadmapHandler(post('coding-submit', { session: openedBody.session, code: 'throw new Error("not yet");' }) as never, failed as never);
+    assert.equal((failed.body as CodingVerdictResponse).failureHint?.category, 'runtime', 'a throwing submit gets the runtime hint');
+    assert.deepEqual(czechIn(failed.body), [], 'the verdict carries no Czech');
 
     // A deploy that lands before migration 039, against a PostgREST that has
     // none of its routines: the plan reads free instead of failing, and the
@@ -3312,6 +3338,7 @@ async function main() {
   assert.equal(gardenPathFor({ id: 'dd-requests-per-second', track: 'system-design', level: 0 }), 'system-design/00-requests-per-second.md');
   assert.ok(CODING_INDEX.length > 0, 'the browser index exists (freshness is enforced by npm run test:coding)');
   assert.ok(CODING_INDEX.every((row) => !('tests' in row) && !('prompt' in row)), 'the browser index carries no task bodies');
+  assert.deepEqual(czechIn(CODING_INDEX), [], 'the browser index carries no Czech titles (C4-6)');
   const ladderBase = { track: 'javascript' as const, progress: { passed: new Set<string>() }, tasks: CODING_INDEX, javascriptLevelsCleared: 0 };
   assert.equal(tierUnlocked({ ...ladderBase, tier: 1 }), true);
   assert.equal(tierUnlocked({ ...ladderBase, tier: 3 }), false);
@@ -3443,6 +3470,19 @@ async function main() {
     appSource: "export default function App() { throw new Error(''); }",
   });
   assert.ok(emptyThrow.passed === 0 && emptyThrow.failed === 1, JSON.stringify(emptyThrow));
+  // C1-6: so has a case that threw a value with no message to read. Reading
+  // `message` from Object.create(null), or through a getter that throws,
+  // threw out of the runner's catch and ended the whole run, which the
+  // learner read as a grader outage.
+  for (const thrown of ['Object.create(null)', "new (class extends Error { get message() { throw new Error('no message'); } })()"]) {
+    const unreadable = await runReactSuite({
+      suite: "import React from 'react';\nimport { render } from '@testing-library/react';\nimport App from './App';\ntest('renders', () => { render(<App />); });\ntest('runs', () => { expect(1).toBe(1); });",
+      appSource: `export default function App() { throw ${thrown}; }`,
+    });
+    assert.equal(unreadable.compileError, null, JSON.stringify(unreadable));
+    assert.deepEqual(unreadable.cases.map((one) => one.status), ['fail', 'pass'], `${thrown}: the case that threw fails and the run goes on: ${JSON.stringify(unreadable)}`);
+    assert.ok(unreadable.cases[0].error, `${thrown}: the failure says something`);
+  }
 
   // The real guest bundle, started with the flags the API passes, outside any
   // VM. It deletes its input before learner code runs, only the stdout line
@@ -3458,7 +3498,9 @@ async function main() {
     });
     const left = readdirSync(dir);
     rmSync(dir, { recursive: true, force: true });
-    return { status: command.status, stdout: command.stdout, nonce, left };
+    // The exit code a shell, and the Sandbox, reports for a signal: 128 + its number.
+    const exitCode = command.status ?? (command.signal ? 128 + osConstants.signals[command.signal] : null);
+    return { status: command.status, exitCode, stdout: command.stdout, nonce, left };
   };
   const guestTask = codingTaskById('react-easy2-disclosure')!;
   const guestSuite = withHiddenCases(guestTask.suite!, solutionFor(guestTask.id)!.hiddenSuite);
@@ -3491,6 +3533,26 @@ async function main() {
   assert.deepEqual(escape.left, [], 'a host function gave the component nothing to write with');
   const escapeResult = readGuestResult(escape.stdout, escape.nonce, guestSuite);
   assert.ok(escapeResult.passed === 0 && /Code generation from strings disallowed/.test(escapeResult.compileError ?? ''), JSON.stringify(escapeResult));
+
+  // C1-6: a guest the learner's code ended is that code's error, not a grader
+  // outage. A component that throws a value with no readable message now
+  // fails its cases; one that uses up the heap still ends the guest, after
+  // the line the guest prints before any learner code runs, so the API reads
+  // an error verdict, recorded like any other. A guest that ends before that
+  // line is still a runner failure: the Submit is not recorded.
+  assert.deepEqual(readGuestRun(honest.exitCode, honest.stdout, honest.nonce, guestSuite), honestResult, 'a clean run reads as before');
+  const nullThrow = guest(guestSuite, 'export default function App() { throw Object.create(null); }');
+  assert.equal(nullThrow.status, 0, 'a thrown null-prototype object no longer ends the guest');
+  const nullThrowResult = readGuestRun(nullThrow.exitCode, nullThrow.stdout, nullThrow.nonce, guestSuite);
+  assert.ok(nullThrowResult.passed === 0 && nullThrowResult.compileError === null, JSON.stringify(nullThrowResult));
+  const exhausted = guest(guestSuite, 'export default function App() { const held = []; for (;;) held.push(new Array(1e6).fill(0)); }');
+  assert.notEqual(exhausted.exitCode, 0, 'a component that uses up the heap ends the guest');
+  const exhaustedResult = readGuestRun(exhausted.exitCode, exhausted.stdout, exhausted.nonce, guestSuite);
+  assert.ok(exhaustedResult.passed === 0 && exhaustedResult.failed > 0, JSON.stringify(exhaustedResult));
+  assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'the learner reads that their code stopped the runner');
+  const missingInput = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), join(tmpdir(), 'no-such-guest-input.json')], { encoding: 'utf8', timeout: 30_000 });
+  assert.notEqual(missingInput.status, 0);
+  assert.throws(() => readGuestRun(missingInput.status, missingInput.stdout, randomBytes(24).toString('hex'), guestSuite), /exited unsuccessfully/, 'a guest that ended before learner code ran is a runner failure');
 
   // CODE-1: the component reaches the grader realm's built-ins through
   // React's exports. With a toJSON on Object.prototype it rewrote the printed
@@ -4939,6 +5001,72 @@ async function main() {
     const outside = codingTaskById('js-count-multiples');
     assert.ok(outside && outside.level > 0 && !levelCodingTasks(outside.topic, outside.level).some((one) => one.id === outside.id), 'js-count-multiples has a level number but no level issues it');
     assert.equal(skipPostpones('js-count-multiples'), false, 'a task outside every quota is optional');
+
+    // C1-8: ten cleared JavaScript Learn levels open tier 3 on the task page
+    // (handleCodingTask reads them from the roadmap row). A practice run and
+    // a skip's suggestion passed 0, so a learner who had them saw tier 3 open
+    // there and never met it in a run. Both now read the same count. The
+    // learner has passed every JavaScript task of tiers 1 and 2 but one, so
+    // the sweep that also opens tier 3 is not complete.
+    const jsTiers = CODING_SUMMARIES.filter((task) => task.track === 'javascript' && !evolvingStage(task.id));
+    const left = jsTiers.find((task) => task.tier === 2)!;
+    const swept = new Set(jsTiers.filter((task) => task.tier <= 2 && task.id !== left.id).map((task) => task.id));
+    const tierOf = (id: string) => codingTaskById(id)!.tier;
+    const laddered = { ...base, plan: 'premium' as const, topic: 'javascript', passed: swept, count: 5, order: 'sequential' as const };
+    assert.deepEqual(buildQueue(laddered), [left.id], 'without the Learn levels only the last tier-2 task is open');
+    const opened = buildQueue({ ...laddered, javascriptLevelsCleared: CODING_FOUNDATION_LEVELS });
+    assert.ok(opened.length === 5 && opened.includes(left.id) && opened.filter((id) => id !== left.id).every((id) => tierOf(id) === 3), `cleared Learn levels open tier 3 to a run: ${opened.join(', ')}`);
+    assert.ok(opened.every((id) => tierLockReason({ track: 'javascript', tier: tierOf(id), progress: { passed: swept }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: CODING_FOUNDATION_LEVELS }) === null), 'a run offers what the task page opens');
+    // Through the handlers, against a stand-in database whose roadmap row has
+    // the ten levels cleared. The plan is Premium for this request.
+    const learner = 'practice-learner-0001';
+    const practiceDb = () => {
+      const levels = Object.fromEntries(Array.from({ length: CODING_FOUNDATION_LEVELS }, (_, index) => [String(index + 1), { passed: true }]));
+      const started: Record<string, unknown>[] = [];
+      const from = (table: string) => {
+        const chain = {
+          select: () => chain, eq: () => chain, in: () => chain, order: () => chain, limit: () => chain,
+          maybeSingle: () => Promise.resolve({ data: table === 'roadmap_progress' ? { data: { javascript: { levels } } } : null, error: null }),
+          then: (resolve: (value: unknown) => unknown) => resolve({ data: table === 'coding_progress' ? [...swept].map((task_id) => ({ task_id, status: 'passed' })) : [], error: null }),
+        };
+        return chain;
+      };
+      const rpc = (name: string, args: Record<string, unknown>) => {
+        if (name === 'start_practice_session_v2') started.push(args);
+        return Promise.resolve({ data: name === 'start_practice_session_v2' ? 'active' : null, error: null });
+      };
+      return { client: { from, rpc }, started };
+    };
+    const asPremium = async (handler: typeof handlePracticeSession, body: Record<string, unknown>, db: ReturnType<typeof practiceDb>) => {
+      const req = { method: 'POST', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '198.51.100.81' }, query: {}, body: { ...body, user_id: learner } };
+      const res = mockResponse();
+      await withRequestContext(req as never, res as never, async () => {
+        await requestMemo(`tier:${learner}`, async () => 'premium');
+        await handler(req as never, res as never, db.client as never);
+      });
+      return res;
+    };
+    const runDb = practiceDb();
+    const run = await asPremium(handlePracticeSession, { count: 5, order: 'sequential', topic: 'javascript' }, runDb);
+    assert.equal(run.statusCode, 200, JSON.stringify(run.body));
+    assert.deepEqual(runDb.started[0]?.p_queue, opened, 'the run the handler starts holds the tier-3 tasks the Learn levels opened');
+    const skipped = await asPremium(handleCodingSkip, { taskId: left.id, reason: 'too-hard' }, practiceDb());
+    assert.equal(skipped.statusCode, 200, JSON.stringify(skipped.body));
+    const next = (skipped.body as { next?: string | null }).next;
+    assert.ok(next && tierOf(next) === 3, `a skip suggests a tier-3 task the Learn levels opened, not nothing: ${next}`);
+
+    // Audit C3-18: the next challenge after a skip came from the top of the
+    // track, so skipping js-count-multiples offered js-digit-sum, a task
+    // before it. It is the next open one after the skipped task, wrapping.
+    const jsSection = CODING_SUMMARIES.filter((one) => one.track === 'javascript');
+    const skippedAt = jsSection.findIndex((one) => one.id === 'js-count-multiples');
+    const offered = nextAfterSkip('js-count-multiples', new Set(), 'premium');
+    assert.ok(offered && offered !== 'js-count-multiples', 'a skip offers another challenge');
+    assert.ok(jsSection.findIndex((one) => one.id === offered) > skippedAt, `the offer comes after the skipped task, not ${offered}`);
+    assert.ok(offered !== 'js-digit-sum', 'the offer is not a task the learner walked past');
+    const wrapped = nextAfterSkip('js-count-multiples', new Set(jsSection.slice(skippedAt + 1).map((one) => one.id)), 'premium');
+    assert.ok(wrapped && jsSection.findIndex((one) => one.id === wrapped) < skippedAt, `with every later task passed, the offer wraps to the start (${wrapped})`);
+    assert.equal(nextAfterSkip('js-count-multiples', new Set(jsSection.map((one) => one.id).filter((id) => id !== 'js-count-multiples')), 'premium'), null, 'nothing left to offer is said as nothing');
   }
 
   // ── the payment webhook believes the order, not the event ───────────────

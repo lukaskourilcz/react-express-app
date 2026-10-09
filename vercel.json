@@ -117,6 +117,14 @@
       "destination": "/daily/:date/index.html"
     },
     {
+      "source": "/coding",
+      "destination": "/coding/index.html"
+    },
+    {
+      "source": "/coding/:track",
+      "destination": "/coding/:track/index.html"
+    },
+    {
       "source": "/coding/:track/:taskId",
       "destination": "/coding/:track/:taskId/index.html"
     },

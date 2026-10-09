@@ -95,7 +95,7 @@ export default function App({ loadUsers = sampleUsers }) {
       en('Add `.catch(() => setStatus("error"))`. A retry is easiest as a counter in state that the effect depends on: Retry sets the status back to "loading" and bumps the counter, and the effect runs again.'),
       en('Keep only the search text in state. `users.filter((user) => user.name.toLowerCase().includes(query.trim().toLowerCase()))` during render gives the visible list.'),
       en('`useEffect(() => { let ignore = false; loadUsers().then((list) => { if (!ignore) setUsers(list); }); return () => { ignore = true; }; }, [loadUsers, attempt]);` React runs the cleanup before the effect runs again and when the component unmounts.'),
-      en('Two effects: one with `[]` dependencies saves `document.title` when `App` mounts and puts it back in its cleanup; another, depending on the user count, sets the new title once the users are loaded.'),
+      en('Two effects: one with `[]` dependencies saves `document.title` when `App` mounts and puts it back in its cleanup; another, depending on the status and the user count (`[status, users.length]`), sets the new title once the status is "ready". The count alone would miss an empty answer: it stays 0, so the effect would never run again.'),
     ],
     approaches: [
       [en('Keep the users and a status ("loading" or "ready") in state.'), en('In an effect with an empty dependency list, call `loadUsers()` and store the result.'), en('Render the status, "No users", or the list, depending on the state.')],
@@ -107,13 +107,17 @@ export default function App({ loadUsers = sampleUsers }) {
     suites: [
       `// A loaded list shows within milliseconds; a page that never shows it
 // fails each check in 300 ms instead of Testing Library's 1 s, so the whole
-// suite stays well inside the grader's time limit.
+// suite stays well inside the grader's time limit. The first check also pays
+// for a cold grader's first render, so it waits up to 1 s.
 const soon={timeout:300};
+const first={timeout:1000};
 const users=[{id:1,name:'Ada'},{id:2,name:'Linus'}];
 const names=()=>screen.getAllByRole('listitem').map((item)=>item.textContent);
-test('shows Loading, then the users',async()=>{let calls=0;render(<App loadUsers={()=>{calls+=1;return Promise.resolve(users);}}/>);expect(screen.getByRole('status').textContent).toBe('Loading');await screen.findByText('Linus',{},soon);expect(screen.queryByRole('status')).toBeNull();expect(names()).toEqual(['Ada','Linus']);expect(calls).toBe(1);});
+test('shows Loading, then the users',async()=>{let calls=0;render(<App loadUsers={()=>{calls+=1;return Promise.resolve(users);}}/>);expect(screen.getByRole('status').textContent).toBe('Loading');await screen.findByText('Linus',{},first);expect(screen.queryByRole('status')).toBeNull();expect(names()).toEqual(['Ada','Linus']);expect(calls).toBe(1);});
 test('an empty result says so',async()=>{render(<App loadUsers={()=>Promise.resolve([])}/>);expect((await screen.findByText('No users',{},soon)).textContent).toBe('No users');expect(screen.queryAllByRole('listitem').length).toBe(0);});`,
-      `test('a failed load can be retried',async()=>{let calls=0;render(<App loadUsers={()=>{calls+=1;return calls===1?Promise.reject(new Error('offline')):Promise.resolve(users);}}/>);expect((await screen.findByRole('alert',{},soon)).textContent).toBe('Could not load users');expect(screen.queryByRole('status')).toBeNull();fireEvent.click(screen.getByRole('button',{name:'Retry',exact:true}));expect(screen.getByRole('status').textContent).toBe('Loading');await screen.findByText('Ada',{},soon);expect(screen.queryByRole('alert')).toBeNull();expect(calls).toBe(2);});`,
+      `// The alert's own words: a Retry button may sit inside it.
+const message=(node)=>{const copy=node.cloneNode(true);copy.querySelectorAll('button').forEach((button)=>button.remove());return copy.textContent.trim();};
+test('a failed load can be retried',async()=>{let calls=0;render(<App loadUsers={()=>{calls+=1;return calls===1?Promise.reject(new Error('offline')):Promise.resolve(users);}}/>);expect(message(await screen.findByRole('alert',{},soon))).toBe('Could not load users');expect(screen.queryByRole('status')).toBeNull();fireEvent.click(screen.getByRole('button',{name:'Retry',exact:true}));expect(screen.getByRole('status').textContent).toBe('Loading');await screen.findByText('Ada',{},soon);expect(screen.queryByRole('alert')).toBeNull();expect(calls).toBe(2);});`,
       `test('search filters the loaded users without loading again',async()=>{let calls=0;render(<App loadUsers={()=>{calls+=1;return Promise.resolve([...users,{id:3,name:'Grace'}]);}}/>);await screen.findByText('Grace',{},soon);fireEvent.change(screen.getByLabelText('Search'),{target:{value:'  LI '}});expect(names()).toEqual(['Linus']);fireEvent.change(screen.getByLabelText('Search'),{target:{value:'zzz'}});expect(screen.getByText('No matches').textContent).toBe('No matches');expect(screen.queryAllByRole('listitem').length).toBe(0);fireEvent.change(screen.getByLabelText('Search'),{target:{value:''}});expect(names()).toEqual(['Ada','Linus','Grace']);expect(calls).toBe(1);});`,
       `test('a new loader loads again, and a late answer from the old one is ignored',async()=>{let finishOld;const {rerender}=render(<App loadUsers={()=>new Promise((resolve)=>{finishOld=resolve;})}/>);rerender(<App loadUsers={()=>Promise.resolve([{id:9,name:'Grace'}])}/>);await screen.findByText('Grace',{},soon);finishOld([{id:1,name:'Ada'}]);await new Promise((resolve)=>setTimeout(resolve,30));expect(names()).toEqual(['Grace']);});
 test('the same loader does not load again on a re-render',async()=>{let calls=0;const load=()=>{calls+=1;return Promise.resolve(users);};const {rerender}=render(<App loadUsers={load}/>);await screen.findByText('Ada',{},soon);rerender(<App loadUsers={load}/>);await new Promise((resolve)=>setTimeout(resolve,30));expect(calls).toBe(1);});`,

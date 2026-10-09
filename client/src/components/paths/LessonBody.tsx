@@ -250,11 +250,12 @@ function InteractiveExample({ section }: { section: Extract<LessonSection, { kin
     try {
       const outcome = await runCodeTests({ track: 'javascript', code, tests: [], grade: false });
       setOutput(outcome.logs);
-      setError(outcome.codeError);
+      // A runner that never loaded is not the snippet's error.
+      setError(outcome.runnerUnavailable ? t('coding.results.runnerUnavailable') : outcome.codeError);
     } finally {
       setRunning(false);
     }
-  }, [code]);
+  }, [code, t]);
 
   return (
     <figure className="lp-figure lp-example">

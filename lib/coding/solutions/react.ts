@@ -989,11 +989,11 @@ test('Loading stays while the request is in flight, then one item per user repla
   const request = requestTo(calls, '/users');
   expect(Boolean(request)).toBe(true);
   await new Promise(resolve => setTimeout(resolve, 30));
-  expect(container.textContent).toContain('Loading');
+  expect(pageText(container)).toContain('Loading');
   expect(container.querySelectorAll('li').length).toBe(0);
   request.respond(FRESH_USERS);
   await waitFor(() => expect(container.querySelectorAll('li').length).toBe(4));
-  expect(container.textContent).not.toContain('Loading');
+  expect(pageText(container)).not.toContain('Loading');
   const items = namesInItems(container);
   FRESH_USERS.forEach((user, index) => expect(items[index]).toContain(user.name));
 }));`,
@@ -3080,6 +3080,22 @@ const App = () => {
     </main>
   );
 };`,
+    // On the hand-moved clock of FAKE_CLOCK, so any delay above 10 ms works:
+    // a key every 10 ms never lets a value settle, and a debounce without
+    // clearTimeout lets the first value through after its delay anyway.
+    hiddenSuite: `${FAKE_CLOCK}
+test('a value replaced before the delay never reaches the list', () => withClock(async clock => {
+  const { container } = render(<App />);
+  const input = container.querySelector('input');
+  for (let key = 0; key < 200; key += 1) {
+    fireEvent.change(input, { target: { value: key % 2 === 0 ? 'che' : 'ban' } });
+    await clock.tick(10);
+    expect(container.querySelectorAll('li')).toHaveLength(3);
+  }
+  await clock.tick(5000);
+  expect(container.querySelectorAll('li')).toHaveLength(1);
+  expect(container.textContent).toContain('Banana');
+}));`,
   },
   "react-todo-dashboard": {
     solution: `const App = () => {
@@ -4953,6 +4969,20 @@ test('filtering never asks the server again', () => withServer(async calls => {
   filterEmail(container, 'ken');
   choosePost(container, '9');
   expect(calls).toHaveLength(1);
+}));
+
+test('an email in capitals matches a lowercase filter', () => withServer(async calls => {
+  const { container } = render(<App />);
+  // Loading shows first, so a page that shows nothing fails here without waiting.
+  expect(says(container, 'loading')).toBe(true);
+  gets(calls, COMMENTS_URL)[0].respond([
+    { id: 1, postId: 1, name: 'Shouting', email: 'ANA@EXAMPLE.COM', body: 'x' },
+    { id: 2, postId: 1, name: 'Quiet', email: 'bo@example.com', body: 'y' },
+  ]);
+  await waitFor(() => expect(entries('Comments')).toHaveLength(2));
+  filterEmail(container, 'ana@');
+  expect(entries('Comments')).toHaveLength(1);
+  expect(entries('Comments')[0]).toContain('ANA@EXAMPLE.COM');
 }));`,
   },
   "react-weather-style-dashboard": {
@@ -5354,10 +5384,10 @@ test('the next search removes the unknown-city message', () => withRequests(asyn
   render(<App />);
   await answer(calls[0], 12.5);
   search('Gotham');
-  expect(screen.getByText('Unknown city: Gotham')).toBeTruthy();
+  expectLine('Unknown city: Gotham');
   expect(calls).toHaveLength(1);
   search(' ostrava');
-  expect(screen.queryByText('Unknown city: Gotham')).toBeNull();
+  expect(hasLine('Unknown city: Gotham')).toBe(false);
   expect(asked(calls[1])).toEqual([FORECAST, 49.83, 18.29, 'temperature_2m']);
 }));
 
@@ -5365,7 +5395,7 @@ test('only a whole city name matches, not the start of one', () => withRequests(
   render(<App />);
   await answer(calls[0], 12.5);
   search('Pra');
-  expect(screen.getByText('Unknown city: Pra')).toBeTruthy();
+  expectLine('Unknown city: Pra');
   expect(calls).toHaveLength(1);
   expect(recent()).toEqual(['Prague: 12.5 °C']);
 }));`,
@@ -5729,6 +5759,14 @@ test('unticking Unread only brings back what was marked read meanwhile', () => w
     ['2026-09-30', ['Invoice paid', 'read']],
   ]);
   expectLine('Unread: 2');
+}));
+
+test('a page with notifications never says there are none', () => withRequests(async calls => {
+  render(<App />);
+  await answer(calls[0], NOTIFICATIONS);
+  expect(document.body.textContent).not.toContain('No notifications');
+  unreadOnly();
+  expect(document.body.textContent).not.toContain('No unread notifications');
 }));`,
   },
   "react-booking-prototype": {

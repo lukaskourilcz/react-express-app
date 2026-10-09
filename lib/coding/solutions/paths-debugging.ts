@@ -228,6 +228,8 @@ const LOGGING_HIDDEN: Hidden = [
     [`(() => { const { back, printed } = ${printedBy('debug("total", 42)')}; return [back, printed.length, printed.join(" ").includes("total"), printed.join(" ").includes("42")]; })()`, [42, 1, true, true]],
     ['debug("zero", 0)', 0],
     ['bestSeller([{ name: "x", qty: 1 }, { name: "y", qty: 4 }, { name: "x", qty: 4 }])', 'x'],
+    // The most units wins, whatever the names sort to.
+    ['bestSeller([{ name: "tea", qty: 5 }, { name: "cake", qty: 1 }])', 'tea'],
   ],
 ];
 

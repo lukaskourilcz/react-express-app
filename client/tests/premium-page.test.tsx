@@ -304,7 +304,8 @@ describe('the launch price (4 Oct to 2 Nov 2026, Prague)', () => {
     expect(screen.getByText(/which applies to subscriptions started from 3 November 2026/)).toBeInTheDocument();
     expect(screen.getByText(/lasts for the lifetime of that subscription/)).toBeInTheDocument();
     on.unmount();
-    vi.useRealTimers();
+    // After the window closes, as the real clock will be from 3 Nov.
+    at('2026-11-03T10:00:00Z');
     renderAt('/terms', <TermsPage />);
     expect(await screen.findByText(/Stripe sells Premium to you as the seller of record/)).toBeInTheDocument();
     expect(screen.queryByText(/Launch price:/)).toBeNull();

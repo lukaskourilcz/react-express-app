@@ -170,6 +170,19 @@ function buildExpect(actual: unknown, negated: boolean): Record<string, unknown>
   });
 }
 
+/** The first line of what a case threw. Reading it runs the thrown value's
+ * own code (a `message` getter, a `toString`), and a value with no way to
+ * become a string, such as `Object.create(null)`, makes that throw too. Out
+ * of the catch it ended the whole run, and the learner read a runner outage;
+ * the case has failed either way. */
+const thrownMessage = (caught: unknown): string => {
+  try {
+    return String((caught as { message?: unknown })?.message ?? caught).split('\n')[0];
+  } catch {
+    return 'threw a value that cannot be read as a message';
+  }
+};
+
 export function createMiniJest() {
   const cases: { name: string; body: Body }[] = [];
   const before: Body[] = [];
@@ -207,7 +220,7 @@ export function createMiniJest() {
         ]);
         for (const hook of after) await follow(hook());
       } catch (caught) {
-        error = String((caught as { message?: unknown })?.message ?? caught).split('\n')[0];
+        error = thrownMessage(caught);
       }
       try { await options.afterEach?.(); } catch { /* cleanup never fails a case */ }
       results.push({ name: one.name, status: error ? 'fail' : 'pass', error, durationMs: Date.now() - started });

@@ -536,6 +536,7 @@ const makeChange = (cents) => {
       { call: 'hasClash([[1, 10], [2, 3], [11, 12]])', expected: true },
       { call: 'hasClash([[10, 20], [2, 9], [100, 200], [20, 30]])', expected: false },
       { call: 'hasClash([[4, 8], [4, 5]])', expected: true },
+      { call: 'hasClash([[1, 5], [3, 8]])', expected: true },
     ],
   },
   'alg-easy2-median': {
@@ -655,6 +656,7 @@ const happyChildren = (appetites, snacks) => {
       { call: 'happyChildren([5, 10, 20], [9, 1, 100, 30])', expected: 3 },
       { call: 'happyChildren([2, 2, 2], [2, 2])', expected: 2 },
       { call: '(() => { const appetites = [3, 1, 2]; const snacks = [2, 3, 1]; happyChildren(appetites, snacks); return [appetites, snacks]; })()', expected: [[3, 1, 2], [2, 3, 1]] },
+      { call: 'happyChildren([1, 2, 3], [3, 1])', expected: 2 },
     ],
   },
 

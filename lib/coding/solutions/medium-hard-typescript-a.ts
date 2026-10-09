@@ -900,6 +900,7 @@ const allocate = (order: readonly OrderLine[], stock: Stock): Allocation => {
       { call: 'allocate([["tea", 2], ["tea", 2]], { north: { tea: 3 }, south: { tea: 2 }, east: {} })', expected: { ok: true, picks: [['north', 'tea', 2], ['south', 'tea', 2]] } },
       { call: 'allocate([["tea", 1], ["tea", 1]], Object.freeze({ north: Object.freeze({ tea: 1 }), south: Object.freeze({ tea: 1 }), east: Object.freeze({}) }))', expected: { ok: true, picks: [['north', 'tea', 1], ['south', 'tea', 1]] } },
       { call: 'allocate([["jam", 4], ["tea", 1]], { north: { jam: 1, tea: 1 }, south: { jam: 1 }, east: { jam: 2 } })', expected: { ok: true, picks: [['north', 'jam', 1], ['south', 'jam', 1], ['east', 'jam', 2], ['north', 'tea', 1]] } },
+      { call: '(() => { const stock = { north: {}, south: {}, east: { tea: 3 } }; allocate([["tea", 2]], stock); return stock; })()', expected: { north: {}, south: {}, east: { tea: 3 } } },
     ],
     hiddenTypeTests: [
       { code: 'const __place: Warehouse = "west";', rejects: true },
@@ -1189,6 +1190,7 @@ const applyEdits = (text: string, edits: readonly Edit[]): EditResult => {
       { call: 'applyEdits("abc", [{ start: 0, end: 2, insert: "" }, { start: 1, end: 2, insert: "" }, { start: 0, end: 5, insert: "" }])', expected: { ok: false, reason: 'out-of-range', edit: 2 } },
       { call: '(() => { const text = "a".repeat(200); const edits = Array.from({ length: 200 }, (_, i) => ({ start: 199 - i, end: 200 - i, insert: "b" })); const result = applyEdits(text, edits); return result.ok && result.text === "b".repeat(200); })()', expected: true },
       { call: 'applyEdits("one two", [{ start: 3, end: 3, insert: "," }, { start: 0, end: 3, insert: "1" }])', expected: { ok: true, text: '1, two' } },
+      { call: 'applyEdits("abc", [{ start: 5, end: 6, insert: "" }, { start: 4, end: 9, insert: "" }])', expected: { ok: false, reason: 'out-of-range', edit: 0 } },
     ],
     hiddenTypeTests: [
       { code: 'applyEdits("a", [{ start: "0", end: 1, insert: "" }]);', rejects: true },

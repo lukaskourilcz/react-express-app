@@ -11,9 +11,10 @@ import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
 import { formatCode } from './runner/format';
-import { runCodeTests, runPassed, type RunOutcome, type RunPhase } from './runner/run-tests';
+import { runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
+import { TYPE_CHECK_STOPPED_MESSAGE } from '../../../shared/coding-evaluate';
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
-import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, type LadderRung } from './hint-ladder';
+import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, MIN_ATTEMPT_MS, type LadderRung } from './hint-ladder';
 import { taskResources } from '../../../shared/coding-docs';
 import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
@@ -35,6 +36,26 @@ import './Coding.css';
 /** Moves focus to a confirmation's safe choice when it appears. Module-level,
  * so its identity is stable and it runs once per mount. */
 const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
+
+/** A React suite that moves focus inside the preview frame takes the page's
+ * focus with it. Call before a run; the function it returns gives focus back
+ * to whatever held it, unless that was the frame. */
+const keepFocus = () => {
+  const before = document.activeElement;
+  return () => {
+    const now = document.activeElement;
+    if (now instanceof HTMLIFrameElement && now !== before && before instanceof HTMLElement && before.isConnected) before.focus();
+  };
+};
+
+/** A reference solution written on one long line reads as a run-on sentence,
+ * so it is laid out for reading. Solutions already on several lines are shown
+ * as their author wrote them. */
+const displaySolution = (source: string, track: PlayableCodingTask['track']): Promise<string> => (
+  source.trim().includes('\n') || source.length <= 80
+    ? Promise.resolve(source)
+    : formatCode(source, track).then((formatted) => formatted.trimEnd(), () => source)
+);
 
 export interface CodingWorkbenchProps {
   task: PlayableCodingTask;
@@ -138,6 +159,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [runCount, setRunCount] = useState(0);
   const [failedRun, setFailedRun] = useState(false);
   const [verdict, setVerdict] = useState<CodingVerdictResponse | null>(null);
+  // The code changed after the verdict: it still says what the server saw,
+  // but no longer about the code on screen.
+  const [verdictStale, setVerdictStale] = useState(false);
+  // A pass recorded during this visit outlives the card that announced it: a
+  // later Submit clears the card, not the pass.
+  const [recordedPass, setRecordedPass] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>(isReact ? 'preview' : 'results');
   const [hintsTaken, setHintsTaken] = useState(0);
@@ -154,6 +181,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const [skipError, setSkipError] = useState<string | null>(null);
   const startedAt = useRef(Date.now());
   const verdictRef = useRef<HTMLElement | null>(null);
+  const resetRef = useRef<HTMLButtonElement | null>(null);
+  const revealRef = useRef<HTMLButtonElement | null>(null);
+  const solutionRef = useRef<HTMLDivElement | null>(null);
+  // The browser's own run during a Submit, which the server's answer replaces.
+  const localRun = useRef<AbortController | null>(null);
   const harness = useReactHarness();
   // What a narrow screen gets instead of an editor: the task's puzzle when it
   // has one, and an honest pending state when it does not. Neither is a pass.
@@ -196,6 +228,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   }, [code, task.track]);
 
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
+  // The runner, and TypeScript's compiler, load while the brief is read: the
+  // first Run does not wait for them, and Run still works if the connection
+  // drops afterwards.
+  useEffect(() => (isReact ? undefined : warmRunner(codeTrack)), [isReact, codeTrack]);
+  // A Submit's browser preview has nowhere to report once the task is left.
+  useEffect(() => () => localRun.current?.abort(), []);
   useEffect(() => { if (verdict) verdictRef.current?.focus(); }, [verdict]);
 
   const setSplit = useCallback((next: number) => {
@@ -233,20 +271,24 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const onCodeChange = useCallback((next: string) => {
     setCode(next);
     if (run || harness.run) setStale(true);
+    if (verdict) setVerdictStale(true);
     setServerChecked(false);
-  }, [run, harness.run]);
+  }, [run, harness.run, verdict]);
 
   const files = useCallback(() => ({ '/App.js': code, '/App.test.js': task.suite ?? '' }), [code, task.suite]);
 
   const runLocal = useCallback(async () => {
     if (phase !== 'idle') return;
     onDraft?.(code);
+    localRun.current?.abort();
     setPhase('running');
     setServerChecked(false);
     setFormatError(null);
     try {
       if (isReact) {
+        const restoreFocus = keepFocus();
         const outcome = await harness.start(files(), { tests: Boolean(task.suite), preview: true });
+        restoreFocus();
         if (outcome.status !== 'done' || outcome.failed > 0) setFailedRun(true);
         setTab(task.suite ? 'results' : 'preview');
       } else {
@@ -256,7 +298,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         });
         setRun(outcome);
         setServerChecked(false);
-        if (!runPassed(outcome)) setFailedRun(true);
+        // A runner that never loaded is not an attempt, so it opens no hint.
+        if (!outcome.runnerUnavailable && !runPassed(outcome)) setFailedRun(true);
         const typesBroken = outcome.check && (outcome.check.codeErrors.length > 0 || outcome.check.typeTests.some((one) => !one.pass));
         setTab(outcome.codeError ? 'results' : typesBroken ? 'types' : 'results');
       }
@@ -285,6 +328,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     setPhase('submitting');
     setSubmitError(null);
     setFormatError(null);
+    // A new Submit replaces the last verdict. Left standing, the old one sat
+    // beside a rate-limit or network error as if it were this Submit's answer.
+    setVerdict(null);
+    setVerdictStale(false);
     const durationMs = Date.now() - startedAt.current;
     try {
       let result: CodingVerdictResponse;
@@ -299,7 +346,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           // The frame runs the suite so the learner sees named cases and a
           // fresh preview straight away; the verdict itself comes from the
           // server, which runs the same suite where it cannot be edited.
+          const restoreFocus = keepFocus();
           const outcome = await harness.start(files(), { tests: true, preview: true });
+          restoreFocus();
           if (!(outcome.status === 'done' && outcome.total > 0 && outcome.failed === 0)) setFailedRun(true);
           setStale(false);
           setRunCount((n) => n + 1);
@@ -308,14 +357,22 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           setServerChecked(true);
         }
       } else {
-        setRunPhase('starting');
-        const local = await runCodeTests({ track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, onPhase: setRunPhase });
-        setRunPhase(null);
-        setRun(local);
-        setStale(false);
+        // The code goes to the server at once. The browser's own run is only a
+        // preview while the server grades: a first compile, or a type that
+        // keeps the checker busy, held Submit back for up to 45 s. Whichever
+        // comes first, the server's run replaces it.
+        const preview = new AbortController();
+        localRun.current = preview;
+        void runCodeTests({ track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, signal: preview.signal }).then((local) => {
+          if (preview.signal.aborted) return;
+          setRun(local);
+          setServerChecked(false);
+          setStale(false);
+          if (!local.runnerUnavailable && !runPassed(local)) setFailedRun(true);
+        });
         setRunCount((n) => n + 1);
-        if (!runPassed(local)) setFailedRun(true);
         result = await submitCoding({ session, code, runCount: runCount + 1, hintsUsed: taken, durationMs });
+        preview.abort();
         // The server's run is the verdict of record; show what it saw.
         setRun({ results: result.results, logs: result.logs, codeError: result.codeError, check: result.check, timedOut: result.verdict === 'timeout' });
         setServerChecked(true);
@@ -331,6 +388,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         return;
       }
       if (result.verdict !== 'passed') setFailedRun(true);
+      if (result.progress?.status === 'passed') setRecordedPass(true);
       setVerdict(result);
       onVerdict?.(result, code);
     } catch (error) {
@@ -362,6 +420,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     if (!session || phase !== 'idle') return;
     setPhase('submitting');
     setSubmitError(null);
+    setVerdict(null);
+    setVerdictStale(false);
     try {
       const result = await submitCoding({
         session, order, runCount, hintsUsed: taken, durationMs: Date.now() - startedAt.current,
@@ -380,8 +440,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     setFormattedCode(task.starter);
     setRun(null);
     setStale(false);
+    setVerdictStale(true);
     setHintsTaken(0);
     setConfirming(null);
+    // Reset is off now (there is nothing left to reset), so focus goes to the
+    // code that was just replaced rather than to the page.
+    editorPaneRef.current?.querySelector<HTMLElement>('.cm-content')?.focus();
   }, [task.starter]);
 
   const confirmSkip = useCallback(async () => {
@@ -405,16 +469,32 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     setSubmitError(null);
     try {
       const response = await revealCoding({ session, hintsUsed: taken });
-      setSolution(response.solution);
+      setSolution(await displaySolution(response.solution, task.track));
       onRevealed?.();
     } catch (error) {
       setSubmitError(error instanceof ApiError && error.code === 'reveal_locked'
         ? t('coding.giveUpLocked', { n: giveUpAfter(rungs.length) })
         : isPremiumRequired(error) ? t('error.premiumRequired') : submitFailure(error));
+      revealRef.current?.focus();
     }
-  }, [session, taken, onRevealed, rungs.length, t, submitFailure]);
+  }, [session, taken, onRevealed, rungs.length, t, submitFailure, task.track]);
+  // The button that asked for the solution is gone once it shows, so focus
+  // goes to the solution itself.
+  useEffect(() => { if (solution) solutionRef.current?.focus(); }, [solution]);
 
   const attemptReady = attemptStarted({ code, starter: task.starter, elapsedMs: Date.now() - startedAt.current, failedRun });
+  // The minute is counted at render time, so a learner who edits and then
+  // stops typing needs a render when it is up; without one the Hint button
+  // waited for the next keystroke.
+  const edited = code.trim() !== task.starter.trim();
+  const [, setAttemptClock] = useState(0);
+  useEffect(() => {
+    if (!edited || failedRun) return;
+    const left = MIN_ATTEMPT_MS - (Date.now() - startedAt.current);
+    if (left <= 0) return;
+    const timer = window.setTimeout(() => setAttemptClock((n) => n + 1), left);
+    return () => window.clearTimeout(timer);
+  }, [edited, failedRun]);
   const nextRung: LadderRung | null = rungs[taken] ?? null;
   // Why a control is unavailable is said beside it, not hidden in a disabled
   // button: the buttons stay focusable and hoverable and carry the reason as a
@@ -427,7 +507,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // pays nothing. After a recorded pass it costs nothing, so a section task
   // shows the solution at once; inside a Learn level showing it still ends the
   // level attempt, so that is asked first, without the XP line.
-  const passedAlready = verdict?.progress?.status === 'passed' || progress?.status === 'passed';
+  const passedAlready = recordedPass || verdict?.progress?.status === 'passed' || progress?.status === 'passed';
   const revealCostsXp = signedIn && !passedAlready;
   const revealNote = mode === 'lesson'
     ? t(revealCostsXp ? 'coding.lesson.giveUpConfirm' : 'coding.lesson.giveUpEnds')
@@ -437,10 +517,26 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     if (passedAlready && mode === 'section') void reveal();
     else setConfirming('reveal');
   };
+  // Keeping the code, by the button or by Escape, hands focus back to the
+  // button that asked; otherwise it fell to the page.
+  const cancelConfirm = () => {
+    const trigger = confirming === 'reset' ? resetRef.current : revealRef.current;
+    setConfirming(null);
+    trigger?.focus();
+  };
+  const onConfirmKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== 'Escape') return;
+    event.preventDefault();
+    event.stopPropagation();
+    cancelConfirm();
+  };
   // A pass after a reveal says why it paid nothing, instead of reading like
-  // any other pass.
+  // any other pass. An accepted order is not a pass at all: the server says
+  // "passed" about the arrangement, and the task stays open for the code.
+  const puzzleAccepted = verdict?.puzzle?.accepted === true;
   const verdictLabel = verdict
-    ? verdict.verdict === 'passed' && verdict.xpForfeited === true ? t('coding.verdict.passedNoXp') : t(`coding.verdict.${verdict.verdict}` as never)
+    ? puzzleAccepted ? t('coding.puzzle.accepted')
+      : verdict.verdict === 'passed' && verdict.xpForfeited === true ? t('coding.verdict.passedNoXp') : t(`coding.verdict.${verdict.verdict}` as never)
     : '';
 
   const busy = phase !== 'idle';
@@ -482,8 +578,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // Approach comparisons open on a recorded pass, and the server decides that.
   // Giving up and reading the reference solution is a different thing: it does
   // not open this, which is why the flag below is the verdict and not `solution`.
-  const passedNow = verdict?.verdict === 'passed';
-  const approaches = useCodingApproaches(task.id, signedIn && (passedNow || progress?.status === 'passed'));
+  const passedNow = verdict?.verdict === 'passed' && !verdict.puzzle;
+  const approaches = useCodingApproaches(task.id, signedIn && (passedNow || recordedPass || progress?.status === 'passed'));
   const approachList = approaches.data?.approaches ?? [];
   // The junior and senior solutions arrive with a verified pass — this one, or
   // a recorded earlier one — and from nowhere else.
@@ -497,11 +593,16 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // Between submissions the Run button still gets a hint, from the narrower
   // signals the browser does hold — same vocabulary, same authored text, so a
   // learner is never told two different stories about one failure.
+  const currentVerdict = verdictStale ? null : verdict;
   const localHint = useMemo(() => {
-    if (verdict || !run || runPassed(run)) return null;
+    if (currentVerdict || !run || runPassed(run)) return null;
+    // Nothing ran, or the types stopped the checker: the note in Results
+    // already names the cause, and no hint about the code would be true.
+    if (run.runnerUnavailable || run.codeError === TYPE_CHECK_STOPPED_MESSAGE) return null;
     const typesBroken = Boolean(run.check && (run.check.codeErrors.length > 0 || run.check.typeTests.some((one) => !one.pass)));
     return failureHint(
       classifyFailure({
+        timedOut: run.timedOut,
         threw: Boolean(run.codeError),
         typeErrors: typesBroken,
         results: run.results.map((one) => ({ pass: one.pass, actual: one.actual })),
@@ -509,8 +610,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       }),
       task.failureHints,
     );
-  }, [verdict, run, task.pitfall, task.failureHints]);
-  const shownHint = verdict?.failureHint ?? localHint;
+  }, [currentVerdict, run, task.pitfall, task.failureHints]);
+  const shownHint = currentVerdict?.failureHint ?? localHint;
+  /** Why a run produced no results: the runner never loaded, the checker
+   * stopped on the types, or the code ran out of time. */
+  const runNote = (outcome: RunOutcome): string => outcome.runnerUnavailable ? t('coding.results.runnerUnavailable')
+    : outcome.codeError === TYPE_CHECK_STOPPED_MESSAGE ? t('coding.results.typeCheckStopped') : t('coding.results.timeout');
   const tabs: { key: Tab; label: string; badge: string | null; good: boolean | null }[] = [
     { key: 'results', label: t('coding.tab.results'), badge: resultsBadge, good: isReact ? (reactRun ? reactRun.failed === 0 && reactRun.total > 0 : null) : localPassed },
     ...(isTypeScript ? [{ key: 'types' as Tab, label: t('coding.tab.types'), badge: typesBadge, good: typesBadge === 'ok' ? true : typesBadge ? false : null }] : []),
@@ -698,7 +803,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         </>
       );
     }
-    if (run.timedOut) return <p className="cd-note cd-note--warn">{t('coding.results.timeout')}</p>;
+    if (run.runnerUnavailable || run.timedOut) return <p className="cd-note cd-note--warn">{runNote(run)}</p>;
     if (run.codeError) return <p className="cd-note cd-note--error">{t('coding.results.codeError')} <code className="cd-inline-code">{run.codeError}</code></p>;
     const passedCount = run.results.filter((r) => r.pass === true).length;
     return (
@@ -777,23 +882,29 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       {reactRun?.previewError && <p className="cd-note cd-note--error">{t('coding.preview.error', { message: reactRun.previewError })}</p>}
       {reactRun?.status === 'timeout' && <p className="cd-note cd-note--warn">{t('coding.preview.timeout')} <Button variant="ghost" size="sm" onClick={harness.reload} label={t('coding.preview.reload')} /></p>}
       {!harness.ready && <p className="cd-console__empty">{t('coding.preview.starting')}</p>}
-      <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className="cd-frame" />
+      <iframe key={harness.frameKey} ref={harness.iframeRef} src={HARNESS_URL} sandbox="allow-scripts allow-forms" title={t('coding.preview.title')} className="cd-frame" tabIndex={tab === 'preview' ? undefined : -1} />
     </>
   );
 
+  // "Passing the visible examples is not enough" is only true when they all
+  // passed; with a visible failure on screen it told the learner otherwise.
+  const visiblePassed = Boolean(verdict && verdict.results.length > 0 && verdict.results.every((one) => one.pass === true)
+    && !(verdict.check && (verdict.check.codeErrors.length > 0 || verdict.check.typeTests.some((one) => !one.pass))));
   // Grading finishes somewhere the learner is not looking, so focus follows the
   // result. The card is not a dialog and does not trap anything: it takes focus
   // once, and Tab carries on from there.
   const verdictCard = verdict && (
-    <section className={`cd-verdict cd-verdict--${verdict.verdict}`} ref={verdictRef} tabIndex={-1}>
+    <section className={`cd-verdict cd-verdict--${puzzleAccepted ? 'puzzle' : verdict.verdict}`} ref={verdictRef} tabIndex={-1}>
       <h3 className="cd-verdict__title">
         <span>{verdictLabel}</span>
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
-      {verdict.verdict === 'failed' && verdict.hidden && verdict.hidden.passed < verdict.hidden.total && <p className="cd-verdict__row">{t('coding.verdict.hiddenFailed')}</p>}
+      {verdictStale && <p className="cd-verdict__row">{t('coding.verdict.stale')}</p>}
+      {verdict.verdict === 'failed' && verdict.hidden && verdict.hidden.passed < verdict.hidden.total && visiblePassed && <p className="cd-verdict__row">{t('coding.verdict.hiddenFailed')}</p>}
       {verdict.puzzle ? (
         <>
-          <p className="cd-verdict__row">{t(verdict.puzzle.accepted ? 'coding.puzzle.accepted' : 'coding.puzzle.rejected')}</p>
+          {/* The title already says whether the order works. */}
+          {!verdict.puzzle.accepted && <p className="cd-verdict__row">{t('coding.puzzle.rejected')}</p>}
           {verdict.puzzle.accepted && (
             <p className="cd-verdict__row">{verdict.puzzle.claim[lang] || verdict.puzzle.claim.en}</p>
           )}
@@ -810,7 +921,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             : t('coding.github.failed')}
         </p>
       )}
-      {verdict.verdict === 'passed' && (
+      {verdict.verdict === 'passed' && !verdict.puzzle && (
         <div className="cd-verdict__actions">
           {mode === 'lesson' && onContinue && <SwimCta size="sm" dir={1} onClick={onContinue} label={t('coding.lesson.continue')} />}
           {mode === 'section' && nextHref && <Button variant="primary" as={Link} href={nextHref} label={t('coding.verdict.next')} />}
@@ -823,13 +934,26 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // Announce what a run or a submission concluded. A live region has to be in
   // the document BEFORE its text changes, so it lives here rather than on the
   // verdict card, which mounts along with its own message.
+  // It says what the panel says: a build error, a timeout or type errors are
+  // never read out as "N of M passing".
+  const runAnnouncement = (): string => {
+    if (isReact) {
+      if (reactRun?.status === 'compile-error') return t('coding.preview.compileError', { message: reactRun.compileError ?? '' });
+      if (reactRun?.status === 'timeout') return t('coding.preview.timeout');
+      return reactRun?.status === 'done' ? t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total }) : '';
+    }
+    if (!run) return '';
+    if (run.runnerUnavailable || run.timedOut) return runNote(run);
+    if (run.codeError) return t('coding.results.codeError');
+    const passing = t('coding.results.passing', { passed: run.results.filter((one) => one.pass === true).length, total: run.results.length });
+    const typeErrors = run.check ? run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length : 0;
+    return typeErrors > 0 ? `${passing}. ${t('coding.types.errors', { n: typeErrors })}` : passing;
+  };
   const announcement = phase === 'running' || phase === 'submitting'
     ? t('coding.status.working')
-    : verdict
+    : currentVerdict
       ? verdictLabel
-      : isReact
-        ? reactRun?.status === 'done' ? t('coding.results.passing', { passed: reactRun.passed, total: reactRun.total }) : ''
-        : run ? t('coding.results.passing', { passed: run.results.filter((one) => one.pass === true).length, total: run.results.length }) : '';
+      : runAnnouncement();
 
   const titleId = `${baseId}-title`;
   const Title = mode === 'section' ? 'h1' : 'h2';
@@ -876,10 +1000,12 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     <div className="cd-editor-actions">
       <div className="cd-actions cd-actions--commands">
         {!puzzleMode && !pendingOnDesktop && <>
-        <Button variant="secondary" onClick={() => void runLocal()} isDisabled={busy} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
-        <SwimCta size="sm" dir={1} onClick={() => void submit()} disabled={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
+        {/* Busy, not disabled: the button that was pressed keeps the focus
+            (a disabled one hands it to the page), and a press does nothing. */}
+        <Button variant="secondary" onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
+        <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
         <Button variant="ghost" onClick={() => void format()} isDisabled={formatDisabled} label={t('coding.format')} />
-        <Button variant="ghost" onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
+        <Button variant="ghost" ref={resetRef} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
         </>}
 
         {/* Unavailable for a reason: focusable, with the reason as its tooltip. */}
@@ -893,6 +1019,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {session && !solution && !solutions && (
           <Button
             variant="ghost"
+            ref={revealRef}
             onClick={askToReveal}
             isDisabled={giveUpUnavailable !== '' || busy}
             tooltip={giveUpUnavailable || undefined}
@@ -986,7 +1113,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                         {rung.kind === 'hint' ? t('coding.hint.hint', { n: rung.index + 1 }) : rung.kind === 'approach' ? t('coding.hint.approach', { n: rung.index + 1 }) : rung.kind === 'skeleton' ? t('coding.hint.skeleton') : t('coding.hint.docs')}
                       </span>
                       {rung.kind === 'skeleton' ? <pre>{rung.body}</pre>
-                        : rung.kind === 'docs' ? <><span>{t('coding.hint.docsBody', { tag: rung.tag })}</span><br /><a href={rung.url} target="_blank" rel="noreferrer">{t('coding.hint.docsLink', { tag: rung.tag })}</a></>
+                        : rung.kind === 'docs' ? <><span>{t('coding.hint.docsBody', { tag: rung.title })}</span><br /><a href={rung.url} target="_blank" rel="noreferrer">{t('coding.hint.docsLink', { tag: rung.title })}</a></>
                         : <Prompt text={rung.body} />}
                     </li>
                   ))}
@@ -1035,22 +1162,22 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   <div className="cd-note" role="status">
                     <p style={{ margin: '0 0 8px' }}>{t(skipResult.required ? 'coding.skip.required' : 'coding.skip.optional')}</p>
                     {skipResult.next && (
-                      <Button variant="secondary" href={`/coding/${task.track}/${skipResult.next}`} label={t('coding.skip.next')} />
+                      <Button variant="secondary" as={Link} href={`/coding/${task.track}/${skipResult.next}`} label={t('coding.skip.next')} />
                     )}
                   </div>
                 )}
 
                 {confirming === 'reveal' && (
-                  <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.giveUp')}>
+                  <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.giveUp')} onKeyDown={onConfirmKeyDown}>
                     <p style={{ margin: '0 0 8px' }}>{revealNote}</p>
                     <div className="cd-actions">
                       <Button variant="primary" onClick={() => void reveal()} label={t('coding.giveUp')} />
-                      <Button variant="secondary" onClick={() => setConfirming(null)} ref={focusOnMount} label={t('coding.retry')} />
+                      <Button variant="secondary" onClick={cancelConfirm} ref={focusOnMount} label={t('coding.giveUpCancel')} />
                     </div>
                   </div>
                 )}
                 {solution && (
-                  <div className="cd-hint cd-solution">
+                  <div className="cd-hint cd-solution" ref={solutionRef} tabIndex={-1}>
                     <span className="cd-hint__label">{t('coding.solutionTitle')}</span>
                     <pre>{solution}</pre>
                     <p className="cd-shortcuts">{t('coding.solutionNote')}</p>
@@ -1058,11 +1185,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 )}
               </div>}
               {confirming === 'reset' && (
-                <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.reset')}>
+                <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.reset')} onKeyDown={onConfirmKeyDown}>
                   <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
                   <div className="cd-actions">
                     <Button variant="primary" onClick={reset} label={t('coding.reset')} />
-                    <Button variant="secondary" onClick={() => setConfirming(null)} ref={focusOnMount} label={t('coding.retry')} />
+                    <Button variant="secondary" onClick={cancelConfirm} ref={focusOnMount} label={t('coding.resetCancel')} />
                   </div>
                 </div>
               )}
@@ -1115,10 +1242,16 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               exactly as tall as the editor beside it (see Coding.css), so this
               is where a long list of checks goes instead of below Run. */}
           <div className="cd-output-scroll">
-          {tabs.map((one) => (
+          {tabs.map((one) => {
+            // A suite that moves focus needs the preview's document laid out,
+            // and a hidden panel has none: every focus check failed once Run
+            // had switched to Results. While a suite runs, the preview panel
+            // is parked off-screen instead, out of reading and tab order.
+            const parked = one.key === 'preview' && tab !== 'preview' && busy;
+            return (
             // The panel takes focus itself: its content is often plain text,
             // so without this a keyboard user tabs straight past the results.
-            <div key={one.key} role="tabpanel" tabIndex={tab === one.key ? 0 : -1} id={`${baseId}-panel-${one.key}`} aria-labelledby={`${baseId}-tab-${one.key}`} className="cd-panel" hidden={tab !== one.key}>
+            <div key={one.key} role="tabpanel" tabIndex={tab === one.key ? 0 : -1} id={`${baseId}-panel-${one.key}`} aria-labelledby={`${baseId}-tab-${one.key}`} className={`cd-panel${parked ? ' cd-panel--parked' : ''}`} hidden={tab !== one.key && !parked} aria-hidden={parked || undefined}>
               {one.key === 'results' && renderResults()}
               {one.key === 'types' && renderTypes()}
               {one.key === 'console' && renderConsole()}
@@ -1127,7 +1260,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {one.key === 'solution' && renderSolution()}
               {one.key === 'approaches' && renderApproaches()}
             </div>
-          ))}
+            );
+          })}
           {verdictCard}
           {tab === 'results' && shownHint && (
             <div className="cd-hint cd-hint--failure" role="status">

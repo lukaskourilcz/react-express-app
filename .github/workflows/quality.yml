@@ -75,6 +75,8 @@ jobs:
           node scripts/wait-for-preview.mjs
           npm run test:browser -- tests/browser/public.spec.ts
           npm run test:browser -- tests/browser/evolving.spec.ts
+          npm run test:browser -- tests/browser/coding-pages.spec.ts
+          npm run test:browser -- tests/browser/coding-workbench.spec.ts
           npm run test:browser -- tests/browser/segmented.spec.ts
           npm run test:browser -- tests/browser/on-accent.spec.ts
           npm run test:browser -- tests/browser/navigation.spec.ts

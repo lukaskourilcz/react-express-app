@@ -10,6 +10,11 @@ export const RUN_TIMEOUT_MS = 2_000;
 /** Timer- and promise-based tasks need longer than a synchronous one. */
 export const ASYNC_TIMEOUT_MS = 6_000;
 export const TIMEOUT_MESSAGE = 'Timed out. Check for an infinite loop.';
+/** What the learner reads when a type check was stopped: the cause is a type,
+ * not a loop. The server's checker (lib/coding/ts-check-pool.ts) and the
+ * browser's runner both report a stopped check with this text. */
+export const TYPE_CHECK_STOPPED_MESSAGE =
+  'Type checking stopped before it finished: it ran out of time, memory or stack. A type that keeps recursing, or one that builds very large unions or tuples, can do this.';
 export const MAX_LOGS = 100;
 /** Console output is capped by size as well as by line count: a line past
  * MAX_LOG_LINE_CHARS is cut, and past MAX_LOG_CHARS in all the rest is
@@ -62,8 +67,11 @@ export interface EvaluateResult {
   timedOut?: boolean;
 }
 
+// Numbers compare the way `includes` and `Map` keys do: NaN equals NaN, and
+// 0 equals -0. Correct arithmetic can produce -0 (`-a - b` with both zero),
+// and no check in the catalogue asks for one sign of zero over the other.
 export const deepEqual = (actual: unknown, expected: unknown): boolean => {
-  if (Object.is(actual, expected)) return true;
+  if (actual === expected || Object.is(actual, expected)) return true;
   if (Array.isArray(actual) || Array.isArray(expected)) {
     return Array.isArray(actual) && Array.isArray(expected) && actual.length === expected.length &&
       actual.every((value, index) => deepEqual(value, expected[index]));
@@ -78,12 +86,17 @@ export const deepEqual = (actual: unknown, expected: unknown): boolean => {
   return false;
 };
 
-/** Renders a value the way the results table shows it. */
+/** JSON writes -0 as 0; this stands in for it until the text is built. */
+const NEGATIVE_ZERO = '\u0000-0\u0000';
+
+/** Renders a value the way the results table shows it. -0 is written as -0,
+ * so a result that differs only in that sign does not read as the answer. */
 export const displayValue = (value: unknown): string => {
   if (value === undefined) return 'undefined';
+  if (Object.is(value, -0)) return '-0';
   try {
-    const text = JSON.stringify(value);
-    return text === undefined ? String(value) : text;
+    const text = JSON.stringify(value, (_key, item: unknown) => (Object.is(item, -0) ? NEGATIVE_ZERO : item));
+    return text === undefined ? String(value) : text.split(JSON.stringify(NEGATIVE_ZERO)).join('-0');
   } catch {
     return String(value);
   }

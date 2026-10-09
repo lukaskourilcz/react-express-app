@@ -43,3 +43,14 @@ test('the guide remains readable with JavaScript disabled', async ({ browser }) 
   await expect(page.locator('details').first().locator('p')).toBeVisible();
   await context.close();
 });
+// C4-4: a crawler or a link preview that runs no JavaScript reads the Coding
+// home and a track page under their own title and canonical URL, which used to
+// be the home page's.
+test('the Coding home and a track page serve their own head', async ({ request }) => {
+  for (const [path, title] of [['/coding', 'Coding challenges · devShark'], ['/coding/javascript', 'JavaScript coding challenges · devShark']]) {
+    const html = await (await request.get(path)).text();
+    expect(html).toContain(`<title>${title}</title>`);
+    expect(html).toContain(`<link rel="canonical" href="https://devshark.app${path}" />`);
+    expect(html).not.toContain('<link rel="canonical" href="https://devshark.app/" />');
+  }
+});

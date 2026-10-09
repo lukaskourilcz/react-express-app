@@ -980,8 +980,9 @@ console.log(reverseVowels("hello"));
   let right = chars.length - 1;
 
   while (left < right) {
-    // move left past non-vowels, move right past non-vowels,
-    // then swap the two vowels and move both pointers in
+    // a non-vowel at left: step left on and go round again
+    // a non-vowel at right: step right back and go round again
+    // otherwise swap the two vowels and move both pointers in
   }
 
   return chars.join("");
@@ -989,7 +990,7 @@ console.log(reverseVowels("hello"));
     hints: ['Strings cannot be changed in place, so split the text into an array of characters first. Swap inside the array and `join` it back at the end.'],
     approach: [
       'Split the text into characters and set `left` to 0 and `right` to the last index.',
-      'While `left` is below `right`: move `left` forward while it sits on a non-vowel, and move `right` back while it sits on a non-vowel.',
+      'While `left` is below `right`, take one step each time round: if `left` sits on a non-vowel, move it forward; otherwise, if `right` sits on a non-vowel, move it back. A loop that only checks for a vowel would run off the end of a word with none.',
       'When both rest on vowels, swap them and move both pointers one step in. Join the characters to finish.',
     ],
     verify: 'tests',

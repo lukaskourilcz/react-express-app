@@ -555,6 +555,7 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
       { call: "(() => { const items = [{id:\"a\"},{id:\"b\"},{id:\"c\"},{id:\"d\"}]; const removed = removeById(items, \"d\"); return [removed.id, items.length]; })()", expected: ["d", 3] },
       { call: "(() => { const items = [{id:1},{id:2},{id:3}]; removeById(items, 42); return items.length; })()", expected: 3 },
       { call: "(() => { const items = [{id:1}]; return removeById(items, 1) !== null && items.length === 0; })()", expected: true },
+      { call: "(() => { const items = [{id:1,n:\"a\"},{id:2,n:\"b\"},{id:1,n:\"c\"}]; const removed = removeById(items, 1); return [removed, items]; })()", expected: [{id:1,n:"a"},[{id:2,n:"b"},{id:1,n:"c"}]] },
     ],
   },
   "js-highest-with-reduce": {

@@ -24,6 +24,19 @@ export interface GuestInput {
  * starts with a line break, so nothing printed before it can join it. */
 export const guestResultLine = (nonce: string, json: string): string => `\n${nonce} ${json}\n`;
 
+/** The line the guest prints once its own setup is done, just before the
+ * suite loads the learner's code. A guest that ends without a result after
+ * this line was ended by that code; one that ends before it is a runner
+ * failure. The nonce is gone before learner code runs, so nothing else can
+ * print it. */
+export const guestStartedLine = (nonce: string): string => `\n${nonce}:started\n`;
+
+/** What the learner reads when their code ended the guest before it could
+ * report: the heap limit is the usual way (an endless chain of promises or
+ * updates). */
+export const GUEST_CRASHED_MESSAGE =
+  'Your code stopped the test runner before it could report: it most likely ran out of memory, for example in an endless chain of promises or state updates.';
+
 // Captured when this module loads, which in the guest is before any learner
 // code runs. The serializer below uses nothing else.
 const ownDescriptor = Reflect.getOwnPropertyDescriptor;
@@ -85,6 +98,22 @@ export function serializeGuestResult(result: unknown): string {
   const total = length > 0 ? length : 1;
   json += `],"passed":${passed},"failed":${total - passed},"total":${total},"compileError":${jsonNullableText(compileError)},"timedOut":${timedOut ? 'true' : 'false'}}`;
   return json;
+}
+
+/**
+ * The outcome of one guest run, from its exit code and stdout. A run that
+ * exited cleanly is read by `readGuestResult`. One that crashed after the
+ * started line (`guestStartedLine`) was crashed by the learner's code, which
+ * is an error in that code and recorded as one; one that crashed before it
+ * throws, as a runner failure the API reports as an outage. A run stopped at
+ * its deadline (exit 137 or 124) is the caller's to report as a timeout.
+ */
+export function readGuestRun(exitCode: number | null, stdout: string, nonce: string, suite: string): ReactSuiteOutcome {
+  if (exitCode === 0) return readGuestResult(stdout, nonce, suite);
+  if (stdout.includes(guestStartedLine(nonce))) {
+    return { cases: [], passed: 0, failed: 1, total: 1, compileError: GUEST_CRASHED_MESSAGE, timedOut: false };
+  }
+  throw new Error('Isolated React runner exited unsuccessfully');
 }
 
 /**

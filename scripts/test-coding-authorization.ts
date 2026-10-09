@@ -1,7 +1,7 @@
 // First: no exported Supabase project may verify the stand-in tokens below.
 import './launch-test-env';
 import assert from 'node:assert/strict';
-import { handleCodingSubmit, handleCodingReveal } from '../lib/coding/handlers';
+import { handleCodingSubmit, handleCodingReveal, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 
 const solved = 'const double=ns=>ns.map(n=>n*2)';
@@ -49,5 +49,37 @@ async function main() {
   assert.equal(errorCode(ownSubmit.body), 'not_configured', 'the owner\'s submit reaches the progress write');
 
   console.log('Coding account-bound submit and reveal authorization passed: guests and other signed-in accounts are refused, the owner is not.');
+
+  // A task opens with the account's own draft and the time it was saved, so
+  // the browser can open the newer of it and the copy on the device (C5-4).
+  // Another account's draft is never read.
+  const drafts: Record<string, { code: string; updated_at: string }> = {
+    'account-a:js-double-numbers': { code: 'const double = (ns) => ns;', updated_at: '2026-10-09T10:00:00.000Z' },
+  };
+  const database = {
+    from: (table: string) => {
+      const filters: Record<string, unknown> = {};
+      const chain = {
+        select: () => chain,
+        eq: (column: string, value: unknown) => { filters[column] = value; return chain; },
+        maybeSingle: async () => ({ data: table === 'coding_drafts' ? drafts[`${filters.user_id}:${filters.task_id}`] ?? null : null, error: null }),
+        then: (resolve: (value: unknown) => unknown) => resolve({ data: [], error: null }),
+      };
+      return chain;
+    },
+  };
+  const open = async (account: string) => {
+    const out = response();
+    await handleCodingTask({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { id: 'js-double-numbers', user_id: account } } as never, out as never, database as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as { draft: string | null; draftUpdatedAt?: string | null };
+  };
+  const own = await open('account-a');
+  assert.equal(own.draft, 'const double = (ns) => ns;');
+  assert.equal(own.draftUpdatedAt, '2026-10-09T10:00:00.000Z', 'the draft comes with the time it was saved');
+  const other = await open('account-b');
+  assert.equal(other.draft, null);
+  assert.equal(other.draftUpdatedAt, null, 'no draft, no time');
+  console.log('Coding task draft passed: the account\'s own draft opens with its time, and no other account\'s.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

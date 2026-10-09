@@ -1,9 +1,9 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
-import { CodingHome } from '../src/components/coding/CodingSection';
+import { CodingHome, CodingTrackScreen } from '../src/components/coding/CodingSection';
 import type { CodingProgressResponse } from '../../shared/coding-api';
 import { CODING_INDEX } from '../../shared/coding-index';
 import type { Tier } from '../../shared/tiers';
@@ -123,4 +123,30 @@ it('waits for a free account’s plan, then names a challenge the free plan open
   const named = CODING_INDEX.find((task) => task.title.en === title);
   expect(named?.free).toBe(true);
   expect(within(card()).getByRole('button', { name: 'Continue' })).toBeEnabled();
+});
+
+// C3-10: a technique row counted the technique in every track and opened one
+// track's list, so "Loops · 148 challenges" opened a list of 80. The count is
+// now the list's own, and says which track it is.
+it('counts each technique the way the list it opens does', () => {
+  state.progress = { data: passedDigitSum, isLoading: false, isError: false, refetch: () => {} };
+  const home = mount();
+  const rows = within(screen.getByRole('region', { name: 'Techniques' })).getAllByRole('link').map((link) => ({
+    href: link.getAttribute('href') ?? '',
+    count: link.querySelector('.cd-technique__count')?.textContent ?? '',
+  }));
+  home.unmount();
+  expect(rows.length).toBeGreaterThan(5);
+  for (const { href, count } of rows) {
+    const list = render(
+      <QueryClientProvider client={client}><MemoryRouter initialEntries={[href]}><LanguageProvider>
+        <Routes><Route path="/coding/:track" element={<CodingTrackScreen />} /></Routes>
+      </LanguageProvider></MemoryRouter></QueryClientProvider>,
+    );
+    const shown = /^Showing (\d+) of \d+$/.exec(screen.getByText(/^Showing \d+ of \d+$/).textContent ?? '')?.[1];
+    const heading = screen.getByRole('heading', { level: 1 }).textContent;
+    expect(heading, href).toMatch(/^(JavaScript|TypeScript|React|Algorithms)$/);
+    expect(count, href).toBe(`${shown} challenges in ${heading}`);
+    list.unmount();
+  }
 });

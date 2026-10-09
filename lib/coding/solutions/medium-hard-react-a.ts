@@ -588,7 +588,7 @@ test('after a retry that works, Load more asks for the page after it', () => wit
 test('a failed first page can be tried again', () => withFetch(async calls => {
   render(<App />);
   await act(async () => { calls[0].fail(new TypeError('Failed to fetch')); });
-  expect(screen.getByRole('alert').textContent).toBe('Could not load photos');
+  expect(alertMessage()).toBe('Could not load photos');
   press('Try again');
   expect(calls[1].url).toBe('/api/photos?page=1');
   await act(async () => { calls[1].respond(photos(1, 2)); });
@@ -2043,6 +2043,13 @@ test('a refused name can still be changed and saved', () => {
   submit('photo.jpg');
   expect(names()).toEqual(['report.pdf', 'notes.txt', 'beach.jpg']);
   expect(document.activeElement).toBe(renameButton('beach.jpg'));
+});
+
+test('a key other than Escape leaves the form open', () => {
+  render(<App />);
+  fireEvent.click(renameButton('notes.txt'));
+  fireEvent.keyDown(input('notes.txt'), { key: 'a' });
+  expect(input('notes.txt')).toBeTruthy();
 });`,
   },
   'react-mh-wait-for-export': {
@@ -2264,12 +2271,13 @@ test('the progress follows each answer', () => withFetch(async calls => {
   expect(screen.queryByText('Preparing… 10%')).toBeNull();
 }));
 
-test('Export is disabled from the click on', () => withFetch(async calls => {
+test('Export stays disabled while the job reports running, and a click on it asks nothing', () => withFetch(async calls => {
   render(<App />);
-  fireEvent.click(exportButton());
+  await begin(calls);
+  await act(async () => { calls[1].respond({ status: 'running', progress: 5 }); });
   expect(exportButton().disabled).toBe(true);
   fireEvent.click(exportButton());
-  expect(calls).toHaveLength(1);
+  expect(calls).toHaveLength(2);
 }));`,
   },
 
@@ -2674,6 +2682,16 @@ test('the mousedown listener on document lives only while the menu is open', () 
     document.addEventListener = realAdd;
     document.removeEventListener = realRemove;
   }
+});
+
+test('ArrowUp from the third item moves the focus to the second', () => {
+  render(<App />);
+  fireEvent.click(trigger());
+  key('ArrowDown');
+  key('ArrowDown');
+  expect(focused()).toBe('Delete');
+  key('ArrowUp');
+  expect(focused()).toBe('Duplicate');
 });`,
   },
   'react-mh-city-combobox': {
@@ -3026,6 +3044,17 @@ test('every option has an id of its own, and typing after a pick opens the list 
   key('Enter');
   type('pa');
   expect(options()).toEqual(['Paris']);
+});
+
+test('ArrowUp from the third option moves to the second', () => {
+  render(<App />);
+  type('b');
+  key('ArrowDown');
+  key('ArrowDown');
+  key('ArrowDown');
+  expect(activeOption().textContent).toBe('Bern');
+  key('ArrowUp');
+  expect(activeOption().textContent).toBe('Berlin');
 });`,
   },
   'react-mh-signup-form': {
@@ -4140,7 +4169,7 @@ test('an answer that is not ok is a failure too', () => withSaves(async calls =>
   type('Buy bread');
   await wait(200);
   await act(async () => { calls[0].error(); });
-  expect(screen.getByRole('alert').textContent).toBe('Could not save');
+  expect(alertMessage()).toBe('Could not save');
   expect(status()).toBe('Unsaved changes');
 }));
 
@@ -4183,6 +4212,16 @@ test('Retry sends the newest text', () => withSaves(async calls => {
   fireEvent.click(screen.getByRole('button', { name: 'Retry' }));
   expect(calls).toHaveLength(2);
   expect(calls[1].body).toBe('Buy bread and jam');
-}));`,
+}));
+
+test('closing after a successful save sends nothing more', () => withSaves(calls => withClock(async clock => {
+  const { unmount } = render(<App />);
+  type('Buy bread');
+  await clock.tick(150);
+  await act(async () => { calls[0].ok(); });
+  expect(status()).toBe('All changes saved');
+  unmount();
+  expect(calls).toHaveLength(1);
+})));`,
   },
 };

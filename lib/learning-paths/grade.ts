@@ -29,8 +29,7 @@ import type { EvidenceState, Localized, VerificationKind } from '../../shared/le
 import type { TypeCheckResult } from '../../shared/coding-ts-check';
 import type { CodingTask } from '../../shared/coding-catalog';
 import { runChecks } from '../coding/sandbox';
-import { nodeTypeScriptChecker } from '../coding/ts-check-node';
-import { checkTypes, TYPE_CHECK_STOPPED_MESSAGE } from '../coding/ts-check-pool';
+import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from '../coding/ts-check-pool';
 import { secureShuffle } from '../quiz-runtime';
 import { codeOutcome } from '../coding/grade';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedCallTest, type MergedCode, type PathCodeSolution } from './types';
@@ -307,7 +306,8 @@ export async function gradePathCode(
       hiddenTypeTotal = hiddenCheck.typeTests.length;
       hiddenTypeFailures = hiddenCheck.typeTests.filter((one) => !one.pass).length;
     }
-    source = nodeTypeScriptChecker().toJavaScript(submitted);
+    if (typed.javascript === null) return typeCheckStopped(code, hidden.length + hiddenTypeTotal, 'error', TRANSPILE_FAILED_MESSAGE, check);
+    source = typed.javascript;
   }
 
   const runnableSource = code.harness ? `${source}\n;\n${code.harness}\n` : source;
@@ -358,20 +358,27 @@ export async function gradePathCode(
 }
 
 /** The grade for a submission whose type check was stopped at its deadline:
- * a timeout, with every criterion unmet. */
-function typeCheckStopped(code: MergedCode, hiddenTotal: number): PathCodeGrade {
+ * a timeout, with every criterion unmet. Code the compiler could not turn into
+ * JavaScript gets the same grade as an error. */
+function typeCheckStopped(
+  code: MergedCode,
+  hiddenTotal: number,
+  outcome: 'timeout' | 'error' = 'timeout',
+  codeError = TYPE_CHECK_STOPPED_MESSAGE,
+  check: TypeCheckResult | null = null,
+): PathCodeGrade {
   const folded = foldCriteria(code, [], false);
   return {
     state: 'needs_revision',
     score: folded.score,
     criteria: folded.criteria,
     code: {
-      outcome: 'timeout',
+      outcome,
       results: [],
       hidden: hiddenTotal > 0 ? { passed: 0, total: hiddenTotal } : null,
-      check: null,
+      check,
       logs: [],
-      codeError: TYPE_CHECK_STOPPED_MESSAGE,
+      codeError,
     },
   };
 }

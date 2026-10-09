@@ -89,7 +89,7 @@ test('the message is sent after the wait', async () => {
   const { container } = render(<App />);
   type('Hi');
   send();
-  await wait(500);
+  await wait(350);
   expect(line(container)).toBe('Sent: Hi');
 });
 
@@ -98,7 +98,7 @@ test('text typed during the wait is sent', async () => {
   type('Hi');
   send();
   type('Hi there');
-  await wait(500);
+  await wait(350);
   expect(line(container)).toBe('Sent: Hi there');
 });
 `,
@@ -517,7 +517,7 @@ test('the request carries a signal', () => withFetch(async calls => {
 test('a slow request gives up after the wait', () => withFetch(async calls => {
   const { container } = render(<App />);
   load();
-  await wait(500);
+  await wait(350);
   expect(calls[0].signal.aborted).toBe(true);
   expect(status(container)).toBe('The server is taking too long');
 }));
@@ -849,7 +849,8 @@ test('a new size goes back to page 1', () => {
     topic: 'react',
     level: 23,
     tier: 2,
-    focus: ['pagination', 'useEffect'],
+    // The server cuts the page: the ladder ends on useEffect, not Array.slice.
+    focus: ['useEffect', 'pagination'],
     title: 'Ask the server for one page',
     prompt: 'The server hands out posts one page at a time. Whenever `page` changes, fetch `/api/posts?_page=<page>&_limit=5` in an effect and show the titles it sends back. The server never says how many pages there are, so a page that comes back with fewer than 5 posts is the last one: disable Next then. Disable Previous on page 1.',
     starter: `import React, { useEffect, useState } from 'react';

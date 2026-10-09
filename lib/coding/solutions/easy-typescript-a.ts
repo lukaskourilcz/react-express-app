@@ -98,7 +98,7 @@ const toPreview = ({ id, title }: Article): Preview => ({ id, title });
 const toPreviews = (articles: readonly Article[]): Preview[] => articles.map(toPreview);`,
     hiddenTests: [
       { call: 'toPreviews([{ id: 7, title: "A", body: "", author: "" }, { id: 3, title: "B", body: "x", author: "y" }, { id: 7, title: "C", body: "z", author: "w" }])', expected: [{ id: 7, title: 'A' }, { id: 3, title: 'B' }, { id: 7, title: 'C' }] },
-      { call: 'Object.keys(toPreviews([{ id: 2, title: "T", body: "B", author: "A" }])[0])', expected: ['id', 'title'] },
+      { call: 'Object.keys(toPreviews([{ id: 2, title: "T", body: "B", author: "A" }])[0]).sort()', expected: ['id', 'title'] },
       { call: '(() => { const list = [{ id: 1, title: "x", body: "y", author: "z" }]; toPreviews(list); return list[0]; })()', expected: { id: 1, title: 'x', body: 'y', author: 'z' } },
     ],
   },
@@ -309,7 +309,7 @@ interface Profile {
 const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user_name, avatar: avatar_url ?? null });`,
     hiddenTests: [
       { call: 'toProfile({ user_name: "dee", avatar_url: undefined })', expected: { name: 'dee', avatar: null } },
-      { call: 'Object.keys(toProfile({ user_name: "e", avatar_url: "/e.png" }))', expected: ['name', 'avatar'] },
+      { call: 'Object.keys(toProfile({ user_name: "e", avatar_url: "/e.png" })).sort()', expected: ['avatar', 'name'] },
       { call: 'toProfile({ user_name: "f g", avatar_url: "https://x.dev/f.png" })', expected: { name: 'f g', avatar: 'https://x.dev/f.png' } },
     ],
   },

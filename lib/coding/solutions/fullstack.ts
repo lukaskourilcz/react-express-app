@@ -46,6 +46,39 @@ function build(app:FullStackApp,stage:number):string {
  `;
 }
 
+/** A checkpoint's reference (`…-N-start`): the previous stage's module with
+ * the one step the checkpoint asks for, and none of stage N's own work, so it
+ * never passes stage N. A checkpoint shows no junior or senior board. */
+function checkpoint(app:FullStackApp,stage:number):string {
+ const {amount,endpoint}=app;
+ if(stage===2)return build(app,2).replace(/\n function updateItem.*\n/,`
+ // The stage-one checks on unknown input: narrow to a record before reading
+ // the two fields. Updating an item is the next step.
+`);
+ if(stage===5)return build(app,4)+`
+ import React,{useState,useEffect} from 'react';import {createLocalFetch} from './localFetch';
+ export {normalizeInput,updateItem,createApi};
+ // Every response succeeds at this step, so the list is fetched once on mount
+ // and drawn. Loading, failures and Retry come with stage five.
+ export default function App({fetcher}){
+ const [local]=useState(()=>createLocalFetch(createApi(${JSON.stringify(fullstackSeed(app))}))),fetch=fetcher||local;
+ const [rows,setRows]=useState([]);
+ useEffect(()=>{fetch('${endpoint}').then(response=>response.json()).then(setRows)},[fetch]);
+ return <main><ul>{rows.map(item=><li key={item.id}>{item.name}<output aria-label={'${amount} '+item.name}>{item.${amount}}</output></li>)}</ul></main>;
+ }
+ `;
+ if(stage===6)return build(app,5).replace('{!loading&&!visible.length',`{/* The inputs keep their text in state, and submitting only stops the page
+ from reloading: sending the POST is stage six. */}
+ <form onSubmit={e=>e.preventDefault()}><label>Name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>${amount}<input type="number" value={amount} onChange={e=>setAmount(e.target.value)}/></label><button>Create</button></form>
+ {!loading&&!visible.length`);
+ return build(app,7)
+  .replace('rows.filter(r=>true)',`rows.filter(r=>r.name.toLowerCase().includes(query.trim().toLowerCase())&&(!available||r.${amount}>0))`)
+  .replace('{!loading&&!visible.length',`{/* Both filters only decide which rows are drawn; the records stay as the API
+ sent them. Pages and Delete are stage eight. */}
+ <label>Search<input value={query} onChange={e=>setQuery(e.target.value)}/></label><label><input type="checkbox" checked={available} onChange={e=>setAvailable(e.target.checked)}/>Available only</label>
+ {!loading&&!visible.length`);
+}
+
 /** Emits `text` only once the app has reached the stage that asks for it. */
 const since = (stage: number, threshold: number, text: string): string => (stage >= threshold ? text : '');
 
@@ -770,7 +803,7 @@ const mutationHiddenSuite = (app:FullStackApp):string => {
  const rows=JSON.stringify([{id:1,name:app.first,[amount]:2,version:1},{id:2,name:app.second,[amount]:0,version:1}]);
  return `const mutationButton=name=>screen.getByRole('button',{name:'${action} '+name,exact:true});
 test('${action} is disabled at zero and while its change is in flight, and a success refetches the list',async()=>{const api=createApi(${rows}),local=createLocalFetch(api);let release=null,gets=0;render(<App fetcher={(url,opt)=>{if(opt?.method==='PATCH')return new Promise(resolve=>{release=()=>resolve(local(url,opt))});gets+=1;return local(url,opt)}}/>);await settle();expect(mutationButton('${app.second}').disabled).toBe(true);expect(mutationButton('${app.first}').disabled).toBe(false);fireEvent.click(mutationButton('${app.first}'));await waitFor(()=>expect(release).not.toBeNull());expect(mutationButton('${app.first}').disabled).toBe(true);const before=gets;api({method:'PATCH',path:endpoint+'/2',body:{version:1,${amount}:7}});release();await waitFor(()=>expect(screen.getByLabelText('${amount} ${app.second}').textContent).toBe('7'));expect(gets>before).toBe(true);expect(screen.getByLabelText('${amount} ${app.first}').textContent).toBe('1');expect(mutationButton('${app.first}').disabled).toBe(false)});
-test('a failed change that is not a conflict shows Request failed',async()=>{const local=createLocalFetch(createApi(${rows}));render(<App fetcher={(url,opt)=>opt?.method==='PATCH'?Promise.resolve({ok:false,status:500,json:async()=>({error:'server'})}):local(url,opt)}/>);await settle();fireEvent.click(mutationButton('${app.first}'));await waitFor(()=>expect(screen.getByRole('alert').textContent).toBe('Request failed'))});`;
+test('a failed change that is not a conflict shows Request failed',async()=>{const local=createLocalFetch(createApi(${rows}));render(<App fetcher={(url,opt)=>opt?.method==='PATCH'?Promise.resolve({ok:false,status:500,json:async()=>({error:'server'})}):local(url,opt)}/>);await settle();fireEvent.click(mutationButton('${app.first}'));await waitFor(()=>expect(alertMessage()).toBe('Request failed'))});`;
 };
 
 export const FULLSTACK_SOLUTIONS:Record<string,CodingSolution> = Object.fromEntries(FULLSTACK_APPS.flatMap(app=>{
@@ -779,6 +812,8 @@ export const FULLSTACK_SOLUTIONS:Record<string,CodingSolution> = Object.fromEntr
  return project.stages.filter(id => !id.endsWith('-start')).map((id,i)=>[id,{solution:build(app,i+1),junior:buildJunior(app,i+1),senior:buildSenior(app,i+1),...(i>=6?{hiddenSuite:mutationHiddenSuite(app)}:{}),...(i<4?{hiddenTests:[
   {call:`normalizeInput({name:'x'.repeat(81),${app.amount}:1})`,expected:null},
   {call:`normalizeInput({name:'A',${app.amount}:1001})`,expected:null},
+  // A missing or non-string name and a value that is not an object are refused, not read.
+  {call:`[{${app.amount}:2},{name:42,${app.amount}:2},'${app.first}'].map(value=>normalizeInput(value))`,expected:[null,null,null]},
   // Stage 1 only: from stage 2 on, the checkpoint shows these as visible checks.
   ...(i===0?[
    {call:`normalizeInput({name:'Plan',${app.amount}:5})`,expected:{name:'Plan',[app.amount]:5}},
@@ -795,5 +830,18 @@ export const FULLSTACK_SOLUTIONS:Record<string,CodingSolution> = Object.fromEntr
    {call:`[null,5,'patch'].map(patch=>updateItem(${JSON.stringify(row)},patch))`,expected:[null,null,null]},
   ]:[]),
   ...(i>=2?[{call:`(()=>{const seed=${JSON.stringify(fullstackSeed(app))};const api=createApi(seed);seed[0].name='changed';const first=api({method:'GET',path:'${app.endpoint}'});first.body[0].name='mutated';return api({method:'GET',path:'${app.endpoint}'}).body[0].name})()`,expected:app.first}]:[]),
- ]}:{})}]);
+  // From stage 3: a POST stores the row it answers with, its reply is a copy,
+  // and a method other than GET or POST on the collection is not found.
+  ...(i>=2?[
+   {call:`(()=>{const api=createApi([]);const reply=api({method:'POST',path:'${app.endpoint}',body:{name:'A',${app.amount}:1}});reply.body.${app.amount}=99;return api({method:'GET',path:'${app.endpoint}'}).body})()`,expected:[{name:'A',[app.amount]:1,id:1,version:1}]},
+   {call:`(()=>{const api=createApi([]);return [api({method:'PUT',path:'${app.endpoint}',body:{name:'A',${app.amount}:1}}),api({method:'GET',path:'${app.endpoint}'}).body.length]})()`,expected:[{status:404,body:{error:'not_found'}},0]},
+  ]:[]),
+  // Stage 4: DELETE removes the row, and PATCH stores the new version behind a copied reply.
+  ...(i>=3?[
+   {call:`(()=>{const api=createApi(${JSON.stringify(fullstackSeed(app))});const reply=api({method:'DELETE',path:'${app.endpoint}/2'});return [reply,api({method:'GET',path:'${app.endpoint}'}).body.map(item=>item.id)]})()`,expected:[{status:200,body:{deleted:2}},[1,3]]},
+   {call:`(()=>{const api=createApi(${JSON.stringify(fullstackSeed(app))});const reply=api({method:'PATCH',path:'${app.endpoint}/1',body:{version:1,${app.amount}:1}});reply.body.${app.amount}=99;return api({method:'GET',path:'${app.endpoint}'}).body[0]})()`,expected:{...row,[app.amount]:1,version:2}},
+  ]:[]),
+ ]}:{})}] as [string,CodingSolution]).concat(
+  project.stages.filter(id => id.endsWith('-start')).map(id=>[id,{solution:checkpoint(app,Number(id.slice(0,-6).split('-').pop()))}] as [string,CodingSolution]),
+ );
 }));

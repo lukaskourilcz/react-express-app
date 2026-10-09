@@ -79,7 +79,8 @@ const ROWS: Row[] = [
   ['objects', `${MDN}/Global_Objects/Object`, 'Object', 'MDN', 'Keys, values, entries and copying.', 'Klíče, hodnoty, dvojice a kopírování.'],
   ['destructuring', `${MDN}/Operators/Destructuring`, 'Destructuring', 'MDN', 'Pulling values out of arrays and objects, with defaults.', 'Vytažení hodnot z polí a objektů, i s výchozími hodnotami.'],
   ['spread', `${MDN}/Operators/Spread_syntax`, 'Spread syntax (...)', 'MDN', 'Copying and combining — and that the copy is shallow.', 'Kopírování a slučování — a že kopie je mělká.'],
-  ['map-set', `${MDN}/Global_Objects/Map`, 'Map', 'MDN', 'Keyed lookup with any key type, and insertion order.', 'Vyhledávání podle klíče libovolného typu a pořadí vkládání.'],
+  // One tag covers Map and Set tasks alike, so it links the guide to both.
+  ['map-set', `${MDN_DOCS}/Web/JavaScript/Guide/Keyed_collections`, 'Keyed collections', 'MDN', 'Map and Set: lookup by key, membership and insertion order.', 'Vyhledávání podle klíče libovolného typu a pořadí vkládání.'],
   ['json', `${MDN}/Global_Objects/JSON`, 'JSON', 'MDN', 'Parsing and stringifying, and what does not survive the trip.', 'Parsování a serializace a co cestu nepřežije.'],
   // ── functions and asynchrony ───────────────────────────────────────────
   ['functions', `${MDN}/Functions`, 'Functions', 'MDN', 'Parameters, defaults, rest and return values.', 'Parametry, výchozí hodnoty, rest a návratové hodnoty.'],
@@ -168,7 +169,8 @@ export function taskResources(focus: readonly string[]): CodingDocLink[] {
 
 /** The first documented technique of a task, or the JavaScript reference.
  * Still the hint ladder's last rung before the solution. */
-export function docsFor(focus: readonly string[]): { tag: string; url: string } {
+export function docsFor(focus: readonly string[]): { tag: string; url: string; title: string } {
   const [first] = taskResources(focus);
-  return first ? { tag: first.tag, url: first.url } : { tag: CODING_DOCS_FALLBACK.tag, url: CODING_DOCS_FALLBACK.url };
+  const page = first ?? CODING_DOCS_FALLBACK;
+  return { tag: page.tag, url: page.url, title: page.title };
 }

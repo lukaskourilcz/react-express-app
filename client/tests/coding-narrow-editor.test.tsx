@@ -109,7 +109,7 @@ it('does not tell a signed-in learner to sign in after an accepted order', async
   });
   mountPuzzle();
   fireEvent.click(screen.getByRole('button', { name: /Check the order/ }));
-  expect(await screen.findByText('That order works.')).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 3, name: 'That order works.' })).toBeVisible();
   expect(screen.getByText('Arranged correctly.')).toBeVisible();
   expect(screen.queryByText('Checked, not recorded: sign in to keep passes.')).toBeNull();
 });

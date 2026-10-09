@@ -247,6 +247,13 @@ export const FDE_M10_SOLUTIONS: Record<string, PathCodeSolution> = {
         async: true,
         criterion: 'approval-guarded',
       },
+      // A revision that is not newer than the loaded one supersedes nothing.
+      {
+        call: '(async function () { var f = __fixture(); var s = createOperatorSession(f.deps); __go(s.load("MB-3312")); await __drain(); var revision = s.getState().proposal.revision; s.noteRevision(revision); s.noteRevision(revision - 1); var superseded = s.getState().superseded; __go(s.approve()); await __drain(); return { superseded: superseded, status: s.getState().status, submitted: f.submissions.length }; })()',
+        expected: { superseded: false, status: 'approved', submitted: 1 },
+        async: true,
+        criterion: 'approval-guarded',
+      },
       {
         call: '(async function () { var f = __fixture({ loadDelay: 100 }); var s = createOperatorSession(f.deps); __go(s.load("MB-3312")); __go(s.load("MB-9001")); await __drain(); var st = s.getState(); return { loads: f.loads, ticketId: st.ticketId, proposalTicket: st.proposal ? st.proposal.ticketId : null, status: st.status }; })()',
         expected: { loads: ['MB-3312'], ticketId: 'MB-3312', proposalTicket: 'MB-3312', status: 'ready' },

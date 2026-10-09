@@ -188,7 +188,7 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
       {!signedIn && <p className="cd-note">{t('coding.run.signIn')}</p>}
       {signedIn && session.isError && (
         <p className="cd-note cd-note--error" role="alert">
-          {t('coding.collections.failed')} <Button variant="secondary" onClick={() => void session.refetch()} label={t('coding.retry')} />
+          {t('coding.run.loadFailed')} <Button variant="secondary" onClick={() => void session.refetch()} label={t('coding.retry')} />
         </p>
       )}
       {signedIn && open && <RunCard session={open} onDone={() => void session.refetch()} />}
@@ -238,7 +238,7 @@ export function ChallengeRunPlanner({ signedIn, collapsible = false }: { signedI
             )}
           </fieldset>
           <div className="cd-actions">
-            <SwimCta size="sm" label={start.isPending ? t('coding.submitting') : t(later ? 'coding.run.plan' : 'coding.run.start')} disabled={start.isPending} onClick={() => { /* submitted by the form */ }} />
+            <SwimCta type="submit" size="sm" label={start.isPending ? t('coding.submitting') : t(later ? 'coding.run.plan' : 'coding.run.start')} disabled={start.isPending} />
           </div>
           {error && <p className="cd-note cd-note--error" role="alert">{error}</p>}
         </form>

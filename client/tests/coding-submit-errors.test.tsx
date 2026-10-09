@@ -58,6 +58,10 @@ for (const [status, code, message, reads] of [
   [429, 'rate_limited', 'Too many requests. Try again shortly.', 'Too many requests. Wait a moment and try again.'],
   [403, 'stage_locked', 'Complete earlier stages first', 'Pass the earlier stages of this challenge first.'],
   [503, 'service_unavailable', 'The service is busy.', 'Server error. Try again in a moment.'],
+  // The grader's threads could not take the Submit (C1-1): a retry, not a
+  // server error, and the learner's own limit, not a rate limit.
+  [503, 'grader_busy', 'The checker is busy right now, so this Submit was not recorded. Try again in a few seconds.', 'The checker could not run just now, so this Submit was not recorded. Try again in a moment.'],
+  [429, 'grader_busy', 'The checker is busy right now, so this Submit was not recorded. Try again in a few seconds.', 'The checker could not run just now, so this Submit was not recorded. Try again in a moment.'],
   [0, 'network', 'Failed to fetch', 'Network error. Check your connection and try again.'],
 ] as const) {
   it(`says what a ${status} ${code} on Submit means`, async () => {
@@ -92,5 +96,5 @@ it('shows a React grader outage as a problem to retry, not as a build error or a
   expect(await screen.findByRole('alert')).toHaveTextContent('The checker could not run just now, so this Submit was not recorded. Try again in a moment.');
   expect(screen.queryByText(/Build error/)).toBeNull();
   expect(screen.queryByRole('heading', { level: 3, name: 'Error' })).toBeNull();
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).not.toHaveAttribute('aria-disabled'));
 });

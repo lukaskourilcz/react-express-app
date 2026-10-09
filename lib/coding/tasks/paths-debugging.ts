@@ -455,7 +455,7 @@ const EDGES: Spec = {
     [mdn('Array.prototype.reduce()', 'Global_Objects/Array/reduce'), doc('console.log()', CONSOLE + 'log_static')],
     [mdn('Optional chaining (?.)', 'Operators/Optional_chaining'), mdn('Nullish coalescing (??)', 'Operators/Nullish_coalescing')],
     [doc('Equality comparisons and sameness', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness'), doc('Truthy', 'https://developer.mozilla.org/en-US/docs/Glossary/Truthy')],
-    [doc('Floating point number', 'https://developer.mozilla.org/en-US/docs/Glossary/Floating_point_number'), mdn('Math.round()', 'Global_Objects/Math/round')],
+    [mdn('Number', 'Global_Objects/Number'), mdn('Math.round()', 'Global_Objects/Math/round')],
     [mdn('Date.prototype.toISOString()', 'Global_Objects/Date/toISOString'), mdn('Date', 'Global_Objects/Date')],
   ],
 };

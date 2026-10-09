@@ -4,9 +4,9 @@
 // node_modules; lib/coding/ts-check-pool.ts starts it and stops it when a
 // check overstays its deadline. One check at a time: the checker loads and
 // parses its lib files first, then says when the learner's check starts, then
-// answers.
+// answers with the results and the code as JavaScript.
 import { parentPort } from 'node:worker_threads';
-import { nodeTypeScriptChecker } from '../lib/coding/ts-check-node';
+import { nodeTypeScriptChecker, transpileOrNull } from '../lib/coding/ts-check-node';
 import type { TypeTestInput } from '../shared/coding-ts-check';
 
 const port = parentPort;
@@ -26,7 +26,8 @@ port.on('message', (message: { type?: unknown; code?: unknown; sets?: TypeTestIn
     }
     port.postMessage({ type: 'start' });
     const code = message.code;
-    port.postMessage({ type: 'done', results: message.sets.map((tests) => checker.check(code, tests)) });
+    const results = message.sets.map((tests) => checker.check(code, tests));
+    port.postMessage({ type: 'done', results, javascript: transpileOrNull(checker, code) });
   } catch (error) {
     port.postMessage({ type: 'fail', message: String((error as Error)?.message ?? error) });
   }

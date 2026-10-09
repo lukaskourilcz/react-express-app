@@ -1640,6 +1640,10 @@ const matchRoute = (routes, path) => {
       { call: 'matchRoute(["/:a/:b", "/shop/:b", "/shop/cart"], "/shop/cart")', expected: { route: '/shop/cart', params: {} } },
       { call: '(() => { const routes = ["/x/*", "/x/:id", "/x/y"]; matchRoute(routes, "/x/y"); return routes; })()', expected: ['/x/*', '/x/:id', '/x/y'] },
       { call: 'matchRoute(["/files/:dir/*"], "/files/img/a/b.png")', expected: { route: '/files/:dir/*', params: { dir: 'img', rest: 'a/b.png' } } },
+      // A literal segment has to be equal, not just present, and the more
+      // specific route wins from either place in the list.
+      { call: '[matchRoute(["/about"], "/contact"), matchRoute(["/users/:id", "/teams/me"], "/users/me")]', expected: [null, { route: '/users/:id', params: { id: 'me' } }] },
+      { call: 'matchRoute(["/users/me", "/users/:id"], "/users/me")', expected: { route: '/users/me', params: {} } },
     ],
   },
   'js-mh-settings-diff': {

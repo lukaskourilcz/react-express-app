@@ -10,18 +10,18 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError } from '../auth';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, withTimeout } from '../http';
-import { claimOnce, enforceClassRateLimit, RATE_LIMITS } from '../rate-limit';
+import { claimOnce, enforceClassRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
-import { codingTaskForHistory, playable } from './catalog';
+import { codingTaskForHistory, englishOnly, playable } from './catalog';
 import { CODING_SUMMARIES, codingTaskById } from './active';
 import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
-import { nodeTypeScriptChecker } from './ts-check-node';
-import { checkTypes, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
+import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
+import { GRADING_PER_CALLER, GraderBusyError } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
@@ -102,8 +102,9 @@ async function loadProgressRow(supabase: SupabaseClient, userId: string, taskId:
   return data ? toProgress(data as ProgressRow) : null;
 }
 
-/** Highest contiguous cleared `javascript` Learn level, from the roadmap blob. */
-async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string): Promise<number> {
+/** Highest contiguous cleared `javascript` Learn level, from the roadmap blob.
+ * Clearing the Learn foundations opens JavaScript tier 3 (`tierUnlocked`). */
+export async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string): Promise<number> {
   const { data, error } = await withTimeout(supabase.from('roadmap_progress').select('data').eq('user_id', userId).maybeSingle());
   if (error || !data?.data) return 0;
   const levels = ((data.data as Record<string, { levels?: Record<string, { passed?: boolean }> }>).javascript?.levels) ?? {};
@@ -203,6 +204,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
 
   let progress: CodingTaskProgress | null = null;
   let draft: string | null = null;
+  let draftUpdatedAt: string | null = null;
   let locked: CodingTaskResponse['locked'] = null;
   let passedIds: ReadonlySet<string> = new Set();
   if (userId && supabase) {
@@ -210,13 +212,14 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       const [rows, cleared, draftRow] = await Promise.all([
         loadProgressRows(supabase, userId),
         javascriptLevelsCleared(supabase, userId),
-        withTimeout(supabase.from('coding_drafts').select('code').eq('user_id', userId).eq('task_id', task.id).maybeSingle()),
+        withTimeout(supabase.from('coding_drafts').select('code,updated_at').eq('user_id', userId).eq('task_id', task.id).maybeSingle()),
       ]);
       const passed = new Set(rows.filter((row) => row.status === 'passed').map((row) => row.task_id));
       passedIds = passed;
       const mine = rows.find((row) => row.task_id === task.id);
       progress = mine ? toProgress(mine) : null;
       draft = typeof draftRow.data?.code === 'string' ? draftRow.data.code : null;
+      draftUpdatedAt = draft !== null && typeof draftRow.data?.updated_at === 'string' ? draftRow.data.updated_at : null;
       locked = tierLockReason({ track: task.track, tier: task.tier, progress: { passed }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: cleared });
       const stage = evolvingStage(task.id);
       if (stage) {
@@ -261,7 +264,7 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       variantId: 'v1',
       lines: presented.lines,
       competencies: [...authoredPuzzle.competencies],
-      claim: authoredPuzzle.claim,
+      claim: englishOnly(authoredPuzzle.claim),
     };
     key = { puzzle: presented.map };
   }
@@ -269,22 +272,22 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
     const prepared = prepareDesign(task, secureShuffle);
     key = { ...(key ?? {}), ...prepared.key };
     if (prepared.design) {
-      play.design = {
+      play.design = englishOnly({
         scenario: prepared.design.scenario,
         brief: prepared.design.brief,
         passMark: prepared.design.passMark,
         steps: prepared.design.steps.map((step) => ({ key: step.key, title: step.title, prompt: step.prompt, options: step.options })),
-      };
+      });
     }
     if (prepared.drill) {
       const { format, scenario, prompt, unit, options, steps } = prepared.drill;
-      play.drill = { format, scenario, prompt, ...(unit ? { unit } : {}), ...(options ? { options } : {}), ...(steps ? { steps } : {}) };
+      play.drill = englishOnly({ format, scenario, prompt, ...(unit ? { unit } : {}), ...(options ? { options } : {}), ...(steps ? { steps } : {}) });
     }
   }
   const session = locked ? null : encodeCodingSession({ taskId: task.id, track: task.track, userId, ...(key ? { key } : {}) });
 
   res.setHeader('Cache-Control', 'private, no-store');
-  const body: CodingTaskResponse = { task: play, session, locked, progress, draft, signedIn: Boolean(userId) };
+  const body: CodingTaskResponse = { task: play, session, locked, progress, draft, draftUpdatedAt, signedIn: Boolean(userId) };
   return res.json(body);
 }
 
@@ -348,11 +351,13 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
     const hiddenTypeTests = solution?.hiddenTypeTests ?? [];
     const typed = await checkTypes(code, hiddenTypeTests.length ? [task.typeTests ?? [], hiddenTypeTests] : [task.typeTests ?? []]);
     if (typed.stopped) {
-      const graded: Graded = {
+      // The message names the cause, a type. The timeout hint would send the
+      // learner looking for a loop that is not there, so there is none.
+      return {
         verdict: 'timeout', results: [], check: null, logs: [], codeError: TYPE_CHECK_STOPPED_MESSAGE, design: null, designReference: null,
         hidden: hiddenTests.length + hiddenTypeTests.length > 0 ? { passed: 0, total: hiddenTests.length + hiddenTypeTests.length } : null,
+        failureHint: null,
       };
-      return { ...graded, failureHint: hintForFailure(task, { ...graded, timedOut: true }) };
     }
     check = typed.results[0];
     const hiddenCheck = typed.results[1];
@@ -360,7 +365,16 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
       hiddenTypeTotal = hiddenCheck.typeTests.length;
       hiddenTypeFailures = hiddenCheck.typeTests.filter((one) => !one.pass).length;
     }
-    codeToRun = nodeTypeScriptChecker().toJavaScript(code);
+    // Code nested too deeply for the compiler is the learner's error, like a
+    // syntax error, not a failure of the handler.
+    if (typed.javascript === null) {
+      const graded: Graded = {
+        verdict: 'error', results: [], check, logs: [], codeError: TRANSPILE_FAILED_MESSAGE, design: null, designReference: null,
+        hidden: hiddenTests.length + hiddenTypeTotal > 0 ? { passed: 0, total: hiddenTests.length + hiddenTypeTotal } : null,
+      };
+      return { ...graded, failureHint: hintForFailure(task, graded) };
+    }
+    codeToRun = typed.javascript;
   }
   // Only the visible checks' console output comes back: a learner who logs
   // inside their function must not read the hidden checks' inputs. The hidden
@@ -571,10 +585,10 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     check: graded.check,
     logs: graded.logs,
     codeError: graded.codeError,
-    design: graded.design,
-    designReference: graded.designReference,
-    failureHint: graded.failureHint ?? null,
-    puzzle: graded.puzzle ?? null,
+    design: englishOnly(graded.design),
+    designReference: englishOnly(graded.designReference),
+    failureHint: englishOnly(graded.failureHint ?? null),
+    puzzle: englishOnly(graded.puzzle ?? null),
     progress: recorded?.progress ?? null,
     firstPass: recorded?.firstPass ?? false,
     xpAwarded: recorded?.xpAwarded ?? 0,
@@ -584,6 +598,16 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     solutions,
     ...(graded.infra ? { graderUnavailable: true as const } : {}),
   };
+}
+
+/** The grader could not take this Submit (`GraderBusyError`): nothing was
+ * graded, so nothing is recorded, and the learner is asked to submit again. A
+ * caller over its own limit hears 429; a Submit the instance's grader threads
+ * could not take, 503. Both carry a Retry-After. */
+function graderBusy(res: VercelResponse, status: 429 | 503, error: GraderBusyError, track: CodingTrack, hasUser: boolean) {
+  logEvent({ status, kind: 'submit_unrecorded', reason: error.reason, track, hasUser });
+  res.setHeader('Retry-After', String(error.retryAfterSeconds));
+  return jsonError(res, status, 'grader_busy', error.message);
 }
 
 /* ── POST ?resource=coding-submit ────────────────────────────────────── */
@@ -656,7 +680,16 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
     code = body.code;
-    graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
+    const done = enterInFlight(req, 'grading', GRADING_PER_CALLER, userId ? `user:${userId}` : undefined);
+    if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'), task.track, Boolean(userId));
+    try {
+      graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
+    } catch (error) {
+      if (!(error instanceof GraderBusyError)) throw error;
+      return graderBusy(res, 503, error, task.track, Boolean(userId));
+    } finally {
+      done();
+    }
   }
   // A grader outage is not the learner's error: it is neither recorded nor
   // counted against the attempt, and the message asks for another Submit.
@@ -742,7 +775,7 @@ export async function handleCodingReveal(req: VercelRequest, res: VercelResponse
   const reference = task.design?.reference ?? task.drill?.explanation ?? null;
   logEvent({ status: 200, kind: 'reveal', track: task.track, hasUser: Boolean(userId) });
   res.setHeader('Cache-Control', 'private, no-store');
-  const out: CodingRevealResponse = { solution, reference, progress };
+  const out: CodingRevealResponse = { solution, reference: englishOnly(reference), progress };
   return res.json(out);
 }
 
@@ -840,6 +873,6 @@ export async function handleCodingApproaches(req: VercelRequest, res: VercelResp
   }
 
   res.setHeader('Cache-Control', 'private, no-store');
-  const body: CodingApproachesResponse = { taskId: id, approaches: approachesFor(id), solutions: solutionPairFor(id) };
+  const body: CodingApproachesResponse = { taskId: id, approaches: englishOnly(approachesFor(id)), solutions: solutionPairFor(id) };
   return res.json(body);
 }

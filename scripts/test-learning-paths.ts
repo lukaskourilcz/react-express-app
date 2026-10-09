@@ -42,6 +42,20 @@ const KNOWN_WRONG_REUSED: Record<string, { label: string; code: string }> = {
   },
 };
 
+/** Mistakes in a path exercise that once met every criterion (Coding audit
+ * C2-7): the reference with one mistake put back in, and the criterion that
+ * must now catch it. */
+const KNOWN_WRONG_PATH: Record<string, { label: string; replace: [string, string]; criterion: string }[]> = {
+  'fde-v1-bridge-operator-state': [
+    { label: 'a failure accepted from any request in flight', replace: ['if (!inFlight || action.requestId !== state.requestId) return state;', 'if (!inFlight) return state;'], criterion: 'stale-responses' },
+    { label: 'an approval accepted from any request', replace: ["if (state.status !== 'approving' || action.requestId !== state.requestId) return state;", "if (state.status !== 'approving') return state;"], criterion: 'stale-responses' },
+    { label: 'a transition that writes into the state it was given', replace: ["return { ...state, status: 'ready', requestId: null, proposal: action.proposal, error: null };", "return Object.assign(state, { status: 'ready', requestId: null, proposal: action.proposal, error: null });"], criterion: 'core' },
+  ],
+  'fde-v1-m10-operator-state': [
+    { label: 'any noted revision superseding the proposal', replace: ['    if (!(revision > state.proposal.revision)) return;\n', ''], criterion: 'approval-guarded' },
+  ],
+};
+
 /** The authoring targets the curriculum documents commit to. A path that
  * falls short is not ready to publish, whatever the validator says. */
 const TARGETS: Record<string, { lessons: number; moduleChecks: number; codeExercises: number }> = {
@@ -285,6 +299,15 @@ async function main() {
             (graded.code.codeError ? `; ${graded.code.codeError}` : ''),
         );
       }
+      for (const wrong of KNOWN_WRONG_PATH[activity.id] ?? []) {
+        const [from, to] = wrong.replace;
+        if (!solution.solution.includes(from)) {
+          fail(`${at}: the known mistake "${wrong.label}" no longer applies to the reference; rewrite it`);
+          continue;
+        }
+        const shortcut = await withTimeout(gradePathCode(activity, code, solution.solution.split(from).join(to), runReactSuite), 30_000, at);
+        if (shortcut.criteria.find((criterion) => criterion.id === wrong.criterion)?.passed !== false) fail(`${at}: ${wrong.label} still meets ${wrong.criterion}`);
+      }
     }
 
     /* ── code that does not run is a recorded attempt, and says so ─────── */
@@ -307,6 +330,9 @@ async function main() {
     );
     for (const id of solutionIds()) {
       if (!known.has(id)) fail(`solutions: ${id} does not match any activity`);
+    }
+    for (const id of Object.keys(KNOWN_WRONG_PATH)) {
+      if (!known.has(id)) fail(`KNOWN_WRONG_PATH: ${id} does not match any activity`);
     }
   }
 
