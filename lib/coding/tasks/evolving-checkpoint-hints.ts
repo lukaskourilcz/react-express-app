@@ -105,7 +105,7 @@ const LADDERS: Record<string, CheckpointLadder> = {
   'react-evolving-catalog-1-start': { hints: ['Declare the four products as an array and map it to li elements, each showing the name and the price. There is nothing to filter yet.'] },
   'react-evolving-catalog-2-start': { hints: ['Keep the chosen sort in state, copy the filtered list with [...list] before you sort it, and compare names with localeCompare and prices by subtracting one from the other.'] },
   'react-evolving-catalog-3-start': { hints: ['Keep the selected ids in state of their own, apart from what is on screen; Selected total adds up the prices of every product whose id is selected, shown or not.'] },
-  'react-evolving-catalog-4-start': { hints: ['Keep the box\'s text in state: empty means no limit, otherwise keep the products priced at or below Number(text). Send the page back to the first whenever it changes.'] },
+  'react-evolving-catalog-4-start': { hints: ['Keep the box\'s text in state: empty means no limit, otherwise keep the products priced at or below Number(text). A lower limit can leave fewer pages, so show the last page that is left rather than one past the end.'] },
   'react-evolving-catalog-5-start': { hints: ['Keep the quantities in an object keyed by product id, with a missing entry counting as 1; Selected total adds price × quantity for every selected product.'] },
 
   'react-evolving-form-1-start': { hints: ['Keep the email in state bound to the input, and call event.preventDefault() in the form\'s onSubmit. Checking the address is the next step.'] },

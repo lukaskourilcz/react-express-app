@@ -55,6 +55,7 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       calls(
         ['calculateWithVariables("a+2",{a:3})', 5],
         ['calculateWithVariables("a*(b+2)",{a:-3,b:4})', -18],
+        ['calculateWithVariables("x",{x:1e-7})', 1e-7],
       ),
     ),
     step(
@@ -202,10 +203,16 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
     step(
       'Add criticalPath(graph,durations) for a valid graph with supplied finite non-negative durations. Return {duration,path} for its longest dependency chain, counting every node on the chain.',
       'Přidej criticalPath(graph,durations) pro platný graf se zadanými konečnými nezápornými délkami. Vrať {duration,path} nejdelšího řetězce závislostí včetně délky každého uzlu.',
-      calls([
-        'criticalPath({a:[],b:["a"],c:[]},{a:2,b:3,c:4})',
-        { duration: 5, path: ['a', 'b'] },
-      ]),
+      calls(
+        [
+          'criticalPath({a:[],b:["a"],c:[]},{a:2,b:3,c:4})',
+          { duration: 5, path: ['a', 'b'] },
+        ],
+        [
+          'criticalPath({a:[],b:["a"]},{a:0,b:1})',
+          { duration: 1, path: ['a', 'b'] },
+        ],
+      ),
     ),
     step(
       'Add impactedNodes(graph,changed) for valid graphs and known changed IDs. Return changed nodes and all transitive dependents once each in plan order; do not include unaffected dependencies.',

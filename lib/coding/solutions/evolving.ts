@@ -1208,13 +1208,19 @@ for (const [id, stages] of Object.entries(hidden)) {
   for (let index=0; index<5; index++) EVOLVING_SOLUTIONS[`${id}-${index+1}`].hiddenTests = stages.slice(0,index+1).flat().map(([call,expected])=>({call,expected,edge:true}));
 }
 
+// The milestone's way of writing a number out in full (calculate reads plain
+// digits only, and String(1e-7) is "1e-7"), for the variables checkpoint.
+const PLAIN_DIGITS = ADVANCED_SOLUTIONS['js-evolving-calculator'][0].split('\n').find((line) => line.startsWith('function plainDigits('))!;
+
 // Checkpoints. `…-N-start` is the small step before milestone N, and its
 // reference is what a learner reads after giving up on it, or for free once
 // it is passed: the previous milestone's module with that one step added and
 // none of the milestone's own work, so pasting it never passes milestone N.
-// The content contract proves both sides. A checkpoint shows no junior or
-// senior board. Each builder gets the previous milestone's reference ('' before
-// stage one); stages 4 and 5 append a function to it, earlier ones rewrite it.
+// The content contract proves both sides, and lists the few checkpoints whose
+// honest reference already does the milestone's work (SAME_AS_MILESTONE). A
+// checkpoint shows no junior or senior board. Each builder gets the previous
+// milestone's reference ('' before stage one); stages 4 and 5 append a
+// function to it, earlier ones rewrite it.
 const checkpoints: Record<string, ((earlier: string) => string)[]> = {
   'js-evolving-calculator': [
     () => `// One number with optional spaces around it: trim, then convert.
@@ -1239,9 +1245,10 @@ function calculate(s) {
   return sum();
 }`,
     earlier => `${earlier}
-// Every name at this step is defined and holds a plain number, so each one is
+// Every name at this step is defined and holds a finite number, so each one is
 // swapped for its value in brackets and the engine does the rest.
-function calculateWithVariables(expression,variables){return calculate(expression.replace(/[A-Za-z_][A-Za-z0-9_]*/g,name=>'('+variables[name]+')'))}`,
+${PLAIN_DIGITS}
+function calculateWithVariables(expression,variables){return calculate(expression.replace(/[A-Za-z_][A-Za-z0-9_]*/g,name=>'('+plainDigits(variables[name])+')'))}`,
     earlier => `${earlier}
 // Every line at this step is valid: a line with = assigns its value to the
 // name on the left, and every line adds its value to results.
@@ -1346,7 +1353,9 @@ function plan(graph){return Object.keys(graph)}`,
     earlier => `${earlier}
 // Every duration is given and valid at this step. In plan order a task's
 // longest chain is its own duration on top of its dependencies' longest one.
-function criticalPath(graph,durations){const best=new Map();let top={duration:0,path:[]};for(const id of plan(graph)){let prior={duration:0,path:[]};for(const dep of graph[id]){const chain=best.get(dep);if(chain.duration>prior.duration)prior=chain}const chain={duration:prior.duration+durations[id],path:[...prior.path,id]};best.set(id,chain);if(chain.duration>top.duration)top=chain}return top}`,
+// The first chain found replaces the empty one even at duration 0, so a task
+// that takes no time still stands on the path.
+function criticalPath(graph,durations){const best=new Map();let top={duration:0,path:[]};for(const id of plan(graph)){let prior={duration:0,path:[]};for(const dep of graph[id]){const chain=best.get(dep);if(!prior.path.length||chain.duration>prior.duration)prior=chain}const chain={duration:prior.duration+durations[id],path:[...prior.path,id]};best.set(id,chain);if(!top.path.length||chain.duration>top.duration)top=chain}return top}`,
     earlier => `${earlier}
 // The graph and the changed ids are valid at this step. Walking in plan order,
 // a task is affected once any of its dependencies is.
@@ -1354,9 +1363,9 @@ function impactedNodes(graph,changed){const order=plan(graph),affected=new Set(c
   ],
   'ts-evolving-result': [
     () => `type Result<T>={ok:true;value:T}|{ok:false;error:string};
-    // Every result at this step succeeds, so its value is read directly;
-    // stage one adds the branch that hands a failure back untouched.
-    function mapResult<T,U>(r:Result<T>,fn:(v:T)=>U):Result<U>{return {ok:true,value:fn((r as {ok:true;value:T}).value)}}`,
+    // Narrowing on ok is what lets TypeScript read value, and the other branch
+    // is a failure, which goes back as it came without calling fn.
+    function mapResult<T,U>(r:Result<T>,fn:(v:T)=>U):Result<U>{if(!r.ok)return r;return {ok:true,value:fn(r.value)}}`,
     earlier => `${earlier}
     // A failure is returned as it came; fn already returns a Result, so its
     // answer is returned as it is rather than wrapped again.
@@ -1365,9 +1374,9 @@ function impactedNodes(graph,changed){const order=plan(graph),affected=new Set(c
     // Values are collected in order until the first failure, which is the answer.
     function collectResults<T>(rs:readonly Result<T>[]):Result<T[]>{const values:T[]=[];for(const r of rs){if(!r.ok)return r;values.push(r.value)}return {ok:true,value:values}}`,
     earlier => `${earlier}
-// Every result at this step succeeds, so each one's value is read directly;
-// stage four sorts failures into errors.
-function partitionResults<T>(results:readonly Result<T>[]):{values:T[];errors:string[]}{return {values:results.map(r=>(r as {ok:true;value:T}).value),errors:[]}}`,
+// Every result is looked at, and narrowing on ok sends its value or its error
+// to the matching list, each in input order.
+function partitionResults<T>(results:readonly Result<T>[]):{values:T[];errors:string[]}{const values:T[]=[],errors:string[]=[];for(const r of results){if(r.ok)values.push(r.value);else errors.push(r.error)}return {values,errors}}`,
     earlier => `${earlier}
 // A success passes through. A failure's error goes to recover through
 // flatMapResult, which already turns a throw into a failure.

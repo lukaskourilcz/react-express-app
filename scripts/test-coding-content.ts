@@ -1328,7 +1328,12 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
   // keeps. An honest reference passes both; only reshaping the two stages can
   // change that, which is the owner's call. Its reference is still proven to
   // pass the milestone, so this entry goes stale once the stages differ.
-  const SAME_AS_MILESTONE = new Set(['ts-evolving-store-1-start']);
+  // The result project's first and fourth checkpoints ask for successes only,
+  // and their milestones add failures. Reading value without narrowing on ok
+  // was the only way to stay short of them, and it turned a failure into a
+  // success; the narrowing their hints ask for already keeps a failure apart,
+  // which is all the milestones add. The same owner's call applies.
+  const SAME_AS_MILESTONE = new Set(['ts-evolving-store-1-start', 'ts-evolving-result-1-start', 'ts-evolving-result-4-start']);
   let checkpoints = 0;
   for (const project of EVOLVING_CHALLENGES) {
     for (const id of project.stages) {
