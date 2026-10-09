@@ -85,6 +85,7 @@ import { reportQuestion } from '../lib/supabase';
 import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readString, writeString } from '../lib/storage';
 import { codingDraftQuery, forgetDeviceDraft, openingDraft, saveDraft } from '../coding/drafts';
+import { DraftNote, useDraftChoice } from '../coding/DraftNote';
 import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
 import { LessonFigures } from './ui/LessonFigure';
@@ -1283,11 +1284,11 @@ function sessionRestartFor(error: unknown): SessionRestart | null {
   return null;
 }
 
-/** One coding task of a level. It opens on the newer of this device's copy
- * and the account draft and saves to both on Run and Submit, as a task in
- * the Coding section does (coding/drafts.ts). The workbench reads its code
- * once, so it waits for the account's draft; a draft that cannot load leaves
- * this device's copy. */
+/** One coding task of a level. It opens on this device's copy or the
+ * account draft and saves to both on Run and Submit, as a task in the Coding
+ * section does (coding/drafts.ts), offering back a copy from this device that
+ * did not open. The workbench reads its code once, so it waits for the
+ * account's draft; a draft that cannot load leaves this device's copy. */
 function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onContinue }: {
   task: PlayableCodingTask;
   session: string;
@@ -1300,23 +1301,22 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
   const draft = useQuery({ ...codingDraftQuery(task.id), enabled: signedIn });
   const waiting = signedIn && draft.isLoading;
   const opening = useMemo(() => (waiting ? null : openingDraft(task.id, draft.data?.code ?? null, draft.data?.updatedAt)), [waiting, task.id, draft.data]);
-  useEffect(() => {
-    if (opening?.conflict === 'account') forgetDeviceDraft(task.id);
-  }, [opening, task.id]);
   const base = draft.data?.updatedAt ?? null;
+  const choice = useDraftChoice(task.id, opening, base);
   const loading = <div className="cd-note" role="status">{t('common.loading')}</div>;
   if (!opening) return loading;
   return (
     <>
-      {opening.conflict && <p className="cd-note" role="status">{t(opening.conflict === 'account' ? 'coding.draft.accountNewer' : 'coding.draft.deviceNewer')}</p>}
+      <DraftNote opening={opening} restored={choice.restored} onRestore={choice.restore} />
       <Suspense fallback={loading}>
         <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={busy} />}>
           <CodingWorkbench
+            key={choice.restored ? 'device' : 'opened'}
             task={task}
             session={session}
             locked={null}
             signedIn={signedIn}
-            initialCode={opening.code}
+            initialCode={choice.code}
             mode="lesson"
             onDraft={(code) => saveDraft(task.id, code, { signedIn, base })}
             onVerdict={(verdict) => {

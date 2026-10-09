@@ -13,6 +13,7 @@ import type { CodingWorkbench as CodingWorkbenchView } from '../../coding/Coding
 import { DesignRunner } from '../../coding/DesignRunner';
 import { codingKeys, codingProgressQuery, useCodingProgress, useCodingTask } from '../../coding/api';
 import { deviceDraft, forgetDeviceDraft, keepDeviceDraft, openingDraft, saveDraft } from '../../coding/drafts';
+import { DraftNote, useDraftChoice } from '../../coding/DraftNote';
 import { bookmarksQuery, practiceSessionQuery, useAdvanceSession, useBookmarks, usePracticeSession, useSaveChallenge } from '../../coding/practice';
 import { ChallengeRunPlanner, taskHref } from './ChallengeRunPlanner';
 import { CategoryGlyph } from '../ui/techIcons';
@@ -811,13 +812,11 @@ export function CodingTaskScreen() {
     setAttempt((n) => n + 1);
   }, [task, workbench.reloading]);
 
-  // The code the editor opens with, decided once per load of the task: the
-  // newer of this device's copy and the account draft. When the account's
-  // was newer, the older copy here goes; either way the page says which won.
+  // The code the editor opens with, decided once per load of the task: this
+  // device's copy or the account draft. The page says which opened when they
+  // differ, and a copy from this device that did not open is offered back.
   const opening = useMemo(() => task.data ? openingDraft(task.data.task.id, task.data.draft, task.data.draftUpdatedAt) : null, [task.data]);
-  useEffect(() => {
-    if (opening?.conflict === 'account' && task.data) forgetDeviceDraft(task.data.task.id);
-  }, [opening, task.data]);
+  const choice = useDraftChoice(task.data?.task.id ?? null, opening, task.data?.draftUpdatedAt);
 
   if (retired && track) return <RetiredTrackNotice track={track} />;
   if (!track || !taskId) return <CodingNotFound what="track" track={null} />;
@@ -874,7 +873,7 @@ export function CodingTaskScreen() {
       : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
   const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
   const previousLocal = stage?.previous ? deviceDraft(stage.previous) : null;
-  const initialCode = opening?.code ?? (stage && previousLocal !== null
+  const initialCode = choice.code ?? (stage && previousLocal !== null
     ? prepareEvolvingDraft(previousLocal, stage.challenge, stage.index)
     : null);
 
@@ -890,7 +889,7 @@ export function CodingTaskScreen() {
           not save says so, and the star itself is the way to try again. */}
       {bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
       {save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
-      {opening?.conflict && <p className="cd-note" role="status">{t(opening.conflict === 'account' ? 'coding.draft.accountNewer' : 'coding.draft.deviceNewer')}</p>}
+      <DraftNote opening={opening} restored={choice.restored} onRestore={choice.restore} />
       {stage && stage.challenge.stages.length > 1 && isBarred(premiumOf(stage.challenge.stages[1])) && (
         <p className="ss-premium-note"><span className="ss-premium-label">{t('premium.badge')}</span> {t(stage.challenge.short ? 'premium.levelsNote' : 'premium.stagesNote')}</p>
       )}
@@ -898,7 +897,7 @@ export function CodingTaskScreen() {
       {data.task.track === 'system-design'
         ? <DesignRunner key={`${data.task.id}-${attempt}`} task={data.task} session={data.session} locked={data.locked} signedIn={data.signedIn} mode="section" onVerdict={onVerdict} onRetry={onRetry} nextHref={nextHref} backHref={backHref} />
         : CodingWorkbench && <CodingWorkbench
-            key={`${data.task.id}-${attempt}`}
+            key={`${data.task.id}-${attempt}${choice.restored ? '-device' : ''}`}
             task={data.task}
             session={data.session}
             locked={data.locked}

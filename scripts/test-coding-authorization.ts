@@ -1,7 +1,7 @@
 // First: no exported Supabase project may verify the stand-in tokens below.
 import './launch-test-env';
 import assert from 'node:assert/strict';
-import { handleCodingSubmit, handleCodingReveal, handleCodingTask } from '../lib/coding/handlers';
+import { handleCodingDraft, handleCodingSubmit, handleCodingReveal, handleCodingTask } from '../lib/coding/handlers';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById } from '../lib/coding/active';
 import { encodeCodingSession } from '../lib/quiz-tokens';
@@ -83,6 +83,28 @@ async function main() {
   assert.equal(other.draft, null);
   assert.equal(other.draftUpdatedAt, null, 'no draft, no time');
   console.log('Coding task draft passed: the account\'s own draft opens with its time, and no other account\'s.');
+
+  // V3-1: a draft save answers with the time the account now holds the code,
+  // which the browser's copy then builds on. When another save landed between
+  // the write and the read-back, the row holds other code and no time is given.
+  let landedBetween: string | null = null;
+  const saving = {
+    rpc: async (_fn: string, args: { p_user_id: string; p_task_id: string; p_code: string }) => {
+      drafts[`${args.p_user_id}:${args.p_task_id}`] = { code: landedBetween ?? args.p_code, updated_at: '2026-10-09T10:05:00.123456+00:00' };
+      return { data: null, error: null };
+    },
+    from: database.from,
+  };
+  const save = async (code: string) => {
+    const out = response();
+    await handleCodingDraft({ method: 'POST', headers: { authorization: 'Bearer stand-in-token' }, query: { user_id: 'account-a' }, body: { id: 'js-double-numbers', code, user_id: 'account-a' } } as never, out as never, saving as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as { ok: boolean; updatedAt: string | null };
+  };
+  assert.deepEqual(await save('const double = (ns) => ns.map((n) => n * 2);'), { ok: true, updatedAt: '2026-10-09T10:05:00.123456+00:00' }, 'a save returns the time it was stored');
+  landedBetween = '// another device';
+  assert.deepEqual(await save('const double = (ns) => ns;'), { ok: true, updatedAt: null }, 'no time for a save another one overtook');
+  console.log('Coding draft save passed: it returns the time the account holds the code, and none when another save overtook it.');
 
   // V3-2: an id no task could have (/coding/javascript/no-such-task) is as
   // unknown as one that fits the pattern; both are 404, and the browser shows

@@ -455,11 +455,28 @@ describe('the coding step and the account draft', () => {
   it('opens a newer copy on this device over the account draft, and says so', async () => {
     signInAs();
     answer({ playable: WITH_CODE });
+    // Written here after the account draft this device loaded, which nothing has saved over since.
     localStorage.setItem('devshark:coding:draft:js-digit-sum', '// typed here after the last save');
-    localStorage.setItem('devshark:coding:draft-time:js-digit-sum', JSON.stringify({ at: Date.parse('2026-10-09T11:00:00Z'), base: null }));
+    localStorage.setItem('devshark:coding:draft-time:js-digit-sum', JSON.stringify({ base: '2026-10-09T10:00:00.000Z' }));
     drafts({ code: '// account draft from the section', updatedAt: '2026-10-09T10:00:00.000Z' });
     expect(await openCodingStep()).toHaveTextContent('// typed here after the last save');
     expect(screen.getByText(/The code on this device is newer than the draft saved to your account/)).toBeInTheDocument();
+  });
+
+  // V3-1: the level weighed this device's clock against the server's and
+  // deleted the copy that lost.
+  it('opens a draft saved elsewhere since, keeps this device’s copy and opens it on request', async () => {
+    signInAs();
+    answer({ playable: WITH_CODE });
+    localStorage.setItem('devshark:coding:draft:js-digit-sum', '// typed here, whatever this clock said');
+    localStorage.setItem('devshark:coding:draft-time:js-digit-sum', JSON.stringify({ at: Date.parse('2026-10-09T23:00:00Z'), base: null }));
+    drafts({ code: '// account draft from the section', updatedAt: '2026-10-09T10:00:00.000Z' });
+    expect(await openCodingStep()).toHaveTextContent('// account draft from the section');
+    expect(screen.getByText(/saved from somewhere else after this device last saw it/)).toBeInTheDocument();
+    expect(localStorage.getItem('devshark:coding:draft:js-digit-sum')).toBe('// typed here, whatever this clock said');
+    fireEvent.click(screen.getByRole('button', { name: 'Open the code from this device' }));
+    expect(screen.getByLabelText('Opened with')).toHaveTextContent('// typed here, whatever this clock said');
+    expect(screen.getByText(/The code from this device is open/)).toBeInTheDocument();
   });
 
   it('saves what the learner runs to the account as well as this device', async () => {

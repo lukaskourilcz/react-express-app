@@ -44,6 +44,7 @@ import {
 import { CODING_CODE_LIMIT_BYTES } from '../../shared/coding-api';
 import type {
   CodingDraftResponse,
+  CodingDraftSaveResponse,
   CodingGardenStatus,
   CodingOutcome,
   CodingProgressResponse,
@@ -836,7 +837,18 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
       if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
       return jsonError(res, 500, 'db_error', 'Could not save the draft');
     }
-    return res.json({ ok: true });
+    // The time the account now holds this code, so the browser can tell its
+    // own save from another device's when the task next opens
+    // (client/src/coding/drafts.ts). save_coding_draft returns nothing, so the
+    // row is read back; if another save landed in between, the row holds other
+    // code and its time is not this save's, so none is given.
+    let updatedAt: string | null = null;
+    try {
+      const row = await withTimeout(supabase.from('coding_drafts').select('code,updated_at').eq('user_id', userId).eq('task_id', id).maybeSingle());
+      if (!row.error && row.data?.code === code && typeof row.data.updated_at === 'string') updatedAt = row.data.updated_at;
+    } catch { /* saved all the same; the browser learns no time */ }
+    const out: CodingDraftSaveResponse = { ok: true, updatedAt };
+    return res.json(out);
   }
   res.setHeader('Allow', 'GET, POST');
   return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');

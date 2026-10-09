@@ -8,6 +8,7 @@ import { syncXpWithServer } from '../lib/xp';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingApproachesResponse,
+  CodingDraftSaveResponse,
   CodingProgressResponse,
   CodingRevealRequest,
   CodingRevealResponse,
@@ -55,8 +56,8 @@ export function fetchCodingProgress(signal?: AbortSignal): Promise<CodingProgres
   return apiFetch<CodingProgressResponse>(`${USER}?op=coding-progress`, { signal });
 }
 
-export function saveCodingDraft(id: string, code: string): Promise<{ ok: boolean }> {
-  return apiFetch<{ ok: boolean }>(`${USER}?op=coding-draft`, { method: 'POST', body: JSON.stringify({ id, code }) });
+export function saveCodingDraft(id: string, code: string): Promise<CodingDraftSaveResponse> {
+  return apiFetch<CodingDraftSaveResponse>(`${USER}?op=coding-draft`, { method: 'POST', body: JSON.stringify({ id, code }) });
 }
 
 export function fetchGithubConnection(signal?: AbortSignal): Promise<GithubConnectionResponse> {
