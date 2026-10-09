@@ -4,7 +4,8 @@
 // The content audit of 8 October 2026 (C2-2, C2-4 and C2-9) found suites that
 // failed pages their prompt allows, such as a Retry button inside the alert,
 // the starter's own heading or "Loading" in a child of the status region, and
-// suites that passed wrong pages. Each variant here is the task's reference
+// suites that passed wrong pages. Its second pass (V2-1, V2-5) added a heading
+// that shows the loading status and a hover written with pointer events. Each variant here is the task's reference
 // with a few exact edits. A correct one must pass the suite the server runs,
 // visible and hidden cases together, and a wrong one must fail it.
 
@@ -84,6 +85,15 @@ export const REACT_VARIANTS: ReactVariant[] = [
     id: 'react-star-rating',
     note: 'shows ★ on every star and marks filled ones with a class',
     edits: [["onClick={() => setRating(star)}>{star <= shown ? '★' : '☆'}</button>", "onClick={() => setRating(star)} className={star <= shown ? 'star on' : 'star'}>★</button>"]],
+    correct: true,
+  },
+  {
+    id: 'react-star-rating',
+    note: 'previews with onPointerEnter and onPointerLeave',
+    edits: [
+      ['<div onMouseLeave={() => setHovered(0)}>', '<div onPointerLeave={() => setHovered(0)}>'],
+      ['onMouseEnter={() => setHovered(star)}', 'onPointerEnter={() => setHovered(star)}'],
+    ],
     correct: true,
   },
   {

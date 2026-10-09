@@ -2415,6 +2415,10 @@ import App from './App';
 // attribute shows it.
 const looks = container => [...container.querySelectorAll('button')].map(star => star.outerHTML);
 const filled = (container, unrated) => looks(container).filter((look, index) => look !== unrated[index]).length;
+// A browser sends pointer events and then mouse events as the pointer moves
+// onto a star and off it, so a page may listen for either.
+const hover = star => { fireEvent.pointerOver(star); fireEvent.mouseOver(star); };
+const leave = star => { fireEvent.pointerOut(star); fireEvent.mouseOut(star); };
 
 test('starts with nothing rated', () => {
   const { container } = render(<App />);
@@ -2426,10 +2430,10 @@ test('previews the hovered star without committing it', () => {
   const { container } = render(<App />);
   const unrated = looks(container);
   const stars = [...container.querySelectorAll('button')];
-  fireEvent.mouseOver(stars[2]);
+  hover(stars[2]);
   expect(filled(container, unrated)).toBe(3);
   expect(container.textContent).toContain('Rating: 0');
-  fireEvent.mouseOut(stars[2]);
+  leave(stars[2]);
   expect(filled(container, unrated)).toBe(0);
 });
 
@@ -2437,9 +2441,9 @@ test('keeps the rating that was clicked', () => {
   const { container } = render(<App />);
   const unrated = looks(container);
   const stars = [...container.querySelectorAll('button')];
-  fireEvent.mouseOver(stars[3]);
+  hover(stars[3]);
   fireEvent.click(stars[3]);
-  fireEvent.mouseOut(stars[3]);
+  leave(stars[3]);
   expect(container.textContent).toContain('Rating: 4');
   expect(filled(container, unrated)).toBe(4);
 });
