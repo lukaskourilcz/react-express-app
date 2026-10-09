@@ -114,13 +114,28 @@ const formatArg = (value: unknown): string => {
 const errorText = (error: unknown): string =>
   String((error && typeof error === 'object' && 'message' in error && (error as { message?: unknown }).message) || error);
 
+/** What Run says when code used a global the grader lacks, which the Run
+ * worker removed (shared/coding-checker-globals.ts). */
+export const hiddenGlobalMessage = (name: string): string => `\`${name}\` isn't available in the checker. Submit runs without it.`;
+
+/** A ReferenceError for one of `hidden` reworded to name the reason. Chrome
+ * and Firefox write "X is not defined", Safari "Can't find variable: X". */
+const explainHidden = (message: string, hidden: ReadonlySet<string> | undefined): string => {
+  if (!hidden || hidden.size === 0) return message;
+  const name = /^(?:ReferenceError: )?(?:([\w$]+) is not defined|Can't find variable: ([\w$]+))$/.exec(message);
+  const missing = name && (name[1] ?? name[2]);
+  return missing && hidden.has(missing) ? hiddenGlobalMessage(missing) : message;
+};
+
 /**
  * Runs `code` once and evaluates each call in its scope. Pass `expectations`
  * to grade, or omit them to just run: an ungraded call reports what it
  * returned with `pass: null`. Every call is awaited, so a promise is graded on
  * what it resolves to. Only clone-safe strings cross the worker boundary.
+ * `hidden` names the globals the Run worker removed to match the grader; an
+ * error from using one says so.
  */
-export async function evaluateCalls(input: { code: string; calls: string[]; expectations?: unknown[] | null }): Promise<EvaluateResult> {
+export async function evaluateCalls(input: { code: string; calls: string[]; expectations?: unknown[] | null; hidden?: ReadonlySet<string> }): Promise<EvaluateResult> {
   const logs: string[] = [];
   let logChars = 0;
   let logsCut = false;
@@ -156,13 +171,13 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   } catch (error) {
     // Code that does not parse, named as the grading sandbox names it.
     const syntax = error instanceof Error && error.name === 'SyntaxError';
-    return { results: [], logs, codeError: syntax ? `SyntaxError: ${errorText(error)}` : errorText(error) };
+    return { results: [], logs, codeError: syntax ? `SyntaxError: ${errorText(error)}` : explainHidden(errorText(error), input.hidden) };
   }
 
   try {
     const outcomes = await evaluate(input.calls, sink, PROBE);
     const results = outcomes.map((outcome, index): CallOutcome => {
-      if (!outcome.ok) return { pass: false, actual: null, error: outcome.error ?? 'Error' };
+      if (!outcome.ok) return { pass: false, actual: null, error: explainHidden(outcome.error ?? 'Error', input.hidden) };
       return {
         pass: grading ? deepEqual(outcome.value, input.expectations![index]) : null,
         actual: displayValue(outcome.value),
@@ -171,7 +186,7 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
     });
     return { results, logs, codeError: null };
   } catch (error) {
-    return { results: [], logs, codeError: errorText(error) };
+    return { results: [], logs, codeError: explainHidden(errorText(error), input.hidden) };
   }
 }
 
