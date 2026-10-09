@@ -515,7 +515,8 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     if (!attempt.error && attempt.data) roadmapAttemptId = session.roadmapAttemptId;
   }
   // Whether the solution was revealed before this pass, read before the pass
-  // is written. Only a pass can forfeit XP, so nothing else pays for the read.
+  // is written, for a database without migration 058, whose routine says it
+  // itself. Only a pass can forfeit XP, so nothing else pays for the read.
   let revealedBefore = false;
   if (input.verdict === 'passed') {
     try {
@@ -548,7 +549,7 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     jsonError(res, 500, 'db_error', 'Could not record the verdict');
     return null;
   }
-  const data = (saved.data ?? {}) as { applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; codeChanged?: boolean };
+  const data = (saved.data ?? {}) as { applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; xpForfeited?: boolean; codeChanged?: boolean };
   // Coins follow the XP the routine just awarded, under the same award id
   // (#227). The last stage of a project or short path is a Premium milestone.
   const xpAwarded = data.xpAwarded === true && xp > 0;
@@ -570,7 +571,12 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     // reveal. Before 048 the routine still pays it: xpAwarded is then true and
     // this stays false, so the verdict never claims a forfeit that did not
     // happen. An unverified (checklist) pass never pays, so it claims none.
-    xpForfeited: revealedBefore && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
+    // From 058 the first verified pass pays even after an old unverified one,
+    // whose row already reads 'passed', and the routine says whether a reveal
+    // cost it the XP (C1-7).
+    xpForfeited: typeof data.xpForfeited === 'boolean'
+      ? data.xpForfeited && data.applied === true && !xpAwarded && xp > 0
+      : revealedBefore && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
     applied: data.applied === true,
     codeChanged: data.codeChanged === true,
   };

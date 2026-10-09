@@ -8,6 +8,8 @@ import { SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
+import { codingAwardId } from '../lib/rewards/coins';
+import { CODING_TASK_XP } from '../shared/coding-catalog';
 import { puzzleFor } from '../lib/coding/puzzles';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { isFreeCodingTask } from '../shared/tiers';
@@ -112,9 +114,11 @@ console.log('PASS integrity: Submit shows the visible checks\' console only');
 // zero, and a level link that only ever turns true. Every routine call is
 // kept, with its arguments. `record_coding_reveal` counts a reveal the way
 // migration 038 does, and `forfeitAfterReveal` adds migration 048's rule: a
-// first pass after a reveal pays no XP.
-type ProgressFake = { status: 'in_progress' | 'passed' | 'revealed'; passes: number; revealCount: number };
-function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
+// first pass after a reveal pays no XP. `firstVerifiedPass` is migration 058:
+// the first verified pass pays even after an unverified one, and the routine
+// says itself whether a reveal cost it the XP.
+type ProgressFake = { status: 'in_progress' | 'passed' | 'revealed'; passes: number; revealCount: number; verified?: boolean };
+function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPass?: boolean } = {}) {
   const attempts = new Set<string>();
   const progress = new Map<string, ProgressFake>();
   const links = new Map<string, boolean>();
@@ -170,19 +174,26 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
     const row = progress.get(key) ?? { status: 'in_progress' as const, passes: 0, revealCount: 0 };
     let firstPass = false;
     let xpAwarded = false;
+    let xpForfeited = false;
     if (args.p_outcome === 'passed') {
-      firstPass = row.passes === 0;
+      const firstVerified = options.firstVerifiedPass === true && args.p_verified === true && row.verified !== true;
+      firstPass = row.passes === 0 || firstVerified;
       row.status = 'passed';
       row.passes += 1;
+      row.verified = row.verified === true || args.p_verified === true;
       const forfeited = options.forfeitAfterReveal === true && row.revealCount > 0;
-      if (firstPass && !forfeited && !xp.has(key) && Number(args.p_xp) > 0) { xp.add(key); xpAwarded = true; }
+      const pays = options.firstVerifiedPass === true ? firstVerified : firstPass;
+      if (pays && !xp.has(key) && Number(args.p_xp) > 0) {
+        if (forfeited) xpForfeited = true;
+        else { xp.add(key); xpAwarded = true; }
+      }
     }
     progress.set(key, row);
     if (args.p_roadmap_attempt_id) {
       const link = `${args.p_roadmap_attempt_id}:${args.p_task_id}`;
       links.set(link, links.get(link) === true || args.p_outcome === 'passed');
     }
-    return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass });
+    return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass, ...(options.firstVerifiedPass ? { xpForfeited } : {}) });
   };
   return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls };
 }
@@ -332,6 +343,51 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   assert.equal(unpaid.xpAwarded, 0);
   assert.equal(unpaid.xpForfeited, false, 'no reveal, no claim');
   console.log('PASS integrity: a pass after a reveal says it earned no XP, and nothing else does');
+}
+
+// ── an old unverified pass no longer blocks the XP (C1-7) ───────────────
+// React passes reported by the browser (3-29 September) and checklist
+// capstones were recorded unverified, and the routine paid only a task's
+// first pass, so the first pass the server checked never paid. Migration 058
+// (owner decision 3) pays the first verified pass, once, and its coins with
+// it under the same award id; the old pass stays on record. A reveal before
+// it still forfeits the XP, which only the routine can tell: the row already
+// reads 'passed'.
+{
+  type Verdict = { verdict?: string; firstPass?: boolean; xpAwarded?: number; xpForfeited?: boolean };
+  const id = 'js-double-numbers';
+  const reference = solutionFor(id)!;
+  const taskXp = CODING_TASK_XP[CODING_TASKS.find((task) => task.id === id)!.tier];
+  const db = codingDatabase({ forfeitAfterReveal: true, firstVerifiedPass: true });
+  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.71' };
+  const submit = async (learner: string, code: string) => {
+    const out = { statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+    await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session: encodeCodingSession({ taskId: id, track: 'javascript', userId: null }), code, user_id: learner } } as never, out as never, db.client as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Verdict;
+  };
+  const coinCredits = (learner: string) => db.rpcCalls.filter((call) => call.name === 'credit_verified_xp_tokens' && call.args.p_user_id === learner);
+
+  const legacy = 'user-legacy-0001';
+  db.progress.set(`${legacy}:${id}`, { status: 'passed', passes: 1, revealCount: 0, verified: false });
+  const paid = await submit(legacy, reference.solution);
+  assert.equal(paid.verdict, 'passed');
+  assert.equal(paid.firstPass, true, 'the first verified pass reads as the first pass');
+  assert.equal(paid.xpAwarded, taskXp, 'it pays the task XP although an unverified pass came first');
+  assert.equal(paid.xpForfeited, false);
+  assert.deepEqual(coinCredits(legacy).map((call) => call.args.p_award_id), [codingAwardId(legacy, id)], 'its coins are credited once, under the task award id');
+  const again = await submit(legacy, reference.senior!);
+  assert.equal(again.xpAwarded, 0, 'a later verified pass pays nothing');
+  assert.equal(coinCredits(legacy).length, 1, 'and credits no more coins');
+  assert.equal(db.progress.get(`${legacy}:${id}`)?.passes, 3, 'the old pass stays on record');
+
+  const revealed = 'user-legacy-0002';
+  db.progress.set(`${revealed}:${id}`, { status: 'passed', passes: 1, revealCount: 1, verified: false });
+  const forfeited = await submit(revealed, reference.solution);
+  assert.equal(forfeited.xpAwarded, 0, 'a reveal before the first verified pass still costs its XP');
+  assert.equal(forfeited.xpForfeited, true, 'and the verdict says so, though the row already read passed');
+  assert.equal(coinCredits(revealed).length, 0, 'no coins either');
+  console.log('PASS integrity: an old unverified pass no longer blocks the first verified pass\'s XP and coins');
 }
 
 // ── a failed system-design submission carries no key ────────────────────
