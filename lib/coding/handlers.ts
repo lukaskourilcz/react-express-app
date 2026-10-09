@@ -20,8 +20,7 @@ import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
-import { nodeTypeScriptChecker } from './ts-check-node';
-import { checkTypes, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
+import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
 import { GRADING_PER_CALLER, GraderBusyError } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
@@ -362,7 +361,16 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
       hiddenTypeTotal = hiddenCheck.typeTests.length;
       hiddenTypeFailures = hiddenCheck.typeTests.filter((one) => !one.pass).length;
     }
-    codeToRun = nodeTypeScriptChecker().toJavaScript(code);
+    // Code nested too deeply for the compiler is the learner's error, like a
+    // syntax error, not a failure of the handler.
+    if (typed.javascript === null) {
+      const graded: Graded = {
+        verdict: 'error', results: [], check, logs: [], codeError: TRANSPILE_FAILED_MESSAGE, design: null, designReference: null,
+        hidden: hiddenTests.length + hiddenTypeTotal > 0 ? { passed: 0, total: hiddenTests.length + hiddenTypeTotal } : null,
+      };
+      return { ...graded, failureHint: hintForFailure(task, graded) };
+    }
+    codeToRun = typed.javascript;
   }
   // Only the visible checks' console output comes back: a learner who logs
   // inside their function must not read the hidden checks' inputs. The hidden

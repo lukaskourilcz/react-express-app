@@ -372,7 +372,8 @@ through the real compiler, each in its own file, on a worker thread of their
 own (`lib/coding/ts-check-pool.ts`) that is stopped 4 s into the check, which
 the learner sees as a timeout; and
 system-design answers are graded against a key sealed in the coding session.
-Both thread pools bound
+The same thread transpiles the TypeScript, so code nested too deeply for the
+compiler is an `error` verdict rather than an HTTP 500. Both thread pools bound
 their queues and how long a run may wait for a thread, and one caller (an
 account, or an address for a guest) has at most two submits grading at once
 (`lib/coding/grader-capacity.ts`, `enterInFlight` in `lib/rate-limit.ts`). A

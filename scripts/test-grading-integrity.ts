@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInSandbox, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
-import { checkTypes, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
+import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
 import { GRADING_PER_CALLER, GraderBusyError } from '../lib/coding/grader-capacity';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
@@ -1031,4 +1031,36 @@ const timed = <T>(run: Promise<T>) => {
     writeFileSync(typesBundle, typesSource);
   }
   console.log('PASS integrity: a thread that would not start is tried again after a pause, and no run moves to the request thread on a deployment');
+}
+
+// ── deeply nested TypeScript gets a verdict (C1-5) ───────────────────────
+// The handler transpiled TypeScript on the request thread after the type
+// check. A thousand nested arrows overflowed the compiler's stack there, the
+// RangeError escaped, and the learner got HTTP 500. The type-check thread now
+// transpiles too; code nested past what it can compile is an error verdict.
+{
+  const solution = solutionFor('ts-typed-slug')!.solution;
+  const submit = (code: string) => submitCode({ taskId: 'ts-typed-slug', track: 'typescript', code, address: '203.0.113.47' });
+  const arrows = await submit(`const f = ${'() => '.repeat(1000)}1;\n${solution}`);
+  assert.equal(arrows.statusCode, 200, JSON.stringify(arrows.body));
+  assert.ok(typeof arrows.body?.verdict === 'string', 'a thousand nested arrows get a verdict');
+  // Thousands of nested blocks: the checker gets through them and the
+  // transpiler does not. Where one gives out and the other does not moves
+  // with the compiler's warm-up, so several depths go in. Each is a verdict,
+  // the type checker's stop or the transpiler's error, and at least one is
+  // the transpiler's.
+  const verdicts: string[] = [];
+  for (const depth of [2500, 3500, 4500, 5500, 6500, 7500]) {
+    const blocks = await submit(`function h(a: number) {\n${'{'.repeat(depth)}a++;${'}'.repeat(depth)}\n}\n${solution}`);
+    assert.equal(blocks.statusCode, 200, JSON.stringify(blocks.body));
+    assert.ok(
+      (blocks.body?.verdict === 'error' && blocks.body.codeError === TRANSPILE_FAILED_MESSAGE)
+        || (blocks.body?.verdict === 'timeout' && blocks.body.codeError === TYPE_CHECK_STOPPED_MESSAGE),
+      `${depth} nested blocks: ${JSON.stringify(blocks.body)}`,
+    );
+    verdicts.push(blocks.body!.verdict!);
+  }
+  assert.ok(verdicts.includes('error'), `code the compiler cannot transpile is an error verdict: ${verdicts.join(', ')}`);
+  assert.equal((await submit(solution)).body?.verdict, 'passed', 'the next Submit is graded as usual');
+  console.log('PASS integrity: TypeScript nested past what the compiler can transpile is an error verdict, not an HTTP 500');
 }

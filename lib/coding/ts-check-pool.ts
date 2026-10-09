@@ -5,7 +5,10 @@
  * took minutes. On the request thread that blocked the roadmap function, which
  * also serves Learn, for every other request the instance held. So a check
  * runs on a worker thread, and the thread is stopped when the learner's checks
- * run past TYPE_CHECK_DEADLINE_MS. The caller reports that as a timeout.
+ * run past TYPE_CHECK_DEADLINE_MS. The caller reports that as a timeout. The
+ * same thread then turns the code into JavaScript: deeply nested code
+ * overflows the compiler's stack there, and on the request thread that
+ * surfaced as an HTTP 500.
  *
  * A thread keeps the compiler and its parsed lib files between checks; the
  * first check on a new thread parses them before its clock starts. Up to
@@ -20,19 +23,22 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import type { TypeCheckResult, TypeTestInput } from '../../shared/coding-ts-check';
-import { nodeTypeScriptChecker } from './ts-check-node';
+import { nodeTypeScriptChecker, transpileOrNull } from './ts-check-node';
 import { bootBackoff, GraderBusyError, inThreadGradingAllowed, threadSlots } from './grader-capacity';
 
 /** The worker bundle build-sandbox-worker.mjs writes
  * (scripts/ts-check-worker-entry.ts). vercel.json ships every
  * lib/coding/generated/*.cjs with api/quiz/roadmap.ts. */
 export const TS_CHECK_WORKER_FILE = 'lib/coding/generated/ts-check-worker.cjs';
-/** How long one submission's type checks may take together. A task's checks
- * finish in well under a second on a warm thread. */
+/** How long one submission's type checks and its transpile may take
+ * together. A task's checks finish in well under a second on a warm thread. */
 export const TYPE_CHECK_DEADLINE_MS = 4_000;
 /** What the learner reads when the checker was stopped. */
 export const TYPE_CHECK_STOPPED_MESSAGE =
   'Type checking stopped before it finished: it ran out of time, memory or stack. A type that keeps recursing, or one that builds very large unions or tuples, can do this.';
+/** What the learner reads when the code could not be turned into JavaScript. */
+export const TRANSPILE_FAILED_MESSAGE =
+  'The compiler could not turn this TypeScript into JavaScript: the code nests too deeply. Flatten the most deeply nested functions, calls or blocks and submit again.';
 /** How long a new thread may take to load the compiler and parse its libs. */
 const WORKER_BOOT_MS = 20_000;
 /** Threads checking at once; further checks wait for one to finish. */
@@ -47,11 +53,12 @@ const IDLE_WORKERS = 1;
 /** A thread's heap. A check that needs more ends the thread, as a timeout. */
 const WORKER_HEAP_MB = 512;
 
-/** The checks' results in the order of their sets, or `stopped` when the
- * checker ran past its deadline, its heap or its stack. */
+/** The checks' results in the order of their sets and the code as
+ * JavaScript, null when the compiler could not transpile it; or `stopped`
+ * when the checker ran past its deadline, its heap or its stack. */
 export type TypeCheckOutcome =
-  | { stopped: false; results: TypeCheckResult[] }
-  | { stopped: true; results: null };
+  | { stopped: false; results: TypeCheckResult[]; javascript: string | null }
+  | { stopped: true; results: null; javascript: null };
 
 const idleWorkers: Worker[] = [];
 const slots = threadSlots({ threads: MAX_WORKERS, waiting: MAX_WAITING, waitMs: TS_CHECK_SLOT_WAIT_MS, name: 'ts_check' });
@@ -67,7 +74,7 @@ const checkWorkerFile = (): string | null => {
   return workerFile;
 };
 
-type WorkerReply = { type: 'start' } | { type: 'done'; results: TypeCheckResult[] } | { type: 'fail'; message: string };
+type WorkerReply = { type: 'start' } | { type: 'done'; results: TypeCheckResult[]; javascript: string | null } | { type: 'fail'; message: string };
 
 /** The thread could not start or never picked the check up: the host's
  * fault, not the learner's. */
@@ -104,7 +111,7 @@ function checkOnWorker(file: string, code: string, sets: readonly TypeTestInput[
     const stop = () => {
       if (settled) return;
       settle(false);
-      resolve({ stopped: true, results: null });
+      resolve({ stopped: true, results: null, javascript: null });
     };
     const unavailable = (reason: string) => {
       if (settled) return;
@@ -123,7 +130,7 @@ function checkOnWorker(file: string, code: string, sets: readonly TypeTestInput[
       }
       if (reply.type === 'done') {
         settle(true);
-        resolve({ stopped: false, results: reply.results });
+        resolve({ stopped: false, results: reply.results, javascript: reply.javascript });
         return;
       }
       // The compiler threw. After the learner's check started that is their
@@ -143,10 +150,10 @@ function checkOnWorker(file: string, code: string, sets: readonly TypeTestInput[
 }
 
 /**
- * Type-checks `code` once per set of type tests, all within `deadlineMs`.
- * Results come back in the order of `sets`; checks the thread had to stop
- * come back as `stopped`, with no results. Throws `GraderBusyError` when no
- * thread can take the check (see runInSandbox).
+ * Type-checks `code` once per set of type tests, then transpiles it, all
+ * within `deadlineMs`. Results come back in the order of `sets`; checks the
+ * thread had to stop come back as `stopped`, with no results. Throws
+ * `GraderBusyError` when no thread can take the check (see runInSandbox).
  */
 export async function checkTypes(
   code: string,
@@ -155,7 +162,7 @@ export async function checkTypes(
 ): Promise<TypeCheckOutcome> {
   const inThread = (): TypeCheckOutcome => {
     const checker = nodeTypeScriptChecker();
-    return { stopped: false, results: sets.map((tests) => checker.check(code, tests)) };
+    return { stopped: false, results: sets.map((tests) => checker.check(code, tests)), javascript: transpileOrNull(checker, code) };
   };
   const file = checkWorkerFile();
   if (!file) {

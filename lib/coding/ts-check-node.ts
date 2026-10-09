@@ -40,6 +40,17 @@ function typescriptLibDir(): string {
   throw new Error('typescript_lib_not_found');
 }
 
+/** `code` as JavaScript, or null when the compiler could not transpile it.
+ * Deeply nested code (a thousand nested arrows, calls or blocks) overflows
+ * the compiler's stack with a RangeError. */
+export function transpileOrNull(checker: TypeScriptChecker, code: string): string | null {
+  try {
+    return checker.toJavaScript(code);
+  } catch {
+    return null;
+  }
+}
+
 export function nodeTypeScriptChecker(): TypeScriptChecker {
   if (checker) return checker;
   const libDir = typescriptLibDir();
