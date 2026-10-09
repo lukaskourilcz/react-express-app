@@ -594,6 +594,7 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
       { call: 'maxSumSubarray([4, -1, 2, 1], 2)', expected: 3 },
       { call: 'maxSumSubarray([1, 2, 3], -2)', expected: null },
       { call: 'maxSumSubarray([-5, -1, -9], 1)', expected: -1 },
+      { call: 'maxSumSubarray([1, 2, 3, 4], 1.5)', expected: null },
     ],
   },
 
@@ -1204,6 +1205,8 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
       { call: '(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 2) throw new Error("once"); return runs; }, 4); const elapsed = Date.now() - started; return elapsed >= 80 && elapsed < 250; })()', expected: true },
       { call: '(async () => { const started = Date.now(); await retryWithBackoff(async () => { throw new Error("down"); }, 2).catch(() => "failed"); const elapsed = Date.now() - started; return elapsed >= 80 && elapsed < 250; })()', expected: true },
       { call: 'retryWithBackoff(async () => 0, 1)', expected: 0 },
+      // Success on the fourth attempt has waited 100 + 200 + 400 ms; a wait that grows by 100 ms each time totals 600.
+      { call: '(async () => { const started = Date.now(); let runs = 0; await retryWithBackoff(async () => { runs += 1; if (runs < 4) throw new Error("flaky"); return runs; }, 5); const elapsed = Date.now() - started; return elapsed >= 650 && elapsed < 1200; })()', expected: true },
     ],
   },
 };
