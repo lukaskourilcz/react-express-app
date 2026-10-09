@@ -124,7 +124,7 @@ async function main() {
       if (fn !== 'save_coding_draft_v2') return { data: null, error: null };
       const key = `${args.p_user_id}:${args.p_task_id}`;
       const row = stored.get(key);
-      if (row?.code === args.p_code) return { data: { saved: true, updatedAt: row.updated_at }, error: null };
+      if (row && row.code === args.p_code) return { data: { saved: true, updatedAt: row.updated_at }, error: null };
       if (row && args.p_force !== true && row.updated_at !== args.p_base) return { data: { saved: false, conflict: true, updatedAt: row.updated_at }, error: null };
       tick += 1;
       const updatedAt = `2026-10-09T11:00:0${tick}.12345${tick}+00:00`;
