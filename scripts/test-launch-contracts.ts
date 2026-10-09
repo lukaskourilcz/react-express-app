@@ -31,7 +31,7 @@ import {
   createChallengeRun,
   stableAttemptId,
 } from '../lib/quiz-tokens';
-import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { checkRateLimit, enforcePerItemRateLimit, enterInFlight, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
@@ -2163,7 +2163,9 @@ async function classroomLimitContracts() {
     { name: 'a skill check', handler: roadmapHandler, method: 'POST', query: { resource: 'skill-check' }, body: {}, ...learnComplete },
     { name: 'a progress sync', handler: roadmapHandler, method: 'PUT', query: {}, body: {}, perPerson: 20, own: 'roadmapMutation', address: 'roadmapMutationAddress' },
     { name: 'a coding task', handler: roadmapHandler, method: 'GET', query: { resource: 'coding-task', id: freeTask.id }, perPerson: 20, own: 'codingTask', address: 'codingTaskAddress' },
-    { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: 'x' }, perPerson: 30, own: 'codingRun', address: 'codingRunAddress' },
+    // A Submit's own budget is per task (owner decision 9), so it carries a
+    // session for one; with no code it is refused after the limits.
+    { name: 'a coding Submit', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-submit' }, body: { session: encodeCodingSession({ taskId: freeTask.id, track: freeTask.track, userId: null }) }, perPerson: 30, own: 'codingSubmit', address: 'codingSubmitAddress' },
     { name: 'a coding reveal', handler: roadmapHandler, method: 'POST', query: { resource: 'coding-reveal' }, body: { session: 'x' }, perPerson: 10, own: 'codingReveal', address: 'codingRevealAddress' },
     { name: 'a flashcard write', handler: flashcardsHandler, method: 'POST', query: {}, body: { subject: 'webdev', question_id: 'q1', question: 'Q?', correct_answer: 'A' }, perPerson: 20, own: 'flashcardMutation', address: 'flashcardMutationAddress' },
   ];
@@ -2321,6 +2323,35 @@ async function classroomLimitContracts() {
     }
     assert.deepEqual(statuses, { 200: PUPILS * perPupil }, 'every Challenge answer from a class behind one address is graded');
     assert.equal(RATE_LIMITS.quizSubmit.capacity, SHARED_NETWORK_SEATS * perPupil, 'grading\'s address bucket holds a class answering the Challenge');
+  }
+
+  // 11. A coding Submit is limited per task (owner decision 9, 9 October
+  //     2026), beneath a ceiling per caller across every task: an account,
+  //     or a guest's address. A caller who spent one task's budget still
+  //     submits on the next task, and nobody submits past the ceiling by
+  //     spreading submits over many tasks.
+  {
+    const tasks = CODING_INDEX.filter((task) => task.free && task.track === 'javascript').slice(0, 6);
+    const { codingSubmit: perTask, codingSubmitCeiling: ceiling } = RATE_LIMITS;
+    assert.ok(tasks.length * perTask.capacity > ceiling.capacity + tasks.length, 'enough tasks to reach the ceiling without spending any one task');
+    const submitOn = (taskId: string): Route => ({ ...routes.find((one) => one.name === 'a coding Submit')!, body: { session: encodeCodingSession({ taskId, track: 'javascript', userId: null }) } });
+    for (const user of [`per-task-${stamp}`, undefined]) {
+      const who = user ? 'an account' : 'a guest';
+      const address = school();
+      const spent = await throughUntilRefused(async () => (await call(submitOn(tasks[0].id), address, user)).statusCode, perTask.capacity, perTask.refillPerSecond);
+      assert.ok(spent >= perTask.capacity, `${who} gets one task's whole budget (${spent})`);
+      assert.notEqual((await call(submitOn(tasks[1].id), address, user)).statusCode, 429, `${who}: one task's spent budget does not refuse the next task`);
+    }
+    for (const user of [`ceiling-${stamp}`, undefined]) {
+      const who = user ? 'an account' : 'a guest';
+      const address = school();
+      let sent = 0;
+      const through = await throughUntilRefused(async () => (await call(submitOn(tasks[sent++ % tasks.length].id), address, user)).statusCode, ceiling.capacity, ceiling.refillPerSecond);
+      assert.ok(through >= ceiling.capacity, `${who} submits up to the ceiling across tasks (${through})`);
+      assert.ok(Math.ceil(sent / tasks.length) < perTask.capacity, `${who}: the ceiling refused it, not one task's budget`);
+    }
+    assert.ok(ceiling.capacity >= 4 * perTask.capacity, 'the ceiling holds four tasks\' whole budgets');
+    assert.equal(RATE_LIMITS.codingSubmitAddress.capacity, SHARED_NETWORK_SEATS * perTask.capacity, 'the address holds a class at the per-task rate');
   }
 
   // 10. A coding draft save is a write to api/user/[op].ts and takes its two
@@ -3826,8 +3857,8 @@ async function main() {
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue loader must not import the solutions');
   const pathCatalogSource = readFileSync(join(process.cwd(), 'lib/learning-paths/catalog.ts'), 'utf8');
   assert.doesNotMatch(pathCatalogSource, /from '\.\/solutions/, 'the learning-path catalogue must not import the solutions');
-  for (const key of ['codingRun', 'codingReveal', 'githubConnect', 'githubSync',
-                     'learningPathStart', 'learningPathSubmit', 'learningPathDraft', 'learningPathEnroll']) {
+  for (const key of ['codingSubmit', 'codingSubmitCeiling', 'codingReveal', 'githubConnect', 'githubSync',
+                     'learningPathStart', 'learningPathSubmit', 'learningPathSubmitCeiling', 'learningPathDraft', 'learningPathEnroll']) {
     assert.ok(key in RATE_LIMITS, `rate limit ${key} must exist`);
   }
 
@@ -4012,6 +4043,49 @@ async function main() {
   assert.equal(rateRes.statusCode, 429);
   assert.ok(rateRes.headers.has('retry-after'));
   assert.equal(isDistributedRateLimitEnabled(), false, 'test environment exercises the safe local fallback');
+
+  // Grader limits are per task (owner decision 9, 9 October 2026). A Submit
+  // takes its task's bucket, then a ceiling across every task; a refusal on
+  // one task spends nothing of the ceiling. Grading in flight is counted the
+  // same way: per task, beneath a ceiling, and an ended submit frees exactly
+  // its own slot.
+  {
+    const stamp = Date.now();
+    const perItem = { key: `item-${stamp}`, capacity: 2, refillPerSecond: 0.0001 };
+    const ceiling = { key: `item-ceiling-${stamp}`, capacity: 3, refillPerSecond: 0.0001 };
+    const guest = { headers: { 'x-forwarded-for': `per-item-${stamp}` }, socket: {} } as never;
+    const take = async (item: string, req = guest) => {
+      const res = mockResponse();
+      return { ok: await enforcePerItemRateLimit(req, res as never, perItem, ceiling, item), status: res.statusCode };
+    };
+    assert.ok((await take('task:a')).ok && (await take('task:a')).ok, 'one task takes its whole budget');
+    assert.deepEqual(await take('task:a'), { ok: false, status: 429 }, 'and is then refused');
+    assert.ok((await take('task:b')).ok, 'one task\'s spent budget does not refuse another task, and its refusal spent none of the ceiling');
+    assert.deepEqual(await take('task:c'), { ok: false, status: 429 }, 'the ceiling holds across tasks');
+    assert.ok((await take('task:c', { headers: { 'x-forwarded-for': `per-item-other-${stamp}` }, socket: {} } as never)).ok, 'another caller keeps its own buckets');
+
+    const scope = `grading-${stamp}`;
+    const on = (item: string) => ({ item, perItem: 2, perCaller: 3 });
+    const a1 = enterInFlight(guest, scope, on('task:a'));
+    const a2 = enterInFlight(guest, scope, on('task:a'));
+    assert.ok(a1 && a2, 'two of one caller\'s submits grade at once on one task');
+    assert.equal(enterInFlight(guest, scope, on('task:a')), null, 'a third waits');
+    const b1 = enterInFlight(guest, scope, on('task:b'));
+    assert.ok(b1, 'a full task holds up no other task');
+    assert.equal(enterInFlight(guest, scope, on('task:c')), null, 'the ceiling holds across tasks');
+    const elsewhere = enterInFlight(guest, scope, on('task:c'), `user:in-flight-${stamp}`);
+    assert.ok(elsewhere, 'another caller has counts of its own');
+    elsewhere();
+    a1();
+    a1();
+    const c1 = enterInFlight(guest, scope, on('task:c'));
+    assert.ok(c1, 'an ended submit frees its slot');
+    assert.equal(enterInFlight(guest, scope, on('task:d')), null, 'and only its own: ending it twice freed nothing more');
+    for (const done of [a2, b1, c1]) done();
+    const again = ['task:a', 'task:b', 'task:a'].map((item) => enterInFlight(guest, scope, on(item)));
+    assert.ok(again.every(Boolean), 'once every submit has ended the caller has its whole count back');
+    for (const done of again) done?.();
+  }
 
   // A classroom round is thirty pupils joining one room from one school
   // address. Every `play` bucket used to be keyed by address alone and sized

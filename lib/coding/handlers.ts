@@ -10,7 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError } from '../auth';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, withTimeout } from '../http';
-import { claimOnce, enforceClassRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
+import { claimOnce, enforceClassRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
@@ -21,7 +21,7 @@ import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
-import { GRADING_PER_CALLER, GraderBusyError } from './grader-capacity';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, isSyntaxError, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
@@ -627,12 +627,15 @@ function graderBusy(res: VercelResponse, status: 429 | 503, error: GraderBusyErr
 
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
   if (!codingAvailable()) return notAvailable(res);
-  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingRunAddress, RATE_LIMITS.codingRun))) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.codingSubmitAddress))) return;
   const body = (req.body || {}) as Partial<CodingSubmitRequest> & { lang?: unknown };
   const session = sessionFrom(body.session);
   if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
   const task = codingTaskById(session.taskId);
   if (!task || task.track !== session.track) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
+  // Per task, beneath a ceiling per caller (owner decision, 9 October 2026):
+  // a learner who spent one task's budget still submits on the next one.
+  if (!(await enforcePerItemRateLimit(req, res, RATE_LIMITS.codingSubmit, RATE_LIMITS.codingSubmitCeiling, gradingItem.task(task.id)))) return;
   const userId = await optionalUser(req, res);
   if (userId === undefined) return;
   if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
@@ -693,7 +696,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
     code = body.code;
-    const done = enterInFlight(req, 'grading', GRADING_PER_CALLER, userId ? `user:${userId}` : undefined);
+    const done = enterInFlight(req, 'grading', { item: gradingItem.task(task.id), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, userId ? `user:${userId}` : undefined);
     if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'), task.track, Boolean(userId));
     try {
       graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);

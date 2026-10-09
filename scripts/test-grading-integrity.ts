@@ -3,8 +3,8 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
-import { GRADING_PER_CALLER, GraderBusyError } from '../lib/coding/grader-capacity';
-import { SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../lib/coding/grader-capacity';
+import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
@@ -916,9 +916,10 @@ export default function App() {
 // thirty submits at once. Thirty runaway programs held every thread while
 // another learner's correct Submit waited behind them: half a minute for
 // JavaScript, and past the function's 45 s limit (a 504) for TypeScript. A
-// caller now has at most GRADING_PER_CALLER submits grading at once, and the
-// rest of a burst is refused at once with 429 `grader_busy`. That is not a
-// verdict: nothing is recorded, so it costs no XP and no streak day.
+// caller now has at most GRADING_PER_TASK submits grading at once on one task
+// and GRADING_PER_CALLER across tasks, and the rest of a burst is refused at
+// once with 429 `grader_busy`. That is not a verdict: nothing is recorded, so
+// it costs no XP and no streak day.
 type Answer = {
   statusCode: number;
   headers: Record<string, string>;
@@ -973,17 +974,17 @@ const timed = <T>(run: Promise<T>) => {
   // threads at 2.5 s each.
   assert.ok(waited < 5_000, `another learner's Submit did not wait behind the burst (${waited} ms)`);
   const refused = answers.filter((out) => out.statusCode === 429);
-  assert.equal(refused.length, answers.length - GRADING_PER_CALLER, `all but ${GRADING_PER_CALLER} of the burst are refused: ${answers.map((out) => out.statusCode).join(',')}`);
+  assert.equal(refused.length, answers.length - GRADING_PER_TASK, `all but ${GRADING_PER_TASK} of the burst are refused: ${answers.map((out) => out.statusCode).join(',')}`);
   for (const out of refused) {
     assert.equal(out.body?.error?.code, 'grader_busy');
     assert.ok(Number(out.headers['retry-after']) >= 1, 'a refusal says when to try again');
   }
   assert.ok(answers.filter((out) => out.statusCode === 200).every((out) => out.body?.verdict === 'timeout'), 'the submits it took are graded as usual');
   const recorded = db.rpcCalls.filter((call) => call.name === 'record_coding_verdict' && call.args.p_user_id === flooder);
-  assert.equal(recorded.length, GRADING_PER_CALLER, 'a refused submit records nothing');
+  assert.equal(recorded.length, GRADING_PER_TASK, 'a refused submit records nothing');
   const again = await submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: solutionFor('js-double-numbers')!.solution, address: '203.0.113.41', account: flooder, db });
   assert.equal(again.body?.verdict, 'passed', 'once its submits are answered the caller may submit again');
-  console.log(`PASS integrity: a burst of runaway submits holds ${GRADING_PER_CALLER} threads and another learner is answered in ${waited} ms`);
+  console.log(`PASS integrity: a burst of runaway submits holds ${GRADING_PER_TASK} threads and another learner is answered in ${waited} ms`);
 }
 {
   const flood = Array.from({ length: 24 }, () => submitCode({ taskId: 'ts-typed-slug', track: 'typescript', code: runawayTypes + solutionFor('ts-typed-slug')!.solution, address: '203.0.113.43' }));
@@ -997,9 +998,61 @@ const timed = <T>(run: Promise<T>) => {
   // learner waits for one runaway check to be stopped, then for a new thread
   // to load the compiler, which a loaded machine takes its time over.
   assert.ok(waited < 30_000, `another learner's TypeScript Submit was answered in time (${waited} ms)`);
-  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_CALLER);
+  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_TASK);
   assert.ok(answers.filter((out) => out.statusCode === 200).every((out) => out.body?.verdict === 'timeout'));
   console.log(`PASS integrity: a burst of runaway type checks leaves another learner's TypeScript Submit answered in ${waited} ms`);
+}
+
+// ── grading in flight is counted per task (owner decision 9) ────────────
+// The count was per caller, so a learner's submit still grading on one task
+// refused their Submit on the next task. It is per task now, beneath a
+// ceiling across tasks, and every answered submit gives its slot back.
+{
+  const free = CODING_TASKS.filter((task) => task.track === 'javascript' && isFreeCodingTask(task.id) && !evolvingStage(task.id) && task.tests && solutionFor(task.id)?.solution)
+    .map((task) => task.id).filter((id) => id !== 'js-double-numbers').slice(0, 2);
+  const [taskB, taskC] = free;
+  assert.ok(taskB && taskC, 'two more free JavaScript tasks with a reference solution');
+  const correct = (taskId: string) => solutionFor(taskId)!.solution;
+
+  // One learner's runaway burst on task A, and their correct Submit on task B
+  // sent with it: B is graded while A's two run, the rest of A is refused.
+  const db = codingDatabase();
+  const learner = 'user-two-tasks-0005';
+  const address = '203.0.113.46';
+  const runaway = "for (;;) { 'x'.repeat(2e6); }";
+  const burst = Array.from({ length: 6 }, () => submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: runaway, address, account: learner, db }));
+  const onB = await submitCode({ taskId: taskB, track: 'javascript', code: correct(taskB), address, account: learner, db });
+  const answers = await Promise.all(burst);
+  assert.equal(onB.statusCode, 200, JSON.stringify(onB.body));
+  assert.equal(onB.body?.verdict, 'passed', 'a burst still grading on one task does not hold up the same learner\'s Submit on another');
+  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_TASK,
+    `all but ${GRADING_PER_TASK} of the burst on one task are refused: ${answers.map((out) => out.statusCode).join(',')}`);
+
+  // The ceiling: with GRADING_PER_CALLER of the learner's submits grading
+  // across two tasks, a Submit on a third is refused and records nothing.
+  const ceilingDb = codingDatabase();
+  const busy = 'user-ceiling-0006';
+  const hold = (taskId: string) => enterInFlight({ headers: { 'x-forwarded-for': address }, socket: {} } as never, 'grading',
+    { item: gradingItem.task(taskId), perItem: GRADING_PER_TASK, perCaller: GRADING_PER_CALLER }, `user:${busy}`);
+  const held = Array.from({ length: GRADING_PER_CALLER }, (_, n) => hold(n < GRADING_PER_TASK ? 'js-double-numbers' : taskB));
+  assert.ok(held.every(Boolean), 'the learner\'s submits fill the ceiling across two tasks');
+  const refused = await submitCode({ taskId: taskC, track: 'javascript', code: correct(taskC), address, account: busy, db: ceilingDb });
+  assert.equal(refused.statusCode, 429, JSON.stringify(refused.body));
+  assert.equal(refused.body?.error?.code, 'grader_busy');
+  assert.equal(ceilingDb.attemptIds.length, 0, 'a Submit past the ceiling records nothing');
+  for (const done of held) done?.();
+  const graded = await submitCode({ taskId: taskC, track: 'javascript', code: correct(taskC), address, account: busy, db: ceilingDb });
+  assert.equal(graded.body?.verdict, 'passed', 'once those are answered the third task is graded');
+
+  // Every answered submit gives its slot back, a timeout as well as a pass:
+  // more of them one after another than the ceiling holds are all graded.
+  const verdicts: string[] = [];
+  for (let n = 0; n <= GRADING_PER_CALLER; n += 1) {
+    const out = await submitCode({ taskId: taskB, track: 'javascript', code: n === 0 ? runaway : correct(taskB), address, account: busy, db: ceilingDb });
+    verdicts.push(`${out.statusCode} ${out.body?.verdict ?? out.body?.error?.code}`);
+  }
+  assert.deepEqual(verdicts, ['200 timeout', ...Array.from({ length: GRADING_PER_CALLER }, () => '200 passed')], 'no slot is kept after its submit is answered');
+  console.log(`PASS integrity: grading in flight is counted per task, ${GRADING_PER_TASK} a task beneath ${GRADING_PER_CALLER} a learner, and every answered submit frees its slot`);
 }
 
 // ── a class submitting at once is graded, not turned away ───────────────

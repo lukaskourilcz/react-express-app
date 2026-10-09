@@ -30,11 +30,25 @@ export class GraderBusyError extends Error {
 }
 
 /** Submits one caller (an account, or an address for a guest) may have
- * grading at once on an instance, across the coding section and learning
- * paths (`enterInFlight` in lib/rate-limit.ts). The workbench sends one at a
- * time; more is a script holding the grader's threads, and the rest of its
- * burst is refused at once instead of queueing in front of other learners. */
-export const GRADING_PER_CALLER = 2;
+ * grading at once on an instance for one coding task or learning-path
+ * activity (`enterInFlight` in lib/rate-limit.ts). The workbench sends one at
+ * a time; more is a script holding the grader's threads, and the rest of its
+ * burst is refused at once instead of queueing in front of other learners.
+ * The count is per task (owner decision, 9 October 2026), so a submit still
+ * grading on one task never holds up another task's. */
+export const GRADING_PER_TASK = 2;
+
+/** The ceiling across every task and activity of one caller. A learner
+ * submitting from two tabs at once never meets it, and it is one fewer than
+ * the four QuickJS threads of an instance (lib/coding/sandbox.ts), so one
+ * caller's runaway programs on several tasks never hold all of them. */
+export const GRADING_PER_CALLER = 3;
+
+/** What a grading count is kept for (`InFlightLimits.item`). */
+export const gradingItem = {
+  task: (taskId: string): string => `task:${taskId}`,
+  activity: (pathId: string, activityId: string): string => `path:${pathId}:${activityId}`,
+};
 
 /** Whether a run may happen on the request thread when no worker thread can
  * take it: in tests and local runs, never on a deployment. There, a runaway
