@@ -743,7 +743,7 @@ async function main() {
         }
         code = checker.toJavaScript(source);
       }
-      // The Run button's realm: Prague time, the grader's built-ins and none
+      // The Run button's realm: UTC, the grader's built-ins and none
       // of the browser's others (scripts/run-realm-node.ts).
       const run = await withTimeout(evaluateInRunRealm({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
       // The production grader: the hidden checks in a fresh program and, here,
@@ -766,6 +766,42 @@ async function main() {
       if (allPassed(starterRun)) fail(`${where}: the untouched starter already passes`);
     }
   }
+
+  /* ── no check depends on the time zone ──────────────────────────────── */
+  // Learner code reads UTC in every runner (owner decision, 9 October 2026,
+  // afternoon), so a check could pass only because the zone is UTC. None
+  // may: every board of a task that works with calendar dates passes its
+  // visible and hidden checks as plain JavaScript in zones with summer time,
+  // without it, and with a half-hour change.
+  const CALENDAR = /new Date\(|Date\.(?:parse|UTC)\(|\.(?:get|set)(?:UTC)?(?:FullYear|Month|Date|Day|Hours|Minutes|Seconds)\(|toISOString\(|getTimezoneOffset\(|to(?:Locale)?(?:Date|Time)String\(/;
+  const calendarTasks: string[] = [];
+  const hostZone = process.env.TZ;
+  try {
+    for (const task of CODING_TASKS) {
+      if (task.verify !== 'tests' || task.track === 'react' || !task.tests || !ONLY.test(task.id)) continue;
+      const solution = solutionFor(task.id);
+      if (!solution) continue;
+      const boards = variants(solution, task.id);
+      const checks = [...task.tests, ...(solution.hiddenTests ?? [])];
+      if (!boards.some(([, source]) => CALENDAR.test(source)) && !checks.some((one) => CALENDAR.test(one.call))) continue;
+      calendarTasks.push(task.id);
+      for (const zone of ['America/Los_Angeles', 'Asia/Tokyo', 'Australia/Lord_Howe', 'Europe/Prague']) {
+        process.env.TZ = zone;
+        for (const [name, source] of boards) {
+          const code = task.track === 'typescript' ? checker.toJavaScript(source) : source;
+          const run = await withTimeout(evaluateCalls({ code, calls: checks.map((one) => one.call), expectations: checks.map((one) => one.expected) }), 8_000, task.id);
+          if (!allPassed(run)) fail(`${task.id} (${name}): a check passes only in UTC; in ${zone}: ${run.codeError ?? run.results.map((one, i) => (one.pass ? null : checks[i].call)).filter(Boolean).join('; ')}`);
+        }
+      }
+    }
+  } finally {
+    if (hostZone === undefined) delete process.env.TZ;
+    else process.env.TZ = hostZone;
+  }
+  for (const id of ['js-path-edges-5', 'ts-mh-fill-missing-days']) {
+    if (ONLY.test(id) && !calendarTasks.includes(id)) fail(`${id}: the time-zone check no longer finds this calendar task`);
+  }
+  console.log(`Time zones: ${calendarTasks.length} calendar tasks checked in four zones besides UTC (${calendarTasks.join(', ')}).`);
 
   /* ── hidden checks that catch the cheap passes ──────────────────────── */
   // The checks a learner can see are examples; the hidden ones are what make
