@@ -164,7 +164,7 @@ export const JAVASCRIPT_PATHS: Record<string, Spec> = {
       [mdn('Set.prototype.has()', 'Global_Objects/Set/has'), mdn('Set.prototype.add()', 'Global_Objects/Set/add')],
       [mdn('Array.prototype.filter()', 'Global_Objects/Array/filter'), mdn('Set.prototype.has()', 'Global_Objects/Set/has')],
       [mdn('Set', 'Global_Objects/Set'), mdn('for...of', 'Statements/for...of')],
-      [mdn('Set.prototype.add()', 'Global_Objects/Set/add'), doc('Equality comparisons and sameness', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Equality_comparisons_and_sameness')],
+      [mdn('Set.prototype.add()', 'Global_Objects/Set/add'), doc('Equality comparisons and sameness', 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness')],
     ],
   },
 

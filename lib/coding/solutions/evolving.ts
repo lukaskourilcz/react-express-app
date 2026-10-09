@@ -1244,9 +1244,10 @@ function calculateWithVariables(expression,variables){return calculate(expressio
 function runProgram(lines){const variables={},results=[];for(const line of lines){const [name,expression]=line.includes('=')?line.split('='):[null,line];const value=calculateWithVariables(expression,variables);if(name!==null)variables[name.trim()]=value;results.push(value)}return {variables,results}}`,
   ],
   'js-evolving-query': [
-    () => `// No options are used yet: a copy is a new array holding the same records,
-// and the caller's array is left as it was.
-function query(rows, options = {}) { return [...rows]; }`,
+    () => `// No options are used yet, so a filter that keeps every row is enough: it
+// returns a new array of the same records and leaves the caller's array as
+// it was. Stage one gives the filter its where test.
+function query(rows, options = {}) { return rows.filter(() => true); }`,
     () => `function query(rows, options={}) {
     let out=rows.filter(row=>Object.entries(options.where||{}).every(([k,v])=>row[k]===v));
     // filter() already made a new array, so sorting it leaves rows alone, and
@@ -1263,8 +1264,10 @@ function query(rows, options = {}) { return [...rows]; }`,
     return out;
   }`,
     earlier => `${earlier}
-// Every value at this step is a finite number, so each group adds them as they come.
-function groupRows(rows,field,valueField){const groups=[];for(const row of rows){let g=groups.find(g=>g.key===row[field]);if(!g){g={key:row[field],count:0,sum:0};groups.push(g)}g.count++;g.sum+=row[valueField]}return groups}`,
+// A Map tells keys apart as === does (NaN aside) and keeps them in first-seen
+// order. Every value at this step is a finite number, so each group adds them
+// as they come.
+function groupRows(rows,field,valueField){const groups=new Map();for(const row of rows){if(!groups.has(row[field]))groups.set(row[field],{key:row[field],count:0,sum:0});const g=groups.get(row[field]);g.count++;g.sum+=row[valueField]}return [...groups.values()]}`,
     earlier => `${earlier}
 // An inner join: each left row pairs with every right row whose key is strictly
 // equal, in left order then right order, and a left row with no match drops out.
@@ -1283,11 +1286,11 @@ function createBus(){
     () => `function createBus(){
     const events=new Map();
     return {
-      on(event,fn){const sub={fn};const list=events.get(event)||[];list.push(sub);events.set(event,list);
-        // Each registration is its own object, so removing it by identity
-        // leaves every other registration of the same callback in place, and a
-        // second call finds nothing left to remove.
-        return ()=>{const i=list.indexOf(sub);if(i>=0)list.splice(i,1)}},
+      on(event,fn){if(!events.has(event))events.set(event,new Set());const sub={fn};events.get(event).add(sub);
+        // Each registration is its own object in the event's Set, which keeps
+        // registration order. Deleting it leaves every other registration of
+        // the same callback in place, and a second call finds nothing to delete.
+        return ()=>{events.get(event).delete(sub)}},
       emit(event,value){for(const sub of [...(events.get(event)||[])])sub.fn(value)},
     };
   }`,
@@ -1305,9 +1308,9 @@ function createBus(){
       }};
   }`,
     earlier => `${earlier}
-// Nothing pauses while the queue is flushed at this step, so resume takes the
-// whole queue at once and delivers it in order.
-function createBufferedBus(){const bus=createBus(),queue=[];let paused=false;return {on:bus.on,once:bus.once,pause(){paused=true},emit(e,v){if(paused){queue.push([e,v]);return []}return bus.emit(e,v)},resume(){paused=false;return queue.splice(0).flatMap(([e,v])=>bus.emit(e,v))}}}`,
+// Nothing pauses while the queue is flushed at this step, so resume delivers
+// the whole queue, oldest first, and collects the listeners' errors.
+function createBufferedBus(){const bus=createBus(),queue=[];let paused=false;return {on:bus.on,once:bus.once,pause(){paused=true},emit(e,v){if(paused){queue.push([e,v]);return []}return bus.emit(e,v)},resume(){paused=false;const errors=[];while(queue.length){const [e,v]=queue.shift();errors.push(...bus.emit(e,v))}return errors}}}`,
     earlier => `${earlier}
 // Each event keeps its newest capacity values, oldest first; a replaying
 // subscriber hears them before it is registered for live values.

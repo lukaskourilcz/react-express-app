@@ -688,9 +688,17 @@ async function main() {
   /* ── the last hint rung ─────────────────────────────────────────────── */
   // The ladder ends on the task's first reference, or on the documentation
   // page of its first focus tag: official documentation either way.
+  // A page about one array or string method, or about Map or Set, is the
+  // right last rung only when a solution of the task uses it: Set tasks
+  // ended on the Map page, and a page the server cuts ended on Array.slice.
   for (const task of CODING_TASKS) {
     const url = task.references?.[0]?.url ?? docsFor(task.focus).url;
     if (!OFFICIAL_DOCS.has(new URL(url).host)) fail(`${task.id}: the hint ladder ends on ${url}, not on official documentation`);
+    const solution = solutionFor(task.id);
+    const api = /\/Global_Objects\/(?:(?:Array|String)\/([a-z]\w*)|(Map|Set))$/.exec(url);
+    if (!solution || !api) continue;
+    const code = [solution.solution, solution.junior ?? '', solution.senior ?? ''].join('\n');
+    if (!new RegExp(api[1] ? `\\.${api[1]}\\(` : `\\b${api[2]}\\b`).test(code)) fail(`${task.id}: the hint ladder ends on ${url}, which none of the task's solutions uses`);
   }
 
   /* ── React solutions ────────────────────────────────────────────────── */

@@ -79,7 +79,8 @@ const ROWS: Row[] = [
   ['objects', `${MDN}/Global_Objects/Object`, 'Object', 'MDN', 'Keys, values, entries and copying.', 'Klíče, hodnoty, dvojice a kopírování.'],
   ['destructuring', `${MDN}/Operators/Destructuring`, 'Destructuring', 'MDN', 'Pulling values out of arrays and objects, with defaults.', 'Vytažení hodnot z polí a objektů, i s výchozími hodnotami.'],
   ['spread', `${MDN}/Operators/Spread_syntax`, 'Spread syntax (...)', 'MDN', 'Copying and combining — and that the copy is shallow.', 'Kopírování a slučování — a že kopie je mělká.'],
-  ['map-set', `${MDN}/Global_Objects/Map`, 'Map', 'MDN', 'Keyed lookup with any key type, and insertion order.', 'Vyhledávání podle klíče libovolného typu a pořadí vkládání.'],
+  // One tag covers Map and Set tasks alike, so it links the guide to both.
+  ['map-set', `${MDN_DOCS}/Web/JavaScript/Guide/Keyed_collections`, 'Keyed collections', 'MDN', 'Map and Set: lookup by key, membership and insertion order.', 'Vyhledávání podle klíče libovolného typu a pořadí vkládání.'],
   ['json', `${MDN}/Global_Objects/JSON`, 'JSON', 'MDN', 'Parsing and stringifying, and what does not survive the trip.', 'Parsování a serializace a co cestu nepřežije.'],
   // ── functions and asynchrony ───────────────────────────────────────────
   ['functions', `${MDN}/Functions`, 'Functions', 'MDN', 'Parameters, defaults, rest and return values.', 'Parametry, výchozí hodnoty, rest a návratové hodnoty.'],
