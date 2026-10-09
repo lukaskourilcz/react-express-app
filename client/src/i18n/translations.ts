@@ -604,6 +604,13 @@ export const en = {
   'xp.gainLearn': '+{xp} XP earned',
   'xp.gainQuiz': '+{xp} XP earned',
   'xp.gainPractice': '+{xp} XP · practice',
+  'xp.gainCoding': '+{xp} XP earned',
+  'xp.gainAgain': '+{xp} XP again',
+  'xp.heldStep': 'No XP this time: you can earn it again from {time}, an hour after you last earned it.',
+  'xp.heldTask': 'No XP this time: reset the task and pass it from {time} to earn it again.',
+  'xp.heldTaskReset': 'No XP this time: reset the task and pass it again to earn it.',
+  'xp.heldAnswer': 'No XP for 1 answer this time: you can earn it again from {time}, an hour after you last earned it.',
+  'xp.heldAnswers': 'No XP for {n} answers this time: you can earn it again from {time}, an hour after you last earned it.',
   'xp.rankUpKicker': 'New rank',
   'xp.rankUp': 'You’re now {title}',
 

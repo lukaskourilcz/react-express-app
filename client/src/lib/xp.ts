@@ -24,6 +24,7 @@ import {
 import { rankLabelKeyFor, getTrack } from './tracks';
 import type { TranslationKey } from '../i18n/translations';
 import { getSubject, useSubject, isSubjectId, topicSetForSubject, type SubjectId } from './subjects';
+import type { LearnRepeatXp } from '../../../shared/repeat-xp';
 
 // v1 held ONE global accumulator shared by every subject; v2 keys XP by subject.
 const QUEST_KEY_LEGACY = 'devquiz:xp:quest:v1';
@@ -108,10 +109,28 @@ export function useLevelInfo(): LevelInfo {
 /* ──── toaster event bus ────────────────────────────────────────────────── */
 
 export type XpToast =
-  | { kind: 'gain'; amount: number; source: 'learn' | 'quiz' | 'practice' }
+  // `coding`: a coding challenge's first verified pass. `again`: a Learn step
+  // or coding challenge paid its XP again, an hour after it last did.
+  | { kind: 'gain'; amount: number; source: 'learn' | 'quiz' | 'practice' | 'coding' | 'again' }
   // Rank titles are carried as an i18n key + vars (not a composed string) so
   // the toaster renders them in the user's current language.
-  | { kind: 'rankup'; titleKey: TranslationKey; titleVars: Record<string, string>; level: number };
+  | { kind: 'rankup'; titleKey: TranslationKey; titleVars: Record<string, string>; level: number }
+  | { kind: 'held'; hold: XpHold };
+
+/** XP the hour held back (migration 060), and when it can be earned again. */
+export type XpHold =
+  /** A Learn level or part test passed again inside its hour. */
+  | { on: 'step'; availableAt: string }
+  /** A coding challenge passed again without its XP: it needs a reset, and
+   * from `availableAt` (null when the hour is already up) a pass pays. */
+  | { on: 'task'; availableAt: string | null }
+  /** Correct answers of a quiz, daily or Challenge result whose question paid
+   * XP less than an hour ago. */
+  | { on: 'questions'; count: number; availableAt: string };
+
+/** An ISO time as the learner's own clock shows it ("14:32"). */
+export const clockTime = (iso: string): string =>
+  new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
 const toastListeners = new Set<(t: XpToast) => void>();
 
@@ -176,11 +195,28 @@ export function awardQuestXp(amount: number, source: 'quiz' | 'practice'): void 
 /** Announce an award already committed by the verified server mutation. The
  * server credited its coins in the same request (#227); nothing is counted
  * here. */
-export function announceVerifiedQuestXp(amount: number): void {
+export function announceVerifiedQuestXp(amount: number, source: 'quiz' | 'coding' | 'again' = 'quiz'): void {
   const verified = clampXp(amount);
   if (verified <= 0) return;
-  emitToast({ kind: 'gain', amount: verified, source: 'quiz' });
+  emitToast({ kind: 'gain', amount: verified, source });
   reconcileRank(true);
+}
+
+/** Tell the learner the hour held XP back, and when it opens again. */
+export function announceXpHeld(hold: XpHold): void {
+  emitToast({ kind: 'held', hold });
+}
+
+/** A signed-in pass of a Learn step already passed (migration 060): the XP
+ * it paid again, then the rank that XP crosses once the account's balance is
+ * in, or when the step's XP opens again. */
+export async function announceLearnRepeat(repeat: LearnRepeatXp): Promise<void> {
+  if (repeat.xp > 0) {
+    announceVerifiedQuestXp(repeat.xp, 'again');
+    await syncXpWithServer({ announceRankUp: true });
+  } else if (repeat.withheld === 'cooldown' && repeat.availableAt) {
+    announceXpHeld({ on: 'step', availableAt: repeat.availableAt });
+  }
 }
 
 /**

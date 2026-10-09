@@ -1,5 +1,6 @@
 import type { PlayableCodingTask } from '../../../shared/coding-catalog';
 import type { PublicItemReview } from '../../../shared/curation';
+import type { LearnRepeatXp } from '../../../shared/repeat-xp';
 export type CategoryType = 'react' | 'typescript' | 'git' | 'javascript' | 'nodejs' | 'nextjs' | 'html' | 'css' | 'dsa' | 'algorithms' | 'abbreviations' | 'general' | 'ai' | 'cool-stuff' | 'databases' | 'system-design' | 'testing' | 'devops' | 'security' | 'dev-world' | 'code-snippets';
 
 export interface Question {
@@ -132,6 +133,10 @@ export interface RoadmapCompletionResult {
    * retired while it was open. Nothing was recorded; the level can be opened
    * again with its current questions. */
   invalidated?: { reason: 'content_retired'; questionIds: string[] };
+  /** A signed-in pass of a step already passed (migration 060): the XP it
+   * paid again, or when the step's XP opens again. Absent from a server or
+   * database before 060, and for a failed attempt. */
+  repeatXp?: LearnRepeatXp;
   progress?: Partial<Record<RoadmapTopic, {
     levels: Record<string, { passed: boolean; bestPct: number }>;
     checkpoints: Record<string, { passed: boolean; bestPct: number }>;
