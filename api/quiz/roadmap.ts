@@ -58,7 +58,7 @@ import { deploymentSubjectIds, isDeploymentTopic } from '../../lib/product-scope
 import { playable as playableCodingTask } from '../../lib/coding/catalog';
 import { levelCodingTasks } from '../../lib/coding/active';
 import type { RoadmapTopicStructure } from '../../lib/roadmap';
-import { handleCodingApproaches, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
+import { handleCodingApproaches, handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../../lib/coding/handlers';
 import {
   handleActivityStart,
   handleActivitySubmit,
@@ -1364,12 +1364,14 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   //   GET  ?resource=coding-task&id=     → a playable task with its sealed session
   //   POST ?resource=coding-submit       → server grading (every track)
   //   POST ?resource=coding-reveal       → the reference solution after a pass or give-up
+  //   POST ?resource=coding-reset        → Reset, signed in: opens the task's repeat XP
   const resource = typeof req.query.resource === 'string' ? req.query.resource : '';
   if (resource.startsWith('coding-')) {
     try {
       if (resource === 'coding-task' && req.method === 'GET') return await handleCodingTask(req, res, supabase);
       if (resource === 'coding-submit' && req.method === 'POST') return await handleCodingSubmit(req, res, supabase);
       if (resource === 'coding-reveal' && req.method === 'POST') return await handleCodingReveal(req, res, supabase);
+      if (resource === 'coding-reset' && req.method === 'POST') return await handleCodingReset(req, res, supabase);
       if (resource === 'coding-approaches' && req.method === 'GET') return await handleCodingApproaches(req, res, supabase);
       res.setHeader('Allow', resource === 'coding-task' || resource === 'coding-approaches' ? 'GET' : 'POST');
       return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');

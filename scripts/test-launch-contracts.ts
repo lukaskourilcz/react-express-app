@@ -4288,6 +4288,14 @@ async function main() {
         if (limit.endsWith('PerUser')) assert.match(body, new RegExp(`RATE_LIMITS\\.${limit}, \`user:\\$\\{\\w+\\.sub\\}\``), `${limit} is keyed by the verified account`);
       }
     }
+    // A question's XP waits an hour (owner decision of 9 Oct 2026, migration
+    // 058). A finished run names each answer's XP, so record_challenge_completion
+    // can leave out the answers whose question paid XP less than an hour ago,
+    // and the coins and the XP the learner is told follow what was awarded.
+    const complete = bodyOf(challengeSource, 'handleCompleteRun');
+    assert.match(complete, /creditVerifiedXp\(supabase, \{[^\n]*xp: awardedXp \}\)/, 'coins follow the XP the run was awarded');
+    assert.match(complete, /xp: data === true \? awardedXp : xp/, 'the learner is told the XP the run was awarded');
+    assert.match(bodyOf(challengeSource, 'runAnswers'), /xp: outcome\.isCorrect \? challengeRunXp\(1\) : 0/, 'each answer carries its XP to the routine');
   }
 
   // Writes to api/user/[op].ts take the same two tiers. Thirty pupils behind

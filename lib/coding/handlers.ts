@@ -48,6 +48,9 @@ import type {
   CodingGardenStatus,
   CodingOutcome,
   CodingProgressResponse,
+  CodingRepeatXp,
+  CodingResetRequest,
+  CodingResetResponse,
   CodingRevealRequest,
   CodingRevealResponse,
   CodingSubmitRequest,
@@ -493,6 +496,7 @@ interface Recorded {
   firstPass: boolean;
   xpAwarded: number;
   xpForfeited: boolean;
+  repeatXp: CodingRepeatXp | null;
   applied: boolean;
   codeChanged: boolean;
 }
@@ -549,11 +553,15 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     jsonError(res, 500, 'db_error', 'Could not record the verdict');
     return null;
   }
-  const data = (saved.data ?? {}) as { applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; xpForfeited?: boolean; codeChanged?: boolean };
+  const data = (saved.data ?? {}) as {
+    applied?: boolean; firstPass?: boolean; xpAwarded?: boolean; xpForfeited?: boolean; codeChanged?: boolean;
+    xpKind?: 'first' | 'repeat' | null; repeatXp?: CodingRepeatXp | null;
+  };
   // Coins follow the XP the routine just awarded, under the same award id
   // (#227). The last stage of a project or short path is a Premium milestone.
+  // A task's repeat XP (058) is XP only: it credits no coins.
   const xpAwarded = data.xpAwarded === true && xp > 0;
-  if (xpAwarded) {
+  if (xpAwarded && data.xpKind !== 'repeat') {
     await creditVerifiedXp(supabase, {
       userId, awardId: codingAwardId(userId, task.id), subject: 'webdev', xp,
     });
@@ -577,8 +585,21 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
     xpForfeited: typeof data.xpForfeited === 'boolean'
       ? data.xpForfeited && data.applied === true && !xpAwarded && xp > 0
       : revealedBefore && data.applied === true && data.firstPass === true && !xpAwarded && xp > 0,
+    repeatXp: repeatXpOf(data.repeatXp),
     applied: data.applied === true,
     codeChanged: data.codeChanged === true,
+  };
+}
+
+/** The routine's `repeatXp` (058), kept only in the shape the client reads. */
+function repeatXpOf(value: unknown): CodingRepeatXp | null {
+  if (!value || typeof value !== 'object') return null;
+  const one = value as { availableAt?: unknown; needsReset?: unknown; withheld?: unknown };
+  const at = typeof one.availableAt === 'string' && !Number.isNaN(Date.parse(one.availableAt)) ? new Date(one.availableAt).toISOString() : null;
+  return {
+    availableAt: at,
+    needsReset: one.needsReset === true,
+    withheld: one.withheld === 'reset' || one.withheld === 'cooldown' ? one.withheld : null,
   };
 }
 
@@ -606,6 +627,7 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
     firstPass: recorded?.firstPass ?? false,
     xpAwarded: recorded?.xpAwarded ?? 0,
     xpForfeited: recorded?.xpForfeited ?? false,
+    repeatXp: recorded?.repeatXp ?? null,
     applied: recorded?.applied ?? false,
     github,
     solutions,
@@ -754,6 +776,39 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   return res.json(verdictBody(graded, recorded, github, checkedPass ? solutionPairFor(task.id) : null));
 }
 
+/* ── POST ?resource=coding-reset ─────────────────────────────────────── */
+
+/** The workbench's Reset, signed in: the code went back to the starter, which
+ * opens the task's repeat XP (migration 058). A pass from an hour after the
+ * task last paid its XP, with no reveal in between, pays it once more. A guest
+ * earns no XP, so a guest's reset records nothing. */
+export async function handleCodingReset(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
+  if (!codingAvailable()) return notAvailable(res);
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingTaskAddress, RATE_LIMITS.codingTask))) return;
+  const body = (req.body || {}) as Partial<CodingResetRequest>;
+  const session = sessionFrom(body.session);
+  if (!session) return jsonError(res, 400, 'invalid_session', 'Coding session expired or invalid');
+  const task = codingTaskById(session.taskId);
+  if (!task) return jsonError(res, 400, 'invalid_session', 'Coding session does not match a task');
+  const userId = await optionalUser(req, res);
+  if (userId === undefined) return;
+  if (!userId) return jsonError(res, 401, 'unauthorized', 'Sign in to earn XP for a task again');
+  if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
+  const saved = await withTimeout(supabase.rpc('record_coding_reset', { p_user_id: userId, p_task_id: task.id }));
+  if (saved.error) {
+    if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Coding repeat migration 058 is not installed');
+    return jsonError(res, 500, 'db_error', 'Could not record the reset');
+  }
+  const data = (saved.data ?? {}) as { recorded?: unknown; availableAt?: unknown };
+  res.setHeader('Cache-Control', 'private, no-store');
+  const out: CodingResetResponse = {
+    recorded: data.recorded === true,
+    availableAt: repeatXpOf({ availableAt: data.availableAt })?.availableAt ?? null,
+  };
+  return res.json(out);
+}
+
 /* ── POST ?resource=coding-reveal ────────────────────────────────────── */
 
 export async function handleCodingReveal(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
@@ -786,6 +841,12 @@ export async function handleCodingReveal(req: VercelRequest, res: VercelResponse
       return jsonError(res, 500, 'db_error', 'Could not record the reveal');
     }
     try { progress = await loadProgressRow(supabase, userId, task.id); } catch { /* the reveal itself succeeded */ }
+  } else if (userId && supabase) {
+    // After a pass the solution opens without the ladder, and costs only the
+    // repeat XP of a reset the learner has open (058): that attempt then pays
+    // nothing. Before 058 there is no repeat XP to forfeit.
+    const marked = await withTimeout(supabase.rpc('record_coding_repeat_reveal', { p_user_id: userId, p_task_id: task.id }));
+    if (marked.error && !isRpcMissing(marked.error)) return jsonError(res, 500, 'db_error', 'Could not record the reveal');
   }
   const solution = solutionFor(task.id)?.solution ?? '';
   const reference = task.design?.reference ?? task.drill?.explanation ?? null;

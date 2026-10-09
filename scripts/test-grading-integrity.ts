@@ -5,7 +5,7 @@ import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInSandbox, SANDBOX_MAX_WAITING
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../lib/coding/grader-capacity';
 import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
-import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
+import { handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
 import { codingAwardId } from '../lib/rewards/coins';
@@ -388,6 +388,92 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   assert.equal(forfeited.xpForfeited, true, 'and the verdict says so, though the row already read passed');
   assert.equal(coinCredits(revealed).length, 0, 'no coins either');
   console.log('PASS integrity: an old unverified pass no longer blocks the first verified pass\'s XP and coins');
+}
+
+// ── a task's XP again, after a reset and an hour (migration 058) ─────────
+// Signed in, Reset tells the server (coding-reset); a pass the routine pays as
+// a repeat is XP only, so the handler credits no coins for it, and the verdict
+// carries when the XP opens again. A reveal after a pass reaches the routine
+// that forfeits the open reset's XP, and never the one that would end a Learn
+// level. A guest's reset records nothing.
+{
+  type Verdict = { verdict?: string; firstPass?: boolean; xpAwarded?: number; repeatXp?: unknown; error?: { code?: string } };
+  const id = 'js-double-numbers';
+  const reference = solutionFor(id)!;
+  const taskXp = CODING_TASK_XP[CODING_TASKS.find((task) => task.id === id)!.tier];
+  const learner = 'user-repeat-0007';
+  const availableAt = '2026-10-09T13:32:00.000Z';
+  const calls: { name: string; args: Record<string, unknown> }[] = [];
+  let verdictData: Record<string, unknown> = {};
+  const row = { task_id: id, track: 'javascript', status: 'passed', passes: 1, review_stage: 0, next_review_at: null, reveal_count: 0, best_passed_at: null };
+  const db = {
+    from: () => {
+      const chain = {
+        select: () => chain, eq: () => chain,
+        maybeSingle: () => Promise.resolve({ data: row, error: null }),
+        then: (resolve: (value: unknown) => unknown) => resolve({ data: [row], error: null }),
+      };
+      return chain;
+    },
+    rpc: (name: string, args: Record<string, unknown>) => {
+      calls.push({ name, args });
+      if (name === 'record_coding_verdict') return Promise.resolve({ data: verdictData, error: null });
+      if (name === 'record_coding_reset') return Promise.resolve({ data: { recorded: true, availableAt: '2026-10-09T15:32:00+02:00' }, error: null });
+      return Promise.resolve({ data: name === 'record_coding_repeat_reveal' ? true : null, error: null });
+    },
+  };
+  const reply = () => ({ statusCode: 200, body: null as unknown, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+  const auth = (user?: string) => ({ 'x-forwarded-for': '203.0.113.72', ...(user ? { authorization: 'Bearer local-test' } : {}) });
+  const session = encodeCodingSession({ taskId: id, track: 'javascript', userId: null });
+  const submit = async () => {
+    const out = reply();
+    await handleCodingSubmit({ method: 'POST', headers: auth(learner), query: {}, body: { session, code: reference.solution, user_id: learner } } as never, out as never, db as never);
+    assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+    return out.body as Verdict;
+  };
+  const coins = () => calls.filter((call) => call.name === 'credit_verified_xp_tokens').length;
+
+  verdictData = { applied: true, firstPass: false, xpAwarded: true, xpKind: 'repeat', xpForfeited: false,
+    repeatXp: { availableAt: '2026-10-09T15:32:00+02:00', needsReset: true, withheld: null } };
+  const repeat = await submit();
+  assert.equal(repeat.xpAwarded, taskXp, 'a repeat pays the task\'s XP');
+  assert.equal(repeat.firstPass, false);
+  assert.deepEqual(repeat.repeatXp, { availableAt, needsReset: true, withheld: null }, 'the verdict says when the XP opens again');
+  assert.equal(coins(), 0, 'a repeat credits no coins');
+
+  verdictData = { applied: true, firstPass: true, xpAwarded: true, xpKind: 'first', xpForfeited: false,
+    repeatXp: { availableAt, needsReset: true, withheld: null } };
+  await submit();
+  assert.equal(coins(), 1, 'a first pass still credits its coins');
+
+  verdictData = { applied: true, firstPass: false, xpAwarded: false, xpKind: null, xpForfeited: false,
+    repeatXp: { availableAt, needsReset: true, withheld: 'reset' } };
+  const withheld = await submit();
+  assert.equal(withheld.xpAwarded, 0);
+  assert.deepEqual(withheld.repeatXp, { availableAt, needsReset: true, withheld: 'reset' }, 'and why a pass paid nothing');
+
+  // Reset, signed in: recorded for the account and the session's task.
+  const reset = reply();
+  await handleCodingReset({ method: 'POST', headers: auth(learner), query: {}, body: { session, user_id: learner } } as never, reset as never, db as never);
+  assert.equal(reset.statusCode, 200, JSON.stringify(reset.body));
+  assert.deepEqual(reset.body, { recorded: true, availableAt }, 'the reset answers when the XP opens');
+  assert.deepEqual(calls.filter((call) => call.name === 'record_coding_reset').map((call) => call.args), [{ p_user_id: learner, p_task_id: id }]);
+  // A guest's reset, and another account's session, record nothing.
+  const guest = reply();
+  await handleCodingReset({ method: 'POST', headers: auth(), query: {}, body: { session } } as never, guest as never, db as never);
+  assert.equal(guest.statusCode, 401, 'a guest earns no XP, so its reset is not recorded');
+  const foreign = reply();
+  await handleCodingReset({ method: 'POST', headers: auth(learner), query: {}, body: { session: encodeCodingSession({ taskId: id, track: 'javascript', userId: 'user-someone-else' }), user_id: learner } } as never, foreign as never, db as never);
+  assert.equal(foreign.statusCode, 403);
+  assert.equal(calls.filter((call) => call.name === 'record_coding_reset').length, 1, 'neither reached the routine');
+
+  // A reveal after the pass forfeits the open reset's XP, and nothing else.
+  const revealed = reply();
+  await handleCodingReveal({ method: 'POST', headers: auth(learner), query: {}, body: { session, hintsUsed: 0, user_id: learner } } as never, revealed as never, db as never);
+  assert.equal(revealed.statusCode, 200, JSON.stringify(revealed.body));
+  assert.deepEqual(calls.filter((call) => call.name.startsWith('record_coding_re') && call.name !== 'record_coding_reset').map((call) => call.name), ['record_coding_repeat_reveal'],
+    'a reveal after a pass is recorded against the open reset, not as a level-ending reveal');
+  console.log('PASS integrity: a task\'s repeat XP takes a reset, pays no coins, and says when it opens again');
 }
 
 // ── a failed system-design submission carries no key ────────────────────

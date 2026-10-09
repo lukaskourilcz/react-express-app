@@ -444,9 +444,11 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         }
 
         logEvent('stats', { status: 200, op: 'submit', latency_ms: Date.now() - started });
-        // The XP the routine awarded: the receipt's whole XP from migration
-        // 056 (048 to 055 paid less for a question answered earlier the same
-        // UTC day), and nothing for a refused second daily. Tokens follow
+        // The XP the routine awarded: from migration 058 the receipt's XP
+        // less that of each correct answer whose question paid XP less than
+        // an hour ago (056 paid it whole; 048 to 055 paid less for a question
+        // answered earlier the same UTC day), and nothing for a refused second
+        // daily. Tokens follow
         // that amount, keyed to the attempt so a replayed submission credits
         // nothing more, and a retry after a commit that timed out credits
         // what the first request could not.
