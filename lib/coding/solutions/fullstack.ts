@@ -836,8 +836,10 @@ export const FULLSTACK_SOLUTIONS:Record<string,CodingSolution> = Object.fromEntr
    {call:`(()=>{const api=createApi([]);const reply=api({method:'POST',path:'${app.endpoint}',body:{name:'A',${app.amount}:1}});reply.body.${app.amount}=99;return api({method:'GET',path:'${app.endpoint}'}).body})()`,expected:[{name:'A',[app.amount]:1,id:1,version:1}]},
    {call:`(()=>{const api=createApi([]);return [api({method:'PUT',path:'${app.endpoint}',body:{name:'A',${app.amount}:1}}),api({method:'GET',path:'${app.endpoint}'}).body.length]})()`,expected:[{status:404,body:{error:'not_found'}},0]},
   ]:[]),
-  // Stage 4: DELETE removes the row, and PATCH stores the new version behind a copied reply.
+  // Stage 4: DELETE removes the row, PATCH stores the new version behind a
+  // copied reply, and any other method on an item is not found and changes nothing.
   ...(i>=3?[
+   {call:`(()=>{const api=createApi(${JSON.stringify(fullstackSeed(app))});return [api({method:'PUT',path:'${app.endpoint}/1',body:{version:1,${app.amount}:1}}),api({method:'GET',path:'${app.endpoint}'}).body[0]]})()`,expected:[{status:404,body:{error:'not_found'}},row]},
    {call:`(()=>{const api=createApi(${JSON.stringify(fullstackSeed(app))});const reply=api({method:'DELETE',path:'${app.endpoint}/2'});return [reply,api({method:'GET',path:'${app.endpoint}'}).body.map(item=>item.id)]})()`,expected:[{status:200,body:{deleted:2}},[1,3]]},
    {call:`(()=>{const api=createApi(${JSON.stringify(fullstackSeed(app))});const reply=api({method:'PATCH',path:'${app.endpoint}/1',body:{version:1,${app.amount}:1}});reply.body.${app.amount}=99;return api({method:'GET',path:'${app.endpoint}'}).body[0]})()`,expected:{...row,[app.amount]:1,version:2}},
   ]:[]),
