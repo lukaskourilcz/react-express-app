@@ -44,6 +44,7 @@ import {
 import { CODING_CODE_LIMIT_BYTES } from '../../shared/coding-api';
 import type {
   CodingDraftResponse,
+  CodingDraftSaveRequest,
   CodingDraftSaveResponse,
   CodingGardenStatus,
   CodingOutcome,
@@ -708,6 +709,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
 
   let recorded: Recorded | null = null;
   let github: CodingGardenStatus | null = null;
+  let draftUpdatedAt: string | null = null;
   if (userId) {
     if (!supabase) return jsonError(res, 503, 'not_configured', 'Coding progress is not configured');
     if (evolvingStage(task.id)) {
@@ -715,10 +717,13 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
       const passed = new Set(rows.filter(row => row.status === 'passed').map(row => row.task_id));
       if (!evolvingUnlocked(task.id, passed)) return jsonError(res, 403, 'stage_locked', 'Complete earlier stages first');
       // Persist the exact submitted code before publishing completion. A next
-      // stage can then resume from this draft even on another device.
+      // stage can then resume from this draft even on another device. It is
+      // written whatever the draft holds, and the time goes back with the
+      // verdict, so the browser's next save builds on it.
       if (code !== null) {
-        const draft = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: task.id, p_code: code }));
-        if (draft.error) return jsonError(res, 500, 'db_error', 'Could not save stage code');
+        const draft = await storeDraft(supabase, userId, task.id, code, 'force');
+        if (!draft || draft === 'missing') return jsonError(res, 500, 'db_error', 'Could not save stage code');
+        if (draft.saved && draft.updatedAt) draftUpdatedAt = draft.updatedAt;
       }
     }
     recorded = await recordVerdict({ supabase, userId, task, session, verdict: graded.verdict, verified: graded.unverified !== true, code, runCount: body.runCount, hintsUsed: body.hintsUsed, durationMs: body.durationMs }, res);
@@ -742,7 +747,9 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   // moment ago in this same request, which is the only reason they are here;
   // an unverified pass checked nothing, so it opens nothing.
   const checkedPass = graded.verdict === 'passed' && code !== null && graded.unverified !== true;
-  return res.json(verdictBody(graded, recorded, github, checkedPass ? solutionPairFor(task.id) : null));
+  const out: CodingVerdictResponse = verdictBody(graded, recorded, github, checkedPass ? solutionPairFor(task.id) : null);
+  if (draftUpdatedAt) out.draftUpdatedAt = draftUpdatedAt;
+  return res.json(out);
 }
 
 /* ── POST ?resource=coding-reveal ────────────────────────────────────── */
@@ -815,6 +822,39 @@ export async function handleCodingProgress(req: VercelRequest, res: VercelRespon
 
 /* ── GET/POST ?op=coding-draft&id=… ──────────────────────────────────── */
 
+/** An account draft's updated_at as Postgres hands it out, ISO 8601 with up
+ * to microseconds: kept as a string, since a Date would drop them. */
+const isDraftTime = (value: unknown): value is string =>
+  typeof value === 'string' && /^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}(\.\d{1,6})?(Z|[+-]\d{2}(:?\d{2})?)$/.test(value) && !Number.isNaN(Date.parse(value));
+
+type StoredDraft = { saved: true; updatedAt: string | null } | { saved: false; updatedAt: string };
+
+/** Write a task's draft: only while the account's draft still has `base`
+ * (null: none yet), or whatever it holds with 'force'. Migration 059's
+ * save_coding_draft_v2 decides under a row lock. Before that migration the
+ * save goes through save_coding_draft (025), which always writes, and the
+ * time is read back: none when another save overtook it. Null for a database
+ * error, 'missing' when neither routine exists. */
+async function storeDraft(supabase: SupabaseClient, userId: string, taskId: string, code: string, base: string | null | 'force'): Promise<StoredDraft | 'missing' | null> {
+  const force = base === 'force';
+  const result = await withTimeout(supabase.rpc('save_coding_draft_v2', { p_user_id: userId, p_task_id: taskId, p_code: code, p_base: force ? null : base, p_force: force }));
+  if (!result.error) {
+    const answer = result.data as { saved?: unknown; conflict?: unknown; updatedAt?: unknown } | null;
+    const updatedAt = typeof answer?.updatedAt === 'string' ? answer.updatedAt : null;
+    if (answer?.saved === false && answer.conflict === true && updatedAt) return { saved: false, updatedAt };
+    return { saved: true, updatedAt };
+  }
+  if (!isRpcMissing(result.error)) return null;
+  const saved = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: taskId, p_code: code }));
+  if (saved.error) return isRpcMissing(saved.error) ? 'missing' : null;
+  let updatedAt: string | null = null;
+  try {
+    const row = await withTimeout(supabase.from('coding_drafts').select('code,updated_at').eq('user_id', userId).eq('task_id', taskId).maybeSingle());
+    if (!row.error && row.data?.code === code && typeof row.data.updated_at === 'string') updatedAt = row.data.updated_at;
+  } catch { /* saved all the same; the browser learns no time */ }
+  return { saved: true, updatedAt };
+}
+
 export async function handleCodingDraft(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient) {
   if (!codingAvailable()) return notAvailable(res);
   const userId = await requireAuthSub(req, res);
@@ -832,24 +872,23 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
     // Rate limited as every write to api/user/[op].ts is (`limitUserWrite`):
     // per account, behind a class-sized address bucket. A second bucket here,
     // keyed by address alone, held a whole class to one person's saves.
-    const code = (req.body as { code?: unknown })?.code;
+    const body = (req.body ?? {}) as Partial<Record<keyof CodingDraftSaveRequest, unknown>>;
+    const code = body.code;
     if (typeof code !== 'string' || Buffer.byteLength(code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 400, 'bad_request', 'code is required and limited to 20 kB');
-    const saved = await withTimeout(supabase.rpc('save_coding_draft', { p_user_id: userId, p_task_id: id, p_code: code }));
-    if (saved.error) {
-      if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
-      return jsonError(res, 500, 'db_error', 'Could not save the draft');
-    }
-    // The time the account now holds this code, so the browser can tell its
-    // own save from another device's when the task next opens
-    // (client/src/coding/drafts.ts). save_coding_draft returns nothing, so the
-    // row is read back; if another save landed in between, the row holds other
-    // code and its time is not this save's, so none is given.
-    let updatedAt: string | null = null;
-    try {
-      const row = await withTimeout(supabase.from('coding_drafts').select('code,updated_at').eq('user_id', userId).eq('task_id', id).maybeSingle());
-      if (!row.error && row.data?.code === code && typeof row.data.updated_at === 'string') updatedAt = row.data.updated_at;
-    } catch { /* saved all the same; the browser learns no time */ }
-    const out: CodingDraftSaveResponse = { ok: true, updatedAt };
+    // The account draft's time this code builds on (owner decision 10). A
+    // client from before it sends none and writes as it always did.
+    const base = !('base' in body) ? 'force' : body.base === null ? null : isDraftTime(body.base) ? body.base : undefined;
+    if (base === undefined) return jsonError(res, 400, 'bad_request', 'base must be a draft time or null');
+    const saved = await storeDraft(supabase, userId, id, code, base);
+    if (!saved) return jsonError(res, 500, 'db_error', 'Could not save the draft');
+    if (saved === 'missing') return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
+    // Saved from another device or tab since: nothing was written, and the
+    // browser asks the learner which code to keep. The other code stays on
+    // the server until the browser asks for it.
+    if (!saved.saved) return jsonError(res, 409, 'draft_conflict', 'Your account holds a draft of this task saved since this code was opened', { updatedAt: saved.updatedAt });
+    // The time the account now holds this code, so the browser's next save
+    // builds on it (client/src/coding/drafts.ts).
+    const out: CodingDraftSaveResponse = { ok: true, updatedAt: saved.updatedAt };
     return res.json(out);
   }
   res.setHeader('Allow', 'GET, POST');

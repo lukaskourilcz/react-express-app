@@ -85,11 +85,14 @@ async function main() {
   console.log('Coding task draft passed: the account\'s own draft opens with its time, and no other account\'s.');
 
   // V3-1: a draft save answers with the time the account now holds the code,
-  // which the browser's copy then builds on. When another save landed between
-  // the write and the read-back, the row holds other code and no time is given.
+  // which the browser's copy then builds on. Before migration 059 the save
+  // goes through save_coding_draft and the time is read back: when another
+  // save landed between the write and the read-back, the row holds other code
+  // and no time is given.
   let landedBetween: string | null = null;
   const saving = {
-    rpc: async (_fn: string, args: { p_user_id: string; p_task_id: string; p_code: string }) => {
+    rpc: async (fn: string, args: { p_user_id: string; p_task_id: string; p_code: string }) => {
+      if (fn === 'save_coding_draft_v2') return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.save_coding_draft_v2' } };
       drafts[`${args.p_user_id}:${args.p_task_id}`] = { code: landedBetween ?? args.p_code, updated_at: '2026-10-09T10:05:00.123456+00:00' };
       return { data: null, error: null };
     },
@@ -105,6 +108,76 @@ async function main() {
   landedBetween = '// another device';
   assert.deepEqual(await save('const double = (ns) => ns;'), { ok: true, updatedAt: null }, 'no time for a save another one overtook');
   console.log('Coding draft save passed: it returns the time the account holds the code, and none when another save overtook it.');
+
+  // Owner decision 10 (migration 059): a save names the account draft's time
+  // its code builds on, and one built on an older time is refused with 409
+  // and the stored time, never the stored code. A client from before sends
+  // no base and writes as it always did. save_coding_draft_v2 is played here
+  // by a stand-in that keeps its rule; supabase/tests/220 covers the routine.
+  const stored = new Map<string, { code: string; updated_at: string }>();
+  const calls: { fn: string; args: Record<string, unknown> }[] = [];
+  let tick = 0;
+  const conditional = {
+    rpc: async (fn: string, args: Record<string, unknown>) => {
+      calls.push({ fn, args });
+      if (fn === 'record_coding_verdict') return { data: { applied: true, firstPass: false, xpAwarded: false, codeChanged: true }, error: null };
+      if (fn !== 'save_coding_draft_v2') return { data: null, error: null };
+      const key = `${args.p_user_id}:${args.p_task_id}`;
+      const row = stored.get(key);
+      if (row?.code === args.p_code) return { data: { saved: true, updatedAt: row.updated_at }, error: null };
+      if (row && args.p_force !== true && row.updated_at !== args.p_base) return { data: { saved: false, conflict: true, updatedAt: row.updated_at }, error: null };
+      tick += 1;
+      const updatedAt = `2026-10-09T11:00:0${tick}.12345${tick}+00:00`;
+      stored.set(key, { code: String(args.p_code), updated_at: updatedAt });
+      return { data: { saved: true, updatedAt }, error: null };
+    },
+    from: database.from,
+  };
+  const post = async (body: Record<string, unknown>) => {
+    const out = response();
+    calls.length = 0;
+    await handleCodingDraft({ method: 'POST', headers: { authorization: 'Bearer stand-in-token' }, query: { user_id: 'account-c' }, body: { id: 'js-double-numbers', user_id: 'account-c', ...body } } as never, out as never, conditional as never);
+    return { status: out.statusCode, body: out.body as { ok?: boolean; updatedAt?: string | null; error?: { code?: string; updatedAt?: string } }, args: calls.find((one) => one.fn === 'save_coding_draft_v2')?.args };
+  };
+  const first = await post({ code: '// first', base: null });
+  assert.equal(first.status, 200, JSON.stringify(first.body));
+  assert.deepEqual([first.args?.p_base, first.args?.p_force], [null, false], 'a save names its base and is not forced');
+  const t1 = first.body.updatedAt!;
+  assert.ok(t1, 'a first save answers with its time');
+  const second = await post({ code: '// second', base: t1 });
+  assert.equal(second.status, 200, 'a save built on the stored time is written');
+  assert.equal(second.args?.p_base, t1, 'the base reaches the routine as sent, microseconds and all');
+  const t2 = second.body.updatedAt!;
+  const stale = await post({ code: '// a tab that loaded before', base: t1 });
+  assert.equal(stale.status, 409, 'a save built on an older time is refused');
+  assert.equal(stale.body.error?.code, 'draft_conflict');
+  assert.equal(stale.body.error?.updatedAt, t2, 'the refusal names the stored time');
+  assert.ok(!JSON.stringify(stale.body).includes('// second'), 'the refusal does not carry the other device\'s code');
+  assert.equal(stored.get('account-c:js-double-numbers')?.code, '// second', 'nothing was written');
+  const mine = await post({ code: '// a tab that loaded before', base: stale.body.error?.updatedAt });
+  assert.equal(mine.status, 200, 'keeping this code is a save built on the time the refusal named');
+  const legacy = await post({ code: '// a client from before 059' });
+  assert.equal(legacy.status, 200, 'a save without a base still writes');
+  assert.equal(legacy.args?.p_force, true, 'a save without a base is forced, as every save was before');
+  for (const base of ['yesterday', 42, '2026-10-09', { at: t1 }]) {
+    const bad = await post({ code: '// x', base });
+    assert.deepEqual([bad.status, bad.body.error?.code, bad.args], [400, 'bad_request', undefined], `base ${JSON.stringify(base)} is refused before the database`);
+  }
+  console.log('Coding draft conflict passed: a save built on an older draft time is refused with 409 and the stored time, never its code; no base writes as before.');
+
+  // An evolving stage's Submit stores the submitted code as the stage draft,
+  // forced, and hands the time back, so the browser's next save builds on it
+  // instead of meeting the stage's own write as a conflict.
+  const stageId = 'js-evolving-calculator-1-start';
+  const stageSession = encodeCodingSession({ taskId: stageId, track: 'javascript', userId: 'account-c' });
+  const submitted = response();
+  calls.length = 0;
+  await handleCodingSubmit({ method: 'POST', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '203.0.113.59' }, query: { user_id: 'account-c' }, body: { session: stageSession, code: '// not there yet', user_id: 'account-c' } } as never, submitted as never, conditional as never);
+  assert.equal(submitted.statusCode, 200, JSON.stringify(submitted.body));
+  const stageWrite = calls.find((one) => one.fn === 'save_coding_draft_v2');
+  assert.equal(stageWrite?.args.p_force, true, 'the stage draft is written whatever the account held');
+  assert.equal((submitted.body as { draftUpdatedAt?: string }).draftUpdatedAt, stored.get(`account-c:${stageId}`)?.updated_at, 'the verdict carries the time the stage draft was stored');
+  console.log('Coding evolving stage draft passed: Submit stores the stage code and returns its time.');
 
   // V3-2: an id no task could have (/coding/javascript/no-such-task) is as
   // unknown as one that fits the pattern; both are 404, and the browser shows
