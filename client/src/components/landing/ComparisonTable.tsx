@@ -1,7 +1,7 @@
 // The plan table: what every account gets next to what Premium opens. It sits
 // on the landing and on /premium. The free column mirrors `shared/tiers.ts`
 // (the three free topics, React up to FREE_LEARN_LEVELS.react, a starter set
-// of challenges and stage one of every project); the counts come from the
+// of challenges and the opening stages of every project); the counts come from the
 // registries, and every word from the landing.compare.* keys.
 //
 // Deep End v2: an editorial section (kicker, h2, subtitle), one .ss-panel
