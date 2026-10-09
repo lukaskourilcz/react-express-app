@@ -525,7 +525,8 @@ async function main() {
       if (difficultyOf(task) !== expected) fail(`${id}: ${checkpoint ? 'a checkpoint at tier ' + task.tier : `stage ${index + 1} of ${length}`} should be ${expected}, not ${difficultyOf(task)}`);
     });
   }
-  if (checkpoints !== 64) fail(`expected the 64 checkpoints of the 14 checkpointed projects, found ${checkpoints}`);
+  const authoredCheckpoints = EVOLVING_CHALLENGES.flatMap((project) => project.stages).filter(isEvolvingCheckpoint);
+  if (checkpoints !== authoredCheckpoints.length) fail(`${authoredCheckpoints.length - checkpoints} checkpoint(s) carry an authored label instead of their tier`);
   // Standalone tasks read their tier: 1–2 Easy, 3 Medium, 4–5 Hard.
   for (const task of CODING_TASKS) {
     if (evolvingStage(task.id) || task.difficulty) continue;
