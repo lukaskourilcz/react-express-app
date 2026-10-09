@@ -777,7 +777,7 @@ export default function App() {
   const recursive = "type B<N extends number, E, A extends unknown[] = []> = A['length'] extends N ? A : B<N, E, [...A, E]>;\n"
     + Array.from({ length: 30 }, (_, index) => `const q${index}: B<999, 'k${index}'>['length'] = 999;\n`).join('');
   const submit = async (code: string) => {
-    const out = { statusCode: 200, body: null as null | { verdict?: string; codeError?: string | null; solutions?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
+    const out = { statusCode: 200, body: null as null | { verdict?: string; codeError?: string | null; solutions?: unknown; failureHint?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
     await handleCodingSubmit({ method: 'POST', headers: {}, body: { session: encodeCodingSession({ taskId: 'ts-typed-slug', track: 'typescript', userId: null }), code } } as never, out as never, null);
     assert.equal(out.statusCode, 200, JSON.stringify(out.body));
     return out.body!;
@@ -794,6 +794,8 @@ export default function App() {
   assert.equal(stuck.verdict, 'timeout', JSON.stringify(stuck));
   assert.equal(stuck.codeError, TYPE_CHECK_STOPPED_MESSAGE);
   assert.equal(stuck.solutions, null, 'a stopped check releases no solutions');
+  // Audit C5-2: the timeout hint sent the learner looking for an endless loop.
+  assert.equal(stuck.failureHint, null, 'a stopped type check carries no loop hint; its message names the type');
   assert.ok(took < TYPE_CHECK_DEADLINE_MS + 3_000, `the check was stopped near its deadline (${took} ms)`);
   // On this thread the same check held the event loop for half a minute; the
   // bound leaves room for a loaded CI machine.

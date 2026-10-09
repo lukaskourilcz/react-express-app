@@ -34,8 +34,7 @@ export const TS_CHECK_WORKER_FILE = 'lib/coding/generated/ts-check-worker.cjs';
  * together. A task's checks finish in well under a second on a warm thread. */
 export const TYPE_CHECK_DEADLINE_MS = 4_000;
 /** What the learner reads when the checker was stopped. */
-export const TYPE_CHECK_STOPPED_MESSAGE =
-  'Type checking stopped before it finished: it ran out of time, memory or stack. A type that keeps recursing, or one that builds very large unions or tuples, can do this.';
+export { TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 /** What the learner reads when the code could not be turned into JavaScript. */
 export const TRANSPILE_FAILED_MESSAGE =
   'The compiler could not turn this TypeScript into JavaScript: the code nests too deeply. Flatten the most deeply nested functions, calls or blocks and submit again.';

@@ -10,6 +10,11 @@ export const RUN_TIMEOUT_MS = 2_000;
 /** Timer- and promise-based tasks need longer than a synchronous one. */
 export const ASYNC_TIMEOUT_MS = 6_000;
 export const TIMEOUT_MESSAGE = 'Timed out. Check for an infinite loop.';
+/** What the learner reads when a type check was stopped: the cause is a type,
+ * not a loop. The server's checker (lib/coding/ts-check-pool.ts) and the
+ * browser's runner both report a stopped check with this text. */
+export const TYPE_CHECK_STOPPED_MESSAGE =
+  'Type checking stopped before it finished: it ran out of time, memory or stack. A type that keeps recursing, or one that builds very large unions or tuples, can do this.';
 export const MAX_LOGS = 100;
 /** Console output is capped by size as well as by line count: a line past
  * MAX_LOG_LINE_CHARS is cut, and past MAX_LOG_CHARS in all the rest is

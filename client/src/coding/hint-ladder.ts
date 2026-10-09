@@ -10,7 +10,7 @@ export type LadderRung =
   | { kind: 'hint'; index: number; body: string }
   | { kind: 'approach'; index: number; body: string }
   | { kind: 'skeleton'; body: string }
-  | { kind: 'docs'; tag: string; url: string };
+  | { kind: 'docs'; title: string; url: string };
 
 export const MAX_HINTS = 5;
 /** A minute of editing counts as a genuine attempt. */
@@ -26,7 +26,8 @@ export function ladderRungs(task: PlayableCodingTask, lang: Lang): LadderRung[] 
   if (task.skeleton) rungs.push({ kind: 'skeleton', body: task.skeleton });
   const docs = docsFor(task.focus);
   const reference = task.references?.[0];
-  rungs.push({ kind: 'docs', tag: reference ? reference.title[lang] || reference.title.en : docs.tag, url: reference?.url ?? docs.url });
+  // The page's own title ("Array.prototype.map()"), never the task's tag slug.
+  rungs.push({ kind: 'docs', title: reference ? reference.title[lang] || reference.title.en : docs.title, url: reference?.url ?? docs.url });
   return rungs;
 }
 

@@ -96,5 +96,5 @@ it('shows a React grader outage as a problem to retry, not as a build error or a
   expect(await screen.findByRole('alert')).toHaveTextContent('The checker could not run just now, so this Submit was not recorded. Try again in a moment.');
   expect(screen.queryByText(/Build error/)).toBeNull();
   expect(screen.queryByRole('heading', { level: 3, name: 'Error' })).toBeNull();
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).not.toHaveAttribute('aria-disabled'));
 });

@@ -2,7 +2,7 @@
 // the Deep End tokens so it sits on the same ink as the rest of the page in
 // both colour schemes. Keyboard users leave the editor with Escape then Tab.
 import { useMemo } from 'react';
-import CodeMirror, { EditorView, keymap, type Extension } from '@uiw/react-codemirror';
+import CodeMirror, { EditorView, keymap, Prec, type Extension } from '@uiw/react-codemirror';
 import { javascript } from '@codemirror/lang-javascript';
 import { indentWithTab } from '@codemirror/commands';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
@@ -73,6 +73,11 @@ export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnl
     syntaxHighlighting(highlight),
     theme,
     keymap.of([indentWithTab]),
+    // Ctrl/Cmd+Enter runs and Ctrl/Cmd+Shift+Enter submits (the workbench
+    // listens for both). basicSetup binds Mod-Enter to "insert blank line",
+    // which added a line to the code on every Run, so the editor claims both
+    // keys and does nothing with them; the event still reaches the workbench.
+    Prec.highest(keymap.of([{ key: 'Mod-Enter', run: () => true }, { key: 'Shift-Mod-Enter', run: () => true }])),
     EditorView.lineWrapping,
     EditorView.contentAttributes.of({ 'aria-label': ariaLabel, 'aria-multiline': 'true', role: 'textbox', ...(describedBy ? { 'aria-describedby': describedBy } : {}) }),
   ], [track, ariaLabel, describedBy]);

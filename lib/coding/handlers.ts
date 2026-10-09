@@ -351,11 +351,13 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
     const hiddenTypeTests = solution?.hiddenTypeTests ?? [];
     const typed = await checkTypes(code, hiddenTypeTests.length ? [task.typeTests ?? [], hiddenTypeTests] : [task.typeTests ?? []]);
     if (typed.stopped) {
-      const graded: Graded = {
+      // The message names the cause, a type. The timeout hint would send the
+      // learner looking for a loop that is not there, so there is none.
+      return {
         verdict: 'timeout', results: [], check: null, logs: [], codeError: TYPE_CHECK_STOPPED_MESSAGE, design: null, designReference: null,
         hidden: hiddenTests.length + hiddenTypeTests.length > 0 ? { passed: 0, total: hiddenTests.length + hiddenTypeTests.length } : null,
+        failureHint: null,
       };
-      return { ...graded, failureHint: hintForFailure(task, { ...graded, timedOut: true }) };
     }
     check = typed.results[0];
     const hiddenCheck = typed.results[1];

@@ -136,13 +136,14 @@ export const FinButton = forwardRef<HTMLButtonElement, ComponentPropsWithoutRef<
  * Homepage-style fin effects with a stable randomized profile for each button.
  * `unavailable` looks and reads disabled (aria-disabled) but keeps the button
  * focusable and pressable, so the press can say why (the Quiz start, which
- * names the missing category in `describedBy`).
+ * names the missing category in `describedBy`). `type="submit"` makes it the
+ * submit button of the form around it, which then needs no `onClick`.
  */
-export function SwimCta({ label, onClick, dir, disabled, unavailable, describedBy, size = 'md' }: { label: string; onClick: () => void; dir?: 1 | -1; disabled?: boolean; unavailable?: boolean; describedBy?: string; size?: 'sm' | 'md' | 'lg' }) {
+export function SwimCta({ label, onClick, type = 'button', dir, disabled, unavailable, describedBy, size = 'md' }: { label: string; onClick?: () => void; type?: 'button' | 'submit'; dir?: 1 | -1; disabled?: boolean; unavailable?: boolean; describedBy?: string; size?: 'sm' | 'md' | 'lg' }) {
   const [animation] = useState(() => generateFinHover(Math.random,dir));
   const off = disabled || unavailable;
   return (
-    <button type="button" onClick={onClick} disabled={disabled} aria-disabled={unavailable || undefined} aria-describedby={describedBy}
+    <button type={type} onClick={onClick} disabled={disabled} aria-disabled={unavailable || undefined} aria-describedby={describedBy}
       className={`ss-fin-button ss-swim-cta ss-swim-cta--${size}`}
       style={{
         ...finHoverStyle(animation),

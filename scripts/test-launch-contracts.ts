@@ -32,7 +32,7 @@ import {
   stableAttemptId,
 } from '../lib/quiz-tokens';
 import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
-import { buildQueue, handleCodingSkip, handlePracticeSession, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
+import { buildQueue, handleCodingSkip, handlePracticeSession, nextAfterSkip, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
@@ -5054,6 +5054,19 @@ async function main() {
     assert.equal(skipped.statusCode, 200, JSON.stringify(skipped.body));
     const next = (skipped.body as { next?: string | null }).next;
     assert.ok(next && tierOf(next) === 3, `a skip suggests a tier-3 task the Learn levels opened, not nothing: ${next}`);
+
+    // Audit C3-18: the next challenge after a skip came from the top of the
+    // track, so skipping js-count-multiples offered js-digit-sum, a task
+    // before it. It is the next open one after the skipped task, wrapping.
+    const jsSection = CODING_SUMMARIES.filter((one) => one.track === 'javascript');
+    const skippedAt = jsSection.findIndex((one) => one.id === 'js-count-multiples');
+    const offered = nextAfterSkip('js-count-multiples', new Set(), 'premium');
+    assert.ok(offered && offered !== 'js-count-multiples', 'a skip offers another challenge');
+    assert.ok(jsSection.findIndex((one) => one.id === offered) > skippedAt, `the offer comes after the skipped task, not ${offered}`);
+    assert.ok(offered !== 'js-digit-sum', 'the offer is not a task the learner walked past');
+    const wrapped = nextAfterSkip('js-count-multiples', new Set(jsSection.slice(skippedAt + 1).map((one) => one.id)), 'premium');
+    assert.ok(wrapped && jsSection.findIndex((one) => one.id === wrapped) < skippedAt, `with every later task passed, the offer wraps to the start (${wrapped})`);
+    assert.equal(nextAfterSkip('js-count-multiples', new Set(jsSection.map((one) => one.id).filter((id) => id !== 'js-count-multiples')), 'premium'), null, 'nothing left to offer is said as nothing');
   }
 
   // ── the payment webhook believes the order, not the event ───────────────
