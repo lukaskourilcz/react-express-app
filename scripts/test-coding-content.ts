@@ -161,6 +161,46 @@ const topLevelNames = (ts: TypeScriptApi, source: string): string[] => {
   return [...names];
 };
 
+/** A React skeleton pasted into its starter with every placeholder left as
+ * it is, the ways a learner would paste it. A skeleton that declares one of
+ * the starter's top-level functions or components again stands in for those
+ * declarations. Otherwise its statements open App's body and its markup,
+ * from the first line that starts with < or {, goes after the starter's
+ * heading; or the statements become App's whole body, returning that markup
+ * in a <main> (or the starter's own return when the skeleton has no markup).
+ * A starter whose App has no body gets the skeleton above App. */
+const skeletonInStarter = (ts: TypeScriptApi, starter: string, skeleton: string): string[] => {
+  const file = ts.createSourceFile('App.jsx', starter, ts.ScriptTarget.Latest, true, ts.ScriptKind.JSX);
+  const functions = new Map<string, { statement: import('typescript').Statement; body: import('typescript').ConciseBody | undefined }>();
+  for (const statement of file.statements) {
+    if (ts.isFunctionDeclaration(statement) && statement.name) functions.set(statement.name.text, { statement, body: statement.body });
+    if (!ts.isVariableStatement(statement)) continue;
+    for (const one of statement.declarationList.declarations) {
+      if (ts.isIdentifier(one.name) && one.initializer && (ts.isArrowFunction(one.initializer) || ts.isFunctionExpression(one.initializer))) functions.set(one.name.text, { statement, body: one.initializer.body });
+    }
+  }
+  const redeclared = new Set([...skeleton.matchAll(/^(?:export\s+)?(?:const|let|function)\s+(\w+)/gm)].flatMap((match) => functions.get(match[1])?.statement ?? []));
+  if (redeclared.size > 0) {
+    const spans = [...redeclared].sort((a, b) => b.getStart() - a.getStart());
+    return [spans.reduce((source, statement, index) => source.slice(0, statement.getStart()) + (index === spans.length - 1 ? skeleton : '') + source.slice(statement.getEnd()), starter)];
+  }
+  const app = functions.get('App');
+  if (!app) return [];
+  if (!app.body || !ts.isBlock(app.body)) return [`${starter.slice(0, app.statement.getStart())}${skeleton}\n\n${starter.slice(app.statement.getStart())}`];
+  const lines = skeleton.split('\n');
+  const markupAt = /^return\b/m.test(skeleton) ? -1 : lines.findIndex((line) => /^\s*[<{]/.test(line) && !/^\s*\{\s*$/.test(line) && !/=>\s*\{\s*$/.test(line));
+  const statements = (markupAt === -1 ? lines : lines.slice(0, markupAt)).join('\n');
+  const markup = markupAt === -1 ? '' : lines.slice(markupAt).join('\n');
+  const open = app.body.getStart() + 1;
+  const close = app.body.getEnd() - 1;
+  const own = starter.slice(open, close);
+  const ownReturn = /^return\b/m.test(skeleton) ? '' : app.body.statements.filter(ts.isReturnStatement).map((statement) => statement.getText(file)).join('\n');
+  return [
+    `${starter.slice(0, open)}\n${statements}\n${markup ? own.replace(/<\/h\d>/, (heading) => `${heading}\n<>${markup}</>`) : own}${starter.slice(close)}`,
+    `${starter.slice(0, open)}\n${statements}\n${markup ? `return <main>${markup}</main>;` : ownReturn}\n${starter.slice(close)}`,
+  ];
+};
+
 /** Every arrangement of a puzzle's lines whose code passes `checks`, found
  * without trying them all. The function's own first and last lines stay
  * first and last; any body line without a brace may also stand outside the
@@ -759,6 +799,8 @@ async function main() {
   // this test instead of every Submit.
   await prepareReactRuntime();
   lockDownRealm();
+  let skeletonPages = 0;
+  let skeletonMs = 0;
   for (const task of CODING_TASKS) {
     if (task.track !== 'react' || task.verify !== 'tests' || !task.suite) continue;
     if (!ONLY.test(task.id)) continue;
@@ -804,7 +846,24 @@ async function main() {
     } finally {
       testing.configure({ asyncUtilTimeout: fullWait });
     }
+    // The skeleton hint rung, pasted into the starter with its placeholders
+    // left as they are, must not pass either: hints cost no XP. A page that
+    // fails a visible case fails the server's run too, so only one that
+    // passes them all runs again with the hidden cases.
+    const skeletonStarted = Date.now();
+    for (const source of task.skeleton ? skeletonInStarter(ts, task.starter, task.skeleton) : []) {
+      skeletonPages += 1;
+      const shown = await runReactSuite({ suite: task.suite, appSource: source });
+      if (shown.compileError || shown.failed > 0 || shown.total === 0) continue;
+      const run = await runReactSuite({ suite, appSource: source });
+      if (!run.compileError && run.failed === 0 && run.total > 0) {
+        fail(`${where}: the skeleton hint rung, pasted into the starter, already passes every case`);
+        break;
+      }
+    }
+    skeletonMs += Date.now() - skeletonStarted;
   }
+  console.log(`React skeletons: ${skeletonPages} pages of a skeleton pasted into its starter fail their suites (${(skeletonMs / 1000).toFixed(1)} s).`);
 
   /* ── skeletons a learner can follow to a pass ───────────────────────── */
   // The skeleton is the last rung before the documentation, so it has to

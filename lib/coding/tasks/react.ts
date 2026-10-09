@@ -1603,7 +1603,7 @@ useEffect(() => {
 
   loadItems();
 
-  return () => controller.abort();
+  return () => /* abort the controller */;
 }, []);
 
 <p>{items.length} posts</p>`,
