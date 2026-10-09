@@ -233,8 +233,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
   // The runner, and TypeScript's compiler, load while the brief is read: the
   // first Run does not wait for them, and Run still works if the connection
-  // drops afterwards.
-  useEffect(() => (isReact ? undefined : warmRunner(codeTrack)), [isReact, codeTrack]);
+  // drops afterwards. Not while a puzzle or the wait for a bigger screen
+  // stands in for the editor: a phone would download and start a compiler it
+  // has no Run for. Choosing the editor starts it.
+  const editorShown = !puzzleMode && !pendingOnDesktop;
+  useEffect(() => (isReact || !editorShown ? undefined : warmRunner(codeTrack)), [isReact, editorShown, codeTrack]);
   // A Submit's browser preview has nowhere to report once the task is left.
   useEffect(() => () => localRun.current?.abort(), []);
   useEffect(() => { if (verdict) verdictRef.current?.focus(); }, [verdict]);
