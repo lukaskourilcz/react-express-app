@@ -381,6 +381,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         preview.abort();
         // The server's run is the verdict of record; show what it saw.
         setRun({ results: result.results, logs: result.logs, codeError: result.codeError, check: result.check, timedOut: result.verdict === 'timeout' });
+        // About the code just sent, even when the browser's preview, which
+        // would have said so, was overtaken.
+        setStale(false);
         setServerChecked(true);
         const typesBroken = result.check && (result.check.codeErrors.length > 0 || result.check.typeTests.some((one) => !one.pass));
         setTab(result.codeError ? 'results' : typesBroken ? 'types' : 'results');
@@ -955,11 +958,20 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     const typeErrors = run.check ? run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length : 0;
     return typeErrors > 0 ? `${passing}. ${t('coding.types.errors', { n: typeErrors })}` : passing;
   };
-  const announcement = phase === 'running' || phase === 'submitting'
+  // Once the code changes, the results on screen are about earlier code. Read
+  // out again they would sound like news about the new code (the first
+  // keystroke after a failed Submit announced "5 of 5 passing"), so until the
+  // next Run or Submit the region keeps what it last said.
+  const said = useRef('');
+  const fresh = busy
     ? t('coding.status.working')
     : currentVerdict
       ? verdictLabel
-      : runAnnouncement();
+      : stale || (verdictStale && !run && !reactRun)
+        ? null
+        : runAnnouncement();
+  if (fresh !== null) said.current = fresh;
+  const announcement = fresh ?? said.current;
 
   const titleId = `${baseId}-title`;
   const Title = mode === 'section' ? 'h1' : 'h2';
