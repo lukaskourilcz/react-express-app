@@ -1,14 +1,16 @@
 // A learner's code for one task lives in two places: a copy on this device,
 // written when they press Run or Submit, and, signed in, the account draft the
-// server keeps. The task screen and a Learn level's coding step both open the
-// newer of the two and save through here.
+// server keeps. The task screen and a Learn level's coding step both open one
+// of the two and save through here.
 //
-// The device copy records when it was written and the account draft's time
-// as this device last saw it. While the account draft still has that time,
-// nothing else saved it since, and the device copy is the newer whatever the
-// clocks say. Once it has moved, another device (or this one, earlier) saved
-// it, and the two times decide. A device copy from before the times were kept
-// stands, as every device copy used to.
+// The device copy records the account draft's time it builds on: the time
+// the screen loaded, or a later time a save from this device returned. While
+// the account draft still has that time, nothing else saved it since, and the
+// device copy is the newer. Once it has moved, another device (or a save
+// whose answer never came back) wrote it, and nothing here can say which is
+// newer: the clocks of two machines do not. The account draft opens then, and
+// the copy on this device is set aside and offered back, never dropped. A
+// device copy from before these times were kept stands, as every one used to.
 import { queryOptions } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { readJSON, readString, removeStored, writeJSON, writeString } from '../lib/storage';
@@ -20,20 +22,31 @@ const draftKey = (id: string) => `devshark:coding:draft:${id}`;
 const draftTimeKey = (id: string) => `devshark:coding:draft-time:${id}`;
 
 interface DraftTime {
-  /** When this device wrote the copy, in its own clock. */
-  at: number;
-  /** The account draft's updated_at this device had when it did, or null. */
+  /** The account draft's updated_at this copy builds on, or null for none.
+   * It outlives a copy the account took, for the next copy to build on. */
   base: string | null;
 }
+
+/** The record of this device's copy, or null for none (or one from before
+ * the times were kept). */
+function draftTime(id: string): DraftTime | null {
+  const time = readJSON<unknown>(draftTimeKey(id), null);
+  return time && typeof time === 'object' && 'base' in time ? { base: typeof time.base === 'string' ? time.base : null } : null;
+}
+/** The later of two account draft times. Both come from the server's clock,
+ * so unlike a device's time they compare. */
+const later = (a: string | null, b: string | null | undefined): string | null =>
+  !b ? a : !a || Date.parse(b) > Date.parse(a) ? b : a;
 
 /** The copy of a task's code on this device, or null. */
 export const deviceDraft = (id: string): string | null => readString(draftKey(id));
 
 /** Keep `code` on this device. `base` is the account draft's time as this
- * screen loaded it (null for none, or for a guest). */
+ * screen loaded it (null for none, or for a guest); a later one a save from
+ * this device returned counts instead. */
 export function keepDeviceDraft(id: string, code: string, base: string | null = null): void {
   writeString(draftKey(id), code);
-  writeJSON(draftTimeKey(id), { at: Date.now(), base } satisfies DraftTime);
+  writeJSON(draftTimeKey(id), { base: later(base, draftTime(id)?.base) } satisfies DraftTime);
 }
 
 export function forgetDeviceDraft(id: string): void {
@@ -45,43 +58,65 @@ export function forgetDeviceDraft(id: string): void {
 export const fitsDraftLimit = (code: string): boolean => new TextEncoder().encode(code).length <= CODING_CODE_LIMIT_BYTES;
 
 /** Which copy the editor opened when the two differed: 'account' when the
- * account draft was newer and replaced this device's copy, 'device' when this
- * device's copy was newer than the account draft. */
+ * account draft was saved since this device's copy began, which is then set
+ * aside; 'device' when this device's copy builds on the account draft as it
+ * still is. */
 export type DraftConflict = 'account' | 'device';
 
 export interface OpeningDraft {
   code: string | null;
   conflict: DraftConflict | null;
+  /** With 'account': the copy on this device, for the learner to take back. */
+  setAside?: string;
 }
 
-/** The code a task opens with: the newer of this device's copy and the
- * account draft (`account`, saved at `accountAt`). Reads only; a caller that
- * opened the account draft over a device copy forgets the copy itself. */
+/** The code a task opens with: this device's copy or the account draft
+ * (`account`, saved at `accountAt`). Reads only, and drops nothing: a copy
+ * set aside stays on this device until the next Run or Submit replaces it. */
 export function openingDraft(id: string, account: string | null, accountAt: string | null | undefined): OpeningDraft {
   const device = deviceDraft(id);
   if (device === null) return { code: account, conflict: null };
   if (account === null || account === device) return { code: device, conflict: null };
-  const time = readJSON<Partial<DraftTime> | null>(draftTimeKey(id), null);
-  const saved = accountAt ? Date.parse(accountAt) : NaN;
+  const time = draftTime(id);
   // A time missing on either side (a copy from before they were kept, or an
   // evolving stage's start made from the stage before): the copy stands.
-  if (typeof time?.at !== 'number' || !Number.isFinite(saved)) return { code: device, conflict: null };
-  if ((time.base ?? null) === accountAt || saved <= time.at) return { code: device, conflict: 'device' };
-  return { code: account, conflict: 'account' };
+  if (!time || !accountAt) return { code: device, conflict: null };
+  if (time.base === accountAt) return { code: device, conflict: 'device' };
+  return { code: account, conflict: 'account', setAside: device };
 }
+
+// One save per task at a time, in the order they were made: two in flight
+// could land in either order and leave the account holding the older code.
+// A save still waiting when a newer one is made is not sent at all.
+const sending = new Map<string, Promise<void>>();
+const newest = new Map<string, number>();
+let saves = 0;
 
 /** Save the code a learner ran or submitted: on this device first, so a
  * failed account save still leaves it here, then to the account. A save the
  * account took lets the device copy go unless `keepOnDevice` (an evolving
- * stage's code is also the next stage's offline start). Code over the limit
- * is not saved at all: the account would refuse it, and Submit says why. */
-export function saveDraft(id: string, code: string, { signedIn, base, keepOnDevice = false }: { signedIn: boolean; base: string | null; keepOnDevice?: boolean }): void {
-  if (!fitsDraftLimit(code)) return;
+ * stage's code is also the next stage's offline start), and the copy here,
+ * now or next, builds on the time the account returned. Code over the limit
+ * stays on this device only, since the account would refuse it: the answer
+ * is 'tooLarge', and the caller says so. */
+export function saveDraft(id: string, code: string, { signedIn, base, keepOnDevice = false }: { signedIn: boolean; base: string | null; keepOnDevice?: boolean }): 'tooLarge' | null {
   keepDeviceDraft(id, code, base);
-  if (!signedIn) return;
-  saveCodingDraft(id, code).then(() => {
-    if (!keepOnDevice && deviceDraft(id) === code) forgetDeviceDraft(id);
-  }).catch(() => { /* the device copy above stands */ });
+  if (!fitsDraftLimit(code)) return signedIn ? 'tooLarge' : null;
+  if (!signedIn) return null;
+  const turn = ++saves;
+  newest.set(id, turn);
+  const save = (sending.get(id) ?? Promise.resolve()).then(async () => {
+    if (newest.get(id) !== turn) return;
+    try {
+      // No time from a server older than this client: the copy goes as before.
+      const updatedAt = (await saveCodingDraft(id, code))?.updatedAt ?? null;
+      if (updatedAt) writeJSON(draftTimeKey(id), { base: later(updatedAt, draftTime(id)?.base) } satisfies DraftTime);
+      if (deviceDraft(id) === code && !keepOnDevice) removeStored(draftKey(id));
+    } catch { /* the device copy above stands */ }
+  });
+  sending.set(id, save);
+  void save.then(() => { if (sending.get(id) === save) sending.delete(id); });
+  return null;
 }
 
 /** The account draft of one task, with its time. */

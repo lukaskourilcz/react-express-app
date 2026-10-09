@@ -2934,6 +2934,7 @@ test('a moved duplicate keeps its own completion, and undo puts it back',()=>{re
     {from:1, suite:`test('the search matches inside a name, not only its start',()=>{render(<App/>);search('rro');expect(screen.getAllByRole('listitem').length).toBe(1);expect(screen.getByRole('listitem').textContent).toContain('Carrot')});`},
     {from:2, suite:`test('price-asc puts the cheapest first, and a new order goes back to page 1',()=>{render(<App/>);fireEvent.change(screen.getByLabelText('Sort'),{target:{value:'price-asc'}});expect(screen.getAllByRole('listitem')[0].textContent).toContain('Banana');fireEvent.click(screen.getByRole('button',{name:'Next',exact:true}));expect(screen.getByLabelText('Page').textContent).toBe('2 / 2');fireEvent.change(screen.getByLabelText('Sort'),{target:{value:'name'}});expect(screen.getByLabelText('Page').textContent).toBe('1 / 2')});`},
     {from:3, suite:`test('unticking a product takes it out of the selection and the total',()=>{render(<App/>);const apple=screen.getByRole('checkbox',{name:'Apple'});fireEvent.click(apple);fireEvent.click(apple);expect(apple.checked).toBe(false);expect(screen.getByLabelText('Selected total').textContent).toBe('0')});`},
+    {from:4, suite:`test('a new maximum price goes back to page 1 even when the current page still exists',()=>{render(<App/>);fireEvent.click(screen.getByRole('button',{name:'Next',exact:true}));fireEvent.change(screen.getByLabelText('Maximum price'),{target:{value:'10'}});expect(screen.getByLabelText('Page').textContent).toBe('1 / 2')});`},
   ],
   'react-evolving-form': [
     {from:4, suite:`test('a company typed before switching to personal is left out of the review and the receipt',()=>{render(<App/>);fill('Email','a@b.cz');next();fill('Name','Ada');fireEvent.change(screen.getByLabelText('Account type'),{target:{value:'business'}});fill('Company','Sharks');fireEvent.change(screen.getByLabelText('Account type'),{target:{value:'personal'}});next();expect(screen.queryByText('Sharks')).toBeNull();fireEvent.click(screen.getByRole('checkbox',{name:'I agree'}));fireEvent.click(screen.getByRole('button',{name:'Submit',exact:true}));expect(screen.queryByText('Sharks')).toBeNull()});`},
@@ -3020,9 +3021,12 @@ export default function App(){
     earlier => earlier
       .replace('const rows=', `const [maxPrice,setMaxPrice]=useState('');
  // An empty field sets no limit. The page stays where it is when the limit
- // changes; stage four goes back to the first page.
+ // changes; when the shorter list ends before it, its last page shows
+ // instead. Stage four goes back to the first page.
  const rows=`)
       .replace('includes(query.trim().toLowerCase()))', "includes(query.trim().toLowerCase())&&(maxPrice===''||p.price<=Number(maxPrice)))")
+      .replace('const pages=Math.ceil(rows.length/2),visible=rows.slice(page*2,page*2+2);', 'const pages=Math.ceil(rows.length/2),current=Math.min(page,Math.max(0,pages-1)),visible=rows.slice(current*2,current*2+2);')
+      .replace('<button disabled={page===0} onClick={()=>setPage(p=>p-1)}>Previous</button><output aria-label="Page">{pages?page+1:0} / {pages}</output><button disabled={page+1>=pages} onClick={()=>setPage(p=>p+1)}>Next</button>', '<button disabled={current===0} onClick={()=>setPage(current-1)}>Previous</button><output aria-label="Page">{pages?current+1:0} / {pages}</output><button disabled={current+1>=pages} onClick={()=>setPage(current+1)}>Next</button>')
       .replace('</main>', '<label>Maximum price<input type="number" min="0" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)}/></label></main>'),
     earlier => earlier
       .replace(' return <main>', ` // A selected product without an entry in quantities counts once. Every edit

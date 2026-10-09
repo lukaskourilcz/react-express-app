@@ -4,7 +4,8 @@
 // The content audit of 8 October 2026 (C2-2, C2-4 and C2-9) found suites that
 // failed pages their prompt allows, such as a Retry button inside the alert,
 // the starter's own heading or "Loading" in a child of the status region, and
-// suites that passed wrong pages. Each variant here is the task's reference
+// suites that passed wrong pages. Its second pass (V2-1, V2-5) added a heading
+// that shows the loading status and a hover written with pointer events. Each variant here is the task's reference
 // with a few exact edits. A correct one must pass the suite the server runs,
 // visible and hidden cases together, and a wrong one must fail it.
 
@@ -51,6 +52,30 @@ export const REACT_VARIANTS: ReactVariant[] = [
     correct: false,
   },
   {
+    id: 'react-loading-state',
+    note: 'shows "Loading…" in the heading itself, then "Users"',
+    edits: [
+      ['if (loading) return <p>Loading…</p>;', 'if (loading) return <main><h2>Loading…</h2></main>;'],
+      ['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Users</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;'],
+    ],
+    correct: true,
+  },
+  {
+    id: 'react-loading-state',
+    note: 'keeps the starter heading and shows "Loading…" in an h3 under it',
+    edits: [
+      ['if (loading) return <p>Loading…</p>;', 'if (loading) return <main><h2>Loading state</h2><h3>Loading…</h3></main>;'],
+      ['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Loading state</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;'],
+    ],
+    correct: true,
+  },
+  {
+    id: 'react-loading-state',
+    note: 'keeps a "Loading…" heading once the users have arrived',
+    edits: [['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Loading…</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;']],
+    correct: false,
+  },
+  {
     id: 'react-star-rating',
     note: 'marks filled stars with aria-pressed and an emoji star',
     edits: [["onClick={() => setRating(star)}>{star <= shown ? '★' : '☆'}</button>", "onClick={() => setRating(star)} aria-pressed={star <= shown}>{star <= shown ? '⭐' : '·'}</button>"]],
@@ -60,6 +85,15 @@ export const REACT_VARIANTS: ReactVariant[] = [
     id: 'react-star-rating',
     note: 'shows ★ on every star and marks filled ones with a class',
     edits: [["onClick={() => setRating(star)}>{star <= shown ? '★' : '☆'}</button>", "onClick={() => setRating(star)} className={star <= shown ? 'star on' : 'star'}>★</button>"]],
+    correct: true,
+  },
+  {
+    id: 'react-star-rating',
+    note: 'previews with onPointerEnter and onPointerLeave',
+    edits: [
+      ['<div onMouseLeave={() => setHovered(0)}>', '<div onPointerLeave={() => setHovered(0)}>'],
+      ['onMouseEnter={() => setHovered(star)}', 'onPointerEnter={() => setHovered(star)}'],
+    ],
     correct: true,
   },
   {

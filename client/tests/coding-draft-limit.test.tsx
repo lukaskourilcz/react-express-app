@@ -1,8 +1,8 @@
 // C5-4, through the real workbench: an oversize Submit sent its 21.7 kB code
-// as a draft save, which the account refused with 400, and left that copy on
-// the device, before saying the code was too large to submit. Now neither
-// Submit nor Run saves code the account would refuse; code that fits saves
-// as before.
+// as a draft save, which the account refused with 400. The fix then saved
+// such code nowhere, so a reload lost it (V3-3). Now Run and Submit keep it on
+// this device, send no account save, and say why; code that fits saves as
+// before.
 import { beforeAll, expect, it, vi } from 'vitest';
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -39,7 +39,7 @@ const response = {
 } as unknown as CodingTaskResponse;
 vi.mock('../src/coding/api', () => ({
   codingKeys: { task: (id: string) => ['task', id], progress: () => ['progress'], approaches: (id: string) => ['approaches', id] },
-  saveCodingDraft: vi.fn(async () => ({ ok: true })),
+  saveCodingDraft: vi.fn(async () => ({ ok: true, updatedAt: null })),
   submitCoding: vi.fn(),
   revealCoding: vi.fn(),
   useCodingApproaches: () => ({ data: undefined }),
@@ -49,7 +49,7 @@ vi.mock('../src/coding/api', () => ({
 
 beforeAll(() => preloadPath('/coding/javascript/js-test-limit'));
 
-it('saves no draft for code over 20 kB, on Submit or Run, and saves code that fits', async () => {
+it('keeps code over 20 kB on this device only, on Submit or Run, says so, and saves code that fits to the account', async () => {
   render(
     <QueryClientProvider client={new QueryClient()}>
       <MemoryRouter initialEntries={['/coding/javascript/js-test-limit']}>
@@ -58,15 +58,22 @@ it('saves no draft for code over 20 kB, on Submit or Run, and saves code that fi
     </QueryClientProvider>,
   );
   const editor = await screen.findByLabelText('Test editor');
-  fireEvent.change(editor, { target: { value: `const one = () => 1;\n// ${'x'.repeat(21 * 1024)}` } });
+  const kept = 'Your code is over 20 kB, too large to save to your account. It is kept on this device only.';
+  const oversize = `const one = () => 1;\n// ${'x'.repeat(21 * 1024)}`;
+  fireEvent.change(editor, { target: { value: oversize } });
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Submit' })));
   expect(await screen.findByRole('alert')).toHaveTextContent('Your code is over 20 kB, the most one Submit takes.');
+  expect(screen.getByText(kept)).toBeVisible();
+  expect(localStorage.getItem('devshark:coding:draft:js-test-limit')).toBe(oversize);
+  fireEvent.change(editor, { target: { value: `${oversize}// and a little more\n` } });
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Run' })));
   expect(saveCodingDraft).not.toHaveBeenCalled();
   expect(submitCoding).not.toHaveBeenCalled();
-  expect(localStorage.getItem('devshark:coding:draft:js-test-limit')).toBeNull();
+  expect(localStorage.getItem('devshark:coding:draft:js-test-limit')).toBe(`${oversize}// and a little more\n`);
+  expect(screen.getByText(kept)).toBeVisible();
 
   fireEvent.change(editor, { target: { value: 'const one = () => 1;\n' } });
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Run' })));
   expect(saveCodingDraft).toHaveBeenCalledWith('js-test-limit', 'const one = () => 1;\n');
+  expect(screen.queryByText(kept)).toBeNull();
 });

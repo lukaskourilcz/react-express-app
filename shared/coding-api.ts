@@ -167,6 +167,13 @@ export interface CodingDraftResponse {
   updatedAt: string | null;
 }
 
+/** POST /api/user/[op]?op=coding-draft: the time the account now holds the
+ * code just sent, or null when it cannot say (another save landed first). */
+export interface CodingDraftSaveResponse {
+  ok: true;
+  updatedAt: string | null;
+}
+
 /* ── GitHub garden ─────────────────────────────────────────────────────── */
 
 export type GithubConnectionStatus = 'pending_repo' | 'active' | 'broken';

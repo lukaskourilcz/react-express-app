@@ -175,6 +175,19 @@ test('TypeScript: Submit leaves at once, and a runaway type is named as one (C5-
   await expect(page.getByText(/infinite loop|loop whose condition/)).toHaveCount(0);
 });
 
+test('a phone waiting for a bigger screen loads no TypeScript compiler until the editor is chosen (V3-4)', async ({ page }) => {
+  await prepare(page);
+  await page.setViewportSize({ width: 390, height: 844 });
+  const runner: string[] = [];
+  page.on('request', (request) => { if (request.url().includes('/assets/coding-worker/')) runner.push(request.url()); });
+  await page.goto('/coding/typescript/ts-typed-slug');
+  await expect(page.getByText('This challenge needs an editor, so it is waiting for a bigger screen.')).toBeVisible();
+  await page.waitForTimeout(2_000);
+  expect(runner).toEqual([]);
+  await page.getByRole('button', { name: 'Use the editor on this screen' }).click();
+  await expect.poll(() => runner.some((url) => /\/ts-compiler-[\w-]+\.js$/.test(url)), { timeout: 30_000 }).toBe(true);
+});
+
 test('signed in: Skip opens the next challenge without reloading the app (C3-18)', async ({ page }) => {
   const seen = await prepare(page, { signedIn: true });
   await openTask(page, '/coding/javascript/js-count-multiples');
