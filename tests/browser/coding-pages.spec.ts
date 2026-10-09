@@ -3,7 +3,7 @@ import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 import { localAuth, storeFakeSession } from './fake-session';
 
 // The Coding pages against the built app, with the API answered here in its
-// real shapes: a missing track or task (C3-17), a track whose progress does
+// real shapes: a missing track or task (C3-17, V3-2), a track whose progress does
 // not load (C5-5), and a task whose account draft is newer than the copy on
 // this device (C5-4). Nothing leaves the machine.
 
@@ -13,6 +13,11 @@ const TIME = `devshark:coding:draft-time:${TASK}`;
 const PREMIUM = { tier: 'premium', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 const PROGRESS = { tasks: { [TASK]: { status: 'passed', passes: 1, reviewStage: 0, nextReviewAt: null, revealCount: 0, bestPassedAt: null } }, due: [], javascriptLevelsCleared: 0, passedByTrack: {} };
 const notFound = (route: Route) => route.fulfill({ status: 404, json: { error: { code: 'not_found', message: 'Not found' } } });
+// What the coding-task resource answers for an id the catalogue does not hold,
+// whatever its shape (scripts/test-coding-authorization.ts pins it). It used to
+// answer 400 for an id outside the task-id pattern, which this page offered to
+// retry forever (V3-2).
+const unknownTask = (route: Route) => route.fulfill({ status: 404, json: { error: { code: 'not_found', message: 'Unknown task' } } });
 
 interface Api {
   progress?: (route: Route) => Promise<void>;
@@ -50,16 +55,18 @@ test('a track that does not exist has a heading, a way back and no index', async
   await expect(page.getByRole('heading', { level: 1, name: 'Coding challenges' })).toBeVisible();
 });
 
-test('a task that does not exist, loaded directly, says so and leads back to its track', async ({ page }) => {
-  const asked: string[] = [];
-  await answer(page, { task: (route) => { asked.push(new URL(route.request().url()).searchParams.get('id') ?? ''); return notFound(route); } });
-  await page.goto('/coding/javascript/no-such-task');
-  await expect(page.getByRole('heading', { level: 1, name: 'That challenge does not exist.' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
-  expect(asked).toEqual(['no-such-task']);
-  await page.getByRole('link', { name: 'Back to the list' }).click();
-  await expect(page.getByRole('heading', { level: 1, name: 'JavaScript' })).toBeVisible();
-});
+for (const id of ['no-such-task', 'js_digit_sum']) {
+  test(`a task that does not exist (${id}), loaded directly, says so and leads back to its track`, async ({ page }) => {
+    const asked: string[] = [];
+    await answer(page, { task: (route) => { asked.push(new URL(route.request().url()).searchParams.get('id') ?? ''); return unknownTask(route); } });
+    await page.goto(`/coding/javascript/${id}`);
+    await expect(page.getByRole('heading', { level: 1, name: 'That challenge does not exist.' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Try again' })).toHaveCount(0);
+    expect(asked).toEqual([id]);
+    await page.getByRole('link', { name: 'Back to the list' }).click();
+    await expect(page.getByRole('heading', { level: 1, name: 'JavaScript' })).toBeVisible();
+  });
+}
 
 test.describe('signed in', () => {
   test.beforeEach(async ({ page }) => {

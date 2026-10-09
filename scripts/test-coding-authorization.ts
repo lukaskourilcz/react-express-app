@@ -2,6 +2,8 @@
 import './launch-test-env';
 import assert from 'node:assert/strict';
 import { handleCodingSubmit, handleCodingReveal, handleCodingTask } from '../lib/coding/handlers';
+import { CODING_TASKS } from '../lib/coding/catalog';
+import { codingTaskById } from '../lib/coding/active';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 
 const solved = 'const double=ns=>ns.map(n=>n*2)';
@@ -81,5 +83,23 @@ async function main() {
   assert.equal(other.draft, null);
   assert.equal(other.draftUpdatedAt, null, 'no draft, no time');
   console.log('Coding task draft passed: the account\'s own draft opens with its time, and no other account\'s.');
+
+  // V3-2: an id no task could have (/coding/javascript/no-such-task) is as
+  // unknown as one that fits the pattern; both are 404, and the browser shows
+  // its not-found page instead of retrying a 400. No id at all is a bad request.
+  const ask = async (id: unknown) => {
+    const out = response();
+    await handleCodingTask({ method: 'GET', headers: {}, query: id === undefined ? {} : { id } } as never, out as never, null);
+    return { status: out.statusCode, code: errorCode(out.body) };
+  };
+  for (const id of ['no-such-task', 'Counter', 'js_digit_sum', 'js-no-such-task-123']) {
+    assert.deepEqual(await ask(id), { status: 404, code: 'not_found' }, `${id} is not found`);
+  }
+  assert.deepEqual(await ask(undefined), { status: 400, code: 'bad_request' }, 'a request without an id is refused');
+  assert.deepEqual(await ask(['js-digit-sum', 'js-sum-array']), { status: 400, code: 'bad_request' }, 'two ids are refused');
+  const retired = CODING_TASKS.find((task) => !codingTaskById(task.id));
+  if (retired) assert.deepEqual(await ask(retired.id), { status: 410, code: 'task_retired' }, `${retired.id} is retired`);
+  assert.equal((await ask('js-double-numbers')).status, 200, 'a task in the catalogue opens');
+  console.log(`Coding task ids passed: unknown ids are 404 whatever their shape${retired ? ', a retired one 410' : ''}, and a missing id 400.`);
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

@@ -189,7 +189,11 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   if (!codingAvailable()) return notAvailable(res);
   if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingTaskAddress, RATE_LIMITS.codingTask))) return;
   const id = req.query.id;
-  if (!isCodingTaskId(id)) return jsonError(res, 400, 'bad_request', 'A task id is required');
+  if (typeof id !== 'string' || !id) return jsonError(res, 400, 'bad_request', 'A task id is required');
+  // An id no task could have (`/coding/javascript/no-such-task`) is as
+  // unknown as one that fits the pattern, and gets the same answer: the
+  // browser shows its not-found page for a 404 and does not ask again.
+  if (!isCodingTaskId(id)) return jsonError(res, 404, 'not_found', 'Unknown task');
   const task = codingTaskById(id);
   if (!task) {
     // A task that exists but is withheld by the content gate is told apart

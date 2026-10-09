@@ -114,8 +114,9 @@ export function useCodingTask(id: string | undefined) {
     enabled: Boolean(id),
     queryFn: ({ signal }) => fetchCodingTask(id!, signal),
     // Premium (402), an unknown task (404) and a retired one (410) are
-    // answers, not failures to retry.
-    retry: (failures, error) => ![402, 404, 410].includes((error as { status?: unknown } | null)?.status as number) && failures < 1,
+    // answers, not failures to retry, and so is a request the server refused
+    // as malformed (400): sent again, it is refused again.
+    retry: (failures, error) => ![400, 402, 404, 410].includes((error as { status?: unknown } | null)?.status as number) && failures < 1,
     staleTime: 0,
     // Task responses contain an editable starting draft. Do not mount a new
     // stage from an old response while its current draft is being fetched.
