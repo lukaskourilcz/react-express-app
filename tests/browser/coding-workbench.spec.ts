@@ -14,7 +14,7 @@ import { localAuth, storeFakeSession } from './fake-session';
 
 interface Seen { submits: number[]; practiceStarts: unknown[]; documents: string[] }
 
-async function prepare(page: Page, { signedIn = false } = {}): Promise<Seen> {
+async function prepare(page: Page, { signedIn = false, verdict = {} as Record<string, unknown> } = {}): Promise<Seen> {
   const seen: Seen = { submits: [], practiceStarts: [], documents: [] };
   page.on('pageerror', (error) => console.error(error.message));
   page.on('request', (request) => {
@@ -47,7 +47,7 @@ async function prepare(page: Page, { signedIn = false } = {}): Promise<Seen> {
       if (body.code?.includes('type B<')) {
         return route.fulfill({ json: { verdict: 'timeout', results: [], hidden: null, check: null, logs: [], codeError: TYPE_CHECK_STOPPED_MESSAGE, design: null, designReference: null, failureHint: null, puzzle: null, progress: null, firstPass: false, xpAwarded: 0, xpForfeited: false, applied: false, github: null, solutions: null } });
       }
-      return route.fulfill({ json: { verdict: 'passed', results: [{ pass: true, actual: null, error: null }], hidden: null, check: null, logs: [], codeError: null, design: null, designReference: null, failureHint: null, puzzle: null, progress: null, firstPass: false, xpAwarded: 0, xpForfeited: false, applied: false, github: null, solutions: null } });
+      return route.fulfill({ json: { verdict: 'passed', results: [{ pass: true, actual: null, error: null }], hidden: null, check: null, logs: [], codeError: null, design: null, designReference: null, failureHint: null, puzzle: null, progress: null, firstPass: false, xpAwarded: 0, xpForfeited: false, applied: false, github: null, solutions: null, ...verdict } });
     }
     if (op === 'entitlement') return route.fulfill({ json: { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null, billingAccount: false, subscriptionLive: false } });
     if (op === 'coding-progress') return route.fulfill({ json: { tasks: {}, due: [], javascriptLevelsCleared: 0 } });
@@ -199,6 +199,19 @@ test('signed in: Skip opens the next challenge without reloading the app (C3-18)
   await expect(page).toHaveURL(/\/coding\/javascript\/js-digit-sum$/);
   await expect(page.getByRole('heading', { level: 1, name: 'Digit sum' })).toBeVisible();
   expect(seen.documents).toHaveLength(1);
+});
+
+// Owner decision of 9 October 2026 (afternoon): a pass that earns no XP
+// because its task paid XP less than an hour ago says so in a toast, with
+// the time on the learner's own clock, as a replayed Learn level does.
+test('signed in: a pass inside the hour says in a toast when the XP opens again', async ({ page }) => {
+  const opens = new Date(Date.now() + 40 * 60_000).toISOString();
+  await prepare(page, { signedIn: true, verdict: { applied: true, repeatXp: { availableAt: opens, needsReset: true, withheld: 'cooldown' } } });
+  await openTask(page, '/coding/javascript/js-count-multiples');
+  await fillEditor(page, solutionFor('js-count-multiples')!.solution);
+  await page.getByRole('button', { name: 'Submit', exact: true }).click();
+  const time = await page.evaluate((iso) => new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), opens);
+  await expect(page.getByRole('status').filter({ hasText: `No XP this time: reset the task and pass it from ${time} to earn it again.` })).toBeVisible();
 });
 
 test('signed in: Start the run starts a challenge run and opens its first task (C3-1)', async ({ page }) => {

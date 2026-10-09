@@ -4,7 +4,7 @@
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from '../lib/api';
 import { staleProfileStats } from '../lib/queryClient';
-import { syncXpWithServer } from '../lib/xp';
+import { announceVerifiedQuestXp, announceXpHeld, syncXpWithServer } from '../lib/xp';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingApproachesResponse,
@@ -46,8 +46,17 @@ export async function submitCoding(input: CodingSubmitRequest): Promise<CodingVe
   // A recorded pass is a streak day.
   if (result.applied && result.verdict === 'passed') staleProfileStats();
   // The pass's XP exists only on the server until a sync, and a later silent
-  // sync would mark the rank it crosses as seen: announce it now.
-  if (result.xpAwarded > 0) void syncXpWithServer({ announceRankUp: true });
+  // sync would mark the rank it crosses as seen: announce the gain, then the
+  // rank. A pass that is no first pass paid the task's XP again (058).
+  if (result.xpAwarded > 0) {
+    announceVerifiedQuestXp(result.xpAwarded, result.firstPass ? 'coding' : 'again');
+    void syncXpWithServer({ announceRankUp: true });
+  } else if (result.applied && result.verdict === 'passed' && result.repeatXp?.withheld) {
+    // A pass the repeat rule (058) paid nothing. The toast says what earns
+    // the XP again: a reset, and a pass from the hour on, when it is not up.
+    const at = result.repeatXp.availableAt;
+    announceXpHeld({ on: 'task', availableAt: at && Date.parse(at) > Date.now() ? at : null });
+  }
   return result;
 }
 
