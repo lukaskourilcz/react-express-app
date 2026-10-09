@@ -244,6 +244,32 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean } = {}) {
   console.log('PASS integrity: a React runner outage is not recorded as the learner\'s error');
 }
 
+// ── a checkpoint hands over nothing that passes its milestone ───────────
+// A pass of a checkpoint (`…-start`) and a reveal there serve that
+// checkpoint's own reference and no boards; that reference fails the
+// milestone after it. The free stage one of the expression engine used to
+// open Premium milestone 1's three solutions (C2-1).
+{
+  const db = codingDatabase();
+  const learner = 'user-cccc-3333';
+  const auth = { authorization: 'Bearer local-test', 'x-forwarded-for': '203.0.113.31' };
+  const id = 'js-evolving-calculator-1-start';
+  const session = encodeCodingSession({ taskId: id, track: 'javascript', userId: null });
+  const reply = () => ({ statusCode: 200, body: null as null | { verdict?: string; solutions?: unknown; solution?: string }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } });
+  const pass = reply();
+  await handleCodingSubmit({ method: 'POST', headers: auth, query: {}, body: { session, code: solutionFor(id)!.solution, user_id: learner } } as never, pass as never, db.client as never);
+  assert.equal(pass.statusCode, 200, JSON.stringify(pass.body));
+  assert.equal(pass.body?.verdict, 'passed');
+  assert.equal(pass.body?.solutions, null, 'a checkpoint pass opens no junior or senior board');
+  const reveal = reply();
+  await handleCodingReveal({ method: 'POST', headers: auth, query: {}, body: { session, hintsUsed: 0, user_id: learner } } as never, reveal as never, db.client as never);
+  assert.equal(reveal.statusCode, 200, JSON.stringify(reveal.body));
+  const milestone = CODING_TASKS.find((task) => task.id === 'js-evolving-calculator-1')!;
+  const pasted = await runChecks({ code: reveal.body?.solution ?? '', visible: milestone.tests!, hidden: solutionFor(milestone.id)!.hiddenTests!, shuffle: (list) => list });
+  assert.ok(!allPassed(pasted.visible) || (pasted.hidden !== null && !allPassed(pasted.hidden)), 'the revealed checkpoint reference does not pass the milestone');
+  console.log('PASS integrity: a checkpoint pass and reveal hand over nothing that passes its milestone');
+}
+
 // ── a pass after a reveal says it paid nothing, and only then ───────────
 // Migration 048 pays no XP (and so no coins) for a first pass after the
 // learner revealed that task's solution. The verdict says so in
