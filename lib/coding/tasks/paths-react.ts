@@ -107,11 +107,13 @@ export default function App({ loadUsers = sampleUsers }) {
     suites: [
       `// A loaded list shows within milliseconds; a page that never shows it
 // fails each check in 300 ms instead of Testing Library's 1 s, so the whole
-// suite stays well inside the grader's time limit.
+// suite stays well inside the grader's time limit. The first check also pays
+// for a cold grader's first render, so it waits up to 1 s.
 const soon={timeout:300};
+const first={timeout:1000};
 const users=[{id:1,name:'Ada'},{id:2,name:'Linus'}];
 const names=()=>screen.getAllByRole('listitem').map((item)=>item.textContent);
-test('shows Loading, then the users',async()=>{let calls=0;render(<App loadUsers={()=>{calls+=1;return Promise.resolve(users);}}/>);expect(screen.getByRole('status').textContent).toBe('Loading');await screen.findByText('Linus',{},soon);expect(screen.queryByRole('status')).toBeNull();expect(names()).toEqual(['Ada','Linus']);expect(calls).toBe(1);});
+test('shows Loading, then the users',async()=>{let calls=0;render(<App loadUsers={()=>{calls+=1;return Promise.resolve(users);}}/>);expect(screen.getByRole('status').textContent).toBe('Loading');await screen.findByText('Linus',{},first);expect(screen.queryByRole('status')).toBeNull();expect(names()).toEqual(['Ada','Linus']);expect(calls).toBe(1);});
 test('an empty result says so',async()=>{render(<App loadUsers={()=>Promise.resolve([])}/>);expect((await screen.findByText('No users',{},soon)).textContent).toBe('No users');expect(screen.queryAllByRole('listitem').length).toBe(0);});`,
       `// The alert's own words: a Retry button may sit inside it.
 const message=(node)=>{const copy=node.cloneNode(true);copy.querySelectorAll('button').forEach((button)=>button.remove());return copy.textContent.trim();};
