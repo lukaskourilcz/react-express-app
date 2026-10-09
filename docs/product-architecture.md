@@ -414,7 +414,14 @@ checklist tasks, passing any code, are graded by suites like the rest since
 29 September 2026. The grader still accepts a `verify: 'checklist'` task, but
 its pass is only the learner's word: it is recorded as unverified, with no XP
 and so no coins, no link to a Learn level attempt, and no junior and senior
-solutions. See
+solutions. Such an old pass, or a React pass the browser reported between 3
+and 29 September, no longer blocks the task's XP (migration 058, owner
+decision of 9 October 2026): the first verified pass pays it and its coins,
+once per account and task, and the old pass stays on record. An account
+already paid for the task, under `coding:<account>:<task>` or the
+`coding:<task>` id of 025-038, is not paid again, and a reveal recorded
+before that pass still forfeits it. Like any pass, the old one still opens
+the approaches and the solution. See
 [`react-grading-operations.md`](./react-grading-operations.md). The
 self-hosted `client/sandbox/` iframe stays for the preview and for the Run
 button's immediate feedback, but the verdict of record is the server's.
@@ -425,9 +432,11 @@ Inside the level the workbench stays on screen with the solution open, and the
 learner finishes the level when they are done reading.
 A reveal before the task's first pass also costs that task its XP and coins:
 from migration 048 the first pass after a recorded reveal pays nothing, and the
-verdict says so with `xpForfeited` (set only when no XP was paid and the
-progress row showed a reveal before the pass, so a database without 048, which
-still pays, never reads as a forfeit). The workbench says this in the reveal
+verdict says so with `xpForfeited`. From migration 058 the routine reports it
+itself, which also covers a first verified pass after an old unverified one;
+without 058 the API sets it only when no XP was paid and the progress row
+showed a reveal before the pass, so a database without 048, which still pays,
+never reads as a forfeit. The workbench says this in the reveal
 confirmation for a signed-in learner who has not passed the task, and shows
 "Passed — no XP because the solution was revealed" on such a pass; after a
 recorded pass the solution opens without the warning, since it costs nothing.
@@ -475,7 +484,12 @@ the device copy records when it was written and the account draft's
 `updated_at` it was written against, the task response carries
 `draftUpdatedAt`, and when the copies differ the page says which one is open.
 Tiers
-open in order (`tierUnlocked`) except in the unladdered tracks — system design
+open in order (`tierUnlocked`): 1 and 2 at once, 3 after every task of tiers
+1 and 2 of that track, and JavaScript's 3 also after the ten JavaScript Learn
+levels, which open no other track's (owner decision of 9 October 2026); 4
+after 80 % of tier 3 and 5 after 80 % of tier 4. The task page, a practice
+run, a skip's suggestion and the browser all ask that one rule, except in the
+unladdered tracks — system design
 is drilled rather than climbed, and `algorithms` is interview preparation a
 learner arrives at with a date in the diary, where a locked tier would withhold
 the very challenge they came for. Each challenge also carries Easy, Medium or
