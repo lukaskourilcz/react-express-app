@@ -250,7 +250,9 @@ async function main() {
       assert.equal(finished.statusCode, 200, `a finished run is recorded on ${shape} (${JSON.stringify(finished.body)})`);
       assert.deepEqual({ awarded: finished.body.awarded, xp: finished.body.xp }, { awarded: true, xp: 10 });
       const completions = calls.filter((call) => call.name === 'record_challenge_completion');
-      const expectedOutcomes = bank.map((question, i) => ({ questionId: question.id, category: question.category, isCorrect: i < 2 }));
+      // From 058 each answer also carries its XP, so the routine can pay a
+      // question only an hour after it last paid (5 a correct answer, 0 a wrong one).
+      const expectedOutcomes = bank.map((question, i) => ({ questionId: question.id, category: question.category, isCorrect: i < 2, xp: i < 2 ? 5 : 0 }));
       assert.deepEqual(completions[0]?.args.p_outcomes, expectedOutcomes, `the run's answers go with their categories (${shape})`);
       assert.equal(completions[0]?.args.p_xp, 10, 'the Challenge XP is unchanged');
       if (shape === '052') {
