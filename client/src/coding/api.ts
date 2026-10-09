@@ -8,6 +8,7 @@ import { syncXpWithServer } from '../lib/xp';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingApproachesResponse,
+  CodingDraftSaveRequest,
   CodingDraftSaveResponse,
   CodingProgressResponse,
   CodingRevealRequest,
@@ -56,8 +57,10 @@ export function fetchCodingProgress(signal?: AbortSignal): Promise<CodingProgres
   return apiFetch<CodingProgressResponse>(`${USER}?op=coding-progress`, { signal });
 }
 
-export function saveCodingDraft(id: string, code: string): Promise<CodingDraftSaveResponse> {
-  return apiFetch<CodingDraftSaveResponse>(`${USER}?op=coding-draft`, { method: 'POST', body: JSON.stringify({ id, code }) });
+/** `base`: the account draft's time the code builds on, null for none. The
+ * server refuses the save with 409 draft_conflict when its draft moved since. */
+export function saveCodingDraft(id: string, code: string, base: string | null): Promise<CodingDraftSaveResponse> {
+  return apiFetch<CodingDraftSaveResponse>(`${USER}?op=coding-draft`, { method: 'POST', body: JSON.stringify({ id, code, base } satisfies CodingDraftSaveRequest) });
 }
 
 export function fetchGithubConnection(signal?: AbortSignal): Promise<GithubConnectionResponse> {

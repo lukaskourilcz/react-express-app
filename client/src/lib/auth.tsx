@@ -7,12 +7,14 @@ import {
   loadSupabase,
   mayHaveSession,
   onSupabaseAuthStateChange,
+  storedSessionUserId,
   supabaseForSession,
   supabaseLoadFailed,
 } from './supabaseClient';
 import { apiFetch } from './api';
 import { registerAccessTokenReader } from './roadmap';
-import { clearAccountData } from './accountData';
+import { clearAccountData, forgetOthersKeptDrafts } from './accountData';
+import { readString, removeStored, writeString } from './storage';
 import { clearAuthReturn, clearSignInResume, currentReturnPath, markSignInResume, rememberAuthReturn, takeSignInResume } from './authReturn';
 import { RELOAD_GRACE_MS, browserRecovery, isChunkLoadError, reloadOnPress, type Recovery } from './routeRecovery';
 
@@ -69,6 +71,19 @@ let resumePending = typeof window !== 'undefined' && takeSignInResume();
 // then does a SIGNED_OUT forget the account's data on this device; supabase-js
 // also sends one for a guest's failed OAuth return, and a guest keeps theirs.
 let accountSignedIn = typeof window !== 'undefined' && hasStoredSession();
+// Which account that is: supabase-js removes a session it cannot refresh
+// before it says SIGNED_OUT, so the id is read while there is one.
+let accountId = typeof window !== 'undefined' ? storedSessionUserId() : null;
+/** The account signed in on this page, or null. */
+export const signedInAccount = (): string | null => (accountSignedIn ? accountId : null);
+
+// A Log out the learner pressed, here or in another tab of this browser
+// (supabase-js tells the others with its own SIGNED_OUT). Any other SIGNED_OUT
+// of an account (a refresh refused: the session expired or was revoked, or
+// the password changed elsewhere) keeps its coding drafts for it.
+const CHOSEN = 'devshark:signed-out-by-choice';
+const chooseSignOut = () => writeString(CHOSEN, String(Date.now()));
+const signOutChosen = () => Date.now() - Number(readString(CHOSEN)) < 30_000;
 
 /** How far a sign-out reaches. `local` ends this browser's session only (the
  * header's Log out); `global` also ends every other session of the account,
@@ -96,6 +111,10 @@ interface AuthContextValue {
    * PASSWORD_RECOVERY), until it signs out. The app shell then opens
    * /reset-password once, wherever the link landed. */
   passwordRecovery: boolean;
+  /** The session ended without the learner choosing it and coding drafts
+   * were kept for the account, until a sign-in or `dismissDraftsKept`. */
+  draftsKept: boolean;
+  dismissDraftsKept: () => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -110,6 +129,8 @@ const AuthContext = createContext<AuthContextValue>({
   signOut: async () => {},
   signInResumeFailed: false,
   passwordRecovery: false,
+  draftsKept: false,
+  dismissDraftsKept: () => {},
 });
 
 export function AuthProvider({ children, recovery = browserRecovery }: {
@@ -123,6 +144,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
   const [isLoading, setIsLoading] = useState(mayHaveSession);
   const [signInResumeFailed, setSignInResumeFailed] = useState(false);
   const [passwordRecovery, setPasswordRecovery] = useState(false);
+  const [draftsKept, setDraftsKept] = useState(false);
   const graceTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(graceTimer.current), []);
 
@@ -183,9 +205,9 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     let initialized = false;
     const unsubscribe = onSupabaseAuthStateChange((event, session) => {
       cachedAccessToken = session?.access_token ?? null;
+      if (session?.user) signedIn(session.user.id);
       setUser(session?.user ?? null);
       setIsLoading(false);
-      if (session?.user) accountSignedIn = true;
       if (event === 'INITIAL_SESSION') initialized = true;
       if ((event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') && initialized && session?.user) reportSignIn();
       if (event === 'PASSWORD_RECOVERY') setPasswordRecovery(true);
@@ -194,8 +216,11 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
         clearSignInReport();
         // The next person on this device starts from nothing, not from the
         // progress, XP, coins, bookmarks and drafts of the account that left.
-        if (accountSignedIn) clearAccountData();
+        // A session that ended on its own keeps the coding drafts for that
+        // account alone, and says so.
+        if (accountSignedIn && clearAccountData(signOutChosen() ? null : accountId)) setDraftsKept(true);
         accountSignedIn = false;
+        accountId = null;
       }
     });
 
@@ -217,8 +242,8 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     void withDeadline(getSupabaseSession(), AUTH_BOOT_TIMEOUT_MS)
       .then((session) => {
         cachedAccessToken = session?.access_token ?? null;
+        if (session?.user) signedIn(session.user.id);
         setUser(session?.user ?? null);
-        if (session?.user) accountSignedIn = true;
       })
       .catch(() => {
         cachedAccessToken = null;
@@ -228,6 +253,17 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
 
     return unsubscribe;
   }, []);
+
+  // An account is here. Drafts an involuntary sign-out kept for another
+  // account are deleted unread; its own come back when it opens a coding
+  // task (coding/drafts.ts).
+  function signedIn(id: string) {
+    accountSignedIn = true;
+    accountId = id;
+    forgetOthersKeptDrafts(id);
+    removeStored(CHOSEN);
+    setDraftsKept(false);
+  }
 
   const signInWithGoogle = async (returnTo?: string) => {
     // A sign-in from anywhere else must not inherit an older page's return.
@@ -248,6 +284,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
     clearSignInReport();
     clearAccountData();
     accountSignedIn = false;
+    accountId = null;
     setPasswordRecovery(false);
     setUser(null);
   };
@@ -261,6 +298,7 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
   // anyway; the server's copy of this session lapses with its refresh token.
   // Signing out everywhere does need the server, and still says it failed.
   const signOut = async (scope: SignOutScope = 'local') => {
+    chooseSignOut();
     const client = await supabaseForSession();
     if (!client) {
       // supabase-js could not load (offline, a failed download).
@@ -273,12 +311,13 @@ export function AuthProvider({ children, recovery = browserRecovery }: {
       forgetSessionHere();
       return;
     }
+    removeStored(CHOSEN);
     throw error;
   };
 
   return (
     <AuthContext.Provider
-      value={{ user, isAuthenticated: !!user, isLoading, signInWithGoogle, signOut, signInResumeFailed, passwordRecovery }}
+      value={{ user, isAuthenticated: !!user, isLoading, signInWithGoogle, signOut, signInResumeFailed, passwordRecovery, draftsKept, dismissDraftsKept: () => setDraftsKept(false) }}
     >
       {children}
     </AuthContext.Provider>

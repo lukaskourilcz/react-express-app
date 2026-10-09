@@ -70,10 +70,13 @@ export interface CodingWorkbenchProps {
   /** The parent's save-for-later control, rendered beside the report flag. */
   saveAction?: ReactNode;
   /** Called with the current code when the learner presses Run or Submit —
-   * the two moments they have said the code is worth keeping. Nothing is
-   * saved while they type, and nothing when they leave. 'tooLarge': the code
-   * was kept on this device only, too large for the account. */
+   * the two moments they have said the code is worth keeping for the
+   * account. 'tooLarge': the code was kept on this device only, too large
+   * for the account. */
   onDraft?: (code: string) => 'tooLarge' | null | void;
+  /** Called with the code after every edit (typing, Reset, Format). The
+   * parent keeps a device copy once the learner pauses (coding/drafts.ts). */
+  onEdit?: (code: string) => void;
   onVerdict?: (verdict: CodingVerdictResponse, submittedCode?: string) => void;
   onRevealed?: () => void;
   nextHref?: string | null;
@@ -137,7 +140,7 @@ function useOnline(): boolean {
 }
 
 export function CodingWorkbench(props: CodingWorkbenchProps) {
-  const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction } = props;
+  const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onEdit, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction } = props;
   const evolution = evolvingStage(task.id);
   const { t, lang } = useLanguage();
   const [reportOpen, setReportOpen] = useState(false);
@@ -150,6 +153,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const checklist = task.verify === 'checklist';
 
   const [code, setCode] = useState<string>(initialCode ?? task.starter);
+  const shownCode = useRef(code);
+  shownCode.current = code;
   const [formattedCode, setFormattedCode] = useState<string>(task.starter);
   const [formatSource, setFormatSource] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -276,10 +281,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const onCodeChange = useCallback((next: string) => {
     setCode(next);
+    onEdit?.(next);
     if (run || harness.run) setStale(true);
     if (verdict) setVerdictStale(true);
     setServerChecked(false);
-  }, [run, harness.run, verdict]);
+  }, [run, harness.run, verdict, onEdit]);
 
   const files = useCallback(() => ({ '/App.js': code, '/App.test.js': task.suite ?? '' }), [code, task.suite]);
 
@@ -415,12 +421,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     try {
       const formatted = await formatCode(code, task.track);
       setCode(current => current === code ? formatted : current);
+      // Kept as typed code is, unless the learner typed on meanwhile.
+      if (shownCode.current === code) onEdit?.(formatted);
       setFormattedCode(formatted);
       setFormatError(null);
     } catch (error) {
       setFormatError(String((error as Error)?.message ?? error).split('\n')[0]);
     }
-  }, [code, task.track]);
+  }, [code, task.track, onEdit]);
 
   /** Send an arrangement. It goes through the same submit route as code, and
    * the server grades it the same from any device — the viewport decided what
@@ -446,6 +454,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const reset = useCallback(() => {
     setCode(task.starter);
+    onEdit?.(task.starter);
     setFormattedCode(task.starter);
     setRun(null);
     setStale(false);
@@ -455,7 +464,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     // Reset is off now (there is nothing left to reset), so focus goes to the
     // code that was just replaced rather than to the page.
     editorPaneRef.current?.querySelector<HTMLElement>('.cm-content')?.focus();
-  }, [task.starter]);
+  }, [task.starter, onEdit]);
 
   const confirmSkip = useCallback(async () => {
     if (skipSubmitting) return;

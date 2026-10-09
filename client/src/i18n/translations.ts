@@ -327,6 +327,7 @@ export const en = {
   'auth.signInFailed': 'Sign-in failed. Try again.',
   'auth.signOutFailed': 'Sign-out failed. Check your connection and try again.',
   'auth.signupBonusToast': '+{tokens} welcome coins',
+  'auth.signedOutKept': 'You were signed out — sign in to keep your code.',
   'auth.profile': 'Profile',
   'auth.account': 'Account',
   'auth.accountRetry': 'Account did not load. Try again',
@@ -1625,6 +1626,9 @@ export const en = {
   'coding.draft.deviceRestored': 'The code from this device is open. Run or Submit to save it to your account in place of the draft there.',
   'coding.draft.deviceNewer': 'The code on this device is newer than the draft saved to your account, so it is open here. Run or Submit to save it to your account.',
   'coding.draft.tooLarge': 'Your code is over 20 kB, too large to save to your account. It is kept on this device only.',
+  // What a task says when its copies part ways (another device saved since,
+  // a copy set aside, code kept for a signed-out account) lives in
+  // translations.drafts.ts, which only the coding chunk loads.
   'coding.retry': 'Try again',
   'coding.planFailed': 'We could not load your plan, so no challenge here carries the Premium mark. Opening one checks your plan.',
   'coding.offline': 'You are offline. Run still works; Submit needs a connection.',
