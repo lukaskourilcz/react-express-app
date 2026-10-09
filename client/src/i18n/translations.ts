@@ -1269,6 +1269,7 @@ export const en = {
   'coding.difficulty.hard': 'Hard',
   'coding.difficulty.prefix': 'Difficulty',
   'coding.lock.foundations': 'Opens after Learn JavaScript levels 1–10, or after every task of the first two tiers in this track.',
+  'coding.lock.sweep': 'Opens after every task of the first two tiers in this track.',
   'coding.lock.tier3': 'Opens after 80 % of the Combine tier.',
   'coding.lock.tier4': 'Opens after 80 % of the Interview tier.',
   // ── Free tier and Premium (shared/tiers.ts, issue #220) ─────────────────

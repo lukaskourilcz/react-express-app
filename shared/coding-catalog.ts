@@ -330,7 +330,8 @@ export const METHOD_TAGS: readonly string[] = CODING_TECHNIQUE_GROUPS['array-met
  * so a foundation task is worth half a level. */
 export const CODING_TASK_XP: Record<CodingTier, number> = { 1: 25, 2: 35, 3: 50, 4: 75, 5: 120 };
 
-/** Learn levels of the `javascript` topic that count as the foundations. */
+/** Learn levels of the `javascript` topic that count as the foundations.
+ * Clearing them opens JavaScript tier 3, and no other track's. */
 export const CODING_FOUNDATION_LEVELS = 10;
 
 export interface CodingProgressSummary {
@@ -362,10 +363,13 @@ const tierPassRatio = (tier: CodingTier, input: CodingLadderInput): number => {
  * Both still grade, award XP and record history exactly like any other task. */
 const UNLADDERED_TRACKS: readonly CodingTrack[] = ['system-design', 'algorithms'];
 
-/** The difficulty ladder. Tiers 1 and 2 are always open; 3 opens after the
- * Learn foundations or a clean sweep of tiers 1–2 in that track; 4 after 80 %
- * of tier 3; 5 (React capstones) after 80 % of tier 4. The unladdered tracks
- * have no ladder: every one of their challenges is open. */
+/** The difficulty ladder. Tiers 1 and 2 are always open; 3 opens after a
+ * clean sweep of tiers 1–2 in that track, and JavaScript's also after the
+ * JavaScript Learn foundations (owner decision, 9 October 2026: the Learn
+ * levels teach JavaScript, so they open no other track); 4 after 80 % of
+ * tier 3; 5 (React capstones) after 80 % of tier 4. The unladdered tracks
+ * have no ladder: every one of their challenges is open. The task page, a
+ * practice run, a skip's suggestion and the browser all ask this one rule. */
 export function tierUnlocked(input: CodingLadderInput): boolean {
   if (UNLADDERED_TRACKS.includes(input.track)) return true;
   switch (input.tier) {
@@ -373,7 +377,7 @@ export function tierUnlocked(input: CodingLadderInput): boolean {
     case 2:
       return true;
     case 3:
-      return input.javascriptLevelsCleared >= CODING_FOUNDATION_LEVELS ||
+      return (input.track === 'javascript' && input.javascriptLevelsCleared >= CODING_FOUNDATION_LEVELS) ||
         (tierPassRatio(1, input) >= 1 && tierPassRatio(2, input) >= 1);
     case 4:
       return tierPassRatio(3, input) >= 0.8;
@@ -384,10 +388,12 @@ export function tierUnlocked(input: CodingLadderInput): boolean {
   }
 }
 
-/** Why a tier is locked, as a translation-key suffix (`coding.lock.<reason>`). */
-export function tierLockReason(input: CodingLadderInput): 'foundations' | 'tier3' | 'tier4' | null {
+/** Why a tier is locked, as a translation-key suffix (`coding.lock.<reason>`).
+ * JavaScript tier 3 names both ways in (`foundations`); every other track's
+ * names the sweep alone (`sweep`). */
+export function tierLockReason(input: CodingLadderInput): 'foundations' | 'sweep' | 'tier3' | 'tier4' | null {
   if (tierUnlocked(input)) return null;
-  if (input.tier === 3) return 'foundations';
+  if (input.tier === 3) return input.track === 'javascript' ? 'foundations' : 'sweep';
   if (input.tier === 4) return 'tier3';
   return 'tier4';
 }

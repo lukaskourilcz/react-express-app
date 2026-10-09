@@ -156,7 +156,7 @@ Difficulty ladder:
 | --- | --- |
 | 1 Foundations | always |
 | 2 Fluency | always |
-| 3 Combine | Learn `javascript` levels 1–10 cleared, or every tier 1–2 task of that track passed |
+| 3 Combine | every tier 1–2 task of that track passed; for JavaScript only, also Learn `javascript` levels 1–10 cleared |
 | 4 Interview | 80 % of tier 3 passed in that track |
 | 5 Capstones (React) | tier 4 of `react` 80 % passed |
 

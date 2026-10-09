@@ -20,7 +20,7 @@ export interface CodingTaskProgress {
   bestPassedAt: string | null;
 }
 
-export type CodingLockReason = 'foundations' | 'tier3' | 'tier4' | 'evolving';
+export type CodingLockReason = 'foundations' | 'sweep' | 'tier3' | 'tier4' | 'evolving';
 
 /** GET ?resource=coding-task&id=… */
 export interface CodingTaskResponse {
