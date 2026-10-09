@@ -366,6 +366,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         void runCodeTests({ track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, signal: preview.signal }).then((local) => {
           if (preview.signal.aborted) return;
           setRun(local);
+          setServerChecked(false);
           setStale(false);
           if (!local.runnerUnavailable && !runPassed(local)) setFailedRun(true);
         });
