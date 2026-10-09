@@ -67,14 +67,19 @@ function onDevice(code: string, at: number, base: string | null) {
   localStorage.setItem(COPY, code);
   localStorage.setItem(TIME, JSON.stringify({ at, base }));
 }
+/** The task screen. `refetch` draws it again on the response `serve` set
+ * last, as a refetch of the task hands the screen a new one. */
 function mount() {
-  return render(
-    <QueryClientProvider client={new QueryClient()}>
+  const client = new QueryClient();
+  const tree = () => (
+    <QueryClientProvider client={client}>
       <MemoryRouter initialEntries={[`/coding/javascript/${ID}`]}>
         <LanguageProvider><Routes><Route path="/coding/:track/:taskId" element={<CodingTaskScreen />} /></Routes></LanguageProvider>
       </MemoryRouter>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const view = render(tree());
+  return { ...view, refetch: () => view.rerender(tree()) };
 }
 const ACCOUNT_NEWER = 'Your account’s draft was saved from somewhere else after this device last saw it, so it is open here. The code from this device is kept until you Run or Submit.';
 const DEVICE_NEWER = 'The code on this device is newer than the draft saved to your account, so it is open here. Run or Submit to save it to your account.';
@@ -124,6 +129,19 @@ it('opens an account draft saved elsewhere since this device’s copy, keeps the
   mount();
   expect(screen.getByLabelText('Code')).toHaveValue('// A3');
   expect(screen.getByRole('status')).toHaveTextContent(DEVICE_NEWER);
+});
+
+it('keeps the editor on the copy it took back, and what was typed since, through a refetch of the task', () => {
+  const saved = iso(NOW - minutes(1));
+  onDevice('// A3', NOW - minutes(2), null);
+  serve('// B2', saved);
+  const view = mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Open the code from this device' }));
+  fireEvent.change(screen.getByLabelText('Code'), { target: { value: '// A3, and more typed since' } });
+  serve('// B2', saved);
+  view.refetch();
+  expect(screen.getByLabelText('Code')).toHaveValue('// A3, and more typed since');
+  expect(note()).toHaveTextContent(RESTORED);
 });
 
 it('still offers the copy from this device after the learner ran the account draft', async () => {

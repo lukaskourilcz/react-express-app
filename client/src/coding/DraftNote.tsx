@@ -9,17 +9,19 @@ import { keepDeviceDraft, type OpeningDraft } from './drafts';
 /** The code the editor opens with, and the learner's choice to take back the
  * copy from this device instead. A restored copy is kept here as building on
  * the account draft now open, so the next visit opens it too. The choice
- * belongs to one load: a new `opening` starts over. The editor reads its code
- * once, so the caller keys it by `restored`. */
+ * lasts while this task is open, through a refetch of its draft, and starts
+ * over on another task. The editor reads its code once, so the caller keys it
+ * by `restored`. */
 export function useDraftChoice(id: string | null, opening: OpeningDraft | null, accountAt: string | null | undefined) {
-  const [restoredFrom, setRestoredFrom] = useState<OpeningDraft | null>(null);
-  const restored = opening !== null && restoredFrom === opening && opening.setAside !== undefined;
+  const [taken, setTaken] = useState<{ id: string | null; code: string | null }>({ id, code: null });
+  if (taken.id !== id) setTaken({ id, code: null });
+  const restored = taken.id === id && taken.code !== null;
   const restore = () => {
     if (!id || opening?.setAside === undefined) return;
     keepDeviceDraft(id, opening.setAside, accountAt ?? null);
-    setRestoredFrom(opening);
+    setTaken({ id, code: opening.setAside });
   };
-  return { code: restored ? opening.setAside! : opening?.code ?? null, restored, restore };
+  return { code: restored ? taken.code : opening?.code ?? null, restored, restore };
 }
 
 export function DraftNote({ opening, restored, onRestore }: { opening: OpeningDraft | null; restored: boolean; onRestore: () => void }) {
