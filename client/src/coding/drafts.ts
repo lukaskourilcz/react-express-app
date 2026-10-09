@@ -298,7 +298,7 @@ export function keepDraftOverConflict(id: string, options: Omit<SaveOptions, 'ba
   const at = conflicts.get(id);
   if (!at) return;
   flushAutosave(id);
-  builtOn.set(id, baseOf(id, at) ?? at);
+  builtOn.set(id, at);
   setConflict(id, null);
   const code = deviceDraft(id);
   if (code !== null) saveDraft(id, code, { ...options, base: at });
