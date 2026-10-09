@@ -3390,6 +3390,45 @@ async function main() {
       if (activity.reuseTaskId) assert.notEqual(codingTaskById(activity.reuseTaskId)?.track, 'system-design', `${activity.id} reuses no system-design task`);
     }
   }
+  // System design is hidden (owner decision, 9 Oct 2026). Its tasks and graders
+  // stay authored, and the walkthrough and drill grading above still runs
+  // against them, but nothing issues one: no summary, no browser index, no
+  // Learn level, no run, no skip suggestion; the task resource answers 404 (as
+  // for an id that never existed, not 410), and Submit and the reveal refuse a
+  // sealed session for one before anything is graded.
+  {
+    const hidden = CODING_TASKS.filter((task) => task.track === 'system-design');
+    assert.equal(hidden.length, 45, 'the 45 system design tasks stay in the repository for their review');
+    assert.ok(hidden.every((task) => solutionFor(task.id) !== undefined || task.design || task.drill), 'with their answer keys');
+    assert.deepEqual(CODING_SUMMARIES.filter((task) => !isCodingSectionTrack(task.track)).map((task) => task.id), [], 'no summary is on a hidden track');
+    assert.deepEqual(CODING_INDEX.filter((task) => !isCodingSectionTrack(task.track)).map((task) => task.id), [], 'the browser index holds no hidden task');
+    let caller = 0;
+    const guestAsk = (resource: string, query: Record<string, unknown>, body?: Record<string, unknown>) => {
+      caller += 1;
+      return { method: body ? 'POST' : 'GET', headers: { 'x-forwarded-for': `198.20.${caller >> 8}.${caller & 255}` }, query: { resource, ...query }, ...(body ? { body } : {}) };
+    };
+    for (const task of hidden) {
+      assert.equal(codingTaskById(task.id), undefined, `${task.id} is not issued`);
+      const asked = mockResponse();
+      await roadmapHandler(guestAsk('coding-task', { id: task.id }) as never, asked as never);
+      assert.equal(asked.statusCode, 404, `${task.id}: the task resource answers 404`);
+      assert.equal((asked.body as { error: { code: string } }).error.code, 'not_found');
+      assert.equal(nextAfterSkip(task.id, new Set(), 'premium'), null, `${task.id}: a skip suggests nothing from it`);
+    }
+    const sealed = encodeCodingSession({ taskId: designTask!.id, track: 'system-design', userId: null, key: prepared.key });
+    const submitted = mockResponse();
+    await roadmapHandler(guestAsk('coding-submit', {}, { session: sealed, answers: prepared.key.steps }) as never, submitted as never);
+    assert.equal(submitted.statusCode, 400, `a sealed system design session is refused at Submit (${JSON.stringify(submitted.body)})`);
+    assert.equal((submitted.body as { error: { code: string } }).error.code, 'invalid_session');
+    assert.ok(!JSON.stringify(submitted.body).includes(designTask!.design!.reference.en.slice(0, 40)), 'and nothing of the key comes back');
+    const revealed = mockResponse();
+    await roadmapHandler(guestAsk('coding-reveal', {}, { session: sealed, hintsUsed: 20 }) as never, revealed as never);
+    assert.equal(revealed.statusCode, 400, 'and at the reveal');
+    for (const plan of ['free', 'premium'] as const) {
+      const run = buildQueue({ minutes: 120, topic: null, plan, passed: new Set<string>(), due: new Set<string>(), count: 20, order: 'sequential' });
+      assert.ok(run.every((id) => isCodingSectionTrack(codingTaskById(id)?.track)), `a ${plan} run holds no hidden task`);
+    }
+  }
   // The solution opens once half the ladder is spent, never before two rungs
   // (or the whole ladder, when it is shorter). The browser shows the same number.
   assert.equal(ladderLength(doubleTask!), 5, 'js-double-numbers offers five rungs: a hint, two approach steps, the skeleton and the docs link');

@@ -2,6 +2,7 @@
 import './launch-test-env';
 import assert from 'node:assert/strict';
 import { handleCodingDraft, handleCodingSubmit, handleCodingReveal, handleCodingTask } from '../lib/coding/handlers';
+import { handleCodingBookmarks } from '../lib/coding/practice-handlers';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById } from '../lib/coding/active';
 import { encodeCodingSession } from '../lib/quiz-tokens';
@@ -119,9 +120,39 @@ async function main() {
   }
   assert.deepEqual(await ask(undefined), { status: 400, code: 'bad_request' }, 'a request without an id is refused');
   assert.deepEqual(await ask(['js-digit-sum', 'js-sum-array']), { status: 400, code: 'bad_request' }, 'two ids are refused');
-  const retired = CODING_TASKS.find((task) => !codingTaskById(task.id));
+  const retired = CODING_TASKS.find((task) => !codingTaskById(task.id) && task.track !== 'system-design');
   if (retired) assert.deepEqual(await ask(retired.id), { status: 410, code: 'task_retired' }, `${retired.id} is retired`);
+  // A task on the hidden system design track is as unknown as one that never
+  // existed: 404, not 410, so nothing tells a visitor it is there.
+  const hidden = CODING_TASKS.filter((task) => task.track === 'system-design');
+  assert.ok(hidden.length > 0);
+  // One design walkthrough and one drill; the launch contracts ask for all of them.
+  for (const task of [hidden.find((one) => one.design)!, hidden.find((one) => one.drill)!]) {
+    assert.deepEqual(await ask(task.id), { status: 404, code: 'not_found' }, `${task.id} is not found`);
+  }
   assert.equal((await ask('js-double-numbers')).status, 200, 'a task in the catalogue opens');
-  console.log(`Coding task ids passed: unknown ids are 404 whatever their shape${retired ? ', a retired one 410' : ''}, and a missing id 400.`);
+  console.log(`Coding task ids passed: unknown ids are 404 whatever their shape, system design ones included${retired ? ', a retired one 410' : ''}, and a missing id 400.`);
+
+  // A star saved on system design before it was hidden stays in the table
+  // and never comes back to the browser, in the saved list or a collection.
+  const starred = {
+    from: (table: string) => {
+      const rows: Record<string, unknown[]> = {
+        coding_bookmarks: [{ task_id: 'sd-url-shortener' }, { task_id: 'js-double-numbers' }],
+        coding_collections: [{ collection_id: 'collection-0001', name: 'Later', position: 0 }],
+        coding_collection_items: [{ collection_id: 'collection-0001', task_id: 'dd-requests-per-second', position: 0 }, { collection_id: 'collection-0001', task_id: 'js-digit-sum', position: 1 }],
+      };
+      const chain = {
+        select: () => chain, eq: () => chain, order: () => chain, in: () => chain,
+        then: (resolve: (value: unknown) => unknown) => resolve({ data: rows[table] ?? [], error: null }),
+      };
+      return chain;
+    },
+  };
+  const listed = response();
+  await handleCodingBookmarks({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { user_id: 'account-a' } } as never, listed as never, starred as never);
+  assert.equal(listed.statusCode, 200, JSON.stringify(listed.body));
+  assert.deepEqual(listed.body, { saved: ['js-double-numbers'], collections: [{ collectionId: 'collection-0001', name: 'Later', position: 0, taskIds: ['js-digit-sum'] }] }, 'no system design id comes back');
+  console.log('Coding bookmarks passed: a star saved on system design is not listed.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

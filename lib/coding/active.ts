@@ -14,7 +14,7 @@
  * `./catalog` directly and never issues. */
 
 import type { CodingTask, CodingTaskSummary, CodingTrack } from '../../shared/coding-catalog';
-import { formatOf } from '../../shared/coding-catalog';
+import { formatOf, isCodingSectionTrack } from '../../shared/coding-catalog';
 import type { EligibilityReason } from '../../shared/curation';
 import { codingTaskEligibility } from '../curation';
 import { CODING_TASKS, EASY_BAND_TASK_IDS, MEDIUM_HARD_BAND_TASK_IDS, levelTaskQuota, summarize } from './catalog';
@@ -23,8 +23,18 @@ import { evolvingStage } from '../../shared/evolving';
 
 const verdicts = CODING_TASKS.map((task) => ({ task, eligibility: codingTaskEligibility(task, solutionFor(task.id)) }));
 
-/** Tasks that may be issued, in catalogue order. */
-export const ACTIVE_CODING_TASKS: readonly CodingTask[] = verdicts.filter((v) => v.eligibility.active).map((v) => v.task);
+/** Tasks that may be issued, in catalogue order: the ones the gate passed, on
+ * a track the Coding section offers. System design is hidden until it has been
+ * reviewed again (owner decision, 9 Oct 2026; `CODING_SECTION_TRACKS`): none of
+ * its tasks is issued, listed or graded, while `./catalog` keeps them, with
+ * their graders, for that review and for the records already earned. */
+export const ACTIVE_CODING_TASKS: readonly CodingTask[] = verdicts
+  .filter((v) => v.eligibility.active && isCodingSectionTrack(v.task.track))
+  .map((v) => v.task);
+
+/** An authored task on a hidden track. The task resource answers it as an
+ * unknown id (404), not as a retired one (410): a hidden track has no page. */
+export const isHiddenCodingTask = (task: Pick<CodingTask, 'track'>): boolean => !isCodingSectionTrack(task.track);
 
 /** Authored tasks the gate withheld, and why. For the admin view and the
  * audit report, never for issuing. */

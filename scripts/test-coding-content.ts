@@ -49,6 +49,8 @@ import { prepareReactRuntime, runReactSuite } from '../lib/coding/react-runner';
 import { lockDownRealm } from '../lib/coding/realm-lockdown';
 import { HIDDEN_CASE_PREFIX, splitHiddenCases, suiteCaseCount, withHiddenCases } from '../lib/coding/react-hidden';
 import { renderCodingIndex } from './build-coding-index';
+import { gradeDesign, prepareDesign } from '../lib/coding/grade';
+import type { DesignAnswer } from '../shared/coding-api';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, isEvolvingCheckpoint, listedChallenges } from '../shared/evolving';
 import { SKELETON_FILLS } from './fixtures/skeleton-fills';
 
@@ -569,6 +571,36 @@ async function main() {
     }
   }
 
+  /* ── hidden tracks ──────────────────────────────────────────────────── */
+  // System design is hidden until its tasks are reviewed again (owner
+  // decision, 9 Oct 2026). Every one of them is still authored and proven
+  // above, and its grader still passes the right answers and fails wrong ones
+  // here, but none is issued: not summarised, so not in the browser index,
+  // not in a Learn level, and not in any list.
+  {
+    const hidden = CODING_TASKS.filter((task) => !CODING_SECTION_TRACKS.includes(task.track));
+    if (hidden.some((task) => task.track !== 'system-design')) fail('only system design is hidden');
+    const issued = new Set(CODING_SUMMARIES.map((summary) => summary.id));
+    for (const task of hidden) {
+      if (issued.has(task.id)) fail(`${task.id}: a hidden task is issued`);
+      const prepared = prepareDesign(task, (list) => [...list].reverse());
+      const right = task.design ? prepared.key.steps!
+        : prepared.key.band ? [prepared.key.band.answer]
+          : prepared.key.order ? [prepared.key.order]
+            : [prepared.key.correct!];
+      const wrong = task.design ? prepared.key.steps!.map((index, step) => (index + 1) % task.design!.steps[step].options.length)
+        : prepared.key.band ? [prepared.key.band.max * 10 + 1]
+          : prepared.key.order ? [[...prepared.key.order].reverse()]
+            : [(prepared.key.correct! + 1) % task.drill!.options!.length];
+      if (gradeDesign(task, prepared.key, right as DesignAnswer[]).outcome !== 'passed') fail(`${task.id}: its grader fails the right answers`);
+      if (gradeDesign(task, prepared.key, wrong as DesignAnswer[]).outcome !== 'failed') fail(`${task.id}: its grader passes wrong answers`);
+    }
+    for (const topic of ['javascript', 'typescript', 'react', 'system-design', 'algorithms'] as const) {
+      for (let level = 0; level <= 25; level++) if (tasksForLevel(topic, level).some((task) => !CODING_SECTION_TRACKS.includes(task.track))) fail(`${topic} level ${level} holds a hidden task`);
+    }
+    if (EVOLVING_CHALLENGES.some((project) => !CODING_SECTION_TRACKS.includes(project.track))) fail('a project sits on a hidden track');
+  }
+
   /* ── index freshness ────────────────────────────────────────────────── */
   for (const summary of CODING_SUMMARIES) if (czechIn(summary).length > 0) fail(`${summary.id}: the browser index carries a Czech title`);
   const indexPath = path.join(process.cwd(), 'shared', 'coding-index.ts');
@@ -986,7 +1018,7 @@ async function main() {
     process.exitCode = 1;
     return;
   }
-  const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}`).join(', ');
+  const byTrack = CODING_TRACKS.map((track) => `${track} ${CODING_TASKS.filter((t) => t.track === track).length}${CODING_SECTION_TRACKS.includes(track) ? '' : ' hidden'}`).join(', ');
   // ── approach comparisons (#158) ────────────────────────────────────────
   // Every covered id is a real task; every comparison has at least two
   // approaches, both languages throughout, and a stated cost. Nothing here
@@ -1178,7 +1210,7 @@ async function main() {
   assert.deepEqual(timed.logs, ['wait: 100ms'], 'console.time reads the sandbox\'s virtual clock');
 
   const byLabel = CODING_DIFFICULTIES.map((label) => `${label} ${labelCounts.get(label) ?? 0}`).join(', ');
-  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}; ${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
+  console.log(`Coding content contract passed: ${CODING_TASKS.length} tasks (${byTrack}), ${CODING_SUMMARIES.length} issued (${byLabel}), solutions proven, payloads answer-free${REQUIRE_CS ? ', Czech parity checked' : ''}${ALLOW_GAPS ? ', level gaps allowed' : ''}.`);
 }
 
 /* ── staged levels, new-array promises and typed parameters ─────────── */

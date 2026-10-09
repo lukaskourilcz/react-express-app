@@ -15,7 +15,7 @@ import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
 import { codingTaskForHistory, englishOnly, playable } from './catalog';
-import { CODING_SUMMARIES, codingTaskById } from './active';
+import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask } from './active';
 import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
@@ -199,8 +199,10 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   if (!task) {
     // A task that exists but is withheld by the content gate is told apart
     // from an unknown id, so a stale bookmark gets an honest answer rather
-    // than a "not found" it will keep retrying.
-    if (codingTaskForHistory(id)) return jsonError(res, 410, 'task_retired', 'This challenge was retired from the active catalogue');
+    // than a "not found" it will keep retrying. A task on a hidden track
+    // (system design) is answered as unknown: nothing of it is reachable.
+    const authored = codingTaskForHistory(id);
+    if (authored && !isHiddenCodingTask(authored)) return jsonError(res, 410, 'task_retired', 'This challenge was retired from the active catalogue');
     return jsonError(res, 404, 'not_found', 'Unknown task');
   }
 
