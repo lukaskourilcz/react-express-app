@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInSandbox, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
-import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
+import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
+import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
 import { GRADING_PER_CALLER, GraderBusyError } from '../lib/coding/grader-capacity';
+import { SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
@@ -945,6 +946,23 @@ const timed = <T>(run: Promise<T>) => {
   console.log(`PASS integrity: a burst of runaway type checks leaves another learner's TypeScript Submit answered in ${waited} ms`);
 }
 
+// ── a class submitting at once is graded, not turned away ───────────────
+// The queue bounds the memory and the wait bounds the time. A class of
+// SHARED_NETWORK_SEATS pressing Submit together queues 64 runs and 32 type
+// checks, all correct and quick; with queues of 32 and 16 a third of them
+// were told the grader was busy while the burst drained in half a second.
+{
+  const seats = SHARED_NETWORK_SEATS;
+  const [jsBurst, tsBurst] = await Promise.all([
+    Promise.all(Array.from({ length: seats * 2 }, () => timed(runInSandbox({ code: 'const f = () => 1;', calls: ['f()'], expectations: [1] })))),
+    Promise.all(Array.from({ length: seats }, () => timed(checkTypes('const a: number = 1;', [[]])))),
+  ]);
+  assert.deepEqual(jsBurst.filter((run) => run.busy !== null).map((run) => run.busy), [], 'a class-sized burst of runs is graded');
+  assert.deepEqual(tsBurst.filter((run) => run.busy !== null).map((run) => run.busy), [], 'a class-sized burst of type checks is graded');
+  assert.ok(jsBurst.every((run) => (run.value as { results: { pass: boolean }[] }).results[0]?.pass === true), 'every run of the burst passes');
+  console.log(`PASS integrity: ${seats * 2} runs and ${seats} type checks submitted together are all graded`);
+}
+
 // ── a run waits a bounded time in a bounded queue (C1-1) ─────────────────
 // Every thread of both pools is held by a run that outlasts the wait. Runs
 // queued behind them are told the grader is busy once they have waited their
@@ -954,11 +972,11 @@ const timed = <T>(run: Promise<T>) => {
   const quick = () => runInSandbox({ code: 'const f = () => 1;', calls: ['f()'], expectations: [1] });
   const js = [
     ...Array.from({ length: 6 }, () => timed(runInSandbox({ code: 'while (true) {}', calls: ['1'], expectations: [1], deadlineMs: SANDBOX_SLOT_WAIT_MS + 2_000 }))),
-    ...Array.from({ length: 40 }, () => timed(quick())),
+    ...Array.from({ length: SANDBOX_MAX_WAITING + 8 }, () => timed(quick())),
   ];
   const ts = [
     ...Array.from({ length: 3 }, () => timed(checkTypes(runawayTypes, [[]], TS_CHECK_SLOT_WAIT_MS + 2_000))),
-    ...Array.from({ length: 20 }, () => timed(checkTypes('const a: number = 1;', [[]]))),
+    ...Array.from({ length: TS_CHECK_MAX_WAITING + 4 }, () => timed(checkTypes('const a: number = 1;', [[]]))),
   ];
   // Through the handler, a Submit the threads cannot take is a 503 and not a
   // verdict.

@@ -271,8 +271,11 @@ const WORKER_GRACE_MS = 1_500;
 const WORKER_BOOT_MS = 10_000;
 /** Threads running at once; further runs wait for one to finish. */
 const MAX_WORKERS = 4;
-/** Runs that may wait for a thread; one more is told the grader is busy. */
-const MAX_WAITING = 32;
+/** Runs that may wait for a thread; one more is told the grader is busy. A
+ * class of SHARED_NETWORK_SEATS submitting at once queues two runs each, and
+ * correct runs drain in milliseconds, so the wait limit below bounds the
+ * time and this only bounds the memory. */
+export const SANDBOX_MAX_WAITING = 160;
 /** How long a run may wait for a thread. A runaway run holds one for its
  * deadline and grace, four seconds, so a run behind a few of them still gets
  * one; a Submit makes two runs, and both waits fit the function's limit. */
@@ -281,7 +284,7 @@ export const SANDBOX_SLOT_WAIT_MS = 5_000;
 const IDLE_WORKERS = 2;
 
 const idleWorkers: Worker[] = [];
-const slots = threadSlots({ threads: MAX_WORKERS, waiting: MAX_WAITING, waitMs: SANDBOX_SLOT_WAIT_MS, name: 'sandbox' });
+const slots = threadSlots({ threads: MAX_WORKERS, waiting: SANDBOX_MAX_WAITING, waitMs: SANDBOX_SLOT_WAIT_MS, name: 'sandbox' });
 const boot = bootBackoff();
 let workerFile: string | null | undefined;
 

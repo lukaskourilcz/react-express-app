@@ -42,8 +42,11 @@ export const TRANSPILE_FAILED_MESSAGE =
 const WORKER_BOOT_MS = 20_000;
 /** Threads checking at once; further checks wait for one to finish. */
 const MAX_WORKERS = 2;
-/** Checks that may wait for a thread; one more is told the grader is busy. */
-const MAX_WAITING = 16;
+/** Checks that may wait for a thread; one more is told the grader is busy.
+ * Room for a class of SHARED_NETWORK_SEATS submitting at once, twice over:
+ * correct checks drain in well under the wait limit below, which is what
+ * bounds the time. */
+export const TS_CHECK_MAX_WAITING = 64;
 /** How long a check may wait for a thread: two runaway checks ahead of it,
  * stopped at TYPE_CHECK_DEADLINE_MS, and the start of a new thread. */
 export const TS_CHECK_SLOT_WAIT_MS = 8_000;
@@ -60,7 +63,7 @@ export type TypeCheckOutcome =
   | { stopped: true; results: null; javascript: null };
 
 const idleWorkers: Worker[] = [];
-const slots = threadSlots({ threads: MAX_WORKERS, waiting: MAX_WAITING, waitMs: TS_CHECK_SLOT_WAIT_MS, name: 'ts_check' });
+const slots = threadSlots({ threads: MAX_WORKERS, waiting: TS_CHECK_MAX_WAITING, waitMs: TS_CHECK_SLOT_WAIT_MS, name: 'ts_check' });
 const boot = bootBackoff();
 let workerFile: string | null | undefined;
 

@@ -382,7 +382,9 @@ Submit sends the code at once, and the browser's own run (its type check has
 system-design answers are graded against a key sealed in the coding session.
 The same thread transpiles the TypeScript, so code nested too deeply for the
 compiler is an `error` verdict rather than an HTTP 500. Both thread pools bound
-their queues and how long a run may wait for a thread, and one caller (an
+how long a run may wait for a thread, and their queues hold a class of 32
+submitting at once twice over, so a burst of correct submits is graded and the
+length only bounds memory. One caller (an
 account, or an address for a guest) has at most two submits grading at once
 (`lib/coding/grader-capacity.ts`, `enterInFlight` in `lib/rate-limit.ts`). A
 Submit the grader cannot take is answered `grader_busy` with a Retry-After,
