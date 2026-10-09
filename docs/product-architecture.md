@@ -372,6 +372,15 @@ through the real compiler, each in its own file, on a worker thread of their
 own (`lib/coding/ts-check-pool.ts`) that is stopped 4 s into the check, which
 the learner sees as a timeout; and
 system-design answers are graded against a key sealed in the coding session.
+Both thread pools bound
+their queues and how long a run may wait for a thread, and one caller (an
+account, or an address for a guest) has at most two submits grading at once
+(`lib/coding/grader-capacity.ts`, `enterInFlight` in `lib/rate-limit.ts`). A
+Submit the grader cannot take is answered `grader_busy` with a Retry-After,
+429 for the caller's own limit and 503 for full threads, and is recorded
+nowhere. A thread that will not start is tried again after a pause that grows
+from one second to thirty; on a deployment no run ever falls back to the
+request thread.
 Learning-path code activities use the same QuickJS sandbox, type-check thread
 and hidden-check program as coding tasks.
 A failed or partly right system-design submission returns, per step, only

@@ -171,6 +171,9 @@ const CODE_KEYS: Partial<Record<string, TranslationKey>> = {
   prerequisite_not_met: 'error.prerequisiteNotMet',
   // An evolving challenge's later stage, sent before the earlier ones passed.
   stage_locked: 'error.stageLocked',
+  // The grader's threads could not take a Submit (429 or 503): nothing was
+  // graded or recorded, and another Submit is the way on.
+  grader_busy: 'coding.verdict.graderUnavailable',
 };
 
 // not_found spans several endpoints whose English server messages are more

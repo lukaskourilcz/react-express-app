@@ -14,6 +14,7 @@
 //     on, the address is checked, not cut to fit, completion is read for the
 //     published curriculum version, a raced second claim, a refused field
 //   * rate limits are the learner's own, with a class-sized address backstop
+//   * a learner with submits already grading is told the grader is busy
 
 import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
 import {
@@ -27,7 +28,8 @@ import {
 } from '../lib/learning-paths/handlers';
 import { requestMemo, withRequestContext } from '../lib/http';
 import { encodeLearningPathSession } from '../lib/quiz-tokens';
-import { RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { enterInFlight, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
+import { GRADING_PER_CALLER } from '../lib/coding/grader-capacity';
 import { LEARNER_PROFILE_META_KEY } from '../shared/learning-paths';
 import { MERCH_ENABLED } from '../shared/rewards';
 import type { SubmitActivityResponse } from '../shared/learning-path-api';
@@ -142,6 +144,49 @@ export async function handlerContracts(fail: Fail): Promise<void> {
       res = response();
       await handleActivitySubmit(request('POST', `submit-${stamp}`, submitBody), res as never, fakeSupabase({ rows: { learning_path_enrollments: enrollmentRow('active') } }));
       if (res.statusCode !== 402) fail(`submit to an active enrollment answers ${res.statusCode} ${code(res)}, not the plan check's 402`);
+    } finally {
+      if (switchBefore === undefined) delete process.env.LEARNING_PATH_DSA_ENABLED;
+      else process.env.LEARNING_PATH_DSA_ENABLED = switchBefore;
+    }
+
+    /* ── a burst is refused before it reaches the grader ──────────────── */
+    // The coding section's grader threads take path code too, and one
+    // learner may have GRADING_PER_CALLER submits grading at once (C1-1).
+    // One more is a 429 `grader_busy`, recorded nowhere; once one of theirs
+    // is answered the next is graded.
+    try {
+      process.env.LEARNING_PATH_DSA_ENABLED = 'true';
+      const burster = `user-paths-burst-${stamp}`;
+      const burstBody = {
+        ...submitBody,
+        user_id: burster,
+        session: encodeLearningPathSession({
+          attemptId: `BURST${stamp}`.padEnd(20, 'a'), enrollmentId, userId: burster, pathId: 'dsa-foundations',
+          activityId: codeActivity.id, activityKind: codeActivity.kind, purpose: codeActivity.purpose,
+          curriculumVersion: dsa.version, rubricVersion: dsa.rubric.version,
+        }).token,
+      };
+      const written: string[] = [];
+      const submitAsPremium = async () => {
+        const res = response();
+        const req = request('POST', `burst-${stamp}`, burstBody);
+        await withRequestContext(req, res as never, async () => {
+          await requestMemo(`tier:${burster}`, async () => 'premium');
+          await handleActivitySubmit(req, res as never, fakeSupabase({
+            rows: { learning_path_enrollments: { ...enrollmentRow('active'), user_id: burster } },
+            rpc: (name) => { written.push(name); return name === 'accept_learning_path_result' ? { data: { ok: true, replayed: false } } : {}; },
+          }));
+        });
+        return res;
+      };
+      const grading = Array.from({ length: GRADING_PER_CALLER }, () => enterInFlight(request('POST', `burst-${stamp}`, burstBody), 'grading', GRADING_PER_CALLER, `user:${burster}`));
+      let res = await submitAsPremium();
+      if (res.statusCode !== 429 || code(res) !== 'grader_busy') fail(`a submit past the learner's grading limit answers ${res.statusCode} ${code(res)}, not 429 grader_busy`);
+      if (written.length > 0) fail(`a submit the grader did not take wrote ${written.join(', ')}`);
+      grading[0]?.();
+      res = await submitAsPremium();
+      if (res.statusCode !== 200 || !(res.body as SubmitActivityResponse | undefined)?.code) fail(`once one of the learner's submits is answered the next is graded, not ${res.statusCode} ${code(res)}`);
+      grading[1]?.();
     } finally {
       if (switchBefore === undefined) delete process.env.LEARNING_PATH_DSA_ENABLED;
       else process.env.LEARNING_PATH_DSA_ENABLED = switchBefore;

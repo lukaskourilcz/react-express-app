@@ -418,6 +418,40 @@ export async function enforceClassRateLimit(
 }
 
 /* -------------------------------------------------------------------------- */
+/* Work in flight                                                             */
+/* -------------------------------------------------------------------------- */
+
+// A bucket counts requests; it does not count how many of them one caller has
+// running at once. A guest's whole grading budget arrived together, thirty
+// runaway submits that held every grader thread of the instance while other
+// learners' submits waited behind them. The grader threads belong to one
+// instance, so this count does too.
+
+const inFlight = new Map<string, number>();
+
+/**
+ * Admit one more piece of `scope`'s work for this caller while fewer than
+ * `max` are running on this instance. The caller is `identity` (`user:<id>`),
+ * or the client address when it is omitted. Returns the function that ends the
+ * work, which must be called once it is done, or null when the caller already
+ * has `max` running; the handler then answers 429 with a Retry-After.
+ */
+export function enterInFlight(req: VercelRequest, scope: string, max: number, identity?: string): (() => void) | null {
+  const key = `${scope}:${identity ?? clientIp(req)}`;
+  const running = inFlight.get(key) ?? 0;
+  if (running >= max) return null;
+  inFlight.set(key, running + 1);
+  let ended = false;
+  return () => {
+    if (ended) return;
+    ended = true;
+    const left = (inFlight.get(key) ?? 1) - 1;
+    if (left > 0) inFlight.set(key, left);
+    else inFlight.delete(key);
+  };
+}
+
+/* -------------------------------------------------------------------------- */
 /* One-time claims                                                            */
 /* -------------------------------------------------------------------------- */
 
