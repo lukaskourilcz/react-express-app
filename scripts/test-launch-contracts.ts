@@ -49,7 +49,7 @@ import { TS_CHECK_WORKER_FILE } from '../lib/coding/ts-check-pool';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
-import { GUEST_CRASHED_MESSAGE, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
+import { GUEST_CRASHED_MESSAGE, GUEST_ENV, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -3500,7 +3500,7 @@ async function main() {
     const nonce = randomBytes(24).toString('hex');
     writeFileSync(input, JSON.stringify({ suite, appSource, nonce }));
     const command = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), input], {
-      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, NODE_ENV: 'development' },
+      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, ...GUEST_ENV },
     });
     const left = readdirSync(dir);
     rmSync(dir, { recursive: true, force: true });

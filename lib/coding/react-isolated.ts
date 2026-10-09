@@ -8,7 +8,7 @@ const { Sandbox } = createRequire(join(process.cwd(), 'package.json'))(
   './lib/coding/generated/vercel-sandbox.cjs',
 ) as typeof import('@vercel/sandbox');
 import type { ReactSuiteOutcome } from './react-runner';
-import { GUEST_NODE_FLAGS, readGuestRun, type GuestInput } from './react-guest';
+import { GUEST_ENV, GUEST_NODE_FLAGS, readGuestRun, type GuestInput } from './react-guest';
 
 // Keep operational diagnostics useful without logging learner code, SDK request
 // bodies, credentials, or arbitrary error messages.
@@ -81,7 +81,7 @@ export async function runIsolatedReactSuite(input: {
     const command = await sandbox.runCommand({
       cmd: 'node',
       args: [...GUEST_NODE_FLAGS, '/vercel/sandbox/runner.cjs', '/vercel/sandbox/input.json'],
-      env: { NODE_ENV: 'development' },
+      env: { ...GUEST_ENV },
       timeoutMs: 10_000,
       signal,
     });
