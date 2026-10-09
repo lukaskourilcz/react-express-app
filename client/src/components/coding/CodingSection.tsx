@@ -745,11 +745,15 @@ export function CodingTaskScreen() {
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
     if (verdict.progress) void queryClient.invalidateQueries({ queryKey: codingKeys.progress() });
-    if (verdict.verdict === 'passed' && activeRun && runIndex >= 0 && runIndex >= activeRun.position) {
+    // An accepted order comes back as "passed" about the arrangement. The task
+    // itself stays open for the code (the server records no progress), so it
+    // neither moves a challenge run on nor lets go of the draft.
+    const passed = verdict.verdict === 'passed' && !verdict.puzzle;
+    if (passed && activeRun && runIndex >= 0 && runIndex >= activeRun.position) {
       const position = runIndex + 1;
       advanceRun.mutate({ sessionId: activeRun.sessionId, position, ...(position >= activeRun.queue.length ? { status: 'finished' as const } : {}) });
     }
-    if (verdict.verdict === 'passed' && taskId) {
+    if (passed && taskId) {
       const stage = evolvingStage(taskId);
       if (stage) {
         // Capture the submitted snapshot synchronously, before Next can navigate

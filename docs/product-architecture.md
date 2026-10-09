@@ -370,7 +370,9 @@ before the learner's code runs (`__probe`, `shared/coding-evaluate.ts`), so
 replacing the global `Proxy` changes no count; TypeScript type tests run
 through the real compiler, each in its own file, on a worker thread of their
 own (`lib/coding/ts-check-pool.ts`) that is stopped 4 s into the check, which
-the learner sees as a timeout; and
+the learner sees as a timeout whose message names the type check, not a loop;
+Submit sends the code at once, and the browser's own run (its type check has
+8 s once the compiler is loaded) is a preview the server's run replaces; and
 system-design answers are graded against a key sealed in the coding session.
 Learning-path code activities use the same QuickJS sandbox, type-check thread
 and hidden-check program as coding tasks.

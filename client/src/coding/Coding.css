@@ -369,6 +369,11 @@
 .cd-output-scroll { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
 .cd-panel { display: flex; flex-direction: column; gap: 10px; min-height: 160px; }
 .cd-panel[hidden] { display: none; }
+/* The React preview while a suite runs under another tab: laid out, so focus
+   can move inside the frame, but off-screen, inert to the pointer and hidden
+   from assistive tech (the workbench sets aria-hidden and takes the frame out
+   of the tab order). */
+.cd-panel--parked { position: fixed; top: 0; left: -10000px; width: 640px; height: 480px; overflow: hidden; pointer-events: none; }
 
 /* results */
 .cd-results { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
@@ -431,6 +436,8 @@
 .cd-verdict { display: flex; flex-direction: column; gap: 8px; padding: 14px 16px; border-radius: var(--radius-container); border: 1px solid var(--ss-card-line); }
 .cd-verdict--passed { background: var(--ss-success-soft); }
 .cd-verdict--failed, .cd-verdict--error, .cd-verdict--timeout { background: var(--ss-warning-soft); }
+/* An accepted order is not a pass, so it does not wear the pass colour. */
+.cd-verdict--puzzle { background: var(--color-background-muted); }
 .cd-verdict__title { margin: 0; font-size: 1.1rem; display: flex; align-items: center; gap: 10px; }
 .cd-verdict__xp { font-family: var(--cd-mono); font-weight: 700; }
 .cd-verdict__row { margin: 0; font-size: 0.9rem; }
@@ -600,7 +607,7 @@
   .cd-skip-reasons { grid-template-columns: minmax(0, 1fr); }
   .cd-editor-actions, .cd-editor-actions > .cd-actions { width: 100%; }
 }
-.cd-verdict:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 3px; }
+.cd-verdict:focus-visible, .cd-solution:focus-visible { outline: 2px solid var(--ss-focus); outline-offset: 3px; }
 
 /* Approach comparisons: one card per approach, each carrying its own cost. */
 .cd-approaches { display: flex; flex-direction: column; gap: 14px; }

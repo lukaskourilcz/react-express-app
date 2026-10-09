@@ -168,7 +168,8 @@ export function taskResources(focus: readonly string[]): CodingDocLink[] {
 
 /** The first documented technique of a task, or the JavaScript reference.
  * Still the hint ladder's last rung before the solution. */
-export function docsFor(focus: readonly string[]): { tag: string; url: string } {
+export function docsFor(focus: readonly string[]): { tag: string; url: string; title: string } {
   const [first] = taskResources(focus);
-  return first ? { tag: first.tag, url: first.url } : { tag: CODING_DOCS_FALLBACK.tag, url: CODING_DOCS_FALLBACK.url };
+  const page = first ?? CODING_DOCS_FALLBACK;
+  return { tag: page.tag, url: page.url, title: page.title };
 }

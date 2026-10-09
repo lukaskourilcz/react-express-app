@@ -78,7 +78,7 @@ it('saves the draft on Run and Submit, never while typing or on leaving', async 
   fireEvent.change(screen.getByLabelText('Test editor'), { target: { value: 'const one = () => 4;' } });
   fireEvent.click(screen.getByRole('button', { name: 'Run' }));
   expect(onRunDraft).toHaveBeenCalledWith('const one = () => 4;');
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Run' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Run' })).not.toHaveAttribute('aria-disabled'));
   cleanup();
 
   const onSubmitDraft = vi.fn();
@@ -87,7 +87,7 @@ it('saves the draft on Run and Submit, never while typing or on leaving', async 
   expect(onSubmitDraft).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
   expect(onSubmitDraft).toHaveBeenCalledWith('const one = () => 5;');
-  await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).toBeEnabled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Submit' })).not.toHaveAttribute('aria-disabled'));
 });
 
 it('uses a visible, accessible branded loading status', () => {
