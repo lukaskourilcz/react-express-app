@@ -35,9 +35,9 @@ type Outgoing =
 
 const post = (message: Outgoing) => window.parent.postMessage(message, '*');
 
-// Learner code here reads Europe/Prague time, as the grader's React guest
-// does (lib/coding/react-runner.ts), whatever the learner's own zone. The
-// frame exists only for learner code, so its Date is rewritten in place.
+// Learner code here reads Europe/Prague time, as it does in the grader's
+// React guest, whatever the learner's own zone. The frame exists only for
+// learner code, so its Date is rewritten in place.
 installPragueTime(window, { intl: Intl });
 
 // Testing Library wants this while a suite runs; React warns about unwrapped
