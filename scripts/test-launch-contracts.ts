@@ -32,7 +32,7 @@ import {
   stableAttemptId,
 } from '../lib/quiz-tokens';
 import { checkRateLimit, isDistributedRateLimitEnabled, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
-import { buildQueue, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
+import { buildQueue, handleCodingSkip, handlePracticeSession, parseScheduledFor, skipPostpones } from '../lib/coding/practice-handlers';
 import { webhookDecision } from '../lib/rewards/handlers';
 import healthHandler from '../api/health';
 import settingsHandler from '../api/settings';
@@ -178,11 +178,11 @@ import {
   isFreeCodingTask,
   isOpenTo,
 } from '../shared/tiers';
-import { EVOLVING_CHALLENGES } from '../shared/evolving';
-import { techniqueGroup, CODING_SECTION_TRACKS } from '../shared/coding-catalog';
+import { EVOLVING_CHALLENGES, evolvingStage } from '../shared/evolving';
+import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
-import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
+import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
 import { handleLeaderboardVisibility, limitUserWrite } from '../api/user/[op]';
 import { handleFriends, handleIdentity } from '../lib/friends-handlers';
 import { isValidHandle } from '../shared/handles';
@@ -4939,6 +4939,59 @@ async function main() {
     const outside = codingTaskById('js-count-multiples');
     assert.ok(outside && outside.level > 0 && !levelCodingTasks(outside.topic, outside.level).some((one) => one.id === outside.id), 'js-count-multiples has a level number but no level issues it');
     assert.equal(skipPostpones('js-count-multiples'), false, 'a task outside every quota is optional');
+
+    // C1-8: ten cleared JavaScript Learn levels open tier 3 on the task page
+    // (handleCodingTask reads them from the roadmap row). A practice run and
+    // a skip's suggestion passed 0, so a learner who had them saw tier 3 open
+    // there and never met it in a run. Both now read the same count. The
+    // learner has passed every JavaScript task of tiers 1 and 2 but one, so
+    // the sweep that also opens tier 3 is not complete.
+    const jsTiers = CODING_SUMMARIES.filter((task) => task.track === 'javascript' && !evolvingStage(task.id));
+    const left = jsTiers.find((task) => task.tier === 2)!;
+    const swept = new Set(jsTiers.filter((task) => task.tier <= 2 && task.id !== left.id).map((task) => task.id));
+    const tierOf = (id: string) => codingTaskById(id)!.tier;
+    const laddered = { ...base, plan: 'premium' as const, topic: 'javascript', passed: swept, count: 5, order: 'sequential' as const };
+    assert.deepEqual(buildQueue(laddered), [left.id], 'without the Learn levels only the last tier-2 task is open');
+    const opened = buildQueue({ ...laddered, javascriptLevelsCleared: CODING_FOUNDATION_LEVELS });
+    assert.ok(opened.length === 5 && opened.includes(left.id) && opened.filter((id) => id !== left.id).every((id) => tierOf(id) === 3), `cleared Learn levels open tier 3 to a run: ${opened.join(', ')}`);
+    assert.ok(opened.every((id) => tierLockReason({ track: 'javascript', tier: tierOf(id), progress: { passed: swept }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: CODING_FOUNDATION_LEVELS }) === null), 'a run offers what the task page opens');
+    // Through the handlers, against a stand-in database whose roadmap row has
+    // the ten levels cleared. The plan is Premium for this request.
+    const learner = 'practice-learner-0001';
+    const practiceDb = () => {
+      const levels = Object.fromEntries(Array.from({ length: CODING_FOUNDATION_LEVELS }, (_, index) => [String(index + 1), { passed: true }]));
+      const started: Record<string, unknown>[] = [];
+      const from = (table: string) => {
+        const chain = {
+          select: () => chain, eq: () => chain, in: () => chain, order: () => chain, limit: () => chain,
+          maybeSingle: () => Promise.resolve({ data: table === 'roadmap_progress' ? { data: { javascript: { levels } } } : null, error: null }),
+          then: (resolve: (value: unknown) => unknown) => resolve({ data: table === 'coding_progress' ? [...swept].map((task_id) => ({ task_id, status: 'passed' })) : [], error: null }),
+        };
+        return chain;
+      };
+      const rpc = (name: string, args: Record<string, unknown>) => {
+        if (name === 'start_practice_session_v2') started.push(args);
+        return Promise.resolve({ data: name === 'start_practice_session_v2' ? 'active' : null, error: null });
+      };
+      return { client: { from, rpc }, started };
+    };
+    const asPremium = async (handler: typeof handlePracticeSession, body: Record<string, unknown>, db: ReturnType<typeof practiceDb>) => {
+      const req = { method: 'POST', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': '198.51.100.81' }, query: {}, body: { ...body, user_id: learner } };
+      const res = mockResponse();
+      await withRequestContext(req as never, res as never, async () => {
+        await requestMemo(`tier:${learner}`, async () => 'premium');
+        await handler(req as never, res as never, db.client as never);
+      });
+      return res;
+    };
+    const runDb = practiceDb();
+    const run = await asPremium(handlePracticeSession, { count: 5, order: 'sequential', topic: 'javascript' }, runDb);
+    assert.equal(run.statusCode, 200, JSON.stringify(run.body));
+    assert.deepEqual(runDb.started[0]?.p_queue, opened, 'the run the handler starts holds the tier-3 tasks the Learn levels opened');
+    const skipped = await asPremium(handleCodingSkip, { taskId: left.id, reason: 'too-hard' }, practiceDb());
+    assert.equal(skipped.statusCode, 200, JSON.stringify(skipped.body));
+    const next = (skipped.body as { next?: string | null }).next;
+    assert.ok(next && tierOf(next) === 3, `a skip suggests a tier-3 task the Learn levels opened, not nothing: ${next}`);
   }
 
   // ── the payment webhook believes the order, not the event ───────────────

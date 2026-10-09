@@ -102,8 +102,9 @@ async function loadProgressRow(supabase: SupabaseClient, userId: string, taskId:
   return data ? toProgress(data as ProgressRow) : null;
 }
 
-/** Highest contiguous cleared `javascript` Learn level, from the roadmap blob. */
-async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string): Promise<number> {
+/** Highest contiguous cleared `javascript` Learn level, from the roadmap blob.
+ * Clearing the Learn foundations opens JavaScript tier 3 (`tierUnlocked`). */
+export async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string): Promise<number> {
   const { data, error } = await withTimeout(supabase.from('roadmap_progress').select('data').eq('user_id', userId).maybeSingle());
   if (error || !data?.data) return 0;
   const levels = ((data.data as Record<string, { levels?: Record<string, { passed?: boolean }> }>).javascript?.levels) ?? {};
