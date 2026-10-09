@@ -26,7 +26,7 @@ import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
 import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { CODING_CODE_LIMIT_BYTES, SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
-import { classifyFailure, failureHint } from '../../../shared/coding-failure';
+import { classifyFailure, failureHint, isSyntaxError } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding, useCodingApproaches } from './api';
 import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
@@ -605,9 +605,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const currentVerdict = verdictStale ? null : verdict;
   const localHint = useMemo(() => {
     if (currentVerdict || !run || runPassed(run)) return null;
-    // Nothing ran, or the types stopped the checker: the note in Results
-    // already names the cause, and no hint about the code would be true.
-    if (run.runnerUnavailable || run.codeError === TYPE_CHECK_STOPPED_MESSAGE) return null;
+    // Nothing ran, the types stopped the checker, or the code did not parse:
+    // the note in Results already names the cause, and no hint about the
+    // code would be true.
+    if (run.runnerUnavailable || run.codeError === TYPE_CHECK_STOPPED_MESSAGE || isSyntaxError(run.codeError)) return null;
     const typesBroken = Boolean(run.check && (run.check.codeErrors.length > 0 || run.check.typeTests.some((one) => !one.pass)));
     return failureHint(
       classifyFailure({

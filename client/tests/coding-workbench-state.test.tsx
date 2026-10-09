@@ -9,7 +9,7 @@ import { revealCoding, submitCoding, useCodingApproaches } from '../src/coding/a
 import { runCodeTests, type RunOutcome } from '../src/coding/runner/run-tests';
 import { skipTask } from '../src/coding/practice';
 import { ApiError } from '../src/lib/api';
-import { TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
+import { evaluateCalls, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 import type { CodingTaskProgress, CodingVerdictResponse } from '../../shared/coding-api';
 import type { PlayableCodingTask } from '../../shared/coding-catalog';
 
@@ -175,6 +175,25 @@ it('says the runner did not load instead of blaming the code, and opens no hint 
   expect(screen.queryByText(/could not run|Your code threw/)).toBeNull();
   // Nothing ran, so it is not the failed attempt that opens the hints.
   expect(screen.getByRole('button', { name: 'Hint' })).toHaveAttribute('aria-disabled', 'true');
+});
+
+// V4-3: `return n +;` showed "Unexpected token ';'" under the runtime hint,
+// "Check the values you index into", about code that never ran. The browser
+// now names it as the grading sandbox does, and no hint follows it.
+it('gives code that does not parse no hint, and a throw still its runtime hint', async () => {
+  const unparsed = await evaluateCalls({ code: 'const double = (list) => list +;', calls: ['double([1])'], expectations: [[2]] });
+  expect(unparsed.codeError).toMatch(/^SyntaxError: /);
+  vi.mocked(runCodeTests).mockResolvedValueOnce(outcome({ codeError: unparsed.codeError }));
+  mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+  expect(await screen.findByText(unparsed.codeError!)).toBeVisible();
+  expect(document.querySelector('.cd-hint--failure')).toBeNull();
+
+  const threw = await evaluateCalls({ code: 'const double = (list) => list;\nnull.x;', calls: ['double([1])'], expectations: [[2]] });
+  expect(threw.codeError).not.toMatch(/^SyntaxError/);
+  vi.mocked(runCodeTests).mockResolvedValueOnce(outcome({ codeError: threw.codeError }));
+  fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+  expect(await screen.findByText(/^Your code threw before it could answer/)).toBeVisible();
 });
 
 // C5-2: a runaway type is the types' doing, not a loop's.

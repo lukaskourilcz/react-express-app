@@ -154,7 +154,9 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
       '}));',
     ].join('\n')}`) as typeof evaluate;
   } catch (error) {
-    return { results: [], logs, codeError: errorText(error) };
+    // Code that does not parse, named as the grading sandbox names it.
+    const syntax = error instanceof Error && error.name === 'SyntaxError';
+    return { results: [], logs, codeError: syntax ? `SyntaxError: ${errorText(error)}` : errorText(error) };
   }
 
   try {

@@ -23,7 +23,7 @@ import { runChecks } from './sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
 import { GRADING_PER_CALLER, GraderBusyError } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
-import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
+import { classifyFailure, failureHint, isSyntaxError, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
 import { approachesFor } from './approaches';
 import { evolvingPassed, evolvingStage, evolvingUnlocked } from '../../shared/evolving';
@@ -328,7 +328,9 @@ function hintForFailure(
   task: CodingTask,
   graded: Pick<Graded, 'verdict' | 'results' | 'check' | 'codeError'> & { timedOut?: boolean },
 ): CodingVerdictResponse['failureHint'] {
-  if (graded.verdict === 'passed') return null;
+  // Code that never parsed: the error says what is wrong, and a hint about
+  // the values it handles would not be true (V4-3).
+  if (graded.verdict === 'passed' || isSyntaxError(graded.codeError)) return null;
   const tests = task.tests ?? [];
   const category = classifyFailure({
     timedOut: graded.verdict === 'timeout' || graded.timedOut === true,
