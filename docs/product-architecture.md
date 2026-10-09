@@ -175,15 +175,19 @@ level would otherwise add correct answers without limit. A quiz question
 counts the same way from migration 048: `record_verified_quiz_result_v2` builds
 its category counts (for `user_category_stats` and this board) from the
 outcomes whose question the learner had not answered earlier the same UTC day,
-read from `user_question_history` before the attempt updates it. XP does
-not follow that rule: from migration 056 every answer earns XP, a repeated
-question included (owner decision of 1 October 2026), so the routine pays the
-receipt's whole XP (`api/quiz/submit.ts`: 2 + 2 × difficulty for each correct
-answer, and at least 20 for the daily challenge). 052 paid only the questions
-not answered earlier the same UTC day, and 048 scaled the quiz by the share of
-such questions. A repeat earns XP and coins, never a place on a board. Each
-receipt outcome still carries its question's XP; the routine no longer reads
-it. The awarded XP is kept on the receipt row
+read from `user_question_history` before the attempt updates it. XP has its
+own rule: a correct answer pays its XP (`api/quiz/submit.ts`: 2 + 2 ×
+difficulty) again once the account's last XP for that question is at least
+60 minutes old (migration 058, owner decision of 9 October 2026). Each
+receipt outcome carries its question's XP; the routine claims each correct
+answer's question in `user_question_xp` (`question_xp_claim`, one upsert, so
+two results paying one question at once pay it once) and pays the receipt's
+XP less that of the answers whose question is still inside its hour. The
+daily challenge keeps its minimum of 20. A receipt without per-question XP
+(minted before 052) is paid as it is. 056 paid every repeat (owner decision
+of 1 October), 052 only the questions not answered earlier the same UTC day,
+and 048 scaled the quiz by the share of such questions. A repeat after its
+hour earns XP and coins, never a place on a board. The awarded XP is kept on the receipt row
 (`quiz_attempts.quest_xp`) and the stats handler credits coins for that
 amount, also when a retry finds the result already recorded after a commit
 that timed out: the credit is keyed to the attempt and pays once, and a NULL
@@ -192,9 +196,15 @@ answer counts the same way on the boards from 052: the handler sends the
 run's answers with their categories (`p_outcomes`), and
 `record_challenge_completion` dates only the questions the learner had not
 answered earlier the same UTC day and updates `user_question_history`, so a
-replayed run adds nothing. The run's Challenge XP (5 a correct answer) is
-unchanged. Without `p_outcomes` (the handler before 052) it counts the run's
-breakdown in full, as before. Coding passes are not answers and are not
+replayed run adds nothing. The run's Challenge XP is 5 a correct answer, and
+from 058 the handler names each answer's XP in `p_outcomes`: an answer whose
+question paid this account XP (in a quiz or a run) less than an hour ago pays
+nothing, the run is awarded the rest, and a run whose every correct answer is
+inside its hour is awarded nothing, like a run with none right. The handler
+credits coins for, and announces, the XP the award row holds. Without
+`p_outcomes` (the handler before 052) it counts the run's breakdown in full,
+as before, and an answer without its own XP (the handler before 058) is paid
+as before. Coding passes are not answers and are not
 counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank.
@@ -257,9 +267,9 @@ is today. No board ranks by streak, and only "This month" ranks by XP.
 XP each learner earned in it, the ranking the month's top three are paid by.
 `user_xp_days` holds that XP per learner, UTC day and subject, and only
 `add_xp_day` writes it, inside each verified award's own transaction:
-`record_verified_quiz_result_v2` (a quiz or daily result, repeats included),
-`record_verified_activity_xp` (a Biggest Shark Challenge run, a coding
-challenge's first pass) and `complete_verified_roadmap_attempt` (a Learn level
+`record_verified_quiz_result_v2` (a quiz or daily result, a repeated question
+once its hour is up), `record_verified_activity_xp` (a Biggest Shark Challenge
+run, a coding challenge's first pass or repeat XP) and `complete_verified_roadmap_attempt` (a Learn level
 or part test passed for the first time, at `learn_step_xp`, the numbers of
 `shared/progression.ts`; learning XP is derived from progress and is not in
 `user_xp`). Learning paths award no XP. Guest XP merged at sign-in
@@ -509,7 +519,20 @@ Hard (`difficultyOf`), projected from its tier, or for a project stage from its
 position; the label gates and pays nothing (see
 `docs/interactive-content-manifest.md`). Of the 770 tasks in
 `shared/coding-index.ts`, 462 are Easy, 199 Medium and 109 Hard; by track,
-316 JavaScript, 156 TypeScript, 183 React, 70 Algorithms and 45 system design. XP follows `CODING_TASK_XP` once per task, and
+316 JavaScript, 156 TypeScript, 183 React, 70 Algorithms and 45 system design. XP follows `CODING_TASK_XP` on a task's first verified pass, and
+again ("repeat XP", migration 058, owner decision of 9 October 2026) on a
+verified pass after the learner reset the task to its starter (the
+workbench's Reset calls `?resource=coding-reset`, which records it with
+`record_coding_reset`), at least 60 minutes after the task last paid its XP
+or a reveal forfeited it, with no reveal since the reset (a reveal after a
+pass is recorded by `record_coding_repeat_reveal`). Any verified pass closes
+the reset, so each payment takes a reset of its own and two Submits after one
+reset pay once. A repeat is XP only, under its own award id
+(`coding:<account>:<task>:r<n>`), into the balance and the month's ledger: no
+coins and no first-pass flag. The verdict's `repeatXp` says when the XP opens
+again and why a pass paid nothing; the workbench says it under the verdict.
+Guests earn no XP, so a guest's Reset stays in the browser. A Learn step
+still pays once, on its first pass. And
 the five coding badges join the shared badge sync for `webdev`. All storage is
 in `supabase/supabase-schema-025.sql`, whose track constraints and routines
 `supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last
@@ -1043,9 +1066,10 @@ production (issue #227, step D8).
   and the game settings mirror them as `coins`, clamped on read, so the owner
   tunes them in `/dev` → Settings → Coins without a deploy. Every account earns
   10 % of verified XP; Premium doubles it at credit time; one account earns at
-  most 400 coins a day from XP, counted after the doubling. Since every answer
-  earns XP (056), repeated questions included, this cap is what bounds the
-  coins a replayed quiz can earn: 400 coins is 4,000 XP a day on the free plan
+  most 400 coins a day from XP, counted after the doubling. While 056 paid
+  every repeated question, this cap was what bounded the coins a replayed quiz
+  could earn; from 058 a question pays again only after an hour, and the cap
+  bounds the rest: 400 coins is 4,000 XP a day on the free plan
   and 2,000 on Premium. The welcome grant is
   200. Premium milestones: a live streak of 7, 30 and 100 days (25, 100, 300;
   "live" as the Profile counts it, a shield or a protection covering the gap
