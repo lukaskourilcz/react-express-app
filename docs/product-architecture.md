@@ -394,6 +394,26 @@ from one second to thirty; on a deployment no run ever falls back to the
 request thread.
 Learning-path code activities use the same QuickJS sandbox, type-check thread
 and hidden-check program as coding tasks.
+Run and Submit give learner code the same realm (owner decisions, 9 October
+2026). Local time is Europe/Prague, with summer time from 01:00 UTC on the last
+Sunday of March to 01:00 UTC on the last Sunday of October, whatever the
+server's or the learner's own zone: one prelude
+(`shared/coding-prague-time.ts`) rewrites `Date`'s local constructor forms,
+`Date.parse` of local strings, the local getters and setters,
+`getTimezoneOffset`, `toString` and the `toLocale*String` methods in QuickJS,
+in the Run worker, in the React frame and in the React guest's page realm (the
+guest also runs with `TZ=Europe/Prague`); the server process itself stays in
+UTC. `toLocaleString`, `localeCompare` and their kin print and sort as an
+en-US browser does, from one shared implementation
+(`shared/coding-locale.ts`). The grader adds `URL`, `URLSearchParams`,
+`TextEncoder`, `TextDecoder`, `atob` and `btoa`
+(`lib/coding/sandbox-web-apis.ts`); `URL` is parsed by the host's WHATWG
+parser through a function that takes and returns strings only. Just before
+learner code runs, the Run worker removes every global and built-in member
+the grader lacks (`shared/coding-checker-globals.ts`, `Intl`, `crypto`,
+`fetch` and some two hundred more), and using one reads "`Intl` isn't
+available in the checker. Submit runs without it." React tasks keep the full
+browser and Node built-ins, in both of their runners.
 A failed or partly right system-design submission returns, per step, only
 whether it was right and the learner's own answer (`gradeDesign`): the correct
 options, orders and ranges, the explanations (which name the right option) and

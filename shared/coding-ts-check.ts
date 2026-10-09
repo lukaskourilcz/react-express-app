@@ -13,10 +13,12 @@ type TypeScriptModule = typeof ts;
 const ANSWER_FILE = 'answer.ts';
 const GLOBALS_FILE = 'globals.d.ts';
 
-// The lib files describe the language, not the host. `console` and the timers
-// come from the DOM lib, which is 2.5 MB of browser API for a few signatures,
-// so they are declared here instead. The console methods are the ones both
-// runners provide (`shared/coding-console.ts`).
+// The lib files describe the language, not the host. `console`, the timers
+// and the web APIs both runners have come from the DOM lib, which is 2.5 MB
+// of browser API for a few signatures, so they are declared here instead. The
+// console methods are the ones both runners provide (`shared/coding-console.ts`);
+// URL, URLSearchParams, the text encoders and base64 are the ones the grader
+// adds (`lib/coding/sandbox-web-apis.ts`).
 const GLOBALS = `declare const console: {
   log(...values: unknown[]): void;
   info(...values: unknown[]): void;
@@ -42,6 +44,56 @@ declare function setInterval(handler: (...args: never[]) => void, ms?: number): 
 declare function clearInterval(handle?: number): void;
 declare function queueMicrotask(callback: () => void): void;
 declare function structuredClone<T>(value: T): T;
+declare class URLSearchParams {
+  constructor(init?: string[][] | Record<string, string> | string | URLSearchParams | Iterable<readonly [string, string]>);
+  readonly size: number;
+  append(name: string, value: string): void;
+  delete(name: string, value?: string): void;
+  get(name: string): string | null;
+  getAll(name: string): string[];
+  has(name: string, value?: string): boolean;
+  set(name: string, value: string): void;
+  sort(): void;
+  toString(): string;
+  forEach(callback: (value: string, key: string, parent: URLSearchParams) => void, thisArg?: unknown): void;
+  entries(): IterableIterator<[string, string]>;
+  keys(): IterableIterator<string>;
+  values(): IterableIterator<string>;
+  [Symbol.iterator](): IterableIterator<[string, string]>;
+}
+declare class URL {
+  constructor(url: string | URL, base?: string | URL);
+  static canParse(url: string | URL, base?: string | URL): boolean;
+  static parse(url: string | URL, base?: string | URL): URL | null;
+  hash: string;
+  host: string;
+  hostname: string;
+  href: string;
+  readonly origin: string;
+  password: string;
+  pathname: string;
+  port: string;
+  protocol: string;
+  search: string;
+  readonly searchParams: URLSearchParams;
+  username: string;
+  toString(): string;
+  toJSON(): string;
+}
+declare class TextEncoder {
+  readonly encoding: string;
+  encode(input?: string): Uint8Array;
+  encodeInto(source: string, destination: Uint8Array): { read: number; written: number };
+}
+declare class TextDecoder {
+  constructor(label?: string, options?: { fatal?: boolean; ignoreBOM?: boolean });
+  readonly encoding: string;
+  readonly fatal: boolean;
+  readonly ignoreBOM: boolean;
+  decode(input?: ArrayBuffer | ArrayBufferView, options?: { stream?: boolean }): string;
+}
+declare function atob(data: string): string;
+declare function btoa(data: string): string;
 `;
 
 /** The newest lib the checker offers, so a modern method is never a false error. */

@@ -13,6 +13,13 @@ import { suiteCaseCount } from './react-hidden';
  * refuses `eval` and `Function(...)` (lib/coding/react-runner.ts). */
 export const GUEST_NODE_FLAGS = ['--max-old-space-size=256', '--disallow-code-generation-from-strings'];
 
+/** The guest's environment. React's `act` needs the development build
+ * (lib/coding/react-runner.ts). The page realm's `Date` reads Prague time
+ * whatever the zone (shared/coding-prague-time.ts); TZ puts the guest's own
+ * realm in Prague too, for the dates jsdom makes there, such as an input's
+ * `valueAsDate`. This is the disposable guest, never the API process. */
+export const GUEST_ENV: Readonly<Record<string, string>> = { NODE_ENV: 'development', TZ: 'Europe/Prague' };
+
 /** What the guest reads from its input file, then deletes before learner code runs. */
 export interface GuestInput {
   suite: string;

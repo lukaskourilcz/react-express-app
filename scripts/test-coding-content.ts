@@ -51,6 +51,7 @@ import { HIDDEN_CASE_PREFIX, splitHiddenCases, suiteCaseCount, withHiddenCases }
 import { renderCodingIndex } from './build-coding-index';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
 import { SKELETON_FILLS } from './fixtures/skeleton-fills';
+import { evaluateInRunRealm } from './run-realm-node';
 
 // The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
 // so Czech copy is retained work rather than a shipped surface and a new task
@@ -699,7 +700,9 @@ async function main() {
         }
         code = checker.toJavaScript(source);
       }
-      const run = await withTimeout(evaluateCalls({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
+      // The Run button's realm: Prague time, the grader's built-ins and none
+      // of the browser's others (scripts/run-realm-node.ts).
+      const run = await withTimeout(evaluateInRunRealm({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
       // The production grader: the hidden checks in a fresh program and, here,
       // in reverse order, so no solution leans on the order they run in or on
       // state the visible calls left behind.
@@ -710,7 +713,7 @@ async function main() {
         fail(`${label}: solution fails visible tests: ${run.codeError ?? wrong.join('; ')}`);
       }
       if (solution.hiddenTests?.length) {
-        const hidden = await withTimeout(evaluateCalls({ code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, label);
+        const hidden = await withTimeout(evaluateInRunRealm({ code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, label);
         if (!allPassed(hidden)) fail(`${label}: solution fails hidden tests: ${hidden.codeError ?? hidden.results.map((r, i) => (r.pass ? null : solution.hiddenTests![i].call)).filter(Boolean).join('; ')}`);
       }
     }
