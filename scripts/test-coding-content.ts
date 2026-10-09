@@ -49,6 +49,7 @@ import { lockDownRealm } from '../lib/coding/realm-lockdown';
 import { HIDDEN_CASE_PREFIX, splitHiddenCases, suiteCaseCount, withHiddenCases } from '../lib/coding/react-hidden';
 import { renderCodingIndex } from './build-coding-index';
 import { EVOLVING_CHALLENGES, evolvingResume, evolvingStage, evolvingUnlocked, evolvingTaskTrack, evolvingPassed, listedChallenges } from '../shared/evolving';
+import { SKELETON_FILLS } from './fixtures/skeleton-fills';
 
 // The app ships English only (`ENABLED_LANGS` in the client's LanguageContext),
 // so Czech copy is retained work rather than a shipped surface and a new task
@@ -126,6 +127,25 @@ const lookupTable = (ts: TypeScriptApi, visible: readonly Check[]): string | nul
     `const __table = {${names.map((name) => `${JSON.stringify(name)}: [${rows.filter((row) => row.call!.name === name).map((row) => `[() => [${row.call!.args}], () => (${literal(row.expected)})]`).join(', ')}]`).join(', ')}};`,
     ...names.map((name) => `function ${name}(...args) { for (const [input, output] of __table[${JSON.stringify(name)}]) if (__same(input(), args)) return output(); return undefined; }`),
   ].join('\n');
+};
+
+/** The first line of a skeleton that `filled` does not keep, or null when
+ * every one is there, in order. A blank line, a line comment and a comment
+ * alone on its line (in JSX braces or not) are holes the filling may replace
+ * with any number of lines; inside a line, a comment stands for any text. */
+const skeletonLineMissing = (skeleton: string, filled: string): string | null => {
+  const literally = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const lines = filled.split('\n').map((line) => line.trim());
+  let at = 0;
+  for (const raw of skeleton.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('//') || /^\{?\/\*.*\*\/\}?$/.test(line)) continue;
+    const pattern = new RegExp(`^${line.split(/\/\*.*?\*\//).map(literally).join('.*')}$`);
+    while (at < lines.length && !pattern.test(lines[at])) at += 1;
+    if (at === lines.length) return line;
+    at += 1;
+  }
+  return null;
 };
 
 /** The names a solution declares at its top level. */
@@ -283,6 +303,13 @@ async function main() {
       assert.ok(task, `${id}: authored task exists`);
       assert.equal(task.track, evolvingTaskTrack(id));
       assert.ok(task.references?.length && task.references.every(ref=>ref.title.en && (!REQUIRE_CS || ref.title.cs) && ref.url.startsWith('https://')), 'each stage has localized references');
+      // A checkpoint is built from its milestone. Its hint ladder has to be
+      // its own, or it advises work the checkpoint has not asked for yet.
+      if (id.endsWith('-start')) {
+        const milestone = CODING_TASKS.find(one => one.id === id.slice(0, -6))!;
+        if (!task.hints.en[0] || task.hints.en[0] === milestone.hints.en[0]) fail(`${id}: a checkpoint needs a first hint of its own, not its milestone's`);
+        if (milestone.approach && JSON.stringify(task.approach?.en) === JSON.stringify(milestone.approach.en)) fail(`${id}: a checkpoint needs method steps of its own, not its milestone's`);
+      }
       assert.equal(evolvingResume(project, passed), id, 'resume is the first unfinished stage');
       assert.equal(evolvingUnlocked(id, passed), true, 'earlier verified passes unlock the next stage');
       if (index > 0) assert.equal(evolvingUnlocked(id, new Set()), false, 'deep links cannot skip prerequisites');
@@ -775,6 +802,31 @@ async function main() {
       }
     } finally {
       testing.configure({ asyncUtilTimeout: fullWait });
+    }
+  }
+
+  /* ── skeletons a learner can follow to a pass ───────────────────────── */
+  // The skeleton is the last rung before the documentation, so it has to
+  // lead somewhere a pass can follow. Each entry of SKELETON_FILLS is one
+  // skeleton filled in: it has to keep every line of the skeleton and pass
+  // every visible and hidden check. A skeleton that declares a const the task
+  // has to reassign, loops over a number, or renders rows the suite does not
+  // count has no such filling.
+  for (const [id, filled] of Object.entries(SKELETON_FILLS)) {
+    if (!ONLY.test(id)) continue;
+    const task = byId.get(id);
+    const solution = solutionFor(id);
+    if (!task?.skeleton || !solution) { fail(`${id}: a skeleton filling names a task with no skeleton`); continue; }
+    const missing = skeletonLineMissing(task.skeleton, filled);
+    if (missing !== null) fail(`${id}: the skeleton filling does not keep the skeleton's line "${missing}"`);
+    if (task.track === 'react') {
+      const run = await withTimeout(runReactSuite({ suite: withHiddenCases(task.suite!, solution.hiddenSuite), appSource: filled }), 20_000, id);
+      if (run.compileError || run.failed > 0 || run.total === 0) fail(`${id}: the filled-in skeleton fails its suite: ${run.compileError ?? run.cases.filter((c) => c.status === 'fail').map((c) => `${c.name}: ${c.error}`).join('; ')}`);
+    } else {
+      const typed = task.track !== 'typescript' || (typesPassed(checker.check(filled, task.typeTests ?? [])) && typesPassed(checker.check(filled, solution.hiddenTypeTests ?? [])));
+      const code = task.track === 'typescript' ? checker.toJavaScript(filled) : filled;
+      const server = await runChecks({ code, visible: task.tests ?? [], hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
+      if (!typed || !allPassed(server.visible) || (server.hidden && !allPassed(server.hidden))) fail(`${id}: the filled-in skeleton fails its checks: ${JSON.stringify(server).slice(0, 400)}`);
     }
   }
 

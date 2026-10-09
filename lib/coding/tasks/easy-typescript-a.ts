@@ -683,14 +683,15 @@ console.log(spanOf([1, 2, 2, 2, 5], 2));
     skeleton: `const spanOf = (sorted: readonly number[], value: number): [number, number] | null => {
   let start = 0;
   let end = sorted.length - 1;
-  // move start forward, then end back, until each reaches the value
-  // when start has passed end, the value is not there
+  // move start forward until it reaches the value or passes end
+  // when start has passed end, the value is not there: return null now
+  // otherwise move end back until it reaches the value
 };`,
-    hints: ['Walk `start` forward while it is at or before `end` and `sorted[start]` is not the value. Then walk `end` back while `sorted[end]` is not the value. If `start` ends up past `end`, the value was never there.'],
+    hints: ['Walk `start` forward while it is at or before `end` and `sorted[start]` is not the value. If `start` ends up past `end`, the value was never there: return null before you touch `end`. Otherwise walk `end` back while `sorted[end]` is not the value; it stops at `start` at the latest.'],
     approach: [
       'Start `start` at 0 and `end` at the last index.',
-      'Move `start` right while `start <= end` and `sorted[start] !== value`. Then move `end` left while `sorted[end] !== value`.',
-      'Return `null` when `start > end`, and `[start, end]` otherwise.',
+      'Move `start` right while `start <= end` and `sorted[start] !== value`. If `start > end` now, return `null`.',
+      'Otherwise move `end` left while `sorted[end] !== value`, and return `[start, end]`.',
     ],
     verify: 'tests',
     estimatedMinutes: 8,
