@@ -10,7 +10,7 @@
 import type { FailureCategory } from './coding-failure';
 import type { PuzzleView } from './coding-puzzle';
 import type { PublicItemReview } from './curation';
-import { evolvingStage } from './evolving';
+import { evolvingStage, isEvolvingCheckpoint } from './evolving';
 
 export type CodingTrack = 'javascript' | 'typescript' | 'react' | 'system-design' | 'algorithms';
 export type CodingTier = 1 | 2 | 3 | 4 | 5;
@@ -88,9 +88,10 @@ export const TIER_DIFFICULTY: Record<CodingTier, Difficulty> = { 1: 'easy', 2: '
 
 /** Where Easy and Medium end in a stage list, by its length: the last Easy
  * position and the last Medium position, one-based. Every project stage and
- * short-path level is tier 2 today, so a stage's label comes from how far along
- * its path it sits. Five-level paths split 2/2/1, ten-stage projects 3/4/3 and
- * the twelve-stage FullStack apps 4/5/3. */
+ * short-path level is tier 2 today, so a milestone's label comes from how far
+ * along its path it sits. Five-level paths split 2/2/1, ten-stage projects
+ * 3/4/3 and the twelve-stage FullStack apps 4/5/3. A checkpoint reads no band:
+ * see `difficultyOf`. */
 export const STAGE_DIFFICULTY_BANDS: Readonly<Record<number, readonly [number, number]>> = {
   5: [2, 4],
   10: [3, 7],
@@ -114,12 +115,18 @@ export const difficultyFitsTier = (difficulty: Difficulty, tier: CodingTier): bo
   difficulty === 'easy' ? tier <= 2 : difficulty === 'hard' ? tier >= 3 : true;
 
 /** The label for a task or summary. An authored `difficulty` wins (the index
- * carries the resolved one); otherwise a project stage or path level reads its
- * position and a standalone task reads its tier. */
+ * carries the resolved one); otherwise a project milestone or path level reads
+ * its position, and a standalone task or a checkpoint reads its tier.
+ *
+ * A checkpoint is the five-minute step a project inserts before a milestone,
+ * and it stays that size wherever it sits, so its label comes from the task
+ * and not from its place in the list (owner decision, 9 Oct 2026): the
+ * position bands called the last checkpoint of each project Hard and the
+ * middle ones Medium. */
 export function difficultyOf(task: { id: string; tier: CodingTier; difficulty?: Difficulty }): Difficulty {
   if (task.difficulty) return task.difficulty;
   const stage = evolvingStage(task.id);
-  if (stage) return stageDifficulty(stage.index, stage.challenge.stages.length);
+  if (stage && !isEvolvingCheckpoint(task.id)) return stageDifficulty(stage.index, stage.challenge.stages.length);
   return TIER_DIFFICULTY[task.tier];
 }
 
