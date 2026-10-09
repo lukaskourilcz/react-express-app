@@ -37,7 +37,7 @@ BEGIN
     '{"javascript":{"correct":9,"total":10}}', NULL, 'webdev', 90, 'bob@example.com', 'Bob');
   PERFORM public.claim_quiz_submission('erasegradekey0000001', 'eraseattempt00000009', v_gone, 'webdev', repeat('c', 64));
   PERFORM public.record_roadmap_answer_v2('eraselevel0000000001', v_gone, 'q1', 1, 1, 'webdev', 'html', 'level', 1, 1, 50);
-  PERFORM public.complete_verified_roadmap_attempt(v_gone, 'eraselevel0000000001');
+  PERFORM public.complete_verified_roadmap_attempt_v2(v_gone, 'eraselevel0000000001');
   PERFORM public.apply_verified_skill_check(v_gone, 'eraseskill0000000001', 'webdev', 15, 20, '["css"]');
   PERFORM public.record_coding_verdict(v_gone, 'erasecoding000001', 'js-double-numbers', 'javascript', 'passed', TRUE, 20, 'webdev', 'eraselevel0000000001');
   PERFORM public.record_coding_reveal(v_gone, 'js-other-task', 'javascript', NULL);
