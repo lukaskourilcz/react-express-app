@@ -2,7 +2,8 @@
 
 An English developer-learning product from one React/Vite client and twelve
 serverless handlers. devShark is freemium: every account gets HTML, CSS and
-JavaScript, React levels 1 to 12 and a starter set of coding challenges, and
+JavaScript, React levels 1 to 12, the opening stages of every coding project
+and a starter set of coding challenges, and
 Premium (3.99 EUR a month or 39.99 EUR a year, VAT included) opens the rest.
 `shared/tiers.ts` holds that split. Subscriptions started between 4 October
 and 2 November 2026 keep a launch price of 1.80 EUR a month or 18.00 EUR a
@@ -12,7 +13,8 @@ all learning was free. StudyShark, which shared this code, moved to its own
 repository (`lukaskourilcz/studyshark`) on 2026-09-24.
 
 Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
-116 of them on the free tier.
+725 of them issued (the 45 system design tasks are hidden until they are
+reviewed again) and 141 of those on the free tier.
 
 ## Learning features
 
@@ -43,10 +45,10 @@ Content: 2,447 authored questions, 1,974 of them served, and 770 coding tasks,
   the existing server sandbox, keep verified checks visibly apart from
   self-reviewed writing, and award no XP — so a task reused from the coding
   catalogue is never rewarded twice. Neither claims a certification.
-- A devShark **Coding** section: 770 tasks across JavaScript, TypeScript, React,
-  Algorithms and system design, labelled Easy, Medium or Hard, graded on the
+- A devShark **Coding** section: 725 tasks across JavaScript, TypeScript, React
+  and Algorithms (system design is hidden), labelled Easy, Medium or Hard, graded on the
   server (QuickJS sandbox, TypeScript compiler, an isolated Vercel Sandbox for
-  React, sealed design keys), with authored hint ladders that end in
+  React), with authored hint ladders that end in
   documentation, coding tasks inside the Learn levels, and an optional **GitHub
   garden** that commits every passed task to the learner's own repository.
   Every graded task also carries a junior and a senior solution that open after

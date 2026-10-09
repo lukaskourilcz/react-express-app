@@ -145,13 +145,18 @@ browser reads it without a task body.
 
 | Challenge | Easy | Medium | Hard |
 | --- | --- | --- | --- |
-| Standalone task, by tier | 1 Foundations, 2 Fluency | 3 Combine | 4 Interview, 5 Capstones |
+| Standalone task or project checkpoint, by tier | 1 Foundations, 2 Fluency | 3 Combine | 4 Interview, 5 Capstones |
 | Five-level path, by level | 1–2 | 3–4 | 5 |
-| Ten-stage project, by stage | 1–3 | 4–7 | 8–10 |
-| Twelve-stage FullStack app, by stage | 1–4 | 5–9 | 10–12 |
+| Ten-stage project milestone, by stage | 1–3 | 4–7 | 8–10 |
+| Twelve-stage FullStack app milestone, by stage | 1–4 | 5–9 | 10–12 |
 
-Every stage and level is tier 2, which is why they read their position. A task
-may carry an authored `difficulty` where the derived label would mislead.
+Every stage and level is tier 2, so the milestones and path levels read their
+position. A checkpoint (`…-start`) is the five-minute step a project puts
+before a milestone and stays that size wherever it sits, so it reads its tier
+like a standalone task: every checkpoint is Easy (owner decision, 9 Oct 2026;
+the bands used to call fourteen of them Hard and twenty-eight Medium, audit
+C2-13). A task may carry an authored `difficulty` where the derived label
+would mislead.
 `npm run test:coding` refuses an Easy task at tier 3 or above and a Hard task
 at tier 1 or 2, requires a band for every path length in use, checks that each
 summary in the index carries the label its task resolves to, and prints the
@@ -557,7 +562,9 @@ challenge away from a tag at three (`every`, `slice`, `useReducer`), or three
 from `recursion` in Algorithms, fails the run on that tag and on every Medium
 or Hard challenge that carries it. The free set was re-picked for the larger
 catalogue: 116 of 770 tasks, 15.1 % (`FREE_CODING_TASK_IDS` in
-`shared/tiers.ts`). Three full content runs on the merged branch passed,
+`shared/tiers.ts`; 141 of the 725 issued tasks since the owner opened the
+whole first stage of the ten-stage projects and fourteen checkpoints and
+hid system design, 9 Oct 2026). Three full content runs on the merged branch passed,
 including the autosave check above; the FIX step then moved that check and
 the others like it onto the hand-moved clock described above.
 

@@ -116,8 +116,11 @@ for every coding task. The app keeps such a head once it starts:
 dated page or a task page keeps its own title, description and canonical URL
 instead of the generic "Coding" or "Question of the day" head. The Coding home
 and its track pages (`/coding`, `/coding/<track>`, `/coding/fullstack`) get a
-head the same way, outside the sitemap; `/coding/review` names `/coding` as
-canonical and the retired `/coding/system-design` names none. The
+head the same way and are in the sitemap (owner decision, 9 Oct 2026); the
+task pages are not. `/coding/review` names `/coding` as canonical and stays
+out. `/coding/system-design` and every address under it are one prerendered
+not-found page, `noindex` in the HTML and with no canonical (`vercel.json`
+sends them all there), because system design is hidden. The
 question itself comes from `GET /api/quiz/daily?qotd=<date|today>`
 (`lib/daily-question.ts`, inside the daily handler so the count stays at
 twelve): a seeded pick from that track in the served bank, options shuffled by
@@ -451,8 +454,17 @@ XP and one-award-per-task ledger, but a topic of its own, so
 none of its challenges can be drawn into a Learn level's quota. Its `level` is
 an ordering key rather than a Learn level, which `hasLearnLevel` is what the
 row, the workbench and the GitHub commit message read before naming one.
-System design still grades and still owns its history but has left the section
-(`CODING_SECTION_TRACKS`).
+System design is hidden until its tasks have been reviewed again (owner
+decision, 9 Oct 2026; `NEEDED.md`). `lib/coding/active.ts` issues no task of a
+track missing from `CODING_SECTION_TRACKS`, so none of its 45 tasks is in a
+list, a search, a challenge run, a skip suggestion, a Learn level, the browser
+index or a share page; the task resource answers 404 for one, Submit and the
+reveal refuse a sealed session for one, and a star saved on one is not listed.
+In the browser `/coding/system-design` and its old task addresses are the
+Coding not-found page. The tasks, their sealed-key graders and the
+`DesignRunner` stay in the repository, and `npm run test:coding` keeps proving
+them, for that review; records already earned against them stay in the
+database.
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
 three coding tasks sealed into the level session; for an account, completion
@@ -476,14 +488,16 @@ the device copy records when it was written and the account draft's
 `draftUpdatedAt`, and when the copies differ the page says which one is open.
 Tiers
 open in order (`tierUnlocked`) except in the unladdered tracks — system design
-is drilled rather than climbed, and `algorithms` is interview preparation a
+(hidden today) is drilled rather than climbed, and `algorithms` is interview preparation a
 learner arrives at with a date in the diary, where a locked tier would withhold
 the very challenge they came for. Each challenge also carries Easy, Medium or
-Hard (`difficultyOf`), projected from its tier, or for a project stage from its
-position; the label gates and pays nothing (see
-`docs/interactive-content-manifest.md`). Of the 770 tasks in
-`shared/coding-index.ts`, 462 are Easy, 199 Medium and 109 Hard; by track,
-316 JavaScript, 156 TypeScript, 183 React, 70 Algorithms and 45 system design. XP follows `CODING_TASK_XP` once per task, and
+Hard (`difficultyOf`), projected from its tier, or for a project milestone or
+path level from its position; a checkpoint reads its tier like a standalone
+task, so every checkpoint is Easy (owner decision, 9 Oct 2026). The label
+gates and pays nothing (see `docs/interactive-content-manifest.md`). Of the
+725 tasks in `shared/coding-index.ts`, 459 are Easy, 171 Medium and 95 Hard; by
+track, 316 JavaScript, 156 TypeScript, 183 React and 70 Algorithms. The 45
+hidden system design tasks are authored but not issued. XP follows `CODING_TASK_XP` once per task, and
 the five coding badges join the shared badge sync for `webdev`. All storage is
 in `supabase/supabase-schema-025.sql`, whose track constraints and routines
 `supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last
@@ -721,13 +735,21 @@ disappears when checkout cannot apply the coupon or the offer has expired.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
   and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
-  stage one of every evolving project and short path (`FREE_EVOLVING_STAGES`),
-  and a starter set of standalone coding challenges listed once in
-  `FREE_CODING_TASK_IDS`. `npm run build:coding-index` projects that list and
-  stage one of every path into `shared/coding-index.ts` as `free: true`, about
-  15 % of the catalogue (`FREE_CODING_SHARE`, held between 12 and 18 % by the
-  launch contracts; 116 of 770 today, re-picked after the Easy and the Medium
-  and Hard waves of #226). Re-pick the list, not the task files,
+  stage one of every evolving project and short path (`FREE_EVOLVING_STAGES`,
+  `freeStageCount`), which in a project with checkpoints is the checkpoint
+  and the first milestone, the last checkpoint of each of the fourteen
+  projects that have checkpoints (`FREE_CHECKPOINT_IDS`), and a starter set of
+  standalone coding challenges listed once in `FREE_CODING_TASK_IDS`. In the
+  stage numbers a learner sees, that is stages 1, 2 and 9 of a ten-stage
+  project, 1 and 11 of a twelve-stage FullStack app and level 1 of a short
+  path (owner decision, 9 Oct 2026, audit C2-13; until then only stage 1).
+  Stages still open in order, so a free account reaches a free checkpoint only
+  after the stages before it. `npm run build:coding-index` projects all of it
+  into `shared/coding-index.ts` as `free: true`, about 19 % of the issued
+  catalogue (`FREE_CODING_SHARE`, held between 16 and 22 % by the launch
+  contracts; 141 of 725 today: JavaScript 68, TypeScript 29, React 33,
+  Algorithms 11). Every free task reads Easy except two debugging paths whose
+  authored level 1 is Medium. Re-pick the list, not the task files,
   when the catalogue grows. Quizzes, the daily challenge, the Biggest Shark
   Challenge, multiplayer, flashcards, the typing racer, leaderboards, streaks,
   friends and the token shop stay open: no quiz category is gated, so nothing
@@ -1350,7 +1372,8 @@ tests remain cumulative, and each stage lists its own checks first so Results
 opens on what the brief just asked for. Original task IDs retain their drafts and
 completion; a passed original milestone also covers its new prerequisite
 without synthesizing extra XP receipts. The shared evolving registry controls
-routes, unlocks and progress. The full catalogue contains 770 tasks, and every
+routes, unlocks and progress. The full catalogue contains 770 tasks (725
+issued, with system design hidden), and every
 graded code task carries a reference, a junior and a senior solution on the
 server; the last two reach the browser only with a verified pass. A stage's
 solutions hold only what that stage asks for: the content contract grades the

@@ -175,14 +175,20 @@ scaffold (`LINKS_REACT_SCAFFOLD`), which exports `normalizeLink` and
 
 Each stage and level carries Easy, Medium or Hard, and a task page's stage
 list sets its numbered stages under those labels. Every stage is tier 2, so
-the label comes from the stage's position (`stageDifficulty` in
-`shared/coding-catalog.ts`):
+a milestone's or a level's label comes from its position (`stageDifficulty`
+in `shared/coding-catalog.ts`):
 
 | Path | Easy | Medium | Hard |
 | --- | --- | --- | --- |
 | Five-level short path | 1–2 | 3–4 | 5 |
-| Ten-stage project, the retired café-orders project included | 1–3 | 4–7 | 8–10 |
-| Twelve-stage FullStack app | 1–4 | 5–9 | 10–12 |
+| Ten-stage project milestone, the retired café-orders project included | 1–3 | 4–7 | 8–10 |
+| Twelve-stage FullStack app milestone | 1–4 | 5–9 | 10–12 |
+
+A checkpoint reads its tier instead, like a standalone task, so every
+checkpoint is Easy: it is the same five-minute step wherever it sits (owner
+decision, 9 Oct 2026). A ten-stage project's list therefore reads Easy 1–3,
+Medium 4, Easy 5, Medium 6, Easy 7, Hard 8, Easy 9, Hard 10; the list groups
+consecutive stages with one label, so the order stays the project's order.
 
 The label unlocks nothing and pays nothing: stages still open in order and earn
 the tier-2 first-pass XP. A stage may carry an authored `difficulty` like any
@@ -237,8 +243,9 @@ focus trigger the same decoration, with no movement under reduced motion.
 Each stage reuses `coding_progress` and `coding_drafts`, so no new table or
 migration is required. Stage issuance checks all preceding server-recorded
 passes and submission rechecks prerequisites. Reveals and skips do not advance
-the sequence. Signed-out visitors can try stage one; account progress requires
-sign-in. A next stage without its own draft starts from the previous stage's
+the sequence. Signed-out visitors can try what the free plan opens (stages 1,
+2 and 9 of a ten-stage project, 1 and 11 of a FullStack app, level 1 of a
+short path; `shared/tiers.ts`); account progress requires sign-in. A next stage without its own draft starts from the previous stage's
 saved code. Submitting persists the exact code before recording a stage pass.
 Earlier stages remain revisitable. Each stage earns existing first-pass XP
 once through the idempotent grading routine.

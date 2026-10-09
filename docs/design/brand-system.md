@@ -24,7 +24,7 @@ Concise, direct, active, specific, encouraging, honest, technically accurate, an
 
 ## Freemium rule
 
-devShark is freemium. `shared/tiers.ts` sets what every account opens (HTML, CSS and JavaScript in full, React levels 1 to 12, stage one of every project and short path, and a starter set of about 15 % of the coding challenges) and what Premium opens for 3.99 EUR a month or 39.99 EUR a year. Copy states the price with "VAT included" beside it and never calls devShark free for everyone; "Free to start" is the claim. A lock reads "Premium" in text, so colour or an icon never carries it alone.
+devShark is freemium. `shared/tiers.ts` sets what every account opens (HTML, CSS and JavaScript in full, React levels 1 to 12, the opening stages of every project and short path, and a starter set of coding challenges, about 19 % of the coding challenges together) and what Premium opens for 3.99 EUR a month or 39.99 EUR a year. Copy states the price with "VAT included" beside it and never calls devShark free for everyone; "Free to start" is the claim. A lock reads "Premium" in text, so colour or an icon never carries it alone.
 
 Premium, coins, cosmetics and merchandise decide which content a learner may start. They leave explanations, grading, XP amounts, scores, streaks, ranks, leaderboards, matching and accounts as they are. Voluntary support is retired: `/support` redirects to `/premium`.
 
