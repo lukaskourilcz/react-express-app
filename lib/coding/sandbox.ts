@@ -20,6 +20,9 @@ import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import { LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, MAX_LOGS, PROBE_IS_INDEX_SOURCE, PROBE_LINE, TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
 import { CONSOLE_SOURCE } from '../../shared/coding-console';
+import { PRAGUE_TIME_SOURCE } from '../../shared/coding-prague-time';
+import { LOCALE_SOURCE } from '../../shared/coding-locale';
+import { hostURL, MAX_URL_TEXT, WEB_APIS_SOURCE } from './sandbox-web-apis';
 import { bootBackoff, GraderBusyError, inThreadGradingAllowed, threadSlots } from './grader-capacity';
 
 let modulePromise: Promise<QuickJSWASMModule> | null = null;
@@ -56,12 +59,28 @@ const HIDDEN_RUN_MESSAGES: ReadonlySet<string> = new Set([TIMEOUT_MESSAGE, STACK
 /** What a hidden run that failed any other way reports. */
 export const HIDDEN_RUN_FAILED_MESSAGE = 'A hidden check could not run.';
 
+/** Where the host's URL parser waits for the program, which takes it and
+ * deletes the name before any learner code runs. */
+const URL_HOST_NAME = '__devsharkHostURL';
+
+/** A prelude without its comment lines and indentation: QuickJS parses every
+ * character of the program on every run. None of the preludes has a
+ * multi-line string, so this changes no code. */
+const compact = (source: string): string => source.split('\n').map((line) => line.trim()).filter((line) => line && !line.startsWith('//')).join('\n');
+// Most runs never read a date, format a number or parse a URL, so these are
+// kept as text and compiled the first time learner code reaches for them.
+const PRAGUE_TIME = JSON.stringify(compact(PRAGUE_TIME_SOURCE));
+const LOCALE = JSON.stringify(compact(LOCALE_SOURCE));
+const WEB_APIS = JSON.stringify(compact(WEB_APIS_SOURCE));
+
 // The learner is compiled in a separate strict function scope. This controller
 // stays in an inaccessible closure held by the host, never in VM globals.
 // Expected values and pass/fail comparison stay entirely outside QuickJS.
 function program(code: string, calls: string[], shownCalls: number): string {
   return `(() => {
 'use strict';
+const hostURL = globalThis.${URL_HOST_NAME};
+delete globalThis.${URL_HOST_NAME};
 const apply = Reflect.apply, keys = Object.keys, isArray = Array.isArray;
 const setPrototype = Object.setPrototypeOf, stringify = JSON.stringify;
 const NativeFunction = Function;
@@ -126,26 +145,49 @@ globalThis.clearTimeout = globalThis.clearInterval = id => {
 globalThis.queueMicrotask = fn => { void (async () => { await 0; fn(); })(); };
 // One clock for every way of asking the time: Date.now, new Date() and Date()
 // all read the virtual clock the timers advance, so code that times itself
-// with new Date() grades the way it runs in the browser.
-const RealDate = Date, construct = Reflect.construct, defineProperty = Object.defineProperty;
+// with new Date() grades the way it runs in the browser. Local time is
+// Europe/Prague, as in Run (shared/coding-prague-time.ts), whatever the
+// server's own zone. Every date comes from the global Date, so the realm's
+// Date is rewritten in place the first time learner code reads that name.
+const RealDate = Date;
 const clock = () => 1700000000000 + now;
-function VirtualDate(...args) {
-  if (new.target === undefined) return construct(RealDate, [clock()], RealDate).toString();
-  return construct(RealDate, args.length === 0 ? [clock()] : args, new.target);
-}
-VirtualDate.prototype = RealDate.prototype;
-defineProperty(RealDate.prototype, 'constructor', { value: VirtualDate, writable: true, configurable: true });
-VirtualDate.now = clock;
-VirtualDate.parse = RealDate.parse;
-VirtualDate.UTC = RealDate.UTC;
-globalThis.Date = VirtualDate;
+const defineProperty = Object.defineProperty;
+const once = (source, ...args) => {
+  let done = false, result;
+  return () => { if (!done) { done = true; result = NativeFunction('return ' + source)()(...args); } return result; };
+};
+const pragueDate = once(${PRAGUE_TIME}, RealDate, { clock, inPlace: true });
+const settle = (name, value) => defineProperty(globalThis, name, { value, writable: true, enumerable: false, configurable: true });
+defineProperty(globalThis, 'Date', {
+  get() { settle('Date', pragueDate()); return globalThis.Date; },
+  set(value) { pragueDate(); settle('Date', value); },
+  enumerable: false, configurable: true,
+});
 globalThis.performance = { now: () => now };
+// toLocaleString and localeCompare as Run has them (shared/coding-locale.ts),
+// and the web APIs Run has: URL, URLSearchParams, TextEncoder, TextDecoder,
+// atob and btoa (sandbox-web-apis.ts), each set compiled on first use too.
+const locale = once(${LOCALE}, globalThis);
+const localeMethods = [[Number.prototype, 'toLocaleString', 0], [BigInt.prototype, 'toLocaleString', 0], [String.prototype, 'localeCompare', 1], [String.prototype, 'toLocaleUpperCase', 0], [String.prototype, 'toLocaleLowerCase', 0], [Array.prototype, 'toLocaleString', 0], [Object.getPrototypeOf(Uint8Array.prototype), 'toLocaleString', 0]];
+for (const [target, name, length] of localeMethods) {
+  const method = { [name](...args) { locale(); return apply(target[name], this, args); } }[name];
+  defineProperty(method, 'length', { value: length, configurable: true });
+  defineProperty(target, name, { value: method, writable: true, enumerable: false, configurable: true });
+}
+const webAPIs = once(${WEB_APIS}, globalThis, hostURL);
+for (const name of ['URL', 'URLSearchParams', 'TextEncoder', 'TextDecoder', 'atob', 'btoa']) {
+  defineProperty(globalThis, name, {
+    get() { webAPIs(); return globalThis[name]; },
+    set(value) { webAPIs(); globalThis[name] = value; },
+    enumerable: false, configurable: true,
+  });
+}
 // structuredClone as the browser has it: a deep copy that keeps Maps, Sets,
 // Dates, RegExps, undefined, NaN and shared or circular references, drops
 // prototypes, and refuses functions and symbols.
 const NativeMap = Map, NativeSet = Set, NativeRegExp = RegExp, NativeError = Error, NativeObject = Object;
 const mapGet = Map.prototype.get, mapSet = Map.prototype.set, mapHas = Map.prototype.has, mapEach = Map.prototype.forEach;
-const setAdd = Set.prototype.add, setEach = Set.prototype.forEach, dateTime = Date.prototype.getTime;
+const setAdd = Set.prototype.add, setEach = Set.prototype.forEach, dateTime = RealDate.prototype.getTime;
 const objectTag = Object.prototype.toString, isView = ArrayBuffer.isView;
 const tagOf = value => apply(objectTag, value, []);
 const refuse = what => { const error = new NativeError(what + ' could not be cloned.'); error.name = 'DataCloneError'; return error; };
@@ -421,6 +463,24 @@ export async function runInQuickJS(input: SandboxInput): Promise<EvaluateResult>
   runtime.setMaxStackSize(STACK_BYTES);
   runtime.setInterruptHandler(shouldInterruptAfterDeadline(deadline));
   const vm = runtime.newContext();
+  // The host's URL parser (sandbox-web-apis.ts). Strings in, one string of
+  // JSON or null out: no host object reaches the VM, and a string past the
+  // limit is refused before it is copied out of the VM.
+  const urlFunction = vm.newFunction('url', (...handles) => {
+    const args: (string | undefined)[] = [];
+    for (const handle of handles.slice(0, 4)) {
+      if (vm.typeof(handle) !== 'string') { args.push(undefined); continue; }
+      const length = vm.getProp(handle, 'length');
+      const tooLong = vm.getNumber(length) > MAX_URL_TEXT;
+      length.dispose();
+      if (tooLong) return vm.null;
+      args.push(vm.getString(handle));
+    }
+    const answer = hostURL(args[0], args[1], args[2], args[3]);
+    return answer === null ? vm.null : vm.newString(answer);
+  });
+  vm.setProp(vm.global, URL_HOST_NAME, urlFunction);
+  urlFunction.dispose();
   let driver: QuickJSHandle | null = null;
   const readDriver = (name: string): unknown => {
     if (!driver) return undefined;
