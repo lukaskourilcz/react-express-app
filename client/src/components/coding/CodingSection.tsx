@@ -779,10 +779,9 @@ export function CodingTaskScreen() {
   // also the offline starting point of the next stage, so it stays on the
   // device after the account takes it.
   const draftBase = task.data?.draftUpdatedAt ?? null;
-  const onDraft = useCallback((code: string) => {
-    if (!taskId) return;
-    saveDraft(taskId, code, { signedIn: isAuthenticated, base: draftBase, keepOnDevice: Boolean(evolvingStage(taskId)) });
-  }, [taskId, isAuthenticated, draftBase]);
+  const onDraft = useCallback((code: string) => (
+    taskId ? saveDraft(taskId, code, { signedIn: isAuthenticated, base: draftBase, keepOnDevice: Boolean(evolvingStage(taskId)) }) : null
+  ), [taskId, isAuthenticated, draftBase]);
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
     if (verdict.progress) void queryClient.invalidateQueries({ queryKey: codingKeys.progress() });

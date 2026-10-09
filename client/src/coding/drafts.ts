@@ -97,11 +97,12 @@ let saves = 0;
  * account took lets the device copy go unless `keepOnDevice` (an evolving
  * stage's code is also the next stage's offline start), and the copy here,
  * now or next, builds on the time the account returned. Code over the limit
- * is not saved at all: the account would refuse it, and Submit says why. */
-export function saveDraft(id: string, code: string, { signedIn, base, keepOnDevice = false }: { signedIn: boolean; base: string | null; keepOnDevice?: boolean }): void {
-  if (!fitsDraftLimit(code)) return;
+ * stays on this device only, since the account would refuse it: the answer
+ * is 'tooLarge', and the caller says so. */
+export function saveDraft(id: string, code: string, { signedIn, base, keepOnDevice = false }: { signedIn: boolean; base: string | null; keepOnDevice?: boolean }): 'tooLarge' | null {
   keepDeviceDraft(id, code, base);
-  if (!signedIn) return;
+  if (!fitsDraftLimit(code)) return signedIn ? 'tooLarge' : null;
+  if (!signedIn) return null;
   const turn = ++saves;
   newest.set(id, turn);
   const save = (sending.get(id) ?? Promise.resolve()).then(async () => {
@@ -115,6 +116,7 @@ export function saveDraft(id: string, code: string, { signedIn, base, keepOnDevi
   });
   sending.set(id, save);
   void save.then(() => { if (sending.get(id) === save) sending.delete(id); });
+  return null;
 }
 
 /** The account draft of one task, with its time. */

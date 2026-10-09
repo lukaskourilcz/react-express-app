@@ -1624,6 +1624,7 @@ export const en = {
   'coding.draft.restore': 'Open the code from this device',
   'coding.draft.deviceRestored': 'The code from this device is open. Run or Submit to save it to your account in place of the draft there.',
   'coding.draft.deviceNewer': 'The code on this device is newer than the draft saved to your account, so it is open here. Run or Submit to save it to your account.',
+  'coding.draft.tooLarge': 'Your code is over 20 kB, too large to save to your account. It is kept on this device only.',
   'coding.retry': 'Try again',
   'coding.planFailed': 'We could not load your plan, so no challenge here carries the Premium mark. Opening one checks your plan.',
   'coding.offline': 'You are offline. Run still works; Submit needs a connection.',

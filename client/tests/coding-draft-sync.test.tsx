@@ -269,11 +269,13 @@ it('saves a run on this device with its time, then to the account, and lets the 
   expect(time()?.base).toBeNull();
 });
 
-it('saves nothing, here or to the account, for code the account would refuse', async () => {
+// V3-3: code over 20 kB was saved nowhere, so a reload lost it.
+it('keeps code the account would refuse on this device, and sends it nowhere', async () => {
   onDevice('// the last code that fit', NOW - minutes(1), null);
   serve(null, null);
   mount();
-  await run(`// ${'x'.repeat(21 * 1024)}`);
+  const oversize = `// ${'x'.repeat(21 * 1024)}`;
+  await run(oversize);
   expect(mocks.save).not.toHaveBeenCalled();
-  expect(localStorage.getItem(COPY)).toBe('// the last code that fit');
+  expect(localStorage.getItem(COPY)).toBe(oversize);
 });

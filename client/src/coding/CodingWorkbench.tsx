@@ -71,8 +71,9 @@ export interface CodingWorkbenchProps {
   saveAction?: ReactNode;
   /** Called with the current code when the learner presses Run or Submit —
    * the two moments they have said the code is worth keeping. Nothing is
-   * saved while they type, and nothing when they leave. */
-  onDraft?: (code: string) => void;
+   * saved while they type, and nothing when they leave. 'tooLarge': the code
+   * was kept on this device only, too large for the account. */
+  onDraft?: (code: string) => 'tooLarge' | null | void;
   onVerdict?: (verdict: CodingVerdictResponse, submittedCode?: string) => void;
   onRevealed?: () => void;
   nextHref?: string | null;
@@ -166,6 +167,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // later Submit clears the card, not the pass.
   const [recordedPass, setRecordedPass] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // The last Run or Submit kept the code on this device only.
+  const [draftTooLarge, setDraftTooLarge] = useState(false);
   const [tab, setTab] = useState<Tab>(isReact ? 'preview' : 'results');
   const [hintsTaken, setHintsTaken] = useState(0);
   const [confirming, setConfirming] = useState<'reset' | 'reveal' | null>(null);
@@ -279,7 +282,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const runLocal = useCallback(async () => {
     if (phase !== 'idle') return;
-    onDraft?.(code);
+    setDraftTooLarge(onDraft?.(code) === 'tooLarge');
     localRun.current?.abort();
     setPhase('running');
     setServerChecked(false);
@@ -319,7 +322,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const submit = useCallback(async () => {
     if (phase !== 'idle' || !session) return;
-    onDraft?.(code);
+    setDraftTooLarge(onDraft?.(code) === 'tooLarge');
     // The server takes 20 kB of code; say so before sending more.
     if (new TextEncoder().encode(code).length > CODING_CODE_LIMIT_BYTES) {
       setSubmitError(t('coding.verdict.tooLarge'));
@@ -1047,7 +1050,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // What the actions open: hints, the skip form, confirmations and errors. It
   // follows the pane in reading order and exists only while it holds something.
   const hintsOpen = taken > 0 || skipping || skipResult !== null || confirming === 'reveal' || solution !== null;
-  const notesOpen = hintsOpen || confirming === 'reset' || !online || formatError !== null || (submitError !== null && !puzzleMode);
+  const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
 
   return (
     <div
@@ -1194,6 +1197,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 </div>
               )}
               {!online && <p className="cd-note cd-note--warn" role="status">{t('coding.offline')}</p>}
+              {draftTooLarge && <p className="cd-note cd-note--warn" role="status">{t('coding.draft.tooLarge')}</p>}
               {formatError && <p className="cd-note cd-note--error" role="status">{formatError}</p>}
               {submitError && !puzzleMode && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
             </div>
