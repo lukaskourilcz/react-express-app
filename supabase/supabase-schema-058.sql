@@ -620,7 +620,7 @@ BEGIN
         TRUE
       ),
       updated_at = NOW();
-    -- The month's XP (section 3).
+    -- The month's XP (056, section 3).
     PERFORM public.add_xp_day(p_user_id, p_subject, v_xp);
   END IF;
 
