@@ -1232,10 +1232,22 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
   // boards with the pass), while the milestone is still to do: pasted into
   // the milestone, with its hidden checks, it has to fail. The proofs above
   // show it passes the checkpoint itself.
+  // The store's first checkpoint asks for get and set, and its milestone only
+  // adds false, 0 and null, which any closure that stores the value already
+  // keeps. An honest reference passes both; only reshaping the two stages can
+  // change that, which is the owner's call. Its reference is still proven to
+  // pass the milestone, so this entry goes stale once the stages differ.
+  const SAME_AS_MILESTONE = new Set(['ts-evolving-store-1-start']);
   let checkpoints = 0;
   for (const project of EVOLVING_CHALLENGES) {
     for (const id of project.stages) {
       if (!id.endsWith('-start') || !ONLY.test(id)) continue;
+      if (SAME_AS_MILESTONE.has(id)) {
+        const milestone = byId.get(id.slice(0, -6));
+        const shown = solutionFor(id);
+        if (!milestone || !shown || !await passesTask(milestone, shown.solution)) fail(`${id}: no longer matches its milestone; drop it from SAME_AS_MILESTONE`);
+        continue;
+      }
       const milestone = byId.get(id.slice(0, -6));
       const shown = solutionFor(id);
       if (!milestone || !shown || milestone.verify !== 'tests') continue;

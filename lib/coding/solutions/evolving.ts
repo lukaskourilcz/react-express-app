@@ -1374,12 +1374,9 @@ function partitionResults<T>(results:readonly Result<T>[]):{values:T[];errors:st
 function recoverResult<T>(result:Result<T>,recover:(error:string)=>Result<T>):Result<T>{return result.ok?result:flatMapResult({ok:true,value:result.error},recover)}`,
   ],
   'ts-evolving-store': [
-    () => `// The values at this step are ordinary non-empty strings and non-zero
-// numbers, so a truthiness check tells "nothing set yet" from a stored value.
-// Stage one stores false, 0 and null too, which this check would mistake for
-// nothing.
-function createStore<T>(initial:T){let stored:T|undefined;
-    return {get:():T=>stored||initial,set:(next:T):void=>{stored=next}};
+    () => `// The state lives in the closure, so every store made by a call has its own.
+function createStore<T>(initial:T){let value=initial;
+    return {get:():T=>value,set:(next:T):void=>{value=next}};
   }`,
     () => `function createStore<T>(initial:T){let value=initial;
     const set=(next:T):void=>{value=next};
