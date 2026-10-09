@@ -27,7 +27,8 @@ import { CodePuzzle } from './CodePuzzle';
 import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { CODING_CODE_LIMIT_BYTES, SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint, isSyntaxError } from '../../../shared/coding-failure';
-import { revealCoding, submitCoding, useCodingApproaches } from './api';
+import { resetCoding, revealCoding, submitCoding, useCodingApproaches } from './api';
+import { RepeatXpNote } from './RepeatXpNote';
 import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
@@ -452,10 +453,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     setVerdictStale(true);
     setHintsTaken(0);
     setConfirming(null);
+    // Signed in, the reset opens the task's XP again (migration 058). A reset
+    // the server missed only means the next pass pays nothing, which its
+    // verdict says.
+    if (signedIn && session) void resetCoding({ session }).catch(() => {});
     // Reset is off now (there is nothing left to reset), so focus goes to the
     // code that was just replaced rather than to the page.
     editorPaneRef.current?.querySelector<HTMLElement>('.cm-content')?.focus();
-  }, [task.starter]);
+  }, [task.starter, signedIn, session]);
 
   const confirmSkip = useCallback(async () => {
     if (skipSubmitting) return;
@@ -909,6 +914,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         <span>{verdictLabel}</span>
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
+      <RepeatXpNote verdict={verdict} />
       {verdictStale && <p className="cd-verdict__row">{t('coding.verdict.stale')}</p>}
       {verdict.verdict === 'failed' && verdict.hidden && verdict.hidden.passed < verdict.hidden.total && visiblePassed && <p className="cd-verdict__row">{t('coding.verdict.hiddenFailed')}</p>}
       {verdict.puzzle ? (
@@ -1205,7 +1211,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               </div>}
               {confirming === 'reset' && (
                 <div className="cd-note cd-note--warn" role="alertdialog" aria-label={t('coding.reset')} onKeyDown={onConfirmKeyDown}>
-                  <p style={{ margin: '0 0 8px' }}>{t('coding.resetConfirm')}</p>
+                  <p style={{ margin: '0 0 8px' }}>{t(signedIn && (progress?.status === 'passed' || verdict?.verdict === 'passed') ? 'coding.resetConfirmXp' : 'coding.resetConfirm')}</p>
                   <div className="cd-actions">
                     <Button variant="primary" onClick={reset} label={t('coding.reset')} />
                     <Button variant="secondary" onClick={cancelConfirm} ref={focusOnMount} label={t('coding.resetCancel')} />
