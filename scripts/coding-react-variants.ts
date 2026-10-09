@@ -51,6 +51,30 @@ export const REACT_VARIANTS: ReactVariant[] = [
     correct: false,
   },
   {
+    id: 'react-loading-state',
+    note: 'shows "Loading…" in the heading itself, then "Users"',
+    edits: [
+      ['if (loading) return <p>Loading…</p>;', 'if (loading) return <main><h2>Loading…</h2></main>;'],
+      ['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Users</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;'],
+    ],
+    correct: true,
+  },
+  {
+    id: 'react-loading-state',
+    note: 'keeps the starter heading and shows "Loading…" in an h3 under it',
+    edits: [
+      ['if (loading) return <p>Loading…</p>;', 'if (loading) return <main><h2>Loading state</h2><h3>Loading…</h3></main>;'],
+      ['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Loading state</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;'],
+    ],
+    correct: true,
+  },
+  {
+    id: 'react-loading-state',
+    note: 'keeps a "Loading…" heading once the users have arrived',
+    edits: [['return <ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul>;', 'return <main><h2>Loading…</h2><ul>{users.map(user => <li key={user.id}>{user.name}</li>)}</ul></main>;']],
+    correct: false,
+  },
+  {
     id: 'react-star-rating',
     note: 'marks filled stars with aria-pressed and an emoji star',
     edits: [["onClick={() => setRating(star)}>{star <= shown ? '★' : '☆'}</button>", "onClick={() => setRating(star)} aria-pressed={star <= shown}>{star <= shown ? '⭐' : '·'}</button>"]],

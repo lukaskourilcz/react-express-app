@@ -970,10 +970,13 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import App from './App';
 
-// The page's text without its headings: the starter's heading says "Loading state".
+// The page's text without the starter's heading, which says "Loading state".
+// A heading that shows the loading status itself still counts.
 const pageText = container => {
   const copy = container.cloneNode(true);
-  copy.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => heading.remove());
+  copy.querySelectorAll('h1, h2, h3, h4, h5, h6').forEach(heading => {
+    if (heading.textContent.trim() === 'Loading state') heading.remove();
+  });
   return copy.textContent;
 };
 
