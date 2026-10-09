@@ -88,6 +88,23 @@ describe('difficulty labels on a track page', () => {
   });
 });
 
+describe('searching a track', () => {
+  // C3-13: the search read the retained Czech titles too, so "seznam" (Czech
+  // for "list") turned up two English challenges. It reads the title the row
+  // shows and the technique tags, nothing a learner cannot see.
+  const rows = () => screen.queryAllByRole('listitem').map((row) => row.textContent ?? '');
+  it('never matches a title in a language the page is not in', () => {
+    mount('/coding/javascript?q=seznam', <CodingTrackScreen />, '/coding/:track');
+    expect(rows().filter((row) => /Zip two lists|The removal that changes/.test(row))).toEqual([]);
+    expect(screen.getByText(/^No challenge matches those filters/)).toBeInTheDocument();
+  });
+
+  it('still finds a challenge by its English title', () => {
+    mount('/coding/javascript?q=zip%20two', <CodingTrackScreen />, '/coding/:track');
+    expect(rows().some((row) => row.includes('Zip two lists'))).toBe(true);
+  });
+});
+
 describe('the format filter', () => {
   it('offers only formats a challenge can have, and reads an old checklist link as no filter', () => {
     mount('/coding/react?format=checklist', <CodingTrackScreen />, '/coding/:track');

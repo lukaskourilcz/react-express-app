@@ -88,6 +88,33 @@ describe('a share page opened directly', () => {
     expect(canonical()).toBe('https://devshark.app/daily/2026-09-29');
   });
 
+  // C4-4: the Coding home and its track pages carry a head of their own, which
+  // used to be the home page's until the app replaced it.
+  it.each([
+    ['/coding', 'Coding challenges · devShark', 'JavaScript, TypeScript, React and algorithm tasks, graded by running tests.'],
+    ['/coding/javascript', 'JavaScript coding challenges · devShark', 'Loops, array methods, closures, and promises, including edge cases.'],
+    ['/coding/fullstack', 'FullStack coding challenges · devShark', 'A five-level link shortener.'],
+  ])('keeps the head the build wrote for %s', (path, title, description) => {
+    const head = prerendered(path, title, description);
+    expect(head).not.toBeNull();
+    visit(path, head);
+    expect(document.title).toBe(title);
+    expect(meta('meta[name="description"]')).toBe(description);
+    expect(canonical()).toBe(`https://devshark.app${path}`);
+    expect(meta('meta[property="og:url"]')).toBe(`https://devshark.app${path}`);
+  });
+
+  it('does not keep a section head that names another page or none', () => {
+    // /coding/review opens /coding, and names it as canonical.
+    expect(prerendered('/coding', 'Coding challenges · devShark', 'Tasks.')).not.toBeNull();
+    window.history.replaceState(null, '', '/coding/review');
+    expect(readShareHead()).toBeNull();
+    // Retired system design names no canonical at all.
+    document.head.innerHTML = SHELL_HEAD;
+    window.history.replaceState(null, '', '/coding/system-design');
+    expect(readShareHead()).toBeNull();
+  });
+
   it('writes other routes as before, and puts the page’s head back on the way back', () => {
     const head = prerendered(TASK, TASK_TITLE, TASK_TEXT);
     visit(TASK, head);
