@@ -380,7 +380,7 @@ console.log(largest([4,9,2]));
     tier: 1,
     focus: ["for"],
     title: "Fizz values",
-    prompt: "Write `fizz(n)`, returning an array counting 1 to n where every multiple of 3 is replaced by the string `Fizz` — `fizz(5)` gives `[1, 2, “Fizz”, 4, 5]`. `fizz(0)` gives an empty array.",
+    prompt: "Write `fizz(n)`, returning an array counting 1 to n where every multiple of 3 is replaced by the string `Fizz` — `fizz(5)` gives `[1, 2, \"Fizz\", 4, 5]`. `fizz(0)` gives an empty array.",
     starter: `const fizz = n => {
   
 };
@@ -832,7 +832,7 @@ console.log(oddSum([1,2,3]));
     tier: 2,
     focus: ["for", "strings"],
     title: "Repeat word",
-    prompt: "Write `repeat(word, times)`, returning the word repeated that many times with single spaces between — `repeat(“hi”, 3)` gives `hi hi hi`. Once means no space at all, and zero times gives an empty string.",
+    prompt: "Write `repeat(word, times)`, returning the word repeated that many times with single spaces between — `repeat(\"hi\", 3)` gives `hi hi hi`. Once means no space at all, and zero times gives an empty string.",
     starter: `const repeat = (word, times) => {
   
 };
@@ -1161,7 +1161,7 @@ console.log(isPalindrome("level"));
     tier: 2,
     focus: ["for-of", "objects"],
     title: "Letter counts",
-    prompt: "Write `countLetters(text)`, returning an object mapping each character to how many times it appears — `countLetters(“aba”)` gives `{ a: 2, b: 1 }`. An empty string gives an empty object.",
+    prompt: "Write `countLetters(text)`, returning an object mapping each character to how many times it appears — `countLetters(\"aba\")` gives `{ a: 2, b: 1 }`. An empty string gives an empty object.",
     starter: `const countLetters = text => {
   
 };

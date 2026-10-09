@@ -849,7 +849,8 @@ test('a new size goes back to page 1', () => {
     topic: 'react',
     level: 23,
     tier: 2,
-    focus: ['pagination', 'useEffect'],
+    // The server cuts the page: the ladder ends on useEffect, not Array.slice.
+    focus: ['useEffect', 'pagination'],
     title: 'Ask the server for one page',
     prompt: 'The server hands out posts one page at a time. Whenever `page` changes, fetch `/api/posts?_page=<page>&_limit=5` in an effect and show the titles it sends back. The server never says how many pages there are, so a page that comes back with fewer than 5 posts is the last one: disable Next then. Disable Previous on page 1.',
     starter: `import React, { useEffect, useState } from 'react';

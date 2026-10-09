@@ -224,11 +224,54 @@ const HIDDEN: [string, unknown][][] = [
   [['safeReport(["a,1,"], 1, 1).problems[0].reason', 'number'], ['safeReport(["a,1,1"], 1, 1).problems', []], ['safeReport(["", "  ", "x"], 1, 1).problems.map((p) => p.reason)', ['empty', 'empty', 'fields']]],
 ];
 
+/** A checkpoint's reference (`…-N-start`): the previous stage's module with
+ * the one change the checkpoint asks for, which leaves the rest of stage N to
+ * do, so it never passes stage N. A checkpoint shows no junior or senior
+ * board. Each entry swaps one function of the previous module for its
+ * checkpoint version; the last adds one. */
+const CHECKPOINT_CHANGES: [before: string, after: string][] = [
+  [reference(0).split('\n\n')[0], `function parseOrder(line) {
+  const parts = line.split(",");
+  // Only the item name is trimmed at this step; the numbers come next.
+  return { item: parts[0].trim(), quantity: parts[1], unitPrice: parts[2] };
+}`],
+  [STARTER_SUMMARIZE, `function summarize(lines) {
+  const totals = {};
+  for (const line of lines) {
+    const order = parseOrder(line);
+    // Every item at this step appears once, so its total is its own order's
+    // total. A repeated item adds up at the next step.
+    totals[order.item] = orderTotal(order);
+  }
+  return totals;
+}`],
+  [STARTER_DISCOUNT, `function applyDiscount(total, threshold, percent) {
+  if (total > threshold) {
+    // percent is a whole number, so 10 takes off a tenth. The comparison and
+    // the rounding are the next step.
+    return total - total * (percent / 100);
+  }
+  return total;
+}`],
+  [STARTER_TRACE, `function trace(label, value) {
+  console.log(label, value);
+  return value;
+}`],
+];
+const checkpointReference = (stage: number): string => stage <= CHECKPOINT_CHANGES.length
+  ? reference(stage - 1).replace(...CHECKPOINT_CHANGES[stage - 1])
+  : `${reference(stage - 1)}
+
+function safeReport(lines, threshold, percent) {
+  // Every line is good at this step, so nothing is set aside yet.
+  return { rows: report(lines, threshold, percent), problems: [] };
+}`;
+
 export const DEBUG_EVOLVING_SOLUTIONS: Record<string, CodingSolution> = Object.fromEntries(
-  [1, 2, 3, 4, 5].map((stage) => [`${DEBUG_CHALLENGE_ID}-${stage}`, {
+  [1, 2, 3, 4, 5].flatMap((stage) => [[`${DEBUG_CHALLENGE_ID}-${stage}`, {
     solution: reference(stage),
     junior: junior(stage),
     senior: senior(stage),
     hiddenTests: HIDDEN.slice(0, stage).flat().map(([call, expected]) => ({ call, expected, edge: true })),
-  }]),
+  }], [`${DEBUG_CHALLENGE_ID}-${stage}-start`, { solution: checkpointReference(stage) }]]),
 );

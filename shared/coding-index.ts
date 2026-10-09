@@ -575,7 +575,7 @@ export const CODING_INDEX: readonly CodingTaskSummary[] = [
   {"id":"react-easy2-page-of-photos","track":"react","level":23,"tier":1,"difficulty":"easy","focus":["pagination","slice"],"title":{"en":"One page at a time","cs":""},"verify":"tests","estimatedMinutes":8,"free":true},
   {"id":"react-easy3-rows-per-page","track":"react","level":23,"tier":2,"difficulty":"easy","focus":["pagination","slice"],"title":{"en":"Rows per page","cs":""},"verify":"tests","estimatedMinutes":8},
   {"id":"react-easy2-show-more","track":"react","level":23,"tier":2,"difficulty":"easy","focus":["pagination","slice"],"title":{"en":"Show more","cs":""},"verify":"tests","estimatedMinutes":8},
-  {"id":"react-easy3-fetch-a-page","track":"react","level":23,"tier":2,"difficulty":"easy","focus":["pagination","useEffect"],"title":{"en":"Ask the server for one page","cs":""},"verify":"tests","estimatedMinutes":9},
+  {"id":"react-easy3-fetch-a-page","track":"react","level":23,"tier":2,"difficulty":"easy","focus":["useEffect","pagination"],"title":{"en":"Ask the server for one page","cs":""},"verify":"tests","estimatedMinutes":9},
   {"id":"react-easy2-numbered-pages","track":"react","level":23,"tier":2,"difficulty":"easy","focus":["pagination","accessibility"],"title":{"en":"Numbered page buttons","cs":""},"verify":"tests","estimatedMinutes":9},
   {"id":"react-mh-load-more","track":"react","level":23,"tier":3,"difficulty":"medium","focus":["fetch","pagination","spread","conditional"],"title":{"en":"Load more from the server","cs":""},"verify":"tests","estimatedMinutes":25},
   {"id":"react-paginated-posts","track":"react","level":23,"tier":3,"difficulty":"medium","focus":["pagination","slice"],"title":{"en":"Paginated posts","cs":""},"verify":"tests","estimatedMinutes":20},

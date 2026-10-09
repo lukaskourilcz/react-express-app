@@ -400,8 +400,8 @@ const CHECKPOINTS: Record<string, Checkpoint[]> = {
       `render(<App/>);fireEvent.click(screen.getByRole('checkbox',{name:'Apple'}));expect(screen.getByLabelText('Selected total').textContent).toBe('2');search('Dates');expect(screen.getByLabelText('Selected total').textContent).toBe('2');`,
     ),
     ui(
-      'Add the number input "Maximum price". Empty means no limit; a non-negative number retains products priced at or below it. Reset pagination when it changes.',
-      'Přidej číselný vstup "Maximum price". Prázdný je bez limitu; nezáporné číslo ponechá produkty nejvýše této ceny. Při změně resetuj stránkování.',
+      'Add the number input "Maximum price". Empty means no limit; a non-negative number retains products priced at or below it.',
+      'Přidej číselný vstup "Maximum price". Prázdný je bez limitu; nezáporné číslo ponechá produkty nejvýše této ceny.',
       `render(<App/>);fireEvent.change(screen.getByLabelText('Maximum price'),{target:{value:'1'}});expect(screen.getAllByRole('listitem').length).toBe(1);expect(screen.getByRole('listitem').textContent).toContain('Banana');`,
     ),
     ui(

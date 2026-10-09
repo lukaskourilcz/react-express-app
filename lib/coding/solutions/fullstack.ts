@@ -46,6 +46,39 @@ function build(app:FullStackApp,stage:number):string {
  `;
 }
 
+/** A checkpoint's reference (`…-N-start`): the previous stage's module with
+ * the one step the checkpoint asks for, and none of stage N's own work, so it
+ * never passes stage N. A checkpoint shows no junior or senior board. */
+function checkpoint(app:FullStackApp,stage:number):string {
+ const {amount,endpoint}=app;
+ if(stage===2)return build(app,2).replace(/\n function updateItem.*\n/,`
+ // The stage-one checks on unknown input: narrow to a record before reading
+ // the two fields. Updating an item is the next step.
+`);
+ if(stage===5)return build(app,4)+`
+ import React,{useState,useEffect} from 'react';import {createLocalFetch} from './localFetch';
+ export {normalizeInput,updateItem,createApi};
+ // Every response succeeds at this step, so the list is fetched once on mount
+ // and drawn. Loading, failures and Retry come with stage five.
+ export default function App({fetcher}){
+ const [local]=useState(()=>createLocalFetch(createApi(${JSON.stringify(fullstackSeed(app))}))),fetch=fetcher||local;
+ const [rows,setRows]=useState([]);
+ useEffect(()=>{fetch('${endpoint}').then(response=>response.json()).then(setRows)},[fetch]);
+ return <main><ul>{rows.map(item=><li key={item.id}>{item.name}<output aria-label={'${amount} '+item.name}>{item.${amount}}</output></li>)}</ul></main>;
+ }
+ `;
+ if(stage===6)return build(app,5).replace('{!loading&&!visible.length',`{/* The inputs keep their text in state, and submitting only stops the page
+ from reloading: sending the POST is stage six. */}
+ <form onSubmit={e=>e.preventDefault()}><label>Name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>${amount}<input type="number" value={amount} onChange={e=>setAmount(e.target.value)}/></label><button>Create</button></form>
+ {!loading&&!visible.length`);
+ return build(app,7)
+  .replace('rows.filter(r=>true)',`rows.filter(r=>r.name.toLowerCase().includes(query.trim().toLowerCase())&&(!available||r.${amount}>0))`)
+  .replace('{!loading&&!visible.length',`{/* Both filters only decide which rows are drawn; the records stay as the API
+ sent them. Pages and Delete are stage eight. */}
+ <label>Search<input value={query} onChange={e=>setQuery(e.target.value)}/></label><label><input type="checkbox" checked={available} onChange={e=>setAvailable(e.target.checked)}/>Available only</label>
+ {!loading&&!visible.length`);
+}
+
 /** Emits `text` only once the app has reached the stage that asks for it. */
 const since = (stage: number, threshold: number, text: string): string => (stage >= threshold ? text : '');
 
@@ -795,5 +828,7 @@ export const FULLSTACK_SOLUTIONS:Record<string,CodingSolution> = Object.fromEntr
    {call:`[null,5,'patch'].map(patch=>updateItem(${JSON.stringify(row)},patch))`,expected:[null,null,null]},
   ]:[]),
   ...(i>=2?[{call:`(()=>{const seed=${JSON.stringify(fullstackSeed(app))};const api=createApi(seed);seed[0].name='changed';const first=api({method:'GET',path:'${app.endpoint}'});first.body[0].name='mutated';return api({method:'GET',path:'${app.endpoint}'}).body[0].name})()`,expected:app.first}]:[]),
- ]}:{})}]);
+ ]}:{})}] as [string,CodingSolution]).concat(
+  project.stages.filter(id => id.endsWith('-start')).map(id=>[id,{solution:checkpoint(app,Number(id.slice(0,-6).split('-').pop()))}] as [string,CodingSolution]),
+ );
 }));

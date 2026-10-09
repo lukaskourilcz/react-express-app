@@ -91,9 +91,15 @@ const PUZZLES: Record<string, AuthoredPuzzle> = {
     ],
     // The two declarations are independent, so either order is right and both
     // are accepted. Insisting on one would teach a rule that does not exist.
+    // `vowels` never changes, so it also works declared inside the loop, or
+    // outside the function before or after it. Every order that passes the
+    // task's checks is accepted; the content contract enumerates them.
     accepted: [
       ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
       ['a', 'c', 'b', 'd', 'e', 'f', 'g', 'h'],
+      ['a', 'c', 'd', 'b', 'e', 'f', 'g', 'h'],
+      ['b', 'a', 'c', 'd', 'e', 'f', 'g', 'h'],
+      ['a', 'c', 'd', 'e', 'f', 'g', 'h', 'b'],
     ],
     competencies: ['sequence', 'control-flow', 'api-usage'],
     claim: ORDERING_CLAIM,
@@ -112,11 +118,15 @@ const PUZZLES: Record<string, AuthoredPuzzle> = {
       { id: 'j', code: '  return true;' },
       { id: 'k', code: '}' },
     ],
+    // `left` needs nothing, so it can come before `clean` as well as either
+    // side of `right`; the two steps inside the loop can swap.
     accepted: [
       ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'],
       ['a', 'b', 'd', 'c', 'e', 'f', 'g', 'h', 'i', 'j', 'k'],
       ['a', 'b', 'c', 'd', 'e', 'f', 'h', 'g', 'i', 'j', 'k'],
       ['a', 'b', 'd', 'c', 'e', 'f', 'h', 'g', 'i', 'j', 'k'],
+      ['a', 'c', 'b', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k'],
+      ['a', 'c', 'b', 'd', 'e', 'f', 'h', 'g', 'i', 'j', 'k'],
     ],
     competencies: ['sequence', 'control-flow', 'edge-handling'],
     claim: ORDERING_CLAIM,
@@ -160,7 +170,17 @@ const PUZZLES: Record<string, AuthoredPuzzle> = {
       { id: 'g', code: '  return best;' },
       { id: 'h', code: '}' },
     ],
-    accepted: [['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']],
+    // For an empty list `best` is undefined and the loop never runs, so the
+    // function returns undefined wherever the guard sits, even after the
+    // return. Every order that passes the task's checks is accepted.
+    accepted: [
+      ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'],
+      ['a', 'c', 'b', 'd', 'e', 'f', 'g', 'h'],
+      ['a', 'c', 'd', 'b', 'e', 'f', 'g', 'h'],
+      ['a', 'c', 'd', 'e', 'b', 'f', 'g', 'h'],
+      ['a', 'c', 'd', 'e', 'f', 'b', 'g', 'h'],
+      ['a', 'c', 'd', 'e', 'f', 'g', 'b', 'h'],
+    ],
     competencies: ['sequence', 'control-flow', 'edge-handling'],
     claim: ORDERING_CLAIM,
   },

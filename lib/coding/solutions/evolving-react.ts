@@ -2958,3 +2958,111 @@ export const REACT_EVOLVING_SOLUTIONS: Record<string,CodingSolution> = Object.fr
     }];
   })),
 );
+
+/*
+ * Checkpoints. `…-N-start` is the small step before stage N, and its reference
+ * is what a learner reads after giving up on it, or for free once it is
+ * passed: the previous stage's App with that one step added and none of stage
+ * N's own work, so it never passes stage N. A checkpoint shows no junior or
+ * senior board. Each builder gets the previous stage's reference ('' before
+ * stage one) and edits it the way advanceReact does.
+ */
+const checkpoints: Record<string,((earlier:string)=>string)[]> = {
+  'react-evolving-board': [
+    () => `import React,{useState} from 'react';
+// Only the input is wired at this step: its value lives in state, so typing
+// shows up and the field starts empty. Adding a task comes with stage one.
+export default function App(){
+ const [text,setText]=useState('');
+ return <main><label>Task<input value={text} onChange={e=>setText(e.target.value)}/></label><button>Add</button></main>;
+}`,
+    earlier => earlier
+      .replace(' return <main>', ` // The filter only decides which rows are drawn; the task list never changes.
+ return <main>`)
+      .replace('<ul>{tasks.filter(t=>true)', `<div>{['All','Active','Completed'].map(f=><button key={f} onClick={()=>setFilter(f)}>{f}</button>)}</div>
+ <ul>{tasks.filter(t=>filter==='All'||(filter==='Completed'?t.done:!t.done))`),
+    earlier => earlier
+      .replace(' return <main>', ` // Every add, delete and toggle already goes through change, which keeps the
+ // list it replaces in past, so undo puts the latest one back. Redo is stage three.
+ const undo=()=>setHistory(h=>h.past.length?{past:h.past.slice(0,-1),present:h.past[h.past.length-1],future:[]}:h);
+ return <main>`)
+      .replace('</main>', '<button disabled={!history.past.length} onClick={undo}>Undo</button></main>'),
+    earlier => earlier
+      .replace(' return <main>', ` // One change for the whole list, so a single undo takes it back.
+ return <main>`)
+      .replace('</main>', '<button disabled={!tasks.some(t=>!t.done)} onClick={()=>change(rows=>rows.map(t=>({...t,done:true})))}>Complete all</button></main>'),
+    earlier => earlier
+      .replace(' return <main>', ` // move swaps neighbours in the full list, so a filter does not change where
+ // a task goes. Only Move up exists at this step.
+ return <main>`)
+      .replace('</li>', `<button aria-label={'Move up '+t.name} disabled={tasks[0].id===t.id} onClick={()=>move(t.id,-1)}>Move up</button></li>`),
+  ],
+  'react-evolving-catalog': [
+    () => `import React from 'react';
+const products=[{id:1,name:'Apple',price:2},{id:2,name:'Banana',price:1},{id:3,name:'Carrot',price:3},{id:4,name:'Dates',price:4}];
+// A fixed list rendered once: one li per product with its name and price.
+export default function App(){
+ return <main><ul>{products.map(p=><li key={p.id}>{p.name} {p.price}</li>)}</ul></main>;
+}`,
+    earlier => earlier
+      .replace(' const pages=', ` // filter() already made a new array, so sorting it leaves products in order.
+ rows.sort((a,b)=>sort==='name'?a.name.localeCompare(b.name):sort==='price-asc'?a.price-b.price:b.price-a.price);
+ const pages=`)
+      .replace('</label>\n', `</label>
+ <label>Sort<select value={sort} onChange={e=>setSort(e.target.value)}><option value="name">Name</option><option value="price-asc">Price ascending</option><option value="price-desc">Price descending</option></select></label>\n`),
+    earlier => earlier
+      .replace(' return <main>', ` // Selection is a list of ids, so it outlives paging and searching, and the
+ // total adds up every selected product, shown or not.
+ return <main>`)
+      .replace('{p.name} {p.price}', '<label><input type="checkbox" checked={selected.includes(p.id)} onChange={()=>setSelected(ids=>ids.includes(p.id)?ids.filter(id=>id!==p.id):[...ids,p.id])}/>{p.name}</label> {p.price}')
+      .replace('</main>', '<output aria-label="Selected total">{products.filter(p=>selected.includes(p.id)).reduce((sum,p)=>sum+p.price,0)}</output></main>'),
+    earlier => earlier
+      .replace('const rows=', `const [maxPrice,setMaxPrice]=useState('');
+ // An empty field sets no limit. The page stays where it is when the limit
+ // changes; stage four goes back to the first page.
+ const rows=`)
+      .replace('includes(query.trim().toLowerCase()))', "includes(query.trim().toLowerCase())&&(maxPrice===''||p.price<=Number(maxPrice)))")
+      .replace('</main>', '<label>Maximum price<input type="number" min="0" value={maxPrice} onChange={e=>setMaxPrice(e.target.value)}/></label></main>'),
+    earlier => earlier
+      .replace(' return <main>', ` // A selected product without an entry in quantities counts once. Every edit
+ // at this step is a whole number from 1 to 99, so it is stored as typed;
+ // stage five keeps the previous value when an edit is out of range.
+ return <main>`)
+      .replace('sum+p.price,0)', 'sum+p.price*(quantities[p.id]??1),0)')
+      .replace('</main>', `<section aria-label="Cart">{products.filter(p=>selected.includes(p.id)).map(p=><label key={p.id}>{'Quantity '+p.name}<input type="number" min="1" max="99" value={quantities[p.id]??1} onChange={e=>setQuantities(q=>({...q,[p.id]:Number(e.target.value)}))}/></label>)}</section></main>`),
+  ],
+  'react-evolving-form': [
+    () => `import React,{useState} from 'react';
+// The email lives in state, and the submit handler stops the browser from
+// reloading the page. Checking the address comes with stage one.
+export default function App(){
+ const [email,setEmail]=useState('');
+ return <main><form onSubmit={e=>e.preventDefault()}><label>Email<input value={email} onChange={e=>setEmail(e.target.value)}/></label><button>Next</button></form></main>;
+}`,
+    earlier => earlier
+      .replace(' return <main>', ` // The name step keeps email in state, so Back finds it as it was. Its Next
+ // does nothing yet: checking the name is stage two.
+ return <main>`)
+      .replace('</form>', `{step===1&&<><label>Name<input value={name} onChange={e=>setName(e.target.value)}/></label><button type="button" onClick={back}>Back</button><button>Next</button></>}
+ </form>`),
+    earlier => earlier
+      .replace(' return <main>', ` // back already clears consent, so an edited summary has to be agreed to again.
+ // Submit does nothing yet: the receipt is stage three.
+ return <main>`)
+      .replace('<button type="button" onClick={back}>Back</button></>}', '<button type="button" onClick={back}>Back</button><label><input type="checkbox" checked={consent} onChange={e=>setConsent(e.target.checked)}/>I agree</label><button type="button" disabled={!consent}>Submit</button></>}'),
+    earlier => earlier
+      .replace('const next=', `// Company is its own piece of state, so switching to personal hides the field
+ // without losing what was typed. Checking it is stage four.
+ const [account,setAccount]=useState('personal'),[company,setCompany]=useState('');
+ const next=`)
+      .replace('<label>Name<input value={name} onChange={e=>setName(e.target.value)}/></label>', `<label>Name<input value={name} onChange={e=>setName(e.target.value)}/></label><label>Account type<select value={account} onChange={e=>setAccount(e.target.value)}><option value="personal">Personal</option><option value="business">Business</option></select></label>{account==='business'&&<label>Company<input value={company} onChange={e=>setCompany(e.target.value)}/></label>}`),
+    earlier => earlier
+      .replace('const back=', `// The draft holds the four fields and a version, never the consent.
+ const saveDraft=()=>localStorage.setItem('evolving-form-draft',JSON.stringify({version:1,email,name,account,company}));
+ const back=`)
+      .replace('</form>', '<button type="button" onClick={saveDraft}>Save draft</button></form>'),
+  ],
+};
+for (const [id, steps] of Object.entries(checkpoints)) {
+  steps.forEach((build, index) => { REACT_EVOLVING_SOLUTIONS[`${id}-${index+1}-start`] = { solution: build(index ? REACT_EVOLVING_SOLUTIONS[`${id}-${index}`].solution : '') }; });
+}

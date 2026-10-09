@@ -46,15 +46,18 @@ request, accepted orders never leave the server).
 | --- | --- | --- | --- |
 | `js-reverse-string` | 5 | 1 | sequence, api-usage |
 | `js-sum-array` | 7 | 1 | sequence, control-flow |
-| `js-count-vowels` | 8 | 2 | sequence, control-flow, api-usage |
+| `js-count-vowels` | 8 | 5 | sequence, control-flow, api-usage |
 | `js-word-count` | 6 | 2 | sequence, api-usage, edge-handling |
-| `js-largest-number` | 8 | 1 | sequence, control-flow, edge-handling |
-| `js-palindrome` | 11 | 4 | sequence, control-flow, edge-handling |
+| `js-largest-number` | 8 | 6 | sequence, control-flow, edge-handling |
+| `js-palindrome` | 11 | 6 | sequence, control-flow, edge-handling |
 
 More than one accepted order is normal: independent declarations can swap, and
 insisting on one canonical answer would teach a rule that does not exist.
 Every accepted order, put together, passes its task's own visible and hidden
-checks; the coding content contract runs them.
+checks, and every order that passes them is accepted: the coding content
+contract runs the accepted orders and enumerates every arrangement (the
+function's first and last lines in place, brace-free lines also outside the
+function) to find any passing one that is missing.
 
 A puzzle never completes its task, so the puzzle screen offers the same "Use
 the editor on this screen" button as the waiting state below. Without it, a

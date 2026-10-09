@@ -1203,3 +1203,240 @@ const hidden: Record<string, [string, unknown][][]> = {
 for (const [id, stages] of Object.entries(hidden)) {
   for (let index=0; index<5; index++) EVOLVING_SOLUTIONS[`${id}-${index+1}`].hiddenTests = stages.slice(0,index+1).flat().map(([call,expected])=>({call,expected,edge:true}));
 }
+
+// Checkpoints. `…-N-start` is the small step before milestone N, and its
+// reference is what a learner reads after giving up on it, or for free once
+// it is passed: the previous milestone's module with that one step added and
+// none of the milestone's own work, so pasting it never passes milestone N.
+// The content contract proves both sides. A checkpoint shows no junior or
+// senior board. Each builder gets the previous milestone's reference ('' before
+// stage one); stages 4 and 5 append a function to it, earlier ones rewrite it.
+const checkpoints: Record<string, ((earlier: string) => string)[]> = {
+  'js-evolving-calculator': [
+    () => `// One number with optional spaces around it: trim, then convert.
+function calculate(expression) { return Number(expression.trim()); }`,
+    () => `// + and - share one precedence, so one left-to-right pass is enough:
+// start from the first number and add or take away each next one.
+function calculate(expression) {
+  const tokens = expression.match(/\\d+(?:\\.\\d+)?|[+-]/g);
+  let total = Number(tokens[0]);
+  for (let i = 1; i < tokens.length; i += 2) total = tokens[i] === '+' ? total + Number(tokens[i + 1]) : total - Number(tokens[i + 1]);
+  return total;
+}`,
+    () => `// A bracket is one more kind of atom: read the expression inside with sum()
+// and step over the closing bracket. Inputs at this step are valid, so
+// nothing checks for a missing bracket, a stray token or a unary sign yet.
+function calculate(s) {
+  let i=0;
+  const space=()=>{while(/\\s/.test(s[i]||'') && i<s.length)i++};
+  function atom(){space();if(s[i]==='('){i++;const n=sum();space();i++;return n}const m=s.slice(i).match(/^\\d+(?:\\.\\d+)?/);i+=m[0].length;return Number(m[0])}
+  function product(){let n=atom();space();while(s[i]==='*'||s[i]==='/'){const op=s[i++],v=atom();n=op==='*'?n*v:n/v;space()}return n}
+  function sum(){let n=product();space();while(s[i]==='+'||s[i]==='-'){const op=s[i++],v=product();n=op==='+'?n+v:n-v;space()}return n}
+  return sum();
+}`,
+    earlier => `${earlier}
+// Every name at this step is defined and holds a plain number, so each one is
+// swapped for its value in brackets and the engine does the rest.
+function calculateWithVariables(expression,variables){return calculate(expression.replace(/[A-Za-z_][A-Za-z0-9_]*/g,name=>'('+variables[name]+')'))}`,
+    earlier => `${earlier}
+// Every line at this step is valid: a line with = assigns its value to the
+// name on the left, and every line adds its value to results.
+function runProgram(lines){const variables={},results=[];for(const line of lines){const [name,expression]=line.includes('=')?line.split('='):[null,line];const value=calculateWithVariables(expression,variables);if(name!==null)variables[name.trim()]=value;results.push(value)}return {variables,results}}`,
+  ],
+  'js-evolving-query': [
+    () => `// No options are used yet, so a filter that keeps every row is enough: it
+// returns a new array of the same records and leaves the caller's array as
+// it was. Stage one gives the filter its where test.
+function query(rows, options = {}) { return rows.filter(() => true); }`,
+    () => `function query(rows, options={}) {
+    let out=rows.filter(row=>Object.entries(options.where||{}).every(([k,v])=>row[k]===v));
+    // filter() already made a new array, so sorting it leaves rows alone, and
+    // sort() is stable, so equal values keep their input order.
+    if(options.orderBy)out.sort((a,b)=>{const x=a[options.orderBy],y=b[options.orderBy];return (x<y?-1:x>y?1:0)*(options.desc?-1:1)});
+    return out;
+  }`,
+    () => `function query(rows, options={}) {
+    let out=rows.filter(row=>Object.entries(options.where||{}).every(([k,v])=>row[k]===v));
+    if(options.orderBy)out.sort((a,b)=>{const x=a[options.orderBy],y=b[options.orderBy];return (x<y?-1:x>y?1:0)*(options.desc?-1:1)});
+    const offset=options.offset??0;out=out.slice(offset,options.limit===undefined?undefined:offset+options.limit);
+    // Each row becomes a new object with only the selected fields it has.
+    if(options.select)out=out.map(row=>Object.fromEntries(options.select.filter(k=>Object.hasOwn(row,k)).map(k=>[k,row[k]])));
+    return out;
+  }`,
+    earlier => `${earlier}
+// A Map tells keys apart as === does (NaN aside) and keeps them in first-seen
+// order. Every value at this step is a finite number, so each group adds them
+// as they come.
+function groupRows(rows,field,valueField){const groups=new Map();for(const row of rows){if(!groups.has(row[field]))groups.set(row[field],{key:row[field],count:0,sum:0});const g=groups.get(row[field]);g.count++;g.sum+=row[valueField]}return [...groups.values()]}`,
+    earlier => `${earlier}
+// An inner join: each left row pairs with every right row whose key is strictly
+// equal, in left order then right order, and a left row with no match drops out.
+function joinRows(left,right,leftKey,rightKey){return left.flatMap(l=>right.filter(r=>l[leftKey]===r[rightKey]).map(r=>({left:l,right:r})))}`,
+  ],
+  'js-evolving-events': [
+    () => `// This step registers one listener per event, so a Map from the event name
+// to its listener is enough; stage one keeps a list of them.
+function createBus(){
+    const listeners=new Map();
+    return {
+      on(event,listener){listeners.set(event,listener)},
+      emit(event,value){const listener=listeners.get(event);if(listener)listener(value)},
+    };
+  }`,
+    () => `function createBus(){
+    const events=new Map();
+    return {
+      on(event,fn){if(!events.has(event))events.set(event,new Set());const sub={fn};events.get(event).add(sub);
+        // Each registration is its own object in the event's Set, which keeps
+        // registration order. Deleting it leaves every other registration of
+        // the same callback in place, and a second call finds nothing to delete.
+        return ()=>{events.get(event).delete(sub)}},
+      emit(event,value){for(const sub of [...(events.get(event)||[])])sub.fn(value)},
+    };
+  }`,
+    () => `function createBus(){
+    const events=new Map();
+    function add(event,fn,once){const sub={fn,once};const list=events.get(event)||[];list.push(sub);events.set(event,list);return ()=>{const i=list.indexOf(sub);if(i>=0)list.splice(i,1)}}
+    return {on:(e,f)=>add(e,f,false),once:(e,f)=>add(e,f,true),
+      emit(event,value){
+        const errors=[],list=events.get(event)||[];
+        // Each listener runs in its own try, so one that throws is recorded and
+        // the rest still hear the event. The list is read as it stands, one
+        // index at a time; stage three takes a snapshot first.
+        for(let i=0;i<list.length;i++){const sub=list[i];if(sub.once)list.splice(i--,1);try{sub.fn(value)}catch(error){errors.push(error)}}
+        return errors;
+      }};
+  }`,
+    earlier => `${earlier}
+// Nothing pauses while the queue is flushed at this step, so resume delivers
+// the whole queue, oldest first, and collects the listeners' errors.
+function createBufferedBus(){const bus=createBus(),queue=[];let paused=false;return {on:bus.on,once:bus.once,pause(){paused=true},emit(e,v){if(paused){queue.push([e,v]);return []}return bus.emit(e,v)},resume(){paused=false;const errors=[];while(queue.length){const [e,v]=queue.shift();errors.push(...bus.emit(e,v))}return errors}}}`,
+    earlier => `${earlier}
+// Each event keeps its newest capacity values, oldest first; a replaying
+// subscriber hears them before it is registered for live values.
+function createReplayBus(capacity){const bus=createBus(),history=new Map();return {on(e,fn,replay=false){if(replay)for(const v of history.get(e)||[])fn(v);return bus.on(e,fn)},emit(e,v){const kept=[...(history.get(e)||[]),v];while(kept.length>capacity)kept.shift();history.set(e,kept);return bus.emit(e,v)}}}`,
+  ],
+  'js-evolving-graph': [
+    () => `// No task depends on another yet, so the graph's own key order is the plan.
+function plan(graph){return Object.keys(graph)}`,
+    () => `function plan(graph){
+    // A dependency that is not one of the graph's own keys means there is no plan.
+    if(Object.values(graph).some(deps=>deps.some(dep=>!Object.hasOwn(graph,dep))))return null;
+    // This step's graphs have no cycles, so a task can be marked done on the
+    // way in: the walk never comes back round to it.
+    const done=new Set(),out=[];
+    function visit(id){if(done.has(id))return;done.add(id);for(const dep of graph[id])visit(dep);out.push(id)}
+    for(const id of Object.keys(graph))visit(id);
+    return out;
+  }`,
+    () => `function plan(graph,options={}){
+    // Each layer is every task, in key order, whose dependencies are all in
+    // earlier layers. This step's layered graphs are valid; stage three
+    // answers an invalid one with null in this mode too.
+    if(options.layers){const layers=[],placed=new Set();for(;;){const ready=Object.keys(graph).filter(id=>!placed.has(id)&&graph[id].every(dep=>placed.has(dep)));if(!ready.length)return layers;layers.push(ready);ready.forEach(id=>placed.add(id))}}
+    const done=new Set(),visiting=new Set(),out=[];
+    function visit(id){if(done.has(id))return;if(!Object.hasOwn(graph,id)||visiting.has(id))throw 0;visiting.add(id);for(const dep of graph[id])visit(dep);visiting.delete(id);done.add(id);out.push(id)}
+    try{for(const id of Object.keys(graph))visit(id)}catch{return null}
+    return out;
+  }`,
+    earlier => `${earlier}
+// Every duration is given and valid at this step. In plan order a task's
+// longest chain is its own duration on top of its dependencies' longest one.
+function criticalPath(graph,durations){const best=new Map();let top={duration:0,path:[]};for(const id of plan(graph)){let prior={duration:0,path:[]};for(const dep of graph[id]){const chain=best.get(dep);if(chain.duration>prior.duration)prior=chain}const chain={duration:prior.duration+durations[id],path:[...prior.path,id]};best.set(id,chain);if(chain.duration>top.duration)top=chain}return top}`,
+    earlier => `${earlier}
+// The graph and the changed ids are valid at this step. Walking in plan order,
+// a task is affected once any of its dependencies is.
+function impactedNodes(graph,changed){const order=plan(graph),affected=new Set(changed);for(const id of order)if(graph[id].some(dep=>affected.has(dep)))affected.add(id);return order.filter(id=>affected.has(id))}`,
+  ],
+  'ts-evolving-result': [
+    () => `type Result<T>={ok:true;value:T}|{ok:false;error:string};
+    // Every result at this step succeeds, so its value is read directly;
+    // stage one adds the branch that hands a failure back untouched.
+    function mapResult<T,U>(r:Result<T>,fn:(v:T)=>U):Result<U>{return {ok:true,value:fn((r as {ok:true;value:T}).value)}}`,
+    earlier => `${earlier}
+    // A failure is returned as it came; fn already returns a Result, so its
+    // answer is returned as it is rather than wrapped again.
+    function flatMapResult<T,U>(r:Result<T>,fn:(v:T)=>Result<U>):Result<U>{return r.ok?fn(r.value):r}`,
+    earlier => `${earlier}
+    // Values are collected in order until the first failure, which is the answer.
+    function collectResults<T>(rs:readonly Result<T>[]):Result<T[]>{const values:T[]=[];for(const r of rs){if(!r.ok)return r;values.push(r.value)}return {ok:true,value:values}}`,
+    earlier => `${earlier}
+// Every result at this step succeeds, so each one's value is read directly;
+// stage four sorts failures into errors.
+function partitionResults<T>(results:readonly Result<T>[]):{values:T[];errors:string[]}{return {values:results.map(r=>(r as {ok:true;value:T}).value),errors:[]}}`,
+    earlier => `${earlier}
+// A success passes through. A failure's error goes to recover through
+// flatMapResult, which already turns a throw into a failure.
+function recoverResult<T>(result:Result<T>,recover:(error:string)=>Result<T>):Result<T>{return result.ok?result:flatMapResult({ok:true,value:result.error},recover)}`,
+  ],
+  'ts-evolving-store': [
+    () => `// The values at this step are ordinary non-empty strings and non-zero
+// numbers, so a truthiness check tells "nothing set yet" from a stored value.
+// Stage one stores false, 0 and null too, which this check would mistake for
+// nothing.
+function createStore<T>(initial:T){let stored:T|undefined;
+    return {get:():T=>stored||initial,set:(next:T):void=>{stored=next}};
+  }`,
+    () => `function createStore<T>(initial:T){let value=initial;
+    const set=(next:T):void=>{value=next};
+    // update hands the current state to fn and stores the result through set.
+    return {get:():T=>value,set,update:(fn:(v:T)=>T):void=>set(fn(value))};
+  }`,
+    () => `function createStore<T>(initial:T){let value=initial;
+    const listeners=new Set<(v:T)=>void>();const notify=()=>{for(const fn of [...listeners])fn(value)};
+    // Every real change keeps the value it replaces, and undo puts the latest
+    // one back. Redo arrives with stage three.
+    const past:T[]=[];
+    const set=(next:T):void=>{if(Object.is(value,next))return;past.push(value);value=next;notify()};
+    return {get:():T=>value,set,
+    update:(fn:(v:T)=>T):void=>set(fn(value)),subscribe:(fn:(v:T)=>void):(()=>void)=>{const sub=(v:T)=>fn(v);listeners.add(sub);return ()=>{listeners.delete(sub)}},
+    undo:():boolean=>{if(!past.length)return false;value=past.pop()!;notify();return true},
+    };
+  }`,
+    earlier => `${earlier}
+// The selected value is worked out once and again on every change of the
+// source; this step only reads it back.
+function selectStore<T,U>(store:{get():T;subscribe(fn:(v:T)=>void):()=>void},select:(v:T)=>U){let value=select(store.get());store.subscribe(v=>{value=select(v)});return {get:():U=>value}}`,
+    earlier => `${earlier}
+// The steps run on a private copy of the value, and the store sees one set
+// with the result. This step's steps never throw.
+function transactStore<T>(store:{get():T;set(v:T):void},steps:readonly ((value:T)=>T)[]):boolean{let value=store.get();for(const step of steps)value=step(value);store.set(value);return true}`,
+  ],
+  'ts-evolving-schema': [
+    () => `type Schema='string'|'number'|'boolean';
+    // Only the string schema is checked at this step: anything that is not a
+    // string gets its one error.
+    function validate(schema:Schema,value:unknown):string[]{return typeof value==='string'?[]:['$: expected '+schema]}`,
+    () => `type Schema='string'|'number'|'boolean'|{object:Record<string,Schema>};
+    function validate(schema:Schema,value:unknown):string[]{
+      if(typeof schema==='string')return typeof value===schema&&(schema!=='number'||Number.isFinite(value))?[]:['$: expected '+schema];
+      // Fields are checked in the schema's key order, a missing one as
+      // undefined, and each error moves under its field's path. Every value
+      // at this step is a record, so the value itself is not checked.
+      const record=value as Record<string,unknown>;
+      return Object.keys(schema.object).flatMap(k=>validate(schema.object[k],Object.prototype.hasOwnProperty.call(record,k)?record[k]:undefined).map(e=>'$.'+k+e.slice(1)));
+    }`,
+    () => `type Schema='string'|'number'|'boolean'|{object:Record<string,Schema>}|{array:Schema};
+    function validate(schema:Schema,value:unknown):string[]{
+      function check(s:Schema,v:unknown,path:string):string[]{
+        if(typeof s==='string')return typeof v===s&&(s!=='number'||Number.isFinite(v))?[]:[path+': expected '+s];
+        // An array checks each element in index order under its own path.
+        if('array' in s)return Array.isArray(v)?v.flatMap((item,i)=>check(s.array,item,path+'['+i+']')):[path+': expected array'];
+        if(v===null||typeof v!=='object'||Array.isArray(v))return [path+': expected object'];
+        return Object.keys(s.object).flatMap(k=>check(s.object[k],Object.prototype.hasOwnProperty.call(v,k)?(v as Record<string,unknown>)[k]:undefined,path+'.'+k));
+      }
+      return check(schema,value,'$');
+    }`,
+    earlier => `${earlier}
+// Every value at this step is a plain record: each own entry is validated and
+// its errors move from $ to $.KEY.
+function validateRecord(schema:Schema,value:unknown):string[]{return Object.entries(value as Record<string,unknown>).flatMap(([k,v])=>validate(schema,v).map(e=>'$.'+k+e.slice(1)))}`,
+    earlier => `${earlier}
+// Any branch that validates wins; otherwise the shortest error list, the
+// earlier branch on a tie.
+function validateUnion(schemas:readonly Schema[],value:unknown):string[]{let best:string[]|undefined;for(const schema of schemas){const errors=validate(schema,value);if(!errors.length)return [];if(!best||errors.length<best.length)best=errors}return best??['$: no alternatives']}`,
+  ],
+};
+for (const [id, steps] of Object.entries(checkpoints)) {
+  steps.forEach((build, index) => { EVOLVING_SOLUTIONS[`${id}-${index+1}-start`] = { solution: build(index ? EVOLVING_SOLUTIONS[`${id}-${index}`].solution : '') }; });
+}

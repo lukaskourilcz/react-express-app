@@ -39,8 +39,8 @@ import { approachCoverage, approachesFor } from '../lib/coding/approaches';
 import { formatOf } from '../shared/coding-catalog';
 import { runChecks, runInSandbox } from '../lib/coding/sandbox';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
-import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder } from '../lib/coding/puzzles';
-import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../shared/coding-puzzle';
+import { presentPuzzle, puzzleCoverage, puzzleFor, resolvePuzzleOrder, type AuthoredPuzzle } from '../lib/coding/puzzles';
+import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES, type PuzzleLine } from '../shared/coding-puzzle';
 import { evaluateCalls, allPassed, deepEqual } from '../shared/coding-evaluate';
 import { createTypeScript, isCheckerLibFile, typesPassed } from '../shared/coding-ts-check';
 import { prepareReactRuntime, runReactSuite } from '../lib/coding/react-runner';
@@ -137,6 +137,76 @@ const topLevelNames = (ts: TypeScriptApi, source: string): string[] => {
     }
   }
   return [...names];
+};
+
+/** Every arrangement of a puzzle's lines whose code passes `checks`, found
+ * without trying them all. The function's own first and last lines stay
+ * first and last; any body line without a brace may also stand outside the
+ * function, before or after it (a loop or a branch out there cannot see the
+ * parameters). Arrangements grow line by line, and whenever the lines placed
+ * so far close every block they open, they run on their own as the whole
+ * body: a check they already throw on or answer wrongly fails every way of
+ * finishing them, so that branch stops there. */
+const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): string[][] => {
+  const depthOf = (code: string) => {
+    const bare = code.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '');
+    return (bare.match(/\{/g)?.length ?? 0) - (bare.match(/\}/g)?.length ?? 0);
+  };
+  const header = puzzle.lines[0];
+  const footer = puzzle.lines[puzzle.lines.length - 1];
+  const body = puzzle.lines.slice(1, -1);
+  const name = /^\s*function\s+([A-Za-z_$][\w$]*)\s*\(.*\{\s*$/.exec(header.code)?.[1];
+  assert.ok(name && footer.code.trim() === '}', 'a puzzle is one function: its first line opens it and its last line closes it');
+  // A body cut short reads as the start of the full one only while nothing
+  // later in it is hoisted.
+  assert.ok(body.every((line) => !/\b(var|function)\b/.test(line.code)), 'a puzzle body declares nothing with var or function');
+  // Every loop gets a step budget, so an arrangement that never leaves one fails instead of hanging.
+  const guard = (code: string) => (/^\s*(while|for|do)\b.*\{\s*$/.test(code) ? `${code} __step();` : code);
+  const callers = checks.map((check) => new Function(name, `"use strict"; return (${check.call});`) as (fn: unknown) => unknown);
+  const END = Symbol('end');
+  // `open`: the body stops early, and falling off its end returns END.
+  const run = (top: PuzzleLine[], placed: PuzzleLine[], open: boolean): 'pass' | 'fail' | 'open' => {
+    const code = [...top, header, ...placed].map((line) => guard(line.code)).concat(open ? ['return __end;'] : [], footer.code).join('\n');
+    let fn: unknown;
+    let reset: () => void;
+    try {
+      [fn, reset] = new Function('__end', `"use strict"; let __steps = 0; const __step = () => { if (++__steps > 10000) throw new Error('steps'); };\n${code}\nreturn [${name}, () => { __steps = 0; }];`)(END);
+    } catch { return 'fail'; }
+    let undecided = false;
+    for (const [index, call] of callers.entries()) {
+      reset();
+      let value: unknown;
+      try { value = call(fn); } catch { return 'fail'; }
+      if (value === END) undecided = true;
+      else if (!deepEqual(value, checks[index].expected)) return 'fail';
+    }
+    return undecided ? 'open' : 'pass';
+  };
+  const permutations = <T>(items: T[]): T[][] => (items.length <= 1 ? [items] : items.flatMap((item, i) => permutations([...items.slice(0, i), ...items.slice(i + 1)]).map((rest) => [item, ...rest])));
+  const flat = body.filter((line) => !/[{}]/.test(line.code));
+  const found: string[][] = [];
+  for (let mask = 0; mask < 1 << flat.length; mask++) {
+    const outside = flat.filter((_, i) => mask & (1 << i));
+    const inside = body.filter((line) => !outside.includes(line));
+    for (const top of permutations(outside)) {
+      const walk = (placed: PuzzleLine[], rest: PuzzleLine[], depth: number): void => {
+        if (rest.length === 0) {
+          // Function declarations hoist, so the outside lines run the same wherever they split around it.
+          if (depth === 1 && run(top, placed, false) === 'pass') {
+            for (let split = 0; split <= top.length; split++) found.push([...top.slice(0, split), header, ...placed, footer, ...top.slice(split)].map((line) => line.id));
+          }
+          return;
+        }
+        if (placed.length > 0 && depth === 1 && run(top, placed, true) === 'fail') return;
+        for (const [i, line] of rest.entries()) {
+          const next = depth + depthOf(line.code);
+          if (next >= 1) walk([...placed, line], [...rest.slice(0, i), ...rest.slice(i + 1)], next);
+        }
+      };
+      walk([], inside, 1);
+    }
+  }
+  return found;
 };
 
 // Every string a suite mentions: quoted literals (minus module names and ARIA
@@ -275,6 +345,13 @@ async function main() {
     if (!(task.estimatedMinutes > 0)) fail(`${where}: estimatedMinutes must be positive`);
     if (task.hints.en.length === 0 && task.verify !== 'drill' && task.verify !== 'guided') fail(`${where}: needs a hint`);
     assert.ok(docsFor(task.focus).url.startsWith('https://'), `${where}: docs link`);
+    // A code example in the brief, the hints or the method steps gets copied
+    // into the editor, where `repeat(“hi”, 3)` is a SyntaxError.
+    for (const text of [task.prompt.en, ...task.hints.en, ...(task.approach?.en ?? [])]) {
+      for (const span of text.split('`').filter((_, index) => index % 2 === 1)) {
+        if (/[“”‘’]/.test(span)) fail(`${where}: the code example \`${span}\` uses curly quotes, which do not run`);
+      }
+    }
     assert.match(gardenPathFor(task), /^[a-z-]+\/\d{2}-[a-z0-9-]+\.(js|ts|jsx|md)$/, `${where}: garden path`);
 
     switch (task.verify) {
@@ -512,13 +589,15 @@ async function main() {
 
   // Every graded code task carries three solutions — the reference the
   // learner can give up to, and the junior and senior versions shown after a
-  // pass — and all three have to pass the same visible and hidden checks.
+  // pass — and all three have to pass the same visible and hidden checks. An
+  // evolving project's checkpoint (`…-start`) carries its reference alone.
   const variants = (solution: NonNullable<ReturnType<typeof solutionFor>>, where: string): [string, string][] => {
     const out: [string, string][] = [['reference', solution.solution]];
+    const boards = !where.endsWith('-start');
     if (typeof solution.junior === 'string' && solution.junior.trim()) out.push(['junior', solution.junior]);
-    else fail(`${where}: missing the junior solution`);
+    else if (boards) fail(`${where}: missing the junior solution`);
     if (typeof solution.senior === 'string' && solution.senior.trim()) out.push(['senior', solution.senior]);
-    else fail(`${where}: missing the senior solution`);
+    else if (boards) fail(`${where}: missing the senior solution`);
     if (solution.junior && solution.senior && solution.junior.trim() === solution.senior.trim()) fail(`${where}: the junior and senior solutions are the same code`);
     return out;
   };
@@ -630,9 +709,17 @@ async function main() {
   /* ── the last hint rung ─────────────────────────────────────────────── */
   // The ladder ends on the task's first reference, or on the documentation
   // page of its first focus tag: official documentation either way.
+  // A page about one array or string method, or about Map or Set, is the
+  // right last rung only when a solution of the task uses it: Set tasks
+  // ended on the Map page, and a page the server cuts ended on Array.slice.
   for (const task of CODING_TASKS) {
     const url = task.references?.[0]?.url ?? docsFor(task.focus).url;
     if (!OFFICIAL_DOCS.has(new URL(url).host)) fail(`${task.id}: the hint ladder ends on ${url}, not on official documentation`);
+    const solution = solutionFor(task.id);
+    const api = /\/Global_Objects\/(?:(?:Array|String)\/([a-z]\w*)|(Map|Set))$/.exec(url);
+    if (!solution || !api) continue;
+    const code = [solution.solution, solution.junior ?? '', solution.senior ?? ''].join('\n');
+    if (!new RegExp(api[1] ? `\\.${api[1]}\\(` : `\\b${api[2]}\\b`).test(code)) fail(`${task.id}: the hint ladder ends on ${url}, which none of the task's solutions uses`);
   }
 
   /* ── React solutions ────────────────────────────────────────────────── */
@@ -771,6 +858,8 @@ async function main() {
   // that puzzle's own lines; no puzzle is short enough to be guessed; and each
   // one declares what arranging it demonstrates.
   const puzzleIds = puzzleCoverage();
+  const puzzlesStarted = Date.now();
+  let puzzleOrders = 0;
   assert.ok(puzzleIds.length > 0, 'the puzzle manifest must cover something');
   for (const id of puzzleIds) {
     const task = CODING_TASKS.find((one) => one.id === id);
@@ -800,6 +889,15 @@ async function main() {
       const run = await runInSandbox({ code, calls: checks.map((one) => one.call), expectations: checks.map((one) => one.expected) });
       assert.ok(allPassed(run), `${id}: the accepted order ${order.join('')} fails the task's checks: ${run.codeError ?? JSON.stringify(run.results.filter((one) => one.pass !== true))}`);
     }
+    // ...and every order that passes them is accepted: a learner who arranged
+    // working code is not told it is wrong. js-largest-number accepted one of
+    // the six that pass. The enumeration must also find each accepted order,
+    // or it no longer covers the arrangements a puzzle allows.
+    const passing = passingArrangements(puzzle, checks).map((order) => order.join(''));
+    const acceptedOrders = new Set(puzzle.accepted.map((order) => order.join('')));
+    for (const order of passing) assert.ok(acceptedOrders.has(order), `${id}: the order ${order} passes the task's checks and is not accepted`);
+    for (const order of acceptedOrders) assert.ok(passing.includes(order), `${id}: the enumeration does not reach the accepted order ${order}`);
+    puzzleOrders += passing.length;
     // What the browser sees carries no authored id, and sorting what it sees
     // never produces an accepted order — the ids say nothing about the answer.
     const reversed = <T>(list: T[]) => [...list].reverse();
@@ -815,6 +913,7 @@ async function main() {
       assert.deepEqual(resolvePuzzleOrder(['zz', 'b0', 'b99'], presented.map), [null, null, null], `${id}: ids never issued resolve to nothing`);
     }
   }
+  console.log(`Puzzles: ${puzzleIds.length} accept exactly the ${puzzleOrders} arrangements that pass their checks (${((Date.now() - puzzlesStarted) / 1000).toFixed(1)} s).`);
 
   // ── the debugging format (#163) ────────────────────────────────────────
   // A debugging task must actually start from broken code: its starter has to
@@ -1075,6 +1174,26 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
     }
   }
 
+  // 1b. What a checkpoint shows must not pass the milestone it leads to. Its
+  // reference opens on giving up there, and for free once it is passed (any
+  // boards with the pass), while the milestone is still to do: pasted into
+  // the milestone, with its hidden checks, it has to fail. The proofs above
+  // show it passes the checkpoint itself.
+  let checkpoints = 0;
+  for (const project of EVOLVING_CHALLENGES) {
+    for (const id of project.stages) {
+      if (!id.endsWith('-start') || !ONLY.test(id)) continue;
+      const milestone = byId.get(id.slice(0, -6));
+      const shown = solutionFor(id);
+      if (!milestone || !shown || milestone.verify !== 'tests') continue;
+      for (const [name, source] of [['reference', shown.solution], ['junior', shown.junior], ['senior', shown.senior]] as const) {
+        if (!source?.trim()) continue;
+        checkpoints += 1;
+        if (await passesTask(milestone, source)) fail(`${id}: its ${name} solution, shown on giving up or after a pass, already passes ${milestone.id}`);
+      }
+    }
+  }
+
   // 2. A promised new array: an in-place version of the reference must fail.
   let promises = 0;
   for (const task of CODING_TASKS) {
@@ -1105,7 +1224,7 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
       fail(`${task.id}: the reference with every parameter typed any still passes the type tests, so they do not hold the signature the statement gives`);
     }
   }
-  console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check (${((Date.now() - started) / 1000).toFixed(1)} s).`);
+  console.log(`Staged levels, promises and signatures: ${staged} earlier solutions fail the next level, ${checkpoints} checkpoint solutions fail their milestone, ${promises} new-array promises and ${signatures} TypeScript signatures are held by a check (${((Date.now() - started) / 1000).toFixed(1)} s).`);
 }
 
 void main().catch((error) => {
