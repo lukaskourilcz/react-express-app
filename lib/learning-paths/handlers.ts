@@ -18,10 +18,11 @@ import { randomBytes } from 'node:crypto';
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
 import { refuseLocked } from '../access';
-import { enforceRateLimit, RATE_LIMITS } from '../rate-limit';
+import { enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { shuffleWithOrder } from '../coding/grade';
+import { GRADING_PER_CALLER, GraderBusyError } from '../coding/grader-capacity';
 import { codingTaskById } from '../coding/active';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../quiz-tokens';
 import {
@@ -773,6 +774,15 @@ function reusedCode(activity: MergedActivity) {
   return task ? codeFromReusedTask(task) : null;
 }
 
+/** The grader could not take this submission: nothing was graded or recorded.
+ * 429 when the learner already has submissions grading, 503 when the
+ * instance's grader threads could not take it; both carry a Retry-After. */
+function graderBusy(res: VercelResponse, status: 429 | 503, error: GraderBusyError) {
+  logEvent({ status, kind: 'submit_unrecorded', reason: error.reason });
+  res.setHeader('Retry-After', String(error.retryAfterSeconds));
+  return jsonError(res, status, 'grader_busy', error.message);
+}
+
 /* ── submitting ───────────────────────────────────────────────────────── */
 
 /**
@@ -914,7 +924,20 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       if (pathCodeTooLarge(body.code)) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
       const merged = activity.code ?? reusedCode(activity);
       if (!merged) return jsonError(res, 404, 'not_found', 'Unknown task');
-      const graded = await gradePathCode(activity, merged, body.code);
+      // The coding section's grader threads, under the same limits
+      // (lib/coding/grader-capacity.ts): a busy grader is a retry, never a
+      // recorded result.
+      const done = enterInFlight(req, 'grading', GRADING_PER_CALLER, `user:${userId}`);
+      if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'));
+      let graded;
+      try {
+        graded = await gradePathCode(activity, merged, body.code);
+      } catch (error) {
+        if (!(error instanceof GraderBusyError)) throw error;
+        return graderBusy(res, 503, error);
+      } finally {
+        done();
+      }
       // Infrastructure failure is retryable, never a recorded learner failure.
       if (graded.code.outcome === 'error' && graded.state === 'in_progress') {
         return jsonError(res, 503, 'runner_unavailable', graded.code.codeError ?? 'The runner could not start. Try again in a moment.');

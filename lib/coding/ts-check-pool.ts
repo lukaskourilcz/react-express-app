@@ -5,49 +5,64 @@
  * took minutes. On the request thread that blocked the roadmap function, which
  * also serves Learn, for every other request the instance held. So a check
  * runs on a worker thread, and the thread is stopped when the learner's checks
- * run past TYPE_CHECK_DEADLINE_MS. The caller reports that as a timeout.
+ * run past TYPE_CHECK_DEADLINE_MS. The caller reports that as a timeout. The
+ * same thread then turns the code into JavaScript: deeply nested code
+ * overflows the compiler's stack there, and on the request thread that
+ * surfaced as an HTTP 500.
  *
  * A thread keeps the compiler and its parsed lib files between checks; the
  * first check on a new thread parses them before its clock starts. Up to
- * MAX_WORKERS checks run at once, and further ones wait for a thread. When the
- * worker bundle is missing (tests and local runs before a build) or a thread
- * cannot start, the check runs in this thread, as it did before, and the
- * missing bundle is logged. */
+ * MAX_WORKERS checks run at once, and further ones wait a bounded time for a
+ * thread (grader-capacity.ts). When no thread can take a check, the caller
+ * gets `GraderBusyError`. Only off a deployment, when the worker bundle is
+ * missing (tests and local runs before a build) or a thread cannot start,
+ * does the check run in this thread, as it did before; the missing bundle is
+ * logged. */
 
 import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import type { TypeCheckResult, TypeTestInput } from '../../shared/coding-ts-check';
-import { nodeTypeScriptChecker } from './ts-check-node';
+import { nodeTypeScriptChecker, transpileOrNull } from './ts-check-node';
+import { bootBackoff, GraderBusyError, inThreadGradingAllowed, threadSlots } from './grader-capacity';
 
 /** The worker bundle build-sandbox-worker.mjs writes
  * (scripts/ts-check-worker-entry.ts). vercel.json ships every
  * lib/coding/generated/*.cjs with api/quiz/roadmap.ts. */
 export const TS_CHECK_WORKER_FILE = 'lib/coding/generated/ts-check-worker.cjs';
-/** How long one submission's type checks may take together. A task's checks
- * finish in well under a second on a warm thread. */
+/** How long one submission's type checks and its transpile may take
+ * together. A task's checks finish in well under a second on a warm thread. */
 export const TYPE_CHECK_DEADLINE_MS = 4_000;
 /** What the learner reads when the checker was stopped. */
 export const TYPE_CHECK_STOPPED_MESSAGE =
   'Type checking stopped before it finished: it ran out of time, memory or stack. A type that keeps recursing, or one that builds very large unions or tuples, can do this.';
+/** What the learner reads when the code could not be turned into JavaScript. */
+export const TRANSPILE_FAILED_MESSAGE =
+  'The compiler could not turn this TypeScript into JavaScript: the code nests too deeply. Flatten the most deeply nested functions, calls or blocks and submit again.';
 /** How long a new thread may take to load the compiler and parse its libs. */
 const WORKER_BOOT_MS = 20_000;
 /** Threads checking at once; further checks wait for one to finish. */
 const MAX_WORKERS = 2;
+/** Checks that may wait for a thread; one more is told the grader is busy. */
+const MAX_WAITING = 16;
+/** How long a check may wait for a thread: two runaway checks ahead of it,
+ * stopped at TYPE_CHECK_DEADLINE_MS, and the start of a new thread. */
+export const TS_CHECK_SLOT_WAIT_MS = 8_000;
 /** Threads kept loaded between checks. */
 const IDLE_WORKERS = 1;
 /** A thread's heap. A check that needs more ends the thread, as a timeout. */
 const WORKER_HEAP_MB = 512;
 
-/** The checks' results in the order of their sets, or `stopped` when the
- * checker ran past its deadline, its heap or its stack. */
+/** The checks' results in the order of their sets and the code as
+ * JavaScript, null when the compiler could not transpile it; or `stopped`
+ * when the checker ran past its deadline, its heap or its stack. */
 export type TypeCheckOutcome =
-  | { stopped: false; results: TypeCheckResult[] }
-  | { stopped: true; results: null };
+  | { stopped: false; results: TypeCheckResult[]; javascript: string | null }
+  | { stopped: true; results: null; javascript: null };
 
 const idleWorkers: Worker[] = [];
-const waiting: (() => void)[] = [];
-let busyWorkers = 0;
+const slots = threadSlots({ threads: MAX_WORKERS, waiting: MAX_WAITING, waitMs: TS_CHECK_SLOT_WAIT_MS, name: 'ts_check' });
+const boot = bootBackoff();
 let workerFile: string | null | undefined;
 
 const checkWorkerFile = (): string | null => {
@@ -59,17 +74,7 @@ const checkWorkerFile = (): string | null => {
   return workerFile;
 };
 
-const acquireSlot = async (): Promise<void> => {
-  if (busyWorkers < MAX_WORKERS) { busyWorkers++; return; }
-  await new Promise<void>((resume) => waiting.push(resume));
-};
-const releaseSlot = () => {
-  const next = waiting.shift();
-  if (next) next();
-  else busyWorkers--;
-};
-
-type WorkerReply = { type: 'start' } | { type: 'done'; results: TypeCheckResult[] } | { type: 'fail'; message: string };
+type WorkerReply = { type: 'start' } | { type: 'done'; results: TypeCheckResult[]; javascript: string | null } | { type: 'fail'; message: string };
 
 /** The thread could not start or never picked the check up: the host's
  * fault, not the learner's. */
@@ -88,7 +93,8 @@ function newWorker(file: string): Worker {
 }
 
 function checkOnWorker(file: string, code: string, sets: readonly TypeTestInput[][], deadlineMs: number): Promise<TypeCheckOutcome> {
-  const worker = idleWorkers.pop() ?? newWorker(file);
+  const idle = idleWorkers.pop();
+  const worker = idle ?? newWorker(file);
   return new Promise<TypeCheckOutcome>((resolve, reject) => {
     let settled = false;
     let started = false;
@@ -105,7 +111,7 @@ function checkOnWorker(file: string, code: string, sets: readonly TypeTestInput[
     const stop = () => {
       if (settled) return;
       settle(false);
-      resolve({ stopped: true, results: null });
+      resolve({ stopped: true, results: null, javascript: null });
     };
     const unavailable = (reason: string) => {
       if (settled) return;
@@ -116,13 +122,15 @@ function checkOnWorker(file: string, code: string, sets: readonly TypeTestInput[
       if (settled) return;
       if (reply.type === 'start') {
         started = true;
+        // A new thread that picked its check up ends the pause after a failed start.
+        if (!idle) boot.started();
         clearTimeout(timer);
         timer = setTimeout(stop, deadlineMs);
         return;
       }
       if (reply.type === 'done') {
         settle(true);
-        resolve({ stopped: false, results: reply.results });
+        resolve({ stopped: false, results: reply.results, javascript: reply.javascript });
         return;
       }
       // The compiler threw. After the learner's check started that is their
@@ -142,9 +150,10 @@ function checkOnWorker(file: string, code: string, sets: readonly TypeTestInput[
 }
 
 /**
- * Type-checks `code` once per set of type tests, all within `deadlineMs`.
- * Results come back in the order of `sets`; checks the thread had to stop
- * come back as `stopped`, with no results.
+ * Type-checks `code` once per set of type tests, then transpiles it, all
+ * within `deadlineMs`. Results come back in the order of `sets`; checks the
+ * thread had to stop come back as `stopped`, with no results. Throws
+ * `GraderBusyError` when no thread can take the check (see runInSandbox).
  */
 export async function checkTypes(
   code: string,
@@ -153,19 +162,28 @@ export async function checkTypes(
 ): Promise<TypeCheckOutcome> {
   const inThread = (): TypeCheckOutcome => {
     const checker = nodeTypeScriptChecker();
-    return { stopped: false, results: sets.map((tests) => checker.check(code, tests)) };
+    return { stopped: false, results: sets.map((tests) => checker.check(code, tests)), javascript: transpileOrNull(checker, code) };
   };
   const file = checkWorkerFile();
-  if (!file) return inThread();
-  await acquireSlot();
+  if (!file) {
+    if (inThreadGradingAllowed()) return inThread();
+    throw new GraderBusyError('ts_check_worker_missing', 30);
+  }
+  await slots.acquire();
   try {
+    const pause = idleWorkers.length === 0 ? boot.pause() : 0;
+    if (pause > 0) {
+      if (inThreadGradingAllowed()) return inThread();
+      throw new GraderBusyError('ts_check_worker_backoff', pause / 1000);
+    }
     return await checkOnWorker(file, code, sets, deadlineMs);
   } catch (error) {
     if (!(error instanceof WorkerUnavailableError)) throw error;
+    boot.failed();
     console.warn(JSON.stringify({ level: 'warn', msg: 'ts_check_worker_unavailable', reason: error.message }));
-    workerFile = null;
-    return inThread();
+    if (inThreadGradingAllowed()) return inThread();
+    throw new GraderBusyError(error.message, boot.pause() / 1000);
   } finally {
-    releaseSlot();
+    slots.release();
   }
 }

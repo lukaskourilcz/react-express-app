@@ -108,7 +108,15 @@ a verified rollout; retain the previous one while rollback remains possible.
   in the same realm as the component, so they stay out of the page, not out of
   reach of a component written to go looking for them.
 - A case that threw has failed, even when the error carries no message;
-  mini-jest on its own read an empty message as a pass.
+  mini-jest on its own read an empty message as a pass. A thrown value whose
+  message cannot be read (`Object.create(null)`, a `message` getter that
+  throws) fails its case too, instead of ending the grader.
+- The guest prints a line with the run's nonce just before the suite loads the
+  component. A guest that exits unsuccessfully after that line was ended by
+  the learner's code (usually the heap limit): Submit records an `error`
+  verdict that says so (`readGuestRun` in `lib/coding/react-guest.ts`). One
+  that ends before that line is still a runner outage: nothing is recorded and
+  the learner is asked to submit again.
 - A case during which a form submits and the component does not cancel it
   fails with that reason (`watchFormSubmits` in
   `shared/coding-react-support.ts`). The browser harness applies the same rule,

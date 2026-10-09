@@ -20,6 +20,7 @@ import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import { LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, MAX_LOGS, PROBE_IS_INDEX_SOURCE, PROBE_LINE, TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
 import { CONSOLE_SOURCE } from '../../shared/coding-console';
+import { bootBackoff, GraderBusyError, inThreadGradingAllowed, threadSlots } from './grader-capacity';
 
 let modulePromise: Promise<QuickJSWASMModule> | null = null;
 const getModule = () => (modulePromise ??= newQuickJSWASMModuleFromVariant(variant));
@@ -270,33 +271,29 @@ const WORKER_GRACE_MS = 1_500;
 const WORKER_BOOT_MS = 10_000;
 /** Threads running at once; further runs wait for one to finish. */
 const MAX_WORKERS = 4;
+/** Runs that may wait for a thread; one more is told the grader is busy. */
+const MAX_WAITING = 32;
+/** How long a run may wait for a thread. A runaway run holds one for its
+ * deadline and grace, four seconds, so a run behind a few of them still gets
+ * one; a Submit makes two runs, and both waits fit the function's limit. */
+export const SANDBOX_SLOT_WAIT_MS = 5_000;
 /** Threads kept loaded between runs. */
 const IDLE_WORKERS = 2;
 
 const idleWorkers: Worker[] = [];
-const waitingRuns: (() => void)[] = [];
-let busyWorkers = 0;
+const slots = threadSlots({ threads: MAX_WORKERS, waiting: MAX_WAITING, waitMs: SANDBOX_SLOT_WAIT_MS, name: 'sandbox' });
+const boot = bootBackoff();
 let workerFile: string | null | undefined;
 
 const sandboxWorkerFile = (): string | null => {
   if (workerFile === undefined) {
     const file = join(process.cwd(), SANDBOX_WORKER_FILE);
     workerFile = existsSync(file) ? file : null;
-    // The pre-worker behaviour, and still a working grader; logged so a
-    // deployment that lost the bundle shows up.
+    // Tests and local runs before a build grade in this thread; a deployment
+    // that lost the bundle refuses runs. Logged so either shows up.
     if (!workerFile) console.warn(JSON.stringify({ level: 'warn', msg: 'sandbox_worker_missing', file: SANDBOX_WORKER_FILE }));
   }
   return workerFile;
-};
-
-const acquireWorkerSlot = async (): Promise<void> => {
-  if (busyWorkers < MAX_WORKERS) { busyWorkers++; return; }
-  await new Promise<void>((resume) => waitingRuns.push(resume));
-};
-const releaseWorkerSlot = () => {
-  const next = waitingRuns.shift();
-  if (next) next();
-  else busyWorkers--;
 };
 
 type WorkerReply = { type: 'start' } | { type: 'done'; result: EvaluateResult } | { type: 'fail'; message: string };
@@ -322,7 +319,8 @@ function newWorker(file: string): Worker {
 }
 
 function runOnWorker(file: string, input: SandboxInput): Promise<EvaluateResult> {
-  const worker = idleWorkers.pop() ?? newWorker(file);
+  const idle = idleWorkers.pop();
+  const worker = idle ?? newWorker(file);
   return new Promise<EvaluateResult>((resolve, reject) => {
     let settled = false;
     let started = false;
@@ -350,6 +348,8 @@ function runOnWorker(file: string, input: SandboxInput): Promise<EvaluateResult>
       if (settled) return;
       if (reply.type === 'start') {
         started = true;
+        // A new thread that picked its run up ends the pause after a failed start.
+        if (!idle) boot.started();
         clearTimeout(timer);
         // The run measures its own deadline from here. A run the interrupt
         // handler cannot reach is stopped with the thread.
@@ -372,24 +372,39 @@ function runOnWorker(file: string, input: SandboxInput): Promise<EvaluateResult>
   });
 }
 
-/** Runs one program on a worker thread; in this thread when the worker
- * bundle is missing (tests and local runs before a build) or cannot start,
- * which is how it ran before the worker existed. Never throws for learner
- * mistakes: a syntax error, a throw, an infinite loop or a promise that
- * never settles all come back as results the caller can show. */
+/** Runs one program on a worker thread. Never throws for learner mistakes:
+ * a syntax error, a throw, an infinite loop or a promise that never settles
+ * all come back as results the caller can show.
+ *
+ * Throws `GraderBusyError` when no thread can take the run: every thread is
+ * busy and the wait ran out, or a thread would not start. After a thread
+ * would not start, a new one is tried again only after a pause
+ * (`bootBackoff`); a run in between that has no loaded thread to use is told
+ * the grader is busy. Only off a deployment (`inThreadGradingAllowed`) does
+ * such a run, or any run when the worker bundle is missing, happen in this
+ * thread, as before the worker existed. */
 export async function runInSandbox(input: SandboxInput): Promise<EvaluateResult> {
   const file = sandboxWorkerFile();
-  if (!file) return runInQuickJS(input);
-  await acquireWorkerSlot();
+  if (!file) {
+    if (inThreadGradingAllowed()) return runInQuickJS(input);
+    throw new GraderBusyError('sandbox_worker_missing', 30);
+  }
+  await slots.acquire();
   try {
+    const pause = idleWorkers.length === 0 ? boot.pause() : 0;
+    if (pause > 0) {
+      if (inThreadGradingAllowed()) return runInQuickJS(input);
+      throw new GraderBusyError('sandbox_worker_backoff', pause / 1000);
+    }
     return await runOnWorker(file, input);
   } catch (error) {
     if (!(error instanceof WorkerUnavailableError)) throw error;
+    boot.failed();
     console.warn(JSON.stringify({ level: 'warn', msg: 'sandbox_worker_unavailable', reason: error.message }));
-    workerFile = null;
-    return runInQuickJS(input);
+    if (inThreadGradingAllowed()) return runInQuickJS(input);
+    throw new GraderBusyError(error.message, boot.pause() / 1000);
   } finally {
-    releaseWorkerSlot();
+    slots.release();
   }
 }
 

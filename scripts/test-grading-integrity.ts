@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict';
-import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInSandbox } from '../lib/coding/sandbox';
-import { checkTypes, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
+import { readFileSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInSandbox, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
+import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
+import { GRADING_PER_CALLER, GraderBusyError } from '../lib/coding/grader-capacity';
 import { handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession } from '../lib/quiz-tokens';
 import { solutionFor } from '../lib/coding/solutions';
@@ -803,4 +806,261 @@ export default function App() {
   const redeclared = await runInSandbox({ code: 'var __probe = { Proxy: function (target) { return target; } };', calls: ['1'], expectations: [1] });
   assert.match(redeclared.codeError ?? '', /^SyntaxError: .*redefinition/, `the probe cannot be redeclared: ${redeclared.codeError}`);
   console.log('PASS integrity: a replaced Proxy or RegExp test does not zero a read count');
+}
+
+// ── one caller cannot hold the grader's threads (C1-1) ───────────────────
+// The grader's queues had no bound and no deadline, and a guest may send
+// thirty submits at once. Thirty runaway programs held every thread while
+// another learner's correct Submit waited behind them: half a minute for
+// JavaScript, and past the function's 45 s limit (a 504) for TypeScript. A
+// caller now has at most GRADING_PER_CALLER submits grading at once, and the
+// rest of a burst is refused at once with 429 `grader_busy`. That is not a
+// verdict: nothing is recorded, so it costs no XP and no streak day.
+type Answer = {
+  statusCode: number;
+  headers: Record<string, string>;
+  body: null | { verdict?: string; applied?: boolean; codeError?: string | null; error?: { code?: string } };
+  setHeader(name: string, value: string): void;
+  status(code: number): Answer;
+  json(body: never): Answer;
+};
+const answer = (): Answer => ({
+  statusCode: 200, headers: {}, body: null,
+  setHeader(name, value) { this.headers[name.toLowerCase()] = String(value); },
+  status(code) { this.statusCode = code; return this; },
+  json(body) { this.body = body; return this; },
+});
+const submitCode = async (input: { taskId: string; track: 'javascript' | 'typescript'; code: string; address: string; account?: string; db?: ReturnType<typeof codingDatabase> }) => {
+  const out = answer();
+  await handleCodingSubmit({
+    method: 'POST', query: {},
+    headers: { 'x-forwarded-for': input.address, ...(input.account ? { authorization: 'Bearer local-test' } : {}) },
+    body: { session: encodeCodingSession({ taskId: input.taskId, track: input.track, userId: null }), code: input.code, ...(input.account ? { user_id: input.account } : {}) },
+  } as never, out as never, (input.db?.client ?? null) as never);
+  return out;
+};
+const runawayTypes = "type B<N extends number, E, A extends unknown[] = []> = A['length'] extends N ? A : B<N, E, [...A, E]>;\n"
+  + Array.from({ length: 30 }, (_, index) => `const q${index}: B<999, 'k${index}'>['length'] = 999;\n`).join('');
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+/** What a run came to and how long it took: its result, or the reason the
+ * grader gave for not taking it. */
+const timed = <T>(run: Promise<T>) => {
+  const started = Date.now();
+  return run.then(
+    (value) => ({ value, busy: null as string | null, ms: Date.now() - started }),
+    (error: unknown) => {
+      if (!(error instanceof GraderBusyError)) throw error;
+      assert.ok(error.retryAfterSeconds >= 1, 'a busy grader says when to try again');
+      return { value: null, busy: error.reason, ms: Date.now() - started };
+    },
+  );
+};
+{
+  const db = codingDatabase();
+  const flooder = 'user-flood-0001';
+  const runaway = "const double = (numbers) => { for (;;) { 'x'.repeat(2e6); } };";
+  const flood = Array.from({ length: 12 }, () => submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: runaway, address: '203.0.113.41', account: flooder, db }));
+  const started = Date.now();
+  const other = await submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: solutionFor('js-double-numbers')!.solution, address: '203.0.113.42', account: 'user-calm-0002', db });
+  const waited = Date.now() - started;
+  const answers = await Promise.all(flood);
+  assert.equal(other.statusCode, 200, JSON.stringify(other.body));
+  assert.equal(other.body?.verdict, 'passed');
+  // Before: the twelve runaway programs went first, three rounds of four
+  // threads at 2.5 s each.
+  assert.ok(waited < 5_000, `another learner's Submit did not wait behind the burst (${waited} ms)`);
+  const refused = answers.filter((out) => out.statusCode === 429);
+  assert.equal(refused.length, answers.length - GRADING_PER_CALLER, `all but ${GRADING_PER_CALLER} of the burst are refused: ${answers.map((out) => out.statusCode).join(',')}`);
+  for (const out of refused) {
+    assert.equal(out.body?.error?.code, 'grader_busy');
+    assert.ok(Number(out.headers['retry-after']) >= 1, 'a refusal says when to try again');
+  }
+  assert.ok(answers.filter((out) => out.statusCode === 200).every((out) => out.body?.verdict === 'timeout'), 'the submits it took are graded as usual');
+  const recorded = db.rpcCalls.filter((call) => call.name === 'record_coding_verdict' && call.args.p_user_id === flooder);
+  assert.equal(recorded.length, GRADING_PER_CALLER, 'a refused submit records nothing');
+  const again = await submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: solutionFor('js-double-numbers')!.solution, address: '203.0.113.41', account: flooder, db });
+  assert.equal(again.body?.verdict, 'passed', 'once its submits are answered the caller may submit again');
+  console.log(`PASS integrity: a burst of runaway submits holds ${GRADING_PER_CALLER} threads and another learner is answered in ${waited} ms`);
+}
+{
+  const flood = Array.from({ length: 24 }, () => submitCode({ taskId: 'ts-typed-slug', track: 'typescript', code: runawayTypes + solutionFor('ts-typed-slug')!.solution, address: '203.0.113.43' }));
+  const started = Date.now();
+  const other = await submitCode({ taskId: 'ts-typed-slug', track: 'typescript', code: solutionFor('ts-typed-slug')!.solution, address: '203.0.113.44' });
+  const waited = Date.now() - started;
+  const answers = await Promise.all(flood);
+  assert.equal(other.statusCode, 200, JSON.stringify(other.body));
+  assert.equal(other.body?.verdict, 'passed');
+  // Before: twelve rounds of two threads, past the function's limit. Now the
+  // learner waits for one runaway check to be stopped, then for a new thread
+  // to load the compiler, which a loaded machine takes its time over.
+  assert.ok(waited < 30_000, `another learner's TypeScript Submit was answered in time (${waited} ms)`);
+  assert.equal(answers.filter((out) => out.statusCode === 429 && out.body?.error?.code === 'grader_busy').length, answers.length - GRADING_PER_CALLER);
+  assert.ok(answers.filter((out) => out.statusCode === 200).every((out) => out.body?.verdict === 'timeout'));
+  console.log(`PASS integrity: a burst of runaway type checks leaves another learner's TypeScript Submit answered in ${waited} ms`);
+}
+
+// ── a run waits a bounded time in a bounded queue (C1-1) ─────────────────
+// Every thread of both pools is held by a run that outlasts the wait. Runs
+// queued behind them are told the grader is busy once they have waited their
+// limit, and runs past the queue's length at once; through the handler that
+// is a 503 `grader_busy`, recorded nowhere. Afterwards the pools are whole.
+{
+  const quick = () => runInSandbox({ code: 'const f = () => 1;', calls: ['f()'], expectations: [1] });
+  const js = [
+    ...Array.from({ length: 6 }, () => timed(runInSandbox({ code: 'while (true) {}', calls: ['1'], expectations: [1], deadlineMs: SANDBOX_SLOT_WAIT_MS + 2_000 }))),
+    ...Array.from({ length: 40 }, () => timed(quick())),
+  ];
+  const ts = [
+    ...Array.from({ length: 3 }, () => timed(checkTypes(runawayTypes, [[]], TS_CHECK_SLOT_WAIT_MS + 2_000))),
+    ...Array.from({ length: 20 }, () => timed(checkTypes('const a: number = 1;', [[]]))),
+  ];
+  // Through the handler, a Submit the threads cannot take is a 503 and not a
+  // verdict.
+  const db = codingDatabase();
+  const busy = await submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: solutionFor('js-double-numbers')!.solution, address: '203.0.113.45', account: 'user-wait-0003', db });
+  assert.equal(busy.statusCode, 503, JSON.stringify(busy.body));
+  assert.equal(busy.body?.error?.code, 'grader_busy');
+  assert.ok(Number(busy.headers['retry-after']) >= 1);
+  assert.equal(db.attemptIds.length, 0, 'a Submit the grader could not take records nothing');
+  const [jsRuns, tsRuns] = await Promise.all([Promise.all(js), Promise.all(ts)]);
+  for (const [name, runs, waitMs] of [['sandbox', jsRuns, SANDBOX_SLOT_WAIT_MS], ['ts_check', tsRuns, TS_CHECK_SLOT_WAIT_MS]] as const) {
+    const ran = runs.filter((run) => run.busy === null);
+    const expired = runs.filter((run) => run.busy === `${name}_wait_expired`);
+    const full = runs.filter((run) => run.busy === `${name}_queue_full`);
+    assert.equal(ran.length + expired.length + full.length, runs.length, `${name}: every run ran or was told the grader is busy`);
+    assert.ok(ran.length >= 1 && expired.length >= 1 && full.length >= 1, `${name}: ${ran.length} ran, ${expired.length} waited out, ${full.length} found the queue full`);
+    assert.ok(full.every((run) => run.ms < 1_000), `${name}: a full queue refuses at once`);
+    assert.ok(expired.every((run) => run.ms >= waitMs - 50 && run.ms < waitMs + 3_000), `${name}: a queued run waits its limit and no longer: ${expired.map((run) => run.ms).join(',')}`);
+  }
+  assert.ok(jsRuns.filter((run) => run.busy === null).every((run) => (run.value as { timedOut?: boolean }).timedOut === true), 'only the runs holding a thread ran');
+  // The threads come back: a full pool's worth of runs all get one.
+  const after = await Promise.all(Array.from({ length: 6 }, () => quick()));
+  assert.ok(after.every((run) => run.results[0]?.pass === true), 'the pool is whole again');
+  assert.equal((await checkTypes('const a: number = 1;', [[]])).stopped, false, 'the type-check pool is whole again');
+  console.log(`PASS integrity: a queued run waits at most ${SANDBOX_SLOT_WAIT_MS} ms (types ${TS_CHECK_SLOT_WAIT_MS} ms), a full queue refuses at once, and neither is a verdict`);
+}
+
+// ── a thread that would not start is tried again (C1-4) ──────────────────
+// One failed start (a boot past its limit, a thread that died before it
+// picked the run up) switched the instance to grading on the request thread
+// for the rest of its life, where a runaway native-call loop blocks every
+// request. A failed start now pauses new threads for a second, doubling up to
+// thirty; on a deployment a run that would need one meanwhile is told the
+// grader is busy, and never runs on the request thread. Here the bundles are
+// replaced by ones that throw as they load, then put back. A pool keeps fewer
+// threads loaded than it runs at once (two of four, one of two), so a full
+// pool's worth of runs always needs a new thread.
+{
+  const sandboxBundle = join(process.cwd(), SANDBOX_WORKER_FILE);
+  const typesBundle = join(process.cwd(), TS_CHECK_WORKER_FILE);
+  const sandboxSource = readFileSync(sandboxBundle);
+  const typesSource = readFileSync(typesBundle);
+  const broken = "throw new Error('this thread does not start');\n";
+  const clean = () => runInSandbox({ code: 'const f = () => 1;', calls: ['f()'], expectations: [1] });
+  const cleanTypes = () => checkTypes('const a: number = 1;', [[]]);
+  /** A full pool's worth of runs at once: what each ran into. */
+  const fullPool = async (count: number, run: () => Promise<unknown>) => Promise.all(Array.from({ length: count }, () => timed(run())));
+  const reasons = (runs: { busy: string | null }[]) => runs.map((run) => run.busy);
+  let worstLag = 0;
+  let last = Date.now();
+  const beat = setInterval(() => { const now = Date.now(); worstLag = Math.max(worstLag, now - last - 20); last = now; }, 20);
+  try {
+    writeFileSync(sandboxBundle, broken);
+    writeFileSync(typesBundle, broken);
+    process.env.VERCEL = '1';
+    // On a deployment a run whose thread would not start does not run here:
+    // the loaded threads take their runs, the rest are told the grader is busy.
+    const failed = await fullPool(4, clean);
+    assert.ok(reasons(failed).includes('sandbox_worker_failed'), `a thread that did not start: ${reasons(failed).join(', ')}`);
+    assert.ok(failed.every((run) => run.busy !== null || (run.value as { results: { pass: boolean | null }[] }).results[0]?.pass === true), 'only loaded threads ran');
+    // During the pause no new thread is tried. A machine slow enough to
+    // outlast a pause meets another failure, and a pause twice as long.
+    let paused = await fullPool(4, clean);
+    for (let tries = 0; tries < 4 && !reasons(paused).includes('sandbox_worker_backoff'); tries++) {
+      assert.ok(reasons(paused).every((reason) => reason === null || reason === 'sandbox_worker_failed'), reasons(paused).join(', '));
+      paused = await fullPool(4, clean);
+    }
+    assert.ok(reasons(paused).includes('sandbox_worker_backoff'), `during the pause: ${reasons(paused).join(', ')}`);
+    assert.ok(reasons(paused).every((reason) => reason === null || reason === 'sandbox_worker_backoff'), 'during the pause no new thread is tried');
+    const typesFailed = await fullPool(2, cleanTypes);
+    assert.ok(reasons(typesFailed).includes('ts_check_worker_failed'), `a type-check thread that did not start: ${reasons(typesFailed).join(', ')}`);
+    // Through the handler: with the loaded threads busy elsewhere, the Submit
+    // needs a new one and is a 503 that records nothing.
+    const occupy = fullPool(2, () => runInSandbox({ code: 'while (true) {}', calls: ['1'], expectations: [1], deadlineMs: 2_000 }));
+    const db = codingDatabase();
+    const refused = await submitCode({ taskId: 'js-double-numbers', track: 'javascript', code: solutionFor('js-double-numbers')!.solution, address: '203.0.113.46', account: 'user-boot-0004', db });
+    await occupy;
+    assert.equal(refused.statusCode, 503, JSON.stringify(refused.body));
+    assert.equal(refused.body?.error?.code, 'grader_busy');
+    assert.ok(Number(refused.headers['retry-after']) >= 1);
+    assert.equal(db.attemptIds.length, 0, 'a grader that could not start records nothing');
+    const occupyTypes = fullPool(1, () => checkTypes(runawayTypes, [[]], 2_000));
+    const typed = await submitCode({ taskId: 'ts-typed-slug', track: 'typescript', code: solutionFor('ts-typed-slug')!.solution, address: '203.0.113.46' });
+    await occupyTypes;
+    assert.equal(typed.statusCode, 503, JSON.stringify(typed.body));
+    // Off a deployment (tests, local runs) such a run still happens, in this
+    // thread, as it did before the worker existed.
+    delete process.env.VERCEL;
+    assert.ok((await Promise.all(Array.from({ length: 4 }, () => clean()))).every((run) => run.results[0]?.pass === true), 'off a deployment every run is graded');
+    process.env.VERCEL = '1';
+    // The bundles are back. Once the pause is over new threads start, and a
+    // runaway native-call loop is stopped there without holding up this one.
+    writeFileSync(sandboxBundle, sandboxSource);
+    writeFileSync(typesBundle, typesSource);
+    const afterPause = async <T>(count: number, run: () => Promise<T>, paused: string) => {
+      for (let tries = 0; tries < 40; tries++) {
+        worstLag = 0;
+        const runs = await fullPool(count, run);
+        if (runs.every((one) => one.busy === null)) return runs.map((one) => one.value as T);
+        assert.ok(reasons(runs).every((reason) => reason === null || reason === paused), `while paused, nothing else stops a run: ${reasons(runs).join(', ')}`);
+        await sleep(1_000);
+      }
+      return assert.fail('the pause ended');
+    };
+    const stuck = await afterPause(4, () => runInSandbox({ code: "for (;;) { 'x'.repeat(2e6); }", calls: ['1'], expectations: [1], deadlineMs: 300 }), 'sandbox_worker_backoff');
+    assert.ok(stuck.every((run) => run.timedOut), 'each runaway run was stopped');
+    // On this thread the loop runs for minutes; the bound leaves room for a
+    // loaded machine starting threads.
+    assert.ok(worstLag < 2_000, `the runaway runs ran on worker threads, not this one (worst lag ${worstLag} ms)`);
+    const stopped = await afterPause(2, () => checkTypes(runawayTypes, [[]], 300), 'ts_check_worker_backoff');
+    assert.ok(stopped.every((outcome) => outcome.stopped), 'type checks run on threads again, under their deadline');
+  } finally {
+    clearInterval(beat);
+    delete process.env.VERCEL;
+    writeFileSync(sandboxBundle, sandboxSource);
+    writeFileSync(typesBundle, typesSource);
+  }
+  console.log('PASS integrity: a thread that would not start is tried again after a pause, and no run moves to the request thread on a deployment');
+}
+
+// ── deeply nested TypeScript gets a verdict (C1-5) ───────────────────────
+// The handler transpiled TypeScript on the request thread after the type
+// check. A thousand nested arrows overflowed the compiler's stack there, the
+// RangeError escaped, and the learner got HTTP 500. The type-check thread now
+// transpiles too; code nested past what it can compile is an error verdict.
+{
+  const solution = solutionFor('ts-typed-slug')!.solution;
+  const submit = (code: string) => submitCode({ taskId: 'ts-typed-slug', track: 'typescript', code, address: '203.0.113.47' });
+  const arrows = await submit(`const f = ${'() => '.repeat(1000)}1;\n${solution}`);
+  assert.equal(arrows.statusCode, 200, JSON.stringify(arrows.body));
+  assert.ok(typeof arrows.body?.verdict === 'string', 'a thousand nested arrows get a verdict');
+  // Thousands of nested blocks: the checker gets through them and the
+  // transpiler does not. Where one gives out and the other does not moves
+  // with the compiler's warm-up, so several depths go in. Each is a verdict,
+  // the type checker's stop or the transpiler's error, and at least one is
+  // the transpiler's.
+  const verdicts: string[] = [];
+  for (const depth of [2500, 3500, 4500, 5500, 6500, 7500]) {
+    const blocks = await submit(`function h(a: number) {\n${'{'.repeat(depth)}a++;${'}'.repeat(depth)}\n}\n${solution}`);
+    assert.equal(blocks.statusCode, 200, JSON.stringify(blocks.body));
+    assert.ok(
+      (blocks.body?.verdict === 'error' && blocks.body.codeError === TRANSPILE_FAILED_MESSAGE)
+        || (blocks.body?.verdict === 'timeout' && blocks.body.codeError === TYPE_CHECK_STOPPED_MESSAGE),
+      `${depth} nested blocks: ${JSON.stringify(blocks.body)}`,
+    );
+    verdicts.push(blocks.body!.verdict!);
+  }
+  assert.ok(verdicts.includes('error'), `code the compiler cannot transpile is an error verdict: ${verdicts.join(', ')}`);
+  assert.equal((await submit(solution)).body?.verdict, 'passed', 'the next Submit is graded as usual');
+  console.log('PASS integrity: TypeScript nested past what the compiler can transpile is an error verdict, not an HTTP 500');
 }

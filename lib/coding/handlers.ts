@@ -10,7 +10,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { createHash } from 'node:crypto';
 import { AuthError } from '../auth';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, withTimeout } from '../http';
-import { claimOnce, enforceClassRateLimit, RATE_LIMITS } from '../rate-limit';
+import { claimOnce, enforceClassRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
 import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
@@ -20,8 +20,8 @@ import { codingTaskReview } from '../curation';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
-import { nodeTypeScriptChecker } from './ts-check-node';
-import { checkTypes, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
+import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
+import { GRADING_PER_CALLER, GraderBusyError } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
 import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
@@ -102,8 +102,9 @@ async function loadProgressRow(supabase: SupabaseClient, userId: string, taskId:
   return data ? toProgress(data as ProgressRow) : null;
 }
 
-/** Highest contiguous cleared `javascript` Learn level, from the roadmap blob. */
-async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string): Promise<number> {
+/** Highest contiguous cleared `javascript` Learn level, from the roadmap blob.
+ * Clearing the Learn foundations opens JavaScript tier 3 (`tierUnlocked`). */
+export async function javascriptLevelsCleared(supabase: SupabaseClient, userId: string): Promise<number> {
   const { data, error } = await withTimeout(supabase.from('roadmap_progress').select('data').eq('user_id', userId).maybeSingle());
   if (error || !data?.data) return 0;
   const levels = ((data.data as Record<string, { levels?: Record<string, { passed?: boolean }> }>).javascript?.levels) ?? {};
@@ -360,7 +361,16 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
       hiddenTypeTotal = hiddenCheck.typeTests.length;
       hiddenTypeFailures = hiddenCheck.typeTests.filter((one) => !one.pass).length;
     }
-    codeToRun = nodeTypeScriptChecker().toJavaScript(code);
+    // Code nested too deeply for the compiler is the learner's error, like a
+    // syntax error, not a failure of the handler.
+    if (typed.javascript === null) {
+      const graded: Graded = {
+        verdict: 'error', results: [], check, logs: [], codeError: TRANSPILE_FAILED_MESSAGE, design: null, designReference: null,
+        hidden: hiddenTests.length + hiddenTypeTotal > 0 ? { passed: 0, total: hiddenTests.length + hiddenTypeTotal } : null,
+      };
+      return { ...graded, failureHint: hintForFailure(task, graded) };
+    }
+    codeToRun = typed.javascript;
   }
   // Only the visible checks' console output comes back: a learner who logs
   // inside their function must not read the hidden checks' inputs. The hidden
@@ -586,6 +596,16 @@ function verdictBody(graded: Graded, recorded: Recorded | null, github: CodingGa
   };
 }
 
+/** The grader could not take this Submit (`GraderBusyError`): nothing was
+ * graded, so nothing is recorded, and the learner is asked to submit again. A
+ * caller over its own limit hears 429; a Submit the instance's grader threads
+ * could not take, 503. Both carry a Retry-After. */
+function graderBusy(res: VercelResponse, status: 429 | 503, error: GraderBusyError, track: CodingTrack, hasUser: boolean) {
+  logEvent({ status, kind: 'submit_unrecorded', reason: error.reason, track, hasUser });
+  res.setHeader('Retry-After', String(error.retryAfterSeconds));
+  return jsonError(res, status, 'grader_busy', error.message);
+}
+
 /* ── POST ?resource=coding-submit ────────────────────────────────────── */
 
 export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse, supabase: SupabaseClient | null) {
@@ -656,7 +676,16 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     if (typeof body.code !== 'string' || body.code.length === 0) return jsonError(res, 400, 'bad_request', 'code is required');
     if (Buffer.byteLength(body.code, 'utf8') > MAX_CODE_BYTES) return jsonError(res, 413, 'too_large', 'Code is limited to 20 kB');
     code = body.code;
-    graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
+    const done = enterInFlight(req, 'grading', GRADING_PER_CALLER, userId ? `user:${userId}` : undefined);
+    if (!done) return graderBusy(res, 429, new GraderBusyError('caller_in_flight'), task.track, Boolean(userId));
+    try {
+      graded = task.track === 'react' ? await gradeReact(task, code) : await gradeCode(task, code);
+    } catch (error) {
+      if (!(error instanceof GraderBusyError)) throw error;
+      return graderBusy(res, 503, error, task.track, Boolean(userId));
+    } finally {
+      done();
+    }
   }
   // A grader outage is not the learner's error: it is neither recorded nor
   // counted against the attempt, and the message asks for another Submit.

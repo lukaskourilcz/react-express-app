@@ -10,10 +10,13 @@
 // hand from its own data properties with functions captured here, before the
 // component exists (serializeGuestResult in lib/coding/react-guest.ts).
 // react-isolated.ts reads only that line (react-guest.ts); it never reads a
-// file from the VM. Node starts with GUEST_NODE_FLAGS, and learner code runs
-// in a page realm without `process` or `require` (lib/coding/react-runner.ts).
+// file from the VM. Before the suite loads the learner's code, the guest
+// prints a started line with the nonce, so a crash after it reads as the
+// learner's error and one before it as a runner failure. Node starts with
+// GUEST_NODE_FLAGS, and learner code runs in a page realm without `process`
+// or `require` (lib/coding/react-runner.ts).
 import { readFileSync, unlinkSync } from 'node:fs';
-import { guestResultLine, serializeGuestResult, type GuestInput } from '../lib/coding/react-guest';
+import { guestResultLine, guestStartedLine, serializeGuestResult, type GuestInput } from '../lib/coding/react-guest';
 import { prepareReactRuntime, runReactSuite } from '../lib/coding/react-runner';
 import { lockDownRealm } from '../lib/coding/realm-lockdown';
 
@@ -28,6 +31,8 @@ async function main() {
   unlinkSync(inputPath);
   await prepareReactRuntime();
   lockDownRealm();
+  // Written out before any learner code runs, so a crash cannot lose it.
+  await new Promise((resolve) => write(guestStartedLine(nonce), resolve));
   const result = await runReactSuite({ suite, appSource });
   write(guestResultLine(nonce, serializeGuestResult(result)), () => exit(0));
 }
