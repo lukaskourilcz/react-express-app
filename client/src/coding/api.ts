@@ -8,6 +8,7 @@ import { syncXpWithServer } from '../lib/xp';
 import { getStoredLang } from '../i18n/LanguageContext';
 import type {
   CodingApproachesResponse,
+  CodingDraftSaveResponse,
   CodingProgressResponse,
   CodingRevealRequest,
   CodingRevealResponse,
@@ -55,8 +56,8 @@ export function fetchCodingProgress(signal?: AbortSignal): Promise<CodingProgres
   return apiFetch<CodingProgressResponse>(`${USER}?op=coding-progress`, { signal });
 }
 
-export function saveCodingDraft(id: string, code: string): Promise<{ ok: boolean }> {
-  return apiFetch<{ ok: boolean }>(`${USER}?op=coding-draft`, { method: 'POST', body: JSON.stringify({ id, code }) });
+export function saveCodingDraft(id: string, code: string): Promise<CodingDraftSaveResponse> {
+  return apiFetch<CodingDraftSaveResponse>(`${USER}?op=coding-draft`, { method: 'POST', body: JSON.stringify({ id, code }) });
 }
 
 export function fetchGithubConnection(signal?: AbortSignal): Promise<GithubConnectionResponse> {
@@ -114,8 +115,9 @@ export function useCodingTask(id: string | undefined) {
     enabled: Boolean(id),
     queryFn: ({ signal }) => fetchCodingTask(id!, signal),
     // Premium (402), an unknown task (404) and a retired one (410) are
-    // answers, not failures to retry.
-    retry: (failures, error) => ![402, 404, 410].includes((error as { status?: unknown } | null)?.status as number) && failures < 1,
+    // answers, not failures to retry, and so is a request the server refused
+    // as malformed (400): sent again, it is refused again.
+    retry: (failures, error) => ![400, 402, 404, 410].includes((error as { status?: unknown } | null)?.status as number) && failures < 1,
     staleTime: 0,
     // Task responses contain an editable starting draft. Do not mount a new
     // stage from an old response while its current draft is being fetched.

@@ -23,7 +23,7 @@ import { runChecks } from './sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
 import { GRADING_PER_CALLER, GraderBusyError } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
-import { classifyFailure, failureHint, jsonKind } from '../../shared/coding-failure';
+import { classifyFailure, failureHint, isSyntaxError, jsonKind } from '../../shared/coding-failure';
 import { afterCodingPass } from '../github-garden';
 import { approachesFor } from './approaches';
 import { evolvingPassed, evolvingStage, evolvingUnlocked } from '../../shared/evolving';
@@ -44,6 +44,7 @@ import {
 import { CODING_CODE_LIMIT_BYTES } from '../../shared/coding-api';
 import type {
   CodingDraftResponse,
+  CodingDraftSaveResponse,
   CodingGardenStatus,
   CodingOutcome,
   CodingProgressResponse,
@@ -189,7 +190,11 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
   if (!codingAvailable()) return notAvailable(res);
   if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.codingTaskAddress, RATE_LIMITS.codingTask))) return;
   const id = req.query.id;
-  if (!isCodingTaskId(id)) return jsonError(res, 400, 'bad_request', 'A task id is required');
+  if (typeof id !== 'string' || !id) return jsonError(res, 400, 'bad_request', 'A task id is required');
+  // An id no task could have (`/coding/javascript/no-such-task`) is as
+  // unknown as one that fits the pattern, and gets the same answer: the
+  // browser shows its not-found page for a 404 and does not ask again.
+  if (!isCodingTaskId(id)) return jsonError(res, 404, 'not_found', 'Unknown task');
   const task = codingTaskById(id);
   if (!task) {
     // A task that exists but is withheld by the content gate is told apart
@@ -323,7 +328,9 @@ function hintForFailure(
   task: CodingTask,
   graded: Pick<Graded, 'verdict' | 'results' | 'check' | 'codeError'> & { timedOut?: boolean },
 ): CodingVerdictResponse['failureHint'] {
-  if (graded.verdict === 'passed') return null;
+  // Code that never parsed: the error says what is wrong, and a hint about
+  // the values it handles would not be true (V4-3).
+  if (graded.verdict === 'passed' || isSyntaxError(graded.codeError)) return null;
   const tests = task.tests ?? [];
   const category = classifyFailure({
     timedOut: graded.verdict === 'timeout' || graded.timedOut === true,
@@ -832,7 +839,18 @@ export async function handleCodingDraft(req: VercelRequest, res: VercelResponse,
       if (isRpcMissing(saved.error)) return jsonError(res, 503, 'migration_required', 'Coding progress migration 025 is not installed');
       return jsonError(res, 500, 'db_error', 'Could not save the draft');
     }
-    return res.json({ ok: true });
+    // The time the account now holds this code, so the browser can tell its
+    // own save from another device's when the task next opens
+    // (client/src/coding/drafts.ts). save_coding_draft returns nothing, so the
+    // row is read back; if another save landed in between, the row holds other
+    // code and its time is not this save's, so none is given.
+    let updatedAt: string | null = null;
+    try {
+      const row = await withTimeout(supabase.from('coding_drafts').select('code,updated_at').eq('user_id', userId).eq('task_id', id).maybeSingle());
+      if (!row.error && row.data?.code === code && typeof row.data.updated_at === 'string') updatedAt = row.data.updated_at;
+    } catch { /* saved all the same; the browser learns no time */ }
+    const out: CodingDraftSaveResponse = { ok: true, updatedAt };
+    return res.json(out);
   }
   res.setHeader('Allow', 'GET, POST');
   return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');

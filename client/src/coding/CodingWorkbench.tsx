@@ -26,7 +26,7 @@ import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
 import { useIsNarrowForEditor } from '../lib/useMediaQuery';
 import { CODING_CODE_LIMIT_BYTES, SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
-import { classifyFailure, failureHint } from '../../../shared/coding-failure';
+import { classifyFailure, failureHint, isSyntaxError } from '../../../shared/coding-failure';
 import { revealCoding, submitCoding, useCodingApproaches } from './api';
 import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
@@ -71,8 +71,9 @@ export interface CodingWorkbenchProps {
   saveAction?: ReactNode;
   /** Called with the current code when the learner presses Run or Submit —
    * the two moments they have said the code is worth keeping. Nothing is
-   * saved while they type, and nothing when they leave. */
-  onDraft?: (code: string) => void;
+   * saved while they type, and nothing when they leave. 'tooLarge': the code
+   * was kept on this device only, too large for the account. */
+  onDraft?: (code: string) => 'tooLarge' | null | void;
   onVerdict?: (verdict: CodingVerdictResponse, submittedCode?: string) => void;
   onRevealed?: () => void;
   nextHref?: string | null;
@@ -166,6 +167,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // later Submit clears the card, not the pass.
   const [recordedPass, setRecordedPass] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // The last Run or Submit kept the code on this device only.
+  const [draftTooLarge, setDraftTooLarge] = useState(false);
   const [tab, setTab] = useState<Tab>(isReact ? 'preview' : 'results');
   const [hintsTaken, setHintsTaken] = useState(0);
   const [confirming, setConfirming] = useState<'reset' | 'reveal' | null>(null);
@@ -230,8 +233,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   useEffect(() => { writeJSON(LAYOUT_KEY, layout); }, [layout]);
   // The runner, and TypeScript's compiler, load while the brief is read: the
   // first Run does not wait for them, and Run still works if the connection
-  // drops afterwards.
-  useEffect(() => (isReact ? undefined : warmRunner(codeTrack)), [isReact, codeTrack]);
+  // drops afterwards. Not while a puzzle or the wait for a bigger screen
+  // stands in for the editor: a phone would download and start a compiler it
+  // has no Run for. Choosing the editor starts it.
+  const editorShown = !puzzleMode && !pendingOnDesktop;
+  useEffect(() => (isReact || !editorShown ? undefined : warmRunner(codeTrack)), [isReact, editorShown, codeTrack]);
   // A Submit's browser preview has nowhere to report once the task is left.
   useEffect(() => () => localRun.current?.abort(), []);
   useEffect(() => { if (verdict) verdictRef.current?.focus(); }, [verdict]);
@@ -279,7 +285,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const runLocal = useCallback(async () => {
     if (phase !== 'idle') return;
-    onDraft?.(code);
+    setDraftTooLarge(onDraft?.(code) === 'tooLarge');
     localRun.current?.abort();
     setPhase('running');
     setServerChecked(false);
@@ -319,7 +325,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
 
   const submit = useCallback(async () => {
     if (phase !== 'idle' || !session) return;
-    onDraft?.(code);
+    setDraftTooLarge(onDraft?.(code) === 'tooLarge');
     // The server takes 20 kB of code; say so before sending more.
     if (new TextEncoder().encode(code).length > CODING_CODE_LIMIT_BYTES) {
       setSubmitError(t('coding.verdict.tooLarge'));
@@ -375,6 +381,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         preview.abort();
         // The server's run is the verdict of record; show what it saw.
         setRun({ results: result.results, logs: result.logs, codeError: result.codeError, check: result.check, timedOut: result.verdict === 'timeout' });
+        // About the code just sent, even when the browser's preview, which
+        // would have said so, was overtaken.
+        setStale(false);
         setServerChecked(true);
         const typesBroken = result.check && (result.check.codeErrors.length > 0 || result.check.typeTests.some((one) => !one.pass));
         setTab(result.codeError ? 'results' : typesBroken ? 'types' : 'results');
@@ -596,9 +605,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const currentVerdict = verdictStale ? null : verdict;
   const localHint = useMemo(() => {
     if (currentVerdict || !run || runPassed(run)) return null;
-    // Nothing ran, or the types stopped the checker: the note in Results
-    // already names the cause, and no hint about the code would be true.
-    if (run.runnerUnavailable || run.codeError === TYPE_CHECK_STOPPED_MESSAGE) return null;
+    // Nothing ran, the types stopped the checker, or the code did not parse:
+    // the note in Results already names the cause, and no hint about the
+    // code would be true.
+    if (run.runnerUnavailable || run.codeError === TYPE_CHECK_STOPPED_MESSAGE || isSyntaxError(run.codeError)) return null;
     const typesBroken = Boolean(run.check && (run.check.codeErrors.length > 0 || run.check.typeTests.some((one) => !one.pass)));
     return failureHint(
       classifyFailure({
@@ -949,11 +959,20 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     const typeErrors = run.check ? run.check.codeErrors.length + run.check.typeTests.filter((one) => !one.pass).length : 0;
     return typeErrors > 0 ? `${passing}. ${t('coding.types.errors', { n: typeErrors })}` : passing;
   };
-  const announcement = phase === 'running' || phase === 'submitting'
+  // Once the code changes, the results on screen are about earlier code. Read
+  // out again they would sound like news about the new code (the first
+  // keystroke after a failed Submit announced "5 of 5 passing"), so until the
+  // next Run or Submit the region keeps what it last said.
+  const said = useRef('');
+  const fresh = busy
     ? t('coding.status.working')
     : currentVerdict
       ? verdictLabel
-      : runAnnouncement();
+      : stale || (verdictStale && !run && !reactRun)
+        ? null
+        : runAnnouncement();
+  if (fresh !== null) said.current = fresh;
+  const announcement = fresh ?? said.current;
 
   const titleId = `${baseId}-title`;
   const Title = mode === 'section' ? 'h1' : 'h2';
@@ -1047,7 +1066,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // What the actions open: hints, the skip form, confirmations and errors. It
   // follows the pane in reading order and exists only while it holds something.
   const hintsOpen = taken > 0 || skipping || skipResult !== null || confirming === 'reveal' || solution !== null;
-  const notesOpen = hintsOpen || confirming === 'reset' || !online || formatError !== null || (submitError !== null && !puzzleMode);
+  const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
 
   return (
     <div
@@ -1194,6 +1213,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                 </div>
               )}
               {!online && <p className="cd-note cd-note--warn" role="status">{t('coding.offline')}</p>}
+              {draftTooLarge && <p className="cd-note cd-note--warn" role="status">{t('coding.draft.tooLarge')}</p>}
               {formatError && <p className="cd-note cd-note--error" role="status">{formatError}</p>}
               {submitError && !puzzleMode && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
             </div>

@@ -49,6 +49,14 @@ export interface FailureSignals {
   pitfall?: FailureCategory;
 }
 
+/** Whether a run's error is code that never parsed. Both runners say so as
+ * "SyntaxError: <message>": the grading sandbox as QuickJS words it, the
+ * browser's runner as `new Function` does. The message says what is wrong,
+ * and no hint about values or types would be true of code that never ran, so
+ * none is given: the hint ladder answers instead. */
+export const isSyntaxError = (codeError: string | null | undefined): boolean =>
+  typeof codeError === 'string' && codeError.startsWith('SyntaxError: ');
+
 /** The JSON kind of a serialized value, as the classifier compares them. */
 export function jsonKind(serialized: string | null): string | null {
   if (serialized === null) return null;

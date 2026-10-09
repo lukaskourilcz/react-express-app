@@ -774,6 +774,12 @@ async function tierContracts() {
     await roadmapHandler(post('coding-submit', { session: openedBody.session, code: 'throw new Error("not yet");' }) as never, failed as never);
     assert.equal((failed.body as CodingVerdictResponse).failureHint?.category, 'runtime', 'a throwing submit gets the runtime hint');
     assert.deepEqual(czechIn(failed.body), [], 'the verdict carries no Czech');
+    // V4-3: code that never parsed got the runtime hint, "check the values you
+    // index into". The error names the line; no hint follows it.
+    const unparsed = mockResponse();
+    await roadmapHandler(post('coding-submit', { session: openedBody.session, code: 'function reverseString(s) { return s +; }' }) as never, unparsed as never);
+    assert.match((unparsed.body as CodingVerdictResponse).codeError ?? '', /^SyntaxError: /, 'the sandbox names code that does not parse');
+    assert.equal((unparsed.body as CodingVerdictResponse).failureHint, null, 'a syntax error gets no hint about values');
 
     // A deploy that lands before migration 039, against a PostgREST that has
     // none of its routines: the plan reads free instead of failing, and the
