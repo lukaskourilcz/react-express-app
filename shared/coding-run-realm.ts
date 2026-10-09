@@ -1,7 +1,7 @@
 /** Makes the Run worker's realm the grader's realm, just before learner code
  * runs (owner decisions, 9 October 2026):
  *
- *  - local time is Europe/Prague (shared/coding-prague-time.ts);
+ *  - local time is UTC (shared/coding-utc-time.ts);
  *  - `toLocaleString`, `localeCompare` and their kin are the grader's
  *    (shared/coding-locale.ts);
  *  - `performance` has only `now`, as in the grader;
@@ -15,10 +15,10 @@
 
 import { hideMissingGlobals } from './coding-checker-globals';
 import { LOCALE_SOURCE } from './coding-locale';
-import { installPragueTime } from './coding-prague-time';
+import { installUtcTime } from './coding-utc-time';
 
 export function prepareRunRealm(global: typeof globalThis): ReadonlySet<string> {
-  installPragueTime(global);
+  installUtcTime(global);
   (new Function(`return ${LOCALE_SOURCE};`)() as (realm: typeof globalThis) => void)(global);
   const clock = global.performance;
   if (clock && typeof clock.now === 'function') {

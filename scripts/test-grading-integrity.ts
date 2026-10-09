@@ -23,7 +23,7 @@ import { allPassed, evaluateCalls, hiddenGlobalMessage, LOG_LINE_CUT, LOG_OUTPUT
 import { CHECKER_GLOBALS, CHECKER_MEMBERS } from '../shared/coding-checker-globals';
 import { nodeTypeScriptChecker } from '../lib/coding/ts-check-node';
 import { evaluateInRunRealm } from './run-realm-node';
-import { PRAGUE_REACT_APP, PRAGUE_REACT_SUITE } from './fixtures/prague-react';
+import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 // Every run below goes through the grader's worker thread, built fresh from
@@ -836,76 +836,88 @@ export default function App() {
   console.log('PASS integrity: Run and Submit agree on strict mode, the clock and structuredClone');
 }
 
-// ── Run and Submit read Prague time (owner decision 1, C1-2) ─────────────
-// Submit graded on a UTC server and Run in the learner's zone: code that read
-// local hours passed on Submit and failed on Run in Prague, and the hidden
-// checks that cross a clock change could never fail on the server. Learner
-// code now reads Europe/Prague time in both, whatever the host's zone.
+// ── Run and Submit read UTC (owner decision of 9 October 2026, afternoon; C1-2) ──
+// Submit graded in QuickJS, whose local time followed the server's zone, and
+// Run in the learner's zone, so code that read local hours could pass on one
+// and fail on the other. The morning's decision gave both Europe/Prague; the
+// afternoon's replaced it with UTC: learner code reads UTC in both, with no
+// summer time, whatever the host's or the browser's zone.
 {
-  const parts = new Intl.DateTimeFormat('en-US', { timeZone: 'Europe/Prague', hourCycle: 'h23', year: 'numeric', month: 'numeric', day: 'numeric', hour: 'numeric', minute: 'numeric', second: 'numeric', weekday: 'short' });
-  const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  /** [year, month, date, hours, minutes, seconds, day, offset] in Prague, from Intl. */
-  const prague = (t: number) => {
-    const field = (type: string) => parts.formatToParts(t).find((one) => one.type === type)!.value;
-    const wall = Date.UTC(+field('year'), +field('month') - 1, +field('day'), +field('hour'), +field('minute'), +field('second'));
-    return [+field('year'), +field('month') - 1, +field('day'), +field('hour'), +field('minute'), +field('second'), WEEKDAYS.indexOf(field('weekday')), -(wall - Math.floor(t / 1000) * 1000) / 60_000];
+  /** [year, month, date, hours, minutes, seconds, day, offset] in UTC. */
+  const utc = (t: number) => {
+    const d = new Date(t);
+    return [d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), d.getUTCHours(), d.getUTCMinutes(), d.getUTCSeconds(), d.getUTCDay(), 0];
   };
-  // Both clock changes of 2026 and 2027 (01:00 UTC on the last Sunday of
-  // March and of October), a millisecond either side, local midnight on and
-  // after each change day, and a winter and a summer noon.
+  // The clock changes of the zones the hosts below are in, a millisecond
+  // either side (Europe/Prague's in March and October, Los Angeles's, and
+  // Lord Howe's half-hour ones), and a winter and a summer noon. In UTC none
+  // of them moves a local field.
   const instants = [
     '2026-03-29T00:59:59.999Z', '2026-03-29T01:00:00.000Z', '2026-10-25T00:59:59.999Z', '2026-10-25T01:00:00.000Z',
-    '2027-03-28T00:59:59.999Z', '2027-03-28T01:00:00.000Z', '2027-10-31T00:59:59.999Z', '2027-10-31T01:00:00.000Z',
-    '2026-03-28T23:00:00.000Z', '2026-03-29T22:00:00.000Z', '2026-10-24T22:00:00.000Z', '2026-10-25T23:00:00.000Z',
+    '2026-03-08T09:59:59.999Z', '2026-03-08T10:00:00.000Z', '2026-11-01T08:59:59.999Z', '2026-11-01T09:00:00.000Z',
+    '2026-04-04T14:59:59.999Z', '2026-04-04T15:00:00.000Z', '2026-10-03T15:29:59.999Z', '2026-10-03T15:30:00.000Z',
     '2026-01-15T11:00:00.000Z', '2026-07-15T10:00:00.000Z',
   ].map((text) => Date.parse(text));
   const fieldCalls = instants.map((t) => `(() => { const d = new Date(${t}); return [d.getFullYear(), d.getMonth(), d.getDate(), d.getHours(), d.getMinutes(), d.getSeconds(), d.getDay(), d.getTimezoneOffset()]; })()`);
   const known: [string, unknown][] = [
-    // The hour the spring change skips reads as summer time; the hour the
-    // autumn change repeats reads as its first (summer-time) pass.
-    ['new Date(2026, 2, 29, 2, 30).toISOString()', '2026-03-29T01:30:00.000Z'],
-    ['new Date(2026, 9, 25, 2, 30).toISOString()', '2026-10-25T00:30:00.000Z'],
-    ['new Date(2026, 2, 29).toISOString()', '2026-03-28T23:00:00.000Z'],
-    ['new Date(2026, 2, 30).toISOString()', '2026-03-29T22:00:00.000Z'],
-    ['new Date(2026, 9, 26).toISOString()', '2026-10-25T23:00:00.000Z'],
-    ['new Date("2026-07-01T12:00").toISOString()', '2026-07-01T10:00:00.000Z'],
-    ['Date.parse("2026-10-25T02:30")', Date.parse('2026-10-25T00:30:00Z')],
+    // A wall-clock time is the UTC time of the same name, even in the hours
+    // a clock change skips or repeats elsewhere.
+    ['new Date(2026, 2, 29, 2, 30).toISOString()', '2026-03-29T02:30:00.000Z'],
+    ['new Date(2026, 9, 25, 2, 30).toISOString()', '2026-10-25T02:30:00.000Z'],
+    ['new Date(2026, 3, 5, 1, 45).toISOString()', '2026-04-05T01:45:00.000Z'],
+    ['new Date("2026-07-01T12:00").toISOString()', '2026-07-01T12:00:00.000Z'],
+    ['Date.parse("2026-10-25T02:30")', Date.parse('2026-10-25T02:30:00Z')],
     ['new Date("2026-01-01").toISOString()', '2026-01-01T00:00:00.000Z'],
-    ['(() => { const d = new Date(2026, 2, 28, 12); d.setDate(d.getDate() + 1); return d.toISOString(); })()', '2026-03-29T10:00:00.000Z'],
-    ['(() => { const d = new Date(2026, 9, 24, 12); d.setHours(d.getHours() + 24); return d.toISOString(); })()', '2026-10-25T11:00:00.000Z'],
-    ['[new Date(2026, 0, 15).getTimezoneOffset(), new Date(2026, 6, 15).getTimezoneOffset()]', [-60, -120]],
-    ['new Date(Date.UTC(2026, 2, 29, 1, 30)).toString()', 'Sun Mar 29 2026 03:30:00 GMT+0200 (Central European Summer Time)'],
-    ['new Date(0).toTimeString()', '01:00:00 GMT+0100 (Central European Standard Time)'],
-    ['new Date(Date.UTC(2026, 9, 25, 0, 30)).toLocaleString("en-US")', '10/25/2026, 2:30:00 AM'],
-    ['new Date(Date.UTC(2026, 9, 25, 1, 30)).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" })', '02:30 AM GMT+1'],
+    ['Date.parse("March 7, 2026 10:00")', Date.parse('2026-03-07T10:00:00Z')],
+    ['(() => { const d = new Date(2026, 2, 28, 12); d.setDate(d.getDate() + 1); return d.toISOString(); })()', '2026-03-29T12:00:00.000Z'],
+    ['(() => { const d = new Date(2026, 9, 24, 12); d.setHours(d.getHours() + 24); return d.toISOString(); })()', '2026-10-25T12:00:00.000Z'],
+    ['Array.from({ length: 12 }, (_, month) => new Date(2026, month, 15).getTimezoneOffset())', Array.from({ length: 12 }, () => 0)],
+    ['new Date(Date.UTC(2026, 2, 29, 1, 30)).toString()', 'Sun Mar 29 2026 01:30:00 GMT+0000 (Coordinated Universal Time)'],
+    ['new Date(0).toTimeString()', '00:00:00 GMT+0000 (Coordinated Universal Time)'],
+    ['String(new Date(Date.UTC(2026, 9, 25, 1, 30)))', 'Sun Oct 25 2026 01:30:00 GMT+0000 (Coordinated Universal Time)'],
+    ['new Date(Date.UTC(2026, 9, 25, 0, 30)).toLocaleString("en-US")', '10/25/2026, 12:30:00 AM'],
+    ['new Date(Date.UTC(2026, 9, 25, 1, 30)).toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", timeZoneName: "short" })', '01:30 AM UTC'],
+    ['new Date(Date.UTC(2026, 9, 25, 23, 30)).toLocaleDateString("en-US", { dateStyle: "full" })', 'Sunday, October 25, 2026'],
+    // A zone the code names is read as before: UTC, Europe/Prague with its
+    // summer time, and any other refused with a message that says so.
     ['new Date(Date.UTC(2026, 0, 1, 23, 30)).toLocaleDateString("en-US", { timeZone: "UTC", dateStyle: "long" })', 'January 1, 2026'],
+    ['new Date(Date.UTC(2026, 9, 25, 0, 30)).toLocaleString("en-US", { timeZone: "Europe/Prague", timeZoneName: "short" })', '10/25/2026, 2:30:00 AM GMT+2'],
+    ['new Date(Date.UTC(2026, 9, 25, 1, 30)).toLocaleString("en-US", { timeZone: "Europe/Prague", timeZoneName: "short" })', '10/25/2026, 2:30:00 AM GMT+1'],
+    ['(() => { try { return new Date(0).toLocaleString("en-US", { timeZone: "Asia/Tokyo" }); } catch (error) { return [error.name, error.message]; } })()', ['RangeError', 'Only the Europe/Prague and UTC time zones are available in the checker, not Asia/Tokyo.']],
   ];
   const calls = [...fieldCalls, ...known.map(([call]) => call)];
-  const expectations = [...instants.map(prague), ...known.map(([, value]) => value)];
-  const submit = await runInSandbox({ code: '', calls, expectations });
-  const run = await evaluateInRunRealm({ code: '', calls, expectations });
+  const expectations = [...instants.map(utc), ...known.map(([, value]) => value)];
   const failing = (result: { results: { pass: boolean | null; actual: string | null; error: string | null }[] }) =>
     result.results.flatMap((one, index) => (one.pass ? [] : [`${calls[index]} -> ${one.actual ?? one.error}, expected ${JSON.stringify(expectations[index])}`]));
-  assert.deepEqual(failing(submit), [], 'Submit reads Prague time');
-  assert.deepEqual(failing(run), [], 'Run reads Prague time');
-  // The host's own zone changes nothing. QuickJS used to take its local time
-  // from the process (TZ=UTC on Vercel).
+  assert.deepEqual(failing(await runInSandbox({ code: '', calls, expectations })), [], 'Submit reads UTC');
+  assert.deepEqual(failing(await evaluateInRunRealm({ code: '', calls, expectations })), [], 'Run reads UTC');
+  // The host's own zone changes nothing. QuickJS takes its local time from
+  // the process, and Run from the learner's browser.
   const hostZone = process.env.TZ;
   try {
-    for (const zone of ['UTC', 'America/Los_Angeles', 'Asia/Tokyo', 'Australia/Lord_Howe']) {
+    // Each zone with the host's own offsets in January and July, so the
+    // switch is known to have reached the process.
+    for (const [zone, offsets] of [['UTC', [0, 0]], ['America/Los_Angeles', [480, 420]], ['Asia/Tokyo', [-540, -540]], ['Australia/Lord_Howe', [-660, -630]]] as const) {
       process.env.TZ = zone;
-      assert.deepEqual(failing(await runInQuickJS({ code: '', calls, expectations })), [], `Submit on a host in ${zone}`);
-      assert.deepEqual(failing(await evaluateInRunRealm({ code: '', calls, expectations })), [], `Run in a browser in ${zone}`);
+      assert.deepEqual([new Date(2026, 0, 15).getTimezoneOffset(), new Date(2026, 6, 15).getTimezoneOffset()], offsets, `the host is in ${zone}`);
+      const submit = await runInQuickJS({ code: '', calls, expectations });
+      const run = await evaluateInRunRealm({ code: '', calls, expectations });
+      assert.deepEqual(failing(submit), [], `Submit on a host in ${zone}`);
+      assert.deepEqual(failing(run), [], `Run in a browser in ${zone}`);
+      assert.deepEqual(run.results.map((one) => one.actual), submit.results.map((one) => one.actual), `Run and Submit print the same in ${zone}`);
     }
   } finally {
     if (hostZone === undefined) delete process.env.TZ;
     else process.env.TZ = hostZone;
   }
 
-  // C1-2: the two tasks whose hidden checks cross a clock change. Code that
-  // works in local time now fails them, on Submit and on Run alike.
+  // C1-2's two tasks. In UTC, counting local days and stepping local days
+  // are right, so they pass on Submit and on Run alike, while the bug each
+  // task is about still fails both the same way.
   const ordersTask = CODING_TASKS.find((task) => task.tests?.some((one) => one.call.startsWith('ordersPerDay(')))!;
-  const localDays = `const pad = (n) => String(n).padStart(2, "0");
+  const ordersHidden = solutionFor(ordersTask.id)!.hiddenTests ?? [];
+  const ordersVersion = (body: string) => solutionFor(ordersTask.id)!.solution.replace(/function ordersPerDay[\s\S]*?\n}\n?/, `${body}\n`);
+  const localDays = ordersVersion(`const pad = (n) => String(n).padStart(2, "0");
 function ordersPerDay(timestamps) {
   const counts = {};
   for (const stamp of timestamps) {
@@ -914,17 +926,22 @@ function ordersPerDay(timestamps) {
     counts[day] = (counts[day] ?? 0) + 1;
   }
   return counts;
-}`;
-  const ordersCode = solutionFor(ordersTask.id)!.solution.replace(/function ordersPerDay[\s\S]*?\n}\n?/, `${localDays}\n`);
-  assert.notEqual(ordersCode, solutionFor(ordersTask.id)!.solution, 'the local-day version replaced the reference');
-  const ordersChecks = { calls: ordersTask.tests!.map((one) => one.call), expectations: ordersTask.tests!.map((one) => one.expected) };
-  const ordersSubmit = await runChecks({ code: ordersCode, visible: ordersTask.tests!, hidden: solutionFor(ordersTask.id)!.hiddenTests ?? [], shuffle: (list) => list });
-  const ordersRun = await evaluateInRunRealm({ code: ordersCode, ...ordersChecks });
-  assert.ok(!allPassed(ordersSubmit.visible), `${ordersTask.id}: counting local days fails Submit`);
-  assert.deepEqual(ordersRun.results.map((one) => one.pass), ordersSubmit.visible.results.map((one) => one.pass), `${ordersTask.id}: Run fails the same checks`);
+}`);
+  const textDays = ordersVersion(`function ordersPerDay(timestamps) {
+  const counts = {};
+  for (const stamp of timestamps) counts[stamp.slice(0, 10)] = (counts[stamp.slice(0, 10)] ?? 0) + 1;
+  return counts;
+}`);
+  for (const [name, code, passes] of [['local getters', localDays, true], ['the text before the T', textDays, false]] as const) {
+    assert.notEqual(code, solutionFor(ordersTask.id)!.solution, `${name}: the version replaced the reference`);
+    const submit = await runChecks({ code, visible: ordersTask.tests!, hidden: ordersHidden, shuffle: (list) => list });
+    const run = await evaluateInRunRealm({ code, calls: ordersTask.tests!.map((one) => one.call), expectations: ordersTask.tests!.map((one) => one.expected) });
+    assert.equal(allPassed(submit.visible) && allPassed(submit.hidden!), passes, `${ordersTask.id} counted with ${name} ${passes ? 'passes' : 'fails'} Submit`);
+    assert.deepEqual(run.results.map((one) => one.pass), submit.visible.results.map((one) => one.pass), `${ordersTask.id} counted with ${name}: Run agrees`);
+  }
   const fill = CODING_TASKS.find((task) => task.id === 'ts-mh-fill-missing-days')!;
   const fillHidden = solutionFor(fill.id)!.hiddenTests!;
-  const stepLocal = (step: string) => `type Reading = [date: string, value: number];
+  const stepWith = (step: string) => `type Reading = [date: string, value: number];
 const fillDays = (readings: readonly Reading[]): Reading[] => {
   const totals = new Map<string, number>();
   for (const [date, value] of readings) totals.set(date, (totals.get(date) ?? 0) + value);
@@ -941,30 +958,29 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
   }
   return filled;
 };`;
-  const springCheck = fillHidden.findIndex((one) => one.call.includes('2026-03-28'));
-  for (const [step, shouldPass] of [['day.setDate(day.getDate() + 1);', false], ['day.setUTCDate(day.getUTCDate() + 1);', true]] as const) {
-    const js = nodeTypeScriptChecker().toJavaScript(stepLocal(step));
+  for (const step of ['day.setDate(day.getDate() + 1);', 'day.setUTCDate(day.getUTCDate() + 1);', 'day.setHours(day.getHours() + 24);']) {
+    const js = nodeTypeScriptChecker().toJavaScript(stepWith(step));
     const graded = await runChecks({ code: js, visible: fill.tests!, hidden: fillHidden, shuffle: (list) => list });
     const ran = await evaluateInRunRealm({ code: js, calls: fillHidden.map((one) => one.call), expectations: fillHidden.map((one) => one.expected) });
-    assert.equal(graded.hidden!.results[springCheck].pass, shouldPass, `fillDays stepping with ${step}: the hidden check across 29 March 2026 ${shouldPass ? 'passes' : 'fails'}`);
+    assert.ok(allPassed(graded.visible) && allPassed(graded.hidden!), `fillDays stepping with ${step} passes every check: ${JSON.stringify(graded.hidden)}`);
     assert.deepEqual(ran.results.map((one) => one.pass), graded.hidden!.results.map((one) => one.pass), `fillDays stepping with ${step}: Run agrees on the hidden inputs`);
   }
-  console.log('PASS integrity: Run and Submit read Prague time, across both clock changes, on any host');
+  console.log('PASS integrity: Run and Submit read UTC, with no clock change, on any host');
 
-  // React: the page realm the guest grades in reads Prague time too, and its
-  // Intl formats in Prague, whatever the host's zone.
+  // React: the page realm the guest grades in reads UTC too, and its Intl
+  // formats in UTC unless the code names a zone, whatever the host's zone.
   const zoneBefore = process.env.TZ;
   try {
-    for (const zone of ['UTC', 'America/New_York']) {
+    for (const zone of ['UTC', 'America/Los_Angeles', 'Asia/Tokyo', 'Australia/Lord_Howe']) {
       process.env.TZ = zone;
-      const react = await runReactSuite({ suite: PRAGUE_REACT_SUITE, appSource: PRAGUE_REACT_APP });
+      const react = await runReactSuite({ suite: UTC_REACT_SUITE, appSource: UTC_REACT_APP });
       assert.ok(react.compileError === null && react.failed === 0 && react.passed === 2, `${zone}: ${JSON.stringify(react.cases)}`);
     }
   } finally {
     if (zoneBefore === undefined) delete process.env.TZ;
     else process.env.TZ = zoneBefore;
   }
-  console.log('PASS integrity: the React page realm reads Prague time on any host');
+  console.log('PASS integrity: the React page realm reads UTC on any host');
 }
 
 // ── the grader has the browser's URL, encoders and base64 (owner decision 2, C1-3) ──

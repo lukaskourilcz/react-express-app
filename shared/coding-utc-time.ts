@@ -1,15 +1,12 @@
-/** Europe/Prague time for learner code, wherever it runs (owner decision,
- * 9 October 2026).
+/** UTC for learner code, wherever it runs (owner decision, 9 October 2026,
+ * afternoon, which replaced the morning's Europe/Prague).
  *
- * Submit grades in QuickJS on a server whose clock is UTC, while Run used the
- * learner's own time zone, so code that read local hours passed on Submit and
- * failed on Run in Prague, and the hidden checks that cross a clock change
- * could never fail on the server. Every runner now gives learner code the same
- * local time: Central European Time, an hour ahead of UTC, and summer time,
- * two hours ahead, from 01:00 UTC on the last Sunday of March to 01:00 UTC on
- * the last Sunday of October. That is the EU rule; it is applied to every
- * year, so dates before 1996, when Prague's summer time ended in September,
- * read an hour off from the historical record. The server's own process keeps
+ * Submit grades in QuickJS, whose local time followed the server's zone,
+ * while Run used the learner's own zone, so code that read local hours could
+ * pass on one and fail on the other. Every runner now gives learner code the
+ * same local time, UTC, with no summer time: the local getters read what the
+ * UTC getters read, `getTimezoneOffset()` is 0 all year and `toString` ends in
+ * "GMT+0000 (Coordinated Universal Time)". The server's own process keeps
  * UTC: only the `Date` learner code sees changes.
  *
  * The rule is written once, here, as source text, because QuickJS needs text
@@ -21,13 +18,14 @@
  *  - `inPlace: true` (QuickJS, the Run worker, the React frame and page
  *    realm, each of which exists only for learner code) also rewrites the
  *    local-time methods on the realm's `Date.prototype`, so every date in the
- *    realm reads Prague time. Without it, the returned constructor has a
- *    prototype of its own and the realm's built-ins are left alone.
+ *    realm reads UTC. Without it, the returned constructor has a prototype of
+ *    its own and the realm's built-ins are left alone.
  *  - `clock` replaces `Date.now` (the grader's timers are virtual).
  *  - `intl`, the realm's `Intl` where it has one (the React runners), makes
- *    `toLocale*String` and `Intl.DateTimeFormat` default to Europe/Prague.
- *    Without it (QuickJS has no `Intl`, and Run hides it to match), the
- *    `toLocale*String` methods format en-US text themselves.
+ *    `toLocale*String` and `Intl.DateTimeFormat` default to UTC; a zone the
+ *    code names is used as named. Without it (QuickJS has no `Intl`, and Run
+ *    hides it to match), the `toLocale*String` methods format en-US text
+ *    themselves, in UTC or in a named UTC or Europe/Prague zone.
  *
  * What it covers: the constructor's local forms (`new Date(y, m, ...)`),
  * `Date()` and `Date.parse` of a local date-time string, every local `get*`
@@ -36,15 +34,15 @@
  * `toISOString` and `toJSON` are unchanged. Plain ES2019, so every browser the
  * app supports and QuickJS evaluate it as written. */
 
-export const LEARNER_TIME_ZONE = 'Europe/Prague';
+export const LEARNER_TIME_ZONE = 'UTC';
 
-export interface PragueTimeOptions {
+export interface UtcTimeOptions {
   inPlace?: boolean;
   clock?: () => number;
   intl?: unknown;
 }
 
-export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
+export const UTC_TIME_SOURCE = String.raw`(NativeDate, settings) => {
   'use strict';
   const options = settings || {};
   const apply = Reflect.apply, construct = Reflect.construct, defineProperty = Object.defineProperty;
@@ -85,10 +83,12 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
     return last - weekdayOf(last);
   };
 
-  // Minutes east of UTC at an instant: summer time from 01:00 UTC on the last
-  // Sunday of March until 01:00 UTC on the last Sunday of October.
+  // Minutes east of UTC in Europe/Prague, for the toLocale*String methods
+  // when the code names that zone: summer time from 01:00 UTC on the last
+  // Sunday of March until 01:00 UTC on the last Sunday of October (the EU
+  // rule, applied to every year). Local time itself is UTC.
   let cachedYear = NaN, summerFrom = 0, summerUntil = 0;
-  const offsetAt = (t) => {
+  const pragueOffsetAt = (t) => {
     const year = civilFromDays(floor(t / DAY))[0];
     if (year !== cachedYear) {
       cachedYear = year;
@@ -96,16 +96,6 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
       summerUntil = lastSunday(year, 10) * DAY + HOUR;
     }
     return t >= summerFrom && t < summerUntil ? 120 : 60;
-  };
-  const localOf = (t) => t + offsetAt(t) * MINUTE;
-  // The instant a Prague wall-clock time stands for. A time the autumn change
-  // repeats is read as the first of the two (summer time); one the spring
-  // change skips is read with the offset before the change, as the language
-  // specifies, so 02:30 on that Sunday is 03:30 summer time.
-  const fromLocal = (local) => {
-    if (local !== local) return NaN;
-    const summer = local - 2 * HOUR;
-    return offsetAt(summer) === 120 ? summer : local - HOUR;
   };
   // [year, month, date, hours, minutes, seconds, ms, weekday] of a wall-clock time.
   const fieldsOf = (local) => {
@@ -123,10 +113,10 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
   };
 
   // Date.parse. The ISO forms are read here, the way V8 reads them: a date
-  // alone is UTC, a date and time with no offset is local. Anything else goes
-  // to the engine's own parser; when that text names no zone, the engine read
-  // it in its own local time, so its wall-clock fields are read again as
-  // Prague time.
+  // alone is UTC, a date and time with no offset is local, which is UTC too.
+  // Anything else goes to the engine's own parser; when that text names no
+  // zone, the engine read it in its own local time, so its wall-clock fields
+  // are read again as UTC.
   const ISO = /^([+-]\d{6}|\d{4})(?:-(\d\d)(?:-(\d\d))?)?(?:[Tt ](\d\d):(\d\d)(?::(\d\d)(?:\.(\d+))?)?)?([Zz]|[+-]\d\d:?\d\d)?$/;
   const NAMED_ZONE = /\d\s*[Zz]\b|\b(?:UTC|GMT|UT|[ECMP][SD]T)\b|\d\s*[+-]\d\d:?\d\d\b/;
   const parseText = (text) => {
@@ -140,8 +130,7 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
       if (month < 1 || month > 12 || day < 1 || day > 31 || hour > 24 || minute > 59 || second > 59 || (hour === 24 && (minute || second || ms))) return NaN;
       const wall = makeTime(+iso[1], month - 1, day, hour, minute, second, ms);
       const zone = iso[8];
-      if (zone === undefined) return timeClip(timed ? fromLocal(wall) : wall);
-      if (zone === 'Z' || zone === 'z') return timeClip(wall);
+      if (zone === undefined || zone === 'Z' || zone === 'z') return timeClip(wall);
       if (!timed) return NaN;
       const digits = zone.replace(':', '');
       const hours = +digits.slice(1, 3), minutes = +digits.slice(3, 5);
@@ -153,7 +142,7 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
     const engine = construct(NativeDate, [t]);
     const f = [];
     for (let i = 0; i < 7; i++) f[i] = apply(nativeLocal[i], engine, []);
-    return timeClip(fromLocal(makeTime(f[0], f[1], f[2], f[3], f[4], f[5], f[6])));
+    return timeClip(makeTime(f[0], f[1], f[2], f[3], f[4], f[5], f[6]));
   };
 
   // ToPrimitive with no hint, for new Date(value).
@@ -189,15 +178,12 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
     return text;
   };
   const yearText = (year) => (year >= 0 ? pad(year, 4) : '-' + pad(-year, 4));
-  const zoneName = (offset) => 'Central European ' + (offset === 120 ? 'Summer' : 'Standard') + ' Time';
-  const zoneText = (offset) => 'GMT+0' + offset / 60 + '00 (' + zoneName(offset) + ')';
   const dateText = (f) => DAYS[f[7]] + ' ' + MONTHS[f[1]] + ' ' + pad(f[2], 2) + ' ' + yearText(f[0]);
-  const timeText = (f, offset) => pad(f[3], 2) + ':' + pad(f[4], 2) + ':' + pad(f[5], 2) + ' ' + zoneText(offset);
+  const timeText = (f) => pad(f[3], 2) + ':' + pad(f[4], 2) + ':' + pad(f[5], 2) + ' GMT+0000 (Coordinated Universal Time)';
   const stringOf = (t) => {
     if (t !== t) return 'Invalid Date';
-    const offset = offsetAt(t);
-    const f = fieldsOf(t + offset * MINUTE);
-    return dateText(f) + ' ' + timeText(f, offset);
+    const f = fieldsOf(t);
+    return dateText(f) + ' ' + timeText(f);
   };
 
   // toLocale*String without Intl: the en-US text the browser prints, for the
@@ -218,11 +204,11 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
     const t = timeOf(date);
     if (given === null) throw new NativeTypeError('Cannot convert undefined or null to object');
     const o = given === undefined ? {} : NativeObject(given);
-    let utc = false;
+    let prague = false;
     if (o.timeZone !== undefined) {
       const zone = NativeString(o.timeZone);
-      if (UTC_ZONES[zone.toLowerCase()] === 1) utc = true;
-      else if (zone.toLowerCase() !== 'europe/prague') throw new NativeRangeError('Only the Europe/Prague and UTC time zones are available in the checker, not ' + zone + '.');
+      if (zone.toLowerCase() === 'europe/prague') prague = true;
+      else if (UTC_ZONES[zone.toLowerCase()] !== 1) throw new NativeRangeError('Only the Europe/Prague and UTC time zones are available in the checker, not ' + zone + '.');
     }
     const hour12 = o.hour12;
     const hourCycle = pick(o, 'hourCycle', ['h11', 'h12', 'h23', 'h24']);
@@ -267,7 +253,7 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
       }
     }
     if (t !== t) return 'Invalid Date';
-    const offset = utc ? 0 : offsetAt(t);
+    const offset = prague ? pragueOffsetAt(t) : 0;
     const f = fieldsOf(t + offset * MINUTE);
     const twelve = hour12 !== undefined ? !!hour12 : hourCycle !== undefined ? hourCycle === 'h11' || hourCycle === 'h12' : true;
 
@@ -304,10 +290,11 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
     }
     if (zoneStyle) {
       const sign = 'GMT+' + offset / 60;
-      const zone = utc
-        ? (zoneStyle === 'long' ? 'Coordinated Universal Time' : zoneStyle === 'short' ? 'UTC' : 'GMT')
-        : zoneStyle === 'long' ? zoneName(offset)
-          : zoneStyle === 'longOffset' ? 'GMT+0' + offset / 60 + ':00'
+      const longSign = 'GMT+0' + offset / 60 + ':00';
+      const zone = !prague
+        ? (zoneStyle === 'long' ? 'Coordinated Universal Time' : zoneStyle === 'short' ? 'UTC' : zoneStyle === 'longOffset' || zoneStyle === 'longGeneric' ? longSign : sign)
+        : zoneStyle === 'long' ? 'Central European ' + (offset === 120 ? 'Summer' : 'Standard') + ' Time'
+          : zoneStyle === 'longOffset' ? longSign
             : zoneStyle === 'longGeneric' ? 'Central European Time'
               : zoneStyle === 'shortGeneric' ? 'Czechia Time' : sign;
       if (timePart) timePart += ' ' + zone;
@@ -319,8 +306,8 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
     return datePart + (longGlue ? ' at ' : datePart === weekdayPart ? ' ' : ', ') + timePart;
   };
 
-  // With Intl (the React runners), the realm's own formatting, in Prague time
-  // unless the code names a zone.
+  // With Intl (the React runners), the realm's own formatting, in UTC unless
+  // the code names a zone.
   const intl = options.intl;
   const withZone = (given) => {
     if (given === null) throw new NativeTypeError('Cannot convert undefined or null to object');
@@ -338,7 +325,7 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
 
   const getter = (index) => function () {
     const t = timeOf(this);
-    return t !== t ? NaN : fieldsOf(localOf(t))[index];
+    return t !== t ? NaN : fieldsOf(t)[index];
   };
   // setFullYear(y, m, d) .. setMilliseconds(ms): the arguments given replace
   // the local fields from position first on.
@@ -348,43 +335,43 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
     const values = [];
     for (let i = 0; i < count; i++) values[i] = +arguments[i];
     if (t !== t && first !== 0) return NaN;
-    const f = fieldsOf(t !== t ? 0 : localOf(t));
+    const f = fieldsOf(t !== t ? 0 : t);
     for (let i = 0; i < count; i++) f[first + i] = values[i];
-    const result = timeClip(fromLocal(makeTime(f[0], f[1], f[2], f[3], f[4], f[5], f[6])));
+    const result = timeClip(makeTime(f[0], f[1], f[2], f[3], f[4], f[5], f[6]));
     apply(setTime, this, [result]);
     return result;
   };
   const methods = {
     getFullYear: getter(0), getMonth: getter(1), getDate: getter(2), getDay: getter(7),
     getHours: getter(3), getMinutes: getter(4), getSeconds: getter(5), getMilliseconds: getter(6),
-    getTimezoneOffset: function () { const t = timeOf(this); return t !== t ? NaN : -offsetAt(t); },
+    getTimezoneOffset: function () { const t = timeOf(this); return t !== t ? NaN : 0; },
     setFullYear: setter(0, 3), setMonth: setter(1, 2), setDate: setter(2, 1),
     setHours: setter(3, 4), setMinutes: setter(4, 3), setSeconds: setter(5, 2), setMilliseconds: setter(6, 1),
     toString: function () { return stringOf(timeOf(this)); },
-    toDateString: function () { const t = timeOf(this); return t !== t ? 'Invalid Date' : dateText(fieldsOf(localOf(t))); },
-    toTimeString: function () { const t = timeOf(this); return t !== t ? 'Invalid Date' : timeText(fieldsOf(localOf(t)), offsetAt(t)); },
+    toDateString: function () { const t = timeOf(this); return t !== t ? 'Invalid Date' : dateText(fieldsOf(t)); },
+    toTimeString: function () { const t = timeOf(this); return t !== t ? 'Invalid Date' : timeText(fieldsOf(t)); },
     toLocaleString: locale('toLocaleString', 'any', 'all'),
     toLocaleDateString: locale('toLocaleDateString', 'date', 'date'),
     toLocaleTimeString: locale('toLocaleTimeString', 'time', 'time'),
   };
   const lengths = { setFullYear: 3, setMonth: 2, setDate: 1, setHours: 4, setMinutes: 3, setSeconds: 2, setMilliseconds: 1 };
   if (typeof proto.getYear === 'function') {
-    methods.getYear = function () { const t = timeOf(this); return t !== t ? NaN : fieldsOf(localOf(t))[0] - 1900; };
+    methods.getYear = function () { const t = timeOf(this); return t !== t ? NaN : fieldsOf(t)[0] - 1900; };
     methods.setYear = function (year) {
       const t = timeOf(this);
       const y = +year;
       if (y !== y) { apply(setTime, this, [NaN]); return NaN; }
       const whole = trunc(y);
-      const f = fieldsOf(t !== t ? 0 : localOf(t));
+      const f = fieldsOf(t !== t ? 0 : t);
       f[0] = whole >= 0 && whole <= 99 ? 1900 + whole : y;
-      const result = timeClip(fromLocal(makeTime(f[0], f[1], f[2], f[3], f[4], f[5], f[6])));
+      const result = timeClip(makeTime(f[0], f[1], f[2], f[3], f[4], f[5], f[6]));
       apply(setTime, this, [result]);
       return result;
     };
     lengths.setYear = 1;
   }
 
-  const PragueDate = function Date(year, month, date, hours, minutes, seconds, ms) {
+  const UtcDate = function Date(year, month, date, hours, minutes, seconds, ms) {
     const count = arguments.length;
     if (new.target === undefined) return stringOf(clock());
     let t;
@@ -399,25 +386,25 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
       const y = +year, m = +month;
       const d = count > 2 ? +date : 1, h = count > 3 ? +hours : 0, mi = count > 4 ? +minutes : 0, s = count > 5 ? +seconds : 0, milli = count > 6 ? +ms : 0;
       const whole = trunc(y);
-      t = timeClip(fromLocal(makeTime(y === y && whole >= 0 && whole <= 99 ? 1900 + whole : y, m, d, h, mi, s, milli)));
+      t = timeClip(makeTime(y === y && whole >= 0 && whole <= 99 ? 1900 + whole : y, m, d, h, mi, s, milli));
     }
     return construct(NativeDate, [t], new.target);
   };
   const target = options.inPlace ? proto : NativeObject.create(proto);
-  defineProperty(PragueDate, 'prototype', { value: target, writable: false, enumerable: false, configurable: false });
+  defineProperty(UtcDate, 'prototype', { value: target, writable: false, enumerable: false, configurable: false });
   const statics = {
     now: function now() { return clock(); },
     parse: function parse(text) { return parseText(NativeString(text)); },
     UTC: nativeUTC,
   };
-  for (const name in statics) defineProperty(PragueDate, name, { value: statics[name], writable: true, enumerable: false, configurable: true });
+  for (const name in statics) defineProperty(UtcDate, name, { value: statics[name], writable: true, enumerable: false, configurable: true });
   defineProperty(statics.parse, 'length', { value: 1, configurable: true });
   for (const name in methods) {
     defineProperty(methods[name], 'name', { value: name, configurable: true });
     defineProperty(methods[name], 'length', { value: lengths[name] || 0, configurable: true });
     defineProperty(target, name, { value: methods[name], writable: true, enumerable: false, configurable: true });
   }
-  defineProperty(target, 'constructor', { value: PragueDate, writable: true, enumerable: false, configurable: true });
+  defineProperty(target, 'constructor', { value: UtcDate, writable: true, enumerable: false, configurable: true });
 
   if (intl && typeof intl.DateTimeFormat === 'function') {
     const NativeFormat = intl.DateTimeFormat;
@@ -429,16 +416,16 @@ export const PRAGUE_TIME_SOURCE = String.raw`(NativeDate, settings) => {
     defineProperty(NativeFormat.prototype, 'constructor', { value: DateTimeFormat, writable: true, enumerable: false, configurable: true });
     defineProperty(intl, 'DateTimeFormat', { value: DateTimeFormat, writable: true, enumerable: false, configurable: true });
   }
-  return PragueDate;
+  return UtcDate;
 }`;
 
-type PragueTimeFactory = (nativeDate: DateConstructor, options?: PragueTimeOptions) => DateConstructor;
+type UtcTimeFactory = (nativeDate: DateConstructor, options?: UtcTimeOptions) => DateConstructor;
 
-/** Puts Prague time into a realm that exists only for learner code (the Run
- * worker, the React frame): its `Date` is replaced and its local-time methods
+/** Puts UTC into a realm that exists only for learner code (the Run worker,
+ * the React frame): its `Date` is replaced and its local-time methods
  * rewritten. Compiled in that realm, like the learner console
  * (shared/coding-console.ts). */
-export function installPragueTime(global: { Date: DateConstructor }, options: Omit<PragueTimeOptions, 'inPlace'> = {}): void {
-  const factory = new Function(`return ${PRAGUE_TIME_SOURCE};`)() as PragueTimeFactory;
+export function installUtcTime(global: { Date: DateConstructor }, options: Omit<UtcTimeOptions, 'inPlace'> = {}): void {
+  const factory = new Function(`return ${UTC_TIME_SOURCE};`)() as UtcTimeFactory;
   global.Date = factory(global.Date, { ...options, inPlace: true });
 }

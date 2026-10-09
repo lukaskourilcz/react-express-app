@@ -3,7 +3,7 @@
  *
  * The browser worker (client/src/coding/runner/worker.ts) runs each program
  * in a fresh realm that shared/coding-run-realm.ts turns into the grader's:
- * Prague time, the grader's locale methods, and no global the grader lacks.
+ * UTC, the grader's locale methods, and no global the grader lacks.
  * Here each run gets a fresh node:vm context with the web globals a worker
  * has, the same two modules are bundled into it, and the program runs
  * through the same evaluateCalls. So a test can hold Run and Submit to the

@@ -20,7 +20,7 @@ import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import { LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, MAX_LOGS, PROBE_IS_INDEX_SOURCE, PROBE_LINE, TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
 import { CONSOLE_SOURCE } from '../../shared/coding-console';
-import { PRAGUE_TIME_SOURCE } from '../../shared/coding-prague-time';
+import { UTC_TIME_SOURCE } from '../../shared/coding-utc-time';
 import { LOCALE_SOURCE } from '../../shared/coding-locale';
 import { hostURL, MAX_URL_TEXT, WEB_APIS_SOURCE } from './sandbox-web-apis';
 import { bootBackoff, GraderBusyError, inThreadGradingAllowed, threadSlots } from './grader-capacity';
@@ -69,7 +69,7 @@ const URL_HOST_NAME = '__devsharkHostURL';
 const compact = (source: string): string => source.split('\n').map((line) => line.trim()).filter((line) => line && !line.startsWith('//')).join('\n');
 // Most runs never read a date, format a number or parse a URL, so these are
 // kept as text and compiled the first time learner code reaches for them.
-const PRAGUE_TIME = JSON.stringify(compact(PRAGUE_TIME_SOURCE));
+const UTC_TIME = JSON.stringify(compact(UTC_TIME_SOURCE));
 const LOCALE = JSON.stringify(compact(LOCALE_SOURCE));
 const WEB_APIS = JSON.stringify(compact(WEB_APIS_SOURCE));
 
@@ -145,9 +145,8 @@ globalThis.clearTimeout = globalThis.clearInterval = id => {
 globalThis.queueMicrotask = fn => { void (async () => { await 0; fn(); })(); };
 // One clock for every way of asking the time: Date.now, new Date() and Date()
 // all read the virtual clock the timers advance, so code that times itself
-// with new Date() grades the way it runs in the browser. Local time is
-// Europe/Prague, as in Run (shared/coding-prague-time.ts), whatever the
-// server's own zone. Every date comes from the global Date, so the realm's
+// with new Date() grades the way it runs in the browser. Local time is UTC,
+// as in Run (shared/coding-utc-time.ts), whatever the server's own zone. Every date comes from the global Date, so the realm's
 // Date is rewritten in place the first time learner code reads that name.
 const RealDate = Date;
 const clock = () => 1700000000000 + now;
@@ -156,11 +155,11 @@ const once = (source, ...args) => {
   let done = false, result;
   return () => { if (!done) { done = true; result = NativeFunction('return ' + source)()(...args); } return result; };
 };
-const pragueDate = once(${PRAGUE_TIME}, RealDate, { clock, inPlace: true });
+const utcDate = once(${UTC_TIME}, RealDate, { clock, inPlace: true });
 const settle = (name, value) => defineProperty(globalThis, name, { value, writable: true, enumerable: false, configurable: true });
 defineProperty(globalThis, 'Date', {
-  get() { settle('Date', pragueDate()); return globalThis.Date; },
-  set(value) { pragueDate(); settle('Date', value); },
+  get() { settle('Date', utcDate()); return globalThis.Date; },
+  set(value) { utcDate(); settle('Date', value); },
   enumerable: false, configurable: true,
 });
 globalThis.performance = { now: () => now };
