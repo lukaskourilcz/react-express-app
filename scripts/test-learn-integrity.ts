@@ -21,13 +21,17 @@
  *  - a part test already passed in a topic outside the learner's plan is
  *    served under `?test=` as it is under `?checkpoint=`;
  *  - a level lost on hearts counts for the streak once, and a database
- *    without the streak routine (before migration 048) does not fail it.
+ *    without the streak routine (before migration 048) does not fail it;
+ *  - a replayed step that passes says what migration 060 paid: its XP again
+ *    an hour after it last paid, as XP only (no coins, no referral), or when
+ *    the XP opens again; a database before 060 completes it as before.
  *
  * Nothing leaves the machine. */
 
 import assert from 'node:assert/strict';
 import { createServer, type IncomingMessage } from 'node:http';
 import type { AddressInfo } from 'node:net';
+import { learnCheckpointXp, learnLevelXp } from '../shared/progression';
 
 const LEARNER = { id: '5a0e7c1e-2f7a-4c3d-9a61-5d2f0c9e8a41', email: 'learner@example.invalid', token: 'learn-contract-learner' };
 const OTHER = { id: '9b1f3a2e-5b6d-4e8f-9a0b-1c2d3e4f5a6b', email: 'other@example.invalid', token: 'learn-contract-other' };
@@ -41,7 +45,8 @@ const BACKEND = {
   meta: { devquiz_learning_preference_v1: { schemaVersion: 1, baseTrack: 'backend', specialization: null } },
 };
 const HEARTS = { id: '6f5e4d3c-2b1a-4f0e-9d8c-7b6a5f4e3d2c', email: 'hearts@example.invalid', token: 'learn-contract-hearts' };
-const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown>; unconfirmed?: boolean }> = [LEARNER, OTHER, OWNER, BROKEN, OWNER_UNCONFIRMED, BACKEND, HEARTS];
+const REPEAT = { id: '8a7b6c5d-4e3f-4a2b-9c1d-0e9f8a7b6c5d', email: 'repeat@example.invalid', token: 'learn-contract-repeat' };
+const USERS: Array<{ id: string; email: string; token: string; meta?: Record<string, unknown>; unconfirmed?: boolean }> = [LEARNER, OTHER, OWNER, BROKEN, OWNER_UNCONFIRMED, BACKEND, HEARTS, REPEAT];
 const PREMIUM = new Set([OWNER.id]);
 const DAY = (offset: number) => new Date(Date.now() - offset * 86_400_000).toISOString().slice(0, 10);
 
@@ -56,6 +61,12 @@ const tables: Record<string, Row[]> = {
 const rpcCalls: { name: string; args: Row }[] = [];
 /** Answer advance_verified_streak as a database before migration 048 does. */
 let streakRoutineMissing = false;
+/** Answer complete_verified_roadmap_attempt_v2 as a database before 060 does. */
+let repeatRoutineMissing = false;
+/** Migration 060's user_learn_step_xp (when each step last paid, ms) and the
+ * repeat awards it paid, by award id. */
+const stepPaidAt = new Map<string, number>();
+const repeatAwards = new Map<string, number>();
 
 const readBody = (req: IncomingMessage) => new Promise<string>((resolve) => {
   let text = '';
@@ -123,6 +134,7 @@ function completeAttempt(args: Row): { status: number; body: unknown } {
   const pct = Math.round((100 * answers.filter((one) => one.is_correct).length) / Number(attempt.total_questions));
   const passed = pct >= Number(attempt.pass_pct);
   attempt.completed_at = new Date().toISOString();
+  attempt.passed = passed;
   const kind = attempt.kind === 'level' ? 'levels' : 'checkpoints';
   const existing = data[topic][kind][String(attempt.ref)] ?? {};
   const entry: Row = { passed: existing.passed === true || passed, bestPct: Math.max(Number(existing.bestPct ?? 0), pct) };
@@ -137,6 +149,35 @@ function completeAttempt(args: Row): { status: number; body: unknown } {
   }
   data[topic][kind][String(attempt.ref)] = entry;
   return { status: 200, body: true };
+}
+
+/** The subset of complete_verified_roadmap_attempt_v2 (migration 060) the
+ * handler relies on: 056's completion, then a replay that passes pays the
+ * step's XP again when the step last paid an hour ago or more. */
+function completeAttemptV2(args: Row): { status: number; body: unknown } {
+  const attempt = tables.roadmap_attempts.find((row) => row.attempt_id === args.p_attempt_id);
+  const kind = attempt?.kind === 'level' ? 'levels' : 'checkpoints';
+  const progress = tables.roadmap_progress.find((one) => one.user_id === args.p_user_id)?.data as Record<string, Record<string, Record<string, Row>>> | undefined;
+  const wasPassed = progress?.[String(attempt?.topic)]?.[kind]?.[String(attempt?.ref)]?.passed === true;
+  const done = completeAttempt(args);
+  if (done.status !== 200) return done;
+  if (done.body !== true) return { status: 200, body: { applied: false, passed: null, firstPass: false, repeatXp: null } };
+  if (attempt!.passed !== true) return { status: 200, body: { applied: true, passed: false, firstPass: false, repeatXp: null } };
+  const key = `${args.p_user_id}:${attempt!.topic}:${attempt!.kind}:${attempt!.ref}`;
+  const xp = attempt!.kind === 'level' ? learnLevelXp(Number(attempt!.ref)) : learnCheckpointXp(Number(attempt!.ref));
+  const now = Date.now();
+  let paid = 0;
+  let withheld: string | null = null;
+  if (!wasPassed) stepPaidAt.set(key, now);
+  else if (now - (stepPaidAt.get(key) ?? -Infinity) >= 60 * 60_000) {
+    stepPaidAt.set(key, now);
+    repeatAwards.set(`learn-repeat:${args.p_attempt_id}`, xp);
+    paid = xp;
+  } else withheld = 'cooldown';
+  return {
+    status: 200,
+    body: { applied: true, passed: true, firstPass: !wasPassed, repeatXp: { xp: paid, availableAt: new Date(stepPaidAt.get(key)! + 60 * 60_000).toISOString(), withheld } },
+  };
 }
 
 async function startStandIn() {
@@ -160,6 +201,13 @@ async function startStandIn() {
       }
       if (rpc[1] === 'record_roadmap_answer_v2') { const out = recordAnswer(args); return send(out.status, out.body); }
       if (rpc[1] === 'complete_verified_roadmap_attempt') { const out = completeAttempt(args); return send(out.status, out.body); }
+      if (rpc[1] === 'complete_verified_roadmap_attempt_v2') {
+        if (repeatRoutineMissing) {
+          return send(404, { code: 'PGRST202', message: 'Could not find the function public.complete_verified_roadmap_attempt_v2(p_attempt_id, p_coding_task_ids, p_user_id) in the schema cache' });
+        }
+        const out = completeAttemptV2(args);
+        return send(out.status, out.body);
+      }
       if (rpc[1] === 'is_premium') return send(200, PREMIUM.has(String(args.p_user)));
       // Rewards, concept reviews: nothing to report.
       return send(200, null);
@@ -486,6 +534,71 @@ async function main() {
       }
     }
     console.log('PASS learn: a level lost on hearts counts for the streak once, and closes without the routine');
+
+    // ── A replayed step pays its XP again after an hour ────────────────────
+    // Migration 060: a pass of a step already passed pays the step's XP
+    // again when it last paid an hour ago or more, as XP only. The response
+    // says what it paid, or when the XP opens again, for the toast.
+    {
+      const playLevel = async (correct: boolean) => {
+        const level = await call('GET', { topic: 'html', level: '1', lang: 'en' }, REPEAT.token);
+        assert.equal(level.statusCode, 200, JSON.stringify(level.body));
+        const session = tokens.decodeSessionEnvelope(level.body.sessionId)!;
+        for (const question of session.questions) {
+          const options = (level.body.questions as Array<{ id: string; options: string[] }>).find((one) => one.id === question.questionId)!.options.length;
+          const answer = await call('POST', { resource: 'answer' }, REPEAT.token, {
+            sessionId: level.body.sessionId, questionId: question.questionId,
+            selectedIndex: correct ? question.correctAnswer : (question.correctAnswer + 1) % options, lang: 'en',
+          });
+          if (answer.statusCode !== 200) break; // out of hearts
+        }
+        rpcCalls.length = 0;
+        const done = await call('POST', { resource: 'complete' }, REPEAT.token, { sessionId: level.body.sessionId });
+        assert.equal(done.statusCode, 200, JSON.stringify(done.body));
+        return done;
+      };
+      const credits = () => rpcCalls.filter((one) => one.name === 'credit_verified_xp_tokens' || one.name === 'credit_referral');
+      const xp = learnLevelXp(1);
+
+      const first = await playLevel(true);
+      assert.equal(first.body.passed, true);
+      assert.equal(first.body.repeatXp?.xp, 0, 'a first pass pays learning XP, not repeat XP');
+      assert.equal(first.body.repeatXp?.withheld, null);
+      assert.ok(credits().some((one) => one.name === 'credit_verified_xp_tokens'), 'a first pass credits its coins');
+
+      const soon = await playLevel(true);
+      assert.equal(soon.body.passed, true);
+      assert.deepEqual({ xp: soon.body.repeatXp?.xp, withheld: soon.body.repeatXp?.withheld }, { xp: 0, withheld: 'cooldown' }, 'a replay inside the hour pays nothing');
+      assert.ok(Math.abs(Date.parse(soon.body.repeatXp.availableAt) - Date.now() - 60 * 60_000) < 60_000, `and says the XP opens an hour after the first pass (${soon.body.repeatXp.availableAt})`);
+      assert.deepEqual(credits(), [], 'and credits nothing');
+
+      for (const key of stepPaidAt.keys()) if (key.startsWith(REPEAT.id)) stepPaidAt.set(key, Date.now() - 60 * 60_000);
+      const later = await playLevel(true);
+      assert.deepEqual({ xp: later.body.repeatXp?.xp, withheld: later.body.repeatXp?.withheld }, { xp, withheld: null }, `an hour later the level pays its ${xp} XP again`);
+      const paidAttempt = String(rpcCalls.find((one) => one.name === 'complete_verified_roadmap_attempt_v2')?.args.p_attempt_id);
+      assert.equal(repeatAwards.get(`learn-repeat:${paidAttempt}`), xp, 'under the attempt\'s own award');
+      assert.deepEqual(credits(), [], 'as XP only: no coins and no referral');
+
+      for (const key of stepPaidAt.keys()) if (key.startsWith(REPEAT.id)) stepPaidAt.set(key, Date.now() - 2 * 60 * 60_000);
+      const failed = await playLevel(false);
+      assert.equal(failed.body.passed, false);
+      assert.equal(failed.body.repeatXp, undefined, 'a failed replay says nothing about repeat XP');
+
+      // Before 060 the routine of 056 completes the replay as before.
+      repeatRoutineMissing = true;
+      try {
+        const old = await playLevel(true);
+        assert.equal(old.body.applied, true, 'a database before 060 still records the replay');
+        assert.equal(old.body.passed, true);
+        assert.equal(old.body.repeatXp, undefined, 'and says nothing about repeat XP');
+        const names = rpcCalls.map((one) => one.name);
+        assert.ok(names.indexOf('complete_verified_roadmap_attempt_v2') >= 0 && names.indexOf('complete_verified_roadmap_attempt') > names.indexOf('complete_verified_roadmap_attempt_v2'),
+          `the handler asked 060's routine, then 056's (${names.join(', ')})`);
+      } finally {
+        repeatRoutineMissing = false;
+      }
+    }
+    console.log('PASS learn: a replayed step pays its XP again after an hour, as XP only, and says when it opens');
   } finally {
     server.close();
   }

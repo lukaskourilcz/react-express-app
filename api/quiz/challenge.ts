@@ -18,6 +18,7 @@ import { enforceClassRateLimit, enforceRateLimit, RATE_LIMITS } from '../../lib/
 import { defaultDeploymentCategories, deploymentSubjectIds, validateCategoryScope } from '../../lib/product-scope';
 import { ASSESSMENT_QUESTION_COUNT } from '../../shared/assessment';
 import { challengeRunXp } from '../../shared/progression';
+import { questionXpHeldOf, type QuestionXpHeld } from '../../shared/repeat-xp';
 import { itemReview } from '../../lib/curation';
 
 // Biggest Shark Challenge: a single function serving every challenge resource
@@ -301,9 +302,25 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     p_xp: xp,
     p_breakdown: answers?.breakdown ?? null,
   };
+  // From migration 060 the completion also names the correct answers whose
+  // question's hour held their XP back, and the XP the award holds. Before
+  // 060 the routines below answer as they did.
+  let xpHeld: QuestionXpHeld | null = null;
+  let heldAward: number | null = null;
   let { data, error } = await withTimeout(
-    supabase.rpc('record_challenge_completion', answers ? { ...completion, p_outcomes: answers.outcomes } : completion),
+    supabase.rpc('record_challenge_completion_v2', answers ? { ...completion, p_outcomes: answers.outcomes } : completion),
   );
+  if (!error && data && typeof data === 'object') {
+    const outcome = data as { awarded?: unknown; xp?: unknown; xpHeld?: unknown };
+    xpHeld = questionXpHeldOf(outcome.xpHeld);
+    heldAward = typeof outcome.xp === 'number' && Number.isInteger(outcome.xp) ? outcome.xp : null;
+    data = outcome.awarded === true;
+  }
+  if (isRpcMissing(error)) {
+    ({ data, error } = await withTimeout(
+      supabase.rpc('record_challenge_completion', answers ? { ...completion, p_outcomes: answers.outcomes } : completion),
+    ));
+  }
   if (isRpcMissing(error) && answers) {
     ({ data, error } = await withTimeout(supabase.rpc('record_challenge_completion', completion)));
   }
@@ -325,7 +342,7 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
   // less than an hour ago pays nothing, so the run may be awarded less than
   // its score: the award row says how much. Without 058, or when the row
   // cannot be read, the run was awarded in full.
-  const awardedXp = data === true ? await awardedRunXp(run.runId, xp) : 0;
+  const awardedXp = data !== true ? 0 : heldAward !== null ? Math.min(heldAward, xp) : await awardedRunXp(run.runId, xp);
   // Tokens follow verified XP, keyed to the same award. A replay credits
   // nothing, and a wallet that cannot be reached never fails the learning.
   if (data === true) {
@@ -334,7 +351,7 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     // milestone may have just been reached. Idempotent; a failure costs nothing.
     await settleMilestones(supabase, auth.sub, run.subject);
   }
-  return res.json({ ok: true, awarded: data === true, score, xp: data === true ? awardedXp : xp });
+  return res.json({ ok: true, awarded: data === true, score, xp: data === true ? awardedXp : xp, ...(xpHeld ? { xpHeld } : {}) });
 }
 
 /** The XP a completed run was awarded (verified_activity_awards). */
