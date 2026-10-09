@@ -181,6 +181,16 @@ export function vercelRoutingContracts(): void {
   assert.ok(rewrites.indexOf(taskRewrite) < rewrites.indexOf(fallback), 'the task rewrite runs before the SPA fallback');
   const missingTask = taskRewrite.destination.replace(':track', 'javascript').replace(':taskId', 'no-such-task');
   assert.ok(rewriteSourcePattern(fallback.source).test(missingTask), `a task page with no prerendered file (${missingTask}) falls through to the app`);
+  // System design is hidden (owner decision, 9 Oct 2026): its track page and
+  // every address under it, old task pages included, get the one noindex
+  // not-found page the build writes, before the general coding rewrites or the
+  // fallback (whose shell names the home page as canonical) can answer them.
+  const firstMatch = (path: string) => rewrites.find((rewrite) => rewriteSourcePattern(rewrite.source).test(path));
+  for (const path of ['/coding/system-design', '/coding/system-design/', '/coding/system-design/sd-url-shortener', '/coding/system-design/dd-requests-per-second/extra']) {
+    assert.equal(firstMatch(path)?.destination, '/coding/system-design/index.html', `${path} is answered by the hidden-track page`);
+  }
+  assert.equal(firstMatch('/coding/javascript')?.destination, '/coding/:track/index.html', 'a track page keeps its own head');
+  assert.equal(firstMatch('/coding/javascript/js-double-numbers')?.destination, '/coding/:track/:taskId/index.html', 'a task page keeps its own head');
 
   // Documents stay revalidated, or a deploy would never reach anyone.
   for (const path of DOCUMENTS) {

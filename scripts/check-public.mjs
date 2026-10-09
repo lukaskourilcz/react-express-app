@@ -5,11 +5,16 @@ import { JSDOM } from 'jsdom';
 const dir = 'client/dist';
 const sitemap = new JSDOM(readFileSync(`${dir}/sitemap.xml`, 'utf8'), { contentType: 'application/xml' });
 const urls = [...sitemap.window.document.querySelectorAll('loc')].map(node => new URL(node.textContent));
-assert.equal(urls.length, 14, 'Home, five guides in two languages, /premium, /premium/cancel and /daily');
+assert.equal(urls.length, 20, 'Home, five guides in two languages, /premium, /premium/cancel, /daily, /coding and its five track pages');
 // The app pages with public HTML (#222, #239). /premium/success stays out: a
 // Stripe return means nothing to anyone else, and the app marks it noindex.
 const APP_PAGES = ['/premium', '/premium/cancel', '/daily'];
 assert.deepEqual(urls.filter(url => APP_PAGES.includes(url.pathname)).map(url => url.pathname), APP_PAGES);
+// The Coding home and its track pages (owner decision, 9 Oct 2026). The task
+// pages, /coding/review and hidden system design stay out.
+const CODING_TRACK_PAGES = ['javascript', 'typescript', 'react', 'algorithms', 'fullstack'].map(track => `/coding/${track}`);
+const SITEMAP_CODING_PAGES = ['/coding', ...CODING_TRACK_PAGES];
+assert.deepEqual(urls.filter(url => url.pathname.startsWith('/coding')).map(url => url.pathname), SITEMAP_CODING_PAGES, 'the sitemap lists the Coding home and its track pages, and nothing else under /coding');
 assert(!urls.some(url => url.pathname.startsWith('/premium/success')), 'the checkout return page is never listed');
 const tiers = readFileSync('shared/tiers.ts', 'utf8');
 const price = (plan) => tiers.match(new RegExp(`${plan}: '([0-9.]+)'`))?.[1];
@@ -25,6 +30,8 @@ for (const url of urls) {
   assert.equal(url.hostname, 'devshark.app');
   if (url.pathname === '/') continue;
   assert.equal(doc.querySelectorAll('h1').length, 1, `${url}: one static h1`);
+  // Checked as section pages below.
+  if (SITEMAP_CODING_PAGES.includes(url.pathname)) continue;
   if (APP_PAGES.includes(url.pathname)) {
     assert.equal(doc.documentElement.lang, 'en');
     assert.equal(doc.querySelectorAll('link[hreflang]').length, 0, `${url}: English only`);
@@ -69,6 +76,7 @@ for (const url of urls) {
 const index = readFileSync('shared/coding-index.ts', 'utf8');
 const tasks = [...index.matchAll(/\{"id":"([^"]+)","track":"([^"]+)"/g)].map(([, id, track]) => ({ id, track }));
 assert(tasks.length > 700, 'the coding index was read');
+assert(!tasks.some(({ track }) => track === 'system-design'), 'the index the browser ships holds no system design task');
 const free = tasks.filter(({ id }) => new RegExp(`"id":"${id}"[^\n]*"free":true`).test(index)).length;
 for (const { id, track } of tasks) {
   const file = path.join(dir, 'coding', track, id, 'index.html');
@@ -80,13 +88,13 @@ for (const { id, track } of tasks) {
   assert(existsSync(path.join(dir, 'og', 'coding', `${id}.png`)), `${id}: its image exists`);
 }
 // C4-4: the Coding home and its track pages carry a head of their own, not
-// the home page's: /coding/review opens /coding and names it, retired system
-// design names no canonical. Like the task pages they stay out of the sitemap.
+// the home page's: /coding/review opens /coding and names it. The home and the
+// track pages are in the sitemap; /coding/review is not.
 const home = new JSDOM(readFileSync(`${dir}/index.html`, 'utf8')).window.document;
 const homeDescription = home.querySelector('meta[name="description"]').getAttribute('content');
 const SECTION_PAGES = {
-  '/coding': '/coding', '/coding/review': '/coding', '/coding/system-design': null,
-  ...Object.fromEntries(['javascript', 'typescript', 'react', 'algorithms', 'fullstack'].map(track => [`/coding/${track}`, `/coding/${track}`])),
+  '/coding': '/coding', '/coding/review': '/coding',
+  ...Object.fromEntries(CODING_TRACK_PAGES.map(page => [page, page])),
 };
 for (const [pagePath, canonicalPath] of Object.entries(SECTION_PAGES)) {
   const doc = new JSDOM(readFileSync(path.join(dir, pagePath, 'index.html'), 'utf8')).window.document;
@@ -96,11 +104,30 @@ for (const [pagePath, canonicalPath] of Object.entries(SECTION_PAGES)) {
   assert.notEqual(doc.title, home.title, `${pagePath}: its own title`);
   assert.equal(doc.querySelector('meta[property="og:title"]').getAttribute('content'), doc.title, `${pagePath}: og:title is the title`);
   assert.notEqual(doc.querySelector('meta[name="description"]').getAttribute('content'), homeDescription, `${pagePath}: its own description`);
-  assert(!urls.some(url => url.pathname === pagePath), `${pagePath}: not in the sitemap`);
+  assert.equal(urls.some(url => url.pathname === pagePath), pagePath === canonicalPath, `${pagePath}: in the sitemap only under its own address`);
+  assert.equal(doc.querySelectorAll('meta[name="robots"]').length, 0, `${pagePath}: indexable`);
 }
 const rewrites = JSON.parse(readFileSync('vercel.json', 'utf8')).rewrites;
 for (const source of ['/coding', '/coding/:track']) {
   assert(rewrites.some(rule => rule.source === source && rule.destination === `${source}/index.html`), `${source} serves its own HTML on Vercel`);
+}
+// System design is hidden (owner decision, 9 Oct 2026). /coding/system-design
+// and every address under it are one not-found page, noindex in the HTML
+// itself, with no canonical and no image of its own. No share page or share
+// image of a system design task is built, and the sitemap names none.
+{
+  const HIDDEN = '/coding/system-design';
+  const doc = new JSDOM(readFileSync(path.join(dir, HIDDEN, 'index.html'), 'utf8')).window.document;
+  assert.equal(doc.querySelector('meta[name="robots"]')?.getAttribute('content'), 'noindex', `${HIDDEN}: noindex without JavaScript`);
+  assert.equal(doc.querySelector('link[rel="canonical"]'), null, `${HIDDEN}: no canonical`);
+  assert.equal(doc.querySelector('meta[property="og:url"]'), null, `${HIDDEN}: no og:url`);
+  assert.equal(doc.querySelector('h1')?.textContent, 'That track does not exist.', `${HIDDEN}: the not-found heading`);
+  assert.deepEqual(readdirSync(path.join(dir, HIDDEN)), ['index.html'], `${HIDDEN}: no task page under it`);
+  assert(!readdirSync(path.join(dir, 'og', 'coding')).some(file => /^(?:sd|dd)-/.test(file)), 'no system design share image');
+  assert(!urls.some(url => url.pathname.startsWith(HIDDEN)), `${HIDDEN}: not in the sitemap`);
+  for (const source of [HIDDEN, `${HIDDEN}/(.*)`]) {
+    assert(rewrites.some(rule => rule.source === source && rule.destination === `${HIDDEN}/index.html`), `${source} is the hidden-track page on Vercel`);
+  }
 }
 const days = readdirSync(`${dir}/daily`).filter((name) => /^\d{4}-\d{2}-\d{2}$/.test(name));
 assert(days.length >= 30, 'the question of the day has dated pages');
@@ -126,4 +153,4 @@ for (const file of codingChunks) {
 assert(readFileSync(`${dir}/robots.txt`, 'utf8').includes(`Sitemap: ${urls[0].origin}/sitemap.xml`));
 assert(!existsSync(`${dir}/mockServiceWorker.js`), 'Mocks must never ship with the app');
 assert(!readdirSync(`${dir}/assets`).some(file => /storybook|mocks|\.stories\./i.test(file)));
-console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content, the Premium terms, ${tasks.length} coding share pages, ${Object.keys(SECTION_PAGES).length} Coding section pages, ${days.length} question-of-the-day pages, and no Czech in ${codingChunks.length} coding chunks.`);
+console.log(`Public HTML passed: ${urls.length} URLs, locale pairs, canonical, schema, teaching content, the Premium terms, ${tasks.length} coding share pages, ${Object.keys(SECTION_PAGES).length} Coding section pages, hidden system design, ${days.length} question-of-the-day pages, and no Czech in ${codingChunks.length} coding chunks.`);

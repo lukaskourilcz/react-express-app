@@ -109,8 +109,8 @@ describe('a share page opened directly', () => {
     expect(prerendered('/coding', 'Coding challenges · devShark', 'Tasks.')).not.toBeNull();
     window.history.replaceState(null, '', '/coding/review');
     expect(readShareHead()).toBeNull();
-    // Retired system design names no canonical at all.
-    document.head.innerHTML = SHELL_HEAD;
+    // Hidden system design is a noindex not-found page with no canonical.
+    document.head.innerHTML = SHELL_HEAD + '<meta name="robots" content="noindex" />';
     window.history.replaceState(null, '', '/coding/system-design');
     expect(readShareHead()).toBeNull();
   });
