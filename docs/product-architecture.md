@@ -466,14 +466,35 @@ tasks as they were. Coding completion is permanent: the API ignores legacy revie
 dates, returns an empty due queue, and never selects passed tasks for scheduled
 coding review. The browser shows no coding review either: no "Due for review"
 filter on a track, no coding card on Today, and `/coding/review` redirects to
-`/coding`. Question/concept review is unchanged. A task's code is saved when
-the learner presses Run or Submit, never while they type: on the device first,
-then, signed in, as the account draft (`?op=coding-draft`, 20 kB at most;
-larger code is not saved anywhere). A task in the section and a Learn level's
-coding step both open the newer of the two copies (`client/src/coding/drafts.ts`):
-the device copy records when it was written and the account draft's
-`updated_at` it was written against, the task response carries
-`draftUpdatedAt`, and when the copies differ the page says which one is open.
+`/coding`. Question/concept review is unchanged. A task's code is kept on
+the device about a second after the learner stops typing (nothing is written
+while they type; leaving the page writes what is waiting), and on Run and
+Submit; code over 20 kB is kept there too. Signed in, Run and Submit also save
+it as the account draft (`?op=coding-draft`, 20 kB at most), never typing
+(owner decision 5, 9 Oct 2026). A task in the section and a Learn level's
+coding step follow the same rules (`client/src/coding/drafts.ts`). The device
+copy records the account draft's `updated_at` it builds on (the task response
+carries `draftUpdatedAt`): the time the screen opened, or one a save from this
+tab returned; typing never moves it. When the copies differ the page says
+which one is open, and a device copy that did not open is set aside and
+offered back ("Open the code from this device") until the learner takes it or
+the account confirms a save. A save sends that time as `base`, and
+`save_coding_draft_v2` (migration 059) writes only while the account draft
+still has it, so an open tab can no longer overwrite a draft saved since on
+another device: the server answers 409 `draft_conflict` with the stored time
+(never its code), and the page asks whether to save this code over it or open
+the other draft, keeping this device's code either way (owner decision 10).
+An evolving stage's Submit writes the stage draft through the same routine,
+forced, and returns its time, so the next save is not a false conflict. A
+sign-out the learner chooses (Log out, here or in another tab, or deleting the
+account) forgets the drafts with the rest of the account's data. A session that
+ends on its own (a refused refresh: expired, revoked, the password changed
+elsewhere) keeps the drafts under the account's id and out of sight, says "You
+were signed out — sign in to keep your code" (and, on the task, that its code
+is kept), and gives them back when the same account signs in and opens a
+coding task; a guest's copy written meanwhile is set aside beside them.
+Another account signing in deletes them unread (`client/src/lib/accountData.ts`,
+owner decision 4). A guest's drafts behave as before.
 Tiers
 open in order (`tierUnlocked`) except in the unladdered tracks — system design
 is drilled rather than climbed, and `algorithms` is interview preparation a
