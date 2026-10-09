@@ -335,6 +335,13 @@ async function main() {
     if (!(task.estimatedMinutes > 0)) fail(`${where}: estimatedMinutes must be positive`);
     if (task.hints.en.length === 0 && task.verify !== 'drill' && task.verify !== 'guided') fail(`${where}: needs a hint`);
     assert.ok(docsFor(task.focus).url.startsWith('https://'), `${where}: docs link`);
+    // A code example in the brief, the hints or the method steps gets copied
+    // into the editor, where `repeat(“hi”, 3)` is a SyntaxError.
+    for (const text of [task.prompt.en, ...task.hints.en, ...(task.approach?.en ?? [])]) {
+      for (const span of text.split('`').filter((_, index) => index % 2 === 1)) {
+        if (/[“”‘’]/.test(span)) fail(`${where}: the code example \`${span}\` uses curly quotes, which do not run`);
+      }
+    }
     assert.match(gardenPathFor(task), /^[a-z-]+\/\d{2}-[a-z0-9-]+\.(js|ts|jsx|md)$/, `${where}: garden path`);
 
     switch (task.verify) {
