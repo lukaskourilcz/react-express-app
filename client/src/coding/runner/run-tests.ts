@@ -118,9 +118,11 @@ export function runCodeTests(input: RunInput): Promise<RunOutcome> {
 /** Loads the runner, and for TypeScript the compiler, while the learner reads
  * the task, so the first Run does not wait for the download and still works
  * if the connection drops afterwards. The files stay in the browser's cache;
- * the worker that fetched them is closed. */
+ * the worker that fetched them is closed. A visitor who asked the browser to
+ * save data downloads them on the first Run instead. */
 export function warmRunner(track: 'javascript' | 'typescript'): () => void {
   if (typeof Worker === 'undefined') return () => {};
+  if ((navigator as { connection?: { saveData?: boolean } }).connection?.saveData) return () => {};
   let worker: Worker | null = null;
   try {
     worker = runnerWorker();

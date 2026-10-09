@@ -3,12 +3,14 @@
 // keeps the checker busy is stopped within seconds and named as a type
 // problem; only a run that started and did not finish is a loop.
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
-import { runCodeTests, TYPE_CHECK_TIMEOUT_MS, COMPILE_TIMEOUT_MS } from '../src/coding/runner/run-tests';
+import { runCodeTests, warmRunner, TYPE_CHECK_TIMEOUT_MS, COMPILE_TIMEOUT_MS } from '../src/coding/runner/run-tests';
 import { RUN_TIMEOUT_MS, TIMEOUT_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 
 type Script = (worker: FakeWorker) => void;
 let script: Script = () => {};
+let started = 0;
 class FakeWorker {
+  constructor() { started += 1; }
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror: ((event: Event) => void) | null = null;
   terminated = false;
@@ -73,4 +75,14 @@ it('names a run that started and never finished a loop', async () => {
 it('passes on a compiler that did not download as unavailable', async () => {
   script = (worker) => { worker.post({ phase: 'compiling' }); worker.post({ phase: 'done', results: [], logs: [], codeError: null, check: null, runnerUnavailable: true }); };
   expect(await run('typescript')).toMatchObject({ runnerUnavailable: true, codeError: null });
+});
+
+it('loads the runner ahead of the first Run, unless the browser asks to save data', () => {
+  script = () => {};
+  started = 0;
+  warmRunner('typescript')();
+  expect(started).toBe(1);
+  vi.stubGlobal('navigator', { ...navigator, connection: { saveData: true } });
+  warmRunner('typescript')();
+  expect(started).toBe(1);
 });
