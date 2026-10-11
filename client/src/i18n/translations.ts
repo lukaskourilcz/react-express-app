@@ -130,6 +130,11 @@ export const en = {
   // Names the levels strip, which is a focusable scroll region.
   'home.pathRegion': 'Learn path for {name}',
   'home.checkpoint': 'Checkpoint',
+  'home.startLearning': 'Start learning {name}',
+  'home.video.title': 'See devShark in action',
+  'home.video.pending': 'Product video coming soon.',
+  'home.video.aria': 'devShark product video',
+  'home.video.unavailable': 'This browser cannot play the product video.',
   'home.startLevel1': 'Start {name} — Level 1',
   'home.roadmapNote': 'Progress saves to your account.',
   'home.moreKicker': 'Also in devShark',

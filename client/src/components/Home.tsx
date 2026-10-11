@@ -1,7 +1,7 @@
 import { captureActivation } from '../lib/analytics';
 // The landing page at "/" — the editorial "Deep End v2" redesign. Instead of a
-// generic hero + three feature cards, it opens with a product-forward pitch: an
-// interactive sample question wired to a real Level-1 question, a topic picker
+// generic hero + three feature cards, it opens with a product-forward pitch: a
+// product-video banner, a topic picker
 // whose cards host schools of shark fins on hover, a live "Inside <Topic>"
 // roadmap preview, the everything-else feature strip, the plan table and the
 // pricing pledge. The accent comes from var(--brand-accent). The app shell
@@ -21,12 +21,12 @@ import { useAuth } from '../lib/auth';
 import { openSignIn } from '../lib/signInDialog';
 import { useActiveSubject } from '../lib/subjects';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
-import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
+import { Kicker, StatItem, FadeFinCta, SwimCta, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import { LaunchOfferBanner } from './LaunchOffer';
-import { HomeSample } from './landing/HomeSample';
+import { HomeVideoBanner } from './landing/HomeVideoBanner';
 import ComparisonTable from './landing/ComparisonTable';
 import './landing/landingSections.css';
 
@@ -108,12 +108,10 @@ function TopicCard({
 
 function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () => void }) {
   const t = useT();
-  // Only an account keeps progress; a guest's stays in this browser.
-  const { isAuthenticated, isLoading } = useAuth();
   return (
     <section
       aria-label={t('home.insideTopic', { name: topic.name })}
-      className="ss-panel"
+      className="ss-panel ss-home-roadmap"
       style={{ padding: 28, display: 'flex', flexDirection: 'column', gap: 22, position: 'relative', overflow: 'hidden', borderRadius: 'var(--radius-page)' }}
     >
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap', position: 'relative' }}>
@@ -128,8 +126,8 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
           const wavePath = pathWave(i);
           const first = i === 0;
           return (
-            <div key={i} style={{ display: 'flex', alignItems: 'flex-start', flexShrink: 0 }}>
-              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, width: 118 }}>
+            <div key={label} role="listitem" className="ss-home-path__step">
+              <div className="ss-home-path__node">
                 <span style={{
                   display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%',
                   background: first ? 'var(--brand-accent)' : 'var(--brand-accent-soft)',
@@ -139,7 +137,7 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
                 }}>{i + 1}</span>
                 <span style={{ fontSize: 'var(--ss-type-label)', fontWeight: 600, color: 'var(--color-text-primary)', textAlign: 'center', lineHeight: 1.3 }}>{label}</span>
               </div>
-              <svg aria-hidden width="40" height="8" viewBox="0 0 40 8" style={{ display: 'block', margin: '16px 2px 0', opacity: 0.3, flexShrink: 0 }}>
+              <svg aria-hidden className="ss-home-path__connector" viewBox="0 0 40 8" preserveAspectRatio="none">
                 <path d={wavePath} fill="none" stroke="var(--ss-ink)" strokeWidth={1.6} strokeLinecap="round" />
               </svg>
             </div>
@@ -147,11 +145,8 @@ function RoadmapPreview({ topic, onStart }: { topic: LandingTopic; onStart: () =
         })}
         <CheckpointNode label={t('home.checkpoint')} />
       </PathStrip>
-      <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', position: 'relative' }}>
-        <SwimCta label={t('home.startLevel1', { name: topic.name })} onClick={onStart} dir={-1} />
-        {!isLoading && (
-          <span style={{ fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t(isAuthenticated ? 'home.roadmapNote' : 'register.deviceOnly')}</span>
-        )}
+      <div className="ss-home-path__actions">
+        <SwimCta label={t('home.startLearning', { name: topic.name })} onClick={onStart} dir={-1} />
       </div>
     </section>
   );
@@ -225,15 +220,7 @@ export default function Home() {
             {stats.map((s) => <StatItem key={s.label} {...s} />)}
           </div>
         </div>
-        {selected && (
-          <HomeSample quiz={<SampleCard
-            showTeaser={false}
-            onAnswered={() => captureActivation('landing_sample_completed', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: selected?.id })}
-            key={selected.id}
-            chip={`${selected.name} · ${t('home.sampleChip', { level: selected.levels[0] })}`}
-            question={selected.question}
-          />} />
-        )}
+        <HomeVideoBanner />
       </section>
 
       {/* ── Topic picker ── */}
