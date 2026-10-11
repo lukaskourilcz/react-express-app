@@ -14,13 +14,13 @@ The homepage has quiz and `js-double-numbers` sample cards on tablets and deskto
 Each new homepage mount randomly selects the first card, kept stable while
 interacting. Only a visited coding card loads the editor and task session;
 switching cards or resizing to mobile and back retains its draft. The coding
-preview shows three bottom-aligned examples; Run and Submit still check the
-full suite. Mobile mounts only the quiz, without dots. The task,
-Run, Format, Submit, visible tests and hidden server checks reuse Coding's API
-and workbench. This is an actual challenge, with normal grading and rewards.
-Only the landing card uses 44px icon buttons for Run (play), Submit (send) and
-Format (aligned lines), with named tooltips. Full coding exercises retain their
-text command buttons.
+preview shows three bottom-aligned examples; Run still checks the full suite.
+Mobile mounts only the quiz, without dots. The task, editor, Run and Format reuse
+Coding's API and workbench. Only the landing card uses 44px icon buttons for Run
+(play) and Format (aligned lines), with named tooltips. Its starter omits the
+scratch-pad instruction, and it has no Submit, Solution or report action. Its
+keyboard shortcut cannot submit. Full coding exercises retain their text
+commands, server grading, solution and report actions.
 
 Each workbench includes a Big O label and an adjacent info tooltip containing
 space targets and explanatory guidance, available by hover, focus and tap.

@@ -2,14 +2,15 @@
 
 ## Compact homepage coding sample — 2026-10-11
 
-Issues #339 and #341–#344 replace the large palindrome sample with the free JavaScript
+Issues #339 and #341–#346 replace the large palindrome sample with the free JavaScript
 `js-double-numbers` challenge. Its complete prompt is a short sentence; the
 landing editor is 160px tall. Two dots below the card stack replace the named
 buttons and counter, and the first desktop/tablet card is random per visit.
 Three example tests sit at the bottom of the results panel; grading retains the
 full suite. Big O space targets and explanatory guidance move to an accessible
-info tooltip. Run, Submit and Format become named icon buttons only on the
-homepage. The normal Coding editor keeps its existing size and text buttons.
+info tooltip. Run and Format become named icon buttons only on the homepage;
+Submit, Solution, the report flag and the scratch-pad instruction are removed
+from that preview. The normal Coding editor keeps its existing size and actions.
 
 | Check | Actual local result |
 |---|---|
@@ -17,11 +18,12 @@ homepage. The normal Coding editor keeps its existing size and text buttons.
 | Sample/workbench tests | PASS — 29 tests, including random first card, dot switching, draft retention, three examples with full-suite execution, named tooltip content and landing-only icon commands |
 | Production build; root/client production audits; diff check | PASS — zero production vulnerabilities |
 | Responsive sweep | PASS — homepage, full double-numbers challenge and palindrome workbench, 12 probes at 360/768/1024/1440px |
-| Live homepage sample | PASS — Format and Run, 5 public tests; Submit, 4 hidden checks and O(n) estimate, signed out |
+| Live coding execution | PASS — Format and Run, 5 public tests; before removal of preview Submit, 4 hidden checks and O(n) estimate also passed, signed out |
 | Prompt size and appearance | PASS — two lines at 600px, one at 768/1024px; light/dark reviewed; mobile mounts only the quiz |
 | Dot controls and Big O tooltip | PASS — Enter switches the card; tooltip opens by click and closes with Escape; three idle/Run examples align to the bottom at 600px |
-| Homepage command icons | PASS — 44px targets at 600px, no overflow; Format, Run (5/5) and Submit (4/4 hidden) work; keyboard focus shows Submit tooltip; full workbench retains command text |
+| Homepage command icons | PASS — 44px targets at 600px, no overflow; named Run/Format tooltips; full workbench retains command text |
 | Client/tooling types after icon tests | PASS — removed unsupported Testing Library role-query options reported by CI; 29 focused tests pass again |
+| Final preview simplification | PASS — 29 tests, tooling types, build and 8 responsive probes; homepage omits scratch-pad instruction, Submit, Solution and report; submit shortcut does nothing; full exercise retains those actions |
 
 GitHub required checks and deployment are tracked on the follow-up PR. Local
 evidence: `/tmp/devshark-compact-{tests,types,launch,build,responsive}.log` and
@@ -29,6 +31,8 @@ evidence: `/tmp/devshark-compact-{tests,types,launch,build,responsive}.log` and
 Final dot/tooltip validation additionally uses `/tmp/devshark-dot-{tests,types,build,responsive}.log`.
 Final icon validation uses `/tmp/devshark-icon-{tests,build,responsive}.log` and
 `/tmp/devshark-home-icons-final.png`.
+Final simplified preview validation uses `/tmp/devshark-simple-{tests,tooling,build,responsive}.log`
+and `/tmp/devshark-home-simple-final.png`.
 
 ## Apple design rollout — 2026-10-11
 
