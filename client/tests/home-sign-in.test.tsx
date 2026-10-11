@@ -93,8 +93,8 @@ it('starts the selected learning path from its renamed action', async () => {
   render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/']}><LanguageProvider><Routes>
     <Route path="/" element={<Home />} /><Route path="/learn" element={<Where />} />
   </Routes></LanguageProvider></MemoryRouter></QueryClientProvider>);
-  fireEvent.click(screen.getByRole('button', { name: 'Learn TypeScript', exact: true }));
-  const path = screen.getByRole('list', { name: 'TypeScript path preview' });
+  fireEvent.click(screen.getByRole('button', { name: 'Learn TypeScript' }));
+  const path = screen.getByRole('list', { name: 'Learn path for TypeScript' });
   expect(within(path).getAllByRole('listitem')).toHaveLength(6);
   expect(within(path).getByText('Basic Types')).toBeInTheDocument();
   expect(screen.queryByRole('button', { name: 'Start learning JavaScript' })).toBeNull();
