@@ -2,14 +2,18 @@
 
 ## Compact homepage coding sample — 2026-10-11
 
-Issue #339 replaces the large palindrome sample with the free JavaScript
+Issues #339 and #341–#343 replace the large palindrome sample with the free JavaScript
 `js-double-numbers` challenge. Its complete prompt is a short sentence; the
-landing editor is 160px tall. The normal Coding editor keeps its existing size.
+landing editor is 160px tall. Two dots below the card stack replace the named
+buttons and counter, and the first desktop/tablet card is random per visit.
+Three example tests sit at the bottom of the results panel; grading retains the
+full suite. Big O space targets and explanatory guidance move to an accessible
+info tooltip. The normal Coding editor keeps its existing size.
 
 | Check | Actual local result |
 |---|---|
 | API types; launch/play-room/verified-caller contracts | PASS |
-| Carousel tests | PASS — 4 tests, including on-demand task selection and draft retention |
+| Sample/workbench tests | PASS — 28 tests, including random first card, dot switching, draft retention, three examples with full-suite execution, and named tooltip content |
 | Production build; root/client production audits; diff check | PASS — zero production vulnerabilities |
 | Responsive sweep | PASS — homepage and full double-numbers challenge, 8 probes at 360/768/1024/1440px |
 | Live homepage sample | PASS — Format and Run, 5 public tests; Submit, 4 hidden checks and O(n) estimate, signed out |

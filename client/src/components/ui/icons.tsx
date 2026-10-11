@@ -75,6 +75,14 @@ export const CheckCircleIcon = ({ size = 20, style }: IconProps) => (
   </svg>
 );
 
+export const InfoIcon = ({ size = 20, style }: IconProps) => (
+  <svg {...base(size)} style={style}>
+    <circle cx="12" cy="12" r="10" />
+    <line x1="12" y1="11" x2="12" y2="16" />
+    <line x1="12" y1="7" x2="12" y2="7" />
+  </svg>
+);
+
 export const BookmarkIcon = ({ size = 20, style }: IconProps) => (
   <svg {...base(size)} style={style}>
     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />

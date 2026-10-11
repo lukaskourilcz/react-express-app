@@ -26,7 +26,7 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import { LaunchOfferBanner } from './LaunchOffer';
-import { HomeSampleCarousel } from './landing/HomeSampleCarousel';
+import { HomeSample } from './landing/HomeSample';
 import ComparisonTable from './landing/ComparisonTable';
 import './landing/landingSections.css';
 
@@ -226,7 +226,7 @@ export default function Home() {
           </div>
         </div>
         {selected && (
-          <HomeSampleCarousel quiz={<SampleCard
+          <HomeSample quiz={<SampleCard
             showTeaser={false}
             onAnswered={() => captureActivation('landing_sample_completed', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: selected?.id })}
             key={selected.id}
