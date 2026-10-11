@@ -6,15 +6,16 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { HomeSample } from '../src/components/landing/HomeSample';
 import { fetchCodingTask } from '../src/coding/api';
 import type { CodingTaskResponse } from '../../shared/coding-api';
+import type { PlayableCodingTask } from '../../shared/coding-catalog';
 
 const viewport = vi.hoisted(() => ({ wide: true }));
 vi.mock('../src/lib/useMediaQuery', () => ({ useMediaQuery: () => viewport.wide }));
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ user: null }) }));
 vi.mock('../src/coding/api', () => ({ codingKeys: { task: (id: string) => ['coding', 'task', id] }, fetchCodingTask: vi.fn() }));
 vi.mock('../src/coding/loadWorkbench', () => {
-  function Workbench({ initialCode, onEdit }: { initialCode: string | null; onEdit: (code: string) => void }) {
-    const [code, setCode] = useState(initialCode ?? 'starter');
-    return <input aria-label="Sample code" value={code} onChange={(event) => { setCode(event.target.value); onEdit(event.target.value); }} />;
+  function Workbench({ task, initialCode, onEdit }: { task: PlayableCodingTask; initialCode: string | null; onEdit: (code: string) => void }) {
+    const [code, setCode] = useState(initialCode ?? task.starter);
+    return <textarea aria-label="Sample code" value={code} onChange={(event) => { setCode(event.target.value); onEdit(event.target.value); }} />;
   }
   return { useWorkbench: () => ({ failed: false, reloading: false, View: Workbench }) };
 });
@@ -22,7 +23,7 @@ vi.mock('../src/coding/loadWorkbench', () => {
 beforeEach(() => {
   viewport.wide = true;
   vi.spyOn(Math, 'random').mockReturnValue(0.75);
-  vi.mocked(fetchCodingTask).mockReset().mockResolvedValue({ task: { id: 'js-double-numbers' }, session: 'sealed-session', signedIn: false, locked: null } as CodingTaskResponse);
+  vi.mocked(fetchCodingTask).mockReset().mockResolvedValue({ task: { id: 'js-double-numbers', starter: 'const double = numbers => {};\n\n// Scratch pad — change this and press Run.\nconsole.log(double([1,2,3]));\n' }, session: 'sealed-session', signedIn: false, locked: null } as CodingTaskResponse);
 });
 afterEach(() => vi.restoreAllMocks());
 
@@ -62,6 +63,7 @@ it('starts on quiz without loading coding and places two named dots below the ca
 it('preserves coding while editing, rerendering and switching with the dots', async () => {
   const rendered = sample();
   const editor = await screen.findByRole('textbox', { name: 'Sample code' });
+  expect(editor).toHaveValue('const double = numbers => {};\n\nconsole.log(double([1,2,3]));\n');
   expect(screen.getByText('Quiz question')).not.toBeVisible();
   expect(screen.queryByRole('button', { name: /^(Quiz|Coding)$/ })).toBeNull();
   fireEvent.change(editor, { target: { value: 'const double = numbers => numbers.map(n => n * 2);' } });

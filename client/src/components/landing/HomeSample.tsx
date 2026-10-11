@@ -1,4 +1,4 @@
-import { useCallback, useId, useState, type ReactNode } from 'react';
+import { useCallback, useId, useMemo, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
 import { Link } from 'react-router-dom';
@@ -16,6 +16,11 @@ function CodingSample({ initialCode, onEdit }: { initialCode: string | null; onE
   const { user } = useAuth();
   const [attempt, setAttempt] = useState(0);
   const task = useQuery({ queryKey: [...codingKeys.task(TASK_ID), 'home', user?.id ?? 'guest'], queryFn: ({ signal }) => fetchCodingTask(TASK_ID, signal), staleTime: 60 * 60_000, refetchOnWindowFocus: false, retry: false });
+  const catalogTask = task.data?.task;
+  const sampleTask = useMemo(() => catalogTask ? {
+    ...catalogTask,
+    starter: catalogTask.starter.replace('// Scratch pad — change this and press Run.\n', ''),
+  } : null, [catalogTask]);
   const workbench = useWorkbench(true, attempt);
   if (task.isError || workbench.failed) return (
     <div className="ss-home-sample__state" role="alert">
@@ -25,9 +30,9 @@ function CodingSample({ initialCode, onEdit }: { initialCode: string | null; onE
       <Link to="/coding/javascript/js-double-numbers">Open coding challenge</Link>
     </div>
   );
-  if (!task.data || !workbench.View) return <div className="ss-home-sample__state" role="status">Loading coding challenge…</div>;
+  if (!task.data || !sampleTask || !workbench.View) return <div className="ss-home-sample__state" role="status">Loading coding challenge…</div>;
   const View = workbench.View;
-  return <View key={`${user?.id ?? 'guest'}-${task.data.session}`} task={task.data.task} session={task.data.session} locked={task.data.locked} signedIn={task.data.signedIn} initialCode={initialCode} onEdit={onEdit} mode="landing" />;
+  return <View key={`${user?.id ?? 'guest'}-${task.data.session}`} task={sampleTask} session={task.data.session} locked={task.data.locked} signedIn={task.data.signedIn} initialCode={initialCode} onEdit={onEdit} mode="landing" />;
 }
 
 export function HomeSample({ quiz }: { quiz: ReactNode }) {

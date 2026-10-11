@@ -21,7 +21,7 @@ import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
 import { ReportDialog } from '../components/ReportDialog';
-import { FlagIcon, InfoIcon, PlayIcon, SendIcon, FormatCodeIcon } from '../components/ui/icons';
+import { FlagIcon, InfoIcon, PlayIcon, FormatCodeIcon } from '../components/ui/icons';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
@@ -582,7 +582,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     : '';
 
   const busy = phase !== 'idle';
-  const submitDisabled = busy || !session || !online || Boolean(solution);
+  const submitDisabled = mode === 'landing' || busy || !session || !online || Boolean(solution);
 
   // The shortcut does what the button would: nothing, while Submit is off.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -1070,9 +1070,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {/* Busy, not disabled: the button that was pressed keeps the focus
             (a disabled one hands it to the page), and a press does nothing. */}
         <Button variant="secondary" isIconOnly={mode === 'landing'} icon={mode === 'landing' ? <PlayIcon /> : undefined} onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : mode === 'landing' ? t('coding.run') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
-        {mode === 'landing'
-          ? <Button variant="primary" isIconOnly icon={<SendIcon />} onClick={() => { if (!submitDisabled) void submit(); }} isDisabled={submitDisabled} tooltip={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
-          : <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />}
+        {mode !== 'landing' && <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />}
         <Button variant="ghost" isIconOnly={mode === 'landing'} icon={mode === 'landing' ? <FormatCodeIcon /> : undefined} onClick={() => void format()} isDisabled={formatDisabled} tooltip={mode === 'landing' ? t('coding.format') : undefined} label={t('coding.format')} />
         <Button variant="ghost" ref={resetRef} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
         </>}
@@ -1085,7 +1083,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           tooltip={hintUnavailable || undefined}
           label={taken === 0 ? t('coding.hint') : t('coding.hintNext')}
         />
-        {session && !solution && !solutions && (
+        {mode !== 'landing' && session && !solution && !solutions && (
           <Button
             variant="ghost"
             ref={revealRef}
@@ -1098,7 +1096,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {signedIn && mode === 'section' && !skipResult && (
           <Button variant="ghost" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />
         )}
-        <div className="cd-actions cd-actions--utility">
+        {mode !== 'landing' && <div className="cd-actions cd-actions--utility">
           {!locked && saveAction}
           <Button
             variant="ghost"
@@ -1108,7 +1106,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             tooltip={t('coding.reportTask')}
             onClick={() => setReportOpen(true)}
           />
-        </div>
+        </div>}
       </div>
     </div>
   );
@@ -1167,7 +1165,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               <Editor minHeight={mode === 'landing' ? 160 : narrow ? 280 : 480} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
               {/* The shortcuts are not printed on the page; a screen reader
                   hears them with the editor, Escape then Tab included. */}
-              <span id={`${baseId}-keys`} className="cd-visually-hidden">{t('coding.shortcuts')}</span>
+              <span id={`${baseId}-keys`} className="cd-visually-hidden">{t(mode === 'landing' ? 'coding.shortcuts.preview' : 'coding.shortcuts')}</span>
             </div>
             {!puzzleMode && !pendingOnDesktop && actionBar}
           </section>
@@ -1344,7 +1342,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       </div>
       {/* The same dialog the quiz uses, carrying the task id and the version of
           the brief that was on screen. Reporting needs no account. */}
-      <ReportDialog
+      {mode !== 'landing' && <ReportDialog
         open={reportOpen}
         onClose={() => setReportOpen(false)}
         onSubmit={async (reason, detail) => {
@@ -1356,7 +1354,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           });
           setReportOpen(false);
         }}
-      />
+      />}
     </div>
   );
 }

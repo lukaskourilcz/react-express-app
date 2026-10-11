@@ -386,15 +386,22 @@ it('uses named icons and tooltips only for the homepage command buttons', () => 
     addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
   }) as MediaQueryList);
   const landing = mount({ mode: 'landing' });
-  for (const name of ['Run', 'Submit', 'Format']) {
+  for (const name of ['Run', 'Format']) {
     const button = screen.getByRole('button', { name });
     expect(button.querySelector('svg')).not.toBeNull();
     expect(button).not.toHaveTextContent(name);
     expect(document.getElementById(button.getAttribute('aria-describedby')!)).toHaveTextContent(name);
   }
+  expect(screen.queryByRole('button', { name: 'Submit' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Solution' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Report a problem with this task' })).toBeNull();
+  fireEvent.keyDown(editor(), { key: 'Enter', ctrlKey: true, shiftKey: true });
+  expect(submitCoding).not.toHaveBeenCalled();
   landing.unmount();
   mount();
   for (const name of ['Run', 'Submit', 'Format']) {
     expect(screen.getByRole('button', { name })).toHaveTextContent(name);
   }
+  expect(screen.getByRole('button', { name: 'Solution' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Report a problem with this task' })).toBeVisible();
 });

@@ -89,12 +89,6 @@ export const PlayIcon = ({ size = 20, style }: IconProps) => (
   </svg>
 );
 
-export const SendIcon = ({ size = 20, style }: IconProps) => (
-  <svg {...base(size)} style={style}>
-    <path d="M22 2 9 15M22 2l-7 20-4-9-9-4 20-7z" />
-  </svg>
-);
-
 export const FormatCodeIcon = ({ size = 20, style }: IconProps) => (
   <svg {...base(size)} style={style}>
     <path d="M3 6h18M8 12h13M3 18h14" />
