@@ -244,8 +244,9 @@ Each stage reuses `coding_progress` and `coding_drafts`, so no new table or
 migration is required. Stage issuance checks all preceding server-recorded
 passes and submission rechecks prerequisites. Reveals and skips do not advance
 the sequence. Signed-out visitors can try what the free plan opens (stages 1,
-2 and 9 of a ten-stage project, 1 and 11 of a FullStack app, level 1 of a
-short path; `shared/tiers.ts`); account progress requires sign-in. A next stage without its own draft starts from the previous stage's
+2 and 3 of a ten-stage project, 1 and 2 of a FullStack app, level 1 of a
+short path; `shared/tiers.ts`), always the first stages, so a free account
+reaches each of them by passing free stages; account progress requires sign-in. A next stage without its own draft starts from the previous stage's
 saved code. Submitting persists the exact code before recording a stage pass.
 Earlier stages remain revisitable. Each stage earns existing first-pass XP
 once through the idempotent grading routine.

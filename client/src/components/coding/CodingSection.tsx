@@ -276,8 +276,8 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
 
 /** On the free plan: which stages of a project, or levels of a short path,
  * come with it. The numbers are the index's projected flags, so they are
- * shared/tiers.ts's rule: stages 1, 2 and 9 of a ten-stage project, 1 and 11
- * of a FullStack app, level 1 of a short path. */
+ * shared/tiers.ts's rule: stages 1, 2 and 3 of a ten-stage project, 1 and 2
+ * of a FullStack app, level 1 of a short path, always the first ones. */
 function PremiumStagesNote({ stages, short }: { stages: readonly string[]; short: boolean }) {
   const { t } = useLanguage();
   const free = stages.flatMap((id, index) => (INDEX_BY_ID.get(id)?.free ? [index + 1] : []));
@@ -326,7 +326,7 @@ function EvolvingGallery({ passed, premiumOf, category, track }: { passed: Reado
     <div ref={listRef} className={`cd-project-list${scrollable ? ' cd-project-list--scroll' : ''}`} tabIndex={scrollable ? 0 : undefined} role={scrollable ? 'region' : undefined} aria-label={scrollable ? t(titleKey) : undefined}>{challenges.map((challenge, index) => {
       const completed = challenge.stages.filter(id => evolvingPassed(id, passed)).length;
       const resumeId = evolvingResume(challenge, passed);
-      // Stage one, and a few more in a long project, come with the free plan; on a free account the others read "Premium".
+      // The opening stages come with the free plan; on a free account the stages after them read "Premium".
       const laterLocked = challenge.stages.some((id) => isBarred(premiumOf(id)));
       return <article key={challenge.id} className="cd-project">
         <span className="cd-project__number" aria-hidden>{String(index + 1).padStart(2, '0')}</span>
