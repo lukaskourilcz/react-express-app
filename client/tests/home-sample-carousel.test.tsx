@@ -21,7 +21,7 @@ vi.mock('../src/coding/loadWorkbench', () => {
 
 beforeEach(() => {
   viewport.wide = true;
-  vi.mocked(fetchCodingTask).mockReset().mockResolvedValue({ task: { id: 'alg-valid-palindrome' }, session: 'sealed-session', signedIn: false, locked: null } as CodingTaskResponse);
+  vi.mocked(fetchCodingTask).mockReset().mockResolvedValue({ task: { id: 'js-double-numbers' }, session: 'sealed-session', signedIn: false, locked: null } as CodingTaskResponse);
 });
 
 function sample() {
@@ -44,13 +44,14 @@ it('loads the real task on demand and preserves the code while switching samples
   expect(fetchCodingTask).not.toHaveBeenCalled();
   fireEvent.click(screen.getByRole('button', { name: 'Coding' }));
   const editor = await screen.findByRole('textbox', { name: 'Sample code' });
-  fireEvent.change(editor, { target: { value: 'my palindrome solution' } });
+  fireEvent.change(editor, { target: { value: 'const double = numbers => numbers.map(n => n * 2);' } });
   fireEvent.click(screen.getByRole('button', { name: 'Quiz' }));
   expect(screen.getByText('Quiz question')).toBeVisible();
   expect(screen.queryByRole('textbox')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Coding' }));
-  expect(screen.getByRole('textbox')).toHaveValue('my palindrome solution');
+  expect(screen.getByRole('textbox')).toHaveValue('const double = numbers => numbers.map(n => n * 2);');
   expect(fetchCodingTask).toHaveBeenCalledTimes(1);
+  expect(fetchCodingTask).toHaveBeenCalledWith('js-double-numbers', expect.any(AbortSignal));
 });
 
 it('offers a retry when the task request fails', async () => {

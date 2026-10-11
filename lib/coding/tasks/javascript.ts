@@ -14,7 +14,7 @@ export const JAVASCRIPT_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["map"],
     title: "Double numbers",
-    prompt: "Write `double(numbers)`, returning a new array with every number multiplied by two. An empty array gives an empty array; negatives, zero and decimals all double normally.",
+    prompt: "Return a new, doubled array: `double(numbers)`.",
     starter: `const double = numbers => {
   
 };

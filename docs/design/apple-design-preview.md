@@ -10,7 +10,7 @@ comparison control and `?design=original` override have been removed. Dark mode
 retains the Deep End blue-green background and grain.
 
 The homepage sample is a two-card carousel on tablets and desktop (600px and
-above), with the quiz initially shown and a real `alg-valid-palindrome` workbench
+above), with the quiz initially shown and a real `js-double-numbers` workbench
 on Coding. The editor and task session load together on the first Coding press;
 code is retained when switching slides. Mobile mounts only the quiz. The task,
 Run, Format, Submit, visible tests and hidden server checks reuse Coding's API
