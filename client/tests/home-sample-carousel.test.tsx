@@ -12,9 +12,9 @@ vi.mock('../src/lib/useMediaQuery', () => ({ useMediaQuery: () => viewport.wide 
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ user: null }) }));
 vi.mock('../src/coding/api', () => ({ codingKeys: { task: (id: string) => ['coding', 'task', id] }, fetchCodingTask: vi.fn() }));
 vi.mock('../src/coding/loadWorkbench', () => {
-  function Workbench() {
-    const [code, setCode] = useState('starter');
-    return <input aria-label="Sample code" value={code} onChange={(event) => setCode(event.target.value)} />;
+  function Workbench({ initialCode, onEdit }: { initialCode: string | null; onEdit: (code: string) => void }) {
+    const [code, setCode] = useState(initialCode ?? 'starter');
+    return <input aria-label="Sample code" value={code} onChange={(event) => { setCode(event.target.value); onEdit(event.target.value); }} />;
   }
   return { useWorkbench: () => ({ failed: false, reloading: false, View: Workbench }) };
 });
@@ -42,13 +42,13 @@ it('mounts only the quiz on mobile and never requests a coding session', () => {
 it('loads the real task on demand and preserves the code while switching samples', async () => {
   sample();
   expect(fetchCodingTask).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole('button', { name: 'Coding', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Coding' }));
   const editor = await screen.findByRole('textbox', { name: 'Sample code' });
   fireEvent.change(editor, { target: { value: 'my palindrome solution' } });
-  fireEvent.click(screen.getByRole('button', { name: 'Quiz', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Quiz' }));
   expect(screen.getByText('Quiz question')).toBeVisible();
   expect(screen.queryByRole('textbox')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: 'Coding', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Coding' }));
   expect(screen.getByRole('textbox')).toHaveValue('my palindrome solution');
   expect(fetchCodingTask).toHaveBeenCalledTimes(1);
 });
@@ -56,7 +56,7 @@ it('loads the real task on demand and preserves the code while switching samples
 it('offers a retry when the task request fails', async () => {
   vi.mocked(fetchCodingTask).mockRejectedValueOnce(new Error('Offline'));
   sample();
-  fireEvent.click(screen.getByRole('button', { name: 'Coding', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Coding' }));
   expect(await screen.findByRole('alert')).toBeVisible();
   fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
   expect(await screen.findByRole('textbox')).toBeVisible();
@@ -65,10 +65,13 @@ it('offers a retry when the task request fails', async () => {
 
 it('unmounts the editor when the viewport becomes mobile', async () => {
   const rendered = sample();
-  fireEvent.click(screen.getByRole('button', { name: 'Coding', exact: true }));
+  fireEvent.click(screen.getByRole('button', { name: 'Coding' }));
   await screen.findByRole('textbox');
   viewport.wide = false;
   rendered.rerender(rendered.view());
   await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull());
   expect(screen.getByText('Quiz question')).toBeVisible();
+  viewport.wide = true;
+  rendered.rerender(rendered.view());
+  expect(await screen.findByRole('textbox')).toHaveValue('retained after resizing');
 });

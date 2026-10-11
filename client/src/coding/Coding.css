@@ -678,3 +678,7 @@
 .cd-stage-group + .cd-stage-group { padding-left: 10px; border-left: 1px solid var(--ss-card-line); }
 .cd-stage-group__label { font-size: 0.8rem; font-weight: 650; color: var(--color-text-secondary); white-space: nowrap; }
 
+
+/* Compact samples keep every output tab readable instead of clipping labels. */
+.cd-workbench--landing .cd-tabs { flex-wrap: wrap; overflow-x: visible; }
+.cd-workbench--landing .cd-tab { flex: 0 0 auto; min-height: 44px; padding: .5rem; font-size: .75rem; }
