@@ -3,7 +3,7 @@ import { CODING_TASKS, playable } from '../../lib/coding/catalog';
 import { solutionFor } from '../../lib/coding/solutions';
 import { hiddenGlobalMessage, TYPE_CHECK_STOPPED_MESSAGE } from '../../shared/coding-evaluate';
 import { runInQuickJS } from '../../lib/coding/sandbox';
-import { PRAGUE_REACT_APP, PRAGUE_REACT_SUITE } from '../../scripts/fixtures/prague-react';
+import { UTC_REACT_APP, UTC_REACT_SUITE } from '../../scripts/fixtures/utc-react';
 import { localAuth, storeFakeSession } from './fake-session';
 
 // The coding workbench in the built app with a real editor, a real runner
@@ -77,6 +77,24 @@ async function fillEditor(page: Page, source: string) {
   await editor.focus();
   await expect(page.locator('.cm-editor')).toHaveClass(/\bcm-focused\b/);
   await editor.fill(source);
+}
+
+/** Opens a task and returns the URL of the Run worker it starts. */
+async function runnerUrl(page: Page): Promise<string> {
+  const started = page.waitForEvent('worker');
+  await openTask(page, '/coding/javascript/js-count-multiples');
+  return (await started).url();
+}
+
+type WorkerRun = { results: { pass: boolean | null; actual: string | null; error: string | null }[] };
+
+/** Runs calls in a fresh copy of the real Run worker, as the Run button does. */
+function runInWorker(page: Page, url: string, calls: string[], expectations: unknown[] | null): Promise<WorkerRun> {
+  return page.evaluate(({ url, calls, expectations }) => new Promise<WorkerRun>((resolve) => {
+    const worker = new Worker(url, { type: 'module' });
+    worker.onmessage = (event) => { if (event.data.phase === 'done') { worker.terminate(); resolve(event.data); } };
+    worker.postMessage({ track: 'javascript', code: '', calls, expectations });
+  }), { url, calls, expectations });
 }
 
 const announced = (page: Page) => page.locator('.cd-workbench > [role="status"]');
@@ -212,20 +230,14 @@ test('signed in: Start the run starts a challenge run and opens its first task (
   await expect(page.getByRole('link', { name: 'Challenge run · 1 of 3' })).toBeVisible();
 });
 
-// Owner decisions of 9 October 2026: learner code reads Europe/Prague time
-// in Run as in Submit, the grader has the browser's URL, URLSearchParams,
-// encoders and base64, and Run has nothing else the grader lacks. Run here is
-// the real worker in a browser told it is in Los Angeles; Submit is the
-// grader's QuickJS, in this process.
-test.describe('Run and Submit share a clock and built-ins (C1-2, C1-3)', () => {
+// Owner decisions of 9 October 2026: the grader has the browser's URL,
+// URLSearchParams, encoders and base64, and Run has nothing else the grader
+// lacks. Run here is the real worker in a browser told it is in Los Angeles;
+// Submit is the grader's QuickJS, in this process.
+test.describe('Run and Submit share built-ins (C1-3)', () => {
   test.use({ timezoneId: 'America/Los_Angeles' });
 
   const AGREE = [
-    '[new Date(2026, 0, 15).getTimezoneOffset(), new Date(2026, 6, 15).getTimezoneOffset()]',
-    '[new Date(2026, 2, 29, 2, 30).toISOString(), new Date(2026, 9, 25, 2, 30).toISOString(), new Date(2026, 2, 29).toISOString()]',
-    '[1774745999999, 1774746000000, 1792889999999, 1792890000000].map((t) => { const d = new Date(t); return [d.getDate(), d.getHours(), d.getTimezoneOffset()]; })',
-    '(() => { const d = new Date(2026, 2, 28, 12); d.setDate(d.getDate() + 1); return [d.toISOString(), d.toString(), Date.parse("2026-10-25T02:30")]; })()',
-    'new Date(Date.UTC(2026, 9, 25, 1, 30)).toLocaleString()',
     'Object.fromEntries(new URLSearchParams("?a=1&b=x+y&c=%E2%9C%93"))',
     '(() => { const u = new URL("../b?q=1#h", "https://example.com/a/c"); u.searchParams.append("r", "é"); return [u.href, u.origin, u.pathname]; })()',
     '[...new TextEncoder().encode("é✓🐟")].concat(new TextDecoder().decode(new Uint8Array([0xF0, 0x9F, 0x90, 0x9F])))',
@@ -238,21 +250,12 @@ test.describe('Run and Submit share a clock and built-ins (C1-2, C1-3)', () => {
   test('the real worker agrees with the grader', async ({ page }) => {
     test.setTimeout(120_000);
     await prepare(page);
-    const started = page.waitForEvent('worker');
-    await openTask(page, '/coding/javascript/js-count-multiples');
-    const workerUrl = (await started).url();
-    const run = (calls: string[]) => page.evaluate(({ url, calls }) => new Promise<{ results: { actual: string | null; error: string | null }[] }>((resolve) => {
-      const worker = new Worker(url, { type: 'module' });
-      worker.onmessage = (event) => { if (event.data.phase === 'done') { worker.terminate(); resolve(event.data); } };
-      worker.postMessage({ track: 'javascript', code: '', calls, expectations: null });
-    }), { url: workerUrl, calls });
-    // The page itself is in Los Angeles; only learner code reads Prague.
-    expect(await page.evaluate(() => new Date(2026, 6, 15).getTimezoneOffset())).toBe(420);
-    const browser = await run(AGREE);
+    const workerUrl = await runnerUrl(page);
+    const browser = await runInWorker(page, workerUrl, AGREE, null);
     const grader = await runInQuickJS({ code: '', calls: AGREE, expectations: null });
     expect(browser.results.map((one) => one.error)).toEqual(AGREE.map(() => null));
     expect(browser.results.map((one) => one.actual)).toEqual(grader.results.map((one) => one.actual));
-    const lacking = await run(LACKING);
+    const lacking = await runInWorker(page, workerUrl, LACKING, null);
     expect(lacking.results.map((one) => one.error)).toEqual([hiddenGlobalMessage('Intl'), hiddenGlobalMessage('crypto'), hiddenGlobalMessage('fetch')]);
     const graderLacking = await runInQuickJS({ code: '', calls: LACKING, expectations: null });
     expect(graderLacking.results.every((one) => one.error !== null)).toBe(true);
@@ -271,18 +274,52 @@ test.describe('Run and Submit share a clock and built-ins (C1-2, C1-3)', () => {
     await expect(announced(page)).toHaveText(/passing$/, { timeout: 30_000 });
     await expect(page.getByRole('tabpanel').getByText(hiddenGlobalMessage('Intl')).first()).toBeVisible();
   });
-
-  test('the React frame reads Prague time too', async ({ page }) => {
-    await page.goto('/sandbox/index.html');
-    const outcome = await page.evaluate(({ app, suite }) => new Promise<{ passed: number; failed: number; errors: (string | null)[] }>((resolve) => {
-      const errors: (string | null)[] = [];
-      window.addEventListener('message', (event) => {
-        const data = event.data as { type?: string; error?: string | null; passed?: number; failed?: number };
-        if (data.type === 'test') errors.push(data.error ?? null);
-        if (data.type === 'done') resolve({ passed: data.passed!, failed: data.failed!, errors });
-      });
-      window.postMessage({ type: 'run', token: 'prague', files: { '/App.js': app, '/App.test.js': suite }, preview: false, tests: true }, '*');
-    }), { app: PRAGUE_REACT_APP, suite: PRAGUE_REACT_SUITE });
-    expect(outcome).toEqual({ passed: 2, failed: 0, errors: [null, null] });
-  });
 });
+
+// The owner's afternoon decision of 9 October 2026 (C1-2): learner code reads
+// UTC, with no summer time, in Run as in Submit and in the React frame,
+// replacing the morning's Europe/Prague. Each browser below is told it is
+// somewhere else, with summer time or without, and a half-hour change in
+// Lord Howe.
+const UTC_TIME: [string, unknown][] = [
+  ['[new Date(2026, 0, 15).getTimezoneOffset(), new Date(2026, 6, 15).getTimezoneOffset()]', [0, 0]],
+  ['[new Date(2026, 2, 29, 2, 30).toISOString(), new Date(2026, 9, 25, 2, 30).toISOString(), new Date(2026, 3, 5, 1, 45).toISOString()]', ['2026-03-29T02:30:00.000Z', '2026-10-25T02:30:00.000Z', '2026-04-05T01:45:00.000Z']],
+  ['[1774745999999, 1774746000000, 1775314800000, 1791041400000].map((t) => { const d = new Date(t); return [d.getDate(), d.getHours(), d.getMinutes(), d.getTimezoneOffset()]; })', [[29, 0, 59, 0], [29, 1, 0, 0], [4, 15, 0, 0], [3, 15, 30, 0]]],
+  ['(() => { const d = new Date(2026, 2, 28, 12); d.setDate(d.getDate() + 1); return [d.toISOString(), d.toString(), Date.parse("2026-10-25T02:30")]; })()', ['2026-03-29T12:00:00.000Z', 'Sun Mar 29 2026 12:00:00 GMT+0000 (Coordinated Universal Time)', 1792895400000]],
+  ['[new Date(Date.UTC(2026, 9, 25, 1, 30)).toLocaleString(), new Date(Date.UTC(2026, 9, 25, 1, 30)).toLocaleString("en-US", { timeZone: "Europe/Prague", timeZoneName: "short" })]', ['10/25/2026, 1:30:00 AM', '10/25/2026, 2:30:00 AM GMT+1']],
+];
+
+for (const [zone, offsets] of [['America/Los_Angeles', [480, 420]], ['Asia/Tokyo', [-540, -540]], ['Australia/Lord_Howe', [-660, -630]]] as const) {
+  test.describe(`Run, Submit and the React frame read UTC in a browser in ${zone} (C1-2)`, () => {
+    test.use({ timezoneId: zone });
+
+    test('the real worker reads UTC, as the grader does', async ({ page }) => {
+      test.setTimeout(120_000);
+      await prepare(page);
+      const workerUrl = await runnerUrl(page);
+      // The page itself keeps the browser's zone; only learner code reads UTC.
+      expect(await page.evaluate(() => [new Date(2026, 0, 15).getTimezoneOffset(), new Date(2026, 6, 15).getTimezoneOffset()])).toEqual(offsets);
+      const calls = UTC_TIME.map(([call]) => call);
+      const expectations = UTC_TIME.map(([, value]) => value);
+      const browser = await runInWorker(page, workerUrl, calls, expectations);
+      const grader = await runInQuickJS({ code: '', calls, expectations });
+      expect(browser.results.map((one) => one.error ?? one.pass)).toEqual(calls.map(() => true));
+      expect(grader.results.map((one) => one.error ?? one.pass)).toEqual(calls.map(() => true));
+      expect(browser.results.map((one) => one.actual)).toEqual(grader.results.map((one) => one.actual));
+    });
+
+    test('the React frame reads UTC too', async ({ page }) => {
+      await page.goto('/sandbox/index.html');
+      const outcome = await page.evaluate(({ app, suite }) => new Promise<{ passed: number; failed: number; errors: (string | null)[] }>((resolve) => {
+        const errors: (string | null)[] = [];
+        window.addEventListener('message', (event) => {
+          const data = event.data as { type?: string; error?: string | null; passed?: number; failed?: number };
+          if (data.type === 'test') errors.push(data.error ?? null);
+          if (data.type === 'done') resolve({ passed: data.passed!, failed: data.failed!, errors });
+        });
+        window.postMessage({ type: 'run', token: 'utc', files: { '/App.js': app, '/App.test.js': suite }, preview: false, tests: true }, '*');
+      }), { app: UTC_REACT_APP, suite: UTC_REACT_SUITE });
+      expect(outcome).toEqual({ passed: 2, failed: 0, errors: [null, null] });
+    });
+  });
+}

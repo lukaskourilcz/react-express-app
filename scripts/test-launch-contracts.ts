@@ -50,7 +50,7 @@ import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { GUEST_CRASHED_MESSAGE, GUEST_ENV, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
-import { PRAGUE_REACT_APP, PRAGUE_REACT_SUITE } from './fixtures/prague-react';
+import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -3714,13 +3714,24 @@ async function main() {
   const exhaustedResult = readGuestRun(exhausted.exitCode, exhausted.stdout, exhausted.nonce, guestSuite);
   assert.ok(exhaustedResult.passed === 0 && exhaustedResult.failed > 0, JSON.stringify(exhaustedResult));
   assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'the learner reads that their code stopped the runner');
-  // The guest reads Prague time: the API starts it with TZ=Europe/Prague,
-  // and its page realm installs Prague time whatever the process zone is.
-  for (const env of [{}, { TZ: 'America/New_York' }] as Record<string, string>[]) {
-    const pragueGuest = guest(PRAGUE_REACT_SUITE, PRAGUE_REACT_APP, env);
-    const pragueResult = readGuestRun(pragueGuest.exitCode, pragueGuest.stdout, pragueGuest.nonce, PRAGUE_REACT_SUITE);
-    assert.ok(pragueResult.compileError === null && pragueResult.failed === 0 && pragueResult.passed === 2, `the React guest reads Prague time (${JSON.stringify(env)}): ${JSON.stringify(pragueResult.cases)}`);
+  // The guest reads UTC: the API starts it with TZ=UTC, and its page realm
+  // installs UTC whatever the process zone is.
+  for (const env of [{}, { TZ: 'America/Los_Angeles' }, { TZ: 'Asia/Tokyo' }, { TZ: 'Australia/Lord_Howe' }] as Record<string, string>[]) {
+    const utcGuest = guest(UTC_REACT_SUITE, UTC_REACT_APP, env);
+    const utcResult = readGuestRun(utcGuest.exitCode, utcGuest.stdout, utcGuest.nonce, UTC_REACT_SUITE);
+    assert.ok(utcResult.compileError === null && utcResult.failed === 0 && utcResult.passed === 2, `the React guest reads UTC (${JSON.stringify(env)}): ${JSON.stringify(utcResult.cases)}`);
   }
+  // TZ=UTC is what puts the dates jsdom makes in the guest's own realm, such
+  // as a date input's valueAsDate, in UTC too: in Los Angeles the same input
+  // reads the day before.
+  const inputSuite = "import React from 'react';\nimport { render, screen } from '@testing-library/react';\nimport App from './App';\ntest('a date input reads its day in UTC', () => { render(<App />); const day = screen.getByLabelText('Day').valueAsDate; expect([day.getTimezoneOffset(), day.getDate(), day.getHours()]).toEqual([0, 29, 0]); });";
+  const inputApp = 'export default function App() { return <label>Day <input type="date" defaultValue="2026-03-29" /></label>; }';
+  const inputRun = (env: Record<string, string>) => {
+    const run = guest(inputSuite, inputApp, env);
+    return readGuestRun(run.exitCode, run.stdout, run.nonce, inputSuite);
+  };
+  assert.deepEqual(inputRun({}).cases.map((one) => one.error), [null], 'started as the API starts it, the guest reads a date input in UTC');
+  assert.equal(inputRun({ TZ: 'America/Los_Angeles' }).failed, 1, 'without TZ=UTC, the date input reads the host zone');
   const missingInput = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), join(tmpdir(), 'no-such-guest-input.json')], { encoding: 'utf8', timeout: 30_000 });
   assert.notEqual(missingInput.status, 0);
   assert.throws(() => readGuestRun(missingInput.status, missingInput.stdout, randomBytes(24).toString('hex'), guestSuite), /exited unsuccessfully/, 'a guest that ended before learner code ran is a runner failure');
