@@ -14,16 +14,17 @@ feedback, and the Instagram footer copy. Issues #330–#337 are tracked by
 | Client/tooling types | PASS after correcting the new test's role-query options |
 | Launch, play-room and verified-caller contracts | PASS |
 | Coding authorization | PASS — locked saves/collection additions refused, open task saved, existing locked bookmark removable |
-| Complexity contracts | PASS — linear, nested, fixed and logarithmic traversal, sorting; unknown recursion, external calls, growing strings and regex backtracking |
+| Complexity contracts | PASS — linear, nested, fixed and logarithmic traversal, sorting; unknown recursion, external calls, growing strings and regex backtracking. Deep parser nesting fails closed |
+| Grading and Learn integrity | PASS — advisory parser errors preserve the grading verdict; adversarial grading and retained progression contracts pass |
 | Carousel and workbench tests | PASS — mobile does not request a task/editor; switching and resizing retain code; request retry works |
 | Full client suite | PASS — 104 files / 987 tests on Node 24. Initial footer matcher corrected; four load-related timeouts in a concurrent run passed on isolated retry before the full passing run |
 | Production build and public HTML | PASS — 725 coding share pages, no Czech in coding chunks |
-| Production CSS | Found and fixed root Apple tokens being purged; build now asserts their survival |
+| Production CSS and bundle | PASS — Apple root token retention asserted by the build; removed obsolete application web-font imports. 240,908 gzip bytes / 243,000 budget |
 | Security and unused code | PASS — no new findings |
 | Root/client production audits | PASS — zero vulnerabilities |
 | Visible browser story | PASS — Format, Run 11/11, Submit 11 visible + 5 hidden checks; server verdict includes O(n); navigation border visible in light/dark |
 | Visible tablet/mobile | PASS — 768px editor available, 360px quiz only, no horizontal overflow |
-| Automated responsive sweep | Final result tracked in PR checks; one transient 430px /challenge load failure occurred while assets were rebuilt and requires a settled recheck |
+| Automated responsive sweep | PASS — 248 route/width probes clear after a settled recheck of the single transient 430px /challenge load failure; latest build also passes 12 homepage/coding/challenge probes at 360, 768, 1024 and 1440px |
 | Reduced motion/transparency/high contrast | Existing fallbacks retained; OS preferences not changed |
 | Diff whitespace | PASS |
 | GitHub quality and deployment | Required final checks and deployment SHA recorded by PR #338; merge waits for verification |

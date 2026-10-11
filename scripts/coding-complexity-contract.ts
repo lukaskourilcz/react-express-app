@@ -19,6 +19,9 @@ export function complexityContracts() {
   assert.equal(check('const solve = xs => mystery(xs);').time, null);
   assert.equal(check('const solve = xs => { while(xs.length) xs = mystery(xs); return 1; };').assessment, 'unknown');
   assert.equal(check('const solve =').assessment, 'unknown');
+  const deeplyNested = `function solve(xs) { ${'{'.repeat(5000)} return xs; ${'}'.repeat(5000)} }`;
+  assert.doesNotThrow(() => check(deeplyNested), 'an advisory parser failure cannot replace the grader verdict');
+  assert.equal(check(deeplyNested).assessment, 'unknown');
   assert.equal(check('const solve = xs => { let out = ""; for (let i=0;i<xs.length;i++) out+=xs[i]; return out; };').assessment, 'unknown');
   assert.equal(check('const solve = xs => /^(a+)+$/.test(xs);').assessment, 'unknown');
   assert.equal(check('const cache = mystery(); const solve = xs => cache[xs];').assessment, 'unknown');

@@ -26,7 +26,7 @@ const scanMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach'
 const callbackMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'flatMap', 'sort', 'toSorted']);
 const scalarMethods = new Set(['push', 'pop', 'get', 'set', 'has', 'add', 'delete', 'charAt', 'charCodeAt', 'at', 'test', 'isArray', 'isInteger', 'isFinite', 'abs', 'floor', 'ceil', 'round', 'min', 'max', 'log2', 'sqrt']);
 
-export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>, code: string): ComplexityReport {
+function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>, code: string): ComplexityReport {
   const guidance = complexityGuidance(task);
   const assumptions = 'Static estimate, not a proof. Assumes input-sized collections, bounded callbacks, constant-time indexing and average constant-time Map/Set operations. Numeric loop bounds are treated as magnitudes, not bit lengths. Sort is modelled as n log n; actual engine behaviour can differ. Timing and extra space are not measured.';
   const unknown = (explanation: string): ComplexityReport => ({ time: null, assessment: 'unknown', explanation, assumptions, guidance });
@@ -165,4 +165,21 @@ export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'te
   const above = target && (cost.power > target.power || (cost.power === target.power && cost.log > target.log));
   const assessment = target ? above ? 'above-target' : 'within-target' : 'estimated';
   return { time, assessment, explanation: [...evidence].join(' · ') || 'No input-growing traversal recognised in the tested function.', assumptions, guidance };
+}
+
+/** Parsing/inspection failures must never replace a grader verdict. Deeply
+ * nested adversarial submissions can exhaust a parser's call stack even while
+ * remaining under the submission byte limit. */
+export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>, code: string): ComplexityReport {
+  try {
+    return inspectComplexity(task, code);
+  } catch {
+    return {
+      time: null,
+      assessment: 'unknown',
+      explanation: 'The structural analyser could not safely inspect this code. Review its complexity manually.',
+      assumptions: 'Complexity analysis is advisory and never changes the correctness verdict or rewards.',
+      guidance: complexityGuidance(task),
+    };
+  }
 }
