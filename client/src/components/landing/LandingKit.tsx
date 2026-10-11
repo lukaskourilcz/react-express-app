@@ -230,38 +230,19 @@ export function SampleCard({ chip, question, onAnswered, showTeaser = true }: { 
   );
 }
 
-/**
- * The horizontal levels strip on the landing's roadmap preview.
- *
- * It overflows on any viewport narrower than its content, so it has to be
- * reachable without a pointer: axe's scrollable-region-focusable rule flags a
- * scroller with no focusable content and no tab stop, and a keyboard or switch
- * user could not see past the third level. Same contract as the comparison
- * table's .ss-compare-scroll: focusable, role="region", and a name from the
- * dictionary.
- */
+/** Full-width roadmap that wraps into two rows on narrow screens. */
 export function PathStrip({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div
-      className="ss-scroll-strip"
-      role="region"
-      aria-label={label}
-      tabIndex={0}
-      style={{ display: 'flex', alignItems: 'flex-start', gap: 0, padding: '6px 2px', position: 'relative' }}
-    >
-      {children}
-    </div>
-  );
+  return <div className="ss-home-path" role="list" aria-label={label}>{children}</div>;
 }
 
 /** Gold "checkpoint" node used at the end of a roadmap-preview path. */
 export function CheckpointNode({ label }: { label: string }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 8, minWidth: 110, flexShrink: 0 }}>
+    <div role="listitem" className="ss-home-path__node">
       <span style={{ display: 'grid', placeItems: 'center', width: 40, height: 40, borderRadius: '50%', background: 'var(--ss-warning-soft)', color: 'var(--ss-warning)', border: '2px solid color-mix(in srgb, var(--ss-warning) 50%, transparent)' }}>
         <TrophyIcon size={20} />
       </span>
-      <span style={{ fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-warning)', whiteSpace: 'nowrap' }}>{label}</span>
+      <span style={{ fontSize: 'var(--ss-type-meta)', fontWeight: 600, color: 'var(--ss-warning)', textAlign: 'center' }}>{label}</span>
     </div>
   );
 }

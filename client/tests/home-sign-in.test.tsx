@@ -1,5 +1,5 @@
 import { expect, it, vi } from 'vitest';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -54,16 +54,18 @@ it('opens the daily challenge from the Daily challenge tile', async () => {
   expect(await screen.findByTestId('location')).toHaveTextContent('/quiz?mode=daily');
 });
 
-// The landing page told every visitor "Progress saves to your account." A
-// guest's progress stays in this browser, and the GitHub garden is off.
-it('says where progress is kept, for a guest and for an account, and promises no garden', async () => {
+// The homepage focuses on choosing a path; progress-storage details live in Learn.
+it('keeps progress-storage copy off the homepage for guests and accounts', async () => {
   server.use(settingsHandler);
   const renderHome = () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     return render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
   };
   const guest = renderHome();
-  expect(screen.getByText('You’re not signed in, so this progress stays on this device only. Signing in starts from your account’s progress instead.')).toBeInTheDocument();
+  expect(screen.queryByText(/stays on this device only/)).toBeNull();
+  expect(screen.getByRole('button', { name: 'Start learning JavaScript' })).toBeInTheDocument();
+  expect(screen.getByRole('region', { name: 'devShark product video' })).toHaveTextContent('Product video coming soon.');
+  expect(screen.queryByRole('textbox', { name: 'Your code' })).toBeNull();
   expect(screen.queryByText('Progress saves to your account.')).toBeNull();
   expect(screen.getByText('Loops, array methods, types and components with real tests.')).toBeInTheDocument();
   expect(screen.queryByText(/GitHub garden/)).toBeNull();
@@ -73,9 +75,29 @@ it('says where progress is kept, for a guest and for an account, and promises no
   auth.value = { ...signedOut, user: { id: 'user-1' } as never, isAuthenticated: true };
   try {
     renderHome();
-    expect(screen.getByText('Progress saves to your account.')).toBeInTheDocument();
+    expect(screen.queryByText('Progress saves to your account.')).toBeNull();
     expect(screen.queryByText(/stays on this device only/)).toBeNull();
   } finally {
     auth.value = signedOut;
   }
+});
+
+// Topic selection changes both the preview and the destination of its action.
+it('starts the selected learning path from its renamed action', async () => {
+  server.use(settingsHandler);
+  function Where() {
+    const location = useLocation();
+    return <p data-testid="location">{location.pathname + location.search}</p>;
+  }
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  render(<QueryClientProvider client={client}><MemoryRouter initialEntries={['/']}><LanguageProvider><Routes>
+    <Route path="/" element={<Home />} /><Route path="/learn" element={<Where />} />
+  </Routes></LanguageProvider></MemoryRouter></QueryClientProvider>);
+  fireEvent.click(screen.getByRole('button', { name: 'Learn TypeScript' }));
+  const path = screen.getByRole('list', { name: 'Learn path for TypeScript' });
+  expect(within(path).getAllByRole('listitem')).toHaveLength(6);
+  expect(within(path).getByText('Basic Types')).toBeInTheDocument();
+  expect(screen.queryByRole('button', { name: 'Start learning JavaScript' })).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Start learning TypeScript' }));
+  expect(await screen.findByTestId('location')).toHaveTextContent('/learn?topic=typescript');
 });
