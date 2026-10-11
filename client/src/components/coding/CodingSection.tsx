@@ -215,9 +215,7 @@ function StatusText({ status }: { status: Status }) {
   return <span className={`cd-row__status cd-status--${status}`}>{t(`coding.status.${status}` as never)}</span>;
 }
 
-/** A star that saves a challenge for later. Saving records interest, never
- * access: a locked item stays in the list with its explanation and still
- * refuses to open. */
+/** Save is offered only after both access and progression are known to open a challenge. */
 function SaveButton({ taskId, saved, onToggle, busy, toolbar = false }: { taskId: string; saved: boolean; onToggle: (next: boolean) => void; busy: boolean; toolbar?: boolean }) {
   const { t } = useLanguage();
   return (
@@ -258,7 +256,7 @@ function TaskRow({ task, status, premium = 'open', saved, onSave, saving }: {
       <StatusText status={status} />
     </>
   );
-  const save = onSave
+  const save = onSave && !locked && status !== 'premium' && premium === 'open'
     ? <SaveButton taskId={task.id} saved={saved === true} busy={saving === true} onToggle={(next) => onSave(task.id, next)} />
     : null;
   return (
@@ -909,7 +907,7 @@ export function CodingTaskScreen() {
             backHref={backHref}
             // The star sits with the workbench's own utilities, beside the
             // report flag, rather than floating above the brief.
-            saveAction={isAuthenticated && (
+            saveAction={isAuthenticated && !data.locked && (
               <SaveButton
                 toolbar
                 taskId={data.task.id}
