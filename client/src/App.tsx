@@ -463,7 +463,7 @@ function App() {
     location.pathname === '/classroom' ||
     location.pathname.startsWith('/coding') ||
     location.pathname.startsWith('/play');
-  const contentMaxWidth = isDev ? 'none' : isHome ? 1200 : isWide ? 1200 : 800;
+  const contentMaxWidth = isDev ? 'none' : isHome ? 1600 : isWide ? 1200 : 800;
 
   // 1–5 shark fins on the footer ocean line, at random (non-overlapping) spots
   // each page load, each independently facing left or right so the school

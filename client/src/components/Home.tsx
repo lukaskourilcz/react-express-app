@@ -1,7 +1,7 @@
 import { captureActivation } from '../lib/analytics';
 // The landing page at "/" — the editorial "Deep End v2" redesign. Instead of a
-// generic hero + three feature cards, it opens with a product-forward pitch: a
-// product-video banner, a topic picker
+// generic hero + three feature cards, it opens with a product-forward pitch: an
+// interactive JavaScript sample question, a topic picker
 // whose cards host schools of shark fins on hover, a live "Inside <Topic>"
 // roadmap preview, the everything-else feature strip, the plan table and the
 // pricing pledge. The accent comes from var(--brand-accent). The app shell
@@ -21,12 +21,11 @@ import { useAuth } from '../lib/auth';
 import { openSignIn } from '../lib/signInDialog';
 import { useActiveSubject } from '../lib/subjects';
 import { LANDING_TOPICS, type LandingTopic, type FinSpec } from '../lib/landingTopics';
-import { Kicker, StatItem, FadeFinCta, SwimCta, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
+import { Kicker, StatItem, FadeFinCta, SwimCta, SampleCard, PathStrip, CheckpointNode, pathWave, type StatSpec } from './landing/LandingKit';
 import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import { LaunchOfferBanner } from './LaunchOffer';
-import { HomeVideoBanner } from './landing/HomeVideoBanner';
 import ComparisonTable from './landing/ComparisonTable';
 import './landing/landingSections.css';
 
@@ -172,6 +171,8 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<string>(featured[0]?.id ?? '');
   const selected = featured.find((x) => x.id === selectedId) ?? featured[0];
 
+  const sample = featured.find((topic) => topic.id === 'javascript');
+
   const heroTitle = t('home.title');
   const heroSubtitle = t('home.subtitle');
   const moreCount = subject.topics.length - featured.length;
@@ -220,7 +221,16 @@ export default function Home() {
             {stats.map((s) => <StatItem key={s.label} {...s} />)}
           </div>
         </div>
-        <HomeVideoBanner />
+        {sample && (
+          <div className="ss-home-sample">
+            <SampleCard
+              showTeaser={false}
+              chip={`${sample.name} · ${t('home.sampleChip', { level: sample.levels[0] })}`}
+              question={sample.question}
+              onAnswered={() => captureActivation('landing_sample_completed', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: sample.id })}
+            />
+          </div>
+        )}
       </section>
 
       {/* ── Topic picker ── */}

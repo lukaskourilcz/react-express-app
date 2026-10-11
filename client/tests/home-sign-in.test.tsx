@@ -64,7 +64,7 @@ it('keeps progress-storage copy off the homepage for guests and accounts', async
   const guest = renderHome();
   expect(screen.queryByText(/stays on this device only/)).toBeNull();
   expect(screen.getByRole('button', { name: 'Start learning JavaScript' })).toBeInTheDocument();
-  expect(screen.getByRole('region', { name: 'devShark product video' })).toHaveTextContent('Product video coming soon.');
+  expect(screen.getByRole('group', { name: 'What does this return?' })).toHaveTextContent('2 ** 3;');
   expect(screen.queryByRole('textbox', { name: 'Your code' })).toBeNull();
   expect(screen.queryByText('Progress saves to your account.')).toBeNull();
   expect(screen.getByText('Loops, array methods, types and components with real tests.')).toBeInTheDocument();
@@ -97,7 +97,26 @@ it('starts the selected learning path from its renamed action', async () => {
   const path = screen.getByRole('list', { name: 'Learn path for TypeScript' });
   expect(within(path).getAllByRole('listitem')).toHaveLength(6);
   expect(within(path).getByText('Basic Types')).toBeInTheDocument();
+  expect(screen.getByRole('group', { name: 'What does this return?' })).toHaveTextContent('2 ** 3;');
   expect(screen.queryByRole('button', { name: 'Start learning JavaScript' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Start learning TypeScript' }));
   expect(await screen.findByTestId('location')).toHaveTextContent('/learn?topic=typescript');
+});
+
+it.each([
+  ['B 8', 'Correct.'],
+  ['A 6', 'Incorrect. The answer is 8.'],
+])('answers the restored JavaScript sample once: %s', (answer, feedback) => {
+  server.use(settingsHandler);
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
+  render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
+  const sample = screen.getByRole('group', { name: 'What does this return?' });
+  expect(within(sample).getAllByRole('button')).toHaveLength(4);
+  const card = within(sample.parentElement!);
+  expect(card.queryByRole('status')).toBeNull();
+  fireEvent.click(within(sample).getByRole('button', { name: answer }));
+  expect(card.getByRole('status')).toHaveTextContent(feedback);
+  expect(card.getByRole('status')).toHaveTextContent('The ** operator is exponentiation');
+  for (const option of within(sample).getAllByRole('button')) expect(option).toBeDisabled();
+  expect(screen.queryByRole('region', { name: 'devShark product video' })).toBeNull();
 });
