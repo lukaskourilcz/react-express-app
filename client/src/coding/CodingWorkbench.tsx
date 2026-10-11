@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Button } from '@astryxdesign/core/Button';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
@@ -20,7 +21,7 @@ import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
 import { ReportDialog } from '../components/ReportDialog';
-import { FlagIcon } from '../components/ui/icons';
+import { FlagIcon, InfoIcon, PlayIcon, FormatCodeIcon } from '../components/ui/icons';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
@@ -38,6 +39,22 @@ import './Coding.css';
 /** Moves focus to a confirmation's safe choice when it appears. Module-level,
  * so its identity is stable and it runs once per mount. */
 const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
+
+function ComplexityInfo({ guidance }: { guidance: ReturnType<typeof complexityGuidance> }) {
+  // Hover/focus use Astryx's normal tooltip behavior; a tap pins it until a
+  // second tap, focus leaves, or Escape. This keeps the information reachable
+  // on touch screens, where the shared tooltip suppresses simulated hover.
+  const [pinned, setPinned] = useState<boolean | undefined>(undefined);
+  return <Tooltip isOpen={pinned} placement="above" content={<div className="cd-complexity__tip">
+    {guidance.targetSpace && <p>Target extra space: <code>{guidance.targetSpace}</code>.</p>}
+    <p>{guidance.note}</p>
+  </div>}>
+    <Button variant="ghost" isIconOnly icon={<InfoIcon size={16} />} label="About Big O complexity" className="cd-complexity__info"
+      onClick={() => setPinned((value) => value === true ? false : true)}
+      onBlur={() => setPinned(false)} onFocus={() => setPinned(undefined)} onMouseEnter={() => setPinned(undefined)}
+      onKeyDown={(event) => { if (event.key === 'Escape') setPinned(false); }} />
+  </Tooltip>;
+}
 
 /** A React suite that moves focus inside the preview frame takes the page's
  * focus with it. Call before a run; the function it returns gives focus back
@@ -565,7 +582,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     : '';
 
   const busy = phase !== 'idle';
-  const submitDisabled = busy || !session || !online || Boolean(solution);
+  const submitDisabled = mode === 'landing' || busy || !session || !online || Boolean(solution);
 
   // The shortcut does what the button would: nothing, while Submit is off.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -815,6 +832,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       );
     }
     const tests = task.tests ?? [];
+    // Landing shows three examples; Run and server grading still execute the
+    // complete test suite. Full challenge screens keep every result visible.
+    const visibleTests = mode === 'landing' ? tests.slice(0, 3) : tests;
     if (!run) {
       // Before the first run every test is already on the board — the call
       // that goes in and the value that should come out — with no verdict.
@@ -823,7 +843,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           <p className="cd-console__empty">{t('coding.results.idle')}</p>
           {tests.length > 0 && (
             <ul className="cd-results">
-              {tests.map((test, index) => codeRow(test, undefined, index))}
+              {visibleTests.map((test, index) => codeRow(test, undefined, index))}
             </ul>
           )}
         </>
@@ -841,7 +861,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           {stale && <small>{t('coding.results.stale')}</small>}
         </p>
         <ul className="cd-results">
-          {run.results.map((result, index) => codeRow(tests[index] ?? { call: '', expected: undefined }, result, index))}
+          {(mode === 'landing' ? run.results.slice(0, 3) : run.results).map((result, index) => codeRow(tests[index] ?? { call: '', expected: undefined }, result, index))}
         </ul>
       </>
     );
@@ -1015,11 +1035,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
       </div>
       <Prompt className="cd-prompt" text={L(task.prompt)} />
-      <details className="cd-complexity">
-        <summary>Big O{complexity.targetTime ? ` · Target ${complexity.targetTime} time` : ' · Efficiency guidance'}</summary>
-        {complexity.targetSpace && <p>Target extra space: <code>{complexity.targetSpace}</code>.</p>}
-        <p>{complexity.note}</p>
-      </details>
+      <div className="cd-complexity">
+        <span>Big O{complexity.targetTime ? ` · Target ${complexity.targetTime} time` : ' · Efficiency guidance'}</span>
+        <ComplexityInfo guidance={complexity} />
+      </div>
       {/* Earlier briefs still apply, but they are context now, not the
           task: smaller, lighter, and numbered by the stage that set them. */}
       {Boolean(task.previousRequirements?.length) && <details className="cd-previous">
@@ -1050,9 +1069,9 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {!puzzleMode && !pendingOnDesktop && <>
         {/* Busy, not disabled: the button that was pressed keeps the focus
             (a disabled one hands it to the page), and a press does nothing. */}
-        <Button variant="secondary" onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
-        <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
-        <Button variant="ghost" onClick={() => void format()} isDisabled={formatDisabled} label={t('coding.format')} />
+        <Button variant="secondary" isIconOnly={mode === 'landing'} icon={mode === 'landing' ? <PlayIcon /> : undefined} onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : mode === 'landing' ? t('coding.run') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
+        {mode !== 'landing' && <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />}
+        <Button variant="ghost" isIconOnly={mode === 'landing'} icon={mode === 'landing' ? <FormatCodeIcon /> : undefined} onClick={() => void format()} isDisabled={formatDisabled} tooltip={mode === 'landing' ? t('coding.format') : undefined} label={t('coding.format')} />
         <Button variant="ghost" ref={resetRef} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
         </>}
 
@@ -1064,7 +1083,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           tooltip={hintUnavailable || undefined}
           label={taken === 0 ? t('coding.hint') : t('coding.hintNext')}
         />
-        {session && !solution && !solutions && (
+        {mode !== 'landing' && session && !solution && !solutions && (
           <Button
             variant="ghost"
             ref={revealRef}
@@ -1077,7 +1096,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {signedIn && mode === 'section' && !skipResult && (
           <Button variant="ghost" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />
         )}
-        <div className="cd-actions cd-actions--utility">
+        {mode !== 'landing' && <div className="cd-actions cd-actions--utility">
           {!locked && saveAction}
           <Button
             variant="ghost"
@@ -1087,7 +1106,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             tooltip={t('coding.reportTask')}
             onClick={() => setReportOpen(true)}
           />
-        </div>
+        </div>}
       </div>
     </div>
   );
@@ -1143,10 +1162,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             <div className="cd-editor-slot">
               {/* Shorter on a narrow screen, so Run and Submit are not a screen
                   away from the code; it still grows with the code. */}
-              <Editor minHeight={mode === 'landing' ? 220 : narrow ? 280 : 480} maxHeight={mode === 'landing' ? 220 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
+              <Editor minHeight={mode === 'landing' ? 160 : narrow ? 280 : 480} maxHeight={mode === 'landing' ? 160 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
               {/* The shortcuts are not printed on the page; a screen reader
                   hears them with the editor, Escape then Tab included. */}
-              <span id={`${baseId}-keys`} className="cd-visually-hidden">{t('coding.shortcuts')}</span>
+              <span id={`${baseId}-keys`} className="cd-visually-hidden">{t(mode === 'landing' ? 'coding.shortcuts.preview' : 'coding.shortcuts')}</span>
             </div>
             {!puzzleMode && !pendingOnDesktop && actionBar}
           </section>
@@ -1323,7 +1342,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       </div>
       {/* The same dialog the quiz uses, carrying the task id and the version of
           the brief that was on screen. Reporting needs no account. */}
-      <ReportDialog
+      {mode !== 'landing' && <ReportDialog
         open={reportOpen}
         onClose={() => setReportOpen(false)}
         onSubmit={async (reason, detail) => {
@@ -1335,7 +1354,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           });
           setReportOpen(false);
         }}
-      />
+      />}
     </div>
   );
 }

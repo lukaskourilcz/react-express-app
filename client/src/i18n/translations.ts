@@ -1657,6 +1657,7 @@ export const en = {
   'coding.repeat.cooldown': 'No XP this time: its XP opens again at {time}. Reset the task then.',
   'coding.resetCancel': 'Keep my code',
   'coding.shortcuts': 'Ctrl+Enter runs, Ctrl+Shift+Enter submits. Escape then Tab leaves the editor.',
+  'coding.shortcuts.preview': 'Ctrl+Enter runs. Escape then Tab leaves the editor.',
   'coding.hint': 'Hint',
   'coding.hintNext': 'Next hint',
   'coding.hintTip.locked': 'Hints open after a minute of editing, or after one failed run.',

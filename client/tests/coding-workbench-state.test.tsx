@@ -45,13 +45,13 @@ const outcome = (extra: Partial<RunOutcome>): RunOutcome => ({ results: [], logs
 const status = () => document.querySelector('.cd-workbench > [role="status"]')!;
 const editor = () => screen.getByLabelText('Test editor');
 
-function mount(props: { signedIn?: boolean; subject?: PlayableCodingTask } = {}) {
+function mount(props: { signedIn?: boolean; subject?: PlayableCodingTask; mode?: 'section' | 'landing' } = {}) {
   return render(
     <MemoryRouter initialEntries={['/coding/javascript/js-test-state']}>
       <LanguageProvider>
         <Routes>
           <Route path="/coding/javascript/js-test-state" element={(
-            <CodingWorkbench task={props.subject ?? task} session="test-session" locked={null} initialCode={null} signedIn={props.signedIn ?? true} mode="section" />
+            <CodingWorkbench task={props.subject ?? task} session="test-session" locked={null} initialCode={null} signedIn={props.signedIn ?? true} mode={props.mode ?? 'section'} />
           )} />
           <Route path="/coding/:track/:taskId" element={<h1>Another task</h1>} />
         </Routes>
@@ -354,4 +354,54 @@ it('shows an accepted order as an order, not a pass, and asks for no approaches'
   expect(status()).toHaveTextContent('That order works.');
   expect(screen.queryByRole('link', { name: 'Next task' })).toBeNull();
   expect(vi.mocked(useCodingApproaches).mock.calls.every(([, enabled]) => enabled === false)).toBe(true);
+});
+
+it('shows three landing examples while Run still checks every test', async () => {
+  const subject = { ...task, tests: [1, 2, 3, 4, 5].map(n => ({ call: `double([${n}])`, expected: [n * 2] })) };
+  vi.mocked(runCodeTests).mockResolvedValue(outcome({ results: subject.tests.map(test => ({ pass: true, actual: JSON.stringify(test.expected), error: null })) }));
+  mount({ subject, mode: 'landing' });
+  const results = screen.getByRole('tabpanel', { name: 'Results' });
+  expect(within(results).getAllByRole('listitem')).toHaveLength(3);
+  fireEvent.click(screen.getByRole('button', { name: 'Run' }));
+  await waitFor(() => expect(within(results).getByText('5 of 5 passing')).toBeVisible());
+  expect(within(results).getAllByRole('listitem')).toHaveLength(3);
+  expect(vi.mocked(runCodeTests).mock.calls[0][0].tests).toHaveLength(5);
+});
+
+it('keeps Big O space targets and guidance exclusively inside its named tooltip', () => {
+  mount({ subject: { ...task, prompt: { en: 'Target: O(n) time, and O(1) extra space.', cs: '' } } });
+  expect(screen.getByText('Big O · Target O(n) time')).toBeVisible();
+  const info = screen.getByRole('button', { name: 'About Big O complexity' });
+  const tooltip = document.getElementById(info.getAttribute('aria-describedby')!)!;
+  expect(tooltip).toHaveAttribute('role', 'tooltip');
+  expect(tooltip).toHaveTextContent('Target extra space: O(1).');
+  expect(tooltip).toHaveTextContent('n is the size of the input.');
+  expect(document.querySelector('.cd-complexity details')).toBeNull();
+  expect(document.querySelector('.cd-complexity > span')).not.toHaveTextContent('Target extra space');
+});
+
+it('uses named icons and tooltips only for the homepage command buttons', () => {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
+  const landing = mount({ mode: 'landing' });
+  for (const name of ['Run', 'Format']) {
+    const button = screen.getByRole('button', { name });
+    expect(button.querySelector('svg')).not.toBeNull();
+    expect(button).not.toHaveTextContent(name);
+    expect(document.getElementById(button.getAttribute('aria-describedby')!)).toHaveTextContent(name);
+  }
+  expect(screen.queryByRole('button', { name: 'Submit' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Solution' })).toBeNull();
+  expect(screen.queryByRole('button', { name: 'Report a problem with this task' })).toBeNull();
+  fireEvent.keyDown(editor(), { key: 'Enter', ctrlKey: true, shiftKey: true });
+  expect(submitCoding).not.toHaveBeenCalled();
+  landing.unmount();
+  mount();
+  for (const name of ['Run', 'Submit', 'Format']) {
+    expect(screen.getByRole('button', { name })).toHaveTextContent(name);
+  }
+  expect(screen.getByRole('button', { name: 'Solution' })).toBeVisible();
+  expect(screen.getByRole('button', { name: 'Report a problem with this task' })).toBeVisible();
 });

@@ -9,14 +9,22 @@ Apple is the application-wide design, applied before first paint. The prototype
 comparison control and `?design=original` override have been removed. Dark mode
 retains the Deep End blue-green background and grain.
 
-The homepage sample is a two-card carousel on tablets and desktop (600px and
-above), with the quiz initially shown and a real `alg-valid-palindrome` workbench
-on Coding. The editor and task session load together on the first Coding press;
-code is retained when switching slides. Mobile mounts only the quiz. The task,
-Run, Format, Submit, visible tests and hidden server checks reuse Coding's API
-and workbench. This is an actual challenge, with normal grading and rewards.
+The homepage has quiz and `js-double-numbers` sample cards on tablets and desktop
+(600px and above), with two accessible dots below the stack to switch cards.
+Each new homepage mount randomly selects the first card, kept stable while
+interacting. Only a visited coding card loads the editor and task session;
+switching cards or resizing to mobile and back retains its draft. The coding
+preview shows three bottom-aligned examples; Run still checks the full suite.
+Mobile mounts only the quiz, without dots. The task, editor, Run and Format reuse
+Coding's API and workbench. Only the landing card uses 44px icon buttons for Run
+(play) and Format (aligned lines), with named tooltips. Its starter omits the
+scratch-pad instruction, and it has no Submit, Solution or report action. Its
+keyboard shortcut cannot submit. Full coding exercises retain their text
+commands, server grading, solution and report actions.
 
-Each workbench includes Big O guidance. Only authored targets are called targets.
+Each workbench includes a Big O label and an adjacent info tooltip containing
+space targets and explanatory guidance, available by hover, focus and tap.
+Only authored targets are called targets.
 Submit adds a bounded AST estimate for recognised loops, traversal and sorting;
 unsupported constructs report “Cannot determine”. It is advisory, explains its
 assumptions, and never changes correctness or XP. Type-only, React and design
