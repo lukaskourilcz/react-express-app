@@ -2,6 +2,7 @@ import { apiFetch } from './api';
 import { staleProfileStats } from './queryClient';
 import type { Question } from '../types/quiz';
 import { getSubject, deliveryCategoriesForSubject } from './subjects';
+import type { QuestionXpHeld } from '../../../shared/repeat-xp';
 
 // Biggest Shark Challenge client. All resources live on one Vercel function
 // (to stay within the 12-function Hobby limit), differentiated by method +
@@ -60,8 +61,10 @@ export function submitChallengeScore(input: { name: string; runToken: string; pr
   });
 }
 
-export async function completeChallengeRun(input: { runToken: string; proofs: string[] }): Promise<{ ok: true; awarded: boolean; score: number; xp?: number }> {
-  const result = await apiFetch<{ ok: true; awarded: boolean; score: number; xp?: number }>('/api/quiz/challenge?resource=complete', {
+/** `xpHeld`: the correct answers whose question paid XP less than an hour
+ * ago, which paid nothing, and when they pay again (migration 060). */
+export async function completeChallengeRun(input: { runToken: string; proofs: string[] }): Promise<{ ok: true; awarded: boolean; score: number; xp?: number; xpHeld?: QuestionXpHeld }> {
+  const result = await apiFetch<{ ok: true; awarded: boolean; score: number; xp?: number; xpHeld?: QuestionXpHeld }>('/api/quiz/challenge?resource=complete', {
     method: 'POST',
     body: JSON.stringify(input),
   });

@@ -25,8 +25,10 @@
  * a quiz's coins for the XP migration 048 says it awarded, also on a retry
  * the routine answers FALSE after a commit that timed out, and for the
  * receipt's XP before 048 adds that column. Sign-in and the deletion of
- * the sign-in identity are answered by the same stand-in. Nothing leaves the
- * machine. */
+ * the sign-in identity are answered by the same stand-in. From migration 060
+ * a quiz result and a Challenge run name the answers the question hour held
+ * back, and before 060 the handlers fall back to 058's routines. Nothing
+ * leaves the machine. */
 
 import assert from 'node:assert/strict';
 import { createServer, type IncomingMessage } from 'node:http';
@@ -268,6 +270,36 @@ async function main() {
     delete UNKNOWN_ARGS.record_challenge_completion;
     delete INSTALLED.record_challenge_completion;
 
+    // From migration 060 the completion names the right answers whose
+    // question paid XP less than an hour ago, and the XP the award holds; the
+    // response passes both on for the toast. Every case above asked 060's
+    // routine first and fell back on its PGRST202.
+    const heldAt = '2026-10-09T14:32:00+00:00';
+    for (const [label, answer, expected] of [
+      ['one answer held back', { awarded: true, xp: 5, xpHeld: { questions: 1, availableAt: heldAt } }, { awarded: true, xp: 5 }],
+      ['every answer held back', { awarded: false, xp: 0, xpHeld: { questions: 2, availableAt: heldAt } }, { awarded: false, xp: 10 }],
+    ] as const) {
+      INSTALLED.record_challenge_completion_v2 = answer;
+      calls.length = 0;
+      const played = tokens.createChallengeRun(true, 'webdev');
+      const finished = mockResponse();
+      await challenge({
+        method: 'POST',
+        headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.12' },
+        query: { resource: 'complete' },
+        url: '/api/quiz/challenge?resource=complete',
+        body: { runToken: played.runToken, proofs: answered(played.runId) },
+      } as never, finished as never);
+      assert.equal(finished.statusCode, 200, `${label}: ${JSON.stringify(finished.body)}`);
+      assert.deepEqual({ awarded: finished.body.awarded, xp: finished.body.xp }, expected, `${label}: the award the routine named`);
+      assert.deepEqual(finished.body.xpHeld, { questions: answer.xpHeld.questions, availableAt: '2026-10-09T14:32:00.000Z' }, `${label}: the held answers and their time`);
+      const names = calls.map((call) => call.name);
+      assert.ok(!names.includes('record_challenge_completion'), `${label}: one call on 060 (${names.join(', ')})`);
+      assert.ok(!names.includes('read:verified_activity_awards'), `${label}: the routine named the award, so nothing is read back`);
+      assert.equal(calls.find((call) => call.name === 'record_challenge_completion_v2')?.args.p_outcomes !== undefined, true, `${label}: with the answers`);
+    }
+    delete INSTALLED.record_challenge_completion_v2;
+
     // The tier before 039: every account reads as free, so a cleared step
     // stays open and a new Premium step answers 402, never 503.
     calls.length = 0;
@@ -494,6 +526,48 @@ async function main() {
         assert.equal(credit, undefined, `${label}: no coins`);
       }
     }
+    // From migration 060 the record also names the right answers whose
+    // question paid XP less than an hour ago; the response passes them on
+    // for the toast. Every case above asked 060's routine first and fell back
+    // to 058's on its PGRST202, and so says nothing about held answers.
+    TABLE_READS.quiz_attempts = { status: 200, body: [{ quest_xp: 16 }] };
+    for (const installed of [true, false]) {
+      if (installed) INSTALLED.record_verified_quiz_result_v3 = { applied: true, xpHeld: { questions: 8, availableAt: '2026-10-09T14:32:00+00:00' } };
+      else INSTALLED.record_verified_quiz_result_v2 = true;
+      calls.length = 0;
+      const held = tokens.encodeQuizResultReceipt({
+        userId: USER.id,
+        correct: 10,
+        total: 10,
+        breakdown: { html: { correct: 10, total: 10 } },
+        outcomes: Array.from({ length: 10 }, (_, i) => ({ questionId: `fallback-html-${i}`, category: 'html', isCorrect: true, xp: 8 })),
+        subject: 'webdev',
+        questXp: 80,
+        purpose: 'quiz',
+      });
+      const saved = mockResponse();
+      await userOps({
+        method: 'POST',
+        headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.7' },
+        query: { op: 'stats' },
+        url: '/api/user/stats',
+        body: { result_receipt: held },
+      } as never, saved as never);
+      assert.equal(saved.statusCode, 200, JSON.stringify(saved.body));
+      assert.equal(saved.body?.applied, true);
+      assert.equal(saved.body?.questXp, 16, 'the awarded XP is read as before');
+      const names = calls.map((call) => call.name);
+      if (installed) {
+        assert.deepEqual(saved.body?.xpHeld, { questions: 8, availableAt: '2026-10-09T14:32:00.000Z' }, 'on 060 the held answers reach the client');
+        assert.ok(!names.includes('record_verified_quiz_result_v2'), `one call on 060 (${names.join(', ')})`);
+        assert.equal(calls.find((call) => call.name === 'record_verified_quiz_result_v3')?.args.p_quest_xp, 80, 'with the receipt as 058 takes it');
+      } else {
+        assert.equal(saved.body?.xpHeld, undefined, 'before 060 nothing is said about held answers');
+        assert.ok(names.indexOf('record_verified_quiz_result_v3') >= 0 && names.indexOf('record_verified_quiz_result_v2') > names.indexOf('record_verified_quiz_result_v3'),
+          `before 060 the handler falls back to 058's routine (${names.join(', ')})`);
+      }
+      delete INSTALLED.record_verified_quiz_result_v3;
+    }
     delete TABLE_READS.quiz_attempts;
     INSTALLED.record_verified_quiz_result_v2 = false;
 
@@ -588,7 +662,7 @@ async function main() {
   } finally {
     server.close();
   }
-  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the name and picture of the Google identity and ignores the body and user_metadata, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; a finished challenge run sends its answers from 052 and only its breakdown before; the streak shield returns every shielded date and answers 409 shield_would_end_streak when the routine refuses; against a stand-in that answers PGRST202 as PostgREST 12 does.');
+  console.log('Migration fallbacks passed: before 039 and 040, the 30-day board answers rpc_missing, a finished challenge run keeps its XP through the older routine, and the tier reads free; before 045, a voucher redemption answers 503 voucher_unavailable while the plan, the admin console and the tier gate keep working; after 046, an account deletion calls delete_user_data alone; the stats write stores the name and picture of the Google identity and ignores the body and user_metadata, and credits the coins of a quiz for the XP the routine awarded; a friend request answers pending_out; a finished challenge run sends its answers from 052 and only its breakdown before; from 060 a quiz result and a challenge run pass on the answers the question hour held back, and before 060 fall back to the routines of 058; the streak shield returns every shielded date and answers 409 shield_would_end_streak when the routine refuses; against a stand-in that answers PGRST202 as PostgREST 12 does.');
 }
 
 main().catch((error) => {

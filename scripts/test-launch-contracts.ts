@@ -3047,6 +3047,20 @@ function monthlyXpContracts() {
   assert.equal(learn.file, 'supabase-schema-056.sql', 'the Learn completion that credits the month is the one that runs');
   assert.match(learn.body, /IF p_user_id IS NOT NULL AND v_passed AND NOT v_was_passed THEN\s+PERFORM public\.add_xp_day\(p_user_id, v_attempt\.subject, public\.learn_step_xp\(v_attempt\.kind, v_attempt\.ref\)\);/,
     'only a first pass earns a step its learning XP');
+  // A Learn replay pays its XP again an hour after the step last paid (060),
+  // through the award routine, so the month counts it too, and only the new
+  // code calls it: the completion production calls keeps 056's body.
+  const repeat = newest.get('complete_verified_roadmap_attempt_v2')!;
+  assert.equal(repeat.file, 'supabase-schema-060.sql');
+  assert.match(repeat.body, /v_applied := public\.complete_verified_roadmap_attempt\(p_user_id, p_attempt_id, p_coding_task_ids\);/,
+    'the replay wraps the completion of 056');
+  assert.match(repeat.body, /AND last_xp_at <= NOW\(\) - INTERVAL '60 minutes'/, 'an hour after the step last paid');
+  assert.match(repeat.body, /public\.record_verified_activity_xp\(p_user_id, 'learn-repeat:' \|\| p_attempt_id, v_attempt\.subject, v_xp\)/,
+    'under the attempt\'s own award id, into the balance and the month');
+  const roadmapHandler = read('api/quiz/roadmap.ts');
+  assert.match(roadmapHandler, /supabase\.rpc\('complete_verified_roadmap_attempt_v2', completion\)/, 'the Learn completion asks 060 first');
+  assert.match(roadmapHandler, /if \(isRpcMissing\(completed\.error\)\) \{\s+completed = await withTimeout\(supabase\.rpc\('complete_verified_roadmap_attempt', completion\)\);/,
+    'and completes as before on a database without it');
   // learn_step_xp is shared/progression.ts in SQL.
   const progression = read('shared/progression.ts');
   assert.match(progression, /export const LEVEL_XP_PER_DIFFICULTY = 50;/);

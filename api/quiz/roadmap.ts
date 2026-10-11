@@ -102,6 +102,7 @@ import { refuseLocked } from '../../lib/access';
 import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
 import { creditReferral } from '../../lib/rewards/referral';
 import type { GatedContent } from '../../shared/tiers';
+import { learnRepeatXpOf, type LearnRepeatXp } from '../../shared/repeat-xp';
 
 // One function for the whole roadmap to stay within the Vercel Hobby
 // 12-function limit. It serves three things off the same route:
@@ -1233,6 +1234,7 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
 
   let progress: unknown;
   let applied = false;
+  let repeatXp: LearnRepeatXp | null = null;
   if (endedOnHearts) {
     if (!attempt.completed_at) {
       const closed = await withTimeout(
@@ -1263,13 +1265,18 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     // Only a first pass earns a step's learning XP, so only a first pass
     // credits coins. Read before the completion writes the pass (#227).
     const passedBefore = passed ? await stepPassed(userId, session) : null;
-    const completed = await withTimeout(
-      supabase.rpc('complete_verified_roadmap_attempt', {
-        p_user_id: userId,
-        p_attempt_id: session.attemptId,
-        p_coding_task_ids: session.codingTaskIds ?? null,
-      }),
-    );
+    const completion = {
+      p_user_id: userId,
+      p_attempt_id: session.attemptId,
+      p_coding_task_ids: session.codingTaskIds ?? null,
+    };
+    // From migration 060 the completion also pays a replayed step its XP
+    // again, an hour after the step last paid (owner decision of 9 Oct
+    // 2026), and says so. Before 060 the completion of 056 answers alone.
+    let completed = await withTimeout(supabase.rpc('complete_verified_roadmap_attempt_v2', completion));
+    if (isRpcMissing(completed.error)) {
+      completed = await withTimeout(supabase.rpc('complete_verified_roadmap_attempt', completion));
+    }
     if (completed.error) {
       if (isRpcMissing(completed.error)) {
         return jsonError(res, 503, 'migration_required', 'Verified learning migration is not installed');
@@ -1282,7 +1289,10 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
       }
       return jsonError(res, 500, 'db_error', 'Could not save learning progress');
     }
-    applied = completed.data === true;
+    const outcome = completed.data as { applied?: unknown; repeatXp?: unknown } | boolean | null;
+    applied = typeof outcome === 'object' && outcome !== null ? outcome.applied === true : outcome === true;
+    // XP only: a repeat credits no coins and is no first pass.
+    repeatXp = typeof outcome === 'object' && outcome !== null ? learnRepeatXpOf(outcome.repeatXp) : null;
     const row = await withTimeout(
       supabase.from(PROGRESS_TABLE).select('data').eq('user_id', userId).maybeSingle(),
     );
@@ -1347,11 +1357,12 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
     }
   }
 
-  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, codingUnverified, outOfHearts: endedOnHearts });
+  logEvent({ status: 200, kind: 'complete', topic: session.topic, passed, hasUser: !!userId, codingPending: codingPending.length, codingUnverified, outOfHearts: endedOnHearts, repeatXp: repeatXp?.xp ?? null });
   return res.json({
     correctAnswers, totalQuestions, percentage, passed, applied, codingPending,
     ...(codingUnverified ? { codingUnverified: true } : {}),
     ...(progress ? { progress } : {}),
+    ...(repeatXp ? { repeatXp } : {}),
   });
 }
 

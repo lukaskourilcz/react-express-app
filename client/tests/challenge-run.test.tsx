@@ -32,6 +32,8 @@ const api = vi.hoisted(() => ({
   release: null as null | (() => void),
   /** The account's XP after a credited run (GET /api/user/xp). */
   accountXp: 0,
+  /** Right answers the question hour held back (migration 060), per run. */
+  held: null as null | { questions: number; availableAt: string },
   /** "Show my name and photo on leaderboards". */
   visible: false,
   scores: [] as { name: string; runToken: string }[],
@@ -93,7 +95,8 @@ vi.mock('../src/lib/api', async (importOriginal) => {
       api.completions.push({ runToken: body.runToken, proofs: body.proofs, status: outcome.status });
       if (outcome.status !== 200) return fail(outcome.status, outcome.code ?? 'error');
       const score = body.proofs.filter((proof) => proof.endsWith(':true')).length;
-      return { ok: true, awarded: score > 0, score, xp: score * 5 };
+      const held = api.held ? Math.min(api.held.questions, score) : 0;
+      return { ok: true, awarded: score - held > 0, score, xp: (score - held) * 5, ...(api.held ? { xpHeld: api.held } : {}) };
     }
     if (parsed.pathname === '/api/quiz/challenge' && opts.method === 'POST' && !parsed.searchParams.has('resource')) {
       const body = JSON.parse(String(opts.body)) as { name: string; runToken: string };
@@ -179,6 +182,7 @@ beforeEach(() => {
   api.holdBatch = 0;
   api.release = null;
   api.accountXp = 0;
+  api.held = null;
   api.visible = false;
   api.scores.length = 0;
   api.cards.length = 0;
@@ -590,6 +594,40 @@ describe('the Hall of Fame name', () => {
     await settle();
     expect((screen.getByLabelText('Your name') as HTMLInputElement).value).toBe('');
   });
+});
+
+// Migration 060: a right answer whose question paid XP less than an hour ago
+// pays nothing (058). The completion names those answers and when the last
+// of them pays again; the learner hears it after the gain, and also when no
+// answer paid at all.
+describe('answers the hour held back', () => {
+  for (const [label, held, gains] of [
+    ['one of two', { questions: 1, availableAt: '2026-10-09T14:32:00.000Z' }, [5]],
+    ['every one', { questions: 2, availableAt: '2026-10-09T14:40:00.000Z' }, []],
+  ] as const) {
+    it(`are told in a toast when ${label} is held back`, async () => {
+      const toasts: XpToast[] = [];
+      const stop = onXpToast((toast: XpToast) => toasts.push(toast));
+      try {
+        api.auth = SIGNED_IN;
+        api.held = held;
+        await mount();
+        await start();
+        await answer('right');
+        await next();
+        await answer('right');
+        await next();
+        await strikeOutNow();
+        const expected: XpToast[] = [
+          ...gains.map((amount) => ({ kind: 'gain', amount, source: 'quiz' }) as XpToast),
+          { kind: 'held', hold: { on: 'questions', count: held.questions, availableAt: held.availableAt } },
+        ];
+        await waitFor(() => expect(toasts.filter((toast) => toast.kind !== 'rankup')).toEqual(expected));
+      } finally {
+        stop();
+      }
+    });
+  }
 });
 
 describe('a run’s rank-up', () => {

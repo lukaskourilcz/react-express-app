@@ -26,6 +26,7 @@ import { eligibleServerBadges, type BadgeStatsSummary } from '../../shared/badge
 import { eligibleCodingBadges } from '../../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../../lib/coding/active';
 import { isMastered, type LevelMasteryEntry } from '../../shared/mastery';
+import { questionXpHeldOf } from '../../shared/repeat-xp';
 import { handleCodingDraft, handleCodingProgress } from '../../lib/coding/handlers';
 import { handleCodingBookmarks, handleCodingSkip, handlePracticeSession } from '../../lib/coding/practice-handlers';
 import { settleMilestones } from '../../lib/rewards/coins';
@@ -416,23 +417,29 @@ async function stats(req: VercelRequest, res: VercelResponse) {
         if (receipt.outcomes.some((outcome) => subjectForCategory(outcome.category) !== receipt.subject)) {
           return jsonError(res, 400, 'invalid_receipt', 'Quiz result receipt has mixed question scope');
         }
-        const { data, error } = await withTimeout(
-          supabase!.rpc('record_verified_quiz_result_v2', {
-            p_user_id: user_id,
-            p_attempt_id: receipt.attemptId,
-            p_correct: receipt.correct,
-            p_total: receipt.total,
-            p_breakdown: receipt.breakdown,
-            p_outcomes: receipt.outcomes,
-            p_subject: receipt.subject,
-            p_quest_xp: receipt.questXp,
-            p_daily_date: receipt.daily?.date ?? null,
-            p_duration_ms: receipt.daily?.durationMs ?? null,
-            p_email: typeof auth.payload.email === 'string' && auth.payload.email.length <= MAX_STR ? auth.payload.email : null,
-            p_name: shown.name,
-            p_picture: shown.picture,
-          }),
-        );
+        const result = {
+          p_user_id: user_id,
+          p_attempt_id: receipt.attemptId,
+          p_correct: receipt.correct,
+          p_total: receipt.total,
+          p_breakdown: receipt.breakdown,
+          p_outcomes: receipt.outcomes,
+          p_subject: receipt.subject,
+          p_quest_xp: receipt.questXp,
+          p_daily_date: receipt.daily?.date ?? null,
+          p_duration_ms: receipt.daily?.durationMs ?? null,
+          p_email: typeof auth.payload.email === 'string' && auth.payload.email.length <= MAX_STR ? auth.payload.email : null,
+          p_name: shown.name,
+          p_picture: shown.picture,
+        };
+        // From migration 060 the same record also names the correct answers
+        // whose question's hour held their XP back, so the learner is told.
+        // Before 060, 058's routine answers alone.
+        let { data: recorded, error } = await withTimeout(supabase!.rpc('record_verified_quiz_result_v3', result));
+        if (isRpcMissing(error)) ({ data: recorded, error } = await withTimeout(supabase!.rpc('record_verified_quiz_result_v2', result)));
+        const outcome = recorded as { applied?: unknown; xpHeld?: unknown } | boolean | null;
+        const data = typeof outcome === 'object' && outcome !== null ? outcome.applied === true : outcome === true;
+        const xpHeld = typeof outcome === 'object' && outcome !== null ? questionXpHeldOf(outcome.xpHeld) : null;
 
         if (error) {
           if (isRpcMissing(error)) {
@@ -469,7 +476,7 @@ async function stats(req: VercelRequest, res: VercelResponse) {
           withTimeout(supabase!.from('user_xp').select('quest_xp, quest_xp_by_subject').eq('user_id', user_id).maybeSingle()),
         ]);
         if (row.error || xpRow.error) return jsonError(res, 500, 'db_error', 'Result saved but account progress could not be loaded');
-        return res.json({ data: row.data, xp: xpRow.data, applied: data === true, questXp });
+        return res.json({ data: row.data, xp: xpRow.data, applied: data === true, questXp, ...(xpHeld ? { xpHeld } : {}) });
       }
 
       const profile = {

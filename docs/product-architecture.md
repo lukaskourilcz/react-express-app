@@ -207,7 +207,18 @@ inside its hour is awarded nothing, like a run with none right. The handler
 credits coins for, and announces, the XP the award row holds. Without
 `p_outcomes` (the handler before 052) it counts the run's breakdown in full,
 as before, and an answer without its own XP (the handler before 058) is paid
-as before. Coding passes are not answers and are not
+as before. From migration 060 (owner decision of 9 October 2026, afternoon)
+the stats write and the Challenge completion ask
+`record_verified_quiz_result_v3` and `record_challenge_completion_v2`, which
+record the result with 058's routine unchanged and then name the correct
+answers whose question's hour held their XP back, with the time the last of
+them pays again (`xpHeld`). They read `user_question_xp` in the same
+transaction: a question this result paid carries the transaction's `NOW()`,
+any other was held back, and a replayed result names none. The browser says
+it in a toast after the gain, on the learner's own clock ("No XP for 2
+answers this time: you can earn it again from 14:32, an hour after you last
+earned it."). Before 060 the handlers fall back to 058's routines and say
+nothing about held answers. Coding passes are not answers and are not
 counted.
 `window_leaderboard` and `window_leaderboard_rank` rank correct answers, then
 fewer answers for the same number correct, and equal results share a rank.
@@ -272,7 +283,8 @@ XP each learner earned in it, the ranking the month's top three are paid by.
 `add_xp_day` writes it, inside each verified award's own transaction:
 `record_verified_quiz_result_v2` (a quiz or daily result, a repeated question
 once its hour is up), `record_verified_activity_xp` (a Biggest Shark Challenge
-run, a coding challenge's first pass or repeat XP) and `complete_verified_roadmap_attempt` (a Learn level
+run, a coding challenge's first pass or repeat XP, a Learn step's repeat XP
+from 060) and `complete_verified_roadmap_attempt` (a Learn level
 or part test passed for the first time, at `learn_step_xp`, the numbers of
 `shared/progression.ts`; learning XP is derived from progress and is not in
 `user_xp`). Learning paths award no XP. Guest XP merged at sign-in
@@ -291,6 +303,36 @@ pins the learner's own line under the list, and has no topic filter, since XP
 is not counted per topic. Below 480px the period control is the small size
 with short labels ("30 days", "Month", "All time", "Today") so the four fit
 at 320px.
+
+### XP again for a replayed Learn step
+
+A Learn level or part test pays its learning XP on its first pass: the XP is
+derived from verified progress (`learn_step_xp`, the numbers of
+`shared/progression.ts`) and is not in `user_xp`. From migration 060 (owner
+decision of 9 October 2026, afternoon) a signed-in pass of a step already
+passed pays that XP again when the step last paid the account at least 60
+minutes ago. `api/quiz/roadmap.ts` completes the attempt with
+`complete_verified_roadmap_attempt_v2`, which runs 056's
+`complete_verified_roadmap_attempt` unchanged, so mastery, spaced review,
+the streak and the first-pass XP stay as they were, and then claims the step
+in `user_learn_step_xp`. The claim is one guarded UPDATE, taken under the
+attempt and progress row locks 056 takes, so two completions at once pay
+once (`supabase/tests/231`). The first pass starts the hour; a step first
+passed before 060 counts it from its first passed attempt still on record,
+and one whose attempts were purged pays at once. A repeat is XP only, under
+its own award id (`learn-repeat:<attempt>`), into the balance and the
+month's ledger through `record_verified_activity_xp`: no coins, no badge and
+no first-pass reward such as an invitation's. A pass inside the hour pays
+nothing, and a failed replay or a guest's pays nothing either. Part test n
+pays 300 × n each time, so part test 3 can pay 900 XP once an hour.
+
+The completion's `repeatXp` says what the pass paid again (`xp`), or that
+the hour held it back (`withheld: 'cooldown'`), and when the step's XP opens
+(`availableAt`). The browser toasts "+N XP again", then syncs the balance,
+or "No XP this time: you can earn it again from 14:32, an hour after you
+last earned it." in the learner's own clock time (`XpToaster`, the held
+toast). On a database before 060 the handler falls back to 056's routine, a
+replay pays nothing, and nothing is said.
 
 ### Sharknames and what friends see
 
@@ -593,8 +635,13 @@ reset pay once. A repeat is XP only, under its own award id
 (`coding:<account>:<task>:r<n>`), into the balance and the month's ledger: no
 coins and no first-pass flag. The verdict's `repeatXp` says when the XP opens
 again and why a pass paid nothing; the workbench says it under the verdict.
+From 9 October (afternoon) a toast says it too (`submitCoding`): a pass that
+paid XP shows "+N XP earned", or "+N XP again" for a repeat, and a verified
+pass the rule paid nothing says what earns the XP again, a reset and a pass
+from the time the hour is up, on the learner's own clock.
 Guests earn no XP, so a guest's Reset stays in the browser. A Learn step
-still pays once, on its first pass. And
+pays its XP again too, an hour after it last paid (see "XP again for a
+replayed Learn step"). And
 the five coding badges join the shared badge sync for `webdev`. All storage is
 in `supabase/supabase-schema-025.sql`, whose track constraints and routines
 `supabase/supabase-schema-038.sql` widens to admit `algorithms`. devShark ships no AI feature; the last
@@ -1182,7 +1229,9 @@ production (issue #227, step D8).
   before; a Learn level or part test passed for the first time credits
   `learn:<account>:<topic>:L<n>` (or `P<n>`) at 50 × the level's tier or 300 ×
   the part (`shared/progression.ts`); a coding challenge's first pass credits
-  `coding:<account>:<task>`, the same id its XP now uses. A quiz's credit is
+  `coding:<account>:<task>`, the same id its XP now uses. Repeat XP, a coding
+  task's after a reset (058) or a Learn step's after an hour (060), credits
+  no coins. A quiz's credit is
   for the XP the routine awarded: the receipt's whole XP from migration 056
   (048 to 055 could pay less), and nothing for a refused second daily. Everything that moves the streak (a verified quiz, a completed
   Learn level or part test, an applied coding pass, an awarded Challenge run)
@@ -1330,8 +1379,10 @@ production (issue #227, step D8).
 stops with 503 if Stripe cannot be reached. It then calls `delete_user_data`,
 which since migration 044 erases every table that holds an account id in one
 routine, including the ones 035 and 039 to 042 added; 045 restates it with the
-voucher redemptions, 051 with the merchandise the account held, and 056 with
-the month's XP ledger (`user_xp_days`). An order
+voucher redemptions, 051 with the merchandise the account held, 056 with
+the month's XP ledger (`user_xp_days`), 058 with the question hours
+(`user_question_xp`) and 060 with the Learn step hours
+(`user_learn_step_xp`). An order
 Spreadshop never received gives its stock reservation back (a claimed package
 reserved none): one awaiting payment is deleted, and a paid one is cancelled,
 which takes it off the fulfilment queue, and kept without the person as the

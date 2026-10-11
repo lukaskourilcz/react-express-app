@@ -33,8 +33,9 @@ import { MotionPop } from '../lib/motion';
 import { SharkFin } from './SharkFin';
 import { renderQuestion } from './CodeBlock';
 import { QuoteLoader, holdLoadingScreen } from './LoadingScreen';
-import { announceVerifiedQuestXp, awardQuestXp, syncXpWithServer } from '../lib/xp';
+import { announceVerifiedQuestXp, announceXpHeld, awardQuestXp, syncXpWithServer } from '../lib/xp';
 import { challengeRunXp } from '../../../shared/progression';
+import type { QuestionXpHeld } from '../../../shared/repeat-xp';
 import { SwimCta } from './landing/LandingKit';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import './DeepEndScreens.css';
@@ -98,14 +99,23 @@ const dropPendingReward = (runToken: string) =>
 
 /** Send each saved run of this learner to the completion step. A run that
  * lands, or that can never land, leaves the list; one the network or the rate
- * limit turned away stays for the next try. */
-async function sendPendingRewards(userId: string): Promise<{ kept: number; xp: number }> {
+ * limit turned away stays for the next try. `held` counts the right answers
+ * whose question paid XP less than an hour ago (migration 060), with the time
+ * the last of them pays again. */
+async function sendPendingRewards(userId: string): Promise<{ kept: number; xp: number; held: QuestionXpHeld | null }> {
   let kept = 0;
   let xp = 0;
+  let held = null as QuestionXpHeld | null;
   for (const run of readPendingRewards().filter((one) => one.userId === userId)) {
     try {
       const res = await completeChallengeRun({ runToken: run.runToken, proofs: run.proofs });
       if (res.awarded) xp += res.xp ?? 0;
+      if (res.xpHeld) {
+        held = {
+          questions: (held?.questions ?? 0) + res.xpHeld.questions,
+          availableAt: held && held.availableAt > res.xpHeld.availableAt ? held.availableAt : res.xpHeld.availableAt,
+        };
+      }
       dropPendingReward(run.runToken);
     } catch (err) {
       if (err instanceof ApiError && err.status === 400 && PERMANENT_REWARD_ERRORS.has(err.code ?? '')) {
@@ -117,7 +127,7 @@ async function sendPendingRewards(userId: string): Promise<{ kept: number; xp: n
       if (err instanceof ApiError && (err.status === 0 || err.status === 429)) break;
     }
   }
-  return { kept, xp };
+  return { kept, xp, held };
 }
 
 /** The batch session that issued the question can no longer grade it: it
@@ -272,12 +282,13 @@ export default function Challenge() {
   const rewardSync = useRef<Promise<void>>(Promise.resolve());
   const syncRewards = useCallback((userId: string) => {
     rewardSync.current = rewardSync.current.then(async () => {
-      const { kept, xp } = await sendPendingRewards(userId);
+      const { kept, xp, held } = await sendPendingRewards(userId);
+      if (xp > 0) announceVerifiedQuestXp(xp);
+      if (held) announceXpHeld({ on: 'questions', count: held.questions, availableAt: held.availableAt });
       if (xp > 0) {
         // The gain first, then the rank it crosses, in Quiz's order. The
         // run's XP exists only on the server until this sync, so the sync
         // announces the rank-up; a silent one marked it seen unannounced.
-        announceVerifiedQuestXp(xp);
         await syncXpWithServer({ announceRankUp: true });
       }
       if (kept > 0) setSnack(t('challenge.rewardPending'));

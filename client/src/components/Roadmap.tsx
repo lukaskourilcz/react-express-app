@@ -23,6 +23,7 @@ import type {
   RoadmapStructure,
   Question,
 } from '../types/quiz';
+import type { LearnRepeatXp } from '../../../shared/repeat-xp';
 import type { PlayableCodingTask } from '../../../shared/coding-catalog';
 import {
   fetchRoadmapLevel,
@@ -69,7 +70,7 @@ import { ROADMAP_MAX_HEARTS } from '../../../shared/assessment';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
 import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
-import { awardLearningOutcome, syncXpWithServer } from '../lib/xp';
+import { announceLearnRepeat, awardLearningOutcome, syncXpWithServer } from '../lib/xp';
 import { computeLearningXp } from '../lib/leveling';
 import { getCategoryHexColor, categoryLabelKey, hoverFilterOn, onCategoryColorText, textOnColor } from '../lib/categories';
 import { BRAND } from '../theme/MuiTheme';
@@ -581,7 +582,7 @@ function Roadmap() {
     setLoadingLesson(false);
   };
 
-  const handleFinished = (pct: number) => {
+  const handleFinished = (pct: number, repeatXp?: LearnRepeatXp) => {
     if (!active || !playable) return;
     // Learning XP is derived from progress, so measure it across the record to
     // reward only a NEW pass; replays/fails fall back to a small practice grant
@@ -590,6 +591,9 @@ function Roadmap() {
     if (active.kind === 'level') recordLevelResult(topic, active.ref, pct, playable.passPct);
     else recordPartTestResult(topic, active.ref, pct, playable.passPct);
     awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before, isAuthenticated);
+    // A signed-in replay that passed: its XP paid again, or the hour that
+    // holds it back (migration 060), in a toast.
+    if (isAuthenticated && repeatXp) void announceLearnRepeat(repeatXp);
   };
 
   // Lay the whole topic out as a serpentine: nodes flow left→right and gently
@@ -1346,7 +1350,7 @@ function LessonRunner({
   /** No Learn level was passed before this one opened (#239). */
   firstLevelPass?: boolean;
   topicColor: string; hasNext: boolean; nextLabel: string;
-  onExit: () => void; onFinished: (pct: number) => void; onNext: () => void;
+  onExit: () => void; onFinished: (pct: number, repeatXp?: LearnRepeatXp) => void; onNext: () => void;
   onReplay: () => void; t: TFn; lang: string;
 }) {
   const { user } = useAuth();
@@ -1466,7 +1470,7 @@ function LessonRunner({
       // A level that fails its coding gate is recorded as not passed even with
       // a full question score; report the percentage the server computed but
       // keep the local pass record honest.
-      onFinished((result.codingPending?.length ?? 0) > 0 ? Math.min(result.percentage, playable.passPct - 1) : result.percentage);
+      onFinished((result.codingPending?.length ?? 0) > 0 ? Math.min(result.percentage, playable.passPct - 1) : result.percentage, result.repeatXp);
       setCodingPhase(false);
       setFinished(true);
     } catch (error) {
@@ -1490,7 +1494,7 @@ function LessonRunner({
         setCorrectCount(result.correctAnswers);
         // Out of hearts is a failed level however the percentage lands, so keep
         // the local record below the pass mark and let the server decide.
-        onFinished(result.passed ? result.percentage : Math.min(result.percentage, playable.passPct - 1));
+        onFinished(result.passed ? result.percentage : Math.min(result.percentage, playable.passPct - 1), result.repeatXp);
         setDead(true);
         setFinished(true);
       } catch (error) {

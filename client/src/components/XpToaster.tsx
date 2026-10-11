@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Text } from '@astryxdesign/core/Text';
-import { onXpToast, type XpToast } from '../lib/xp';
+import { clockTime, onXpToast, type XpHold, type XpToast } from '../lib/xp';
 import { useT } from '../i18n/LanguageContext';
 import type { TranslationKey } from '../i18n/translations';
 import { MotionPop, m, AnimatePresence, useReducedMotion, stillIfReduced } from '../lib/motion';
 import { useIsMobile } from '../lib/useMediaQuery';
-import { BoltIcon, TrophyIcon } from './ui/icons';
+import { BoltIcon, ClockIcon, TrophyIcon } from './ui/icons';
 
 // A global, self-contained listener for XP events. Mounted once at the app root
 // so XP gains and rank-ups toast from anywhere (quiz results, the learning path,
@@ -15,13 +15,32 @@ import { BoltIcon, TrophyIcon } from './ui/icons';
 
 const GAIN_MS = 2200;
 const RANKUP_MS = 4800;
+// A sentence with a time in it, read rather than glanced at.
+const HELD_MS = 6000;
 
 type GainSource = Extract<XpToast, { kind: 'gain' }>['source'];
 const GAIN_KEY: Record<GainSource, TranslationKey> = {
   learn: 'xp.gainLearn',
   quiz: 'xp.gainQuiz',
   practice: 'xp.gainPractice',
+  coding: 'xp.gainQuiz',
+  again: 'xp.gainAgain',
 };
+
+/** What the hour held back, and when it opens again, in the learner's own
+ * clock time (migration 060). */
+function heldMessage(t: ReturnType<typeof useT>, hold: XpHold): string {
+  const { on, availableAt } = hold;
+  const key = on === 'questions'
+    ? hold.count === 1 ? 'xp.heldAnswer' : 'xp.heldAnswers'
+    : on === 'task'
+      ? availableAt ? 'xp.heldTask' : 'xp.heldTaskReset'
+      : 'xp.heldStep';
+  return t(key, {
+    n: on === 'questions' ? hold.count : 0,
+    time: availableAt ? clockTime(availableAt) : '',
+  });
+}
 
 export default function XpToaster() {
   const t = useT();
@@ -45,7 +64,7 @@ export default function XpToaster() {
   // Auto-hide, then let the exit transition run before clearing `current`.
   useEffect(() => {
     if (!open || !current) return;
-    const ms = current.kind === 'rankup' ? RANKUP_MS : GAIN_MS;
+    const ms = current.kind === 'rankup' ? RANKUP_MS : current.kind === 'held' ? HELD_MS : GAIN_MS;
     const id = window.setTimeout(() => setOpen(false), ms);
     return () => window.clearTimeout(id);
   }, [open, current]);
@@ -110,6 +129,24 @@ export default function XpToaster() {
                       {t('xp.rankUp', { title: t(current.titleKey, current.titleVars) })}
                     </Text>
                   </div>
+                </div>
+              ) : current.kind === 'held' ? (
+                <div
+                  role="status"
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', maxWidth: 'min(92vw, 460px)',
+                    borderRadius: 'var(--radius-element)', fontWeight: 700,
+                    color: 'var(--color-text-primary)', background: 'var(--color-background-surface)',
+                    border: '1px solid var(--color-border)', borderLeft: '4px solid var(--ss-info)',
+                    boxShadow: 'var(--shadow-med)',
+                  }}
+                >
+                  <span style={{ display: 'inline-flex', flexShrink: 0, color: 'var(--ss-info)' }} aria-hidden>
+                    <ClockIcon size={18} />
+                  </span>
+                  <Text as="span" color="inherit" weight="bold">
+                    {heldMessage(t, current.hold)}
+                  </Text>
                 </div>
               ) : (
                 <div

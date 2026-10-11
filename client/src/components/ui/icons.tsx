@@ -29,6 +29,14 @@ export const BoltIcon = ({ size = 20, style }: IconProps) => (
   </svg>
 );
 
+// A clock: XP that opens again at a time (the XP toaster).
+export const ClockIcon = ({ size = 20, style }: IconProps) => (
+  <svg {...base(size)} style={style}>
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
 export const TrophyIcon = ({ size = 20, style }: IconProps) => (
   <svg {...base(size)} style={style}>
     <path d="M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0V4z" />
