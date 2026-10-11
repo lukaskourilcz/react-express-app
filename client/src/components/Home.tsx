@@ -26,6 +26,7 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import { LaunchOfferBanner } from './LaunchOffer';
+import { HomeSampleCarousel } from './landing/HomeSampleCarousel';
 import ComparisonTable from './landing/ComparisonTable';
 import './landing/landingSections.css';
 
@@ -225,13 +226,13 @@ export default function Home() {
           </div>
         </div>
         {selected && (
-          <SampleCard
+          <HomeSampleCarousel quiz={<SampleCard
             showTeaser={false}
             onAnswered={() => captureActivation('landing_sample_completed', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: selected?.id })}
             key={selected.id}
             chip={`${selected.name} · ${t('home.sampleChip', { level: selected.levels[0] })}`}
             question={selected.question}
-          />
+          />} />
         )}
       </section>
 

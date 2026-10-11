@@ -876,6 +876,24 @@
 :root[data-design='apple'] .ss-drawer-link { min-height: 44px; }
 :root[data-design='apple'] .ss-home { gap: clamp(3rem, 6vw, 5rem) !important; }
 :root[data-design='apple'] .ss-hero-grid { gap: clamp(2rem, 4vw, 4rem); padding-block: 1rem 1.5rem; }
+@media (min-width: 1024px) {
+  :root[data-design='apple'] .ss-home .ss-hero-grid { grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); align-items: center; }
+}
+@media (min-width: 600px) and (max-width: 1023px) {
+  :root[data-design='apple'] .ss-home .ss-hero-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.ss-home-carousel { min-width: 0; padding: 0 1rem 1rem 0; }
+.ss-home-carousel__controls { display: flex; align-items: center; gap: .5rem; margin: 0 0 2rem; }
+.ss-home-carousel__controls button { min-height: 44px; }
+.ss-home-carousel__count { margin-left: auto; color: var(--color-text-secondary); font-size: var(--ss-type-label); font-variant-numeric: tabular-nums; }
+.ss-home-carousel__stack { position: relative; isolation: isolate; }
+.ss-home-carousel__behind { position: absolute; inset: -1rem -1rem 1rem 1rem; z-index: -1; border: 1px solid var(--color-border); border-radius: var(--radius-container); background: var(--color-background-elevated); box-shadow: var(--shadow-low); padding: .2rem 1.25rem; color: var(--color-text-secondary); font-size: .65rem; overflow: hidden; }
+.ss-home-carousel__slide { min-width: 0; animation: ssHomeSampleFade .18s ease-out; }
+.ss-home-carousel__slide[hidden] { display: none; }
+.ss-home-carousel__slide > .ss-panel { min-height: 26rem; justify-content: center; }
+.ss-home-carousel__slide.ss-panel { padding: .75rem; }
+.ss-home-carousel__state { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem; min-height: 26rem; }
+@media (prefers-reduced-motion: reduce) { .ss-home-carousel__slide { animation: none; } }
 :root[data-design='apple'] .ss-hero-grid h1 { font-weight: 650 !important; letter-spacing: -.045em !important; line-height: 1.035 !important; text-wrap: balance; }
 :root[data-design='apple'] .ss-hero-grid > div:first-child { gap: 1.5rem !important; }
 :root[data-design='apple'] .ss-hero-grid > div:first-child > p { font-size: 1.2rem !important; line-height: 1.55; }
@@ -948,3 +966,5 @@
     border: 1px solid var(--color-text-primary) !important;
   }
 }
+
+@keyframes ssHomeSampleFade { from { opacity: 0; } to { opacity: 1; } }

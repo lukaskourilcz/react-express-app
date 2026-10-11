@@ -212,6 +212,21 @@
 
 /* ── workbench ─────────────────────────────────────────────────────────── */
 .cd-workbench { display: flex; flex-direction: column; gap: 16px; }
+.cd-complexity { border: 1px solid var(--color-border); border-radius: var(--radius-inner); padding: .75rem; font-size: var(--ss-type-label); line-height: 1.5; }
+.cd-complexity summary { cursor: pointer; font-weight: 600; }
+.cd-complexity p { margin: .5rem 0 0; }
+.cd-workbench--landing .cd-workbench__grid { grid-template-columns: minmax(0, 1fr); gap: .75rem; }
+.cd-workbench--landing .cd-pane { padding: .75rem; }
+.cd-workbench--landing .cd-pane--output { contain: none; min-height: 200px; }
+.cd-workbench--landing .cd-splitter { display: none; }
+.cd-workbench--landing .cd-brief__title { font-size: 1.15rem; }
+.cd-workbench--landing .cd-prompt { font-size: var(--ss-type-label); }
+.cd-workbench--landing .cd-output-scroll { max-height: 280px; }
+@media (min-width: 600px) {
+  .cd-workbench--landing .cd-workbench__grid { grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); align-items: stretch; }
+  .cd-workbench--landing .cd-pane--output { contain: size; }
+  .cd-workbench--landing .cd-output-scroll { max-height: none; }
+}
 .cd-workbench__grid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);

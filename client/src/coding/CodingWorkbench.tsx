@@ -1143,7 +1143,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             <div className="cd-editor-slot">
               {/* Shorter on a narrow screen, so Run and Submit are not a screen
                   away from the code; it still grows with the code. */}
-              <Editor minHeight={mode === 'landing' ? 220 : narrow ? 280 : 480} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
+              <Editor minHeight={mode === 'landing' ? 220 : narrow ? 280 : 480} maxHeight={mode === 'landing' ? 220 : undefined} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
               {/* The shortcuts are not printed on the page; a screen reader
                   hears them with the editor, Escape then Tab included. */}
               <span id={`${baseId}-keys`} className="cd-visually-hidden">{t('coding.shortcuts')}</span>

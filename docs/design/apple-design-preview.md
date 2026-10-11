@@ -1,15 +1,29 @@
-# Apple design — local experiment
+# Apple design — application rollout
 
 Requested 11 October 2026. Branch: `codex/apple-design-preview`.
 Source: [Emil Kowalski's apple-design skill](https://github.com/emilkowalski/skills/blob/main/skills/apple-design/SKILL.md).
 
-## Preview
+## Application default
 
-Run `npm run dev --prefix client -- --host 127.0.0.1 --port 3000`.
-Open `http://127.0.0.1:3000/?design=apple` and use the development-only
-Original / Apple control to compare the same page without losing its state.
-The selected appearance follows client-side navigation and is encoded in the URL.
-The server stays local; nothing was pushed or deployed.
+Apple is the application-wide design, applied before first paint. The prototype
+comparison control and `?design=original` override have been removed. Dark mode
+retains the Deep End blue-green background and grain.
+
+The homepage sample is a two-card carousel on tablets and desktop (600px and
+above), with the quiz initially shown and a real `alg-valid-palindrome` workbench
+on Coding. The editor and task session load together on the first Coding press;
+code is retained when switching slides. Mobile mounts only the quiz. The task,
+Run, Format, Submit, visible tests and hidden server checks reuse Coding's API
+and workbench. This is an actual challenge, with normal grading and rewards.
+
+Each workbench includes Big O guidance. Only authored targets are called targets.
+Submit adds a bounded AST estimate for recognised loops, traversal and sorting;
+unsupported constructs report “Cannot determine”. It is advisory, explains its
+assumptions, and never changes correctness or XP. Type-only, React and design
+work require manual analysis. Extra space is an authored target, not a measured
+claim. Feedback becomes stale along with the verdict after an edit.
+
+Issues: #330–#337. Branch: `codex/apple-design-preview`.
 
 ## Components affected
 
@@ -35,27 +49,10 @@ motion helpers and drawer receive the branch's motion improvements in both varia
 Owner refinement: the Apple variant's dark mode retains the original Deep End
 blue-green ink background, grain and gradient (`#0c161e` to `#0a1219`), with
 matching dark surface tokens. The light palette and Apple component shapes remain
-as previewed. The floating header's scroll-edge fade uses a separate solid color
-token so it still works over the layered page background.
+as previewed. The header border remains continuous; the external fade that cut it off was removed.
 
 ## Validation
 
-- API TypeScript check: passed.
-- Client TypeScript check: passed.
-- Launch, play-room and verified-caller contracts: passed.
-- Client tests: 103 files / 983 tests passed.
-- Production build: passed (existing mixed-import and large-chunk warnings).
-- Production dependency audits, root and client: 0 vulnerabilities.
-- Browser: light and dark appearance, 360 / 768 / 1440 px, no page overflow;
-  sample-question answer and accessible success message; mobile menu and Escape;
-  sign-in dialog display and console (no errors observed).
-- Reduced motion, transparency and high contrast: explicit CSS fallbacks;
-  no OS preference changes were made to exercise them.
-- `git diff --check`: passed.
-
-Plain Vite serves this visual preview without API handlers. Authenticated account
-flows, live grading, wallet mutations, billing and remote data were not exercised.
-The repository's fixture-driven `check:responsive` sweep was not run; viewport
-checks used the visible browser. Keyboard focus and native dialog behavior were
-retained; a complete accessibility audit, zoom and forced-colors checks remain
-outside this prototype's verification.
+See the Apple rollout entry in `docs/release-acceptance.md` for actual release
+checks and browser evidence. The initial prototype was local only; the owner
+subsequently requested merging the complete rollout and deploying through Git.
