@@ -4,8 +4,8 @@
 // (see vercel.json); the page itself keeps its strict policy.
 //
 // Each worker serves one run. Just before the learner's code runs, its realm
-// becomes the grader's (shared/coding-run-realm.ts): Prague time, the
-// grader's locale methods, and none of the globals the grader lacks, so Run
+// becomes the grader's (shared/coding-run-realm.ts): UTC, the grader's
+// locale methods, and none of the globals the grader lacks, so Run
 // and Submit agree.
 import { evaluateCalls } from '../../../../shared/coding-evaluate';
 import { prepareRunRealm } from '../../../../shared/coding-run-realm';

@@ -50,7 +50,7 @@ import { transform } from 'sucrase';
 import { asRunnableModule, failUncancelledSubmits, FETCH_STUB_SOURCE, type FormSubmitTarget } from '../../shared/coding-react-support';
 import { createMiniJest, type MiniJestRun } from '../../shared/coding-mini-jest';
 import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
-import { PRAGUE_TIME_SOURCE, type PragueTimeOptions } from '../../shared/coding-prague-time';
+import { UTC_TIME_SOURCE, type UtcTimeOptions } from '../../shared/coding-utc-time';
 
 /** How long one suite may take before it is called a timeout. */
 export const REACT_SUITE_TIMEOUT_MS = 5_000;
@@ -115,9 +115,9 @@ function recognizeOtherRealms() {
 
 /** A fresh page realm for one run. The global object starts with no
  * prototype, so `this.constructor` inside it finds the realm's own `Object`
- * and never the host's. Its `Date` reads Europe/Prague time, as the browser
- * frame's does (shared/coding-prague-time.ts), and its `Intl` formats dates
- * in that zone unless the code names another. */
+ * and never the host's. Its `Date` reads UTC, as the browser frame's does
+ * (shared/coding-utc-time.ts), and its `Intl` formats dates in UTC unless
+ * the code names another zone. */
 function createPageRealm(): Context {
   const page = createContext(Object.create(null), {
     name: 'react-page',
@@ -128,8 +128,8 @@ function createPageRealm(): Context {
     if (host[key] !== undefined) Object.defineProperty(page, key, { value: host[key], configurable: true, writable: true });
   }
   Object.defineProperty(page, 'console', { value: runInContext(SILENT_CONSOLE, page), configurable: true, writable: true });
-  const pragueTime = runInContext(`(${PRAGUE_TIME_SOURCE})`, page) as (date: unknown, options: PragueTimeOptions) => unknown;
-  const pageDate = pragueTime(runInContext('Date', page), { inPlace: true, intl: runInContext('Intl', page) });
+  const utcTime = runInContext(`(${UTC_TIME_SOURCE})`, page) as (date: unknown, options: UtcTimeOptions) => unknown;
+  const pageDate = utcTime(runInContext('Date', page), { inPlace: true, intl: runInContext('Intl', page) });
   Object.defineProperty(page, 'Date', { value: pageDate, configurable: true, writable: true });
   return page;
 }

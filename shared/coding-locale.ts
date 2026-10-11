@@ -22,7 +22,7 @@
  * The locale argument is not read: en-US is the only locale, as in an engine
  * built without other locale data. An option outside this list throws a
  * RangeError that says so, in both runners. Dates are formatted by
- * shared/coding-prague-time.ts. Plain ES2019 source text, evaluated by
+ * shared/coding-utc-time.ts. Plain ES2019 source text, evaluated by
  * QuickJS (lib/coding/sandbox.ts) and compiled in the Run worker
  * (shared/coding-run-realm.ts). */
 

@@ -50,7 +50,7 @@ import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { GUEST_CRASHED_MESSAGE, GUEST_ENV, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
-import { PRAGUE_REACT_APP, PRAGUE_REACT_SUITE } from './fixtures/prague-react';
+import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
@@ -169,7 +169,6 @@ import { ROADMAP_TOPICS, isRoadmapTopic, topicLevelCount, ROADMAP_LEVELS } from 
 import type { Question } from '../lib/quiz-runtime';
 import type { CodingTaskResponse, CodingVerdictResponse } from '../shared/coding-api';
 import {
-  FREE_CHECKPOINT_IDS,
   FREE_CODING_SHARE,
   FREE_CODING_TASK_IDS,
   FREE_LEARN_LEVELS,
@@ -181,8 +180,8 @@ import {
   isFreeCodingTask,
   isOpenTo,
 } from '../shared/tiers';
-import { EVOLVING_CHALLENGES, evolvingStage, isEvolvingCheckpoint } from '../shared/evolving';
-import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, stageDifficulty, tierLockReason } from '../shared/coding-catalog';
+import { EVOLVING_CHALLENGES, evolvingStage, evolvingUnlocked, isEvolvingCheckpoint } from '../shared/evolving';
+import { techniqueGroup, CODING_FOUNDATION_LEVELS, CODING_SECTION_TRACKS, tierLockReason } from '../shared/coding-catalog';
 import { CODING_SUMMARIES } from '../lib/coding/active';
 import { serverContentIndex } from '../lib/access';
 import { isRpcMissing, jsonPremiumRequired, PremiumRequiredError, requestMemo, requireAuthSub, verifiedCallerId, withRequestContext } from '../lib/http';
@@ -538,44 +537,71 @@ async function tierContracts() {
     CODING_INDEX.filter((task) => task.free).map((task) => task.id),
     'the server summaries and the browser index open the same tasks',
   );
-  // Stage one of every evolving project and short path is open, and in a
-  // project with checkpoints that is the checkpoint and the first milestone
-  // (owner decision, 9 Oct 2026). Beyond it, only the listed checkpoints are.
-  // In the stage numbers a learner sees: 1, 2 and 9 of a ten-stage project,
-  // 1 and 11 of a FullStack app, level 1 of a short path. The Terms say so.
+  // The opening stages of every evolving project and short path are open:
+  // stage one, the checkpoint and the first milestone in a project with
+  // checkpoints (owner decision 6, 9 Oct 2026), and then the checkpoint after
+  // it that opens the next milestone (the owner's follow-up that afternoon).
+  // In the stage numbers a learner sees: 1, 2 and 3 of a ten-stage project,
+  // 1 and 2 of a FullStack app, level 1 of a short path. They are always the
+  // head of the list, and the Terms name them from this rule.
   const freeStages = (stages: readonly string[]) => stages.flatMap((id, at) => (contentTier({ kind: 'coding-task', taskId: id }, index) === 'free' ? [at + 1] : []));
+  const shapeOf = (challenge: (typeof EVOLVING_CHALLENGES)[number]) => (challenge.short ? 'short' : challenge.stages.length === 10 ? 'ten-stage' : challenge.stages.length === 12 ? 'fullstack' : null);
+  const ownerStages: Record<string, readonly number[]> = { short: [1], 'ten-stage': [1, 2, 3], fullstack: [1, 2] };
   for (const challenge of EVOLVING_CHALLENGES) {
+    const shape = shapeOf(challenge);
+    assert.ok(shape, `${challenge.id}: a project length the copy names`);
     const firstMilestone = challenge.stages.findIndex((id) => !isEvolvingCheckpoint(id)) + 1;
-    assert.equal(freeStageCount(challenge.stages), firstMilestone, `${challenge.id}: stage one ends at the first milestone`);
-    const expected = challenge.short ? [1] : challenge.stages.length === 10 ? [1, 2, 9] : [1, 11];
-    assert.ok(challenge.short || challenge.stages.length === 10 || challenge.stages.length === 12, `${challenge.id}: a project length the copy names`);
-    assert.deepEqual(freeStages(challenge.stages), expected, `${challenge.id}: the free stages`);
-    // The stage after stage one is Premium, by kind and by the tier rule.
+    const opensNext = isEvolvingCheckpoint(challenge.stages[firstMilestone] ?? '');
+    assert.equal(freeStageCount(challenge.stages), firstMilestone + (opensNext ? 1 : 0), `${challenge.id}: the free stages end at the first milestone, or at the checkpoint right after it`);
+    assert.deepEqual(freeStages(challenge.stages), Array.from({ length: freeStageCount(challenge.stages) }, (_, at) => at + 1), `${challenge.id}: the free stages are the head of the list`);
+    assert.deepEqual(freeStages(challenge.stages), ownerStages[shape], `${challenge.id}: the free stages`);
+    // The stage after the free ones is Premium, by kind and by the tier rule.
     const next = challenge.stages[freeStageCount(challenge.stages)];
-    assert.equal(contentTier({ kind: 'evolving-stage', challengeId: challenge.id, stage: freeStageCount(challenge.stages) + 1 }, index), 'premium', `${challenge.id}: the stage after stage one`);
+    assert.equal(contentTier({ kind: 'evolving-stage', challengeId: challenge.id, stage: freeStageCount(challenge.stages) + 1 }, index), 'premium', `${challenge.id}: the stage after the free ones`);
     assert.equal(isFreeCodingTask(next), false, `${challenge.id}: ${next} is Premium`);
     for (const [at, id] of challenge.stages.entries()) {
       assert.equal(contentTier({ kind: 'evolving-stage', challengeId: challenge.id, stage: at + 1 }, index), contentTier({ kind: 'coding-task', taskId: id }, index), `${id}: a stage and its task agree`);
     }
   }
-  assert.match(ENGLISH['legal.terms.plans.free'], /stages 1, 2 and 9 of every ten-stage coding project, stages 1 and 11 of every twelve-stage FullStack app, level 1 of every short path/, 'the Terms name the free stages the rule opens');
-  // The fourteen checkpoints: exactly the five-minute tier-2 checkpoints the
-  // position bands used to label Hard (audit C2-13), the last checkpoint of
-  // every project that has checkpoints. Each now reads Easy from its tier.
-  const byTask = new Map(CODING_TASKS.map((task) => [task.id, task]));
-  const bandedHard = EVOLVING_CHALLENGES.flatMap((challenge) => challenge.stages.filter((id, at) =>
-    isEvolvingCheckpoint(id) && stageDifficulty(at, challenge.stages.length) === 'hard'));
-  assert.deepEqual([...FREE_CHECKPOINT_IDS].sort(), [...bandedHard].sort(), 'the free checkpoints are the ones the bands called Hard');
-  assert.equal(FREE_CHECKPOINT_IDS.length, 14);
-  for (const challenge of EVOLVING_CHALLENGES.filter((one) => one.stages.some(isEvolvingCheckpoint))) {
-    assert.ok(FREE_CHECKPOINT_IDS.includes(challenge.stages.filter(isEvolvingCheckpoint).at(-1)!), `${challenge.id}: its last checkpoint is free`);
+  // The Terms list the stages this rule opens, in the words the stage list
+  // uses ("1, 2 and 3"), read from one project of each shape.
+  const named = (numbers: readonly number[]) => (numbers.length > 1 ? `${numbers.slice(0, -1).join(', ')} and ${numbers[numbers.length - 1]}` : String(numbers[0]));
+  const freeOf = (shape: string) => freeStages(EVOLVING_CHALLENGES.find((challenge) => shapeOf(challenge) === shape)!.stages);
+  const termsStages = `stages ${named(freeOf('ten-stage'))} of every ten-stage coding project, stages ${named(freeOf('fullstack'))} of every twelve-stage FullStack app, level ${named(freeOf('short'))} of every short path`;
+  assert.ok(ENGLISH['legal.terms.plans.free'].includes(termsStages), `the Terms name the free stages the rule opens: ${termsStages}`);
+  // Reachable (the owner, 9 Oct 2026 afternoon: "give other, reachable
+  // stages"). Walk every project in order as a free account: pass each stage
+  // it may open once the stages before it are passed, and stop at the first
+  // it may not. By then it has passed every free stage of the project and
+  // nothing else. The fourteen last checkpoints that were free before failed
+  // this: each sat behind Premium stages.
+  for (const challenge of EVOLVING_CHALLENGES) {
+    const passed = new Set<string>();
+    for (const id of challenge.stages) {
+      if (!isOpenTo('free', { kind: 'coding-task', taskId: id }, index) || !evolvingUnlocked(id, passed)) break;
+      passed.add(id);
+    }
+    assert.deepEqual([...passed], challenge.stages.filter((id) => isFreeCodingTask(id)), `${challenge.id}: a free account reaches every free stage by passing free stages only`);
   }
-  for (const id of FREE_CHECKPOINT_IDS) {
+  // The fourteen checkpoints opened beyond stage one: in each project that
+  // has checkpoints, the one right after the first milestone, a five-minute
+  // tier-2 step that reads Easy. They replace the last checkpoint of each
+  // (stage 9 or 11), which a free account could not reach; those are Premium.
+  const byTask = new Map(CODING_TASKS.map((task) => [task.id, task]));
+  const checkpointed = EVOLVING_CHALLENGES.filter((one) => one.stages.some(isEvolvingCheckpoint));
+  assert.equal(checkpointed.length, 14, 'fourteen projects have checkpoints');
+  for (const challenge of checkpointed) {
+    const id = challenge.stages[freeStageCount(challenge.stages) - 1];
+    const firstMilestone = challenge.stages.find((one) => !isEvolvingCheckpoint(one))!;
+    assert.equal(id, evolvingStage(firstMilestone)!.next, `${challenge.id}: the last free stage is the one after the first milestone`);
+    assert.ok(isEvolvingCheckpoint(id), `${id} is a checkpoint`);
     const task = byTask.get(id)!;
     assert.ok(task && indexIds.has(id), `${id} is issued`);
     assert.equal(task.estimatedMinutes, 5, `${id}: a five-minute checkpoint`);
     assert.equal(task.tier, 2, `${id}: tier 2`);
-    assert.equal(CODING_INDEX.find((one) => one.id === id)?.difficulty, 'easy', `${id}: reads Easy, not Hard`);
+    assert.equal(CODING_INDEX.find((one) => one.id === id)?.difficulty, 'easy', `${id}: reads Easy`);
+    const last = challenge.stages.filter(isEvolvingCheckpoint).at(-1)!;
+    assert.equal(isFreeCodingTask(last), false, `${challenge.id}: its last checkpoint, ${last}, is Premium`);
   }
   assert.deepEqual(FREE_CODING_TASK_IDS.filter((id) => evolvingStage(id)), [], 'the starter set lists standalone tasks only');
   // Every free task reads Easy, except a level whose authors set its label
@@ -802,10 +828,13 @@ async function tierContracts() {
       assert.equal(JSON.stringify(revealed.body ?? {}).includes('solution'), false, 'nothing of the solution comes back');
     }
 
-    // Owner decision 6 (9 Oct 2026) at the server's gate: a free account and a
-    // guest open the first milestone of every ten-stage project and the
-    // fourteen last checkpoints, and are refused the stage after each. The
-    // gate is refuseLocked over shared/tiers.ts; nothing else decides it.
+    // Owner decision 6 and its follow-up (9 Oct 2026) at the server's gate: a
+    // free account and a guest open the stages that became free after stage
+    // one alone was (the first milestone of every ten-stage project and the
+    // checkpoint after stage one of every project with checkpoints), and are
+    // refused with 402 the first stage after the free ones and the last
+    // checkpoint, which was free until the follow-up. The gate is
+    // refuseLocked over shared/tiers.ts; nothing else decides it.
     // Each request is its own caller, so no rate-limit bucket fills up.
     let caller = 0;
     const opens = async (id: string, as: 'account' | 'guest') => {
@@ -817,35 +846,80 @@ async function tierContracts() {
     };
     const tenStage = EVOLVING_CHALLENGES.filter((one) => one.stages.length === 10 && !one.short);
     assert.equal(tenStage.length, 11, 'eleven ten-stage projects');
-    const newlyFree = [...tenStage.map((one) => one.stages[1]), ...FREE_CHECKPOINT_IDS];
+    const newlyFree = [...tenStage.map((one) => one.stages[1]), ...checkpointed.map((one) => one.stages[freeStageCount(one.stages) - 1])];
     for (const id of newlyFree) {
-      const stage = evolvingStage(id)!;
-      const after = stage.next!;
       for (const as of ['account', 'guest'] as const) {
         const opened = await opens(id, as);
         assert.equal(opened.statusCode, 200, `${as}: ${id} opens on the free tier (${JSON.stringify(opened.body)})`);
-        const refused = await opens(after, as);
-        assert.equal(refused.statusCode, 402, `${as}: ${after}, the stage after ${id}, stays Premium`);
-        assert.deepEqual((refused.body as { error: { kind: string; ref: string } }).error, {
-          ...(refused.body as { error: object }).error, kind: 'evolving-stage', ref: `${stage.challenge.id}:${stage.index + 2}`,
-        });
+      }
+    }
+    for (const challenge of checkpointed) {
+      const refusedIds = [challenge.stages[freeStageCount(challenge.stages)], challenge.stages.filter(isEvolvingCheckpoint).at(-1)!];
+      for (const id of refusedIds) {
+        for (const as of ['account', 'guest'] as const) {
+          const refused = await opens(id, as);
+          assert.equal(refused.statusCode, 402, `${as}: ${id} stays Premium`);
+          assert.deepEqual((refused.body as { error: { kind: string; ref: string } }).error, {
+            ...(refused.body as { error: object }).error, kind: 'evolving-stage', ref: `${challenge.id}:${challenge.stages.indexOf(id) + 1}`,
+          });
+        }
       }
     }
     // Opened is not a session: stages still unlock in order, so with nothing
     // passed the first milestone is held until its checkpoint is.
     assert.equal(((await opens('js-evolving-calculator-1', 'account')).body as CodingTaskResponse).locked, 'evolving');
-    // Submit follows the same gate: a guest's session for a newly free stage is
-    // graded (its reference passes), and one for the stage after it is refused.
-    for (const id of ['js-evolving-calculator-1', 'js-evolving-calculator-5-start']) {
+    // Submit follows the same gate: a guest's session for a free stage is
+    // graded (its reference passes), and one for the stage after the free
+    // ones, or for the last checkpoint, is refused.
+    for (const id of ['js-evolving-calculator-1', 'js-evolving-calculator-2-start']) {
       const graded = mockResponse();
       const session = encodeCodingSession({ taskId: id, track: 'javascript', userId: null });
       await roadmapHandler({ ...post('coding-submit', { session, code: solutionFor(id)!.solution, lang: 'en' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, graded as never);
       assert.equal(graded.statusCode, 200, `${id}: a guest submit is graded (${JSON.stringify(graded.body)})`);
       assert.equal((graded.body as CodingVerdictResponse).verdict, 'passed', `${id}: its reference passes`);
-      const next = evolvingStage(id)!.next!;
+    }
+    for (const id of ['js-evolving-calculator-2', 'js-evolving-calculator-5-start']) {
       const refused = mockResponse();
-      await roadmapHandler({ ...post('coding-submit', { session: encodeCodingSession({ taskId: next, track: 'javascript', userId: null }), code: solutionFor(next)!.solution, lang: 'en' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, refused as never);
-      assert.equal(refused.statusCode, 402, `${next}: a guest submit is refused`);
+      await roadmapHandler({ ...post('coding-submit', { session: encodeCodingSession({ taskId: id, track: 'javascript', userId: null }), code: solutionFor(id)!.solution, lang: 'en' }), headers: { 'x-forwarded-for': `198.19.0.${caller += 1}` } } as never, refused as never);
+      assert.equal(refused.statusCode, 402, `${id}: a guest submit is refused`);
+    }
+    // The reachability walk through the task page: a free account whose
+    // stand-in database holds a pass of every stage before the one it asks
+    // for. Each free stage answers 200 and unlocked, after free passes only;
+    // the first stage after them answers 402 with every free stage passed.
+    const walkDb = (passedIds: ReadonlySet<string>) => {
+      const from = (table: string) => {
+        const chain = {
+          select: () => chain, eq: () => chain, in: () => chain, order: () => chain, limit: () => chain,
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
+          then: (resolve: (value: unknown) => unknown) => resolve({ data: table === 'coding_progress' ? [...passedIds].map((task_id) => ({ task_id, status: 'passed' })) : [], error: null }),
+        };
+        return chain;
+      };
+      return { from, rpc: () => Promise.resolve({ data: null, error: null }) };
+    };
+    const asFreeAccount = async (id: string, passedIds: ReadonlySet<string>) => {
+      caller += 1;
+      const learner = `contract-walker-${caller}`;
+      const req = { method: 'GET', headers: { authorization: 'Bearer stand-in-token', 'x-forwarded-for': `198.18.${caller >> 8}.${caller & 255}` }, query: { resource: 'coding-task', id, user_id: learner } };
+      const res = mockResponse();
+      await withRequestContext(req as never, res as never, async () => {
+        await requestMemo(`tier:${learner}`, async () => 'free');
+        await handleCodingTask(req as never, res as never, walkDb(passedIds) as never);
+      });
+      return res;
+    };
+    for (const challenge of EVOLVING_CHALLENGES) {
+      const passed = new Set<string>();
+      const free = challenge.stages.slice(0, freeStageCount(challenge.stages));
+      for (const id of free) {
+        const page = await asFreeAccount(id, passed);
+        assert.equal(page.statusCode, 200, `${id}: a free account opens it after ${passed.size} free passes (${JSON.stringify(page.body)})`);
+        assert.equal((page.body as CodingTaskResponse).locked, null, `${id}: unlocked by the free stages before it`);
+        passed.add(id);
+      }
+      const after = challenge.stages[free.length];
+      if (after) assert.equal((await asFreeAccount(after, passed)).statusCode, 402, `${after}: Premium with every free stage of ${challenge.id} passed`);
     }
 
     // C4-6: the app ships English only, so a task, its puzzle and a failed
@@ -3728,13 +3802,24 @@ async function main() {
   const exhaustedResult = readGuestRun(exhausted.exitCode, exhausted.stdout, exhausted.nonce, guestSuite);
   assert.ok(exhaustedResult.passed === 0 && exhaustedResult.failed > 0, JSON.stringify(exhaustedResult));
   assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'the learner reads that their code stopped the runner');
-  // The guest reads Prague time: the API starts it with TZ=Europe/Prague,
-  // and its page realm installs Prague time whatever the process zone is.
-  for (const env of [{}, { TZ: 'America/New_York' }] as Record<string, string>[]) {
-    const pragueGuest = guest(PRAGUE_REACT_SUITE, PRAGUE_REACT_APP, env);
-    const pragueResult = readGuestRun(pragueGuest.exitCode, pragueGuest.stdout, pragueGuest.nonce, PRAGUE_REACT_SUITE);
-    assert.ok(pragueResult.compileError === null && pragueResult.failed === 0 && pragueResult.passed === 2, `the React guest reads Prague time (${JSON.stringify(env)}): ${JSON.stringify(pragueResult.cases)}`);
+  // The guest reads UTC: the API starts it with TZ=UTC, and its page realm
+  // installs UTC whatever the process zone is.
+  for (const env of [{}, { TZ: 'America/Los_Angeles' }, { TZ: 'Asia/Tokyo' }, { TZ: 'Australia/Lord_Howe' }] as Record<string, string>[]) {
+    const utcGuest = guest(UTC_REACT_SUITE, UTC_REACT_APP, env);
+    const utcResult = readGuestRun(utcGuest.exitCode, utcGuest.stdout, utcGuest.nonce, UTC_REACT_SUITE);
+    assert.ok(utcResult.compileError === null && utcResult.failed === 0 && utcResult.passed === 2, `the React guest reads UTC (${JSON.stringify(env)}): ${JSON.stringify(utcResult.cases)}`);
   }
+  // TZ=UTC is what puts the dates jsdom makes in the guest's own realm, such
+  // as a date input's valueAsDate, in UTC too: in Los Angeles the same input
+  // reads the day before.
+  const inputSuite = "import React from 'react';\nimport { render, screen } from '@testing-library/react';\nimport App from './App';\ntest('a date input reads its day in UTC', () => { render(<App />); const day = screen.getByLabelText('Day').valueAsDate; expect([day.getTimezoneOffset(), day.getDate(), day.getHours()]).toEqual([0, 29, 0]); });";
+  const inputApp = 'export default function App() { return <label>Day <input type="date" defaultValue="2026-03-29" /></label>; }';
+  const inputRun = (env: Record<string, string>) => {
+    const run = guest(inputSuite, inputApp, env);
+    return readGuestRun(run.exitCode, run.stdout, run.nonce, inputSuite);
+  };
+  assert.deepEqual(inputRun({}).cases.map((one) => one.error), [null], 'started as the API starts it, the guest reads a date input in UTC');
+  assert.equal(inputRun({ TZ: 'America/Los_Angeles' }).failed, 1, 'without TZ=UTC, the date input reads the host zone');
   const missingInput = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), join(tmpdir(), 'no-such-guest-input.json')], { encoding: 'utf8', timeout: 30_000 });
   assert.notEqual(missingInput.status, 0);
   assert.throws(() => readGuestRun(missingInput.status, missingInput.stdout, randomBytes(24).toString('hex'), guestSuite), /exited unsuccessfully/, 'a guest that ended before learner code ran is a runner failure');

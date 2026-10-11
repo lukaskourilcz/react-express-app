@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
@@ -19,6 +19,8 @@ vi.mock('../src/lib/upgradeSheet', async (importOriginal) => ({
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ isAuthenticated: true, isLoading: false, signInWithGoogle: vi.fn() }) }));
 const FREE_PLAN = { tier: 'free', signedIn: true, loading: false, failed: false, data: null, refetch: () => {} };
 const plan = vi.hoisted(() => ({ value: {} as Record<string, unknown> }));
+// The account's passes, by task id; none unless a test sets them.
+const progress = vi.hoisted(() => ({ tasks: {} as Record<string, { status: 'passed' }> }));
 vi.mock('../src/lib/entitlement', () => ({ useEntitlement: () => plan.value }));
 vi.mock('../src/coding/practice', () => ({
   useBookmarks: () => ({ data: { saved: [] }, isPending: false, isError: false }),
@@ -29,7 +31,7 @@ vi.mock('../src/coding/practice', () => ({
 vi.mock('../src/coding/api', () => ({
   codingKeys: { task: (id: string) => ['task', id], progress: () => ['progress'] },
   saveCodingDraft: vi.fn(),
-  useCodingProgress: () => ({ data: { tasks: {}, due: [], javascriptLevelsCleared: 0 }, isLoading: false, isError: false }),
+  useCodingProgress: () => ({ data: { tasks: progress.tasks, due: [], javascriptLevelsCleared: 0 }, isLoading: false, isError: false }),
   useCodingTask: (id: string) => ({ data: {
     task: { id, track: 'javascript', tier: 2, starter: '// starter' },
     draft: null, signedIn: true, locked: null, session: null,
@@ -55,6 +57,7 @@ beforeAll(() => preloadPath('/coding/javascript/js-digit-sum'));
 beforeEach(() => {
   sheet.open.mockReset();
   plan.value = { ...FREE_PLAN };
+  progress.tasks = {};
 });
 
 describe('the stage list on the free plan', () => {
@@ -62,9 +65,9 @@ describe('the stage list on the free plan', () => {
 
   it('names the free stages, labels checkpoints by their size and draws the rest as Premium that opens the sheet', () => {
     mount(`/coding/javascript/${project.stages[0]}`, <CodingTaskScreen />, '/coding/:track/:taskId');
-    // Owner decision of 9 Oct 2026: the checkpoint and the first milestone
-    // (stages 1 and 2) and the last checkpoint (stage 9) are free.
-    expect(screen.getByText('Stages 1, 2 and 9 come with the free plan. Premium opens the others.')).toBeInTheDocument();
+    // The owner's decisions of 9 Oct 2026: the checkpoint and the first
+    // milestone (stages 1 and 2), and the checkpoint after them (stage 3).
+    expect(screen.getByText('Stages 1, 2 and 3 come with the free plan. Premium opens the stages after them.')).toBeInTheDocument();
     const nav = screen.getByRole('navigation');
     const groups = within(nav).getAllByRole('group');
     // The milestones keep their position bands; every checkpoint (the odd
@@ -72,34 +75,54 @@ describe('the stage list on the free plan', () => {
     expect(groups.map((group) => within(group).getByText(/^(Easy|Medium|Hard)$/).textContent))
       .toEqual(['Easy', 'Medium', 'Easy', 'Medium', 'Easy', 'Hard', 'Easy', 'Hard']);
 
-    // Stage one is where the learner is. Stages 2 and 9 are free and wait for
-    // the stages before them; the other seven are Premium.
+    // Stage one is where the learner is. Stages 2 and 3 are free and wait for
+    // the stages before them; the seven after them are Premium.
     const current = within(nav).getByRole('link');
     expect(current).toHaveAttribute('aria-current', 'step');
     const buttons = within(nav).getAllByRole('button');
     expect(buttons).toHaveLength(9);
     const premium = buttons.filter((button) => /, Premium$/.test(button.getAttribute('aria-label') ?? ''));
-    expect(premium.map((button) => button.textContent)).toEqual(['3', '4', '5', '6', '7', '8', '10']);
+    expect(premium.map((button) => button.textContent)).toEqual(['4', '5', '6', '7', '8', '9', '10']);
     for (const button of premium) {
       expect(button).toHaveAttribute('aria-disabled', 'true');
       expect(button).not.toBeDisabled();
     }
     const waiting = buttons.filter((button) => !premium.includes(button));
-    expect(waiting.map((button) => button.textContent)).toEqual(['2', '9']);
+    expect(waiting.map((button) => button.textContent)).toEqual(['2', '3']);
     for (const button of waiting) {
       expect(button).toHaveAttribute('aria-disabled', 'true');
       fireEvent.click(button);
     }
     expect(sheet.open).not.toHaveBeenCalled();
     fireEvent.click(premium[0]);
-    expect(sheet.open).toHaveBeenCalledWith({ kind: 'evolving-stage', ref: `${project.id}:3` });
+    expect(sheet.open).toHaveBeenCalledWith({ kind: 'evolving-stage', ref: `${project.id}:4` });
+  });
+
+  // Reachable on the free plan: each free stage opens from the list once the
+  // free stages before it are passed, and the stage after them is Premium
+  // even with all of them passed. The last checkpoint (stage 9) used to be
+  // free and could never open: stages 4 to 8 before it are Premium.
+  it('opens each free stage once the free stages before it are passed', () => {
+    for (const reached of [2, 3]) {
+      progress.tasks = Object.fromEntries(project.stages.slice(0, reached - 1).map((id) => [id, { status: 'passed' as const }]));
+      mount(`/coding/javascript/${project.stages[0]}`, <CodingTaskScreen />, '/coding/:track/:taskId');
+      const nav = screen.getByRole('navigation');
+      expect(within(nav).getByRole('link', { name: `Evolving · Stage ${reached} of 10` })).toHaveAttribute('href', `/coding/javascript/${project.stages[reached - 1]}`);
+      cleanup();
+    }
+    progress.tasks = Object.fromEntries(project.stages.slice(0, 3).map((id) => [id, { status: 'passed' as const }]));
+    mount(`/coding/javascript/${project.stages[0]}`, <CodingTaskScreen />, '/coding/:track/:taskId');
+    const nav = screen.getByRole('navigation');
+    expect(within(nav).getAllByRole('link').map((link) => link.textContent)).toEqual(['✓ 1', '✓ 2', '✓ 3']);
+    fireEvent.click(within(nav).getByRole('button', { name: 'Evolving · Stage 4 of 10, Premium' }));
+    expect(sheet.open).toHaveBeenCalledWith({ kind: 'evolving-stage', ref: `${project.id}:4` });
   });
 });
 
 describe('the project cards on the free plan', () => {
-  it('name the stages the free plan opens: 1 and 11 of a FullStack app, level 1 of a short path', () => {
+  it('name the stages the free plan opens: 1 and 2 of a FullStack app, level 1 of a short path', () => {
     mount('/coding/fullstack', <FullStackScreen />, '/coding/fullstack');
-    expect(screen.getAllByText('Stages 1 and 11 come with the free plan. Premium opens the others.')).toHaveLength(3);
+    expect(screen.getAllByText('Stages 1 and 2 come with the free plan. Premium opens the stages after them.')).toHaveLength(3);
     expect(screen.getByText('Level 1 comes with the free plan. Premium opens the levels after it.')).toBeInTheDocument();
   });
 });

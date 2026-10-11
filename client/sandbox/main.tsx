@@ -14,7 +14,7 @@ import { transform } from 'sucrase';
 import { createMiniJest } from '../../shared/coding-mini-jest';
 import { asRunnableModule, failUncancelledSubmits, FETCH_STUB_SOURCE } from '../../shared/coding-react-support';
 import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
-import { installPragueTime } from '../../shared/coding-prague-time';
+import { installUtcTime } from '../../shared/coding-utc-time';
 
 interface RunMessage {
   type: 'run';
@@ -35,10 +35,10 @@ type Outgoing =
 
 const post = (message: Outgoing) => window.parent.postMessage(message, '*');
 
-// Learner code here reads Europe/Prague time, as it does in the grader's
-// React guest, whatever the learner's own zone. The frame exists only for
-// learner code, so its Date is rewritten in place.
-installPragueTime(window, { intl: Intl });
+// Learner code here reads UTC, as it does in the grader's React guest,
+// whatever the learner's own zone. The frame exists only for learner code,
+// so its Date is rewritten in place.
+installUtcTime(window, { intl: Intl });
 
 // Testing Library wants this while a suite runs; React warns about unwrapped
 // updates when it is left on, so the preview render turns it off again.
