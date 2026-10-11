@@ -41,10 +41,10 @@ Issues: #330–#337. Branch: `codex/apple-design-preview`.
 | MotionItem and MotionPop | Critically damped spring defaults; short fades under reduced motion |
 
 The shared tokens also affect existing Coding, Learn, Quiz, Coins and Premium
-screens where they consume those tokens. This is a visual prototype, not a
-rewrite of every screen's local CSS. No new gesture-driven controls were added.
-The original comparison is intended to compare visual treatment; the shared
-motion helpers and drawer receive the branch's motion improvements in both variants.
+screens where they consume those tokens. Screen-specific layouts continue to
+use their existing components and local CSS. The shared motion helpers and drawer
+use the Apple motion defaults throughout the app. No new gesture-driven controls
+were added.
 
 Owner refinement: the Apple variant's dark mode retains the original Deep End
 blue-green ink background, grain and gradient (`#0c161e` to `#0a1219`), with
