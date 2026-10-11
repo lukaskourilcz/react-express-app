@@ -18,6 +18,9 @@ preview shows three bottom-aligned examples; Run and Submit still check the
 full suite. Mobile mounts only the quiz, without dots. The task,
 Run, Format, Submit, visible tests and hidden server checks reuse Coding's API
 and workbench. This is an actual challenge, with normal grading and rewards.
+Only the landing card uses 44px icon buttons for Run (play), Submit (send) and
+Format (aligned lines), with named tooltips. Full coding exercises retain their
+text command buttons.
 
 Each workbench includes a Big O label and an adjacent info tooltip containing
 space targets and explanatory guidance, available by hover, focus and tap.
