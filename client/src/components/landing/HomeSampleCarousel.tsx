@@ -1,4 +1,4 @@
-import { useId, useState, type ReactNode } from 'react';
+import { useCallback, useId, useState, type ReactNode } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@astryxdesign/core/Button';
 import { Link } from 'react-router-dom';
@@ -12,7 +12,7 @@ const TASK_ID = 'alg-valid-palindrome';
 
 /** Reuses the real task API, sealed session, editor, runner and server grader.
  * Mobile never mounts this branch or downloads the workbench. */
-function PalindromeSample() {
+function PalindromeSample({ initialCode, onEdit }: { initialCode: string | null; onEdit: (code: string) => void }) {
   const { user } = useAuth();
   const [attempt, setAttempt] = useState(0);
   const task = useQuery({ queryKey: [...codingKeys.task(TASK_ID), 'home', user?.id ?? 'guest'], queryFn: ({ signal }) => fetchCodingTask(TASK_ID, signal), staleTime: 60 * 60_000, refetchOnWindowFocus: false, retry: false });
@@ -27,7 +27,7 @@ function PalindromeSample() {
   );
   if (!task.data || !workbench.View) return <div className="ss-home-carousel__state" role="status">Loading palindrome challenge…</div>;
   const View = workbench.View;
-  return <View key={`${user?.id ?? 'guest'}-${task.data.session}`} task={task.data.task} session={task.data.session} locked={task.data.locked} signedIn={task.data.signedIn} initialCode={null} mode="landing" />;
+  return <View key={`${user?.id ?? 'guest'}-${task.data.session}`} task={task.data.task} session={task.data.session} locked={task.data.locked} signedIn={task.data.signedIn} initialCode={initialCode} onEdit={onEdit} mode="landing" />;
 }
 
 export function HomeSampleCarousel({ quiz }: { quiz: ReactNode }) {
@@ -35,6 +35,10 @@ export function HomeSampleCarousel({ quiz }: { quiz: ReactNode }) {
   const [slide, setSlide] = useState<'quiz' | 'coding'>('quiz');
   const id = useId();
   const [codingVisited, setCodingVisited] = useState(false);
+  const { user } = useAuth();
+  const owner = user?.id ?? 'guest';
+  const [draft, setDraft] = useState<{ owner: string; code: string } | null>(null);
+  const onEdit = useCallback((code: string) => setDraft({ owner, code }), [owner]);
   // The viewport governs mounting, not just CSS visibility: no hidden editor
   // or worker on phones. The quiz keeps its answer when switching slides.
   if (!tabletOrDesktop) return <>{quiz}</>;
@@ -49,7 +53,7 @@ export function HomeSampleCarousel({ quiz }: { quiz: ReactNode }) {
         <div className="ss-home-carousel__behind" aria-hidden="true"><span>{slide === 'quiz' ? 'Valid palindrome · Coding challenge' : 'What does this return? · Quiz'}</span></div>
         <div id={`${id}-quiz`} className="ss-home-carousel__slide" hidden={slide !== 'quiz'} aria-label="Quiz sample">{quiz}</div>
         <div id={`${id}-coding`} className="ss-home-carousel__slide ss-panel" hidden={slide !== 'coding'} aria-label="Coding sample">
-          {codingVisited && <PalindromeSample />}
+          {codingVisited && <PalindromeSample initialCode={draft?.owner === owner ? draft.code : null} onEdit={onEdit} />}
         </div>
       </div>
     </section>

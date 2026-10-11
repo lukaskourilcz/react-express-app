@@ -66,7 +66,8 @@ it('offers a retry when the task request fails', async () => {
 it('unmounts the editor when the viewport becomes mobile', async () => {
   const rendered = sample();
   fireEvent.click(screen.getByRole('button', { name: 'Coding' }));
-  await screen.findByRole('textbox');
+  const editor = await screen.findByRole('textbox');
+  fireEvent.change(editor, { target: { value: 'retained after resizing' } });
   viewport.wide = false;
   rendered.rerender(rendered.view());
   await waitFor(() => expect(screen.queryByRole('textbox')).toBeNull());
