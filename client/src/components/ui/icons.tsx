@@ -83,6 +83,24 @@ export const InfoIcon = ({ size = 20, style }: IconProps) => (
   </svg>
 );
 
+export const PlayIcon = ({ size = 20, style }: IconProps) => (
+  <svg {...base(size)} style={style}>
+    <polygon points="7 4 21 12 7 20 7 4" />
+  </svg>
+);
+
+export const SendIcon = ({ size = 20, style }: IconProps) => (
+  <svg {...base(size)} style={style}>
+    <path d="M22 2 9 15M22 2l-7 20-4-9-9-4 20-7z" />
+  </svg>
+);
+
+export const FormatCodeIcon = ({ size = 20, style }: IconProps) => (
+  <svg {...base(size)} style={style}>
+    <path d="M3 6h18M8 12h13M3 18h14" />
+  </svg>
+);
+
 export const BookmarkIcon = ({ size = 20, style }: IconProps) => (
   <svg {...base(size)} style={style}>
     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />

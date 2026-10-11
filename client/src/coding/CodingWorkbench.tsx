@@ -21,7 +21,7 @@ import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
 import { ReportDialog } from '../components/ReportDialog';
-import { FlagIcon, InfoIcon } from '../components/ui/icons';
+import { FlagIcon, InfoIcon, PlayIcon, SendIcon, FormatCodeIcon } from '../components/ui/icons';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
@@ -1069,9 +1069,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {!puzzleMode && !pendingOnDesktop && <>
         {/* Busy, not disabled: the button that was pressed keeps the focus
             (a disabled one hands it to the page), and a press does nothing. */}
-        <Button variant="secondary" onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
-        <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
-        <Button variant="ghost" onClick={() => void format()} isDisabled={formatDisabled} label={t('coding.format')} />
+        <Button variant="secondary" isIconOnly={mode === 'landing'} icon={mode === 'landing' ? <PlayIcon /> : undefined} onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : mode === 'landing' ? t('coding.run') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
+        {mode === 'landing'
+          ? <Button variant="primary" isIconOnly icon={<SendIcon />} onClick={() => { if (!submitDisabled) void submit(); }} isDisabled={submitDisabled} tooltip={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
+          : <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />}
+        <Button variant="ghost" isIconOnly={mode === 'landing'} icon={mode === 'landing' ? <FormatCodeIcon /> : undefined} onClick={() => void format()} isDisabled={formatDisabled} tooltip={mode === 'landing' ? t('coding.format') : undefined} label={t('coding.format')} />
         <Button variant="ghost" ref={resetRef} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
         </>}
 

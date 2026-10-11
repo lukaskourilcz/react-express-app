@@ -379,3 +379,19 @@ it('keeps Big O space targets and guidance exclusively inside its named tooltip'
   expect(document.querySelector('.cd-complexity details')).toBeNull();
   expect(document.querySelector('.cd-complexity > span')).not.toHaveTextContent('Target extra space');
 });
+
+it('uses named icons and tooltips only for the homepage command buttons', () => {
+  const landing = mount({ mode: 'landing' });
+  for (const name of ['Run', 'Submit', 'Format']) {
+    const button = screen.getByRole('button', { name, exact: true });
+    expect(button.querySelector('svg')).not.toBeNull();
+    expect(button).not.toHaveTextContent(name);
+    expect(document.getElementById(button.getAttribute('aria-describedby')!)).toHaveTextContent(name);
+  }
+  landing.unmount();
+  mount();
+  fireEvent.click(screen.getByRole('button', { name: 'Use the editor on this screen' }));
+  for (const name of ['Run', 'Submit', 'Format']) {
+    expect(screen.getByRole('button', { name, exact: true })).toHaveTextContent(name);
+  }
+});

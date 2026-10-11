@@ -219,6 +219,7 @@
 .cd-complexity__tip p + p { margin-top: .5rem; }
 .cd-workbench--landing .cd-workbench__grid { grid-template-columns: minmax(0, 1fr); gap: .75rem; }
 .cd-workbench--landing .cd-pane { padding: .75rem; }
+.cd-workbench--landing .cd-actions--commands button[aria-label] { min-width: 44px; min-height: 44px; }
 .cd-workbench--landing .cd-pane--output { contain: none; min-height: 200px; }
 .cd-workbench--landing .cd-splitter { display: none; }
 .cd-workbench--landing .cd-brief__title { font-size: 1.15rem; }
