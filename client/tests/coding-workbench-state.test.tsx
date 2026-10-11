@@ -381,17 +381,20 @@ it('keeps Big O space targets and guidance exclusively inside its named tooltip'
 });
 
 it('uses named icons and tooltips only for the homepage command buttons', () => {
+  vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
+  }) as MediaQueryList);
   const landing = mount({ mode: 'landing' });
   for (const name of ['Run', 'Submit', 'Format']) {
-    const button = screen.getByRole('button', { name, exact: true });
+    const button = screen.getByRole('button', { name });
     expect(button.querySelector('svg')).not.toBeNull();
     expect(button).not.toHaveTextContent(name);
     expect(document.getElementById(button.getAttribute('aria-describedby')!)).toHaveTextContent(name);
   }
   landing.unmount();
   mount();
-  fireEvent.click(screen.getByRole('button', { name: 'Use the editor on this screen' }));
   for (const name of ['Run', 'Submit', 'Format']) {
-    expect(screen.getByRole('button', { name, exact: true })).toHaveTextContent(name);
+    expect(screen.getByRole('button', { name })).toHaveTextContent(name);
   }
 });

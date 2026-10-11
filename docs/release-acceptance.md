@@ -21,6 +21,7 @@ homepage. The normal Coding editor keeps its existing size and text buttons.
 | Prompt size and appearance | PASS — two lines at 600px, one at 768/1024px; light/dark reviewed; mobile mounts only the quiz |
 | Dot controls and Big O tooltip | PASS — Enter switches the card; tooltip opens by click and closes with Escape; three idle/Run examples align to the bottom at 600px |
 | Homepage command icons | PASS — 44px targets at 600px, no overflow; Format, Run (5/5) and Submit (4/4 hidden) work; keyboard focus shows Submit tooltip; full workbench retains command text |
+| Client/tooling types after icon tests | PASS — removed unsupported Testing Library role-query options reported by CI; 29 focused tests pass again |
 
 GitHub required checks and deployment are tracked on the follow-up PR. Local
 evidence: `/tmp/devshark-compact-{tests,types,launch,build,responsive}.log` and
