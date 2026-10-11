@@ -1,5 +1,24 @@
 # Release acceptance matrix
 
+## Compact homepage coding sample — 2026-10-11
+
+Issue #339 replaces the large palindrome sample with the free JavaScript
+`js-double-numbers` challenge. Its complete prompt is a short sentence; the
+landing editor is 160px tall. The normal Coding editor keeps its existing size.
+
+| Check | Actual local result |
+|---|---|
+| API types; launch/play-room/verified-caller contracts | PASS |
+| Carousel tests | PASS — 4 tests, including on-demand task selection and draft retention |
+| Production build; root/client production audits; diff check | PASS — zero production vulnerabilities |
+| Responsive sweep | PASS — homepage and full double-numbers challenge, 8 probes at 360/768/1024/1440px |
+| Live homepage sample | PASS — Format and Run, 5 public tests; Submit, 4 hidden checks and O(n) estimate, signed out |
+| Prompt size and appearance | PASS — two lines at 600px, one at 768/1024px; light/dark reviewed; mobile mounts only the quiz |
+
+GitHub required checks and deployment are tracked on the follow-up PR. Local
+evidence: `/tmp/devshark-compact-{tests,types,launch,build,responsive}.log` and
+`/tmp/devshark-compact-{root,client}-audit.log`.
+
 ## Apple design rollout — 2026-10-11
 
 Owner requested the default Apple design, retaining Deep End dark backgrounds,
