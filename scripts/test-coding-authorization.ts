@@ -238,10 +238,11 @@ async function main() {
     return out;
   };
   const barred = await mutateBookmark({ op: 'save', taskId: higher.id, saved: true });
-  assert.equal(barred.statusCode, 403, JSON.stringify(barred.body));
+  assert.equal(barred.statusCode, 402, JSON.stringify(barred.body));
+  assert.equal(errorCode(barred.body), 'premium_required', 'Save preserves the shared Premium refusal contract');
   assert.equal(writes, 0, 'a locked bookmark is rejected before the write');
   const collectionBarred = await mutateBookmark({ op: 'collection-item', taskId: higher.id, collectionId: 'collection-0001', present: true });
-  assert.equal(collectionBarred.statusCode, 403);
+  assert.equal(collectionBarred.statusCode, 402);
   assert.equal(writes, 0, 'collections cannot bypass the bookmark gate');
   assert.equal((await mutateBookmark({ op: 'save', taskId: 'alg-valid-palindrome', saved: true })).statusCode, 200);
   assert.equal(writes, 1, 'an open free challenge can be saved');

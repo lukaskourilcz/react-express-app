@@ -842,7 +842,7 @@ export function CodingTaskScreen() {
             backHref={backHref}
             // The star sits with the workbench's own utilities, beside the
             // report flag, rather than floating above the brief.
-            saveAction={isAuthenticated && !data.locked && (
+            saveAction={isAuthenticated && !data.locked && premiumOf(data.task.id) === 'open' && (
               <SaveButton
                 toolbar
                 taskId={data.task.id}

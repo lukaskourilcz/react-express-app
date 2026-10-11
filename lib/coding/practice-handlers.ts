@@ -15,7 +15,7 @@ import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
-import { resolveTier, serverContentIndex } from '../access';
+import { resolveTier, serverContentIndex, refuseLocked } from '../access';
 import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask, levelCodingTasks } from './active';
 import { codingTaskForHistory } from './catalog';
 import { javascriptLevelsCleared } from './handlers';
@@ -78,6 +78,7 @@ async function refuseSavedLock(res: VercelResponse, supabase: SupabaseClient, us
     ]);
     if (rows.error) throw new Error('progress_unavailable');
     const passed = new Set((rows.data ?? []).filter((row) => row.status === 'passed').map((row) => String(row.task_id)));
+    if (await refuseLocked(res, userId, codingContent(taskId), { cleared: async () => evolvingPassed(taskId, passed) })) return true;
     if (canSaveCodingTask(taskId, passed, plan, cleared)) return false;
     jsonError(res, 403, 'challenge_locked', 'Unlock this challenge before saving it');
   } catch {
