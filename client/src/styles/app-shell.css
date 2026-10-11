@@ -903,7 +903,6 @@
 :root[data-design='apple'] .ss-hero-grid h1 { font-weight: 650 !important; letter-spacing: -.045em !important; line-height: 1.035 !important; text-wrap: balance; }
 :root[data-design='apple'] .ss-hero-grid > div:first-child { gap: 1.5rem !important; }
 :root[data-design='apple'] .ss-hero-grid > div:first-child > p { font-size: 1.2rem !important; line-height: 1.55; }
-:root[data-design='apple'] .ss-hero-grid > .ss-panel { padding: clamp(1.25rem, 3vw, 2rem) !important; gap: 1.125rem !important; }
 :root[data-design='apple'] .ss-home h2 { font-weight: 650 !important; letter-spacing: -.025em !important; }
 :root[data-design='apple'] .ss-hero-stats { gap: 2.25rem; margin-top: .5rem; }
 :root[data-design='apple'] .ss-hero-stats > div > span:first-child { font-size: 1.75rem !important; font-weight: 600 !important; }
