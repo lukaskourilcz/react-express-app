@@ -16,7 +16,7 @@ feedback, and the Instagram footer copy. Issues #330–#337 are tracked by
 | Coding authorization | PASS — locked saves/collection additions refused, open task saved, existing locked bookmark removable |
 | Complexity contracts | PASS — linear, nested, fixed and logarithmic traversal, sorting; unknown recursion, external calls, growing strings and regex backtracking |
 | Carousel and workbench tests | PASS — mobile does not request a task/editor; switching and resizing retain code; request retry works |
-| Full client suite | Initial 982/983 pass; footer negative matcher corrected and focused suite passes. A concurrent Node 24 run hit four timeouts; all 36 affected tests passed on isolated retry. Final full run tracked in PR checks |
+| Full client suite | PASS — 104 files / 987 tests on Node 24. Initial footer matcher corrected; four load-related timeouts in a concurrent run passed on isolated retry before the full passing run |
 | Production build and public HTML | PASS — 725 coding share pages, no Czech in coding chunks |
 | Production CSS | Found and fixed root Apple tokens being purged; build now asserts their survival |
 | Security and unused code | PASS — no new findings |
