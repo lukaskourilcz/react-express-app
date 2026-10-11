@@ -15,13 +15,15 @@ info tooltip. The normal Coding editor keeps its existing size.
 | API types; launch/play-room/verified-caller contracts | PASS |
 | Sample/workbench tests | PASS — 28 tests, including random first card, dot switching, draft retention, three examples with full-suite execution, and named tooltip content |
 | Production build; root/client production audits; diff check | PASS — zero production vulnerabilities |
-| Responsive sweep | PASS — homepage and full double-numbers challenge, 8 probes at 360/768/1024/1440px |
+| Responsive sweep | PASS — homepage, full double-numbers challenge and palindrome workbench, 12 probes at 360/768/1024/1440px |
 | Live homepage sample | PASS — Format and Run, 5 public tests; Submit, 4 hidden checks and O(n) estimate, signed out |
 | Prompt size and appearance | PASS — two lines at 600px, one at 768/1024px; light/dark reviewed; mobile mounts only the quiz |
+| Dot controls and Big O tooltip | PASS — Enter switches the card; tooltip opens by click and closes with Escape; three idle/Run examples align to the bottom at 600px |
 
 GitHub required checks and deployment are tracked on the follow-up PR. Local
 evidence: `/tmp/devshark-compact-{tests,types,launch,build,responsive}.log` and
 `/tmp/devshark-compact-{root,client}-audit.log`.
+Final dot/tooltip validation additionally uses `/tmp/devshark-dot-{tests,types,build,responsive}.log`.
 
 ## Apple design rollout — 2026-10-11
 
