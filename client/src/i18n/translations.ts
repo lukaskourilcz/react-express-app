@@ -5,6 +5,10 @@
 // Interpolation: use {name} placeholders and pass vars to t(key, vars).
 
 export const en = {
+  'designPreview.label': 'Compare interface designs',
+  'designPreview.local': 'Local preview',
+  'designPreview.original': 'Original',
+  'designPreview.apple': 'Apple',
   // App shell / navigation
   'nav.quiz': 'Quiz',
   'nav.learn': 'Learn',

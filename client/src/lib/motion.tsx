@@ -121,7 +121,7 @@ export function MotionItem({
       style={style}
       initial={reduce ? { opacity: 0 } : { opacity: 0, y: 12 }}
       animate={reduce ? { opacity: 1 } : { opacity: 1, y: 0 }}
-      transition={{ duration: 0.32, ease: 'easeOut', delay }}
+      transition={reduce ? { duration: 0.12 } : { type: 'spring', stiffness: 400, damping: 40, delay }}
     >
       {children}
     </m.div>
@@ -136,7 +136,7 @@ export function MotionPop({ children, className }: { children: ReactNode; classN
       className={className}
       initial={reduce ? { opacity: 0 } : { opacity: 0, scale: 0.8 }}
       animate={reduce ? { opacity: 1 } : { opacity: 1, scale: 1 }}
-      transition={reduce ? { duration: 0.2 } : { type: 'spring', stiffness: 480, damping: 26 }}
+      transition={reduce ? { duration: 0.12 } : { type: 'spring', stiffness: 440, damping: 42 }}
     >
       {children}
     </m.div>

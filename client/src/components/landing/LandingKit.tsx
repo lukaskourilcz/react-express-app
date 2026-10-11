@@ -92,7 +92,7 @@ export function FadeFinCta({
   const reduce = useReducedMotion();
   return (
     <button
-      type="button" onClick={onClick} disabled={disabled}
+      type="button" className="ss-fin-button" onClick={onClick} disabled={disabled}
       onMouseEnter={() => setHover(true)} onMouseLeave={() => setHover(false)}
       onFocus={() => setHover(true)} onBlur={() => setHover(false)}
       style={{

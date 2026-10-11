@@ -7,6 +7,8 @@ import ReactDOM from 'react-dom/client';
 // sits under the component styles.
 import './styles/reset.css';
 import './styles/astryx-theme.css';
+// Vzhled nastavíme před prvním vykreslením, aby náhled neproblikl původním motivem.
+document.documentElement.dataset.design = new URLSearchParams(window.location.search).get('design') === 'original' ? 'original' : 'apple';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import App from './App';

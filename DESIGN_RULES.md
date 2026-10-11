@@ -1,5 +1,16 @@
 # Design Rules — devShark "Deep End v2"
 
+## Local Apple design experiment
+
+Branch `codex/apple-design-preview` adds an owner-requested visual experiment
+based on [apple-design](https://github.com/emilkowalski/skills/blob/main/skills/apple-design/SKILL.md).
+`html[data-design='apple']` overrides typography, neutral surfaces, radii,
+card elevation and chrome. Those overrides intentionally replace the paper
+stock and textured-dialog treatments below for this experiment. The original
+appearance remains available through `?design=original`; the comparison
+control is development-only. Brand geometry, accent, content and access rules
+still follow the existing sources. See `docs/design/apple-design-preview.md`.
+
 These rules govern every visual change in this codebase. They come from the
 `Deep End v2` design handoff (the `.dc.html` references + README). Read them
 before touching any component, style file, or brand mark. The design tokens
