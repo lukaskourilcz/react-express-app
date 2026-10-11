@@ -16,14 +16,19 @@ const label = (cost: Cost): string => {
   const log = cost.log === 0 ? '' : cost.log === 1 ? 'log n' : `(log n)^${cost.log}`;
   return `O(${[n, log].filter(Boolean).join(' ') || '1'})`;
 };
-const rank = (value: string): number | null => ({ 'O(1)': 0, 'O(log n)': 1, 'O(n)': 2, 'O(n log n)': 3, 'O(n^2)': 4, 'O(n²)': 4, 'O(n^3)': 5 }[value] ?? null);
+const targetCost = (value: string): Cost | null => {
+  const simple: Record<string, Cost> = { 'O(1)': constant, 'O(log n)': { power: 0, log: 1 }, 'O(n)': linear, 'O(n log n)': { power: 1, log: 1 }, 'O(n²)': { power: 2, log: 0 } };
+  if (simple[value]) return simple[value];
+  const power = value.match(/^O\(n\^(\d+)\)$/);
+  return power ? { power: Number(power[1]), log: 0 } : null;
+};
 const scanMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'includes', 'indexOf', 'lastIndexOf', 'slice', 'split', 'join', 'reverse', 'toReversed', 'flat', 'flatMap', 'concat', 'replace', 'replaceAll', 'toLowerCase', 'toUpperCase', 'trim', 'substring', 'substr', 'shift', 'unshift', 'splice']);
 const callbackMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'flatMap', 'sort', 'toSorted']);
 const scalarMethods = new Set(['push', 'pop', 'get', 'set', 'has', 'add', 'delete', 'charAt', 'charCodeAt', 'at', 'test', 'isArray', 'isInteger', 'isFinite', 'abs', 'floor', 'ceil', 'round', 'min', 'max', 'log2', 'sqrt']);
 
 export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>, code: string): ComplexityReport {
   const guidance = complexityGuidance(task);
-  const assumptions = 'Static estimate, not a proof. Assumes input-sized collections, bounded callbacks, constant-time indexing and average constant-time Map/Set operations. Sort is modelled as n log n; actual engine behaviour can differ. Timing and extra space are not measured.';
+  const assumptions = 'Static estimate, not a proof. Assumes input-sized collections, bounded callbacks, constant-time indexing and average constant-time Map/Set operations. Numeric loop bounds are treated as magnitudes, not bit lengths. Sort is modelled as n log n; actual engine behaviour can differ. Timing and extra space are not measured.';
   const unknown = (explanation: string): ComplexityReport => ({ time: null, assessment: 'unknown', explanation, assumptions, guidance });
   if (task.track === 'react' || task.track === 'system-design' || !task.tests?.length) return unknown(guidance.note);
   if (code.length > 20_000) return unknown('This submission is too large for the structural estimate.');
@@ -48,13 +53,25 @@ export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'te
   }
   if (!entries.size) return unknown('The tested entry point cannot be resolved statically. Review this implementation manually.');
   let uncertainty: string | null = null;
+  for (const statement of file.statements) {
+    if (ts.isVariableStatement(statement)) for (const declaration of statement.declarationList.declarations) {
+      const init = declaration.initializer;
+      if (init && !ts.isArrowFunction(init) && !ts.isFunctionExpression(init) && !ts.isStringLiteral(init) && !ts.isNumericLiteral(init) && !ts.isRegularExpressionLiteral(init) && ![ts.SyntaxKind.TrueKeyword, ts.SyntaxKind.FalseKeyword, ts.SyntaxKind.NullKeyword].includes(init.kind)) uncertainty = 'Setup outside the tested function needs a manual input-size review.';
+    }
+  }
   const evidence = new Set<string>();
   let visited = 0;
   const inspectFunction = (fn: ts.FunctionLikeDeclaration, stack: Set<string>): Cost => {
     const parameters = new Set(fn.parameters.flatMap((parameter) => ts.isIdentifier(parameter.name) ? [parameter.name.text] : []));
     const bounds = new Set(parameters);
+    const strings = new Set<string>();
+    const regexes = new Map<string, string>();
     const collect = (node: ts.Node) => {
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && /\.length\b/.test(node.initializer.getText(file))) bounds.add(node.name.text);
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+        if (ts.isStringLiteral(node.initializer)) strings.add(node.name.text);
+        if (ts.isRegularExpressionLiteral(node.initializer)) regexes.set(node.name.text, node.initializer.text);
+      }
       ts.forEachChild(node, collect);
     };
     if (fn.body) collect(fn.body);
@@ -72,6 +89,7 @@ export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'te
     const walk = (node: ts.Node): Cost => {
       visited += 1;
       if (visited > 12_000) { uncertainty = 'The analysis limit was reached. Review the code manually.'; return constant; }
+      if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left) && strings.has(node.left.text) && [ts.SyntaxKind.PlusEqualsToken, ts.SyntaxKind.EqualsToken].includes(node.operatorToken.kind)) uncertainty = 'Growing immutable strings need a manual review of copying costs.';
       if (ts.isFunctionDeclaration(node) || ts.isArrowFunction(node) || ts.isFunctionExpression(node)) return constant;
       if (ts.isForInStatement(node)) { uncertainty = 'Object enumeration needs a manual review of the input model.'; return constant; }
       if (ts.isForOfStatement(node)) {
@@ -111,7 +129,12 @@ export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'te
         } else if (ts.isPropertyAccessExpression(node.expression)) {
           const method = node.expression.name.text;
           const receiver = node.expression.expression.getText(file);
-          if (receiver === 'console') return constant; // Scratch-pad logging is not the solution's algorithm.
+          if (receiver === 'console') return constant;
+          if (method === 'test' || method === 'replace' || method === 'replaceAll') {
+            const pattern = method === 'test' ? regexes.get(receiver) ?? receiver : node.arguments[0]?.getText(file) ?? '';
+            if (pattern.startsWith('/') && !/^\/\[\^?[a-zA-Z0-9\-]+\]\/[gimyus]*$/.test(pattern)) uncertainty = 'Regular-expression backtracking needs a manual worst-case review.';
+            if (method === 'test' && !pattern.startsWith('/')) uncertainty = 'The regular expression cannot be resolved statically.';
+          } // Scratch-pad logging is not the solution's algorithm.
           if (method === 'sort' || method === 'toSorted') { call = { power: 1, log: 1 }; evidence.add('Sorting input data'); }
           else if (['toLowerCase', 'toUpperCase', 'trim'].includes(method) && ts.isElementAccessExpression(node.expression.expression)) { call = constant; }
           else if (scanMethods.has(method) || (receiver === 'Object' && ['keys', 'values', 'entries'].includes(method)) || method === 'from') { call = linear; evidence.add('Collection/string scan'); }
@@ -138,8 +161,8 @@ export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'te
   for (const name of entries) cost = max(cost, inspectFunction(functions.get(name)!, new Set([name])));
   if (uncertainty) return unknown(uncertainty);
   const time = label(cost);
-  const actual = rank(time);
-  const target = guidance.targetTime ? rank(guidance.targetTime) : null;
-  const assessment = actual !== null && target !== null ? actual <= target ? 'within-target' : 'above-target' : 'estimated';
+  const target = guidance.targetTime ? targetCost(guidance.targetTime) : null;
+  const above = target && (cost.power > target.power || (cost.power === target.power && cost.log > target.log));
+  const assessment = target ? above ? 'above-target' : 'within-target' : 'estimated';
   return { time, assessment, explanation: [...evidence].join(' · ') || 'No input-growing traversal recognised in the tested function.', assumptions, guidance };
 }
