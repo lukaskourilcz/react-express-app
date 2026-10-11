@@ -32,6 +32,12 @@ rewrite of every screen's local CSS. No new gesture-driven controls were added.
 The original comparison is intended to compare visual treatment; the shared
 motion helpers and drawer receive the branch's motion improvements in both variants.
 
+Owner refinement: the Apple variant's dark mode retains the original Deep End
+blue-green ink background, grain and gradient (`#0c161e` to `#0a1219`), with
+matching dark surface tokens. The light palette and Apple component shapes remain
+as previewed. The floating header's scroll-edge fade uses a separate solid color
+token so it still works over the layered page background.
+
 ## Validation
 
 - API TypeScript check: passed.

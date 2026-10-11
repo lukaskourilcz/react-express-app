@@ -886,7 +886,7 @@
   position: absolute;
   inset: 100% 1rem auto;
   height: 1.25rem;
-  background: linear-gradient(var(--ss-app-bg), transparent);
+  background: linear-gradient(var(--ss-scroll-edge-bg), transparent);
   pointer-events: none;
 }
 :root[data-design='apple'] .ss-toolbar { min-height: 64px; padding-inline: 1.25rem; }
