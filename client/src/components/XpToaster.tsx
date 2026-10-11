@@ -23,20 +23,23 @@ const GAIN_KEY: Record<GainSource, TranslationKey> = {
   learn: 'xp.gainLearn',
   quiz: 'xp.gainQuiz',
   practice: 'xp.gainPractice',
-  coding: 'xp.gainCoding',
+  coding: 'xp.gainQuiz',
   again: 'xp.gainAgain',
 };
 
 /** What the hour held back, and when it opens again, in the learner's own
  * clock time (migration 060). */
 function heldMessage(t: ReturnType<typeof useT>, hold: XpHold): string {
-  if (hold.on === 'questions') {
-    return t(hold.count === 1 ? 'xp.heldAnswer' : 'xp.heldAnswers', { n: hold.count, time: clockTime(hold.availableAt) });
-  }
-  if (hold.on === 'task') {
-    return hold.availableAt ? t('xp.heldTask', { time: clockTime(hold.availableAt) }) : t('xp.heldTaskReset');
-  }
-  return t('xp.heldStep', { time: clockTime(hold.availableAt) });
+  const { on, availableAt } = hold;
+  const key = on === 'questions'
+    ? hold.count === 1 ? 'xp.heldAnswer' : 'xp.heldAnswers'
+    : on === 'task'
+      ? availableAt ? 'xp.heldTask' : 'xp.heldTaskReset'
+      : 'xp.heldStep';
+  return t(key, {
+    n: on === 'questions' ? hold.count : 0,
+    time: availableAt ? clockTime(availableAt) : '',
+  });
 }
 
 export default function XpToaster() {

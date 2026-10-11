@@ -604,7 +604,6 @@ export const en = {
   'xp.gainLearn': '+{xp} XP earned',
   'xp.gainQuiz': '+{xp} XP earned',
   'xp.gainPractice': '+{xp} XP · practice',
-  'xp.gainCoding': '+{xp} XP earned',
   'xp.gainAgain': '+{xp} XP again',
   'xp.heldStep': 'No XP this time: you can earn it again from {time}, an hour after you last earned it.',
   'xp.heldTask': 'No XP this time: reset the task and pass it from {time} to earn it again.',
