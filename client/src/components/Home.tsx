@@ -26,6 +26,7 @@ import { CURRENT_PRODUCT } from '../lib/products';
 import { SUBJECT_SCOPE_CATALOG } from '../../../shared/subject-catalog';
 import { localizeLandingTopic } from '../lib/localizeLandingTopic';
 import { LaunchOfferBanner } from './LaunchOffer';
+import { HomeSampleCarousel } from './landing/HomeSampleCarousel';
 import ComparisonTable from './landing/ComparisonTable';
 import './landing/landingSections.css';
 
@@ -54,6 +55,7 @@ function TopicCard({
       onMouseLeave={() => setHover(false)}
       aria-label={`${t('nav.learn')} ${topic.name}`}
       aria-pressed={selected}
+      className="ss-topic-card"
       style={{
         position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', gap: 12, textAlign: 'left',
         background: selected ? 'var(--brand-accent-soft)' : 'var(--ss-card-bg)',
@@ -175,7 +177,6 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<string>(featured[0]?.id ?? '');
   const selected = featured.find((x) => x.id === selectedId) ?? featured[0];
 
-  const brand = CURRENT_PRODUCT.brand;
   const heroTitle = t('home.title');
   const heroSubtitle = t('home.subtitle');
   const moreCount = subject.topics.length - featured.length;
@@ -187,7 +188,7 @@ export default function Home() {
   ];
 
 
-  const scrollToTopics = () => topicsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const scrollToTopics = () => topicsRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'start' });
 
   const strip: StripItem[] = [
     { titleKey: 'today.title', textKey: 'today.subtitle', to: '/today', icon: STRIP_ICON(<><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /><path d="m9 16 2 2 4-4" /></>) },
@@ -199,11 +200,10 @@ export default function Home() {
   ];
 
   return (
-    <div className="ss-pop" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 56 }}>
+    <div className="ss-pop ss-home" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 56 }}>
       {/* ── Hero ── */}
       <section aria-label={t('home.introAria')} className="ss-hero-grid">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>
-          <Kicker><span className="ss-brand-name">{brand}</span> · {t('home.freeForever')}</Kicker>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'var(--ss-type-display)', lineHeight: 1.06, letterSpacing: '-0.02em' }}>
             {heroTitle}
           </h1>
@@ -226,12 +226,13 @@ export default function Home() {
           </div>
         </div>
         {selected && (
-          <SampleCard
+          <HomeSampleCarousel quiz={<SampleCard
+            showTeaser={false}
             onAnswered={() => captureActivation('landing_sample_completed', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: selected?.id })}
             key={selected.id}
             chip={`${selected.name} · ${t('home.sampleChip', { level: selected.levels[0] })}`}
             question={selected.question}
-          />
+          />} />
         )}
       </section>
 

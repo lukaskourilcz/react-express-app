@@ -5,6 +5,10 @@
 // Interpolation: use {name} placeholders and pass vars to t(key, vars).
 
 export const en = {
+  'designPreview.label': 'Compare interface designs',
+  'designPreview.local': 'Local preview',
+  'designPreview.original': 'Original',
+  'designPreview.apple': 'Apple',
   // App shell / navigation
   'nav.quiz': 'Quiz',
   'nav.learn': 'Learn',
@@ -266,7 +270,7 @@ export const en = {
   'rewards.seePremium': 'See what Premium includes',
   'rewards.merchPremium': 'Premium members redeem coins for merchandise.',
   'rewards.social.title': 'Find devShark elsewhere',
-  'rewards.social.body': 'News and new challenges.',
+  'rewards.social.body': 'Follow us on Instagram.',
   'rewards.social.linkedin': 'LinkedIn',
   'rewards.social.instagram': 'Instagram',
   'rewards.social.threads': 'Threads',

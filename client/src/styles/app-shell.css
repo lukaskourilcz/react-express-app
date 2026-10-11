@@ -841,3 +841,130 @@
 .ss-launch-banner p { margin: 0; line-height: 1.5; }
 .ss-launch-banner h2 { margin: 0 0 0.35rem; font: 750 1.05rem/1.3 var(--font-family-heading); }
 .ss-launch-banner .ss-launch-banner__terms { margin-top: 0.5rem; color: var(--color-text-secondary); font-size: var(--ss-type-meta); }
+
+/* Apple application chrome and surfaces. */
+:root[data-design='apple'] .ss-header {
+  position: absolute;
+  z-index: 100;
+  inset: .875rem 1rem auto;
+  width: calc(100% - 2rem);
+  max-width: 1168px;
+  margin-inline: auto;
+  border: 1px solid var(--color-border);
+  flex-shrink: 0;
+  border-radius: 1.25rem;
+  background: var(--ss-header-bg);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: var(--shadow-low);
+}
+/* Keep the edge within the rounded material; an external gradient cut off the border. */
+:root[data-design='apple'] .ss-header::after { content: none; }
+:root[data-design='apple'] .ss-toolbar { min-height: 64px; padding-inline: 1.25rem; }
+:root[data-design='apple'] .ss-app-root[data-chrome='true'] #main-content { padding-top: 7rem !important; }
+:root[data-design='apple'] .ss-navlink { border-radius: 999px; font-weight: 600; min-height: 44px; display: inline-flex; align-items: center; }
+:root[data-design='apple'] .ss-navlink[data-active='true'] { box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--brand-accent) 18%, transparent); }
+:root[data-design='apple'] .ss-drawer-panel {
+  width: 19rem;
+  padding: .75rem;
+  border-right: 1px solid var(--color-border);
+  border-radius: 0 1.75rem 1.75rem 0;
+  background: var(--ss-material);
+  -webkit-backdrop-filter: blur(32px) saturate(140%);
+  backdrop-filter: blur(32px) saturate(140%);
+}
+:root[data-design='apple'] .ss-drawer-link { min-height: 44px; }
+:root[data-design='apple'] .ss-home { gap: clamp(3rem, 6vw, 5rem) !important; }
+:root[data-design='apple'] .ss-hero-grid { gap: clamp(2rem, 4vw, 4rem); padding-block: 1rem 1.5rem; }
+@media (min-width: 1024px) {
+  :root[data-design='apple'] .ss-home .ss-hero-grid { grid-template-columns: minmax(0, .78fr) minmax(0, 1.22fr); align-items: center; }
+}
+@media (min-width: 600px) and (max-width: 1023px) {
+  :root[data-design='apple'] .ss-home .ss-hero-grid { grid-template-columns: minmax(0, 1fr); }
+}
+.ss-home-carousel { min-width: 0; padding: 0 1rem 1rem 0; }
+.ss-home-carousel__controls { display: flex; align-items: center; gap: .5rem; margin: 0 0 2rem; }
+.ss-home-carousel__controls button { min-height: 44px; }
+.ss-home-carousel__count { margin-left: auto; color: var(--color-text-secondary); font-size: var(--ss-type-label); font-variant-numeric: tabular-nums; }
+.ss-home-carousel__stack { position: relative; isolation: isolate; }
+.ss-home-carousel__behind { position: absolute; inset: -1rem -1rem 1rem 1rem; z-index: -1; border: 1px solid var(--color-border); border-radius: var(--radius-container); background: var(--color-background-elevated); box-shadow: var(--shadow-low); padding: .2rem 1.25rem; color: var(--color-text-secondary); font-size: .65rem; overflow: hidden; }
+.ss-home-carousel__slide { min-width: 0; animation: ssHomeSampleFade .18s ease-out; }
+.ss-home-carousel__slide[hidden] { display: none; }
+.ss-home-carousel__slide > .ss-panel { min-height: 26rem; justify-content: center; }
+.ss-home-carousel__slide.ss-panel { padding: .75rem; }
+.ss-home-carousel__state { display: flex; flex-direction: column; align-items: flex-start; gap: 1rem; padding: 1.5rem; min-height: 26rem; }
+@media (prefers-reduced-motion: reduce) { .ss-home-carousel__slide { animation: none; } }
+:root[data-design='apple'] .ss-hero-grid h1 { font-weight: 650 !important; letter-spacing: -.045em !important; line-height: 1.035 !important; text-wrap: balance; }
+:root[data-design='apple'] .ss-hero-grid > div:first-child { gap: 1.5rem !important; }
+:root[data-design='apple'] .ss-hero-grid > div:first-child > p { font-size: 1.2rem !important; line-height: 1.55; }
+:root[data-design='apple'] .ss-hero-grid > .ss-panel { padding: clamp(1.25rem, 3vw, 2rem) !important; gap: 1.125rem !important; }
+:root[data-design='apple'] .ss-home h2 { font-weight: 650 !important; letter-spacing: -.025em !important; }
+:root[data-design='apple'] .ss-hero-stats { gap: 2.25rem; margin-top: .5rem; }
+:root[data-design='apple'] .ss-hero-stats > div > span:first-child { font-size: 1.75rem !important; font-weight: 600 !important; }
+:root[data-design='apple'] .ss-hero-stats > div > span:last-child { letter-spacing: .045em !important; font-size: .7rem !important; }
+:root[data-design='apple'] :is(.ss-panel, .ss-raised, .ss-lift) {
+  background-image: none;
+  border: 1px solid var(--ss-card-line);
+  border-bottom-width: 1px;
+  box-shadow: var(--shadow-low);
+}
+:root[data-design='apple'] .ss-topic-card {
+  min-height: 5rem;
+  border-bottom-width: 1px !important;
+  box-shadow: none !important;
+  padding: 1.25rem !important;
+}
+:root[data-design='apple'] .ss-topic-card[aria-pressed='true'] { box-shadow: inset 0 0 0 1px var(--brand-accent) !important; }
+:root[data-design='apple'] .ss-topic-card:hover { border-color: var(--brand-accent) !important; }
+:root[data-design='apple'] .ss-radio-card { min-height: 3rem; border-radius: .85rem; background: var(--color-background-muted); border-color: transparent; }
+:root[data-design='apple'] .ss-radio-card[data-tone='success'] { background: var(--ss-success-soft); border-color: var(--ss-success); }
+:root[data-design='apple'] .ss-text-links :is(a, button) { text-decoration-thickness: 1px; text-underline-offset: .2em; }
+:root[data-design='apple'] :is(.ss-fin-button, .astryx-button, .ss-link-button) { border-radius: 999px !important; }
+/* Okamžitá odezva na stisk; výběr se dál potvrzuje až nativním click. */
+:root[data-design='apple'] :is(button, .ss-navlink, .ss-link-button) { touch-action: manipulation; }
+:root[data-design='apple'] :is(.astryx-button, .ss-fin-button, .ss-radio-card, .ss-navlink, .ss-strip-tile):active:not(:disabled):not([aria-disabled='true']) {
+  transform: scale(.97);
+  transition: transform 80ms ease-out;
+}
+/* Tématické karty se nehýbou: jejich odezvu nese barva, vlna a ploutve. */
+:root[data-design='apple'] .ss-topic-card:active { filter: brightness(.96); }
+:root[data-design='apple'] :is(.ss-input, .ss-select, .astryx-input) { border-radius: .85rem; }
+:root[data-design='apple'] dialog.astryx-dialog {
+  border: 1px solid var(--color-border) !important;
+  border-radius: 1.75rem !important;
+  background: var(--ss-material) !important;
+  -webkit-backdrop-filter: blur(32px) saturate(150%);
+  backdrop-filter: blur(32px) saturate(150%);
+  box-shadow: var(--shadow-high) !important;
+}
+:root[data-design='apple'] dialog.astryx-dialog::backdrop { background: rgba(0, 0, 0, .36) !important; }
+:root[data-design='apple'] .ss-design-preview { border-radius: 1.25rem; }
+:root[data-design='apple'] .ss-brand-footer { padding-bottom: 5rem; }
+
+@media (max-width: 760px) {
+  :root[data-design='apple'] .ss-hero-grid { grid-template-columns: 1fr; gap: 2rem; padding-top: 0; }
+  :root[data-design='apple'] .ss-hero-grid h1 { font-size: clamp(2.6rem, 7vw, 3.8rem) !important; }
+}
+@media (max-width: 599px) {
+  :root[data-design='apple'] .ss-header { inset: .5rem .5rem auto; width: calc(100% - 1rem); border-radius: 1rem; }
+  :root[data-design='apple'] .ss-toolbar { padding-inline: .5rem; min-height: 60px; }
+  :root[data-design='apple'] .ss-app-root[data-chrome='true'] #main-content { padding-top: 6rem !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-design='apple'] :is(.astryx-button, .ss-fin-button, .ss-radio-card, .ss-navlink, .ss-strip-tile):active { transform: none; }
+}
+@media (prefers-reduced-transparency: reduce) {
+  :root[data-design='apple'] :is(.ss-header, .ss-drawer-panel, dialog.astryx-dialog) {
+    background: var(--color-background-elevated) !important;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+@media (prefers-contrast: more) {
+  :root[data-design='apple'] :is(.ss-header, .ss-drawer-panel, dialog.astryx-dialog, .ss-panel, .ss-radio-card) {
+    background: var(--color-background-elevated) !important;
+    border: 1px solid var(--color-text-primary) !important;
+  }
+}
+
+@keyframes ssHomeSampleFade { from { opacity: 0; } to { opacity: 1; } }

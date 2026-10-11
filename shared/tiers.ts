@@ -16,8 +16,8 @@
  *
  * A signed-out visitor holds the free tier, unsaved: the server refuses
  * Premium content to a guest with the same 402 as a free account, and the
- * browser draws it with the Premium mark. The landing's sample question ("Try
- * one, no signup") runs in the browser, and the opening stages of every
+ * browser draws it with the Premium mark. The landing's sample question runs in the browser; its desktop/tablet
+ * coding sample uses the same sealed task and server grader as Coding, and the opening stages of every
  * project and short path are free content. */
 
 import type { CodingTaskSummary } from './coding-catalog';

@@ -17,6 +17,7 @@ import { decodeCodingSession, encodeCodingSession, type CodingSession } from '..
 import { codingTaskForHistory, englishOnly, playable } from './catalog';
 import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask } from './active';
 import { codingTaskReview } from '../curation';
+import { assessComplexity } from './complexity';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
@@ -781,6 +782,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   // an unverified pass checked nothing, so it opens nothing.
   const checkedPass = graded.verdict === 'passed' && code !== null && graded.unverified !== true;
   const out: CodingVerdictResponse = verdictBody(graded, recorded, github, checkedPass ? solutionPairFor(task.id) : null);
+  if (code !== null && !graded.infra) out.complexity = assessComplexity(task, code);
   if (draftUpdatedAt) out.draftUpdatedAt = draftUpdatedAt;
   return res.json(out);
 }

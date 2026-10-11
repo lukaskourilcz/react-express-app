@@ -2,13 +2,9 @@
  * sessions. Mounted as `op=` branches on `api/user/[op].ts`, so the
  * twelve-function budget is unchanged.
  *
- * None of this is authority over anything. A saved challenge records interest,
- * not access: an item the learner may not open yet stays in their list with an
- * explanation and still refuses to launch, because launching goes through the
- * same eligibility check everything else does. A skip is feedback — a required
- * task that was skipped stays required and unlocks nothing. A session is a
- * queue and a position, chosen from what was already eligible; it can reorder
- * practice, never widen it.
+ * Saving requires the same plan and progression eligibility as opening a
+ * challenge. Existing bookmarks may be removed after access changes. A skip
+ * is feedback and unlocks nothing; practice queues never widen eligibility.
  *
  * Every write goes through a service-role routine (migration 027) so the limits
  * live in one place instead of being trusted from a request. */
@@ -19,13 +15,13 @@ import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import { isRpcMissing, jsonError, createLogger, requireAuthSub, withTimeout } from '../http';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
-import { resolveTier, serverContentIndex } from '../access';
+import { resolveTier, serverContentIndex, refuseLocked } from '../access';
 import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask, levelCodingTasks } from './active';
 import { codingTaskForHistory } from './catalog';
 import { javascriptLevelsCleared } from './handlers';
-import { evolvingStage } from '../../shared/evolving';
+import { evolvingStage, evolvingUnlocked, evolvingPassed } from '../../shared/evolving';
 import { codingContent, isOpenTo, type Tier } from '../../shared/tiers';
-import { isCodingSectionTrack, isCodingTaskId, tierUnlocked, type CodingTaskSummary } from '../../shared/coding-catalog';
+import { isCodingSectionTrack, isCodingTaskId, tierUnlocked, tierLockReason, type CodingTaskSummary } from '../../shared/coding-catalog';
 import {
   isPracticeOrder,
   isPracticeSessionMinutes,
@@ -64,6 +60,32 @@ const newId = (): string => randomBytes(24).toString('base64url').slice(0, 32);
 /** The tasks the section offers, in catalogue order. Retired tracks keep their
  * records but never come back as practice. */
 const SECTION_TASKS: CodingTaskSummary[] = CODING_SUMMARIES.filter((task) => isCodingSectionTrack(task.track));
+
+/** The task-opening gates also apply to new bookmarks and collection items. */
+export function canSaveCodingTask(taskId: string, passed: ReadonlySet<string>, plan: Tier, cleared: number): boolean {
+  const task = SECTION_TASKS.find((one) => one.id === taskId);
+  if (!task) return false;
+  if (!evolvingPassed(taskId, passed) && !isOpenTo(plan, codingContent(taskId), serverContentIndex())) return false;
+  if (evolvingStage(taskId)) return evolvingUnlocked(taskId, passed);
+  return !tierLockReason({ track: task.track, tier: task.tier, progress: { passed }, tasks: CODING_SUMMARIES, javascriptLevelsCleared: cleared });
+}
+
+async function refuseSavedLock(res: VercelResponse, supabase: SupabaseClient, userId: string, taskId: string): Promise<boolean> {
+  try {
+    const [rows, cleared, plan] = await Promise.all([
+      withTimeout(supabase.from('coding_progress').select('task_id,status').eq('user_id', userId)),
+      javascriptLevelsCleared(supabase, userId), resolveTier(userId),
+    ]);
+    if (rows.error) throw new Error('progress_unavailable');
+    const passed = new Set((rows.data ?? []).filter((row) => row.status === 'passed').map((row) => String(row.task_id)));
+    if (await refuseLocked(res, userId, codingContent(taskId), { cleared: async () => evolvingPassed(taskId, passed) })) return true;
+    if (canSaveCodingTask(taskId, passed, plan, cleared)) return false;
+    jsonError(res, 403, 'challenge_locked', 'Unlock this challenge before saving it');
+  } catch {
+    jsonError(res, 503, 'access_unavailable', 'Could not verify challenge access. Please try again');
+  }
+  return true;
+}
 
 /* ── saved challenges and collections ─────────────────────────────────── */
 
@@ -126,6 +148,7 @@ export async function handleCodingBookmarks(req: VercelRequest, res: VercelRespo
       if (!isCodingTaskId(taskId) || (body.saved === true && !SECTION_TASKS.some((task) => task.id === taskId))) {
         return jsonError(res, 400, 'bad_request', 'Unknown challenge');
       }
+      if (body.saved === true && await refuseSavedLock(res, supabase, userId, taskId)) return;
       const saved = await withTimeout(
         supabase.rpc('set_coding_bookmark', { p_user_id: userId, p_task_id: taskId, p_saved: body.saved === true }),
       );
@@ -177,6 +200,7 @@ export async function handleCodingBookmarks(req: VercelRequest, res: VercelRespo
       if (typeof body.collectionId !== 'string' || !isCodingTaskId(taskId)) {
         return jsonError(res, 400, 'bad_request', 'A collection and a challenge are required');
       }
+      if (body.present === true && await refuseSavedLock(res, supabase, userId, taskId)) return;
       const changed = await withTimeout(
         supabase.rpc('set_coding_collection_item', {
           p_collection_id: body.collectionId, p_user_id: userId, p_task_id: taskId, p_present: body.present === true,

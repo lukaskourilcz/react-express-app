@@ -1,5 +1,3 @@
-import '@fontsource-variable/inter/wght.css';
-import '@fontsource-variable/manrope/wght.css';
 import React, { lazy, Suspense } from 'react';
 import ReactDOM from 'react-dom/client';
 // Global reset (replaces MUI's CssBaseline) + the Astryx design-system
@@ -7,6 +5,8 @@ import ReactDOM from 'react-dom/client';
 // sits under the component styles.
 import './styles/reset.css';
 import './styles/astryx-theme.css';
+// Apply the application design before the first paint.
+document.documentElement.dataset.design = 'apple';
 import { BrowserRouter } from 'react-router-dom';
 import { QueryClientProvider } from '@tanstack/react-query';
 import App from './App';

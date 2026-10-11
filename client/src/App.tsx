@@ -26,7 +26,7 @@ import SignInButton from './components/SignInButton';
 import { useAuth } from './lib/auth';
 import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
-import { m } from './lib/motion';
+import { m, AnimatePresence, useReducedMotion } from './lib/motion';
 import BrandFooter from './components/BrandFooter';
 import CookieConsent from './components/CookieConsent';
 import { CURRENT_PRODUCT } from './lib/products';
@@ -243,6 +243,7 @@ function AccountRetry({ retry, busy }: { retry: () => void; busy: boolean }) {
 }
 
 function App() {
+  const reduceMotion = useReducedMotion();
   const location = useLocation();
   const navigate = useNavigate();
   const { t, setLang, lang } = useLanguage();
@@ -462,7 +463,7 @@ function App() {
     location.pathname === '/classroom' ||
     location.pathname.startsWith('/coding') ||
     location.pathname.startsWith('/play');
-  const contentMaxWidth = isDev ? 'none' : isHome ? 1000 : isWide ? 1200 : 800;
+  const contentMaxWidth = isDev ? 'none' : isHome ? 1200 : isWide ? 1200 : 800;
 
   // 1–5 shark fins on the footer ocean line, at random (non-overlapping) spots
   // each page load, each independently facing left or right so the school
@@ -494,7 +495,7 @@ function App() {
     // One-screen shell: the app is exactly one viewport tall. Pages scroll
     // INSIDE <main>, so the header and the ocean footer (waterline + fins) are
     // always visible. `dvh` tracks the collapsing mobile URL bar.
-    <div className="ss-app-root">
+    <div className="ss-app-root" data-chrome={showChrome}>
       <a
         href="#main-content"
         className="ss-skip-link"
@@ -608,12 +609,17 @@ function App() {
             </div>
           </div>
         </header>
+        <AnimatePresence>
         {mobileNavOpen && (
-          <div className="ss-show-mobile">
+          <m.div className="ss-show-mobile" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }}>
             <div className="ss-drawer-backdrop" onClick={() => setMobileNavOpen(false)} />
-            <div
+            <m.div
               ref={drawerRef}
               className="ss-drawer-panel"
+              initial={reduceMotion ? { opacity: 0 } : { x: '-100%' }}
+              animate={reduceMotion ? { opacity: 1 } : { x: 0 }}
+              exit={reduceMotion ? { opacity: 0 } : { x: '-100%' }}
+              transition={reduceMotion ? { duration: 0.12 } : { type: 'spring', stiffness: 440, damping: 42 }}
               role="dialog"
               aria-modal="true"
               aria-label={t('nav.menuTitle')}
@@ -653,9 +659,10 @@ function App() {
                   </Link>
                 ))}
               </div>
-            </div>
-          </div>
+            </m.div>
+          </m.div>
         )}
+        </AnimatePresence>
         </>
       )}
 

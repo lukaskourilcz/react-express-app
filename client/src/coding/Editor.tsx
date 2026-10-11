@@ -65,9 +65,10 @@ export interface EditorProps {
   describedBy?: string;
   readOnly?: boolean;
   minHeight?: number;
+  maxHeight?: number;
 }
 
-export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnly, minHeight = 240 }: EditorProps) {
+export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnly, minHeight = 240, maxHeight }: EditorProps) {
   const extensions = useMemo<Extension[]>(() => [
     javascript({ jsx: track === 'react', typescript: track === 'typescript' || track === 'react' }),
     syntaxHighlighting(highlight),
@@ -83,7 +84,7 @@ export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnl
   ], [track, ariaLabel, describedBy]);
 
   return (
-    <div className="cd-editor" style={{ minHeight }}>
+    <div className="cd-editor" style={{ minHeight, maxHeight }}>
       <CodeMirror
         value={value}
         onChange={onChange}
@@ -106,6 +107,7 @@ export function Editor({ value, onChange, track, ariaLabel, describedBy, readOnl
         indentWithTab={false}
         height="auto"
         minHeight={`${minHeight}px`}
+        maxHeight={maxHeight ? `${maxHeight}px` : undefined}
       />
     </div>
   );

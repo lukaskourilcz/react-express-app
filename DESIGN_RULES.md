@@ -1,5 +1,14 @@
 # Design Rules — devShark "Deep End v2"
 
+## Apple application design
+
+The application uses [apple-design](https://github.com/emilkowalski/skills/blob/main/skills/apple-design/SKILL.md)
+through the existing Astryx and Deep End components. `html[data-design='apple']`
+defines system typography, rounded materials, quiet elevation and translucent
+chrome. These rules replace the paper stock and textured-dialog treatments
+below. Preserve the Deep End blue-green background in dark mode. Brand geometry,
+accent, content and access rules still follow the existing sources.
+
 These rules govern every visual change in this codebase. They come from the
 `Deep End v2` design handoff (the `.dc.html` references + README). Read them
 before touching any component, style file, or brand mark. The design tokens

@@ -1,6 +1,7 @@
 // First: clears the environment the handlers below read when imported.
 import './launch-test-env';
 import assert from 'node:assert/strict';
+import { complexityContracts } from './coding-complexity-contract';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFileSync, spawnSync } from 'node:child_process';
 import { constants as osConstants, tmpdir } from 'node:os';
@@ -3299,6 +3300,7 @@ async function identityContracts() {
 }
 
 async function main() {
+  complexityContracts();
   // Code graded below runs on the grader's worker thread, built fresh from the
   // sources under test.
   await buildSandboxWorker();

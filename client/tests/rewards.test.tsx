@@ -250,7 +250,7 @@ describe('Find devShark elsewhere', () => {
     routes({ social: posted });
     render(<BrandFooter />, { wrapper });
     const nav = screen.getByRole('navigation', { name: 'Find devShark elsewhere' });
-    expect(within(nav).getByText('News and new challenges.')).toBeInTheDocument();
+    expect(within(nav).getByText('Follow us on Instagram.')).toBeInTheDocument();
     for (const name of [/Instagram/]) {
       const link = within(nav).getByRole('link', { name });
       expect(link).toHaveAttribute('target', '_blank');
@@ -263,6 +263,6 @@ describe('Find devShark elsewhere', () => {
     expect(within(nav).queryByRole('link', { name: /Threads/ })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(posted).not.toHaveBeenCalled();
-    expect(screen.queryByText(/Thanks for visiting|follow/i)).toBeNull();
+    expect(screen.queryByText(/Thanks for visiting|Thanks for following/i)).toBeNull();
   });
 });
