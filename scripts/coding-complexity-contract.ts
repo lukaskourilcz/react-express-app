@@ -14,6 +14,12 @@ export function complexityContracts() {
   assert.equal(nested.assessment, 'above-target');
   assert.equal(check('function solve(xs) { for(let i=0;i<xs.length;i++) for(let j=0;j<3;j++) xs[i]+=j; return xs; }').time, 'O(n)');
   assert.equal(check('const solve = xs => xs.map(x => xs.includes(x));').time, 'O(n^2)');
+  assert.equal(check('const solve = xs => new Set(xs.map(x => xs.includes(x)));').time, 'O(n^2)');
+  assert.equal(check('const solve = xs => [...xs.map(x => xs.includes(x))];').time, 'O(n^2)');
+  assert.equal(check('function solve(xs) { for (const x of xs.map(x => xs.includes(x))) {} return xs; }').time, 'O(n^2)');
+  assert.equal(check('function solve(xs) { for (let i=0;i<xs.length && xs.includes(i);i++) {} return xs; }').time, 'O(n^2)');
+  assert.equal(check('function solve(xs) { for (let i=mystery(xs);i<xs.length;i++) {} return xs; }').assessment, 'unknown');
+  assert.equal(check('const solve = xs => /[a-z]/.test(xs);').time, 'O(n)');
   assert.equal(check('function solve(xs) { let i=1; while(i<xs.length) i*=2; return i; }').time, 'O(log n)');
   assert.equal(check('const solve = xs => xs.length ? solve(xs.slice(1)) : 0;').assessment, 'unknown');
   assert.equal(check('const solve = xs => mystery(xs);').time, null);

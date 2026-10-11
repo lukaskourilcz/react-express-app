@@ -94,7 +94,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       if (ts.isForInStatement(node)) { uncertainty = 'Object enumeration needs a manual review of the input model.'; return constant; }
       if (ts.isForOfStatement(node)) {
         evidence.add('Input traversal');
-        return multiply(linear, walk(node.statement));
+        return max(walk(node.expression), multiply(linear, walk(node.statement)));
       }
       if (ts.isForStatement(node) || ts.isWhileStatement(node) || ts.isDoStatement(node)) {
         const condition = ts.isForStatement(node) ? node.condition : node.expression;
@@ -110,13 +110,20 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
         } else if (!/^[\w\s<>=!+\-\d.]+$/.test(condition.getText(file)) || !/\b\d+\b/.test(condition.getText(file))) {
           uncertainty = 'A loop bound cannot be related to the input size.';
         }
-        return multiply(loop, walk(node.statement));
+        // Conditions and increment expressions run on every iteration; the
+        // initializer runs once. Their scans/calls are part of the algorithm.
+        let repeated = max(walk(node.statement), walk(condition));
+        if (ts.isForStatement(node) && node.incrementor) repeated = max(repeated, walk(node.incrementor));
+        const total = multiply(loop, repeated);
+        return ts.isForStatement(node) && node.initializer ? max(total, walk(node.initializer)) : total;
       }
       if (ts.isNewExpression(node)) {
         if (!ts.isIdentifier(node.expression) || !['Map', 'Set', 'Array', 'Date'].includes(node.expression.text)) uncertainty = 'An external constructor needs manual review.';
-        return node.arguments?.length && node.expression.getText(file) !== 'Date' ? linear : constant;
+        let cost = node.arguments?.length && node.expression.getText(file) !== 'Date' ? linear : constant;
+        for (const argument of node.arguments ?? []) cost = max(cost, walk(argument));
+        return cost;
       }
-      if (ts.isSpreadElement(node) || ts.isSpreadAssignment(node)) { evidence.add('Copying input data'); return linear; }
+      if (ts.isSpreadElement(node) || ts.isSpreadAssignment(node)) { evidence.add('Copying input data'); return max(linear, walk(node.expression)); }
       if (ts.isCallExpression(node)) {
         let call: Cost = constant;
         if (ts.isIdentifier(node.expression)) {
@@ -138,6 +145,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
           if (method === 'sort' || method === 'toSorted') { call = { power: 1, log: 1 }; evidence.add('Sorting input data'); }
           else if (['toLowerCase', 'toUpperCase', 'trim'].includes(method) && ts.isElementAccessExpression(node.expression.expression)) { call = constant; }
           else if (scanMethods.has(method) || (receiver === 'Object' && ['keys', 'values', 'entries'].includes(method)) || method === 'from') { call = linear; evidence.add('Collection/string scan'); }
+          else if (method === 'test' && node.arguments[0] && !ts.isElementAccessExpression(node.arguments[0])) { call = linear; evidence.add('String scan'); }
           else if (!scalarMethods.has(method)) uncertainty = 'A method with unknown cost needs manual review.';
           // Receiver chains run sequentially. Callback work is repeated per item.
           let callback = constant;
