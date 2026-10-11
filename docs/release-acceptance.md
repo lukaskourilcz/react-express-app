@@ -24,10 +24,12 @@ was performed.
 | Responsive sweep | PASS — `/` and `/learn`, 8 probes at 360/768/1024/1440px |
 | Manual appearance and topic selection | PASS — dark desktop/mobile, light tablet; all seven featured topics update their Start learning label; long CSS labels remain within the 360px page |
 | React component review | PASS — existing primitives/tokens, stable label keys, derived selection, no new effect/data request; named list and video region; decorative placeholder symbol has no fake action |
+| Browser accessibility and keyboard path | PASS — 4 route-axe tests, light/dark WCAG 2.2 AA, long CSS steps inside the phone panel, and Enter opens the selected TypeScript path |
+| Initial full CI | All content/client/types/security/build/audit and Storybook/performance checks passed; the browser step failed only because its old path test required the removed horizontal scroller. That test now verifies reflow and keyboard navigation; final required CI is rerun. |
 | Diff whitespace | PASS |
 
 Local evidence: `/tmp/devshark-banner-{tests,types,tooling,launch,build,responsive,public,unused}.log`
-and `/tmp/devshark-banner-{root,client}-audit.log`. Required GitHub checks and
+and `/tmp/devshark-banner-{root,client}-audit.log`, `/tmp/devshark-banner-final-{axe,build,responsive}.log`. Required GitHub checks and
 production deployment are verified on the associated PR before merge/release.
 
 ## Compact homepage coding sample — 2026-10-11

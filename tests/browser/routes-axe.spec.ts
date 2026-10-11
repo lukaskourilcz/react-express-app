@@ -93,20 +93,31 @@ test('the accent chip takes its colour from the derived on-tint token', async ({
   expect(painted.color).not.toBe(asRgb(painted.accent));
 });
 
-test('the levels strip is a keyboard-reachable scroll region', async ({ page }) => {
-  await page.setViewportSize({ width: 390, height: 844 });
+test('the homepage path keeps every step in view and starts the selected topic by keyboard', async ({ page }) => {
+  await page.setViewportSize({ width: 360, height: 800 });
   await page.goto('/');
   await settled(page);
-  const strip = page.locator('.ss-scroll-strip');
-  await expect(strip).toHaveCount(1);
-  await expect(strip).toHaveAttribute('tabindex', '0');
-  await expect(strip).toHaveAttribute('role', 'region');
-  await expect(strip).toHaveAccessibleName(/\S/);
+  await page.getByRole('button', { name: 'Learn CSS', exact: true }).click();
+  const path = page.getByRole('list', { name: 'Learn path for CSS' });
+  await expect(path.getByText('Layout with Grid & Responsive Design')).toBeVisible();
+  await expect(path.getByText('Checkpoint')).toBeVisible();
 
-  // It has to scroll once focused, or the tab stop is decoration.
-  expect(await strip.evaluate((node) => node.scrollWidth > node.clientWidth)).toBe(true);
-  await strip.focus();
-  await expect(strip).toBeFocused();
-  await page.keyboard.press('ArrowRight');
-  await expect.poll(() => strip.evaluate((node) => node.scrollLeft)).toBeGreaterThan(0);
+  // Long step names and the checkpoint need no sideways scrolling on a phone.
+  expect(await path.evaluate((node) => {
+    const bounds = node.getBoundingClientRect();
+    return node.scrollWidth <= node.clientWidth && [...node.querySelectorAll('[role="listitem"]')].every((item) => {
+      const rect = item.getBoundingClientRect();
+      return rect.left >= bounds.left && rect.right <= bounds.right && rect.top >= bounds.top && rect.bottom <= bounds.bottom;
+    });
+  })).toBe(true);
+
+  const topic = page.getByRole('button', { name: 'Learn TypeScript', exact: true });
+  await topic.focus();
+  await page.keyboard.press('Enter');
+  await expect(topic).toHaveAttribute('aria-pressed', 'true');
+  const start = page.getByRole('button', { name: 'Start learning TypeScript', exact: true });
+  await start.focus();
+  await expect(start).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/\/learn\?topic=typescript$/);
 });
