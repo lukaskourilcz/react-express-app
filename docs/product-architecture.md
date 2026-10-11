@@ -922,7 +922,9 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   stage two and up, `learning-path-start` and `learning-path-submit` in
   `api/quiz/roadmap.ts`, and `learning-path-enrollment` in `api/user/[op].ts`.
   Premium gates starting new content. Drafts, bookmarks, skips and reviews of
-  cleared content stay open, a lapsed account keeps everything it passed, and
+  cleared content stay open. New coding bookmarks and collection items require
+  the same plan and progression access as opening the task; old bookmarks remain
+  removable after access changes. A lapsed account keeps everything it passed, and
   placement checks stay open. A coding task issued inside a Learn level
   follows that level, and pausing a learning path is never refused.
 - **The 402 contract.** `jsonPremiumRequired` in `lib/http.ts` (and

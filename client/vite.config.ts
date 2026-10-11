@@ -112,11 +112,17 @@ function purgeAstryxCss(): Plugin {
             // :is(...):not(:disabled) even when its classes are safelisted.
             // `data-motion` is set through `dataset` (lib/motion.tsx), so the
             // attribute's name never appears whole in the bundle.
-            greedy: [/ss-fin-button/, /data-scroll-active/, /data-theme/, /data-color-mode/, /data-selected/, /data-active/, /data-tone/, /data-locked/, /data-complete/, /data-motion/],
+            greedy: [/ss-fin-button/, /data-scroll-active/, /data-design/, /data-theme/, /data-color-mode/, /data-selected/, /data-active/, /data-tone/, /data-locked/, /data-complete/, /data-motion/],
           },
         });
         if (result.css.includes('.ss-fin-hover__swimmer') && !/ss-fin-button[^{}]*:hover[^{}]*\{/.test(result.css)) {
           throw new Error('CSS cleanup removed the shark fin hover activation rule');
+        }
+        // The default design is assigned through dataset before first paint.
+        // Its root token block must survive production CSS cleanup too.
+        const appleRoot = /:root\[data-design=(["']?)apple\1\]\s*\{/;
+        if (appleRoot.test(source) && !appleRoot.test(result.css)) {
+          throw new Error('CSS cleanup removed the Apple design tokens');
         }
         if (source.includes('data-motion') && !result.css.includes('data-motion')) {
           throw new Error('CSS cleanup removed the rule that shows the page when Motion’s features chunk fails');
