@@ -27,7 +27,6 @@ import { useAuth } from './lib/auth';
 import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m, AnimatePresence, useReducedMotion } from './lib/motion';
-import DesignPreview from './components/DesignPreview';
 import BrandFooter from './components/BrandFooter';
 import CookieConsent from './components/CookieConsent';
 import { CURRENT_PRODUCT } from './lib/products';
@@ -497,7 +496,6 @@ function App() {
     // INSIDE <main>, so the header and the ocean footer (waterline + fins) are
     // always visible. `dvh` tracks the collapsing mobile URL bar.
     <div className="ss-app-root" data-chrome={showChrome}>
-      {import.meta.env.DEV && <DesignPreview />}
       <a
         href="#main-content"
         className="ss-skip-link"

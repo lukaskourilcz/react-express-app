@@ -176,7 +176,6 @@ export default function Home() {
   const [selectedId, setSelectedId] = useState<string>(featured[0]?.id ?? '');
   const selected = featured.find((x) => x.id === selectedId) ?? featured[0];
 
-  const brand = CURRENT_PRODUCT.brand;
   const heroTitle = t('home.title');
   const heroSubtitle = t('home.subtitle');
   const moreCount = subject.topics.length - featured.length;
@@ -204,7 +203,6 @@ export default function Home() {
       {/* ── Hero ── */}
       <section aria-label={t('home.introAria')} className="ss-hero-grid">
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>
-          <Kicker><span className="ss-brand-name">{brand}</span> · {t('home.freeForever')}</Kicker>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'var(--ss-type-display)', lineHeight: 1.06, letterSpacing: '-0.02em' }}>
             {heroTitle}
           </h1>
@@ -228,6 +226,7 @@ export default function Home() {
         </div>
         {selected && (
           <SampleCard
+            showTeaser={false}
             onAnswered={() => captureActivation('landing_sample_completed', { product: CURRENT_PRODUCT.id, locale: lang, source: 'home', category: selected?.id })}
             key={selected.id}
             chip={`${selected.name} · ${t('home.sampleChip', { level: selected.levels[0] })}`}

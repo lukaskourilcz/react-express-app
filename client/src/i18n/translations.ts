@@ -270,7 +270,7 @@ export const en = {
   'rewards.seePremium': 'See what Premium includes',
   'rewards.merchPremium': 'Premium members redeem coins for merchandise.',
   'rewards.social.title': 'Find devShark elsewhere',
-  'rewards.social.body': 'News and new challenges.',
+  'rewards.social.body': 'Follow us on Instagram.',
   'rewards.social.linkedin': 'LinkedIn',
   'rewards.social.instagram': 'Instagram',
   'rewards.social.threads': 'Threads',

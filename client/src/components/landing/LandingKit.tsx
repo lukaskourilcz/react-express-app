@@ -165,7 +165,7 @@ export interface SampleQuestion { text: string; code?: string; opts: string[]; a
  * (e.g. "JavaScript · Level 1 — Values & Math"); mount with a `key` so picking
  * resets when the parent swaps the question.
  */
-export function SampleCard({ chip, question, onAnswered }: { chip: string; question: SampleQuestion; onAnswered?: () => void }) {
+export function SampleCard({ chip, question, onAnswered, showTeaser = true }: { chip: string; question: SampleQuestion; onAnswered?: () => void; showTeaser?: boolean }) {
   const t = useT();
   const [picked, setPicked] = useState<number | null>(null);
   const answered = picked !== null;
@@ -176,7 +176,7 @@ export function SampleCard({ chip, question, onAnswered }: { chip: string; quest
     <div className="ss-panel" style={{ padding: 24, display: 'flex', flexDirection: 'column', gap: 14, borderRadius: 'var(--radius-container)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <span style={{ borderRadius: 999, padding: '3px 10px', background: 'var(--brand-accent-soft)', color: 'var(--brand-accent-on-soft)', fontSize: '0.75rem', fontWeight: 600 }}>{chip}</span>
-        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginLeft: 'auto' }}>{t('home.tryOne')}</span>
+        {showTeaser && <span style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--color-text-secondary)', marginLeft: 'auto' }}>{t('home.tryOne')}</span>}
       </div>
       <fieldset style={{ margin: 0, padding: 0, border: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
         {/* A <legend> is laid out by the fieldset itself, not as a flex item, so
