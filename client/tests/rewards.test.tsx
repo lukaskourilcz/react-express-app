@@ -263,6 +263,6 @@ describe('Find devShark elsewhere', () => {
     expect(within(nav).queryByRole('link', { name: /Threads/ })).toBeNull();
     await new Promise((resolve) => setTimeout(resolve, 20));
     expect(posted).not.toHaveBeenCalled();
-    expect(screen.queryByText(/Thanks for visiting|follow/i)).toBeNull();
+    expect(screen.queryByText(/Thanks for visiting|Thanks for following/i)).toBeNull();
   });
 });

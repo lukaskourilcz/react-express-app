@@ -2,6 +2,7 @@
  * in `lib/coding/handlers.ts` produce these shapes; `client/src/coding/api.ts`
  * consumes them. Answers never appear here: results, not keys. */
 
+import type { ComplexityReport } from './coding-complexity';
 import type { CodingTrack, Localized, PlayableCodingTask } from './coding-catalog';
 import type { CallOutcome } from './coding-evaluate';
 import type { FailureCategory } from './coding-failure';
@@ -76,6 +77,8 @@ export interface CodingSolutionPair {
 }
 
 export interface CodingVerdictResponse {
+  /** Advisory server estimate for this exact submitted code; never affects rewards. */
+  complexity?: ComplexityReport;
   verdict: CodingOutcome;
   /** Visible tests, in task order (code tracks). */
   results: CallOutcome[];

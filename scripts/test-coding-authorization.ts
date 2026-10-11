@@ -2,7 +2,7 @@
 import './launch-test-env';
 import assert from 'node:assert/strict';
 import { handleCodingDraft, handleCodingSubmit, handleCodingReveal, handleCodingTask } from '../lib/coding/handlers';
-import { handleCodingBookmarks } from '../lib/coding/practice-handlers';
+import { handleCodingBookmarks, canSaveCodingTask } from '../lib/coding/practice-handlers';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById } from '../lib/coding/active';
 import { encodeCodingSession } from '../lib/quiz-tokens';
@@ -216,7 +216,7 @@ async function main() {
         coding_collection_items: [{ collection_id: 'collection-0001', task_id: 'dd-requests-per-second', position: 0 }, { collection_id: 'collection-0001', task_id: 'js-digit-sum', position: 1 }],
       };
       const chain = {
-        select: () => chain, eq: () => chain, order: () => chain, in: () => chain,
+        select: () => chain, eq: () => chain, order: () => chain, in: () => chain, maybeSingle: async () => ({ data: null, error: null }),
         then: (resolve: (value: unknown) => unknown) => resolve({ data: rows[table] ?? [], error: null }),
       };
       return chain;
@@ -226,6 +226,27 @@ async function main() {
   await handleCodingBookmarks({ method: 'GET', headers: { authorization: 'Bearer stand-in-token' }, query: { user_id: 'account-a' } } as never, listed as never, starred as never);
   assert.equal(listed.statusCode, 200, JSON.stringify(listed.body));
   assert.deepEqual(listed.body, { saved: ['js-double-numbers'], collections: [{ collectionId: 'collection-0001', name: 'Later', position: 0, taskIds: ['js-digit-sum'] }] }, 'no system design id comes back');
+  assert.equal(canSaveCodingTask('alg-valid-palindrome', new Set(), 'free', 0), true, 'a free open task may be saved');
+  const higher = CODING_TASKS.find((task) => codingTaskById(task.id) && task.tier === 4 && task.track === 'javascript')!;
+  assert.equal(canSaveCodingTask(higher.id, new Set(), 'premium', 0), false, 'Premium does not bypass the progression gate for Save');
+  assert.equal(canSaveCodingTask('sd-url-shortener', new Set(), 'premium', 99), false, 'hidden tasks cannot be saved');
+  let writes = 0;
+  const bookmarkDb = { ...starred, rpc: async () => { writes += 1; return { data: true, error: null }; } };
+  const mutateBookmark = async (body: unknown, db = bookmarkDb) => {
+    const out = response();
+    await handleCodingBookmarks({ method: 'PUT', headers: { authorization: 'Bearer stand-in-token' }, query: { user_id: 'account-a' }, body } as never, out as never, db as never);
+    return out;
+  };
+  const barred = await mutateBookmark({ op: 'save', taskId: higher.id, saved: true });
+  assert.equal(barred.statusCode, 403, JSON.stringify(barred.body));
+  assert.equal(writes, 0, 'a locked bookmark is rejected before the write');
+  const collectionBarred = await mutateBookmark({ op: 'collection-item', taskId: higher.id, collectionId: 'collection-0001', present: true });
+  assert.equal(collectionBarred.statusCode, 403);
+  assert.equal(writes, 0, 'collections cannot bypass the bookmark gate');
+  assert.equal((await mutateBookmark({ op: 'save', taskId: 'alg-valid-palindrome', saved: true })).statusCode, 200);
+  assert.equal(writes, 1, 'an open free challenge can be saved');
+  assert.equal((await mutateBookmark({ op: 'save', taskId: higher.id, saved: false })).statusCode, 200);
+  assert.equal(writes, 2, 'existing locked bookmarks can still be removed');
   console.log('Coding bookmarks passed: a star saved on system design is not listed.');
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

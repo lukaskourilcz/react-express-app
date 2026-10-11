@@ -32,6 +32,7 @@ import { RepeatXpNote } from './RepeatXpNote';
 import { CODING_TIERS, difficultyOf, formatOf, hasLearnLevel, type Localized, type PlayableCodingTask } from '../../../shared/coding-catalog';
 import { DifficultyBadge } from './DifficultyBadge';
 import type { CodingLockReason, CodingSolutionPair, CodingTaskProgress, CodingVerdictResponse } from '../../../shared/coding-api';
+import { complexityGuidance } from '../../../shared/coding-complexity';
 import './Coding.css';
 
 /** Moves focus to a confirmation's safe choice when it appears. Module-level,
@@ -67,7 +68,7 @@ export interface CodingWorkbenchProps {
    * recorded pass opens the Solution tab on a return visit. */
   progress?: CodingTaskProgress | null;
   initialCode: string | null;
-  mode: 'section' | 'lesson';
+  mode: 'section' | 'lesson' | 'landing';
   /** The parent's save-for-later control, rendered beside the report flag. */
   saveAction?: ReactNode;
   /** Called with the current code when the learner presses Run or Submit —
@@ -143,6 +144,7 @@ function useOnline(): boolean {
 export function CodingWorkbench(props: CodingWorkbenchProps) {
   const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onEdit, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction } = props;
   const evolution = evolvingStage(task.id);
+  const complexity = complexityGuidance(task);
   const { t, lang } = useLanguage();
   const [reportOpen, setReportOpen] = useState(false);
   const L = useCallback((value: Localized | undefined): string => (value ? value[lang] || value.en : ''), [lang]);
@@ -205,7 +207,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const editorPaneRef = useRef<HTMLElement | null>(null);
   const focusEditorPane = useRef(false);
   const puzzleMode = narrow && Boolean(task.puzzle) && mode === 'section' && !editorHere;
-  const pendingOnDesktop = narrow && !task.puzzle && !editorHere;
+  const pendingOnDesktop = mode !== 'landing' && narrow && !task.puzzle && !editorHere;
   const chooseEditorHere = useCallback(() => {
     try { sessionStorage.setItem(NARROW_EDITOR_KEY, '1'); } catch { /* the choice then lasts for this page only */ }
     focusEditorPane.current = true;
@@ -924,6 +926,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
       <RepeatXpNote verdict={verdict} />
+      {verdict.complexity && <div className="cd-complexity" aria-label="Solution efficiency">
+        <strong>Estimated time: {verdict.complexity.time ?? 'Cannot determine'}</strong>
+        {!verdictStale && verdict.verdict === 'passed' && verdict.complexity.assessment === 'within-target' && <p>Meets the stated time target under the analysis assumptions.</p>}
+        {!verdictStale && verdict.complexity.assessment === 'above-target' && <p>Above the stated time target. Look for repeated work inside a scan.</p>}
+        <p>{verdict.complexity.explanation}</p>
+        <details><summary>How this estimate works</summary><p>{verdict.complexity.assumptions}</p></details>
+      </div>}
       {verdictStale && <p className="cd-verdict__row">{t('coding.verdict.stale')}</p>}
       {verdict.verdict === 'failed' && verdict.hidden && verdict.hidden.passed < verdict.hidden.total && visiblePassed && <p className="cd-verdict__row">{t('coding.verdict.hiddenFailed')}</p>}
       {verdict.puzzle ? (
@@ -1006,6 +1015,11 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
       </div>
       <Prompt className="cd-prompt" text={L(task.prompt)} />
+      <details className="cd-complexity">
+        <summary>Big O{complexity.targetTime ? ` · Target ${complexity.targetTime} time` : ' · Efficiency guidance'}</summary>
+        {complexity.targetSpace && <p>Target extra space: <code>{complexity.targetSpace}</code>.</p>}
+        <p>{complexity.note}</p>
+      </details>
       {/* Earlier briefs still apply, but they are context now, not the
           task: smaller, lighter, and numbered by the stage that set them. */}
       {Boolean(task.previousRequirements?.length) && <details className="cd-previous">
@@ -1064,7 +1078,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           <Button variant="ghost" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />
         )}
         <div className="cd-actions cd-actions--utility">
-          {saveAction}
+          {!locked && saveAction}
           <Button
             variant="ghost"
             isIconOnly
@@ -1129,7 +1143,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
             <div className="cd-editor-slot">
               {/* Shorter on a narrow screen, so Run and Submit are not a screen
                   away from the code; it still grows with the code. */}
-              <Editor minHeight={narrow ? 280 : 480} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
+              <Editor minHeight={mode === 'landing' ? 220 : narrow ? 280 : 480} value={code} onChange={onCodeChange} track={task.track} ariaLabel={t('coding.editorLabel')} describedBy={`${baseId}-keys`} readOnly={Boolean(solution) && mode === 'lesson'} />
               {/* The shortcuts are not printed on the page; a screen reader
                   hears them with the editor, Escape then Tab included. */}
               <span id={`${baseId}-keys`} className="cd-visually-hidden">{t('coding.shortcuts')}</span>
