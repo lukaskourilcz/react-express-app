@@ -1,5 +1,35 @@
 # Release acceptance matrix
 
+## Homepage video banner and learning path — 2026-10-11
+
+Issues #347–#349 replace the practice carousel with a 16:9 product-video
+placeholder on every viewport. No new recording is available yet. The banner
+makes no media request; a WebM source, poster and optional MP4 fallback can be
+supplied later, with explicit native playback and no autoplay or loop.
+The selected path uses the full panel width, wraps to three columns on phones,
+and ends with a bottom-right “Start learning {topic}” action. Homepage
+progress-storage copy is removed. Normal exercises and grading are unchanged.
+The dated tool comparison records official sources, prices, export-format
+uncertainty and a proposed 30-second capture plan; no recording or purchase
+was performed.
+
+| Check | Actual local result |
+|---|---|
+| API and tooling types | PASS |
+| Homepage and video component tests | PASS — 6 tests: guest/account copy, selected-path navigation, honest empty banner, explicit playback, poster and source fallback |
+| Production build | PASS |
+| Launch/play-room/verified-caller contracts | PASS |
+| Root/client production dependency audits | PASS — zero vulnerabilities |
+| Public HTML and unused-code checks | PASS — no new unused findings |
+| Responsive sweep | PASS — `/` and `/learn`, 8 probes at 360/768/1024/1440px |
+| Manual appearance and topic selection | PASS — dark desktop/mobile, light tablet; all seven featured topics update their Start learning label; long CSS labels remain within the 360px page |
+| React component review | PASS — existing primitives/tokens, stable label keys, derived selection, no new effect/data request; named list and video region; decorative placeholder symbol has no fake action |
+| Diff whitespace | PASS |
+
+Local evidence: `/tmp/devshark-banner-{tests,types,tooling,launch,build,responsive,public,unused}.log`
+and `/tmp/devshark-banner-{root,client}-audit.log`. Required GitHub checks and
+production deployment are verified on the associated PR before merge/release.
+
 ## Compact homepage coding sample — 2026-10-11
 
 Issues #339 and #341–#346 replace the large palindrome sample with the free JavaScript

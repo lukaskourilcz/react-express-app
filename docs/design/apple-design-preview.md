@@ -9,18 +9,18 @@ Apple is the application-wide design, applied before first paint. The prototype
 comparison control and `?design=original` override have been removed. Dark mode
 retains the Deep End blue-green background and grain.
 
-The homepage has quiz and `js-double-numbers` sample cards on tablets and desktop
-(600px and above), with two accessible dots below the stack to switch cards.
-Each new homepage mount randomly selects the first card, kept stable while
-interacting. Only a visited coding card loads the editor and task session;
-switching cards or resizing to mobile and back retains its draft. The coding
-preview shows three bottom-aligned examples; Run still checks the full suite.
-Mobile mounts only the quiz, without dots. The task, editor, Run and Format reuse
-Coding's API and workbench. Only the landing card uses 44px icon buttons for Run
-(play) and Format (aligned lines), with named tooltips. Its starter omits the
-scratch-pad instruction, and it has no Submit, Solution or report action. Its
-keyboard shortcut cannot submit. Full coding exercises retain their text
-commands, server grading, solution and report actions.
+The homepage hero now reserves a 16:9 product-video banner. The owner has not
+recorded the new video yet, so the banner shows a quiet, truthful placeholder
+with no media request or playback action. Native WebM playback, a matching
+poster and an optional MP4 fallback are prepared; playback is explicit.
+The earlier quiz/coding carousel and dots have been removed on all widths.
+Normal coding and quiz exercises remain available in their own routes.
+
+The selected learning path distributes five steps and its checkpoint across
+the full panel width, wrapping into two rows on phones. The green
+“Start learning {topic}” action sits at the bottom right. Progress-storage
+copy is omitted from the homepage. Issues #347–#349 track this refinement;
+see `homepage-video-tool-research-2026-10-11.md` for the capture-tool comparison.
 
 Each workbench includes a Big O label and an adjacent info tooltip containing
 space targets and explanatory guidance, available by hover, focus and tap.
