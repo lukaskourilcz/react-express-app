@@ -1,5 +1,23 @@
 # Release acceptance matrix
 
+## Restore the original homepage content width — 2026-10-12
+
+Restores the homepage's centred 1000px maximum from `bb96f3c`, the mainline
+version live on 10 October, replacing the later 1600px limit. Other routes
+retain their existing 800px/1200px limits. The JavaScript sample stays interactive.
+
+Validation: API typecheck, launch contracts, production build and diff whitespace
+passed. Both production dependency audits report zero vulnerabilities. The existing
+homepage browser test now verifies the centred 1000px cap at 1440px and 2560px,
+keyboard answer feedback, absence of the video and 360px reflow; both light and
+dark cases pass. Responsive checks pass all 14 homepage probes (360 through 1440px,
+both themes), with no overflow or clipped content. Desktop light and mobile dark
+screenshots were visually reviewed. The responsive script rejects 1920/2560px as
+unsupported inputs; the wide-screen cap is covered by the Playwright test instead.
+
+Evidence: `/tmp/devshark-width-browser`, `/tmp/devshark-width-responsive-light.log`
+and `/tmp/devshark-width-responsive-dark.log`. Existing build chunk warnings remain.
+
 ## Restore the single homepage JavaScript sample — 2026-10-11
 
 Issues #353 and #352 restore the original `2 ** 3` sample using the existing
