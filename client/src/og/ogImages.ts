@@ -15,13 +15,14 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { fileURLToPath } from 'node:url';
 import satori from 'satori';
 import { Resvg } from '@resvg/resvg-js';
 
 export const OG_WIDTH = 1200;
 export const OG_HEIGHT = 630;
 /** Bump when the layout changes, so cached cards are drawn again. */
-const LAYOUT_VERSION = 1;
+const LAYOUT_VERSION = 2;
 
 const INK = '#132019';
 const INK_700 = '#3C4F43';
@@ -39,7 +40,7 @@ const el = (type: string, style: Record<string, unknown>, children?: unknown, ex
   ({ type, props: { style: { display: 'flex', ...style }, ...(children === undefined ? {} : { children }), ...extra } });
 
 const require = createRequire(import.meta.url);
-const clientRoot = path.resolve(path.dirname(require.resolve('@fontsource/inter/package.json')), '../../..');
+const clientRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
 const kitSvg = (name: string) => {
   // The kit files carry a C2PA manifest in <metadata>; the drawing is the rest.
   const svg = readFileSync(path.join(clientRoot, 'public/brand/v9/recommended', name), 'utf8').replace(/<metadata>[\s\S]*?<\/metadata>/, '');
@@ -58,7 +59,7 @@ function loadAssets() {
       { name: 'Inter', data: font('inter', 'inter-latin-600-normal.woff'), weight: 600, style: 'normal' },
       { name: 'Manrope', data: font('manrope', 'manrope-latin-800-normal.woff'), weight: 800, style: 'normal' },
     ],
-    logo: kitSvg('devshark-logo-horizontal-green.svg'),
+    logo: `data:image/svg+xml;base64,${readFileSync(path.join(clientRoot, 'public/brand/approved/navbar-logo-ink.svg')).toString('base64')}`,
     fin: kitSvg('devshark-fin-wave-green.svg'),
   };
   return assets;
@@ -83,7 +84,7 @@ function layout(card: OgCard): Node {
 
   return el('div', { width: OG_WIDTH, height: OG_HEIGHT, flexDirection: 'column', justifyContent: 'space-between', background: PAPER, padding: '56px 72px', fontFamily: 'Inter' }, [
     el('div', { alignItems: 'center', justifyContent: 'space-between' }, [
-      el('img', { width: 276, height: 44 }, undefined, { src: logo, width: 276, height: 44 }),
+      el('img', { width: 330, height: 44 }, undefined, { src: logo, width: 330, height: 44 }),
       el('div', { alignItems: 'center', height: 48, padding: '0 22px', borderRadius: 24, border: `2px solid ${LINE}`, background: '#FFFFFF', color: INK, fontSize: 24, fontWeight: 600 }, pill),
     ]),
     el('div', { flexDirection: 'column', gap: 18, maxWidth: 1000 }, [
