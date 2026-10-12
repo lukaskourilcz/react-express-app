@@ -248,10 +248,9 @@ export function PlayLanding() {
             Shop and the Career Roadmap. */}
         <div className="ss-pop" style={{ width: '100%' }}>
           <VStack gap={1}>
-            <Kicker>{t('play.kicker')}</Kicker>
-            <Heading level={1} type="display-3">
+            <Kicker as="h1" className="ss-section-title">
               {t('play.title')}
-            </Heading>
+            </Kicker>
             <Text type="large" color="secondary">
               {t('play.subtitle')}
             </Text>

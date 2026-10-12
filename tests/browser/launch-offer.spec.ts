@@ -1,8 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
 import AxeBuilder from '@axe-core/playwright';
+import { localAuth, storeFakeSession } from './fake-session';
 
 // The launch price on /premium (shared/launch-offer.ts): 4 Oct 2026 00:00 to
-// 2 Nov 2026 23:59:59, Prague time. The browser's clock is fixed with
+// 30 Nov 2026 23:59:59, Prague time. The browser's clock is fixed with
 // Playwright's clock and the server's answer (/api/settings) is stubbed, the
 // two inputs the page reads. Every other API call fails fast, as in
 // route-errors.spec.ts, so the page draws for a signed-out visitor.
@@ -34,35 +35,57 @@ async function settled(page: Page): Promise<void> {
 
 const plans = (page: Page) => page.getByRole('region', { name: 'Choose a plan' });
 
-test('inside the window: the launch price, the regular price from 3 Nov, and no earlier-price claim', async ({ page }) => {
+test('Premium member has a gold diamond and a disabled Start free action with a keyboard tooltip', async ({ page }) => {
+  await prepare(page, { now: '2026-10-12T10:00:00Z', launchOffer: false });
+  await storeFakeSession(page);
+  await localAuth(page);
+  await page.route('**/api/user/**', route => {
+    const url = new URL(route.request().url());
+    if (url.searchParams.get('op') !== 'entitlement' && !url.pathname.endsWith('/entitlement')) return route.fallback();
+    return route.fulfill({ json: {
+    tier: 'premium', source: 'manual', currentPeriodEnd: null, cancelAtPeriodEnd: false,
+    inGrace: false, validUntil: null, billingAccount: false, subscriptionLive: false,
+    } });
+  });
+  await page.goto('/');
+  const free = page.getByRole('button', { name: 'Start free', exact: true });
+  await expect(free).toHaveAttribute('aria-disabled', 'true');
+  await free.focus();
+  await free.press('Tab');
+  await page.keyboard.press('Shift+Tab');
+  await expect(page.getByRole('tooltip')).toHaveText('You are already a Premium member! Thank you! <3');
+  await expect(page.locator('.ss-premium-nav-icon--member')).toBeVisible();
+});
+
+test('inside the window: the launch price, the regular price from 1 Dec, and no earlier-price claim', async ({ page }) => {
   await prepare(page, { now: '2026-10-10T10:00:00Z', launchOffer: true });
   await page.goto('/premium?utm_source=instagram&utm_medium=post&utm_campaign=launch-55');
-  await expect(page.getByRole('heading', { level: 1, name: 'Everything in devShark at the launch price of €1.80 a month' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Everything in devShark at the launch price of €2.25 a month' })).toBeVisible();
   const region = plans(page);
   const monthly = region.locator('[data-plan="monthly"] .ss-offer-amount');
-  await expect(monthly.locator('s')).toHaveText('€3.99');
-  await expect(monthly.locator('strong')).toHaveText('€1.80');
-  await expect(region.locator('[data-plan="annual"] .ss-offer-amount strong')).toHaveText('€18.00');
+  await expect(monthly.locator('s')).toHaveText('€4.99');
+  await expect(monthly.locator('strong')).toHaveText('€2.25');
+  await expect(region.locator('[data-plan="annual"] .ss-offer-amount strong')).toHaveText('€26.95');
   // Screen readers hear one sentence per price, not two bare numbers.
   const snapshot = await region.locator('[data-plan="monthly"] .ss-premium-plan__price').ariaSnapshot();
-  expect(snapshot).toContain('€1.80 launch price; the regular price from 3 Nov 2026 is €3.99');
-  expect(snapshot).not.toMatch(/deletion|€3\.99 €1\.80/);
-  const note = region.getByRole('group', { name: 'Launch price €1.80 a month · €18.00 a year' });
-  await expect(note).toContainText('55% below the regular price of €3.99 a month · €39.99 a year, which applies from 3 Nov 2026');
+  expect(snapshot).toContain('€2.25 launch price; the regular price from 1 Dec 2026 is €4.99');
+  expect(snapshot).not.toMatch(/deletion|€4\.99 €1\.80/);
+  const note = region.getByRole('group', { name: 'Launch price €2.25 a month · €26.95 a year' });
+  await expect(note).toContainText('55% below the regular price of €4.99 a month · €59.88 a year, which applies from 1 Dec 2026');
   await expect(note).toContainText('Kept for the lifetime of your subscription · cancel anytime');
-  await expect(note).toContainText('Offer ends 2 Nov 2026');
+  await expect(note).toContainText('Offer ends 30 Nov 2026');
   await expect(page.locator('body')).not.toContainText(/lowest price|last 30 days/i);
   // The campaign label survives on the address the first pageview reads.
   expect(new URL(page.url()).searchParams.get('utm_campaign')).toBe('launch-55');
 });
 
-test('before 4 Oct 00:00 Prague and after 2 Nov 23:59:59 Prague: the page is today’s', async ({ page }) => {
-  for (const now of ['2026-09-28T12:00:00Z', '2026-10-03T21:59:59Z', '2026-11-02T23:00:00Z']) {
+test('before 4 Oct 00:00 Prague and after 30 Nov 23:59:59 Prague: the page is today’s', async ({ page }) => {
+  for (const now of ['2026-09-28T12:00:00Z', '2026-10-03T21:59:59Z', '2026-11-30T23:00:00Z']) {
     await prepare(page, { now, launchOffer: true });
     await page.goto('/premium');
-    await expect(page.getByRole('heading', { level: 1, name: 'Everything in devShark for €3.99 a month' }), now).toBeVisible();
-    await expect(plans(page).getByText('€3.99', { exact: true })).toBeVisible();
-    await expect(plans(page).getByText('€39.99', { exact: true })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Everything in devShark for €4.99 a month' }), now).toBeVisible();
+    await expect(plans(page).getByText('€4.99', { exact: true })).toBeVisible();
+    await expect(plans(page).getByText('€59.88', { exact: true })).toBeVisible();
     await expect(page.locator('.ss-offer-amount, .ss-offer-note, s')).toHaveCount(0);
     await expect(page.locator('body')).not.toContainText(/launch price|1\.80|18\.00/i);
     await page.unrouteAll({ behavior: 'ignoreErrors' });
@@ -72,7 +95,7 @@ test('before 4 Oct 00:00 Prague and after 2 Nov 23:59:59 Prague: the page is tod
 test('inside the window without the coupon: the page is today’s', async ({ page }) => {
   await prepare(page, { now: '2026-10-10T10:00:00Z', launchOffer: false });
   await page.goto('/premium');
-  await expect(page.getByRole('heading', { level: 1, name: 'Everything in devShark for €3.99 a month' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 1, name: 'Everything in devShark for €4.99 a month' })).toBeVisible();
   await expect(page.locator('.ss-offer-amount, .ss-offer-note')).toHaveCount(0);
 });
 

@@ -120,7 +120,8 @@ describe('while merchandise is paused (owner decision 10)', () => {
     const t = (key: keyof typeof en, vars?: Record<string, string | number>) =>
       en[key].replace(/\{(\w+)\}/g, (_, name: string) => String(vars?.[name] ?? `{${name}}`));
     render(<PremiumStaticArticle t={t} />);
-    expect(screen.getByText(/Save 7\.89 EUR a year/)).toBeInTheDocument();
+    expect(screen.queryByText(/Save .* EUR a year/)).toBeNull();
+    expect(screen.getByText(/59\.88/)).toBeInTheDocument();
     expect(document.body.textContent).not.toMatch(/months? free|merchandise|\{saving\}/i);
   });
 

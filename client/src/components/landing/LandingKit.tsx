@@ -35,7 +35,7 @@ export function Kicker({
 }: {
   children: ReactNode;
   center?: boolean;
-  as?: 'span' | 'h2' | 'h3';
+  as?: 'span' | 'h1' | 'h2' | 'h3';
   className?: string;
   variant?: number;
   /** Forwarded to the rendered element — the GitHub garden heading is a scroll

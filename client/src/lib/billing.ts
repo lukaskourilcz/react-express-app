@@ -1,5 +1,5 @@
-// Billing in the browser (#221). The browser never talks to Stripe: it asks
-// the server for a hosted Checkout or Customer Portal URL and goes there. Only
+// Billing in the browser (#221). The server creates a Checkout Session;
+// Stripe.js mounts its payment iframe. The portal still uses a redirect. Only
 // the signed webhook and the server's session lookup change a plan, so nothing
 // here can open Premium by itself.
 import { apiFetch } from './api';
@@ -59,13 +59,13 @@ function leaveFor(url: unknown): void {
   window.location.assign(url);
 }
 
-/** Start Checkout for a plan and leave for Stripe's hosted page. */
-export async function startCheckout(plan: BillingPlan): Promise<void> {
-  const { url } = await apiFetch<{ url: string }>(USER('billing-checkout'), {
+/** Start the Stripe-hosted form only after the learner accepts the terms. */
+export async function startCheckout(plan: BillingPlan, signal?: AbortSignal): Promise<{ client_secret: string; session_id: string; expires_at: number; ui_mode: 'form' | 'embedded_page' }> {
+  return apiFetch(USER('billing-checkout'), {
     method: 'POST',
-    body: JSON.stringify({ plan }),
+    body: JSON.stringify({ plan, consent: true }),
+    signal,
   });
-  leaveFor(url);
 }
 
 /** Open the Customer Portal: card, invoices, plan switch, cancel at period end. */

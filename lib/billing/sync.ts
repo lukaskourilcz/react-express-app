@@ -413,6 +413,8 @@ export interface SessionOutcome {
 /** Apply a completed Checkout Session: link the customer, keep the consent
  * with the session id, mirror the subscription. Shared by the webhook and the
  * success page, and idempotent, so both may run for one session. */
+export const CHECKOUT_CONSENT_VERSION = 'devshark-checkout-form-v1';
+
 export async function applyCheckoutSession(
   deps: BillingDeps,
   session: Stripe.Checkout.Session,
@@ -435,13 +437,18 @@ export async function applyCheckoutSession(
   }
   const customerId = idOf(session.customer);
   if (customerId) await linkCustomer(deps, userId, customerId);
-  if (session.consent?.terms_of_service === 'accepted') {
+  const formConsent = session.metadata?.checkout_consent_version === CHECKOUT_CONSENT_VERSION
+    && session.metadata.product === DEVSHARK_PRODUCT
+    && session.metadata.supabase_user_id === userId;
+  const consentAt = formConsent ? Date.parse(session.metadata!.checkout_consent_at ?? '') : NaN;
+  const validFormConsent = formConsent && Number.isFinite(consentAt) && consentAt > 0 && consentAt < (acceptedAtSeconds + 1) * 1000;
+  if (session.consent?.terms_of_service === 'accepted' || validFormConsent) {
     await rpc(deps, 'record_checkout_consent', {
       p_session_id: session.id,
       p_user_id: userId,
       p_subscription_id: subscriptionId,
-      p_waiver_text: (session.custom_text?.terms_of_service_acceptance?.message || WAIVER_TEXT).slice(0, 1200),
-      p_accepted_at: new Date(acceptedAtSeconds * 1000).toISOString(),
+      p_waiver_text: (validFormConsent ? session.metadata!.checkout_consent_text || WAIVER_TEXT : session.custom_text?.terms_of_service_acceptance?.message || WAIVER_TEXT).slice(0, 1200),
+      p_accepted_at: new Date(validFormConsent ? consentAt : acceptedAtSeconds * 1000).toISOString(),
     });
   }
   return { status: 'complete', sync: await syncSubscription(deps, subscriptionId, { userHint: userId }) };

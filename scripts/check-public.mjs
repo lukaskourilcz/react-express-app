@@ -16,6 +16,7 @@ const CODING_TRACK_PAGES = ['javascript', 'typescript', 'react', 'algorithms', '
 const SITEMAP_CODING_PAGES = ['/coding', ...CODING_TRACK_PAGES];
 assert.deepEqual(urls.filter(url => url.pathname.startsWith('/coding')).map(url => url.pathname), SITEMAP_CODING_PAGES, 'the sitemap lists the Coding home and its track pages, and nothing else under /coding');
 assert(!urls.some(url => url.pathname.startsWith('/premium/success')), 'the checkout return page is never listed');
+assert(!urls.some(url => url.pathname.startsWith('/premium/checkout')), 'the private checkout page is never listed');
 const tiers = readFileSync('shared/tiers.ts', 'utf8');
 const price = (plan) => tiers.match(new RegExp(`${plan}: '([0-9.]+)'`))?.[1];
 for (const url of urls) {
@@ -41,10 +42,11 @@ for (const url of urls) {
       assert.equal(schema['@type'], 'LearningResource'); assert.equal(schema.url, url.href); assert.equal(schema.name, doc.title);
       assert.equal(schema.isAccessibleForFree, false, 'Premium is the paid subscription');
       assert.deepEqual(schema.offers.map(offer => offer.price), [price('monthly'), price('annual')], 'the offers carry the prices from shared/tiers.ts');
-      assert(schema.offers.every(offer => offer.priceSpecification.valueAddedTaxIncluded === true), 'every price includes VAT');
+      assert(schema.offers.every(offer => offer.priceSpecification.valueAddedTaxIncluded === false), 'every price excludes VAT, as selected by the owner');
       assert.match(text, new RegExp(`${price('monthly').replace('.', '\\.')}`), `${url}: the monthly price is in the HTML`);
       assert.match(text, new RegExp(`${price('annual').replace('.', '\\.')}`), `${url}: the annual price is in the HTML`);
-      assert.match(text, /VAT included/, `${url}: prices say VAT included`);
+      assert.match(text, /before VAT/, `${url}: prices say VAT is extra`);
+      assert.doesNotMatch(text, /VAT included/i, `${url}: no obsolete tax-inclusive claim`);
       assert.match(text, /renews automatically/i, `${url}: auto-renewal is stated before purchase`);
       assert.match(text, /lose my 14-day right of withdrawal/, `${url}: the waiver sentence is stated before purchase`);
       assert(doc.querySelector('a[href="/terms"]') && doc.querySelector('a[href="/premium/cancel"]'), `${url}: links to the Terms and the cancellation page`);

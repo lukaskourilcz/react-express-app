@@ -95,6 +95,16 @@ export const FormatCodeIcon = ({ size = 20, style }: IconProps) => (
   </svg>
 );
 
+export const ResetIcon = ({ size = 20, style }: IconProps) => (
+  <svg {...base(size)} style={style}><path d="M3 11a9 9 0 1 1 2.64 6.36M3 4v7h7" /></svg>
+);
+export const HintIcon = ({ size = 20, style }: IconProps) => (
+  <svg {...base(size)} style={style}><path d="M9 18h6M10 22h4M9 18v-2a6 6 0 1 1 6 0v2" /></svg>
+);
+export const SkipIcon = ({ size = 20, style }: IconProps) => (
+  <svg {...base(size)} style={style}><path d="m5 4 10 8-10 8V4ZM19 4v16" /></svg>
+);
+
 export const BookmarkIcon = ({ size = 20, style }: IconProps) => (
   <svg {...base(size)} style={style}>
     <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z" />

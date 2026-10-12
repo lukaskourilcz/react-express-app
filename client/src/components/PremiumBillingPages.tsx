@@ -13,13 +13,14 @@
 // Neither page changes a plan by itself. The server does, from the signed
 // webhook, its own lookup of the session, or a proven cancellation request.
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { Banner } from '@astryxdesign/core/Banner';
 import { Button } from '@astryxdesign/core/Button';
 import { RadioList, RadioListItem } from '@astryxdesign/core/RadioList';
 import { Skeleton } from '@astryxdesign/core/Skeleton';
 import { TextInput } from '@astryxdesign/core/TextInput';
+import { CheckboxInput } from '@astryxdesign/core/CheckboxInput';
 import { useLanguage } from '../i18n/LanguageContext';
 import { ApiError, friendlyError } from '../lib/api';
 import { useAuth } from '../lib/auth';
@@ -34,24 +35,140 @@ import {
   requestCancellation,
   reviewCancelLink,
   useBilling,
+  startCheckout,
   type CancelAction,
   type CancelLink,
   type CancelPending,
   type CancelReceipt,
 } from '../lib/billing';
-import type { EntitlementResponse } from '../../../shared/tiers';
+import { PREMIUM_PRICE, type EntitlementResponse } from '../../../shared/tiers';
 import { useLaunchOffer } from '../lib/launchOffer';
-import { LaunchOfferNote, PremiumPriceSentence } from './LaunchOffer';
+import { LaunchOfferNote, OfferAmount, PremiumPriceSentence } from './LaunchOffer';
 import { Page } from './PublicInfoPages';
 import PremiumCheckoutButton from './PremiumCheckoutButton';
 import { planText } from './PlanLine';
 import './PremiumBillingPages.css';
+import { CHECKOUT_APPEARANCE, loadCheckoutStripe, type CheckoutView } from '../lib/stripeCheckoutForm';
+import { isOnline } from '../lib/routeRecovery';
 
 const SESSION_ID = /^cs_(test|live)_[A-Za-z0-9]{8,240}$/;
 /** How often, and how many times, the page asks again while a payment is
  * still processing. */
 const RECHECK_MS = 4000;
 const RECHECKS = 5;
+type CheckoutRuntime = { controller: AbortController; form?: CheckoutView; timer?: number };
+
+/** Stripe owns the iframe and card fields. The server owns the order, consent,
+ * price and fulfillment; a successful browser callback never grants Premium. */
+export function PremiumCheckoutPage() {
+  const { t } = useLanguage();
+  const [params] = useSearchParams();
+  const navigate = useNavigate();
+  const billing = useBilling();
+  const offer = useLaunchOffer();
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const entitlement = useEntitlement();
+  const plan = params.get('plan');
+  const validPlan = plan === 'monthly' || plan === 'annual';
+  const [consent, setConsent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [ready, setReady] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const runtime = useRef<CheckoutRuntime | null>(null);
+  const loading = !billing.known || isLoading || (isAuthenticated && entitlement.loading);
+  const paying = entitlement.data?.subscriptionLive === true || (entitlement.tier === 'premium' && entitlement.data?.source === 'provider');
+
+  useEffect(() => {
+    setConsent(false); setBusy(false); setReady(false); setError(null);
+    return () => {
+      runtime.current?.controller.abort();
+      runtime.current?.form?.destroy();
+      clearTimeout(runtime.current?.timer);
+      runtime.current = null;
+    };
+  }, [plan, user?.id]);
+
+  const start = async () => {
+    if (!validPlan || !consent || runtime.current || !isAuthenticated || !billing.enabled || paying) return;
+    if (!isOnline()) { setError(t('common.offline')); return; }
+    const current: CheckoutRuntime = { controller: new AbortController() };
+    runtime.current = current;
+    setBusy(true); setError(null);
+    current.timer = window.setTimeout(() => {
+      if (runtime.current !== current) return;
+      current.controller.abort(); current.form?.destroy(); runtime.current = null;
+      setBusy(false); setReady(false); setError(t('premium.page.unreachable'));
+    }, 45000);
+    try {
+      const stripe = await loadCheckoutStripe(billing.seller === 'link' ? 'embedded_page' : 'form');
+      if (current.controller.signal.aborted) return;
+      const session = await startCheckout(plan, current.controller.signal);
+      if (current.controller.signal.aborted) return;
+      if (!session.client_secret || !Number.isFinite(session.expires_at) || !['form', 'embedded_page'].includes(session.ui_mode)) throw new Error('The payment provider returned an invalid checkout.');
+      let form: CheckoutView;
+      if (session.ui_mode === 'embedded_page') {
+        form = await stripe.createEmbeddedCheckoutPage({ fetchClientSecret: async () => session.client_secret });
+        if (current.controller.signal.aborted) { form.destroy(); return; }
+      } else {
+        const checkout = stripe.initCheckoutFormSdk({ clientSecret: session.client_secret, appearance: CHECKOUT_APPEARANCE });
+        const result = await checkout.loadActions();
+        if (current.controller.signal.aborted) return;
+        if (result.type !== 'success') throw new Error('The payment form could not load. Try again.');
+        const checkoutForm = checkout.createForm({ layout: 'expanded' });
+        form = checkoutForm;
+        checkoutForm.on('confirm', async (event) => {
+          if (current.controller.signal.aborted || runtime.current !== current) return;
+          setBusy(true); setError(null);
+          try {
+            const answer = await result.actions.confirm({ formConfirmEvent: event });
+            if (answer?.type === 'error') throw new Error(answer.error?.message || 'The payment could not be confirmed.');
+          } catch (err) {
+            if (!current.controller.signal.aborted) setError(friendlyError(err));
+          } finally {
+            if (!current.controller.signal.aborted) setBusy(false);
+          }
+        });
+      }
+      current.form = form;
+      form.mount('#checkout-form');
+      setReady(true); setBusy(false);
+      clearTimeout(current.timer);
+      current.timer = window.setTimeout(() => {
+        if (runtime.current !== current) return;
+        current.controller.abort(); form.destroy(); runtime.current = null;
+        setReady(false); setBusy(false); setConsent(false);
+        setError(t('billing.success.expiredBody'));
+      }, Math.max(0, session.expires_at * 1000 - Date.now()));
+    } catch (err) {
+      if (current.controller.signal.aborted) return;
+      clearTimeout(current.timer);
+      current.form?.destroy(); runtime.current = null;
+      setBusy(false); setReady(false); setError(friendlyError(err));
+    }
+  };
+
+  return <Page title={t('billing.checkout.title')} lead={t('billing.checkout.lead')}>
+    <section className="ss-info-card ss-billing-card ss-checkout-card">
+      {billing.failed ? <><Banner status="error" title={t('premium.page.unreachable')} /><Button label={t('profile.plan.retry')} onClick={billing.retry} /></>
+        : loading ? <p role="status">{t('billing.checkout.loading')}</p> : !validPlan ? <Banner status="error" title={t('billing.checkout.choosePlan')} />
+        : !billing.enabled ? <p>{t('billing.checkout.soon')}</p>
+          : !isAuthenticated ? <Button label={t('billing.checkout.signIn')} onClick={() => openSignIn({ returnTo: `/premium/checkout?plan=${plan}` })} />
+            : paying ? <PremiumCheckoutButton plan={plan} /> : <>
+              <h2>{t(plan === 'annual' ? 'premium.page.annualName' : 'premium.page.monthlyName')}</h2>
+              <p className="ss-checkout-price">{offer ? <OfferAmount offer={offer} plan={plan} /> : <strong>{PREMIUM_PRICE.symbol}{PREMIUM_PRICE[plan]}</strong>}</p>
+              {offer && <LaunchOfferNote offer={offer} compact />}
+              <p>{t(plan === 'annual' ? 'premium.page.annualRenews' : 'premium.page.monthlyRenews')}</p>
+              <p><Link to="/terms">{t('legal.link.terms')}</Link> · <Link to="/privacy">{t('legal.link.privacy')}</Link></p>
+              <CheckboxInput value={consent} onChange={setConsent} label={t('billing.checkout.consent')} isRequired isDisabled={busy || ready} />
+              {!ready && <Button label={t('billing.checkout.openForm')} onClick={() => void start()} isDisabled={!consent || busy} isLoading={busy} />}
+              {busy && <p role="status">{t(ready ? 'billing.success.checkingStatus' : 'billing.checkout.loading')}</p>}
+            </>}
+      {error && <p role="alert">{error}</p>}
+      <div id="checkout-form" className="ss-checkout-form" data-ready={ready} />
+      <div className="ss-info-actions"><Button variant="secondary" label={t('billing.checkout.back')} onClick={() => navigate('/premium')} /></div>
+    </section>
+  </Page>;
+}
 
 type SuccessState =
   | { kind: 'checking' }

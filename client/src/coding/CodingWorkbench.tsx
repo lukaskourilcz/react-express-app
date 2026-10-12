@@ -21,11 +21,11 @@ import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
 import { ReportDialog } from '../components/ReportDialog';
-import { FlagIcon, InfoIcon, PlayIcon, FormatCodeIcon } from '../components/ui/icons';
+import { FlagIcon, InfoIcon, PlayIcon, FormatCodeIcon, CheckCircleIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
-import { useIsNarrowForEditor } from '../lib/useMediaQuery';
+import { useIsNarrowForEditor, useMediaQuery } from '../lib/useMediaQuery';
 import { CODING_CODE_LIMIT_BYTES, SKIP_REASONS, type SkipReason } from '../../../shared/coding-api';
 import { classifyFailure, failureHint, isSyntaxError } from '../../../shared/coding-failure';
 import { resetCoding, revealCoding, submitCoding, useCodingApproaches } from './api';
@@ -168,6 +168,8 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const online = useOnline();
   const baseId = useId();
   const isReact = task.track === 'react';
+  const compactViewport = useMediaQuery('(width < 1220px)');
+  const compactCommands = mode === 'landing' || compactViewport;
   const isTypeScript = task.track === 'typescript';
   const codeTrack = task.track === 'typescript' ? 'typescript' : 'javascript';
   const checklist = task.verify === 'checklist';
@@ -943,10 +945,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     <section className={`cd-verdict cd-verdict--${puzzleAccepted ? 'puzzle' : verdict.verdict}`} ref={verdictRef} tabIndex={-1}>
       <h3 className="cd-verdict__title">
         <span>{verdictLabel}</span>
-        {verdict.xpAwarded > 0 && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
+        {(verdict.xpAwarded > 0 || (isReact && verdict.verdict === 'passed' && !verdictStale)) && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
-      <RepeatXpNote verdict={verdict} />
-      {verdict.complexity && <div className="cd-complexity" aria-label="Solution efficiency">
+      {!(isReact && verdict.verdict === 'passed' && !verdictStale) && <RepeatXpNote verdict={verdict} />}
+      {!isReact && verdict.complexity && <div className="cd-complexity" aria-label="Solution efficiency">
         <strong>Estimated time: {verdict.complexity.time ?? 'Cannot determine'}</strong>
         {!verdictStale && verdict.verdict === 'passed' && verdict.complexity.assessment === 'within-target' && <p>Meets the stated time target under the analysis assumptions.</p>}
         {!verdictStale && verdict.complexity.assessment === 'above-target' && <p>Above the stated time target. Look for repeated work inside a scan.</p>}
@@ -964,7 +966,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
           )}
         </>
       ) : (
-        verdict.verdict === 'passed' && verdict.progress && <p className="cd-verdict__row">{verdict.firstPass ? t('coding.verdict.firstPass') : t('coding.verdict.again')}</p>
+        !isReact && verdict.verdict === 'passed' && verdict.progress && <p className="cd-verdict__row">{verdict.firstPass ? t('coding.verdict.firstPass') : t('coding.verdict.again')}</p>
       )}
       {verdict.verdict === 'passed' && !verdict.progress && !verdict.puzzle && <p className="cd-verdict__row">{signedIn ? t('coding.verdict.notRecorded') : t('coding.verdict.signIn')}</p>}
       {verdict.github && verdict.github.status !== 'not_connected' && (
@@ -1069,32 +1071,38 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {!puzzleMode && !pendingOnDesktop && <>
         {/* Busy, not disabled: the button that was pressed keeps the focus
             (a disabled one hands it to the page), and a press does nothing. */}
-        <Button variant="secondary" isIconOnly={mode === 'landing'} icon={mode === 'landing' ? <PlayIcon /> : undefined} onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : mode === 'landing' ? t('coding.run') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
-        {mode !== 'landing' && <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />}
-        <Button variant="ghost" isIconOnly={mode === 'landing'} icon={mode === 'landing' ? <FormatCodeIcon /> : undefined} onClick={() => void format()} isDisabled={formatDisabled} tooltip={mode === 'landing' ? t('coding.format') : undefined} label={t('coding.format')} />
-        <Button variant="ghost" ref={resetRef} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
+        <Button variant="secondary" isIconOnly={compactCommands} icon={compactCommands ? <PlayIcon /> : undefined} onClick={() => void runLocal()} isDisabled={busy} tooltip={busy ? t('coding.status.working') : compactCommands ? t('coding.run') : undefined} label={phase === 'running' ? (runPhase === 'compiling' ? t('coding.compiling') : t('coding.running')) : t('coding.run')} />
+        {mode !== 'landing' && (compactCommands
+          ? <Button variant="primary" isIconOnly icon={<CheckCircleIcon />} onClick={() => { if (!submitDisabled) void submit(); }} isDisabled={submitDisabled} tooltip={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />
+          : <SwimCta size="sm" dir={1} onClick={() => { if (!submitDisabled) void submit(); }} unavailable={submitDisabled} label={phase === 'submitting' ? t('coding.submitting') : t('coding.submit')} />)}
+        <Button variant="ghost" isIconOnly={compactCommands} icon={compactCommands ? <FormatCodeIcon /> : undefined} onClick={() => void format()} isDisabled={formatDisabled} tooltip={compactCommands ? t('coding.format') : undefined} label={t('coding.format')} />
+        <Button variant="ghost" ref={resetRef} isIconOnly={compactCommands} icon={compactCommands ? <ResetIcon /> : undefined} tooltip={compactCommands ? t('coding.reset') : undefined} onClick={() => setConfirming('reset')} isDisabled={resetDisabled} label={t('coding.reset')} />
         </>}
 
         {/* Unavailable for a reason: focusable, with the reason as its tooltip. */}
         <Button
           variant="secondary"
+          isIconOnly={compactCommands}
+          icon={compactCommands ? <HintIcon /> : undefined}
           onClick={takeHint}
           isDisabled={hintUnavailable !== ''}
-          tooltip={hintUnavailable || undefined}
+          tooltip={compactCommands ? `${taken === 0 ? t('coding.hint') : t('coding.hintNext')}${hintUnavailable ? `. ${hintUnavailable}` : ''}` : hintUnavailable || undefined}
           label={taken === 0 ? t('coding.hint') : t('coding.hintNext')}
         />
         {mode !== 'landing' && session && !solution && !solutions && (
           <Button
             variant="ghost"
+            isIconOnly={compactCommands}
+            icon={compactCommands ? <EyeIcon /> : undefined}
             ref={revealRef}
             onClick={askToReveal}
             isDisabled={giveUpUnavailable !== '' || busy}
-            tooltip={giveUpUnavailable || undefined}
+            tooltip={compactCommands ? `${t('coding.giveUp')}${giveUpUnavailable ? `. ${giveUpUnavailable}` : ''}` : giveUpUnavailable || undefined}
             label={t('coding.giveUp')}
           />
         )}
         {signedIn && mode === 'section' && !skipResult && (
-          <Button variant="ghost" onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />
+          <Button variant="ghost" isIconOnly={compactCommands} icon={compactCommands ? <SkipIcon /> : undefined} tooltip={compactCommands ? t('coding.skip.action') : undefined} onClick={() => setSkipping((open) => !open)} aria-expanded={skipping} label={t('coding.skip.action')} />
         )}
         {mode !== 'landing' && <div className="cd-actions cd-actions--utility">
           {!locked && saveAction}

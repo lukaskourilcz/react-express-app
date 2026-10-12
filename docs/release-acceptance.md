@@ -2874,3 +2874,33 @@ The hero browser regression is included in required CI. The removed UI does not
 change server content eligibility, review records,
 reports or grading. Required remote checks and production verification follow
 on the associated pull request.
+
+## 12 October 2026 — embedded Premium checkout and interface cleanup
+
+Owner-selected Managed Payments uses supported `embedded_page`: Stripe's actual API refused `form` for this merchant model. The optional plain branch implements Checkout Form SDK with the supplied appearance. Required consent is collected before session creation; server metadata preserves the waiver/version/timestamp and existing signed fulfillment records it. No schema or grading changes; twelve API handlers remain.
+
+Production Stripe/Vercel setup is prepared (live restricted key, public key, exclusive EUR 4.99/59.88 prices, forever 55% coupon through 30 November, nine-event webhook and default Portal). **Sales are disabled at the owner's request while identity verification waits.** Remaining setup is solely in [STRIPE_INTEGRATION_TODO.md](../../STRIPE_INTEGRATION_TODO.md).
+
+Premium membership disables Start free with an explanatory tooltip and colors the header diamond gold. Duplicate page kickers are replaced by green semantic main headings and the existing varied wave. Native select arrows are inset by 1rem. React success omits the complexity/first-pass/repeat-XP prose while retaining actual server XP, navigation and genuine exceptional states. Coding toolbar controls show icons and accessible tooltips below 1220px.
+
+| Check | Actual outcome |
+|---|---|
+| `typecheck:api`, `typecheck:scripts`, `test:launch` | Pass |
+| `test:billing` | Pass, 40 checks; explicit consent, old/new consent recording, ownership/signatures/idempotency and matching restricted live/test keys |
+| `test:client` | Pass, 104 files / 996 tests |
+| `build` | Pass; production-shaped Supabase placeholders used for signed-in browser tests |
+| `check:bundle` | Pass, 241337/243000 initial gzip bytes |
+| `check:unused`, `check:security` | Pass |
+| Both production dependency audits | Pass, zero vulnerabilities |
+| `git diff --check` | Pass |
+| Coding browser suite | 17 passed, including React success and 1220/1219/360px keyboard tooltips |
+| Launch-pricing browser checks | Regular/discounted pricing and light/dark WCAG 2.2 AA passed at 390/1280px; Premium membership regression corrected to intercept the actual multiplexed entitlement route and rechecked separately |
+| Actual Stripe sandbox API | Subscription session created with Managed Payments, exclusive EUR 4.99 Price, forever 55% coupon, EUR 2.25 total before location-dependent tax |
+| Actual external checkout iframe | Current Endive `createEmbeddedCheckoutPage({fetchClientSecret})` verified in Chrome and headless Chromium after correcting the older call. Stripe displayed EUR 4.99 subtotal, EUR 2.74 discount, EUR 0.47 Czech VAT and EUR 2.72 due. No purchase was confirmed and no real learner entitlement was created; actual paid completion/webhook delivery remains an activation gate |
+| Live payment/KYC, external webhook delivery, retry/email settings, logged-out cancellation email | Not verified; sales remain off and the owner deferred identity verification |
+
+Final local checks: 249 light-mode responsive probes across 28 routes and widths 320–1440; 248 were clear on the first run, `/profile` at 430px had a transient response failure during rebuild, then its focused retry passed. Another 18 dark-mode probes cover the changed routes at 360/768/1440px, all clear. All 17 coding-workbench browser checks, the five pricing/AA checks, the Premium keyboard-tooltip/gold-diamond check, and 13 coding-page/navigation/route-accessibility checks passed. Client tooling typecheck passed. Vercel's readable production values were verified: matching public `pk_live_` key, prices, coupon, Managed Payments and disabled sales; private Secrets cannot be read back by design, and their creation/storage was verified through provider API and Vercel metadata.
+
+GitHub protected `verify` and `sql` checks and production deployment are checked before release; their final evidence is recorded on PR #360. Physical-phone/Safari and real live purchase remain separate owner checks; no claims of these checks passing.
+
+Final public HTML check passed after replacing the obsolete tax-inclusive contract with the owner-selected tax-exclusive expectation: 20 sitemap URLs, both Premium prices and VAT-extra wording/schema, 725 coding share pages, seven section pages, 87 daily pages and no Czech in 16 coding chunks. The private checkout page remains outside the sitemap.

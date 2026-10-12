@@ -15,6 +15,7 @@ import { useT } from '../../i18n/LanguageContext';
 import type { TranslationKey } from '../../i18n/translations';
 import { FREE_LEARN_LEVELS, PREMIUM_PRICE } from '../../../../shared/tiers';
 import { useLaunchOffer } from '../../lib/launchOffer';
+import { useEntitlement } from '../../lib/entitlement';
 import { LaunchOfferNote, PremiumMonthlyCaption } from '../LaunchOffer';
 import { SUBJECT_SCOPE_CATALOG } from '../../../../shared/subject-catalog';
 import { Button } from '@astryxdesign/core/Button';
@@ -84,6 +85,7 @@ export interface ComparisonTableProps {
 export default function ComparisonTable({ startHref = '/learn', onStart, showCta = true, showOfferNote = true, afterTable }: ComparisonTableProps) {
   const t = useT();
   const offer = useLaunchOffer();
+  const entitlement = useEntitlement();
   const headingId = useId();
   const config = useGameConfig();
   const open = { paths: anyLearningPathOpen(config), redemption: redemptionOpen(config) };
@@ -162,7 +164,13 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
 
       {showCta && (
         <div>
-          {onStart ? (
+          {entitlement.loading ? (
+            <Button variant="primary" size="lg" label={t('landing.compare.cta')} isDisabled isLoading />
+          ) : entitlement.failed ? (
+            <Button variant="primary" size="lg" label={t('landing.compare.cta')} isDisabled tooltip={t('profile.plan.failed')} />
+          ) : entitlement.tier === 'premium' ? (
+            <Button variant="primary" size="lg" label={t('landing.compare.cta')} isDisabled tooltip={t('premium.memberThanks')} />
+          ) : onStart ? (
             <SwimCta label={t('landing.compare.cta')} onClick={onStart} dir={1} />
           ) : (
             <Button variant="primary" size="lg" as={Link} href={startHref} label={t('landing.compare.cta')} />

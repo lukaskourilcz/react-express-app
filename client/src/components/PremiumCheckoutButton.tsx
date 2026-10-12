@@ -10,13 +10,13 @@
 // The button only leads to Stripe's hosted page. The order button that
 // commits to paying is Stripe's, with the wording set on the server.
 import { useState } from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
 import { useLanguage } from '../i18n/LanguageContext';
 import { friendlyError } from '../lib/api';
 import { useAuth } from '../lib/auth';
 import { openSignIn } from '../lib/signInDialog';
-import { openBillingPortal, startCheckout, useBilling, type BillingPlan } from '../lib/billing';
+import { openBillingPortal, useBilling, type BillingPlan } from '../lib/billing';
 import { useEntitlement } from '../lib/entitlement';
 import { useClearOnPageRestore } from '../lib/pageRestore';
 
@@ -26,6 +26,7 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const entitlement = useEntitlement();
   const location = useLocation();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // Back from Stripe can bring this page back from the cache busy.
@@ -58,7 +59,7 @@ export default function PremiumCheckoutButton({ plan }: { plan: BillingPlan }) {
   // page; signed in, it leaves for Stripe and stays busy until it does.
   const press = !isAuthenticated
     ? () => openSignIn({ returnTo: location.pathname + location.search })
-    : () => void run(paying ? openBillingPortal : () => startCheckout(plan));
+    : paying ? () => void run(openBillingPortal) : () => navigate(`/premium/checkout?plan=${plan}`);
 
   return (
     <>

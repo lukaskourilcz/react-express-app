@@ -99,6 +99,41 @@ function runInWorker(page: Page, url: string, calls: string[], expectations: unk
 
 const announced = (page: Page) => page.locator('.cd-workbench > [role="status"]');
 
+test('React success stays compact and toolbar labels switch at 1220px with keyboard tooltips', async ({ page }) => {
+  await prepare(page, { signedIn: true, verdict: {
+    xpAwarded: 25, applied: true, firstPass: true,
+    progress: { attempts: 1, passedAt: new Date().toISOString(), lastXpAt: new Date().toISOString() },
+    complexity: { time: null, explanation: 'Manual review needed', assumptions: 'Static estimate', assessment: 'unknown' },
+  } });
+  const id = 'react-easy2-focus-the-search';
+  await openTask(page, `/coding/react/${id}`);
+  await fillEditor(page, solutionFor(id)!.solution);
+  const commands = page.locator('.cd-actions--commands');
+  for (const width of [1220, 1219, 360]) {
+    await page.setViewportSize({ width, height: 900 });
+    if (width === 360) await page.getByRole('button', { name: 'Use the editor on this screen' }).click();
+    const run = commands.getByRole('button', { name: 'Run', exact: true });
+    await expect(run).toBeVisible();
+    if (width >= 1220) await expect(run).toContainText('Run');
+    else {
+      await expect(run).not.toContainText('Run');
+      await run.focus();
+      await run.press('Tab');
+      await page.keyboard.press('Shift+Tab');
+      await expect(page.getByRole('tooltip', { name: 'Run', exact: true })).toBeVisible();
+      await run.press('Escape');
+    }
+  }
+  await page.setViewportSize({ width: 1219, height: 900 });
+  await commands.getByRole('button', { name: 'Submit', exact: true }).click();
+  const verdict = page.locator('.cd-verdict');
+  await expect(verdict).toContainText('Passed');
+  await expect(verdict).toContainText('+25 XP');
+  await expect(verdict.getByRole('link', { name: 'Next task' })).toBeVisible();
+  await expect(verdict.getByRole('link', { name: 'Back to the list' })).toBeVisible();
+  await expect(verdict).not.toContainText(/Estimated time|How this estimate works|First pass|Reset the task/);
+});
+
 test('React: a focus check passes on every Run, not just the first, and a build error is shown (C4-1, C3-2, C3-6)', async ({ page }) => {
   test.setTimeout(120_000);
   await prepare(page);

@@ -24,6 +24,7 @@ import ReferralBinder from './components/ReferralBinder';
 import PendingQuizResults from './components/PendingQuizResults';
 import SignInButton from './components/SignInButton';
 import { useAuth } from './lib/auth';
+import { useEntitlement } from './lib/entitlement';
 import { useWallet } from './lib/rewards';
 import { capturePageview, identifyUser, resetAnalytics } from './lib/analytics';
 import { m, AnimatePresence, useReducedMotion } from './lib/motion';
@@ -75,7 +76,7 @@ const loadCoding = routeChunk(under('/coding'), () => import('./components/codin
 const loadGithubSettings = routeChunk(exact('/settings/github'), () => import('./components/coding/GithubSettingsPage'));
 const loadPaths = routeChunk(under('/roadmap/specializations', '/roadmap/paths'), () => import('./components/paths/LearningPathScreens'));
 const loadPremium = routeChunk(exact('/premium'), () => import('./components/PremiumPage'));
-const loadBilling = routeChunk(exact('/premium/success', '/premium/cancel'), () => import('./components/PremiumBillingPages'));
+const loadBilling = routeChunk(exact('/premium/checkout', '/premium/success', '/premium/cancel'), () => import('./components/PremiumBillingPages'));
 const loadDaily = routeChunk(under('/daily'), () => import('./components/DailyQuestionPage'));
 const loadAuthPages = routeChunk(exact('/auth/confirmed', '/reset-password'), () => import('./components/auth/AuthPages'));
 
@@ -112,6 +113,7 @@ const NotFoundPage = lazyPage(() => loadPublicInfo().then((m) => ({ default: m.N
 const PremiumPage = lazyPage(loadPremium);
 const DailyQuestionPage = lazyPage(loadDaily);
 const PremiumSuccessPage = lazyPage(() => loadBilling().then((m) => ({ default: m.PremiumSuccessPage })));
+const PremiumCheckoutPage = lazyPage(() => loadBilling().then((m) => ({ default: m.PremiumCheckoutPage })));
 const PremiumCancelPage = lazyPage(() => loadBilling().then((m) => ({ default: m.PremiumCancelPage })));
 const EmailConfirmedPage = lazyPage(() => loadAuthPages().then((m) => ({ default: m.EmailConfirmedPage })));
 const ResetPasswordPage = lazyPage(() => loadAuthPages().then((m) => ({ default: m.ResetPasswordPage })));
@@ -148,8 +150,8 @@ const MenuIcon = () => (
 
 // Premium: a cut gem, the one plan mark in the header. Decorative; the
 // button carries the word "Premium" as its accessible name and tooltip.
-const PremiumNavIcon = () => (
-  <svg aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+const PremiumNavIcon = ({ member }: { member: boolean }) => (
+  <svg className={member ? 'ss-premium-nav-icon--member' : undefined} aria-hidden="true" focusable="false" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 3h12l4 6-10 12L2 9z" />
     <path d="M2 9h20M12 21 8 9l2-6M12 21l4-12-2-6" />
   </svg>
@@ -245,6 +247,7 @@ function App() {
   const navigate = useNavigate();
   const { t, setLang, lang } = useLanguage();
   const config = useGameConfig();
+  const membership = useEntitlement();
   const [quizActive, setQuizActive] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement | null>(null);
@@ -563,11 +566,11 @@ function App() {
                   <AxIconButton
                     variant="ghost"
                     size="sm"
-                    label={t('nav.premium')}
-                    tooltip={t('nav.premium')}
+                    label={t(membership.tier === 'premium' ? 'nav.premiumMember' : 'nav.premium')}
+                    tooltip={t(membership.tier === 'premium' ? 'premium.memberThanks' : 'nav.premium')}
                     onClick={() => navigate('/premium')}
                     data-route="/premium"
-                    icon={<PremiumNavIcon />}
+                    icon={<PremiumNavIcon member={membership.tier === 'premium'} />}
                   />
                   <AxIconButton
                     variant="ghost"
@@ -795,6 +798,7 @@ function App() {
                   <Route path="/terms" element={<TermsPage />} />
                   <Route path="/premium" element={<PremiumPage />} />
                   <Route path="/premium/success" element={<PremiumSuccessPage />} />
+                  <Route path="/premium/checkout" element={<PremiumCheckoutPage />} />
                   <Route path="/premium/cancel" element={<PremiumCancelPage />} />
                   {/* Where the confirmation and password-reset emails land. */}
                   <Route path="/auth/confirmed" element={<EmailConfirmedPage />} />

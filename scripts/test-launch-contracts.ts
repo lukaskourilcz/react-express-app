@@ -994,10 +994,14 @@ function billingContracts() {
   const clientPackage = read('client/package.json');
   assert.doesNotMatch(clientPackage, /stripe/i, 'the browser bundle carries no Stripe library');
   for (const file of listFiles(join(process.cwd(), 'client/src')).filter((path) => /\.(tsx?|css|html)$/.test(path))) {
-    assert.doesNotMatch(read(file.slice(process.cwd().length + 1)), /js\.stripe\.com|@stripe\//, `${file} loads no Stripe script`);
+    if (file.endsWith('/stripeCheckoutForm.ts')) continue;
+    assert.doesNotMatch(read(file.slice(process.cwd().length + 1)), /js\.stripe\.com|@stripe\//, `${file} loads no Stripe script outside the checkout loader`);
   }
   const csp = read('vercel.json');
-  assert.doesNotMatch(csp, /stripe/i, 'the CSP names no Stripe host');
+  assert.match(csp, /https:\/\/js\.stripe\.com/, 'Stripe.js is allowed by CSP');
+  assert.match(csp, /https:\/\/checkout\.stripe\.com/, 'the hosted payment iframe is allowed');
+  assert.match(read('client/src/lib/stripeCheckoutForm.ts'), /document\.head\.append\(script\)/, 'Stripe.js loads directly into the head');
+  assert.match(read('lib/billing/handlers.ts'), /consent !== true/, 'the server requires explicit checkout consent');
   // Billing changes entitlements and nothing else.
   for (const file of listFiles(join(process.cwd(), 'lib/billing'))) {
     const source = read(file.slice(process.cwd().length + 1));
@@ -1019,9 +1023,9 @@ function publicCopyContracts() {
   // The sentence the buyer ticks in Checkout is the one /premium and the
   // Terms quote, word for word.
   assert.equal(ENGLISH['premium.page.waiver'], WAIVER_TEXT, 'the waiver on /premium and in the Terms matches Checkout');
-  // Every price the pages print says VAT included next to it.
+  // Every price the pages print says before VAT next to it.
   for (const key of ['landing.compare.premiumCaption', 'premium.page.monthlyRenews', 'premium.page.annualRenews', 'premium.sheet.price'] as const) {
-    assert.match(ENGLISH[key], /VAT included/, `${key} states the price with VAT`);
+    assert.match(ENGLISH[key], /before VAT/, `${key} states the price with VAT`);
   }
   // Redemption ships closed (DEFAULT_MERCH_SETTINGS.enabled is false), so
   // every place that sells Premium with merchandise says it depends on
@@ -1112,7 +1116,7 @@ function publicCopyContracts() {
   for (const page of PUBLIC_PAGES) {
     assert.ok(rewrites.some((rule) => rule.source === page.path && rule.destination === `${page.path}/index.html`), `${page.path} serves its static HTML`);
   }
-  assert.deepEqual([...NOINDEX_PATHS], ['/premium/success', '/auth/confirmed', '/reset-password']);
+  assert.deepEqual([...NOINDEX_PATHS], ['/premium/success', '/premium/checkout', '/auth/confirmed', '/reset-password']);
   // The pages the confirmation and reset emails open are client routes (no
   // handler of their own), and the catch-all rewrite serves them the app.
   const catchAll = rewrites.find((rule) => rule.destination === '/index.html');
@@ -1122,7 +1126,7 @@ function publicCopyContracts() {
   }
   const schema = premiumSchema('Premium', 'Premium', 'https://devshark.app/premium');
   assert.equal(schema.isAccessibleForFree, false, 'Premium is not free to access');
-  assert.ok(schema.offers.every((offer) => offer.priceSpecification.valueAddedTaxIncluded), 'the offers include VAT');
+  assert.ok(schema.offers.every((offer) => offer.priceSpecification.valueAddedTaxIncluded === false), 'the offers exclude VAT');
   // The trader is either unset or set, never a placeholder the page would print.
   for (const [field, value] of Object.entries(TRADER)) {
     assert.ok(value === null || (typeof value === 'string' && value.trim().length > 2 && !/todo|tbd|xxx|example|\[/i.test(value)), `TRADER.${field} is null or a real value`);
@@ -2786,7 +2790,7 @@ async function dailyOwnerContracts() {
   assert.equal(guest.statusCode, 200, JSON.stringify(guest.body));
 }
 
-/** The launch price (shared/launch-offer.ts): 4 Oct 2026 00:00 to 2 Nov 2026
+/** The launch price (shared/launch-offer.ts): 4 Oct 2026 00:00 to 30 Nov 2026
  * 23:59:59 in Prague, inert without billing and the coupon. */
 function launchOfferContracts() {
   const read = (path: string) => readFileSync(join(process.cwd(), path), 'utf8');
@@ -2795,17 +2799,17 @@ function launchOfferContracts() {
   }).format(instant);
   // The edges, read back in Prague time: CEST at the start, CET at the end.
   assert.equal(prague(LAUNCH_OFFER.startsAt), '04/10/2026, 00:00:00 CEST');
-  assert.equal(prague(LAUNCH_OFFER.endsBefore - 1), '02/11/2026, 23:59:59 CET');
-  assert.equal(prague(LAUNCH_OFFER.endsBefore), '03/11/2026, 00:00:00 CET');
-  assert.equal(LAUNCH_REDEEM_BY, 1793660399, 'the coupon redeem_by: 2 Nov 2026 23:59:59 CET');
-  assert.equal(prague(LAUNCH_REDEEM_BY * 1000), '02/11/2026, 23:59:59 CET');
+  assert.equal(prague(LAUNCH_OFFER.endsBefore - 1), '30/11/2026, 23:59:59 CET');
+  assert.equal(prague(LAUNCH_OFFER.endsBefore), '01/12/2026, 00:00:00 CET');
+  assert.equal(LAUNCH_REDEEM_BY, 1796079599, 'the coupon redeem_by: 30 Nov 2026 23:59:59 CET');
+  assert.equal(prague(LAUNCH_REDEEM_BY * 1000), '30/11/2026, 23:59:59 CET');
   // The window, edge instants included and excluded.
   assert.equal(launchWindowOpen(LAUNCH_OFFER.startsAt - 1), false, '3 Oct 23:59:59.999 Prague: closed');
   assert.equal(launchWindowOpen(LAUNCH_OFFER.startsAt), true, '4 Oct 00:00 Prague: open');
   assert.equal(launchWindowOpen(Date.parse('2026-10-03T23:59:59+02:00')), false, '3 Oct 23:59:59 Prague (UTC 21:59:59): closed');
   assert.equal(launchWindowOpen(Date.parse('2026-10-04T01:59:59+02:00')), true, '4 Oct 01:59:59 Prague (still 3 Oct in UTC): open');
-  assert.equal(launchWindowOpen(LAUNCH_OFFER.endsBefore - 1), true, '2 Nov 23:59:59.999 Prague: open');
-  assert.equal(launchWindowOpen(LAUNCH_OFFER.endsBefore), false, '3 Nov 00:00 Prague: closed');
+  assert.equal(launchWindowOpen(LAUNCH_OFFER.endsBefore - 1), true, '30 Nov 23:59:59.999 Prague: open');
+  assert.equal(launchWindowOpen(LAUNCH_OFFER.endsBefore), false, '1 Dec 00:00 Prague: closed');
   assert.equal(launchWindowOpen(Date.parse('2026-09-28T12:00:00Z')), false, 'today, 28 Sep: closed');
   assert.equal(launchWindowOpen(Number.NaN), false);
   // 25 Oct 2026: clocks go back from 03:00 CEST to 02:00 CET, so 02:30 happens
@@ -2829,20 +2833,20 @@ function launchOfferContracts() {
   assert.equal(publicBillingSettings({ BILLING_ENABLED: 'true', STRIPE_COUPON_LAUNCH: 'launch55' }, inside).launchOffer, false, 'an incomplete Stripe setup sells nothing, offer or not');
   // The prices: 55 % off, rounded to the cent the way Stripe rounds a
   // percentage coupon, derived from PREMIUM_PRICE.
-  assert.equal(discountedPrice('3.99'), '1.80');
-  assert.equal(discountedPrice('39.99'), '18.00');
+  assert.equal(discountedPrice('4.99'), '2.25');
+  assert.equal(discountedPrice('59.88'), '26.95');
   assert.equal(discountedPrice('10.00', 50), '5.00');
   assert.throws(() => discountedPrice('3.9'));
   const display = launchOfferDisplay();
   assert.deepEqual(
     { percent: display.percent, symbol: display.symbol, monthly: display.monthly, annual: display.annual, offerMonthly: display.offerMonthly, offerAnnual: display.offerAnnual },
-    { percent: 55, symbol: '€', monthly: '3.99', annual: '39.99', offerMonthly: '1.80', offerAnnual: '18.00' },
+    { percent: 55, symbol: '€', monthly: '4.99', annual: '59.88', offerMonthly: '2.25', offerAnnual: '26.95' },
   );
   assert.equal(display.startDate, '4 October 2026');
-  assert.equal(display.endDate, '2 November 2026');
-  assert.equal(display.endDateShort, '2 Nov 2026');
-  assert.equal(display.regularFrom, '3 Nov 2026');
-  assert.equal(display.regularFromLong, '3 November 2026');
+  assert.equal(display.endDate, '30 November 2026');
+  assert.equal(display.endDateShort, '30 Nov 2026');
+  assert.equal(display.regularFrom, '1 Dec 2026');
+  assert.equal(display.regularFromLong, '1 December 2026');
   // The module is pure and the copy carries no price or date of its own.
   assert.doesNotMatch(read('shared/launch-offer.ts'), /from '\.\.\/lib\//, 'shared/launch-offer.ts imports nothing from lib/');
   const offerKeys = Object.entries(ENGLISH).filter(([key]) => /^(premium\.offer\.|premium\.page\.titleOffer|premium\.page\.faq\.offer|landing\.compare\.premiumCaptionOffer|legal\.terms\.price\.(launch|discount))/.test(key));
@@ -2855,9 +2859,9 @@ function launchOfferContracts() {
     assert.doesNotMatch(value, /\b(hurry|only \d+ left|limited time|ends soon|last chance|act now|today only|countdown)\b/i, `${key} uses urgency copy`);
   }
   for (const key of ['premium.offer.price', 'landing.compare.premiumCaptionOffer', 'legal.terms.price.launch'] as const) {
-    assert.match(ENGLISH[key], /VAT included/, `${key} states the price with VAT`);
+    assert.match(ENGLISH[key], /before VAT/, `${key} states the price with VAT`);
   }
-  // The struck regular price is always named as the regular price from 3 Nov.
+  // The struck regular price is always named as the regular price from 1 Dec.
   assert.match(ENGLISH['premium.offer.regular'], /regular price of .* which applies from \{regularFrom\}/);
   assert.match(ENGLISH['premium.offer.srPrice'], /regular price from \{regularFrom\}/);
 }

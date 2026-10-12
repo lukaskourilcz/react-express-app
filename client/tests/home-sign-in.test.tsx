@@ -6,10 +6,14 @@ import { LanguageProvider } from '../src/i18n/LanguageContext';
 import Home from '../src/components/Home';
 import { server } from './mocks/server';
 import { settingsHandler } from './mocks/handlers';
+import { http, HttpResponse } from 'msw';
 
 const auth = vi.hoisted(() => ({
   value: { user: null, isAuthenticated: false, isLoading: false },
 }));
+const freeEntitlementHandler = http.get('*/api/user/*', ({ request }) => new URL(request.url).searchParams.get('op') === 'entitlement'
+  ? HttpResponse.json({ tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null })
+  : undefined);
 vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
 const openSignIn = vi.hoisted(() => vi.fn());
 vi.mock('../src/lib/signInDialog', async (importOriginal) => ({ ...(await importOriginal<object>()), openSignIn }));
@@ -19,7 +23,7 @@ vi.mock('../src/lib/billing', () => ({ useBilling: () => ({ known: true, enabled
 // and an email and password follow. The dialog's Google button keeps the
 // Back-from-Google recovery (tests/sign-in-dialog.test.tsx).
 it('opens the sign-in dialog from the hero link', () => {
-  server.use(settingsHandler);
+  server.use(settingsHandler, freeEntitlementHandler);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
   const link = screen.getByRole('button', { name: 'Sign in or create an account' });
@@ -32,7 +36,7 @@ it('opens the sign-in dialog from the hero link', () => {
 // The tile says "Daily challenge": one question set for everyone a day, which
 // is the quiz's daily mode, not the survival Challenge it used to open.
 it('opens the daily challenge from the Daily challenge tile', async () => {
-  server.use(settingsHandler);
+  server.use(settingsHandler, freeEntitlementHandler);
   function Where() {
     const location = useLocation();
     return <p data-testid="location">{location.pathname + location.search}</p>;
@@ -56,7 +60,7 @@ it('opens the daily challenge from the Daily challenge tile', async () => {
 
 // The homepage focuses on choosing a path; progress-storage details live in Learn.
 it('keeps progress-storage copy off the homepage for guests and accounts', async () => {
-  server.use(settingsHandler);
+  server.use(settingsHandler, freeEntitlementHandler);
   const renderHome = () => {
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
     return render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
@@ -84,7 +88,7 @@ it('keeps progress-storage copy off the homepage for guests and accounts', async
 
 // Topic selection changes both the preview and the destination of its action.
 it('starts the selected learning path from its renamed action', async () => {
-  server.use(settingsHandler);
+  server.use(settingsHandler, freeEntitlementHandler);
   function Where() {
     const location = useLocation();
     return <p data-testid="location">{location.pathname + location.search}</p>;
@@ -107,7 +111,7 @@ it.each([
   ['B 8', 'Correct.'],
   ['A 6', 'Incorrect. The answer is 8.'],
 ])('answers the restored JavaScript sample once: %s', (answer, feedback) => {
-  server.use(settingsHandler);
+  server.use(settingsHandler, freeEntitlementHandler);
   const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
   render(<QueryClientProvider client={client}><MemoryRouter><LanguageProvider><Home /></LanguageProvider></MemoryRouter></QueryClientProvider>);
   const sample = screen.getByRole('group', { name: 'What does this return?' });

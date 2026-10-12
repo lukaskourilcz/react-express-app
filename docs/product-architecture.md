@@ -816,7 +816,8 @@ carrying its content in words rather than a caption. See
 
 The owner made devShark freemium on 2026-09-25 (`SECOND-HANDOFF-25-9-2026.md`,
 sections 0, 2 and 3). Every registered account gets the free tier. Premium
-costs 3.99 EUR a month or 39.99 EUR a year, VAT included. Redeeming coins for
+costs 4.99 EUR a month or 59.88 EUR a year before VAT (owner decision,
+12 October 2026). Applicable VAT is added at Checkout. Redeeming coins for
 merchandise is a Premium benefit that is paused until next quarter
 (`MERCH_ENABLED`, see below). Premium changes which content a learner
 may start. Grading, explanations, XP amounts, scores, streaks, ranks,
@@ -831,10 +832,10 @@ grant or a voucher (below). Migrations 039 to 045 reached production on
 more; it goes to production after the deploy that stopped calling them
 ("Account erasure" below).
 
-**Launch price (4 October to 2 November 2026).** The owner decided on
+**Launch price (4 October to 30 November 2026).** The owner decided on
 2026-09-28 that every subscription started between Sun 4 Oct 2026 00:00 and
-Mon 2 Nov 2026 23:59:59, Prague time, pays 55 % less for its whole lifetime:
-1.80 EUR a month or 18.00 EUR a year, VAT included. `shared/launch-offer.ts`
+Mon 30 Nov 2026 23:59:59, Prague time, pays 55 % less for its whole lifetime:
+2.25 EUR a month or 26.95 EUR a year before VAT. `shared/launch-offer.ts`
 holds the window, the percentage and the prices derived from `PREMIUM_PRICE`
 (rounded the way Stripe rounds a percentage coupon). The offer is on only
 inside the window, with `BILLING_ENABLED` and a complete Stripe setup, and
@@ -853,7 +854,7 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   refuses (Stripe's "Update your Checkout integration" page, read
   2026-09-28), so the same session works on both tax paths. A discounted
   session expires when the offer does (at least 31 minutes after it opens,
-  Stripe's minimum being 30), and the coupon's `redeem_by` (1793660399) is
+  Stripe's minimum being 30), and the coupon's `redeem_by` (1796079599) is
   the limit Stripe enforces; Stripe's documentation does not say whether a
   session opened before `redeem_by` and paid after it keeps the discount.
 - The browser shows the offer when `/api/settings` says `billing.launchOffer`
@@ -862,8 +863,8 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   `/premium`, the plan table, the upgrade sheet, the expired-checkout line
   and the Terms print the launch price beside the regular price struck
   through, and a note that names the regular price and the day it applies
-  from (3 Nov 2026), "kept for the lifetime of your subscription · cancel
-  anytime" and "Offer ends 2 Nov 2026". Screen readers hear one sentence per
+  from (1 Dec 2026), "kept for the lifetime of your subscription · cancel
+  anytime" and "Offer ends 30 Nov 2026". Screen readers hear one sentence per
   price. No countdown and no scarcity copy.
 - Framing: an introductory launch price, not a reduction. Premium was never
   sold before the offer, so the pages cite no "lowest price in the last 30
@@ -874,7 +875,7 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   `client/src/lib/publicMetadata.ts` and the share images.
   They state the regular price.
 - `LAUNCH_OFFER_TEST_NOW` replaces the clock for the coupon decision on a
-  test-mode deployment only (an `sk_test_` key), so the owner can try the
+  test-mode deployment only (an `sk_test_` or `rk_test_` key), so the owner can try the
   Checkout before 4 October.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
@@ -1044,12 +1045,18 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   Managed Payments making Stripe (as Link) the merchant of record; plain Stripe
   with Stripe Tax runs behind the same code when `STRIPE_MANAGED_PAYMENTS` is
   `false`. The server alone talks to Stripe through the official `stripe`
-  package (API version `2026-08-26.dahlia`); the browser only visits Stripe's
-  hosted pages, so there is no Stripe.js, no iframe and no CSP change. The code
+  package (Checkout Studio API version
+  `2026-09-30.endive; custom_checkout_payment_form_preview=v1`). Stripe.js
+  mounts a Stripe-hosted iframe on `/premium/checkout`; card details go directly
+  to Stripe. Managed Payments rejects `ui_mode: form`, so it uses the supported
+  `embedded_page` mode. The optional plain Stripe branch uses `form`. Consent
+  is required on devShark before creating a session; the server records its
+  version, timestamp and waiver text in session metadata. The CSP permits the
+  specific Stripe script, frame and connection origins. The code
   lives in `lib/billing/` (`config.ts`, `stripe.ts`, `sync.ts`, `cancel.ts`,
   `handlers.ts`), and the routes are `op=` branches of `api/user/[op].ts`, so
   the handler count stays at twelve:
-  - `billing-checkout` POST `{ plan: 'monthly' | 'annual' }` (signed in, 10 a
+  - `billing-checkout` POST `{ plan: 'monthly' | 'annual', consent: true }` (signed in, 10 a
     minute per account): gets or creates the account's Stripe customer, sends
     an account with a subscription that can still charge to the portal
     instead (409 `already_premium`), whether the database or Stripe knows it
@@ -1058,7 +1065,7 @@ disappears when checkout cannot apply the coupon or the offer has expired.
     Checkout Session with `client_reference_id`,
     `subscription_data.metadata` `product: 'devshark'` and `supabase_user_id`,
     required terms consent whose text is the withdrawal waiver, the renewal and
-    cancellation sentence beside the order button, `submit_type: 'pay'`,
+    cancellation sentence beside the order button, `submit_type: 'auto'`,
     promotion codes and `locale: 'auto'`. GET `?session_id=` is the success
     page's lookup: only the account's own completed session is applied, through
     the same path as the webhook.
@@ -1143,7 +1150,7 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   expires its open Checkout Sessions. It stops if Stripe cannot be reached.
   The deletion card says so to a paying account and links the withdrawal.
 - **Public copy and legal pages (#222).** `/premium` (`PremiumPage.tsx`) shows
-  the two plans with "VAT included", the renewal, the waiver sentence and the
+  the two plans with "before VAT", the renewal, the waiver sentence and the
   14-day refund beside the buttons (`PremiumFacts.tsx`), what Premium opens,
   the plan table and six questions; a subscriber sees the plan line instead of
   a second checkout. The plan table (`landing/ComparisonTable.tsx`) compares
