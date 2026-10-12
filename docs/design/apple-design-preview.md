@@ -9,12 +9,16 @@ Apple is the application-wide design, applied before first paint. The prototype
 comparison control and `?design=original` override have been removed. Dark mode
 retains the Deep End blue-green background and grain.
 
-The homepage hero now reserves a 16:9 product-video banner. The owner has not
-recorded the new video yet, so the banner shows a quiet, truthful placeholder
-with no media request or playback action. Native WebM playback, a matching
-poster and an optional MP4 fallback are prepared; playback is explicit.
-The earlier quiz/coding carousel and dots have been removed on all widths.
-Normal coding and quiz exercises remain available in their own routes.
+The homepage hero restores the original interactive JavaScript question,
+`2 ** 3`, with four answers and immediate feedback from the existing SampleCard.
+It remains the single sample on every viewport, independent of the selected
+learning path. The desktop headline keeps 62.5% of the hero; the question is
+capped at 480px and the homepage at 1600px. Below 1024px it sits below the headline.
+
+The eight-image carousel prototype is preserved on the local branch
+`archive/homepage-feature-gallery-2026-10-11` at `505f7c9`, including original
+WebP captures, provenance, components, Storybook and tests. It is not imported,
+shipped or requested by the production homepage. The user rejected this direction.
 
 The selected learning path distributes five steps and its checkpoint across
 the full panel width, wrapping into two rows on phones. The green

@@ -1,5 +1,37 @@
 # Release acceptance matrix
 
+## Restore the single homepage JavaScript sample — 2026-10-11
+
+Issues #353 and #352 restore the original `2 ** 3` sample using the existing
+SampleCard. All four answers and immediate correct/incorrect explanations work
+without signup. The question stays JavaScript when the learning path changes.
+The hero keeps its wider headline and a compact 480px question column, stacking
+below 1024px. Existing path actions and the Apple/dark appearance are retained.
+The rejected eight-image gallery is preserved locally on
+`archive/homepage-feature-gallery-2026-10-11` at `505f7c9`; its images, component,
+provenance and tests do not ship in this branch. The saved video component remains
+available in Storybook, but is not mounted on Home.
+
+| Check | Actual local result |
+|---|---|
+| API, client/tooling and script types | PASS |
+| Home and saved video tests | PASS — 8 tests, including correct/wrong answers, one answer per visit, and fixed JavaScript sample after path selection |
+| Launch/play-room/verified-caller contracts | PASS — the first run hit the existing photo-preview subprocess timeout under concurrent builds; rerun passed without changing the contract |
+| Production build | PASS |
+| Root/client production dependency audits | PASS — zero vulnerabilities |
+| Responsive sweep | PASS — 14 probes across `/` and `/learn` at 360/390/430/768/1024/1280/1440px; no overflow or unprobed routes |
+| Route accessibility | PASS — 4 existing browser tests, including light/dark WCAG 2.2 AA and keyboard path navigation |
+| Restored sample browser flow | PASS — 2 tests, light/dark, keyboard answer, disabled answered options, desktop headline at least 720px in a 1440px viewport, and 360px reflow |
+| Test corrections | Initial sample assertions included an unrelated global status region and used an exact answer name that changes after the success tick appears. Scoped status and stable answer matching passed on rerun. |
+| Unused-code check | PASS — zero findings |
+| Visual inspection | PASS — built homepage screenshots reviewed; original question, four answers, retained dark background and wide headline visible |
+| Live Chrome control | BLOCKED — Computer Use reported `Sky Computer Use native pipe startup failed`; screenshots from normal browser tests were used for local review |
+| Diff whitespace | PASS |
+
+Evidence: `/tmp/devshark-restore-*.log` and the `home-sample` browser artifacts.
+Required GitHub checks and the exact production deployment are tracked on the
+associated PR. Brand exploration is separate and does not replace the site logo.
+
 ## Homepage video banner and learning path — 2026-10-11
 
 Issues #347–#349 replace the practice carousel with a 16:9 product-video
