@@ -13,7 +13,7 @@ The homepage hero restores the original interactive JavaScript question,
 `2 ** 3`, with four answers and immediate feedback from the existing SampleCard.
 It remains the single sample on every viewport, independent of the selected
 learning path. The desktop headline keeps 62.5% of the hero; the question is
-capped at 480px and the homepage at 1600px. Below 1024px it sits below the headline.
+capped at 480px and the homepage at its original 1000px. Below 1024px it sits below the headline.
 
 The eight-image carousel prototype is preserved on the local branch
 `archive/homepage-feature-gallery-2026-10-11` at `505f7c9`, including original

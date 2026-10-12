@@ -13,8 +13,15 @@ for (const theme of ['light', 'dark'] as const) {
     await expect(sample.getByRole('button')).toHaveCount(4);
     await expect(sample).toContainText('2 ** 3;');
     await expect(page.locator('.ss-feature-gallery, .ss-home-video')).toHaveCount(0);
-    const headline = await page.getByRole('heading', { level: 1 }).boundingBox();
-    expect(headline!.width).toBeGreaterThanOrEqual(720);
+    const content = page.locator('#main-content > div');
+    for (const width of [1440, 2560]) {
+      await page.setViewportSize({ width, height: 1000 });
+      const bounds = await content.boundingBox();
+      expect(bounds!.width).toBeLessThanOrEqual(1000);
+      expect(bounds!.width).toBeGreaterThan(990);
+      expect(Math.abs(bounds!.x - (width - bounds!.x - bounds!.width))).toBeLessThan(20);
+    }
+    await page.setViewportSize({ width: 1440, height: 1000 });
     await page.screenshot({ path: info.outputPath(`homepage-quiz-${theme}.png`) });
     const correct = sample.getByRole('button', { name: /^B 8/ });
     await correct.focus();
