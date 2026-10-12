@@ -40,7 +40,7 @@ export const NOINDEX_PATHS: readonly string[] = ['/premium/success', '/premium/c
 
 /** Structured data for /premium. The guides above stay free to read
  * (`isAccessibleForFree: true`); Premium is the paid subscription, so it says
- * `false` and lists both prices with VAT included. */
+ * `false` and lists both prices before VAT. */
 export function premiumSchema(title: string, description: string, url: string) {
   const offer = (period: 'monthly' | 'annual') => ({
     '@type': 'Offer',

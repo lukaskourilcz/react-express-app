@@ -79,6 +79,6 @@ For price updates, create immutable Prices under this Product and update environ
 
 Use sandbox account `acct_1UKjRALFC1za5WgX`, matching `pk_test_`/`sk_test_` or `rk_test_`, and an isolated data fixture. Success card `4242 4242 4242 4242`, any future expiry/CVC; decline `4000 0000 0000 0002`; authentication `4000 0025 0000 3155`. Never use test cards in live mode.
 
-Actual sandbox API verified Managed Payments `embedded_page`, exclusive EUR 4.99 monthly price, 55% forever coupon and total EUR 2.25 before billing-location tax. Contract tests separately verify signed fulfillment, duplicates, consent and ownership; this is not proof of a completed external payment. See [release acceptance](docs/release-acceptance.md) for final check outcomes and checks that could not run.
+Actual sandbox API verified Managed Payments `embedded_page`, exclusive EUR 4.99 monthly price, 55% forever coupon and total EUR 2.25 before billing-location tax. Contract tests separately verify signed fulfillment, duplicates, consent and ownership; this is not proof of a completed external payment. A real Stripe.js mount attempt hit HTTP 429; complete the sandbox purchase/webhook gate before enabling sales. See [release acceptance](docs/release-acceptance.md) for final check outcomes and checks that could not run.
 
 Resources: [Stripe support](https://support.stripe.com), [Stripe MCP](https://docs.stripe.com/mcp), [Managed Payments integration](https://docs.stripe.com/payments/managed-payments/update-checkout), [Checkout form](https://docs.stripe.com/checkout/form/quickstart).

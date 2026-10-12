@@ -1150,7 +1150,7 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   expires its open Checkout Sessions. It stops if Stripe cannot be reached.
   The deletion card says so to a paying account and links the withdrawal.
 - **Public copy and legal pages (#222).** `/premium` (`PremiumPage.tsx`) shows
-  the two plans with "VAT included", the renewal, the waiver sentence and the
+  the two plans with "before VAT", the renewal, the waiver sentence and the
   14-day refund beside the buttons (`PremiumFacts.tsx`), what Premium opens,
   the plan table and six questions; a subscriber sees the plan line instead of
   a second checkout. The plan table (`landing/ComparisonTable.tsx`) compares
