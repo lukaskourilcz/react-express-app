@@ -163,7 +163,7 @@ export default function ComparisonTable({ startHref = '/learn', onStart, showCta
       </p>
 
       {showCta && (
-        <div>
+        <div className="ss-compare-cta">
           {entitlement.loading ? (
             <Button variant="primary" size="lg" label={t('landing.compare.cta')} isDisabled isLoading />
           ) : entitlement.failed ? (
