@@ -43,7 +43,7 @@ import {
 } from '../lib/billing';
 import { PREMIUM_PRICE, type EntitlementResponse } from '../../../shared/tiers';
 import { useLaunchOffer } from '../lib/launchOffer';
-import { LaunchOfferNote, OfferAmount } from './LaunchOffer';
+import { LaunchOfferNote, OfferAmount, PremiumPriceSentence } from './LaunchOffer';
 import { Page } from './PublicInfoPages';
 import PremiumCheckoutButton from './PremiumCheckoutButton';
 import { planText } from './PlanLine';
