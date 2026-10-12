@@ -40,7 +40,6 @@ export default function BrandFooter() {
         <nav aria-label={t('footer.legal')}>
           {/* The plans and prices; /support redirects here since #222. */}
           <Link to="/premium">{t('nav.premium')}</Link>
-          <Link to="/curation">{t('footer.curation')}</Link>
           {/* Dated notes on what changed (#239). */}
           <Link to="/privacy">{t('footer.privacy')}</Link>
           <Link to="/terms">{t('footer.terms')}</Link>

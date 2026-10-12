@@ -177,10 +177,12 @@ export default function Home() {
   const heroSubtitle = t('home.subtitle');
   const moreCount = subject.topics.length - featured.length;
 
-  // Two stats from the registries: the topic count and the question count.
+  // Public inventory counts from the subject registry, checked against the
+  // server's deliverable question bank and active coding catalogue at release.
   const stats: StatSpec[] = [
     { value: String(subject.topics.length), label: t('home.statTracks') },
     { value: SUBJECT_SCOPE_CATALOG[subject.id].questionCount.toLocaleString(), label: t('home.statQuestions') },
+    { value: SUBJECT_SCOPE_CATALOG[subject.id].codingChallengeCount.toLocaleString(), label: t('home.statCodingChallenges') },
   ];
 
 
@@ -199,7 +201,7 @@ export default function Home() {
     <div className="ss-pop ss-home" style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 56 }}>
       {/* ── Hero ── */}
       <section aria-label={t('home.introAria')} className="ss-hero-grid">
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>
+        <div className="ss-hero-copy" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 20 }}>
           <h1 style={{ margin: 0, fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: 'var(--ss-type-display)', lineHeight: 1.06, letterSpacing: '-0.02em' }}>
             {heroTitle}
           </h1>
@@ -240,9 +242,6 @@ export default function Home() {
           <h2 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '1.75rem', letterSpacing: '-0.015em' }}>
             {t('home.topicsTitle')}
           </h2>
-          <p className="ss-text-links" style={{ margin: 0 }}>
-            <Link to="/curation">{t('footer.curation')}</Link>
-          </p>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(210px,1fr))', gap: 14 }}>
           {featured.map((topic) => (

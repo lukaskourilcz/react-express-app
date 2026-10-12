@@ -4,9 +4,9 @@ Two questions decide whether a question or a coding task stays in the active
 pool. Is it worth learning? Is it right? Both are scored, both have a
 threshold, and passing one says nothing about the other.
 
-That much is a methodology, and it is written for learners at `/curation`. The
-harder half is the part that stops the product claiming more than it can show,
-and that is what this document is about.
+This internal methodology also stops the product claiming more than it can show.
+The owner retired the public methodology page and all links to it on
+2026-10-12. Content eligibility and review records remain authoritative.
 
 ## The two gates
 
@@ -142,16 +142,12 @@ could exist that the process cannot see.
 - `partial` — real numbers to quote, review still in progress.
 - `none` — nothing reviewed yet, **or** one source that cannot be counted.
 
-While the audit is in progress it returns `partial` with the real numbers, and
-`/curation` quotes them. It becomes `complete` only when every served item has
+While the audit is in progress it returns `partial` with the real numbers.
+It becomes `complete` only when every served item has
 a current record. There is no fallback sentence that sounds better.
 
 ## Where a learner meets this
 
-- **Landing.** One line beside the topic picker, about the criteria applied —
-  not about a plan the visitor has not chosen.
-- **`/curation`.** The methodology, linked from the footer and from each path
-  overview. Optional to read; no gate, no acknowledgement.
 - **Report a problem.** In the quiz toolbar, in the Learn view and in the coding
   workbench, carrying the item id **and** the version that was on screen
   (migration 029) so a fix can be matched to the wording the learner actually

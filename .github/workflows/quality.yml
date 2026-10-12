@@ -85,6 +85,7 @@ jobs:
           npm run test:browser -- tests/browser/sign-in.spec.ts
           npm run test:browser -- tests/browser/route-errors.spec.ts
           npm run test:browser -- tests/browser/first-load.spec.ts
+          npm run test:browser -- tests/browser/home-sample.spec.ts
           npm run test:browser -- tests/browser/routes-axe.spec.ts
           npm run test:browser -- tests/browser/daily.spec.ts
           npm run test:browser -- tests/browser/launch-offer.spec.ts

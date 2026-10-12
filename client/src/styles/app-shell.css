@@ -494,16 +494,6 @@
   .ss-term__popover { left: auto; right: 0; }
 }
 
-/* The methodology page: the marker list and the plain-language checklists. */
-.ss-curation-markers { display: grid; gap: 10px; margin: 12px 0 0; }
-.ss-curation-markers > div { display: grid; gap: 2px; }
-.ss-curation-markers dt { font-weight: 700; font-size: var(--ss-type-compact); }
-.ss-curation-markers dd { margin: 0; color: var(--color-text-secondary); }
-.ss-curation-list { margin: 12px 0 0; padding-left: 1.1rem; display: grid; gap: 6px; }
-.ss-curation-kind { margin-top: 14px; }
-.ss-curation-kind h3 { margin: 0 0 4px; font-size: var(--ss-type-compact); }
-.ss-curation-kind p { margin: 0; color: var(--color-text-secondary); }
-
 /* Lesson figures. HTML and CSS only: the browser laying out real boxes is the
    most accurate way to show containment, and the only one that survives a
    200% zoom in either language. Every mark carries a word as well as a tint. */
@@ -877,7 +867,15 @@
 :root[data-design='apple'] .ss-home { gap: clamp(3rem, 6vw, 5rem) !important; }
 :root[data-design='apple'] .ss-hero-grid { gap: clamp(2rem, 4vw, 4rem); padding-block: 1rem 1.5rem; }
 @media (min-width: 1024px) {
-  :root[data-design='apple'] .ss-home .ss-hero-grid { grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr); align-items: center; }
+  :root[data-design='apple'] .ss-home .ss-hero-grid {
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, .75fr);
+    align-items: center;
+    /* Main starts at 7rem below the floating header. Reserve the same space
+       below the hero so its content is centred on the whole viewport. Tall
+       content can grow naturally on short screens and at increased zoom. */
+    min-height: calc(100dvh - 14rem);
+    padding-block: 0;
+  }
 }
 .ss-home-sample { width: 100%; min-width: 0; max-width: 480px; justify-self: end; }
 @media (max-width: 1023px) {
@@ -908,7 +906,15 @@
 :root[data-design='apple'] .ss-hero-grid > div:first-child { gap: 1.5rem !important; }
 :root[data-design='apple'] .ss-hero-grid > div:first-child > p { font-size: 1.2rem !important; line-height: 1.55; }
 :root[data-design='apple'] .ss-home h2 { font-weight: 650 !important; letter-spacing: -.025em !important; }
-:root[data-design='apple'] .ss-hero-stats { gap: 2.25rem; margin-top: .5rem; }
+:root[data-design='apple'] .ss-hero-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  width: 100%;
+  max-width: 32rem;
+  gap: 1.25rem 2.25rem;
+  margin-top: .5rem;
+}
+:root[data-design='apple'] .ss-hero-stats > div { min-width: 0; }
 :root[data-design='apple'] .ss-hero-stats > div > span:first-child { font-size: 1.75rem !important; font-weight: 600 !important; }
 :root[data-design='apple'] .ss-hero-stats > div > span:last-child { letter-spacing: .045em !important; font-size: .7rem !important; }
 :root[data-design='apple'] :is(.ss-panel, .ss-raised, .ss-lift) {

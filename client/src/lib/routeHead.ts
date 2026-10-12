@@ -32,7 +32,6 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/premium/cancel': 'title.premiumCancel',
   '/daily': 'title.daily',
   '/classroom': 'title.classroom',
-  '/curation': 'title.curation',
   '/dev': 'title.dev',
   '/auth/confirmed': 'title.emailConfirmed',
   '/reset-password': 'title.resetPassword',

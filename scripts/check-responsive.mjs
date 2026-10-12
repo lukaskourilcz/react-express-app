@@ -48,8 +48,8 @@ const DEFAULT_BASE = 'http://localhost:4173';
 // The routes that render their page on the preview server with the fixtures
 // below, all signed out. Left out until the sweep has fixtures for their
 // data, because without them they are measured on an error or empty state:
-//   /roadmap (GET /api/user/* for the learner's profile); /curation
-//   (GET /api/quiz/questions); /dev (GET /api/admin/settings); /play/EXPIRED
+//   /roadmap (GET /api/user/* for the learner's profile);
+//   /dev (GET /api/admin/settings); /play/EXPIRED
 //   (signed out it is the same sign-in gate as /play).
 const DEFAULT_ROUTES = [
   '/',

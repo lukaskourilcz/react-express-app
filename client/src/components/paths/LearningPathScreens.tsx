@@ -290,8 +290,7 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               the one that matters: coming back to earlier material is the plan
               working, not the plan slipping. */}
           <p className="lp-note">
-            {t('paths.activityKinds')}{' '}
-            <Link to="/curation">{t('footer.curation')}</Link>
+            {t('paths.activityKinds')}
           </p>
         </div>
         <div className="lp-head__actions">

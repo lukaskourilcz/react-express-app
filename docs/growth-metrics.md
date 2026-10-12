@@ -66,7 +66,7 @@ lower-case label is removed from every URL PostHog receives
 
 Measure aggregate funnels with anonymous/session-scoped identifiers and short
 retention. The client sends `quiz_started`, `quiz_submitted`,
-`classroom_or_match_joined`, `share_initiated`, `curation_page_viewed` and
+`classroom_or_match_joined`, `share_initiated` and
 `premium_page_viewed`. `share_initiated` carries `kind` (`quiz_result`,
 `daily_result`, `referral`, `challenge_result`, `typing_result`,
 `daily_question`) and, from the #239 surfaces, `source` and `method`
