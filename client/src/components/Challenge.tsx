@@ -729,8 +729,7 @@ export default function Challenge() {
         <section className="de-hero-panel">
           <VStack gap={3}>
             <VStack gap={1}>
-              <Kicker>{t('challenge.kicker')}</Kicker>
-              <Heading level={1} type="display-3">{t('challenge.title')}</Heading>
+              <Kicker as="h1" className="ss-section-title">{t('challenge.title')}</Kicker>
               <Text type="large" color="secondary">{t('challenge.description')}</Text>
             </VStack>
             <div className="de-stat-row">

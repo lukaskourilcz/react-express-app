@@ -128,7 +128,7 @@ describe('the upgrade sheet', () => {
     // The merchandise line waits for redemption to open (design audit P0.1).
     expect(screen.getAllByRole('listitem')).toHaveLength(5);
     expect(screen.queryByText(/redeem for devShark merchandise/)).not.toBeInTheDocument();
-    expect(screen.getByText(/€3\.99 a month or €39\.99 a year, VAT included/)).toBeInTheDocument();
+    expect(screen.getByText(/€4\.99 a month or €59\.88 a year, before VAT/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Go Premium' })).toBeInTheDocument();
     act(() => { fireEvent.click(screen.getByRole('button', { name: 'Not now' })); });
     expect(sheet.result.current).toBeNull();
@@ -160,9 +160,9 @@ describe('the upgrade sheet', () => {
     try {
       server.use(http.get('*/api/settings', () => HttpResponse.json({ billing: { enabled: true, cancellable: true, seller: 'link', launchOffer: true } })));
       render(<UpgradeSheet request={{ id: 2, kind: 'coding-task', ref: 'js-x' }} />, { wrapper });
-      expect(await screen.findByRole('group', { name: 'Launch price €1.80 a month · €18.00 a year' })).toHaveTextContent('Offer ends 2 Nov 2026');
-      expect(screen.getByText('€1.80 launch price; the regular price from 3 Nov 2026 is €3.99')).toBeInTheDocument();
-      expect(screen.getByText('€18.00 launch price; the regular price from 3 Nov 2026 is €39.99')).toBeInTheDocument();
+      expect(await screen.findByRole('group', { name: 'Launch price €2.25 a month · €26.95 a year' })).toHaveTextContent('Offer ends 30 Nov 2026');
+      expect(screen.getByText('€2.25 launch price; the regular price from 1 Dec 2026 is €4.99')).toBeInTheDocument();
+      expect(screen.getByText('€26.95 launch price; the regular price from 1 Dec 2026 is €59.88')).toBeInTheDocument();
     } finally {
       vi.useRealTimers();
     }

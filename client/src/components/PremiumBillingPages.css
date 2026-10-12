@@ -20,6 +20,8 @@
   overflow-wrap: anywhere;
 }
 .ss-billing-form { display: flex; flex-direction: column; gap: 1.1rem; }
+.ss-checkout-form { width: 100%; min-width: 0; }
+.ss-checkout-form[data-ready="true"] { min-height: 320px; }
 .ss-billing-form .ss-info-actions,
 .ss-billing-card .ss-info-actions { margin-top: 0.25rem; }
 .ss-billing-confirm { display: flex; flex-direction: column; gap: 0.75rem; }

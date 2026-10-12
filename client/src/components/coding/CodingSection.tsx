@@ -325,8 +325,7 @@ export function CodingHome() {
     <div className="cd-page cd-discovery ss-pop">
       <div className="cd-home-head">
         <header>
-          <Kicker>{t('coding.kicker')}</Kicker>
-          <h1>{t('coding.title')}</h1>
+          <Kicker as="h1" className="ss-section-title">{t('coding.title')}</Kicker>
           <p className="cd-lead">{t('coding.subtitle')}</p>
         </header>
         <NextChallenge next={next} state={nextState} onRetry={() => void progress.refetch()} />
@@ -484,8 +483,7 @@ export function CodingTrackScreen() {
     return (
       <div className="cd-page ss-pop">
         <header>
-          <Kicker>{t('coding.kicker')} · <Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
-          <h1>{t(`coding.track.${track}` as never)}</h1>
+          <Kicker as="h1" className="ss-section-title">{t(`coding.track.${track}` as never)}</Kicker>
           <p className="cd-lead">{t(`coding.trackBlurb.${track}` as never)}</p>
         </header>
         <p className="cd-note cd-note--error" role="alert">
@@ -511,8 +509,7 @@ export function CodingTrackScreen() {
   return (
     <div className="cd-page ss-pop">
       <header>
-        <Kicker>{t('coding.kicker')} · <Link className="cd-link" to="/coding">{t('coding.title')}</Link></Kicker>
-        <h1>{t(`coding.track.${track}` as never)}</h1>
+        <Kicker as="h1" className="ss-section-title">{t(`coding.track.${track}` as never)}</Kicker>
         <p className="cd-lead">{t(`coding.trackBlurb.${track}` as never)}</p>
         <div style={{ marginTop: 12, maxWidth: 420 }}>
           <WaterlineProgress decorativeFins value={tasks.length ? (100 * done) / tasks.length : 0} label={t('coding.progress', { passed: done, total: tasks.length })} />

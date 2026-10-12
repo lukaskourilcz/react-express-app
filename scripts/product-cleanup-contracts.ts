@@ -203,10 +203,10 @@ function premiumCopyContracts() {
   assert.equal(annualSaving('3.99', '39.99'), '7.89', '3.99 × 12 − 39.99');
   assert.equal(annualSaving('1.80', '18.00'), '3.60', '1.80 × 12 − 18.00 at the launch price');
   assert.equal(annualSaving('5.00', '70.00'), '0.00', 'a yearly plan dearer than twelve months saves nothing, never a negative amount');
-  assert.equal(annualSaving(PREMIUM_PRICE.monthly, PREMIUM_PRICE.annual), '7.89');
+  assert.equal(annualSaving(PREMIUM_PRICE.monthly, PREMIUM_PRICE.annual), '0.00');
   const offer = launchOfferDisplay();
   assert.equal(offer.offerAnnualSaving, annualSaving(offer.offerMonthly, offer.offerAnnual));
-  assert.equal(offer.offerAnnualSaving, '3.60');
+  assert.equal(offer.offerAnnualSaving, '0.05');
   assert.equal(offer.currency, 'EUR');
   // The sentence carries no amount of its own and no "months free".
   assert.equal(ENGLISH['premium.page.annualSaving'], 'Save {saving} {currency} a year');

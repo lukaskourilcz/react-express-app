@@ -15,7 +15,7 @@ it('shows the compact October copy without dates or an extra action', () => {
   vi.setSystemTime(new Date('2026-09-28T12:00:00Z'));
   mount();
   expect(screen.getByRole('heading', { name: 'October launch offer · 55% off' })).toBeInTheDocument();
-  expect(screen.getByText('€1.80 a month or €18.00 a year, VAT included.')).toBeInTheDocument();
+  expect(screen.getByText('€2.25 a month or €26.95 a year, before VAT.')).toBeInTheDocument();
   expect(screen.queryByText(/Prague time|4 October|Join by/)).not.toBeInTheDocument();
   expect(screen.queryByRole('link')).not.toBeInTheDocument();
 });
@@ -39,6 +39,8 @@ it('reschedules a boundary beyond the browser timeout limit', () => {
   mount();
   act(() => { vi.advanceTimersByTime(2 ** 31 - 1); });
   expect(screen.getByRole('complementary')).toBeInTheDocument();
-  act(() => { vi.advanceTimersByTime(LAUNCH_OFFER.endsBefore - Date.now()); });
+  while (Date.now() < LAUNCH_OFFER.endsBefore) {
+    act(() => { vi.advanceTimersByTime(Math.min(2 ** 31 - 1, LAUNCH_OFFER.endsBefore - Date.now())); });
+  }
   expect(screen.queryByRole('complementary')).not.toBeInTheDocument();
 });

@@ -1,4 +1,4 @@
-// What /premium states before anyone pays: the prices with VAT, the renewal,
+// What /premium states before anyone pays: the prices before VAT, the renewal,
 // the waiver sentence and the refund, plus the list of what Premium opens.
 //
 // Pure on purpose. The live page renders these with the app's translator and
@@ -29,7 +29,7 @@ export function premiumVars() {
     currency: PREMIUM_PRICE.currency,
     monthly: PREMIUM_PRICE.monthly,
     annual: PREMIUM_PRICE.annual,
-    /** The yearly saving at the regular prices: "7.89". */
+    /** The yearly saving at the regular prices: "0.00". */
     saving: annualSaving(PREMIUM_PRICE.monthly, PREMIUM_PRICE.annual),
   };
 }
@@ -100,7 +100,7 @@ export function PremiumStaticArticle({ t }: { t: Translate }) {
         <h2 id="premium-plans" className="ss-premium-section-title">{t('premium.page.plansTitle')}</h2>
         <ul className="ss-premium-list">
           <li>{t('premium.page.monthlyName')}: {vars.symbol}{vars.monthly} {t('premium.page.perMonth')}. {t('premium.page.monthlyRenews')}</li>
-          <li>{t('premium.page.annualName')}: {vars.symbol}{vars.annual} {t('premium.page.perYear')}. {t('premium.page.annualSaving', vars)}. {t('premium.page.annualRenews')}</li>
+          <li>{t('premium.page.annualName')}: {vars.symbol}{vars.annual} {t('premium.page.perYear')}. {Number(vars.saving) > 0 && <>{t('premium.page.annualSaving', vars)}. </>}{t('premium.page.annualRenews')}</li>
         </ul>
         <PremiumSmallPrint t={t} link={anchor} headingId="premium-small-print" />
       </section>

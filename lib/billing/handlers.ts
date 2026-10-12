@@ -1,6 +1,6 @@
 /** The billing routes, all `op=` branches of `api/user/[op].ts`:
  *
- *   POST /api/user/billing-checkout        { plan } → { url } of a Stripe Checkout Session
+ *   POST /api/user/billing-checkout        { plan, consent: true } → { client_secret }
  *   GET  /api/user/billing-checkout?session_id=cs_…  the success page's lookup
  *   POST /api/user/billing-portal          → { url } of a Customer Portal session
  *   POST /api/user/billing-webhook         Stripe events, signed
@@ -29,6 +29,7 @@ import {
   BillingMigrationError,
   BillingPermanentError,
   DEVSHARK_PRODUCT,
+  CHECKOUT_CONSENT_VERSION,
   expireOpenCheckouts,
   linkCustomer,
   liveDevsharkSubscriptions,
@@ -84,7 +85,7 @@ export function checkoutText(plan: BillingPlan, origin: string, launchOffer = fa
     terms_of_service_acceptance: { message: `${WAIVER_TEXT} I accept the [Terms](${origin}/terms).` },
     submit: {
       message:
-        `Pay starts a subscription at the price shown, VAT included, renewed every ${period} until you cancel. ` +
+        `Pay starts a subscription at the price shown, with applicable VAT added at checkout, renewed every ${period} until you cancel. ` +
         (launchOffer
           ? `The launch price, ${LAUNCH_OFFER.percentOff}% below the regular price, applies to every renewal for as long as this subscription runs, and ends if it ends. `
           : '') +
@@ -95,7 +96,7 @@ export function checkoutText(plan: BillingPlan, origin: string, launchOffer = fa
 
 /** Stripe keeps a Checkout Session open for 30 minutes to 24 hours. With the
  * launch coupon applied, the session closes when the offer does, so a page
- * opened on 2 November cannot be paid at the launch price on 4 November. A
+ * opened on 30 November cannot be paid at the launch price on 2 December. A
  * session opened in the offer's last half hour still gets Stripe's minimum,
  * plus a minute for clock drift; the coupon's own `redeem_by` is the limit
  * Stripe enforces. */
@@ -127,29 +128,38 @@ export function checkoutSessionParams(
   // `product` marks the session and the subscription as devShark's, so the
   // webhook never acts on another product sold from the same Stripe account
   // (finding BILL-1).
-  const metadata = { product: DEVSHARK_PRODUCT, supabase_user_id: userId, plan, ...offer };
+  const metadata = {
+    product: DEVSHARK_PRODUCT, supabase_user_id: userId, plan, ...offer,
+    checkout_consent_version: CHECKOUT_CONSENT_VERSION,
+    checkout_consent_at: new Date(now).toISOString(),
+    checkout_consent_text: checkoutText(plan, config.origin, coupon !== null).terms_of_service_acceptance.message,
+  };
   return {
     mode: 'subscription',
+    // Stripe API verified on 12 Oct 2026: Managed Payments rejects `form`.
+    // Its compatible embedded page still keeps card data inside Stripe.
+    ui_mode: (config.managedPayments ? 'embedded_page' : 'form') as Stripe.Checkout.SessionCreateParams.UiMode,
+    integration_identifier: 'custom_embedded_web_0001',
     customer: customerId,
     client_reference_id: userId,
     line_items: [{ price, quantity: 1 }],
     subscription_data: { metadata },
     metadata,
-    success_url: `${config.origin}/premium/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${config.origin}/premium`,
+    return_url: `${config.origin}/premium/success?session_id={CHECKOUT_SESSION_ID}`,
     ...(coupon
       ? { discounts: [{ coupon }], expires_at: launchSessionExpiry(now) }
       : { allow_promotion_codes: true }),
-    consent_collection: { terms_of_service: 'required' },
-    custom_text: checkoutText(plan, config.origin, coupon !== null),
-    // "Pay" is the order button that reads as an obligation to pay.
-    submit_type: 'pay',
+    // Form does not support consent_collection. The authenticated request
+    // requires explicit consent and these server-written metadata preserve it.
+    submit_type: 'auto',
+    phone_number_collection: { enabled: false },
+    billing_address_collection: 'auto',
     locale: 'auto',
     ...(config.managedPayments
       ? { managed_payments: { enabled: true } }
       : {
           automatic_tax: { enabled: true },
-          billing_address_collection: 'required' as const,
+          payment_method_collection: 'always' as const,
           customer_update: { address: 'auto' as const, name: 'auto' as const },
         }),
   };
@@ -178,6 +188,9 @@ async function startCheckout(req: VercelRequest, res: VercelResponse, supabase: 
   const plan = (req.body as { plan?: unknown } | undefined)?.plan;
   if (typeof plan !== 'string' || !(BILLING_PLANS as readonly string[]).includes(plan)) {
     return jsonError(res, 400, 'bad_request', "plan must be 'monthly' or 'annual'");
+  }
+  if ((req.body as { consent?: unknown } | undefined)?.consent !== true) {
+    return jsonError(res, 400, 'checkout_consent_required', 'Accept the Terms and the immediate start of Premium before continuing.');
   }
   const deps = depsFor(config, supabase)!;
   const email = typeof auth.payload.email === 'string' ? auth.payload.email : null;
@@ -209,10 +222,10 @@ async function startCheckout(req: VercelRequest, res: VercelResponse, supabase: 
       customerId = await createCustomer(deps, userId, email, true);
       session = await deps.stripe.checkout.sessions.create(checkoutSessionParams(config, plan as BillingPlan, userId, customerId, now));
     }
-    if (!session.url) throw new Error('checkout_without_url');
+    if (!session.client_secret) throw new Error('checkout_without_client_secret');
     log({ status: 200, kind: 'checkout', plan, managed: config.managedPayments, offer: launchCoupon(config, now) ? LAUNCH_OFFER.id : null, expired_sessions: open.expired });
     res.setHeader('Cache-Control', 'no-store');
-    return res.json({ url: session.url });
+    return res.json({ client_secret: session.client_secret, session_id: session.id, expires_at: session.expires_at, ui_mode: session.ui_mode });
   } catch (error) {
     if (error instanceof BillingPermanentError) {
       log({ status: 409, kind: 'checkout', reason: error.code });

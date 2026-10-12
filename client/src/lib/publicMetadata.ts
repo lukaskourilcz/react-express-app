@@ -36,7 +36,7 @@ export function codingShareDescription({ difficulty, track, brand, free, total }
 /** App routes that must stay out of search results: a Stripe return carries a
  * checkout id and means nothing to anyone else, and the pages an email link
  * opens mean something only to whoever got the email. */
-export const NOINDEX_PATHS: readonly string[] = ['/premium/success', '/auth/confirmed', '/reset-password'];
+export const NOINDEX_PATHS: readonly string[] = ['/premium/success', '/premium/checkout', '/auth/confirmed', '/reset-password'];
 
 /** Structured data for /premium. The guides above stay free to read
  * (`isAccessibleForFree: true`); Premium is the paid subscription, so it says
@@ -52,7 +52,7 @@ export function premiumSchema(title: string, description: string, url: string) {
       '@type': 'UnitPriceSpecification',
       price: PREMIUM_PRICE[period],
       priceCurrency: PREMIUM_PRICE.currency,
-      valueAddedTaxIncluded: true,
+      valueAddedTaxIncluded: PREMIUM_PRICE.taxBehavior !== 'exclusive',
       billingDuration: period === 'annual' ? 'P1Y' : 'P1M',
     },
   });

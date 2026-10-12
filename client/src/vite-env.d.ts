@@ -3,6 +3,8 @@
 interface ImportMetaEnv {
   readonly VITE_SUPABASE_URL: string;
   readonly VITE_SUPABASE_ANON_KEY: string;
+  /** Public Stripe key; never place a Stripe secret key in a VITE_ variable. */
+  readonly VITE_STRIPE_PUBLISHABLE_KEY?: string;
   /** Product identity: "devshark" or unset. Anything else fails the build. */
   readonly VITE_PRODUCT?: string;
   /** Subject lock: "webdev" or unset. Anything else fails the build. */

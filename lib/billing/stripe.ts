@@ -1,8 +1,7 @@
 /** The Stripe client and the webhook signature check.
  *
- * Only the server talks to Stripe. The browser is redirected to Stripe's hosted
- * Checkout and Customer Portal pages: no Stripe.js, no iframe, and the CSP in
- * vercel.json stays as it is. */
+ * The server creates Checkout Sessions and verifies payment state. Stripe.js
+ * mounts a Stripe-hosted payment iframe; card details never reach devShark. */
 
 import Stripe from 'stripe';
 import type { VercelRequest } from '../vercel-types.js';
@@ -31,6 +30,8 @@ export function stripeFor(config: BillingConfig): StripeApi | null {
     cached = {
       key: config.secretKey,
       client: new Stripe(config.secretKey, {
+        // Current Checkout Studio header, verified in the account on 12 Oct 2026.
+        apiVersion: '2026-09-30.endive; custom_checkout_payment_form_preview=v1' as Stripe.LatestApiVersion,
         // The function budget is ten seconds; one quick retry fits in it.
         maxNetworkRetries: 1,
         timeout: 7000,

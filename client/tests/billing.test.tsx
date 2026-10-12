@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { isStripeHostedUrl, looksLikeEmail } from '../src/lib/billing';
-import { PremiumCancelPage, PremiumSuccessPage } from '../src/components/PremiumBillingPages';
+import { PremiumCancelPage, PremiumCheckoutPage, PremiumSuccessPage } from '../src/components/PremiumBillingPages';
 import PlanLine from '../src/components/PlanLine';
 import BrandFooter from '../src/components/BrandFooter';
 import PremiumCheckoutButton from '../src/components/PremiumCheckoutButton';
@@ -20,7 +20,7 @@ vi.mock('../src/lib/auth', () => ({ useAuth: () => auth.value }));
 const openSignIn = vi.hoisted(() => vi.fn());
 vi.mock('../src/lib/signInDialog', async (importOriginal) => ({ ...(await importOriginal<object>()), openSignIn }));
 const signIn = () => { auth.value = { ...auth.value, user: { id: 'user-1' }, isAuthenticated: true }; };
-afterEach(() => { auth.value = { ...auth.value, user: null, isAuthenticated: false }; openSignIn.mockClear(); });
+afterEach(() => { auth.value = { ...auth.value, user: null, isAuthenticated: false }; openSignIn.mockClear(); delete window.Stripe; vi.unstubAllEnvs(); });
 
 const FREE = { tier: 'free', source: null, currentPeriodEnd: null, cancelAtPeriodEnd: false, inGrace: false, validUntil: null };
 const PREMIUM = { ...FREE, tier: 'premium', source: 'provider', currentPeriodEnd: '2026-11-12T10:00:00.000Z' };
@@ -38,7 +38,7 @@ function serve({ plan = FREE, billing = { enabled: true, cancellable: true } }: 
 
 /** Shows the router's current hash, so a test can see the link's token leave it. */
 function HashProbe() {
-  return <output data-testid="hash">{useLocation().hash}</output>;
+  return <><output data-testid="hash">{useLocation().hash}</output><output data-testid="location">{useLocation().pathname + useLocation().search}</output></>;
 }
 
 function renderAt(path: string, node: ReactNode) {
@@ -61,6 +61,87 @@ describe('the browser only ever leaves for Stripe', () => {
     expect(isStripeHostedUrl('javascript:alert(1)')).toBe(false);
     expect(looksLikeEmail(' learner@example.com ')).toBe(true);
     expect(looksLikeEmail('learner@')).toBe(false);
+  });
+});
+
+describe('the embedded checkout', () => {
+  const secret = `${SESSION}_secret_not_logged`;
+  function stripeUi(uiMode: 'embedded_page' | 'form' = 'embedded_page', expiresAt = Math.floor(Date.now() / 1000) + 3600) {
+    vi.stubEnv('VITE_STRIPE_PUBLISHABLE_KEY', 'pk_test_client_contract');
+    const mount = vi.fn(); const destroy = vi.fn(); const confirm = vi.fn().mockResolvedValue({ type: 'success' });
+    const on = vi.fn(); const form = { mount, destroy, on };
+    const initEmbeddedCheckout = vi.fn().mockResolvedValue(form);
+    const initCheckoutFormSdk = vi.fn().mockReturnValue({ createForm: vi.fn().mockReturnValue(form), loadActions: vi.fn().mockResolvedValue({ type: 'success', actions: { confirm } }) });
+    window.Stripe = vi.fn().mockReturnValue({ initEmbeddedCheckout, initCheckoutFormSdk });
+    const create = vi.fn();
+    server.use(http.post('*/api/user/billing-checkout', async ({ request }) => {
+      create(await request.json());
+      return HttpResponse.json({ client_secret: secret, session_id: SESSION, expires_at: expiresAt, ui_mode: uiMode });
+    }));
+    return { mount, destroy, confirm, on, initEmbeddedCheckout, initCheckoutFormSdk, create };
+  }
+  async function acceptAndOpen() {
+    const checkbox = await screen.findByRole('checkbox');
+    fireEvent.click(checkbox);
+    fireEvent.click(screen.getByRole('button', { name: 'Continue to secure payment' }));
+  }
+
+  it('requires consent and mounts Managed Payments inside Stripe without leaking the client secret', async () => {
+    signIn(); serve(); const ui = stripeUi();
+    const view = renderAt('/premium/checkout?plan=annual', <PremiumCheckoutPage />);
+    const checkbox = await screen.findByRole('checkbox');
+    expect(checkbox).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Continue to secure payment' })).toBeDisabled();
+    expect(ui.create).not.toHaveBeenCalled();
+    await acceptAndOpen();
+    await waitFor(() => expect(ui.mount).toHaveBeenCalledWith('#checkout-form'));
+    expect(ui.create).toHaveBeenCalledExactlyOnceWith({ plan: 'annual', consent: true });
+    expect(ui.initEmbeddedCheckout).toHaveBeenCalledExactlyOnceWith({ clientSecret: secret });
+    expect(ui.initCheckoutFormSdk).not.toHaveBeenCalled();
+    expect(document.body.textContent).not.toContain(secret);
+    expect(screen.getByTestId('location')).not.toHaveTextContent(secret);
+    expect(checkbox).toBeDisabled();
+    view.unmount(); expect(ui.destroy).toHaveBeenCalledOnce();
+  });
+
+  it('wires the form preview confirmation and shows a failed confirmation without granting a plan', async () => {
+    signIn(); serve(); const ui = stripeUi('form');
+    renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
+    await acceptAndOpen();
+    await waitFor(() => expect(ui.on).toHaveBeenCalled());
+    const event = { type: 'confirm' };
+    ui.confirm.mockResolvedValue({ type: 'error', error: { message: 'Card declined' } });
+    await act(async () => { await ui.on.mock.calls[0][1](event); });
+    expect(ui.confirm).toHaveBeenCalledExactlyOnceWith({ formConfirmEvent: event });
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.queryByText('Everything is open now.')).not.toBeInTheDocument();
+  });
+
+  it('handles expiry with a new consent step and destroys the expired form', async () => {
+    signIn(); serve(); const ui = stripeUi('embedded_page', Math.floor(Date.now() / 1000) - 1);
+    renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
+    await acceptAndOpen();
+    expect(await screen.findByRole('alert')).toHaveTextContent('The checkout closed before payment');
+    expect(ui.destroy).toHaveBeenCalledOnce();
+    expect(screen.getByRole('checkbox')).not.toBeChecked();
+    expect(screen.getByRole('button', { name: 'Continue to secure payment' })).toBeDisabled();
+  });
+
+  it('shows the server refusal and lets the learner retry', async () => {
+    signIn(); serve(); stripeUi();
+    server.use(http.post('*/api/user/billing-checkout', () => HttpResponse.json({ error: { code: 'already_premium', message: 'active' } }, { status: 409 })));
+    renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
+    await acceptAndOpen();
+    expect(await screen.findByRole('alert')).toHaveTextContent('You already have a Premium subscription');
+    expect(screen.getByRole('button', { name: 'Continue to secure payment' })).toBeEnabled();
+  });
+
+  it('asks a signed-out learner to sign in before creating an order', async () => {
+    serve(); const ui = stripeUi();
+    renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
+    fireEvent.click(await screen.findByRole('button', { name: 'Sign in to continue' }));
+    expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium/checkout?plan=monthly' });
+    expect(ui.create).not.toHaveBeenCalled(); expect(ui.initEmbeddedCheckout).not.toHaveBeenCalled();
   });
 });
 
@@ -128,7 +209,7 @@ describe('/premium/success', () => {
     server.use(http.get('*/api/user/billing-checkout', () => HttpResponse.json({ status: 'expired', entitlement: FREE })));
     renderAt(`/premium/success?session_id=${SESSION}`, <PremiumSuccessPage />);
     expect(await screen.findByRole('heading', { level: 1, name: 'This checkout expired' })).toBeInTheDocument();
-    expect(screen.getByText('No payment was taken. €3.99 a month or €39.99 a year, VAT included. Cancel any time.')).toBeInTheDocument();
+    expect(screen.getByText('No payment was taken. €4.99 a month or €59.88 a year, before VAT. Cancel any time.')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'Continue with monthly' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Continue with yearly' })).toBeInTheDocument();
   });
@@ -326,34 +407,16 @@ describe('the checkout button', () => {
     expect(screen.queryByRole('button')).toBeNull();
   });
 
-  it('sends a free account to Stripe for the plan it chose', async () => {
-    signIn();
-    serve();
-    let plan: unknown;
-    server.use(http.post('*/api/user/billing-checkout', async ({ request }) => {
-      plan = ((await request.json()) as { plan: string }).plan;
-      return HttpResponse.json({ url: 'https://checkout.stripe.com/c/pay/cs_test_x' });
-    }));
-    await withLocation(async (assign) => {
-      renderAt('/premium', <PremiumCheckoutButton plan="annual" />);
-      const button = await screen.findByRole('button', { name: 'Continue with yearly' });
-      await waitFor(() => expect(button).toBeEnabled());
-      fireEvent.click(button);
-      await waitFor(() => expect(assign).toHaveBeenCalledWith('https://checkout.stripe.com/c/pay/cs_test_x'));
-      expect(plan).toBe('annual');
-    });
-  });
-
-  it('shows the server’s refusal instead of leaving', async () => {
-    signIn();
-    serve();
-    server.use(http.post('*/api/user/billing-checkout', () =>
-      HttpResponse.json({ error: { code: 'already_premium', message: 'active' } }, { status: 409 })));
-    renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
-    const button = await screen.findByRole('button', { name: 'Continue with monthly' });
+  it('opens checkout for the selected plan without creating an order before consent', async () => {
+    signIn(); serve();
+    const create = vi.fn();
+    server.use(http.post('*/api/user/billing-checkout', () => { create(); return HttpResponse.json({}); }));
+    renderAt('/premium', <PremiumCheckoutButton plan="annual" />);
+    const button = await screen.findByRole('button', { name: 'Continue with yearly' });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
-    expect(await screen.findByRole('alert')).toHaveTextContent('You already have a Premium subscription. Manage it from your profile.');
+    expect(await screen.findByTestId('location')).toHaveTextContent('/premium/checkout?plan=annual');
+    expect(create).not.toHaveBeenCalled();
   });
 
   it('asks a visitor to sign in and a subscriber to manage billing', async () => {
@@ -379,11 +442,11 @@ describe('the checkout button', () => {
 
   it('is pressable again when Back restores the page from the browser cache', async () => {
     signIn();
-    serve();
+    serve({ plan: PREMIUM });
     // The press leaves for Stripe; the page stays busy until the browser unloads it.
     server.use(http.post('*/api/user/*', async () => { await delay('infinite'); return HttpResponse.json({ url: 'https://checkout.stripe.com/c/pay/cs_test_x' }); }));
     renderAt('/premium', <PremiumCheckoutButton plan="monthly" />);
-    const button = await screen.findByRole('button', { name: 'Continue with monthly' });
+    const button = await screen.findByRole('button', { name: 'Manage billing' });
     await waitFor(() => expect(button).toBeEnabled());
     fireEvent.click(button);
     await waitFor(() => expect(button).toBeDisabled());

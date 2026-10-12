@@ -1,10 +1,11 @@
 /** Billing configuration, read from the server environment on every call.
  *
  *   BILLING_ENABLED               'true' opens checkout; anything else hides it
- *   STRIPE_SECRET_KEY             sk_live_… or sk_test_… (server only)
+ *   STRIPE_SECRET_KEY             sk_/rk_live_… or sk_/rk_test_… (server only)
+ *   VITE_STRIPE_PUBLISHABLE_KEY    matching pk_live_… or pk_test_… (public)
  *   STRIPE_WEBHOOK_SECRET         whsec_… of the endpoint /api/user/billing-webhook
- *   STRIPE_PRICE_PREMIUM_MONTHLY  price_… (3.99 EUR, tax_behavior inclusive)
- *   STRIPE_PRICE_PREMIUM_ANNUAL   price_… (39.99 EUR, tax_behavior inclusive)
+ *   STRIPE_PRICE_PREMIUM_MONTHLY  price_… (4.99 EUR, tax_behavior exclusive)
+ *   STRIPE_PRICE_PREMIUM_ANNUAL   price_… (59.88 EUR, tax_behavior exclusive)
  *   STRIPE_PRICE_PREMIUM_LEGACY   optional, comma-separated: earlier devShark
  *                                 Premium Prices that existing subscriptions
  *                                 still bill after a price change
@@ -21,7 +22,7 @@
  *                                 it decides whether the coupon applies, so
  *                                 the owner can try the launch Checkout on a
  *                                 Preview before 4 October. Ignored unless
- *                                 STRIPE_SECRET_KEY is an sk_test_ key.
+ *                                 STRIPE_SECRET_KEY is a test-mode key.
  *   RESEND_API_KEY, RESEND_FROM   the emails of the public cancellation page:
  *                                 its confirmation link and its receipt.
  *                                 Without them only a signed-in owner of the
@@ -102,6 +103,9 @@ export function billingConfig(env: Env = process.env): BillingConfig {
   if (!webhookSecret) missing.push('STRIPE_WEBHOOK_SECRET');
   if (!prices.monthly) missing.push('STRIPE_PRICE_PREMIUM_MONTHLY');
   if (!prices.annual) missing.push('STRIPE_PRICE_PREMIUM_ANNUAL');
+  const publishableKey = value(env, 'VITE_STRIPE_PUBLISHABLE_KEY');
+  const keyMode = /^(?:sk|rk)_live_/.test(secretKey ?? '') ? 'live' : 'test';
+  if (!publishableKey?.startsWith(`pk_${keyMode}_`)) missing.push('VITE_STRIPE_PUBLISHABLE_KEY');
   // No default: Managed Payments needs Stripe's approval first, and plain
   // Stripe makes the owner the taxable person. The owner says which.
   if (managedRaw !== 'true' && managedRaw !== 'false') missing.push('STRIPE_MANAGED_PAYMENTS');
@@ -126,7 +130,7 @@ export function billingConfig(env: Env = process.env): BillingConfig {
  * production decides by the real time whatever the variable says. */
 function testNow(env: Env, secretKey: string | null): number | null {
   const raw = value(env, 'LAUNCH_OFFER_TEST_NOW');
-  if (!raw || !secretKey?.startsWith('sk_test_')) return null;
+  if (!raw || !/^(?:sk|rk)_test_/.test(secretKey ?? '')) return null;
   const parsed = Date.parse(raw);
   return Number.isFinite(parsed) ? parsed : null;
 }

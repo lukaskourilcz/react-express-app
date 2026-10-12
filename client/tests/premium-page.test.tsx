@@ -62,17 +62,17 @@ describe('/premium', () => {
   it('states the price with VAT, the renewal and the waiver before anyone pays', async () => {
     serve();
     renderAt('/premium', <PremiumPage />);
-    expect(screen.getByRole('heading', { level: 1, name: 'Everything in devShark for €3.99 a month' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Everything in devShark for €4.99 a month' })).toBeInTheDocument();
     const plans = screen.getByRole('region', { name: 'Choose a plan' });
     expect(within(plans).getByRole('heading', { level: 3, name: 'Monthly' })).toBeInTheDocument();
-    expect(within(plans).getByText('€3.99')).toBeInTheDocument();
-    expect(within(plans).getByText('€39.99')).toBeInTheDocument();
-    // Owner decision 11: the exact saving at the prices shown, 3.99 × 12 − 39.99.
-    expect(within(plans).getByText('Save 7.89 EUR a year')).toBeInTheDocument();
+    expect(within(plans).getByText('€4.99')).toBeInTheDocument();
+    expect(within(plans).getByText('€59.88')).toBeInTheDocument();
+    // Owner decision 11: the exact saving at the prices shown, 4.99 × 12 − 59.88.
+    expect(within(plans).queryByText(/Save .* EUR a year/)).toBeNull();
     expect(screen.queryByText(/months? free/i)).toBeNull();
     // The refund promise says what the Terms and the code say: once per account.
     expect(within(plans).getByText(/withdraw within 14 days of your first payment and get that payment back in full, once per account\./)).toBeInTheDocument();
-    expect(within(plans).getAllByText(/VAT included\. Renews every (month|year) until you cancel\./)).toHaveLength(2);
+    expect(within(plans).getAllByText(/before VAT\. Renews every (month|year) until you cancel\./)).toHaveLength(2);
     expect(within(plans).getByText(/renews automatically at the end of each month or year/)).toBeInTheDocument();
     expect(within(plans).getByText(en['premium.page.waiver'])).toBeInTheDocument();
     expect(within(plans).getByRole('link', { name: 'Terms of use' })).toHaveAttribute('href', '/terms');
@@ -172,7 +172,7 @@ describe('the plan table', () => {
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
     const headers = within(table).getAllByRole('columnheader').map((cell) => cell.textContent);
-    expect(headers).toEqual(['What you get', 'FreeEvery account', 'Premium€3.99 a month, VAT included']);
+    expect(headers).toEqual(['What you get', 'FreeEvery account', 'Premium€4.99 a month, before VAT']);
     const rows = within(table).getAllByRole('rowheader').map((cell) => cell.textContent);
     expect(rows).toContain('React');
     // Nothing that has not opened yet (design audit P0.1), and no ads row:
@@ -200,56 +200,70 @@ describe('the plan table', () => {
     expect(await within(table).findByRole('rowheader', { name: 'FDE and DSA learning paths' })).toBeInTheDocument();
     expect(within(table).queryByRole('rowheader', { name: 'Coins for merchandise' })).toBeNull();
   });
+
+  it('keeps Start free disabled for Premium and explains it through a keyboard tooltip', async () => {
+    signIn(); serve({ plan: PAYING });
+    const onStart = vi.fn();
+    renderAt('/', <ComparisonTable onStart={onStart} />);
+    const button = await screen.findByRole('button', { name: 'Start free' });
+    await waitFor(() => expect(button).toHaveAttribute('aria-disabled', 'true'));
+    fireEvent.click(button);
+    expect(onStart).not.toHaveBeenCalled();
+    act(() => button.focus());
+    // jsdom treats the native popover as hidden; the browser regression checks
+    // that keyboard focus actually opens it.
+    expect(await screen.findByRole('tooltip', { hidden: true })).toHaveTextContent('You are already a Premium member! Thank you! <3');
+  });
 });
 
-describe('the launch price (4 Oct to 2 Nov 2026, Prague)', () => {
+describe('the launch price (4 Oct to 30 Nov 2026, Prague)', () => {
   const ON = { enabled: true, cancellable: true, seller: 'link', launchOffer: true };
   const at = (iso: string) => { vi.useFakeTimers({ toFake: ['Date'] }); vi.setSystemTime(new Date(iso)); };
   afterEach(() => { vi.useRealTimers(); });
 
   const expectRegularPage = async () => {
     expect(await screen.findAllByRole('button', { name: 'Sign in to continue' })).toHaveLength(2);
-    expect(screen.getByRole('heading', { level: 1, name: 'Everything in devShark for €3.99 a month' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: 'Everything in devShark for €4.99 a month' })).toBeInTheDocument();
     const plans = screen.getByRole('region', { name: 'Choose a plan' });
-    expect(within(plans).getByText('€3.99')).toBeInTheDocument();
-    expect(within(plans).getByText('€39.99')).toBeInTheDocument();
-    expect(within(plans).getByText('Save 7.89 EUR a year')).toBeInTheDocument();
+    expect(within(plans).getByText('€4.99')).toBeInTheDocument();
+    expect(within(plans).getByText('€59.88')).toBeInTheDocument();
+    expect(within(plans).queryByText(/Save .* EUR a year/)).toBeNull();
     expect(document.querySelector('s, [data-offer]')).toBeNull();
     expect(screen.queryByText(/launch price/i)).toBeNull();
     expect(screen.queryByText(/1\.80|18\.00/)).toBeNull();
   };
 
-  it('shows the launch price, the regular price from 3 Nov, the lifetime and the end date', async () => {
+  it('shows the launch price, the regular price from 1 Dec, the lifetime and the end date', async () => {
     at('2026-10-10T10:00:00Z');
     serve({ billing: ON });
     renderAt('/premium', <PremiumPage />);
-    expect(await screen.findByRole('heading', { level: 1, name: 'Everything in devShark at the launch price of €1.80 a month' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1, name: 'Everything in devShark at the launch price of €2.25 a month' })).toBeInTheDocument();
     const plans = screen.getByRole('region', { name: 'Choose a plan' });
     // Each plan: the regular price struck through beside the launch price,
     // announced as one sentence.
     const monthly = plans.querySelector('[data-plan="monthly"] .ss-offer-amount')!;
-    expect(monthly.querySelector('s')).toHaveTextContent('€3.99');
-    expect(monthly.querySelector('strong')).toHaveTextContent('€1.80');
+    expect(monthly.querySelector('s')).toHaveTextContent('€4.99');
+    expect(monthly.querySelector('strong')).toHaveTextContent('€2.25');
     expect(monthly.querySelector('[aria-hidden="true"]')).toContainElement(monthly.querySelector('s'));
-    expect(within(monthly as HTMLElement).getByText('€1.80 launch price; the regular price from 3 Nov 2026 is €3.99')).toHaveClass('ss-sr-only');
+    expect(within(monthly as HTMLElement).getByText('€2.25 launch price; the regular price from 1 Dec 2026 is €4.99')).toHaveClass('ss-sr-only');
     const annual = plans.querySelector('[data-plan="annual"] .ss-offer-amount')!;
-    expect(annual.querySelector('s')).toHaveTextContent('€39.99');
-    expect(annual.querySelector('strong')).toHaveTextContent('€18.00');
-    // The saving is true for the price shown: 1.80 × 12 − 18.00, not the
+    expect(annual.querySelector('s')).toHaveTextContent('€59.88');
+    expect(annual.querySelector('strong')).toHaveTextContent('€26.95');
+    // The saving is true for the price shown: 2.25 × 12 − 26.95, not the
     // regular 7.89 (owner decision 11).
-    expect(within(plans.querySelector('[data-plan="annual"]') as HTMLElement).getByText('Save 3.60 EUR a year')).toBeInTheDocument();
+    expect(within(plans.querySelector('[data-plan="annual"]') as HTMLElement).queryByText(/Save .* EUR a year/)).toBeNull();
     expect(within(plans).queryByText('Save 7.89 EUR a year')).toBeNull();
-    const note = within(plans).getByRole('group', { name: 'Launch price €1.80 a month · €18.00 a year' });
-    expect(note).toHaveTextContent('55% below the regular price of €3.99 a month · €39.99 a year, which applies from 3 Nov 2026');
+    const note = within(plans).getByRole('group', { name: 'Launch price €2.25 a month · €26.95 a year' });
+    expect(note).toHaveTextContent('55% below the regular price of €4.99 a month · €59.88 a year, which applies from 1 Dec 2026');
     expect(note).toHaveTextContent('Kept for the lifetime of your subscription · cancel anytime');
-    expect(note).toHaveTextContent('Offer ends 2 Nov 2026');
+    expect(note).toHaveTextContent('Offer ends 30 Nov 2026');
     // Launch-price framing: no earlier price is cited, nothing counts down.
     expect(document.body.textContent).not.toMatch(/lowest price|last 30 days|hurry|left\b/i);
     expect(screen.getByText('How long does the launch price last?')).toBeInTheDocument();
-    expect(screen.getByText(/a subscription started from 3 November 2026 pays the regular price of €3\.99 a month or €39\.99 a year/)).toBeInTheDocument();
+    expect(screen.getByText(/a subscription started from 1 December 2026 pays the regular price of €4\.99 a month or €59\.88 a year/)).toBeInTheDocument();
     // The plan table on /premium leaves the note to the plans above it.
     expect(screen.getAllByRole('group', { name: /^Launch price/ })).toHaveLength(1);
-    expect(within(screen.getByRole('table')).getByText('€1.80 launch price; the regular price from 3 Nov 2026 is €3.99')).toBeInTheDocument();
+    expect(within(screen.getByRole('table')).getByText('€2.25 launch price; the regular price from 1 Dec 2026 is €4.99')).toBeInTheDocument();
   });
 
   it('shows the regular page before 4 Oct 00:00 Prague, even when the server says on', async () => {
@@ -259,17 +273,17 @@ describe('the launch price (4 Oct to 2 Nov 2026, Prague)', () => {
     await expectRegularPage();
   });
 
-  it('starts at 4 Oct 00:00 Prague and ends after 2 Nov 23:59:59 Prague', async () => {
+  it('starts at 4 Oct 00:00 Prague and ends after 30 Nov 23:59:59 Prague', async () => {
     at('2026-10-03T22:00:00Z');
     serve({ billing: ON });
     const first = renderAt('/premium', <PremiumPage />);
     expect(await screen.findByRole('group', { name: /^Launch price/ })).toBeInTheDocument();
     first.unmount();
-    at('2026-11-02T22:59:59.999Z');
+    at('2026-11-30T22:59:59.999Z');
     const last = renderAt('/premium', <PremiumPage />);
     expect(await screen.findByRole('group', { name: /^Launch price/ })).toBeInTheDocument();
     last.unmount();
-    at('2026-11-02T23:00:00Z');
+    at('2026-11-30T23:00:00Z');
     renderAt('/premium', <PremiumPage />);
     await expectRegularPage();
   });
@@ -291,21 +305,21 @@ describe('the launch price (4 Oct to 2 Nov 2026, Prague)', () => {
     serve({ billing: ON });
     renderAt('/', <ComparisonTable />);
     const table = screen.getByRole('table');
-    await waitFor(() => expect(within(table).getByText('€1.80')).toBeInTheDocument());
-    expect(within(table).getByText('€3.99').tagName).toBe('S');
-    expect(screen.getByRole('group', { name: 'Launch price €1.80 a month · €18.00 a year' })).toHaveTextContent('which applies from 3 Nov 2026');
+    await waitFor(() => expect(within(table).getByText('€2.25')).toBeInTheDocument());
+    expect(within(table).getByText('€4.99').tagName).toBe('S');
+    expect(screen.getByRole('group', { name: 'Launch price €2.25 a month · €26.95 a year' })).toHaveTextContent('which applies from 1 Dec 2026');
   });
 
   it('adds the launch price to the Terms only while it is on', async () => {
     at('2026-10-10T10:00:00Z');
     serve({ billing: ON });
     const on = renderAt('/terms', <TermsPage />);
-    expect(await screen.findByText(/Launch price: a subscription started between 4 October 2026 and 2 November 2026, Prague time, costs €1\.80 a month or €18\.00 a year, VAT included, for as long as it runs\./)).toBeInTheDocument();
-    expect(screen.getByText(/which applies to subscriptions started from 3 November 2026/)).toBeInTheDocument();
+    expect(await screen.findByText(/Launch price: a subscription started between 4 October 2026 and 30 November 2026, Prague time, costs €2\.25 a month or €26\.95 a year, before VAT, for as long as it runs\./)).toBeInTheDocument();
+    expect(screen.getByText(/which applies to subscriptions started from 1 December 2026/)).toBeInTheDocument();
     expect(screen.getByText(/lasts for the lifetime of that subscription/)).toBeInTheDocument();
     on.unmount();
-    // After the window closes, as the real clock will be from 3 Nov.
-    at('2026-11-03T10:00:00Z');
+    // After the window closes, as the real clock will be from 1 Dec.
+    at('2026-12-01T10:00:00Z');
     renderAt('/terms', <TermsPage />);
     expect(await screen.findByText(/Stripe sells Premium to you as the seller of record/)).toBeInTheDocument();
     expect(screen.queryByText(/Launch price:/)).toBeNull();
@@ -333,7 +347,7 @@ describe('the Terms and the privacy policy', () => {
     for (const heading of ['The free plan and Premium', 'Price and payment', 'Renewal and cancellation', 'Your right of withdrawal', '14-day refund on your first payment', 'How to withdraw', 'Premium without payment', 'Law and disputes', 'Complaints']) {
       expect(screen.getByRole('heading', { level: 2, name: heading })).toBeInTheDocument();
     }
-    expect(screen.getByText(/Premium costs €3\.99 a month or €39\.99 a year\. Both prices include VAT\./)).toBeInTheDocument();
+    expect(screen.getByText(/Premium costs €4\.99 a month or €59\.88 a year\. Both prices exclude VAT\./)).toBeInTheDocument();
     expect(screen.getByText(/React levels 1 to 12/)).toBeInTheDocument();
     expect(screen.getByText(en['premium.page.waiver'])).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 3, name: 'Model withdrawal form' })).toBeInTheDocument();

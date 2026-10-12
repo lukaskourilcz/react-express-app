@@ -33,6 +33,7 @@ export const PRICES = { monthly: 'price_1FixturePremiumMonthly', annual: 'price_
 const BASE_ENV = {
   BILLING_ENABLED: 'true',
   STRIPE_SECRET_KEY: 'sk_test_devshark_contract_never_sent',
+  VITE_STRIPE_PUBLISHABLE_KEY: 'pk_test_devshark_contract_never_sent',
   STRIPE_WEBHOOK_SECRET: WEBHOOK_SECRET,
   STRIPE_PRICE_PREMIUM_MONTHLY: PRICES.monthly,
   STRIPE_PRICE_PREMIUM_ANNUAL: PRICES.annual,
@@ -448,7 +449,7 @@ export class FakeStripe {
             this.createdSessions.push(params);
             const id = `cs_test_created${++this.seq}Session`;
             const session = {
-              id, object: 'checkout.session', url: `https://checkout.stripe.com/c/pay/${id}`, status: 'open', payment_status: 'unpaid',
+              id, client_secret: id + '_secret_test', ui_mode: params.ui_mode, expires_at: Math.floor(Date.now() / 1000) + 86400, object: 'checkout.session', url: `https://checkout.stripe.com/c/pay/${id}`, status: 'open', payment_status: 'unpaid',
               mode: params.mode, customer: params.customer, client_reference_id: params.client_reference_id, metadata: params.metadata ?? {}, subscription: null,
             };
             this.sessions.set(id, session);
@@ -969,7 +970,7 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
 
   const checkout = async (token: string | undefined, body: unknown) => {
     const res = mockRes();
-    await lib.handleBillingCheckout(apiReq('POST', 'billing-checkout', { token, body }) as never, res as never, supabase);
+    await lib.handleBillingCheckout(apiReq('POST', 'billing-checkout', { token, body: { ...(body as object), consent: true } }) as never, res as never, supabase);
     return res;
   };
 
@@ -992,7 +993,9 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     TOKENS.set('token-Buyer', { id: userId, email: 'buyer@example.com' });
     const res = await checkout('token-Buyer', { plan: 'monthly' });
     assert.equal(res.statusCode, 200);
-    assert.match(res.body.url, /^https:\/\/checkout\.stripe\.com\//);
+    assert.match(res.body.client_secret, /^cs_test_.*_secret_test$/);
+    assert.equal(res.body.ui_mode, 'embedded_page');
+    assert.equal(res.body.url, undefined);
     const params = stripe.createdSessions.at(-1);
     assert.equal(params.mode, 'subscription');
     assert.equal(params.client_reference_id, userId);
@@ -1000,12 +1003,18 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     assert.equal(params.subscription_data.metadata.supabase_user_id, userId);
     assert.equal(params.subscription_data.metadata.product, 'devshark', 'the subscription carries devShark’s own marker (finding BILL-1)');
     assert.equal(params.metadata.product, 'devshark', 'and so does the session');
-    assert.equal(params.success_url, 'https://devshark.app/premium/success?session_id={CHECKOUT_SESSION_ID}');
-    assert.equal(params.cancel_url, 'https://devshark.app/premium');
-    assert.deepEqual(params.consent_collection, { terms_of_service: 'required' });
-    assert.match(params.custom_text.terms_of_service_acceptance.message, /^I want Premium to start now and I understand that I lose my 14-day right of withdrawal for digital content\./);
-    assert.match(params.custom_text.submit.message, /VAT included, renewed every month until you cancel/);
-    assert.equal(params.submit_type, 'pay');
+    assert.equal(params.return_url, 'https://devshark.app/premium/success?session_id={CHECKOUT_SESSION_ID}');
+    assert.equal(params.success_url, undefined);
+    assert.equal(params.cancel_url, undefined);
+    assert.equal(params.ui_mode, 'embedded_page');
+    assert.equal(params.consent_collection, undefined);
+    assert.equal(params.metadata.checkout_consent_version, 'devshark-checkout-form-v1');
+    assert.match(params.metadata.checkout_consent_text, /^I want Premium to start now and I understand that I lose my 14-day right of withdrawal for digital content\./);
+    assert.match(lib.checkoutText('monthly', 'https://devshark.app').submit.message, /applicable VAT added at checkout, renewed every month until you cancel/);
+    assert.equal(params.submit_type, 'auto');
+    assert.equal(params.payment_method_collection, undefined, 'Managed Payments controls payment collection');
+    assert.deepEqual(params.phone_number_collection, { enabled: false });
+    assert.equal(params.billing_address_collection, 'auto');
     assert.equal(params.allow_promotion_codes, true);
     assert.equal(params.locale, 'auto');
     assert.deepEqual(params.managed_payments, { enabled: true });
@@ -1021,7 +1030,7 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     await checkout('token-Buyer', { plan: 'annual' });
     assert.equal(stripe.customerCreates.length, creates);
     assert.deepEqual(stripe.createdSessions.at(-1).line_items, [{ price: PRICES.annual, quantity: 1 }]);
-    assert.match(stripe.createdSessions.at(-1).custom_text.submit.message, /renewed every year/);
+    assert.match(lib.checkoutText('annual', 'https://devshark.app').submit.message, /renewed every year/);
 
     // Plain Stripe with Stripe Tax behind the same flag.
     applyEnv({ STRIPE_MANAGED_PAYMENTS: 'false' });
@@ -1033,19 +1042,30 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     applyEnv();
   });
 
+  await check('embedded checkout requires explicit consent before making a Stripe request', async () => {
+    const a = await account('FormConsent');
+    for (const consent of [undefined, false, 'true', 1]) {
+      const calls = stripe.calls;
+      const res = mockRes();
+      await lib.handleBillingCheckout(apiReq('POST', 'billing-checkout', { token: a.token, body: { plan: 'monthly', consent } }) as never, res as never, supabase);
+      assert.equal(res.statusCode, 400);
+      assert.equal(res.body.error.code, 'checkout_consent_required');
+      assert.equal(stripe.calls, calls, 'no customer, order or payment without consent');
+    }
+  });
+
   await check('the launch coupon rides on Checkout only inside its window, with billing on and the coupon set', async () => {
     const INSIDE = Date.parse('2026-10-10T10:00:00Z');
     const BEFORE = Date.parse('2026-10-03T21:59:59.999Z'); // 3 Oct 23:59:59.999 in Prague
     const START = Date.parse('2026-10-03T22:00:00Z'); // 4 Oct 00:00 in Prague
-    const LAST = Date.parse('2026-11-02T22:59:59.999Z'); // 2 Nov 23:59:59.999 in Prague
-    const AFTER = Date.parse('2026-11-02T23:00:00Z'); // 3 Nov 00:00 in Prague
+    const LAST = Date.parse('2026-11-30T22:59:59.999Z'); // 2 Nov 23:59:59.999 in Prague
+    const AFTER = Date.parse('2026-11-30T23:00:00Z'); // 3 Nov 00:00 in Prague
     const withCoupon = lib.billingConfig({ ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'launch55' });
     const params = (config: ReturnType<typeof lib.billingConfig>, now: number, plan: 'monthly' | 'annual' = 'monthly') =>
       lib.checkoutSessionParams(config, plan, 'user-launch', 'cus_launch', now);
     // Stripe types `submit` as `'' | { message }`, where '' unsets it.
     const submitText = (session: ReturnType<typeof params>) => {
-      const submit = session.custom_text?.submit;
-      return submit ? submit.message : '';
+      return lib.checkoutText(session.metadata?.plan as 'monthly' | 'annual', 'https://devshark.app', session.metadata?.offer === 'launch-55').submit.message;
     };
 
     for (const plan of ['monthly', 'annual'] as const) {
@@ -1081,14 +1101,19 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     const today = Date.parse('2026-09-28T12:00:00Z');
     const testClock = { ...BASE_ENV, STRIPE_COUPON_LAUNCH: 'launch55', LAUNCH_OFFER_TEST_NOW: '2026-10-10T10:00:00Z' };
     assert.deepEqual(params(lib.billingConfig(testClock), today).discounts, [{ coupon: 'launch55' }], 'test key: the test clock decides');
+    assert.deepEqual(params(lib.billingConfig({ ...testClock, STRIPE_SECRET_KEY: 'rk_test_fixture' }), today).discounts, [{ coupon: 'launch55' }], 'restricted test key: the same test clock');
+    const restrictedLive = lib.billingConfig({ ...testClock, STRIPE_SECRET_KEY: 'rk_live_fixture', VITE_STRIPE_PUBLISHABLE_KEY: 'pk_live_fixture' });
+    assert.equal(restrictedLive.checkoutEnabled, true, 'restricted live key requires its matching public live key');
+    assert.equal(restrictedLive.launchTestNow, null, 'restricted live key never reads a test clock');
+    assert.equal(lib.billingConfig({ ...testClock, STRIPE_SECRET_KEY: 'rk_live_fixture' }).checkoutEnabled, false, 'mixed live/test keys keep sales closed');
     assert.equal(params(lib.billingConfig({ ...testClock, STRIPE_SECRET_KEY: 'sk_live_devshark_never_sent' }), today).discounts, undefined, 'live key: the real clock decides');
     assert.equal(params(lib.billingConfig({ ...testClock, LAUNCH_OFFER_TEST_NOW: 'not a date' }), today).discounts, undefined);
 
     // A discounted session closes when the offer does, within Stripe's 30 min to 24 h.
     assert.equal(params(withCoupon, INSIDE).expires_at, Math.floor(INSIDE / 1000) + 24 * 3600 - 60, 'far from the end: about 24 hours');
-    const lateEvening = Date.parse('2026-11-02T20:00:00Z');
+    const lateEvening = Date.parse('2026-11-30T20:00:00Z');
     assert.equal(params(withCoupon, lateEvening).expires_at, Math.floor(AFTER / 1000), 'on the last evening: closes at the end');
-    const lastMinutes = Date.parse('2026-11-02T22:50:00Z');
+    const lastMinutes = Date.parse('2026-11-30T22:50:00Z');
     assert.equal(params(withCoupon, lastMinutes).expires_at, Math.floor(lastMinutes / 1000) + 31 * 60, 'in the last half hour: Stripe’s minimum');
 
     // Through the handler: the coupon env var is set, and the clock decides.
@@ -1166,11 +1191,11 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     TOKENS.set('token-TwoTabs', { id: userId, email: 'twotabs@example.com' });
     const first = await checkout('token-TwoTabs', { plan: 'monthly' });
     assert.equal(first.statusCode, 200);
-    const firstId = String(first.body.url).split('/').at(-1)!;
+    const firstId = first.body.session_id;
     assert.equal(stripe.sessions.get(firstId).status, 'open');
     const second = await checkout('token-TwoTabs', { plan: 'annual' });
     assert.equal(second.statusCode, 200);
-    const secondId = String(second.body.url).split('/').at(-1)!;
+    const secondId = second.body.session_id;
     assert.equal(stripe.sessions.get(firstId).status, 'expired', 'the first tab’s Checkout can no longer be paid');
     assert.equal(stripe.sessions.get(secondId).status, 'open');
     const customer = stripe.sessions.get(secondId).customer;
@@ -1244,6 +1269,18 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     // The webhook arriving afterwards changes nothing.
     await deliver(eventText('checkout.session.completed', a.ids, 'success1'));
     assert.equal((await db.grants(a.userId)).length, 1);
+  });
+
+  await check('embedded checkout keeps the server-written consent when Stripe has no consent_collection', async () => {
+    const a = await account('FormReceipt');
+    const session = stripe.sessions.get(a.ids.cs);
+    session.consent = null;
+    session.metadata = { product: 'devshark', supabase_user_id: a.userId, checkout_consent_version: 'devshark-checkout-form-v1', checkout_consent_at: '2026-09-20T10:00:00.000Z', checkout_consent_text: 'The Terms and immediate-start waiver accepted before payment.' };
+    const res = await lookup(a.token, a.ids.cs);
+    assert.equal(res.statusCode, 200);
+    assert.equal((await db.consent(a.ids.cs))?.waiverText, session.metadata.checkout_consent_text);
+    assert.equal((await db.consent(a.ids.cs))?.userId, a.userId);
+    assert.equal(res.body.entitlement.tier, 'premium');
   });
 
   /* The Customer Portal ---------------------------------------------------- */
@@ -1527,7 +1564,7 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     TOKENS.set('token-Delete3', { id: userId, email: 'delete3@example.com' });
     const opened = await checkout('token-Delete3', { plan: 'monthly' });
     assert.equal(opened.statusCode, 200);
-    const sessionId = String(opened.body.url).split('/').at(-1)!;
+    const sessionId = opened.body.session_id;
     assert.equal(await lib.endBillingForDeletedAccount(supabase, userId), true);
     assert.equal(stripe.sessions.get(sessionId).status, 'expired', 'the Checkout opened before the deletion is closed (finding BILL-3)');
     // An outage while listing the sessions stops the deletion.
@@ -1607,7 +1644,7 @@ export async function runBillingSuite(db: Backend, lib: Lib): Promise<number> {
     const userId = newUserId();
     TOKENS.set('token-Before039', { id: userId, email: 'before039@example.com' });
     const res = mockRes();
-    await lib.handleBillingCheckout(apiReq('POST', 'billing-checkout', { token: 'token-Before039', body: { plan: 'monthly' } }) as never, res as never, before039);
+    await lib.handleBillingCheckout(apiReq('POST', 'billing-checkout', { token: 'token-Before039', body: { plan: 'monthly', consent: true } }) as never, res as never, before039);
     assert.equal(res.statusCode, 503);
     assert.equal(res.body.error.code, 'migration_required');
     const raw = eventText('customer.subscription.created', idsFor('Before039', userId), 'before039');

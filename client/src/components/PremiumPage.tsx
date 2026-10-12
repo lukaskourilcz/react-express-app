@@ -79,7 +79,7 @@ function PlanCard({ plan, showAction, offer }: { plan: BillingPlan; showAction: 
       </p>
       {/* The saving is true for the price shown above it: the launch prices
           while the offer is on, the regular ones otherwise (owner decision 11). */}
-      {annual && (
+      {annual && Number(vars.saving) > 0 && (
         <p className="ss-premium-plan__saving">
           {t('premium.page.annualSaving', offer ? { saving: offer.offerAnnualSaving, currency: offer.currency } : vars)}
         </p>

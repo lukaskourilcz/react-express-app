@@ -2874,3 +2874,29 @@ The hero browser regression is included in required CI. The removed UI does not
 change server content eligibility, review records,
 reports or grading. Required remote checks and production verification follow
 on the associated pull request.
+
+## 12 October 2026 — embedded Premium checkout and interface cleanup
+
+Owner-selected Managed Payments uses supported `embedded_page`: Stripe's actual API refused `form` for this merchant model. The optional plain branch implements Checkout Form SDK with the supplied appearance. Required consent is collected before session creation; server metadata preserves the waiver/version/timestamp and existing signed fulfillment records it. No schema or grading changes; twelve API handlers remain.
+
+Production Stripe/Vercel setup is prepared (live restricted key, public key, exclusive EUR 4.99/59.88 prices, forever 55% coupon through 30 November, nine-event webhook and default Portal). **Sales are disabled at the owner's request while identity verification waits.** Remaining setup is solely in [STRIPE_INTEGRATION_TODO.md](../../STRIPE_INTEGRATION_TODO.md).
+
+Premium membership disables Start free with an explanatory tooltip and colors the header diamond gold. Duplicate page kickers are replaced by green semantic main headings and the existing varied wave. Native select arrows are inset by 1rem. React success omits the complexity/first-pass/repeat-XP prose while retaining actual server XP, navigation and genuine exceptional states. Coding toolbar controls show icons and accessible tooltips below 1220px.
+
+| Check | Actual outcome |
+|---|---|
+| `typecheck:api`, `typecheck:scripts`, `test:launch` | Pass |
+| `test:billing` | Pass, 40 checks; explicit consent, old/new consent recording, ownership/signatures/idempotency and matching restricted live/test keys |
+| `test:client` | Pass, 104 files / 996 tests |
+| `build` | Pass; production-shaped Supabase placeholders used for signed-in browser tests |
+| `check:bundle` | Pass, 241337/243000 initial gzip bytes |
+| `check:unused`, `check:security` | Pass |
+| Both production dependency audits | Pass, zero vulnerabilities |
+| `git diff --check` | Pass |
+| Coding browser suite | 17 passed, including React success and 1220/1219/360px keyboard tooltips |
+| Launch-pricing browser checks | Regular/discounted pricing and light/dark WCAG 2.2 AA passed at 390/1280px; Premium membership regression corrected to intercept the actual multiplexed entitlement route and rechecked separately |
+| Actual Stripe sandbox API | Subscription session created with Managed Payments, exclusive EUR 4.99 Price, forever 55% coupon, EUR 2.25 total before location-dependent tax |
+| Actual external checkout purchase | Not completed: Stripe.js requests returned HTTP 429 and its payment iframe did not mount in the local harness. No payment or real learner entitlement was created; SDK mocks/contract tests do not stand in for this gate |
+| Live payment/KYC, external webhook delivery, retry/email settings, logged-out cancellation email | Not verified; sales remain off and the owner deferred identity verification |
+
+Responsive matrix, final browser results and production deployment evidence are appended after they complete. Physical-phone/Safari and real live purchase remain separate owner checks; no claims of these checks passing.

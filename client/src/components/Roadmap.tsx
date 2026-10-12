@@ -730,10 +730,7 @@ function Roadmap() {
   return (
     <div className="de-page" style={{ maxWidth: 1060 }}>
       <div className="rm-journey-heading">
-        <div style={{ display: 'flex', marginBottom: 6 }}>
-          <Kicker>{t('roadmap.title')}</Kicker>
-        </div>
-        <Heading level={1}>{t('roadmap.journeyTitle')}</Heading>
+        <Kicker as="h1" className="ss-section-title">{t('roadmap.journeyTitle')}</Kicker>
         <div style={{ marginTop: 4 }}>
           <Text type="supporting" color="secondary">{t('roadmap.subtitle')}</Text>
         </div>

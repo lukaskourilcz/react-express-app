@@ -1,6 +1,6 @@
 /** The launch offer (owner decision, 28 September 2026): 55 % off Premium,
  * monthly and yearly, for the lifetime of every subscription started between
- * Sunday 4 October 2026 00:00 and Monday 2 November 2026 23:59:59, Prague time.
+ * Sunday 4 October 2026 00:00 and Monday 30 November 2026 23:59:59, Prague time.
  *
  * One module for the server and the browser. The server decides whether
  * Checkout carries the Stripe coupon (lib/billing/handlers.ts); the browser
@@ -33,15 +33,15 @@ export const LAUNCH_OFFER = {
   percentOff: 55,
   /** 4 Oct 2026 00:00:00 in Prague (CEST, UTC+2). */
   startsAt: Date.parse('2026-10-03T22:00:00Z'),
-  /** The first instant after the offer: 3 Nov 2026 00:00:00 in Prague (CET,
+  /** The first instant after the offer: 1 Dec 2026 00:00:00 in Prague (CET,
    * UTC+1, after the change from CEST on 25 October). The last instant of the
-   * offer is 2 Nov 2026 23:59:59.999. */
-  endsBefore: Date.parse('2026-11-02T23:00:00Z'),
+   * offer is 30 Nov 2026 23:59:59.999. */
+  endsBefore: Date.parse('2026-11-30T23:00:00Z'),
   timeZone: 'Europe/Prague',
 } as const;
 
 /** The offer's last whole second as a Unix timestamp: the coupon's
- * `redeem_by` (2 Nov 2026 23:59:59 CET = 1793660399). */
+ * `redeem_by` (30 Nov 2026 23:59:59 CET). */
 export const LAUNCH_REDEEM_BY = Math.floor(LAUNCH_OFFER.endsBefore / 1000) - 1;
 
 /** Whether an instant falls inside the window: from the start, inclusive, to
@@ -72,22 +72,22 @@ const fromCents = (cents: number): string => `${Math.floor(cents / 100)}.${Strin
 
 /** The price after a percentage off, rounded to the cent the way Stripe
  * rounds a percentage coupon: the discount is rounded, then subtracted.
- * 3.99 → 1.80 and 39.99 → 18.00 at 55 %. */
+ * 4.99 → 2.25 and 59.88 → 26.95 at 55 %. */
 export function discountedPrice(regular: string, percentOff: number = LAUNCH_OFFER.percentOff): string {
   const cents = toCents(regular);
   return fromCents(cents - Math.round((cents * percentOff) / 100));
 }
 
 /** What the yearly plan saves against twelve months of the monthly plan, as
- * a price string: 3.99 × 12 − 39.99 = 7.89 at the regular prices, and
- * 1.80 × 12 − 18.00 = 3.60 at the launch prices. Worked out in cents, so no
+ * a price string: 4.99 × 12 − 59.88 = 0.00 at the regular prices, and
+ * 2.25 × 12 − 26.95 = 0.05 at the launch prices. Worked out in cents, so no
  * float holds money, and never below zero. /premium prints it next to the
  * yearly price it is true for (owner decision 11). */
 export function annualSaving(monthly: string, annual: string): string {
   return fromCents(Math.max(0, toCents(monthly) * 12 - toCents(annual)));
 }
 
-/** A date in the offer's time zone: "2 Nov 2026" (short) or "2 November 2026". */
+/** A date in the offer's time zone: "30 Nov 2026" (short) or "30 November 2026". */
 export function launchDate(instant: number, month: 'short' | 'long' = 'short'): string {
   return new Intl.DateTimeFormat('en-GB', { day: 'numeric', month, year: 'numeric', timeZone: LAUNCH_OFFER.timeZone }).format(instant);
 }
@@ -101,7 +101,7 @@ export function launchDate(instant: number, month: 'short' | 'long' = 'short'): 
  * the last 30 days" line (EU Price Indication Directive art. 6a, Czech
  * consumer-protection act § 12a). The pages state
  * the launch price and name the regular price as the one that applies to
- * subscriptions started from 3 November 2026. */
+ * subscriptions started from 1 December 2026. */
 export function launchOfferDisplay() {
   const offerMonthly = discountedPrice(PREMIUM_PRICE.monthly);
   const offerAnnual = discountedPrice(PREMIUM_PRICE.annual);
@@ -113,17 +113,17 @@ export function launchOfferDisplay() {
     annual: PREMIUM_PRICE.annual,
     offerMonthly,
     offerAnnual,
-    /** The yearly saving at the launch prices: "3.60". */
+    /** The yearly saving at the launch prices: "0.05". */
     offerAnnualSaving: annualSaving(offerMonthly, offerAnnual),
     /** "4 October 2026" */
     startDate: launchDate(LAUNCH_OFFER.startsAt, 'long'),
-    /** "2 November 2026" */
+    /** "30 November 2026" */
     endDate: launchDate(LAUNCH_OFFER.endsBefore - 1, 'long'),
-    /** "2 Nov 2026" */
+    /** "30 Nov 2026" */
     endDateShort: launchDate(LAUNCH_OFFER.endsBefore - 1, 'short'),
-    /** "3 Nov 2026": the first day of the regular price. */
+    /** "1 Dec 2026": the first day of the regular price. */
     regularFrom: launchDate(LAUNCH_OFFER.endsBefore, 'short'),
-    /** "3 November 2026" */
+    /** "1 December 2026" */
     regularFromLong: launchDate(LAUNCH_OFFER.endsBefore, 'long'),
   };
 }

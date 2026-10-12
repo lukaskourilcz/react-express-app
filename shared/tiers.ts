@@ -46,10 +46,10 @@ export const FREE_EVOLVING_STAGES = 1;
  * 9 Oct 2026. Those fourteen moved that afternoon from the end of each
  * project to the checkpoint after stage one, so the count stayed. */
 export const FREE_CODING_SHARE = { target: 0.19, min: 0.16, max: 0.22 } as const;
-/** The prices shown to a learner, VAT included. Billing charges the provider's
+/** The prices shown to a learner, before VAT. Billing charges the provider's
  * Price objects (section 3.1 of the second handoff); this is the display copy
  * and must match them. */
-export const PREMIUM_PRICE = { currency: 'EUR', symbol: '€', monthly: '3.99', annual: '39.99' } as const;
+export const PREMIUM_PRICE = { currency: 'EUR', symbol: '€', monthly: '4.99', annual: '59.88', taxBehavior: 'exclusive' } as const;
 
 /** The standalone coding challenges open on the free tier: the starter set.
  *

@@ -852,10 +852,9 @@ function Quiz({ onActiveChange }: { onActiveChange?: (active: boolean) => void }
       <div className="ss-pop" style={{ width: '100%', maxWidth: 680, margin: '0 auto' }}>
         {/* Editorial header: kicker + wave tick + Manrope title + subline. */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
-          <Kicker>{t('quiz.kicker')}</Kicker>
-          <h1 style={{ margin: '6px 0 0', fontFamily: 'var(--font-family-heading)', fontWeight: 800, fontSize: '2rem', letterSpacing: '-0.015em' }}>
+          <Kicker as="h1" className="ss-section-title">
             {t('quiz.buildTitle')}
-          </h1>
+          </Kicker>
           <p style={{ margin: 0, fontSize: 'var(--ss-type-compact)', color: 'var(--color-text-secondary)' }}>{t('quiz.buildSubtitle')}</p>
         </div>
 
