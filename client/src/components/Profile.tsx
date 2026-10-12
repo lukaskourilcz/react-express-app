@@ -233,14 +233,14 @@ function ProfileBody({
                   {/* min-width 0 lets a long name or email ellipsise inside
                       the card instead of running past it. */}
                   <div style={{ minWidth: 0, flex: 1 }}>
-                    <VStack gap={0.5}>
+                    <div className="de-profile-identity__text">
                       <Heading level={1} maxLines={1}>
                         {flair ? `${flair} ` : ''}{shownName}
                       </Heading>
                       <Text type="supporting" color="secondary" maxLines={1}>
                         {user.email}
                       </Text>
-                    </VStack>
+                    </div>
                   </div>
                 </HStack>
                 <IdentitySettings />

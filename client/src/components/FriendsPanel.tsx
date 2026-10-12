@@ -343,16 +343,18 @@ function FriendList({ friends, hasHandle, onChanged }: { friends: Friend[]; hasH
               {/* The name is written beside it, so the avatar is decoration. */}
               <InitialsAvatar name={friend.displayName} src={friend.picture} size={36} />
               <span className="fr-friend__who">
-                <span className="fr-friend__name">
-                  {friend.displayName}
-                  {friend.displayName !== friend.handle && <span className="fr-handle">{friend.handle}</span>}
-                </span>
-                <span className="fr-friend__marks">
-                  <CountryFlag code={friend.country} locale={lang} size={16} />
-                  {/* Owned and worn. It says nothing about anybody's learning
-                      and it does not move this row: the order is by correct
-                      answers, then accuracy. */}
-                  {friend.crown && <CrownBadge size={16} />}
+                <span className="fr-friend__identity">
+                  <span className="fr-friend__name">
+                    {friend.displayName}
+                    {friend.displayName !== friend.handle && <span className="fr-handle">{friend.handle}</span>}
+                  </span>
+                  <span className="fr-friend__marks">
+                    <CountryFlag code={friend.country} locale={lang} size={16} />
+                    {/* Owned and worn. It says nothing about anybody's learning
+                        and it does not move this row: the order is by correct
+                        answers, then accuracy. */}
+                    {friend.crown && <CrownBadge size={16} />}
+                  </span>
                 </span>
                 <span className="fr-friend__meta">
                   {t('friends.streakDays', { n: friend.currentStreak })}
