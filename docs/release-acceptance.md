@@ -12,6 +12,10 @@ literal newline/emoji, the second sentence below the first, hover/focus visibili
 disabled Enter activation, and no horizontal overflow. The initial scripted click
 was correctly blocked by the disabled button; the probe now uses keyboard Enter.
 Responsive checks pass five light and three dark homepage probes (360–1440px).
+The first protected CI browser run exposed the existing launch-offer regression's
+old `<3` expectation. Its copy assertion now matches the newline/blue heart and
+checks `pre-line`; the focused browser regression passes locally without timeout
+changes. The first run's types, full application tests, build and audits passed.
 Evidence: `/tmp/devshark-premium-thanks/`. Protected CI and exact production
 verification are recorded on the associated PR before release.
 

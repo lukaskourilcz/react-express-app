@@ -53,7 +53,8 @@ test('Premium member has a gold diamond and a disabled Start free action with a 
   await free.focus();
   await free.press('Tab');
   await page.keyboard.press('Shift+Tab');
-  await expect(page.getByRole('tooltip')).toHaveText('You are already a Premium member! Thank you! <3');
+  await expect(page.getByRole('tooltip')).toHaveText('You are already a Premium member!\nThank you! 💙');
+  await expect(page.getByRole('tooltip')).toHaveCSS('white-space', 'pre-line');
   await expect(page.locator('.ss-premium-nav-icon--member')).toBeVisible();
 });
 
