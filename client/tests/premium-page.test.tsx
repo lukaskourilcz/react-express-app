@@ -212,7 +212,7 @@ describe('the plan table', () => {
     act(() => button.focus());
     // jsdom treats the native popover as hidden; the browser regression checks
     // that keyboard focus actually opens it.
-    expect(await screen.findByRole('tooltip', { hidden: true })).toHaveTextContent('You are already a Premium member! Thank you! <3');
+    expect(await screen.findByRole('tooltip', { hidden: true })).toHaveTextContent('You are already a Premium member! Thank you! 💙');
   });
 });
 

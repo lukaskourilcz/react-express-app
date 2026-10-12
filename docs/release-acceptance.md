@@ -1,5 +1,20 @@
 # Release acceptance matrix
 
+## Premium Start free thank-you tooltip — 2026-10-12
+
+The existing English thank-you copy now has a newline before "Thank you! 💙".
+The comparison CTA scopes `white-space: pre-line` to its existing Astryx tooltip;
+the button remains disabled and keyboard-focusable. The navbar tooltip is separate.
+API typecheck, launch contracts, build, 23 existing Premium page tests, both
+production dependency audits (zero vulnerabilities) and diff whitespace pass.
+Six authenticated local browser cases at 360/768/1440px in light/dark verify the
+literal newline/emoji, the second sentence below the first, hover/focus visibility,
+disabled Enter activation, and no horizontal overflow. The initial scripted click
+was correctly blocked by the disabled button; the probe now uses keyboard Enter.
+Responsive checks pass five light and three dark homepage probes (360–1440px).
+Evidence: `/tmp/devshark-premium-thanks/`. Protected CI and exact production
+verification are recorded on the associated PR before release.
+
 ## Navbar Premium tooltip — 2026-10-12
 
 The navbar diamond uses the existing `nav.premium` translation for its tooltip
