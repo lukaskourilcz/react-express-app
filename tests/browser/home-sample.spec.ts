@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 
 for (const theme of ['light', 'dark'] as const) {
   test(`${theme}: homepage has one working JavaScript question on desktop and mobile`, async ({ page }, info) => {
@@ -12,6 +13,9 @@ for (const theme of ['light', 'dark'] as const) {
     if (await reject.isVisible()) await reject.click();
     await expect(sample.getByRole('button')).toHaveCount(4);
     await expect(sample).toContainText('2 ** 3;');
+    const stats = page.locator('.ss-hero-stats');
+    await expect(stats.getByText('coding challenges', { exact: true })).toBeVisible();
+    await expect(stats).toContainText(SUBJECT_SCOPE_CATALOG.webdev.codingChallengeCount.toLocaleString());
     await expect(page.locator('.ss-feature-gallery, .ss-home-video')).toHaveCount(0);
     const content = page.locator('#main-content > div');
     for (const width of [1440, 2560]) {
@@ -20,6 +24,13 @@ for (const theme of ['light', 'dark'] as const) {
       expect(bounds!.width).toBeLessThanOrEqual(1000);
       expect(bounds!.width).toBeGreaterThan(990);
       expect(Math.abs(bounds!.x - (width - bounds!.x - bounds!.width))).toBeLessThan(20);
+      const copy = await page.locator('.ss-hero-copy').boundingBox();
+      expect(Math.abs(copy!.y + copy!.height / 2 - 500)).toBeLessThan(2);
+    }
+    for (const height of [729, 900, 1200]) {
+      await page.setViewportSize({ width: 1440, height });
+      const copy = await page.locator('.ss-hero-copy').boundingBox();
+      expect(Math.abs(copy!.y + copy!.height / 2 - height / 2)).toBeLessThan(2);
     }
     await page.setViewportSize({ width: 1440, height: 1000 });
     await page.screenshot({ path: info.outputPath(`homepage-quiz-${theme}.png`) });

@@ -2837,3 +2837,40 @@ JavaScript parser and allowing independent caching. Its fixed frame is reserved
 while the SVG loads. The repeated local bundle check passes at 240769 gzip bytes,
 with the 243000-byte limit unchanged; build and both-theme browser checks pass.
 Remote verification passed in run 38229491791 (including browser, Storybook and performance checks). Before release, main was merged to retain the newer 1000px homepage width; the only conflict was this acceptance log, and both entries are preserved. The combined revision is verified again.
+
+## Retire curation and centre the homepage hero — 2026-10-12
+
+Removes the How we curate links from the footer, homepage topic picker and
+learning-path overviews, and removes the public page, route loader, route title,
+page-only helper and styles. Its former address uses the existing not-found page
+with noindex and a working keyboard-accessible Go home action. The privacy
+policy no longer lists opening the retired page as an analytics event.
+
+The desktop headline, description, actions and stats are centred together on
+the viewport. CSS reserves the same space below the hero as the floating header
+uses above it; short and narrow screens can grow and scroll naturally. A third
+stat displays 725 coding challenges from the subject catalogue, with a launch
+contract checking it against the server’s active coding summaries. The three
+stats form a responsive grid without loading another catalogue or making a request.
+
+| Check | Actual local result |
+|---|---|
+| API types | PASS |
+| Footer, route-head, homepage and learning-path tests | PASS — 47 tests |
+| Launch/play-room/verified-caller contracts | PASS |
+| Production build | PASS — existing chunk-size advisories remain |
+| Root/client production dependency audits | PASS — zero vulnerabilities |
+| Unused code | PASS — zero findings |
+| Responsive sweep | PASS — Home, Learn and both learning-path overviews; 28 probes at 360/390/430/768/1024/1280/1440px |
+| Browser checks | PASS — 20 route/theme/width combinations, no retired links or visible copy; former URL has the not-found title, noindex and keyboard return home; no coverage-page request |
+| Hero browser flow | PASS — both themes, 1440/2560px width, viewport heights 729/900/1200px; the copy centre is within 2px of the viewport centre, third stat visible, keyboard sample answer and 360px reflow work |
+| Bundle budget | PASS — 240629/243000 gzip bytes |
+| React review | PASS — existing shell/not-found/stat primitives, no new state or effects or count request; legal/settings controls retained |
+| Visual review | PASS — retired-address and centred hero screenshots in both themes and mobile/desktop |
+| Diff whitespace | PASS |
+
+Evidence: `/tmp/devshark-remove-curation/` holds the local logs and screenshots.
+The hero browser regression is included in required CI. The removed UI does not
+change server content eligibility, review records,
+reports or grading. Required remote checks and production verification follow
+on the associated pull request.

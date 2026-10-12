@@ -352,6 +352,8 @@ async function auditGateContracts() {
   // stay in the catalogue only so old rows resolve (#230).
   const deliverable = served.filter((q) => deliveryCategories('webdev').includes(q.category)).length;
   assert.equal(SUBJECT_SCOPE_CATALOG.webdev.questionCount, deliverable, `questionCount must be the ${deliverable} questions the bank can serve`);
+  assert.equal(SUBJECT_SCOPE_CATALOG.webdev.codingChallengeCount, CODING_SUMMARIES.length,
+    'the landing coding challenge count must match the active, visible coding catalogue');
   for (const row of REVIEW_REGISTRY) {
     if (row.kind !== 'question') continue;
     const item = history.get(row.id);

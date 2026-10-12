@@ -66,7 +66,6 @@ const loadPlay = routeChunk(under('/play'), () => import('./components/Play'));
 const loadChallenge = routeChunk(exact('/challenge'), () => import('./components/Challenge'));
 const loadDev = routeChunk(under('/dev'), () => import('./components/dev/DevPage'));
 const loadLegal = routeChunk(exact('/privacy', '/terms'), () => import('./components/LegalPages'));
-const loadCuration = routeChunk(exact('/curation'), () => import('./components/CurationPage'));
 const loadPublicInfo = routeChunk(exact('/classroom'), () => import('./components/PublicInfoPages'));
 const loadTopic = routeChunk(under('/topics', '/cs/topics'), () => import('./components/TopicLandingPage'));
 const loadToday = routeChunk(exact('/today'), () => import('./components/Today'));
@@ -94,7 +93,6 @@ const Challenge = lazyPage(loadChallenge);
 const DevPage = lazyPage(loadDev);
 const PrivacyPage = lazyPage(() => loadLegal().then((m) => ({ default: m.PrivacyPage })));
 const TermsPage = lazyPage(() => loadLegal().then((m) => ({ default: m.TermsPage })));
-const CurationPage = lazyPage(() => loadCuration().then((m) => ({ default: m.CurationPage })));
 const ClassroomPage = lazyPage(() => loadPublicInfo().then((m) => ({ default: m.ClassroomPage })));
 const TopicLandingPage = lazyPage(loadTopic);
 const Today = lazyPage(loadToday);
@@ -801,7 +799,6 @@ function App() {
                   {/* Where the confirmation and password-reset emails land. */}
                   <Route path="/auth/confirmed" element={<EmailConfirmedPage />} />
                   <Route path="/reset-password" element={<ResetPasswordPage />} />
-                  <Route path="/curation" element={<CurationPage />} />
                   <Route path="/daily" element={<DailyQuestionPage />} />
                   <Route path="/daily/:date" element={<DailyQuestionPage />} />
                   <Route path="/classroom" element={<ClassroomPage />} />

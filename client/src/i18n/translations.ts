@@ -109,6 +109,7 @@ export const en = {
   'home.signInGoogle': 'Sign in with Google',
   'home.statTracks': 'topic tracks',
   'home.statQuestions': 'questions',
+  'home.statCodingChallenges': 'coding challenges',
   'home.introAria': 'Introduction',
   'home.topicBlurbLocalized': '{name} is split into short lessons, practice and checkpoints.',
   'home.sampleQuestionLocalized': 'What is included in the {name} learning path?',

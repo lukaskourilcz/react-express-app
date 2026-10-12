@@ -29,11 +29,12 @@ function wrapper({ children }: { children: ReactNode }) {
 }
 
 describe('the footer', () => {
-  it('links no changelog beside the legal links', () => {
+  it('links no retired informational pages beside the legal links', () => {
     server.use(http.get('*/api/settings', () => HttpResponse.json({})));
     render(<BrandFooter />, { wrapper });
     expect(screen.getByRole('link', { name: 'Terms' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: 'Changelog' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'How we curate' })).toBeNull();
   });
 
   it('shows the Threads icon once its URL is recorded', () => {
