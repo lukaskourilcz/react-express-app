@@ -31,7 +31,25 @@ hashed SVG shared by both themed use instances, keeping asset data out of the
 JavaScript parser and allowing independent caching. Its fixed frame is reserved
 while the SVG loads. The repeated local bundle check passes at 240769 gzip bytes,
 with the 243000-byte limit unchanged; build and both-theme browser checks pass.
-Remote verification must pass again before release.
+Remote verification passed in run 38229491791 (including browser, Storybook and performance checks). Before release, main was merged to retain the newer 1000px homepage width; the only conflict was this acceptance log, and both entries are preserved. The combined revision is verified again.
+
+## Restore the original homepage content width — 2026-10-12
+
+Restores the homepage's centred 1000px maximum from `bb96f3c`, the mainline
+version live on 10 October, replacing the later 1600px limit. Other routes
+retain their existing 800px/1200px limits. The JavaScript sample stays interactive.
+
+Validation: API typecheck, launch contracts, production build and diff whitespace
+passed. Both production dependency audits report zero vulnerabilities. The existing
+homepage browser test now verifies the centred 1000px cap at 1440px and 2560px,
+keyboard answer feedback, absence of the video and 360px reflow; both light and
+dark cases pass. Responsive checks pass all 14 homepage probes (360 through 1440px,
+both themes), with no overflow or clipped content. Desktop light and mobile dark
+screenshots were visually reviewed. The responsive script rejects 1920/2560px as
+unsupported inputs; the wide-screen cap is covered by the Playwright test instead.
+
+Evidence: `/tmp/devshark-width-browser`, `/tmp/devshark-width-responsive-light.log`
+and `/tmp/devshark-width-responsive-dark.log`. Existing build chunk warnings remain.
 
 ## Restore the single homepage JavaScript sample — 2026-10-11
 
