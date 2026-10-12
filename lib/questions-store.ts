@@ -184,6 +184,55 @@ function mergeRow(row: QuestionEditRow, base?: Question): Question {
   return merged;
 }
 
+/** Fresh source proof for the marketing integration. Serving caches and the
+ * base-bank fallback cannot establish whether an operator hid or edited an item.
+ * Refuse incomplete PostgREST results rather than silently losing overrides. */
+export async function getFreshMarketingQuestions(): Promise<{ question: Question; deleted: boolean; updatedAt: string | null }[]> {
+  if (!supabase || !process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY === process.env.SUPABASE_ANON_KEY) throw new Error('marketing_source_unavailable');
+  const client = supabase;
+  const read = async (): Promise<QuestionEditRow[]> => {
+    const rows: QuestionEditRow[] = [];
+    let total: number | null = null;
+    for (let offset = 0; offset < 5000; offset += 500) {
+      const { data, error, count } = await withTimeout(
+        client.from(TABLE).select('*', { count: 'exact' }).order('question_id').range(offset, offset + 499), 5000,
+      );
+      if (error || !data || count === null || count > 5000 || (total !== null && total !== count)) throw new Error('marketing_source_unavailable');
+      total = count;
+      rows.push(...data as QuestionEditRow[]);
+      if (rows.length === total) return rows;
+      if (data.length !== 500 || rows.length > total) throw new Error('marketing_source_unavailable');
+    }
+    throw new Error('marketing_source_unavailable');
+  };
+  // PostgREST pages span requests. Verify a second complete observation so
+  // concurrent edits/deletes cannot manufacture an apparently complete layer.
+  const data = await withTimeout((async () => {
+    const first = await read();
+    const second = await read();
+    if (JSON.stringify(first) !== JSON.stringify(second)) throw new Error('marketing_source_unavailable');
+    return second;
+  })(), 10000);
+  const bank = await loadSubjectQuestionBank('webdev', false);
+  return buildMarketingQuestionSnapshot(bank.questions, data);
+}
+
+/** Includes safe history for tombstones, with the exact same merge as serving. */
+export function buildMarketingQuestionSnapshot(base: Question[], rows: QuestionEditRow[]): { question: Question; deleted: boolean; updatedAt: string | null }[] {
+  const overrides = new Map(rows.map((row) => [row.question_id, row]));
+  const baseIds = new Set(base.map((q) => q.id));
+  return [
+    ...base.map((q) => {
+      const row = overrides.get(q.id);
+      return { question: row ? mergeRow(row, q) : withImportance(q), deleted: row?.deleted ?? false, updatedAt: row?.updated_at ?? null };
+    }),
+    ...rows.filter((row) => row.is_custom && !baseIds.has(row.question_id)).map((row) => ({
+      question: mergeRow(row), deleted: row.deleted, updatedAt: row.updated_at ?? null,
+    })),
+  ];
+}
+
 /** Attach a resolved importance to a base question that has no override row. */
 function withImportance(q: Question): Question {
   return q.importance != null ? q : { ...q, importance: computeImportance(q) };
