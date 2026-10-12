@@ -16,11 +16,11 @@ The normal k and uncut S follow the selected reference. The source is a raster;
 these outlines are a trace, not the original font/vector master.
 
 The original V9 fin paths and wave stroke are unchanged. Its visible height is
-88% of the wordmark height, with the complete fin-and-wave bounds centred on
-the wordmark. The gap is 28% of the wordmark height. The fin and “dev” use
+100% of the wordmark height: the fin tip aligns with the top of the lettering,
+and the bottom of the wave stroke aligns with its bottom. The gap is 28% of the wordmark height. The fin and “dev” use
 `--brand-accent`; “Shark” uses `--brand-ink` in light mode and white in dark mode.
-The logo has fixed dimensions (about 162 × 22 px in the header and
-147 × 20 px in the mobile menu), needs no font and inherits the
+The logo has fixed dimensions (about 166 × 22 px in the header and
+151 × 20 px in the mobile menu), needs no font and inherits the
 existing home link's translated accessible name. Existing V9 export and
 single-colour rules below still apply to the archived assets.
 The two lettering paths share one hashed SVG request, cached independently of
