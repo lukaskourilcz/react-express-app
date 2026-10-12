@@ -3,15 +3,18 @@ import {
   FIN_BODY, FIN_MIRROR, FIN_WAVE_CUT, FIN_WAVE_LINE,
   LOGO_WAVE_STROKE,
 } from './brandGeometry';
-import { WORDMARK_DEV, WORDMARK_SHARK, WORDMARK_WIDTH, WORDMARK_HEIGHT } from './wordmarkGeometry';
+import wordmarkUrl from '../assets/brand/devshark-wordmark.svg';
 
 /**
  * Approved October 2026 wordmark with the unchanged V9 fin and wave.
  * Both visible silhouettes are vertically centred, including the wave stroke.
- * Inline outlines avoid font substitution, image loading and layout shifts.
+ * A shared, cacheable SVG keeps the outlines out of the JavaScript bundle.
+ * Fixed dimensions avoid layout shifts; the lettering needs no font.
  */
 
 // Fin bounds including the round wave: x=-0.5..26.5, y=2.1..21.7.
+const WORDMARK_WIDTH = 1347;
+const WORDMARK_HEIGHT = 229;
 const FIN_HEIGHT = 19.6;
 const FIN_SCALE = WORDMARK_HEIGHT * 0.88 / FIN_HEIGHT;
 const FIN_WIDTH = 27 * FIN_SCALE;
@@ -46,8 +49,8 @@ export default function BrandLogo({ height = 22, label }: BrandLogoProps) {
         <path d={FIN_WAVE_LINE} fill="none" stroke="currentColor" strokeWidth={LOGO_WAVE_STROKE} strokeLinecap="round" />
       </g>
       <g transform={`translate(${WORDMARK_X} 0)`} fillRule="evenodd">
-        <path d={WORDMARK_DEV} />
-        <path d={WORDMARK_SHARK} fill="light-dark(var(--brand-ink), #fff)" />
+        <use href={`${wordmarkUrl}#dev`} />
+        <use href={`${wordmarkUrl}#shark`} fill="light-dark(var(--brand-ink), #fff)" />
       </g>
     </svg>
   );

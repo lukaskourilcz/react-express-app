@@ -137,7 +137,7 @@ plain clickable cards; don't combine it with a fin-school hover.)
   wordmark with a vertically centred V9 fin; accent “dev”, ink/white “Shark”). Fin glyph / swimming fin / waterline:
   `client/src/components/SharkFin.tsx`. Both read the kit geometry from
   `brandGeometry.ts`; never redraw the fin. The approved wordmark outlines live
-  in `wordmarkGeometry.ts`. See `docs/brand/brand-guidelines.md`.
+  in `client/src/assets/brand/devshark-wordmark.svg`. See `docs/brand/brand-guidelines.md`.
 - Kicker + waterline tick: the `<Kicker>` component (`landing/LandingKit.tsx`),
   which applies `.ss-kicker` and one of the eight waves. The rule is
   `<WaterlineRule>` from the same file.
