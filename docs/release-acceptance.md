@@ -1,5 +1,19 @@
 # Release acceptance matrix
 
+## Navbar Premium tooltip — 2026-10-12
+
+The navbar diamond uses the existing `nav.premium` translation for its tooltip
+for every account. Its Premium member accessible name and gold icon remain.
+Local API typecheck, launch contracts, build, ten existing shell tests, both
+production dependency audits (zero vulnerabilities), and diff whitespace pass.
+Eight authenticated fixture browser cases cover free/Premium, light/dark and
+1280/1440px: mouse and focus tooltips read exactly "Premium" and the gold member
+icon remains. Navbar icons are hidden at 768px by the existing compact layout;
+that initial visibility probe was corrected to the supported desktop widths.
+Responsive homepage checks pass five light and three dark probes from 360–1440px.
+Evidence: `/tmp/devshark-premium-tooltip/`. Protected CI and exact production
+verification are recorded on the associated PR before release.
+
 ## Restore the original homepage content width — 2026-10-12
 
 Restores the homepage's centred 1000px maximum from `bb96f3c`, the mainline
