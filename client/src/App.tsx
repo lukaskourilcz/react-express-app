@@ -567,7 +567,7 @@ function App() {
                     variant="ghost"
                     size="sm"
                     label={t(membership.tier === 'premium' ? 'nav.premiumMember' : 'nav.premium')}
-                    tooltip={t(membership.tier === 'premium' ? 'premium.memberThanks' : 'nav.premium')}
+                    tooltip={t('nav.premium')}
                     onClick={() => navigate('/premium')}
                     data-route="/premium"
                     icon={<PremiumNavIcon member={membership.tier === 'premium'} />}
