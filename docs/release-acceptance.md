@@ -2804,3 +2804,36 @@ build, both production dependency audits (0 vulnerabilities), and diff whitespac
 Homepage responsive checks passed all 10 probes at 360/390/768/1024/1440 in light
 and dark themes. Desktop Chrome visual review confirmed card placement and copy.
 The existing build chunk-size warning remains; no new runtime dependencies.
+
+## Approved navigation wordmark — 2026-10-12
+
+The header and mobile menu use the owner's selected plain heavy wordmark,
+traced from the supplied screenshot. The V9 fin/wave geometry is retained and
+its visible bounds are centred beside the lettering. The home link keeps its
+translated name and 44px target; the outlined lettering has no font dependency.
+The static logo has no new loading, error, auth, offline or disabled states.
+
+| Check | Actual local result |
+|---|---|
+| API types | PASS |
+| Launch/play-room/verified-caller contracts | PASS |
+| Production build | PASS — existing large-chunk advisory remains |
+| Root/client production dependency audits | PASS — zero vulnerabilities |
+| Responsive sweep | PASS — `/` and `/learn`, 14 probes at 360/390/430/768/1024/1280/1440px; no overflow or unprobed routes |
+| Logo browser checks | PASS — both themes at all seven widths, home accessible name, keyboard focus, 44px target, resolved ink/white fill, and no horizontal overflow |
+| Visual review | PASS — light mobile, dark desktop, and settled mobile drawer screenshots; approved bold lettering, ordinary k and centred retained fin |
+| Reduced motion | PASS — browser checks ran with reduced motion; logo is static |
+| Diff whitespace | PASS |
+| Release | Local change only; no deployment or publication performed |
+
+Evidence: `/tmp/devshark-nav-logo/` contains build, type, launch, audit,
+responsive and browser logs and the reviewed screenshots. Source and tracing
+details are recorded in `docs/brand/brand-guidelines.md`.
+
+Release follow-up: the first remote verification found the initial JS/CSS bundle
+2315 gzip bytes above its 243000-byte budget. The wordmark is now a separate
+hashed SVG shared by both themed use instances, keeping asset data out of the
+JavaScript parser and allowing independent caching. Its fixed frame is reserved
+while the SVG loads. The repeated local bundle check passes at 240769 gzip bytes,
+with the 243000-byte limit unchanged; build and both-theme browser checks pass.
+Remote verification passed in run 38229491791 (including browser, Storybook and performance checks). Before release, main was merged to retain the newer 1000px homepage width; the only conflict was this acceptance log, and both entries are preserved. The combined revision is verified again.

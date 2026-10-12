@@ -1,27 +1,26 @@
 import { useId } from 'react';
 import {
   FIN_BODY, FIN_MIRROR, FIN_WAVE_CUT, FIN_WAVE_LINE,
-  LOGO_FIN_PLACEMENT, LOGO_LETTERS, LOGO_LETTER_STROKE, LOGO_VIEW_BOX, LOGO_WAVE_STROKE, LOGO_WORDMARK_X,
+  LOGO_WAVE_STROKE,
 } from './brandGeometry';
+import wordmarkUrl from '../assets/brand/devshark-wordmark.svg';
 
 /**
- * The devShark compact logo: the fin with its wave, then the devShark
- * wordmark. Every path and transform is copied from
- * client/public/brand/v9/recommended/devshark-logo-compact-green.svg (see
- * brandGeometry.ts). The fill and strokes read `currentColor`, so the parent
- * sets the colour: the subject accent, or white on ink.
- *
- * Brand rules (docs/brand/brand-guidelines.md):
- * - Minimum height: 18 px for this compact logo, 24 px for the primary
- *   horizontal logo.
- * - Below 100 px of width, use the clean fin (`SharkFin`) instead of a logo.
- * - Clear space on every side equals the height of the letter d.
- * - Never redraw, stretch, recolour single letters or add effects. The
- *   spelling is always devShark.
+ * Approved October 2026 wordmark with the unchanged V9 fin and wave.
+ * Both visible silhouettes are vertically centred, including the wave stroke.
+ * A shared, cacheable SVG keeps the outlines out of the JavaScript bundle.
+ * Fixed dimensions avoid layout shifts; the lettering needs no font.
  */
 
-const VIEW_BOX = `${LOGO_VIEW_BOX.x} ${LOGO_VIEW_BOX.y} ${LOGO_VIEW_BOX.width} ${LOGO_VIEW_BOX.height}`;
-const FIN_TRANSFORM = `translate(${LOGO_FIN_PLACEMENT.x} ${LOGO_FIN_PLACEMENT.y}) scale(${LOGO_FIN_PLACEMENT.scale})`;
+// Fin bounds including the round wave: x=-0.5..26.5, y=2.1..21.7.
+const WORDMARK_WIDTH = 1347;
+const WORDMARK_HEIGHT = 229;
+const FIN_HEIGHT = 19.6;
+const FIN_SCALE = WORDMARK_HEIGHT * 0.88 / FIN_HEIGHT;
+const FIN_WIDTH = 27 * FIN_SCALE;
+const WORDMARK_X = FIN_WIDTH + WORDMARK_HEIGHT * 0.28;
+const WIDTH = WORDMARK_X + WORDMARK_WIDTH;
+const FIN_TRANSFORM = `translate(${0.5 * FIN_SCALE} ${(WORDMARK_HEIGHT - FIN_HEIGHT * FIN_SCALE) / 2 - 2.1 * FIN_SCALE}) scale(${FIN_SCALE})`;
 
 interface BrandLogoProps {
   /** Rendered height in px. 22 in the header, 20 in the mobile menu. */
@@ -32,13 +31,13 @@ interface BrandLogoProps {
 
 export default function BrandLogo({ height = 22, label }: BrandLogoProps) {
   const clipId = `devshark-logo-cut-${useId().replace(/:/g, '')}`;
-  const width = Math.round((height * LOGO_VIEW_BOX.width / LOGO_VIEW_BOX.height) * 100) / 100;
+  const width = Math.round((height * WIDTH / WORDMARK_HEIGHT) * 100) / 100;
   const a11y = label ? { role: 'img', 'aria-label': label } : { 'aria-hidden': true };
   return (
     <svg
       {...a11y}
       focusable="false"
-      viewBox={VIEW_BOX}
+      viewBox={`0 0 ${WIDTH} ${WORDMARK_HEIGHT}`}
       width={width}
       height={height}
       fill="currentColor"
@@ -49,19 +48,9 @@ export default function BrandLogo({ height = 22, label }: BrandLogoProps) {
         <g clipPath={`url(#${clipId})`}><path d={FIN_BODY} transform={FIN_MIRROR} /></g>
         <path d={FIN_WAVE_LINE} fill="none" stroke="currentColor" strokeWidth={LOGO_WAVE_STROKE} strokeLinecap="round" />
       </g>
-      <g transform={`translate(${LOGO_WORDMARK_X} 0)`}>
-        {LOGO_LETTERS.map(({ d, dx }) => (
-          <path
-            key={d.slice(0, 12)}
-            d={d}
-            transform={dx ? `translate(${dx} 0)` : undefined}
-            stroke="currentColor"
-            strokeWidth={LOGO_LETTER_STROKE}
-            strokeLinejoin="round"
-            strokeLinecap="round"
-            paintOrder="stroke"
-          />
-        ))}
+      <g transform={`translate(${WORDMARK_X} 0)`} fillRule="evenodd">
+        <use href={`${wordmarkUrl}#dev`} />
+        <use href={`${wordmarkUrl}#shark`} fill="light-dark(var(--brand-ink), #fff)" />
       </g>
     </svg>
   );

@@ -133,10 +133,11 @@ plain clickable cards; don't combine it with a fin-school hover.)
 
 ## 7. Reuse the brand primitives
 
-- Logo: `client/src/components/BrandLogo.tsx` (the V9 compact logo in
-  `currentColor`). Fin glyph / swimming fin / waterline:
+- Logo: `client/src/components/BrandLogo.tsx` (the approved October 2026 bold
+  wordmark with a vertically centred V9 fin; accent “dev”, ink/white “Shark”). Fin glyph / swimming fin / waterline:
   `client/src/components/SharkFin.tsx`. Both read the kit geometry from
-  `brandGeometry.ts`; never redraw the fin. See `docs/brand/brand-guidelines.md`.
+  `brandGeometry.ts`; never redraw the fin. The approved wordmark outlines live
+  in `client/src/assets/brand/devshark-wordmark.svg`. See `docs/brand/brand-guidelines.md`.
 - Kicker + waterline tick: the `<Kicker>` component (`landing/LandingKit.tsx`),
   which applies `.ss-kicker` and one of the eight waves. The rule is
   `<WaterlineRule>` from the same file.
