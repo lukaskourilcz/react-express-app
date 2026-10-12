@@ -1,5 +1,35 @@
 # Release acceptance matrix
 
+## OwnDashboard source integration (#364) — 2026-10-13
+
+The owner integration can read current English question overrides, curation
+eligibility and active coding tasks through one resource on the existing quiz
+handler. Packets carry canonical content hashes, revisions and retained
+ineligible tombstones. Fresh counted override reads run twice and hold on DB
+failure, truncation or changing observations; daily selection binds the date
+and checks the served wording. Coding packets contain no answer reveal, tests
+or solution modules. OwnDashboard owns the usage ledger and post approvals.
+
+Node 24.19.0 validation: API types, the standalone marketing producer and HTTP
+handler tests, production build, security policy checks, both production audits
+(zero vulnerabilities), twelve-handler count and diff whitespace pass. Marketing
+tests cover all 2,447 authored questions and 725 active tasks, edits/custom items,
+deletes/retired items, stable pagination and supersession, two-page override
+reads, changing/truncated/error DB responses, authentication and dated daily
+selection. The handler uses a local PostgREST stand-in; production DB overrides
+and integration secrets were unavailable and no production proof is claimed.
+
+Full `test:launch` remains blocked in existing isolated React guest tests. One
+run reported the UTC guest assertion; the final rerun reported `Isolated React
+runner exited unsuccessfully`. The first implementation run also caught a tier
+reader boundary, corrected by reusing the catalogue's free/Premium projection.
+The responsive sweep passed 320px route probes before it was stopped to focus
+on unchanged quiz/daily pages. The focused browser then timed out at startup;
+no completed final responsive matrix is claimed. Logs live under
+`/tmp/devshark-marketing-*.log`. These failures require a clean release rerun
+before merging. No client UI, grading, XP, entitlement, production configuration
+or publishing activation changed. The owner setup item is in `NEEDED.md`.
+
 ## Premium Start free thank-you tooltip — 2026-10-12
 
 The existing English thank-you copy now has a newline before "Thank you! 💙".

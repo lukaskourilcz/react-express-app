@@ -1631,3 +1631,18 @@ rows stay, and `delete_user_data` still erases them (SQL test 200).
   a quiz on a topic Learn does not teach (`sharkCardStudyLink`). Previous and
   Next (and ← →) move through the deck; "Got it" takes the card out with an
   Undo. Empty, signed-out, loading and error states say how to get cards.
+
+## OwnDashboard marketing source adapter
+
+`GET /api/quiz/questions?resource=marketing-source` uses a dedicated owner
+integration bearer, fresh counted question overrides and the current curation
+gate. It exports bounded `marketing-source/1` packets with authored answers for
+questions and allowlisted prompts/starters for active coding tasks. Failed,
+truncated or changing override reads hold the export; serving fallbacks do not
+prove marketing eligibility. Retained invalid items yield tombstones, and hard
+removal answers 410 on a recheck. Dated daily packets reuse the platform selector
+and bind their revision to the actual `/daily/<date>` link. OwnDashboard owns
+usage, approvals and publication; this operation reads no learner records and
+adds no model calls or publishing credentials. See
+[marketing-social-bridge.md](marketing-social-bridge.md) for the header contract,
+limits and setup.
