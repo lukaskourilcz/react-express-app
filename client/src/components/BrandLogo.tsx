@@ -7,7 +7,7 @@ import wordmarkUrl from '../assets/brand/devshark-wordmark.svg';
 
 /**
  * Approved October 2026 wordmark with the unchanged V9 fin and wave.
- * Both visible silhouettes are vertically centred, including the wave stroke.
+ * The fin tip and the bottom of the wave stroke align with the wordmark edges.
  * A shared, cacheable SVG keeps the outlines out of the JavaScript bundle.
  * Fixed dimensions avoid layout shifts; the lettering needs no font.
  */
@@ -16,11 +16,11 @@ import wordmarkUrl from '../assets/brand/devshark-wordmark.svg';
 const WORDMARK_WIDTH = 1347;
 const WORDMARK_HEIGHT = 229;
 const FIN_HEIGHT = 19.6;
-const FIN_SCALE = WORDMARK_HEIGHT * 0.88 / FIN_HEIGHT;
+const FIN_SCALE = WORDMARK_HEIGHT / FIN_HEIGHT;
 const FIN_WIDTH = 27 * FIN_SCALE;
 const WORDMARK_X = FIN_WIDTH + WORDMARK_HEIGHT * 0.28;
 const WIDTH = WORDMARK_X + WORDMARK_WIDTH;
-const FIN_TRANSFORM = `translate(${0.5 * FIN_SCALE} ${(WORDMARK_HEIGHT - FIN_HEIGHT * FIN_SCALE) / 2 - 2.1 * FIN_SCALE}) scale(${FIN_SCALE})`;
+const FIN_TRANSFORM = `translate(${0.5 * FIN_SCALE} ${-2.1 * FIN_SCALE}) scale(${FIN_SCALE})`;
 
 interface BrandLogoProps {
   /** Rendered height in px. 22 in the header, 20 in the mobile menu. */
