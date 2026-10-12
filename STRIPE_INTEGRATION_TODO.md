@@ -9,7 +9,7 @@ There are no placeholder prices, payment modes or credentials in the production 
 | Field | Current value | Action before enabling sales |
 |---|---|---|
 | `BILLING_ENABLED` | `false` | Set to `true` only after the remaining gates below pass; redeploy. |
-| `RESEND_API_KEY`, `RESEND_FROM` | Unconfigured | Supply a Resend key and verified sender for logged-out cancellation confirmation emails; signed-in cancellation already works. |
+| `RESEND_API_KEY`, `RESEND_FROM` | Unconfigured, deferred by owner | Cancellation requires sign-in for this release. Resend is optional future work, not a sales activation gate. |
 
 ## Prepared production resources
 
@@ -66,8 +66,10 @@ Only [stripeCheckoutForm.ts](client/src/lib/stripeCheckoutForm.ts) is a new impl
 
 - [ ] Owner: complete Stripe's **Verify Lukas Kouril's identity** task and confirm payments/payouts are no longer paused. API-key security verification is already complete; it is a separate task.
 - [ ] Confirm Managed Payments remains eligible/approved and test supported subscription/Portal behavior, including tax added by billing location, monthly/yearly switching and retained lifetime discount.
-- [ ] Configure failed-payment retry exhaustion to cancel, and verify receipts/refund emails and cancellation flow. The Portal is prepared; retry/email dashboard settings are not yet verified.
-- [ ] Configure and test logged-out cancellation email delivery. Complete the existing trader/legal and hosting readiness gates referenced in [NEEDED.md](NEEDED.md); do not invent legal identity details.
+- [x] Dashboard configuration: cancel the subscription after all retries fail; the first failed renewal remains overdue and active status requires the latest invoice to be settled. Failed-card-payment and card-expiry notification emails are enabled and saved. Actual failure/delivery behavior still belongs to the isolated sandbox test below.
+- [x] Managed Payments receipt configuration: Stripe always sends payment receipts, invoices, refund and credit-note emails from Link, independently of the general receipt switches. Confirm actual delivery during the isolated transaction test. See [official Managed Payments behavior](https://docs.stripe.com/payments/managed-payments/how-it-works).
+- [x] Owner decision on 12 October: cancellation stays available after sign-in only. Logged-out confirmation emails and Resend provisioning are deferred; `cancelByEmail=false` remains intentional.
+- [ ] Complete the existing trader/legal and hosting readiness gates referenced in [NEEDED.md](NEEDED.md); do not invent legal identity details.
 - [ ] Complete an isolated sandbox purchase, actual webhook delivery, failed renewal/grace/cancellation and refund. Preview currently shares production data: do **not** enable test-card sales against real learner accounts.
 - [ ] After all gates: enable sales in Production and redeploy. Verify EUR, prices before VAT, automatic 55% coupon until the window ends, signup → payment → Premium, and cancellation with a dedicated authorized account.
 
