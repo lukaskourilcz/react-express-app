@@ -200,10 +200,9 @@ const RouteLoader = () => {
   return <LoadingScreen label={t('common.loading')} size={28} sx={{ minHeight: 'auto', py: 6 }} />;
 };
 
-// The header brand: the V9 compact logo (fin with its wave, then the
-// wordmark), 22px tall, in the accent: the subject's green in light mode and
-// its bright variant in dark mode (6.05:1 on ink). BrandLogo documents the
-// size and clear-space rules; .ss-header-brand keeps 16px free around it on phones.
+// The approved bold wordmark and centred V9 fin, 22px tall. The fin and
+// “dev” inherit the readable theme accent; “Shark” is ink in light mode and
+// white in dark mode. The header link keeps its accessible home label.
 function HeaderBrand() {
   const t = useT();
   return (

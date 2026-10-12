@@ -1,5 +1,30 @@
 # Release acceptance matrix
 
+## Approved navigation wordmark — 2026-10-12
+
+The header and mobile menu use the owner's selected plain heavy wordmark,
+traced from the supplied screenshot. The V9 fin/wave geometry is retained and
+its visible bounds are centred beside the lettering. The home link keeps its
+translated name and 44px target; inline outlines have no loading or font dependency.
+The static logo has no new loading, error, auth, offline or disabled states.
+
+| Check | Actual local result |
+|---|---|
+| API types | PASS |
+| Launch/play-room/verified-caller contracts | PASS |
+| Production build | PASS — existing large-chunk advisory remains |
+| Root/client production dependency audits | PASS — zero vulnerabilities |
+| Responsive sweep | PASS — `/` and `/learn`, 14 probes at 360/390/430/768/1024/1280/1440px; no overflow or unprobed routes |
+| Logo browser checks | PASS — both themes at all seven widths, home accessible name, keyboard focus, 44px target, resolved ink/white fill, and no horizontal overflow |
+| Visual review | PASS — light mobile, dark desktop, and settled mobile drawer screenshots; approved bold lettering, ordinary k and centred retained fin |
+| Reduced motion | PASS — browser checks ran with reduced motion; logo is static |
+| Diff whitespace | PASS |
+| Release | Local change only; no deployment or publication performed |
+
+Evidence: `/tmp/devshark-nav-logo/` contains build, type, launch, audit,
+responsive and browser logs and the reviewed screenshots. Source and tracing
+details are recorded in `docs/brand/brand-guidelines.md`.
+
 ## Restore the single homepage JavaScript sample — 2026-10-11
 
 Issues #353 and #352 restore the original `2 ** 3` sample using the existing

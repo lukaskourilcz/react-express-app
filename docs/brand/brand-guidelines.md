@@ -1,5 +1,29 @@
 # devShark brand guidelines (V9)
 
+## Navigation wordmark update — 2026-10-12
+
+The owner selected the plain heavy **devShark** lettering in
+`Screenshot 2026-10-12 at 10.28.40.png` and explicitly retained the existing
+fin and wave. This supersedes the V9 lettering only in the header and mobile
+menu, both rendered by `BrandLogo`. The other V9 assets remain the archived kit.
+
+`wordmarkGeometry.ts` contains deterministic outlines of the supplied 1500 × 452
+pixel screenshot, not a replacement font: foreground luminance below 170,
+crop x=61…1407 and y=97…325, pixel contours simplified within 0.8 source pixels,
+with even-odd counters. The resulting wordmark is 1347 × 229 units; “dev” and
+“Shark” are separate solid fills. No generator was called for this integration.
+The normal k and uncut S follow the selected reference. The source is a raster;
+these outlines are a trace, not the original font/vector master.
+
+The original V9 fin paths and wave stroke are unchanged. Its visible height is
+88% of the wordmark height, with the complete fin-and-wave bounds centred on
+the wordmark. The gap is 28% of the wordmark height. The fin and “dev” use
+`--brand-accent`; “Shark” uses `--brand-ink` in light mode and white in dark mode.
+The inline SVG has fixed dimensions (about 162 × 22 px in the header and
+147 × 20 px in the mobile menu), needs no font or image request and inherits the
+existing home link's translated accessible name. Existing V9 export and
+single-colour rules below still apply to the archived assets.
+
 The owner chose V9 on 2026-09-27. Compared with the earlier one-wave revision (`client/public/brand/devshark-approved/`), V9 moves the fin up to the top ascender line, draws the wave as thick as the letter stems, and sets the lettering optically bolder with rounded corners.
 
 The kit lives in [`client/public/brand/v9/`](../../client/public/brand/v9/README.md). The owner's generator produced every file from one exact geometry. The lettering is outlines, so no file depends on a font, and every PNG has a transparent background. The generator, the HTML brand manual, the change list and the social templates stay in the owner's archive.
