@@ -27,7 +27,7 @@ const PREMIUM = { ...FREE, tier: 'premium', source: 'provider', currentPeriodEnd
 const SESSION = 'cs_test_a1ContractSession0001';
 
 /** /api/settings with the billing switches, and the plan. */
-function serve({ plan = FREE, billing = { enabled: true, cancellable: true } }: { plan?: unknown; billing?: unknown } = {}) {
+function serve({ plan = FREE, billing = { enabled: true, cancellable: true, seller: 'link' } }: { plan?: unknown; billing?: unknown } = {}) {
   server.use(
     http.get('*/api/settings', () => HttpResponse.json({ billing })),
     http.get('*/api/user/*', ({ request }) => new URL(request.url).searchParams.get('op') === 'entitlement' || request.url.includes('/entitlement')
@@ -65,20 +65,29 @@ describe('the browser only ever leaves for Stripe', () => {
 });
 
 describe('the embedded checkout', () => {
+  let mockStripeClient: ReturnType<NonNullable<Window['Stripe']>>;
   const secret = `${SESSION}_secret_not_logged`;
   function stripeUi(uiMode: 'embedded_page' | 'form' = 'embedded_page', expiresAt = Math.floor(Date.now() / 1000) + 3600) {
     vi.stubEnv('VITE_STRIPE_PUBLISHABLE_KEY', 'pk_test_client_contract');
     const mount = vi.fn(); const destroy = vi.fn(); const confirm = vi.fn().mockResolvedValue({ type: 'success' });
     const on = vi.fn(); const form = { mount, destroy, on };
-    const initEmbeddedCheckout = vi.fn().mockResolvedValue(form);
+    const createEmbeddedCheckoutPage = vi.fn(async (_options: { fetchClientSecret: () => Promise<string> }) => form);
     const initCheckoutFormSdk = vi.fn().mockReturnValue({ createForm: vi.fn().mockReturnValue(form), loadActions: vi.fn().mockResolvedValue({ type: 'success', actions: { confirm } }) });
-    window.Stripe = vi.fn().mockReturnValue({ initEmbeddedCheckout, initCheckoutFormSdk });
+    mockStripeClient = { createEmbeddedCheckoutPage, initCheckoutFormSdk };
+    window.Stripe = vi.fn(() => mockStripeClient);
+    const append = document.head.append.bind(document.head);
+    vi.spyOn(document.head, 'append').mockImplementation((...nodes) => {
+      append(...nodes);
+      for (const node of nodes) if (node instanceof HTMLScriptElement && node.src.startsWith('https://js.stripe.com/')) {
+        queueMicrotask(() => node.dispatchEvent(new Event('load')));
+      }
+    });
     const create = vi.fn();
     server.use(http.post('*/api/user/billing-checkout', async ({ request }) => {
       create(await request.json());
       return HttpResponse.json({ client_secret: secret, session_id: SESSION, expires_at: expiresAt, ui_mode: uiMode });
     }));
-    return { mount, destroy, confirm, on, initEmbeddedCheckout, initCheckoutFormSdk, create };
+    return { mount, destroy, confirm, on, createEmbeddedCheckoutPage, initCheckoutFormSdk, create };
   }
   async function acceptAndOpen() {
     const checkbox = await screen.findByRole('checkbox');
@@ -96,7 +105,9 @@ describe('the embedded checkout', () => {
     await acceptAndOpen();
     await waitFor(() => expect(ui.mount).toHaveBeenCalledWith('#checkout-form'));
     expect(ui.create).toHaveBeenCalledExactlyOnceWith({ plan: 'annual', consent: true });
-    expect(ui.initEmbeddedCheckout).toHaveBeenCalledExactlyOnceWith({ clientSecret: secret });
+    expect(ui.createEmbeddedCheckoutPage).toHaveBeenCalledOnce();
+    expect(await ui.createEmbeddedCheckoutPage.mock.calls[0][0].fetchClientSecret()).toBe(secret);
+    expect(document.querySelector('script[src="https://js.stripe.com/endive/stripe.js"]')).not.toBeNull();
     expect(ui.initCheckoutFormSdk).not.toHaveBeenCalled();
     expect(document.body.textContent).not.toContain(secret);
     expect(screen.getByTestId('location')).not.toHaveTextContent(secret);
@@ -105,7 +116,7 @@ describe('the embedded checkout', () => {
   });
 
   it('wires the form preview confirmation and shows a failed confirmation without granting a plan', async () => {
-    signIn(); serve(); const ui = stripeUi('form');
+    signIn(); serve({ billing: { enabled: true, cancellable: true, seller: 'trader' } }); const ui = stripeUi('form');
     renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
     await acceptAndOpen();
     await waitFor(() => expect(ui.on).toHaveBeenCalled());
@@ -141,7 +152,7 @@ describe('the embedded checkout', () => {
     renderAt('/premium/checkout?plan=monthly', <PremiumCheckoutPage />);
     fireEvent.click(await screen.findByRole('button', { name: 'Sign in to continue' }));
     expect(openSignIn).toHaveBeenCalledWith({ returnTo: '/premium/checkout?plan=monthly' });
-    expect(ui.create).not.toHaveBeenCalled(); expect(ui.initEmbeddedCheckout).not.toHaveBeenCalled();
+    expect(ui.create).not.toHaveBeenCalled(); expect(ui.createEmbeddedCheckoutPage).not.toHaveBeenCalled();
   });
 });
 

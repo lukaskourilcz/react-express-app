@@ -100,14 +100,14 @@ export function PremiumCheckoutPage() {
       setBusy(false); setReady(false); setError(t('premium.page.unreachable'));
     }, 45000);
     try {
-      const stripe = await loadCheckoutStripe();
+      const stripe = await loadCheckoutStripe(billing.seller === 'link' ? 'embedded_page' : 'form');
       if (current.controller.signal.aborted) return;
       const session = await startCheckout(plan, current.controller.signal);
       if (current.controller.signal.aborted) return;
       if (!session.client_secret || !Number.isFinite(session.expires_at) || !['form', 'embedded_page'].includes(session.ui_mode)) throw new Error('The payment provider returned an invalid checkout.');
       let form: CheckoutView;
       if (session.ui_mode === 'embedded_page') {
-        form = await stripe.initEmbeddedCheckout({ clientSecret: session.client_secret });
+        form = await stripe.createEmbeddedCheckoutPage({ fetchClientSecret: async () => session.client_secret });
         if (current.controller.signal.aborted) { form.destroy(); return; }
       } else {
         const checkout = stripe.initCheckoutFormSdk({ clientSecret: session.client_secret, appearance: CHECKOUT_APPEARANCE });

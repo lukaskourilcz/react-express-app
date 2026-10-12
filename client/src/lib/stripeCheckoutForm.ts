@@ -1,4 +1,4 @@
-// Load the preview directly from Stripe, on the checkout page after consent.
+// Load the selected Stripe SDK directly, on the checkout page after consent.
 // No card data, client secrets or Stripe instances go into app storage/logs.
 export const CHECKOUT_APPEARANCE = {
   theme: 'stripe', labels: 'auto', inputs: 'spaced',
@@ -25,37 +25,39 @@ export interface CheckoutSdk {
 }
 interface StripeFormClient {
   initCheckoutFormSdk(options: { clientSecret: string; appearance: typeof CHECKOUT_APPEARANCE }): CheckoutSdk;
-  initEmbeddedCheckout(options: { clientSecret: string }): Promise<CheckoutView>;
+  createEmbeddedCheckoutPage(options: { fetchClientSecret: () => Promise<string> }): Promise<CheckoutView>;
 }
-type StripeFactory = (key: string, options: { betas: string[] }) => StripeFormClient;
+type StripeFactory = (key: string, options?: { betas: string[] }) => StripeFormClient;
 declare global { interface Window { Stripe?: StripeFactory } }
 
-let loading: Promise<void> | undefined;
-function loadStripeJs(): Promise<void> {
-  if (window.Stripe) return Promise.resolve();
-  if (loading) return loading;
-  loading = new Promise<void>((resolve, reject) => {
+type CheckoutMode = 'form' | 'embedded_page';
+const scriptLoads = new Map<CheckoutMode, Promise<StripeFactory>>();
+function loadStripeJs(mode: CheckoutMode): Promise<StripeFactory> {
+  const known = scriptLoads.get(mode);
+  if (known) return known;
+  const loading = new Promise<StripeFactory>((resolve, reject) => {
     const script = document.createElement('script');
-    script.src = 'https://js.stripe.com/dahlia/stripe.js';
+    script.src = `https://js.stripe.com/${mode === 'embedded_page' ? 'endive' : 'dahlia'}/stripe.js`;
     script.async = true;
     const timer = window.setTimeout(() => finish(new Error('Stripe did not load. Check your connection and try again.')), 15000);
     function finish(error?: Error) {
       clearTimeout(timer);
       script.onload = null;
       script.onerror = null;
-      if (error) { script.remove(); reject(error); } else resolve();
+      if (error) { script.remove(); reject(error); } else resolve(window.Stripe!);
     }
     script.onload = () => finish(window.Stripe ? undefined : new Error('Stripe Checkout is unavailable. Please try again.'));
     script.onerror = () => finish(new Error('Stripe did not load. Check your connection and try again.'));
     document.head.append(script);
-  }).catch((error: unknown) => { loading = undefined; throw error; });
+  }).catch((error: unknown) => { scriptLoads.delete(mode); throw error; });
+  scriptLoads.set(mode, loading);
   return loading;
 }
 
-export async function loadCheckoutStripe(): Promise<StripeFormClient> {
+export async function loadCheckoutStripe(mode: 'form' | 'embedded_page' = 'form'): Promise<StripeFormClient> {
   const key = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY?.trim();
   if (!key || !/^pk_(test|live)_/.test(key)) throw new Error('Premium checkout is not configured yet.');
-  await loadStripeJs();
-  const stripe = window.Stripe!(key, { betas: ['custom_checkout_payment_form_1'] });
+  const factory = await loadStripeJs(mode);
+  const stripe = mode === 'embedded_page' ? factory(key) : factory(key, { betas: ['custom_checkout_payment_form_1'] });
   return stripe;
 }

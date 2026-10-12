@@ -45,7 +45,7 @@ Files: [handlers.ts](lib/billing/handlers.ts), [stripe.ts](lib/billing/stripe.ts
 | `automatic_tax`, `payment_method_collection`, `customer_update` | Omitted for Managed Payments, which controls tax/address handling |
 | Consent | Required devShark checkbox before POST; server-versioned waiver and timestamp in session metadata |
 | API header | `2026-09-30.endive; custom_checkout_payment_form_preview=v1`, verified in Checkout Studio |
-| Stripe.js | Direct `https://js.stripe.com/dahlia/stripe.js`; beta `custom_checkout_payment_form_1` |
+| Stripe.js | Managed: direct `https://js.stripe.com/endive/stripe.js`, `createEmbeddedCheckoutPage({fetchClientSecret})`; plain form: direct `https://js.stripe.com/dahlia/stripe.js`, beta `custom_checkout_payment_form_1` |
 | Form appearance (plain branch) | Stripe theme; auto labels; spaced inputs; Roboto 16px; spacing 4px; radius 4px; background `#ffffff`, danger `#df1b41`, primary `#0570de`, success `#00c853`, text `#30313d` |
 | Form layout/confirmation (plain branch) | `expanded`; `loadActions()`; confirm event → `actions.confirm({formConfirmEvent})` |
 
@@ -79,6 +79,6 @@ For price updates, create immutable Prices under this Product and update environ
 
 Use sandbox account `acct_1UKjRALFC1za5WgX`, matching `pk_test_`/`sk_test_` or `rk_test_`, and an isolated data fixture. Success card `4242 4242 4242 4242`, any future expiry/CVC; decline `4000 0000 0000 0002`; authentication `4000 0025 0000 3155`. Never use test cards in live mode.
 
-Actual sandbox API verified Managed Payments `embedded_page`, exclusive EUR 4.99 monthly price, 55% forever coupon and total EUR 2.25 before billing-location tax. Contract tests separately verify signed fulfillment, duplicates, consent and ownership; this is not proof of a completed external payment. A real Stripe.js mount attempt hit HTTP 429; complete the sandbox purchase/webhook gate before enabling sales. See [release acceptance](docs/release-acceptance.md) for final check outcomes and checks that could not run.
+Actual sandbox API verified Managed Payments `embedded_page`, exclusive EUR 4.99 monthly price, 55% forever coupon and total EUR 2.25 before billing-location tax. Contract tests separately verify signed fulfillment, duplicates, consent and ownership; this is not proof of a completed external payment. An initial older SDK call failed to mount; the current Endive `createEmbeddedCheckoutPage` API was then verified in Chrome and headless Chromium. Actual Checkout displayed EUR 4.99, a EUR 2.74 discount, EUR 0.47 Czech VAT and EUR 2.72 due. No purchase was confirmed; complete the sandbox purchase/webhook gate before enabling sales. See [release acceptance](docs/release-acceptance.md) for final check outcomes and checks that could not run.
 
 Resources: [Stripe support](https://support.stripe.com), [Stripe MCP](https://docs.stripe.com/mcp), [Managed Payments integration](https://docs.stripe.com/payments/managed-payments/update-checkout), [Checkout form](https://docs.stripe.com/checkout/form/quickstart).
