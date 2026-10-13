@@ -83,6 +83,10 @@ async function listen(server: Server): Promise<number> {
 async function startStandIns() {
   const supabase = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://stand-in');
+    if(url.pathname==='/rest/v1/user_stats'&&req.method==='GET'&&req.headers.apikey==='anon-verified-caller') {
+      res.setHeader('content-type','application/json');res.statusCode=403;
+      res.end(JSON.stringify({code:'42501',message:'permission denied for table user_stats'}));return;
+    }
     res.setHeader('content-type', 'application/json');
     const send = (status: number, body: unknown) => { res.statusCode = status; res.end(JSON.stringify(body)); };
     if (url.pathname === '/auth/v1/user') {

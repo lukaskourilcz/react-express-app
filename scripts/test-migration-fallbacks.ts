@@ -1,4 +1,7 @@
 /* Migration fallbacks (review findings data-1 and data-2).
+ * Automatic Challenge score persistence now requires migration 064 and
+ * fails closed without it. The XP fallback cases below provide that mandatory
+ * boundary separately while simulating unavailable older XP routines.
  *
  * `main` can deploy before the owner applies migrations 039 to 044, so the
  * handlers that name a fallback for a missing routine have to recognise the
@@ -209,14 +212,24 @@ async function main() {
       tokens.encodeScoreProof(run.runId, 'fallback-q4', 'webdev', false),
       tokens.encodeScoreProof(run.runId, 'fallback-q5', 'webdev', false),
     ];
-    const done = mockResponse();
-    await challenge({
+    const completionRequest={
       method: 'POST',
       headers: { authorization: `Bearer ${TOKEN}`, 'x-forwarded-for': '10.20.0.2' },
       query: { resource: 'complete' },
       url: '/api/quiz/challenge?resource=complete',
       body: { runToken: run.runToken, proofs },
-    } as never, done as never);
+    };
+    const unavailable=mockResponse();
+    await challenge(completionRequest as never,unavailable as never);
+    assert.equal(unavailable.statusCode,503,'positive results require migration 064 before completion');
+    assert.equal(unavailable.body.error?.code,'leaderboard_unavailable');
+    assert.ok(!calls.some(call=>call.name==='record_verified_activity_xp'),'a missing automatic-score routine grants no XP');
+    // Score persistence is mandatory; below we independently exercise older
+    // XP-routine fallbacks with the required score boundary installed.
+    INSTALLED.save_completed_challenge_score={id:'score-contract',name:'sleepySharkie1',score:2,created_at:'2026-10-14T00:00:00Z',selected_topics:null,all_topics:null};
+    calls.length=0;
+    const done = mockResponse();
+    await challenge(completionRequest as never,done as never);
     assert.equal(done.statusCode, 200, `a finished run before 040 is recorded (${JSON.stringify(done.body)})`);
     assert.deepEqual({ awarded: done.body.awarded, score: done.body.score, xp: done.body.xp }, { awarded: true, score: 2, xp: 10 });
     const names = calls.map((call) => call.name);
