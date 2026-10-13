@@ -10,8 +10,9 @@ failure, truncation or changing observations; daily selection binds the date
 and checks the served wording. Coding packets contain no answer reveal, tests
 or solution modules. OwnDashboard owns the usage ledger and post approvals.
 
-Node 24.19.0 validation: API types, the standalone marketing producer and HTTP
-handler tests, production build, security policy checks, both production audits
+Node 24.19.0 validation: API and script types, full launch contracts, the standalone
+marketing producer and HTTP handler tests, production build, unused-code and security
+policy checks, both production audits
 (zero vulnerabilities), twelve-handler count and diff whitespace pass. Marketing
 tests cover all 2,447 authored questions and 725 active tasks, edits/custom items,
 deletes/retired items, stable pagination and supersession, two-page override
@@ -19,15 +20,20 @@ reads, changing/truncated/error DB responses, authentication and dated daily
 selection. The handler uses a local PostgREST stand-in; production DB overrides
 and integration secrets were unavailable and no production proof is claimed.
 
-Full `test:launch` remains blocked in existing isolated React guest tests. One
-run reported the UTC guest assertion; the final rerun reported `Isolated React
-runner exited unsuccessfully`. The first implementation run also caught a tier
-reader boundary, corrected by reusing the catalogue's free/Premium projection.
+The clean full `test:launch` rerun passes, including Play and verified-caller
+contracts. PR #365 CI caught the integration's invalid learner-limit identity;
+verified exports now consume a dedicated shared operation budget after bearer
+verification, with no learner identity supplied. Regression tests prove invalid
+bearers cannot spend that budget, different verified caller addresses share its
+twenty requests, and an exhausted export does not consume a learner quiz budget.
+The identity verifier is unchanged. The build retains its existing mixed-import
+and chunk-size warnings.
 The responsive sweep passed 320px route probes before it was stopped to focus
 on unchanged quiz/daily pages. The focused browser then timed out at startup;
 no completed final responsive matrix is claimed. Logs live under
-`/tmp/devshark-marketing-*.log`. These failures require a clean release rerun
-before merging. No client UI, grading, XP, entitlement, production configuration
+`/tmp/devshark-marketing-*.log`. No new visual run applies to this server-only
+rate-limit fix; CI's full browser matrix still needs verification before merging.
+No client UI, grading, XP, entitlement, production configuration
 or publishing activation changed. The owner setup item is in `NEEDED.md`.
 
 ## Premium Start free thank-you tooltip — 2026-10-12

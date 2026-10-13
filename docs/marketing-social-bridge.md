@@ -15,7 +15,9 @@ configure this server-only secret with at least 32 characters and put it in
 n8n Cloud's credential store. It grants only this authored-source operation;
 it is neither a learner token nor a Supabase key. Keep it out of browser bundles,
 logs and workflow exports. An absent/short secret returns 503, an invalid bearer
-returns 401. Existing quiz address and integration rate limits apply; the producer never forwards
+returns 401. The quiz address backstop applies before authentication; verified exports share
+a separate 20-request-per-minute integration budget across addresses. Invalid bearers cannot
+consume that budget. The producer never forwards
 the integration bearer to learner Auth. Responses carry
 `Cache-Control: private, no-store` and `Vary: Authorization`.
 

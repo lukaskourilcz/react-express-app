@@ -8,6 +8,7 @@ import { questionEligibility } from '../lib/curation';
 import { pickQuestionOfTheDay } from '../lib/daily-question';
 import { utcToday } from '../shared/daily-question';
 import type { VercelResponse } from '../lib/vercel-types';
+import { checkRateLimit, RATE_LIMITS } from '../lib/rate-limit';
 
 const now = '2026-10-13T12:00:00.000Z';
 const bank = await loadWebdevQuestions();
@@ -74,9 +75,28 @@ let status = 200;
 let body: any;
 const res = { setHeader() {}, status(value: number) { status = value; return this; }, json(value: unknown) { body = value; return this; } } as unknown as VercelResponse;
 process.env.DEVSHARK_MARKETING_EXPORT_SECRET = secret;
+// Invalid integration credentials must not spend the verified shared budget.
+for (let i = 0; i < 25; i++) {
+  await handleMarketingSource({ method: 'GET', query: {}, headers: {
+    authorization: 'Bearer invalid', 'x-forwarded-for': `unauthorized-export-${i}` }, socket: {} }, res);
+  assert.equal(status, 401);
+}
 await handleMarketingSource({ method: 'GET', query: { resource: 'marketing-source' }, headers: { authorization: `Bearer ${secret}` }, socket: {} }, res);
 assert.equal(status, 503, 'DB absence must hold rather than returning the base bank');
 assert.ok(!body.packets);
 await handleMarketingSource({ method: 'GET', query: {}, headers: {}, socket: {} }, res);
 assert.equal(status, 401);
+// The first verified request above spent one token. Nineteen more verified
+// requests fit; different addresses cannot multiply the integration budget.
+for (let i = 0; i < 19; i++) {
+  await handleMarketingSource({ method: 'GET', query: { limit: '51' }, headers: {
+    authorization: `Bearer ${secret}`, 'x-forwarded-for': `verified-export-${i}` }, socket: {} }, res);
+  assert.equal(status, 400, 'verified integration still has its twenty-request budget');
+}
+await handleMarketingSource({ method: 'GET', query: { limit: '51' }, headers: {
+  authorization: `Bearer ${secret}`, 'x-forwarded-for': 'another-export-address' }, socket: {} }, res);
+assert.equal(status, 429, 'verified export is bounded across all addresses');
+assert.equal(body.error.code, 'rate_limited');
+assert.equal(checkRateLimit({ headers: {}, socket: {} } as never, res, RATE_LIMITS.quizSession, 'user:marketing-test-learner'), true,
+  'an exhausted integration cannot consume a learner quiz budget');
 console.log(`Marketing source contracts passed (${packets.length} authored questions, ${ACTIVE_CODING_TASKS.length} active tasks; edits, tombstones, no secret payloads, daily, pagination, auth, fail-closed DB).`);

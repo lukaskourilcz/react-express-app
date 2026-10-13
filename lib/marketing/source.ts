@@ -128,7 +128,7 @@ export async function handleMarketingSource(req: VercelRequest, res: VercelRespo
   if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSessionAddress))) return;
   if (!process.env.DEVSHARK_MARKETING_EXPORT_SECRET || process.env.DEVSHARK_MARKETING_EXPORT_SECRET.length < 32) return jsonError(res, 503, 'marketing_not_configured', 'Marketing source export is not configured');
   if (!authorizedExport(req.headers, process.env.DEVSHARK_MARKETING_EXPORT_SECRET)) return jsonError(res, 401, 'unauthorized', 'Invalid marketing integration');
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.quizSession, 'marketing:devshark'))) return;
+  if (!(await enforceRateLimit(req, res, RATE_LIMITS.marketingExport))) return;
   let query: ExportQuery;
   try { query = parseExportQuery(req.query); } catch { return jsonError(res, 400, 'bad_request', 'Invalid marketing source query'); }
   const now = new Date().toISOString();
