@@ -1079,8 +1079,8 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   const stored = (outcome.result ?? out) as SubmitActivityResponse;
   if (activity.kind === 'code' && stored.xpAwarded > 0 && outcome.coding?.xpKind !== 'repeat') {
     await creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId,canonicalTaskId), subject: 'webdev', xp: stored.xpAwarded });
-    await settleMilestones(supabase,userId,'webdev');
   }
+  if (activity.kind === 'code' && stored.state === 'verified_pass') await settleMilestones(supabase,userId,'webdev');
   return res.json({ ...stored, replayed: outcome.replayed === true });
 }
 
