@@ -1,56 +1,22 @@
-// Runs one React suite against one App module under jsdom, with the same
-// compiler and the same mini-jest the browser harness uses, so a verdict from
-// the server and a verdict from the learner's Run button are produced by the
-// same rules.
+// Trusted React/jsdom/Testing Library and suites live in a Node page realm.
+// Learner modules run in QuickJS/WASM through typed, serialized capabilities
+// (react-learner.ts). No learner object can reach the page realm's intrinsics,
+// DOM implementation, React internals, tests, matchers or result authority.
 //
-// This module is NOT a security boundary. Run it only for trusted reference
-// solutions in local tests, or inside the disposable microVM used by
-// react-isolated.ts. API handlers must never evaluate learner code here.
-//
-// The component, the suite and the fetch fixtures are evaluated in a separate
-// JavaScript realm (a node:vm context) whose global object holds the page:
-// jsdom's window and document, timers and a few web APIs. Node's `process`,
-// `require`, `module` and the host's global object are not on it, and code
-// generation from strings (`eval`, `Function(...)`) is switched off there, so
-// `Function('return this')()` cannot climb out to the host either. The guest
-// process (scripts/react-sandbox-entry.ts) also starts Node with
-// --disallow-code-generation-from-strings, so a host function reached through
-// jsdom or React cannot compile code with `.constructor` either. Learner code
-// therefore cannot write files, end the process or print the result itself.
-// It does reach this realm's objects through React and jsdom, so the guest
-// freezes this realm's built-ins before any learner code runs
-// (lib/coding/realm-lockdown.ts, called by scripts/react-sandbox-entry.ts),
-// and each case's promise is followed with the page's own `then` captured
-// before the suite ran. The component still shares the page realm with the
-// suite, so this is not a claim that no component can ever influence its own
-// verdict: see docs/react-grading-operations.md.
-//
-// Three details this module exists to get right:
-//
-//  * React exports `act` only from its DEVELOPMENT build, and Testing Library
-//    needs it. A serverless function runs with NODE_ENV=production, where a
-//    plain `require('react')` returns a build with no `act` at all — RTL then
-//    falls back to the `react-dom/test-utils` shim, which calls the missing
-//    `React.act` and throws on the first `render()`. The runtime is therefore
-//    loaded once with NODE_ENV pinned to development, and the value is put
-//    back immediately afterwards.
-//
-//  * jsdom, React and Testing Library are heavy. Everything here is imported
-//    lazily, so only a React submission pays for them; a JavaScript or
-//    TypeScript submission never loads a line of it.
-//
-//  * Node reports a promise nobody handled on `process`, which the page realm
-//    does not have. A suite that checks for them listens on `window`, as it
-//    would in a browser, so the runner forwards each one there as an
-//    `unhandledrejection` event.
+// This module is used for trusted local reference tests and inside a fresh,
+// network-denied microVM only. API handlers call react-isolated.ts; an outage
+// never falls back to in-process execution. React/RTL load lazily with the
+// development build needed by act. The suite's page keeps UTC and forwards
+// unhandled rejections to window, including the private learner Promise kernel.
 
 import { compileFunction, createContext, runInContext, type Context } from 'node:vm';
 import { types } from 'node:util';
 import { transform } from 'sucrase';
-import { asRunnableModule, failUncancelledSubmits, FETCH_STUB_SOURCE, type FormSubmitTarget } from '../../shared/coding-react-support';
+import { failUncancelledSubmits, FETCH_STUB_SOURCE, type FormSubmitTarget } from '../../shared/coding-react-support';
 import { createMiniJest, type MiniJestRun } from '../../shared/coding-mini-jest';
 import { LOCAL_FETCH_SOURCE } from '../../shared/coding-fullstack-support';
 import { UTC_TIME_SOURCE, type UtcTimeOptions } from '../../shared/coding-utc-time';
+import { createReactLearner, type ReactLearner } from './react-learner';
 
 /** How long one suite may take before it is called a timeout. */
 export const REACT_SUITE_TIMEOUT_MS = 5_000;
@@ -129,8 +95,10 @@ function createPageRealm(): Context {
   }
   Object.defineProperty(page, 'console', { value: runInContext(SILENT_CONSOLE, page), configurable: true, writable: true });
   const utcTime = runInContext(`(${UTC_TIME_SOURCE})`, page) as (date: unknown, options: UtcTimeOptions) => unknown;
-  const pageDate = utcTime(runInContext('Date', page), { inPlace: true, intl: runInContext('Intl', page) });
+  const intl=runInContext('Intl',page);
+  const pageDate = utcTime(runInContext('Date', page), { inPlace: true, intl });
   Object.defineProperty(page, 'Date', { value: pageDate, configurable: true, writable: true });
+  Object.defineProperty(page, 'Intl', { value: intl, configurable: true, writable: true });
   return page;
 }
 
@@ -283,41 +251,45 @@ export interface ReactSuiteOutcome extends MiniJestRun {
 }
 
 /** Runs `suite` against `appSource` (a component body or a full module). */
-export async function runReactSuite(input: { suite: string; appSource: string }): Promise<ReactSuiteOutcome> {
+export async function runReactSuite(input: { suite: string; appSource: string; compiledApp?: string; compiledFixtures?: Record<string,string> }): Promise<ReactSuiteOutcome> {
   const { testing, modules, window: pageWindow } = await ensureRuntime();
   const jest = createMiniJest();
   const page = createPageRealm();
   const follow = followInPage(page);
   let compileError: string | null = null;
   let appModule: unknown = null;
+  let learner: ReactLearner | undefined;
+  try {
+    const { compileReactLearner } = input.compiledApp ? {compileReactLearner:undefined} : await import('./react-transpile');
+    learner = await createReactLearner({
+      source: input.compiledApp ?? compileReactLearner!(input.appSource), page, modules,
+      fixtures: input.compiledFixtures ?? {'./fetchStub':compileReactLearner!(FETCH_STUB_SOURCE,false),'./localFetch':compileReactLearner!(LOCAL_FETCH_SOURCE,false)},
+      makeError:runInContext('(message,name)=>{const error=new Error(message);error.name=name;return error;}',page),
+      report: (type,reason) => {
+        if(type==='unhandled') ignoreRejection(reason,undefined);
+        else if(type==='callback-error') ignoreRejection(reason,undefined);
+      },
+    });
+    appModule=learner.exports;
+  } catch(error) {
+    compileError=`compiling App: ${(error as Error).message.split('\n')[0]}`;
+    appModule={__esModule:true,default:()=>null};
+  }
 
   const resolve = (request: string): unknown => {
     if (request === './App' || request === './App.js' || request === './App.jsx') {
       if (appModule) return appModule;
-      try {
-        appModule = runModule(page, asRunnableModule(input.appSource), resolveForApp);
-      } catch (error) {
-        compileError = `compiling App: ${(error as Error).message.split('\n')[0]}`;
-        appModule = { default: () => null };
-      }
-      return appModule;
+      return {default:()=>null};
     }
     if (request === './fetchStub' || request === './fetchStub.js') return runModule(page, FETCH_STUB_SOURCE, resolve);
     if (request === './localFetch') return runModule(page, LOCAL_FETCH_SOURCE, resolve);
     if (request in modules) return modules[request];
     throw new Error(`Cannot find module '${request}'`);
   };
-  // The component gets React and the fixtures, never Testing Library: with
-  // it, a component could reconfigure how the suite's queries and waits run.
-  const resolveForApp = (request: unknown): unknown => {
-    const name = String(request);
-    if (name.startsWith('@testing-library/')) throw new Error(`Cannot find module '${name}'`);
-    return resolve(name);
-  };
-
   try {
     runModule(page, input.suite, resolve, jest.globals);
   } catch (error) {
+    learner?.dispose();
     return {
       cases: [], passed: 0, failed: 1, total: 1, timedOut: false,
       compileError: `compiling suite: ${(error as Error).message.split('\n')[0]}`,
@@ -334,6 +306,7 @@ export async function runReactSuite(input: { suite: string; appSource: string })
   } finally {
     holdRejections(false);
     stopWatchingSubmits();
+    learner?.dispose();
   }
   // A case that threw has an error, even an empty one. Mini-jest reads an
   // empty message as no error, so a component that threw `new Error('')`
@@ -345,7 +318,7 @@ export async function runReactSuite(input: { suite: string; appSource: string })
     const passed = cases.filter((one) => one.status === 'pass').length;
     run = { cases, passed, failed: cases.length - passed, total: cases.length };
   }
-  const timedOut = run.cases.some((one) => one.status === 'fail' && /timed out/i.test(one.error ?? ''));
+  const timedOut = /interrupted/i.test(compileError??'') || run.cases.some((one) => one.status === 'fail' && /timed out|interrupted/i.test(one.error ?? ''));
   if (run.total === 0) {
     return { ...run, failed: 1, total: 1, timedOut, compileError: compileError ?? 'suite registered no test cases' };
   }

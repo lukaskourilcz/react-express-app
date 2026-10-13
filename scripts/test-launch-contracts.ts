@@ -49,6 +49,9 @@ import { runInSandbox, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { TS_CHECK_WORKER_FILE } from '../lib/coding/ts-check-pool';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 import { runReactSuite } from '../lib/coding/react-runner';
+import { compileReactLearner } from '../lib/coding/react-transpile';
+import { FETCH_STUB_SOURCE } from '../shared/coding-react-support';
+import { LOCAL_FETCH_SOURCE } from '../shared/coding-fullstack-support';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { GUEST_CRASHED_MESSAGE, GUEST_ENV, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
 import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
@@ -3787,9 +3790,9 @@ async function main() {
     const dir = mkdtempSync(join(tmpdir(), 'react-guest-'));
     const input = join(dir, 'input.json');
     const nonce = randomBytes(24).toString('hex');
-    writeFileSync(input, JSON.stringify({ suite, appSource, nonce }));
+    writeFileSync(input, JSON.stringify({ suite, appSource, nonce, compiledApp:compileReactLearner(appSource),compiledFixtures:{'./fetchStub':compileReactLearner(FETCH_STUB_SOURCE,false),'./localFetch':compileReactLearner(LOCAL_FETCH_SOURCE,false)} }));
     const command = spawnSync(process.execPath, [...GUEST_NODE_FLAGS, join(process.cwd(), 'lib/coding/generated/react-sandbox.cjs'), input], {
-      cwd: dir, encoding: 'utf8', timeout: 30_000, env: { ...process.env, ...GUEST_ENV, ...env },
+      cwd: dir, encoding: 'utf8', timeout: 10_000, env: { ...process.env, ...GUEST_ENV, ...env },
     });
     const left = readdirSync(dir);
     rmSync(dir, { recursive: true, force: true });
@@ -3816,7 +3819,7 @@ async function main() {
   ].join('\n'));
   assert.deepEqual(forged.left, [], 'the forged component wrote nothing');
   const forgedResult = readGuestResult(forged.stdout, forged.nonce, guestSuite);
-  assert.ok(forgedResult.passed === 0 && /process is not defined/.test(forgedResult.compileError ?? ''), JSON.stringify(forgedResult));
+  assert.ok(forgedResult.passed === 0 && /'?process'? is not defined/.test(forgedResult.compileError ?? ''), JSON.stringify(forgedResult));
   // A host function the component can reach compiles nothing either, and a
   // verdict line printed through the page's window.console is ignored.
   const escape = guest(guestSuite, [
@@ -3827,7 +3830,7 @@ async function main() {
   ].join('\n'));
   assert.deepEqual(escape.left, [], 'a host function gave the component nothing to write with');
   const escapeResult = readGuestResult(escape.stdout, escape.nonce, guestSuite);
-  assert.ok(escapeResult.passed === 0 && /Code generation from strings disallowed/.test(escapeResult.compileError ?? ''), JSON.stringify(escapeResult));
+  assert.ok(escapeResult.passed === 0 && /Dynamic code generation is disabled/.test(escapeResult.compileError ?? ''), JSON.stringify(escapeResult));
 
   // C1-6: a guest the learner's code ended is that code's error, not a grader
   // outage. A component that throws a value with no readable message now
@@ -3841,10 +3844,10 @@ async function main() {
   const nullThrowResult = readGuestRun(nullThrow.exitCode, nullThrow.stdout, nullThrow.nonce, guestSuite);
   assert.ok(nullThrowResult.passed === 0 && nullThrowResult.compileError === null, JSON.stringify(nullThrowResult));
   const exhausted = guest(guestSuite, 'export default function App() { const held = []; for (;;) held.push(new Array(1e6).fill(0)); }');
-  assert.notEqual(exhausted.exitCode, 0, 'a component that uses up the heap ends the guest');
+  assert.notEqual(exhausted.exitCode, 0, 'a component exhausting resources is stopped by the external guest deadline');
   const exhaustedResult = readGuestRun(exhausted.exitCode, exhausted.stdout, exhausted.nonce, guestSuite);
   assert.ok(exhaustedResult.passed === 0 && exhaustedResult.failed > 0, JSON.stringify(exhaustedResult));
-  assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'the learner reads that their code stopped the runner');
+  assert.equal(exhaustedResult.compileError, GUEST_CRASHED_MESSAGE, 'resource exhaustion never becomes a passing result');
   // The guest reads UTC: the API starts it with TZ=UTC, and its page realm
   // installs UTC whatever the process zone is.
   for (const env of [{}, { TZ: 'America/Los_Angeles' }, { TZ: 'Asia/Tokyo' }, { TZ: 'Australia/Lord_Howe' }] as Record<string, string>[]) {
@@ -3893,7 +3896,7 @@ async function main() {
     assert.equal(attempt.status, 0, `${name}: the guest printed a verdict`);
     const verdict = readGuestResult(attempt.stdout, attempt.nonce, guestSuite);
     assert.equal(verdict.passed, 0, `${name}: forged ${verdict.passed} passing case(s): ${JSON.stringify(verdict)}`);
-    assert.match(verdict.compileError ?? '', /not extensible|read only|Cannot (?:define|redefine|assign|add)/, `${name}: the built-in refused the change: ${verdict.compileError}`);
+    assert.match(verdict.compileError ?? '', /not extensible|read[- ]only|Cannot (?:define|redefine|assign|add)/, `${name}: the built-in refused the change: ${verdict.compileError}`);
   }
   // In its own realm the component may replace Promise.prototype.then. The
   // runner follows a case's promise with the then it captured before the
