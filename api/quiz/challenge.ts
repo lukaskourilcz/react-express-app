@@ -33,7 +33,6 @@ import { itemReview } from '../../lib/curation';
 
 const BATCH_SIZE = 25;
 const MAX_EXCLUDE = 500;
-const MAX_NAME = 40;
 const MAX_SCORE = 1000;
 
 const logEvent = createLogger('quiz/challenge');
@@ -45,7 +44,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // ── POST: submit a finished run's score to the leaderboard ──
   if (req.method === 'POST') {
     if (resource === 'complete') return handleCompleteRun(req, res);
-    return handleSubmitScore(req, res);
+    return jsonError(res, 409, 'automatic_score', 'Completed Challenge scores are saved automatically');
   }
 
   if (req.method !== 'GET') {
@@ -109,30 +108,30 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
   if (assessment && suppliedRunToken) {
     return jsonError(res, 400, 'bad_request', 'Assessment sessions cannot reuse challenge runs');
   }
-  const ranked = req.query.ranked !== '0';
-  const run = assessment
-    ? null
-    : suppliedRunToken
-    ? decodeChallengeRun(suppliedRunToken)
-    : createChallengeRun(ranked, scope.subject);
-  if (!assessment && (!run || run.subject !== scope.subject)) return jsonError(res, 400, 'invalid_run', 'Challenge run expired or invalid');
-  if (!assessment && suppliedRunToken && run && run.ranked !== ranked) {
-    return jsonError(res, 400, 'invalid_run_mode', 'Challenge run mode cannot change');
-  }
-  const runToken = assessment ? '' : suppliedRunToken || (run && 'runToken' in run ? run.runToken : '');
-  const catSet = new Set(scope.categories);
-
+  if (!assessment && req.query.ranked === '0') return jsonError(res, 400, 'invalid_run_mode', 'Challenge allows 90 seconds per question');
   const lang = normalizeLang(req.query.lang);
   const all = await getEffectiveQuestions(scope.subject, lang === 'cs');
-  const pool = all.filter(
-    (q) =>
-      !PRIVATE_CATEGORIES.includes(q.category) &&
-      !excludeSet.has(q.id) &&
-      catSet.has(q.category),
-  );
-  if (pool.length === 0) {
-    return jsonError(res, 404, 'no_questions', 'No challenge questions available');
+  const deliverable = new Set(defaultDeploymentCategories());
+  const available: string[] = [...new Set(all.filter(q => deliverable.has(q.category) && !PRIVATE_CATEGORIES.includes(q.category)).map(q => q.category))].sort();
+  const topics = scope.categories.filter(topic => available.includes(topic)).sort();
+  if (topics.length === 0) return jsonError(res, 404, 'no_questions', 'No challenge questions available');
+  let auth;
+  try { auth = assessment ? null : await tryAuth(req); }
+  catch (error) {
+    if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
+    throw error;
   }
+  const run = assessment ? null : suppliedRunToken ? decodeChallengeRun(suppliedRunToken)
+    : createChallengeRun(true, scope.subject, { topics, allTopics: available.length === topics.length && available.every(topic => topics.includes(topic)), userId: auth?.sub ?? null });
+  if (!assessment && (!run || run.subject !== scope.subject || !run.ranked)) return jsonError(res, 400, 'invalid_run', 'Challenge run expired or invalid');
+  if (run && 'userId' in run && run.userId !== (auth?.sub ?? null)) return jsonError(res, 400, 'invalid_run', 'Challenge run belongs to another session');
+  if (suppliedRunToken && run && run.topics && (run.topics.length !== topics.length || run.topics.some(topic => !topics.includes(topic)))) {
+    return jsonError(res, 400, 'invalid_run_scope', 'Challenge topics cannot change during a run');
+  }
+  const runToken = assessment ? '' : suppliedRunToken || (run && 'runToken' in run ? run.runToken : '');
+  const catSet = new Set(run?.topics ?? topics);
+  const pool = all.filter(q => !PRIVATE_CATEGORIES.includes(q.category) && !excludeSet.has(q.id) && catSet.has(q.category));
+  if (pool.length === 0) return jsonError(res, 404, 'no_questions', 'No challenge questions available');
 
   const weight = (q: Question) => q.importance ?? 5;
   const batchSize = assessment ? ASSESSMENT_QUESTION_COUNT : BATCH_SIZE;
@@ -169,76 +168,6 @@ async function handleQuestionBatch(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Cache-Control', 'private, no-store');
   logEvent({ status: 200, kind: assessment ? 'assessment' : 'batch', count: questions.length, excluded: excludeSet.size });
   res.json({ sessionId, runToken, questions });
-}
-
-async function handleSubmitScore(req: VercelRequest, res: VercelResponse) {
-  // Throttled so a script can't flood the Hall of Fame. Legit humans finish
-  // ~90s runs, so 10 posts / hour with a small burst is generous. The address
-  // bucket holds a class; the per-person limit is taken below, per account,
-  // or per sealed run for a caller without one.
-  if (!(await enforceRateLimit(req, res, RATE_LIMITS.challengeScore))) return;
-
-  const body = (req.body || {}) as { name?: unknown; runToken?: unknown; proofs?: unknown };
-  const name = typeof body.name === 'string' ? body.name.trim().slice(0, MAX_NAME) : '';
-  if (!name) return jsonError(res, 400, 'bad_request', 'name is required');
-
-  if (typeof body.runToken !== 'string') {
-    return jsonError(res, 400, 'bad_request', 'runToken is required');
-  }
-  const run = decodeChallengeRun(body.runToken);
-  if (!run || !deploymentSubjectIds().includes(run.subject)) {
-    return jsonError(res, 400, 'invalid_run', 'Challenge run expired, invalid, or belongs to another product');
-  }
-  if (!run.ranked) return jsonError(res, 400, 'practice_run', 'Practice-pace runs are not ranked');
-  if (!Array.isArray(body.proofs) || body.proofs.length > MAX_SCORE) {
-    return jsonError(res, 400, 'bad_request', 'proofs must be an array');
-  }
-
-  const seen = new Set<string>();
-  let score = 0;
-  let failures = 0;
-  for (const value of body.proofs) {
-    if (typeof value !== 'string') return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
-    const proof = decodeScoreProof(value);
-    if (!proof || proof.runId !== run.runId || proof.subject !== run.subject) {
-      return jsonError(res, 400, 'invalid_proof', 'Invalid score proof');
-    }
-    if (seen.has(proof.questionId)) continue;
-    seen.add(proof.questionId);
-    if (proof.isCorrect) score++;
-    else failures++;
-  }
-  if (failures !== 3) {
-    return jsonError(res, 400, 'incomplete_run', 'A ranked run must include its three terminal strikes');
-  }
-
-  // Optional auth — when signed in, attribute the run so later dedupe is possible.
-  // Anonymous submissions still land on the board.
-  let auth;
-  try {
-    auth = await tryAuth(req);
-  } catch (error) {
-    if (error instanceof AuthError) return jsonError(res, error.status, error.code, error.message);
-    throw error;
-  }
-  const userId = auth?.sub ?? null;
-  // Without an account the run sealed in the token is the caller, at the
-  // same budget, so guests behind one school address do not share one.
-  const withinCallerLimit = auth
-    ? await enforceRateLimit(req, res, RATE_LIMITS.challengeScorePerUser, `user:${auth.sub}`)
-    : await enforceRateLimit(req, res, RATE_LIMITS.challengeScorePerUser, `run:${run.runId}`);
-  if (!withinCallerLimit) return;
-
-  try {
-    const record = await recordChallengeScore({
-      name, score, runId: run.runId, subject: run.subject, userId,
-    });
-    if (!record) return jsonError(res, 500, 'db_error', 'Could not save score');
-    logEvent({ status: 200, kind: 'submit', score, hasUser: !!userId });
-    return res.json({ ok: true, record });
-  } catch {
-    return jsonError(res, 503, 'leaderboard_unavailable', 'Could not save the score right now');
-  }
 }
 
 async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
@@ -283,7 +212,15 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     ? await enforceRateLimit(req, res, RATE_LIMITS.challengeCompletePerUser, `user:${auth.sub}`)
     : await enforceRateLimit(req, res, RATE_LIMITS.challengeCompletePerUser, `run:${run.runId}`);
   if (!withinCallerLimit) return;
-  if (!auth) return res.json({ ok: true, awarded: false, score });
+  if ('userId' in run && run.userId !== (auth?.sub ?? null)) return jsonError(res, 400, 'invalid_run', 'Challenge run belongs to another session');
+  if (score <= 0) return res.json({ ok: true, awarded: false, score, xp: 0, record: null });
+  let record;
+  try {
+    record = await recordChallengeScore({ score, runId: run.runId, subject: run.subject, userId: auth?.sub ?? null, topics: run.topics, allTopics: run.allTopics });
+  } catch {
+    return jsonError(res, 503, 'leaderboard_unavailable', 'Could not save the score right now');
+  }
+  if (!auth) return res.json({ ok: true, awarded: false, score, record });
   if (!supabase) return jsonError(res, 503, 'not_configured', 'Account progress is not configured');
   // Only server-proven correct answers earn XP. Merely creating/ending a run
   // (including an all-timeout run) must never be a farmable base award.
@@ -351,7 +288,7 @@ async function handleCompleteRun(req: VercelRequest, res: VercelResponse) {
     // milestone may have just been reached. Idempotent; a failure costs nothing.
     await settleMilestones(supabase, auth.sub, run.subject);
   }
-  return res.json({ ok: true, awarded: data === true, score, xp: data === true ? awardedXp : xp, ...(xpHeld ? { xpHeld } : {}) });
+  return res.json({ ok: true, awarded: data === true, score, record, xp: data === true ? awardedXp : xp, ...(xpHeld ? { xpHeld } : {}) });
 }
 
 /** The XP a completed run was awarded (verified_activity_awards). */

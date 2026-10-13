@@ -42,6 +42,7 @@ BEGIN
     (v_legacy, 'Legacy', TRUE), (v_four, 'Four answers', TRUE);
   UPDATE public.user_stats SET show_on_leaderboards = TRUE WHERE user_id = v_quiz;
 
+  UPDATE public.user_handles h SET leaderboard_name_mode='account', leaderboard_account_name=u.name FROM public.user_stats u WHERE u.user_id=h.user_id AND u.name IS NOT NULL;
   SELECT string_agg(display_name || ' ' || total_correct || '/' || total_questions, ', ' ORDER BY n) INTO v_board
     FROM public.subject_leaderboard(ARRAY['html', 'css', 'javascript'], 100)
          WITH ORDINALITY AS b(display_name, picture, total_correct, total_questions, accuracy_pct, n);

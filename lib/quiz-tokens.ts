@@ -56,6 +56,9 @@ interface ChallengeRunPayload {
   runId: string;
   ranked: boolean;
   subject: ScopeSubjectId;
+  topics?: string[];
+  allTopics?: boolean;
+  userId?: string | null;
   iat: number;
   exp: number;
 }
@@ -362,16 +365,20 @@ export function stableAttemptId(...parts: string[]): string {
   return createHmac('sha256', TOKEN_KEY).update(parts.join('\u001f'), 'utf8').digest('base64url').slice(0, 32);
 }
 
-export function createChallengeRun(ranked = true, subject: ScopeSubjectId = 'webdev') {
+export function createChallengeRun(ranked = true, subject: ScopeSubjectId = 'webdev', evidence?: { topics: string[]; allTopics: boolean; userId: string | null }) {
   const now = Date.now();
   const runId = b64url(randomBytes(18));
-  return { runId, ranked, subject, runToken: sealToken({ kind: 'challenge-run', runId, ranked, subject, iat: now, exp: now + CHALLENGE_TTL_MS }) };
+  return { runId, ranked, subject, ...evidence, runToken: sealToken({ kind: 'challenge-run', runId, ranked, subject, ...evidence, iat: now, exp: now + CHALLENGE_TTL_MS }) };
 }
 
-export function decodeChallengeRun(token: string): { runId: string; ranked: boolean; subject: ScopeSubjectId } | null {
+export function decodeChallengeRun(token: string): { runId: string; ranked: boolean; subject: ScopeSubjectId; topics: string[] | null; allTopics: boolean | null; userId?: string | null } | null {
   const payload = openToken(token) as Partial<ChallengeRunPayload> | null;
   if (!payload || payload.kind !== 'challenge-run' || !validLifetime(payload, CHALLENGE_TTL_MS) || typeof payload.runId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.runId) || typeof payload.ranked !== 'boolean' || !isScopeSubject(payload.subject)) return null;
-  return { runId: payload.runId, ranked: payload.ranked, subject: payload.subject };
+  const topics = Array.isArray(payload.topics) && payload.topics.length > 0 && payload.topics.every(topic => typeof topic === 'string') ? payload.topics : null;
+  if ((topics !== null) !== (typeof payload.allTopics === 'boolean')) return null;
+  if (payload.userId !== undefined && payload.userId !== null && typeof payload.userId !== 'string') return null;
+  return { runId: payload.runId, ranked: payload.ranked, subject: payload.subject, topics, allTopics: topics ? payload.allTopics! : null,
+    ...(payload.userId !== undefined ? { userId: payload.userId } : {}) };
 }
 
 export function encodeScoreProof(runId: string, questionId: string, subject: ScopeSubjectId, isCorrect: boolean): string {

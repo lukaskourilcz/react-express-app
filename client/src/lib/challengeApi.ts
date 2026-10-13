@@ -22,6 +22,8 @@ export interface ChallengeScore {
   name: string;
   score: number;
   createdAt: string;
+  topics?: string[] | null;
+  allTopics?: boolean | null;
 }
 
 export interface ChallengeLeaderboard {
@@ -29,7 +31,7 @@ export interface ChallengeLeaderboard {
   champion: ChallengeScore | null;
 }
 
-export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; runToken?: string; ranked?: boolean; assessment?: boolean } = {}): Promise<ChallengeBatch> {
+export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; runToken?: string; ranked?: boolean; assessment?: boolean; categories?: string[] } = {}): Promise<ChallengeBatch> {
   const params = new URLSearchParams();
   if (opts.exclude && opts.exclude.length > 0) {
     // Cap the exclude payload — the server caps too, but no need to send more.
@@ -41,7 +43,7 @@ export function fetchChallengeBatch(opts: { exclude?: string[]; lang?: string; r
   if (opts.assessment) params.set('resource', 'assessment');
   // Scope the challenge mix to the subject's served categories. A retired
   // section in the list gets the whole request refused.
-  params.set('categories', deliveryCategoriesForSubject(getSubject()).join(','));
+  params.set('categories', (opts.categories ?? deliveryCategoriesForSubject(getSubject())).join(','));
   const qs = params.toString();
   return apiFetch<ChallengeBatch>(`/api/quiz/challenge${qs ? `?${qs}` : ''}`);
 }
@@ -54,17 +56,10 @@ export function getChallengeLeaderboard(): Promise<ChallengeLeaderboard> {
   return apiFetch<ChallengeLeaderboard>(`/api/quiz/challenge?${params}`);
 }
 
-export function submitChallengeScore(input: { name: string; runToken: string; proofs: string[] }): Promise<{ ok: true; record: ChallengeScore | null }> {
-  return apiFetch<{ ok: true; record: ChallengeScore | null }>('/api/quiz/challenge', {
-    method: 'POST',
-    body: JSON.stringify(input),
-  });
-}
-
 /** `xpHeld`: the correct answers whose question paid XP less than an hour
  * ago, which paid nothing, and when they pay again (migration 060). */
-export async function completeChallengeRun(input: { runToken: string; proofs: string[] }): Promise<{ ok: true; awarded: boolean; score: number; xp?: number; xpHeld?: QuestionXpHeld }> {
-  const result = await apiFetch<{ ok: true; awarded: boolean; score: number; xp?: number; xpHeld?: QuestionXpHeld }>('/api/quiz/challenge?resource=complete', {
+export async function completeChallengeRun(input: { runToken: string; proofs: string[] }): Promise<{ ok: true; awarded: boolean; score: number; xp?: number; xpHeld?: QuestionXpHeld; record?: ChallengeScore | null }> {
+  const result = await apiFetch<{ ok: true; awarded: boolean; score: number; xp?: number; xpHeld?: QuestionXpHeld; record?: ChallengeScore | null }>('/api/quiz/challenge?resource=complete', {
     method: 'POST',
     body: JSON.stringify(input),
   });

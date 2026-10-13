@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import SharknameCard from '../src/components/SharknameCard';
-import { hasSharkWord } from '../../shared/sharkname';
+import { hasSharkWord, numberedSharkname } from '../../shared/sharkname';
 import { isValidHandle } from '../../shared/handles';
 import { server } from './mocks/server';
 
@@ -90,7 +90,7 @@ describe('your sharkname', () => {
     expect(input).toHaveValue('sleepySharkie');
     fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
     const base = (input as HTMLInputElement).value;
-    expect(container.querySelector('.sn-plate')).toHaveTextContent(`${base}9007199254740993`);
+    expect(container.querySelector('.sn-plate')).toHaveTextContent(numberedSharkname(base, '9007199254740993'));
     expect(handlePuts).toEqual([]);
   });
   it('shows the current sharkname in the field', async () => {

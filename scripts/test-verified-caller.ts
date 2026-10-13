@@ -112,6 +112,8 @@ async function startStandIns() {
     seen.push({ method: req.method ?? 'GET', path: url.pathname, filters, body });
     const rpc = /^\/rest\/v1\/rpc\/([a-z0-9_]+)$/.exec(url.pathname)?.[1];
     if (rpc) {
+      if (rpc === 'allocate_shark_name') return send(200, { handle: 'sleepySharkie17', ordinal: '17', base: 'sleepySharkie' });
+      if (rpc === 'save_completed_challenge_score') return send(200, { id: 'score-17', name: 'sleepySharkie17', score: (body as Row).p_score, selected_topics: (body as Row).p_topics, all_topics: (body as Row).p_all_topics, created_at: new Date().toISOString() });
       // The Premium check: account A is Premium, so every coding task opens.
       if (rpc === 'is_premium') return send(200, (body as Row | undefined)?.p_user === A.id);
       if (rpc.endsWith('leaderboard') || rpc === 'friend_lookup') return send(200, []);
@@ -119,6 +121,7 @@ async function startStandIns() {
     }
     if (url.pathname.startsWith('/rest/v1/')) {
       const single = String(req.headers.accept ?? '').includes('vnd.pgrst.object');
+      if (url.pathname === '/rest/v1/user_handles' && req.method === 'GET') return send(200, single ? { leaderboard_name_mode: 'nickname' } : []);
       if (req.method === 'POST' || req.method === 'PATCH') {
         const row = (Array.isArray(body) ? body[0] : body) as Row;
         return send(201, single ? row : [row]);
@@ -191,6 +194,7 @@ async function main() {
       rateLimit,
       http,
       { CODING_TASKS },
+      { default: challenge },
     ] = await Promise.all([
       import('../api/user/[op]'),
       import('../api/quiz/roadmap'),
@@ -202,6 +206,7 @@ async function main() {
       import('../lib/rate-limit'),
       import('../lib/http'),
       import('../lib/coding/catalog'),
+      import('../api/quiz/challenge'),
     ]);
 
     type Handler = (req: never, res: never) => unknown;
@@ -220,6 +225,41 @@ async function main() {
       call(userOps as Handler, { ...input, query: { op, ...(input.query ?? {}) } });
     const reads = (path: string) => seen.filter((one) => one.path === path);
     const errorCode = (res: Response) => (res.body as { error?: { code?: string } } | undefined)?.error?.code;
+
+    // Leaderboard identity is independent of friends and cannot publish a full email.
+    seen.length = 0;
+    const preference = await user('leaderboard-name', { method: 'PUT', account: EMAIL, body: { mode: 'account', accountName: 'spoof@example.com', user_id: B.id } });
+    assert.equal(preference.statusCode, 200, JSON.stringify(preference.body));
+    assert.deepEqual(preference.body, { mode: 'account', nickname: 'sleepySharkie17', accountName: 'ada', showPhoto: false, picture: null });
+    const preferenceWrite = reads('/rest/v1/user_handles').find(row => row.method === 'PATCH');
+    assert.equal(preferenceWrite?.filters.user_id, EMAIL.id);
+    assert.deepEqual(preferenceWrite?.body, { leaderboard_name_mode: 'account', leaderboard_account_name: 'ada' });
+    assert.ok(!seen.some(row => row.path === '/rest/v1/rpc/set_friend_display'));
+    const unavailable = await user('leaderboard-name', { method: 'PUT', account: LISTED_UNCONFIRMED, body: { mode: 'account' } });
+    assert.equal(unavailable.statusCode, 409);
+    assert.equal(errorCode(unavailable), 'account_name_unavailable');
+    console.log('PASS verified caller: leaderboard names use the verified profile or confirmed email prefix, independently of friends');
+
+    // Completion writes positive scores automatically; zero allocates nothing.
+    const completedRun = tokens.createChallengeRun(true, 'webdev', { topics: ['javascript'], allTopics: false, userId: null });
+    const strikes = ['a','b','c'].map(id => tokens.encodeScoreProof(completedRun.runId, id, 'webdev', false));
+    seen.length = 0;
+    const zero = await call(challenge as Handler, { method: 'POST', query: { resource: 'complete' }, body: { runToken: completedRun.runToken, proofs: strikes } });
+    assert.equal(zero.statusCode, 200);
+    assert.equal(reads('/rest/v1/rpc/save_completed_challenge_score').length, 0);
+    assert.equal(reads('/rest/v1/rpc/allocate_shark_name').length, 0);
+    const positive = await call(challenge as Handler, { method: 'POST', query: { resource: 'complete' }, body: { runToken: completedRun.runToken, proofs: [...strikes, tokens.encodeScoreProof(completedRun.runId, 'right', 'webdev', true)], name: 'spoofed' } });
+    assert.equal(positive.statusCode, 200, JSON.stringify(positive.body));
+    const scoreWrite = reads('/rest/v1/rpc/save_completed_challenge_score')[0].body as Row;
+    assert.equal(scoreWrite.p_score, 1);
+    assert.equal(scoreWrite.p_user_id, null);
+    assert.deepEqual(scoreWrite.p_topics, ['javascript']);
+    assert.equal(scoreWrite.p_all_topics, false);
+    assert.equal(scoreWrite.name, undefined);
+    const foreignRun = await call(challenge as Handler, { method: 'POST', account: B, query: { resource: 'complete' }, body: { runToken: completedRun.runToken, proofs: [...strikes, tokens.encodeScoreProof(completedRun.runId, 'right', 'webdev', true)] } });
+    assert.equal(foreignRun.statusCode, 400);
+    assert.equal(reads('/rest/v1/rpc/save_completed_challenge_score').length, 1);
+    console.log('PASS verified caller: completed positive Challenge runs save automatically; zero and foreign sessions write nothing');
 
     // ── a token for A with a user_id of B acts for A ──────────────────────
     seen.length = 0;

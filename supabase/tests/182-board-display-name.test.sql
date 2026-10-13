@@ -51,8 +51,10 @@ BEGIN
   -- sharkname still shows.
   PERFORM public.set_friend_display(v_email, TRUE, NULL);
 
+  UPDATE public.user_handles SET leaderboard_name_mode='account',leaderboard_account_name='Nora Named' WHERE user_id=v_named;
+  UPDATE public.user_handles SET leaderboard_name_mode='account',leaderboard_account_name='Noel Nohandle' WHERE user_id=v_nohdl;
   v_expected := format(
-    'thirsty-sharkie-182/%1$ssam, Nora Named/%1$snora, fin-de-fiesta-182/-, Noel Nohandle/%1$snoel, -/-',
+    'thirsty-sharkie-182/%1$ssam, Nora Named/%1$snora, fin-de-fiesta-182/-, Noel Nohandle/%1$snoel, mucho-chomp-shark-182/-',
     v_photo);
 
   SELECT concat_ws(' | ',
@@ -73,12 +75,14 @@ BEGIN
   ASSERT public.board_display_name(v_named) = 'Nora Named', 'the Google name when chosen';
   ASSERT public.board_display_name(v_email) = 'fin-de-fiesta-182', 'an email account by its sharkname';
   ASSERT public.board_display_name(v_nohdl) = 'Noel Nohandle', 'no sharkname: the consented name';
-  ASSERT public.board_display_name(v_hidden) IS NULL, 'consent off: no name, whatever else is chosen';
+  ASSERT public.board_display_name(v_hidden) = 'mucho-chomp-shark-182', 'friend identity and photo consent cannot opt out of the board';
   ASSERT public.board_display_name('aaaaaaaa-0000-4000-8000-000000000192') IS NULL, 'no stats row: no name';
 
   -- Switching the name choice back moves every board at once; the photo
   -- stays where the leaderboard switch put it.
   PERFORM public.set_friend_display(v_named, FALSE, NULL);
+  ASSERT public.board_display_name(v_named)='Nora Named', 'friend name changes do not change the board';
+  UPDATE public.user_handles SET leaderboard_name_mode='nickname' WHERE user_id=v_named;
   SELECT COALESCE(display_name, '-') || '/' || COALESCE(picture, '-') INTO v_name
     FROM public.window_leaderboard(30, 100, NULL, 5, v_named) WHERE is_viewer;
   ASSERT v_name = format('el-tiburon-loco-182/%snora', v_photo),
@@ -88,7 +92,7 @@ BEGIN
   UPDATE public.user_stats SET show_on_leaderboards = FALSE WHERE user_id = v_email;
   SELECT COALESCE(display_name, '-') INTO v_name
     FROM public.subject_leaderboard(ARRAY['javascript'], 100) WHERE total_correct = 8;
-  ASSERT v_name = '-', format('switching consent off hides the sharkname too; got %s', v_name);
+  ASSERT v_name = 'fin-de-fiesta-182', format('switching consent off hides the sharkname too; got %s', v_name);
 
   ASSERT NOT has_function_privilege('authenticated', 'public.board_display_name(text)', 'EXECUTE'),
     'board_display_name is service-role only';

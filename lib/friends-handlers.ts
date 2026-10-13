@@ -130,7 +130,8 @@ export async function handleFriends(
         return res.json({ country: (data as string | null) ?? null });
       }
       const raw = body.base ?? body.handle;
-      const base = typeof raw === 'string' && raw.trim() ? camelSharkBase(raw.trim()) : '';
+      const base = typeof raw === 'string' && isValidHandle(raw.trim())
+        ? body.base !== undefined ? raw.trim() : camelSharkBase(raw.trim()) : '';
       if (!isAllowedSharkBase(base)) return jsonError(res, 400, 'invalid_handle', KNOWN.invalid_handle.message);
       let allocation;
       try { allocation = await allocateSharkName(supabase, { userId, base, replace: true }); }

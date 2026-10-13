@@ -270,7 +270,7 @@ it('drops the “You” mark from an offline copy an older version saved', async
 // ── Names on the public boards (migration 049) ──────────────────────────────
 
 const PAT = { id: 'user-1', user_metadata: { full_name: 'Pat Example' } };
-const SWITCH = 'Show my name and photo on leaderboards';
+const SWITCH = /Account name/;
 
 it('shows a learner who has not switched their name on as “Learner”, with the default avatar', async () => {
   server.use(http.get('*/api/leaderboard', () => HttpResponse.json({
@@ -293,17 +293,16 @@ it('names the learner’s own pinned line only while they are switched on', asyn
   server.use(leaderboardHandlers.pinned, visibilityHandler(false));
   const hidden = await mount();
   const pinned = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
-  expect(within(pinned).getByText('Learner')).toBeVisible();
+  expect(within(pinned).getByText('sleepySharkie1')).toBeVisible();
   expect(within(pinned).getByText('You')).toBeVisible();
-  expect(screen.queryByText('Pat Example')).toBeNull();
-  expect(await screen.findByRole('switch', { name: SWITCH })).not.toBeChecked();
+  expect(await screen.findByRole('radio', { name: SWITCH })).not.toBeChecked();
   hidden.unmount();
 
   server.use(visibilityHandler(true));
   await mount();
   const shown = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
   expect(within(shown).getByText('Pat Example')).toBeVisible();
-  expect(await screen.findByRole('switch', { name: SWITCH })).toBeChecked();
+  expect(await screen.findByRole('radio', { name: SWITCH })).toBeChecked();
 });
 
 it('switches the learner’s name on from the board and reloads their own line at once', async () => {
@@ -321,16 +320,16 @@ it('switches the learner’s name on from the board and reloads their own line a
       return HttpResponse.json({ ...leaderboardData, entries: [own, leaderboardData.entries[1]], me: { rank: 1, correct: 8, answered: 10, accuracy_pct: 80 } });
     }),
     visibilityHandler(false),
-    http.put('*/api/user/leaderboard-visibility', async ({ request }) => {
-      const body = (await request.json()) as { visible: boolean };
+    http.put('*/api/user/leaderboard-name', async ({ request }) => {
+      const body = (await request.json()) as { mode: string };
       puts.push(body);
       await held;
-      named = body.visible;
-      return HttpResponse.json({ visible: body.visible });
+      named = body.mode === 'account';
+      return HttpResponse.json({ mode: body.mode, nickname: 'sleepySharkie1', accountName: 'Pat Example' });
     }),
   );
   await mount();
-  const toggle = await screen.findByRole('switch', { name: SWITCH });
+  const toggle = await screen.findByRole('radio', { name: SWITCH });
   await waitFor(() => expect(toggle).toBeEnabled());
   expect(toggle).not.toBeChecked();
   const own = () => document.querySelector('tbody tr[aria-current="true"]') as HTMLElement;
@@ -338,7 +337,7 @@ it('switches the learner’s name on from the board and reloads their own line a
 
   fireEvent.click(toggle);
   // On at once, while the save is still on its way.
-  await waitFor(() => expect(puts).toEqual([{ visible: true }]));
+  await waitFor(() => expect(puts).toEqual([{ mode: 'account' }]));
   expect(toggle).toBeChecked();
   release();
   await waitFor(() => expect(within(own()).getByText('Pat Example')).toBeVisible());
@@ -352,17 +351,17 @@ it('puts the switch back and says so when saving it fails', async () => {
   server.use(
     leaderboardHandlers.populated,
     visibilityHandler(false),
-    http.put('*/api/user/leaderboard-visibility', async ({ request }) => {
+    http.put('*/api/user/leaderboard-name', async ({ request }) => {
       puts.push(await request.json());
       return HttpResponse.json({ error: { code: 'db_error', message: 'Could not load or save leaderboard visibility' } }, { status: 500 });
     }),
   );
   await mount();
-  const toggle = await screen.findByRole('switch', { name: SWITCH });
+  const toggle = await screen.findByRole('radio', { name: SWITCH });
   await waitFor(() => expect(toggle).toBeEnabled());
   fireEvent.click(toggle);
   expect(await screen.findByRole('alert')).toHaveTextContent('Your leaderboard setting wasn’t saved. Try again.');
-  expect(puts).toEqual([{ visible: true }]);
+  expect(puts).toEqual([{ mode: 'account' }]);
   await waitFor(() => expect(toggle).not.toBeChecked());
 });
 
@@ -432,7 +431,7 @@ it('pins the learner’s own month line, with their XP, below the list', async (
   expect(within(pinned).getByText('12')).toBeVisible();
   expect(within(pinned).getByText('340')).toBeVisible();
   expect(within(pinned).getByText('You')).toBeVisible();
-  expect(within(pinned).getByText('Learner')).toBeVisible();
+  expect(within(pinned).getByText('sleepySharkie1')).toBeVisible();
 });
 
 it('tells a signed-in learner with no XP this month how to appear', async () => {

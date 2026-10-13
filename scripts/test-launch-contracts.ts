@@ -2281,6 +2281,35 @@ async function guestChallengeLimitContracts() {
   assert.equal(quizStatuses.at(-1), 429, 'guest quizzes behind one address keep sharing its rate');
 }
 
+async function challengeSelectionContracts() {
+  const all = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: deliveryCategories('webdev').join(',') }), all as never);
+  assert.equal(all.statusCode, 200);
+  assert.equal(decodeChallengeRun((all.body as { runToken: string }).runToken)?.allTopics, true, 'the default selection earns the all-topics evidence');
+  const batch = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: 'javascript,typescript' }), batch as never);
+  assert.equal(batch.statusCode, 200, JSON.stringify(batch.body));
+  const opened = batch.body as { runToken: string; questions: { category: string }[] };
+  const run = decodeChallengeRun(opened.runToken)!;
+  assert.deepEqual(run.topics, ['javascript','typescript']);
+  assert.equal(run.allTopics, false);
+  assert.equal(run.userId, null);
+  assert.ok(opened.questions.every(question => run.topics!.includes(question.category)));
+  const changed = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: 'javascript', runToken: opened.runToken }), changed as never);
+  assert.equal(changed.statusCode, 400, 'a refill cannot drop a sealed topic');
+  assert.equal((changed.body as { error: { code: string } }).error.code, 'invalid_run_scope');
+  const same = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: 'typescript,javascript', runToken: opened.runToken }), same as never);
+  assert.equal(same.statusCode, 200, 'a reordered identical selection refills the same run');
+  const relaxed = mockResponse();
+  await challengeHandler(quizRequest('GET', { categories: 'javascript', ranked: '0' }), relaxed as never);
+  assert.equal(relaxed.statusCode, 400, 'there is only one Challenge mode');
+  const legacy = decodeChallengeRun(createChallengeRun(true, 'webdev').runToken)!;
+  assert.equal(legacy.topics, null, 'legacy runs without evidence get no invented categories');
+  assert.equal(legacy.allTopics, null);
+}
+
 /** A class behind one school address (review round 3: SEC-1, QUIZ-2, PLAY-3,
  * CODE-8, PROF-7). Each route below charged one person's budget to the whole
  * address, so the pupil past it got 429: a quiz, the due list, the daily
@@ -4525,7 +4554,7 @@ async function main() {
     for (const [body, verify, limits, write] of [
       [bodyOf(submitSource, 'routeHandler'), 'await tryAuth(req)', ['quizSubmitPerUser', 'challengeSubmitPerUser', 'quizSubmitAnonymous'], 'await claimSubmission('],
       [bodyOf(challengeSource, 'handleCompleteRun'), 'await tryAuth(req)', ['challengeCompletePerUser'], "rpc('record_challenge_completion'"],
-      [bodyOf(challengeSource, 'handleSubmitScore'), 'await tryAuth(req)', ['challengeScorePerUser'], 'await recordChallengeScore('],
+      [bodyOf(challengeSource, 'handleCompleteRun'), 'await tryAuth(req)', ['challengeCompletePerUser'], 'await recordChallengeScore('],
     ] as const) {
       const verified = body.indexOf(verify);
       const written = body.indexOf(write);
@@ -5530,6 +5559,7 @@ async function main() {
   await qotdContracts();
   await quizSubmitScopeContracts();
   await guestChallengeLimitContracts();
+  await challengeSelectionContracts();
   await dailyIntegrityContracts();
   await dailyOwnerContracts();
   seededShuffleContracts();

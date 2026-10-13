@@ -22,6 +22,7 @@ DECLARE
   v_board TEXT;
   v_rank  RECORD;
   v_count INTEGER;
+  v_bo_name TEXT; v_cy_name TEXT;
 BEGIN
   INSERT INTO public.user_stats (user_id, name, picture, show_on_leaderboards) VALUES
     (v_ada, 'Ada Lovelace', 'https://lh3.googleusercontent.com/a/ada', TRUE),
@@ -34,9 +35,12 @@ BEGIN
     (v_cy,  v_today, 'math',   9000),
     (v_di,  v_last_start, 'webdev', 800);
 
+  UPDATE public.user_handles h SET leaderboard_name_mode='account',leaderboard_account_name=u.name FROM public.user_stats u WHERE h.user_id=u.user_id AND u.user_id IN(v_ada,v_di);
+  SELECT handle INTO v_bo_name FROM public.user_handles WHERE user_id=v_bo;
+  SELECT handle INTO v_cy_name FROM public.user_handles WHERE user_id=v_cy;
   SELECT string_agg(format('%s:%s:%s:%s:%s', b.rank, COALESCE(b.display_name, '-'), COALESCE(b.picture, '-'), b.xp, b.is_viewer), ' | ' ORDER BY b.n)
     INTO v_board FROM public.month_xp_leaderboard('webdev', 100, v_bo) WITH ORDINALITY AS b(rank, display_name, picture, xp, is_viewer, n);
-  ASSERT v_board = '1:Ada Lovelace:https://lh3.googleusercontent.com/a/ada:500:f | 1:-:-:500:t | 3:-:-:300:f',
+  ASSERT v_board = format('1:Ada Lovelace:https://lh3.googleusercontent.com/a/ada:500:f | 1:%s:-:500:t | 3:%s:-:300:f',v_bo_name,v_cy_name),
     format('this month''s XP, ties sharing first, names only when switched on, the viewer marked: %s', v_board);
 
   SELECT rank, xp INTO v_rank FROM public.month_xp_leaderboard_rank(v_bo, 'webdev');
@@ -61,13 +65,14 @@ BEGIN
 
   -- A sharkname is the name on the board.
   PERFORM public.set_user_handle(v_ada, 'thirsty-sharkie');
-  SELECT display_name INTO v_board FROM public.month_xp_leaderboard('webdev', 100, NULL) WHERE xp = 500 AND display_name IS NOT NULL;
+  UPDATE public.user_handles SET leaderboard_name_mode='nickname' WHERE user_id=v_ada;
+  SELECT display_name INTO v_board FROM public.month_xp_leaderboard('webdev', 100, NULL) WHERE xp = 500 AND display_name='thirsty-sharkie';
   ASSERT v_board = 'thirsty-sharkie', format('the board shows the sharkname: %s', v_board);
 
   -- Switching the name off takes it off at once.
   UPDATE public.user_stats SET show_on_leaderboards = FALSE WHERE user_id = v_ada;
-  SELECT count(*) INTO v_count FROM public.month_xp_leaderboard('webdev', 100, NULL) WHERE display_name IS NOT NULL OR picture IS NOT NULL;
-  ASSERT v_count = 0, 'nobody is named once the switch is off';
+  SELECT count(*) INTO v_count FROM public.month_xp_leaderboard('webdev', 100, NULL) WHERE picture IS NOT NULL;
+  ASSERT v_count = 0, 'no photo is exposed once consent is off';
 END;
 $$;
 

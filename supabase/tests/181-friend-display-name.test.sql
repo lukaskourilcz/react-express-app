@@ -36,6 +36,7 @@ BEGIN
   PERFORM public.set_user_handle(v_cy, 'fin-de-fiesta-181');
   PERFORM public.set_user_handle(v_dee, 'mucho-chomp-shark-181');
 
+  UPDATE public.user_handles SET discoverable=TRUE WHERE user_id=ANY(ARRAY[v_ada,v_bo,v_cy,v_dee]);
   -- Bo and Ada are friends.
   PERFORM public.request_friend(v_bo, 'thirsty-sharkie-181');
   PERFORM public.respond_friend(v_ada, 'el-tiburon-loco-181', TRUE);

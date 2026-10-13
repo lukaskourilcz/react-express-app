@@ -22,8 +22,8 @@ const BOARD = {
   champion: { id: 'run-1', name: 'Harbour reader', score: 42, createdAt: '2026-09-25T10:00:00Z' },
 };
 
-describe('the relaxed pace switch', () => {
-  it('shows when it is on, with the selected accent and a check', async () => {
+describe('Challenge topics and the single clock', () => {
+  it('defaults to every topic, allows a smaller mix, and refuses an empty selection', async () => {
     server.use(http.get('*/api/quiz/challenge', () => HttpResponse.json(BOARD)));
     addSheet('deepEnd');
     const client = new QueryClient({ defaultOptions: { queries: { retry: false, gcTime: 0 } } });
@@ -34,19 +34,15 @@ describe('the relaxed pace switch', () => {
         </MemoryRouter>
       </QueryClientProvider>,
     ));
-    const relaxed = await screen.findByRole('checkbox', { name: /Relaxed pace/ });
-    const check = relaxed.querySelector('.de-track-card__check')!;
-    expect(check).toHaveAttribute('aria-hidden', 'true');
-    expect(check.querySelector('svg')).not.toBeNull();
-
-    expect(relaxed).toHaveAttribute('aria-checked', 'false');
-    expect(getComputedStyle(check).opacity).toBe('0');
-    expect(getComputedStyle(relaxed).getPropertyValue('background')).toBe('var(--color-background-surface)');
-
-    fireEvent.click(relaxed);
-    expect(relaxed).toHaveAttribute('aria-checked', 'true');
-    expect(getComputedStyle(check).opacity).toBe('1');
-    expect(getComputedStyle(relaxed).getPropertyValue('background')).toBe('var(--brand-accent-soft)');
-    expect(getComputedStyle(relaxed).getPropertyValue('box-shadow')).toBe('inset 0 0 0 1px var(--brand-accent)');
+    expect(screen.queryByRole('checkbox', { name: /Relaxed pace/ })).toBeNull();
+    expect(screen.getByText('90 s')).toBeInTheDocument();
+    const topics = screen.getAllByRole('button', { pressed: true });
+    expect(topics.length).toBeGreaterThan(10);
+    topics.forEach(topic => fireEvent.click(topic));
+    expect(screen.getByRole('button', { name: 'Start' })).toBeDisabled();
+    expect(screen.getByText('Choose at least one topic to start.')).toBeInTheDocument();
+    fireEvent.click(topics[0]);
+    expect(topics[0]).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: 'Start' })).toBeEnabled();
   });
 });

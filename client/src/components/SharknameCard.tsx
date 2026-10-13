@@ -75,7 +75,10 @@ export default function SharknameCard({ focus = false, onFocused }: { focus?: bo
 
   // A board names a learner by this card's choices (board_display_name), so
   // a saved change refetches whatever boards the tab has loaded.
-  const boardsChanged = () => void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+  const boardsChanged = () => {
+    void queryClient.invalidateQueries({ queryKey: ['leaderboard'] });
+    void queryClient.invalidateQueries({ queryKey: ['leaderboard-name'] });
+  };
 
   return (
     <section className="ss-panel sn-card" aria-labelledby={titleId}>

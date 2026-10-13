@@ -71,6 +71,11 @@ BEGIN
   IF v_base !~ '^[a-z][A-Za-z]{2,30}$' OR lower(v_base) IN ('admin','administrator','moderator','mod','support','help','staff','team','shark','studyshark','devshark','sharkira','learner','anonymous','me','you','system','root','null','undefined')
     OR (p_user_id IS NOT NULL AND p_identity_key <> 'user:' || p_user_id)
     OR (p_user_id IS NULL AND (p_replace OR p_identity_key !~ '^guest:[A-Za-z0-9_-]{16,64}$')) THEN RAISE EXCEPTION 'invalid_handle'; END IF;
+  -- Reads/retries of an allocated identity do not serialize the whole site.
+  IF NOT p_replace THEN
+    SELECT * INTO v_allocation FROM public.shark_name_allocations WHERE identity_key = p_identity_key;
+    IF FOUND THEN RETURN jsonb_build_object('handle', v_allocation.current_name, 'ordinal', v_allocation.ordinal::TEXT, 'base', v_allocation.base); END IF;
+  END IF;
   SELECT next_number INTO v_number FROM public.shark_name_counter WHERE singleton FOR UPDATE;
   SELECT * INTO v_allocation FROM public.shark_name_allocations WHERE identity_key = p_identity_key FOR UPDATE;
   IF FOUND AND NOT p_replace THEN

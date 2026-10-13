@@ -33,7 +33,7 @@ import { SegmentedControl, SegmentedControlItem } from '@astryxdesign/core/Segme
 import ErrorRetry from './ErrorRetry';
 import { useLanguage, useT } from '../i18n/LanguageContext';
 import { useIsMobile, useMediaQuery } from '../lib/useMediaQuery';
-import { getUserProfile, useAuth } from '../lib/auth';
+import { useAuth } from '../lib/auth';
 import { ApiError, friendlyError } from '../lib/api';
 import { leaderboardQuery, useLeaderboard, type LeaderboardRequest } from '../lib/queries';
 import { leaderboardVisibilityQuery, useLeaderboardVisibility } from '../lib/leaderboardVisibility';
@@ -144,8 +144,7 @@ function Leaderboard() {
   const compact = useMediaQuery('(max-width: 479.95px)');
   const subject = useActiveSubject();
   const { user } = useAuth();
-  const profile = getUserProfile(user);
-  const { visible: named } = useLeaderboardVisibility();
+  const { setting } = useLeaderboardVisibility();
   const topics = visibleCategoryOptionsFor();
   const selectId = useId();
 
@@ -212,9 +211,9 @@ function Leaderboard() {
 
   const rows = board ? toRows(drawTab, board, t) : [];
   const viewerListed = rows.some((row) => row.isViewer);
-  // The pinned line is drawn here, not sent, so it applies the server's rule
-  // itself: the learner's own name and photo only while they are switched on.
-  const ownName = named === true ? profile.name?.trim() || null : null;
+  // The pinned line uses the server's private name preference. Public photo
+  // consent is not inferred from the account's avatar.
+  const ownName = setting ? (setting.mode === 'account' ? setting.accountName ?? setting.nickname : setting.nickname) : null;
   const pinned: Row | null =
     me && me.rank !== null && !viewerListed
       ? {
@@ -222,7 +221,7 @@ function Leaderboard() {
           rank: me.rank,
           name: ownName ?? t('leaderboard.anonymous'),
           anonymous: ownName === null,
-          picture: named === true ? profile.picture ?? null : null,
+          picture: setting?.picture ?? null,
           ...(drawTab === 'month' ? monthFigures(me as MonthLeaderboardMe, t) : answerFigures(me as LeaderboardMe, t)),
           isViewer: true,
         }

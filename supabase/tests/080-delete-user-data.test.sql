@@ -79,6 +79,7 @@ BEGIN
   PERFORM public.set_user_handle(v_gone, 'gone-learner');
   PERFORM public.set_user_handle(v_bob, 'bob-learner');
   PERFORM public.set_user_handle(v_carol, 'carol-learner');
+  UPDATE public.user_handles SET discoverable=TRUE WHERE user_id IN(v_gone,v_bob);
   PERFORM public.request_friend(v_gone, 'bob-learner');
   PERFORM public.remove_friend(v_gone, 'carol-learner', TRUE);
   PERFORM public.referral_summary(v_bob);

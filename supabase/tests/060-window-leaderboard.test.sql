@@ -31,6 +31,7 @@ BEGIN
   UPDATE public.user_stats SET show_on_leaderboards = TRUE
    WHERE user_id IN (v_eight_ten, v_eight_twelve, v_nine_twenty, v_four_answers);
 
+  UPDATE public.user_handles h SET leaderboard_name_mode='account', leaderboard_account_name=u.name FROM public.user_stats u WHERE u.user_id=h.user_id AND u.name IS NOT NULL;
   SELECT string_agg(rank || ':' || display_name, ', ' ORDER BY rank, display_name) INTO v_board
     FROM public.window_leaderboard(30, 100, 'javascript', 5, NULL);
   ASSERT v_board = '1:Nine of twenty, 2:Eight of ten, 3:Eight of twelve',
@@ -51,6 +52,7 @@ BEGIN
   PERFORM public.add_activity_day(v_edge_outside, v_today - 30, 'css', 10, 10);
   INSERT INTO public.user_stats (user_id, name, show_on_leaderboards)
     VALUES (v_edge_inside, 'Inside', TRUE), (v_edge_outside, 'Outside', TRUE);
+  UPDATE public.user_handles h SET leaderboard_name_mode='account', leaderboard_account_name=u.name FROM public.user_stats u WHERE u.user_id=h.user_id AND u.name IS NOT NULL;
   SELECT string_agg(display_name, ', ' ORDER BY display_name) INTO v_board
     FROM public.window_leaderboard(30, 100, 'css', 5, NULL);
   ASSERT v_board = 'Inside', format('only answers inside the 30 days count, got %s', v_board);
