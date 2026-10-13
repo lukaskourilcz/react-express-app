@@ -8,12 +8,22 @@ now claims, and what has not been done. The machine-readable record is `docs/aud
 the runtime projection of it is `lib/curation-registry.ts`; the gate that
 applies it is described in `docs/curation-claims.md`.
 
-Last updated 2026-09-11. The wave is complete. Every one of the 2,128 items a
+The September wave was completed on 2026-09-11. Every one of the 2,128 items a
 learner can be served has been read twice, rewritten or retired, translated
 from the final English, and recorded in the ledger; all sixteen categories are
 in the gate's scope, so an item without a current passing record is withheld
 rather than served with no claim. The 319 items in the retired sections have
 been read once each and disposed of.
+
+On 2026-10-13, forty fresh English questions were authored and model-reviewed
+for the ten depleted Learn levels: JavaScript 1/2/4, Node.js 8, DSA 4,
+Algorithms 1/6/8/10 and Security 15. Their exact-content records and evidence
+are in the same ledger and registry. This is a content addition, not a human
+review claim or completion of the remaining coding/override audit in #176.
+The explicit membership in `roadmap-questions-restored.ts` preserves historical
+ids and level numbers. With all 485 current production question hides applied,
+the restored levels have respectively 5/4/5, 6, 6, 4/4/4/5 and 5 reviewed
+questions; none is unavailable. The hidden questions remain hidden.
 
 ## 1. What a learner can be served, counted
 

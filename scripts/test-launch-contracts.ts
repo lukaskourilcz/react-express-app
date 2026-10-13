@@ -3057,7 +3057,7 @@ function monthlyXpContracts() {
   }
   // Learning XP lives in verified progress, not in user_xp: a first pass adds it.
   const learn = newest.get('complete_verified_roadmap_attempt')!;
-  assert.equal(learn.file, 'supabase-schema-056.sql', 'the Learn completion that credits the month is the one that runs');
+  assert.equal(learn.file, 'supabase-schema-062.sql', 'the Learn completion that credits the month and leaves coding pending is the one that runs');
   assert.match(learn.body, /IF p_user_id IS NOT NULL AND v_passed AND NOT v_was_passed THEN\s+PERFORM public\.add_xp_day\(p_user_id, v_attempt\.subject, public\.learn_step_xp\(v_attempt\.kind, v_attempt\.ref\)\);/,
     'only a first pass earns a step its learning XP');
   // A Learn replay pays its XP again an hour after the step last paid (060),

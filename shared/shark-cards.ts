@@ -46,6 +46,8 @@ const QUIZ_CATEGORIES: readonly string[] = SUBJECT_SCOPE_CATALOG.webdev.categori
 /** The Learn topic and level a question belongs to, or null for a question
  * that is not part of a Learn level (a quiz question, or a retired topic). */
 export function learnLevelOfQuestion(questionId: string): { topic: string; level: number } | null {
+  const fresh = /^rm-([a-z]+)-fresh-(\d+)-\d+$/.exec(questionId);
+  if (fresh && LEARN_TOPICS.includes(fresh[1]) && Number(fresh[2]) >= 1) return { topic: fresh[1], level: Number(fresh[2]) };
   const match = /^(rm-[a-z]+)-(\d+)$/.exec(questionId);
   if (!match) return null;
   const topic = Object.keys(LEARN_ID_PREFIXES).find((one) => LEARN_ID_PREFIXES[one] === match[1]);

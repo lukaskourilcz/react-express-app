@@ -1,4 +1,5 @@
 import type { SnippetMeta } from '../shared/snippet-format';
+import { restoredQuestions } from './roadmap-questions-restored';
 import {
   roadmapJsQuestions,
   roadmapTsQuestions,
@@ -10425,6 +10426,7 @@ const codeReadingQuestions = coreQuestions.filter((question) => question.categor
 export const questions: Question[] = [
   ...codeReadingQuestions,
   ...roadmapJsQuestions,
+  ...restoredQuestions,
   ...roadmapTsQuestions,
   ...roadmapReactQuestions,
   ...roadmapNextQuestions,
