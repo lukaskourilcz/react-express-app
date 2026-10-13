@@ -7,8 +7,8 @@ import type { ReactSuiteOutcome } from '../coding/react-runner';
  *
  *   - the attempt is bound to an enrollment, so a task a learner reaches
  *     through a path is authorized by that enrollment rather than by the
- *     ordinary coding tier ladder — and the pass records path evidence only,
- *     never coding XP, coding progress or a tier unlock;
+ *     ordinary coding tier ladder — and the handler records path evidence together with the shared coding
+ *     reward ledger; access still comes from the enrollment;
  *   - assertions group into named criteria, so a critical failure cannot be
  *     averaged away by a strong score elsewhere;
  *   - objective checks grade against the key sealed in the attempt session,
@@ -17,7 +17,7 @@ import type { ReactSuiteOutcome } from '../coding/react-runner';
  *     check can prove a field is non-empty; it cannot establish quality, and
  *     nothing here pretends otherwise.
  *
- * No path awards XP in v1. */
+ * Verified coding activities use the ordinary coding reward rules. */
 
 import { createHash } from 'node:crypto';
 import type {

@@ -14,7 +14,10 @@
 
 import type { VercelRequest, VercelResponse } from '../vercel-types.js';
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes } from 'node:crypto';
+import { assessComplexity } from '../coding/complexity';
+import { codingPassXp, complexityGuidance, type ComplexityReport } from '../../shared/coding-complexity';
+import { codingAwardId, creditVerifiedXp, settleMilestones } from '../rewards/coins';
 import { AuthError, tryAuth } from '../auth';
 import { createLogger, isRpcMissing, jsonError, requireAuthSub, withTimeout } from '../http';
 import { refuseLocked } from '../access';
@@ -738,6 +741,7 @@ async function buildActivityPayload(
       return {
         code: {
           language: code.language,
+          complexityGuidance: complexityGuidance({ track: code.language, prompt: code.prompt, tests: code.tests }),
           prompt: code.prompt,
           starter: code.starter,
           ...(code.skeleton ? { skeleton: code.skeleton } : {}),
@@ -873,6 +877,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   let criteria: SubmitActivityResponse['criteria'] = [];
   let questions: SubmitActivityResponse['questions'] = null;
   let code: SubmitActivityResponse['code'] = null;
+  let complexity: ComplexityReport | null = null;
   let feedback: SubmitActivityResponse['feedback'] = [];
   let artifact: Record<string, string | string[]> | null = null;
 
@@ -949,6 +954,8 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       score = graded.score;
       criteria = graded.criteria;
       code = graded.code;
+      complexity = assessComplexity(activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!
+        : { track: merged.language, prompt: merged.prompt, tests: merged.tests }, body.code);
       feedback = codeFeedback(graded);
       break;
     }
@@ -1008,6 +1015,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     nextActivityId: computeNextActivity(manifest, states),
     replayed: false,
     xpAwarded: 0,
+    ...(complexity ? { complexity } : {}),
   };
 
   const acceptParams = {
@@ -1035,11 +1043,18 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   // other. With the requirements, the routine (migration 054) decides
   // completion again from the states it writes, one result at a time. Before
   // 054 is installed it does not take them, and the call is made without.
-  let accepted = await withTimeout(supabase.rpc('accept_learning_path_result', {
-    ...acceptParams,
-    p_module_requires: moduleRequirements(module),
-  }));
-  if (accepted.error && isRpcMissing(accepted.error)) {
+  const canonicalTaskId = activity.reuseTaskId ?? `path-code-${createHash('sha256').update(`${path.id}:${activity.id}`).digest('hex').slice(0,32)}`;
+  const language = (activity.code ?? reusedCode(activity))?.language ?? 'javascript';
+  const codeTrack = activity.reuseTaskId ? codingTaskById(activity.reuseTaskId)!.track
+    : path.id === 'dsa-foundations' && language === 'javascript' ? 'algorithms' : language;
+  let accepted = activity.kind === 'code'
+    ? await withTimeout(supabase.rpc('accept_learning_path_coding_result', {
+      p_accept: { ...acceptParams, p_module_requires: moduleRequirements(module) },
+      p_task_id: canonicalTaskId, p_track: codeTrack, p_xp: state === 'verified_pass' ? codingPassXp(complexity) : 0,
+      p_code_hash: createHash('sha256').update(body.code!).digest('hex'),
+    }))
+    : await withTimeout(supabase.rpc('accept_learning_path_result', { ...acceptParams, p_module_requires: moduleRequirements(module) }));
+  if (activity.kind !== 'code' && accepted.error && isRpcMissing(accepted.error)) {
     accepted = await withTimeout(supabase.rpc('accept_learning_path_result', acceptParams));
   }
   if (accepted.error) {
@@ -1047,7 +1062,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     return jsonError(res, 500, 'db_error', 'Could not record the result');
   }
   markStorageInstalled();
-  const outcome = (accepted.data ?? {}) as { ok?: boolean; reason?: string; replayed?: boolean; result?: unknown };
+  const outcome = (accepted.data ?? {}) as { ok?: boolean; reason?: string; replayed?: boolean; result?: unknown; coding?: { xpKind?: string } };
   if (!outcome.ok) {
     if (outcome.reason === 'expired') return jsonError(res, 410, 'attempt_expired', 'This attempt expired. Start it again.');
     if (outcome.reason === 'conflict') {
@@ -1061,11 +1076,12 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     status: 200, kind: 'submit', path: path.id, activityKind: activity.kind,
     state, replayed: outcome.replayed === true,
   });
-  if (outcome.replayed === true) {
-    const stored = (outcome.result ?? out) as SubmitActivityResponse;
-    return res.json({ ...stored, replayed: true });
+  const stored = (outcome.result ?? out) as SubmitActivityResponse;
+  if (activity.kind === 'code' && stored.xpAwarded > 0 && outcome.coding?.xpKind !== 'repeat') {
+    await creditVerifiedXp(supabase, { userId, awardId: codingAwardId(userId,canonicalTaskId), subject: 'webdev', xp: stored.xpAwarded });
+    await settleMilestones(supabase,userId,'webdev');
   }
-  return res.json(out);
+  return res.json({ ...stored, replayed: outcome.replayed === true });
 }
 
 /**

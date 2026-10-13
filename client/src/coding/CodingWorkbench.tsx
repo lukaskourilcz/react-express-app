@@ -5,12 +5,12 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Button } from '@astryxdesign/core/Button';
-import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
+import { CodingCompletion, ComplexityInfo } from './CodingCompletion';
 import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
 import { TYPE_CHECK_STOPPED_MESSAGE } from '../../../shared/coding-evaluate';
@@ -21,7 +21,7 @@ import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
 import { ReportDialog } from '../components/ReportDialog';
-import { FlagIcon, InfoIcon, PlayIcon, FormatCodeIcon, CheckCircleIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
+import { FlagIcon, PlayIcon, FormatCodeIcon, CheckCircleIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
@@ -39,17 +39,6 @@ import './Coding.css';
 /** Moves focus to a confirmation's safe choice when it appears. Module-level,
  * so its identity is stable and it runs once per mount. */
 const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
-
-function ComplexityInfo({ guidance }: { guidance: ReturnType<typeof complexityGuidance> }) {
-  // The trigger is itself a link, so the guide also works on touch/keyboard.
-  const { t } = useLanguage();
-  return <Tooltip placement="above" content={<div className="cd-complexity__tip">
-    <p>{guidance.note}</p>
-    <p>{t('coding.complexity.learn')}</p>
-  </div>}>
-    <Button as={Link} href="/big-o" variant="ghost" isIconOnly icon={<InfoIcon size={16} />} label={t('coding.complexity.info')} className="cd-complexity__info" />
-  </Tooltip>;
-}
 
 /** A React suite that moves focus inside the preview frame takes the page's
  * focus with it. Call before a run; the function it returns gives focus back
@@ -1114,20 +1103,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
 
   if (verdict?.verdict === 'passed' && !verdict.puzzle && !verdictStale && !verdict.graderUnavailable) {
-    const above = verdict.complexity?.assessment === 'above-target' && Boolean(verdict.complexity.time);
-    const next = mode === 'lesson' ? onContinue : undefined;
-    return <div className={`cd-workbench cd-workbench--${mode} cd-complete`}>
-      <section ref={verdictRef} tabIndex={-1} className={`cd-verdict cd-verdict--${above ? 'warning' : 'passed'}`}>
-        <h1 className="cd-verdict__title">{t('coding.verdict.passed')} <span>{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span></h1>
-        {verdict.complexity?.time && <p className="cd-verdict__row">{t('coding.complexity.result', { complexity: verdict.complexity.time })}</p>}
-      </section>
-      <div className="cd-verdict__actions">
-        {next ? <Button variant="primary" onClick={next} label={t('coding.verdict.next')} />
-          : nextHref ? <Button variant="primary" as={Link} href={nextHref} label={t('coding.verdict.next')} />
-          : <Button variant="primary" isDisabled label={t('coding.verdict.next')} />}
-        <Button variant="secondary" as={Link} href={backHref ?? (mode === 'lesson' ? '/learn' : `/coding/${task.track}`)} label={t('coding.verdict.back')} />
-      </div>
-    </div>;
+    return <div className={`cd-workbench cd-workbench--${mode}`}><CodingCompletion
+      xp={verdict.xpAwarded} complexity={verdict.complexity} sectionRef={verdictRef}
+      onNext={mode === 'lesson' ? onContinue : undefined} nextHref={nextHref ?? undefined}
+      backHref={backHref ?? (mode === 'lesson' ? '/learn' : `/coding/${task.track}`)} /></div>;
   }
 
   return (

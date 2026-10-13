@@ -26,15 +26,15 @@ BEGIN
   UPDATE public.user_handles SET leaderboard_name_mode='account',leaderboard_account_name='Verified Account' WHERE user_id='sql-auto-board-user';
   ASSERT public.board_display_name('sql-auto-board-user') = 'Verified Account';
   ASSERT (SELECT show_real_name AND show_photo_to_friends FROM public.user_handles WHERE user_id='sql-auto-board-user');
-  UPDATE public.user_handles SET leaderboard_name_mode='account',leaderboard_account_name=repeat('A',60) WHERE user_id='sql-auto-board-user';
-  a := public.save_completed_challenge_score('sqllongnamescore001','sql-auto-board-user','webdev',9,'hungryFin','["javascript"]',FALSE);
-  ASSERT char_length(a->>'name')=60;
   a := public.save_completed_challenge_score('sqlsignedscore0001','sql-auto-board-user','webdev',8,'hungryFin','["javascript"]',TRUE);
   ASSERT a->>'name' = 'Verified Account';
   UPDATE public.user_handles SET leaderboard_name_mode='nickname' WHERE user_id='sql-auto-board-user';
   ASSERT (SELECT name FROM public.challenge_leaderboard('webdev') WHERE id=(a->>'id')::UUID) = named;
   ASSERT NOT (SELECT show_on_leaderboards FROM public.user_stats WHERE user_id='sql-auto-board-user');
   ASSERT (SELECT show_real_name AND show_photo_to_friends FROM public.user_handles WHERE user_id='sql-auto-board-user');
+  UPDATE public.user_handles SET leaderboard_name_mode='account',leaderboard_account_name=repeat('A',60) WHERE user_id='sql-auto-board-user';
+  a := public.save_completed_challenge_score('sqllongnamescore001','sql-auto-board-user','webdev',9,'hungryFin','["javascript"]',FALSE);
+  ASSERT char_length(a->>'name')=60;
   BEGIN
     UPDATE public.user_handles SET leaderboard_account_name='person@example.com' WHERE user_id='sql-auto-board-user';
     RAISE EXCEPTION 'expected email protection';

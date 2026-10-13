@@ -1682,3 +1682,11 @@ account name obtained from the verified provider profile or confirmed email's
 local part, never a full email or a client-provided name. It changes neither
 the name nor the photo shared with friends. Existing public-photo consent is
 kept; the old visibility flag can no longer hide a leaderboard name.
+
+Verified native-path code now records acceptance and the shared coding award
+in one transaction (migration 065). A reused task keeps its ordinary task ID;
+an independent path exercise has a stable scoped ID. This prevents paying the
+same task again just because it was reached on another screen. Type-only,
+unverified, reveal, cooldown and repeat rules remain in record_coding_verdict.
+The accepted path response stores the actual award and the same complexity
+analysis used to choose it, so retries replay it without paying again.

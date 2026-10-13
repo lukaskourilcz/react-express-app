@@ -9,6 +9,7 @@
 import type { CallTest, Localized, LocalizedList, TypeTest } from './coding-catalog';
 import type { CallOutcome } from './coding-evaluate';
 import type { TypeCheckResult } from './coding-ts-check';
+import type { ComplexityGuidance, ComplexityReport } from './coding-complexity';
 import type {
   ActivityPurpose,
   ActivitySummary,
@@ -207,6 +208,7 @@ export interface CheckQuestionPayload {
 /** A code activity as the learner receives it: prompt, starter, visible tests.
  * Hidden assertions and the reference solution stay on the server. */
 export interface PathCodePayload {
+  complexityGuidance?: ComplexityGuidance;
   language: PathCodeLanguage;
   prompt: Localized;
   starter: string;
@@ -315,6 +317,7 @@ export interface CodeVerdictPayload {
 }
 
 export interface SubmitActivityResponse {
+  complexity?: ComplexityReport | null;
   activityId: string;
   state: EvidenceState;
   verification: VerificationKind;
@@ -335,9 +338,8 @@ export interface SubmitActivityResponse {
   /** True when this response replays a previously accepted result rather than
    * grading again. */
   replayed: boolean;
-  /** No learning path awards XP in v1; stated explicitly so the client never
-   * has to infer it. */
-  xpAwarded: 0;
+  /** Actual server award; code reuses the ordinary coding reward ledger. */
+  xpAwarded: number;
 }
 
 /* ── drafts ────────────────────────────────────────────────────────────── */
