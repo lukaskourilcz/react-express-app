@@ -21,7 +21,8 @@ const BOOTSTRAP = String.raw`(request, schedule, report, roots) => {
   'use strict';
   const kernel = (${REACT_PROMISE_SOURCE})(schedule, (type,promise,reason) => report(type,encode(reason)));
   const Promise = kernel.Promise;
-  const guests = new Map(), ids = new WeakMap(), hosts = new Map(), hostIds = new WeakMap();
+  const guests = new Map(), ids = new WeakMap(), hosts = new Map(), hostIds = new WeakMap(), instanceUpdaters=new WeakMap();
+  let Component;
   let next = 1;
   const encode = value => {
     if (value === undefined) return {u:1};
@@ -30,7 +31,7 @@ const BOOTSTRAP = String.raw`(request, schedule, report, roots) => {
     if (value === null || ['string','number','boolean'].includes(typeof value)) return value;
     const host = hostIds.get(value); if (host) return host;
     let id = ids.get(value); if (!id) { id=next++; ids.set(value,id); guests.set(id,value); }
-    return {g:id,kind:typeof value==='function'?'function':Array.isArray(value)?'array':kernel.isPromise(value)?'promise':value instanceof Error?'error':value instanceof Date?'date':value instanceof Set?'set':value instanceof Map?'map':'object'};
+    return {g:id,kind:typeof value==='function'?(value.prototype&&value.prototype.isReactComponent?'class':'function'):Array.isArray(value)?'array':kernel.isPromise(value)?'promise':value instanceof Error?'error':value instanceof Date?'date':value instanceof Set?'set':value instanceof Map?'map':'object'};
   };
   const rpc = message => {
     const result = JSON.parse(request(JSON.stringify(message)));
@@ -75,6 +76,15 @@ const BOOTSTRAP = String.raw`(request, schedule, report, roots) => {
   };
   const modules=Object.create(null);
   for(const [name,value] of Object.entries(roots.modules)) modules[name]=decode(value);
+  Component=class Component {
+    constructor(props,context){this.props=props;this.context=context;this.refs={};}
+    setState(update,callback){const updater=instanceUpdaters.get(this);if(!updater)throw new Error('Component is not mounted');updater('state',update,callback);}
+    forceUpdate(callback){const updater=instanceUpdaters.get(this);if(!updater)throw new Error('Component is not mounted');updater('force',undefined,callback);}
+  };
+  Component.prototype.isReactComponent={};
+  class PureComponent extends Component {}
+  PureComponent.prototype.isPureReactComponent=true;
+  modules.react=Object.assign({},modules.react,{Component,PureComponent});
   const require=name=>{if(Object.prototype.hasOwnProperty.call(modules,name)) return modules[name]; throw new Error("Cannot find module '"+name+"'");};
   for(const [name,value] of Object.entries(roots.globals)) Object.defineProperty(globalThis,name,{value:decode(value),writable:name==='fetch',configurable:false});
   const now=decode(roots.now);
@@ -108,6 +118,9 @@ const BOOTSTRAP = String.raw`(request, schedule, report, roots) => {
     else if(data.op==='delete') result=delete guests.get(data.id)[data.key];
     else if(data.op==='items') return JSON.stringify(Array.from(guests.get(data.id),encode));
     else if(data.op==='method') result=Reflect.apply(guests.get(data.id)[data.key],guests.get(data.id),data.args.map(decode));
+    else if(data.op==='class-init'){result=Reflect.construct(guests.get(data.id),data.args.map(decode));instanceUpdaters.set(result,decode(data.updater));}
+    else if(data.op==='class-sync'){const instance=guests.get(data.id);instance.props=decode(data.props);instance.state=decode(data.state);instance.context=decode(data.context);instance.refs=decode(data.refs);result=undefined;}
+    else if(data.op==='class-method'){const instance=guests.get(data.id),fn=instance[data.key];result=typeof fn==='function'?Reflect.apply(fn,instance,data.args.map(decode)):undefined;}
     else if(data.op==='subscribe') { kernel.subscribe(guests.get(data.id),decode(data.yes),decode(data.no)); result=undefined; }
     else if(data.op==='module') { const module={exports:{}}; load(require,module,module.exports); modules[data.name]=module.exports; if(data.name==='./fetchStub') modules['./fetchStub.js']=module.exports; result=module.exports; }
     else if(data.op==='flush') { kernel.flush(); result=undefined; }
@@ -197,7 +210,37 @@ export async function createReactLearner(input: {
     if(guestValues.has(value.g)) return guestValues.get(value.g);
     const id=value.g;
     let target:any;
-    if(value.kind==='function') target=function(this:any,...args:any[]){return decode(invoke({op:'invoke',id,thisArg:encode(this),args:args.map(arg=>encode(arg))}));};
+    if(value.kind==='class') {
+      const React=input.modules.react as any;
+      const instances=new WeakMap<object,number>();
+      target=class LearnerComponent extends React.Component {
+        constructor(props:any,context:any){
+          super(props,context);
+          const updater=encode((kind:string,update:any,callback:any)=>kind==='force'?this.forceUpdate(callback):this.setState(update,callback));
+          const instance=invoke({op:'class-init',id,args:[encode(props),encode(context)],updater});
+          if(!instance.g) throw new Error('Invalid component instance');
+          instances.set(this,instance.g);
+          guestIds.set(this,instance.g);
+          this.state=decode(invoke({op:'read',id:instance.g,key:'state'}))??null;
+        }
+        render(){
+          const instance=instances.get(this)!;
+          invoke({op:'class-sync',id:instance,props:encode(this.props),state:encode(this.state),context:encode(this.context),refs:encode(this.refs)});
+          return decode(invoke({op:'class-method',id:instance,key:'render',args:[]}));
+        }
+        componentDidMount(){return decode(invoke({op:'class-method',id:instances.get(this),key:'componentDidMount',args:[]}));}
+        componentDidUpdate(props:any,state:any,snapshot:any){return decode(invoke({op:'class-method',id:instances.get(this),key:'componentDidUpdate',args:[encode(props),encode(state),encode(snapshot)]}));}
+        componentWillUnmount(){return decode(invoke({op:'class-method',id:instances.get(this),key:'componentWillUnmount',args:[]}));}
+        componentDidCatch(error:any,info:any){return decode(invoke({op:'class-method',id:instances.get(this),key:'componentDidCatch',args:[encode(error),encode(info)]}));}
+      };
+      const prototype=decode(invoke({op:'read',id,key:'prototype'}));
+      if(prototype?.isPureReactComponent) target.prototype.isPureReactComponent=true;
+      for(const method of ['shouldComponentUpdate','getSnapshotBeforeUpdate','componentWillMount','componentWillReceiveProps','componentWillUpdate','UNSAFE_componentWillMount','UNSAFE_componentWillReceiveProps','UNSAFE_componentWillUpdate']) {
+        if(typeof prototype?.[method]!=='function') continue;
+        target.prototype[method]=function(this:any,...args:any[]){return decode(invoke({op:'class-method',id:instances.get(this),key:method,args:args.map(arg=>encode(arg))}));};
+      }
+    }
+    else if(value.kind==='function') target=function(this:any,...args:any[]){return decode(invoke({op:'invoke',id,thisArg:encode(this),args:args.map(arg=>encode(arg))}));};
     else if(value.kind==='array') target=[];
     else if(value.kind==='promise') {
       target=new Promise((resolve,reject)=>{
