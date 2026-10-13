@@ -331,9 +331,9 @@ it('opens the challenge offered after a skip inside the app', async () => {
   expect(await screen.findByRole('heading', { level: 1, name: 'Another task' })).toBeVisible();
 });
 
-// C3-4 / C5-9: an accepted order came back as "Passed", and then asked for
-// approach comparisons, which the server refused with 403.
-it('shows an accepted order as an order, not a pass, and asks for no approaches', async () => {
+// An accepted arrangement uses the same minimal completion, with its actual
+// zero XP. It still never requests verified-code approach comparisons.
+it('shows the minimal completion for an accepted order without granting XP or requesting approaches', async () => {
   vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
     matches: query === '(max-width: 1023.95px)', media: query, onchange: null,
     addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {}, dispatchEvent() { return true; },
@@ -349,10 +349,10 @@ it('shows an accepted order as an order, not a pass, and asks for no approaches'
   }));
   mount({ subject: { ...task, puzzle } });
   fireEvent.click(screen.getByRole('button', { name: /Check the order/ }));
-  expect(await screen.findByRole('heading', { level: 3, name: 'That order works.' })).toBeVisible();
-  expect(screen.queryByRole('heading', { level: 1, name: /^Passed/ })).toBeNull();
-  expect(status()).toHaveTextContent('That order works.');
-  expect(screen.queryByRole('link', { name: 'Next task' })).toBeNull();
+  expect(await screen.findByRole('heading', { level: 1, name: 'Passed +0 XP' })).toBeVisible();
+  expect(screen.queryByRole('button', { name: /Check the order/ })).toBeNull();
+  expect(screen.getByRole('button', { name: 'Next task' })).toBeVisible();
+  expect(screen.getByRole('link', { name: 'Back to the list' })).toBeVisible();
   expect(vi.mocked(useCodingApproaches).mock.calls.every(([, enabled]) => enabled === false)).toBe(true);
 });
 

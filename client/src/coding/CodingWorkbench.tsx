@@ -1102,7 +1102,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   const hintsOpen = taken > 0 || skipping || skipResult !== null || confirming === 'reveal' || solution !== null;
   const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
 
-  if (verdict?.verdict === 'passed' && !verdict.puzzle && !verdictStale && !verdict.graderUnavailable) {
+  if (verdict?.verdict === 'passed' && !verdictStale && !verdict.graderUnavailable) {
     return <div className={`cd-workbench cd-workbench--${mode}`}><CodingCompletion
       xp={verdict.xpAwarded} complexity={verdict.complexity} sectionRef={verdictRef}
       onNext={mode === 'lesson' ? onContinue : undefined} nextHref={nextHref ?? undefined}
