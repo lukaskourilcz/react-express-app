@@ -1,6 +1,8 @@
 CREATE EXTENSION IF NOT EXISTS dblink WITH SCHEMA extensions;
 DO $$
-DECLARE dsn TEXT := 'host=127.0.0.1 port=' || current_setting('port') || ' dbname=' || current_database() || ' user=' || current_user;
+DECLARE dsn TEXT := format('host=%s port=%s dbname=%s user=%s password=%s',
+  COALESCE(host(inet_server_addr()), 'localhost'), inet_server_port(), current_database(), current_user,
+  COALESCE(NULLIF(current_setting('devshark.test_password', TRUE), ''), 'postgres'));
   a JSONB; b JSONB; c JSONB; stamp TEXT := replace(gen_random_uuid()::TEXT, '-', '');
   ia TEXT := 'guest:racea' || stamp; ib TEXT := 'guest:raceb' || stamp;
 BEGIN

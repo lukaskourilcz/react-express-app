@@ -129,8 +129,8 @@ test('React success stays compact and toolbar labels switch at 1220px with keybo
   const verdict = page.locator('.cd-verdict');
   await expect(verdict).toContainText('Passed');
   await expect(verdict).toContainText('+25 XP');
-  await expect(verdict.getByRole('link', { name: 'Next task' })).toBeVisible();
-  await expect(verdict.getByRole('link', { name: 'Back to the list' })).toBeVisible();
+  await expect(page.locator('.cd-complete').getByRole('link', { name: 'Next task' })).toBeVisible();
+  await expect(page.locator('.cd-complete').getByRole('link', { name: 'Back to the list' })).toBeVisible();
   await expect(verdict).not.toContainText(/Estimated time|How this estimate works|First pass|Reset the task/);
 });
 
@@ -267,11 +267,11 @@ test('signed in: a pass inside the hour says in a toast when the XP opens again'
   await expect(page.getByRole('status').filter({ hasText: `No XP this time: reset the task and pass it from ${time} to earn it again.` })).toBeVisible();
 });
 
-test('signed in: Start the run starts a challenge run and opens its first task (C3-1)', async ({ page }) => {
+test('signed in: Start starts a challenge run and opens its first task (C3-1)', async ({ page }) => {
   const seen = await prepare(page, { signedIn: true });
   await page.goto('/coding');
   await page.getByRole('button', { name: /Challenge run/ }).click();
-  await page.getByRole('button', { name: 'Start the run' }).click();
+  await page.getByRole('button', { name: 'Start', exact:true }).click();
   await expect.poll(() => seen.practiceStarts.length).toBe(1);
   expect(seen.practiceStarts[0]).toMatchObject({ order: 'sequential' });
   await expect(page).toHaveURL(/\/coding\/javascript\/js-sum-array$/);

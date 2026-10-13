@@ -688,6 +688,7 @@ export function CodingTaskScreen() {
   }, [learnSession, taskId]);
   const task = useCodingTask(track ? taskId : undefined, learnSession);
   const [attempt, setAttempt] = useState(0);
+  const [completedTask, setCompletedTask] = useState<string | null>(null);
   const workbench = useWorkbench(track !== null, attempt);
   const bookmarks = useBookmarks(isAuthenticated);
   const save = useSaveChallenge();
@@ -729,6 +730,7 @@ export function CodingTaskScreen() {
   useEffect(() => { if (fetchedSignedIn === false && isAuthenticated) void refetchTask(); }, [fetchedSignedIn, isAuthenticated, refetchTask]);
 
   const onVerdict = useCallback((verdict: CodingVerdictResponse, submittedCode?: string) => {
+    setCompletedTask(verdict.verdict === 'passed' && !verdict.graderUnavailable ? taskId ?? null : null);
     if (verdict.progress) void queryClient.invalidateQueries({ queryKey: codingKeys.progress() });
     // An accepted order comes back as "passed" about the arrangement. The task
     // itself stays open for the code (the server records no progress), so it
@@ -824,19 +826,19 @@ export function CodingTaskScreen() {
     <div className="cd-page ss-pop">
       {/* Rendered only when it has something to say: an empty row would still
           take a gap in the page's column and push the brief down for nothing. */}
-      {(stage || (runIndex >= 0 && activeRun)) && <div className="cd-actions">
+      {completedTask !== taskId && (stage || (runIndex >= 0 && activeRun)) && <div className="cd-actions">
         {stage && <span>{stage.challenge.title[lang]} — {t(stage.challenge.short ? 'coding.evolving.level' : 'coding.evolving.stage', { n: stage.index + 1, total: stage.challenge.stages.length })}</span>}
         {runIndex >= 0 && activeRun && <Link className="cd-link" to="/coding">{t('coding.run.stage', { n: runIndex + 1, total: activeRun.queue.length })}</Link>}
       </div>}
       {/* A list that did not load offers to load it again; a star that did
           not save says so, and the star itself is the way to try again. */}
-      {bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
-      {save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
-      <DraftNote choice={choice} />
-      {stage && stage.challenge.stages.some((id) => isBarred(premiumOf(id))) && (
+      {completedTask !== taskId && bookmarks.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.saved.loadFailed')} <Button variant="secondary" onClick={() => void bookmarks.refetch()} label={t('coding.retry')} /></p>}
+      {completedTask !== taskId && save.isError && <p role="alert" className="cd-note cd-note--error">{t('coding.collections.failed')}</p>}
+      {completedTask !== taskId && <DraftNote choice={choice} />}
+      {completedTask !== taskId && stage && stage.challenge.stages.some((id) => isBarred(premiumOf(id))) && (
         <PremiumStagesNote stages={stage.challenge.stages} short={stage.challenge.short === true} />
       )}
-      {stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} premiumOf={premiumOf} />}
+      {completedTask !== taskId && stage && <StageNav stages={stage.challenge.stages} short={stage.challenge.short === true} currentId={data.task.id} passed={passedIds} premiumOf={premiumOf} />}
       {CodingWorkbench && <CodingWorkbench
             key={`${data.task.id}-${attempt}-${choice.version}-${data.signedIn}`}
             task={data.task}
