@@ -532,7 +532,7 @@ without 058 the API sets it only when no XP was paid and the progress row
 showed a reveal before the pass, so a database without 048, which still pays,
 never reads as a forfeit. The workbench says this in the reveal
 confirmation for a signed-in learner who has not passed the task, and shows
-"Passed — no XP because the solution was revealed" on such a pass; after a
+"Passed +0 XP" on such a pass; after a
 recorded pass the solution opens without the warning, since it costs nothing.
 The junior and senior readings shown beside each other after a pass are
 stripped of their authoring comments in `lib/coding/solutions/index.ts`, so the
@@ -568,7 +568,16 @@ database.
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
 three coding tasks sealed into the level session; for an account, completion
-requires a passed verdict for each. A guest's coding passes are never stored,
+requires a verified, unrevealed passed verdict for each. The parent attempt is
+created before the intro is served, with its sealed coding-task list. `Build it`
+links open a new tab with the coding session in the URL fragment; that tab
+removes the fragment and submits the session in the request body. The server
+checks the owner, task binding, expiry and open attempt on access, Submit and
+reveal. A read-only attempt-status request checks completion when Learn regains
+focus. Missing unrevealed coding passes leave the attempt open, recording no
+failure, XP or streak; a reveal still ends it. Migration 062 enforces the same
+rule under the parent row lock, before dependent coding writes.
+A guest's coding passes are never stored,
 so a guest's level passes on its questions: the completion answers
 `codingUnverified: true`, records nothing, and the browser keeps the pass on
 that device and says coding tasks are checked and saved after sign-in. The Easy-band challenges of #226 (`EASY_BAND` in
@@ -879,7 +888,10 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   Checkout before 4 October.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
-  and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
+  and JavaScript in full, React levels 1 to 12 of 25, and DSA levels 1 and 2
+  (`FREE_LEARN_LEVELS`). The DSA introduction is open without placement or a
+  track prerequisite at `/learn/big-o`, linked by the public `/big-o` guide;
+  this exception opens no other DSA content. Also free are
   the opening stages of every evolving project and short path
   (`FREE_EVOLVING_STAGES`, `freeStageCount`), and a starter set of standalone
   coding challenges listed once in `FREE_CODING_TASK_IDS`. The opening stages

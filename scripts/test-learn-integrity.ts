@@ -336,6 +336,20 @@ async function main() {
     assert.equal(own.statusCode, 200);
     assert.equal(tokens.decodeSessionEnvelope(own.body.sessionId)?.userId, LEARNER.id, 'the session is sealed to the account');
     const ownCoding = (own.body.coding ?? [])[0] as { session: string } | undefined;
+    assert.ok(ownCoding);
+    const linked = tokens.decodeCodingSession(ownCoding.session)!;
+    assert.ok(tables.roadmap_attempts.some(row => row.attempt_id === linked.roadmapAttemptId), 'the parent exists before the intro link is opened');
+    const openedCoding = await call('POST', { resource: 'coding-task', id: linked.taskId }, LEARNER.token, { session: ownCoding.session });
+    assert.equal(openedCoding.statusCode, 200, JSON.stringify(openedCoding.body));
+    assert.equal(openedCoding.body.session, ownCoding.session, 'a new coding tab retains its original Learn session');
+    const foreignCoding = await call('POST', { resource: 'coding-task', id: linked.taskId }, OTHER.token, { session: ownCoding.session });
+    assert.equal(foreignCoding.statusCode, 409, 'a linked coding tab refuses a different owner');
+    const wrongCoding = await call('POST', { resource: 'coding-task', id: 'js-sum-array' }, LEARNER.token, { session: ownCoding.session });
+    assert.equal(wrongCoding.statusCode, 400, 'the link cannot change its task');
+    const beforeStatus = JSON.stringify(tables);
+    const status = await call('POST', { resource: 'attempt-status' }, LEARNER.token, { sessionId: own.body.sessionId });
+    assert.equal(status.statusCode, 200, JSON.stringify(status.body));
+    assert.equal(JSON.stringify(tables), beforeStatus, 'checking a Learn attempt changes no records');
     assert.ok(ownCoding, 'JavaScript level 1 carries a coding task');
     assert.equal(tokens.decodeCodingSession(ownCoding.session)?.userId, LEARNER.id, 'and so is its coding task');
     const firstQuestion = tokens.decodeSessionEnvelope(own.body.sessionId)!.questions[0];
@@ -449,6 +463,8 @@ async function main() {
       assert.equal(signedDone.statusCode, 200, JSON.stringify(signedDone.body));
       assert.equal(signedDone.body.passed, false, 'an account still needs a recorded coding pass');
       assert.deepEqual(signedDone.body.codingPending, taskIds);
+      assert.equal(signedDone.body.waiting, true, 'an unrevealed pending task leaves the attempt open');
+      assert.equal(tables.roadmap_attempts.find(row => row.attempt_id === tokens.decodeSessionEnvelope(signedIn.body.sessionId)!.attemptId)?.completed_at ?? null, null);
       assert.equal(signedDone.body.codingUnverified, undefined, 'an account is never told its coding went unverified');
     }
     console.log('PASS learn: a guest passes a level on its questions; an account still needs its coding pass');

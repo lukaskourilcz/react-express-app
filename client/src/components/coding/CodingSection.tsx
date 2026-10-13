@@ -42,7 +42,7 @@ import {
 } from '../../../../shared/coding-catalog';
 import type { CodingProgressResponse, CodingTaskProgress, CodingVerdictResponse } from '../../../../shared/coding-api';
 import { Badge } from '@astryxdesign/core/Badge';
-import { ApiError, isPremiumRequired } from '../../lib/api';
+import { ApiError, friendlyError, isPremiumRequired } from '../../lib/api';
 import { isBarred, useLocks, type LockState } from '../../lib/locks';
 import { entitlementQuery } from '../../lib/entitlement';
 import { readOnce, settled, useFirstData } from '../../lib/routeData';
@@ -676,7 +676,17 @@ export function CodingTaskScreen() {
   // A track the section does not offer (system design is hidden) is not
   // found. Its task is never fetched, so no session is issued.
   const track = isCodingSectionTrack(trackParam) ? trackParam : null;
-  const task = useCodingTask(track ? taskId : undefined);
+  const [learnLink] = useState(() => {
+    const sealed = new URLSearchParams(window.location.hash.slice(1)).get('learn');
+    try { return { taskId, session: sealed ?? sessionStorage.getItem(`devshark:learn-coding:${taskId}`) ?? undefined }; } catch { return { taskId, session: sealed ?? undefined }; }
+  });
+  const learnSession = learnLink.taskId === taskId ? learnLink.session : undefined;
+  useEffect(() => {
+    if (!learnSession || !taskId) return;
+    try { sessionStorage.setItem(`devshark:learn-coding:${taskId}`, learnSession); } catch { /* memory copy still works */ }
+    if (new URLSearchParams(window.location.hash.slice(1)).has('learn')) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
+  }, [learnSession, taskId]);
+  const task = useCodingTask(track ? taskId : undefined, learnSession);
   const [attempt, setAttempt] = useState(0);
   const workbench = useWorkbench(track !== null, attempt);
   const bookmarks = useBookmarks(isAuthenticated);
@@ -779,6 +789,10 @@ export function CodingTaskScreen() {
   }
   const CodingWorkbench = workbench.View;
   if (task.isError || !task.data || !CodingWorkbench) {
+    if (learnSession && task.error instanceof ApiError && ['invalid_session', 'session_owner_mismatch'].includes(task.error.code ?? '')) return <div className="cd-page">
+      <p className="cd-note cd-note--error" role="alert">{friendlyError(task.error)}</p>
+      <Button as={Link} href="/learn" variant="secondary" label={t('coding.lesson.backToLearn')} />
+    </div>;
     return (
       <div className="cd-page">
         <p className="cd-note cd-note--error" role="alert">{t('coding.loadError')}</p>

@@ -162,7 +162,7 @@ function buildQuestions(ids: string[], lang: ReturnType<typeof normalizeLang>, b
   return { questions, answerKey };
 }
 
-function playableResponse(input: {
+async function playableResponse(input: {
   kind: 'level' | 'checkpoint';
   topic: RoadmapTopic;
   ref: number;
@@ -204,6 +204,12 @@ function playableResponse(input: {
     // a token would otherwise record a level the guard never allowed.
     userId: input.userId,
   });
+  // A coding link can be opened before the first question is answered.
+  // Persist its parent now, with the same sealed task list and owner.
+  if (supabase && codingTasks.length > 0) {
+    const opened = await ensureAttempt(roadmapSession(sessionId)!, input.userId);
+    if (opened.error || !opened.data) throw new Error('Could not open the learning attempt');
+  }
   return {
     kind: input.kind,
     topic: input.topic,
@@ -942,6 +948,7 @@ async function ensureAttempt(
           pass_pct: passPct,
           required_level_start: session.requiredLevelStart ?? null,
           required_level_end: session.requiredLevelEnd ?? null,
+          coding_task_ids: session.codingTaskIds ?? null,
           expires_at: new Date(Date.now() + 2 * 60 * 60_000).toISOString(),
         })
         .select('attempt_id,user_id,subject,topic,kind,ref,total_questions,pass_pct,required_level_start,required_level_end,completed_at')
@@ -1228,14 +1235,18 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   const codingUnverified = !userId && (session.codingTaskIds?.length ?? 0) > 0;
   if (passed && !codingUnverified && session.codingTaskIds && session.codingTaskIds.length > 0) {
     const codingRows = await withTimeout(
-      supabase.from('roadmap_attempt_coding').select('task_id,passed,revealed').eq('attempt_id', session.attemptId!),
+      supabase.from('roadmap_attempt_coding').select('task_id,passed,verified,revealed').eq('attempt_id', session.attemptId!),
     );
     if (codingRows.error) return jsonError(res, 500, 'db_error', 'Could not grade the coding tasks');
     const passedIds = new Set((codingRows.data ?? [])
-      .filter((row) => row.passed === true && row.revealed !== true)
+      .filter((row) => row.passed === true && row.verified === true && row.revealed !== true)
       .map((row) => String(row.task_id)));
     codingPending = session.codingTaskIds.filter((id) => !passedIds.has(id));
     if (codingPending.length > 0) passed = false;
+    const revealed = (codingRows.data ?? []).some(row => session.codingTaskIds!.includes(String(row.task_id)) && row.revealed === true);
+    if (codingPending.length > 0 && !revealed && graded.length === totalQuestions && !attempt.completed_at) {
+      return res.json({ correctAnswers, totalQuestions, percentage, passed: false, applied: false, waiting: true, codingPending });
+    }
   }
 
   let progress: unknown;
@@ -1372,6 +1383,24 @@ async function handleComplete(req: VercelRequest, res: VercelResponse) {
   });
 }
 
+/** Read-only: a tab returning from a linked coding task checks this attempt. */
+async function handleAttemptStatus(req: VercelRequest, res: VercelResponse) {
+  if (!(await enforceClassRateLimit(req, res, RATE_LIMITS.roadmapCompleteAddress, RATE_LIMITS.roadmapComplete))) return;
+  if (!supabase) return jsonError(res, 503, 'not_configured', 'Learning progress is not configured');
+  const session = roadmapSession((req.body as { sessionId?: unknown } | undefined)?.sessionId);
+  if (!session) return jsonError(res, 400, 'invalid_session', 'Learning session expired or invalid');
+  const userId = await optionalAuthSub(req, res);
+  if (userId === undefined || refuseForeignSession(res, session, userId)) return;
+  const [attempt, coding] = await Promise.all([
+    withTimeout(supabase.from('roadmap_attempts').select('attempt_id,user_id,subject,topic,kind,ref,total_questions,required_level_start,required_level_end,completed_at,expires_at').eq('attempt_id', session.attemptId!).maybeSingle()),
+    withTimeout(supabase.from('roadmap_attempt_coding').select('task_id,passed,verified,revealed').eq('attempt_id', session.attemptId!)),
+  ]);
+  if (attempt.error || coding.error) return jsonError(res, 503, 'progress_unavailable', 'Could not load the learning attempt. Try again.');
+  if (!attempt.data || !attemptMatches(attempt.data, session, userId) || Date.parse(attempt.data.expires_at) <= Date.now()) return jsonError(res, 409, 'invalid_session', 'This learning attempt expired. Start the lesson again.');
+  res.setHeader('Cache-Control', 'private, no-store');
+  return res.json({ completed: Boolean(attempt.data.completed_at), coding: (coding.data ?? []).filter(row => session.codingTaskIds?.includes(String(row.task_id))).map(row => ({ taskId: String(row.task_id), passed: row.passed === true && row.verified === true && row.revealed !== true, revealed: row.revealed === true })) });
+}
+
 /* ──── handler ──────────────────────────────────────────────────────────── */
 
 async function routeHandler(req: VercelRequest, res: VercelResponse) {
@@ -1385,12 +1414,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   const resource = typeof req.query.resource === 'string' ? req.query.resource : '';
   if (resource.startsWith('coding-')) {
     try {
-      if (resource === 'coding-task' && req.method === 'GET') return await handleCodingTask(req, res, supabase);
+      if (resource === 'coding-task' && (req.method === 'GET' || req.method === 'POST')) return await handleCodingTask(req, res, supabase);
       if (resource === 'coding-submit' && req.method === 'POST') return await handleCodingSubmit(req, res, supabase);
       if (resource === 'coding-reveal' && req.method === 'POST') return await handleCodingReveal(req, res, supabase);
       if (resource === 'coding-reset' && req.method === 'POST') return await handleCodingReset(req, res, supabase);
       if (resource === 'coding-approaches' && req.method === 'GET') return await handleCodingApproaches(req, res, supabase);
-      res.setHeader('Allow', resource === 'coding-task' || resource === 'coding-approaches' ? 'GET' : 'POST');
+      res.setHeader('Allow', resource === 'coding-task' ? 'GET, POST' : resource === 'coding-approaches' ? 'GET' : 'POST');
       return jsonError(res, 405, 'method_not_allowed', 'Method not allowed');
     } catch (error) {
       if (error instanceof ServiceUnavailableError) return jsonError(res, 503, error.code, error.message);
@@ -1431,6 +1460,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       return jsonError(res, 500, 'internal_error', 'Could not complete the learning attempt');
     }
   }
+  if (req.method === 'POST' && resource === 'attempt-status') return handleAttemptStatus(req, res);
   if (req.method === 'POST' && req.query.resource === 'skill-check') {
     try {
       return await handleSkillCheck(req, res);
@@ -1603,7 +1633,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
       pool.push(...(live.levelIds[l - 1] ?? []));
     }
     const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
-    const playable = playableResponse({
+    const playable = await playableResponse({
       kind: 'checkpoint', topic, ref: part, title: `Part ${part}`,
       passPct: PART_TEST_PASS, ids, lang, byId, userId: learner?.userId ?? null,
       ...requiredRange(availability, range.startLevel, range.endLevel),
@@ -1638,7 +1668,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
     const pool: string[] = [];
     for (let l = range.startLevel; l <= range.endLevel; l++) pool.push(...(live.levelIds[l - 1] ?? []));
     const ids = secureShuffle(pool).slice(0, PART_TEST_SIZE);
-    const playable = playableResponse({
+    const playable = await playableResponse({
       kind: 'checkpoint', topic, ref: checkpoint, title: `Part ${checkpoint}`,
       passPct: PART_TEST_PASS, ids, lang, byId, userId: learner?.userId ?? null,
       ...requiredRange(availability, range.startLevel, range.endLevel),
@@ -1668,7 +1698,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // so it is told the nearest *available* level before this one: an
   // unavailable level is stepped over there exactly as the map steps over it.
   const required = previousAvailable(availability, level);
-  const playable = playableResponse({
+  const playable = await playableResponse({
     kind: 'level', topic, ref: meta.level, title: meta.title,
     difficulty: meta.difficulty, passPct: LEVEL_PASS,
     ids: live.levelIds[level - 1] ?? [], lang, byId, userId: learner?.userId ?? null,

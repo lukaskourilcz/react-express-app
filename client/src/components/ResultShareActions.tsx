@@ -12,7 +12,7 @@ import { canWebShare, captureShare, shareLink, type ShareKind, type ShareSource 
 import './ShareMoments.css';
 
 export interface ResultShareActionsProps {
-  kind: Extract<ShareKind, 'challenge_result' | 'typing_result'>;
+  kind: Extract<ShareKind, 'challenge_result' | 'learn_topic_result'>;
   /** What was played, as the card's label. */
   label: string;
   /** The result, as the card's headline. */
@@ -29,7 +29,7 @@ export interface ResultShareActionsProps {
 
 type Status = 'idle' | 'working' | 'shared' | 'copied' | 'saved' | 'failed';
 
-const SOURCE: Record<ResultShareActionsProps['kind'], ShareSource> = { challenge_result: 'challenge', typing_result: 'typing' };
+const SOURCE: Record<ResultShareActionsProps['kind'], ShareSource> = { challenge_result: 'challenge', learn_topic_result: 'learn_topic' };
 
 export default function ResultShareActions({ kind, label, headline, detail, text, path, centered = false }: ResultShareActionsProps) {
   const { t, lang } = useLanguage();
@@ -45,7 +45,7 @@ export default function ResultShareActions({ kind, label, headline, detail, text
       detail,
       date: new Intl.DateTimeFormat(lang === 'en' ? 'en-GB' : lang, { dateStyle: 'long' }).format(new Date()),
       accent,
-      fileSuffix: kind === 'challenge_result' ? 'challenge' : 'typing',
+      fileSuffix: kind === 'challenge_result' ? 'challenge' : 'learning-path',
     });
   };
 

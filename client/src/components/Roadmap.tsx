@@ -31,6 +31,7 @@ import {
   fetchRoadmapPartTest,
   submitRoadmapAnswer,
   completeRoadmapAttempt,
+  checkRoadmapAttempt,
   applySkillCheckReceipt,
   recordLevelResult,
   recordPartTestResult,
@@ -59,6 +60,7 @@ import {
 } from '../lib/roadmap';
 import { availabilityOf } from '../lib/roadmap';
 import ReferralMoment from './ReferralMoment';
+import ResultShareActions from './ResultShareActions';
 import { useSubject, topicsForSubject, type SubjectId } from '../lib/subjects';
 import {
   masteryState,
@@ -711,6 +713,7 @@ function Roadmap() {
         key={`${topic}-${active.kind}-${active.ref}`}
         playable={playable}
         firstLevelPass={noLevelPassedYet}
+        topicCompleted={active.kind === 'test' && active.ref === ranges.length && ranges.every(range => isPartTestPassed(progress, topic, range.part))}
         topicColor={topicColor}
         hasNext={!!next}
         nextLabel={nextLabel}
@@ -1342,11 +1345,12 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
 }
 
 function LessonRunner({
-  playable, firstLevelPass = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
+  playable, firstLevelPass = false, topicCompleted = false, topicColor, hasNext, nextLabel, onExit, onFinished, onNext, onReplay, t, lang,
 }: {
   playable: RoadmapPlayable;
   /** No Learn level was passed before this one opened (#239). */
   firstLevelPass?: boolean;
+  topicCompleted?: boolean;
   topicColor: string; hasNext: boolean; nextLabel: string;
   onExit: () => void; onFinished: (pct: number, repeatXp?: LearnRepeatXp) => void; onNext: () => void;
   onReplay: () => void; t: TFn; lang: string;
@@ -1465,6 +1469,10 @@ function LessonRunner({
       setCorrectCount(result.correctAnswers);
       setCodingPending(result.codingPending ?? []);
       setCodingUnverified(result.codingUnverified === true);
+      if (result.waiting) {
+        setCodingPhase(true);
+        return;
+      }
       // A level that fails its coding gate is recorded as not passed even with
       // a full question score; report the percentage the server computed but
       // keep the local pass record honest.
@@ -1477,6 +1485,23 @@ function LessonRunner({
       setCompleting(false);
     }
   }, [onFinished, playable.passPct, playable.sessionId, reportError]);
+
+  const checkCoding = useCallback(async () => {
+    try {
+      const status = await checkRoadmapAttempt(playable.sessionId);
+      const passed = status.coding.filter(item => item.passed).map(item => item.taskId);
+      setCodingPassed(passed);
+      if (status.coding.some(item => item.revealed)) setSolutionShown(true);
+      if (codingPhase && codingTasks.every(item => passed.includes(item.task.id))) await complete();
+    } catch (error) { reportError(error); }
+  }, [playable.sessionId, codingPhase, codingTasks, complete, reportError]);
+  useEffect(() => {
+    if (!user || codingTasks.length === 0 || finished) return;
+    const refresh = () => { if (document.visibilityState === 'visible') void checkCoding(); };
+    window.addEventListener('focus', refresh);
+    document.addEventListener('visibilitychange', refresh);
+    return () => { window.removeEventListener('focus', refresh); document.removeEventListener('visibilitychange', refresh); };
+  }, [user, codingTasks.length, finished, checkCoding]);
 
   const advance = useCallback(async () => {
     if (outOfHearts) {
@@ -1618,7 +1643,9 @@ function LessonRunner({
           {codingTasks.length > 0 && (
             <div style={{ marginTop: 12, fontSize: '0.9rem', color: 'var(--color-text-secondary)' }}>
               <span style={{ fontWeight: 700 }}>{t('coding.lesson.kicker')}: </span>
-              {codingTasks.map(({ task }) => task.title[lang === 'cs' ? 'cs' : 'en'] || task.title.en).join(' · ')}
+              {codingTasks.map(({ task, session }, index) => <span key={task.id}>
+                {index > 0 && ' · '}<a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${task.track}/${task.id}#learn=${encodeURIComponent(session)}`}>{task.title[lang === 'cs' ? 'cs' : 'en'] || task.title.en}</a>
+              </span>)}
             </div>
           )}
         </div>
@@ -1647,6 +1674,10 @@ function LessonRunner({
           <Kicker style={{ marginLeft: 'auto' }}>{t('coding.lesson.kicker')} · {t('coding.lesson.counter', { n: codingIndex + 1, total: codingTasks.length })}</Kicker>
         </div>
         <p style={{ margin: 0, color: 'var(--color-text-secondary)' }}>{t('coding.lesson.intro')} {t('coding.lesson.giveUpNote')}</p>
+        <div className="cd-actions">
+          <a className="cd-link" target="_blank" rel="noopener noreferrer" href={`/coding/${current.task.track}/${current.task.id}#learn=${encodeURIComponent(current.session)}`}>{t('coding.lesson.openTab')}</a>
+          {user && <AxButton variant="secondary" label={t('coding.lesson.checkCompletion')} onClick={() => void checkCoding()} isDisabled={completing} />}
+        </div>
         {answerError && <div role="alert" className="cd-note cd-note--error">{answerError}</div>}
         <LessonCodingTask
           key={current.task.id}
@@ -1788,6 +1819,10 @@ function LessonRunner({
             <ReferralMoment signedIn={!!user} source="learn_level" />
           </div>
         )}
+        {passed && topicCompleted && <ResultShareActions centered kind="learn_topic_result"
+          label={t(categoryLabelKey(playable.topic))} headline={t('roadmap.topicCompleted')}
+          detail={t('roadmap.topicShareDetail')} text={t('roadmap.topicShareText', { topic: t(categoryLabelKey(playable.topic)) })}
+          path={`/learn?topic=${playable.topic}`} />}
       </div>
     );
   }

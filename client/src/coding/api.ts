@@ -33,8 +33,10 @@ export const codingKeys = {
   github: () => ['coding', 'github'] as const,
 };
 
-export function fetchCodingTask(id: string, signal?: AbortSignal): Promise<CodingTaskResponse> {
-  return apiFetch<CodingTaskResponse>(`${ROADMAP}?resource=coding-task&id=${encodeURIComponent(id)}`, { signal });
+export function fetchCodingTask(id: string, signal?: AbortSignal, learnSession?: string): Promise<CodingTaskResponse> {
+  return apiFetch<CodingTaskResponse>(`${ROADMAP}?resource=coding-task&id=${encodeURIComponent(id)}`, { signal,
+    ...(learnSession ? { method: 'POST', body: JSON.stringify({ session: learnSession }) } : {}),
+  });
 }
 
 export async function submitCoding(input: CodingSubmitRequest): Promise<CodingVerdictResponse> {
@@ -129,11 +131,11 @@ export function useCodingApproaches(id: string | undefined, passed: boolean) {
   });
 }
 
-export function useCodingTask(id: string | undefined) {
+export function useCodingTask(id: string | undefined, learnSession?: string) {
   return useQuery({
-    queryKey: codingKeys.task(id ?? ''),
+    queryKey: [...codingKeys.task(id ?? ''), learnSession ?? null],
     enabled: Boolean(id),
-    queryFn: ({ signal }) => fetchCodingTask(id!, signal),
+    queryFn: ({ signal }) => fetchCodingTask(id!, signal, learnSession),
     // Premium (402), an unknown task (404) and a retired one (410) are
     // answers, not failures to retry, and so is a request the server refused
     // as malformed (400): sent again, it is refused again.

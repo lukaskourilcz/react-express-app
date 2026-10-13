@@ -61,9 +61,10 @@ BEGIN
   PERFORM public.record_roadmap_answer_v2('levelattempt00000003', v_user, 'q1', 1, 1, 'webdev', 'javascript', 'level', 2, 1, 50);
   v_done := public.complete_verified_roadmap_attempt(v_user, 'levelattempt00000003', '["js-double-numbers"]');
   SELECT passed INTO v_passed FROM public.roadmap_attempts WHERE attempt_id = 'levelattempt00000003';
-  ASSERT v_done IS TRUE AND v_passed IS FALSE, 'the coding gate holds the level back without a passing verdict';
+  ASSERT v_done IS FALSE AND v_passed IS NULL, 'the coding gate keeps the attempt open without a passing verdict';
+  ASSERT (SELECT completed_at IS NULL FROM public.roadmap_attempts WHERE attempt_id = 'levelattempt00000003');
   SELECT (data #>> '{javascript,levels,2,passed}')::BOOLEAN INTO v_passed FROM public.roadmap_progress WHERE user_id = v_user;
-  ASSERT v_passed IS FALSE, 'the level is not marked passed';
+  ASSERT v_passed IS NULL, 'waiting records no result for the level';
 
   -- With the verdict recorded against the attempt, it passes.
   PERFORM public.record_roadmap_answer_v2('levelattempt00000004', v_user, 'q1', 1, 1, 'webdev', 'javascript', 'level', 2, 1, 50);
