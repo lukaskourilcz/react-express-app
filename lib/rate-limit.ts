@@ -12,7 +12,9 @@
 //      Upstash isn't configured, or if a Redis call fails so we never hard-fail
 //      a request on the limiter. Buckets are keyed per (endpoint, caller): the
 //      identity a handler passes, always `user:<verified id>`, or the client
-//      IP when it passes none. They live in the module's Map, which persists
+//      IP when it passes none. A server-configured shared operation scope has
+//      one bucket across callers (used only after integration verification).
+//      They live in the module's Map, which persists
 //      across warm invocations of the same instance. Not distributed, but
 //      enough to blunt the "one script hammering one endpoint" abuse the app
 //      cares about (leaderboard spam, report spam, admin-password guessing).
@@ -36,6 +38,8 @@ export interface RateLimitConfig {
   refillPerSecond: number;
   /** Namespace so different endpoints don't share buckets. */
   key: string;
+  /** A server-configured operation budget shared across callers; never a user identity. */
+  scope?: 'shared';
 }
 
 /**
@@ -54,6 +58,9 @@ export const SHARED_NETWORK_SEATS = 32;
 
 export const RATE_LIMITS = {
   admin: { key: 'admin_gate', capacity: 5, refillPerSecond: 1 },
+  // Read-only export has one owner-controlled integration authority. Consume
+  // this shared budget only after verifying its bearer, without learner Auth.
+  marketingExport: { key: 'marketing_export', capacity: 20, refillPerSecond: 20 / 60, scope: 'shared' },
   // A quiz, review or due list, the daily challenge, the question of the day,
   // a Challenge batch and a placement start. Two tiers (`enforceClassRateLimit`):
   // this one is the caller's own, per account, per sealed Challenge run for a
@@ -271,7 +278,7 @@ export function checkRateLimit(
   const now = Date.now();
   maybeCleanup(now);
 
-  const key = `${config.key}:${identity ?? clientIp(req)}`;
+  const key = `${config.key}:${config.scope === 'shared' ? 'shared' : identity ?? clientIp(req)}`;
   const b = buckets.get(key) ?? { tokens: config.capacity, updatedAt: now };
   const elapsedSeconds = (now - b.updatedAt) / 1000;
   const refilled = Math.min(config.capacity, b.tokens + elapsedSeconds * config.refillPerSecond);
@@ -380,7 +387,7 @@ export async function enforceRateLimit(
   if (!limiter) return checkRateLimit(req, res, config, identity);
 
   try {
-    const id = identity ?? clientIp(req);
+    const id = config.scope === 'shared' ? 'shared' : identity ?? clientIp(req);
     const { success, reset } = await withLimiterDeadline(limiter.limit(id));
     if (success) return true;
 

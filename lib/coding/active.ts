@@ -16,12 +16,17 @@
 import type { CodingTask, CodingTaskSummary, CodingTrack } from '../../shared/coding-catalog';
 import { formatOf, isCodingSectionTrack } from '../../shared/coding-catalog';
 import type { EligibilityReason } from '../../shared/curation';
-import { codingTaskEligibility } from '../curation';
+import { codingTaskEligibility, taskHash } from '../curation';
 import { CODING_TASKS, EASY_BAND_TASK_IDS, MEDIUM_HARD_BAND_TASK_IDS, levelTaskQuota, summarize } from './catalog';
 import { solutionFor } from './solutions';
 import { evolvingStage } from '../../shared/evolving';
 
 const verdicts = CODING_TASKS.map((task) => ({ task, eligibility: codingTaskEligibility(task, solutionFor(task.id)) }));
+
+/** Server-only source revisions include grader edits without exporting graders. */
+export const CODING_SOURCE_VERSIONS: ReadonlyMap<string, string> = new Map(
+  CODING_TASKS.map((task) => [task.id, taskHash(task, solutionFor(task.id))]),
+);
 
 /** Tasks that may be issued, in catalogue order: the ones the gate passed, on
  * a track the Coding section offers. System design is hidden until it has been
