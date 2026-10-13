@@ -2,6 +2,7 @@
 -- that CI runs already has every one of them, so there this file changes
 -- nothing; it only lets the suite run on a bare Postgres too. Each object is
 -- created only when missing, so a real definition is never replaced.
+CREATE SCHEMA IF NOT EXISTS extensions;
 
 DO $$
 BEGIN
