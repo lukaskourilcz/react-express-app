@@ -276,8 +276,7 @@ function TodayShell({ t, children }: { t: TFn; children: ReactNode }) {
   return (
     <div className="de-page today-page" style={{ maxWidth: 760 }}>
       <header className="today-heading">
-        <Kicker>{t('today.kicker')}</Kicker>
-        <Heading level={1}>{t('today.title')}</Heading>
+        <h1 className="ss-sr-only">{t('today.title')}</h1>
       </header>
       {children}
     </div>

@@ -1582,7 +1582,7 @@ function LessonRunner({
 
   if (showIntro && intro) {
     return (
-      <div style={{ maxWidth: 640, margin: '0 auto' }}>
+      <div style={{ width: '100%', minWidth: 0, maxWidth: 640, margin: '0 auto' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
           <AxButton isIconOnly icon={<CloseIcon size={18} />} variant="ghost" size="sm" label={t('roadmap.exit')} onClick={onExit} />
           <div style={{ flex: 1 }} />
@@ -2192,16 +2192,12 @@ function SkillCheckRunner({
   if (phase === 'intro') {
     return (
       <div style={{ maxWidth: 560, margin: '0 auto', textAlign: 'center', marginTop: 16 }}>
-        <Kicker center>{t('placement.kicker')}</Kicker>
-        <div style={{ marginTop: 10 }}>
-          <Heading level={2} justify="center">{t('placement.title')}</Heading>
-        </div>
+        <Kicker as="h1" center>{t('placement.kicker')}</Kicker>
+
         <div style={{ marginTop: 8 }}>
           <Text color="secondary">{t('placement.subtitle')}</Text>
         </div>
-        <div style={{ marginTop: 12, marginBottom: 24 }}>
-          <Text type="supporting" color="secondary">{t('placement.idkCounts')}</Text>
-        </div>
+
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
           <AxButton variant="primary" label={t('placement.start')} onClick={() => void start()} />
           <AxButton variant="secondary" label={t('placement.cancel')} onClick={onCancel} />
@@ -2256,9 +2252,7 @@ function SkillCheckRunner({
             <div style={{ marginTop: 8, marginBottom: 8 }}>
               <Text color="secondary">{t(tier as TranslationKey)}</Text>
             </div>
-            <div style={{ marginBottom: 24 }}>
-              <Text type="supporting" color="secondary">{t('placement.doneBody')}</Text>
-            </div>
+
           </>
         )}
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -2286,7 +2280,7 @@ function SkillCheckRunner({
   const optionValue = answered && answers[current.id] >= 0 ? answers[current.id] : null;
 
   return (
-    <div style={{ maxWidth: 640, margin: '0 auto' }}>
+    <div style={{ width: '100%', minWidth: 0, maxWidth: 640, margin: '0 auto' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
         <AxButton
           isIconOnly

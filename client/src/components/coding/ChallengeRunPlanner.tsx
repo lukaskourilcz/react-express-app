@@ -96,7 +96,7 @@ function RunCard({ session, onDone }: { session: PracticeSession; onDone: () => 
 
   return (
     <div className="cd-run__card" role="group" aria-labelledby="cd-run-card-title">
-      <Kicker as="h3" id="cd-run-card-title">{t(scheduled ? 'coding.run.planned' : 'coding.run.active')}</Kicker>
+      <h3 className={scheduled ? 'ss-kicker' : 'ss-sr-only'} id="cd-run-card-title">{t(scheduled ? 'coding.run.planned' : 'coding.run.active')}</h3>
       <p className="cd-run__summary">{runSummary(session, t)}</p>
       {scheduled && session.scheduledFor && (
         <p className="cd-run__when" role="status">

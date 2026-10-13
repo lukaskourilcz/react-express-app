@@ -58,6 +58,9 @@ const Highlighter = lazyShellPart(async () => {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         style={oneDark as any}
         customStyle={{
+          width: '100%',
+          minWidth: 0,
+          boxSizing: 'border-box',
           margin: '1rem 0',
           borderRadius: 6,
           fontSize: '0.75rem',
@@ -80,6 +83,10 @@ const PlainCode = ({ code, language }: { code: string; language: string }) => {
     <pre
       aria-label={t('a11y.codeBlock', { language })}
       style={{
+        width: '100%',
+        minWidth: 0,
+        maxWidth: '100%',
+        boxSizing: 'border-box',
         margin: '1rem 0',
         padding: '1rem',
         borderRadius: 6,

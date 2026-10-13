@@ -1120,6 +1120,7 @@ export default function Challenge() {
             maxHeight: '48vh',
             overflowY: 'auto',
             borderRadius: 'var(--radius-container)',
+            backgroundColor: 'var(--color-background-surface)',
             boxShadow: 'var(--shadow-high)',
           }}
         >
