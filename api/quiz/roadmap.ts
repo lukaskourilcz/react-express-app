@@ -1697,7 +1697,7 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   // The completion routine re-checks the prerequisite in SQL by level number,
   // so it is told the nearest *available* level before this one: an
   // unavailable level is stepped over there exactly as the map steps over it.
-  const required = previousAvailable(availability, level);
+  const required = isBigOIntroduction(topic, level) ? null : previousAvailable(availability, level);
   const playable = await playableResponse({
     kind: 'level', topic, ref: meta.level, title: meta.title,
     difficulty: meta.difficulty, passPct: LEVEL_PASS,

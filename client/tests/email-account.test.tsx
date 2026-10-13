@@ -47,6 +47,7 @@ const FRIENDS = {
 function serveAccount(visible: boolean) {
   server.use(
     settingsHandler,
+    http.get('*/api/user/leaderboard-name', () => HttpResponse.json({mode:visible?'account':'nickname',nickname:'elTiburonLoco1',accountName:'ada.lovelace',showPhoto:false,photo:null})),
     visibilityHandler(visible),
     http.get('*/api/user/stats', () => HttpResponse.json({ data: STATS })),
     http.get('*/api/user/xp', () => HttpResponse.json({ data: { quest_xp: 0, by_subject: {} } })),
@@ -109,15 +110,15 @@ describe('an account made with an email and password', () => {
     expect((await screen.findAllByText('el-tiburon-loco')).length).toBeGreaterThan(0);
   });
 
-  it('stays “Learner” on the boards, even with the name switch on, and its address never shows', async () => {
+  it('uses the server-confirmed account name on the boards without publishing the full email or photo', async () => {
     serveAccount(true);
     server.use(leaderboardHandlers.pinned);
     await mount('/leaderboard', <Leaderboard />);
     const pinned = (await screen.findByRole('table')).querySelector('tfoot tr') as HTMLElement;
-    expect(within(pinned).getByText('Learner')).toBeVisible();
+    expect(within(pinned).getByText('ada.lovelace')).toBeVisible();
     expect(within(pinned).getByText('You')).toBeVisible();
-    expect(within(pinned).queryByRole('img')).toBeNull();
-    expect(document.body).not.toHaveTextContent(/ada\.lovelace|@example\.com/);
+    expect(pinned.querySelector('img')).toBeNull();
+    expect(document.body).not.toHaveTextContent(/@example\.com/);
   });
 
   // A live room names its players on the server (lib/public-identity.ts):

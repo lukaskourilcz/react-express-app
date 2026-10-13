@@ -623,6 +623,16 @@ async function main() {
       }
     }
     console.log('PASS learn: a replayed step pays its XP again after an hour, as XP only, and says when it opens');
+    // A direct visit to the public guide's second intro must be completable,
+    // rather than open successfully and then fail its SQL prerequisite.
+    const bigO=await call('GET',{topic:'dsa',level:'2',lang:'en'},OTHER.token);
+    assert.equal(bigO.statusCode,200,JSON.stringify(bigO.body));
+    assert.equal((bigO.body.coding??[]).length,0,'the introductory Big O lesson needs no locked coding task');
+    assert.ok((await answerAll(bigO.body.sessionId,OTHER.token)).every(status=>status===200));
+    const bigODone=await call('POST',{resource:'complete'},OTHER.token,{sessionId:bigO.body.sessionId});
+    assert.equal(bigODone.statusCode,200,JSON.stringify(bigODone.body));
+    assert.equal(bigODone.body.passed,true,'a free beginner completes Big O without DSA level one or placement');
+    console.log('PASS learn: Big O level two can be completed directly without placement or an earlier DSA level');
   } finally {
     server.close();
   }
