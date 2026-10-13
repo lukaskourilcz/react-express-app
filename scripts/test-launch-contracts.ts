@@ -3279,7 +3279,7 @@ async function identityContracts() {
   const friendsDb = {
     async rpc(name: string, args: Record<string, unknown>) {
       friendCalls.push({ name, args });
-      if (name === 'set_user_handle') return { data: args.p_handle, error: null };
+      if (name === 'allocate_shark_name') return { data: { handle: `${args.p_base}9007199254740993`, ordinal: '9007199254740993', base: args.p_base }, error: null };
       if (name === 'friend_lookup') return { data: [{ handle: 'thirsty-sharkie', state: 'accepted', display_name: 'Ada Lovelace' }], error: null };
       if (name === 'friend_list') return { data: [{ handle: 'thirsty-sharkie', display_name: 'Ada Lovelace', picture: null, current_streak: 3 }], error: null };
       if (name === 'friend_requests') return { data: [{ handle: 'fin-de-fiesta', direction: 'incoming', display_name: 'Dee Example' }], error: null };
@@ -3291,18 +3291,18 @@ async function identityContracts() {
     await handleFriends(op, { method, headers: {}, query: { op, user_id: 'contract-identity-ada', ...options.query }, body: options.body } as never, res as never, friendsDb as never);
     return res;
   };
-  const longest = 'shark-so-fat-it-cant-swim-at-all';
-  assert.equal(longest.length, 32);
-  assert.deepEqual((await friends('friends-handle', 'PUT', { body: { handle: longest } })).body, { handle: longest }, 'a 32-character sharkname is accepted');
-  for (const handle of [`${longest}x`, 'ab', '-sharkie', 'Shark', 'thirsty sharkie']) {
+  const longest = 'sharkSoFatItCantSwim';
+  assert.deepEqual((await friends('friends-handle', 'PUT', { body: { base: longest } })).body,
+    { handle: `${longest}9007199254740993`, ordinal: '9007199254740993', base: longest }, 'the suffix is a server-owned decimal string');
+  for (const handle of [`${longest}42`, 'ab', '-sharkie', 'Shark', 'thirsty sharkie']) {
     const refused = await friends('friends-handle', 'PUT', { body: { handle } });
     assert.equal(refused.statusCode, 400, `${handle} is refused before the database`);
     assert.equal(code(refused), 'invalid_handle');
-    assert.match((refused.body as { error: { message: string } }).error.message, /3–32/);
+    assert.match((refused.body as { error: { message: string } }).error.message, /number is added automatically/);
   }
-  assert.equal(friendCalls.filter((one) => one.name === 'set_user_handle').length, 1, 'only the valid sharkname reached set_user_handle');
+  assert.equal(friendCalls.filter((one) => one.name === 'allocate_shark_name').length, 1, 'only the approved base reaches the atomic allocator');
   assert.match(readFileSync(join(process.cwd(), 'client/src/lib/friends.ts'), 'utf8'), /from '\.\.\/\.\.\/\.\.\/shared\/handles'/, 'the client checks the same rule as the API, from shared/handles.ts');
-  assert.ok(isValidHandle(longest) && !isValidHandle(`${longest}x`));
+  assert.ok(isValidHandle(longest));
 
   assert.deepEqual((await friends('friends-lookup', 'GET', { query: { handle: 'thirsty-sharkie' } })).body,
     { found: true, handle: 'thirsty-sharkie', state: 'accepted', displayName: 'Ada Lovelace' });

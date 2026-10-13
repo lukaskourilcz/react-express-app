@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
-import { generateSharkname, hasSharkWord, seededRandom, SHARK_WORDS } from '../../shared/sharkname';
+import { generateSharkname, hasSharkWord, seededRandom, SHARK_WORDS, camelSharkBase, isAllowedSharkBase, numberedSharkname } from '../../shared/sharkname';
 import { HANDLE_PATTERN, RESERVED_HANDLES, isValidHandle } from '../../shared/handles';
 
 // The Sharkname generator (shared/sharkname.ts): every name it rolls must be
@@ -34,10 +34,10 @@ const BLOCKED_FRAGMENTS = [
 ];
 
 describe('the sharkname generator', () => {
-  it('always rolls a handle the database accepts: 3–32 characters, lower-case kebab-case, not reserved', () => {
+  it('always rolls a handle the database accepts: 3–32 characters, camelCase bases, not reserved', () => {
     const bad = names.filter((name) =>
       !HANDLE_PATTERN.test(name) || !isValidHandle(name) || name.length > 32
-      || !/^[a-z]+(-[a-z]+)+$/.test(name) || RESERVED_HANDLES.has(name));
+      || !isAllowedSharkBase(name) || RESERVED_HANDLES.has(name));
     expect(bad).toEqual([]);
   });
 
@@ -70,16 +70,16 @@ describe('the sharkname generator', () => {
       noBueno: /-no-bueno-/,
     };
     for (const [shape, pattern] of Object.entries(shapes)) {
-      expect(names.some((name) => pattern.test(name)), shape).toBe(true);
+      expect(names.some((name) => pattern.test(name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase())), shape).toBe(true);
     }
     for (const example of ['thirsty-sharkie', 'shark-so-fat-it-cant-swim', 'blood-no-bueno-shark', 'el-tiburon-loco', 'fin-de-fiesta', 'sharky-mc-tacoface', 'mucho-chomp-shark']) {
-      expect(unique.has(example), example).toBe(true);
+      expect(unique.has(camelSharkBase(example)), example).toBe(true);
     }
   });
 
   it('never rolls a blocked word', () => {
     const blocked = names.filter((name) => {
-      const segments = name.split('-');
+      const segments = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().split('-');
       const squashed = segments.join('');
       return segments.some((segment) => BLOCKED_SEGMENTS.includes(segment))
         || BLOCKED_FRAGMENTS.some((fragment) => squashed.includes(fragment));
@@ -132,7 +132,7 @@ describe('the seed friends’ sharknames (migration 055)', () => {
   it('took them from the generator, and the seed script writes the same ones', () => {
     const random = seededRandom(2026);
     const rolled = new Set(Array.from({ length: 60 }, () => generateSharkname(random)));
-    for (const row of rows) expect(rolled.has(row.newHandle), row.newHandle).toBe(true);
+    for (const row of rows) expect(rolled.has(camelSharkBase(row.newHandle)), row.newHandle).toBe(true);
     expect(Object.fromEntries(profiles.map((one) => [one.slug, one.handle])))
       .toEqual(Object.fromEntries(rows.map((row) => [row.oldHandle, row.newHandle])));
   });
@@ -141,3 +141,13 @@ describe('the seed friends’ sharknames (migration 055)', () => {
     expect(migration).toMatch(/WHERE h\.user_id = v\.user_id\s+AND h\.handle = v\.old_handle\s+AND NOT EXISTS \(\s+SELECT 1 FROM public\.user_handles taken WHERE taken\.handle_key = lower\(v\.new_handle\)/);
   });
 });
+
+ it('keeps decimal ordinals exact and bounds the complete name', () => {
+   expect(numberedSharkname('sharkNoBueno', '9007199254740993')).toBe('sharkNoBueno9007199254740993');
+   const full = numberedSharkname('sharkSoHungryItAteTheMenu', '9223372036854775806');
+   expect(full.length).toBeLessThanOrEqual(32);
+   expect(full.endsWith('9223372036854775806')).toBe(true);
+   expect(hasSharkWord(full)).toBe(true);
+   expect(isAllowedSharkBase('sleepySharkie42')).toBe(false);
+   expect(isAllowedSharkBase('nastyShark')).toBe(false);
+ });

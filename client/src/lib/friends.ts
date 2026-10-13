@@ -14,6 +14,8 @@ export { isValidHandle };
 export interface HandleState {
   /** null until the learner claims one — and until then nobody can find them. */
   handle: string | null;
+  ordinal?: string | null;
+  base?: string | null;
   /** False means no new person can find you. It does not unmake a friendship. */
   discoverable: boolean;
   /** ISO 3166-1 alpha-2, or null for no flag. Declaring one is optional. */
@@ -85,8 +87,8 @@ const OP = (op: string) => `/api/user/${op}`;
 
 export const getHandle = (): Promise<HandleState> => apiFetch<HandleState>(OP('friends-handle'));
 
-export const setHandle = (handle: string): Promise<{ handle: string }> =>
-  apiFetch(OP('friends-handle'), { method: 'PUT', body: JSON.stringify({ handle: handle.trim() }) });
+export const setHandle = (base: string): Promise<{ handle: string; ordinal: string; base: string }> =>
+  apiFetch(OP('friends-handle'), { method: 'PUT', body: JSON.stringify({ base: base.trim() }) });
 
 export const setDiscoverable = (discoverable: boolean): Promise<{ discoverable: boolean }> =>
   apiFetch(OP('friends-handle'), { method: 'PUT', body: JSON.stringify({ discoverable }) });
