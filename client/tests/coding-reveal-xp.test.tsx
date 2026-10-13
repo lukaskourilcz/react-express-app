@@ -2,7 +2,7 @@
 // learner is told before (the confirmation) and after (the verdict card), and
 // not told once the task is passed, where a reveal costs nothing.
 import { expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import { CodingWorkbench } from '../src/coding/CodingWorkbench';
@@ -34,7 +34,7 @@ const progress = (status: CodingTaskProgress['status']): CodingTaskProgress => (
 const verdict = (extra: Partial<CodingVerdictResponse>): CodingVerdictResponse => ({
   verdict: 'passed', results: [{ pass: true, actual: '1', error: null }], hidden: null, check: null, logs: [], codeError: null,
   design: null, designReference: null, failureHint: null, puzzle: null, progress: progress('passed'),
-  firstPass: true, xpAwarded: 35, xpForfeited: false, applied: true, github: null, solutions: null, ...extra,
+  firstPass: true, xpAwarded: 25, xpForfeited: false, applied: true, github: null, solutions: null, ...extra,
 });
 const revealed: CodingRevealResponse = { solution: 'const one = () => 1;', reference: null, progress: progress('revealed') };
 
@@ -64,7 +64,7 @@ function climbTheLadder() {
 
 async function submitAndWait() {
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-  return screen.findByRole('heading', { level: 3 });
+  return screen.findByRole('heading', { level: 1, name: /^Passed/ });
 }
 
 it('warns a signed-in learner before a pass that revealing costs the XP and coins', async () => {
@@ -105,10 +105,8 @@ it('drops the XP warning after a pass in this session too, and inside a Learn le
   mount({ mode: 'lesson' });
   climbTheLadder();
   await submitAndWait();
-  fireEvent.click(screen.getByRole('button', { name: 'Solution' }));
-  const dialog = screen.getByRole('alertdialog', { name: 'Solution' });
-  expect(dialog).toHaveTextContent('Showing the solution ends this level attempt. You can retry the level later. Show it?');
-  expect(dialog).not.toHaveTextContent(XP_WARNING);
+  expect(screen.queryByRole('button', { name: 'Solution' })).toBeNull();
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Passed +25 XP');
 });
 
 it('does not tell a signed-out visitor about XP a reveal cannot cost them', () => {
@@ -122,10 +120,8 @@ it('says a pass after a reveal earned no XP, instead of reading like any other p
   vi.mocked(submitCoding).mockResolvedValue(verdict({ xpAwarded: 0, xpForfeited: true }));
   mount();
   const heading = await submitAndWait();
-  expect(heading).toHaveTextContent('Passed — no XP because the solution was revealed');
-  expect(screen.queryByText(/\+\d+ XP/)).toBeNull();
-  // The live region announces the same words.
-  await waitFor(() => expect(screen.getAllByRole('status').some((node) => node.textContent === 'Passed — no XP because the solution was revealed')).toBe(true));
+  expect(heading).toHaveTextContent('Passed +0 XP');
+  expect(screen.queryByRole('button', { name: 'Solution' })).toBeNull();
 });
 
 it('keeps the plain pass and its XP when nothing was revealed', async () => {
@@ -133,7 +129,7 @@ it('keeps the plain pass and its XP when nothing was revealed', async () => {
   mount();
   const heading = await submitAndWait();
   expect(heading).toHaveTextContent('Passed');
-  expect(heading).toHaveTextContent('+35 XP');
+  expect(heading).toHaveTextContent('+25 XP');
   expect(heading).not.toHaveTextContent('no XP');
 });
 

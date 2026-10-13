@@ -82,14 +82,14 @@ it('clears the last verdict when a new Submit fails', async () => {
   expect(screen.queryByRole('heading', { level: 3, name: 'Failed' })).toBeNull();
 });
 
-it('says a verdict is about earlier code once the code changes', async () => {
+it('replaces the editor with the completion screen after a pass', async () => {
   vi.mocked(submitCoding).mockResolvedValueOnce(verdict({}));
   mount();
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-  expect(await screen.findByRole('heading', { level: 3, name: /^Passed/ })).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
   expect(screen.queryByText(/You changed the code after this check/)).toBeNull();
-  fireEvent.change(editor(), { target: { value: 'const double = (list) => list.map((n) => n * 2);' } });
-  expect(screen.getByText('You changed the code after this check. Submit again to check the new version.')).toBeVisible();
+  expect(screen.queryByLabelText('Test editor')).toBeNull();
+  expect(screen.getByRole('link', { name: 'Back to the list' })).toBeVisible();
 });
 
 // C3-9 / C4-3: "Passing the visible examples is not enough" appeared when
@@ -159,7 +159,7 @@ it('does not call the server’s results about the code just submitted stale', a
   vi.mocked(runCodeTests).mockImplementationOnce(() => new Promise(() => {}));
   vi.mocked(submitCoding).mockResolvedValueOnce(verdict({}));
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-  expect(await screen.findByRole('heading', { level: 3, name: /^Passed/ })).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
   expect(screen.queryByText('The code changed since this run.')).toBeNull();
 });
 
@@ -214,11 +214,11 @@ it('sends Submit without waiting for the browser run, and shows the server run',
   mount();
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
   await waitFor(() => expect(submitCoding).toHaveBeenCalledTimes(1));
-  expect(await screen.findByRole('heading', { level: 3, name: /^Passed/ })).toBeVisible();
+  expect(await screen.findByRole('heading', { level: 1, name: /^Passed/ })).toBeVisible();
   // The browser run finishing late does not replace what the server saw.
   await act(async () => { finishLocal(outcome({ codeError: 'late local run' })); });
   expect(screen.queryByText('late local run')).toBeNull();
-  expect(screen.getByRole('tab', { name: /Results/ })).toHaveTextContent('2/2');
+  expect(screen.queryByRole('tab', { name: /Results/ })).toBeNull();
 });
 
 // C3-8: the gate was checked at render time only, so a learner who edited
@@ -350,7 +350,7 @@ it('shows an accepted order as an order, not a pass, and asks for no approaches'
   mount({ subject: { ...task, puzzle } });
   fireEvent.click(screen.getByRole('button', { name: /Check the order/ }));
   expect(await screen.findByRole('heading', { level: 3, name: 'That order works.' })).toBeVisible();
-  expect(screen.queryByRole('heading', { level: 3, name: /^Passed/ })).toBeNull();
+  expect(screen.queryByRole('heading', { level: 1, name: /^Passed/ })).toBeNull();
   expect(status()).toHaveTextContent('That order works.');
   expect(screen.queryByRole('link', { name: 'Next task' })).toBeNull();
   expect(vi.mocked(useCodingApproaches).mock.calls.every(([, enabled]) => enabled === false)).toBe(true);
@@ -370,11 +370,11 @@ it('shows three landing examples while Run still checks every test', async () =>
 
 it('keeps Big O space targets and guidance exclusively inside its named tooltip', () => {
   mount({ subject: { ...task, prompt: { en: 'Target: O(n) time, and O(1) extra space.', cs: '' } } });
-  expect(screen.getByText('Big O · Target O(n) time')).toBeVisible();
-  const info = screen.getByRole('button', { name: 'About Big O complexity' });
+  expect(screen.getByText('Desired complexity: O(n)')).toBeVisible();
+  const info = screen.getByRole('link', { name: 'About Big O complexity' });
   const tooltip = document.getElementById(info.getAttribute('aria-describedby')!)!;
   expect(tooltip).toHaveAttribute('role', 'tooltip');
-  expect(tooltip).toHaveTextContent('Target extra space: O(1).');
+  expect(info).toHaveAttribute('href', '/big-o');
   expect(tooltip).toHaveTextContent('n is the size of the input.');
   expect(document.querySelector('.cd-complexity details')).toBeNull();
   expect(document.querySelector('.cd-complexity > span')).not.toHaveTextContent('Target extra space');

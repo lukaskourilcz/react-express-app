@@ -34,7 +34,6 @@ const task: PlayableCodingTask = {
 const passed: CodingTaskProgress = { status: 'passed', passes: 1, reviewStage: 0, nextReviewAt: null, revealCount: 0, bestPassedAt: null };
 // 14:32 in the browser's own zone, as the note prints it.
 const at = new Date(2026, 9, 9, 14, 32).toISOString();
-const shown = new Date(at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 const verdict = (repeatXp: CodingRepeatXp | null, extra: Partial<CodingVerdictResponse> = {}): CodingVerdictResponse => ({
   verdict: 'passed', results: [{ pass: true, actual: '1', error: null }], hidden: null, check: null, logs: [], codeError: null,
   design: null, designReference: null, failureHint: null, puzzle: null, progress: passed,
@@ -54,7 +53,7 @@ function mount(signedIn = true, progress: CodingTaskProgress | null = passed) {
 async function submitWith(body: CodingVerdictResponse) {
   vi.mocked(submitCoding).mockResolvedValue(body);
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-  return screen.findByRole('heading', { level: 3 });
+  return screen.findByRole('heading', { level: 1, name: /^Passed/ });
 }
 
 beforeEach(() => {
@@ -66,26 +65,27 @@ it('says when a paid pass can earn the XP again', async () => {
   mount();
   await submitWith(verdict({ availableAt: at, needsReset: true, withheld: null }, { firstPass: true, xpAwarded: 25 }));
   expect(screen.getByText('+25 XP')).toBeVisible();
-  expect(screen.getByText(`Reset the task to earn its XP again from ${shown}.`)).toBeVisible();
+  expect(screen.queryByText(/Reset the task to earn/)).toBeNull();
 });
 
 it('says a pass without a reset paid nothing, and why', async () => {
   mount();
   await submitWith(verdict({ availableAt: at, needsReset: true, withheld: 'reset' }));
-  expect(screen.getByText('No XP this time: reset the task first.')).toBeVisible();
-  expect(screen.queryByText(/XP$/)).toBeNull();
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Passed +0 XP');
+  expect(screen.queryByText(/No XP this time/)).toBeNull();
 });
 
 it('says a pass inside the hour paid nothing, and when to reset', async () => {
   mount();
   await submitWith(verdict({ availableAt: at, needsReset: true, withheld: 'cooldown' }));
-  expect(screen.getByText(`No XP this time: its XP opens again at ${shown}. Reset the task then.`)).toBeVisible();
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Passed +0 XP');
+  expect(screen.queryByText(/No XP this time/)).toBeNull();
 });
 
 it('leaves a pass after a reveal to its own title', async () => {
   mount();
   await submitWith(verdict({ availableAt: at, needsReset: true, withheld: null }, { xpForfeited: true }));
-  expect(screen.getByRole('heading', { level: 3 })).toHaveTextContent('Passed — no XP because the solution was revealed');
+  expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Passed +0 XP');
   expect(screen.queryByText(/Reset the task/)).toBeNull();
 });
 

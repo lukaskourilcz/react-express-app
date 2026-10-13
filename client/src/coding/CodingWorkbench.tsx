@@ -41,18 +41,13 @@ import './Coding.css';
 const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
 
 function ComplexityInfo({ guidance }: { guidance: ReturnType<typeof complexityGuidance> }) {
-  // Hover/focus use Astryx's normal tooltip behavior; a tap pins it until a
-  // second tap, focus leaves, or Escape. This keeps the information reachable
-  // on touch screens, where the shared tooltip suppresses simulated hover.
-  const [pinned, setPinned] = useState<boolean | undefined>(undefined);
-  return <Tooltip isOpen={pinned} placement="above" content={<div className="cd-complexity__tip">
-    {guidance.targetSpace && <p>Target extra space: <code>{guidance.targetSpace}</code>.</p>}
+  // The trigger is itself a link, so the guide also works on touch/keyboard.
+  const { t } = useLanguage();
+  return <Tooltip placement="above" content={<div className="cd-complexity__tip">
     <p>{guidance.note}</p>
+    <p>{t('coding.complexity.learn')}</p>
   </div>}>
-    <Button variant="ghost" isIconOnly icon={<InfoIcon size={16} />} label="About Big O complexity" className="cd-complexity__info"
-      onClick={() => setPinned((value) => value === true ? false : true)}
-      onBlur={() => setPinned(false)} onFocus={() => setPinned(undefined)} onMouseEnter={() => setPinned(undefined)}
-      onKeyDown={(event) => { if (event.key === 'Escape') setPinned(false); }} />
+    <Button as={Link} href="/big-o" variant="ghost" isIconOnly icon={<InfoIcon size={16} />} label={t('coding.complexity.info')} className="cd-complexity__info" />
   </Tooltip>;
 }
 
@@ -948,13 +943,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {(verdict.xpAwarded > 0 || (isReact && verdict.verdict === 'passed' && !verdictStale)) && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
       {!(isReact && verdict.verdict === 'passed' && !verdictStale) && <RepeatXpNote verdict={verdict} />}
-      {!isReact && verdict.complexity && <div className="cd-complexity" aria-label="Solution efficiency">
-        <strong>Estimated time: {verdict.complexity.time ?? 'Cannot determine'}</strong>
-        {!verdictStale && verdict.verdict === 'passed' && verdict.complexity.assessment === 'within-target' && <p>Meets the stated time target under the analysis assumptions.</p>}
-        {!verdictStale && verdict.complexity.assessment === 'above-target' && <p>Above the stated time target. Look for repeated work inside a scan.</p>}
-        <p>{verdict.complexity.explanation}</p>
-        <details><summary>How this estimate works</summary><p>{verdict.complexity.assumptions}</p></details>
-      </div>}
+      {verdict.complexity?.time && <p className="cd-verdict__row">{t('coding.complexity.result', { complexity: verdict.complexity.time })}</p>}
       {verdictStale && <p className="cd-verdict__row">{t('coding.verdict.stale')}</p>}
       {verdict.verdict === 'failed' && verdict.hidden && verdict.hidden.passed < verdict.hidden.total && visiblePassed && <p className="cd-verdict__row">{t('coding.verdict.hiddenFailed')}</p>}
       {verdict.puzzle ? (
@@ -1037,10 +1026,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
       </div>
       <Prompt className="cd-prompt" text={L(task.prompt)} />
-      <div className="cd-complexity">
-        <span>Big O{complexity.targetTime ? ` · Target ${complexity.targetTime} time` : ' · Efficiency guidance'}</span>
+      {complexity.targetTime && <div className="cd-complexity">
+        <span>{t('coding.complexity.desired', { complexity: complexity.targetTime })}</span>
         <ComplexityInfo guidance={complexity} />
-      </div>
+      </div>}
       {/* Earlier briefs still apply, but they are context now, not the
           task: smaller, lighter, and numbered by the stage that set them. */}
       {Boolean(task.previousRequirements?.length) && <details className="cd-previous">
@@ -1123,6 +1112,23 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // follows the pane in reading order and exists only while it holds something.
   const hintsOpen = taken > 0 || skipping || skipResult !== null || confirming === 'reveal' || solution !== null;
   const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
+
+  if (verdict?.verdict === 'passed' && !verdict.puzzle && !verdictStale && !verdict.graderUnavailable) {
+    const above = verdict.complexity?.assessment === 'above-target' && Boolean(verdict.complexity.time);
+    const next = mode === 'lesson' ? onContinue : undefined;
+    return <div className={`cd-workbench cd-workbench--${mode} cd-complete`}>
+      <section ref={verdictRef} tabIndex={-1} className={`cd-verdict cd-verdict--${above ? 'warning' : 'passed'}`}>
+        <h1 className="cd-verdict__title">{t('coding.verdict.passed')} <span>{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span></h1>
+        {verdict.complexity?.time && <p className="cd-verdict__row">{t('coding.complexity.result', { complexity: verdict.complexity.time })}</p>}
+      </section>
+      <div className="cd-verdict__actions">
+        {next ? <Button variant="primary" onClick={next} label={t('coding.verdict.next')} />
+          : nextHref ? <Button variant="primary" as={Link} href={nextHref} label={t('coding.verdict.next')} />
+          : <Button variant="primary" isDisabled label={t('coding.verdict.next')} />}
+        <Button variant="secondary" as={Link} href={backHref ?? (mode === 'lesson' ? '/learn' : `/coding/${task.track}`)} label={t('coding.verdict.back')} />
+      </div>
+    </div>;
+  }
 
   return (
     <div

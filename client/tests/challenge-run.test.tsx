@@ -381,7 +381,7 @@ describe('the run reward', () => {
     expect(within(items[0]).getByText('Batch 1 question 2?')).toBeInTheDocument();
     expect(within(items[0]).getByText('right')).toBeInTheDocument();
     expect(within(items[0]).getByText('Because.')).toBeInTheDocument();
-    fireEvent.click(within(items[0]).getByRole('button', { name: 'Save as Shark Card' }));
+    fireEvent.click(within(items[0]).getByRole('button', { name: 'Save as a Shark Card' }));
     await waitFor(() => expect(api.cards).toHaveLength(1));
     expect(api.cards[0]).toEqual({
       question_id: 'b1-q2', question: 'Batch 1 question 2?', category: 'javascript',

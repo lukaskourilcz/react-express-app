@@ -129,7 +129,7 @@ describe('/daily', () => {
     renderAt('/daily');
     fireEvent.click((await screen.findAllByRole('radio'))[0]);
     fireEvent.click(screen.getByRole('button', { name: 'Check answer' }));
-    fireEvent.click(await screen.findByRole('button', { name: 'Save as Shark Card' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Save as a Shark Card' }));
     const savedButton = await screen.findByRole('button', { name: 'Saved as Shark Card' });
     await waitFor(() => expect(savedButton).toBeEnabled());
     expect(savedButton).toHaveAttribute('aria-pressed', 'true');

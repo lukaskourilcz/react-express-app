@@ -468,12 +468,13 @@ async function auditGateContracts() {
   const roundRes = mockResponse();
   await roadmapHandler({ method: 'POST', headers: {}, query: { resource: 'placement' }, body: { placementToken, answers: { [pool[0].id]: 0, 'retired-while-open': 0 } } } as never, roundRes as never);
   assert.equal(roundRes.statusCode, 200, JSON.stringify(roundRes.body));
-  const round = roundRes.body as { done: boolean; voided?: number; lastRoundSize?: number; lastRoundCorrect?: number; asked?: number };
+  const round = roundRes.body as { done: boolean; voided?: number; lastRoundSize?: number; lastRoundCorrect?: number; asked?: number; review?: import('../shared/assessment').PlacementReview[] };
   assert.equal(round.done, false);
   assert.equal(round.voided, 1, 'the retired item is reported as void');
   assert.equal(round.lastRoundSize, 1, 'the void item does not count in the round');
   assert.equal(round.lastRoundCorrect, 1);
   assert.equal(round.asked, 1, 'the run continues from what was actually graded');
+  assert.deepEqual(round.review, [{ questionId: pool[0].id, selectedIndex: 0, correctAnswer: 0, isCorrect: true, explanation: pool[0].explanation }], 'accepted review keeps the sealed shuffled answer index and omits retired items');
   // A round is graded once. Submitted again with other answers it would report
   // a different score, and a few dozen replays would find every key and mint a
   // perfect, verified placement receipt.
@@ -482,6 +483,7 @@ async function auditGateContracts() {
   assert.equal(replayRes.statusCode, 409, 'a placement round cannot be submitted twice');
   assert.equal((replayRes.body as { error: { code: string } }).error.code, 'placement_round_used');
   assert.equal(JSON.stringify(replayRes.body).includes('lastRoundCorrect'), false, 'the refusal reports no score');
+  assert.equal(JSON.stringify(replayRes.body).includes('correctAnswer'), false, 'a replay never receives review keys');
 
   // A Learn session lives as long as the attempt the answer routine opens for
   // it (two hours), so a level whose coding tasks run past an hour can still
@@ -635,6 +637,10 @@ async function tierContracts() {
     for (let part = 1; part <= 3; part++) assert.equal(contentTier({ kind: 'learn-part-test', topic, part }, index), 'free');
   }
   assert.equal(FREE_LEARN_LEVELS.react, 12);
+  assert.equal(FREE_LEARN_LEVELS.dsa, 2);
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 1 }, index), 'free');
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 2 }, index), 'free');
+  assert.equal(contentTier({ kind: 'learn-level', topic: 'dsa', level: 3 }, index), 'premium');
   assert.equal(contentTier({ kind: 'learn-level', topic: 'react', level: 12 }, index), 'free');
   assert.equal(contentTier({ kind: 'learn-level', topic: 'react', level: 13 }, index), 'premium');
   assert.equal(contentTier({ kind: 'learn-part-test', topic: 'react', part: 1 }, index), 'free', "React's first part is open");
@@ -3606,12 +3612,12 @@ async function main() {
   assert.equal(tierUnlocked({ ...ladderBase, track: 'system-design', tier: 5 }), true, 'system design has no ladder');
   assert.deepEqual(eligibleCodingBadges(new Set(), CODING_INDEX), []);
   assert.deepEqual(CODING_BADGES.map((badge) => badge.id), [...CODING_BADGE_IDS], 'every coding badge has display metadata');
-  assert.ok(CODING_TASK_XP[1] < CODING_TASK_XP[5]);
+  assert.ok(Object.values(CODING_TASK_XP).every(xp => xp === 25), 'coding pass XP does not depend on difficulty');
   // Easy, Medium and Hard are labels projected from the tier ladder (#224).
   // Every listed challenge carries one, and nothing that opens, locks or pays
   // reads it: the ladder and the XP table stay keyed by tier.
   assert.ok(CODING_INDEX.every((row) => isDifficulty(row.difficulty)), 'every indexed challenge carries Easy, Medium or Hard');
-  assert.deepEqual(CODING_TASK_XP, { 1: 25, 2: 35, 3: 50, 4: 75, 5: 120 }, 'coding XP stays keyed by tier');
+  assert.deepEqual(CODING_TASK_XP, { 1: 25, 2: 25, 3: 25, 4: 25, 5: 25 }, 'coding tasks share the base reward');
   const codingCatalogSource = readFileSync(join(process.cwd(), 'shared', 'coding-catalog.ts'), 'utf8');
   const ladderSource = codingCatalogSource.slice(codingCatalogSource.indexOf('export function tierUnlocked'), codingCatalogSource.indexOf('/** Cosmetic badge ids'));
   assert.ok(ladderSource.includes('tierPassRatio') && !/difficulty/i.test(ladderSource.replace(/\/\*\*[\s\S]*?\*\//g, '')), 'the tier ladder never reads the difficulty label');

@@ -187,7 +187,7 @@ describe('a question retired while the quiz was open', () => {
 
     expect(screen.getByText('Retired, not counted')).toBeInTheDocument();
     expect(screen.queryByText('alpha b')).not.toBeInTheDocument();
-    expect(await screen.findAllByRole('button', { name: 'Save as Shark Card' })).toHaveLength(1);
+    expect(await screen.findAllByRole('button', { name: 'Save as a Shark Card' })).toHaveLength(1);
   });
 });
 
@@ -212,7 +212,7 @@ describe('Shark Cards from the review (owner decision 12)', () => {
     await startQuiz([Q('a')]);
     fireEvent.keyDown(document.body, { key: '1' });
     fireEvent.click(screen.getByRole('button', { name: /submit quiz/i }));
-    const save = await screen.findByRole('button', { name: 'Save as Shark Card' });
+    const save = await screen.findByRole('button', { name: 'Save as a Shark Card' });
     expect(save).toHaveAttribute('aria-pressed', 'false');
     // Before anything is saved, the card asks the server for nothing but the deck.
     expect(saved).toEqual([]);
@@ -227,7 +227,7 @@ describe('Shark Cards from the review (owner decision 12)', () => {
     await waitFor(() => expect(savedButton).toBeEnabled());
     expect(savedButton).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: 'Saved as Shark Card' })).toBe(savedButton);
-    expect(screen.getByRole('link', { name: 'Open Shark Cards' })).toHaveAttribute('href', '/collection');
+    expect(screen.queryByRole('link', { name: 'Open Shark Cards' })).toBeNull();
   });
 
   it('offers nothing to a signed-out learner, whose cards would have no account to live in', async () => {

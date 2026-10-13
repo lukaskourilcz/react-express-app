@@ -690,3 +690,8 @@
 /* Compact samples keep every output tab readable instead of clipping labels. */
 .cd-workbench--landing .cd-tabs { flex-wrap: wrap; overflow-x: visible; }
 .cd-workbench--landing .cd-tab { flex: 0 0 auto; min-height: 44px; padding: .5rem; font-size: .75rem; }
+
+.cd-complete { width: 100%; max-width: 640px; margin-inline: auto; }
+.cd-complete .cd-verdict { margin-bottom: 20px; }
+.cd-verdict--warning { border-color: var(--ss-warning); background: var(--ss-warning-soft); color: var(--ss-warning); }
+.cd-complete .cd-verdict__actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }

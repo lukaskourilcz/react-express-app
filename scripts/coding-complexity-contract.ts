@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { assessComplexity } from '../lib/coding/complexity';
+import { codingPassXp } from '../shared/coding-complexity';
 import { codingTaskForHistory } from '../lib/coding/catalog';
 import { solutionFor } from '../lib/coding/solutions';
 
@@ -12,12 +13,38 @@ export function complexityContracts() {
   const nested = check('function solve(xs) { let sum=0; for(let i=0;i<xs.length;i++) for(let j=0;j<xs.length;j++) sum+=xs[j]; return sum; }');
   assert.equal(nested.time, 'O(n^2)');
   assert.equal(nested.assessment, 'above-target');
+  assert.equal(codingPassXp(nested), 15);
+  assert.equal(codingPassXp(check('const solve = xs => xs.map(x => x);')), 25);
+  assert.equal(codingPassXp(check('const solve = xs => mystery(xs);')), 25);
+  assert.equal(check('const solve = xs => xs.map(x => [1, 2, 3].includes(x));').time, 'O(n)', 'a fixed inner scan is constant work');
+  assert.equal(check('const solve = xs => [1, 2, 3].map(x => xs.includes(x));').time, 'O(n)', 'a fixed outer scan does not multiply input growth');
+  assert.equal(check('function solve(xs) { const fixed = [1,2,3]; for (const x of fixed) { fixed.includes(x); } return xs; }').time, 'O(1)');
+  assert.equal(check('function solve(xs) { const copy = xs; return copy.map(x => xs.map(y => y+x)); }').time, 'O(n^2)');
+
   assert.equal(check('function solve(xs) { for(let i=0;i<xs.length;i++) for(let j=0;j<3;j++) xs[i]+=j; return xs; }').time, 'O(n)');
-  assert.equal(check('const solve = xs => xs.map(x => xs.includes(x));').time, 'O(n^2)');
-  assert.equal(check('const solve = xs => new Set(xs.map(x => xs.includes(x)));').time, 'O(n^2)');
-  assert.equal(check('const solve = xs => [...xs.map(x => xs.includes(x))];').time, 'O(n^2)');
-  assert.equal(check('function solve(xs) { for (const x of xs.map(x => xs.includes(x))) {} return xs; }').time, 'O(n^2)');
-  assert.equal(check('function solve(xs) { for (let i=0;i<xs.length && xs.includes(i);i++) {} return xs; }').time, 'O(n^2)');
+  assert.equal(check('const solve = xs => xs.map(x => xs.map(y => y+x));').time, 'O(n^2)');
+  assert.equal(check('const solve = xs => new Set(xs.map(x => xs.map(y => y+x)));').time, 'O(n^2)');
+  assert.equal(check('const solve = xs => [...xs.map(x => xs.map(y => y+x))];').time, 'O(n^2)');
+  assert.equal(check('function solve(xs) { for (const x of xs.map(x => xs.map(y => y+x))) {} return xs; }').time, 'O(n^2)');
+  assert.equal(check('function solve(xs) { for (let i=0;i<xs.length && xs.includes(i);i++) {} return xs; }').assessment, 'unknown');
+  for (const code of [
+    'function solve(xs) { for(let i=0;i<xs.length;i++) for(let j=0;j<Math.min(xs.length,3);j++) {} return xs; }',
+    'function solve(xs) { for(let i=0;i<xs.length;i++) for(let j=0;j<3 && xs.length>0;j++) {} return xs; }',
+    'function solve(xs) { for(let i=0;i<xs.length;i+=3) for(let j=i;j<Math.min(i+3,xs.length);j++) {} return xs; }',
+    'function solve(xs) { let right=0; for(let left=0;left<xs.length;left++) while(right<xs.length) right++; return xs; }',
+    'function solve(xs) { let arr=xs; arr=[1,2,3]; return xs.map(x=>arr.includes(x)); }',
+    'function solve(xs) { for(let i=0;i<xs.length;i++) for(let j=0;j<xs.length;j++) { break; } return xs; }',
+    'function solve(xs) { let j=0; for(let i=0;i<xs.length;i++) for(;j<xs.length;j++) {} return xs; }',
+    'function solve(xs) { const n=xs.length%3; for(let i=0;i<xs.length;i++) for(let j=0;j<n;j++) {} return xs; }',
+    'function solve(xs) { for(let i=0;i<xs.length;i++) for(let j=0;j<(xs.length?3:0);j++) {} return xs; }',
+    'const solve = xs => xs.map(x => xs.some(() => true));',
+    'const solve = xs => xs.map(x => xs.every(() => false));',
+    'const solve = xs => xs.map(x => xs.includes(xs[0]));',
+  ]) assert.equal(codingPassXp(check(code)), 25, 'an uncertain bounded/amortized traversal must not reduce XP');
+  assert.equal(check("const solve = xs => xs.map(x => /[a-z]/.test('abc'));").time, 'O(n)');
+  assert.equal(check('const solve = xs => xs.map(x => xs.slice(0,3).includes(x));').time, 'O(n)');
+  assert.equal(check('const solve = xs => xs.map(x => xs.slice(-3).includes(x));').time, 'O(n)');
+  assert.equal(check('const solve = xs => xs.split("").map(x => xs.substring(0,3).includes(x));').time, 'O(n)');
   assert.equal(check('function solve(xs) { for (let i=mystery(xs);i<xs.length;i++) {} return xs; }').assessment, 'unknown');
   assert.equal(check('const solve = xs => /[a-z]/.test(xs);').time, 'O(n)');
   assert.equal(check('function solve(xs) { let i=1; while(i<xs.length) i*=2; return i; }').time, 'O(log n)');

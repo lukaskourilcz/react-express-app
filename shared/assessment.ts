@@ -2,6 +2,15 @@ import { SUBJECT_SCOPE_CATALOG, type ScopeSubjectId } from './subject-catalog';
 
 export const ASSESSMENT_QUESTION_COUNT = 20;
 
+/** Answer feedback is returned only after the server accepts a placement round. */
+export interface PlacementReview {
+  questionId: string;
+  selectedIndex: number;
+  correctAnswer: number;
+  isCorrect: boolean;
+  explanation: string;
+}
+
 // ── Learn levels: hearts ─────────────────────────────────────────────────────
 // A Learn level gives the learner this many wrong answers before it ends. The
 // lesson stops on the last one, which usually leaves later questions

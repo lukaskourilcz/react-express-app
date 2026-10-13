@@ -31,7 +31,9 @@ export const isTier = (value: unknown): value is Tier => value === 'free' || val
 /** Learn topics open to every registered account, in full. */
 export const FREE_LEARN_TOPICS = ['html', 'css', 'javascript'] as const;
 /** Topics open up to a level; React has 25 levels, so 12 is the first half. */
-export const FREE_LEARN_LEVELS: Readonly<Partial<Record<string, number>>> = { react: 12 };
+export const FREE_LEARN_LEVELS: Readonly<Partial<Record<string, number>>> = { react: 12, dsa: 2 };
+/** The public Big O introduction also bypasses topic/plan placement gates. */
+export const isBigOIntroduction = (topic: string, level: number): boolean => topic === 'dsa' && (level === 1 || level === 2);
 /** The opening stages of every evolving project and short path stay open:
  * its first milestone, or a short path's first level, together with the
  * checkpoint a project puts before it and the checkpoint that opens its next

@@ -101,7 +101,7 @@ import { loadReviewStates, recordConceptReviews } from '../../lib/concept-review
 import { refuseLocked } from '../../lib/access';
 import { creditLearnPass, settleMilestones } from '../../lib/rewards/coins';
 import { creditReferral } from '../../lib/rewards/referral';
-import type { GatedContent } from '../../shared/tiers';
+import { isBigOIntroduction, type GatedContent } from '../../shared/tiers';
 import { learnRepeatXpOf, type LearnRepeatXp } from '../../shared/repeat-xp';
 
 // One function for the whole roadmap to stay within the Vercel Hobby
@@ -600,6 +600,7 @@ function stepRefusal(
   // A passed part test is covered on both of its names: `?test=n` and the
   // older `?checkpoint=n` read the same record, and the map offers it again.
   if (stepAlreadyPassed(context.progress, topic, step)) return null;
+  if (step.kind === 'level' && isBigOIntroduction(topic, step.level)) return null;
 
   if (!isTopicInPlan(context.profile, subject, topic)) {
     return { code: 'not_in_plan', message: 'This topic is not part of the learning plan you chose' };
@@ -799,6 +800,7 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
   // another question later so the receipt still covers the full budget.
   const servedNow = await getEffectiveQuestionsById(state.subject, false);
   const roundOutcomes: PlacementOutcome[] = [];
+  const review: import('../../shared/assessment').PlacementReview[] = [];
   let roundCorrect = 0;
   let voided = 0;
   for (const item of state.items) {
@@ -815,6 +817,8 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
     const isCorrect = selected >= 0 && selected === item.correctAnswer;
     if (isCorrect) roundCorrect++;
     roundOutcomes.push({ questionId: item.questionId, category: item.category, isCorrect });
+    review.push({ questionId: item.questionId, selectedIndex: selected, correctAnswer: item.correctAnswer,
+      isCorrect, explanation: servedNow.get(item.questionId)!.explanation });
   }
 
   // Each round is graded once. The token is sealed but not single-use, and
@@ -854,6 +858,7 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
       total,
       difficulty: nextDifficulty,
       unlockedPreview: assessmentUnlocks(state.subject, correct, total),
+      review,
     };
     // The final unlock stays on the verified 20-question skill-check path: only a
     // signed-in run that reached the full budget mints a receipt to apply it.
@@ -890,6 +895,7 @@ async function handlePlacementRound(req: VercelRequest, res: VercelResponse) {
   if (!response) return jsonError(res, 404, 'no_questions', 'No placement questions available');
   response.lastRoundCorrect = roundCorrect;
   response.lastRoundSize = graded;
+  response.review = review;
   if (voided > 0) response.voided = voided;
   res.setHeader('Cache-Control', 'private, no-store');
   logEvent({ status: 200, kind: 'placement_round', subject: state.subject, round: state.round + 1, difficulty: nextDifficulty });

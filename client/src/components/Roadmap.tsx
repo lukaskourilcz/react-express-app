@@ -1,4 +1,5 @@
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { Kicker } from './landing/LandingKit';
 import { retirementOf } from '../../../shared/retired-content';
@@ -66,7 +67,7 @@ import {
   type MasteryState,
   type LevelMasteryEntry,
 } from '../../../shared/mastery';
-import { ROADMAP_MAX_HEARTS } from '../../../shared/assessment';
+import { ROADMAP_MAX_HEARTS, type PlacementReview } from '../../../shared/assessment';
 import { levelIntro, preloadLevelIntros } from '../lib/levelIntros';
 import { useRoadmapStructure, useRoadmapStructureFirst } from '../lib/queries';
 import { apiFetch } from '../lib/api';
@@ -2039,6 +2040,7 @@ interface PlacementRound {
   questions: Question[];
   lastRoundCorrect?: number;
   lastRoundSize?: number;
+  review?: PlacementReview[];
 }
 interface PlacementDone {
   done: true;
@@ -2047,6 +2049,7 @@ interface PlacementDone {
   difficulty: number;
   unlockedPreview: string[];
   resultReceipt?: string;
+  review: PlacementReview[];
 }
 type PlacementResponse = PlacementRound | PlacementDone;
 
@@ -2078,6 +2081,7 @@ function SkillCheckRunner({
   const [qIndex, setQIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, number>>({});
   const [correct, setCorrect] = useState(0);
+  const [review, setReview] = useState<(PlacementReview & { question: Question })[]>([]);
   const [verifiedUnlocks, setVerifiedUnlocks] = useState<RoadmapTopic[] | undefined>();
   // Signed in, the receipt that could not be applied, kept for Try again.
   const [unapplied, setUnapplied] = useState<string | null>(null);
@@ -2141,6 +2145,7 @@ function SkillCheckRunner({
     setPhase('loading');
     setError(null);
     setVerifiedUnlocks(undefined);
+    setReview([]);
     const startedAt = Date.now();
     try {
       const params = new URLSearchParams({ resource: 'placement', subject, lang });
@@ -2163,6 +2168,10 @@ function SkillCheckRunner({
         method: 'POST',
         body: JSON.stringify({ placementToken: token, answers, lang }),
       });
+      setReview((previous) => [...previous, ...(res.review ?? []).flatMap((item) => {
+        const question = questions.find((one) => one.id === item.questionId);
+        return question ? [{ ...item, question }] : [];
+      })]);
       if (res.done) {
         await finishFrom(res);
       } else {
@@ -2173,7 +2182,7 @@ function SkillCheckRunner({
       setError(friendlyError(err));
       setPhase('error');
     }
-  }, [token, answers, lang, difficulty, applyRound, finishFrom]);
+  }, [token, answers, lang, difficulty, questions, applyRound, finishFrom]);
 
   const current: Question | undefined = questions[qIndex];
   const roundSize = questions.length;
@@ -2231,7 +2240,7 @@ function SkillCheckRunner({
             ? 'roadmap.skillCheckSome'
             : 'roadmap.skillCheckLow';
     return (
-      <div style={{ maxWidth: 520, margin: '0 auto', textAlign: 'center', marginTop: 16 }}>
+      <div style={{ width: '100%', minWidth: 0, maxWidth: 640, margin: '0 auto', textAlign: 'center', marginTop: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
           <IconTile size={52}>
             <BoltIcon size={24} />
@@ -2262,6 +2271,16 @@ function SkillCheckRunner({
           <AxButton variant={unapplied ? 'secondary' : 'primary'} label={t('roadmap.skillCheckBack')} onClick={() => onFinished(correct, verifiedUnlocks)} />
           <AxButton variant="secondary" label={t('placement.retry')} onClick={() => void start()} />
         </div>
+        <section className="rm-placement-review" aria-label={t('placement.review')}>
+          <h2>{t('placement.review')}</h2>
+          {review.map((item, index) => <article className="ss-info-card" key={item.questionId}>
+            <h3>{index + 1}. {t(item.isCorrect ? 'quiz.correct' : 'quiz.incorrect')}</h3>
+            {renderQuestion(item.question.question)}
+            <p><strong>{t('placement.yourAnswer')}</strong> {item.question.options[item.selectedIndex] ?? t('placement.idkYet')}</p>
+            <p><strong>{t('placement.correctAnswer')}</strong> {item.question.options[item.correctAnswer]}</p>
+            <p>{item.explanation}</p>
+          </article>)}
+        </section>
       </div>
     );
   }
@@ -2396,6 +2415,49 @@ function SkillCheckRunner({
       </div>
     </div>
   );
+}
+
+/** The same reviewed DSA lessons, with an entry point open before placement. */
+export function BigOIntroduction() {
+  const { t, lang } = useLanguage();
+  const { isAuthenticated, user } = useAuth();
+  const [level, setLevel] = useState<1 | 2 | null>(null);
+  const [generation, setGeneration] = useState(0);
+  const before = useRef(0);
+  const lesson = useQuery({
+    queryKey: ['big-o-introduction', level, generation, lang, user?.id ?? null],
+    enabled: level !== null,
+    queryFn: ({ signal }) => fetchRoadmapLevel('dsa', level!, lang, signal),
+    staleTime: 0,
+    gcTime: 0,
+    retry: false,
+  });
+  const open = (next: 1 | 2) => {
+    before.current = computeLearningXp(getRoadmapProgress());
+    setGeneration((value) => value + 1);
+    setLevel(next);
+  };
+  if (level !== null) {
+    if (lesson.isPending) return <QuoteLoader quote={t('quiz.loadingQuote')} label={t('common.loading')} />;
+    if (lesson.error || !lesson.data) return <LessonError message={friendlyError(lesson.error)} onRetry={() => open(level)} onExit={() => setLevel(null)} t={t} />;
+    return <LessonRunner key={`${level}-${generation}-${user?.id ?? 'guest'}`} playable={lesson.data}
+      topicColor={getCategoryHexColor('dsa')} hasNext={level === 1} nextLabel={t('roadmap.nextLevel')}
+      onExit={() => setLevel(null)} onNext={() => open(2)} onReplay={() => open(level)} lang={lang} t={t}
+      onFinished={(pct, repeatXp) => {
+        recordLevelResult('dsa', level, pct, lesson.data!.passPct);
+        awardLearningOutcome(computeLearningXp(getRoadmapProgress()) - before.current, isAuthenticated);
+        if (isAuthenticated && repeatXp) void announceLearnRepeat(repeatXp);
+      }} />;
+  }
+  return <div className="de-page" style={{ maxWidth: 640 }}>
+    <h1>{t('bigO.pathTitle')}</h1>
+    <p>{t('bigO.pathLead')}</p>
+    <div className="ss-info-actions">
+      <AxButton variant="primary" label={t('bigO.firstLesson')} onClick={() => open(1)} />
+      <AxButton variant="secondary" label={t('bigO.secondLesson')} onClick={() => open(2)} />
+    </div>
+    <p><Link to="/big-o">{t('bigO.backToGuide')}</Link></p>
+  </div>;
 }
 
 export default Roadmap;

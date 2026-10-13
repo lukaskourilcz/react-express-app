@@ -48,7 +48,7 @@ it('Start the run sends the chosen options and opens the first task', async () =
   fireEvent.click(screen.getByRole('button', { name: 'JavaScript', pressed: false }));
   fireEvent.click(screen.getByRole('button', { name: '5 challenges' }));
   fireEvent.click(screen.getByRole('radio', { name: /Shuffled/ }));
-  fireEvent.click(screen.getByRole('button', { name: 'Start the run' }));
+  fireEvent.click(screen.getByRole('button', { name: 'Start' }));
   expect(mutate).toHaveBeenCalledTimes(1);
   expect(mutate.mock.calls[0][0]).toEqual({ count: 5, order: 'random', topic: 'javascript' });
   expect(await screen.findByRole('heading', { level: 1, name: 'Task page' })).toBeInTheDocument();

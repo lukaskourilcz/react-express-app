@@ -27,15 +27,33 @@ const result = (extra: Partial<CodingVerdictResponse>): CodingVerdictResponse =>
   verdict:'passed',results:[{pass:true,actual:null,error:null}],hidden:null,check:null,logs:[],codeError:null,
   design:null,designReference:null,failureHint:null,puzzle:null,progress:null,firstPass:false,xpAwarded:0,xpForfeited:false,applied:false,github:null,solutions:null,...extra,
 });
-it('shows the server React results after Submit instead of stale browser failures', async () => {
-  vi.mocked(submitCoding).mockResolvedValue(result({}));
+it('replaces the workbench with the passed award and two completion actions', async () => {
+  vi.mocked(submitCoding).mockResolvedValue(result({xpAwarded:25}));
   mount();
   fireEvent.click(screen.getByRole('button',{name:'Submit'}));
-  await waitFor(()=>expect(screen.getByRole('tab',{name:/Results/})).toHaveTextContent('1/1'));
+  await waitFor(()=>expect(screen.getByRole('heading',{level:1})).toHaveTextContent('Passed +25 XP'));
   expect(screen.queryByText('local form event failed')).toBeNull();
-  expect(screen.getByRole('heading',{level:1})).toHaveTextContent('Test form');
-  fireEvent.click(screen.getByRole('button',{name:'Run'}));
-  await waitFor(()=>expect(screen.getByRole('tab',{name:/Results/})).toHaveTextContent('0/1'));
+  expect(screen.queryByLabelText('Test editor')).toBeNull();
+  expect(screen.queryByRole('tab',{name:/Results/})).toBeNull();
+  expect(screen.getByRole('button',{name:'Next task'})).toBeDisabled();
+  expect(screen.getByRole('link',{name:'Back to the list'})).toHaveAttribute('href','/coding/react');
+  expect(screen.queryByText(/Complexity/)).toBeNull();
+});
+it('shows only known complexity and the server award for an above-target pass', async () => {
+  vi.mocked(submitCoding).mockResolvedValue(result({xpAwarded:15,complexity:{time:'O(n^2)',assessment:'above-target',explanation:'Nested scans',assumptions:'',guidance:{targetTime:'O(n)',targetSpace:null,note:''}}}));
+  mount();
+  fireEvent.click(screen.getByRole('button',{name:'Submit'}));
+  await waitFor(()=>expect(screen.getByRole('heading',{level:1})).toHaveTextContent('Passed +15 XP'));
+  expect(screen.getByText('Complexity: O(n^2)')).toBeVisible();
+  expect(screen.getByRole('heading',{level:1}).closest('section')).toHaveClass('cd-verdict--warning');
+});
+it('hides unknown complexity completely and displays the actual zero award', async () => {
+  vi.mocked(submitCoding).mockResolvedValue(result({complexity:{time:null,assessment:'unknown',explanation:'Cannot determine',assumptions:'',guidance:{targetTime:null,targetSpace:null,note:''}}}));
+  mount();
+  expect(screen.queryByText(/Desired complexity/)).toBeNull();
+  fireEvent.click(screen.getByRole('button',{name:'Submit'}));
+  await waitFor(()=>expect(screen.getByRole('heading',{level:1})).toHaveTextContent('Passed +0 XP'));
+  expect(screen.queryByText(/Cannot determine|Complexity|Efficiency/)).toBeNull();
 });
 it('shows the server startup error so a learner can understand a failed submission', async () => {
   vi.mocked(submitCoding).mockResolvedValue(result({verdict:'error',results:[],codeError:'The React runner could not start. Try again in a moment.'}));

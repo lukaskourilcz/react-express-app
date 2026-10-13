@@ -18,6 +18,7 @@ import { codingTaskForHistory, englishOnly, playable } from './catalog';
 import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask } from './active';
 import { codingTaskReview } from '../curation';
 import { assessComplexity } from './complexity';
+import { codingPassXp, type ComplexityReport } from '../../shared/coding-complexity';
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
@@ -35,7 +36,6 @@ import { prepareEvolvingDraft } from '../../shared/coding-fullstack-support';
 import { presentPuzzle, puzzleFor, resolvePuzzleOrder } from './puzzles';
 import { isAcceptedOrder, isCompleteOrder, PUZZLE_MAX_LINES } from '../../shared/coding-puzzle';
 import {
-  CODING_TASK_XP,
   CODING_TRACKS,
   isCodingTaskId,
   tierLockReason,
@@ -490,6 +490,7 @@ interface RecordInput {
   verdict: CodingOutcome;
   verified: boolean;
   code: string | null;
+  complexity?: ComplexityReport | null;
   runCount?: number;
   hintsUsed?: number;
   durationMs?: number;
@@ -512,7 +513,7 @@ async function recordVerdict(input: RecordInput, res: VercelResponse): Promise<R
   const { supabase, userId, task, session } = input;
   // Only a verdict the server checked pays: an unverified pass (a checklist
   // task) records the attempt and the progress row with no XP, so no coins.
-  const xp = input.verified ? CODING_TASK_XP[task.tier] : 0;
+  const xp = input.verified ? codingPassXp(input.complexity) : 0;
   // A coding task inside a Learn level links to the level attempt; the row
   // exists once the first question was answered. Without it the verdict is
   // still recorded, only unlinked. An unverified verdict is never linked, so
@@ -741,6 +742,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
     return res.json(verdictBody(graded, null, null, null));
   }
 
+  const complexity = code !== null ? assessComplexity(task, code) : null;
   let recorded: Recorded | null = null;
   let github: CodingGardenStatus | null = null;
   let draftUpdatedAt: string | null = null;
@@ -760,7 +762,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
         if (draft.saved && draft.updatedAt) draftUpdatedAt = draft.updatedAt;
       }
     }
-    recorded = await recordVerdict({ supabase, userId, task, session, verdict: graded.verdict, verified: graded.unverified !== true, code, runCount: body.runCount, hintsUsed: body.hintsUsed, durationMs: body.durationMs }, res);
+    recorded = await recordVerdict({ supabase, userId, task, session, verdict: graded.verdict, verified: graded.unverified !== true, code, complexity, runCount: body.runCount, hintsUsed: body.hintsUsed, durationMs: body.durationMs }, res);
     if (!recorded) return;
     if (graded.verdict === 'passed' && recorded.applied) {
       github = await afterCodingPass(supabase, {
@@ -782,7 +784,7 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   // an unverified pass checked nothing, so it opens nothing.
   const checkedPass = graded.verdict === 'passed' && code !== null && graded.unverified !== true;
   const out: CodingVerdictResponse = verdictBody(graded, recorded, github, checkedPass ? solutionPairFor(task.id) : null);
-  if (code !== null && !graded.infra) out.complexity = assessComplexity(task, code);
+  if (complexity) out.complexity = complexity;
   if (draftUpdatedAt) out.draftUpdatedAt = draftUpdatedAt;
   return res.json(out);
 }

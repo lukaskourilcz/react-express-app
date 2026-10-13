@@ -298,6 +298,14 @@ async function main() {
       return statuses;
     };
 
+    // The Big O introduction opens before placement, but no later DSA step does.
+    for (const level of ['1', '2']) {
+      const intro = await call('GET', { topic: 'dsa', level, lang: 'en' }, LEARNER.token);
+      assert.equal(intro.statusCode, 200, `free beginner Big O lesson ${level}: ${JSON.stringify(intro.body)}`);
+    }
+    const laterDsa = await call('GET', { topic: 'dsa', level: '3', lang: 'en' }, LEARNER.token);
+    assert.notEqual(laterDsa.statusCode, 200, 'the introduction must not unlock the rest of DSA');
+
     // ── A guest's session cannot be completed by an account ────────────────
     // JavaScript level 10 opens part two: a new account is refused it when it
     // asks with its token. Fetched without the token, the same level is served

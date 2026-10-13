@@ -12,6 +12,8 @@ const ROUTE_TITLE_KEYS: Record<string, TranslationKey> = {
   '/': 'title.home',
   '/quiz': 'title.quiz',
   '/learn': 'title.learn',
+  '/big-o': 'bigO.title',
+  '/learn/big-o': 'bigO.pathTitle',
   '/roadmap': 'title.roadmap',
   '/profile': 'title.profile',
   '/leaderboard': 'title.leaderboard',
