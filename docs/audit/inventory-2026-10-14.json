@@ -1,7 +1,7 @@
 {
   "schema": "devshark-audit-inventory/v1",
   "reconciledOn": "2026-10-14",
-  "catalogueCommit": "f520045d889b5b40a6f24bda746d820c31551128",
+  "catalogueCommit": "cf128185c7680449b822f65f6e5399e54c4eded9",
   "shippedLocales": [
     "en"
   ],
@@ -15,14 +15,18 @@
     "eligibleHiddenByOverrides": 194,
     "effectiveOnBranch": 1820,
     "allEffectiveItemsHaveCurrentQuestionReviews": true,
-    "newQuestionsNotYetDeployed": 40
+    "newQuestionsNotYetDeployed": 0,
+    "effectiveProductionAtSnapshot": 1820,
+    "overrideSnapshotSortedIdsMd5": "7271a4b58a6e2b174fe541351d7cbdc4"
   },
   "coding": {
     "authored": 770,
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "Required full coding/client step passed in GitHub Actions 38486027732; release then held by initial bundle budget. Execution is not editorial approval."
+    "executionEvidence": "PR #372 final required verify/sql passed on 5befb908 in GitHub Actions 38498381826; deployed production smoke passed. Ten individual current model records have separate 88-candidate editorial evidence; execution does not approve the remaining tasks.",
+    "currentModelReviewedIssuedTasks": 10,
+    "issuedStillRequiringReview": 715
   },
   "nativePaths": {
     "paths": 2,
@@ -34,7 +38,10 @@
     "reusedCodingActivities": 1,
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
-    "deliveryDependsOnDeploymentFlagsAndStorage": true
+    "deliveryDependsOnDeploymentFlagsAndStorage": true,
+    "currentStagedModelReviewRecords": 12,
+    "recordsStillRequiringReview": 251,
+    "reviewEvidence": "Twelve D01 records in docs/audit/wip/native/review-2026-10-14-dsa-d01.jsonl; exact English/grader bindings checked by audit:native-reviews. This partial editorial wave is not yet deployed or a runtime review claim."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
@@ -42,7 +49,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "Branch inventory plus a current production deletion snapshot; the new content is not yet deployed.",
+    "Production inventory at the 14 October override snapshot; the forty restored questions and ten reviewed coding tasks are deployed. The subsequent twelve native records are a staged partial wave.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

@@ -2992,8 +2992,9 @@ Exact guarded cleanup removed only that QA score/allocation, preserved all
 eleven account handles and left the next number at decimal string `14`.
 The spent ordinal is not recycled. The prior 30-minute CI attempt was cancelled
 in the final Storybook step; the 45-minute cap retains every gate and the final
-run completed. #366–#370 closed with production evidence. #191 stays open for
-the separately confirmed native instrumentation replacement gap in #373.
+run completed. #366–#370 closed with production evidence. The separately
+confirmed native instrumentation gap in #373 was subsequently fixed in PR #374;
+#373 and the completed grading-authority scope of #191 are now closed.
 
 ## Native grading authority follow-up — 14 October 2026 (#373)
 
@@ -3017,8 +3018,36 @@ The existing grading integrity suite passes after making queue-expiry evidence
 deterministic with a held slot: a TypeScript diagnostic may legitimately finish
 before its wait cap, so compiler speed no longer substitutes for an expiry
 test. Real burst admission, retry/no-verdict behavior, actual expiration bounds
-and pool recovery remain checked. Required final CI and deployment for this
-follow-up are still pending. No new migration or API handler is introduced.
+and pool recovery remain checked. Final required verify/SQL passed on
+`611e74bc` in [run 38499204299](https://github.com/lukaskourilcz/react-express-app/actions/runs/38499204299).
+Merge `cf128185` deployed READY as `dpl_CiBJNbTuZfUccoxc2AYyypiXVUNF`.
+Production health, guide/free intro and actual correct/wrong React/JavaScript
+grading passed. No authenticated native activity was submitted in production.
+No new migration or API handler is introduced.
+
+## Final learning browser and starter compatibility — 14 October 2026 (#375)
+
+WebKit exposed a four-pixel main-scrollbar width change between long and short
+Skill Check questions, despite a stable gutter. The main scroll lane now stays
+present. Focused Big O table arrow keys scroll inside its region in all three
+engines. Chromium's answer-width test now waits for the answers to be visible
+before measuring; the two-pixel width requirement remains unchanged.
+
+A correct native queue implementation failed with its authored starter example
+because the provided buffer factory was initialized afterwards. Immutable helper
+APIs now exist before learner source, while instrumentation installs once after
+declarations. Private counters/original references and sealed fixtures remain
+protected. All 47 native/reused references and every native authored scratch-pad
+example pass; 22 authority/setup checks pass, including repeated setup and
+replacement refusal. All 46 English starter action comments match Submit.
+
+Local API/script types, launch and full grading/Learn integrity pass. Chromium,
+Firefox and WebKit each pass twelve light/dark cases at 360/1440px; the Big O
+cases include keyboard and 200% text reflow. The focused nine-route light and dark
+sweeps each pass all 63 probes at 360–1440px. Both production dependency audits
+report zero vulnerabilities. Initial bundle remains within the unchanged
+243000-byte cap at 242948 gzip bytes. Final follow-up CI and production verification
+are pending; these local results do not claim a physical-device check.
 
 No physical Safari/Firefox/Windows/phone, timed managed-backup restore, actual
 external alert delivery, sustained expected-load acceptance or paid Stripe
