@@ -574,7 +574,7 @@ console.log(flattenAll([1, [2, [3, [4]]]]));
     tier: 2,
     focus: ['flat'],
     title: 'Expand the ranges',
-    prompt: 'A print dialog stores page ranges as `[from, to]` pairs, both ends included. Write `expand(ranges)`, returning every page number in one flat array, in the order given. Use `flatMap`: its callback turns each range into an array of numbers, and `flatMap` joins those arrays into one. `expand([[1, 3], [7, 8]])` gives `[1, 2, 3, 7, 8]`. A range whose two ends are equal is one page, and no ranges give `[]`.',
+    prompt: "A list stores inclusive integer ranges as [from, to] pairs. Write `expand(ranges)`, returning every integer in range order, using flatMap to join each range's numbers. `expand([[1, 3], [7, 8]])` gives `[1, 2, 3, 7, 8]`. Equal endpoints give one number; reversed endpoints add nothing. Keep repeated numbers from overlapping or repeated ranges. Inputs are ordinary dense arrays of two-integer pairs, with endpoints from -10000 through 10000, at most 10000 ranges and at most 10000 produced numbers overall. Do not change either input level; frozen arrays are valid. Return a fresh array even for empty input. Target: O(n) time, where n is the number of ranges plus the number of produced integers; integer increments and copies take constant time.",
     starter: `const expand = ranges => {
 
 };
@@ -602,6 +602,12 @@ console.log(expand([[1, 3], [7, 8]]));
       { call: 'expand([[10, 12], [2, 3]])', expected: [10, 11, 12, 2, 3], label: 'ranges keep the order given' },
       { call: 'expand([[4, 4]])', expected: [4], label: 'both ends equal', edge: true },
       { call: 'expand([])', expected: [], label: 'no ranges', edge: true },
+      { call: "expand([[2,3],[3,4],[2,2]])", expected: [2, 3, 3, 4, 2], label: "overlap and repeated values remain in range order", edge: true },
+      { call: "expand([[4,2],[-1,0],[0,0]])", expected: [-1, 0, 0], label: "reversed range adds nothing and zero is retained", edge: true },
+      { call: "expand(Object.freeze([Object.freeze([-2,1]),Object.freeze([5,5])]))", expected: [-2, -1, 0, 1, 5], label: "frozen ranges", edge: true },
+      { call: "(() => {const first=[3,4],second=[1,2],ranges=[first,second];expand(ranges);return ranges[0]===first&&ranges[1]===second&&first[0]===3&&first[1]===4&&second[0]===1&&second[1]===2;})()", expected: true, label: "preserve range order and pair data", edge: true },
+      { call: "(() => {const ranges=[];const a=expand(ranges),b=expand(ranges);return a!==ranges&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty results", edge: true },
+      { call: "(() => {const out=expand([[-5000,4999]]);return out.length===10000&&out.every((value,index)=>value===index-5000);})()", expected: true, label: "bounded output-sensitive expansion", edge: true },
     ],
   },
 

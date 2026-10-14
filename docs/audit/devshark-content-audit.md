@@ -1,5 +1,33 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b010
+
+Reviewed inclusive range expansion, index-distinct pairs, sorted squares,
+literal vowel reversal and outside-in ordering. Current coding coverage is
+**80/725**: forty deployed, forty staged, **645 remaining**; native remains
+**60/263**. PR #393 checks thirty staged reviews through b008; b009–b010 are
+local five-item commits.
+
+The baseline matched 30/40 expectations. New cases preserve overlapping
+range occurrences, original object references, frozen input and fresh empty
+results, and reject normalization of non-ASCII text. Range inputs/output are
+bounded and reversed endpoints explicitly add nothing. Pair generation
+explains its n*(n-1)/2 output cost. Squares use exact bounded integer products;
+the junior appends descending values and reverses once instead of repeatedly
+shifting a growing result with unshift. ASCII vowel membership and unchanged
+combining marks/surrogate pairs are explicit. Outside-in keeps falsy and
+undefined values using Boolean fixtures where JSON cannot encode them.
+
+All **40/40 final-hash worker verdicts** agree (twenty valid, five starters,
+fifteen wrong), plus twenty authored-target/base-25-XP checks and focused
+coding contracts. API types, launch contracts, registry/index generation,
+build, both production dependency audits (zero vulnerabilities), copy sweep
+and diff checks pass. The three longest rewritten routes pass eighteen light
+and eighteen dark probes at 360–1440px, with zero issues or unprobed routes.
+The b010 JSONL records individual scores, sources and final model self-reading;
+no independent/human approval or authenticated acceptance is claimed.
+Historical IDs, tier access and archived Czech stay intact.
+
 ## 15 October continuation — five-item batch b009
 
 Individually reviewed grid differences, quantity expansion, indexed string
