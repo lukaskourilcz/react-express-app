@@ -74,4 +74,3 @@ export const CLEARANCE = `(async () => {
   }
   return { covered, overlays: overlays.length };
 })()`;
-
