@@ -335,6 +335,43 @@ integrity, 20 selected advisory/reward checks and both production dependency
 audits pass locally. Production overrides were re-read during this release on 14 October: 485 hides,
 zero active rows, and the same sorted-ID digest as the earlier snapshot.
 
+### Native DSA wave 5 — singly linked lists
+
+Twelve D05 records were read individually: two lessons, two reading
+acknowledgements, a check and its four questions, and three code exercises.
+The field/allocation model, finite acyclic plain-node input, strict equality,
+value identity and null tail are explicit. A literal insertion-line swap throws
+before initialization; losing an unsaved suffix is a different failure. Position
+k costs O(k + 1), with O(n) worst-case work; reachability does not promise a
+collection time or fixed physical memory layout. Comparable options and hints
+without the complete core assignment retain the intended misconceptions.
+
+Actual local worker probes accepted SameValueZero search, Object.is deletion,
+cloned reversed values and a search that added fields. Final finite witnesses
+reject those cases, including NaN/-0, object/symbol/undefined/falsey values and
+original-link snapshots. Seven valid reference/alternative solutions pass;
+three starters and ten wrong variants fail (20/20 expected verdicts). A reversal
+using an array of original node references still passes semantics. The authored
+O(1) auxiliary-space goal is separate from the finite identity criterion, which
+does not measure temporary storage or prove arbitrary complexity. No noisy
+wall-clock penalty was introduced.
+
+Executed question contexts confirm null.next failure, insertion/suffix identity,
+literal line-swap ReferenceError and n exact walk/rewire counts. Per-item quality
+floors are 4/5 and relevance 8–10/10; exact content/grading bindings cover all
+twelve. Sources and final reading are retained in
+`review-2026-10-14-dsa-d05.jsonl`, explicitly same-session model self-review.
+This is #387, with #386 as its prerequisite. The branch now records 60/263 native
+items (48 deployed, 12 staged); 203 native items and 700 coding tasks remain.
+Local API/script types, launch, attempt-version authority, combined grading/Learn
+integrity, all path references/starter examples, 33 instrumentation authority
+checks, build/public/unused/security and both production dependency audits pass.
+Twenty-four local public-wire activity layouts cover both themes at 360/1440,
+main focus and 200% text at 1440; eighteen light and eighteen dark public-route
+reflow probes pass at six widths. These fixtures do not establish authenticated
+production acceptance or activate deployment flags. Required CI/deployment for
+this partial wave are pending.
+
 ## 1. September inventory, retained as historical evidence
 
 Every place a devShark question can reach a learner was reconciled from the
