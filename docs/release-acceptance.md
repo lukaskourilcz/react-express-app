@@ -2966,7 +2966,7 @@ remain outside the learner engine. Twelve physical API handlers remain.
 | Full coding/server/client step | PASS on `f520045d`: 770 authored / 725 issued tasks, server ownership/grading/reward/path/billing/fallback/garden/live-monitor checks, 104 client files / 996 tests |
 | React compatibility and authority | PASS — 501 reference/junior/senior implementations locally after class/lifecycle support; private Promise/kernel and learner-authority tests passed locally and in the required full step |
 | Public build and policy | PASS locally and on `f520045d`: production build, public HTML, unused code, security policies; existing chunk-size advisories retained |
-| Initial bundle | `f520045d` required CI failed at 243267/243000 gzip bytes. Removed unused retired English UI values, preserving archived Czech keys and all current copy; repeat measured build PASS at 242937/243000. Final-head CI still required |
+| Initial bundle | `f520045d` initially failed at 243267/243000 gzip bytes. Removed unused retired English UI values, preserving archived Czech keys and all current copy; measured build and final `fec381a3` CI PASS at 242937/243000 |
 | Responsive | PASS — 264 light probes (33 routes, 320–1440px), 63 focused dark probes (9 routes, 360–1440px), zero issues or unprobed routes |
 | Active result UI | PASS — eight light/dark mobile/desktop Challenge/Big O cases; opaque feedback, full-width horizontally scrolling code, fresh 90-second clock, positive-only completion, 200% text reflow and keyboard scrolling; four Skill Check cases verify stable widths and complete answer/explanation review |
 | Coding browser result | PASS — actual built editor completion and 1220/1219/360px command/tooltips, plus Start-labelled signed-in run fixture; API answered locally |
@@ -2975,13 +2975,50 @@ remain outside the learner engine. Twelve physical API handlers remain.
 | Production schema/name checks | 061–065 applied in order. Eleven case-insensitive unique account handles and unique ordinals, ten unchanged seed identities converted, custom identities preserved; counter/allocation RLS and private RPC grants checked. Advisors returned INFO-only private-table notices, no warnings/errors |
 | Production dependency audits | Root and client: zero vulnerabilities; no dependency changes in the follow-up |
 | Diff whitespace | PASS |
-| Protected merge and production code | Pending final `verify` and `sql` checks; no completed release claimed here |
+| Protected merge and production code | PASS — final `fec381a3` required `verify` and `sql`, including Storybook/performance, in [run 38494594258](https://github.com/lukaskourilcz/react-express-app/actions/runs/38494594258). Merge `1ed1d5c2` is production READY as `dpl_5r8fBKN8fzT91h2qN4Zn3X5uQRP6` on devshark.app |
 
 The old production health code used anonymous SELECT on `user_stats`, which
 061 correctly revoked. That caused a false HTTP 503 after schema deployment.
 The fix reads readiness through private server access; its grant-denying
-regression and deployed preview return 200. Production recovery still requires
-the dependent code release. No anonymous grants were widened to mask the issue.
+regression and deployed preview return 200. The production merge now returns
+200 with healthy database/service-role dependencies. No anonymous grants were
+widened to mask the issue.
+
+The final production smoke also passed correct and wrong React/JavaScript
+submissions with zero guest account XP/progress. A positive guest Challenge
+allocated ordinal `13`, retained sealed JavaScript topics and replayed the same
+score/name; a zero result returned no record and SQL found no zero-score rows.
+Exact guarded cleanup removed only that QA score/allocation, preserved all
+eleven account handles and left the next number at decimal string `14`.
+The spent ordinal is not recycled. The prior 30-minute CI attempt was cancelled
+in the final Storybook step; the 45-minute cap retains every gate and the final
+run completed. #366–#370 closed with production evidence. #191 stays open for
+the separately confirmed native instrumentation replacement gap in #373.
+
+## Native grading authority follow-up — 14 October 2026 (#373)
+
+A private local `maxGap` candidate replaced the appended `__countReads` helper,
+made one linear warm-up call, then compared every pair. The actual old path
+grader accepted it. No malicious production submission was performed.
+
+Authored harnesses now keep counters, wrap state and original function
+references in a private lexical closure. Only immutable helpers needed by
+trusted calls or the stated learner API leave it; exposed fixture objects are
+recursively sealed with captured intrinsics. Submitted source is not parsed or
+filtered. This protects the observed input-access contract; it does not turn
+finite operation-budget tests into a proof of arbitrary algorithmic complexity.
+
+Local API/script types, launch contracts, all 47 native/reused code references
+and nineteen authority/valid-alternative checks pass. Checks reject helper
+replacement across five shuffles, same-named declarations, Proxy/prototype
+replacement, recursion/queue counter shadowing and fixture mutation (including a shadowed
+freezer), while accepting independent min/max, recursive-sum and queue code.
+The existing grading integrity suite passes after making queue-expiry evidence
+deterministic with a held slot: a TypeScript diagnostic may legitimately finish
+before its wait cap, so compiler speed no longer substitutes for an expiry
+test. Real burst admission, retry/no-verdict behavior, actual expiration bounds
+and pool recovery remain checked. Required final CI and deployment for this
+follow-up are still pending. No new migration or API handler is introduced.
 
 No physical Safari/Firefox/Windows/phone, timed managed-backup restore, actual
 external alert delivery, sustained expected-load acceptance or paid Stripe
