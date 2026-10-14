@@ -7,22 +7,13 @@ import type { CodingSolution } from '../types';
 export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   "ts-typed-slug": {
     solution: "const toSlug = (title: string): string => title.trim().toLowerCase().split(/\\s+/).filter(Boolean).join(\"-\");",
-    junior: `const toSlug = (title: string): string => {
-  const words = title.trim().split(" ");
-  let slug = "";
-  for (const word of words) {
-    if (word === "") {
-      continue;
-    }
-    if (slug !== "") {
-      slug += "-";
-    }
-    slug += word.toLowerCase();
-  }
-  return slug;
-};`,
+    junior: "const toSlug = (title: string): string => {\n  const words = title.trim().split(/\\s+/);\n  let slug = \"\";\n  for (const word of words) {\n    if (word === \"\") {\n      continue;\n    }\n    if (slug !== \"\") {\n      slug += \"-\";\n    }\n    slug += word.toLowerCase();\n  }\n  return slug;\n};",
     senior: `const toSlug = (title: string): string => title.trim().toLowerCase().replace(/\\s+/g, "-");`,
     hiddenTests: [
+      {"call":"toSlug(\"\\tHello\\nWorld\\r \")","expected":"hello-world"},
+      {"call":"toSlug(\" Café Menu \")","expected":"café-menu"},
+      {"call":"toSlug(\" A+B / #C \")","expected":"a+b-/-#c"},
+      {"call":"toSlug(\"İ\")","expected":"i̇"},
       { call: "toSlug(\"My   First Post\")", expected: "my-first-post" },
       { call: "toSlug(\"   \")", expected: "" },
       { call: "toSlug(\"TypeScript\")", expected: "typescript" },
@@ -47,6 +38,10 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   // Carry only the current best three, so the whole list is never sorted.
   scores.reduce<number[]>((best, score) => [...best, score].sort((one, other) => other - one).slice(0, 3), []);`,
     hiddenTests: [
+      {"call":"(() => { const values=[]; return topThree(values)!==values; })()","expected":true},
+      {"call":"(() => { const values=[3]; return topThree(values)!==values; })()","expected":true},
+      {"call":"topThree([1.25,-2,4.5,4.5,0])","expected":[4.5,4.5,1.25]},
+      {"call":"topThree(__probe.freeze([5,1,9,9,2]))","expected":[9,9,5]},
       { call: "topThree([10,50,20,40,30])", expected: [50, 40, 30] },
       { call: "topThree([100,9,20])", expected: [100, 20, 9] },
       { call: "topThree([2,8])", expected: [8, 2] },
@@ -71,6 +66,9 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   return \`\${opener}, \${name}!\`;
 };`,
     hiddenTests: [
+      {"call":"greet(\"\", \"\")","expected":", !"},
+      {"call":"greet(\" Ada \", \" Hi \")","expected":" Hi ,  Ada !"},
+      {"call":"greet(\"Bo\", undefined)","expected":"Hello, Bo!"},
       { call: "greet(\"Eve\", \"Welcome\")", expected: "Welcome, Eve!" },
       { call: "greet(\"Fay\")", expected: "Hello, Fay!" },
       { call: "greet(\"Ivy\", \"\")", expected: ", Ivy!" },
@@ -82,29 +80,15 @@ export const TYPESCRIPT_SOLUTIONS: Record<string, CodingSolution> = {
   last: string;
 }
 
-const fullName = (person: Person): string => [person.first, person.last].filter(Boolean).join(" ");`,
-    junior: `interface Person {
-  first: string;
-  last: string;
-}
-
-const fullName = (person: Person): string => {
-  if (person.first === "") {
-    return person.last;
-  }
-  if (person.last === "") {
-    return person.first;
-  }
-  return person.first + " " + person.last;
-};`,
-    senior: `interface Person {
-  first: string;
-  last: string;
-}
-
-// A missing half leaves one stray space at an end, which trim() removes.
-const fullName = ({ first, last }: Person): string => \`\${first} \${last}\`.trim();`,
+const fullName = (person: Person): string => [person.first.trim(), person.last.trim()].filter(Boolean).join(" ");`,
+    junior: "interface Person { first: string; last: string; }\nconst fullName = (person: Person): string => {\n  const first = person.first.trim(), last = person.last.trim();\n  if (first === \"\") return last;\n  if (last === \"\") return first;\n  return first + \" \" + last;\n};",
+    senior: "interface Person { first: string; last: string; }\nconst fullName = ({ first, last }: Person): string => {\n  const parts = [first.trim(), last.trim()];\n  return parts.filter(part => part !== \"\").join(\" \");\n};",
     hiddenTests: [
+      {"call":"fullName({first:\"  Ada \",last:\" Lovelace  \"})","expected":"Ada Lovelace"},
+      {"call":"fullName({first:\"\\t \",last:\" Hopper \"})","expected":"Hopper"},
+      {"call":"fullName({first:\" Mary  Ann \",last:\" van Neumann \"})","expected":"Mary  Ann van Neumann"},
+      {"call":"(() => { const person={first:\" Ada \",last:\" Lovelace \"}; fullName(person); return [person.first,person.last]; })()","expected":[" Ada "," Lovelace "]},
+      {"call":"fullName(__probe.freeze({first:\" Ada \",last:\" Lovelace \"}))","expected":"Ada Lovelace"},
       { call: "fullName({first:\"Grace\",last:\"Hopper\"})", expected: "Grace Hopper" },
       { call: "fullName({first:\"\",last:\"Prince\"})", expected: "Prince" },
       { call: "fullName({first:\"Madonna\",last:\"\"})", expected: "Madonna" },
@@ -139,6 +123,12 @@ const displayName = (user: User): string => {
   return nickname;
 };`,
     hiddenTests: [
+      {"call":"displayName(__probe.freeze({name:\" Name \",nickname:\" Nick \"}))","expected":" Nick "},
+      {"call":"displayName({name:\" Name \"})","expected":" Name "},
+      {"call":"(() => { const user={name:\" Name \",nickname:undefined}; const result=displayName(user); return [result,user.name,user.nickname===undefined]; })()","expected":[" Name "," Name ",true]},
+      {"call":"displayName({name:\"Ada\",nickname:\"  \"})","expected":"  "},
+      {"call":"displayName({name:\"\",nickname:undefined})","expected":""},
+      {"call":"(() => { const user={name:\" Name \",nickname:\" Nick \"}; const result=displayName(user); return [result,user.name,user.nickname]; })()","expected":[" Nick "," Name "," Nick "]},
       { call: "displayName({name:\"Eve\",nickname:\"Evie\"})", expected: "Evie" },
       { call: "displayName({name:\"Fay\"})", expected: "Fay" },
       { call: "displayName({name:\"Gus\",nickname:\"\"})", expected: "" },

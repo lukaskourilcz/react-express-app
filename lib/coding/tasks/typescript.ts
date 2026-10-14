@@ -14,7 +14,7 @@ export const TYPESCRIPT_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["annotations", "strings"],
     title: "Typed slug",
-    prompt: "Write `toSlug(title: string): string`, turning a title into a URL slug: trimmed, lowercased, with every run of spaces replaced by a single dash. An empty string gives an empty string, and a single word comes back as itself.",
+    prompt: "Write `toSlug(title: string): string`. Remove JavaScript whitespace from both ends, lowercase with JavaScript's default string rules, and replace every remaining whitespace run with one dash. Tabs, line breaks and nonbreaking spaces count as whitespace. Empty or whitespace-only input returns an empty string. Preserve other characters; do not encode URLs, remove punctuation or normalize Unicode.\n\nTarget: O(n) time, where n is title.length in UTF-16 code units, using a materialized-output character-work model. Type checking must accept strings and reject non-string arguments or number assignments from the result.",
     starter: `const toSlug = (title) => {
   
 };
@@ -26,7 +26,7 @@ console.log(toSlug("Hello World"));
   // build and return the answer
 };`,
     hints: [
-      "The whole job is three string operations in a row, and the type is the same going in and coming out.",
+      "Check the whitespace at the ends separately from runs inside the text. Decide which characters the task tells you to preserve.",
     ],
     approach: [
       "Annotate the parameter and the return value first, then write the body — the compiler will tell you the moment the two disagree.",
@@ -48,6 +48,8 @@ console.log(toSlug("Hello World"));
       { call: "toSlug(\"Solo\")", expected: "solo", label: "a single word", edge: true },
     ],
     typeTests: [
+      {"code":"toSlug(null);","rejects":true,"label":"null is not a string input"},
+      {"code":"declare const text: string; const result: string = toSlug(text);","label":"accepts an arbitrary string"},
       { code: "const __slug: string = toSlug(\"Hello World\");", label: "gives back a string" },
       { code: "toSlug(42);", label: "refuses anything but a string", rejects: true },
       {
@@ -66,7 +68,7 @@ console.log(toSlug("Hello World"));
     tier: 1,
     focus: ["annotations", "sort", "slice"],
     title: "Top three scores",
-    prompt: "Write `topThree(scores: number[]): number[]`, returning the three highest values, largest first. Fewer than three values gives back all of them, largest first, and the array you were handed must not be reordered in place.",
+    prompt: "Write `topThree(scores: number[]): number[]`, returning up to three highest scores in descending numeric order. The input is a dense array of finite numbers. Keep duplicate occurrences: [7,7,3,7] returns [7,7,7]. Return a fresh array even for zero or one score; never write into the input.\n\nTarget: O(n log n) time for n ≥ 2, where n is scores.length, under a comparison-sort cost model. Small inputs take constant work. Sorting a copy is recommended; a correct faster selection is also valid. This is an authored model goal, not a universal JavaScript sort timing guarantee.",
     starter: `const topThree = (scores) => {
   
 };
@@ -78,7 +80,7 @@ console.log(topThree([5,9,1,7]));
   // build and return the answer
 };`,
     hints: [
-      "Sort reorders the array it is given, so copy first — and without a comparator it orders numbers as if they were words.",
+      "Check numeric ordering and where duplicates belong. Before using an operation, ask whether it can change the caller's array.",
     ],
     approach: [
       "Copy the array before sorting, because sort reorders the array it is given rather than returning a fresh one.",
@@ -96,6 +98,8 @@ console.log(topThree([5,9,1,7]));
       { call: "topThree([2,8])", expected: [8, 2], label: "two values, largest first", edge: true },
     ],
     typeTests: [
+      {"code":"topThree([null]);","rejects":true,"label":"null is not a numeric score"},
+      {"code":"declare const values: number[]; const result: number[] = topThree(values);","label":"accepts an arbitrary numeric array"},
       {
         code: "const __best: number[] = topThree([1, 2, 3]);",
         label: "gives back an array of numbers",
@@ -117,7 +121,7 @@ console.log(topThree([5,9,1,7]));
     tier: 1,
     focus: ["annotations", "optional"],
     title: "Greeting with a default",
-    prompt: "Write `greet(name: string, greeting?: string): string`, returning the greeting, a comma, the name and an exclamation mark — `Hello, Ada!`. The greeting is optional and falls back to `Hello`, but an empty greeting that was actually passed is used as given.",
+    prompt: "Write `greet(name: string, greeting?: string): string`, returning greeting + \", \" + name + \"!\". Use \"Hello\" only when the greeting is omitted or undefined; an empty greeting still wins. Preserve both strings exactly, including any whitespace. Reject non-string name/greeting arguments during type checking; the result must have a string type.\n\nTarget: O(n) time in a materialized-output model, where n is the combined UTF-16 length of the name, the chosen greeting and three separator characters. This describes output character work, not a guarantee about an engine's lazy string allocation.",
     starter: `const greet = (name, greeting) => {
   
 };
@@ -129,10 +133,10 @@ console.log(greet("Ada"));
   // build and return the answer
 };`,
     hints: [
-      "A default value in the parameter list is what makes an argument optional — and only a missing one is replaced by it.",
+      "Compare an omitted greeting, explicit undefined and an empty string. The fallback should apply to the first two without swallowing the third.",
     ],
     approach: [
-      "A default value in the parameter list is what makes an argument optional, and the compiler infers its type from that default.",
+      "Mark the greeting optional or provide a default value. Keep its string/undefined type consistent with the fallback.",
       "Only a missing argument or an explicit undefined triggers the default, which is why an empty greeting passed on purpose survives.",
       "Build the sentence from the greeting, a comma, the name and an exclamation mark.",
     ],
@@ -155,6 +159,11 @@ console.log(greet("Ada"));
       },
     ],
     typeTests: [
+      {"code":"greet(null);","rejects":true,"label":"null is not a string name"},
+      {"code":"greet(\"Ada\",null);","rejects":true,"label":"null is not an optional string greeting"},
+      {"code":"declare const name: string; declare const greeting: string; const result: string = greet(name,greeting);","label":"accepts arbitrary string arguments"},
+      {"code":"greet(42);","rejects":true,"label":"the name must be a string"},
+      {"code":"const wrongNumber: number = greet(\"Ada\");","rejects":true,"label":"the result does not have a number or any type"},
       { code: "const __line: string = greet(\"Ada\");", label: "the greeting can be left out" },
       { code: "greet();", label: "the name cannot be left out", rejects: true },
       { code: "greet(\"Ada\", 3);", label: "the greeting has to be text", rejects: true },
@@ -169,7 +178,7 @@ console.log(greet("Ada"));
     tier: 1,
     focus: ["interfaces"],
     title: "Person interface",
-    prompt: "Declare an interface named `Person` with `first` and `last`, both strings, then write `fullName(person: Person): string` joining them with a single space. When either half is empty the space goes too, so no answer ever starts or ends with one.",
+    prompt: "Define a named object type Person with required first and last string fields. An interface is recommended; an equivalent type alias is accepted. Write `fullName(person: Person): string`. Trim JavaScript whitespace from each field, omit any empty trimmed field, and join the remaining parts with one ordinary space. Preserve whitespace inside each trimmed part. Never write into the input object. Type checking must reject missing or non-string fields and non-string uses of the result.\n\nTarget: O(n) time, where n is first.length + last.length in UTF-16 code units, using a character-work model for trimming and materializing the result.",
     starter: `const fullName = (person) => {
   
 };
@@ -186,12 +195,12 @@ const fullName = (person: Person): string => {
   // build and return the answer
 };`,
     hints: [
-      "An interface is a named shape written once above the function, and then used wherever that shape is expected.",
+      "Work out what counts as an empty part after trimming, then decide when a separator is needed. Give the input shape a reusable name.",
     ],
     approach: [
       "Write the interface above the function: a name, then one line per property with its type.",
       "Use that name as the parameter type, and the body can read both properties without any further checks.",
-      "Join the two halves with a space, but drop the empty ones first, or a missing half leaves a space stranded at one end.",
+      "Trim each field, omit empty trimmed parts, and put one separator between the remaining parts. Keep whitespace inside each part.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -213,6 +222,12 @@ const fullName = (person: Person): string => {
       { call: "fullName({first:\"\",last:\"\"})", expected: "", label: "neither half", edge: true },
     ],
     typeTests: [
+      {"code":"fullName({first:null,last:\"Ng\"});","rejects":true,"label":"null is not a string field"},
+      {"code":"declare const part: string; const person: Person = {first:part,last:part}; const result: string = fullName(person);","label":"the named shape accepts arbitrary string fields"},
+      {"code":"fullName({first:3,last:\"Ng\"});","rejects":true,"label":"first must be a string"},
+      {"code":"fullName({first:\"Bo\",last:3});","rejects":true,"label":"last must be a string"},
+      {"code":"const wrongPerson: Person = {first:3,last:\"Ng\"};","rejects":true,"label":"the named type requires string fields"},
+      {"code":"const wrongNumber: number = fullName({first:\"Bo\",last:\"Ng\"});","rejects":true,"label":"the result does not have a number or any type"},
       {
         code: "const __shown: string = fullName({ first: \"Ada\", last: \"Lovelace\" });",
         label: "gives back a string",
@@ -233,7 +248,7 @@ const fullName = (person: Person): string => {
     tier: 1,
     focus: ["optional", "interfaces"],
     title: "Optional nickname",
-    prompt: "Declare an interface named `User` with a required `name` and an optional `nickname`, both strings, then write `displayName(user: User): string` returning the nickname when it is set (not `undefined`) and the name otherwise. A nickname that is set but empty still wins.",
+    prompt: "Define a named object type User with a required name: string and optional nickname?: string. An interface is recommended; an equivalent type alias is accepted. Write `displayName(user: User): string`. Return nickname when it is not undefined, otherwise name. Preserve the selected string exactly; an empty or whitespace-only nickname is a stored value. Never write into the input object. Type checking must reject missing names, wrong field types and non-string uses of the result.\n\nTarget: O(1) time under a constant-cost ordinary-field access model: choose an existing string value without scanning or copying its characters. Compiler work and getters/proxies are outside this runtime model.",
     starter: `const displayName = (user) => {
   
 };
@@ -250,7 +265,7 @@ const displayName = (user: User): string => {
   // build and return the answer
 };`,
     hints: [
-      "Two fallback operators look interchangeable here and are not: one gives way on any falsy value, the other only on null and undefined.",
+      "Use the same decision for an absent property and explicit undefined. Test an empty nickname separately before choosing a fallback.",
     ],
     approach: [
       "Marking a property optional with a question mark means reading it gives you the type or undefined, and the compiler makes you handle both.",
@@ -281,6 +296,12 @@ const displayName = (user: User): string => {
       },
     ],
     typeTests: [
+      {"code":"displayName({name:\"Bo\",nickname:null});","rejects":true,"label":"an optional string excludes null"},
+      {"code":"declare const name: string; const user: User = {name,nickname:name}; const result: string = displayName(user);","label":"the named shape accepts arbitrary string fields"},
+      {"code":"displayName({name:3});","rejects":true,"label":"name must be a string"},
+      {"code":"displayName({name:\"Bo\",nickname:3});","rejects":true,"label":"nickname must be a string when present"},
+      {"code":"const wrongUser: User = {name:3};","rejects":true,"label":"the named type requires a string name"},
+      {"code":"const wrongNumber: number = displayName({name:\"Bo\"});","rejects":true,"label":"the result does not have a number or any type"},
       {
         code: "const __shown: string = displayName({ name: \"Ada\" });",
         label: "gives back a string",
