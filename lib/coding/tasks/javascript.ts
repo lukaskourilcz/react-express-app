@@ -179,7 +179,7 @@ console.log(longest(["cat","elephant","dog"]));
     tier: 1,
     focus: ["for-of", "strings"],
     title: "Count vowels",
-    prompt: "Write `countVowels(text)`, returning how many vowels (a, e, i, o, u) the string holds. Uppercase vowels count too; a string with none, or an empty string, gives 0.",
+    prompt: "Write `countVowels(text)`, returning the number of literal ASCII vowels `a e i o u A E I O U` in a primitive string. Empty text or text with none gives 0. Count every occurrence; y, accented vowels and other Unicode letters do not count. Do not normalize text or lowercase the entire Unicode string: for example, `İ` is not ASCII I and contributes 0, while the ASCII a followed by a combining accent still contributes 1. Target: O(n) time, where n is the UTF-16 length of the input; membership in the fixed ten-character vowel set takes constant time.",
     starter: `const countVowels = text => {
   
 };
@@ -187,21 +187,9 @@ console.log(longest(["cat","elephant","dog"]));
 // Scratch pad — change this and press Run.
 console.log(countVowels("hello"));
 `,
-    skeleton: `const countVowels = text => {
-  let count = 0;
-
-  for (const letter of /* text, in lower case */) {
-    // add one to count when "aeiou" includes letter
-  }
-
-  return count;
-};`,
-    hints: ["Loop through lowercase letters and check \"aeiou\"."],
-    approach: [
-      "Lowercase the text first so uppercase vowels are counted the same way.",
-      "Walk the characters and test membership against the five vowels; a string of vowels plus includes is enough.",
-      "Return how many matched, not the matches themselves.",
-    ],
+    skeleton: "const countVowels = text => {\n  let count = 0;\n  for (const letter of text) {\n    // count membership in the fixed uppercase/lowercase ASCII vowel set\n  }\n  return count;\n};",
+    hints: ["Compare each original character with a fixed set containing both uppercase and lowercase ASCII vowels. Converting Unicode text to lowercase can introduce an ASCII letter that was not in the original input."],
+    approach: ["Use the fixed vowel set aeiouAEIOU, or a regular expression restricted to these ASCII letters.", "Walk the original string and increment a counter for each matching item. Do not count unique letters only.", "Return the count. Unicode normalization and whole-string lowercasing are unnecessary and can change which original characters match."],
     verify: "tests",
     estimatedMinutes: 10,
     tests: [
@@ -210,6 +198,10 @@ console.log(countVowels("hello"));
       { call: "countVowels(\"\")", expected: 0, label: "empty string", edge: true },
       { call: "countVowels(\"HELLO\")", expected: 2, label: "uppercase counts too", edge: true },
       { call: "countVowels(\"xyz\")", expected: 0, label: "no vowels", edge: true },
+      { call: "countVowels(\"İıáéíóúＡＥＩＯＵ𝒜\")", expected: 0, label: "only literal ASCII vowels", edge: true },
+      { call: "countVowels(\"a\\u0301ÉIİ\")", expected: 2, label: "combining marks do not change literal ASCII matches", edge: true },
+      { call: "countVowels(\"aaAAeeEEiiIIooOOuuUU\")", expected: 20, label: "count every uppercase and lowercase occurrence", edge: true },
+      { call: "countVowels(\"🦈 yY 123 !\")", expected: 0, label: "emoji y digits and punctuation are not vowels", edge: true },
     ],
   },
   {
@@ -1156,7 +1148,7 @@ console.log(isPalindrome("level"));
     tier: 2,
     focus: ["for-of", "objects"],
     title: "Letter counts",
-    prompt: "Write `countLetters(text)`, returning an object mapping each character to how many times it appears — `countLetters(\"aba\")` gives `{ a: 2, b: 1 }`. An empty string gives an empty object.",
+    prompt: "Write `countLetters(text)`, returning a fresh object that counts every item produced by the JavaScript string iterator (`for...of`), including spaces, punctuation and uppercase characters. For example, `countLetters(\"aba\")` gives `{ a: 2, b: 1 }`. A surrogate pair such as 🦈 counts as one key, while combining marks are separate keys; do not normalize text or change case. Empty text gives an empty object. `text` is a primitive string. Target: O(n) time, where n is the number of UTF-16 code units, using average constant-time dictionary updates; update the accumulator instead of copying all prior counts on each step.",
     starter: `const countLetters = text => {
   
 };
@@ -1173,14 +1165,8 @@ console.log(countLetters("aba"));
 
   return counts;
 };`,
-    hints: [
-      "Walk the characters building an object up as you go, treating a character you have not seen yet as though its count were already zero.",
-    ],
-    approach: [
-      "Build an object as you walk the characters, using reduce or a loop.",
-      "For each letter, read the existing count or fall back to zero, then store one more.",
-      "The starting value is an empty object, which is also what an empty string returns.",
-    ],
+    hints: ["Walk the string with for...of to keep surrogate pairs together. Keep one counts object, and increment the entry for the current iterator item from zero when it is missing."],
+    approach: ["Create one empty counts object.", "Walk the original text with for...of, without normalization or case conversion. The iterator preserves surrogate pairs but splits combining sequences.", "Increment the count for the current item, starting from zero. Return the same accumulator after the loop; copying the growing dictionary at every character adds unnecessary repeated work."],
     verify: "tests",
     estimatedMinutes: 20,
     tests: [
@@ -1199,6 +1185,10 @@ console.log(countLetters("aba"));
         label: "repeats accumulate",
         edge: true,
       },
+      { call: "countLetters(\"🦈a🦈A !\")", expected: {"🦈": 2, "a": 1, "A": 1, " ": 1, "!": 1}, label: "surrogate pairs case spaces and punctuation", edge: true },
+      { call: "countLetters(\"é e\\u0301\")", expected: {"é": 1, " ": 1, "e": 1, "́": 1}, label: "combining mark stays a separate key", edge: true },
+      { call: "(() => {const a=countLetters(\"\"),b=countLetters(\"\");return a!==b&&Object.keys(a).length===0&&Object.keys(b).length===0;})()", expected: true, label: "fresh empty results", edge: true },
+      { call: "(() => {const text=Array.from({length:128},(_,i)=>String.fromCodePoint(1024+i)).join(\"\");const out=countLetters(text+text);return Object.keys(out).length===128&&[...text].every(c=>out[c]===2);})()", expected: true, label: "many distinct characters", edge: true },
     ],
   },
   {

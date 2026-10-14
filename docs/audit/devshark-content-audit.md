@@ -1,5 +1,37 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b006
+
+Reviewed own-key enumeration, typeof counting, character frequencies, ASCII
+vowels and decimal digits individually. Current coding coverage is **60/725**:
+30 deployed, thirty staged, **665 remaining**; native remains **60/263**.
+
+The baseline matched 37/45 expectations. New ownership, Unicode and numeric
+boundary cases distinguish hidden keys, unsafe instance-method calls,
+inherited enumeration, code-unit splitting, case normalization and rounded
+logarithms. Type counting now includes inherited keys consistently across its
+revealed answers and covers all eight typeof labels. Character counting states
+iterator units and uses one growing accumulator. Vowel reference, junior,
+puzzle and skeleton-fill fixture now match the literal ASCII policy of the
+senior; lowercasing dotted İ no longer introduces an unintended vowel.
+Digit counting has a safe finite domain and an O(log n) numeric-magnitude
+target, with zero handled separately.
+
+All **45/45 final-hash worker verdicts** agree: twenty-five valid variants and
+puzzle arrangements, five starters, fifteen wrong programs. Twenty explicit
+authored-target/base-25-XP checks pass, including the logarithmic digit target;
+unknown estimates stay unknown without a penalty. Focused coding contracts
+verify all six puzzle enumerations and the updated skeleton filling, and
+grading/Learn authority tests pass. The five item scores, sources and separate
+final English self-readings are in the b006 JSONL. This is model review only.
+
+Registry/index generation, API/script types, launch contracts, build, both
+production dependency audits (zero vulnerabilities), copy-artifact sweep and
+diff checks pass. The three longest rewritten task routes pass eighteen light
+and eighteen dark probes at 360–1440px, with zero issues or unprobed routes.
+Authenticated and production acceptance remain separate; IDs, access rules
+and archived Czech stay intact.
+
 ## 15 October continuation — five-item batch b005
 
 Reviewed recent-search history, list wording, matching keys, dictionary

@@ -268,7 +268,7 @@ console.log(lastFew(["a", "b", "c", "d"], 2));
     tier: 1,
     focus: ['do-while'],
     title: 'Count the digits',
-    prompt: 'Write `countDigits(n)` for a whole number `n` of 0 or more, returning how many digits it has. Use a `do...while` loop: count one digit, divide `n` by 10 and round down with `Math.floor`, and repeat while `n` is still above 0. `countDigits(2026)` gives 4. The number 0 has one digit, and a `do...while` gets that right because its body always runs once.',
+    prompt: "Write `countDigits(n)` for a whole number `n` of 0 or more, returning how many digits it has. Use a `do...while` loop: count one digit, divide `n` by 10 and round down with `Math.floor`, and repeat while `n` is still above 0. `countDigits(2026)` gives 4. The number 0 has one digit, and a `do...while` gets that right because its body always runs once. The input is an integer from 0 through Number.MAX_SAFE_INTEGER (9007199254740991); numeric -0 also counts as zero. Negative, fractional and non-finite inputs are outside this task. Target: O(log n) time for positive n, where n is the numeric value, counting each division and rounding as constant time; zero takes O(1). Near powers of ten, floating-point logarithms may round to the wrong side of the boundary, so repeated integer division is a reliable approach.",
     starter: `const countDigits = n => {
 
 };
@@ -297,6 +297,11 @@ console.log(countDigits(2026), countDigits(0));
       { call: 'countDigits(123456789)', expected: 9 },
       { call: 'countDigits(0)', expected: 1, label: 'zero has one digit', edge: true },
       { call: 'countDigits(1000)', expected: 4, label: 'zeros at the end count', edge: true },
+      { call: "countDigits(999999999999999)", expected: 15, label: "just below a large power of ten", edge: true },
+      { call: "countDigits(1000000000000000)", expected: 16, label: "large power of ten", edge: true },
+      { call: "countDigits(Number.MAX_SAFE_INTEGER)", expected: 16, label: "largest safe integer", edge: true },
+      { call: "countDigits(-0)", expected: 1, label: "negative zero has one digit", edge: true },
+      { call: "countDigits(87654321)", expected: 8, label: "an unseen ordinary input", edge: true },
     ],
   },
   {

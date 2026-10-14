@@ -62,8 +62,8 @@ export const SKELETON_FILLS: Record<string, string> = {
   'js-count-vowels': `const countVowels = text => {
   let count = 0;
 
-  for (const letter of text.toLowerCase()) {
-    if ("aeiou".includes(letter)) count += 1;
+  for (const letter of text) {
+    if ("aeiouAEIOU".includes(letter)) count += 1;
   }
 
   return count;

@@ -296,7 +296,7 @@ console.log(withDefaults({ theme: "dark" }, { theme: "light", size: 12 }));
     tier: 2,
     focus: ['for-in', 'objects'],
     title: 'Count values by type',
-    prompt: 'Write `countTypes(object)`, returning an object that counts the values of `object` by what `typeof` says about them, visiting the keys with `for…in`. `countTypes({ a: 1, b: "x", c: 2 })` gives `{ number: 2, string: 1 }`. `typeof` answers `"object"` for arrays and for `null` too, so they count there. An empty object gives `{}`.',
+    prompt: "Write `countTypes(object)`, returning an object that counts the values of `object` by what `typeof` says about them, visiting the keys with `for…in`. `countTypes({ a: 1, b: \"x\", c: 2 })` gives `{ number: 2, string: 1 }`. `typeof` answers `\"object\"` for arrays and for `null` too, so they count there. An empty object gives `{}`. Deliberately include inherited enumerable string keys, as for...in does, with nearer properties shadowing the same inherited name. Exclude non-enumerable and symbol-keyed properties. Count exactly the eight JavaScript typeof labels; symbol-valued and bigint-valued properties count as symbol and bigint, and NaN counts as number. Inputs are ordinary data objects without getters or proxies, including frozen or null-prototype objects. Do not change input values or prototypes. Target: O(n) time, where n counts property names and prototype objects inspected, assuming constant-time typeof, indexing and count updates.",
     starter: `const countTypes = object => {
 
 };
@@ -314,12 +314,8 @@ console.log(countTypes({ a: 1, b: "x", c: 2 }));
 
   return counts;
 };`,
-    hints: ['`counts[type]` is `undefined` the first time a type turns up. `(counts[type] ?? 0) + 1` starts it at 1.'],
-    approach: [
-      'Create an empty object for the counts.',
-      'Loop over the keys with `for…in` and read the type of each value with `typeof object[key]`.',
-      'Use the type as a key in the counts and add one to it, starting from 0 when it is missing.',
-    ],
+    hints: ["Use typeof for the group name, even for null and arrays. When you see a group for the first time its count is missing; decide how to turn that missing count into the first occurrence."],
+    approach: ["Create an empty object for counts. A typeof label is always one of eight fixed strings.", "Visit enumerable string keys with for...in, including inherited keys in this exercise. Read typeof object[key] without JSON conversion or custom null/array labels.", "Increment the matching group from zero and return the counts. If an application needs own properties only, add an ownership check; that would change this task."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -328,6 +324,10 @@ console.log(countTypes({ a: 1, b: "x", c: 2 }));
       { call: 'countTypes({ f: () => 1, g: "x" })', expected: { function: 1, string: 1 } },
       { call: 'countTypes({ u: undefined })', expected: { undefined: 1 }, label: 'undefined is its own type', edge: true },
       { call: 'countTypes({})', expected: {}, label: 'an empty object', edge: true },
+      { call: "(() => {const o=Object.create({x:true,z:\"s\"});o.x=0;o.a=null;return countTypes(o);})()", expected: {"number": 1, "object": 1, "string": 1}, label: "inherited values and own shadowing", edge: true },
+      { call: "countTypes({a:Symbol(\"x\"),b:1n,c:NaN,d:()=>0,e:undefined,f:false,g:\"\",h:null})", expected: {"symbol": 1, "bigint": 1, "number": 1, "function": 1, "undefined": 1, "boolean": 1, "string": 1, "object": 1}, label: "all eight typeof labels", edge: true },
+      { call: "(() => {const o=Object.assign(Object.create(null),{a:1});Object.defineProperty(o,\"hidden\",{value:true});o[Symbol(\"s\")]=true;return countTypes(Object.freeze(o));})()", expected: {"number": 1}, label: "frozen null-prototype input excludes hidden and symbol keys", edge: true },
+      { call: "(() => {const o={a:1};countTypes(o);return o.a===1&&Object.keys(o).length===1;})()", expected: true, label: "do not alter values", edge: true },
     ],
   },
 

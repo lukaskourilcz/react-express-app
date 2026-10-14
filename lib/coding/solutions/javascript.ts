@@ -94,17 +94,8 @@ const sum = numbers => numbers.reduce(add, 0);`,
     ],
   },
   "js-count-vowels": {
-    solution: "const countVowels = text => [...text.toLowerCase()].filter(letter => \"aeiou\".includes(letter)).length;",
-    junior: `const countVowels = text => {
-  const vowels = ["a", "e", "i", "o", "u"];
-  let count = 0;
-  for (const character of text.toLowerCase()) {
-    if (vowels.includes(character)) {
-      count = count + 1;
-    }
-  }
-  return count;
-};`,
+    solution: "const countVowels = text => [...text].filter(letter => \"aeiouAEIOU\".includes(letter)).length;",
+    junior: "const countVowels = text => {\n  const vowels = \"aeiouAEIOU\";\n  let count = 0;\n  for (const character of text) {\n    if (vowels.includes(character)) count++;\n  }\n  return count;\n};",
     senior: `// match gives null rather than [] when nothing matches; the i flag covers uppercase.
 const countVowels = text => (text.match(/[aeiou]/gi) ?? []).length;`,
     hiddenTests: [
@@ -640,7 +631,7 @@ const isPalindrome = text =>
     ],
   },
   "js-letter-counts": {
-    solution: "const countLetters = text => [...text].reduce((counts, letter) => ({...counts, [letter]: (counts[letter] ?? 0) + 1}), {});",
+    solution: "const countLetters = text => {\n  const counts = {};\n  for (const letter of text) {\n    counts[letter] = (counts[letter] ?? 0) + 1;\n  }\n  return counts;\n};",
     junior: `const countLetters = text => {
   const counts = {};
   for (const letter of text) {

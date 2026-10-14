@@ -212,7 +212,7 @@ console.log(invert({ a: "x", b: "y" }));
     tier: 2,
     focus: ['for-in', 'objects'],
     title: 'Own keys only',
-    prompt: 'A `for…in` loop also visits keys an object inherits from its prototype. Write `ownKeys(object)`, returning only the keys the object holds itself, in loop order, by checking each key with `Object.hasOwn(object, key)` inside a `for…in` loop. With `const item = Object.create({ shared: true })` and then `item.name = "pen"`, `ownKeys(item)` gives `["name"]`. An object with no keys of its own gives an empty array.',
+    prompt: "A `for…in` loop also visits keys an object inherits from its prototype. Write `ownKeys(object)`, returning only the keys the object holds itself, in loop order, by checking each key with `Object.hasOwn(object, key)` inside a `for…in` loop. With `const item = Object.create({ shared: true })` and then `item.name = \"pen\"`, `ownKeys(item)` gives `[\"name\"]`. An object with no keys of its own gives an empty array. Only enumerable string keys are included; symbol and non-enumerable keys are excluded. For ordinary objects, array-index names come first in numeric order, followed by other string names in creation order. Inputs have data properties without getters or proxies; accept null-prototype and frozen objects, including a key named hasOwnProperty. Return a fresh array and do not mutate the input or its prototypes. Target: O(n) time, where n counts property names and prototype objects inspected, assuming constant-time ownership checks.",
     starter: `const ownKeys = object => {
 
 };
@@ -245,6 +245,11 @@ console.log(ownKeys(item));
       { call: 'ownKeys(Object.create({ inherited: 1 }))', expected: [], label: 'only inherited keys', edge: true },
       { call: 'ownKeys({})', expected: [], label: 'an empty object', edge: true },
       { call: 'ownKeys(Object.assign(Object.create({ size: "M" }), { size: "L" }))', expected: ['size'], label: 'an own key that shadows an inherited one appears once', edge: true },
+      { call: "(() => {const o=Object.assign(Object.create(null),{hasOwnProperty:0,a:1});return ownKeys(Object.freeze(o));})()", expected: ["hasOwnProperty", "a"], label: "borrowed ownership checks work without a prototype", edge: true },
+      { call: "(() => {const o={a:1};Object.defineProperty(o,\"hidden\",{value:2});o[Symbol(\"s\")]=3;return ownKeys(o);})()", expected: ["a"], label: "exclude non-enumerable and symbol keys", edge: true },
+      { call: "ownKeys({\"10\":1,\"2\":1,z:1})", expected: ["2", "10", "z"], label: "integer names precede other keys", edge: true },
+      { call: "(() => {const o=Object.create({x:1});Object.defineProperty(o,\"x\",{value:2,enumerable:false});return ownKeys(o);})()", expected: [], label: "hidden own property is not emitted", edge: true },
+      { call: "(() => {const o={a:1};ownKeys(o);return o.a===1&&Object.keys(o).length===1;})()", expected: true, label: "preserve the source object", edge: true },
     ],
   },
 

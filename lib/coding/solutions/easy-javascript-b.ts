@@ -202,15 +202,7 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
   }
   return counts;
 };`,
-    senior: `const countTypes = object => {
-  const counts = {};
-  for (const key in object) {
-    if (!Object.hasOwn(object, key)) continue;
-    const type = typeof object[key];
-    counts[type] = (counts[type] ?? 0) + 1;
-  }
-  return counts;
-};`,
+    senior: "const countTypes = object => {\n  const counts = {};\n  // Match the inherited-key semantics of for...in in this exercise.\n  for (const key in object) {\n    const type = typeof object[key];\n    counts[type] = (counts[type] ?? 0) + 1;\n  }\n  return counts;\n};",
     hiddenTests: [
       { call: 'countTypes({ a: 1, b: 2, c: 3 })', expected: { number: 3 } },
       { call: 'countTypes({ s: "", n: 0, b: false })', expected: { string: 1, number: 1, boolean: 1 } },
