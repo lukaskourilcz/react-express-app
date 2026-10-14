@@ -29,7 +29,7 @@ import {
   moduleRequirements,
 } from '../lib/learning-paths/handlers';
 import { requestMemo, withRequestContext } from '../lib/http';
-import { encodeLearningPathSession } from '../lib/quiz-tokens';
+import { createLearningPathSession as encodeLearningPathSession } from '../lib/learning-paths/session';
 import { enterInFlight, RATE_LIMITS, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, gradingItem } from '../lib/coding/grader-capacity';
 import { LEARNER_PROFILE_META_KEY } from '../shared/learning-paths';

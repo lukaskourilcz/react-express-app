@@ -1,11 +1,11 @@
 // First: no exported Supabase project may verify the stand-in tokens below.
 import './launch-test-env';
+import { createCodingSession as encodeCodingSession } from '../lib/coding/session';
 import assert from 'node:assert/strict';
 import { handleCodingDraft, handleCodingSubmit, handleCodingReveal, handleCodingTask } from '../lib/coding/handlers';
 import { handleCodingBookmarks, canSaveCodingTask } from '../lib/coding/practice-handlers';
 import { CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById } from '../lib/coding/active';
-import { encodeCodingSession } from '../lib/quiz-tokens';
 
 const solved = 'const double=ns=>ns.map(n=>n*2)';
 

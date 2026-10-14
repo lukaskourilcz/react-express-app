@@ -38,7 +38,7 @@
     "check:bundle": "node scripts/check-bundle.mjs",
     "build:react-runner": "node scripts/build-react-runner.mjs",
     "prepare:react-snapshot": "node scripts/prepare-react-snapshot.mjs",
-    "test:coding-auth": "esbuild scripts/test-coding-authorization.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/coding-auth.mjs --log-level=warning && PRODUCT_ID=devshark node node_modules/.cache/shark/coding-auth.mjs",
+    "test:coding-auth": "esbuild scripts/test-coding-authorization.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/coding-auth.mjs --log-level=warning && PRODUCT_ID=devshark node node_modules/.cache/shark/coding-auth.mjs && esbuild scripts/test-attempt-versions.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/attempt-versions.mjs --log-level=warning && PRODUCT_ID=devshark node node_modules/.cache/shark/attempt-versions.mjs",
     "test:react-isolation": "esbuild scripts/test-react-isolation.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/isolation.mjs --log-level=warning && node node_modules/.cache/shark/isolation.mjs",
     "test:billing": "esbuild scripts/test-billing.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/billing.mjs --log-level=warning && node node_modules/.cache/shark/billing.mjs",
     "test:fallbacks": "esbuild scripts/test-migration-fallbacks.ts --bundle --platform=node --format=esm --packages=external --outfile=node_modules/.cache/shark/migration-fallbacks.mjs --log-level=warning && node node_modules/.cache/shark/migration-fallbacks.mjs",

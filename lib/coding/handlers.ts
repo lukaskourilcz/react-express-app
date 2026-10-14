@@ -13,9 +13,10 @@ import { isRpcMissing, jsonError, createLogger, requireAuthSub, tryAuthOnce, wit
 import { claimOnce, enforceClassRateLimit, enforcePerItemRateLimit, enforceRateLimit, enterInFlight, RATE_LIMITS } from '../rate-limit';
 import { deploymentSubjectIds } from '../product-scope';
 import { secureShuffle } from '../quiz-runtime';
-import { decodeCodingSession, encodeCodingSession, type CodingSession } from '../quiz-tokens';
+import { decodeCodingSession, type CodingSession } from '../quiz-tokens';
 import { codingTaskForHistory, englishOnly, playable } from './catalog';
 import { CODING_SUMMARIES, codingTaskById, isHiddenCodingTask } from './active';
+import { createCodingSession, codingAttemptVersion } from './session';
 import { codingTaskReview } from '../curation';
 import { assessComplexity } from './complexity';
 import { codingPassXp, type ComplexityReport } from '../../shared/coding-complexity';
@@ -316,7 +317,13 @@ export async function handleCodingTask(req: VercelRequest, res: VercelResponse, 
       play.drill = englishOnly({ format, scenario, prompt, ...(unit ? { unit } : {}), ...(options ? { options } : {}), ...(steps ? { steps } : {}) });
     }
   }
-  const session = linkedSession ? String(linkedRaw) : locked ? null : encodeCodingSession({ taskId: task.id, track: task.track, userId, ...(key ? { key } : {}) });
+  // Reading the current brief renews a stale Learn link under the same parent
+  // and attempt id. The original owner/task/expiry checks above still apply.
+  const session = linkedSession && linkedSession.version === codingAttemptVersion(task) ? String(linkedRaw)
+    : locked ? null : createCodingSession({ taskId: task.id, track: task.track, userId,
+      ...(linkedSession ? { attemptId: linkedSession.attemptId, roadmapAttemptId: linkedSession.roadmapAttemptId } : {}),
+      ...(key ? { key } : {}),
+    });
 
   res.setHeader('Cache-Control', 'private, no-store');
   const body: CodingTaskResponse = { task: play, session, locked, progress, draft, draftUpdatedAt, signedIn: Boolean(userId) };
@@ -680,6 +687,9 @@ export async function handleCodingSubmit(req: VercelRequest, res: VercelResponse
   if (session.userId && session.userId !== userId) return jsonError(res, 403, 'invalid_session', 'Coding session belongs to another account');
   if (await refuseLocked(res, userId, codingSessionContent(task, session), { cleared: () => taskCleared(supabase, userId!, task.id) })) return;
   if (await refuseInvalidLearnLink(supabase, res, session, userId)) return;
+  if (session.version !== codingAttemptVersion(task)) {
+    return jsonError(res, 409, 'task_changed', 'This task changed while you were working. Reload its latest brief before submitting. Your code has been kept.');
+  }
 
   let graded: Graded;
   let code: string | null = null;

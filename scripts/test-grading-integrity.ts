@@ -1,3 +1,4 @@
+import { createCodingSession as encodeCodingSession } from '../lib/coding/session';
 import assert from 'node:assert/strict';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -6,7 +7,7 @@ import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SL
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem, threadSlots } from '../lib/coding/grader-capacity';
 import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
-import { encodeCodingSession, type CodingDesignKey } from '../lib/quiz-tokens';
+import { type CodingDesignKey } from '../lib/quiz-tokens';
 import { gradeDesign, prepareDesign } from '../lib/coding/grade';
 import type { DesignAnswer } from '../shared/coding-api';
 import { solutionFor } from '../lib/coding/solutions';
