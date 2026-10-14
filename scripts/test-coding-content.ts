@@ -213,7 +213,7 @@ const skeletonInStarter = (ts: TypeScriptApi, starter: string, skeleton: string)
  * so far close every block they open, they run on their own as the whole
  * body: a check they already throw on or answer wrongly fails every way of
  * finishing them, so that branch stops there. */
-const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): string[][] => {
+const passingArrangements = (puzzle: Pick<AuthoredPuzzle, 'lines'>, checks: readonly Check[]): string[][] => {
   const depthOf = (code: string) => {
     const bare = code.replace(/"(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'|`(?:[^`\\]|\\.)*`/g, '');
     return (bare.match(/\{/g)?.length ?? 0) - (bare.match(/\}/g)?.length ?? 0);
@@ -251,9 +251,21 @@ const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): 
     let undecided = false;
     for (const [index, call] of callers.entries()) {
       reset();
+      // A caller can turn END into false, a string, or an arithmetic error.
+      // Track the unfinished return before its wrapper consumes the value;
+      // such a prefix is undecided, not a failing complete arrangement.
+      let returnedEnd = false;
+      const tracked = (...args: unknown[]) => {
+        const result = (fn as (...args: unknown[]) => unknown)(...args);
+        if (containsEnd(result)) returnedEnd = true;
+        return result;
+      };
       let value: unknown;
-      try { value = call(fn); } catch { return 'fail'; }
-      if (containsEnd(value)) undecided = true;
+      try { value = call(tracked); } catch {
+        if (returnedEnd) { undecided = true; continue; }
+        return 'fail';
+      }
+      if (returnedEnd || containsEnd(value)) undecided = true;
       else if (!deepEqual(value, checks[index].expected)) return 'fail';
     }
     return undecided ? 'open' : 'pass';
@@ -1094,6 +1106,21 @@ async function main() {
   // Every covered id is a real task; every accepted order is a permutation of
   // that puzzle's own lines; no puzzle is short enough to be guessed; and each
   // one declares what arranging it demonstrates.
+  const prefixProbe = { lines: [
+    { id: 'a', code: 'function twice(n) {' },
+    { id: 'b', code: '  const value = n * 2;' },
+    { id: 'c', code: '  const copy = value;' },
+    { id: 'd', code: '  return copy;' },
+    { id: 'e', code: '}' },
+  ] };
+  for (const call of ['twice(3) === 6', 'twice(3) + 1 === 7', 'String(twice(3)) === "6"']) {
+    assert.deepEqual(passingArrangements(prefixProbe, [{ call, expected: true }]),
+      [['a', 'b', 'c', 'd', 'e']], `puzzle prefix tracking survives ${call}`);
+  }
+  assert.deepEqual(passingArrangements(prefixProbe, [{ call: '[twice(3)]', expected: [6] }]),
+    [['a', 'b', 'c', 'd', 'e']], 'puzzle prefix tracking preserves nested sentinels');
+  assert.deepEqual(passingArrangements(prefixProbe, [{ call: 'twice(3) === 5', expected: true }]),
+    [], 'puzzle prefix tracking still rejects incorrect complete code');
   const puzzleIds = puzzleCoverage();
   const puzzlesStarted = Date.now();
   let puzzleOrders = 0;
