@@ -1,4 +1,4 @@
-import { writeFileSync } from 'node:fs';
+import { writeFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { CODING_TASKS } from '../../../../lib/coding/catalog';
 import { solutionFor } from '../../../../lib/coding/solutions';
@@ -6,6 +6,7 @@ import { puzzleFor } from '../../../../lib/coding/puzzles';
 import { approachesFor } from '../../../../lib/coding/approaches';
 import { taskHash, taskTranslationHash } from '../../../../lib/curation';
 import { levelCodingTasks } from '../../../../lib/coding/active';
+import { complexityGuidance } from '../../../../shared/coding-complexity';
 
 import { JAVASCRIPT_TASKS } from '../../../../lib/coding/tasks/javascript';
 import { JAVASCRIPT_LOOP_TASKS } from '../../../../lib/coding/tasks/javascript-loops';
@@ -20,6 +21,8 @@ for (const [name, list] of [['javascript', [...JAVASCRIPT_TASKS, ...JAVASCRIPT_D
   for (const t of list) SOURCE_OF.set(t.id, name);
 }
 const out = process.argv[2];
+if (!out) throw new Error('Pass an output directory');
+mkdirSync(out, { recursive: true, mode: 0o700 });
 const batches: Record<string, unknown[]> = {};
 for (const task of CODING_TASKS) {
   const solution = solutionFor(task.id);
@@ -40,6 +43,7 @@ for (const task of CODING_TASKS) {
     csHash: taskTranslationHash(task),
     title: task.title,
     prompt: task.prompt,
+    complexityGuidance: complexityGuidance(task),
     starter: task.starter,
     previousRequirements: task.previousRequirements ?? null,
     references: task.references ?? null,

@@ -63,8 +63,8 @@ console.log(digitsOnly("+420 777-123 456"));
     level: 2,
     tier: 2,
     focus: ['regex'],
-    title: 'Is it a hex colour?',
-    prompt: 'Write `isHexColour(text)`, returning `true` when the whole text is a six-digit hex colour: a `#` followed by exactly six characters from 0–9 and a–f, in either case. Use a regular expression and its `test` method. `isHexColour("#1a2b3c")` gives `true`, and `isHexColour("#12345")` gives `false`. Anything before the `#` or after the sixth digit makes it `false`.',
+    title: 'Is it a hex color?',
+    prompt: 'Write `isHexColour(text)`, returning a boolean for a string containing exactly `#` and six ASCII hexadecimal digits (`0–9`, `a–f` or `A–F`). Extra characters, whitespace and line breaks make it false. `"#1a2b3c"` is valid; `"#12345"` is not. A regular expression with `test` is one approach; CSS shorthand and other CSS color syntax are outside this exercise. Target: O(1) time: a valid candidate has exactly seven UTF-16 code units, so only that bounded number of positions needs inspection.',
     starter: `const isHexColour = text => {
 
 };
@@ -76,7 +76,7 @@ console.log(isHexColour("#1a2b3c"), isHexColour("#12345"));
   const pattern = /* ^ and $ around a # and six hex characters, with the i flag */;
   return pattern.test(text);
 };`,
-    hints: ['`^` pins a pattern to the start of the text and `$` to the end, so nothing else can sit around the colour. `[0-9a-f]{6}` matches six hex characters, and the `i` flag accepts capitals too.'],
+    hints: ["Check the entire input, including whitespace at either end. Which character range and exact repetition count describe the six digits?"],
     approach: [
       'Build the character class for one hex digit: `[0-9a-f]`.',
       'Ask for exactly six of them with `{6}`, after a literal `#`.',
@@ -91,6 +91,7 @@ console.log(isHexColour("#1a2b3c"), isHexColour("#12345"));
       { call: 'isHexColour("#12345g")', expected: false, label: 'g is not a hex digit', edge: true },
       { call: 'isHexColour("123456")', expected: false, label: 'the # is required', edge: true },
       { call: 'isHexColour("#1234567")', expected: false, label: 'a seventh digit is too many', edge: true },
+      { call: 'isHexColour("")', expected: false, label: 'empty text', edge: true },
     ],
   },
   {
@@ -101,7 +102,7 @@ console.log(isHexColour("#1a2b3c"), isHexColour("#12345"));
     tier: 2,
     focus: ['regex'],
     title: 'Every hashtag in a post',
-    prompt: 'Write `hashtags(text)`, returning every hashtag in the text, in order. A hashtag is a `#` followed by one or more letters, digits or underscores. Use `match` with a regular expression and the `g` flag. `hashtags("Loving #javascript and #css")` gives `["#javascript", "#css"]`. When nothing matches, `match` gives `null`; return an empty array instead.',
+    prompt: 'Write `hashtags(text)`, returning an array of matches in their original order, including duplicates and original case. For this exercise, a match is `#` followed immediately by one or more ASCII characters from `A–Z`, `a–z`, `0–9` or `_`; it ends before any other character. Tags may touch or occur inside other text. `"#one#two"` gives `["#one", "#two"]`; `"#café"` gives `["#caf"]`. No matches, including empty text, gives `[]`. Target: O(n) time, where n is the number of UTF-16 code units in text.',
     starter: `const hashtags = text => {
 
 };
@@ -113,7 +114,7 @@ console.log(hashtags("Loving #javascript and #css"));
   const found = text.match(/* a # and then one or more word characters, every match */);
   return /* found, or [] when it is null */;
 };`,
-    hints: ['`\\w` matches a letter, digit or underscore, and `\\w+` matches a run of them. With the `g` flag, `match` returns every match in an array, or `null` when nothing matches.'],
+    hints: ["A tag ends as soon as its permitted character run ends. Remember to collect later tags as well as the first, and handle no match."],
     approach: [
       'Write the pattern `/#\\w+/g`: a literal `#`, then one or more word characters, every match.',
       'Call `text.match` with it.',
@@ -126,6 +127,7 @@ console.log(hashtags("Loving #javascript and #css"));
       { call: 'hashtags("#one#two")', expected: ['#one', '#two'], label: 'tags can touch' },
       { call: 'hashtags("no tags here")', expected: [], label: 'no match gives an empty array', edge: true },
       { call: 'hashtags("a # b")', expected: [], label: 'a # on its own is not a tag', edge: true },
+      { call: 'hashtags("#café #你好 #_")', expected: ['#caf', '#_'], label: 'the stated ASCII character set', edge: true },
     ],
   },
 
@@ -138,7 +140,7 @@ console.log(hashtags("Loving #javascript and #css"));
     tier: 2,
     focus: ['split', 'objects'],
     title: 'Read a query string',
-    prompt: 'A query string looks like `"page=2&sort=new"`. Write `parseQuery(query)`, returning an object with one key per pair: split the text on `&`, then split each pair on `=`. `parseQuery("page=2&sort=new")` gives `{ page: "2", sort: "new" }`. Values stay strings. A pair with no `=` gets an empty string, a key that appears twice keeps its last value, and an empty query gives `{}`.',
+    prompt: 'Write `parseQuery(query)`, parsing a simplified raw string into an object of own string-valued properties. Split on `&` and ignore empty segments. The first `=` in each segment separates key and value; keep later `=` in the value. Without `=`, the whole segment is the key with value `""`. Keys may be empty; repeated keys keep their last value, including `__proto__`. Empty input gives `{}`. Preserve percent escapes, `+`, spaces and `?` literally: this is not a complete URL parser. `"page=2&token=a=b"` gives `{ page: "2", token: "a=b" }`. Target: O(n) time, where n is the input length in UTF-16 code units, assuming ordinary property insertion costs.',
     starter: `const parseQuery = query => {
 
 };
@@ -147,22 +149,16 @@ console.log(hashtags("Loving #javascript and #css"));
 console.log(parseQuery("page=2&sort=new"));
 `,
     skeleton: `const parseQuery = query => {
-  const result = {};
-  if (/* the query is empty */) return result;
-
+  const entries = [];
   for (const pair of query.split("&")) {
-    const [key, value] = /* the pair split on = */;
-    // store the value under the key, or "" when there is no value
+    // ignore an empty segment
+    // locate the first =, then extract the key and value
+    // add the [key, value] pair to entries
   }
-
-  return result;
+  return Object.fromEntries(entries);
 };`,
-    hints: ['`"".split("&")` gives `[""]`, not `[]`, so check for an empty query first. `const [key, value] = pair.split("=")` leaves `value` as `undefined` when the pair has no `=`.'],
-    approach: [
-      'Return `{}` straight away when the query is an empty string.',
-      'Split the query on `&` and loop over the pairs.',
-      'Split each pair on `=` and store the value under the key, using `""` when the value is missing. A later pair with the same key overwrites the earlier one.',
-    ],
+    hints: ["Separate the first delimiter from the rest of the value. Creating properties from entries also avoids an inherited setter swallowing an ordinary-looking key."],
+    approach: ["Split on & and skip empty segments. Locate the first = with indexOf.", "If no delimiter exists, pair the whole segment with an empty string. Otherwise slice the key before it and the value after it.", "Collect key/value entries and use Object.fromEntries. Repeated keys are overwritten, and __proto__ becomes an own data property."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -171,6 +167,7 @@ console.log(parseQuery("page=2&sort=new"));
       { call: 'parseQuery("flag")', expected: { flag: '' }, label: 'a key with no = gets an empty string', edge: true },
       { call: 'parseQuery("a=1&a=2")', expected: { a: '2' }, label: 'the last value wins', edge: true },
       { call: 'parseQuery("")', expected: {}, label: 'an empty query', edge: true },
+      { call: 'parseQuery("token=a=b")', expected: { token: 'a=b' }, label: 'keep later equals signs', edge: true },
     ],
   },
 

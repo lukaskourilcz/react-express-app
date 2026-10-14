@@ -1064,7 +1064,15 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
 
   // C1-3: reading a query with URLSearchParams passed Run and failed Submit.
   const query = CODING_TASKS.find((task) => task.id === 'js-easy3-read-query')!;
-  const viaParams = 'const parseQuery = query => Object.fromEntries(new URLSearchParams(query));';
+  // The task now preserves raw text, while the string constructor decodes
+  // form syntax. Its iterable constructor exercises the same browser API
+  // without changing the task's literal key/value contract.
+  const viaParams = `const parseQuery = query => Object.fromEntries(new URLSearchParams(
+    query.split('&').filter(pair => pair !== '').map(pair => {
+      const index = pair.indexOf('=');
+      return index < 0 ? [pair, ''] : [pair.slice(0, index), pair.slice(index + 1)];
+    })
+  ));`;
   const querySubmit = await runChecks({ code: viaParams, visible: query.tests!, hidden: solutionFor(query.id)!.hiddenTests ?? [], shuffle: (list) => list });
   const queryRun = await evaluateInRunRealm({ code: viaParams, calls: query.tests!.map((one) => one.call), expectations: query.tests!.map((one) => one.expected) });
   assert.ok(allPassed(querySubmit.visible) && (!querySubmit.hidden || allPassed(querySubmit.hidden)), `URLSearchParams passes Submit: ${JSON.stringify(querySubmit)}`);

@@ -12,7 +12,7 @@ export const CODING_INDEX: readonly CodingTaskSummary[] = [
   {"id":"js-first-letters","track":"javascript","level":2,"tier":1,"difficulty":"easy","focus":["map","strings"],"title":{"en":"First letters","cs":""},"verify":"tests","estimatedMinutes":10,"free":true},
   {"id":"js-capitalize","track":"javascript","level":2,"tier":1,"difficulty":"easy","focus":["strings"],"title":{"en":"Capitalize","cs":""},"verify":"tests","estimatedMinutes":10,"free":true},
   {"id":"js-word-count","track":"javascript","level":2,"tier":1,"difficulty":"easy","focus":["split","strings"],"title":{"en":"Word count","cs":""},"verify":"tests","estimatedMinutes":10,"free":true},
-  {"id":"js-easy3-hex-colour","track":"javascript","level":2,"tier":2,"difficulty":"easy","focus":["regex"],"title":{"en":"Is it a hex colour?","cs":""},"verify":"tests","estimatedMinutes":10},
+  {"id":"js-easy3-hex-colour","track":"javascript","level":2,"tier":2,"difficulty":"easy","focus":["regex"],"title":{"en":"Is it a hex color?","cs":""},"verify":"tests","estimatedMinutes":10},
   {"id":"js-easy3-find-hashtags","track":"javascript","level":2,"tier":2,"difficulty":"easy","focus":["regex"],"title":{"en":"Every hashtag in a post","cs":""},"verify":"tests","estimatedMinutes":10},
   {"id":"js-easy3-read-query","track":"javascript","level":2,"tier":2,"difficulty":"easy","focus":["split","objects"],"title":{"en":"Read a query string","cs":""},"verify":"tests","estimatedMinutes":10},
   {"id":"js-repeat-word","track":"javascript","level":2,"tier":2,"difficulty":"easy","focus":["for","strings"],"title":{"en":"Repeat word","cs":""},"verify":"tests","estimatedMinutes":20},

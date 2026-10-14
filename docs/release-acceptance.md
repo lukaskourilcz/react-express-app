@@ -3046,8 +3046,11 @@ Firefox and WebKit each pass twelve light/dark cases at 360/1440px; the Big O
 cases include keyboard and 200% text reflow. The focused nine-route light and dark
 sweeps each pass all 63 probes at 360–1440px. Both production dependency audits
 report zero vulnerabilities. Initial bundle remains within the unchanged
-243000-byte cap at 242948 gzip bytes. Final follow-up CI and production verification
-are pending; these local results do not claim a physical-device check.
+243000-byte cap at 242948 gzip bytes. Final required verify/SQL passed on
+`2fb7ced1` in [run 38508356988](https://github.com/lukaskourilcz/react-express-app/actions/runs/38508356988).
+Merge `006fae90` is production READY as `dpl_6y3kLFYECJaqWFVGr6FsVwGLN73z`;
+health, guide/free intro and actual correct/wrong React/JavaScript grading passed.
+These checks do not claim an authenticated native activity or physical device.
 
 No physical Safari/Firefox/Windows/phone, timed managed-backup restore, actual
 external alert delivery, sustained expected-load acceptance or paid Stripe

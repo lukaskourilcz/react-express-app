@@ -25,9 +25,14 @@ export const JAVASCRIPT_DEBUG_SOLUTIONS: Record<string, CodingSolution> = {
   const mean = total / numbers.length;
   return mean;
 };`,
-    senior: `// A running mean folds each value in as it arrives, so there is no total to divide and nothing to divide by zero.
-const average = numbers => numbers.reduce((mean, number, index) => mean + (number - mean) / (index + 1), 0);`,
+    senior: `const average = numbers => numbers.length === 0
+  ? 0
+  : numbers.reduce((total, number) => total + number, 0) / numbers.length;`,
     hiddenTests: [
+      {"call": "average([10000000000000000, 1, 1])", "expected": 3333333333333333.5},
+      {"call": "average([0.1, 0.2])", "expected": 0.15000000000000002},
+      {"call": "average([-1.5, 0.5, 2.5])", "expected": 0.5},
+      {"call": "(() => { const numbers = [2, 4, 6]; const mean = average(numbers); return [mean, numbers]; })()", "expected": [4, [2, 4, 6]]},
       { call: 'average([0])', expected: 0 },
       { call: 'average([1, 2, 3, 4])', expected: 2.5 },
       { call: 'Number.isNaN(average([]))', expected: false, label: 'the empty case is a number, not NaN' },

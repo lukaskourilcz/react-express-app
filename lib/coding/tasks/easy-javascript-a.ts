@@ -29,7 +29,7 @@ export const EASY_JAVASCRIPT_A_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ['flat'],
     title: 'Flatten one level',
-    prompt: 'Write `flattenOnce(list)`, returning a new array with one level of nesting removed, using the array method `flat()`. `flattenOnce([1, [2, 3], [4]])` gives `[1, 2, 3, 4]`. An array nested two deep keeps its inner brackets, so `flattenOnce([1, [2, [3]]])` gives `[1, 2, [3]]`. The input keeps its nesting.',
+    prompt: "Write `flattenOnce(list)`, returning a new array with exactly one level of nesting removed. The outer array and its immediate child arrays are dense. Keep element order and do not change any input array. Values and deeper arrays keep their identity: this is a shallow operation. `[1, [2, [3]]]` becomes `[1, 2, [3]]`; empty child arrays add nothing, and an empty input still returns a new empty array. `flat()` is one useful approach. Target: O(n) time, where n counts outer entries plus entries in immediate child arrays; deeper arrays are not traversed.",
     starter: `const flattenOnce = list => {
 
 };
@@ -40,7 +40,7 @@ console.log(flattenOnce([1, [2, 3], [4]]));
     skeleton: `const flattenOnce = list => {
   return /* list with one level of nesting removed */;
 };`,
-    hints: ['Called with no argument, `flat()` removes exactly one level of brackets and returns a new array.'],
+    hints: ["Distinguish an array directly inside the list from one inside that array. Only the first layer is unpacked; non-array values stay in place."],
     approach: [
       'Call `flat()` on the list. With no argument its depth is 1.',
       'Return what it gives back. It is a new array, so the input keeps its nesting.',
