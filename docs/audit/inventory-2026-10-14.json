@@ -25,8 +25,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "PR #372 final required verify/sql passed on 5befb908 in GitHub Actions 38498381826; deployed production smoke passed. Ten individual current model records have separate 88-candidate editorial evidence; execution does not approve the remaining tasks.",
-    "currentModelReviewedIssuedTasks": 10,
-    "issuedStillRequiringReview": 715
+    "currentModelReviewedIssuedTasks": 20,
+    "issuedStillRequiringReview": 705,
+    "deployedModelReviewedIssuedTasks": 10,
+    "stagedModelReviewedIssuedTasks": 10,
+    "stagedExecutionEvidence": "Waves 3/4: 49/49 and 40/40 selected QuickJS candidate verdicts; individual scores and same-session final reading. Final CI/deployment pending."
   },
   "nativePaths": {
     "paths": 2,
@@ -39,9 +42,10 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 12,
+    "currentStagedModelReviewRecords": 0,
     "recordsStillRequiringReview": 251,
-    "reviewEvidence": "Twelve D01 records in docs/audit/wip/native/review-2026-10-14-dsa-d01.jsonl; exact English/grader bindings checked by audit:native-reviews. This partial editorial wave is not yet deployed or a runtime review claim."
+    "reviewEvidence": "Twelve D01 exact-bound model records deployed through PR #376 after required CI 38508356988 and production smoke on 006fae90. Partial editorial evidence; no complete-catalogue/runtime review claim.",
+    "deployedModelReviewRecords": 12
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,

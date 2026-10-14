@@ -25,7 +25,7 @@ export const JAVASCRIPT_DEBUG_TASKS: CodingTaskSource[] = [
     format: 'debug',
     focus: ['reduce', 'functions'],
     title: 'The average that divides by nothing',
-    prompt: '`average(numbers)` should return the mean of a list of numbers, and `0` for an empty list. It returns the right answer for ordinary lists and something strange for an empty one. Find the bug and make the smallest change that fixes it.',
+    prompt: "Fix `average(numbers)` so empty input returns `0`. For nonempty input, add the Numbers from left to right starting at `0`, then divide by the count, using JavaScript arithmetic without rounding. Input is a dense array of finite Numbers whose running total remains finite. Preserve the input array. The starter already handles ordinary nonempty lists; find its empty-case bug. Target: O(n) time, where n is the number of input entries.",
     starter: `const average = numbers => {
   const total = numbers.reduce((sum, number) => sum + number, 0);
   return total / numbers.length;

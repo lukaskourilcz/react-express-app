@@ -153,37 +153,37 @@ const APPROACHES: Record<string, CuratedApproach[]> = {
   'js-palindrome': [
     {
       name: { en: 'Compare with the reverse', cs: 'Porovnání s obrácením' },
-      code: 'const isPalindrome = text => {\n  const clean = text.toLowerCase().replace(/[^a-z0-9]/g, "");\n  return clean === [...clean].reverse().join("");\n};',
+      code: 'const isPalindrome = text => {\n  return text === [...text].reverse().join("");\n};',
       readability: {
-        en: 'States the definition directly: the same forwards as backwards, once the noise is gone.',
+        en: 'States the definition directly: compare the word with its reverse.',
         cs: 'Vyslovuje definici přímo: stejné dopředu i dozadu, jakmile zmizí šum.',
       },
       time: 'O(n)',
       space: 'O(n)',
       assumptions: {
-        en: 'Letters and digits count and everything else does not — that rule is a decision, and the code writes it down.',
+        en: 'The task accepts only lowercase ASCII letters. n is the number of letters; no cleaning or case conversion is required.',
         cs: 'Počítají se písmena a číslice, nic jiného — to pravidlo je rozhodnutí a kód ho zapisuje.',
       },
       tradeoffs: {
-        en: 'Copies the string twice. Never stops early, even when the first and last characters already disagree.',
+        en: 'Allocates a character array and a reversed string. It processes the whole word even when its ends already differ.',
         cs: 'Kopíruje řetězec dvakrát. Nikdy nekončí dřív, ani když se první a poslední znak už neshodují.',
       },
     },
     {
       name: { en: 'Two pointers', cs: 'Dva ukazatele' },
-      code: 'function isPalindrome(text) {\n  const clean = text.toLowerCase().replace(/[^a-z0-9]/g, "");\n  let left = 0;\n  let right = clean.length - 1;\n  while (left < right) {\n    if (clean[left] !== clean[right]) return false;\n    left++;\n    right--;\n  }\n  return true;\n}',
+      code: 'function isPalindrome(text) {\n  let left = 0;\n  let right = text.length - 1;\n  while (left < right) {\n    if (text[left] !== text[right]) return false;\n    left++;\n    right--;\n  }\n  return true;\n}',
       readability: {
         en: 'Longer, but it says why it stops: the first disagreement is the answer.',
         cs: 'Delší, ale říká, proč končí: první neshoda je odpověď.',
       },
       time: 'O(n)',
-      space: 'O(n) for the cleaned copy, O(1) beyond it',
+      space: 'O(1)',
       assumptions: {
-        en: 'The same cleaning rule. The walk itself needs no extra memory.',
+        en: 'The same lowercase ASCII input. The comparison uses constant-time indexing and a fixed number of counters.',
         cs: 'Stejné pravidlo čištění. Samotné procházení nepotřebuje paměť navíc.',
       },
       tradeoffs: {
-        en: 'More code for a saving that only shows on long strings that fail early.',
+        en: 'Can stop at the first mismatched pair. In the worst case it compares all opposite pairs without allocating a copy.',
         cs: 'Víc kódu za úsporu, která se projeví jen u dlouhých řetězců selhávajících brzy.',
       },
     },

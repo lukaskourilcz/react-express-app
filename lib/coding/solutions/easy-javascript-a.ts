@@ -18,6 +18,10 @@ export const EASY_JAVASCRIPT_A_SOLUTIONS: Record<string, CodingSolution> = {
 };`,
     senior: `const flattenOnce = list => list.flat();`,
     hiddenTests: [
+      {"call": "(() => { const list = [1, 2]; return flattenOnce(list) !== list; })()", "expected": true},
+      {"call": "(() => { const list = []; return flattenOnce(list) !== list; })()", "expected": true},
+      {"call": "(() => { const item = { value: 1 }; const inner = [3]; const list = [item, [2, inner]]; const out = flattenOnce(list); return [out !== list, out[0] === item, out[2] === inner, list[1][1] === inner, list.length]; })()", "expected": [true, true, true, true, 2]},
+      {"call": "flattenOnce([null, [false, \"\", null]])", "expected": [null, false, "", null]},
       { call: 'flattenOnce([])', expected: [] },
       { call: 'flattenOnce([[1, 2], 3, [[4]]])', expected: [1, 2, 3, [4]] },
       { call: 'flattenOnce([["x"], "y"])', expected: ['x', 'y'] },

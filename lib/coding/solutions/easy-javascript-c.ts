@@ -22,6 +22,10 @@ export const EASY_JAVASCRIPT_C_SOLUTIONS: Record<string, CodingSolution> = {
 };`,
     senior: `const undo = history => (history.length > 0 ? history.pop() : null);`,
     hiddenTests: [
+      {"call": "(() => { const history = [undefined]; return [undo(history) === undefined, history.length]; })()", "expected": [true, 0]},
+      {"call": "(() => { const history = [false]; return [undo(history), history]; })()", "expected": [false, []]},
+      {"call": "(() => { const change = { text: \"x\" }; const history = [change]; return [undo(history) === change, history.length]; })()", "expected": [true, 0]},
+      {"call": "(() => { const history = []; return [undo(history), history]; })()", "expected": [null, []]},
       { call: '(() => { const history = [1, 2, 3]; const undone = [undo(history), undo(history), undo(history), undo(history)]; return [undone, history]; })()', expected: [[3, 2, 1, null], []] },
       { call: 'undo([0])', expected: 0 },
       { call: 'undo(["", "x", ""])', expected: '' },
@@ -78,6 +82,9 @@ export const EASY_JAVASCRIPT_C_SOLUTIONS: Record<string, CodingSolution> = {
   return { command, args };
 };`,
     hiddenTests: [
+      {"call": "(() => { const words = []; const result = readCommand(words); return result.args !== words; })()", "expected": true},
+      {"call": "(() => { const words = [\"say\", \"hello\", \"world\"]; const result = readCommand(words); result.args[0] = \"changed\"; return words; })()", "expected": ["say", "hello", "world"]},
+      {"call": "readCommand([\"😀\", \"a b\", \"\"])", "expected": {"command": "😀", "args": ["a b", ""]}},
       { call: 'readCommand(["move", "3", "left", "fast"])', expected: { command: 'move', args: ['3', 'left', 'fast'] } },
       { call: 'readCommand(["", "x"])', expected: { command: '', args: ['x'] } },
       { call: '(() => { const words = ["a"]; readCommand(words).args.push("b"); return words; })()', expected: ['a'] },

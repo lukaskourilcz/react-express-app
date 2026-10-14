@@ -214,6 +214,8 @@ const largest = numbers => numbers.reduce((best, number) => Math.max(best, numbe
 // The rule lives apart from the counting, so adding Buzz later touches one line.
 const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
     hiddenTests: [
+      {"call": "fizz(12)", "expected": [1, 2, "Fizz", 4, 5, "Fizz", 7, 8, "Fizz", 10, 11, "Fizz"]},
+      {"call": "(() => { const first = fizz(0); const second = fizz(0); return first !== second; })()", "expected": true},
       { call: "fizz(2)", expected: [1, 2] },
       { call: "fizz(7)", expected: [1, 2, "Fizz", 4, 5, "Fizz", 7] },
       { call: "fizz(9)", expected: [1, 2, "Fizz", 4, 5, "Fizz", 7, 8, "Fizz"] },
@@ -444,6 +446,11 @@ const oddSum = numbers => numbers.reduce((sum, number) => (number % 2 === 0 ? su
     senior: `// join puts the separator between items only, so once gives no space and zero gives "".
 const repeat = (word, times) => Array(times).fill(word).join(" ");`,
     hiddenTests: [
+      {"call": "repeat(\"\", 3)", "expected": "  "},
+      {"call": "repeat(\" \", 2)", "expected": "   "},
+      {"call": "repeat(\" x \", 2)", "expected": " x   x "},
+      {"call": "repeat(\"😀\", 2)", "expected": "😀 😀"},
+      {"call": "repeat(\"\", 1)", "expected": ""},
       { call: "repeat(\"go\",4)", expected: "go go go go" },
       { call: "repeat(\"yes\",1)", expected: "yes" },
       { call: "repeat(\"no\",0)", expected: "" },
@@ -583,6 +590,9 @@ const activate = user => Object.assign({}, user, { active: true });`,
 const isPalindrome = text =>
   [...text].every((character, index, characters) => character === characters[characters.length - 1 - index]);`,
     hiddenTests: [
+      {"call": "isPalindrome(\"abccba\")", "expected": true},
+      {"call": "isPalindrome(\"abdcba\")", "expected": false},
+      {"call": "isPalindrome(\"aaaaab\")", "expected": false},
       { call: "isPalindrome(\"racecar\")", expected: true },
       { call: "isPalindrome(\"abca\")", expected: false },
       { call: "isPalindrome(\"ab\")", expected: false },
