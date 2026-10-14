@@ -3072,8 +3072,9 @@ network retries return the stored matching result without repeated grading/XP.
 
 Local API/script/client/tooling types, launch, path, coding ownership/version and
 full grading/Learn integrity checks pass. The stale-editor client checks pass
-(37 tests across two files). Initial browser matrix passed light/dark at 360/1440;
-the extended zoom/keyboard matrix is recorded separately when complete. The
+(37 tests across two files). The final browser matrix passes light/dark at 360/1440, keyboard activation,
+44px refresh targets and 200% text at 1440. The first extended check found
+a 32px target; both refresh controls were corrected and the matrix rerun. The
 three-route light/dark reflow sweep passed 18 probes each at 360–1440. Both
 production dependency audits report zero vulnerabilities. Build/public/unused/
 security policies pass; initial production-shaped bundle is 242982/243000 bytes

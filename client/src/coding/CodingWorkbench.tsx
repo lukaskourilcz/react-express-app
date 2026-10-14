@@ -1117,7 +1117,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     catch (error) { setSubmitError(friendlyError(error)); }
     finally { setPhase('idle'); }
   };
-  const refreshAction = taskChanged && onRefreshTask && <Button variant="secondary" isDisabled={busy || !online} onClick={() => void refreshTask()} label={t('coding.verdict.reloadBrief')} />;
+  const refreshAction = taskChanged && onRefreshTask && <Button className="cd-brief-refresh" variant="secondary" isDisabled={busy || !online} onClick={() => void refreshTask()} label={t('coding.verdict.reloadBrief')} />;
   const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
 
   if (verdict?.verdict === 'passed' && !verdictStale && !verdict.graderUnavailable) {

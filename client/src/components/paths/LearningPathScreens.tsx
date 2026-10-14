@@ -830,7 +830,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
                 !
               </span>
               <span>{error}</span>
-              {briefChanged && <Button variant="secondary" isDisabled={busy} onClick={() => void refreshBrief()} label={t('coding.verdict.reloadBrief')} />}
+              {briefChanged && <Button className="lp-brief-refresh" variant="secondary" isDisabled={busy} onClick={() => void refreshBrief()} label={t('coding.verdict.reloadBrief')} />}
             </div>
           )}
 
