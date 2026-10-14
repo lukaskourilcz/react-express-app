@@ -375,7 +375,8 @@ it('keeps Big O space targets and guidance exclusively inside its named tooltip'
   const tooltip = document.getElementById(info.getAttribute('aria-describedby')!)!;
   expect(tooltip).toHaveAttribute('role', 'tooltip');
   expect(info).toHaveAttribute('href', '/big-o');
-  expect(tooltip).toHaveTextContent('n is the size of the input.');
+  expect(tooltip).toHaveTextContent('array items, string characters, list nodes');
+  expect(tooltip).toHaveTextContent('Variables such as n, m or L refer to the sizes described in the brief.');
   expect(document.querySelector('.cd-complexity details')).toBeNull();
   expect(document.querySelector('.cd-complexity > span')).not.toHaveTextContent('Target extra space');
 });
