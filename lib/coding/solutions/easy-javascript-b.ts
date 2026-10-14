@@ -171,34 +171,9 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 
   /* ── for...in ─────────────────────────────────────────────────────── */
   'js-easy3-fill-defaults': {
-    solution: `const withDefaults = (settings, defaults) => {
-  const result = { ...settings };
-  for (const key in defaults) {
-    // in asks whether the key exists, so false, 0 and "" are kept.
-    if (!(key in result)) result[key] = defaults[key];
-  }
-  return result;
-};`,
-    junior: `const withDefaults = (settings, defaults) => {
-  const result = {};
-  for (const key in settings) {
-    result[key] = settings[key];
-  }
-  for (const key in defaults) {
-    const alreadySet = key in result;
-    if (!alreadySet) {
-      result[key] = defaults[key];
-    }
-  }
-  return result;
-};`,
-    senior: `const withDefaults = (settings, defaults) => {
-  const result = { ...settings };
-  for (const key in defaults) {
-    if (Object.hasOwn(defaults, key) && !Object.hasOwn(result, key)) result[key] = defaults[key];
-  }
-  return result;
-};`,
+    solution: "const withDefaults = (settings, defaults) => {\n  const result = Object.create(null);\n  for (const key in settings) {\n    if (Object.hasOwn(settings, key)) result[key] = settings[key];\n  }\n  for (const key in defaults) {\n    if (Object.hasOwn(defaults, key) && !Object.hasOwn(result, key)) {\n      result[key] = defaults[key];\n    }\n  }\n  return result;\n};",
+    junior: "const withDefaults = (settings, defaults) => {\n  const result = Object.create(null);\n  for (const key in settings) {\n    const isOwnSetting = Object.hasOwn(settings, key);\n    if (isOwnSetting) result[key] = settings[key];\n  }\n  for (const key in defaults) {\n    const isOwnDefault = Object.hasOwn(defaults, key);\n    const alreadySet = Object.hasOwn(result, key);\n    if (isOwnDefault && !alreadySet) result[key] = defaults[key];\n  }\n  return result;\n};",
+    senior: "const withDefaults = (settings, defaults) => Object.fromEntries([...Object.entries(defaults), ...Object.entries(settings)]);",
     hiddenTests: [
       { call: 'withDefaults({ name: "" }, { name: "anon" })', expected: { name: '' } },
       { call: 'withDefaults({ a: null }, { a: 1, b: 2 })', expected: { a: null, b: 2 } },

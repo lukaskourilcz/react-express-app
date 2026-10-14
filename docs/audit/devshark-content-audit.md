@@ -1,5 +1,40 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b005
+
+Reviewed recent-search history, list wording, matching keys, dictionary
+inversion and configuration defaults. Current coding coverage is **55/725**:
+30 deployed, twenty-five staged, **670 remaining**; native is **60/263**.
+
+The baseline matched 32/40 selected verdicts. Duplicate removal, empty-item
+filtering, Object.is equality and dictionary membership mistakes escaped
+checks. The for-in selection exercise now deliberately includes inherited
+keys consistently in every revealed answer; invert and defaults explicitly
+select own enumerable string properties. All special string names work as
+own dictionary data. Defaults preserve an explicitly stored undefined value.
+Recent history has a nonnegative integer cap, avoiding an unbounded negative
+pop loop; sentence formatting preserves literal punctuation and empty items.
+
+Actual old revealed answers against new fixtures scored matching keys
+11/11, 11/11 and 9/11; inversion 8/10, 8/10 and 9/10; defaults 8/10, 8/10 and
+9/10. The final replacement variants and selected wrong answers pass **40/40
+expected verdicts** (twenty valid, five starters, fifteen wrong). Twenty
+authored-target/base-25-XP checks and the focused Run/Submit/puzzle contract
+pass. Cost units include inspected prototype names/objects where for-in
+walks them. Individual scores and final readings are in the b005 JSONL;
+this is same-session model review, not independent or human approval.
+
+API types, launch contracts, registry/index generation, the final build, both
+production dependency audits (zero vulnerabilities), copy-artifact sweep and
+diff checks pass. The three longest rewritten task pages pass eighteen light
+and eighteen dark probes over 360–1440px with zero unprobed routes. An earlier
+footer-clearance failure was a measurement error: bounds of rows outside a
+nested scrollport were counted as painted text. The separate tooling fix
+intersects ancestor clip bounds; six browser regression scenarios still
+recognize actual visible and partial overlap while excluding clipped content.
+No product CSS workaround or relaxed overlap threshold was introduced.
+Production and authenticated acceptance remain separate.
+
 ## 15 October continuation — five-item batch b004
 
 Individually reviewed table framing, playlist append, restricted CSV joining,

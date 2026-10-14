@@ -135,7 +135,7 @@ console.log(menuItems([[["soup"], ["bread", "salad"]], [["cake"]]]));
     tier: 1,
     focus: ['for-in', 'objects'],
     title: 'Keys that hold a value',
-    prompt: 'Write `keysWithValue(object, value)`, returning an array of the keys whose value is strictly equal to `value`, in the order a `for…in` loop visits them. `keysWithValue({ a: 1, b: 2, c: 1 }, 1)` gives `["a", "c"]`. No match gives an empty array, and the string `"1"` does not match the number `1`.',
+    prompt: "Write `keysWithValue(object, value)`, returning an array of the keys whose value is strictly equal to `value`, in the order a `for…in` loop visits them. `keysWithValue({ a: 1, b: 2, c: 1 }, 1)` gives `[\"a\", \"c\"]`. No match gives an empty array, and the string `\"1\"` does not match the number `1`. This exercise deliberately includes inherited enumerable string keys, exactly as `for...in` does; symbol and non-enumerable keys are excluded. Own properties shadow inherited properties of the same name, even when the own property is non-enumerable. Inputs are ordinary data objects without getters or proxies; do not mutate them or their prototypes, and accept null-prototype or frozen objects. Strict equality means NaN never matches, 0 matches -0, and object values match only by reference. Target: O(n) time, where n counts property names and prototype objects inspected; assume constant-time property access and equality.",
     starter: `const keysWithValue = (object, value) => {
 
 };
@@ -152,12 +152,8 @@ console.log(keysWithValue({ a: 1, b: 2, c: 1 }, 1));
 
   return keys;
 };`,
-    hints: ['`for (const key in object)` hands you each key name. Read the value with `object[key]` and compare it with `===`.'],
-    approach: [
-      'Start an empty array for the matching keys.',
-      'Loop over the keys with `for…in` and read each value with bracket notation, since the key is in a variable.',
-      'Push the key when its value is strictly equal to the one you were given, then return the array.',
-    ],
+    hints: ["Compare the value read with bracket notation using strict equality. Unlike Object.keys, a for...in loop also reaches inherited enumerable keys; decide whether an own key hides an inherited one."],
+    approach: ["Start a fresh array, then visit enumerable string keys with for...in. In this exercise inherited keys are intentionally included.", "Read object[key] and append the key only when the value is strictly equal to the query. Do not replace === with Object.is or coercive equality.", "Return the array. For an application that needs only own keys, add Object.hasOwn or use Object.keys instead; that is a different contract."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -166,6 +162,12 @@ console.log(keysWithValue({ a: 1, b: 2, c: 1 }, 1));
       { call: 'keysWithValue({ a: 1 }, 5)', expected: [], label: 'no match gives an empty array', edge: true },
       { call: 'keysWithValue({ a: "1", b: 1 }, 1)', expected: ['b'], label: 'a string never equals a number', edge: true },
       { call: 'keysWithValue({}, 0)', expected: [], label: 'an empty object', edge: true },
+      { call: "(() => { const parent={p:1,a:1}; const o=Object.create(parent);o.b=1;o.a=2;return keysWithValue(o,1); })()", expected: ["b", "p"], label: "inherited keys with own shadowing", edge: true },
+      { call: "(() => { const o=Object.create({x:1,y:1});Object.defineProperty(o,\"x\",{value:1,enumerable:false});o[Symbol(\"s\")]=1;return keysWithValue(o,1); })()", expected: ["y"], label: "non-enumerable own key hides inherited key", edge: true },
+      { call: "keysWithValue({a:NaN,b:NaN},NaN)", expected: [], label: "NaN is not strictly equal to itself", edge: true },
+      { call: "keysWithValue({a:0,b:-0},-0)", expected: ["a", "b"], label: "strict equality includes both zero signs", edge: true },
+      { call: "(() => { const value={id:1}; const o=Object.freeze(Object.assign(Object.create(null),{a:value,b:{id:1},c:value})); return keysWithValue(o,value); })()", expected: ["a", "c"], label: "reference equality and frozen null-prototype input", edge: true },
+      { call: "keysWithValue({\"10\":1,\"2\":1,z:1},1)", expected: ["2", "10", "z"], label: "integer key order", edge: true },
     ],
   },
   {
@@ -176,7 +178,7 @@ console.log(keysWithValue({ a: 1, b: 2, c: 1 }, 1));
     tier: 1,
     focus: ['for-in', 'objects'],
     title: 'Swap keys and values',
-    prompt: 'Write `invert(object)`, returning a new object whose keys are the original values and whose values are the original keys, built with a `for…in` loop. `invert({ a: "x", b: "y" })` gives `{ x: "a", y: "b" }`. When two keys share a value, the key the loop visits last wins. An empty object gives an empty object, and the input is not changed.',
+    prompt: "Write `invert(object)`, returning a fresh dictionary whose keys are the original values and whose values are the original keys. Consider only own enumerable string keys, in Object.keys order; loop with `for...in` and ignore inherited keys. For example, `invert({ a: \"x\", b: \"y\" })` gives `{ x: \"a\", y: \"b\" }`. When values repeat, the last visited original key wins. Values are primitive strings or finite numbers; convert numbers to property names with JavaScript string conversion. All string names, including `__proto__`, `constructor` and the empty string, must work as own data keys. Inputs are ordinary data objects without getters or proxies, including null-prototype and frozen objects. Do not change the input. The result may have a null prototype. Target: O(n) time, where n counts inspected property names and prototype objects, plus the total length of those names and converted own values, using average constant-time dictionary access.",
     starter: `const invert = object => {
 
 };
@@ -184,21 +186,9 @@ console.log(keysWithValue({ a: 1, b: 2, c: 1 }, 1));
 // Scratch pad. Change this and press Run.
 console.log(invert({ a: "x", b: "y" }));
 `,
-    skeleton: `const invert = object => {
-  const inverted = {};
-
-  for (const key in object) {
-    // store key under the name object[key]
-  }
-
-  return inverted;
-};`,
-    hints: ['Inside the loop, `object[key]` is the value. Use it as the new key: `inverted[object[key]] = key`.'],
-    approach: [
-      'Create an empty object for the result.',
-      'Visit each key with `for…in` and assign the key to the result under the name of its value.',
-      'A later key with the same value overwrites the earlier one, which is the rule the task asks for.',
-    ],
+    skeleton: "const invert = object => {\n  const inverted = Object.create(null);\n  for (const key in object) {\n    // ignore inherited keys, then store the old key under the old value\n  }\n  return inverted;\n};",
+    hints: ["Use the old value as a dictionary key and the old key as its value. A null-prototype dictionary avoids inherited setters and reserved property names; check ownership while iterating the input."],
+    approach: ["Create a dictionary with Object.create(null), so names such as __proto__ are ordinary data keys.", "Visit enumerable string keys with for...in and keep only keys for which Object.hasOwn(object, key) is true.", "Assign each original key under its converted value. Assignment overwrites an earlier match, so the last visited key wins. Return the dictionary."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -207,6 +197,11 @@ console.log(invert({ a: "x", b: "y" }));
       { call: 'invert({ first: "same", second: "same" })', expected: { same: 'second' }, label: 'the last key with a value wins', edge: true },
       { call: 'invert({})', expected: {}, label: 'an empty object', edge: true },
       { call: '(() => { const input = { a: "b" }; invert(input); return input; })()', expected: { a: 'b' }, label: 'the input is not changed', edge: true },
+      { call: "(() => { const o=Object.create({inherited:\"bad\"});o.own=\"ok\";Object.defineProperty(o,\"hidden\",{value:\"secret\"});o[Symbol(\"s\")]=\"symbol\";return invert(o); })()", expected: {"ok": "own"}, label: "ignore inherited non-enumerable and symbol keys", edge: true },
+      { call: "(() => { const out=invert(Object.freeze({a:\"__proto__\",b:\"constructor\",c:\"\"})); return Object.hasOwn(out,\"__proto__\")&&out.__proto__===\"a\"&&Object.hasOwn(out,\"constructor\")&&out.constructor===\"b\"&&out[\"\"]===\"c\"; })()", expected: true, label: "special names are own data keys", edge: true },
+      { call: "invert({\"10\":\"same\",\"2\":\"same\",a:\"same\"})", expected: {"same": "a"}, label: "last visited key follows property order", edge: true },
+      { call: "invert(Object.assign(Object.create(null),{a:0,b:-0,c:1.5}))", expected: {"0": "b", "1.5": "c"}, label: "numeric conversion and null-prototype input", edge: true },
+      { call: "(() => { const o={}; const out=invert(o); return out!==o&&Object.keys(out).length===0; })()", expected: true, label: "fresh empty dictionary", edge: true },
     ],
   },
   {

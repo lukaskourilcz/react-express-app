@@ -66,7 +66,7 @@ console.log(undo(changes), changes);
     tier: 2,
     focus: ['unshift', 'pop'],
     title: 'Recent searches',
-    prompt: 'A search box shows the latest searches first and remembers at most `max` of them. Write `addSearch(recent, term, max)`, which puts `term` at the front of `recent` with `unshift`, then removes searches from the end with `pop` until no more than `max` are left. It changes `recent` in place and returns it. `addSearch(["css", "html"], "js", 2)` gives `["js", "css"]`.',
+    prompt: "A search box shows the latest searches first and remembers at most `max` of them. Write `addSearch(recent, term, max)`, which puts `term` at the front of `recent` with `unshift`, then removes searches from the end with `pop` until no more than `max` are left. It changes `recent` in place and returns it. `addSearch([\"css\", \"html\"], \"js\", 2)` gives `[\"js\", \"css\"]`. `recent` is a mutable dense array of primitive strings; `term` is a primitive string and `max` is an integer from 0 through 10000. Keep duplicates and empty terms as separate searches, preserving their order. The result must be the same array, including when max is zero. Target: O(n) time, where n is the original number of searches; moving or removing one stored reference takes constant time.",
     starter: `const addSearch = (recent, term, max) => {
 
 };
@@ -95,6 +95,10 @@ console.log(addSearch(["css", "html"], "js", 2));
       { call: '(() => { const recent = ["a", "b", "c"]; addSearch(recent, "d", 3); return recent; })()', expected: ['d', 'a', 'b'], label: 'the list changes in place' },
       { call: 'addSearch([], "first", 3)', expected: ['first'], label: 'the first search', edge: true },
       { call: 'addSearch(["a", "b"], "c", 0)', expected: [], label: 'a max of 0 keeps nothing', edge: true },
+      { call: "addSearch([\"a\",\"a\",\"\"],\"a\",4)", expected: ["a", "a", "a", ""], label: "duplicates and empty search terms", edge: true },
+      { call: "(() => { const recent=[\"a\",\"b\"]; const result=addSearch(recent,\"\",0); return result===recent&&recent.length===0; })()", expected: true, label: "zero limit preserves the array identity", edge: true },
+      { call: "(() => { const recent=Array.from({length:128},(_,i)=>String(i)); const result=addSearch(recent,\"new\",1); return result===recent&&recent.length===1&&recent[0]===\"new\"; })()", expected: true, label: "remove every excess search", edge: true },
+      { call: "addSearch([],\"\",10000)", expected: [""], label: "empty term is a search", edge: true },
     ],
   },
   {

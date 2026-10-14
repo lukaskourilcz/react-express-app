@@ -218,7 +218,7 @@ console.log(addSongs(["Intro"], ["Wave", "Tide"]));
     tier: 2,
     focus: ['join', 'slice'],
     title: 'A list in words',
-    prompt: 'Write `inWords(items)`, joining a list of words the way a sentence does: commas between the items, and `and` before the last one. Use `slice` and `join`. `inWords(["tea", "coffee", "juice"])` gives `"tea, coffee and juice"`, and `inWords(["salt", "pepper"])` gives `"salt and pepper"`. A single item comes back on its own, and an empty list gives an empty string. Leave `items` as it was.',
+    prompt: "Write `inWords(items)`, joining a list of words the way a sentence does: commas between the items, and `and` before the last one. Use `slice` and `join`. `inWords([\"tea\", \"coffee\", \"juice\"])` gives `\"tea, coffee and juice\"`, and `inWords([\"salt\", \"pepper\"])` gives `\"salt and pepper\"`. A single item comes back on its own, and an empty list gives an empty string. Leave `items` as it was. `items` is an ordinary dense array of primitive strings. Preserve each string exactly, including spaces, empty strings, punctuation and repetitions; do not filter, trim or parse it. Use no comma immediately before the final `and`. Frozen arrays are valid. Target: O(n) time, where n is the number of items plus their total UTF-16 length, assuming linear slice and join operations.",
     starter: `const inWords = items => {
 
 };
@@ -232,7 +232,7 @@ console.log(inWords(["tea", "coffee", "juice"]));
   const last = items[items.length - 1];
   return /* allButLast joined with ", ", then " and ", then last */;
 };`,
-    hints: ['`items.slice(0, -1)` copies every item except the last. `join(", ")` puts a comma and a space between the items and nothing after the final one.'],
+    hints: ["Separate the zero- and one-item cases from longer lists. For a longer list, join the prefix with comma-space and keep the last item for the final conjunction."],
     approach: [
       'Handle short lists first. With fewer than two items, `items.join("")` already gives `""` or the one item.',
       'Take every item but the last with `slice(0, -1)` and join them with `", "`.',
@@ -246,6 +246,10 @@ console.log(inWords(["tea", "coffee", "juice"]));
       { call: 'inWords(["a", "b", "c", "d"])', expected: 'a, b, c and d' },
       { call: 'inWords(["water"])', expected: 'water', label: 'one item comes back on its own', edge: true },
       { call: 'inWords([])', expected: '', label: 'no items', edge: true },
+      { call: "inWords([\"\",\"x\",\"\"])", expected: ", x and ", label: "preserve empty strings", edge: true },
+      { call: "inWords([\"a, b\",\"c and d\",\" e \"])", expected: "a, b, c and d and  e ", label: "literal punctuation and spaces", edge: true },
+      { call: "inWords(Object.freeze([\"a\",\"a\",\"a\"]))", expected: "a, a and a", label: "frozen repeated words", edge: true },
+      { call: "inWords([\"\"])", expected: "", label: "one empty string", edge: true },
     ],
   },
 
@@ -258,7 +262,7 @@ console.log(inWords(["tea", "coffee", "juice"]));
     tier: 1,
     focus: ['for-in', 'objects'],
     title: 'Fill in the defaults',
-    prompt: 'Write `withDefaults(settings, defaults)`, returning a new object with every key of `settings`, plus each key of `defaults` that `settings` does not have. Loop over `defaults` with `for…in`. `withDefaults({ theme: "dark" }, { theme: "light", size: 12 })` gives `{ theme: "dark", size: 12 }`. A setting of `false`, `0` or `""` is still a setting and is kept. Neither input is changed.',
+    prompt: "Write `withDefaults(settings, defaults)`, returning a fresh shallow dictionary of own enumerable string properties. Keep every such setting; copy a default only when settings has no own enumerable key with that name. Loop over defaults with `for...in`, ignoring inherited keys. `withDefaults({ theme: \"dark\" }, { theme: \"light\", size: 12 })` gives `{ theme: \"dark\", size: 12 }`. Existing false, 0, empty string, null and undefined values are all kept. Inputs are ordinary data objects with string keys and data values, without getters or proxies; inherited and non-enumerable keys are ignored, and null-prototype or frozen objects are valid. Keep original value references and do not change either input or nested values. All string names, including `__proto__` and `toString`, must work as own data keys; the result may have a null prototype. Target: O(n) time, where n counts property names and prototype objects inspected across both inputs; assume bounded-length names and average constant-time dictionary operations.",
     starter: `const withDefaults = (settings, defaults) => {
 
 };
@@ -266,21 +270,9 @@ console.log(inWords(["tea", "coffee", "juice"]));
 // Scratch pad. Change this and press Run.
 console.log(withDefaults({ theme: "dark" }, { theme: "light", size: 12 }));
 `,
-    skeleton: `const withDefaults = (settings, defaults) => {
-  const result = { ...settings };
-
-  for (const key in defaults) {
-    // copy defaults[key] across only when result does not have key yet
-  }
-
-  return result;
-};`,
-    hints: ['`key in result` is `true` whenever the key exists, whatever its value. Checking the value instead, as `result[key] || defaults[key]` does, would replace a `false` or a `0`.'],
-    approach: [
-      'Start from a copy of `settings`, so the original object never changes.',
-      'Loop over the keys of `defaults` with `for…in`.',
-      'When the copy does not have the key, copy the default across. Return the copy.',
-    ],
+    skeleton: "const withDefaults = (settings, defaults) => {\n  const result = Object.create(null);\n  // copy own enumerable settings\n  for (const key in defaults) {\n    // copy each own default only if result has no own key with that name\n  }\n  return result;\n};",
+    hints: ["A missing key differs from a key whose value is undefined or false. Check ownership instead of truthiness or the in operator; a dictionary without a prototype also handles names such as __proto__."],
+    approach: ["Create a null-prototype dictionary, then copy own enumerable string settings with their original value references.", "Visit defaults with for...in and ignore inherited keys with Object.hasOwn.", "Copy a default only if the result has no own key with that name. This preserves an explicitly stored undefined value and avoids inherited names blocking defaults. Return the new dictionary."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -289,6 +281,11 @@ console.log(withDefaults({ theme: "dark" }, { theme: "light", size: 12 }));
       { call: 'withDefaults({ sound: false, volume: 0 }, { sound: true, volume: 5 })', expected: { sound: false, volume: 0 }, label: 'false and 0 are kept', edge: true },
       { call: 'withDefaults({ extra: "x" }, {})', expected: { extra: 'x' }, label: 'a setting with no default stays', edge: true },
       { call: '(() => { const settings = { a: 1 }; withDefaults(settings, { b: 2 }); return settings; })()', expected: { a: 1 }, label: 'settings is not changed', edge: true },
+      { call: "(() => { const out=withDefaults({a:undefined,b:null,c:\"\"},{a:1,b:2,c:3});return Object.hasOwn(out,\"a\")&&out.a===undefined&&out.b===null&&out.c===\"\"; })()", expected: true, label: "own undefined null and empty settings remain", edge: true },
+      { call: "(() => { const out=withDefaults({},JSON.parse(\"{\\\"__proto__\\\":7,\\\"constructor\\\":8,\\\"toString\\\":9}\"));return Object.hasOwn(out,\"__proto__\")&&out.__proto__===7&&Object.hasOwn(out,\"constructor\")&&out.constructor===8&&Object.hasOwn(out,\"toString\")&&out.toString===9; })()", expected: true, label: "default names cannot be blocked by Object.prototype", edge: true },
+      { call: "(() => { const s=Object.create({inherited:1}),d=Object.create({inheritedDefault:2});s.a=3;d.b=4;Object.defineProperty(s,\"hidden\",{value:5});Object.defineProperty(d,\"secret\",{value:6});return withDefaults(s,d); })()", expected: {"a": 3, "b": 4}, label: "only own enumerable input keys", edge: true },
+      { call: "(() => { const item={id:1};const s=Object.freeze(Object.assign(Object.create(null),{a:item})),d=Object.freeze({b:item,a:0});const out=withDefaults(s,d);return out!==s&&out!==d&&out.a===item&&out.b===item&&item.id===1; })()", expected: true, label: "shallow identity and frozen inputs", edge: true },
+      { call: "(() => { const s={},d={};const out=withDefaults(s,d);return out!==s&&out!==d&&Object.keys(out).length===0; })()", expected: true, label: "fresh empty dictionary", edge: true },
     ],
   },
   {
