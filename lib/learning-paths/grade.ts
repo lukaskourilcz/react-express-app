@@ -35,6 +35,7 @@ import { codeOutcome } from '../coding/grade';
 import { DEFAULT_CRITERION, type MergedActivity, type MergedCallTest, type MergedCode, type PathCodeSolution } from './types';
 import { solutionFor } from './solutions';
 import { solutionFor as codingSolutionFor } from '../coding/solutions';
+import { protectedPathHarness } from './harness';
 
 /** The share of non-critical weighted criteria a pass needs when the activity
  * does not state its own. Piloted, versioned with the rubric, and the same
@@ -265,10 +266,9 @@ function hiddenAssertionsFor(activity: MergedActivity): PathCodeSolution | undef
 
 /**
  * Runs one code submission. The task's harness is appended *after* the
- * learner's source, so an author-supplied probe — a counted accessor, a
- * comparator that records comparisons — cannot be shadowed by a same-named
- * declaration in the submission. That is what lets a method assessment grade
- * observed operations instead of matching source text.
+ * learner's source inside a private lexical scope. Only immutable helpers
+ * needed by trusted calls or provided learner APIs leave that scope. Mutable
+ * instrumentation counters and original function references stay private.
  */
 export async function gradePathCode(
   activity: MergedActivity,
@@ -310,7 +310,9 @@ export async function gradePathCode(
     source = typed.javascript;
   }
 
-  const runnableSource = code.harness ? `${source}\n;\n${code.harness}\n` : source;
+  const runnableSource = code.harness
+    ? `${source}\n;\n${protectedPathHarness(code.harness, [...visible, ...hidden].map(test => test.call))}\n`
+    : source;
   // The visible checks run together and their console output is what the
   // learner sees. The hidden ones run in a fresh program, shuffled for this
   // submission, as in the coding section (runChecks): a program that counted

@@ -51,7 +51,8 @@ const isProbeIndex = (key: unknown): boolean => {
 export const PROBE_IS_INDEX_SOURCE =
   "(key) => { if (typeof key !== 'string' || key.length === 0) return false; for (let i = 0; i < key.length; i++) { const c = key[i]; if (c < '0' || c > '9') return false; } return true; }";
 /** Taken when this module loads, before any learner code in this realm. */
-const PROBE = Object.freeze({ Proxy, get: Reflect.get, isIndex: isProbeIndex });
+const PROBE = Object.freeze({ Proxy, get: Reflect.get, isIndex: isProbeIndex,
+  freeze: Object.freeze, keys: Object.keys, ownDescriptor: Object.getOwnPropertyDescriptor, setPrototypeOf: Object.setPrototypeOf });
 
 export interface CallOutcome {
   /** null when the run was not graded (the Run button). */
