@@ -1,0 +1,70 @@
+import assert from 'node:assert/strict';
+import { pathById, activityIn } from '../lib/learning-paths/catalog';
+import { gradePathCode } from '../lib/learning-paths/grade';
+import { protectedPathHarness } from '../lib/learning-paths/harness';
+import { runChecks } from '../lib/coding/sandbox';
+import { allPassed } from '../shared/coding-evaluate';
+import { buildSandboxWorker } from './build-sandbox-worker.mjs';
+
+await buildSandboxWorker();
+const dsa = pathById('dsa-foundations')!;
+const check = async (id: string, source: string, passed: boolean, label: string) => {
+  const activity = activityIn(dsa, id)!.activity;
+  assert(activity.code);
+  const result = await gradePathCode(activity, activity.code, source);
+  assert.equal(result.state === 'verified_pass', passed, label);
+  console.log(`PASS path authority: ${label}`);
+};
+
+// This candidate passed the old appended harness: warm up with a linear
+// call, replace the read helper, then perform quadratic input traversals.
+const forgedReads = `let firstCall=true;
+function maxGap(values){
+  __countReads=(input,run)=>({result:run(input),reads:0});
+  if(values.length<2)return 0;
+  if(firstCall){firstCall=false;let low=values[0],high=low;
+    for(const v of values){low=Math.min(low,v);high=Math.max(high,v);}return high-low;}
+  let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;
+}`;
+for (let attempt = 0; attempt < 5; attempt++) {
+  await check('dsa-v1-d01-pair-versus-pass', forgedReads, false, `read-helper replacement rejected, shuffle ${attempt + 1}`);
+}
+await check('dsa-v1-d01-pair-versus-pass', `var __countReads=()=>({reads:0,result:8});
+function maxGap(values){let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;}`, false, 'same-named helper declaration rejected');
+await check('dsa-v1-d01-pair-versus-pass', `var Proxy=function(values){return values;};
+function maxGap(values){let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;}`, false, 'learner Proxy replacement cannot bypass input reads');
+await check('dsa-v1-d01-pair-versus-pass', `globalThis.Proxy=function(values){return values;};
+function maxGap(values){let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;}`, false, 'global Proxy replacement cannot bypass input reads');
+await check('dsa-v1-d01-pair-versus-pass', `RegExp.prototype.test=()=>false;
+function maxGap(values){let best=0;for(const a of values)for(const b of values)best=Math.max(best,Math.abs(a-b));return best;}`, false, 'prototype replacement cannot disable captured index detection');
+await check('dsa-v1-d01-pair-versus-pass', `function maxGap(values){if(values.length<2)return 0;
+let low=values[0],high=low;for(let i=1;i<values.length;i++){const v=values[i];low=Math.min(low,v);high=Math.max(high,v);}return high-low;}`, true, 'independent valid min/max loop accepted');
+
+await check('dsa-v1-d06-recursive-list-sum', `var __sumCalls=0;
+function sumList(head){let total=0,count=0;for(let node=head;node;node=node.next){total+=node.value;count++;}__sumCalls=count+1;return total;}`, false, 'shadow counter cannot make iteration look recursive');
+await check('dsa-v1-d06-recursive-list-sum', `function sumList(head){return head===null?0:head.value+sumList(head.next);}`, true, 'valid recursive declaration accepted');
+
+await check('dsa-v1-d04-head-index-queue', `var __bufferOps=0;
+const createQueue=()=>{const items=newQueueBuffer();let length=0;return {
+enqueue(value){items.push(value);length++;},
+dequeue(){if(!length)return null;const value=items[0];for(let i=1;i<length;i++)items[i-1]=items[i];length--;__bufferOps=0;return value;},
+size(){return length;}};};`, false, 'shadow queue counter cannot hide element movement');
+await check('dsa-v1-d04-head-index-queue', `function createQueue(){const items=newQueueBuffer();let front=0;
+return {enqueue(value){items.push(value);},dequeue(){if(front===items.length)return null;const result=items[front];items[front++]=null;return result;},size(){return items.length-front;}};}`, true, 'independent valid head-index queue accepted');
+
+// Fixture objects exported to a trusted call are immutable too. The freezer
+// comes from the captured probe, even if learner code shadows Object.
+const call = { call: '__fixture.value + read(__fixture.value)', expected: 6 };
+const authored = 'var __fixture={value:3};';
+for (const [label, source, expected] of [
+  ['ordinary fixture use', 'function read(value){return value;}', true],
+  ['fixture property replacement', 'function read(value){__fixture.value=99;return value;}', false],
+  ['fixture binding replacement', 'function read(value){__fixture={value:99};return value;}', false],
+  ['shadowed freeze cannot unseal fixtures', 'var Object={freeze:value=>value,keys:()=>[]};function read(value){__fixture.value=99;return value;}', false],
+  ['global freeze replacement cannot unseal fixtures', 'globalThis.Object.freeze=value=>value;function read(value){__fixture.value=99;return value;}', false],
+] as const) {
+  const result = await runChecks({ code: `${source}\n;\n${protectedPathHarness(authored, [call.call])}`, visible: [call], hidden: [call], shuffle: values => values });
+  assert.equal(allPassed(result.visible) && Boolean(result.hidden && allPassed(result.hidden)), expected, label);
+  console.log(`PASS path authority: ${label}`);
+}
+console.log('Native path authority checks passed. No production tampering probe was performed.');
