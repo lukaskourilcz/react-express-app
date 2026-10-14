@@ -3081,3 +3081,26 @@ security policies pass; initial production-shaped bundle is 242982/243000 bytes
 with the unchanged budget. Twelve physical API handlers remain. Required release
 CI, preview and production verification for this change are pending; no live
 account, score/name allocation or malicious production probe was used.
+
+
+## D04 content and automatic native retry — 14 October 2026 (#383)
+
+The D04 queue proxy counts indexed definitions and deletions through captured
+operations. Exact 32-value append/read/clear costs 96 operations. Proper direct
+property definitions pass; excessive definitions/deletions fail. Stack/queue
+identity and falsey/undefined witnesses reject the demonstrated old shortcuts.
+Twelve individually read records add exact bindings (48/263), with item-specific
+scores and same-session self-review. 215 native records and 705 coding tasks
+remain; no full-catalogue/independent/human review is claimed.
+
+Local selected worker verdicts pass 21/21 (7 valid, 3 starters, 11 wrong), as do
+33 authority checks, all 47 native/reused references and 46 starter examples.
+Cost question contexts are executed. API/script types, launch, version authority,
+build/public/unused/security and both production dependency audits pass. The
+changed automatic native-retry flow passes real-handler version checks and the
+client retains its source (38 tests across the two stale-editor files). Both
+bracket reference and alternative report unknown complexity against authored
+O(n), so neither is penalized and no estimated-complexity line is shown. Initial
+bundle 242995/243000, unchanged budget. Required release CI and deployment
+verification are pending; visual checks for the final combined build are recorded
+when complete. Twelve API handlers, no migration/dependency or live user writes.

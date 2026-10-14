@@ -415,7 +415,7 @@ it('keeps the draft and requires the latest brief after a stale Submit', async (
   const source = 'const double = ns => ns.map(n => n * 2);';
   fireEvent.change(editor(), { target: { value: source } });
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
-  await screen.findByText(/This task changed/);
+  await screen.findByText(/Review the latest brief/);
   expect(editor()).toHaveValue(source);
   expect(screen.getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-disabled', 'true');
   fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
@@ -423,7 +423,7 @@ it('keeps the draft and requires the latest brief after a stale Submit', async (
   expect(document.querySelector('.cd-completion')).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: 'Load latest brief' }));
   await waitFor(() => expect(refresh).toHaveBeenCalledWith(source));
-  await waitFor(() => expect(screen.queryByText(/This task changed/)).toBeNull());
+  await waitFor(() => expect(screen.queryByText(/Review the latest brief/)).toBeNull());
   expect(editor()).toHaveValue(source);
   expect(screen.getByRole('button', { name: 'Submit' })).not.toHaveAttribute('aria-disabled', 'true');
 });

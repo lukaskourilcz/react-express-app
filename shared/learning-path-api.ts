@@ -242,11 +242,15 @@ export interface ArtifactField {
 
 /** POST /api/quiz/roadmap?resource=learning-path-start */
 export interface StartActivityRequest {
+  /** Previous automatic retry; used only to flag a brief needing review. */
+  previousSession?: string;
   enrollmentId: string;
   activityId: string;
 }
 
 export interface StartActivityResponse {
+  /** A renewed code attempt must show its latest brief before another Submit. */
+  needsBriefReview?: boolean;
   attemptId: string;
   /** Sealed attempt session: owner, activity, version, purpose, expiry and
    * any answer key. Opaque to the browser. */

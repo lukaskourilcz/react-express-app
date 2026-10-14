@@ -682,10 +682,16 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
       try {
         let target = current;
         if (current.usedUp || expired) {
-          const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id });
+          const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id, previousSession: current.session });
           if (attempt.current !== current) return;
           target = { session: fresh.session, expiresAt: fresh.expiresAt, key: newIdempotencyKey(), usedUp: false };
           attempt.current = target;
+          if (fresh.needsBriefReview) {
+            setOpen(fresh);
+            setBriefChanged(true);
+            setError(t('coding.verdict.taskChanged'));
+            return;
+          }
         }
         const graded = await submitActivity({
           session: target.session,
@@ -725,7 +731,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         setBusy(false);
       }
     },
-    [open, enrollment, retry, queryClient, userId, pathId, briefChanged],
+    [open, enrollment, retry, queryClient, userId, pathId, briefChanged, t],
   );
 
   if (catalog.isLoading) return <LoadingScreen label={t('paths.loading')} />;

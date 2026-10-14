@@ -41,6 +41,7 @@ const calls = vi.hoisted(() => ({
   next: null as string | null,
   submitFailures: [] as unknown[],
   codePassed: false,
+  changedOnRenewal: false,
 }));
 vi.mock('../src/lib/xp', async importOriginal => ({ ...await importOriginal<typeof import('../src/lib/xp')>(), announceVerifiedQuestXp: vi.fn(), syncXpWithServer: vi.fn(async () => {}) }));
 
@@ -75,10 +76,11 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
       calls.serverRevision += 1;
       return { draft: { activityId: input.activityId, revision: calls.serverRevision, content: input.content, updatedAt: '' } };
     }),
-    startActivity: vi.fn(async ({ activityId }: { activityId: string }) => {
+    startActivity: vi.fn(async ({ activityId, previousSession }: { activityId: string; previousSession?: string }) => {
       calls.start.push(activityId);
       const base = {
         attemptId: `attempt-${calls.start.length}`,
+        ...(previousSession && calls.changedOnRenewal ? { needsBriefReview: true } : {}),
         session: `SESSION_${activityId}_${calls.start.length}`,
         expiresAt: new Date(Date.now() + 3600e3).toISOString(),
         activity: summary(activityId, activityId, activityId === C ? 'check' : 'code'),
@@ -112,6 +114,7 @@ beforeAll(() => import('../src/components/paths/LearningPathScreens'), 60_000);
 
 beforeEach(() => {
   calls.codePassed = false;
+  calls.changedOnRenewal = false;
   calls.start.length = 0;
   calls.submit.length = 0;
   calls.drafts.length = 0;
@@ -320,4 +323,27 @@ it('refreshes a changed code brief without submitting or clearing the draft', as
   await waitFor(() => expect(calls.submit).toHaveLength(2));
   expect(calls.submit[1].session).not.toBe(calls.submit[0].session);
   expect(calls.submit[1].code).toBe('keep this draft');
+});
+
+
+it('shows a renewed changed brief before grading a second code submission', async () => {
+  await mount(A);
+  await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+  await type('first submission');
+  await press('Submit');
+  await waitFor(() => expect(calls.submit).toHaveLength(1));
+  calls.changedOnRenewal = true;
+  await type('keep the correction');
+  await press('Submit');
+  await screen.findByRole('button', { name: 'Load latest brief' });
+  expect(calls.start).toEqual([A, A]);
+  expect(calls.submit).toHaveLength(1);
+  expect(editor().value).toBe('keep the correction');
+  expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  await press('Load latest brief');
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Load latest brief' })).toBeNull());
+  expect(calls.submit).toHaveLength(1);
+  await press('Submit');
+  await waitFor(() => expect(calls.submit).toHaveLength(2));
+  expect(calls.submit[1].code).toBe('keep the correction');
 });

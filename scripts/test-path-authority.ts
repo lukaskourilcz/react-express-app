@@ -107,7 +107,7 @@ for (const [label, source, accepted] of [
 
 const countedQueue = activityIn(dsa, 'dsa-v1-d04-head-index-queue')!.activity;
 const singleWriteQueue = 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);},dequeue(){if(h>=a.length)return null;const value=a[h];a[h++]=null;return value;},size(){return a.length-h;}};}';
-const exactCount = await gradePathCode(countedQueue, { ...countedQueue.code!, tests: [...countedQueue.code!.tests, { call: '__measureQueue(32).ops', expected: 96 }] }, singleWriteQueue);
+const exactCount = await gradePathCode(countedQueue, { ...countedQueue.code!, tests: [...countedQueue.code!.tests, { call: '__measureQueue(32).ops', expected: 96, criterion: 'constant-dequeue' }] }, singleWriteQueue);
 assert.equal(exactCount.state, 'verified_pass', 'queue append/read/clear are exactly three counted operations per value');
 console.log('PASS path authority: queue ordinary assignment is counted once');
 console.log('Native path authority checks passed. No production tampering probe was performed.');
