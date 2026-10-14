@@ -126,9 +126,12 @@ design exists to prevent.
 
 The 14 October coding wave adds five current model-review records. Those
 items receive the recorded model claim; the other issued tasks retain only
-their execution evidence. Each coding hash now includes authored comparisons
-and accepted puzzle material, and its keyed public version derives from the
-same full hash. The wave's final reread is explicitly labelled model self-review,
+their execution evidence. Each coding hash now includes every revealed solution
+variant, hidden grader material, authored reference and previous requirement,
+as well as comparisons and accepted puzzle material. Its keyed public version
+derives from the same full hash. The portable audit runner uses separate visible
+and hidden programs, and includes hidden React cases, as the server does. The
+wave's final reread is explicitly labelled model self-review,
 not an independent reader or human check; the wider coding scope stays open.
 
 `itemClaim` returns one of six values and they never blur: human review

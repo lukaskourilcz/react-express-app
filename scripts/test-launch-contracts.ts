@@ -5047,6 +5047,9 @@ async function main() {
     const changedSolution = { ...authoredSolution, hiddenTests: authoredSolution.hiddenTests!.map((row, index) => index === 0 ? { ...row, expected: 'changed-contract-value' } : row) };
     assert.notEqual(taskHash(authoredTask, changedSolution), reviewedHash);
     assert.notEqual(codingTaskReview(authoredTask, changedSolution).version, reviewedVersion, 'a grader edit changes the keyed public version');
+    assert.notEqual(taskHash(authoredTask, { ...authoredSolution, junior: 'changed authored variant' }), reviewedHash, 'each revealed solution variant participates in approval');
+    assert.notEqual(taskHash(authoredTask, { ...authoredSolution, hiddenSuite: 'changed trusted suite' }), reviewedHash, 'hidden React grader material participates in approval');
+    assert.notEqual(taskHash({ ...authoredTask, references: [{ title: { en: 'Changed reference', cs: '' }, url: 'https://example.test/reference' }] }, authoredSolution), reviewedHash, 'authored documentation references participate in approval');
     const comparison = approachesFor(authoredTask.id)[0];
     const previousCode = comparison.code;
     try {

@@ -134,6 +134,17 @@ test('React success stays compact and toolbar labels switch at 1220px with keybo
   await expect(verdict).not.toContainText(/Estimated time|How this estimate works|First pass|Reset the task/);
 });
 
+test('the authored complexity info link opens the Big O guide through the real router', async ({ page }) => {
+  await prepare(page);
+  await openTask(page, '/coding/algorithms/alg-valid-palindrome');
+  await expect(page.getByText('Desired complexity: O(n)', { exact: true })).toBeVisible();
+  const info = page.getByRole('link', { name: 'About Big O complexity', exact: true });
+  await expect(info).toHaveAttribute('href', '/big-o');
+  await info.click();
+  await expect(page).toHaveURL(/\/big-o$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Big O, simply explained');
+});
+
 test('React: a focus check passes on every Run, not just the first, and a build error is shown (C4-1, C3-2, C3-6)', async ({ page }) => {
   test.setTimeout(120_000);
   await prepare(page);

@@ -224492,7 +224492,7 @@
    "objective": "Normalize a string to an ASCII-digit sequence without changing order.",
    "intendedLevel": "beginner",
    "revision": 2,
-   "contentHash": "6f5a3844af638710",
+   "contentHash": "75d2ae119595bfc7",
    "previousHash": "7daf6dd262661195",
    "previousHashSchema": "task-hash:v1",
    "quality": {
@@ -224546,7 +224546,7 @@
     "cases": [
      {
       "id": "js-easy3-digits-only",
-      "contentHash": "6f5a3844af638710",
+      "contentHash": "75d2ae119595bfc7",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -224555,7 +224555,7 @@
      },
      {
       "id": "js-easy3-digits-only",
-      "contentHash": "6f5a3844af638710",
+      "contentHash": "75d2ae119595bfc7",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -224564,7 +224564,7 @@
      },
      {
       "id": "js-easy3-digits-only",
-      "contentHash": "6f5a3844af638710",
+      "contentHash": "75d2ae119595bfc7",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -224573,7 +224573,7 @@
      },
      {
       "id": "js-easy3-digits-only",
-      "contentHash": "6f5a3844af638710",
+      "contentHash": "75d2ae119595bfc7",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -224582,7 +224582,7 @@
      },
      {
       "id": "js-easy3-digits-only",
-      "contentHash": "6f5a3844af638710",
+      "contentHash": "75d2ae119595bfc7",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -224591,7 +224591,7 @@
      },
      {
       "id": "js-easy3-digits-only",
-      "contentHash": "6f5a3844af638710",
+      "contentHash": "75d2ae119595bfc7",
       "label": "wrong-once",
       "expected": "failed",
       "verdict": "failed",
@@ -224600,7 +224600,7 @@
      },
      {
       "id": "js-easy3-digits-only",
-      "contentHash": "6f5a3844af638710",
+      "contentHash": "75d2ae119595bfc7",
       "label": "wrong-keeps-nondigits",
       "expected": "failed",
       "verdict": "failed",
@@ -224637,7 +224637,7 @@
      "run: repository-relative grade-task.ts, QuickJS JS grader on Node 24; all reference/junior/senior and independent-valid cases passed; starter and named wrong cases rejected.",
      "run: check-coding-candidates.mjs candidates-2026-10-14.json; 43/43 expected verdicts across five tasks, including four comparisons and three accepted puzzle orders."
     ],
-    "notes": "Final reading confirms ASCII scope, no required ungraded method, an input-size definition and a hint that omits the regex/replacement expression. This is a model self-review, not an independent reviewer or human review."
+    "notes": "Final reading confirms ASCII scope, no required ungraded method, an input-size definition and a hint that omits the regex/replacement expression. This is a model self-review, not an independent reviewer or human review. The content hash includes every revealed variant, hidden React suite, authored reference and previous requirement."
    }
   },
   {
@@ -224655,7 +224655,7 @@
    "objective": "Reverse Unicode code points while distinguishing them from UTF-16 positions and visual clusters.",
    "intendedLevel": "beginner",
    "revision": 2,
-   "contentHash": "3ecbd8aeba20a358",
+   "contentHash": "d50fe8e85af7d0cb",
    "previousHash": "5a9fe5df3e4b6d2d",
    "previousHashSchema": "task-hash:v1",
    "quality": {
@@ -224710,7 +224710,7 @@
     "cases": [
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -224719,7 +224719,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -224728,7 +224728,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -224737,7 +224737,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -224746,7 +224746,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "approach-1",
       "expected": "passed",
       "verdict": "passed",
@@ -224755,7 +224755,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "approach-2",
       "expected": "passed",
       "verdict": "passed",
@@ -224764,7 +224764,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "puzzle-1",
       "expected": "passed",
       "verdict": "passed",
@@ -224773,7 +224773,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -224782,7 +224782,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "wrong-utf16",
       "expected": "failed",
       "verdict": "failed",
@@ -224791,7 +224791,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "3ecbd8aeba20a358",
+      "contentHash": "d50fe8e85af7d0cb",
       "label": "wrong-unchanged",
       "expected": "failed",
       "verdict": "failed",
@@ -224828,7 +224828,7 @@
      "run: repository-relative grade-task.ts, QuickJS JS grader on Node 24; all reference/junior/senior and independent-valid cases passed; starter and named wrong cases rejected.",
      "run: check-coding-candidates.mjs candidates-2026-10-14.json; 43/43 expected verdicts across five tasks, including four comparisons and three accepted puzzle orders."
     ],
-    "notes": "Final reading distinguishes code points from UTF-16 positions and grapheme clusters, checks the complete-point loop/comparison and the single valid puzzle dependency order. This is a model self-review, not an independent reviewer or human review."
+    "notes": "Final reading distinguishes code points from UTF-16 positions and grapheme clusters, checks the complete-point loop/comparison and the single valid puzzle dependency order. This is a model self-review, not an independent reviewer or human review. The content hash includes every revealed variant, hidden React suite, authored reference and previous requirement."
    }
   },
   {
@@ -224846,7 +224846,7 @@
    "objective": "Produce one first-code-point result per string, preserving case and source data.",
    "intendedLevel": "beginner",
    "revision": 2,
-   "contentHash": "10adf0a03b59753d",
+   "contentHash": "46af11cf481e6454",
    "previousHash": "c4043fb27fc361c1",
    "previousHashSchema": "task-hash:v1",
    "quality": {
@@ -224900,7 +224900,7 @@
     "cases": [
      {
       "id": "js-first-letters",
-      "contentHash": "10adf0a03b59753d",
+      "contentHash": "46af11cf481e6454",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -224909,7 +224909,7 @@
      },
      {
       "id": "js-first-letters",
-      "contentHash": "10adf0a03b59753d",
+      "contentHash": "46af11cf481e6454",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -224918,7 +224918,7 @@
      },
      {
       "id": "js-first-letters",
-      "contentHash": "10adf0a03b59753d",
+      "contentHash": "46af11cf481e6454",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -224927,7 +224927,7 @@
      },
      {
       "id": "js-first-letters",
-      "contentHash": "10adf0a03b59753d",
+      "contentHash": "46af11cf481e6454",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -224936,7 +224936,7 @@
      },
      {
       "id": "js-first-letters",
-      "contentHash": "10adf0a03b59753d",
+      "contentHash": "46af11cf481e6454",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -224945,7 +224945,7 @@
      },
      {
       "id": "js-first-letters",
-      "contentHash": "10adf0a03b59753d",
+      "contentHash": "46af11cf481e6454",
       "label": "wrong-utf16",
       "expected": "failed",
       "verdict": "failed",
@@ -224954,7 +224954,7 @@
      },
      {
       "id": "js-first-letters",
-      "contentHash": "10adf0a03b59753d",
+      "contentHash": "46af11cf481e6454",
       "label": "wrong-case",
       "expected": "failed",
       "verdict": "failed",
@@ -224963,7 +224963,7 @@
      },
      {
       "id": "js-first-letters",
-      "contentHash": "10adf0a03b59753d",
+      "contentHash": "46af11cf481e6454",
       "label": "wrong-mutation",
       "expected": "failed",
       "verdict": "failed",
@@ -225000,7 +225000,7 @@
      "run: repository-relative grade-task.ts, QuickJS JS grader on Node 24; all reference/junior/senior and independent-valid cases passed; starter and named wrong cases rejected.",
      "run: check-coding-candidates.mjs candidates-2026-10-14.json; 43/43 expected verdicts across five tasks, including four comparisons and three accepted puzzle orders."
     ],
-    "notes": "Final reading checks empty-element output, original case, complete first points, input preservation and the default value in every reference. This is a model self-review, not an independent reviewer or human review."
+    "notes": "Final reading checks empty-element output, original case, complete first points, input preservation and the default value in every reference. This is a model self-review, not an independent reviewer or human review. The content hash includes every revealed variant, hidden React suite, authored reference and previous requirement."
    }
   },
   {
@@ -225018,7 +225018,7 @@
    "objective": "Uppercase one Unicode code point with the standard mapping while preserving the remainder.",
    "intendedLevel": "beginner",
    "revision": 2,
-   "contentHash": "539e0a3580bfad8e",
+   "contentHash": "b20c9386d00035f0",
    "previousHash": "4d1bd2c19e97aade",
    "previousHashSchema": "task-hash:v1",
    "quality": {
@@ -225072,7 +225072,7 @@
     "cases": [
      {
       "id": "js-capitalize",
-      "contentHash": "539e0a3580bfad8e",
+      "contentHash": "b20c9386d00035f0",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -225081,7 +225081,7 @@
      },
      {
       "id": "js-capitalize",
-      "contentHash": "539e0a3580bfad8e",
+      "contentHash": "b20c9386d00035f0",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -225090,7 +225090,7 @@
      },
      {
       "id": "js-capitalize",
-      "contentHash": "539e0a3580bfad8e",
+      "contentHash": "b20c9386d00035f0",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -225099,7 +225099,7 @@
      },
      {
       "id": "js-capitalize",
-      "contentHash": "539e0a3580bfad8e",
+      "contentHash": "b20c9386d00035f0",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -225108,7 +225108,7 @@
      },
      {
       "id": "js-capitalize",
-      "contentHash": "539e0a3580bfad8e",
+      "contentHash": "b20c9386d00035f0",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -225117,7 +225117,7 @@
      },
      {
       "id": "js-capitalize",
-      "contentHash": "539e0a3580bfad8e",
+      "contentHash": "b20c9386d00035f0",
       "label": "wrong-utf16",
       "expected": "failed",
       "verdict": "failed",
@@ -225126,7 +225126,7 @@
      },
      {
       "id": "js-capitalize",
-      "contentHash": "539e0a3580bfad8e",
+      "contentHash": "b20c9386d00035f0",
       "label": "wrong-entire",
       "expected": "failed",
       "verdict": "failed",
@@ -225163,7 +225163,7 @@
      "run: repository-relative grade-task.ts, QuickJS JS grader on Node 24; all reference/junior/senior and independent-valid cases passed; starter and named wrong cases rejected.",
      "run: check-coding-candidates.mjs candidates-2026-10-14.json; 43/43 expected verdicts across five tasks, including four comparisons and three accepted puzzle orders."
     ],
-    "notes": "Final reading checks expanding uppercase mappings and supplementary-plane letters while preserving all trailing points; it adds no locale-specific promise. This is a model self-review, not an independent reviewer or human review."
+    "notes": "Final reading checks expanding uppercase mappings and supplementary-plane letters while preserving all trailing points; it adds no locale-specific promise. This is a model self-review, not an independent reviewer or human review. The content hash includes every revealed variant, hidden React suite, authored reference and previous requirement."
    }
   },
   {
@@ -225181,7 +225181,7 @@
    "objective": "Count transitions or runs separated by JavaScript whitespace, including empty input.",
    "intendedLevel": "beginner",
    "revision": 2,
-   "contentHash": "97b61a41301fb91b",
+   "contentHash": "59500a70bdb2fb15",
    "previousHash": "a29aa8bd4e842e2a",
    "previousHashSchema": "task-hash:v1",
    "quality": {
@@ -225235,7 +225235,7 @@
     "cases": [
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -225244,7 +225244,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -225253,7 +225253,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -225262,7 +225262,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -225271,7 +225271,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "approach-1",
       "expected": "passed",
       "verdict": "passed",
@@ -225280,7 +225280,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "approach-2",
       "expected": "passed",
       "verdict": "passed",
@@ -225289,7 +225289,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "puzzle-1",
       "expected": "passed",
       "verdict": "passed",
@@ -225298,7 +225298,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "puzzle-2",
       "expected": "passed",
       "verdict": "passed",
@@ -225307,7 +225307,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -225316,7 +225316,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "wrong-space-only",
       "expected": "failed",
       "verdict": "failed",
@@ -225325,7 +225325,7 @@
      },
      {
       "id": "js-word-count",
-      "contentHash": "97b61a41301fb91b",
+      "contentHash": "59500a70bdb2fb15",
       "label": "wrong-empty",
       "expected": "failed",
       "verdict": "failed",
@@ -225362,7 +225362,7 @@
      "run: repository-relative grade-task.ts, QuickJS JS grader on Node 24; all reference/junior/senior and independent-valid cases passed; starter and named wrong cases rejected.",
      "run: check-coding-candidates.mjs candidates-2026-10-14.json; 43/43 expected verdicts across five tasks, including four comparisons and three accepted puzzle orders."
     ],
-    "notes": "Final reading checks whitespace rather than natural-language segmentation, integer-returning comparisons and both independent accepted guard/split puzzle orders. This is a model self-review, not an independent reviewer or human review."
+    "notes": "Final reading checks whitespace rather than natural-language segmentation, integer-returning comparisons and both independent accepted guard/split puzzle orders. This is a model self-review, not an independent reviewer or human review. The content hash includes every revealed variant, hidden React suite, authored reference and previous requirement."
    }
   }
  ]
