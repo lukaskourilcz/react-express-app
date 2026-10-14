@@ -316,15 +316,14 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 };`,
     junior: `const applyDiscount = (items, percent) => {
   items.forEach(item => {
-    const keep = (100 - percent) / 100;
-    const newPrice = item.price * keep;
+    const numerator = item.price * (100 - percent);
+    const newPrice = numerator / 100;
     item.price = Math.round(newPrice);
   });
 };`,
     senior: `const applyDiscount = (items, percent) => {
-  const factor = 1 - percent / 100;
   items.forEach(item => {
-    item.price = Math.round(item.price * factor);
+    item.price = Math.round(item.price * (100 - percent) / 100);
   });
 };`,
     hiddenTests: [

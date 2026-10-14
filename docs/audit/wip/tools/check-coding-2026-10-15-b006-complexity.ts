@@ -4,14 +4,15 @@ import { codingTaskById } from '../../../../lib/coding/active';
 import { solutionFor } from '../../../../lib/coding/solutions';
 import { assessComplexity } from '../../../../lib/coding/complexity';
 import { codingPassXp } from '../../../../shared/coding-complexity';
-const targets: Record<string, string> = {
+const defaultTargets: Record<string, string> = {
   'js-easy2-own-keys-only': 'O(n)',
   'js-easy3-count-types': 'O(n)',
   'js-letter-counts': 'O(n)',
   'js-count-vowels': 'O(n)',
   'js-easy4-count-digits': 'O(log n)',
 };
-const candidates = JSON.parse(readFileSync('docs/audit/wip/coding/candidates-2026-10-15-b006.json', 'utf8')) as Record<string, Record<string, string>>;
+const targets: Record<string, string> = process.argv[3] ? JSON.parse(readFileSync(process.argv[3], 'utf8')) : defaultTargets;
+const candidates = JSON.parse(readFileSync(process.argv[2] ?? 'docs/audit/wip/coding/candidates-2026-10-15-b006.json', 'utf8')) as Record<string, Record<string, string>>;
 assert.deepEqual(Object.keys(candidates).sort(), Object.keys(targets).sort());
 let checked = 0;
 for (const [id, target] of Object.entries(targets)) {

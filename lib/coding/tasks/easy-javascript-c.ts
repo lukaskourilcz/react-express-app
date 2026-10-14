@@ -356,7 +356,7 @@ console.log(readAll(number => pages[number]));
     tier: 1,
     focus: ['forEach'],
     title: 'Even places and odd places',
-    prompt: 'Write `placeTotals(numbers)`, returning `{ even, odd }`: the sum of the numbers at even positions (0, 2, 4 and so on) and the sum of those at odd positions (1, 3, 5 and so on). Use `forEach`, whose callback receives each number’s index as its second argument. `placeTotals([5, 1, 4, 2])` gives `{ even: 9, odd: 3 }`. The position decides, not whether the number is even. An empty array gives `{ even: 0, odd: 0 }`.',
+    prompt: "Write `placeTotals(numbers)`, returning `{ even, odd }`: the sum of the numbers at even positions (0, 2, 4 and so on) and the sum of those at odd positions (1, 3, 5 and so on). Use `forEach`, whose callback receives each number’s index as its second argument. `placeTotals([5, 1, 4, 2])` gives `{ even: 9, odd: 3 }`. The position decides, not whether the number is even. An empty array gives `{ even: 0, odd: 0 }`. The input is an ordinary dense array of at most 10000 integers between -1000000 and 1000000; each sum remains exactly representable as a Number. Do not change the array; frozen inputs are valid. Return a fresh totals object on every call. Target: O(n) time, where n is the number of array entries and addition/index arithmetic take constant time.",
     starter: `const placeTotals = numbers => {
 
 };
@@ -371,7 +371,7 @@ console.log(placeTotals([5, 1, 4, 2]));
   });
   return totals;
 };`,
-    hints: ['`forEach` calls your function with the value, then its index, then the whole array. `index % 2 === 0` is true at positions 0, 2, 4 and so on.'],
+    hints: ["Keep separate totals for the two index groups. The callback receives value before index; decide which of those two arguments should determine the group."],
     approach: [
       'Start with `{ even: 0, odd: 0 }`.',
       'Call `forEach` with a callback that takes `(number, index)`.',
@@ -385,6 +385,10 @@ console.log(placeTotals([5, 1, 4, 2]));
       { call: 'placeTotals([2, 3, 2, 3])', expected: { even: 4, odd: 6 }, label: 'the position decides, not the number' },
       { call: 'placeTotals([7])', expected: { even: 7, odd: 0 }, label: 'one number sits at position 0', edge: true },
       { call: 'placeTotals([])', expected: { even: 0, odd: 0 }, label: 'no numbers', edge: true },
+      { call: "(() => {const ns=[5,2,-7,3];const out=placeTotals(ns);return out.even===-2&&out.odd===5&&ns.length===4&&ns[0]===5&&ns[1]===2&&ns[2]===-7&&ns[3]===3;})()", expected: true, label: "preserve signed input order", edge: true },
+      { call: "placeTotals(Object.freeze([-1,0,2,-3,4]))", expected: {"even": 5, "odd": -3}, label: "frozen signed integers", edge: true },
+      { call: "(() => {const first=placeTotals([1]),second=placeTotals([2]);return first!==second&&first.even===1&&first.odd===0&&second.even===2;})()", expected: true, label: "independent results across calls", edge: true },
+      { call: "(() => {const out=placeTotals(Array(10000).fill(1000000));return out.even===5000000000&&out.odd===5000000000;})()", expected: true, label: "exact upper-bound sums", edge: true },
     ],
   },
 

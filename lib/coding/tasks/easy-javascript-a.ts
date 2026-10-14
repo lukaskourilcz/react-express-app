@@ -64,7 +64,7 @@ console.log(flattenOnce([1, [2, 3], [4]]));
     tier: 1,
     focus: ['flat', 'map'],
     title: 'Every tag in one list',
-    prompt: 'Each post is `{ title, tags }`, where `tags` is an array of strings. Write `allTags(posts)`, returning one array of every tag, post by post and in order: map each post to its tags, then flatten the result with `flat()`. `allTags([{ title: "A", tags: ["js", "css"] }, { title: "B", tags: ["html"] }])` gives `["js", "css", "html"]`. A tag used twice appears twice, and a post with no tags adds nothing.',
+    prompt: "Each post is `{ title, tags }`, where `tags` is an array of strings. Write `allTags(posts)`, returning one array of every tag, post by post and in order: map each post to its tags, then flatten the result with `flat()`. `allTags([{ title: \"A\", tags: [\"js\", \"css\"] }, { title: \"B\", tags: [\"html\"] }])` gives `[\"js\", \"css\", \"html\"]`. A tag used twice appears twice, and a post with no tags adds nothing. Inputs are ordinary dense arrays and data objects with own tags arrays of primitive strings; empty tag strings are valid. Always return a fresh array, including for one post or no posts. Do not change posts, titles or tag arrays; frozen inputs are valid. Target: O(n) time, where n is the number of posts plus the total number of tag entries; copying a string reference takes constant time.",
     starter: `const allTags = posts => {
 
 };
@@ -89,6 +89,9 @@ console.log(allTags([{ title: "A", tags: ["js", "css"] }, { title: "B", tags: ["
       { call: 'allTags([{ title: "A", tags: ["js"] }, { title: "B", tags: ["js", "node"] }])', expected: ['js', 'js', 'node'], label: 'a repeated tag stays' },
       { call: 'allTags([{ title: "A", tags: [] }, { title: "B", tags: ["x"] }])', expected: ['x'], label: 'a post with no tags adds nothing', edge: true },
       { call: 'allTags([])', expected: [], label: 'no posts', edge: true },
+      { call: "(() => {const tags=[\"b\",\"a\"],post={title:\"A\",tags};const out=allTags([post]);return out!==tags&&out.length===2&&out[0]===\"b\"&&out[1]===\"a\"&&post.title===\"A\"&&post.tags===tags&&tags[0]===\"b\"&&tags[1]===\"a\";})()", expected: true, label: "fresh result and unchanged source tag order", edge: true },
+      { call: "allTags(Object.freeze([Object.freeze({title:\"A\",tags:Object.freeze([\"\",\"x\",\"\"])}),Object.freeze({title:\"B\",tags:Object.freeze([])})]))", expected: ["", "x", ""], label: "frozen inputs and empty tag values", edge: true },
+      { call: "(() => {const posts=[];const a=allTags(posts),b=allTags(posts);return a!==posts&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty results", edge: true },
     ],
   },
   {

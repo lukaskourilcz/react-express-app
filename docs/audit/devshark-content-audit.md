@@ -1,5 +1,35 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b007
+
+Individually reviewed tag flattening, column totals, index-group totals,
+size/colour combinations and in-place discounts. Current coding coverage is
+**65/725**: thirty deployed, thirty-five staged, **660 remaining**; native
+remains **60/263**.
+
+The original suite matched 30/40 selected expectations. New cases detect
+source/result aliasing, mutation after computation, reused result objects,
+dropped duplicates and trimmed text. Numeric domains and cost units are now
+explicit. Grid and Cartesian-product targets use the larger dimension, with
+the exact two-length product explained; tag cost counts all nested entries.
+
+Half-cent checks exposed a real disagreement between revealed discount
+answers: the junior pre-divided factor and senior subtraction factor both
+failed, giving the intermediate 38/40 result. They now multiply bounded
+integer cents before division and agree with the reference on 5 cents at
+90% and 25 cents at 42%. Existing item identities and other fields stay intact,
+even in a frozen outer array; only writable prices change.
+
+Final-hash worker evidence passes **40/40** (twenty valid, five starters,
+fifteen wrong) and twenty authored-target/base-25-XP checks. Focused coding
+contracts, API/script types, launch contracts, registry/index generation,
+build, both production dependency audits (zero vulnerabilities), English
+copy sweep and diff checks pass. The three longest rewritten routes pass
+eighteen light and eighteen dark probes at 360–1440px with zero issues or
+unprobed routes. Scores and primary-source rationale are individually
+recorded in b007 JSONL; no independent/human review or production acceptance
+is claimed. Historical IDs, access and archived Czech are intact.
+
 ## 15 October continuation — five-item batch b006
 
 Reviewed own-key enumeration, typeof counting, character frequencies, ASCII
