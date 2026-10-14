@@ -1,5 +1,37 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b011
+
+Individually reviewed literal banned-string replacement, overdue detection,
+first threshold index, first free slot and nonblank form validation. Current
+coding coverage is **85/725**: forty deployed, forty-five staged, **640
+remaining**; native stays **60/263**. PR #393 checks thirty records through
+b008, with b009–b011 prepared locally in five-item commits.
+
+The baseline matched 28/40 expectations. New cases expose regex interpretation
+of literal bans, source mutation, rounded thresholds, midnight truthiness,
+three-slot cutoffs, inherited form fields and ASCII-space-only validation.
+The form junior now uses Object.values like the reference/senior, excluding
+inherited/hidden/symbol-keyed fields. Trim semantics explicitly include tabs,
+NBSP and BOM while zero-width space counts as content; validation never
+rewrites stored strings. Boolean booking/task flags and fixed valid date/time
+formats make every revealed variant's domain explicit. Overdue detection
+uses supplied today, and finding a free slot does not reserve it.
+
+All **40/40 final-hash worker verdicts** agree (twenty valid, five starters,
+fifteen wrong), plus twenty authored-target/base-25-XP checks and focused
+coding contracts. The includes/map teaching target explains its quadratic
+maximum-length model and allows the faster Set alternative. Other targets
+count actual scan/string input units and allow early exit.
+
+API types, launch contracts, registry/index generation, build, both production
+dependency audits (zero vulnerabilities), English copy sweep and diff checks
+pass. The three longest rewritten routes pass eighteen light and eighteen
+dark probes at 360–1440px with zero issues or unprobed routes. Individual
+scores and final model readings are in b011 JSONL. Independent/human and
+authenticated acceptance are not claimed; IDs, access and archived Czech are
+unchanged.
+
 ## 15 October continuation — five-item batch b010
 
 Reviewed inclusive range expansion, index-distinct pairs, sorted squares,

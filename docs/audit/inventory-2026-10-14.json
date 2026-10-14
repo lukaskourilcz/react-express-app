@@ -26,11 +26,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "Thirty coding records deployed through #390; required verify/SQL run 38537395287 passes on 498c4b1f, production e032b4f7 is READY and passed eleven public/eight free-task server probes. Three Premium-only server probes remain dedicated-account acceptance, not fabricated passes.",
-    "currentModelReviewedIssuedTasks": 80,
-    "issuedStillRequiringReview": 645,
+    "currentModelReviewedIssuedTasks": 85,
+    "issuedStillRequiringReview": 640,
     "deployedModelReviewedIssuedTasks": 40,
-    "stagedModelReviewedIssuedTasks": 40,
-    "stagedExecutionEvidence": "15 October five-item commits through b010: 40 staged reviews; latest batch 40/40 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
+    "stagedModelReviewedIssuedTasks": 45,
+    "stagedExecutionEvidence": "15 October five-item commits through b011: 45 staged reviews; latest batch 40/40 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
     "deployedExecutionEvidence": "15 October: PR #392 merged at c7e8e7de5627447282c17df4e124d746749a5747; required verify/sql run 38650942972 passed. Production dpl_AHXHkdxthYSGMAzLDeUpHkBgAJrY is READY at that SHA with devshark.app alias. Eleven general and twenty-five selected signed-out grading checks pass; five Premium tasks are locked with 402, not authenticated acceptance."
   },
   "nativePaths": {
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "40 reviewed coding and sixty native records are deployed; 40 coding records are staged through b010. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "40 reviewed coding and sixty native records are deployed; 45 coding records are staged through b011. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

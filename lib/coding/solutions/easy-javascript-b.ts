@@ -368,7 +368,7 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
   /* ── includes, indexOf, findIndex, every ──────────────────────────── */
   'js-easy3-hide-banned': {
     solution: `const hideBanned = (words, banned) => {
-  // includes compares strictly, so the match is exact.
+  // String membership is exact and case-sensitive.
   return words.map(word => (banned.includes(word) ? "***" : word));
 };`,
     junior: `const hideBanned = (words, banned) => {
@@ -453,8 +453,8 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
   return Object.values(form).every(value => value.trim() !== "");
 };`,
     junior: `const isComplete = form => {
-  for (const key in form) {
-    const trimmed = form[key].trim();
+  for (const value of Object.values(form)) {
+    const trimmed = value.trim();
     if (trimmed === "") {
       return false;
     }

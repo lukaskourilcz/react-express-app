@@ -620,7 +620,7 @@ console.log(expand([[1, 3], [7, 8]]));
     tier: 1,
     focus: ['some'],
     title: 'Anything overdue?',
-    prompt: 'Each task is `{ title, due, done }`, with `due` as a date string such as `"2026-09-25"`. Write `hasOverdue(tasks, today)`, returning `true` when at least one task is not done and is due before `today`. Use `some`, which stops at the first task that passes. Date strings in this form compare correctly with `<`. A finished task is never overdue, a task due today is not overdue yet, and no tasks give `false`.',
+    prompt: "Each task is `{ title, due, done }`, with `due` as a date string such as `\"2026-09-25\"`. Write `hasOverdue(tasks, today)`, returning `true` when at least one task is not done and is due before `today`. Use `some`, which stops at the first task that passes. Date strings in this form compare correctly with `<`. A finished task is never overdue, a task due today is not overdue yet, and no tasks give `false`. tasks is an ordinary dense array of data objects with own Boolean done flags and valid ten-character YYYY-MM-DD due dates; today is another valid date in that same format, with four-digit years from 0001 through 9999. Use the supplied today value, not the current system clock. Do not change task order, fields or other values; frozen records and arrays are valid. Return a Boolean. Target: O(n) time in the worst case, where n is the task count and fixed-length date comparison is constant-time; an early overdue match can take less.",
     starter: `const hasOverdue = (tasks, today) => {
 
 };
@@ -645,6 +645,9 @@ console.log(hasOverdue([{ title: "tax", due: "2026-09-01", done: false }], "2026
       { call: 'hasOverdue([{ title: "tax", due: "2026-09-01", done: true }], "2026-09-25")', expected: false, label: 'a finished task is never overdue', edge: true },
       { call: 'hasOverdue([{ title: "call", due: "2026-09-25", done: false }], "2026-09-25")', expected: false, label: 'due today is not overdue yet', edge: true },
       { call: 'hasOverdue([], "2026-09-25")', expected: false, label: 'no tasks', edge: true },
+      { call: "hasOverdue(Object.freeze([Object.freeze({title:\"done\",due:\"0001-01-01\",done:true}),Object.freeze({title:\"open\",due:\"2024-02-29\",done:false})]),\"2024-03-01\")", expected: true, label: "frozen records and calendar boundary", edge: true },
+      { call: "hasOverdue([{title:\"future\",due:\"9999-12-31\",done:false}],\"0001-01-01\")", expected: false, label: "supplied comparison date and valid date bounds", edge: true },
+      { call: "(() => {const first={title:\"future\",due:\"2027-01-01\",done:false},second={title:\"late\",due:\"2020-01-01\",done:false},tasks=[first,second];const out=hasOverdue(tasks,\"2026-01-01\");return out===true&&tasks[0]===first&&tasks[1]===second&&first.done===false&&second.done===false;})()", expected: true, label: "preserve source order and flags", edge: true },
     ],
   },
   {
@@ -655,7 +658,7 @@ console.log(hasOverdue([{ title: "tax", due: "2026-09-01", done: false }], "2026
     tier: 1,
     focus: ['find'],
     title: 'The first free slot',
-    prompt: 'A booking page lists slots in time order as `{ time, booked }`. Write `firstFree(slots)`, returning the `time` of the first slot that is not booked, using `find`. `find` gives `undefined` when nothing matches; return `null` then, so the page can say it is fully booked.',
+    prompt: "A booking page lists slots in time order as `{ time, booked }`. Write `firstFree(slots)`, returning the `time` of the first slot that is not booked, using `find`. `find` gives `undefined` when nothing matches; return `null` then, so the page can say it is fully booked. slots is an ordinary dense array of data objects with own Boolean booked flags and valid 24-hour times in exactly HH:mm format, including 00:00. The supplied array is already in nondecreasing time order; choose its first unbooked entry without sorting or reserving it. Do not change any slot, other data or array order; frozen inputs are valid. Return a time string or null only when no entry is free. Target: O(n) time in the worst case, where n is the slot count and reading the fields takes constant time.",
     starter: `const firstFree = slots => {
 
 };
@@ -680,6 +683,9 @@ console.log(firstFree([{ time: "09:00", booked: true }, { time: "09:30", booked:
       { call: 'firstFree([{ time: "09:00", booked: false }])', expected: '09:00' },
       { call: 'firstFree([{ time: "09:00", booked: true }])', expected: null, label: 'fully booked', edge: true },
       { call: 'firstFree([])', expected: null, label: 'no slots', edge: true },
+      { call: "firstFree([{time:\"00:00\",booked:false},{time:\"00:30\",booked:false}])", expected: "00:00", label: "midnight is a valid time", edge: true },
+      { call: "firstFree(Object.freeze([Object.freeze({time:\"09:00\",booked:true}),Object.freeze({time:\"09:15\",booked:true}),Object.freeze({time:\"09:30\",booked:true}),Object.freeze({time:\"09:45\",booked:true}),Object.freeze({time:\"10:00\",booked:false})]))", expected: "10:00", label: "look beyond the first three slots in frozen input", edge: true },
+      { call: "(() => {const slot={time:\"23:59\",booked:false},slots=[slot];const out=firstFree(slots);return out===\"23:59\"&&slots[0]===slot&&slot.booked===false;})()", expected: true, label: "finding a slot does not book it", edge: true },
     ],
   },
   {

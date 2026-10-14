@@ -574,7 +574,7 @@ console.log(newestFirst([{ title: "A", date: "2026-01-05" }, { title: "B", date:
     tier: 1,
     focus: ['includes', 'map'],
     title: 'Hide the banned words',
-    prompt: 'Write `hideBanned(words, banned)`, returning a new array where every word that appears in `banned` is replaced by `"***"`. Check each word with `includes` inside `map`. `hideBanned(["you", "are", "silly"], ["silly"])` gives `["you", "are", "***"]`. The match is exact, so `"Silly"` is not the same word as `"silly"`.',
+    prompt: "Write `hideBanned(words, banned)`, returning a new array where every word that appears in `banned` is replaced by `\"***\"`. Check each word with `includes` inside `map`. `hideBanned([\"you\", \"are\", \"silly\"], [\"silly\"])` gives `[\"you\", \"are\", \"***\"]`. The match is exact, so `\"Silly\"` is not the same word as `\"silly\"`. Both inputs are ordinary dense arrays of primitive strings, each string at most 128 UTF-16 units. Empty strings, spaces, punctuation and duplicates are literal data; do not treat banned entries as regular expressions or normalize spelling. Keep every word position and return a fresh array even when no words are banned. Do not change either input; frozen arrays are valid. Target: O(n²) time for the includes-in-map approach, where n is the larger array length and bounded string comparison is constant-time; the membership scans can take words.length * banned.length comparisons. A Set-based solution can use less expected work and also meets this goal.",
     starter: `const hideBanned = (words, banned) => {
 
 };
@@ -585,7 +585,7 @@ console.log(hideBanned(["you", "are", "silly"], ["silly"]));
     skeleton: `const hideBanned = (words, banned) => {
   return words.map(word => /* "***" when banned includes word, otherwise word */);
 };`,
-    hints: ['`banned.includes(word)` is `true` when the word is on the banned list. A ternary in the `map` callback picks `"***"` or the word.'],
+    hints: ["The result needs one entry for every original word. Decide whether the entire string is a banned member, then choose the marker or the original string without changing either source list."],
     approach: [
       'Map over the words, because the result has one entry per word.',
       'For each word, ask `banned.includes(word)`.',
@@ -599,6 +599,11 @@ console.log(hideBanned(["you", "are", "silly"], ["silly"]));
       { call: 'hideBanned(["hello"], [])', expected: ['hello'], label: 'nothing banned', edge: true },
       { call: 'hideBanned(["Silly", "silly"], ["silly"])', expected: ['Silly', '***'], label: 'the match is exact', edge: true },
       { call: 'hideBanned([], ["x"])', expected: [], label: 'no words', edge: true },
+      { call: "hideBanned([\"a.*\",\"ax\",\"a\",\"\", \"é\",\"e\\u0301\"],[\"a.*\",\"\", \"é\"])", expected: ["***", "ax", "a", "***", "***", "é"], label: "literal punctuation empty strings and exact Unicode spelling", edge: true },
+      { call: "hideBanned(Object.freeze([\"z\",\"ok\",\"z\"]),Object.freeze([\"z\",\"a\",\".\"]))", expected: ["***", "ok", "***"], label: "frozen inputs and repeated matches", edge: true },
+      { call: "(() => {const words=[\"x\"],banned=[];const out=hideBanned(words,banned);return out!==words&&out.length===1&&out[0]===\"x\";})()", expected: true, label: "fresh result when nothing is banned", edge: true },
+      { call: "(() => {const banned=[\"z\",\"a\"],words=[\"z\"];hideBanned(words,banned);return banned[0]===\"z\"&&banned[1]===\"a\"&&words[0]===\"z\";})()", expected: true, label: "preserve both inputs", edge: true },
+      { call: "(() => {const words=[],banned=[];const out=hideBanned(words,banned);return out!==words&&out!==banned&&out.length===0;})()", expected: true, label: "fresh empty result", edge: true },
     ],
   },
   {
@@ -652,7 +657,7 @@ console.log(positionsOf(["a", "b", "a", "c", "a"], "a"));
     tier: 1,
     focus: ['findIndex'],
     title: 'The first reading over the limit',
-    prompt: 'Write `firstOverLimit(readings, limit)`, returning the index of the first reading greater than `limit`, using `findIndex`. `firstOverLimit([3, 8, 12, 15], 10)` gives 2. A reading equal to the limit is not over it, and when no reading is over the limit the answer is -1.',
+    prompt: "Write `firstOverLimit(readings, limit)`, returning the index of the first reading greater than `limit`, using `findIndex`. `firstOverLimit([3, 8, 12, 15], 10)` gives 2. A reading equal to the limit is not over it, and when no reading is over the limit the answer is -1. readings is an ordinary dense array of finite Numbers and limit is a finite Number; fractional and negative readings are valid. Compare the supplied numbers without rounding or coercion. Do not change the array; frozen inputs are valid. Target: O(n) time in the worst case, where n is the reading count and numeric comparison is constant-time; an early match can take less.",
     starter: `const firstOverLimit = (readings, limit) => {
 
 };
@@ -677,6 +682,10 @@ console.log(firstOverLimit([3, 8, 12, 15], 10));
       { call: 'firstOverLimit([10, 11], 10)', expected: 1, label: 'equal to the limit is not over it', edge: true },
       { call: 'firstOverLimit([1, 2], 5)', expected: -1, label: 'nothing over the limit', edge: true },
       { call: 'firstOverLimit([], 0)', expected: -1, label: 'no readings', edge: true },
+      { call: "firstOverLimit([0.01,0.06,0.2],0.05)", expected: 1, label: "fractional readings are not rounded", edge: true },
+      { call: "firstOverLimit(Object.freeze([-0.5,-0.1,0]),-0.2)", expected: 1, label: "frozen fractional negative readings", edge: true },
+      { call: "(() => {const readings=[3,1,7,9];const out=firstOverLimit(readings,5);return out===2&&readings[0]===3&&readings[1]===1&&readings[2]===7&&readings[3]===9;})()", expected: true, label: "preserve original index order", edge: true },
+      { call: "firstOverLimit([0,-0],0)", expected: -1, label: "neither zero sign is over zero", edge: true },
     ],
   },
   {
@@ -687,7 +696,7 @@ console.log(firstOverLimit([3, 8, 12, 15], 10));
     tier: 1,
     focus: ['every', 'objects'],
     title: 'Every field filled in',
-    prompt: 'A form is an object whose values are the strings someone typed. Write `isComplete(form)`, returning `true` when every value holds something other than spaces, using `Object.values` and `every`. `isComplete({ name: "Ada", email: "ada@example.com" })` gives `true`, and an empty email gives `false`. A value of only spaces counts as empty. `every` gives `true` for an empty list, so a form with no fields is complete.',
+    prompt: "A form is an object whose values are the strings someone typed. Write `isComplete(form)`, returning `true` when every value holds something other than spaces, using `Object.values` and `every`. `isComplete({ name: \"Ada\", email: \"ada@example.com\" })` gives `true`, and an empty email gives `false`. A value of only spaces counts as empty. `every` gives `true` for an empty list, so a form with no fields is complete. Consider only own enumerable string-keyed fields; inherited, non-enumerable and symbol-keyed properties are ignored. Those field values are primitive strings. Blank means empty after JavaScript trim, including its whitespace and line terminators such as tabs, non-breaking spaces and BOM; a zero-width space is not removed by trim and counts as content. Inputs are ordinary data objects without getters or proxies, including frozen and null-prototype objects. Do not trim or rewrite the stored values. Target: O(n) time, where n is the number of own properties inspected plus the total UTF-16 length of included field strings, assuming linear trimming and constant-time property access.",
     starter: `const isComplete = form => {
 
 };
@@ -698,7 +707,7 @@ console.log(isComplete({ name: "Ada", email: "" }));
     skeleton: `const isComplete = form => {
   return Object.values(form).every(/* a test for a value that is not blank */);
 };`,
-    hints: ['`value.trim()` removes the spaces at both ends, so a blank value becomes `""`. The test passes when what is left is not an empty string.'],
+    hints: ["Validate the own enumerable string values, not inherited properties. Use trim only to inspect whether content remains; keep the original stored strings unchanged."],
     approach: [
       'Get the values with `Object.values(form)`.',
       'Call `every` with a test that trims each value and checks it is not `""`.',
@@ -712,6 +721,12 @@ console.log(isComplete({ name: "Ada", email: "" }));
       { call: 'isComplete({ name: "   " })', expected: false, label: 'spaces alone count as empty', edge: true },
       { call: 'isComplete({ city: "  Brno " })', expected: true, label: 'spaces around a word are fine', edge: true },
       { call: 'isComplete({})', expected: true, label: 'a form with no fields is complete', edge: true },
+      { call: "isComplete(Object.create({inherited:\" \"}))", expected: true, label: "inherited fields do not count", edge: true },
+      { call: "(() => {const form={own:\"ok\"};Object.defineProperty(form,\"hidden\",{value:\" \"});form[Symbol(\"s\")]=\" \";return isComplete(form);})()", expected: true, label: "hidden and symbol fields are excluded", edge: true },
+      { call: "isComplete({a:\"\\t\\n\\u00a0\\ufeff\"})", expected: false, label: "JavaScript whitespace-only field", edge: true },
+      { call: "isComplete({a:\"\\u200b\"})", expected: true, label: "zero-width space is content under trim", edge: true },
+      { call: "isComplete(Object.freeze(Object.assign(Object.create(null),{name:\" Ada \"})))", expected: true, label: "frozen null-prototype form", edge: true },
+      { call: "(() => {const form={name:\" Ada \"};const out=isComplete(form);return out===true&&form.name===\" Ada \";})()", expected: true, label: "validation preserves stored text", edge: true },
     ],
   },
 
