@@ -12,7 +12,6 @@
 // count rather than a number.
 
 import { mkdirSync, writeFileSync, readFileSync } from 'node:fs';
-import { createHash } from 'node:crypto';
 import path from 'node:path';
 import { questions, type Question } from '../lib/quiz-data';
 import { questionTranslationsCs } from '../lib/quiz-data.cs';
@@ -31,6 +30,7 @@ import { restoredLevels, restoredQuestionIds } from '../lib/roadmap-questions-re
 import { isRetiredTopic } from '../shared/retired-content';
 import { WEBDEV_PLAN_STAGES } from '../shared/progression';
 import { LEARNING_PATHS } from '../lib/learning-paths/catalog';
+import { nativeContentHash, nativeGradingHash } from '../lib/learning-paths/audit';
 
 type Delivery =
   /** In the served pool and offered by discovery. */
@@ -192,11 +192,11 @@ function main() {
 
   const byDelivery = (d: Delivery) => items.filter((i) => i.delivery === d).length;
   const activeCoding = new Set(ACTIVE_CODING_TASKS.map(task => task.id));
-  const materialHash = (value: unknown) => createHash('sha256').update(JSON.stringify(englishOnly(value))).digest('hex').slice(0, 16);
+  const materialHash = nativeContentHash;
   const pathMaterials = LEARNING_PATHS.flatMap(learningPath => learningPath.modules.flatMap(module => [
     ...module.lessons.map(lesson => ({ id: `${learningPath.id}:${lesson.id}`, path: learningPath.id, module: module.id, kind: 'lesson', contentHash: materialHash(lesson) })),
     ...module.activities.flatMap(activity => [
-      { id: `${learningPath.id}:${activity.id}`, path: learningPath.id, module: module.id, kind: 'activity', contentHash: materialHash(activity) },
+      { id: `${learningPath.id}:${activity.id}`, path: learningPath.id, module: module.id, kind: 'activity', contentHash: materialHash(activity), gradingHash: nativeGradingHash(activity) },
       ...(activity.questions ?? []).map(question => ({ id: `${learningPath.id}:${question.id}`, path: learningPath.id, module: module.id, kind: 'check-question', contentHash: materialHash(question) })),
     ]),
   ]));
