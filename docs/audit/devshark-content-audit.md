@@ -215,8 +215,8 @@ gap in #378, with no malicious production probe.
 The briefs now recommend the intended pointer techniques and state authored
 time/space goals without claiming their finite semantic/write assertions detect
 all temporary copying or prove arbitrary complexity. The actual worker returns
-all 24 selected expected verdicts: twelve valid reference/alternative/built-in/copy
-implementations pass; three starters and nine wrong implementations fail.
+all 24 selected expected verdicts: eleven valid reference/alternative/built-in/copy
+implementations pass; three starters and ten wrong implementations fail.
 All 47 path references and 46 authored starter examples pass, along with 27
 authority/setup checks. The repository-relative D02 checker reproduces candidates
 and question probes without assigning scores.
