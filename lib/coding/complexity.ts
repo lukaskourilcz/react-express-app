@@ -89,9 +89,11 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       }
       return 'unknown';
     };
-    const strings = new Set<string>();
+    const strings = new Set<string>(fn.parameters.flatMap(parameter =>
+      ts.isIdentifier(parameter.name) && parameter.type?.kind === ts.SyntaxKind.StringKeyword ? [parameter.name.text] : []));
     const regexes = new Map<string, string>();
     const collect = (node: ts.Node) => {
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.type?.kind === ts.SyntaxKind.StringKeyword) strings.add(node.name.text);
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
         const kind = collectionKind(node.initializer);
         if (bounds.has(node.name.text)) uncertainty = 'A shadowed input binding needs manual review.';
@@ -122,6 +124,18 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       visited += 1;
       if (visited > 12_000) { uncertainty = 'The analysis limit was reached. Review the code manually.'; return constant; }
       if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left) && strings.has(node.left.text) && [ts.SyntaxKind.PlusEqualsToken, ts.SyntaxKind.EqualsToken].includes(node.operatorToken.kind)) uncertainty = 'Growing immutable strings need a manual review of copying costs.';
+      if (ts.isTemplateExpression(node) && node.templateSpans.some(span => collectionKind(span.expression) !== 'fixed')) {
+        uncertainty = 'Input-dependent string construction needs a manual review of output costs.';
+      }
+      if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.PlusToken) {
+        const stringOperand = (operand: ts.Expression): boolean => ts.isStringLiteral(operand)
+          || ts.isNoSubstitutionTemplateLiteral(operand) || ts.isTemplateExpression(operand)
+          || (ts.isIdentifier(operand) && strings.has(operand.text));
+        if ((stringOperand(node.left) || stringOperand(node.right))
+          && (collectionKind(node.left) !== 'fixed' || collectionKind(node.right) !== 'fixed')) {
+          uncertainty = 'Input-dependent string construction needs a manual review of output costs.';
+        }
+      }
       if (ts.isFunctionDeclaration(node) || ts.isArrowFunction(node) || ts.isFunctionExpression(node)) return constant;
       if (ts.isForInStatement(node)) { uncertainty = 'Object enumeration needs a manual review of the input model.'; return constant; }
       if (ts.isForOfStatement(node)) {

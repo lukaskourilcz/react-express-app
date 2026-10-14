@@ -11,7 +11,7 @@ import { solutionFor } from './solutions';
 
 export function codingAttemptVersion(task: CodingTask): string {
   return createHash('sha256').update(JSON.stringify([
-    'coding-attempt:v1', taskHash(task, solutionFor(task.id)), complexityGuidance(task),
+    'coding-attempt:v2', taskHash(task, solutionFor(task.id)), complexityGuidance(task),
   ])).digest('hex');
 }
 
