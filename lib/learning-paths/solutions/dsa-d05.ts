@@ -13,6 +13,10 @@ export const DSA_D05_SOLUTIONS: Record<string, PathCodeSolution> = {
     solution:
       'const prepend = (head, value) => ({ value, next: head });\n\nconst find = (head, value) => {\n  let node = head;\n  while (node !== null) {\n    if (node.value === value) return node;\n    node = node.next;\n  }\n  return null;\n};',
     hiddenTests: [
+      {"call": "find(__build([NaN]), NaN)", "expected": null},
+      {"call": "(() => { const head = __build([-0, 1]); return find(head, 0) === head; })()", "expected": true},
+      {"call": "(() => { const object = {}, symbol = Symbol('v'); const head = __build([object, symbol, undefined, false, '', NaN, -0]); const snap = __snapshot(head); const added = prepend(head, object); return added !== head && added.value === object && added.next === head && find(head, object) === head && find(head, symbol) === head.next && find(head, {}) === null && find(head, undefined) === head.next.next && __unchanged(snap, true); })()", "expected": true},
+      {"call": "(() => { const head = __build([7, 7]); const snap = __snapshot(head); find(head, 7); return __unchanged(snap, true); })()", "expected": true},
       {
         call: '(() => { const head = __build([1, 2, 3]); prepend(head, 0); return __toArray(head); })()',
         expected: [1, 2, 3],
@@ -35,6 +39,10 @@ export const DSA_D05_SOLUTIONS: Record<string, PathCodeSolution> = {
     solution:
       'const deleteFirst = (head, value) => {\n  if (head === null) return null;\n  if (head.value === value) return head.next;\n\n  let previous = head;\n  while (previous.next !== null) {\n    if (previous.next.value === value) {\n      previous.next = previous.next.next;\n      return head;\n    }\n    previous = previous.next;\n  }\n\n  return head;\n};',
     hiddenTests: [
+      {"call": "(() => { const head = __build([-0, 1]); return deleteFirst(head, 0) === head.next; })()", "expected": true},
+      {"call": "(() => { const head = __build([NaN, 1]); const snap = __snapshot(head); return deleteFirst(head, NaN) === head && __unchanged(snap, true); })()", "expected": true},
+      {"call": "(() => { const object = {}, symbol = Symbol('v'); const head = __build([0, object, symbol, object, undefined, false, '']); const snap = __snapshot(head); const removed = head.next, following = removed.next; const out = deleteFirst(head, object); return out === head && head.next === following && removed.next === following && __unchanged(snap, false) && snap.nodes[2].next === snap.links[2] && snap.nodes[3].next === snap.links[3]; })()", "expected": true},
+      {"call": "(() => { const head = __build([{}, 2]); const snap = __snapshot(head); return deleteFirst(head, {}) === head && __unchanged(snap, true); })()", "expected": true},
       {
         call: '(() => { const head = __build([1, 2, 3]); const third = head.next.next; return deleteFirst(head, 2).next === third; })()',
         expected: true,
@@ -60,6 +68,8 @@ export const DSA_D05_SOLUTIONS: Record<string, PathCodeSolution> = {
     solution:
       'const reverseList = head => {\n  let previous = null;\n  let current = head;\n  while (current !== null) {\n    const rest = current.next;\n    current.next = previous;\n    previous = current;\n    current = rest;\n  }\n  return previous;\n};',
     hiddenTests: [
+      {"call": "(() => { const object = {}, symbol = Symbol('v'); const head = __build([object, symbol, undefined, false, '', NaN, -0]); const snap = __snapshot(head); const out = __chain(reverseList(head)); if (out.length !== snap.nodes.length || out[out.length - 1].next !== null || !__unchanged(snap, false)) return false; for (let i = 0; i < out.length; i++) if (out[i] !== snap.nodes[snap.nodes.length - 1 - i]) return false; return true; })()", "expected": true, "criterion": "in-place-links"},
+      {"call": "(() => { const head = __build([1, 2, 3]); return reverseList(reverseList(head)) === head && head.next.value === 2 && head.next.next.value === 3 && head.next.next.next === null; })()", "expected": true},
       { call: '(() => __toArray(reverseList(__build([1, 2, 3, 4, 5, 6]))))()', expected: [6, 5, 4, 3, 2, 1] },
       { call: "(() => __toArray(reverseList(__build(['a', 'b', 'c']))))()", expected: ['c', 'b', 'a'] },
       { call: '(() => { const head = __build([1, 2, 3]); const first = head; reverseList(head); return first.next; })()', expected: null },
