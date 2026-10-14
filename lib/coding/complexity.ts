@@ -4,7 +4,7 @@ import ts from 'typescript';
 import { complexityGuidance, type ComplexityReport } from '../../shared/coding-complexity';
 import type { CodingTask } from '../../shared/coding-catalog';
 
-const inputNames = (text: string, names: Set<string>) => /\.length\b/.test(text) || [...names].some((name) => new RegExp(`\\b${name}\\b`).test(text));
+const inputNames = (text: string, names: Set<string>) => [...names].some((name) => new RegExp(`\\b${name}\\b`).test(text));
 
 type Cost = { power: number; log: number };
 const constant: Cost = { power: 0, log: 0 };
@@ -53,6 +53,8 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   }
   if (!entries.size) return unknown('The tested entry point cannot be resolved statically. Review this implementation manually.');
   let uncertainty: string | null = null;
+  let loopReturns = false;
+  let shortCircuitScans = false;
   for (const statement of file.statements) {
     if (ts.isVariableStatement(statement)) for (const declaration of statement.declarationList.declarations) {
       const init = declaration.initializer;
@@ -61,13 +63,43 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   }
   const evidence = new Set<string>();
   let visited = 0;
-  const inspectFunction = (fn: ts.FunctionLikeDeclaration, stack: Set<string>): Cost => {
-    const parameters = new Set(fn.parameters.flatMap((parameter) => ts.isIdentifier(parameter.name) ? [parameter.name.text] : []));
-    const bounds = new Set(parameters);
+  const inspectFunction = (fn: ts.FunctionLikeDeclaration, stack: Set<string>, inherited: Set<string> = new Set(), inputParameters?: Set<string>): Cost => {
+    const parameters = inputParameters ?? new Set(fn.parameters.flatMap((parameter) => ts.isIdentifier(parameter.name) ? [parameter.name.text] : []));
+    const bounds = new Set(inherited);
+    // A callback's item is not automatically a whole input-sized collection.
+    for (const parameter of fn.parameters) if (ts.isIdentifier(parameter.name)) bounds.delete(parameter.name.text);
+    for (const parameter of parameters) bounds.add(parameter);
+    const fixedCollections = new Set<string>();
+    const numericLiteral = (node: ts.Node): number | null => ts.isNumericLiteral(node) ? Number(node.text)
+      : ts.isPrefixUnaryExpression(node) && node.operator === ts.SyntaxKind.MinusToken && ts.isNumericLiteral(node.operand) ? -Number(node.operand.text) : null;
+    const collectionKind = (node: ts.Node): 'input' | 'fixed' | 'unknown' => {
+      if (ts.isParenthesizedExpression(node)) return collectionKind(node.expression);
+      if (ts.isIdentifier(node)) return fixedCollections.has(node.text) ? 'fixed' : bounds.has(node.text) ? 'input' : 'unknown';
+      if (ts.isStringLiteral(node) || ts.isNumericLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return 'fixed';
+      if (ts.isArrayLiteralExpression(node)) return node.elements.some(ts.isSpreadElement) ? 'unknown' : 'fixed';
+      if (ts.isPropertyAccessExpression(node) && node.name.text === 'length') return collectionKind(node.expression);
+      if (ts.isBinaryExpression(node) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken].includes(node.operatorToken.kind)
+        && numericLiteral(node.right) !== null && collectionKind(node.left) === 'input') return 'input';
+      if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
+        const method = node.expression.name.text;
+        if (['slice', 'substring', 'substr'].includes(method) && node.arguments.length >= 2 && node.arguments.every(argument => numericLiteral(argument) !== null)) return 'fixed';
+        if (method === 'slice' && node.arguments.length === 1 && (numericLiteral(node.arguments[0]) ?? 0) < 0) return 'fixed';
+        if (scanMethods.has(method) || method === 'sort' || method === 'toSorted') return collectionKind(node.expression.expression);
+        if (['Object', 'Array'].includes(node.expression.expression.getText(file)) && ['keys', 'values', 'entries', 'from'].includes(method)) return node.arguments[0] ? collectionKind(node.arguments[0]) : 'unknown';
+      }
+      return 'unknown';
+    };
     const strings = new Set<string>();
     const regexes = new Map<string, string>();
     const collect = (node: ts.Node) => {
-      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer && /\.length\b/.test(node.initializer.getText(file))) bounds.add(node.name.text);
+      if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+        const kind = collectionKind(node.initializer);
+        if (bounds.has(node.name.text)) uncertainty = 'A shadowed input binding needs manual review.';
+        if (kind === 'input') bounds.add(node.name.text);
+        if (kind === 'fixed') fixedCollections.add(node.name.text);
+      }
+      if (ts.isBinaryExpression(node) && ts.isIdentifier(node.left) && bounds.has(node.left.text)
+        && node.operatorToken.kind === ts.SyntaxKind.EqualsToken) uncertainty = 'An input-size binding changes during the algorithm.';
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
         if (ts.isStringLiteral(node.initializer)) strings.add(node.name.text);
         if (ts.isRegularExpressionLiteral(node.initializer)) regexes.set(node.name.text, node.initializer.text);
@@ -94,7 +126,9 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       if (ts.isForInStatement(node)) { uncertainty = 'Object enumeration needs a manual review of the input model.'; return constant; }
       if (ts.isForOfStatement(node)) {
         evidence.add('Input traversal');
-        return max(walk(node.expression), multiply(linear, walk(node.statement)));
+        const kind = collectionKind(node.expression);
+        if (kind === 'unknown') uncertainty = 'The traversed collection cannot be related to the input size.';
+        return max(walk(node.expression), multiply(kind === 'input' ? linear : constant, walk(node.statement)));
       }
       if (ts.isForStatement(node) || ts.isWhileStatement(node) || ts.isDoStatement(node)) {
         const condition = ts.isForStatement(node) ? node.condition : node.expression;
@@ -104,10 +138,39 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
           uncertainty = 'A loop has no recognised monotonic step. Its iteration count needs manual review.';
         }
         let loop: Cost = constant;
+        // Input mentioned somewhere in a condition is not a proof that the
+        // induction variable traverses it. Capped/chunked bounds and shared
+        // pointers need accounting beyond this local structural estimate.
+        if (!ts.isBinaryExpression(condition) || ![ts.SyntaxKind.LessThanToken, ts.SyntaxKind.LessThanEqualsToken,
+          ts.SyntaxKind.GreaterThanToken, ts.SyntaxKind.GreaterThanEqualsToken].includes(condition.operatorToken.kind)) {
+          uncertainty = 'A compound loop bound needs manual iteration-count review.';
+        }
+        if (ts.isBinaryExpression(condition) && (ts.isCallExpression(condition.left) || ts.isCallExpression(condition.right))) uncertainty = 'A computed loop bound needs manual iteration-count review.';
+        if (ts.isBinaryExpression(condition)) {
+          const canonical = (operand: ts.Expression): boolean => ts.isIdentifier(operand) || numericLiteral(operand) !== null
+            || (ts.isPropertyAccessExpression(operand) && operand.name.text === 'length')
+            || (ts.isBinaryExpression(operand) && [ts.SyntaxKind.PlusToken, ts.SyntaxKind.MinusToken].includes(operand.operatorToken.kind)
+              && canonical(operand.left) && numericLiteral(operand.right) !== null);
+          if (!canonical(condition.left) || !canonical(condition.right)) uncertainty = 'A computed loop bound needs manual iteration-count review.';
+        }
+        if (ts.isForStatement(node) && !node.initializer) uncertainty = 'A persistent induction variable needs an amortized complexity review.';
+        if (ts.isForStatement(node) && node.initializer) {
+          const starts = ts.isVariableDeclarationList(node.initializer) ? node.initializer.declarations.map(declaration => declaration.initializer)
+            : ts.isBinaryExpression(node.initializer) ? [node.initializer.right] : [node.initializer];
+          if (starts.some(start => start && inputBound(start))) uncertainty = 'A loop starts from an input-dependent or shared position.';
+        }
+        const inspectControl = (child: ts.Node) => {
+          if (ts.isFunctionDeclaration(child) || ts.isArrowFunction(child) || ts.isFunctionExpression(child)) return;
+          if (ts.isBreakStatement(child)) uncertainty = 'Early loop termination needs manual iteration-count review.';
+          if (ts.isReturnStatement(child)) loopReturns = true;
+          if (ts.isWhileStatement(child) || ts.isDoStatement(child)) uncertainty = 'Nested persistent pointers need an amortized complexity review.';
+          ts.forEachChild(child, inspectControl);
+        };
+        inspectControl(node.statement);
         if (inputBound(condition)) {
           loop = /\/=\s*2|\*=\s*2|>>=\s*1/.test(increment) ? { power: 0, log: 1 } : linear;
           evidence.add(loop.log ? 'Halving or doubling loop' : 'Input-bounded loop');
-        } else if (!/^[\w\s<>=!+\-\d.]+$/.test(condition.getText(file)) || !/\b\d+\b/.test(condition.getText(file))) {
+        } else if (![...fixedCollections].some(name => new RegExp(`\\b${name}\\b`).test(condition.getText(file))) && (!/^[\w\s<>=!+\-\d.]+$/.test(condition.getText(file)) || !/\b\d+\b/.test(condition.getText(file)))) {
           uncertainty = 'A loop bound cannot be related to the input size.';
         }
         // Conditions and increment expressions run on every iteration; the
@@ -119,11 +182,17 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
       }
       if (ts.isNewExpression(node)) {
         if (!ts.isIdentifier(node.expression) || !['Map', 'Set', 'Array', 'Date'].includes(node.expression.text)) uncertainty = 'An external constructor needs manual review.';
-        let cost = node.arguments?.length && node.expression.getText(file) !== 'Date' ? linear : constant;
+        const kind = node.arguments?.[0] ? collectionKind(node.arguments[0]) : 'fixed';
+        if (kind === 'unknown' && node.expression.getText(file) !== 'Date') uncertainty = 'The constructor input size needs manual review.';
+        let cost = kind === 'input' && node.expression.getText(file) !== 'Date' ? linear : constant;
         for (const argument of node.arguments ?? []) cost = max(cost, walk(argument));
         return cost;
       }
-      if (ts.isSpreadElement(node) || ts.isSpreadAssignment(node)) { evidence.add('Copying input data'); return max(linear, walk(node.expression)); }
+      if (ts.isSpreadElement(node) || ts.isSpreadAssignment(node)) {
+        const kind = collectionKind(node.expression);
+        if (kind === 'unknown') uncertainty = 'The copied collection needs manual input-size review.';
+        evidence.add('Copying input data'); return max(kind === 'input' ? linear : constant, walk(node.expression));
+      }
       if (ts.isCallExpression(node)) {
         let call: Cost = constant;
         if (ts.isIdentifier(node.expression)) {
@@ -131,25 +200,41 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
           const helper = functions.get(name);
           if (helper) {
             if (stack.has(name)) { uncertainty = 'Recursion needs a recurrence and input-size review; it is not inferred automatically.'; return constant; }
-            call = inspectFunction(helper, new Set([...stack, name]));
+            const inputParams = new Set(helper.parameters.flatMap((parameter, i) => ts.isIdentifier(parameter.name) && node.arguments[i] && collectionKind(node.arguments[i]) === 'input' ? [parameter.name.text] : []));
+            call = inspectFunction(helper, new Set([...stack, name]), bounds, inputParams);
           } else if (!['Number', 'Boolean', 'parseInt', 'parseFloat', 'isNaN', 'isFinite'].includes(name)) uncertainty = 'An indirect or external function call needs manual review.';
         } else if (ts.isPropertyAccessExpression(node.expression)) {
           const method = node.expression.name.text;
+          if (['some', 'every', 'find', 'findIndex', 'includes', 'indexOf', 'lastIndexOf'].includes(method)) shortCircuitScans = true;
           const receiver = node.expression.expression.getText(file);
           if (receiver === 'console') return constant;
+          if (fixedCollections.has(receiver) && ['push', 'unshift', 'splice'].includes(method)) uncertainty = 'A growing local collection needs manual input-size review.';
           if (method === 'test' || method === 'replace' || method === 'replaceAll') {
             const pattern = method === 'test' ? regexes.get(receiver) ?? receiver : node.arguments[0]?.getText(file) ?? '';
             if (pattern.startsWith('/') && !/^\/\[\^?[a-zA-Z0-9\-]+\]\/[gimyus]*$/.test(pattern)) uncertainty = 'Regular-expression backtracking needs a manual worst-case review.';
             if (method === 'test' && !pattern.startsWith('/')) uncertainty = 'The regular expression cannot be resolved statically.';
           } // Scratch-pad logging is not the solution's algorithm.
-          if (method === 'sort' || method === 'toSorted') { call = { power: 1, log: 1 }; evidence.add('Sorting input data'); }
+          const collection = collectionKind(node.expression.expression);
+          if (method === 'sort' || method === 'toSorted') {
+            if (collection === 'unknown') uncertainty = 'The sorted collection needs manual input-size review.';
+            call = collection === 'input' ? { power: 1, log: 1 } : constant; evidence.add('Sorting input data');
+          }
           else if (['toLowerCase', 'toUpperCase', 'trim'].includes(method) && ts.isElementAccessExpression(node.expression.expression)) { call = constant; }
-          else if (scanMethods.has(method) || (receiver === 'Object' && ['keys', 'values', 'entries'].includes(method)) || method === 'from') { call = linear; evidence.add('Collection/string scan'); }
-          else if (method === 'test' && node.arguments[0] && !ts.isElementAccessExpression(node.arguments[0])) { call = linear; evidence.add('String scan'); }
+          else if (scanMethods.has(method) || (receiver === 'Object' && ['keys', 'values', 'entries'].includes(method)) || method === 'from') {
+            const kind = ['slice', 'substring', 'substr'].includes(method) && collectionKind(node) === 'fixed' ? 'fixed'
+              : receiver === 'Object' || (receiver === 'Array' && method === 'from') ? node.arguments[0] ? collectionKind(node.arguments[0]) : 'unknown' : collection;
+            if (kind === 'unknown') uncertainty = 'A scan cannot be related to the input size.';
+            call = kind === 'input' ? linear : constant; evidence.add('Collection/string scan');
+          }
+          else if (method === 'test' && node.arguments[0] && !ts.isElementAccessExpression(node.arguments[0])) {
+            const kind = collectionKind(node.arguments[0]);
+            if (kind === 'unknown') uncertainty = 'The tested string size needs manual review.';
+            call = kind === 'input' ? linear : constant; evidence.add('String scan');
+          }
           else if (!scalarMethods.has(method)) uncertainty = 'A method with unknown cost needs manual review.';
           // Receiver chains run sequentially. Callback work is repeated per item.
           let callback = constant;
-          for (const argument of node.arguments) if ((ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)) && argument.body) callback = max(callback, inspectFunction(argument, stack));
+          for (const argument of node.arguments) if ((ts.isArrowFunction(argument) || ts.isFunctionExpression(argument)) && argument.body) callback = max(callback, inspectFunction(argument, stack, bounds, new Set()));
           if (callbackMethods.has(method) && node.arguments[0] && !ts.isArrowFunction(node.arguments[0]) && !ts.isFunctionExpression(node.arguments[0])) {
             uncertainty = 'A named or indirect callback needs manual review of its repeated work.';
           }
@@ -171,6 +256,8 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   const time = label(cost);
   const target = guidance.targetTime ? targetCost(guidance.targetTime) : null;
   const above = target && (cost.power > target.power || (cost.power === target.power && cost.log > target.log));
+  if (above && loopReturns) return unknown('Early returns inside a traversal need a manual worst-case review.');
+  if (above && shortCircuitScans) return unknown('Early-exit scans need a manual worst-case review before reducing XP.');
   const assessment = target ? above ? 'above-target' : 'within-target' : 'estimated';
   return { time, assessment, explanation: [...evidence].join(' · ') || 'No input-growing traversal recognised in the tested function.', assumptions, guidance };
 }
@@ -186,7 +273,7 @@ export function assessComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'te
       time: null,
       assessment: 'unknown',
       explanation: 'The structural analyser could not safely inspect this code. Review its complexity manually.',
-      assumptions: 'Complexity analysis is advisory and never changes the correctness verdict or rewards.',
+      assumptions: 'An unavailable estimate never changes the correctness verdict or reduces the base reward.',
       guidance: complexityGuidance(task),
     };
   }

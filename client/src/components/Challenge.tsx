@@ -10,23 +10,20 @@ import { Card } from '@astryxdesign/core/Card';
 import { Badge } from '@astryxdesign/core/Badge';
 import { Banner } from '@astryxdesign/core/Banner';
 import { ProgressBar } from '@astryxdesign/core/ProgressBar';
-import { TextInput } from '@astryxdesign/core/TextInput';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { AppToast } from './ui/AppToast';
-import { CheckCircleIcon } from './ui/icons';
 import { ApiError, apiFetch, friendlyError } from '../lib/api';
 import {
   fetchChallengeBatch,
   completeChallengeRun,
-  submitChallengeScore,
   type ChallengeLeaderboard,
 } from '../lib/challengeApi';
 import { challengeLeaderboardQuery, useChallengeLeaderboard } from '../lib/queries';
 import { readOnce, settled, useFirstData } from '../lib/routeData';
 import type { Question, QuizResult } from '../types/quiz';
 import { useLanguage } from '../i18n/LanguageContext';
-import { useAuth, getUserProfile } from '../lib/auth';
-import { useLeaderboardVisibility } from '../lib/leaderboardVisibility';
-import { useActiveSubject, useSubject } from '../lib/subjects';
+import { useAuth } from '../lib/auth';
+import { useActiveSubject, useSubject, deliveryCategoriesForSubject } from '../lib/subjects';
 import { useIsMobile } from '../lib/useMediaQuery';
 import { visuallyHidden } from '../theme/MuiTheme';
 import { MotionPop } from '../lib/motion';
@@ -40,7 +37,8 @@ import { SwimCta } from './landing/LandingKit';
 import { readJSON, writeJSON, removeStored } from '../lib/storage';
 import './DeepEndScreens.css';
 import { RadioCard, RadioCardGroup } from './ui/RadioCards';
-import { CategoryTag } from './ui/CategoryTag';
+import { categoryLabelKey } from '../lib/categories';
+import { CategoryTag, TopicPill } from './ui/CategoryTag';
 import ResultShareActions from './ResultShareActions';
 import ReferralMoment from './ReferralMoment';
 import { SaveSharkCard } from './SaveSharkCard';
@@ -56,10 +54,9 @@ type Phase = 'intro' | 'loading' | 'playing' | 'gameover' | 'error';
 const MAX_LIVES = 3;
 const LOW_BATCH_THRESHOLD = 4; // top up the buffer when this few remain
 const TIME_LIMIT_S = 90; // each question is capped at 90 seconds
-const RELAXED_TIME_LIMIT_S = 180; // accessibility practice pace; never ranked
 const LOW_TIME_S = 15; // highlight + pulse the clock under this many seconds
 // A batch's session is sealed for an hour (lib/quiz-tokens.ts). No question is
-// shown from a batch older than this, so its answer, even at the relaxed pace,
+// shown from a batch older than this, so its answer
 // reaches the server while that session still grades it.
 const STALE_BATCH_MS = 50 * 60 * 1000;
 // A timeout strike the network or the rate limit refused is sent again after
@@ -72,10 +69,10 @@ const PENDING_CHALLENGE_KEY = 'studyshark:pending-challenge-reward:v1';
 const MAX_PENDING_REWARDS = 20;
 // Completion refusals that no retry can change: an expired or foreign run, or
 // proofs that do not make a finished run. Such a run leaves the list.
-const PERMANENT_REWARD_ERRORS = new Set(['invalid_run', 'incomplete_run', 'invalid_proof', 'bad_request']);
+const PERMANENT_REWARD_ERRORS = new Set(['invalid_run', 'invalid_run_scope', 'incomplete_run', 'invalid_proof', 'bad_request']);
 
 interface PendingChallengeReward {
-  userId: string;
+  userId: string | null;
   runToken: string;
   proofs: string[];
 }
@@ -85,7 +82,7 @@ function readPendingRewards(): PendingChallengeReward[] {
   const list: unknown[] = Array.isArray(raw) ? raw : raw ? [raw] : [];
   return list.filter((one): one is PendingChallengeReward => {
     const run = one as Partial<PendingChallengeReward> | null;
-    return !!run && typeof run.userId === 'string' && typeof run.runToken === 'string' && Array.isArray(run.proofs);
+    return !!run && (run.userId === null || typeof run.userId === 'string') && typeof run.runToken === 'string' && Array.isArray(run.proofs);
   });
 }
 
@@ -102,14 +99,14 @@ const dropPendingReward = (runToken: string) =>
  * limit turned away stays for the next try. `held` counts the right answers
  * whose question paid XP less than an hour ago (migration 060), with the time
  * the last of them pays again. */
-async function sendPendingRewards(userId: string): Promise<{ kept: number; xp: number; held: QuestionXpHeld | null }> {
+async function sendPendingRewards(userId: string | null): Promise<{ kept: number; xp: number; held: QuestionXpHeld | null }> {
   let kept = 0;
   let xp = 0;
   let held = null as QuestionXpHeld | null;
   for (const run of readPendingRewards().filter((one) => one.userId === userId)) {
     try {
       const res = await completeChallengeRun({ runToken: run.runToken, proofs: run.proofs });
-      if (res.awarded) xp += res.xp ?? 0;
+      if (userId && res.awarded) xp += res.xp ?? 0;
       if (res.xpHeld) {
         held = {
           questions: (held?.questions ?? 0) + res.xpHeld.questions,
@@ -195,14 +192,15 @@ export default function Challenge() {
   useBoardFirstData();
   const { lang, t } = useLanguage();
   const { user } = useAuth();
-  const profile = getUserProfile(user);
   const accent = useActiveSubject().accent;
   const isMobile = useIsMobile();
 
   const [phase, setPhase] = useState<Phase>('intro');
   const [error, setError] = useState<string | null>(null);
-  const [relaxedPace, setRelaxedPace] = useState(false);
-  const timeLimitS = relaxedPace ? RELAXED_TIME_LIMIT_S : TIME_LIMIT_S;
+  const timeLimitS = TIME_LIMIT_S;
+  const availableTopics = deliveryCategoriesForSubject('webdev');
+  const [topics, setTopics] = useState<string[]>(availableTopics);
+  const runTopics = useRef<string[]>(availableTopics);
 
   // Leaderboard preview (intro screen + game-over) via TanStack Query.
   const boardQuery = useChallengeLeaderboard();
@@ -220,13 +218,6 @@ export default function Challenge() {
   // 12): each can be saved as a Shark Card with its answer and explanation.
   const [missed, setMissed] = useState<AnsweredQ[]>([]);
   const [submitting, setSubmitting] = useState(false);
-  // The Hall of Fame is public. The name box starts empty, and holds the
-  // account's name only for a learner who shows their name on the
-  // leaderboards; it is filled once, so a cleared box stays clear.
-  const leaderboardVisibility = useLeaderboardVisibility();
-  const [name, setName] = useState('');
-  const namePrefilled = useRef(false);
-  const [submittedScore, setSubmittedScore] = useState(false);
   const [snack, setSnack] = useState<string | null>(null);
   // The question's deadline, set when it is shown. The clock counts down to
   // it rather than counting ticks, so time the page spends in the background
@@ -280,7 +271,7 @@ export default function Challenge() {
   // Saved rewards go out one after another, so a sync started at game over
   // never races the one started on arrival.
   const rewardSync = useRef<Promise<void>>(Promise.resolve());
-  const syncRewards = useCallback((userId: string) => {
+  const syncRewards = useCallback((userId: string | null) => {
     rewardSync.current = rewardSync.current.then(async () => {
       const { kept, xp, held } = await sendPendingRewards(userId);
       if (xp > 0) announceVerifiedQuestXp(xp);
@@ -292,30 +283,28 @@ export default function Challenge() {
         await syncXpWithServer({ announceRankUp: true });
       }
       if (kept > 0) setSnack(t('challenge.rewardPending'));
+      else void boardQuery.refetch();
     });
     return rewardSync.current;
-  }, [t]);
+  }, [t, boardQuery.refetch]);
 
   useEffect(() => {
-    if (user?.id) void syncRewards(user.id);
+    void syncRewards(user?.id ?? null);
+  }, [syncRewards, user?.id]);
+  useEffect(() => {
+    const retry = () => { if (readPendingRewards().some(run => run.userId === (user?.id ?? null))) void syncRewards(user?.id ?? null); };
+    window.addEventListener('online', retry);
+    window.addEventListener('focus', retry);
+    return () => { window.removeEventListener('online', retry); window.removeEventListener('focus', retry); };
   }, [syncRewards, user?.id]);
   // Focus target when the run ends, so AT users hear the transition.
   const gameOverHeadingRef = useRef<HTMLDivElement | null>(null);
-  const [scoreSubmitting, setScoreSubmitting] = useState(false);
 
   const livesLeft = MAX_LIVES - livesLost;
 
   /* ─── leaderboard ───────────────────────────────────────────── */
 
   // Refetch the subject-scoped board after a score is submitted.
-  const refreshLeaderboard = boardQuery.refetch;
-
-  useEffect(() => {
-    if (namePrefilled.current || leaderboardVisibility.visible !== true || !profile.name) return;
-    namePrefilled.current = true;
-    const accountName = profile.name;
-    setName((typed) => typed || accountName);
-  }, [leaderboardVisibility.visible, profile.name]);
 
   /* ─── question buffer ───────────────────────────────────────── */
 
@@ -329,7 +318,7 @@ export default function Challenge() {
             exclude: excluded,
             lang,
             runToken: runTokenRef.current || undefined,
-            ranked: !relaxedPace,
+            categories: runTopics.current,
           });
           if (generation !== runGeneration.current) return null;
           runTokenRef.current = batch.runToken;
@@ -365,7 +354,7 @@ export default function Challenge() {
         if (topupInFlight.current === p) topupInFlight.current = null;
       }
     },
-    [lang, relaxedPace],
+    [lang],
   );
 
   const popNext = useCallback((): BufferedQuestion | null => {
@@ -391,6 +380,8 @@ export default function Challenge() {
   /* ─── game flow ─────────────────────────────────────────────── */
 
   const startRun = useCallback(async () => {
+    if (topics.length === 0) return;
+    runTopics.current = [...topics];
     runGeneration.current += 1;
     const generation = runGeneration.current;
     // A refill still in flight belongs to the run that ended.
@@ -404,7 +395,6 @@ export default function Challenge() {
     setSelected(null);
     setLastResult(null);
     setMissed([]);
-    setSubmittedScore(false);
     setDeadline(0);
     awardedRef.current = false;
     runTokenRef.current = '';
@@ -424,7 +414,7 @@ export default function Challenge() {
     showQuestion(next);
     setSeenIds([next.question.id]);
     setPhase('playing');
-  }, [ensureBufferTopUp, popNext, showQuestion, t]);
+  }, [ensureBufferTopUp, popNext, showQuestion, t, topics]);
 
   const advance = useCallback(
     async (becameGameOver: boolean) => {
@@ -599,33 +589,6 @@ export default function Challenge() {
     }
   }, [current, lastResult, submitting, applyGrade, expireQuestion, gradeOrReplay]);
 
-  /* ─── leaderboard submit on game over ───────────────────────── */
-
-  const onSubmitScore = useCallback(async () => {
-    if (scoreSubmitting) return;
-    const cleaned = name.trim();
-    if (!cleaned) {
-      setSnack(t('challenge.nameRequired'));
-      return;
-    }
-    setScoreSubmitting(true);
-    try {
-      if (!runTokenRef.current) throw new Error('Challenge run expired');
-      await submitChallengeScore({
-        name: cleaned,
-        runToken: runTokenRef.current,
-        proofs: scoreProofsRef.current,
-      });
-      setSubmittedScore(true);
-      setSnack(t('challenge.scoreSubmitted'));
-      void refreshLeaderboard();
-    } catch (err) {
-      setSnack(friendlyError(err));
-    } finally {
-      setScoreSubmitting(false);
-    }
-  }, [name, refreshLeaderboard, t, scoreSubmitting]);
-
   /* ─── countdown clock ───────────────────────────────────────── */
 
   // Each question is capped at TIME_LIMIT_S from the moment it is shown. Read
@@ -657,17 +620,14 @@ export default function Challenge() {
   useEffect(() => {
     if (phase === 'gameover' && !awardedRef.current) {
       awardedRef.current = true;
-      if (user) {
-        if (runTokenRef.current) {
-          writePendingRewards([
-            ...readPendingRewards(),
-            { userId: user.id, runToken: runTokenRef.current, proofs: [...scoreProofsRef.current] },
-          ]);
-          void syncRewards(user.id);
-        }
-      } else {
-        awardQuestXp(challengeRunXp(score), 'quiz');
+      if (score > 0 && runTokenRef.current) {
+        writePendingRewards([
+          ...readPendingRewards().filter(run => run.runToken !== runTokenRef.current),
+          { userId: user?.id ?? null, runToken: runTokenRef.current, proofs: [...scoreProofsRef.current] },
+        ]);
+        void syncRewards(user?.id ?? null);
       }
+      if (!user) awardQuestXp(challengeRunXp(score), 'quiz');
     }
     // Announce the run's end to AT by moving focus to the game-over heading.
     if (phase === 'gameover') {
@@ -736,22 +696,15 @@ export default function Challenge() {
               <div className="de-stat"><strong>{MAX_LIVES}</strong><span>{t('challenge.finsStat')}</span></div>
               <div className="de-stat"><strong>{timeLimitS} s</strong><span>{t('challenge.perQuestion')}</span></div>
             </div>
-            <button
-              type="button"
-              role="checkbox"
-              aria-checked={relaxedPace}
-              className={`de-track-card${relaxedPace ? ' is-selected' : ''}`}
-              onClick={() => setRelaxedPace((value) => !value)}
-              // The track-card flex basis is sized for a row of cards; in this
-              // column it became a 220px height with empty space below the text.
-              style={{ textAlign: 'left', flex: 'none' }}
-            >
-              <span className="de-track-card__check" aria-hidden="true"><CheckCircleIcon size={20} /></span>
-              <strong>{t('challenge.relaxedPace')}</strong>
-              <span>{t('challenge.relaxedHint')}</span>
-            </button>
+            <fieldset className="ss-topic-picker">
+              <legend>{t('challenge.topics')}</legend>
+              <div className="ss-topic-pills">
+                {availableTopics.map(category => <TopicPill key={category} category={category} selected={topics.includes(category)} onClick={() => setTopics(old => old.includes(category) ? old.filter(value => value !== category) : [...old, category])} />)}
+              </div>
+              {topics.length === 0 && <p role="status">{t('challenge.noTopics')}</p>}
+            </fieldset>
             <HStack gap={2} align="center" wrap="wrap">
-              <SwimCta label={t('challenge.startButton')} dir={-1} onClick={() => void startRun()} />
+              <SwimCta label={t('challenge.startButton')} dir={-1} disabled={topics.length === 0} onClick={() => void startRun()} />
             </HStack>
           </VStack>
         </section>
@@ -823,50 +776,11 @@ export default function Challenge() {
               kind="challenge_result"
               label={t('challenge.shareLabel')}
               headline={t('challenge.shareHeadline', { n: score })}
-              detail={t(relaxedPace ? 'challenge.shareDetailPractice' : 'challenge.shareDetail')}
+              detail={t('challenge.shareDetail')}
               text={t('challenge.shareText', { n: score })}
               path="/challenge"
               centered
             />
-
-            {relaxedPace ? (
-              <Banner status="info" title={t('challenge.practiceScore')} />
-            ) : !submittedScore ? (
-              <div className="ss-panel" style={{ padding: 16 }}>
-                <VStack gap={1.5}>
-                  <Text type="body" size="sm">
-                    {t('challenge.submitPrompt')}
-                  </Text>
-                  <div
-                    style={{
-                      display: 'flex',
-                      gap: 8,
-                      flexDirection: isMobile ? 'column' : 'row',
-                      alignItems: isMobile ? 'stretch' : 'flex-end',
-                    }}
-                  >
-                    <div style={{ flex: '1 1 auto' }}>
-                      <TextInput
-                        label={t('challenge.nameLabel')}
-                        description={t('challenge.namePublicHint')}
-                        value={name}
-                        onChange={(v) => setName(v.slice(0, 40))}
-                        onEnter={() => void onSubmitScore()}
-                      />
-                    </div>
-                    <Button
-                      variant="primary"
-                      label={t('challenge.submitScore')}
-                      onClick={() => void onSubmitScore()}
-                      isDisabled={scoreSubmitting}
-                      isLoading={scoreSubmitting}
-                    />
-                  </div>
-                </VStack>
-              </div>
-            ) : (
-              <Banner status="success" title={t('challenge.scoreSubmitted')} />
-            )}
 
             {missed.length > 0 && (
               <section className="sc-missed" aria-labelledby="challenge-missed">
@@ -1120,6 +1034,7 @@ export default function Challenge() {
             maxHeight: '48vh',
             overflowY: 'auto',
             borderRadius: 'var(--radius-container)',
+            backgroundColor: 'var(--color-background-surface)',
             boxShadow: 'var(--shadow-high)',
           }}
         >
@@ -1210,6 +1125,7 @@ function ClockIcon() {
 }
 
 function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
+  const { t } = useLanguage();
   // role="list" restores list semantics that Safari/VoiceOver drop when
   // list-style is none.
   return (
@@ -1236,6 +1152,11 @@ function LeaderboardList({ board }: { board: ChallengeLeaderboard }) {
                 {row.name}
               </Text>
             </span>
+            {row.topics && row.topics.length > 0 && <Tooltip content={row.allTopics ? 'This beast completed the challenge with all topics! Watch out!' : row.topics.map(topic => t(categoryLabelKey(topic as Question['category']))).join(', ')}>
+              <span tabIndex={0} className="challenge-topic-count" aria-label={row.allTopics ? 'All topics' : `${row.topics.length} topics`}>
+                {row.allTopics ? <SharkFin size={20} color="var(--ss-challenge-gold)" /> : row.topics.length}
+              </span>
+            </Tooltip>}
           </div>
           <Text type="body" size="sm" weight="bold" color={i === 0 ? 'accent' : 'primary'}>
             {row.score}

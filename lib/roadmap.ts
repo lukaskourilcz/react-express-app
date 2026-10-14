@@ -14,6 +14,7 @@
 // structure (fetched at runtime) so titles never drift out of sync.
 
 import { QUESTIONS_PER_LEVEL, ROADMAP_LEVELS, difficultyForLevel } from './roadmap-build';
+import { restoredQuestionIds } from './roadmap-questions-restored';
 import { PARTS_PER_TOPIC, partRanges, type StepAvailability } from '../shared/progression';
 
 export type RoadmapTopic =
@@ -225,7 +226,7 @@ export function topicCheckpointCount(topic: RoadmapTopic): number {
 /** The question ids that make up a given topic/level (1-based level). */
 export function levelQuestionIds(topic: RoadmapTopic, level: number): string[] {
   const start = (level - 1) * QUESTIONS_PER_LEVEL + 1;
-  return Array.from({ length: QUESTIONS_PER_LEVEL }, (_, i) => `${ID_PREFIX[topic]}-${start + i}`);
+  return [...Array.from({ length: QUESTIONS_PER_LEVEL }, (_, i) => `${ID_PREFIX[topic]}-${start + i}`), ...restoredQuestionIds(topic, level)];
 }
 
 /** The 40 question ids for a checkpoint: every question in its 5 levels. */
@@ -244,7 +245,7 @@ export function topicLevels(topic: RoadmapTopic): RoadmapLevelMeta[] {
     level: i + 1,
     title,
     difficulty: difficultyForLevel(i + 1),
-    questionCount: QUESTIONS_PER_LEVEL,
+    questionCount: levelQuestionIds(topic, i + 1).length,
   }));
 }
 

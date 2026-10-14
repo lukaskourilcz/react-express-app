@@ -9,8 +9,8 @@
 // score, no name.
 import { capture } from './analytics';
 
-export type ShareKind = 'referral' | 'challenge_result' | 'typing_result' | 'daily_question';
-export type ShareSource = 'learn_level' | 'challenge' | 'typing' | 'daily';
+export type ShareKind = 'referral' | 'challenge_result' | 'learn_topic_result' | 'daily_question';
+export type ShareSource = 'learn_level' | 'learn_topic' | 'challenge' | 'daily';
 export type ShareMethod = 'share' | 'copy' | 'download';
 
 /** The one analytics event, with an allow-listed payload. */

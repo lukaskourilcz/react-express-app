@@ -179,7 +179,7 @@ export async function handlerContracts(fail: Fail): Promise<void> {
           await requestMemo(`tier:${burster}`, async () => 'premium');
           await handleActivitySubmit(req, res as never, fakeSupabase({
             rows: { learning_path_enrollments: { ...enrollmentRow('active'), user_id: burster } },
-            rpc: (name) => { written.push(name); return name === 'accept_learning_path_result' ? { data: { ok: true, replayed: false } } : {}; },
+            rpc: (name) => { written.push(name); return ['accept_learning_path_result','accept_learning_path_coding_result'].includes(name) ? { data: { ok: true, replayed: false } } : {}; },
           }));
         });
         return res;

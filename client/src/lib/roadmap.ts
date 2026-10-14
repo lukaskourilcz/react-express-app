@@ -144,6 +144,10 @@ export async function completeRoadmapAttempt(sessionId: string): Promise<Roadmap
   return result;
 }
 
+export function checkRoadmapAttempt(sessionId: string): Promise<{ completed: boolean; coding: { taskId: string; passed: boolean; revealed: boolean }[] }> {
+  return apiFetch('/api/quiz/roadmap?resource=attempt-status', { method: 'POST', body: JSON.stringify({ sessionId }) });
+}
+
 export function applySkillCheckReceipt(resultReceipt: string): Promise<{ applied: boolean; unlocked: RoadmapTopic[] }> {
   return apiFetch('/api/quiz/roadmap?resource=skill-check', {
     method: 'POST',

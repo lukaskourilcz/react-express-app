@@ -1,0 +1,169 @@
+import { test, expect, type Page } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
+
+// These tests exercise the built UI with local wire fixtures. They do not
+// establish server grading or leaderboard writes; SQL and preview smoke
+// checks cover those boundaries independently.
+const longCode = `const names = [${Array.from({ length: 24 }, (_, i) => `"learner${i}"`).join(', ')}];`;
+
+async function prepare(page: Page, theme: 'light' | 'dark') {
+  await page.emulateMedia({ colorScheme: theme, reducedMotion: 'reduce' });
+  await page.addInitScript(theme => {
+    localStorage.setItem('devquiz:color-mode', theme);
+    localStorage.setItem('devshark:consent', JSON.stringify({ version: 1, analytics: false, marketing: false, decidedAt: Date.now() }));
+  }, theme);
+}
+
+async function challenge(page: Page) {
+  const completions: unknown[] = [];
+  await page.route('**/api/**', route => {
+    const url = new URL(route.request().url());
+    if (url.pathname === '/api/quiz/challenge') {
+      if (url.searchParams.get('resource') === 'leaderboard') return route.fulfill({ json: {
+        top: [{ id: 'one', name: 'calmShark1', score: 8, createdAt: '2026-10-13T10:00:00Z', topics: ['javascript', 'react'], allTopics: false },
+          { id: 'two', name: 'braveShark2', score: 7, createdAt: '2026-10-13T10:00:00Z', topics: ['javascript'], allTopics: true }], champion: null,
+      } });
+      if (url.searchParams.get('resource') === 'complete') {
+        completions.push(route.request().postDataJSON());
+        return route.fulfill({ json: { ok: true, awarded: false, score: 1, xp: 0, record: null } });
+      }
+      const exclude = new Set((url.searchParams.get('exclude') ?? '').split(','));
+      return route.fulfill({ json: { sessionId: 'local-session', runToken: 'local-run', questions: Array.from({ length: 12 }, (_, i) => ({
+        id: `local-${i}`, category: 'javascript', difficulty: 1,
+        question: `Question ${i + 1}: which value is a number?\n\n\`\`\`javascript\n${longCode}\n\`\`\``,
+        options: ['42', '"42"', 'null', 'undefined'],
+      })).filter(q => !exclude.has(q.id)) } });
+    }
+    if (url.pathname === '/api/quiz/submit') {
+      const body = route.request().postDataJSON() as { answers: Record<string, number> };
+      const [questionId, selectedIndex] = Object.entries(body.answers)[0];
+      const correct = selectedIndex === 0;
+      return route.fulfill({ json: { totalQuestions: 1, correctAnswers: Number(correct), percentage: correct ? 100 : 0, questXp: 0,
+        results: [{ questionId, selectedIndex, correctAnswer: 0, isCorrect: correct, explanation: '42 has no quotation marks, so it is a number.', scoreProof: `local-proof-${questionId}` }],
+      } });
+    }
+    return route.fulfill({ status: 503, json: { error: { code: 'offline', message: 'local fixture' } } });
+  });
+  return completions;
+}
+
+for (const theme of ['light', 'dark'] as const) for (const width of [360, 1440]) {
+  test(`${theme} ${width}px: Skill Check keeps question width and reviews the accepted answers`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 900 });
+    await prepare(page, theme);
+    const questions = [
+      { id: 'skill-code', category: 'javascript', difficulty: 1, question: `What does typeof null return?\n\n\`\`\`javascript\n${longCode}\n\`\`\``, options: ['object', 'string', 'null', 'undefined'] },
+      { id: 'skill-plain', category: 'javascript', difficulty: 1, question: 'Which value is a number?', options: ['42', '"42"', 'null', 'undefined'] },
+    ];
+    await page.route('**/api/**', route => {
+      const url = new URL(route.request().url());
+      const resource = url.searchParams.get('resource');
+      if (url.pathname === '/api/quiz/roadmap') {
+        if (resource === 'progress') return route.fulfill({ json: { data: {}, extra: { unlocked: [] } } });
+        if (resource === 'learning-path-catalog') return route.fulfill({ json: { versions: {}, paths: [] } });
+        if (resource === 'placement') {
+          if (route.request().method() === 'GET') return route.fulfill({ json: { done: false, round: 1, totalRounds: 1, difficulty: 1, asked: 0, total: 2, idkCountsAsMiss: true, placementToken: 'local-placement', questions } });
+          return route.fulfill({ json: { done: true, correct: 1, total: 2, difficulty: 1, unlockedPreview: [], review: [
+            { questionId: 'skill-code', selectedIndex: 1, correctAnswer: 0, isCorrect: false, explanation: 'typeof null is object for historical compatibility.' },
+            { questionId: 'skill-plain', selectedIndex: 0, correctAnswer: 0, isCorrect: true, explanation: '42 is a numeric literal.' },
+          ] } });
+        }
+        return route.fulfill({ json: { topics: ['javascript'], structure: { javascript: { levels: [{ level: 1, title: 'Values', difficulty: 1, questionCount: 8 }], checkpoints: [] } } } });
+      }
+      return route.fulfill({ status: 503, json: { error: { code: 'offline', message: 'local fixture' } } });
+    });
+    await page.goto('/learn');
+    await page.getByRole('button', { name: /Skill check/ }).click();
+    await page.getByRole('button', { name: 'Start placement', exact: true }).click();
+    const stem = page.locator('#placement-question');
+    await expect(stem.locator('pre')).toBeVisible();
+    const codingWidth = (await stem.boundingBox())!.width;
+    await page.getByRole('radio', { name: '2 string', exact: true }).click();
+    await page.getByRole('button', { name: 'Next', exact: true }).click();
+    await expect(stem).toContainText('Which value is a number?');
+    expect(Math.abs((await stem.boundingBox())!.width - codingWidth)).toBeLessThan(2);
+    await page.getByRole('radio', { name: '1 42', exact: true }).click();
+    await page.getByRole('button', { name: 'Finish', exact: true }).click();
+    const review = page.locator('.rm-placement-review');
+    await expect(review.locator('article')).toHaveCount(2);
+    await expect(review).toContainText('Your answer: string');
+    await expect(review).toContainText('Correct answer: object');
+    await expect(review).toContainText('typeof null is object for historical compatibility.');
+    await expect(review).toContainText('42 is a numeric literal.');
+    await expect(page.getByRole('button', { name: 'Share result', exact: true })).toHaveCount(0);
+    await expect(page.getByText('We opened the paths that match where you are. You can retake this anytime.', { exact: true })).toHaveCount(0);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test(`${theme} ${width}px: Challenge has a full-width code block, opaque feedback and positive-only automatic completion`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await prepare(page, theme);
+    const completions = await challenge(page);
+    await page.goto('/challenge');
+    await expect(page.getByText('90 s', { exact: true })).toBeVisible();
+    await expect(page.getByText('Relaxed pace')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Start', exact: true }).click();
+    await expect(page.getByRole('timer')).toContainText('1:30');
+    const code = page.locator('#challenge-question pre');
+    await expect(code).toBeVisible();
+    const codeBox = await code.boundingBox();
+    const answersBox = await page.getByRole('radiogroup').boundingBox();
+    expect(Math.abs(codeBox!.width - answersBox!.width)).toBeLessThan(2);
+    expect(await code.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
+    await page.getByRole('radio', { name: '42', exact: true }).click();
+    await page.getByRole('button', { name: 'Submit', exact: true }).click();
+    const feedback = page.locator('[aria-live="assertive"]').filter({ hasText: '42 has no quotation marks' });
+    await expect(feedback).toBeVisible();
+    const appearance = await feedback.evaluate(el => {
+      const style = getComputedStyle(el);
+      return { background: style.backgroundColor, opacity: style.opacity };
+    });
+    expect(appearance.opacity).toBe('1');
+    expect(appearance.background).toMatch(/^rgb\(/);
+    await page.screenshot({ path: info.outputPath(`challenge-feedback-${theme}-${width}.png`), fullPage: true });
+    await page.getByRole('button', { name: 'Next question', exact: true }).click();
+    await expect(page.getByRole('timer')).toContainText('1:30');
+    for (let strike = 0; strike < 3; strike++) {
+      await page.getByRole('radio', { name: '"42"', exact: true }).click();
+      await page.getByRole('button', { name: 'Submit', exact: true }).click();
+      await page.getByRole('button', { name: strike === 2 ? 'See result' : 'Next question', exact: true }).click();
+    }
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Run ended');
+    await expect.poll(() => completions.length).toBe(1);
+    await expect(page.getByText('Save your score', { exact: true })).toHaveCount(0);
+    await expect(page.getByRole('textbox')).toHaveCount(0);
+    await page.getByRole('button', { name: 'Play again', exact: true }).click();
+    for (let strike = 0; strike < 3; strike++) {
+      await page.getByRole('radio', { name: '"42"', exact: true }).click();
+      await page.getByRole('button', { name: 'Submit', exact: true }).click();
+      await page.getByRole('button', { name: strike === 2 ? 'See result' : 'Next question', exact: true }).click();
+    }
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Run ended');
+    expect(completions).toHaveLength(1);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  });
+
+  test(`${theme} ${width}px: Big O guide reflows at 200% text size and links to its free intro`, async ({ page }, info) => {
+    await page.setViewportSize({ width, height: 900 });
+    await prepare(page, theme);
+    await page.route('**/api/**', route => route.fulfill({ status: 503, json: { error: { code: 'offline', message: 'local fixture' } } }));
+    await page.goto('/big-o');
+    await expect(page.getByRole('heading', { level: 1 })).toContainText('Big O');
+    await expect(page.locator('main a[href="/learn/big-o"]')).toBeVisible();
+    await page.addStyleTag({ content: 'html { font-size: 200% !important; }' });
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    const brand = await page.getByRole('link', { name: 'devShark home', exact: true }).boundingBox();
+    const login = await page.getByRole('button', { name: 'Log in', exact: true }).boundingBox();
+    expect(brand!.x + brand!.width).toBeLessThanOrEqual(login!.x);
+    const examples = page.getByRole('region', { name: 'Common patterns', exact: true });
+    await examples.focus();
+    await expect(examples).toBeFocused();
+    if (await examples.evaluate(el => el.scrollWidth > el.clientWidth)) {
+      await examples.press('ArrowRight');
+      await expect.poll(() => examples.evaluate(el => el.scrollLeft)).toBeGreaterThan(0);
+    }
+    const findings = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa']).analyze();
+    expect(findings.violations.map(v => v.id)).toEqual([]);
+    await page.screenshot({ path: info.outputPath(`big-o-${theme}-${width}-200.png`), fullPage: true });
+  });
+}

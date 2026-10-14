@@ -8,6 +8,7 @@
 
 import { queryOptions, useQuery } from '@tanstack/react-query';
 import { apiFetch } from './api';
+import { staleProfileStats } from './queryClient';
 import { readJSON, removeStored, writeJSON } from './storage';
 import type {
   DraftSaveRequest,
@@ -146,14 +147,16 @@ export function startActivity(input: StartActivityRequest): Promise<StartActivit
   });
 }
 
-export function submitActivity(input: SubmitActivityRequest): Promise<SubmitActivityResponse> {
-  return apiFetch<SubmitActivityResponse>(`${ROADMAP}?resource=learning-path-submit`, {
+export async function submitActivity(input: SubmitActivityRequest): Promise<SubmitActivityResponse> {
+  const result = await apiFetch<SubmitActivityResponse>(`${ROADMAP}?resource=learning-path-submit`, {
     method: 'POST',
     body: JSON.stringify(input),
     // Grading a code activity runs the sandbox; the API's own budget is
     // shorter than this, so the client never gives up first.
     timeoutMs: 30_000,
   });
+  if (result.code?.outcome === 'passed' && result.state === 'verified_pass') staleProfileStats();
+  return result;
 }
 
 /** A fresh key per intended submission. Retrying a failed request reuses the

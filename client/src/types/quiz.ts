@@ -126,6 +126,8 @@ export interface RoadmapCompletionResult {
   applied: boolean;
   /** Coding task ids the level still needs before it passes. */
   codingPending?: string[];
+  /** Correct questions, with unrevealed coding tasks still open in this attempt. */
+  waiting?: boolean;
   /** A guest's level: it passed on its questions, and its coding tasks were
    * not checked, because a guest's coding passes are never stored. */
   codingUnverified?: boolean;

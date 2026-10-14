@@ -76,7 +76,7 @@ it('says the challenge run could not load, and loads it again on Try again', asy
     ? HttpResponse.json({ session: null })
     : DOWN()));
   await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Try again' })));
-  expect(await screen.findByRole('button', { name: 'Start the run' })).toBeInTheDocument();
+  expect(await screen.findByRole('button', { name: 'Start' })).toBeInTheDocument();
   expect(screen.queryByRole('alert')).toBeNull();
   expect(seen.filter((one) => one === 'GET practice-session')).toHaveLength(1);
 });

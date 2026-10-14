@@ -1,6 +1,6 @@
 {
  "schema": "devshark-content-ledger/v1",
- "auditedOn": "2026-09-11",
+ "auditedOn": "2026-10-13",
  "scope": {
   "categories": [
    "ai",
@@ -26,13 +26,13 @@
   {
    "id": "question-bank",
    "description": "lib/webdev-bank.ts: quiz-data.ts questions + fix-the-test",
-   "items": 2447,
+   "items": 2487,
    "countable": true
   },
   {
    "id": "coding-catalog",
    "description": "lib/coding/catalog.ts",
-   "items": 249,
+   "items": 770,
    "countable": true
   },
   {
@@ -43,9 +43,9 @@
   },
   {
    "id": "question_edits",
-   "description": "Supabase override table (admin edits, custom questions, hides). Not readable from the repository.",
-   "items": null,
-   "countable": false
+   "description": "Production snapshot read on 2026-10-14: 485 deletion rows, zero active edits/custom questions. See docs/audit/inventory-2026-10-14.json. Future changes require another read.",
+   "items": 485,
+   "countable": true
   },
   {
    "id": "legacy-core",
@@ -55,11 +55,15 @@
   }
  ],
  "counts": {
-  "active": 2128,
+  "active": 2168,
+  "eligibleQuestions": 2014,
   "retiredSection": 319,
   "unreferenced": 312,
   "legacyCore": 795,
-  "codingTasks": 249
+  "codingTasks": 770,
+  "activeCodingTasks": 725,
+  "hiddenCodingTasks": 45,
+  "pathMaterials": 263
  },
  "items": [
   {
@@ -221588,6 +221592,2890 @@
     "run": "claude-code session, 2026-09-09"
    },
    "reviewedAt": "2026-09-11"
+  },
+  {
+   "id": "rm-javascript-fresh-1-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 1,
+   "levelTitle": "Values & Math",
+   "objective": "Read numeric expressions and distinguish numbers from numeric strings.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "2c0fedc85490dd44",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Values & Math; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-1-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 1,
+   "levelTitle": "Values & Math",
+   "objective": "Read numeric expressions and distinguish numbers from numeric strings.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "a652d51d68ce13a7",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Values & Math; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-1-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 1,
+   "levelTitle": "Values & Math",
+   "objective": "Read numeric expressions and distinguish numbers from numeric strings.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "120672bbb1a8ffb4",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Values & Math; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-1-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 1,
+   "levelTitle": "Values & Math",
+   "objective": "Read numeric expressions and distinguish numbers from numeric strings.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "58b96222056cb195",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Values & Math; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Expressions_and_operators"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-2-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 2,
+   "levelTitle": "Strings",
+   "objective": "Read string indices, concatenation and immutable string values.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "aed4d3c2472167ef",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Strings; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-2-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 2,
+   "levelTitle": "Strings",
+   "objective": "Read string indices, concatenation and immutable string values.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "25767b330fca9007",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Strings; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-2-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 2,
+   "levelTitle": "Strings",
+   "objective": "Read string indices, concatenation and immutable string values.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "3214819eecb37b3b",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Strings; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-2-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 2,
+   "levelTitle": "Strings",
+   "objective": "Read string indices, concatenation and immutable string values.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "9dfce179b643d039",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Strings; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-4-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "levelTitle": "Arrays: Basics",
+   "objective": "Use array indices, length and basic mutation without confusing return values.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "94de87e852861f07",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Arrays: Basics; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-4-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "levelTitle": "Arrays: Basics",
+   "objective": "Use array indices, length and basic mutation without confusing return values.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "b21980da235746b8",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Arrays: Basics; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-4-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "levelTitle": "Arrays: Basics",
+   "objective": "Use array indices, length and basic mutation without confusing return values.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "95b10687981abbfa",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Arrays: Basics; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-javascript-fresh-4-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "levelTitle": "Arrays: Basics",
+   "objective": "Use array indices, length and basic mutation without confusing return values.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "575defe2ccae4d89",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Arrays: Basics; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-nodejs-fresh-8-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "nodejs",
+   "topic": "nodejs",
+   "level": 8,
+   "levelTitle": "OS & Util",
+   "objective": "Choose OS information and diagnostic utilities appropriate to a Node process.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "61149d4c5903c351",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for OS & Util; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://nodejs.org/api/os.html",
+    "https://nodejs.org/api/util.html"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-nodejs-fresh-8-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "nodejs",
+   "topic": "nodejs",
+   "level": 8,
+   "levelTitle": "OS & Util",
+   "objective": "Choose OS information and diagnostic utilities appropriate to a Node process.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "0f6b4e7879d8be7b",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for OS & Util; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://nodejs.org/api/os.html",
+    "https://nodejs.org/api/util.html"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-nodejs-fresh-8-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "nodejs",
+   "topic": "nodejs",
+   "level": 8,
+   "levelTitle": "OS & Util",
+   "objective": "Choose OS information and diagnostic utilities appropriate to a Node process.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "293a2ce8d9bad4bd",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for OS & Util; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://nodejs.org/api/os.html",
+    "https://nodejs.org/api/util.html"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-nodejs-fresh-8-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "nodejs",
+   "topic": "nodejs",
+   "level": 8,
+   "levelTitle": "OS & Util",
+   "objective": "Choose OS information and diagnostic utilities appropriate to a Node process.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "bf808d1d36d6b908",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for OS & Util; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://nodejs.org/api/os.html",
+    "https://nodejs.org/api/util.html"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-dsa-fresh-4-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "dsa",
+   "topic": "dsa",
+   "level": 4,
+   "levelTitle": "Strings",
+   "objective": "Understand string representation, immutable updates and traversal costs.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "689747d5c1f7acd6",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Strings; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-dsa-fresh-4-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "dsa",
+   "topic": "dsa",
+   "level": 4,
+   "levelTitle": "Strings",
+   "objective": "Understand string representation, immutable updates and traversal costs.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "5d18ad425f87d733",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Strings; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-dsa-fresh-4-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "dsa",
+   "topic": "dsa",
+   "level": 4,
+   "levelTitle": "Strings",
+   "objective": "Understand string representation, immutable updates and traversal costs.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "21691440667a76b2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Strings; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-dsa-fresh-4-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "dsa",
+   "topic": "dsa",
+   "level": 4,
+   "levelTitle": "Strings",
+   "objective": "Understand string representation, immutable updates and traversal costs.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "fb1397253a370bc0",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Strings; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-1-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 1,
+   "levelTitle": "Ratios & Proportions",
+   "objective": "Scale quantities while preserving their stated relationship.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "6183d1f787b43bb6",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Ratios & Proportions; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Arithmetic checked independently; proportional scaling requires the stated constant-rate assumption."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-1-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 1,
+   "levelTitle": "Ratios & Proportions",
+   "objective": "Scale quantities while preserving their stated relationship.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "769065407888d57e",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Ratios & Proportions; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Arithmetic checked independently; proportional scaling requires the stated constant-rate assumption."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-1-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 1,
+   "levelTitle": "Ratios & Proportions",
+   "objective": "Scale quantities while preserving their stated relationship.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "46506823c3052087",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Ratios & Proportions; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Arithmetic checked independently; proportional scaling requires the stated constant-rate assumption."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-1-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 1,
+   "levelTitle": "Ratios & Proportions",
+   "objective": "Scale quantities while preserving their stated relationship.",
+   "intendedLevel": "beginner",
+   "revision": 1,
+   "contentHash": "e05f8966ae3c448b",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Ratios & Proportions; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Arithmetic checked independently; proportional scaling requires the stated constant-rate assumption."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-6-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 6,
+   "levelTitle": "Algebraic Thinking",
+   "objective": "Turn requirements into expressions and solve for an unknown quantity.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "6bf50a0f021ab020",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Algebraic Thinking; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Expressions evaluated independently using arithmetic and boundary examples."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-6-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 6,
+   "levelTitle": "Algebraic Thinking",
+   "objective": "Turn requirements into expressions and solve for an unknown quantity.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "672f4cabb4d7a343",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Algebraic Thinking; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Expressions evaluated independently using arithmetic and boundary examples."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-6-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 6,
+   "levelTitle": "Algebraic Thinking",
+   "objective": "Turn requirements into expressions and solve for an unknown quantity.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "14106e472ab05cfd",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Algebraic Thinking; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Expressions evaluated independently using arithmetic and boundary examples."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-6-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 6,
+   "levelTitle": "Algebraic Thinking",
+   "objective": "Turn requirements into expressions and solve for an unknown quantity.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "425f2be9a153c025",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Algebraic Thinking; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Expressions evaluated independently using arithmetic and boundary examples."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-8-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 8,
+   "levelTitle": "Logic Puzzles",
+   "objective": "Combine stated constraints and distinguish what is possible from what is guaranteed.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "58b09b45f482ad1b",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Logic Puzzles; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Each constraint checked with a complete small truth table or enumeration."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-8-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 8,
+   "levelTitle": "Logic Puzzles",
+   "objective": "Combine stated constraints and distinguish what is possible from what is guaranteed.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "0fbab7858ca7b331",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Logic Puzzles; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Each constraint checked with a complete small truth table or enumeration."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-8-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 8,
+   "levelTitle": "Logic Puzzles",
+   "objective": "Combine stated constraints and distinguish what is possible from what is guaranteed.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "84f1bd875b748e83",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Logic Puzzles; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Each constraint checked with a complete small truth table or enumeration."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-8-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 8,
+   "levelTitle": "Logic Puzzles",
+   "objective": "Combine stated constraints and distinguish what is possible from what is guaranteed.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "ad3d3fc26b4cd057",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Logic Puzzles; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Each constraint checked with a complete small truth table or enumeration."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-10-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 10,
+   "levelTitle": "Problem Solving",
+   "objective": "Clarify requirements, check a baseline and validate invariants and edge cases.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "68abf7215821cb8c",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Problem Solving; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Reasoning checked against the stated inputs and expected outcomes."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-10-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 10,
+   "levelTitle": "Problem Solving",
+   "objective": "Clarify requirements, check a baseline and validate invariants and edge cases.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "aa1ab0a50702e097",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Problem Solving; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Reasoning checked against the stated inputs and expected outcomes."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-10-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 10,
+   "levelTitle": "Problem Solving",
+   "objective": "Clarify requirements, check a baseline and validate invariants and edge cases.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "ce9e07502b374d0c",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Problem Solving; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Reasoning checked against the stated inputs and expected outcomes."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-algorithms-fresh-10-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "algorithms",
+   "topic": "algorithms",
+   "level": 10,
+   "levelTitle": "Problem Solving",
+   "objective": "Clarify requirements, check a baseline and validate invariants and edge cases.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "dc757b2abd612893",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Problem Solving; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "Reasoning checked against the stated inputs and expected outcomes."
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-security-fresh-15-1",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "security",
+   "topic": "security",
+   "level": 15,
+   "levelTitle": "Secure Design & Threat Modeling",
+   "objective": "Identify assets, data flows and trust boundaries and revisit risks when design changes.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "eedca1f4ec3f9466",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Secure Design & Threat Modeling; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-security-fresh-15-2",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "security",
+   "topic": "security",
+   "level": 15,
+   "levelTitle": "Secure Design & Threat Modeling",
+   "objective": "Identify assets, data flows and trust boundaries and revisit risks when design changes.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "f2c471e75ec413a4",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Secure Design & Threat Modeling; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-security-fresh-15-3",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "security",
+   "topic": "security",
+   "level": 15,
+   "levelTitle": "Secure Design & Threat Modeling",
+   "objective": "Identify assets, data flows and trust boundaries and revisit risks when design changes.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "db6d4e244f4c7792",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Secure Design & Threat Modeling; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
+  },
+  {
+   "id": "rm-security-fresh-15-4",
+   "kind": "question",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "quiz",
+    "daily",
+    "challenge",
+    "placement",
+    "learn-level",
+    "learn-part-test",
+    "personalised-review",
+    "play",
+    "flashcards",
+    "today-due"
+   ],
+   "category": "security",
+   "topic": "security",
+   "level": 15,
+   "levelTitle": "Secure Design & Threat Modeling",
+   "objective": "Identify assets, data flows and trust boundaries and revisit risks when design changes.",
+   "intendedLevel": "intermediate",
+   "revision": 1,
+   "contentHash": "517b3dd05a9096ee",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 3,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "retain",
+   "retireReason": null,
+   "defects": [],
+   "rationale": "Fresh material for Secure Design & Threat Modeling; the question, alternatives, non-spoiling hint and explanation were read against the level objective. Existing hidden/retired items and ids remain unchanged.",
+   "evidence": [
+    "https://cheatsheetseries.owasp.org/cheatsheets/Threat_Modeling_Cheat_Sheet.html"
+   ],
+   "cs": null,
+   "verification": {
+    "pass": "second-reading",
+    "verdict": "retain",
+    "problems": [],
+    "notes": "Read for a single correct answer, misleading hints, level fit and option plausibility; numeric/code examples independently evaluated."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "item-review",
+     "second-reading"
+    ],
+    "run": "Codex implementation, 2026-10-13"
+   },
+   "reviewedAt": "2026-10-13"
   }
  ]
 }

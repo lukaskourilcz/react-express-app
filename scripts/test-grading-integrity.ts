@@ -128,6 +128,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const attempts = new Set<string>();
   const progress = new Map<string, ProgressFake>();
   const links = new Map<string, boolean>();
+  const levels = new Map<string, { user_id: string; coding_task_ids: string[]; completed_at: string | null; expires_at: string }>();
   const xp = new Set<string>();
   const attemptIds: string[] = [];
   const rpcCalls: { name: string; args: Record<string, unknown> }[] = [];
@@ -143,7 +144,7 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
       eq: (column: string, value: unknown) => { filters[column] = value; return chain; },
       in: () => chain,
       maybeSingle: () => {
-        if (table === 'roadmap_attempts') return result({ attempt_id: filters.attempt_id });
+        if (table === 'roadmap_attempts') return result(levels.get(String(filters.attempt_id)) ?? null);
         if (table === 'coding_progress') {
           const row = progress.get(`${filters.user_id}:${filters.task_id}`);
           return result(row ? progressRow(filters.task_id, row) : null);
@@ -201,14 +202,15 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
     }
     return result({ applied: true, firstPass, xpAwarded, codeChanged: firstPass, ...(options.firstVerifiedPass ? { xpForfeited } : {}) });
   };
-  return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls };
+  return { client: { from, rpc }, progress, links, xp, attemptIds, rpcCalls, levels };
 }
 
 {
   const db = codingDatabase();
   const learner = 'user-aaaa-1111';
   const levelAttempt = 'levelattempt0123456789';
-  const session = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: null, roadmapAttemptId: levelAttempt });
+  db.levels.set(levelAttempt, { user_id: learner, coding_task_ids: ['js-double-numbers'], completed_at: null, expires_at: new Date(Date.now() + 2 * 60 * 60_000).toISOString() });
+  const session = encodeCodingSession({ taskId: 'js-double-numbers', track: 'javascript', userId: learner, roadmapAttemptId: levelAttempt });
   const reference = solutionFor('js-double-numbers')!;
   type Verdict = { verdict?: string; applied?: boolean; firstPass?: boolean; xpAwarded?: number; xpForfeited?: boolean; progress?: { status?: string } | null };
   const submit = async (code: string) => {
@@ -620,13 +622,14 @@ function codingDatabase(options: { forfeitAfterReveal?: boolean; firstVerifiedPa
   const task = CODING_TASKS.find((one) => one.track === 'react' && one.verify === 'tests' && one.suite && isFreeCodingTask(one.id)
     && !evolvingStage(one.id) && solutionFor(one.id)?.junior && solutionFor(one.id)?.senior)!;
   const { verify, suite } = task;
+  db.levels.set(levelAttempt, { user_id: learner, coding_task_ids: [task.id], completed_at: null, expires_at: new Date(Date.now() + 2 * 60 * 60_000).toISOString() });
   task.verify = 'checklist';
   delete task.suite;
   try {
     const out = { statusCode: 200, body: null as null | { verdict?: string; xpAwarded?: number; applied?: boolean; solutions?: unknown }, setHeader() {}, status(code: number) { this.statusCode = code; return this; }, json(body: never) { this.body = body; return this; } };
     await handleCodingSubmit({
       method: 'POST', headers: { authorization: 'Bearer local-test' }, query: {},
-      body: { session: encodeCodingSession({ taskId: task.id, track: 'react', userId: null, roadmapAttemptId: levelAttempt }), code: 'const App = () => null;', user_id: learner },
+      body: { session: encodeCodingSession({ taskId: task.id, track: 'react', userId: learner, roadmapAttemptId: levelAttempt }), code: 'const App = () => null;', user_id: learner },
     } as never, out as never, db.client as never);
     assert.equal(out.statusCode, 200, JSON.stringify(out.body));
     assert.equal(out.body?.verdict, 'passed', 'the learner\'s confirmation still stands');

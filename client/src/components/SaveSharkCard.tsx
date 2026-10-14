@@ -6,8 +6,8 @@
 // its topic, the correct option and the explanation. Pressed again it takes
 // the card back out. Cards belong to an account, so a signed-out visitor sees
 // nothing here.
-import { Link } from 'react-router-dom';
 import { Button } from '@astryxdesign/core/Button';
+import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { useT } from '../i18n/LanguageContext';
 import { friendlyError } from '../lib/api';
 import { toSharkCard, useRemoveSharkCard, useSaveSharkCard, useSharkCardSaved, type GradedQuestion } from '../lib/sharkCards';
@@ -44,18 +44,18 @@ export function SaveSharkCard({
 
   return (
     <div className="sc-save" data-saved={pressed ? 'true' : 'false'}>
+      <Tooltip content={t('sharkCards.save')}>
       <Button
         variant="secondary"
         size="sm"
+        isIconOnly
         aria-pressed={pressed}
         icon={pressed ? <CheckCircleIcon size={16} /> : <BookmarkIcon size={16} />}
         label={pressed ? t('sharkCards.savedButton') : t('sharkCards.save')}
         isDisabled={busy}
         onClick={toggle}
       />
-      {pressed && (
-        <Link className="sc-save__link" to="/collection">{t('sharkCards.open')}</Link>
-      )}
+      </Tooltip>
       {failure && (
         <p className="sc-save__error" role="alert">
           {save.isError ? t('sharkCards.saveFailed') : t('sharkCards.removeFailed')} {friendlyError(failure)}

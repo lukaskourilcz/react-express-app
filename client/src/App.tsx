@@ -57,7 +57,8 @@ const exact = (...paths: string[]) => (pathname: string) => paths.includes(pathn
 const under = (...prefixes: string[]) => (pathname: string) => prefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 const loadHome = routeChunk(exact('/'), () => import('./components/Home'));
 const loadQuiz = routeChunk(exact('/quiz'), () => import('./components/Quiz'));
-const loadRoadmap = routeChunk(exact('/learn'), () => import('./components/Roadmap'));
+const loadRoadmap = routeChunk(exact('/learn', '/learn/big-o'), () => import('./components/Roadmap'));
+const loadBigO = routeChunk(exact('/big-o'), () => import('./components/BigOPage'));
 const loadCareerRoadmap = routeChunk(exact('/roadmap'), () => import('./components/CareerRoadmap'));
 const loadProfile = routeChunk(exact('/profile'), () => import('./components/Profile'));
 const loadLeaderboard = routeChunk(exact('/leaderboard'), () => import('./components/Leaderboard'));
@@ -83,6 +84,8 @@ const loadAuthPages = routeChunk(exact('/auth/confirmed', '/reset-password'), ()
 const Home = lazyPage(loadHome);
 const Quiz = lazyPage(loadQuiz);
 const Roadmap = lazyPage(loadRoadmap);
+const BigOPage = lazyPage(loadBigO);
+const BigOIntroduction = lazyPage(() => loadRoadmap().then((m) => ({ default: m.BigOIntroduction })));
 const CareerRoadmap = lazyPage(loadCareerRoadmap);
 const Profile = lazyPage(loadProfile);
 const Leaderboard = lazyPage(loadLeaderboard);
@@ -767,6 +770,8 @@ function App() {
                   <Route path="/" element={<Home />} />
                   <Route path="/quiz" element={<Quiz onActiveChange={setQuizActive} />} />
                   <Route path="/learn" element={<Roadmap />} />
+                  <Route path="/big-o" element={<BigOPage />} />
+                  <Route path="/learn/big-o" element={<BigOIntroduction />} />
                   <Route path="/today" element={<Today />} />
                   <Route path="/collection" element={<Collection />} />
                   <Route path="/typing" element={<TypingRacer />} />

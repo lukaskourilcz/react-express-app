@@ -3,7 +3,7 @@
    .ss-raised; colours and motion come from the tokens. */
 
 /* ── Save as Shark Card ─────────────────────────────────────────────────── */
-.sc-save { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0.5rem; }
+.sc-save { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; margin-top: 0; }
 .sc-save .astryx-button { min-height: 44px; }
 .sc-save__link { color: var(--color-text-accent, var(--brand-accent)); font-weight: 600; font-size: var(--ss-type-compact); }
 .sc-save__link:focus-visible { outline: 3px solid var(--ss-focus); outline-offset: 2px; border-radius: 4px; }

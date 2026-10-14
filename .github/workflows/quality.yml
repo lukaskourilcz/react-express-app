@@ -38,10 +38,10 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
   verify:
     runs-on: ubuntu-latest
-    # The coding content contract now also grades every task against wrong
-    # solutions (lookup tables, constants, static React pages), which adds
-    # a few minutes to a run that already took about fifteen.
-    timeout-minutes: 30
+    # Full isolated grading, browser coverage, Storybook and performance need
+    # more than the old 30-minute cap: run 38491511671 passed the preceding
+    # gates and timed out during the final Storybook/performance step.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -53,7 +53,7 @@ jobs:
             client/package-lock.json
       - run: npm ci && npm ci --prefix client
       - run: npm run typecheck:api && npm run typecheck:scripts && npm run typecheck:tooling --prefix client
-      - run: npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:coding && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:garden && npm run test:live-grading && npm run test:client
+      - run: npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:react-authority && npm run test:coding && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:garden && npm run test:live-grading && npm run test:client
       - run: npm run check:unused && npm run check:security
       - run: |
           # The browser checks below run against this build, so it signs in the
@@ -78,6 +78,7 @@ jobs:
           npm run test:browser -- tests/browser/coding-pages.spec.ts
           npm run test:browser -- tests/browser/coding-workbench.spec.ts
           npm run test:browser -- tests/browser/coding-drafts.spec.ts
+          npm run test:browser -- tests/browser/learning-release.spec.ts
           npm run test:browser -- tests/browser/segmented.spec.ts
           npm run test:browser -- tests/browser/on-accent.spec.ts
           npm run test:browser -- tests/browser/navigation.spec.ts

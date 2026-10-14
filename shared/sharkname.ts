@@ -1,12 +1,13 @@
 /**
  * The Sharkname generator: a random, silly, shark-shaped handle such as
- * `thirsty-sharkie`, `el-tiburon-loco` or `shark-so-fat-it-cant-swim`.
+ * `thirstySharkie`, `elTiburonLoco` or `sharkSoFatItCantSwim`.
  *
  * Pure and deterministic for a given random source, so the Profile rolls names
  * with `Math.random` and a test (or migration 055's seed friends) replays the
  * same names from a seeded source.
  *
- * Every name is lower-case kebab-case, passes the handle rule in
+ * Every base is camelCase; the database adds the identity's stable number.
+ * A base passes the handle rule in
  * `shared/handles.ts` (3–32 characters, not reserved) and has at least one
  * segment from SHARK_WORDS. The tone is cartoon shark: the jokes are about
  * the shark (a shark so fat it cannot swim), never about a person, and the
@@ -114,7 +115,13 @@ const NO_BUENO = [
 const pick = <T,>(random: RandomSource, list: readonly T[]): T =>
   list[Math.min(list.length - 1, Math.floor(random() * list.length))];
 
-const join = (...parts: string[]): string => parts.join('-');
+export function camelSharkBase(value: string): string {
+  if (!value) return '';
+  if (!/[-_]/.test(value)) return value[0].toLowerCase() + value.slice(1);
+  const words = value.split(/[-_]+/).filter(Boolean);
+  return words.map((word, index) => index ? word[0].toUpperCase() + word.slice(1).toLowerCase() : word.toLowerCase()).join('');
+}
+const join = (...parts: string[]): string => camelSharkBase(parts.join('-'));
 
 /** One template per joke shape. Each returns a name with a shark word in it. */
 const TEMPLATES: readonly ((random: RandomSource) => string)[] = [
@@ -137,7 +144,28 @@ const TEMPLATES: readonly ((random: RandomSource) => string)[] = [
 
 /** True when `name` has a segment from SHARK_WORDS. */
 export const hasSharkWord = (name: string): boolean =>
-  name.toLowerCase().split(/[-_]/).some((segment) => SHARK_WORDS.has(segment));
+  name.replace(/\d+$/, '').replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().split(/[-_]/).some((segment) => SHARK_WORDS.has(segment));
+
+const APPROVED_WORDS = new Set([
+  ...ADJECTIVES, ...SHARK_NOUNS, ...SPECIES, ...SPANISH_ADJECTIVES, ...FOODS,
+  ...MC_SHARKS, ...MC_FACES.map(word => `${word}face`), ...MUCHO, ...FIN_DE,
+  ...SO_SUBJECTS, ...SO_JOKES.flat(), ...NO_BUENO, ...SPANISH_WORDS,
+  'el', 'mc', 'mucho', 'muy', 'fin', 'de', 'so', 'it', 'no', 'bueno',
+].flatMap(word => word.split('-')));
+
+/** Preview bases use the same approved vocabulary as the generator. */
+export function isAllowedSharkBase(base: string): boolean {
+  return /^[a-z][A-Za-z]{2,30}$/.test(base) && isValidHandle(base) && hasSharkWord(base)
+    && base.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase().split('-').every(word => APPROVED_WORDS.has(word));
+}
+
+/** Ordinals are decimal strings, never JS numbers; mirrors migration 063. */
+export function numberedSharkname(base: string, ordinal?: string | null): string {
+  if (!ordinal) return base;
+  const available = HANDLE_MAX_LENGTH - ordinal.length;
+  const bounded = base.length <= available ? base : `shark${base[0].toUpperCase()}${base.slice(1)}`.slice(0, available);
+  return `${bounded}${ordinal}`;
+}
 
 /**
  * A random sharkname. `avoid` lists names not to return (the learner's current
@@ -149,9 +177,9 @@ export function generateSharkname(random: RandomSource = Math.random, avoid: Ite
   const skip = new Set(Array.from(avoid, (name) => name.toLowerCase()));
   for (let attempt = 0; attempt < 50; attempt += 1) {
     const name = pick(random, TEMPLATES)(random);
-    if (name.length <= HANDLE_MAX_LENGTH && isValidHandle(name) && hasSharkWord(name) && !skip.has(name)) return name;
+    if (name.length < HANDLE_MAX_LENGTH && isValidHandle(name) && isAllowedSharkBase(name) && !skip.has(name.toLowerCase())) return name;
   }
-  return skip.has('thirsty-sharkie') ? 'sleepy-sharkie' : 'thirsty-sharkie';
+  return skip.has('thirstysharkie') ? 'sleepySharkie' : 'thirstySharkie';
 }
 
 /** A seeded RandomSource (mulberry32): the same seed gives the same names. */

@@ -8,14 +8,61 @@ now claims, and what has not been done. The machine-readable record is `docs/aud
 the runtime projection of it is `lib/curation-registry.ts`; the gate that
 applies it is described in `docs/curation-claims.md`.
 
-Last updated 2026-09-11. The wave is complete. Every one of the 2,128 items a
+The September wave was completed on 2026-09-11. Every one of the 2,128 items a
 learner can be served has been read twice, rewritten or retired, translated
 from the final English, and recorded in the ledger; all sixteen categories are
 in the gate's scope, so an item without a current passing record is withheld
 rather than served with no claim. The 319 items in the retired sections have
 been read once each and disposed of.
 
-## 1. What a learner can be served, counted
+On 2026-10-13, forty fresh English questions were authored and model-reviewed
+for the ten depleted Learn levels: JavaScript 1/2/4, Node.js 8, DSA 4,
+Algorithms 1/6/8/10 and Security 15. Their exact-content records and evidence
+are in the same ledger and registry. This is a content addition, not a human
+review claim or completion of the remaining coding/override audit in #176.
+The explicit membership in `roadmap-questions-restored.ts` preserves historical
+ids and level numbers. With all 485 current production question hides applied,
+the restored levels have respectively 5/4/5, 6, 6, 4/4/4/5 and 5 reviewed
+questions; none is unavailable. The hidden questions remain hidden.
+
+## Current inventory reconciliation — 14 October 2026
+
+The current implementation branch contains 2,168 authored questions in the
+active categories. The exact-content eligibility gate serves 2,014 and withholds
+154. Re-reading the production override layer found 485 deletion rows and zero
+active edits or custom questions. Of the eligible static items, 194 are hidden
+by those rows, leaving 1,820 effective questions on this branch. The forty new
+questions are included in that figure; this is a branch/database reconciliation,
+not a claim that the branch has already deployed. Every one of the 1,820 has a
+current passing question-review record.
+
+The coding catalogue now contains 770 tasks, of which 725 are issued and 45
+system-design tasks remain hidden. Their executable grading checks are distinct
+from editorial review: the complete required CI coding/client test step passed
+on `f520045d` (run 38486027732), then the release was held by the initial bundle
+budget. The 501 React reference/junior/senior implementations also passed the new
+isolated engine locally. None of those runs supplies missing item-level scores.
+The coding editorial wave remains open; the old count of 249 below describes
+the September wave only.
+
+The native FDE/DSA catalogues are now inventoried by exact English content:
+24 modules, 38 lessons, 112 activities and 113 individual check questions —
+263 lesson/activity/question records. Activities include 47 code activities;
+reuse bindings point at their canonical coding task. Availability still depends
+on the existing deployment flags and storage, so authored materials are counted
+even where a deployment does not currently enable a path. Their earlier
+unpublished status is not grounds for omitting them from the follow-up audit.
+This inventory is not an editorial approval of those records.
+
+`audit:devshark-inventory` now records fresh-level membership explicitly, coding
+hashes and issuing state, and hashes every path record, with separate reviewer
+exports. The coding exporter and grader use repository-relative imports rather
+than a former review machine's absolute path. Production override counts were
+read through the authenticated Supabase connection; no content was restored or
+rewritten in that database. No inaccessible override source is claimed in this
+dated snapshot. New edits after the snapshot require another reconciliation.
+
+## 1. September inventory, retained as historical evidence
 
 Every place a devShark question can reach a learner was reconciled from the
 code (`npm run audit:devshark-inventory`). The numbers are the repository's;
@@ -264,12 +311,13 @@ served on one reading is the one thing this audit does not do.
   wrote them, which is inconsistent between files: 46 occurrences are spaced
   and 16 are tight, and Czech genuinely writes `100% využití` tight when it is
   adjectival. One owner decision settles it.
-- The 249 coding tasks are issued as before. Their audit needs the grader
+- The September inventory's 249 coding tasks were issued as before. Their audit needs the grader
   checks `docs/audit/wip/CODING-BRIEF.md` specifies (reference, starter, an
   alternative valid solution and two wrong approaches through the real
   sandbox), and the batches with solutions are ready in `docs/audit/wip/coding/`.
-- The two learning paths are unpublished (both switches off) and unreachable;
-  they were not inventoried item by item.
+- The two learning paths were unpublished at the September reading and were
+  not inventoried item by item then. The current reconciliation above now
+  counts their exact lesson, activity and question content.
 - The review is model-performed. It is a real item-level review with recorded
   evidence, and it is not a human review; the product's own wording keeps the
   distinction. A human reading of the 152 retirements and of the 3 corrected

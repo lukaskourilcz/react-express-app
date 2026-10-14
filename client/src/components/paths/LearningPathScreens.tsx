@@ -22,6 +22,8 @@ import { isBarred, useLocks } from '../../lib/locks';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
 import { useTrack } from '../../lib/tracks';
 import { capturePathEvent } from '../../lib/analytics';
+import { CodingCompletion } from '../../coding/CodingCompletion';
+import { announceVerifiedQuestXp, syncXpWithServer } from '../../lib/xp';
 import LoadingScreen from '../LoadingScreen';
 import ErrorRetry from '../ErrorRetry';
 import {
@@ -677,6 +679,10 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
         if (attempt.current !== target) return;
         setAttemptUsedUp(false);
         setResult(graded);
+        if (!graded.replayed && graded.xpAwarded > 0) {
+          announceVerifiedQuestXp(graded.xpAwarded);
+          void syncXpWithServer({ announceRankUp: true });
+        }
         if (graded.state === 'verified_pass') {
           capturePathEvent('learning_path_activity_verified', {
             pathId,
@@ -847,7 +853,13 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             />
           )}
 
-          {open?.code && (
+          {open?.code && result?.state === 'verified_pass' && result.code?.outcome === 'passed' && <CodingCompletion
+            xp={result.xpAwarded} complexity={result.complexity} backHref={moduleHref(pathId,module.id)}
+            nextHref={result.nextActivityId && result.nextActivityId !== open.activity.id ? (() => {
+              const nextModule = entry.manifest.modules.find(one => one.activities.some(activity => activity.id === result.nextActivityId));
+              return nextModule ? activityHref(pathId,nextModule.id,result.nextActivityId!) : undefined;
+            })() : undefined} />}
+          {open?.code && !(result?.state === 'verified_pass' && result.code?.outcome === 'passed') && (
             <CodeActivity
               key={open.activity.id}
               code={open.code}
@@ -874,7 +886,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             />
           )}
 
-          {result && (
+          {result && !(open?.code && result.state === 'verified_pass' && result.code?.outcome === 'passed') && (
             <section className="lp-card lp-section">
               <div className="lp-completion__line">
                 <h2>{t('paths.result')}</h2>

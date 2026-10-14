@@ -8,6 +8,7 @@
 
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Editor } from '../../coding/Editor';
+import { ComplexityInfo } from '../../coding/CodingCompletion';
 import { useT } from '../../i18n/LanguageContext';
 import { LessonView, RichText } from './LessonBody';
 import { useLoc, useLocList } from './localized';
@@ -317,6 +318,7 @@ export function CodeActivity({
       <div className="lp-split__brief">
         <div className="lp-brief lp-card">
           <RichText text={loc(code.prompt)} />
+          {code.complexityGuidance?.targetTime && <div className="cd-complexity"><span>{t('coding.complexity.desired', { complexity: code.complexityGuidance.targetTime })}</span><ComplexityInfo guidance={code.complexityGuidance} /></div>}
           {contract.length > 0 && (
             <section className="lp-section">
               <h3>{t('paths.code.contract')}</h3>

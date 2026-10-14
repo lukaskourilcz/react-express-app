@@ -40,7 +40,9 @@ const calls = vi.hoisted(() => ({
   serverDraft: null as null | { activityId: string; revision: number; content: Record<string, unknown>; updatedAt: string },
   next: null as string | null,
   submitFailures: [] as unknown[],
+  codePassed: false,
 }));
+vi.mock('../src/lib/xp', async importOriginal => ({ ...await importOriginal<typeof import('../src/lib/xp')>(), announceVerifiedQuestXp: vi.fn(), syncXpWithServer: vi.fn(async () => {}) }));
 
 vi.mock('../src/lib/auth', () => ({ useAuth: () => ({ user: { id: 'user-1' }, isAuthenticated: true, isLoading: false }) }));
 vi.mock('../src/lib/entitlement', () => ({
@@ -95,10 +97,10 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
       if (failure) throw failure;
       const check = Array.isArray(input.answers);
       return {
-        activityId: check ? C : A, state: 'needs_revision', verification: 'machine_verified', score: 0.5, criteria: [],
+        activityId: check ? C : A, state: calls.codePassed ? 'verified_pass' : 'needs_revision', verification: 'machine_verified', score: 0.5, criteria: [],
         questions: check ? [{ questionId: 'q1', correct: false, correctIndex: 1, explanation: loc('Because of the right side.') }] : null,
-        code: check ? null : { outcome: 'failed', results: [], hidden: null, check: null, logs: [], codeError: null },
-        feedback: [], module: null, guidedComplete: false, nextActivityId: calls.next, replayed: false, xpAwarded: 0,
+        code: check ? null : { outcome: calls.codePassed ? 'passed' : 'failed', results: [], hidden: null, check: null, logs: [], codeError: null },
+        feedback: [], module: null, guidedComplete: false, nextActivityId: calls.next, replayed: false, xpAwarded: calls.codePassed ? 25 : 0,
       };
     }),
   };
@@ -109,6 +111,7 @@ vi.mock('../src/lib/learningPaths', async (importOriginal) => {
 beforeAll(() => import('../src/components/paths/LearningPathScreens'), 60_000);
 
 beforeEach(() => {
+  calls.codePassed = false;
   calls.start.length = 0;
   calls.submit.length = 0;
   calls.drafts.length = 0;
@@ -148,6 +151,19 @@ const wait = (ms: number) => act(async () => { await new Promise((resolve) => se
 const status = () => document.querySelector('.lp-work .lp-actions__status')?.textContent;
 
 describe('one attempt takes one result', () => {
+  it('finishes code with the shared Passed banner and two actions', async () => {
+    calls.codePassed = true;
+    calls.next = B;
+    await mount(A);
+    await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+    await press('Submit');
+    expect(await screen.findByRole('heading', { name: 'Passed +25 XP' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Next task' })).toHaveAttribute('href', expect.stringContaining(B));
+    expect(screen.getByRole('link', { name: 'Back to the list' })).toHaveAttribute('href','/roadmap/paths/dsa-foundations/dsa-v1-d01');
+    expect(screen.queryByRole('textbox', { name: 'Your solution' })).toBeNull();
+    expect(screen.queryByRole('heading', { name: 'Results' })).toBeNull();
+    expect(screen.queryByText('Complexity could not be determined')).toBeNull();
+  });
   it('a second submission of a graded code exercise opens a fresh attempt with a key of its own', async () => {
     await mount(A);
     await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));

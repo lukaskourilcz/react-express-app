@@ -56,6 +56,8 @@ const DEFAULT_ROUTES = [
   '/quiz',
   '/daily',
   '/learn',
+  '/big-o',
+  '/learn/big-o',
   '/today',
   '/challenge',
   '/leaderboard',

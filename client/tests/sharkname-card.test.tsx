@@ -7,7 +7,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { MemoryRouter } from 'react-router-dom';
 import { LanguageProvider } from '../src/i18n/LanguageContext';
 import SharknameCard from '../src/components/SharknameCard';
-import { hasSharkWord } from '../../shared/sharkname';
+import { hasSharkWord, numberedSharkname } from '../../shared/sharkname';
 import { isValidHandle } from '../../shared/handles';
 import { server } from './mocks/server';
 
@@ -20,7 +20,7 @@ const ADA = { realName: 'Ada Lovelace', photo: 'https://lh3.googleusercontent.co
 const LATER = new Date(Date.now() + 20 * 86_400_000).toISOString();
 const EARLIER = new Date(Date.now() - 86_400_000).toISOString();
 
-interface HandleRow { handle: string | null; discoverable: boolean; country: string | null; canChangeAt: string | null }
+interface HandleRow { handle: string | null; ordinal?: string; base?: string; discoverable: boolean; country: string | null; canChangeAt: string | null }
 interface IdentityRow { showRealName: boolean; showPhoto: boolean; realName: string | null; photo: string | null }
 
 /** A stand-in for the two ops, holding one learner's rows. */
@@ -37,14 +37,14 @@ function serve(options: {
   server.use(
     http.get('*/api/user/friends-handle', () => HttpResponse.json(handle)),
     http.put('*/api/user/friends-handle', async ({ request }) => {
-      const body = (await request.json()) as { handle: string };
+      const body = (await request.json()) as { base: string };
       handlePuts.push(body);
-      if (options.taken?.includes(body.handle.toLowerCase())) {
+      if (options.taken?.some(name => name.toLowerCase() === body.base.toLowerCase())) {
         return HttpResponse.json({ error: { code: 'handle_taken', message: 'That sharkname is already taken' } }, { status: 409 });
       }
-      handle.handle = body.handle;
+      handle.handle = body.base;
       handle.canChangeAt = LATER;
-      return HttpResponse.json({ handle: body.handle });
+      return HttpResponse.json({ handle: body.base });
     }),
     http.get('*/api/user/identity', () => HttpResponse.json(identity)),
     http.put('*/api/user/identity', async ({ request }) => {
@@ -82,6 +82,17 @@ const reducedMotion = (reduce: boolean) => {
 afterEach(() => reducedMotion(false));
 
 describe('your sharkname', () => {
+  it('previews a changed base with the same server number without allocating anything', async () => {
+    reducedMotion(true);
+    const { handlePuts } = serve({ handle: { handle: 'sleepySharkie9007199254740993', base: 'sleepySharkie', ordinal: '9007199254740993' } });
+    const { container } = renderCard();
+    const input = await field();
+    expect(input).toHaveValue('sleepySharkie');
+    fireEvent.click(screen.getByRole('button', { name: 'Generate' }));
+    const base = (input as HTMLInputElement).value;
+    expect(container.querySelector('.sn-plate')).toHaveTextContent(numberedSharkname(base, '9007199254740993'));
+    expect(handlePuts).toEqual([]);
+  });
   it('shows the current sharkname in the field', async () => {
     serve();
     renderCard();
@@ -106,7 +117,7 @@ describe('your sharkname', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText(`Saved. Your sharkname is ${rolled}.`)).toBeInTheDocument();
-    expect(handlePuts).toEqual([{ handle: rolled }]);
+    expect(handlePuts).toEqual([{ base: rolled }]);
   });
 
   it('flips through names before it lands when motion is allowed, and Generate waits for it', async () => {
@@ -131,16 +142,16 @@ describe('your sharkname', () => {
 
   it('offers another name when the one sent is taken', async () => {
     reducedMotion(true);
-    const { handlePuts } = serve({ taken: ['fin-de-fiesta'] });
+    const { handlePuts } = serve({ taken: ['finDeFiesta'] });
     renderCard();
     const input = await field();
-    fireEvent.change(input, { target: { value: 'fin-de-fiesta' } });
+    fireEvent.change(input, { target: { value: 'finDeFiesta' } });
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('fin-de-fiesta is taken.');
+    expect(alert).toHaveTextContent('finDeFiesta is taken.');
     const offer = within(alert).getByRole('button', { name: /^Try / });
     const suggestion = offer.textContent!.replace(/^Try /, '');
-    expect(suggestion).not.toBe('fin-de-fiesta');
+    expect(suggestion).not.toBe('finDeFiesta');
     expect(isValidHandle(suggestion) && hasSharkWord(suggestion)).toBe(true);
 
     fireEvent.click(offer);
@@ -149,7 +160,7 @@ describe('your sharkname', () => {
     expect(screen.queryByRole('alert')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText(`Saved. Your sharkname is ${suggestion}.`)).toBeInTheDocument();
-    expect(handlePuts).toEqual([{ handle: 'fin-de-fiesta' }, { handle: suggestion }]);
+    expect(handlePuts).toEqual([{ base: 'finDeFiesta' }, { base: suggestion }]);
   });
 
   it('refuses a name the database would refuse, without asking it', async () => {
@@ -158,10 +169,10 @@ describe('your sharkname', () => {
     const input = await field();
     fireEvent.change(input, { target: { value: 'no spaces-shark' } });
     fireEvent.keyDown(input, { key: 'Enter' });
-    expect(await screen.findByRole('alert')).toHaveTextContent('3–32 letters, numbers, hyphens or underscores');
+    expect(await screen.findByRole('alert')).toHaveTextContent('Your number is added automatically.');
     expect(handlePuts).toEqual([]);
     // 32 characters fit; the field stops at 32.
-    expect(input).toHaveAttribute('maxLength', '32');
+    expect(input).toHaveAttribute('maxLength', '31');
   });
 
   it('says until when a recent sharkname is fixed, and offers no Generate meanwhile', async () => {

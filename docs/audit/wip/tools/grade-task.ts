@@ -4,12 +4,12 @@
 //   node grade-task.mjs <taskId> --drill '<answer json>'   (estimate: number; tradeoff/bottleneck: option index; sequence: [indices])
 // Prints JSON: verdict, visible results, hidden results, type check, logs.
 import { readFileSync } from 'node:fs';
-import { CODING_TASKS } from '/home/user/react-express-app/lib/coding/catalog';
-import { solutionFor } from '/home/user/react-express-app/lib/coding/solutions';
-import { runInSandbox } from '/home/user/react-express-app/lib/coding/sandbox';
-import { nodeTypeScriptChecker } from '/home/user/react-express-app/lib/coding/ts-check-node';
-import { codeOutcome, gradeDesign, prepareDesign } from '/home/user/react-express-app/lib/coding/grade';
-import { runReactSuite } from '/home/user/react-express-app/lib/coding/react-runner';
+import { CODING_TASKS } from '../../../../lib/coding/catalog';
+import { solutionFor } from '../../../../lib/coding/solutions';
+import { runInSandbox } from '../../../../lib/coding/sandbox';
+import { nodeTypeScriptChecker } from '../../../../lib/coding/ts-check-node';
+import { codeOutcome, gradeDesign, prepareDesign } from '../../../../lib/coding/grade';
+import { runReactSuite } from '../../../../lib/coding/react-runner';
 
 async function main() {
   const [taskId, arg, extra] = process.argv.slice(2);

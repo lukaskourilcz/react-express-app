@@ -56,7 +56,7 @@ test('nothing leads to Node',()=>{ expect(reach()).toEqual(['no fs','blocked','b
     suite: `import App from './App'; \ntest('renders nothing yet', () => { expect(typeof App).toBe('function'); });`,
   });
   assert.equal(forged.passed, 0, JSON.stringify(forged));
-  assert.match(forged.compileError ?? '', /process is not defined/);
+  assert.match(forged.compileError ?? '', /'?process'? is not defined/);
   console.log('PASS a forged result.json and early exit are not a verdict');
   const stuck = await runIsolatedReactSuite({
     appSource: 'while(true){}; export default function App(){return null}',

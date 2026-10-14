@@ -5,12 +5,12 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react';
 import { SwimCta, FinButton } from '../components/landing/LandingKit';
 import { Button } from '@astryxdesign/core/Button';
-import { Tooltip } from '@astryxdesign/core/Tooltip';
 import { Link } from 'react-router-dom';
 import { useLanguage } from '../i18n/LanguageContext';
 import { readJSON, writeJSON } from '../lib/storage';
 import { ApiError, friendlyError, isPremiumRequired } from '../lib/api';
 import { Editor } from './Editor';
+import { CodingCompletion, ComplexityInfo } from './CodingCompletion';
 import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
 import { TYPE_CHECK_STOPPED_MESSAGE } from '../../../shared/coding-evaluate';
@@ -21,7 +21,7 @@ import { evolvingStage } from '../../../shared/evolving';
 import { skipTask } from './practice';
 import { TermsBar } from '../components/ui/Terms';
 import { ReportDialog } from '../components/ReportDialog';
-import { FlagIcon, InfoIcon, PlayIcon, FormatCodeIcon, CheckCircleIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
+import { FlagIcon, PlayIcon, FormatCodeIcon, CheckCircleIcon, ResetIcon, HintIcon, EyeIcon, SkipIcon } from '../components/ui/icons';
 import { reportQuestion } from '../lib/supabase';
 import { glossaryDomainFor } from '../lib/glossaryDomain';
 import { CodePuzzle } from './CodePuzzle';
@@ -39,22 +39,6 @@ import './Coding.css';
 /** Moves focus to a confirmation's safe choice when it appears. Module-level,
  * so its identity is stable and it runs once per mount. */
 const focusOnMount = (node: HTMLButtonElement | null) => { node?.focus(); };
-
-function ComplexityInfo({ guidance }: { guidance: ReturnType<typeof complexityGuidance> }) {
-  // Hover/focus use Astryx's normal tooltip behavior; a tap pins it until a
-  // second tap, focus leaves, or Escape. This keeps the information reachable
-  // on touch screens, where the shared tooltip suppresses simulated hover.
-  const [pinned, setPinned] = useState<boolean | undefined>(undefined);
-  return <Tooltip isOpen={pinned} placement="above" content={<div className="cd-complexity__tip">
-    {guidance.targetSpace && <p>Target extra space: <code>{guidance.targetSpace}</code>.</p>}
-    <p>{guidance.note}</p>
-  </div>}>
-    <Button variant="ghost" isIconOnly icon={<InfoIcon size={16} />} label="About Big O complexity" className="cd-complexity__info"
-      onClick={() => setPinned((value) => value === true ? false : true)}
-      onBlur={() => setPinned(false)} onFocus={() => setPinned(undefined)} onMouseEnter={() => setPinned(undefined)}
-      onKeyDown={(event) => { if (event.key === 'Escape') setPinned(false); }} />
-  </Tooltip>;
-}
 
 /** A React suite that moves focus inside the preview frame takes the page's
  * focus with it. Call before a run; the function it returns gives focus back
@@ -948,13 +932,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {(verdict.xpAwarded > 0 || (isReact && verdict.verdict === 'passed' && !verdictStale)) && <span className="cd-verdict__xp">{t('coding.verdict.xp', { xp: verdict.xpAwarded })}</span>}
       </h3>
       {!(isReact && verdict.verdict === 'passed' && !verdictStale) && <RepeatXpNote verdict={verdict} />}
-      {!isReact && verdict.complexity && <div className="cd-complexity" aria-label="Solution efficiency">
-        <strong>Estimated time: {verdict.complexity.time ?? 'Cannot determine'}</strong>
-        {!verdictStale && verdict.verdict === 'passed' && verdict.complexity.assessment === 'within-target' && <p>Meets the stated time target under the analysis assumptions.</p>}
-        {!verdictStale && verdict.complexity.assessment === 'above-target' && <p>Above the stated time target. Look for repeated work inside a scan.</p>}
-        <p>{verdict.complexity.explanation}</p>
-        <details><summary>How this estimate works</summary><p>{verdict.complexity.assumptions}</p></details>
-      </div>}
+      {verdict.complexity?.time && <p className="cd-verdict__row">{t('coding.complexity.result', { complexity: verdict.complexity.time })}</p>}
       {verdictStale && <p className="cd-verdict__row">{t('coding.verdict.stale')}</p>}
       {verdict.verdict === 'failed' && verdict.hidden && verdict.hidden.passed < verdict.hidden.total && visiblePassed && <p className="cd-verdict__row">{t('coding.verdict.hiddenFailed')}</p>}
       {verdict.puzzle ? (
@@ -1037,10 +1015,10 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         {formatOf(task) === 'debug' && <span className="cd-tag cd-tag--format">{t('coding.format.debug')}</span>}
       </div>
       <Prompt className="cd-prompt" text={L(task.prompt)} />
-      <div className="cd-complexity">
-        <span>Big O{complexity.targetTime ? ` · Target ${complexity.targetTime} time` : ' · Efficiency guidance'}</span>
+      {complexity.targetTime && <div className="cd-complexity">
+        <span>{t('coding.complexity.desired', { complexity: complexity.targetTime })}</span>
         <ComplexityInfo guidance={complexity} />
-      </div>
+      </div>}
       {/* Earlier briefs still apply, but they are context now, not the
           task: smaller, lighter, and numbered by the stage that set them. */}
       {Boolean(task.previousRequirements?.length) && <details className="cd-previous">
@@ -1123,6 +1101,13 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // follows the pane in reading order and exists only while it holds something.
   const hintsOpen = taken > 0 || skipping || skipResult !== null || confirming === 'reveal' || solution !== null;
   const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
+
+  if (verdict?.verdict === 'passed' && !verdictStale && !verdict.graderUnavailable) {
+    return <div className={`cd-workbench cd-workbench--${mode}`}><CodingCompletion
+      xp={verdict.xpAwarded} complexity={verdict.complexity} sectionRef={verdictRef}
+      onNext={mode === 'lesson' ? onContinue : undefined} nextHref={nextHref ?? undefined}
+      backHref={backHref ?? (mode === 'lesson' ? '/learn' : `/coding/${task.track}`)} /></div>;
+  }
 
   return (
     <div

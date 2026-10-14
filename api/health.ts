@@ -1,7 +1,6 @@
 import type { VercelRequest, VercelResponse } from '../lib/vercel-types.js';
-import { createAnonClient, createServiceClient, jsonError, withTimeout, logEvent, withRequestContext } from '../lib/http';
+import { createServiceClient, jsonError, withTimeout, logEvent, withRequestContext } from '../lib/http';
 
-const supabase = createAnonClient();
 const service = createServiceClient();
 
 /**
@@ -28,9 +27,12 @@ async function routeHandler(req: VercelRequest, res: VercelResponse) {
   let supabaseStatus: 'ok' | 'down' | 'unconfigured' = 'unconfigured';
   let privilegedStatus: 'ok' | 'down' | 'unconfigured' = 'unconfigured';
 
-  if (supabase) {
+  // Private learning tables intentionally grant nothing to anonymous callers.
+  // Readiness checks run on the server's authorized connection too; requiring
+  // an anonymous SELECT would report a healthy, private database as down.
+  if (service) {
     try {
-      const { error } = await withTimeout(supabase.from('user_stats').select('id').limit(1), 1500);
+      const { error } = await withTimeout(service.from('user_stats').select('id').limit(1), 1500);
       supabaseStatus = error ? 'down' : 'ok';
     } catch (error) {
       supabaseStatus = 'down';

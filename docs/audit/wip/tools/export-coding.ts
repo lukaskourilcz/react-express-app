@@ -1,20 +1,20 @@
 import { writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { CODING_TASKS } from '/home/user/react-express-app/lib/coding/catalog';
-import { solutionFor } from '/home/user/react-express-app/lib/coding/solutions';
-import { puzzleFor } from '/home/user/react-express-app/lib/coding/puzzles';
-import { approachesFor } from '/home/user/react-express-app/lib/coding/approaches';
-import { taskHash, taskTranslationHash } from '/home/user/react-express-app/lib/curation';
-import { levelCodingTasks } from '/home/user/react-express-app/lib/coding/active';
+import { CODING_TASKS } from '../../../../lib/coding/catalog';
+import { solutionFor } from '../../../../lib/coding/solutions';
+import { puzzleFor } from '../../../../lib/coding/puzzles';
+import { approachesFor } from '../../../../lib/coding/approaches';
+import { taskHash, taskTranslationHash } from '../../../../lib/curation';
+import { levelCodingTasks } from '../../../../lib/coding/active';
 
-import { JAVASCRIPT_TASKS } from '/home/user/react-express-app/lib/coding/tasks/javascript';
-import { JAVASCRIPT_LOOP_TASKS } from '/home/user/react-express-app/lib/coding/tasks/javascript-loops';
-import { JAVASCRIPT_DEBUG_TASKS } from '/home/user/react-express-app/lib/coding/tasks/javascript-debug';
-import { TYPESCRIPT_TASKS } from '/home/user/react-express-app/lib/coding/tasks/typescript';
-import { TYPESCRIPT_LOOP_TASKS } from '/home/user/react-express-app/lib/coding/tasks/typescript-loops';
-import { REACT_TASKS } from '/home/user/react-express-app/lib/coding/tasks/react';
-import { REACT_LOOP_TASKS } from '/home/user/react-express-app/lib/coding/tasks/react-loops';
-import { SYSTEM_DESIGN_TASKS } from '/home/user/react-express-app/lib/coding/tasks/system-design';
+import { JAVASCRIPT_TASKS } from '../../../../lib/coding/tasks/javascript';
+import { JAVASCRIPT_LOOP_TASKS } from '../../../../lib/coding/tasks/javascript-loops';
+import { JAVASCRIPT_DEBUG_TASKS } from '../../../../lib/coding/tasks/javascript-debug';
+import { TYPESCRIPT_TASKS } from '../../../../lib/coding/tasks/typescript';
+import { TYPESCRIPT_LOOP_TASKS } from '../../../../lib/coding/tasks/typescript-loops';
+import { REACT_TASKS } from '../../../../lib/coding/tasks/react';
+import { REACT_LOOP_TASKS } from '../../../../lib/coding/tasks/react-loops';
+import { SYSTEM_DESIGN_TASKS } from '../../../../lib/coding/tasks/system-design';
 const SOURCE_OF = new Map<string, string>();
 for (const [name, list] of [['javascript', [...JAVASCRIPT_TASKS, ...JAVASCRIPT_DEBUG_TASKS]], ['javascript-loops', JAVASCRIPT_LOOP_TASKS], ['typescript', [...TYPESCRIPT_TASKS, ...TYPESCRIPT_LOOP_TASKS]], ['react', REACT_TASKS], ['react-loops', REACT_LOOP_TASKS], ['system-design', SYSTEM_DESIGN_TASKS]] as const) {
   for (const t of list) SOURCE_OF.set(t.id, name);

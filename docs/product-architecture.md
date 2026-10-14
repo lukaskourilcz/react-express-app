@@ -235,34 +235,21 @@ recorded in and share a rank; the time is shown and recorded but decides
 nothing. The all-time boards and Today arrive in order without a rank, and
 the Leaderboard screen numbers them so equal results share a rank there too.
 
-Names on the boards are opt-in. `user_stats.show_on_leaderboards` (049) is off
-for every learner, existing ones included, until they switch on "Show my name
-and photo on leaderboards" on the Profile or on the Leaderboard. Both switches
-read one query and write through `op=leaderboard-visibility` in
-`api/user/[op].ts` (GET `{ visible }`, PUT `{ visible }`; signed in only, each
-PUT charged to the account's write limit). Every board routine returns
-`display_name` and `picture` only while the flag is on and NULL otherwise, and
-the screen then shows "Learner" with the default avatar. From 055 the name is
-`board_display_name(user_id)`, one rule for every board, and any new board
-reads it too: NULL while the flag is off; with it on, the learner's
-sharkname, or their Google name when they chose "Friends see: your name";
-and, for a learner with no sharkname, the Google name, as 049 showed it. The
-picture still follows the flag alone (`CASE WHEN show_on_leaderboards THEN
-picture END`). The viewer's own
-30-day row follows the same rule, so it shows them what everybody else sees:
-a switch refetches every board the learner's tab has loaded, their personal
-board at once, and everyone else sees the change within about a minute, which
-the switch's hint says. The privacy policy says the same under
-"Leaderboards". The name and picture stored for a board are the ones on the
-account's Google identity (`identity_data.full_name` or `name`, `avatar_url`
-or `picture`), read in `verifiedProfile` (`api/user/[op].ts`), never
-`user_metadata`, which the account can rewrite from the browser. An account
-without a Google identity (email and password) has no name there: with the
-switch on it appears by its sharkname, and without a sharkname the boards
-say "Learner". The Biggest Shark Challenge's Hall of Fame shows the name a
-learner types when saving a score. That box starts empty: it takes the
-account's name only while this switch is on, fills it once so a cleared box
-stays clear, and says the name is shown publicly on the Hall of Fame.
+Leaderboard names are mandatory from migration 064. Profile's independent
+`leaderboard-name` operation chooses `nickname` (default) or `account`;
+`board_display_name(user_id)` applies that choice on every board. Account
+names come from the verified provider identity, or the local part of a
+confirmed email; the full email and browser-editable `user_metadata` are
+never accepted as public identity. Missing nicknames receive the server's
+unique generated shark name. This choice does not change what friends see.
+`user_stats.show_on_leaderboards` now controls only the optional public
+photo, retaining previous photo consent. `leaderboard-visibility` remains
+the photo operation and cannot remove a name from a board. Changes invalidate
+the learner's board caches; public reads refresh within about a minute.
+The viewer's own row follows the same name/photo rules. Challenge uses this
+server identity when automatically saving a completed positive score; guests
+get a generated name tied to the run. There is no name-entry form and zero
+scores create no score or guest-name allocation.
 `api/leaderboard.ts` serves every shared board (`period=30d`, `global`,
 `category` and `daily`) to everyone with `public, s-maxage=60` and no
 `stale-while-revalidate`, so the CDN never serves a board older than a
@@ -532,7 +519,7 @@ without 058 the API sets it only when no XP was paid and the progress row
 showed a reveal before the pass, so a database without 048, which still pays,
 never reads as a forfeit. The workbench says this in the reveal
 confirmation for a signed-in learner who has not passed the task, and shows
-"Passed — no XP because the solution was revealed" on such a pass; after a
+"Passed +0 XP" on such a pass; after a
 recorded pass the solution opens without the warning, since it costs nothing.
 The junior and senior readings shown beside each other after a pass are
 stripped of their authoring comments in `lib/coding/solutions/index.ts`, so the
@@ -568,7 +555,16 @@ database.
 
 Learn levels of the `javascript`, `typescript`, and `react` topics carry one to
 three coding tasks sealed into the level session; for an account, completion
-requires a passed verdict for each. A guest's coding passes are never stored,
+requires a verified, unrevealed passed verdict for each. The parent attempt is
+created before the intro is served, with its sealed coding-task list. `Build it`
+links open a new tab with the coding session in the URL fragment; that tab
+removes the fragment and submits the session in the request body. The server
+checks the owner, task binding, expiry and open attempt on access, Submit and
+reveal. A read-only attempt-status request checks completion when Learn regains
+focus. Missing unrevealed coding passes leave the attempt open, recording no
+failure, XP or streak; a reveal still ends it. Migration 062 enforces the same
+rule under the parent row lock, before dependent coding writes.
+A guest's coding passes are never stored,
 so a guest's level passes on its questions: the completion answers
 `codingUnverified: true`, records nothing, and the browser keeps the pass on
 that device and says coding tasks are checked and saved after sign-in. The Easy-band challenges of #226 (`EASY_BAND` in
@@ -879,7 +875,10 @@ disappears when checkout cannot apply the coupon or the offer has expired.
   Checkout before 4 October.
 
 - **`shared/tiers.ts`** is the one contract for what free includes: HTML, CSS
-  and JavaScript in full, React levels 1 to 12 of 25 (`FREE_LEARN_LEVELS`),
+  and JavaScript in full, React levels 1 to 12 of 25, and DSA levels 1 and 2
+  (`FREE_LEARN_LEVELS`). The DSA introduction is open without placement or a
+  track prerequisite at `/learn/big-o`, linked by the public `/big-o` guide;
+  this exception opens no other DSA content. Also free are
   the opening stages of every evolving project and short path
   (`FREE_EVOLVING_STAGES`, `freeStageCount`), and a starter set of standalone
   coding challenges listed once in `FREE_CODING_TASK_IDS`. The opening stages
@@ -1631,3 +1630,50 @@ rows stay, and `delete_user_data` still erases them (SQL test 200).
   a quiz on a topic Learn does not teach (`sharkCardStudyLink`). Previous and
   Next (and ← →) move through the deck; "Got it" takes the card out with an
   Undo. Empty, signed-out, loading and error states say how to get cards.
+
+## Learning and Challenge updates, 13 October 2026
+
+Coding passes use the shared 25 XP base (15 only for a reliably identified
+solution above its applicable authored time-complexity target). Unknown
+complexity is omitted, with no penalty. Cooldowns, reveals, unverified tasks
+and guest rules still determine the actual award. `/big-o` explains input
+size and common growth rates and links to DSA levels 1–2, available free
+without Skill Check. Later DSA access is unchanged.
+
+Learn creates a parent attempt before exposing a coding link. The new tab
+takes its sealed session from a fragment and removes it from the address;
+the server validates owner, task binding, open state and expiry on every
+operation. Missing coding work keeps Learn pending. Focus/status checks read
+the server's state; completion checks it again under the parent's row lock
+(migration 062). Fresh reviewed questions restore ten depleted levels while
+keeping all owner-hidden question overrides in place. Skill Check review
+is returned after each round is accepted and retains the displayed shuffle.
+
+Every Biggest Shark Challenge question allows 90 seconds. Topics are selected
+before starting and sealed in the run; refills cannot change them. Completed
+positive scores save automatically, for signed-in learners and guests, under
+one run ID. Zero scores create neither a score nor a guest name. Historical
+results with no topic evidence remain without it. Known selections show a
+count with the topics in a tooltip, or a gold fin for all available topics.
+
+Migration 063 assigns one global decimal ordinal to each existing/new handle
+and each positively completed guest run. The counter is transactional; numbers
+remain stable across renames and are never recycled. New generated names are
+camelCase plus the ordinal, and API ordinals are strings. The original unchanged
+ten seed handles are converted; custom choices are preserved. Preview rolls
+allocate nothing. The existing 30-day rename cooldown still applies.
+
+Migration 064 makes leaderboard identity mandatory, defaulting to the shark
+nickname. The independent `leaderboard-name` profile operation allows an
+account name obtained from the verified provider profile or confirmed email's
+local part, never a full email or a client-provided name. It changes neither
+the name nor the photo shared with friends. Existing public-photo consent is
+kept; the old visibility flag can no longer hide a leaderboard name.
+
+Verified native-path code now records acceptance and the shared coding award
+in one transaction (migration 065). A reused task keeps its ordinary task ID;
+an independent path exercise has a stable scoped ID. This prevents paying the
+same task again just because it was reached on another screen. Type-only,
+unverified, reveal, cooldown and repeat rules remain in record_coding_verdict.
+The accepted path response stores the actual award and the same complexity
+analysis used to choose it, so retries replay it without paying again.

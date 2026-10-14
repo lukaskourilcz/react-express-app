@@ -20,6 +20,7 @@ DECLARE
   v_boards   TEXT;
   v_expected TEXT;
   v_viewer   TEXT;
+  v_bo_name TEXT;
 BEGIN
   SELECT is_nullable, column_default INTO v_nullable, v_default
     FROM information_schema.columns
@@ -40,8 +41,10 @@ BEGIN
     p_daily_date => v_today, p_duration_ms => 60000);
 
   SELECT show_on_leaderboards INTO v_flag FROM public.user_stats WHERE user_id = v_bo;
-  ASSERT v_flag IS FALSE, format('a new learner starts hidden, got %s', v_flag);
+  ASSERT v_flag IS FALSE, format('a new learner starts without a public photo, got %s', v_flag);
 
+  SELECT handle INTO v_bo_name FROM public.user_handles WHERE user_id=v_bo;
+  UPDATE public.user_handles SET leaderboard_name_mode='account', leaderboard_account_name='Ada Lovelace' WHERE user_id=v_ada;
   -- Ada switches it on, as op=leaderboard-visibility does.
   UPDATE public.user_stats SET show_on_leaderboards = TRUE WHERE user_id = v_ada;
 
@@ -56,16 +59,16 @@ BEGIN
       (SELECT string_agg(COALESCE(display_name, '-') || '/' || COALESCE(picture, '-'), ', ' ORDER BY correct DESC)
          FROM public.daily_leaderboard_v2(v_today, 'webdev', 50)))
     INTO v_boards;
-  v_expected := format('Ada Lovelace/%1$s, -/-', v_ada_photo);
+  v_expected := format('Ada Lovelace/%1$s, %2$s/-', v_ada_photo,v_bo_name);
   v_expected := concat_ws(' | ', v_expected, v_expected, v_expected, v_expected);
   ASSERT v_boards = v_expected,
-    format('only the learner who switched it on is named, on all four boards; expected %s, got %s', v_expected, v_boards);
+    format('every learner is named; photos follow their independent consent, on all four boards; expected %s, got %s', v_expected, v_boards);
 
   -- Bo's own line on the 30-day board is marked as his and still unnamed:
   -- he sees what everybody else sees.
   SELECT COALESCE(display_name, '-') || '/' || COALESCE(picture, '-') INTO v_viewer
     FROM public.window_leaderboard(30, 100, NULL, 5, v_bo) WHERE is_viewer;
-  ASSERT v_viewer = '-/-', format('the viewer''s own row follows the same rule, got %s', v_viewer);
+  ASSERT v_viewer = v_bo_name || '/-', format('the viewer''s own row follows the same rule, got %s', v_viewer);
 
   -- Both switch: Bo on, Ada off. A later result does not switch Bo back.
   UPDATE public.user_stats SET show_on_leaderboards = NOT show_on_leaderboards WHERE user_id IN (v_ada, v_bo);
@@ -86,16 +89,16 @@ BEGIN
       (SELECT string_agg(COALESCE(display_name, '-') || '/' || COALESCE(picture, '-'), ', ' ORDER BY correct DESC)
          FROM public.daily_leaderboard_v2(v_today, 'webdev', 50)))
     INTO v_boards;
-  v_expected := format('-/-, Bo Private/%1$s', v_bo_photo);
+  v_expected := format('Ada Lovelace/-, %2$s/%1$s', v_bo_photo,v_bo_name);
   v_expected := concat_ws(' | ', v_expected, v_expected, v_expected, v_expected);
   ASSERT v_boards = v_expected,
-    format('switching the flag changes every board; expected %s, got %s', v_expected, v_boards);
+    format('switching photo consent changes every board; expected %s, got %s', v_expected, v_boards);
 
   -- Switched on with no stored name, the row keeps the photo and leaves the
   -- label to the client.
   UPDATE public.user_stats SET name = '   ' WHERE user_id = v_bo;
   SELECT COALESCE(display_name, '-') || '/' || COALESCE(picture, '-') INTO v_viewer
     FROM public.category_leaderboard('javascript', 50, 5) WHERE picture IS NOT NULL;
-  ASSERT v_viewer = format('-/%s', v_bo_photo), format('a blank name is no name, got %s', v_viewer);
+  ASSERT v_viewer = format('%s/%s', v_bo_name,v_bo_photo), format('a blank name is no name, got %s', v_viewer);
 END;
 $$;
