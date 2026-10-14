@@ -1,11 +1,19 @@
 import assert from 'node:assert/strict';
 import { assessComplexity } from '../lib/coding/complexity';
-import { codingPassXp } from '../shared/coding-complexity';
+import { codingPassXp, complexityGuidance } from '../shared/coding-complexity';
 import { codingTaskForHistory } from '../lib/coding/catalog';
 import { solutionFor } from '../lib/coding/solutions';
 
 export function complexityContracts() {
   const task = { track: 'javascript' as const, prompt: { en: 'Target: O(n) time and O(1) extra space.', cs: '' }, tests: [{ call: 'solve([1,2,3])', expected: 6 }] };
+  const target = (prompt: string) => complexityGuidance({ ...task, prompt: { en: prompt } }).targetTime;
+  assert.equal(target('Target: O(n).'), 'O(n)', 'a standalone authored runtime target is applicable');
+  assert.equal(target('Target: O(log min(a, b)) calls.'), 'O(log min(a, b))', 'nested notation remains complete');
+  assert.equal(target('Target: O(log n) checks and O(1) space.'), 'O(log n)');
+  assert.equal(target('Target: O(n) space.'), null, 'space cannot be mistaken for time');
+  assert.equal(target('Target: O(n time.'), null, 'incomplete notation is not presented');
+  assert.equal(complexityGuidance({ ...task, tests: [] }).targetTime, null, 'type-only tasks have no runtime target');
+  assert.equal(complexityGuidance({ ...task, track: 'react' }).targetTime, null, 'UI rendering has no comparable runtime target');
   const check = (code: string) => assessComplexity(task, code);
   assert.equal(check('const solve = xs => xs.length;').time, 'O(1)');
   assert.equal(check('const solve = xs => xs.map(x => x * 2);').time, 'O(n)');

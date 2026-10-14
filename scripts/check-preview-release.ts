@@ -1,9 +1,10 @@
 // Uses a private, temporary Vercel access link. Never print or persist cookies,
 // access URLs, sessions, source, credentials or full error response bodies.
-import { readFileSync } from 'node:fs';
+import { readFileSync, writeFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import { chromium } from '@playwright/test';
 import { solutionFor } from '../lib/coding/solutions';
+import { questions } from '../lib/quiz-data';
 
 const access=JSON.parse(readFileSync(process.argv[2],'utf8')) as {url:string};
 const origin=new URL(access.url).origin;
@@ -33,6 +34,58 @@ try {
       assert.equal(result.xpAwarded,0,'signed-out preview grading creates no XP');
       assert.equal(result.progress,null,'signed-out preview grading creates no progress');
       console.log(`PASS preview ${id} ${kind}: ${expected}, 0 XP, no progress`);
+    }
+  }
+  // Explicit opt-in: this creates one real guest score. Store its exact ID
+  // privately for guarded cleanup; never delete by a name or a broad filter.
+  if (process.argv[3] === '--challenge') {
+    const cleanupFile = process.argv[4];
+    assert(cleanupFile, 'Challenge verification requires a private cleanup file');
+    for (const positive of [true, false]) {
+      const opened = await context.request.get(`${origin}/api/quiz/challenge?categories=javascript&lang=en`);
+      assert.equal(opened.status(), 200, 'Challenge batch must open');
+      const batch = await opened.json();
+      const proofs: string[] = [];
+      for (let index = 0; index < (positive ? 4 : 3); index++) {
+        const question = batch.questions[index];
+        const authored = questions.find(one => one.id === question.id);
+        assert(authored, 'This check only grades a known, unedited authored question');
+        const answer = question.options.indexOf(authored.options[authored.correctAnswer]);
+        assert(answer >= 0, 'The displayed shuffle must contain the authored answer');
+        const selectedIndex = positive && index === 0 ? answer : (answer + 1) % question.options.length;
+        const submitted = await context.request.post(`${origin}/api/quiz/submit`, { data: { sessionId: batch.sessionId, answers: { [question.id]: selectedIndex }, lang: 'en' } });
+        assert.equal(submitted.status(), 200, 'Challenge answer must be accepted');
+        const result = await submitted.json();
+        assert.equal(result.results[0].isCorrect, positive && index === 0);
+        assert.equal(typeof result.results[0].scoreProof, 'string');
+        proofs.push(result.results[0].scoreProof);
+      }
+      const complete = () => context.request.post(`${origin}/api/quiz/challenge?resource=complete`, { data: { runToken: batch.runToken, proofs } });
+      const completed = await complete();
+      assert.equal(completed.status(), 200, 'Challenge completion must be accepted');
+      const result = await completed.json();
+      assert.equal(result.score, positive ? 1 : 0);
+      assert.equal(result.awarded, false, 'Guest completion awards no account XP');
+      if (positive) {
+        const record = result.record;
+        assert(record && typeof record.id === 'string', 'A positive completed run creates a score');
+        // Persist immediately so a later assertion failure still leaves a
+        // precise cleanup target. This file contains no session or proof.
+        writeFileSync(cleanupFile, JSON.stringify({ scoreId: record.id, score: 1, subject: 'webdev', topics: ['javascript'] }), { mode: 0o600 });
+        assert.deepEqual(record.topics, ['javascript']);
+        assert.equal(record.allTopics, false);
+        assert.match(record.name, /^[a-z][A-Za-z]*[1-9][0-9]*$/);
+        const repeated = await complete();
+        assert.equal(repeated.status(), 200);
+        const retry = await repeated.json();
+        assert.equal(retry.record.id, record.id, 'Retry replays the same score');
+        assert.equal(retry.record.name, record.name, 'Retry allocates no new name');
+        console.log('PASS preview Challenge: positive guest score, camelCase numbered identity, sealed topic evidence, same score on retry');
+      } else {
+        assert.equal(result.record, null, 'A zero score creates no leaderboard record');
+        assert.equal(result.xp, 0);
+        console.log('PASS preview Challenge: zero score omitted');
+      }
     }
   }
 } finally {await context.close();await browser.close();}
