@@ -106,8 +106,10 @@ for (const theme of ['light', 'dark'] as const) for (const width of [360, 1440])
     await expect(page.getByRole('timer')).toContainText('1:30');
     const code = page.locator('#challenge-question pre');
     await expect(code).toBeVisible();
+    const answers = page.getByRole('radiogroup');
+    await expect(answers).toBeVisible();
     const codeBox = await code.boundingBox();
-    const answersBox = await page.getByRole('radiogroup').boundingBox();
+    const answersBox = await answers.boundingBox();
     expect(Math.abs(codeBox!.width - answersBox!.width)).toBeLessThan(2);
     expect(await code.evaluate(el => el.scrollWidth > el.clientWidth)).toBe(true);
     await page.getByRole('radio', { name: '42', exact: true }).click();
