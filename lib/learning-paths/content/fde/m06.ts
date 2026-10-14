@@ -550,7 +550,7 @@ export const FDE_M06: ModuleSource = {
   };
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const demoRegistry = {
   'orders.read': {
     scope: 'orders.read',

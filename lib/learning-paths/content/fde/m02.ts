@@ -500,7 +500,7 @@ export const FDE_M02: ModuleSource = {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const demoPage = cursor => ({
   tickets: [
     { id: 'TCK-1', customerId: cursor === null ? 'CUS-1' : '', subject: 'Demo', channel: 'email' },

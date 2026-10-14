@@ -604,7 +604,7 @@ export const FDE_M09: ModuleSource = {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const demo = createCircuit({
   call: () => Promise.resolve('routed'),
   failureThreshold: 3,

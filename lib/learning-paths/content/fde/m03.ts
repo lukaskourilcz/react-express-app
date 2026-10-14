@@ -602,7 +602,7 @@ export const FDE_M03: ModuleSource = {
   return { ok: true, records };
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const demoRows = [
   { id: 'ORD-1001', tenantId: 'TEN-4021', customer: 'Halloway Depot', status: 'open', total: 240.5 },
   { id: 'ORD-2001', tenantId: 'TEN-7788', customer: 'Brant and Ivey', status: 'open', total: 512 },

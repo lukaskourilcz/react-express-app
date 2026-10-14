@@ -508,7 +508,7 @@ export const FDE_C01: ModuleSource = {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const demoCsv = 'customer_id,tenant_id,company\\nCUS-1,TEN-1,Demo Ltd';
 const demoClient = {
   listTickets: cursor =>
@@ -696,7 +696,7 @@ buildCaseList(demoClient, demoCsv).then(out => console.log(JSON.stringify(out)))
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const demoViewer = { tenantId: 'TEN-4021', clearances: ['kb-general'] };
 const demoResults = [
   { id: 'KB-1', tenantId: 'TEN-4021', visibility: 'published', updatedAt: '2026-03-01', score: 0.8, action: 'route_returns', text: 'Returns take 7 days.' },
@@ -863,7 +863,7 @@ const proposeAction = (viewer, results, modelOutput) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const demoDataset = [
   { id: 'C-1', slice: 'billing', expected: 'route_billing', split: 'holdout' },
   { id: 'C-2', slice: 'returns', expected: 'route_returns', split: 'tune' },
@@ -1056,7 +1056,7 @@ const compareCandidates = (dataset, candidates, baselineId) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const demoRequest = {
   ticket: { id: 'TCK-1', subject: 'Invoice question', tenantId: 'TEN-4021' },
   viewer: { tenantId: 'TEN-4021', clearances: ['kb-general'] },

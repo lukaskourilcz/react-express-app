@@ -422,7 +422,7 @@ export const DSA_D03: ModuleSource = {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log([...countFrequencies(['a', 'b', 'a']).entries()]);
 `,
         skeleton: `const countFrequencies = values => {
@@ -504,7 +504,7 @@ console.log([...countFrequencies(['a', 'b', 'a']).entries()]);
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(firstUnique(['a', 'b', 'a', 'c']));
 `,
         skeleton: `const firstUnique = values => {
@@ -563,7 +563,7 @@ console.log(firstUnique(['a', 'b', 'a', 'c']));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(intersection([1, 2, 3, 4], [3, 4, 5]));
 `,
         skeleton: `const intersection = (left, right) => {

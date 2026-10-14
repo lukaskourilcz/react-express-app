@@ -478,7 +478,7 @@ export const DSA_D06: ModuleSource = {
 
 }
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(sumList({ value: 1, next: { value: 2, next: null } }));
 `,
         skeleton: `function sumList(head) {
@@ -561,7 +561,7 @@ console.log(sumList({ value: 1, next: { value: 2, next: null } }));
 
 }
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(factorial(5));
 `,
         skeleton: `function factorial(n) {
@@ -626,7 +626,7 @@ console.log(factorial(5));
 
 }
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(countdownSteps(3));
 `,
         skeleton: `function countdownSteps(n) {

@@ -405,7 +405,7 @@ console.log("n = 10 costs", steps, "steps");`,
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(sumOfEvens([1, 2, 3, 4]));
 `,
         skeleton: `const sumOfEvens = values => {
@@ -480,7 +480,7 @@ console.log(sumOfEvens([1, 2, 3, 4]));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(halvingSteps(10));
 `,
         skeleton: `const halvingSteps = n => {
@@ -534,7 +534,7 @@ console.log(halvingSteps(10));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(maxGap([3, 9, 1]));
 `,
         skeleton: `const maxGap = values => {
