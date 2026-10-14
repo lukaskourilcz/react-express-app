@@ -190,9 +190,10 @@ an empty history from an existing falsey/undefined entry.
 Quality floors are 3–4/5 and relevance 8–10/10, individually reasoned. Final
 readings are explicitly same-session model self-review. Passing these 89 selected
 verdicts supplies no scores for another item. Twenty of 725 issued tasks now have
-current records on this branch, including ten deployed earlier; 705 tasks and
-251 native records still require individual review. These two latest coding
-waves await final required CI and deployment verification.
+current records, all deployed through PRs #372 and #377. Final required verify/SQL
+passed for #377 on b062773b (Actions 38511335026), and its production deployment
+passed health and correct/wrong grading probes. The remaining 705 tasks still
+need individual review.
 
 ### Native wave 2 — arrays, strings and pointer walks
 
@@ -224,8 +225,39 @@ and question probes without assigning scores.
 Quality floors are 3–4/5 and relevance 7–10/10, individually reasoned with
 same-session model final reading. Twenty-four of 263 native records now have
 current bindings; 239 still need individual review. This latest twelve-record
-wave awaits required CI and deployment. Coding remains at twenty recorded
-tasks across the merged and pending waves; 705 still need review.
+wave is deployed through PR #379: required verify/SQL passed on 59f27e60
+(Actions 38512520280), and production dpl_6cxcAkxCe5dT4kAsTmDLEMmbWnjq
+passed health and correct/wrong grading probes. Coding remains at twenty deployed
+records; 705 still need review.
+
+### Native wave 3 — Map, Set and value identity
+
+Twelve D03 records were read individually: two lessons, two reading activities,
+a check and its four questions, and three coding exercises. Map and Set access
+claims now distinguish JavaScript's required average sublinear access from an
+assumed hash-table model. Input sizes, bounded key work, resizing, property-key
+ordering and SameValueZero are stated explicitly. Executed question examples
+confirm counts, nested comparisons and property ordering.
+
+Frequency counting, first-unique selection and intersection specify preservation,
+fresh output containers and value identity. First-unique retains undefined/null
+values with the stated null-sentinel limitation; intersection preserves left
+order and uses SameValueZero. Either sign of zero is accepted. Correct slower
+alternatives pass semantics; no finite suite is described as proving complexity.
+
+The protected grader returned 21/21 selected expected verdicts: seven valid
+implementations passed; three starters and eleven wrong implementations failed.
+A newly added NaN witness initially relied on replaceable Number.isNaN; a local
+forged-helper candidate demonstrated that weakness before publication. The
+witness now uses the language's non-reflexive NaN comparison, and that candidate
+fails. All 47 path references and 46 authored starter examples pass. Reproducible
+candidate and question probes are in `docs/audit/wip/tools/check-native-d03*.ts`.
+
+Quality floors are 3–4/5 and relevance 7–10/10, with item-specific reasons and
+same-session final model reading in the D03 JSONL record. No independent or human
+review is claimed. This branch has 36/263 exact native records (24 deployed and
+12 staged); 227 native records and 705 issued coding tasks remain for #176.
+Required release CI and deployment verification for this D03 wave are pending.
 
 ## 1. September inventory, retained as historical evidence
 
