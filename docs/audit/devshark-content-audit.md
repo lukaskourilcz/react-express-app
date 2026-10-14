@@ -255,9 +255,46 @@ candidate and question probes are in `docs/audit/wip/tools/check-native-d03*.ts`
 
 Quality floors are 3–4/5 and relevance 7–10/10, with item-specific reasons and
 same-session final model reading in the D03 JSONL record. No independent or human
-review is claimed. This branch has 36/263 exact native records (24 deployed and
-12 staged); 227 native records and 705 issued coding tasks remain for #176.
-Required release CI and deployment verification for this D03 wave are pending.
+review is claimed. This wave is deployed through PR #381 after required verify/SQL passed on
+997856f1 (Actions 38517372725). Production dpl_9euzTfKBzbBNYgjiDQtkjSy2k8B3
+passed health/Big O/free-intro and correct/wrong grading. At that release,
+36/263 native records and 20/725 coding records were individually recorded.
+
+### Native wave 4 — stacks, queues and bracket order
+
+Twelve D04 records were read separately and scored. Dense-array and doubled-
+capacity assumptions now qualify cost claims; survivor moves total n(n − 1)/2,
+and capacity copies total less than 2n for positive n. Retained logical slots,
+spare capacity and references that may keep values alive are distinguished.
+Question contexts were executed, including exactly 49,995,000 moves for n=10,000.
+
+The queue's separate buffer proxy omitted indexed property definitions and
+deletions. An actual local candidate repeated ten definitions per enqueue yet
+passed its six-operations-per-value budget. Captured trusted operations now count
+those mutations, with exact append/read/clear accounting (96 operations for 32
+values). Direct definitions remain accepted; excess Object/Reflect definitions
+and delete/redefine traces fail. This measured gap is #383. Wording limits the
+criterion to finite buffer traces, without proving arbitrary complexity or work
+outside the buffer.
+
+Stack/queue returned values retain object and symbol identity and falsey/undefined
+values. Copies accepted by structural fixtures now fail strict witnesses. A
+linked-node stack, a direct-index queue and a direct-definition queue pass. The
+bracket task's authored O(n) time/space goal defines n as the length of its six-
+character ASCII input. The final worker returns 21/21 selected expected verdicts
+(7 valid, 3 starters and 11 wrong), and 33 authority/setup checks pass. All 47
+path references and 46 starter examples pass. Reproducible candidate and question
+probes and item-specific JSONL scores are retained; final reading is explicitly
+same-session model self-review, without an independent/human claim.
+
+This branch has 48/263 exact native records: 36 deployed and 12 staged. Another
+215 native records and 705 issued coding tasks remain for #176. Final required
+CI and deployment verification for D04 are pending. PR #382 is its prerequisite
+for preserving open coding attempts across these authored/grader edits. The
+automatic native retry also compares its prior seal before using a fresh one:
+a changed, legacy or expired attempt opens a latest-brief review instead of
+silently grading old code against unseen new rules. A matching current retry
+continues normally; typed source remains in the editor.
 
 ## 1. September inventory, retained as historical evidence
 
