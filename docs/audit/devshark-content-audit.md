@@ -1,5 +1,37 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b012
+
+Reviewed last-dot filename suffixes, next workflow labels, all matching
+positions, sorted insertion indexes and the nonmutating removal debug task.
+Current coding coverage is **90/725**: forty deployed, fifty staged, **635
+remaining**; native stays **60/263**. PR #393 checks thirty records through
+b008; b009–b012 are local five-item batches. Its exact c91873a6 preview passes
+11 general and 20 selected signed-out submissions; 26 Premium tasks return
+402, outside authenticated acceptance. A paced retry completed the initial
+HTTP-429-limited task-open sweep without changing product limits.
+
+The baseline matched 26/40 expectations. New cases reject trimming filename
+suffixes, leading-dot rejection under the stated last-dot rule, mutable
+allow-lists, last-occurrence/falsy next labels, Object.is/structural matching,
+input mutation, rounded insertion positions and reused empty arrays. Filename
+matching explicitly concerns names, not file-content validation. NextStep
+keeps an empty destination label. PositionsOf explains why forward successive
+searches visit disjoint portions and remain linear. InsertAt reports a lower
+bound without changing the list and accepts a faster binary-search alternative.
+The removal starter stays deliberately broken; corrected variants retain
+NaN under strict equality and preserve distinct equal-looking objects.
+
+All **40/40 final-hash verdicts** agree (twenty valid, five starters, fifteen
+wrong), with twenty authored-target/base-25-XP checks and focused coding
+contracts. API types, launch contracts, registry/index generation, build,
+both production dependency audits (zero vulnerabilities), copy sweep and diff
+checks pass. The three longest rewritten routes pass eighteen light and
+eighteen dark probes over 360–1440px, with zero issues or unprobed routes.
+Individual scores and final model readings are in b012 JSONL; the next-step
+and removal diagnostic hints score 5/5. No independent/human or authenticated
+acceptance is claimed; IDs, access and archived Czech are preserved.
+
 ## 15 October continuation — five-item batch b011
 
 Individually reviewed literal banned-string replacement, overdue detection,

@@ -116,7 +116,7 @@ console.log(tally(["a", "b", "a"]));
     format: 'debug',
     focus: ['filter', 'splice'],
     title: 'The removal that changes the caller’s list',
-    prompt: '`without(items, unwanted)` should return a new list with every copy of `unwanted` removed, leaving the list it was given untouched. The returned list is right, but the caller finds their own list has changed. Fix it.',
+    prompt: "`without(items, unwanted)` should return a new list with every copy of `unwanted` removed, leaving the list it was given untouched. The returned list is right, but the caller finds their own list has changed. Fix it. Inputs are an ordinary dense array of data values and any unwanted value. Match with strict equality: NaN never matches, 0 and -0 match, and objects match only by reference. Preserve the order, original references and repeated occurrences of everything kept. Always return a fresh array, including empty input and no removal. Do not change the source or nested values; frozen arrays are valid. Target: O(n) time, where n is the input length, assuming constant-time equality and reference copying.",
     starter: `const without = (items, unwanted) => {
   for (let i = items.length - 1; i >= 0; i--) {
     if (items[i] === unwanted) items.splice(i, 1);
@@ -155,6 +155,10 @@ console.log(without(original, "a"), original);
         label: 'the list that was passed in is not changed',
         edge: true,
       },
+      { call: "(() => {const out=without([NaN,1],NaN);return out.length===2&&Number.isNaN(out[0])&&out[1]===1;})()", expected: true, label: "NaN is retained under strict equality", edge: true },
+      { call: "without([0,-0,1],-0)", expected: [1], label: "remove both zero signs", edge: true },
+      { call: "(() => {const target={id:1},kept={id:1},items=Object.freeze([target,kept,target]);const out=without(items,target);return out!==items&&out.length===1&&out[0]===kept&&kept.id===1;})()", expected: true, label: "frozen reference matching preserves distinct equal-looking objects", edge: true },
+      { call: "(() => {const items=[];const a=without(items,1),b=without(items,1);return a!==items&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty results", edge: true },
     ],
   },
   {

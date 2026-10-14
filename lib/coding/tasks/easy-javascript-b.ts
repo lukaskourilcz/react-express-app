@@ -614,7 +614,7 @@ console.log(hideBanned(["you", "are", "silly"], ["silly"]));
     tier: 2,
     focus: ['indexOf', 'while'],
     title: 'Every position of a value',
-    prompt: 'Write `positionsOf(list, value)`, returning every index where `value` appears, in order. Use `indexOf` with its second argument, the index to start searching from, inside a `while` loop. `positionsOf(["a", "b", "a", "c", "a"], "a")` gives `[0, 2, 4]`. No match gives `[]`. Like `indexOf`, it compares strictly, so `"1"` is not `1`.',
+    prompt: "Write `positionsOf(list, value)`, returning every index where `value` appears, in order. Use `indexOf` with its second argument, the index to start searching from, inside a `while` loop. `positionsOf([\"a\", \"b\", \"a\", \"c\", \"a\"], \"a\")` gives `[0, 2, 4]`. No match gives `[]`. Like `indexOf`, it compares strictly, so `\"1\"` is not `1`. Inputs are an ordinary dense array of data values and any query value. Strict equality means NaN never matches, 0 and -0 both match, and objects match only by reference. Do not change the input or nested values; frozen arrays are valid. Return a fresh positions array on every call, including empty input and no match. Target: O(n) time, where n is the input length and equality is treated as constant-time: each new indexOf starts after the previous match, so the searches scan disjoint successive portions rather than restarting at zero.",
     starter: `const positionsOf = (list, value) => {
 
 };
@@ -647,6 +647,11 @@ console.log(positionsOf(["a", "b", "a", "c", "a"], "a"));
       { call: 'positionsOf([1, 2, 3], 4)', expected: [], label: 'no match', edge: true },
       { call: 'positionsOf([1, "1", 1], 1)', expected: [0, 2], label: 'the string "1" is not the number 1', edge: true },
       { call: 'positionsOf([], "x")', expected: [], label: 'an empty list', edge: true },
+      { call: "positionsOf([NaN,NaN],NaN)", expected: [], label: "NaN never matches", edge: true },
+      { call: "positionsOf([0,-0,1],-0)", expected: [0, 1], label: "both zero signs match", edge: true },
+      { call: "(() => {const value={id:1};return positionsOf(Object.freeze([value,{id:1},value]),value);})()", expected: [0, 2], label: "frozen reference equality", edge: true },
+      { call: "(() => {const list=[2,1,2];positionsOf(list,2);return list;})()", expected: [2, 1, 2], label: "preserve source order", edge: true },
+      { call: "(() => {const list=[];const a=positionsOf(list,1),b=positionsOf(list,1);return a!==list&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty positions", edge: true },
     ],
   },
   {

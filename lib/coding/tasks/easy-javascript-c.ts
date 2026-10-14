@@ -696,7 +696,7 @@ console.log(firstFree([{ time: "09:00", booked: true }, { time: "09:30", booked:
     tier: 1,
     focus: ['includes', 'strings'],
     title: 'Is this file type allowed?',
-    prompt: 'Write `isAllowed(fileName, allowed)`, where `allowed` is an array of lower-case extensions such as `["png", "jpg"]`. Take the text after the last dot of the file name, lower-case it, and check it with `includes`. `isAllowed("Photo.PNG", ["png", "jpg"])` gives `true`. A name with no dot has no extension and is never allowed.',
+    prompt: "Write `isAllowed(fileName, allowed)`, where `allowed` is an array of lower-case extensions such as `[\"png\", \"jpg\"]`. Take the text after the last dot of the file name, lower-case it, and check it with `includes`. `isAllowed(\"Photo.PNG\", [\"png\", \"jpg\"])` gives `true`. A name with no dot has no extension and is never allowed. This is a literal name-suffix exercise, not file-content inspection. fileName is a primitive string of at most 1024 UTF-16 units and is treated exactly as supplied, without trimming or path parsing. allowed is an ordinary dense array of nonempty lowercase ASCII letter/digit extensions, each at most 16 units. A leading-dot name such as .PNG has extension png under this last-dot rule; an empty name, a lone dot or a trailing dot is not allowed. Do not change allowed; frozen arrays are valid. Target: O(n) time, where n is the filename length plus allowed entry count, with bounded extension comparison and linear string scanning/lowercasing.",
     starter: `const isAllowed = (fileName, allowed) => {
 
 };
@@ -724,6 +724,13 @@ console.log(isAllowed("Photo.PNG", ["png", "jpg"]));
       { call: 'isAllowed("archive.tar.gz", ["gz"])', expected: true, label: 'only the part after the last dot counts' },
       { call: 'isAllowed("png", ["png"])', expected: false, label: 'no dot, no extension', edge: true },
       { call: 'isAllowed("image.jpg", [])', expected: false, label: 'nothing allowed', edge: true },
+      { call: "isAllowed(\".PNG\",[\"png\"])", expected: true, label: "a leading dot follows the stated suffix rule", edge: true },
+      { call: "isAllowed(\"name.png \",[\"png\"])", expected: false, label: "do not trim extension text", edge: true },
+      { call: "isAllowed(\"name.png\\n\",[\"png\"])", expected: false, label: "a trailing line break is literal data", edge: true },
+      { call: "isAllowed(\"name.\",[\"png\"])", expected: false, label: "no text after the last dot", edge: true },
+      { call: "isAllowed(\".\",[\"png\"])", expected: false, label: "a lone dot is not an allowed extension", edge: true },
+      { call: "isAllowed(\"a.JPG\",Object.freeze([\"png\",\"jpg\"]))", expected: true, label: "frozen allowed list", edge: true },
+      { call: "(() => {const allowed=[\"png\",\"jpg\"];const out=isAllowed(\"a.JPG\",allowed);return out===true&&allowed[0]===\"png\"&&allowed[1]===\"jpg\";})()", expected: true, label: "preserve allowed order", edge: true },
     ],
   },
   {
@@ -734,7 +741,7 @@ console.log(isAllowed("Photo.PNG", ["png", "jpg"]));
     tier: 1,
     focus: ['indexOf'],
     title: 'What comes next',
-    prompt: 'A checkout runs through fixed steps, such as `["cart", "address", "payment", "done"]`. Write `nextStep(steps, current)`, returning the step after `current`, using `indexOf` to find where `current` is. The last step has no next step, and neither does a name that is not in the list: return `null` for both.',
+    prompt: "A checkout runs through fixed steps, such as `[\"cart\", \"address\", \"payment\", \"done\"]`. Write `nextStep(steps, current)`, returning the step after `current`, using `indexOf` to find where `current` is. The last step has no next step, and neither does a name that is not in the list: return `null` for both. steps is an ordinary dense array of primitive strings, and current is a primitive string; each string is at most 128 UTF-16 units. Matching is exact and case-sensitive. When labels repeat, use the first occurrence as indexOf does. Empty strings are valid labels, so an empty next label must be returned as an empty string, not null. Do not change the input; frozen arrays are valid. Target: O(n) time in the worst case, where n is the number of steps and bounded string equality takes constant time.",
     starter: `const nextStep = (steps, current) => {
 
 };
@@ -761,6 +768,12 @@ console.log(nextStep(["cart", "address", "payment", "done"], "address"));
       { call: 'nextStep(["cart", "address", "payment", "done"], "done")', expected: null, label: 'the last step', edge: true },
       { call: 'nextStep(["cart", "address", "payment", "done"], "shipping")', expected: null, label: 'a step that is not in the list', edge: true },
       { call: 'nextStep([], "cart")', expected: null, label: 'no steps', edge: true },
+      { call: "nextStep([\"a\",\"b\",\"a\",\"c\"],\"a\")", expected: "b", label: "use the first repeated current label", edge: true },
+      { call: "nextStep([\"a\",\"\",\"b\"],\"a\")", expected: "", label: "empty destination is a real label", edge: true },
+      { call: "nextStep([\"\",\"b\"],\"\")", expected: "b", label: "empty current label can match", edge: true },
+      { call: "nextStep([\"cart\",\"done\"],\"Cart\")", expected: null, label: "exact case", edge: true },
+      { call: "nextStep(Object.freeze([\"a\",\"b\"]),\"a\")", expected: "b", label: "frozen input", edge: true },
+      { call: "(() => {const steps=[\"b\",\"a\",\"c\"];nextStep(steps,\"b\");return steps;})()", expected: ["b", "a", "c"], label: "preserve step order", edge: true },
     ],
   },
   {
@@ -771,7 +784,7 @@ console.log(nextStep(["cart", "address", "payment", "done"], "address"));
     tier: 2,
     focus: ['findIndex'],
     title: 'Where does it go?',
-    prompt: 'Write `insertAt(sorted, value)` for a list of numbers in ascending order, returning the index where `value` should go to keep the list sorted: the index of the first number that is greater than or equal to `value`. Use `findIndex`. When every number is smaller, `findIndex` gives -1, but the value belongs at the end, so return `sorted.length`. `insertAt([10, 20, 30], 25)` gives 2.',
+    prompt: "Write `insertAt(sorted, value)` for a list of numbers in ascending order, returning the index where `value` should go to keep the list sorted: the index of the first number that is greater than or equal to `value`. Use `findIndex`. When every number is smaller, `findIndex` gives -1, but the value belongs at the end, so return `sorted.length`. `insertAt([10, 20, 30], 25)` gives 2. sorted is an ordinary dense array of finite Numbers in nondecreasing order, and value is a finite Number. Fractional and negative values are valid; compare without rounding. For duplicates return the position before the first equal entry. This function only reports an index: do not insert, reorder or otherwise change the input, and accept frozen arrays. Target: O(n) time for the taught findIndex scan, where n is the input length and numeric comparison is constant-time; a faster correct search also meets the goal.",
     starter: `const insertAt = (sorted, value) => {
 
 };
@@ -797,6 +810,10 @@ console.log(insertAt([10, 20, 30], 25));
       { call: 'insertAt([10, 20, 30], 20)', expected: 1, label: 'an equal value goes before it' },
       { call: 'insertAt([10, 20, 30], 40)', expected: 3, label: 'after everything goes at the end', edge: true },
       { call: 'insertAt([], 7)', expected: 0, label: 'an empty list', edge: true },
+      { call: "insertAt([0.1,0.2,0.3],0.15)", expected: 1, label: "fractional lower bound without rounding", edge: true },
+      { call: "insertAt(Object.freeze([-2,-0,0,1]),0)", expected: 1, label: "frozen input and first equal zero", edge: true },
+      { call: "(() => {const input=[1,3,5];const out=insertAt(input,2);return out===1&&input.length===3&&input[0]===1&&input[1]===3&&input[2]===5;})()", expected: true, label: "report the position without inserting", edge: true },
+      { call: "insertAt([1,1,1,2],1)", expected: 0, label: "lower bound before all duplicates", edge: true },
     ],
   },
 
