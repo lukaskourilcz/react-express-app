@@ -377,7 +377,7 @@ console.log(largest([4,9,2]));
     tier: 1,
     focus: ["for"],
     title: "Fizz values",
-    prompt: "Write `fizz(n)`, returning an array counting 1 to n where every multiple of 3 is replaced by the string `Fizz` — `fizz(5)` gives `[1, 2, \"Fizz\", 4, 5]`. `fizz(0)` gives an empty array.",
+    prompt: "Write `fizz(n)` for a nonnegative integer n. Return a new array with one entry for each integer from 1 through n, in order: use the exact string `Fizz` for multiples of 3 and the Number itself otherwise. `fizz(5)` gives `[1, 2, \"Fizz\", 4, 5]`; `fizz(0)` gives `[]`. Target: O(n) time, where n is the requested number of output entries.",
     starter: `const fizz = n => {
   
 };
@@ -389,9 +389,7 @@ console.log(fizz(5));
   const numbers = /* the numbers 1 through n, in an array */;
   return numbers.map(number => /* "Fizz" when number divides by 3, otherwise number */);
 };`,
-    hints: [
-      "Count from 1 up to n, and for each number decide whether it divides by three before you decide what to put in the array.",
-    ],
+    hints: ["Check the two endpoints of the range before deciding which values get a label. Divisibility is about a remainder, not a decimal quotient."],
     approach: [
       "Build the numbers one through n first, then transform them.",
       "For each number, return the word Fizz when it divides evenly by three, and the number itself otherwise.",

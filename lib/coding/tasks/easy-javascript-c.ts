@@ -29,7 +29,7 @@ export const EASY_JAVASCRIPT_C_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ['pop'],
     title: 'Undo the last step',
-    prompt: 'An editor keeps every change in a `history` array, oldest first. Write `undo(history)`, which removes the newest change from the end of the array with `pop` and returns it. The array gets shorter, so the next `undo` returns the change before. With nothing left to undo, return `null`: `pop` on an empty array gives `undefined`.',
+    prompt: "An editor stores history in a dense ordinary array, oldest first. Write `undo(history)`, removing exactly its last entry in place and returning that entry unchanged. Entries may be any value, including `0`, `false`, an empty string, `null` or `undefined`; do not confuse these with an empty array. If the array is already empty, leave it empty and return `null`. `pop()` is one approach. Target: O(1) time per call under the ordinary array model, regardless of n, the current number of entries.",
     starter: `const undo = history => {
 
 };
@@ -42,7 +42,7 @@ console.log(undo(changes), changes);
   if (/* nothing to undo */) return null;
   return /* the newest change, removed from history */;
 };`,
-    hints: ['`pop` removes the last element in place and returns it. On an empty array it returns `undefined`, so check the length first.'],
+    hints: ["Use the array's length to distinguish nothing to undo from an entry with an empty or falsey value. Only the last entry should disappear."],
     approach: [
       'Check `history.length`. When it is 0, return `null`.',
       'Otherwise call `history.pop()`. It removes the newest change and gives it back.',
@@ -105,7 +105,7 @@ console.log(addSearch(["css", "html"], "js", 2));
     tier: 1,
     focus: ['shift'],
     title: 'Split off the command',
-    prompt: 'A chat bot reads a command as an array of words, such as `["add", "milk", "eggs"]`. Write `readCommand(words)`, returning `{ command, args }`: the first word as `command` and the words after it as `args`. Take the first word off a copy with `shift`, so the caller’s array is not changed. An empty array gives `{ command: null, args: [] }`.',
+    prompt: "Write `readCommand(words)` for a dense array of strings. Return a new object `{ command, args }`: the first string unchanged as command, and a new array of the remaining strings in order. Preserve the caller's array, even if the result is edited later. An empty input gives `{ command: null, args: [] }` with a new args array; an empty first string remains `\"\"`. If you use `shift()`, work on a copy. Target: O(n) time, where n is the number of input strings.",
     starter: `const readCommand = words => {
 
 };
@@ -118,7 +118,7 @@ console.log(readCommand(["add", "milk", "eggs"]));
   const command = /* the first word, taken off args */;
   return { command: /* command, or null when there was none */, args };
 };`,
-    hints: ['`shift` removes the first element and returns it, and every other element moves one place forward. It changes the array, which is why it runs on a copy here. On an empty array it returns `undefined`.'],
+    hints: ["Taking a word from the front changes an array if you use shift. Protect the caller's array and distinguish an empty first word from no first word."],
     approach: [
       'Copy the words with `[...words]`.',
       'Call `shift()` on the copy. What it returns is the command, and the copy now holds only the arguments.',

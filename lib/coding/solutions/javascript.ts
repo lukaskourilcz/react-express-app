@@ -214,6 +214,8 @@ const largest = numbers => numbers.reduce((best, number) => Math.max(best, numbe
 // The rule lives apart from the counting, so adding Buzz later touches one line.
 const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
     hiddenTests: [
+      {"call": "fizz(12)", "expected": [1, 2, "Fizz", 4, 5, "Fizz", 7, 8, "Fizz", 10, 11, "Fizz"]},
+      {"call": "(() => { const first = fizz(0); const second = fizz(0); return first !== second; })()", "expected": true},
       { call: "fizz(2)", expected: [1, 2] },
       { call: "fizz(7)", expected: [1, 2, "Fizz", 4, 5, "Fizz", 7] },
       { call: "fizz(9)", expected: [1, 2, "Fizz", 4, 5, "Fizz", 7, 8, "Fizz"] },
