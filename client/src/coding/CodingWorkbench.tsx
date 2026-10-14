@@ -82,6 +82,7 @@ export interface CodingWorkbenchProps {
   onEdit?: (code: string) => void;
   onVerdict?: (verdict: CodingVerdictResponse, submittedCode?: string) => void;
   onRevealed?: () => void;
+  onRefreshTask?: (code: string) => Promise<void>;
   nextHref?: string | null;
   backHref?: string;
   onContinue?: () => void;
@@ -143,7 +144,7 @@ function useOnline(): boolean {
 }
 
 export function CodingWorkbench(props: CodingWorkbenchProps) {
-  const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onEdit, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction } = props;
+  const { task, session, locked, signedIn, progress, initialCode, mode, onDraft, onEdit, onVerdict, onRevealed, nextHref, backHref, onContinue, saveAction, onRefreshTask } = props;
   const evolution = evolvingStage(task.id);
   const complexity = complexityGuidance(task);
   const { t, lang } = useLanguage();
@@ -177,6 +178,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // A pass recorded during this visit outlives the card that announced it: a
   // later Submit clears the card, not the pass.
   const [recordedPass, setRecordedPass] = useState(false);
+  const [taskChanged, setTaskChanged] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   // The last Run or Submit kept the code on this device only.
   const [draftTooLarge, setDraftTooLarge] = useState(false);
@@ -413,7 +415,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setVerdict(result);
       onVerdict?.(result, code);
     } catch (error) {
-      if (error instanceof ApiError && error.code === 'invalid_session') setSubmitError(t('coding.verdict.sessionExpired'));
+      if (error instanceof ApiError && error.code === 'task_changed') {
+        localRun.current?.abort();
+        setRun(null);
+        setServerChecked(false);
+        setTaskChanged(true);
+        setSubmitError(t('coding.verdict.taskChanged'));
+      }
+      else if (error instanceof ApiError && error.code === 'invalid_session') setSubmitError(t('coding.verdict.sessionExpired'));
       // The upgrade sheet is already open; the line beside the button says why.
       else if (isPremiumRequired(error)) setSubmitError(t('error.premiumRequired'));
       else setSubmitError(submitFailure(error));
@@ -452,6 +461,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       setVerdict(result);
       onVerdict?.(result);
     } catch (error) {
+      if (error instanceof ApiError && error.code === 'task_changed') setTaskChanged(true);
       setSubmitError(isPremiumRequired(error) ? t('error.premiumRequired') : submitFailure(error));
     } finally {
       setPhase('idle');
@@ -568,7 +578,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
     : '';
 
   const busy = phase !== 'idle';
-  const submitDisabled = mode === 'landing' || busy || !session || !online || Boolean(solution);
+  const submitDisabled = taskChanged || mode === 'landing' || busy || !session || !online || Boolean(solution);
 
   // The shortcut does what the button would: nothing, while Submit is off.
   const onKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
@@ -1100,6 +1110,14 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
   // What the actions open: hints, the skip form, confirmations and errors. It
   // follows the pane in reading order and exists only while it holds something.
   const hintsOpen = taken > 0 || skipping || skipResult !== null || confirming === 'reveal' || solution !== null;
+  const refreshTask = async () => {
+    if (!onRefreshTask || busy) return;
+    setPhase('submitting');
+    try { await onRefreshTask(code); setTaskChanged(false); setSubmitError(null); setRun(null); }
+    catch (error) { setSubmitError(friendlyError(error)); }
+    finally { setPhase('idle'); }
+  };
+  const refreshAction = taskChanged && onRefreshTask && <Button variant="secondary" isDisabled={busy || !online} onClick={() => void refreshTask()} label={t('coding.verdict.reloadBrief')} />;
   const notesOpen = hintsOpen || confirming === 'reset' || !online || draftTooLarge || formatError !== null || (submitError !== null && !puzzleMode);
 
   if (verdict?.verdict === 'passed' && !verdictStale && !verdict.graderUnavailable) {
@@ -1124,6 +1142,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
                   over rather than being graded under the new one. */}
               <CodePuzzle key={session ?? task.id} puzzle={task.puzzle} busy={busy} onSubmit={(order) => void submitOrder(order)} />
               {submitError && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+              {puzzleMode && refreshAction}
               <div className="cd-actions">
                 <Button variant="secondary" onClick={chooseEditorHere} label={t('coding.pendingDesktopUseEditor')} />
               </div>
@@ -1257,6 +1276,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
               {draftTooLarge && <p className="cd-note cd-note--warn" role="status">{t('coding.draft.tooLarge')}</p>}
               {formatError && <p className="cd-note cd-note--error" role="status">{formatError}</p>}
               {submitError && !puzzleMode && <p className="cd-note cd-note--error" role="alert">{submitError}</p>}
+              {!puzzleMode && refreshAction}
             </div>
           )}
 

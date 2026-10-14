@@ -90,7 +90,7 @@ process.env.LEARNING_PATH_DSA_ENABLED = 'true';
 const path = pathById('dsa-foundations')!;
 const activity = activityIn(path, 'dsa-v1-d01-count-pairs')?.activity ?? path.modules.flatMap(module => module.activities).find(one => one.kind === 'code')!;
 const nativeInput = { attemptId: 'native-version-0123456789', enrollmentId: 'native-enroll-0123456789', userId: account, pathId: path.id, activityId: activity.id, activityKind: activity.kind, purpose: activity.purpose, curriculumVersion: path.version, rubricVersion: path.rubric.version };
-assert.equal(decodeLearningPathSession(createLearningPathSession(nativeInput).token)?.version, pathCodeAttemptVersion(activity));
+assert.equal(decodeLearningPathSession(createLearningPathSession(nativeInput).token)?.version, pathCodeAttemptVersion(activity, path.rubric.version));
 let accepted: Record<string, unknown> | null = null;
 const nativeDb = {
   from(table: string) {
@@ -110,10 +110,10 @@ for (const version of [undefined, '0'.repeat(64)]) {
   assert.equal(writes, 0);
 }
 const beforeExpected = activity.code!.tests[0].expected;
-const beforeVersion = pathCodeAttemptVersion(activity);
+const beforeVersion = pathCodeAttemptVersion(activity, path.rubric.version);
 try {
   activity.code!.tests[0].expected = 'changed grading expectation';
-  assert.notEqual(pathCodeAttemptVersion(activity), beforeVersion);
+  assert.notEqual(pathCodeAttemptVersion(activity, path.rubric.version), beforeVersion);
 } finally { activity.code!.tests[0].expected = beforeExpected; }
 console.log('PASS attempt versions: native exact code bindings and legacy/stale refusal before grading/evidence/XP');
 

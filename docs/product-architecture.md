@@ -422,6 +422,14 @@ the learner sees as a timeout whose message names the type check, not a loop;
 Submit sends the code at once, and the browser's own run (its type check has
 8 s once the compiler is loaded) is a preview the server's run replaces; and
 system-design answers are graded against a key sealed in the coding session.
+New coding sessions also seal the exact authored/task-grader version (including
+hidden checks, puzzle material and efficiency guidance). Submit refuses stale or
+legacy unversioned sessions before grading or writing progress/XP. Reading the
+latest brief renews a linked session under the same validated Learn parent and
+attempt id; the editor keeps its draft. The version stays inside the encrypted
+token, and is not a public digest of answer material. Runtime-only grading or
+reward changes must bump the attempt tag in `lib/coding/session.ts`.
+
 The same thread transpiles the TypeScript, so code nested too deeply for the
 compiler is an `error` verdict rather than an HTTP 500. Both thread pools bound
 how long a run may wait for a thread, and their queues hold a class of 32
@@ -716,9 +724,15 @@ path-shaped contract — an attempt bound to an enrollment (so a task reached
 through a path is authorized by that enrollment rather than the ordinary
 coding tier ladder), assertions grouped into named criteria (so a
 security-critical failure cannot be averaged away), and evidence recorded in
-`learning_path_*` only. A path pass writes no coding progress, no tier unlock
-and **no XP in v1**, which is what keeps a task reused from the coding
-catalogue from being rewarded twice.
+`learning_path_*` only. A path pass writes no tier unlock. Verified coding activities use the shared
+canonical coding reward (migration 065): a reused ordinary task cannot earn a
+second first-pass reward. Non-coding activities keep their existing reward rules.
+Native code sessions bind exact activity/grader material and rubric version.
+A stale unaccepted session is refused before grading or evidence/XP writes;
+loading its latest brief keeps the editor source. An already accepted matching
+network retry returns the stored response read-only, without grading or paying
+again. Runtime-only native grading changes must bump the attempt tag in
+`lib/learning-paths/session.ts`.
 
 An objective check grades against the key sealed in its attempt. A project
 check (`purpose: 'project'`, the DSA final) deals the same questions again on a

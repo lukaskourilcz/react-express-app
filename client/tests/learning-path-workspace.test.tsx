@@ -298,3 +298,26 @@ describe('the draft autosave', () => {
     expect(localStorage.getItem(`devshark:path:draft:${ENROLLMENT}:${A}`)).toBeNull();
   });
 });
+
+
+it('refreshes a changed code brief without submitting or clearing the draft', async () => {
+  calls.submitFailures.push(new ApiError('This activity changed while you were working.', 409, 'task_changed'));
+  await mount(A);
+  await waitFor(() => expect(editor().value).toBe(`STARTER_FOR_${A}`));
+  await type('keep this draft');
+  await press('Submit');
+  await screen.findByRole('button', { name: 'Load latest brief' });
+  expect(screen.getByRole('button', { name: 'Submit' })).toBeDisabled();
+  expect(calls.submit).toHaveLength(1);
+  expect(calls.start).toEqual([A]);
+  expect(editor().value).toBe('keep this draft');
+  await press('Load latest brief');
+  await waitFor(() => expect(calls.start).toEqual([A, A]));
+  await waitFor(() => expect(screen.queryByRole('button', { name: 'Load latest brief' })).toBeNull());
+  expect(calls.submit).toHaveLength(1);
+  expect(editor().value).toBe('keep this draft');
+  await press('Submit');
+  await waitFor(() => expect(calls.submit).toHaveLength(2));
+  expect(calls.submit[1].session).not.toBe(calls.submit[0].session);
+  expect(calls.submit[1].code).toBe('keep this draft');
+});

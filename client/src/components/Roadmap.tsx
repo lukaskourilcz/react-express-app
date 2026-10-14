@@ -89,6 +89,7 @@ import { reportQuestion } from '../lib/supabase';
 import { shuffleDifferentFrom } from '../lib/shuffle';
 import { readString, writeString } from '../lib/storage';
 import { autosaveDraft, codingDraftQuery, flushAutosave, forgetDeviceDraft, openingDraft, saveDraft } from '../coding/drafts';
+import { fetchCodingTask } from '../coding/api';
 import { DraftNote, useDraftChoice } from '../coding/DraftNote';
 import { renderQuestion } from './CodeBlock';
 import { TermsBar } from './ui/Terms';
@@ -1305,6 +1306,7 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
   onContinue: () => void;
 }) {
   const { t } = useLanguage();
+  const [currentTask, setCurrentTask] = useState({ task, session });
   const draft = useQuery({ ...codingDraftQuery(task.id), enabled: signedIn });
   const waiting = signedIn && draft.isLoading;
   const opening = useMemo(() => (waiting ? null : openingDraft(task.id, draft.data?.code ?? null, draft.data?.updatedAt)), [waiting, task.id, draft.data]);
@@ -1321,8 +1323,8 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
         <ShellPartBoundary fallback={(retry, busy) => <ErrorRetry message={t('coding.loadError')} onRetry={retry} busy={busy} />}>
           <CodingWorkbench
             key={choice.version}
-            task={task}
-            session={session}
+            task={currentTask.task}
+            session={currentTask.session}
             locked={null}
             signedIn={signedIn}
             initialCode={choice.code}
@@ -1334,6 +1336,12 @@ function LessonCodingTask({ task, session, signedIn, onPassed, onRevealed, onCon
                 forgetDeviceDraft(task.id, epoch);
                 onPassed();
               }
+            }}
+            onRefreshTask={async (code) => {
+              saveDraft(task.id, code, { signedIn, base, epoch });
+              const refreshed = await fetchCodingTask(task.id, undefined, currentTask.session);
+              if (!refreshed.session) throw new Error(t('coding.loadError'));
+              setCurrentTask({ task: refreshed.task, session: refreshed.session });
             }}
             onRevealed={onRevealed}
             onContinue={onContinue}

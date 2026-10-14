@@ -382,3 +382,50 @@ for (const [zone, offsets] of [['America/Los_Angeles', [480, 420]], ['Asia/Tokyo
     });
   });
 }
+
+
+for (const width of [360, 1440]) {
+  for (const theme of ['light', 'dark'] as const) {
+    test(`changed task keeps code and reloads its brief at ${width}px in ${theme}`, async ({ page }) => {
+      await prepare(page);
+      await page.setViewportSize({ width, height: 900 });
+      let refreshed = false;
+      let submits = 0;
+      await page.route(/resource=coding-submit(?:&|$)/, route => {
+        submits++;
+        return route.fulfill({ status: 409, json: { error: { code: 'task_changed', message: 'This task changed while you were working. Load its latest brief before submitting. Your code has been kept.' } } });
+      });
+      await page.route(/resource=coding-task(?:&|$)/, route => {
+        const authored = CODING_TASKS.find(one => one.id === 'js-double-numbers')!;
+        const task = playable(authored);
+        if (refreshed) task.title = { en: 'Updated double task', cs: '' };
+        return route.fulfill({ json: { task, session: refreshed ? 'fresh-session' : 'old-session', locked: null, progress: null, draft: null, signedIn: false } });
+      });
+      await openTask(page, '/coding/javascript/js-double-numbers');
+      await page.evaluate(value => localStorage.setItem('devquiz:color-mode', value), theme);
+      await page.reload();
+      await expect(page.locator('#main-content')).toBeFocused();
+      if (width === 1440) await page.addStyleTag({ content: 'html { font-size: 200%; }' });
+      if (width === 360) await page.getByRole('button', { name: 'Use the editor on this screen' }).click();
+      const source = 'const double = values => values.map(value => value * 2);';
+      await fillEditor(page, source);
+      await page.getByRole('button', { name: 'Submit', exact: true }).click();
+      const reload = page.getByRole('button', { name: 'Load latest brief' });
+      await expect(reload).toBeVisible();
+      const target = await reload.boundingBox();
+      expect(target!.height).toBeGreaterThanOrEqual(44);
+      await expect(page.locator('.cm-content')).toContainText(source);
+      await expect(page.getByRole('button', { name: 'Submit', exact: true })).toBeDisabled();
+      expect(submits).toBe(1);
+      refreshed = true;
+      await reload.focus();
+      await page.keyboard.press('Enter');
+      await expect(page.getByRole('heading', { name: 'Updated double task' })).toBeVisible();
+      await expect(reload).toHaveCount(0);
+      await expect(page.locator('.cm-content')).toContainText(source);
+      await expect(page.getByRole('button', { name: 'Submit', exact: true })).toBeEnabled();
+      expect(submits).toBe(1);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    });
+  }
+}

@@ -871,7 +871,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     return jsonError(res, 409, 'session_mismatch', 'This attempt no longer matches the activity');
   }
 
-  if (activity.kind === 'code' && session.version !== pathCodeAttemptVersion(activity)) {
+  if (activity.kind === 'code' && session.version !== pathCodeAttemptVersion(activity, path.rubric.version)) {
     // A response lost after an accepted write is still the recorded result,
     // even when the catalogue changed before its network retry. Read only the
     // bound attempt; never regrade it or pay its reward again.
