@@ -100,7 +100,7 @@ export const DSA_D04: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A stack and a queue are not containers so much as rules about which end you may touch. Both hold a sequence. Both let you add one value and take one back. They differ in exactly one place: which value they are willing to give you.',
+            'A stack and a queue are abstract data types with different access orders. Both hold a sequence. Both let you add one value and take one back. They differ in exactly one place: which value they are willing to give you.',
         },
         {
           kind: 'prose',
@@ -179,7 +179,7 @@ console.log("pop on empty", stack.pop());`,
           kind: 'callout',
           tone: 'note',
           body:
-            'Underflow is popping an empty stack, and every implementation has to decide what that does. Throwing and returning a sentinel are both defensible; leaving it undefined is not. This module returns `null`, which is ambiguous when `null` is itself a stored value — `size()` is what tells the two apart. Pick one rule and write it down.',
+            'Underflow is reading or removing from an empty stack. Throwing or returning a sentinel can both be sound if the API states its behavior. This module returns `null`, which is ambiguous when `null` is itself a stored value — `size()` is what tells the two apart. Pick one rule and write it down.',
         },
         {
           kind: 'prose',
@@ -250,7 +250,7 @@ console.log("pop on empty", stack.pop());`,
         {
           kind: 'prose',
           body:
-            'Both structures need a size, and both need it for the same reason: it is the guard that keeps a reader from asking for a value that is not there. Check the size before you pop, or make `pop` do the check itself, but do not skip it and read whatever the underlying array hands back.',
+            'Empty-case behavior must be stated. This module returns null on underflow and provides size to distinguish an empty structure from one storing null. A different API can throw or return undefined if that behavior is documented.',
         },
         {
           kind: 'callout',
@@ -293,7 +293,7 @@ console.log("pop on empty", stack.pop());`,
           kind: 'callout',
           tone: 'note',
           body:
-            'Amortized is a statement about a sequence, not about a single call. It says n pushes cost O(n) between them, so the average is constant. It does not say every push is cheap, and in a system where one slow call matters more than the total — a frame budget, an audio callback — the average is the wrong number to quote.',
+            'Amortized is a statement about a sequence, not about a single call. It says n pushes cost O(n) between them, so the average is constant. It does not say every push is cheap, and in a system where one slow call matters more than the total — a frame budget, an audio callback — the amortized bound alone does not guarantee that deadline.',
         },
         {
           kind: 'prose',
@@ -352,18 +352,18 @@ console.log("pop on empty", stack.pop());`,
         {
           kind: 'prose',
           body:
-            'The fix is to stop moving elements. Keep the values where they are and remember where the front is instead: a head index that starts at 0 and only ever goes up. `dequeue` reads the slot the head points at, then adds one to the head. Nothing else in the array changes.',
+            'The fix is to stop moving elements. Keep the values where they are and remember where the front is instead: a head index that starts at 0 and only ever goes up. `dequeue` reads the slot the head points at, then adds one to the head. No waiting value moves; the consumed slot can be cleared to release its reference.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code: 'const createQueue = () => {\n  const items = [];\n  let head = 0;\n\n  return {\n    enqueue: value => { items.push(value); },\n    dequeue: () => {\n      if (head >= items.length) return null;\n      const value = items[head];\n      items[head] = null; // release the reference, not the slot\n      head += 1;\n      return value;\n    },\n    size: () => items.length - head,\n  };\n};',
-          caption: 'A head-index queue: one slot read, one index bumped, whatever the queue length.',
+          caption: 'A head-index queue: read and clear one slot, then advance the head without moving waiting values.',
         },
         {
           kind: 'prose',
           body:
-            'Every operation here is constant, `enqueue` amortized so. `size()` is `items.length - head`, one subtraction. The queue is empty when the head has caught up with the end, which is the condition `dequeue` checks before it reads anything.',
+            'In the stated model, dequeue and size are constant-time; enqueue is amortized constant-time. `size()` is `items.length - head`, one subtraction. The queue is empty when the head has caught up with the end, which is the condition `dequeue` checks before it reads anything.',
         },
         {
           kind: 'callout',
@@ -463,7 +463,7 @@ console.log("pop on empty", stack.pop());`,
         },
         {
           id: 'dsa-v1-d04-q3',
-          prompt: "A growable-array model starts with capacity 1 and doubles it when full, copying stored values. Index writes and copying one value have constant cost. What does amortized O(1) append mean?",
+          prompt: "A growable-array model starts with capacity 1 and doubles it when full, copying stored values. Index writes and copying one value have constant cost. For n ≥ 1 appends, what does amortized O(1) append mean?",
           options: [
             "A run of n appends costs O(n) total, though one resize append can cost O(n).",
             "Every append costs O(1) individually, because resizing never copies stored values.",
@@ -658,7 +658,7 @@ console.log(queue.dequeue(), queue.size());
 };`,
         hints: [
           "Keep separate positions for the stored end and the next value to return. Work out when they describe an empty queue.",
-          '`dequeue` reads `items[head]` and then adds one to `head`. Nothing else changes, so the cost does not depend on how many values are waiting.',
+          'Read the front value before advancing the head. You can clear the consumed slot without moving any waiting value.',
           'Write `null` into the slot you just read before advancing the head. The slot stays in the buffer, but the value it referenced can be collected.',
         ],
         approach: [
@@ -740,7 +740,7 @@ console.log(queue.dequeue(), queue.size());
       code: {
         language: 'javascript',
         prompt:
-          'Write `isBalanced(text)`, returning `true` when every bracket in `text` is closed by the matching kind in the right order, and `false` otherwise.\n\n`text` contains only these six characters: `(`, `)`, `[`, `]`, `{`, `}`. No other character ever appears, so there is nothing to skip and nothing to reject. The empty string is balanced.\n\n`([]{})` is balanced. `(]` is not, because a closer has to match the opener it meets. `([)]` is not, because the pairs overlap instead of nesting. `)(` is not, because a closer arrives with nothing open. `(` is not, because an opener is still waiting when the string ends.',
+          'Write `isBalanced(text)`, returning `true` when every bracket in `text` is closed by the matching kind in the right order, and `false` otherwise.\n\n`text` contains only these six characters: `(`, `)`, `[`, `]`, `{`, `}`. No other character ever appears, so there is nothing to skip and nothing to reject. The empty string is balanced.\n\nTarget: O(n) time and O(n) extra space, where n is text.length; all six allowed characters are single ASCII code units. A stack is the recommended approach; fixed tests check the result, not a proof of the target.\n\n`([]{})` is balanced. `(]` is not, because a closer has to match the opener it meets. `([)]` is not, because the pairs overlap instead of nesting. `)(` is not, because a closer arrives with nothing open. `(` is not, because an opener is still waiting when the string ends.',
         contract: [
           'The input holds only `()[]{}`, so no other character has to be handled.',
           'The empty string returns `true`.',

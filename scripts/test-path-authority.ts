@@ -92,7 +92,6 @@ for (const [label, source, expected] of [
 ] as const) {
   await check('dsa-v1-d02-reverse-in-place', source, expected, label);
 }
-console.log('Native path authority checks passed. No production tampering probe was performed.');
 
 
 // D04 uses a separate counted-buffer proxy. Property definitions/deletions
@@ -104,3 +103,11 @@ for (const [label, source, accepted] of [
   ['queue repeated deletions and definitions exceed the budget', 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);const index=String(a.length-1);for(let i=0;i<10;i++){delete a[index];Object.defineProperty(a,index,{value,writable:true,enumerable:true,configurable:true});}},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', false],
   ['queue captured definition survives global replacement', 'Object.defineProperty=()=>{throw new Error("replaced");};function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){Reflect.defineProperty(a,String(a.length),{value,writable:true,enumerable:true,configurable:true});},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', true],
 ] as const) await check('dsa-v1-d04-head-index-queue', source, accepted, label);
+
+
+const countedQueue = activityIn(dsa, 'dsa-v1-d04-head-index-queue')!.activity;
+const singleWriteQueue = 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);},dequeue(){if(h>=a.length)return null;const value=a[h];a[h++]=null;return value;},size(){return a.length-h;}};}';
+const exactCount = await gradePathCode(countedQueue, { ...countedQueue.code!, tests: [...countedQueue.code!.tests, { call: '__measureQueue(32).ops', expected: 96 }] }, singleWriteQueue);
+assert.equal(exactCount.state, 'verified_pass', 'queue append/read/clear are exactly three counted operations per value');
+console.log('PASS path authority: queue ordinary assignment is counted once');
+console.log('Native path authority checks passed. No production tampering probe was performed.');
