@@ -38,10 +38,10 @@ jobs:
           DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
   verify:
     runs-on: ubuntu-latest
-    # The coding content contract now also grades every task against wrong
-    # solutions (lookup tables, constants, static React pages), which adds
-    # a few minutes to a run that already took about fifteen.
-    timeout-minutes: 30
+    # Full isolated grading, browser coverage, Storybook and performance need
+    # more than the old 30-minute cap: run 38491511671 passed the preceding
+    # gates and timed out during the final Storybook/performance step.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
