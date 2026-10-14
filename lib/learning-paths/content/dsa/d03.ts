@@ -32,26 +32,26 @@ export const DSA_D03: ModuleSource = {
         {
           label: 'MDN — Map',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
-        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-09-08' },
+        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-10-14' },
       ],
       sections: [
         {
           kind: 'prose',
           body:
-            'Finding a value in an array means looking at elements until one matches. Nothing else is available: position tells you nothing about content, so a miss costs a full traversal. A hash table changes the question from "where is it?" to "where would it have to be?" — it computes a slot from the key itself and looks only there.',
+            'For an unsorted array without a search index, a membership miss can require a full traversal. A sorted sequence can support other search techniques; this comparison starts with the unsorted case. In this lesson, a hash table has bounded load and constant-cost key hashing/comparison. It changes the question from "where is it?" to "where would it have to be?" — it computes a slot from the key itself and looks only there.',
         },
         {
           kind: 'prose',
           body:
-            'That computation is the hash function. It turns a key into a bucket index, deterministically: the same key always lands in the same bucket. Store the entry there, and a later lookup hashes the key again, goes straight to that bucket, and compares only what it finds. The number of entries in the table never entered the calculation, which is why the cost does not grow with it.',
+            'That computation is the hash function. It turns a key into a bucket index, deterministically: the same key always lands in the same bucket. Store the entry there, and a later lookup hashes the key again, goes straight to that bucket, and compares only what it finds. The bucket index also depends on table capacity and changes during resizing. With well-distributed hashes and a bounded load factor, the expected bucket search is constant; arbitrary key-length costs are outside that model.',
         },
         {
           kind: 'code',
           language: 'javascript',
-          code: '// One traversal per lookup: a thousand lookups over a thousand users\n// is a million comparisons.\nconst findUser = (users, id) => users.find(user => user.id === id);\n\n// One traversal to build, then expected constant work per lookup.\nconst byId = new Map(users.map(user => [user.id, user]));\nconst findFast = id => byId.get(id);',
-          caption: 'The trade: one linear pass and extra memory up front, then lookups that ignore the size of the collection.',
+          code: '// One traversal per lookup: a thousand lookups over a thousand users\n// can cost a million comparisons in the worst case (for example, misses).\nconst findUser = (users, id) => users.find(user => user.id === id);\n\n// Assume unique ids; duplicate ids would make find return the first user\n// while Map construction retains the last. Under the hash-table model:\n// one traversal to build, then expected constant work per lookup.\nconst byId = new Map(users.map(user => [user.id, user]));\nconst findFast = id => byId.get(id);',
+          caption: 'The trade: one linear pass and extra memory up front, then expected constant lookups under the stated hash-table assumptions.',
         },
         {
           kind: 'prose',
@@ -99,7 +99,7 @@ export const DSA_D03: ModuleSource = {
           kind: 'callout',
           tone: 'note',
           body:
-            'Memory is what pays for the speed. A hash table keeps more buckets than entries so collisions stay rare, and it grows and rehashes when the entries catch up with the buckets. A Map of n entries therefore occupies more than n slots. On a few thousand items you will not notice; on tens of millions the slack is the constraint.',
+            'Memory is what pays for the speed. A hash table keeps more buckets than entries so collisions stay rare, and it grows and rehashes when the entries catch up with the buckets. A bounded-load hash-table model uses O(n) entries and bucket storage, with implementation-dependent overhead. JavaScript Map may use another representation; whether that overhead matters depends on the workload and memory limit.',
         },
         {
           kind: 'prose',
@@ -125,9 +125,9 @@ export const DSA_D03: ModuleSource = {
             [
               'What order do entries come out in?',
               'Insertion order, for every key',
-              'Integer-like keys first in ascending order, then the rest in insertion order',
+              'Reflect.ownKeys: canonical array-index names first numerically, other strings next, then symbols; each latter group keeps insertion order',
             ],
-            ['How many entries are there?', '`map.size`, read directly', '`Object.keys(obj).length`, which builds an array first'],
+            ['How many entries are there?', '`map.size`, read directly', '`Object.keys(obj).length` allocates and counts only own enumerable string keys; Reflect.ownKeys includes symbols and nonenumerable own keys'],
             [
               'Can a key arrive that you never set?',
               'No — a Map holds only what you put in it',
@@ -139,18 +139,18 @@ export const DSA_D03: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Key equality in a Map follows SameValueZero. Two keys match when they are the same value, with two adjustments to `===`: `NaN` matches `NaN`, and `0` matches `-0`. So `1` and `"1"` are two separate keys, `true` and `1` are two separate keys, and a Map can count occurrences of `NaN` without special handling.',
+            'Key equality in a Map follows SameValueZero. Two keys match when they are the same value, like `===` except that NaN matches NaN. Both === and SameValueZero already treat 0 and -0 as equal. So `1` and `"1"` are two separate keys, `true` and `1` are two separate keys, and a Map can count occurrences of `NaN` without special handling.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'A plain object converts every key to a string, so `obj[1]` and `obj["1"]` are one slot and `obj[{ id: 7 }]` becomes the key `"[object Object]"`. A Map keeps the key you handed it, which cuts the other way for objects: two structurally identical objects are two different keys, and `map.set({ id: 7 }, x).get({ id: 7 })` is `undefined`.',
+            'Ordinary object keys become strings or symbols through property-key conversion. Non-Symbol primitive keys such as numbers become strings, so `obj[1]` and `obj["1"]` are one slot and `obj[{ id: 7 }]` becomes the key `"[object Object]"`. A Map keeps the key you handed it, which cuts the other way for objects: two structurally identical objects are two different keys, and `map.set({ id: 7 }, x).get({ id: 7 })` is `undefined`.',
         },
         {
           kind: 'prose',
           body:
-            'So the deal is narrow and worth stating in one line: you spend memory and give up positional access, and you get `get`, `set`, `has` and `delete` whose expected cost does not grow with the number of entries. The next lesson is about what "expected" leaves out.',
+            'So the deal is narrow and worth stating in one line: you spend memory and give up positional access, and you get `get`, `set`, `has` and `delete` with expected constant lookup costs under the bounded-key hash-table model, while JavaScript guarantees only sublinear average access. The next lesson is about what "expected" leaves out.',
         },
       ],
     },
@@ -163,30 +163,30 @@ export const DSA_D03: ModuleSource = {
         {
           label: 'MDN — Set',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Set',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
         {
           label: 'MDN — Equality comparisons and sameness',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Equality_comparisons_and_sameness',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
       ],
       sections: [
         {
           kind: 'prose',
           body:
-            'A Set is a Map with the values removed. It answers one question — is this value in here? — and it answers it the same way a Map answers `has`: hash the value, go to the bucket, compare what is there. Key equality is SameValueZero again, so a Set stores `1` and `"1"` separately and collapses two `NaN`s into one entry.',
+            'A Set stores membership without attached values. A hash-based Set follows the same bucket model; JavaScript does not require that exact representation. It answers one question — is this value in here? — and it answers it the same way a Map answers `has`: hash the value, go to the bucket, compare what is there. Key equality is SameValueZero again, so a Set stores `1` and `"1"` separately and collapses two `NaN`s into one entry.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code: "const seen = new Set(['a', 'b', 'a']);\nseen.size;        // 2 — the second 'a' found itself already there\nseen.has('a');    // true\nseen.add('c');\nseen.delete('b'); // true when the value was present, false when it was not\n[...seen];        // ['a', 'c'] — insertion order kept, duplicates gone",
-          caption: 'The whole Set surface: add, has, delete, size, and iteration in insertion order.',
+          caption: 'Common Set operations: add, has, delete, size, and iteration in insertion order.',
         },
         {
           kind: 'prose',
           body:
-            'The pattern a Set replaces is the nested scan. You have n things and a list of m things to check them against, and the direct version asks the m-list about every one of the n. That is nm comparisons, and it is quietly quadratic whenever the two lists grow together.',
+            'The pattern a Set replaces is the nested scan. You have n things and a list of m things to check them against, and the direct version asks the m-list about every one of the n. The worst case has up to nm comparisons; it is quadratic in a shared size when both lists grow proportionally. Short-circuit hits can do less work.',
         },
         {
           kind: 'code',
@@ -210,7 +210,7 @@ export const DSA_D03: ModuleSource = {
         {
           kind: 'prose',
           body:
-            '"Expected" is doing real work in those rows. It means the cost averaged over keys, under the assumption that the hash spreads them across the buckets. For the keys an ordinary program uses, that assumption holds and the average is a small fixed number of steps. It is not a statement about every individual lookup, and it is not a guarantee about every possible set of keys.',
+            '"Expected" is doing real work in those rows. It means the cost averaged over keys, under the assumption that the hash spreads them across the buckets. This expectation requires a suitable hashing distribution, bounded load and bounded key-hashing/equality work; it is an assumption to state, not a promise about every workload. It is not a statement about every individual lookup, and it is not a guarantee about every possible set of keys.',
         },
         {
           kind: 'trace',
@@ -284,7 +284,7 @@ export const DSA_D03: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The gap matters when someone else chooses your keys. A request handler that maps user-supplied strings into a table can be fed a batch of keys that collide, and the chain walk in the trace above is what the server then does on every lookup. Engines defend against this with randomised hashing, and it is still the reason a hard latency bound wants a structure with a worst-case guarantee, such as a balanced tree, rather than a hash table.',
+            'The gap matters when someone else chooses your keys. In a chained hash table, deliberately colliding keys can force long bucket walks. Implementations may mitigate collisions or use a different structure; do not assume the illustrated attack applies unchanged to every JavaScript Map. A structure with worst-case operation bounds can help when those bounds matter, but key-comparison cost and runtime scheduling still affect latency.',
         },
         {
           kind: 'prose',
@@ -341,21 +341,21 @@ export const DSA_D03: ModuleSource = {
       questions: [
         {
           id: 'dsa-v1-d03-q1',
-          prompt: '`seen` is a `Map` holding a million entries. Which description of `seen.get(key)` is accurate?',
+          prompt: '`seen` is a JavaScript Map with n entries. What access-time guarantee does the language specification require?',
           options: [
-            'Expected constant: with keys that spread across buckets the cost does not grow with the entry count, though a run of collisions pushes an individual lookup toward linear.',
-            'Guaranteed constant: the specification requires the same number of steps whatever the Map holds.',
-            'Logarithmic: a Map keeps its keys in sorted order, so `get` halves the search range at each step.',
-            'Linear: `get` walks the entries in insertion order until the key matches.',
+            'Average access must be sublinear in n; constant expected lookup is a hash-table model, not a universal Map guarantee.',
+            'Every lookup must be worst-case constant; growing the table or colliding keys cannot increase its operation count.',
+            'Every lookup must be logarithmic because Map sorts its keys and repeatedly halves the remaining search range.',
+            'Every lookup must be linear because get walks entries in insertion order until it reaches the matching key.',
           ],
           correct: 0,
           explanation:
-            'The specification asks for access times that are sublinear on average, not constant in every case, so the guarantee in the second option does not exist. A Map iterates in insertion order but never sorts its keys, so there is no range to halve. And it does not scan: the hash sends the lookup to one bucket, which is why the normal case is a small fixed number of comparisons rather than a traversal.',
+            'The specification requires sublinear average access. A hash table or another suitable representation can meet it; expected constant lookup needs additional hash-table assumptions. Insertion order describes iteration, not a required get algorithm. Map need not sort keys or scan them in insertion order, and it promises no universal constant worst-case operation count.',
           competencies: ['maps-sets', 'complexity'],
         },
         {
           id: 'dsa-v1-d03-q2',
-          prompt: '`tags` has n entries and `banned` has m entries, and the two lengths are unrelated. What is the tightest growth class for `flagged`, and what does putting `banned` into a `Set` first change?',
+          prompt: 'Assume bounded key comparisons/hashing and expected constant Set operations. `tags` has n entries, `banned` has m, and their lengths are unrelated. What is the tightest worst-case class for `flagged`, and the expected class after building a Set once?',
           context: {
             language: 'javascript',
             code: 'const flagged = (tags, banned) => {\n  const out = [];\n  for (const tag of tags) {\n    if (banned.includes(tag)) out.push(tag);\n  }\n  return out;\n};',
@@ -412,12 +412,8 @@ export const DSA_D03: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          "Write `countFrequencies(values)`, returning a `Map` from each value in the array to how many times it appears. `countFrequencies(['a', 'b', 'a'])` returns a Map holding `'a' → 2` and `'b' → 1`.\n\nThe keys must come out in order of first appearance, which a Map gives you for free as long as you insert each key the first time you meet it. An empty array returns an empty Map, not `null` and not an empty object. Values keep their type: `1` and `'1'` are two different keys, and so are `true` and `1`.\n\nOne pass over the array is enough. The tests read the result with `[...map.entries()]`, because a Map is not comparable as JSON.",
-        contract: [
-          'Return a `Map`, never a plain object and never an array of pairs.',
-          'Key each entry by the value itself, so `1` and `\'1\'` stay separate.',
-          'Keys iterate in order of first appearance; an empty array returns an empty Map.',
-        ],
+          "Write `countFrequencies(values)` for a dense array of JavaScript values. Return a Map from each distinct value to its positive occurrence count, with keys in first-appearance order. Use Map's SameValueZero equality: NaN matches NaN, signed zeros are equal, and objects/symbols keep their identity. `1` and `\"1\"` are separate keys. Empty input returns a new empty Map. Preserve the input array.\n\nTarget: O(n) time, where n is input entries, assuming bounded key hashing/comparison and average constant Map operations. JavaScript requires only sublinear average access; the tests check counts, equality and order, not arbitrary runtime growth.",
+        contract: ["Return a new Map with counts for every distinct value and leave the input array unchanged.", "Use SameValueZero key equality, with object and symbol identity preserved.", "Iterate keys in first-appearance order, including mixed-type values."],
         starter: `const countFrequencies = values => {
 
 };
@@ -434,10 +430,7 @@ console.log([...countFrequencies(['a', 'b', 'a']).entries()]);
 
   return counts;
 };`,
-        hints: [
-          'Start with `new Map()`. For each value, `counts.get(value)` is `undefined` the first time, so treat that as zero before adding one.',
-          'A Map keeps keys in insertion order, so the order comes out right on its own — as long as the first `set` for a key happens when you first meet it, which a single left-to-right pass guarantees.',
-        ],
+        hints: ["A repeated value needs its earlier count, while a new value needs an initial count. Avoid converting keys to strings.", "Updating an existing Map key does not change its insertion position. Consider how that preserves first appearance."],
         approach: [
           'Create an empty Map to hold the counts.',
           'Walk the array once, binding each value.',
@@ -494,12 +487,8 @@ console.log([...countFrequencies(['a', 'b', 'a']).entries()]);
       code: {
         language: 'javascript',
         prompt:
-          "Write `firstUnique(values)`, returning the first value in the array that appears exactly once. `firstUnique(['a', 'b', 'a', 'c'])` returns `'b'`, because `'a'` appears twice and `'b'` is the earliest value that does not. Return `null` when every value repeats, and `null` for an empty array.\n\nTwo passes are the expected shape and are entirely fine: one to count, one to walk the array in order and return the first value whose count is 1. That is O(n) time overall, and O(n) auxiliary space for the counts.\n\nValues keep their type, so `0` and `'0'` are different values, and so are `false` and `0`.",
-        contract: [
-          'Return the first qualifying value in the array\'s own order, not the first key of your counting structure.',
-          'Return `null` — not `undefined`, not `-1` — when no value appears exactly once.',
-          'Compare values by identity, so `0` and `\'0\'` never share a count.',
-        ],
+          "Write `firstUnique(values)` for a dense array of JavaScript values. Return the earliest input value that appears exactly once, or null when there is none, including empty input. Compare using SameValueZero: NaN equals NaN, signed zeros are equal, and object/symbol identities stay distinct. A qualifying undefined or null value is returned as that value; the null sentinel need not distinguish a found null. Either zero sign is acceptable. Preserve the input array.\n\nA counting pass followed by an input-order or insertion-ordered Map scan is one approach. Target: O(n) time, where n is input entries, under bounded key-cost and average constant Map operations. These are model assumptions, not a universal Map time guarantee.",
+        contract: ["Return the earliest qualifying value under SameValueZero equality; object and symbol values keep their identity.", "Return null when none qualifies. A qualifying undefined remains undefined, and either zero sign is acceptable.", "Preserve the input array; iteration over an insertion-ordered Map can preserve first-appearance order."],
         starter: `const firstUnique = values => {
 
 };
@@ -520,11 +509,7 @@ console.log(firstUnique(['a', 'b', 'a', 'c']));
 
   return /* nothing qualified */;
 };`,
-        hints: [
-          'The first pass builds the same value-to-count Map as the frequency exercise. The second pass is what makes the answer the *first* one: walk the original array again and return the first value whose count is 1.',
-          'Returning the first key of the Map whose count is 1 happens to work here too, since a Map keeps insertion order — but walking the array is the version that stays correct if the counting structure ever changes.',
-          'Reaching the end of the second pass means nothing appeared exactly once, so return `null` there rather than falling off the end.',
-        ],
+        hints: ["Seeing a value once is not enough to know it stays unique. Decide what information survives when it appears later.", "After counting, identify the earliest qualifying value; numeric object-property order can differ from the input order.", "A falsey value may still be the correct result. Distinguish finding it from reaching the end without any qualifying value."],
         approach: [
           'Build a Map from each value to the number of times it appears.',
           'Walk the original array a second time, in order.',
@@ -553,12 +538,8 @@ console.log(firstUnique(['a', 'b', 'a', 'c']));
       code: {
         language: 'javascript',
         prompt:
-          'Write `intersection(left, right)`, returning an array of the values that appear in both inputs. `intersection([1, 2, 3, 4], [3, 4, 5])` returns `[3, 4]`.\n\nEach shared value appears in the output once, in the order it first appears in `left`. Duplicates in either input must not duplicate the output: `intersection([2, 2, 3], [3, 2])` is `[2, 3]`. When either input is empty, or the two share nothing, return `[]`.\n\nNeither input may be modified. Build a Set from `right` and test each element of `left` against it, which costs expected O(n + m) instead of the O(nm) a nested scan would spend.',
-        contract: [
-          'Return a new array; leave both `left` and `right` exactly as they were.',
-          'Each shared value appears once, in the order it first appears in `left`.',
-          'An empty input, or no shared values, returns an empty array.',
-        ],
+          "Write `intersection(left, right)` for two dense arrays of JavaScript values. Return a new array of values present in both, each once, in their first-appearance order in left. Use SameValueZero equality: NaN equals NaN, signed zeros are equal, and objects/symbols match by identity. Values retain their type; use the representative from left, except either sign of zero is acceptable. Preserve both inputs. Empty input or no overlap returns a new empty array.\n\nBuilding a Set from right once and scanning left is one approach. Target: O(n + m) time, where n and m are the input lengths, assuming bounded key costs and average constant Set operations. Correct slower alternatives can pass semantic checks; the tests do not prove arbitrary complexity.",
+        contract: ["Return a fresh output array for every input, including empty cases; preserve both inputs.", "Each shared SameValueZero class appears once, in first-appearance order from left.", "Object/symbol identities and value types are preserved; either zero sign is acceptable."],
         starter: `const intersection = (left, right) => {
 
 };
@@ -577,11 +558,7 @@ console.log(intersection([1, 2, 3, 4], [3, 4, 5]));
 
   return out;
 };`,
-        hints: [
-          '`new Set(right)` gives you membership in expected constant time, so the loop over `left` never scans `right` again.',
-          'Membership alone is not enough: `left` can repeat a shared value. Keep a second Set of the values you have already pushed, and skip anything already in it.',
-          'Pushing onto a fresh array keeps both inputs untouched. Sorting, splicing or filtering in place would not.',
-        ],
+        hints: ["Membership answers whether right contains a value. What additional information prevents the same shared value from being emitted twice?", "Choose which input controls the output order. Keep the original arrays separate from any result-building state.", "Check repeated values, mixed types and NaN against the equality rule before choosing a membership test."],
         approach: [
           'Build a Set from `right`.',
           'Create an empty Set for the values already added, and an empty output array.',
