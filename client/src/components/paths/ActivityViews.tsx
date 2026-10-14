@@ -273,6 +273,7 @@ export function CodeActivity({
   onDraft,
   draftStatus,
   busy,
+  submitBlocked = false,
 }: {
   code: PathCodePayload;
   draft: PathDraft | null;
@@ -281,6 +282,7 @@ export function CodeActivity({
   onDraft: (source: string) => void;
   draftStatus: DraftStatus;
   busy: boolean;
+  submitBlocked?: boolean;
 }) {
   const t = useT();
   const loc = useLoc();
@@ -362,7 +364,7 @@ export function CodeActivity({
               setSource(code.starter);
               queueDraft(code.starter);
             }} isDisabled={busy} label={t('paths.code.reset')} />
-          <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
+          <Button variant="primary" onClick={() => onSubmit(source)} isDisabled={busy || submitBlocked || source.trim().length === 0} label={busy ? t('paths.action.submitting') : t('paths.action.submit')} />
         </div>
 
         <Editor

@@ -1,5 +1,6 @@
 // First: clears the environment the handlers below read when imported.
 import './launch-test-env';
+import { createCodingSession as encodeCodingSession } from '../lib/coding/session';
 import assert from 'node:assert/strict';
 import { complexityContracts } from './coding-complexity-contract';
 import { mkdtempSync, readFileSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs';
@@ -57,7 +58,7 @@ import { LOCAL_FETCH_SOURCE } from '../shared/coding-fullstack-support';
 import { splitHiddenCases, withHiddenCases } from '../lib/coding/react-hidden';
 import { GUEST_CRASHED_MESSAGE, GUEST_ENV, GUEST_NODE_FLAGS, readGuestResult, readGuestRun, serializeGuestResult } from '../lib/coding/react-guest';
 import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
-import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
+import { decodeCodingSession, encodeCodingSession as encodeLegacyCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
 import { contentVersion, contentHash, translationHash, taskHash, itemReview, codingTaskReview, questionEligibility, isAuditedCategory } from '../lib/curation';
@@ -3493,7 +3494,7 @@ async function main() {
   // expired session, and nothing here noticed, because this block only ever
   // tried JavaScript.
   for (const track of CODING_TRACKS) {
-    const sealed = encodeCodingSession({ taskId: 'alg-two-sum', track, userId: 'user-0001' });
+    const sealed = encodeLegacyCodingSession({ taskId: 'alg-two-sum', track, userId: 'user-0001' });
     assert.equal(decodeCodingSession(sealed)?.track, track, `a coding session on the ${track} track must decode`);
   }
 

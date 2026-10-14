@@ -695,3 +695,5 @@
 .cd-complete .cd-verdict { margin-bottom: 20px; }
 .cd-verdict--warning { border-color: var(--ss-warning); background: var(--ss-warning-soft); color: var(--ss-warning); }
 .cd-complete .cd-verdict__actions { display: flex; gap: 12px; flex-wrap: wrap; justify-content: center; }
+
+.cd-brief-refresh { min-height: 44px; }
