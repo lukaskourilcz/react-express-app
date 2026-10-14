@@ -1,7 +1,7 @@
 {
   "schema": "devshark-audit-inventory/v1",
   "reconciledOn": "2026-10-14",
-  "catalogueCommit": "0c3388c4fbf0a7374b4ce1fd4ce353408060a2e9",
+  "catalogueCommit": "d47e3a9d273aa241e4440a40aab9ace4d37dc776",
   "shippedLocales": [
     "en"
   ],
@@ -25,12 +25,12 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "Twenty individually recorded coding tasks deployed through PRs #372 and #377. Required verify/SQL passed on b062773b in Actions 38511335026; production dpl_6u64uVFgweVX7Tj9Xhwutup8VjSZ passed health and correct/wrong grading. Selected editorial verdicts are 88 plus 89; execution does not approve other tasks.",
-    "currentModelReviewedIssuedTasks": 25,
-    "issuedStillRequiringReview": 700,
-    "deployedModelReviewedIssuedTasks": 20,
+    "executionEvidence": "Twenty-five individually recorded coding tasks deployed through PRs #372/#377/#386. Required verify/SQL for #386 passed on 91e581c9 in Actions 38528432347; production dpl_Ay5qY4nrksapSrAihuVqt5uBVDv7 passed eleven signed-out route/grading checks on merge 29566b91. Execution does not approve unreviewed tasks.",
+    "currentModelReviewedIssuedTasks": 30,
+    "issuedStillRequiringReview": 695,
+    "deployedModelReviewedIssuedTasks": 25,
     "stagedModelReviewedIssuedTasks": 5,
-    "stagedExecutionEvidence": "Five TypeScript foundation tasks individually read and recorded: 42/42 selected expected compiler/worker verdicts, 20 selected conservative advisory/25 XP checks. Complete coding execution contract passes locally. Required CI/deployment pending; no editorial approval inferred for other tasks."
+    "stagedExecutionEvidence": "Five TypeScript union/tuple/dictionary tasks individually read and recorded: 40/40 selected expected compiler/worker verdicts and twenty selected authored-goal/base-25-XP checks. Full required CI/deployment pending."
   },
   "nativePaths": {
     "paths": 2,
@@ -56,7 +56,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "Production overrides re-read 14 October at 07:25 UTC: 485 hides, no active rows, same sorted-ID digest. Forty restored questions, twenty reviewed coding tasks and forty-eight native records deployed. Five further TypeScript coding records staged. Twelve D05 native records are also staged.",
+    "The earlier 14 October production override snapshot remains unchanged at its recorded recheck: 485 hides, zero active rows, same sorted-ID digest. Forty restored questions, twenty-five reviewed coding tasks and forty-eight native records are production-verified. Five further coding records are staged; twelve D05 native records are merged with production verification pending.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

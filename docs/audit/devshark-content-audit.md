@@ -372,6 +372,37 @@ reflow probes pass at six widths. These fixtures do not establish authenticated
 production acceptance or activate deployment flags. Required CI/deployment for
 this partial wave are pending.
 
+### Coding wave 6 — unions, tuples and safe dictionary keys
+
+Padded id, Shipping speed, Split a name, Tally votes and Rotate a list were read
+individually with their full specifications, variants and grader/type fixtures.
+Number formatting uses default String conversion and a fixed minimum width;
+string inputs are untouched. Shipping uses the supplied three-entry literal rule.
+Name splitting preserves the exact first U+0020 prefix/suffix rather than
+normalizing whitespace. Rotation produces fresh mutable output, even for tiny
+inputs, while preserving readonly caller data.
+
+Actual supplemental worker probes showed that Tally's reference and junior
+failed ordinary prototype-named keys; the Map/fromEntries senior passed.
+A null-prototype local dictionary repairs both, and avoids copying a growing
+accumulator for every vote. Own enumerable data entries, duplicate counts,
+case/empty/whitespace values and input preservation are explicit. An ordinary
+object with explicit own-property definitions is a valid alternative. Bounded-key
+average dictionary cost is an authored model, not an engine/hash timing guarantee.
+
+The old selected candidate set matched 32/40. The final TypeScript 5.9.3/QuickJS
+worker returns 40/40 expected verdicts: 20 valid variants/alternatives, five
+starters and fifteen wrong approaches. Newly explicit preservation rules are
+separated from existing typing/reference defects. Twenty selected authored-goal
+and base-25-XP checks pass without unsupported above-target penalties. Per-item
+quality floors are 4/5 and relevance 9–10/10, with exact task-hash:v2 records and
+same-session final self-review. No independent or human review is claimed.
+
+This is #389. The branch records 30/725 coding tasks (25 deployed, five staged);
+695 still need individual review. Full required CI/deployment for this partial
+wave are pending. Native coverage remains partial at 60/263, with 203 further
+records still requiring individual review.
+
 ## 1. September inventory, retained as historical evidence
 
 Every place a devShark question can reach a learner was reconciled from the
