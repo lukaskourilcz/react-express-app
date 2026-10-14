@@ -36,6 +36,8 @@ export const LOG_OUTPUT_CUT = '… (output cut)';
  * line (PROBE_LINE), which the code cannot redeclare; the object is frozen.
  * Checks and path harnesses write `new __probe.Proxy(...)`,
  * `__probe.isIndex(key)` and `__probe.get(...)`.
+ * Path-harness export sealing also uses captured freeze/descriptor/key
+ * operations, so learner replacements cannot leave fixtures writable.
  */
 export const PROBE_LINE = '"use strict"; const __probe = arguments[arguments.length - 1];';
 /** Whether a property key is an array index, with no built-in method. The

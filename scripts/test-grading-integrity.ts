@@ -3,7 +3,7 @@ import { readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { HIDDEN_RUN_FAILED_MESSAGE, runChecks, runInQuickJS, runInSandbox, SANDBOX_MAX_WAITING, SANDBOX_SLOT_WAIT_MS, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TS_CHECK_MAX_WAITING, TS_CHECK_SLOT_WAIT_MS, TS_CHECK_WORKER_FILE, TYPE_CHECK_DEADLINE_MS, TYPE_CHECK_STOPPED_MESSAGE } from '../lib/coding/ts-check-pool';
-import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../lib/coding/grader-capacity';
+import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem, threadSlots } from '../lib/coding/grader-capacity';
 import { enterInFlight, SHARED_NETWORK_SEATS } from '../lib/rate-limit';
 import { handleCodingReset, handleCodingReveal, handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { encodeCodingSession, type CodingDesignKey } from '../lib/quiz-tokens';
@@ -1502,7 +1502,12 @@ const timed = <T>(run: Promise<T>) => {
     const expired = runs.filter((run) => run.busy === `${name}_wait_expired`);
     const full = runs.filter((run) => run.busy === `${name}_queue_full`);
     assert.equal(ran.length + expired.length + full.length, runs.length, `${name}: every run ran or was told the grader is busy`);
-    assert.ok(ran.length >= 1 && expired.length >= 1 && full.length >= 1, `${name}: ${ran.length} ran, ${expired.length} waited out, ${full.length} found the queue full`);
+    // A type checker can diagnose the recursive alias before its deadline,
+    // freeing its slots and legitimately finishing every queued normal check.
+    // Queue expiration is checked with held slots below, independently of
+    // compiler speed; real expirations here must still obey the production cap.
+    assert.ok(ran.length >= 1 && full.length >= 1, `${name}: ${ran.length} ran, ${expired.length} waited out, ${full.length} found the queue full`);
+    if (name === 'sandbox') assert.ok(expired.length >= 1, 'an infinite JS loop holds its slot past the queue deadline');
     assert.ok(full.every((run) => run.ms < 1_000), `${name}: a full queue refuses at once`);
     assert.ok(expired.every((run) => run.ms >= waitMs - 50 && run.ms < waitMs + 3_000), `${name}: a queued run waits its limit and no longer: ${expired.map((run) => run.ms).join(',')}`);
   }
@@ -1512,6 +1517,25 @@ const timed = <T>(run: Promise<T>) => {
   assert.ok(after.every((run) => run.results[0]?.pass === true), 'the pool is whole again');
   assert.equal((await checkTypes('const a: number = 1;', [[]])).stopped, false, 'the type-check pool is whole again');
   console.log(`PASS integrity: a queued run waits at most ${SANDBOX_SLOT_WAIT_MS} ms (types ${TS_CHECK_SLOT_WAIT_MS} ms), a full queue refuses at once, and neither is a verdict`);
+}
+
+// Exercise the actual shared queue while its only slot is explicitly held.
+// This always reaches expiry, even on a machine where TypeScript diagnoses
+// the "runaway" type before the integration burst's production wait cap.
+for (const name of ['sandbox', 'ts_check']) {
+  const waitMs = 50;
+  const slots = threadSlots({ threads: 1, waiting: 1, waitMs, name });
+  await slots.acquire();
+  const queued = timed(slots.acquire());
+  const full = await timed(slots.acquire());
+  assert.equal(full.busy, `${name}_queue_full`);
+  const expired = await queued;
+  assert.equal(expired.busy, `${name}_wait_expired`);
+  assert.ok(expired.ms >= waitMs - 5 && expired.ms < waitMs + 3_000, `${name}: held-slot waiter respects the deadline`);
+  slots.release();
+  assert.equal((await timed(slots.acquire())).busy, null, `${name}: expired waiter does not consume the released slot`);
+  slots.release();
+  console.log(`PASS integrity: ${name} held-slot queue expires, refuses overflow and recovers`);
 }
 
 // ── a thread that would not start is tried again (C1-4) ──────────────────
