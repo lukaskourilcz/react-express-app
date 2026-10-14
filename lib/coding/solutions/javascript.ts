@@ -535,6 +535,11 @@ const average = numbers => numbers.reduce((sum, number) => sum + number, 0) / Ma
       { call: "average([10,20])", expected: 15 },
       { call: "average([-4,-2])", expected: -3 },
       { call: "average([7])", expected: 7 },
+      { call: "(() => { const result=average([0,0,1]); return typeof result==='number' && Math.abs(result-1/3)<1e-12; })()", expected: true },
+      { call: "(() => { const result=average([0.1,0.2]); return typeof result==='number' && Math.abs(result-0.15)<1e-12; })()", expected: true },
+      { call: "(() => { const input=Object.freeze([-4,0,4]); return [average(input),input]; })()", expected: [0, [-4, 0, 4]] },
+      { call: "(() => { const input=[5,1,3]; return [average(input),input]; })()", expected: [3, [5, 1, 3]] },
+      { call: "average(Array.from({length:10000},()=>1000000))", expected: 1000000 },
     ],
   },
   "js-short-words": {
@@ -556,19 +561,15 @@ const shortWords = words => words.filter(word => word.length <= MAX_SHORT_LENGTH
       { call: "shortWords([\"tree\",\"house\",\"ox\",\"plant\"])", expected: ["tree", "ox"] },
       { call: "shortWords([\"fives\",\"sixsix\"])", expected: [] },
       { call: "shortWords([\"\",\"abcd\",\"abcde\"])", expected: ["", "abcd"] },
+      { call: "shortWords(['😀😀','😀😀😀','e\\u0301abc','abcd','','ox','ox'])", expected: ["😀😀", "abcd", "", "ox", "ox"] },
+      { call: "(() => { const input=[]; return shortWords(input)!==input; })()", expected: true },
+      { call: "(() => { const input=Object.freeze(['','cat','cat']); const out=shortWords(input); return [out,out===input,input]; })()", expected: [["", "cat", "cat"], false, ["", "cat", "cat"]] },
+      { call: "(() => { const input=['horse','cat','cat']; return [shortWords(input),input]; })()", expected: [["cat", "cat"], ["horse", "cat", "cat"]] },
     ],
   },
   "js-object-keys": {
     solution: "const keys = object => Object.keys(object);",
-    junior: `const keys = object => {
-  const names = [];
-  for (const name in object) {
-    if (object.hasOwnProperty(name)) {
-      names.push(name);
-    }
-  }
-  return names;
-};`,
+    junior: "const keys = object => {\n  const names = [];\n  for (const name of Reflect.ownKeys(object)) {\n    if (typeof name === 'string' && Object.prototype.propertyIsEnumerable.call(object, name)) names.push(name);\n  }\n  return names;\n};",
     senior: `// entries keeps insertion order too; destructuring the pair takes the key and leaves the value unused.
 const keys = object => Object.entries(object).map(([key]) => key);`,
     hiddenTests: [
@@ -576,43 +577,44 @@ const keys = object => Object.entries(object).map(([key]) => key);`,
       { call: "keys({name:\"Ada\",age:36,city:\"London\"})", expected: ["name", "age", "city"] },
       { call: "keys({only:null})", expected: ["only"] },
       { call: "keys(Object.assign(Object.create({inherited:1}), {own:2}))", expected: ["own"] },
+      { call: "keys({10:'ten',2:'two',b:1,a:2})", expected: ["2", "10", "b", "a"] },
+      { call: "(() => { const o={a:1}; Object.defineProperty(o,'hidden',{value:2}); o[Symbol('tag')]=3; return keys(o); })()", expected: ["a"] },
+      { call: "(() => { const o=Object.create(null); o.a=1; o.hasOwnProperty=0; return keys(o); })()", expected: ["a", "hasOwnProperty"] },
+      { call: "keys(JSON.parse('{\"__proto__\":5,\"constructor\":3}'))", expected: ["__proto__", "constructor"] },
+      { call: "keys({b:0,'4294967295':1,'01':2,2:3,1:4})", expected: ["1", "2", "b", "4294967295", "01"] },
+      { call: "(() => { const o=Object.freeze({b:2,a:1}); return [keys(o),o.b,o.a]; })()", expected: [["b", "a"], 2, 1] },
+      { call: "(() => { const o={b:2,a:1}; const out=keys(o); return [out,o.b,o.a,Reflect.ownKeys(o)]; })()", expected: [["b", "a"], 2, 1, ["b", "a"]] },
     ],
   },
   "js-object-values": {
     solution: "const values = object => Object.values(object);",
-    junior: `const values = object => {
-  const result = [];
-  for (const key in object) {
-    if (object.hasOwnProperty(key)) {
-      result.push(object[key]);
-    }
-  }
-  return result;
-};`,
+    junior: "const values = object => {\n  const result = [];\n  for (const key of Reflect.ownKeys(object)) {\n    if (typeof key === 'string' && Object.prototype.propertyIsEnumerable.call(object, key)) result.push(object[key]);\n  }\n  return result;\n};",
     senior: `// keys + lookup was the values() idiom before ES2017 and follows the same insertion order.
 const values = object => Object.keys(object).map(key => object[key]);`,
     hiddenTests: [
       { call: "values({b:2,a:1})", expected: [2, 1] },
       { call: "values({x:null,y:0,z:\"\"})", expected: [null, 0, ""] },
       { call: "values({list:[1,2],inner:{k:1}})", expected: [[1, 2], { k: 1 }] },
+      { call: "values({10:'ten',2:'two',b:null})", expected: ["two", "ten", null] },
+      { call: "(() => { const o=Object.assign(Object.create({inherited:9}),{own:2}); Object.defineProperty(o,'hidden',{value:3}); o[Symbol('tag')]=4; return values(o); })()", expected: [2] },
+      { call: "(() => { const o=Object.create(null); o.a=null; o.hasOwnProperty=0; return values(o); })()", expected: [null, 0] },
+      { call: "(() => { const nested={n:1}; const tag=Symbol('data'); const o={a:null,b:0,c:'',d:false,e:undefined,f:NaN,g:1n,h:tag,i:nested}; const out=values(o); return out.length===9 && out[4]===undefined && Number.isNaN(out[5]) && out[6]===1n && out[7]===tag && out[8]===nested; })()", expected: true },
+      { call: "(() => { const o=Object.freeze({b:2,a:1}); return [values(o),o.b,o.a]; })()", expected: [[2, 1], 2, 1] },
+      { call: "(() => { const o={b:2,a:1}; const out=values(o); return [out,o.b,o.a,Reflect.ownKeys(o)]; })()", expected: [[2, 1], 2, 1, ["b", "a"]] },
     ],
   },
   "js-activate-user": {
     solution: "const activate = user => ({...user, active: true});",
-    junior: `const activate = user => {
-  const copy = {};
-  for (const key in user) {
-    copy[key] = user[key];
-  }
-  copy.active = true;
-  return copy;
-};`,
-    senior: `// Assigning into a fresh {} is what protects the caller's object; the later source wins on active.
-const activate = user => Object.assign({}, user, { active: true });`,
+    junior: "const activate = user => {\n  const copy = {};\n  for (const key of Reflect.ownKeys(user)) {\n    if (Object.prototype.propertyIsEnumerable.call(user, key)) {\n      Object.defineProperty(copy, key, { value: user[key], writable: true, enumerable: true, configurable: true });\n    }\n  }\n  copy.active = true;\n  return copy;\n};",
+    senior: "// A null-prototype target has no inherited __proto__ setter.\nconst activate = user => Object.assign(Object.create(null), user, { active: true });",
     hiddenTests: [
       { call: "activate({name:\"Lin\",role:\"admin\"})", expected: { name: "Lin", role: "admin", active: true } },
       { call: "(() => { const user = {name:\"Bo\",active:false}; const next = activate(user); return [user, next, next === user]; })()", expected: [{ name: "Bo", active: false }, { name: "Bo", active: true }, false] },
       { call: "activate({active:true})", expected: { active: true } },
+      { call: "(() => { const nested={n:1}; const tag=Symbol('tag'); const input={payload:nested,[tag]:7,active:false}; Object.defineProperty(input,'hidden',{value:3}); Object.freeze(input); const out=activate(input); return [out!==input,out.payload===nested,out[tag]===7,Object.prototype.hasOwnProperty.call(out,'hidden'),out.active,input.active,nested.n,Reflect.ownKeys(nested).length]; })()", expected: [true, true, true, false, true, false, 1, 1] },
+      { call: "(() => { const data={flag:true}; const input=Object.create(null); Object.defineProperty(input,'__proto__',{value:data,enumerable:true}); const out=activate(input); return [Object.prototype.hasOwnProperty.call(out,'__proto__'),out.__proto__===data,Object.getPrototypeOf(out)===data,out.active,input.active===undefined]; })()", expected: [true, true, false, true, true] },
+      { call: "(() => { const input=Object.assign(Object.create({inherited:9}),{name:'A',active:false}); const out=activate(input); return [Object.prototype.hasOwnProperty.call(out,'inherited'),out.name,out.active,input.active]; })()", expected: [false, "A", true, false] },
+      { call: "(() => { const input=Object.freeze({active:true}); const out=activate(input); return out!==input && out.active===true; })()", expected: true },
     ],
   },
   "js-palindrome": {

@@ -911,7 +911,7 @@ console.log(range(2,4));
     tier: 2,
     focus: ["reduce"],
     title: "Average",
-    prompt: "Write `average(numbers)`, returning the mean of the array. An empty array returns 0 rather than NaN.",
+    prompt: "Write `average(numbers)`, returning the arithmetic mean using JavaScript Number arithmetic without rounding the answer. Empty input returns 0. Input is a dense array of at most 10,000 finite numbers between -1,000,000 and 1,000,000; leave it unchanged, including when frozen. Small floating-point differences are accepted in fractional checks. Target: O(n) time, where n is the number of values and Number operations count as constant-time work.",
     starter: `const average = numbers => {
   
 };
@@ -925,11 +925,11 @@ console.log(average([2,4,6]));
   return /* total divided by how many numbers there are */;
 };`,
     hints: [
-      "A mean is a total divided by a count, so the only real decision here is what to hand back when the count is zero.",
+      "Separate the empty case from the arithmetic. What two quantities describe a mean, and how can you compute them without changing the observations?",
     ],
     approach: [
       "Sum the values with reduce, then divide by how many there are.",
-      "Guard the empty array before dividing, since dividing by a length of zero yields NaN.",
+      "Guard the empty array before dividing: its total and length are both zero, and 0 / 0 is NaN.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -950,7 +950,7 @@ console.log(average([2,4,6]));
     tier: 2,
     focus: ["filter", "strings"],
     title: "Short words",
-    prompt: "Write `shortWords(words)`, returning only the words with fewer than five characters. Four characters passes, five does not.",
+    prompt: "Write `shortWords(words)`, returning a new array of strings whose JavaScript length is less than five. Measure UTF-16 code units, as String.length does: two emoji such as '😀😀' occupy four units, while three occupy six. Preserve order, duplicate occurrences and empty strings. Input is a dense string array and may be frozen; leave it unchanged, and return a new array even for empty or all-matching input. Target: O(n) time, where n is the number of strings and each stored length read counts as constant-time work.",
     starter: `const shortWords = words => {
   
 };
@@ -963,11 +963,11 @@ console.log(shortWords(["cat","elephant"]));
     return /* true to keep this item */;
   });`,
     hints: [
-      "A keep-or-drop decision on each word using its length. Read the boundary carefully: four characters passes and five does not.",
+      "Make each keep-or-drop decision independently so equal words remain separate occurrences. Use the task's length unit; a visible emoji can occupy two UTF-16 units.",
     ],
     approach: [
       "Use filter, keeping a word only when its length passes the comparison.",
-      "The boundary matters: strictly fewer than five characters passes, so a four-letter word is kept and a five-letter word is not.",
+      "Compare the stored UTF-16 length with five. Empty strings qualify; four units qualify and five do not, regardless of how many symbols a person sees.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -998,7 +998,7 @@ console.log(shortWords(["cat","elephant"]));
     tier: 2,
     focus: ["objects"],
     title: "Object keys",
-    prompt: "Write `keys(object)`, returning an array of the object’s own key names in insertion order. An empty object gives an empty array.",
+    prompt: "Write `keys(object)`, returning a new array of its own enumerable string-keyed property names. Use JavaScript property order: array-index keys come first in ascending numeric order, followed by other strings in creation order. Ignore inherited, non-enumerable and symbol keys. Input is an ordinary object with data properties, possibly frozen or with a null prototype; leave it unchanged. Target: O(n) time under a unit-cost property-enumeration model, where n counts all own properties examined.",
     starter: `const keys = object => {
   
 };
@@ -1011,10 +1011,10 @@ console.log(keys({a:1,b:2}));
   return /* result */;
 };`,
     hints: [
-      "JavaScript hands you an object’s own key names as an array already — the question is which built-in returns the names rather than what is stored under them.",
+      "Consider three traits separately: is a property on this object, is it enumerable, and is its key a string? Numeric index keys also have a defined order.",
     ],
     approach: [
-      "Object.keys hands back the property names as an array.",
+      "Object.keys returns own enumerable string keys. Array-index names are ordered numerically; other string names keep creation order.",
       "Confirm an empty object gives an empty array rather than undefined.",
     ],
     verify: "tests",
@@ -1035,7 +1035,7 @@ console.log(keys({a:1,b:2}));
     tier: 2,
     focus: ["objects"],
     title: "Object values",
-    prompt: "Write `values(object)`, returning an array of the object’s values in insertion order. `null` is a value like any other; an empty object gives an empty array.",
+    prompt: "Write `values(object)`, returning a new array of values belonging to its own enumerable string-keyed properties. Use JavaScript property order: array-index keys ascending, then other string keys in creation order. Ignore inherited, non-enumerable and symbol-keyed properties. Keep every selected value, including null, undefined and false; retain original object/array references. Input is an ordinary object with data properties, possibly frozen or with a null prototype; leave it unchanged. Target: O(n) time under a unit-cost property-access model, where n counts all own properties examined.",
     starter: `const values = object => {
   
 };
@@ -1048,11 +1048,11 @@ console.log(values({a:1,b:2}));
   return /* result */;
 };`,
     hints: [
-      "The same family of built-ins as the previous challenge, but this time you want what is stored rather than what it is stored under.",
+      "Collect the values without converting or filtering them. If a selected value is an object, your result should refer to that same object.",
     ],
     approach: [
-      "Object.values hands back the property values as an array.",
-      "Remember null is a real value and must survive into the result.",
+      "Object.values reads own enumerable string-keyed properties, with array-index keys first in numeric order and other strings in creation order.",
+      "Keep null, undefined and other falsy values. This is a shallow collection: nested objects remain the original references.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -1072,7 +1072,7 @@ console.log(values({a:1,b:2}));
     tier: 2,
     focus: ["spread", "objects"],
     title: "Activate user",
-    prompt: "Write `activate(user)`, returning a new object with the same properties plus `active: true`. The original object must not be changed, and an existing `active: false` is overridden.",
+    prompt: "Write `activate(user)`, returning a new object that shallow-copies the user's own enumerable properties, including string and symbol keys, and sets its own active property to true. Override any existing active value. Keep nested values by reference, leave the input unchanged and skip inherited/non-enumerable properties. Input has ordinary data properties and may be frozen or have a null prototype. An own '__proto__' data key must remain a data key without setting the result's prototype. Target: O(n) time under a unit-cost property-copy model, where n is the number of own properties examined.",
     starter: `const activate = user => {
   
 };
@@ -1085,7 +1085,7 @@ console.log(activate({name:"Sam"}));
   return /* result */;
 };`,
     hints: [
-      "Build a new object instead of assigning onto the one you were given, and put the flag after the copied properties so it wins when both are present.",
+      "There may be two versions of active when the input already has one. Which should win, and how can you preserve nested references without assigning into the input?",
     ],
     approach: [
       "Spread the original object into a new one rather than assigning to the original, so the input is left untouched.",

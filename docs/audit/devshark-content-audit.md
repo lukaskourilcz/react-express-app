@@ -1,5 +1,35 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b003
+
+Reviewed `js-average`, `js-short-words`, `js-object-keys`, `js-object-values`
+and `js-activate-user` individually. Current coverage is **45/725 coding**:
+30 deployed, fifteen staged, **680 remaining**. Native remains **60/263**.
+
+The object exercises now distinguish own enumerable string keys, symbol keys,
+property order and shallow identity. Actual old revealed variants failed
+null-prototype or shadowed-method inputs; the activation variants also lost
+symbols, copied inherited properties or invoked the legacy `__proto__` setter.
+Their replacements retain the stated data without changing caller objects.
+The mean specifies numeric results and a bounded tolerance; the short-word
+filter explicitly counts UTF-16 code units. New counterexamples caught an
+intermediate coercive mean check and an activation fixture that did not yet
+detect nested mutation; both fixtures were strengthened before recording.
+
+All **42/42 final-hash worker verdicts** agree with expectations: twenty valid,
+five starters and seventeen wrong programs. Twenty authored O(n)/base-25-XP
+checks pass. The focused coding contract proves Run/Submit consistency for
+all five tasks and the six puzzle enumerations. Individual manually chosen
+scores, primary sources and final English self-readings are recorded in
+`review-2026-10-15-b003.jsonl`; this remains same-session model review.
+
+Registry/index generation, API types, launch contracts, build, both production
+dependency audits (zero vulnerabilities), copy-artifact sweep and diff checks
+pass. Thirty light and thirty dark task-route probes at 360–1440px pass with
+no unprobed routes. These are local checks, not production or authenticated
+acceptance. No access rules, historical IDs, API handlers or archived Czech
+were changed.
+
 ## 15 October continuation — five-item batch b002
 
 Individually reviewed `js-all-positive`, `js-total-price`, `js-find-user`,
