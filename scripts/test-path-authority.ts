@@ -83,7 +83,6 @@ for (const [label, source, expected] of [
   assert.equal(allPassed(result.visible) && Boolean(result.hidden && allPassed(result.hidden)), expected, label);
   console.log(`PASS path authority: ${label}`);
 }
-console.log('Native path authority checks passed. No production tampering probe was performed.');
 for (const [label, source, expected] of [
   ['one definition per index is counted once', 'function reverseInPlace(values){const copy=values.slice().reverse();for(let i=0;i<copy.length;i++)Object.defineProperty(values,String(i),{value:copy[i],writable:true,enumerable:true,configurable:true});return values;}', true],
   ['three definitions per index exceed the budget', 'function reverseInPlace(values){const copy=values.slice().reverse();for(let round=0;round<3;round++)for(let i=0;i<copy.length;i++)Object.defineProperty(values,String(i),{value:copy[i],writable:true,enumerable:true,configurable:true});return values;}', false],
@@ -93,3 +92,4 @@ for (const [label, source, expected] of [
 ] as const) {
   await check('dsa-v1-d02-reverse-in-place', source, expected, label);
 }
+console.log('Native path authority checks passed. No production tampering probe was performed.');
