@@ -1,5 +1,44 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b002
+
+Individually reviewed `js-all-positive`, `js-total-price`, `js-find-user`,
+`js-odd-sum` and `js-number-range`. Current coding coverage is **40/725**:
+30 deployed and ten staged in b001–b002, with **685 coding tasks** still
+unreviewed. Native coverage remains **60/263**, leaving 203 records.
+
+The original selection matched 32/40 expectations. Case folding, cloned
+lookup results, duplicate removal and fixture memorization escaped tests;
+rounding and read-only policies were also insufficiently specified. The new
+briefs explicitly define these policies rather than retroactively treating
+all eight old passes as violations of the old wording. `allPositive` no longer
+depends on a prior question. Its finite-number domain makes all revealed
+predicate variants agree. `total` explicitly uses input-order Number addition;
+`findUser` preserves original identity and exact bounded string names;
+`oddSum` keeps repeated signed integers within exact-sum bounds; `range`
+defines reversed, singleton and bounded inclusive intervals with output-size n.
+
+All **40/40 final-hash worker verdicts** pass: twenty valid variants, five
+starters and fifteen wrong approaches. After the final range-explanation fix,
+its eight candidates were rerun and combined with the thirty-two unchanged
+current-hash verdicts. Twenty selected authored O(n)/base-25-XP checks pass.
+The find and odd-sum hints are deliberately scored 3/5 for their sound but
+basic guidance rather than assigned the batch's other scores automatically.
+Individual scores, relevance-marker rationale, primary documentation and
+final self-reading notes are in `review-2026-10-15-b002.jsonl`; candidate
+programs are in `candidates-2026-10-15-b002.json`. Use the existing b001
+complexity probe with the b002 candidate-file argument to repeat its checks.
+This is same-session model review, not independent or human approval.
+
+Batch b002 validation passes: registry/index generation, API typecheck,
+launch/room/caller contracts, build, both production dependency audits (zero
+vulnerabilities), the English copy-artifact sweep (zero hits/five items) and
+diff checks. Thirty light and thirty dark task-page probes at 360–1440 px
+report zero issues and zero unprobed routes. These are local fixture checks;
+the batch is not yet released or counted as authenticated acceptance.
+
+Earlier sections below are dated batch snapshots, not later live counts.
+
 ## 15 October continuation — five-item batch b001
 
 The owner resumed the remaining audit with a commit after every five items.

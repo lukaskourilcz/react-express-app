@@ -539,7 +539,7 @@ console.log(hasAdult([12,18]));
     tier: 1,
     focus: ["every"],
     title: "All positive",
-    prompt: "Write `allPositive(numbers)`, returning true only when every value is above zero. Zero makes it false, and an empty array is true.",
+    prompt: "Write `allPositive(numbers)`, returning a boolean: true only when every value is strictly above zero. Either sign of zero makes it false; an empty array is true because it contains no counterexample. Input is a dense array of finite JavaScript numbers and may be frozen; leave it unchanged. Target: O(n) time in the worst case, where n is the number of elements and each Number comparison counts as one operation; a counterexample permits an earlier return.",
     starter: `const allPositive = numbers => {
   
 };
@@ -552,7 +552,7 @@ console.log(allPositive([1,2,3]));
     return /* condition */;
   });`,
     hints: [
-      "The opposite question to the last one: every value has to qualify. Think about what that means for a list with nothing in it to disqualify.",
+      "Look for a counterexample rather than counting successes. What result remains when the search finishes without finding one, including in an empty list?",
     ],
     approach: [
       "Use every, which stops at the first failure and hands back a boolean.",
@@ -583,7 +583,7 @@ console.log(allPositive([1,2,3]));
     tier: 1,
     focus: ["reduce", "objects"],
     title: "Total price",
-    prompt: "Write `total(items)`, returning the sum of every item’s `price`. An empty array totals 0, and decimal prices add up normally.",
+    prompt: "Write `total(items)`, adding each item's price to a Number total that starts at zero, in array order. An empty array returns 0. Use ordinary JavaScript addition without rounding or applying quantity fields: 0.1 plus 0.2 gives 0.30000000000000004. Input is a dense array of plain objects with finite nonnegative numeric price properties; leave the array and objects unchanged, including when frozen. Target: O(n) time, where n is the number of items and property reads and Number additions count as constant-time work.",
     starter: `const total = items => {
   
 };
@@ -744,7 +744,7 @@ console.log(wordCount("one two three"));
     tier: 1,
     focus: ["find", "objects"],
     title: "Find user",
-    prompt: "Write `findUser(users, name)`, returning the first user object whose `name` matches. Return `undefined` when nothing matches, or when the list is empty.",
+    prompt: "Write `findUser(users, name)`, returning the original first object whose name is exactly equal to the query string, including case, spaces and empty strings. Preserve its identity and extra properties; return undefined for no match or an empty list. Input is a dense array of plain objects with string name properties; names and the query are at most 128 UTF-16 code units long. Leave the array and objects unchanged, including when frozen. Target: O(n) time, where n is the number of users; the name-length bound makes each string comparison bounded work.",
     starter: `const findUser = (users, name) => {
   
 };
@@ -787,7 +787,7 @@ console.log(findUser([{name:"Ana"}],"Ana"));
     tier: 2,
     focus: ["filter", "reduce"],
     title: "Odd sum",
-    prompt: "Write `oddSum(numbers)`, returning the total of just the odd values. Negative odds count; no odd values, or an empty array, totals 0.",
+    prompt: "Write `oddSum(numbers)`, returning the sum of every odd occurrence, including negative and repeated odd values. No odd values or an empty input returns 0. Input is a dense array of at most 10,000 JavaScript integer Numbers between -1,000,000 and 1,000,000; these bounds keep the sum exactly representable. Leave the input unchanged, including when frozen. Target: O(n) time, where n is the number of input values and Number remainder, comparison and addition count as constant-time operations.",
     starter: `const oddSum = numbers => {
   
 };
@@ -868,7 +868,7 @@ console.log(repeat("hi",3));
     tier: 2,
     focus: ["for", "push"],
     title: "Number range",
-    prompt: "Write `range(start, end)`, returning every integer from start through end, both included. Start may equal end, and a negative start works the same way.",
+    prompt: "Write `range(start, end)`, returning all integers in ascending order from start through end, both included. Equal endpoints give one value; start greater than end gives an empty array. Both inputs are integer Numbers between -10,000 and 10,000. Target: O(n) time for n output elements, with constant work for an empty interval; n is max(0, end - start + 1), rather than the size of either endpoint. Count Number operations and array appends as constant-time work in this exercise's array model.",
     starter: `const range = (start, end) => {
   
 };
@@ -886,10 +886,10 @@ console.log(range(2,4));
   return result;
 };`,
     hints: [
-      "Count up from start while you have not gone past end. The boundary is the whole exercise, because end is included in the result.",
+      "Check a one-value interval and a reversed interval before choosing a loop boundary. How many values must exist when the endpoints are equal?",
     ],
     approach: [
-      "Work out how many values the range holds before you build it: end minus start, plus one.",
+      "If start is greater than end, return an empty array. Otherwise the result holds end minus start, plus one values.",
       "Generate values by adding the index to the start, so a negative start works the same way.",
       "Use an inclusive comparison so the end value is part of the result.",
     ],
