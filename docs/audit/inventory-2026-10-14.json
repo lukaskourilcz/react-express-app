@@ -42,10 +42,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 0,
-    "recordsStillRequiringReview": 251,
+    "currentStagedModelReviewRecords": 12,
+    "recordsStillRequiringReview": 239,
     "reviewEvidence": "Twelve D01 exact-bound model records deployed through PR #376 after required CI 38508356988 and production smoke on 006fae90. Partial editorial evidence; no complete-catalogue/runtime review claim.",
-    "deployedModelReviewRecords": 12
+    "deployedModelReviewRecords": 12,
+    "currentModelReviewRecords": 24,
+    "stagedReviewEvidence": "Twelve individually read D02 records, 24/24 selected candidate verdicts, corrected indexed definition/deletion counting and exact review bindings. Final CI/deployment pending."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
