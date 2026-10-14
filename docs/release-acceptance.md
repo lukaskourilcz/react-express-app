@@ -2946,3 +2946,48 @@ Final public HTML check passed after replacing the obsolete tax-inclusive contra
 - Direct authenticated local browser fixtures passed ten light/dark cases at 360/390/768/1220/1440: name/email gap 0px, nickname/flag overlap in the same row, stats 2px beneath it, no horizontal overflow, long-name and no-flag/no-answer rows retained. Only fake local users and intercepted API responses were used; no real account data or production entitlement was changed.
 - Focused responsive sweeps cover signed-out /profile and home at 360/390/768/1280/1440 in light and 360/768/1440 in dark. These complement the authenticated fixture above; the signed-out Profile redirect is not claimed as an authenticated profile test.
 - Protected CI and final Production deployment must pass before release; exact final evidence is recorded on the associated PR. Live Stripe sales remain disabled pending the existing activation checklist, including the owner's deferred identity verification.
+
+
+## Learning, Challenge and grading release — 13–14 October 2026 (PR #371)
+
+Implements compact coding outcomes with actual 25/15/0 XP; conditional authored
+complexity, the public Big O guide/free DSA intro, ten restored Learn levels,
+new-tab linked coding and accepted Skill Check answer review. Challenge uses
+90 seconds per question, sealed selected topics, automatic positive-only scores
+and mandatory independently chosen leaderboard names. Server-generated camelCase
+names share one atomic immutable decimal ordinal. The React learner now runs in
+QuickJS/WASM with private serialized capabilities; trusted suites and results
+remain outside the learner engine. Twelve physical API handlers remain.
+
+| Gate | Actual evidence before final protected release |
+|---|---|
+| API/script/client types and launch | PASS locally, including complete/nested authored targets, unknown estimates, direct Big O level-two completion and private-grant health readiness |
+| Fresh SQL chain | PASS — 60 SQL checks; required SQL job passed on `f520045d` in run 38486027732 |
+| Full coding/server/client step | PASS on `f520045d`: 770 authored / 725 issued tasks, server ownership/grading/reward/path/billing/fallback/garden/live-monitor checks, 104 client files / 996 tests |
+| React compatibility and authority | PASS — 501 reference/junior/senior implementations locally after class/lifecycle support; private Promise/kernel and learner-authority tests passed locally and in the required full step |
+| Public build and policy | PASS locally and on `f520045d`: production build, public HTML, unused code, security policies; existing chunk-size advisories retained |
+| Initial bundle | `f520045d` required CI failed at 243267/243000 gzip bytes. Removed unused retired English UI values, preserving archived Czech keys and all current copy; repeat measured build PASS at 242937/243000. Final-head CI still required |
+| Responsive | PASS — 264 light probes (33 routes, 320–1440px), 63 focused dark probes (9 routes, 360–1440px), zero issues or unprobed routes |
+| Active result UI | PASS — eight light/dark mobile/desktop Challenge/Big O cases; opaque feedback, full-width horizontally scrolling code, fresh 90-second clock, positive-only completion, 200% text reflow and keyboard scrolling; four Skill Check cases verify stable widths and complete answer/explanation review |
+| Coding browser result | PASS — actual built editor completion and 1220/1219/360px command/tooltips, plus Start-labelled signed-in run fixture; API answered locally |
+| Real preview HTTP/VM | PASS on deployed `f520045d`: health/guide/free-intro HTTP 200; real React and JavaScript correct submissions passed and wrong ones failed, with zero anonymous account XP/progress |
+| Real Challenge write | PASS through the same preview with production storage: one positive guest record, camelCase numbered name, sealed JavaScript topic metadata; identical retry ID/name; zero-score API result had no record. SQL read confirmed one score/allocation and no zero scores. Exact guarded cleanup removed the fixture score/allocation and preserved eleven account handles; counter stayed 13 |
+| Production schema/name checks | 061–065 applied in order. Eleven case-insensitive unique account handles and unique ordinals, ten unchanged seed identities converted, custom identities preserved; counter/allocation RLS and private RPC grants checked. Advisors returned INFO-only private-table notices, no warnings/errors |
+| Production dependency audits | Root and client: zero vulnerabilities; no dependency changes in the follow-up |
+| Diff whitespace | PASS |
+| Protected merge and production code | Pending final `verify` and `sql` checks; no completed release claimed here |
+
+The old production health code used anonymous SELECT on `user_stats`, which
+061 correctly revoked. That caused a false HTTP 503 after schema deployment.
+The fix reads readiness through private server access; its grant-denying
+regression and deployed preview return 200. Production recovery still requires
+the dependent code release. No anonymous grants were widened to mask the issue.
+
+No physical Safari/Firefox/Windows/phone, timed managed-backup restore, actual
+external alert delivery, sustained expected-load acceptance or paid Stripe
+completion is inferred from these checks. Billing and merchandise remain off;
+marketing PR #365 stays draft under its separate production/publication gate.
+Question overrides remain hidden. #176's full editorial wave is still open;
+`docs/audit/inventory-2026-10-14.json` records current coverage without turning
+execution evidence into editorial approval. Private preview links, cookies,
+sessions and proofs are absent from commits and evidence comments.
