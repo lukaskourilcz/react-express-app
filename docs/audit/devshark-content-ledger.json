@@ -224655,7 +224655,7 @@
    "objective": "Reverse Unicode code points while distinguishing them from UTF-16 positions and visual clusters.",
    "intendedLevel": "beginner",
    "revision": 2,
-   "contentHash": "d50fe8e85af7d0cb",
+   "contentHash": "392bff6f6c30e493",
    "previousHash": "5a9fe5df3e4b6d2d",
    "previousHashSchema": "task-hash:v1",
    "quality": {
@@ -224710,7 +224710,7 @@
     "cases": [
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -224719,7 +224719,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -224728,7 +224728,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -224737,7 +224737,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -224746,7 +224746,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "approach-1",
       "expected": "passed",
       "verdict": "passed",
@@ -224755,7 +224755,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "approach-2",
       "expected": "passed",
       "verdict": "passed",
@@ -224764,7 +224764,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "puzzle-1",
       "expected": "passed",
       "verdict": "passed",
@@ -224773,7 +224773,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -224782,7 +224782,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "wrong-utf16",
       "expected": "failed",
       "verdict": "failed",
@@ -224791,7 +224791,7 @@
      },
      {
       "id": "js-reverse-string",
-      "contentHash": "d50fe8e85af7d0cb",
+      "contentHash": "392bff6f6c30e493",
       "label": "wrong-unchanged",
       "expected": "failed",
       "verdict": "failed",
@@ -224828,7 +224828,7 @@
      "run: repository-relative grade-task.ts, QuickJS JS grader on Node 24; all reference/junior/senior and independent-valid cases passed; starter and named wrong cases rejected.",
      "run: check-coding-candidates.mjs candidates-2026-10-14.json; 43/43 expected verdicts across five tasks, including four comparisons and three accepted puzzle orders."
     ],
-    "notes": "Final reading distinguishes code points from UTF-16 positions and grapheme clusters, checks the complete-point loop/comparison and the single valid puzzle dependency order. This is a model self-review, not an independent reviewer or human review. The content hash includes every revealed variant, hidden React suite, authored reference and previous requirement."
+    "notes": "Final reading distinguishes code points from UTF-16 positions and grapheme clusters, checks the complete-point loop/comparison and the single valid puzzle dependency order. This is a model self-review, not an independent reviewer or human review. The content hash includes every revealed variant, hidden React suite, authored reference and previous requirement. The final skeleton names code points; its filled fixture uses Array.from, replacing the obsolete UTF-16 split fixture found by the full coding contract."
    }
   },
   {

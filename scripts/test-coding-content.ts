@@ -230,6 +230,16 @@ const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): 
   const guard = (code: string) => (/^\s*(while|for|do)\b.*\{\s*$/.test(code) ? `${code} __step();` : code);
   const callers = checks.map((check) => new Function(name, `"use strict"; return (${check.call});`) as (fn: unknown) => unknown);
   const END = Symbol('end');
+  // Authored checks may wrap a function result in an array/record to verify
+  // input preservation. Falling through an unfinished prefix then puts END
+  // inside that wrapper; it is still undecided, rather than an incorrect
+  // complete result that may prune an otherwise valid puzzle arrangement.
+  const containsEnd = (value: unknown, seen = new Set<object>()): boolean => {
+    if (value === END) return true;
+    if (value === null || typeof value !== 'object' || seen.has(value)) return false;
+    seen.add(value);
+    return Object.values(value).some(item => containsEnd(item, seen));
+  };
   // `open`: the body stops early, and falling off its end returns END.
   const run = (top: PuzzleLine[], placed: PuzzleLine[], open: boolean): 'pass' | 'fail' | 'open' => {
     const code = [...top, header, ...placed].map((line) => guard(line.code)).concat(open ? ['return __end;'] : [], footer.code).join('\n');
@@ -243,7 +253,7 @@ const passingArrangements = (puzzle: AuthoredPuzzle, checks: readonly Check[]): 
       reset();
       let value: unknown;
       try { value = call(fn); } catch { return 'fail'; }
-      if (value === END) undecided = true;
+      if (containsEnd(value)) undecided = true;
       else if (!deepEqual(value, checks[index].expected)) return 'fail';
     }
     return undecided ? 'open' : 'pass';

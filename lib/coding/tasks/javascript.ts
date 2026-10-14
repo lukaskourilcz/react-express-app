@@ -230,7 +230,7 @@ console.log(countVowels("hello"));
 console.log(reverse("cat"));
 `,
     skeleton: `const reverse = text => {
-  const letters = /* the characters of text, as an array */;
+  const letters = /* the code points of text, as an array */;
   // reverse letters, then join them back into one string
   return /* the joined string */;
 };`,
