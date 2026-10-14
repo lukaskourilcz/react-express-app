@@ -43,6 +43,8 @@ import { defaultDeploymentCategories, validateCategoryScope } from '../lib/produ
 import { playable as playableCodingTask, CODING_TASKS } from '../lib/coding/catalog';
 import { codingTaskById, levelCodingTasks } from '../lib/coding/active';
 import { solutionFor } from '../lib/coding/solutions';
+import { approachesFor } from '../lib/coding/approaches';
+import { puzzleFor } from '../lib/coding/puzzles';
 import { gradeDesign, prepareDesign, codeOutcome, giveUpAfter, ladderLength } from '../lib/coding/grade';
 import { giveUpAfter as clientGiveUpAfter } from '../client/src/coding/hint-ladder';
 import { runInSandbox, SANDBOX_WORKER_FILE } from '../lib/coding/sandbox';
@@ -58,7 +60,7 @@ import { UTC_REACT_APP, UTC_REACT_SUITE } from './fixtures/utc-react';
 import { decodeCodingSession, encodeCodingSession, decodeGithubConnectState, encodeGithubConnectState } from '../lib/quiz-tokens';
 import { decodeLearningPathSession, encodeLearningPathSession } from '../lib/quiz-tokens';
 import { LEARNING_PATHS, publicManifest, pathEnabledInEnv, availabilityFor } from '../lib/learning-paths/catalog';
-import { contentVersion, contentHash, translationHash, itemReview, codingTaskReview, questionEligibility, isAuditedCategory } from '../lib/curation';
+import { contentVersion, contentHash, translationHash, taskHash, itemReview, codingTaskReview, questionEligibility, isAuditedCategory } from '../lib/curation';
 import { AUDITED_CATEGORIES, REVIEW_REGISTRY } from '../lib/curation-registry';
 import { readLedger, registryFromLedger, renderCurationRegistry, REGISTRY_PATH } from './build-curation-registry';
 import { webdevBankContracts } from './webdev-bank-contract';
@@ -5032,11 +5034,33 @@ async function main() {
     );
 
     // Machine evidence stands on its own and is never called a review.
-    const codingReview = codingTaskReview(CODING_TASKS[0]);
+    const codingReview = codingTaskReview({ ...CODING_TASKS[0], id: 'unreviewed-contract-fixture' });
     assert.equal(codingReview.status, 'unreviewed');
     assert.equal((codingReview.executionChecks ?? 0) > 0, true, 'a proven solution is recorded evidence');
     assert.equal(itemClaim(codingReview), 'checked-automatically');
     assert.ok(codingReview.version.length >= 8, 'a coding task carries a version to report against');
+
+    const authoredTask = CODING_TASKS.find(task => task.id === 'js-word-count')!;
+    const authoredSolution = solutionFor(authoredTask.id)!;
+    const reviewedHash = taskHash(authoredTask, authoredSolution);
+    const reviewedVersion = codingTaskReview(authoredTask, authoredSolution).version;
+    const changedSolution = { ...authoredSolution, hiddenTests: authoredSolution.hiddenTests!.map((row, index) => index === 0 ? { ...row, expected: 'changed-contract-value' } : row) };
+    assert.notEqual(taskHash(authoredTask, changedSolution), reviewedHash);
+    assert.notEqual(codingTaskReview(authoredTask, changedSolution).version, reviewedVersion, 'a grader edit changes the keyed public version');
+    const comparison = approachesFor(authoredTask.id)[0];
+    const previousCode = comparison.code;
+    try {
+      comparison.code += '\n// changed authored comparison';
+      assert.notEqual(taskHash(authoredTask, authoredSolution), reviewedHash, 'comparison code participates in approval');
+      assert.notEqual(codingTaskReview(authoredTask, authoredSolution).version, reviewedVersion, 'comparison code participates in the report version');
+    } finally { comparison.code = previousCode; }
+    const puzzle = puzzleFor(authoredTask.id)!;
+    const previousOrders = puzzle.accepted;
+    try {
+      puzzle.accepted = [...previousOrders, [...previousOrders[0]].reverse()];
+      assert.notEqual(taskHash(authoredTask, authoredSolution), reviewedHash, 'accepted puzzle orders participate in approval');
+      assert.notEqual(codingTaskReview(authoredTask, authoredSolution).version, reviewedVersion, 'a puzzle-key edit changes the report version');
+    } finally { puzzle.accepted = previousOrders; }
 
     // The public shape carries no scores unless a current record exists, and
     // never a reviewer, a report or anything resembling an answer.

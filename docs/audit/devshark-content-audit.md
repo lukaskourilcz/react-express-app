@@ -64,6 +64,36 @@ dated snapshot. New edits after the snapshot require another reconciliation.
 
 ## 1. September inventory, retained as historical evidence
 
+### Coding wave 1 — five foundations, 14 October 2026
+
+Five tasks were read individually and rewritten: digits-only normalization,
+code-point reversal, first-code-point extraction, capitalization and
+whitespace-delimited word count. Their ledger rows score each dimension and
+relevance marker separately, retain the prior hash/defects and record sources
+fetched during the review. Quality floors are 3–4/5; relevance totals are 8–9/10.
+The final second reading was performed by the same model/session and is labelled
+as self-review. No independent second reviewer or human review is claimed.
+
+The initial checks demonstrated that every old candidate passed its old grader;
+the later individual reading found ambiguous character/empty-input contracts,
+an ungraded required regex method, an ASCII-only capitalization/reversal pool,
+a literal-space word-count variant, and comparisons returning frequency Maps
+instead of a number. The new contracts, references, boundaries and comparisons
+agree. The actual QuickJS grader returned all 43 expected verdicts: 15 reference
+variants, five independent valid alternatives, four comparisons and three puzzle
+orders passed; five starters and eleven wrong implementations failed. The array
+mutation check now rejects a mutating first-letter solution. These targeted
+checks are evidence for these five records only.
+
+`task-hash:v2` now includes comparison code/copy and puzzle lines/accepted orders.
+The public report version is keyed over that full hash; a fixture/grader,
+comparison or puzzle-key edit changes it and invalidates current review.
+Archived Czech is untouched and not approved for these new English versions.
+The coding scope remains incomplete: 720 issued tasks and the native-path
+editorial records still need individual review. Hidden system-design content
+remains hidden pending its separate return decision. This is a staged branch
+change, not a claim of deployed retirements or full audit completion.
+
 Every place a devShark question can reach a learner was reconciled from the
 code (`npm run audit:devshark-inventory`). The numbers are the repository's;
 the one source that could not be counted is named below.

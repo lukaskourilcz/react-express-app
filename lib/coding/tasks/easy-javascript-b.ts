@@ -29,7 +29,7 @@ export const EASY_JAVASCRIPT_B_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ['regex'],
     title: 'Keep only the digits',
-    prompt: 'Write `digitsOnly(text)`, returning the text with every character that is not a digit removed, using `replace` with a regular expression. `digitsOnly("+420 777-123 456")` gives `"420777123456"`. Text with no digits gives an empty string.',
+    prompt: 'Write `digitsOnly(text)`, keeping only ASCII digits `0` through `9` in their original order. `digitsOnly("+420 777-123 456")` gives `"420777123456"`; all other characters, including other Unicode numerals, are removed. Empty text or text with no ASCII digits gives `""`. A regular expression is one useful approach. Target: O(n) time, where n is the number of JavaScript string positions.',
     starter: `const digitsOnly = text => {
 
 };
@@ -40,7 +40,7 @@ console.log(digitsOnly("+420 777-123 456"));
     skeleton: `const digitsOnly = text => {
   return text.replace(/* a pattern for one non-digit, with the g flag */, "");
 };`,
-    hints: ['`\\D` matches one character that is not a digit. Without the `g` flag, `replace` changes only the first match.'],
+    hints: ['Think about matching the characters to remove, and whether replacing one match covers the whole phone number.'],
     approach: [
       'Write a pattern that matches a single non-digit: `/\\D/`.',
       'Add the `g` flag, so `replace` removes every match and not only the first.',

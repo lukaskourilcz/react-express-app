@@ -112,19 +112,22 @@ const countVowels = text => (text.match(/[aeiou]/gi) ?? []).length;`,
   "js-reverse-string": {
     solution: "const reverse = text => [...text].reverse().join(\"\");",
     junior: `const reverse = text => {
-  let reversed = "";
-  for (let index = text.length - 1; index >= 0; index -= 1) {
-    reversed = reversed + text[index];
+  const characters = Array.from(text);
+  const reversed = [];
+  for (let index = characters.length - 1; index >= 0; index -= 1) {
+    reversed.push(characters[index]);
   }
-  return reversed;
+  return reversed.join("");
 };`,
     senior: `// Spreading splits by code point, so an emoji stays whole where split("") would tear it in two.
-const reverse = text => [...text].reduceRight((reversed, character) => reversed + character, "");`,
+const reverse = text => Array.from(text).reverse().join("");`,
     hiddenTests: [
       { call: "reverse(\"stressed\")", expected: "desserts" },
       { call: "reverse(\" x\")", expected: "x " },
       { call: "reverse(\"a b c\")", expected: "c b a" },
       { call: "reverse(\"Z\")", expected: "Z" },
+      { call: "reverse(\"😀a🚀\")", expected: "🚀a😀" },
+      { call: "reverse(\"e\\u0301x\")", expected: "x́e" },
     ],
   },
   "js-positive-numbers": {
@@ -228,21 +231,27 @@ const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
     ],
   },
   "js-first-letters": {
-    solution: "const firstLetters = words => words.map(word => word[0]);",
+    solution: "const firstLetters = words => words.map(([first = \"\"]) => first);",
     junior: `const firstLetters = words => {
   const letters = [];
   for (const word of words) {
-    const firstLetter = word.charAt(0);
+    let firstLetter = "";
+    for (const character of word) {
+      firstLetter = character;
+      break;
+    }
     letters.push(firstLetter);
   }
   return letters;
 };`,
     senior: `// A string is iterable, so destructuring its first element gives its first character.
-const firstLetters = words => words.map(([first]) => first);`,
+const firstLetters = words => words.map(word => word[Symbol.iterator]().next().value ?? "");`,
     hiddenTests: [
       { call: "firstLetters([\"apple\",\"Banana\",\"cherry\"])", expected: ["a", "B", "c"] },
       { call: "firstLetters([\"x\",\"y\"])", expected: ["x", "y"] },
       { call: "firstLetters([\"Zed\"])", expected: ["Z"] },
+      { call: "firstLetters([\"\",\"𐐨test\",\"🚀\"])", expected: ["", "𐐨", "🚀"] },
+      { call: "(() => { const words = [\"Red\",\"blue\"]; const result = firstLetters(words); return [result, words]; })()", expected: [["R", "b"], ["Red", "blue"]] },
     ],
   },
   "js-has-adult": {
@@ -301,22 +310,24 @@ const allPositive = numbers => !numbers.some(number => number <= 0);`,
     ],
   },
   "js-capitalize": {
-    solution: "const capitalize = word => word ? word[0].toUpperCase() + word.slice(1) : \"\";",
+    solution: "const capitalize = text => { const [first = \"\", ...rest] = text; return first.toUpperCase() + rest.join(\"\"); };",
     junior: `const capitalize = text => {
-  if (text.length === 0) {
+  const letters = Array.from(text);
+  if (letters.length === 0) {
     return "";
   }
-  const firstLetter = text.charAt(0).toUpperCase();
-  const rest = text.substring(1);
-  return firstLetter + rest;
+  letters[0] = letters[0].toUpperCase();
+  return letters.join("");
 };`,
     senior: `// charAt(0) is "" on an empty string, and so is slice(1), so no guard is needed.
-const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
+const capitalize = text => text.replace(/^./su, first => first.toUpperCase());`,
     hiddenTests: [
       { call: "capitalize(\"world\")", expected: "World" },
       { call: "capitalize(\"jAVA script\")", expected: "JAVA script" },
       { call: "capitalize(\"z\")", expected: "Z" },
       { call: "capitalize(\"already Done\")", expected: "Already Done" },
+      { call: "capitalize(\"𐐨abc\")", expected: "𐐀abc" },
+      { call: "capitalize(\"😀hello\")", expected: "😀hello" },
     ],
   },
   "js-unique-values": {
@@ -349,7 +360,7 @@ const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
   "js-word-count": {
     solution: "const wordCount = sentence => sentence.trim() ? sentence.trim().split(/\\s+/).length : 0;",
     junior: `const wordCount = sentence => {
-  const pieces = sentence.trim().split(" ");
+  const pieces = sentence.trim().split(/\\s+/);
   let count = 0;
   for (const piece of pieces) {
     if (piece !== "") {
@@ -365,6 +376,8 @@ const wordCount = sentence => (sentence.match(/\\S+/g) ?? []).length;`,
       { call: "wordCount(\"the quick brown fox\")", expected: 4 },
       { call: "wordCount(\"  lead and trail  \")", expected: 3 },
       { call: "wordCount(\"one\")", expected: 1 },
+      { call: "wordCount(\"one\\u00a0two\\tthree\")", expected: 3 },
+      { call: "wordCount(\"\\t\\n\\u00a0\")", expected: 0 },
     ],
   },
   "js-find-user": {

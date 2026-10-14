@@ -124,6 +124,13 @@ that cover them assert repository-wide properties rather than per-item ones, and
 claiming otherwise for four thousand items would be the exact failure this
 design exists to prevent.
 
+The 14 October coding wave adds five current model-review records. Those
+items receive the recorded model claim; the other issued tasks retain only
+their execution evidence. Each coding hash now includes authored comparisons
+and accepted puzzle material, and its keyed public version derives from the
+same full hash. The wave's final reread is explicitly labelled model self-review,
+not an independent reader or human check; the wider coding scope stays open.
+
 `itemClaim` returns one of six values and they never blur: human review
 outranks model review, which outranks machine evidence; more than once needs
 more than one recorded human review; and unavailable metadata returns `none`

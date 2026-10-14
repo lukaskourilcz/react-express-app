@@ -22,6 +22,7 @@ export const EASY_JAVASCRIPT_B_SOLUTIONS: Record<string, CodingSolution> = {
       { call: 'digitsOnly("(555) 010-9999")', expected: '5550109999' },
       { call: 'digitsOnly("1 2 3 4 5 6 7 8 9 0")', expected: '1234567890' },
       { call: 'digitsOnly("x9")', expected: '9' },
+      { call: 'digitsOnly("١2３4😀5")', expected: '245' },
     ],
   },
   'js-easy3-hex-colour': {
