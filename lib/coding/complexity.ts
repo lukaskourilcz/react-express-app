@@ -43,10 +43,20 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
     }
   }
   const entries = new Set<string>();
+  const testedStrings = new Map<ts.FunctionLikeDeclaration, Set<string>>();
   for (const test of task.tests) {
     const expression = ts.createSourceFile('test.ts', test.call, ts.ScriptTarget.Latest, true);
     const visit = (node: ts.Node) => {
-      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && functions.has(node.expression.text)) entries.add(node.expression.text);
+      if (ts.isCallExpression(node) && ts.isIdentifier(node.expression) && functions.has(node.expression.text)) {
+        entries.add(node.expression.text);
+        const fn = functions.get(node.expression.text)!;
+        const names = testedStrings.get(fn) ?? new Set<string>();
+        node.arguments.forEach((argument, index) => {
+          const parameter = fn.parameters[index];
+          if (parameter && ts.isIdentifier(parameter.name) && (ts.isStringLiteral(argument) || ts.isNoSubstitutionTemplateLiteral(argument))) names.add(parameter.name.text);
+        });
+        testedStrings.set(fn, names);
+      }
       ts.forEachChild(node, visit);
     };
     visit(expression);
@@ -91,6 +101,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
     };
     const strings = new Set<string>(fn.parameters.flatMap(parameter =>
       ts.isIdentifier(parameter.name) && parameter.type?.kind === ts.SyntaxKind.StringKeyword ? [parameter.name.text] : []));
+    for (const name of testedStrings.get(fn) ?? []) strings.add(name);
     const regexes = new Map<string, string>();
     const collect = (node: ts.Node) => {
       if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.type?.kind === ts.SyntaxKind.StringKeyword) strings.add(node.name.text);

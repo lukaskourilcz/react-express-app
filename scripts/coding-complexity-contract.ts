@@ -75,6 +75,8 @@ export function complexityContracts() {
     assert.equal(check(code).time, null, 'unresolved string construction has no constant label');
     assert.equal(codingPassXp(check(code)), 25, 'unknown string construction keeps its base reward');
   }
+  const stringInputs = { ...task, tests: [{ call: 'solve("first", "second")', expected: 'firstsecond' }] };
+  assert.equal(assessComplexity(stringInputs, 'const solve = (left, right) => left + right;').time, null, 'tested string arguments do not become scalar arithmetic');
   assert.equal(check('const solve = value => value + 1;').time, 'O(1)', 'scalar arithmetic remains analyzable');
   assert.equal(check('const solve = value => value.name;').time, 'O(1)', 'field access has no output construction');
   assert.equal(check('const solve = value => "a" + "b";').time, 'O(1)', 'fixed literals remain bounded');
