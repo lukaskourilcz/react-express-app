@@ -124,9 +124,11 @@ that cover them assert repository-wide properties rather than per-item ones, and
 claiming otherwise for four thousand items would be the exact failure this
 design exists to prevent.
 
-The 14 October coding waves add ten current model-review records. Those
-items receive the recorded model claim; the other issued tasks retain only
-their execution evidence. Each coding hash now includes every revealed solution
+Coding audit waves add only individually recorded model reviews. Items with a
+passing record for their current version receive the recorded model claim;
+other issued tasks retain only their execution evidence. Current coverage is
+reported in the dated audit inventory rather than inferred from a test run.
+Each coding hash includes every revealed solution
 variant, hidden grader material, authored reference and previous requirement,
 as well as comparisons and accepted puzzle material. Its keyed public version
 derives from the same full hash. The portable audit runner uses separate visible

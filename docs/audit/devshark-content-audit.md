@@ -1,5 +1,51 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b001
+
+The owner resumed the remaining audit with a commit after every five items.
+This batch reviews `js-positive-numbers`, `js-square-numbers`,
+`js-largest-number`, `js-countdown` and `js-has-adult` individually; it does
+not approve the rest of their source file. Current coverage is **35/725 coding
+tasks** (30 deployed, five staged) and **60/263 native records**. Another
+**690 coding tasks and 203 native records** still need individual review.
+Production overrides remain the explicitly dated 14 October snapshot.
+
+The original selection matched 39/46 expected verdicts. Reuse of an all-positive
+or empty input, duplicate removal and fixture memorization escaped checks.
+Read-only handling is now explicit; an old in-place-sort pass is not described
+as violating a no-mutation clause the old maximum/adult brief did not contain.
+Dense finite-number domains, numerical signed-zero equivalence and numeric
+output-size bounds make the requirements precise. Hints guide selection,
+position, initialization and termination without supplying complete code.
+
+The final current hashes pass **47/47 selected worker verdicts**: 27 valid
+variants/puzzle orders, five starters and fifteen wrong approaches. The two
+hint-only final changes were rerun on all sixteen affected candidates; the
+other thirty-one records keep their unchanged current hashes. Twenty linear
+variants receive the authored O(n) goal without a false penalty. A valid
+copy-then-sort maximum is accepted for correctness; the analyzer cannot
+determine its complexity, so it receives the base 25 XP without a label.
+No timing measurement is represented as a proof of Big O.
+
+Reproduce the per-item execution with `export-coding.ts`, `grade-task.ts` and
+`check-coding-candidates.mjs`, using
+`docs/audit/wip/coding/candidates-2026-10-15-b001.json`. The reward probe is
+`docs/audit/wip/tools/check-coding-2026-10-15-b001-complexity.ts`; the five
+individually authored decisions and their evidence are in
+`docs/audit/wip/coding/review-2026-10-15-b001.jsonl`. All final readings are
+same-session model self-review; no independent reader or human approval is
+claimed. IDs, access rules, archived Czech and historical progress are intact.
+
+Batch validation: API typecheck, launch/room/caller contracts, application
+build, generated-registry/index checks and both production dependency audits
+pass; the audits report zero vulnerabilities. The English learner-copy artifact
+sweep reports zero hits across these five items. Thirty light and thirty dark
+task-page probes at 360, 390, 768, 1024, 1280 and 1440 px report no overflow,
+escaping content or unprobed routes. Twelve physical API handlers remain.
+These are local/fixture results, not authenticated or production acceptance.
+
+The sections below are dated prior waves, not current coverage claims.
+
 The item-by-item audit that
 [#176](https://github.com/lukaskourilcz/react-express-app/issues/176) asks
 for, over every question a devShark learner can be served. This report says

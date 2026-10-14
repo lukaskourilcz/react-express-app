@@ -260,7 +260,7 @@ console.log(reverse("cat"));
     tier: 1,
     focus: ["filter"],
     title: "Positive numbers",
-    prompt: "Write `positives(numbers)`, returning a new array of the values strictly above zero, in order. Zero is not positive, and an array with none gives an empty array.",
+    prompt: "Write `positives(numbers)`, returning a new array of the values strictly above zero, in their original order, including duplicates. Zero (including -0) is not positive. The input is a dense array of finite JavaScript numbers and may be frozen; leave it unchanged. Return a new array even when the input is empty or every value is positive. Target: O(n) time, where n is the number of input elements, treating Number comparisons as constant-time work.",
     starter: `const positives = numbers => {
   
 };
@@ -273,7 +273,7 @@ console.log(positives([-1,0,3]));
     return /* true to keep this item */;
   });`,
     hints: [
-      "A keep-or-drop decision on each value, and the only subtlety is the boundary: zero is not above zero.",
+      "Decide about each occurrence independently: keeping one value should not remove an equal value later. How can you keep the selected values in order without editing the input?",
     ],
     approach: [
       "Use filter with a strict greater-than-zero test.",
@@ -287,6 +287,7 @@ console.log(positives([-1,0,3]));
       { call: "positives([])", expected: [], label: "empty input", edge: true },
       { call: "positives([0])", expected: [], label: "zero is not positive", edge: true },
       { call: "positives([-5,-1])", expected: [], label: "nothing matches", edge: true },
+      { call: "positives([2,2,0.5,-0,0])", expected: [2, 2, 0.5], label: "keep duplicates and positive fractions", edge: true },
     ],
   },
   {
@@ -298,7 +299,7 @@ console.log(positives([-1,0,3]));
     tier: 1,
     focus: ["map"],
     title: "Square numbers",
-    prompt: "Write `squares(numbers)`, returning a new array with every number multiplied by itself. A negative squares to a positive; zero and decimals square normally.",
+    prompt: "Write `squares(numbers)`, returning a new array with each input number multiplied by itself, in order and without rounding. Use JavaScript Number arithmetic: negative inputs square to nonnegative results, and zero and decimals follow the same multiplication rule. The input is a dense array of finite numbers and may be frozen; leave it unchanged. Even an empty input must give a different array. Target: O(n) time, where n is the number of elements and each Number multiplication counts as constant-time work.",
     starter: `const squares = numbers => {
   
 };
@@ -311,7 +312,7 @@ console.log(squares([2,3]));
     return /* transformed item */;
   });`,
     hints: [
-      "One output for every input, and squaring is just a number multiplied by itself — the same shape as doubling.",
+      "Keep positions aligned: output position i comes from input position i. Build the output separately so the caller's original values stay available.",
     ],
     approach: [
       "Use map, since every input produces exactly one output.",
@@ -336,7 +337,7 @@ console.log(squares([2,3]));
     tier: 1,
     focus: ["for"],
     title: "Largest number",
-    prompt: "Write `largest(numbers)`, returning the biggest value in the array. It must still work when every value is negative, and when the maximum appears more than once. Assume at least one number.",
+    prompt: "Write `largest(numbers)`, returning its numerically greatest value. The input is a dense array of 1 to 10,000 finite JavaScript numbers; leave it unchanged, including when it is frozen. Handle all-negative inputs, fractions and repeated maxima. Either sign of zero is acceptable when zero is the maximum. Target: O(n) time, where n is the number of elements and Number comparisons count as constant-time work.",
     starter: `const largest = numbers => {
   
 };
@@ -353,9 +354,9 @@ console.log(largest([4,9,2]));
 
   return best;
 };`,
-    hints: ["Compare every value with the largest seen."],
+    hints: ["What initial candidate comes from the actual data, even when all the values are negative? Compare each later value with that candidate."],
     approach: [
-      "Either track the largest seen so far in a loop, or spread the array into Math.max.",
+      "Track the largest seen in a loop or reduce from the first value. Math.max with spread also works for this bounded exercise, but a scan avoids turning all elements into function arguments.",
       "Make sure the comparison still works when every value is negative — starting from zero would be wrong.",
     ],
     verify: "tests",
@@ -414,7 +415,7 @@ console.log(fizz(5));
     tier: 1,
     focus: ["while"],
     title: "Countdown",
-    prompt: "Write `countDown(n)`, returning an array counting down from n to 1 — `countDown(3)` gives `[3, 2, 1]`. `countDown(0)` gives an empty array.",
+    prompt: "Write `countDown(n)`, returning the integers from n down to 1, inclusive: `countDown(3)` gives `[3, 2, 1]`. The input n is an integer from 0 to 10,000; zero gives an empty array. Each value appears once and zero is never included. Target: O(n) time, where n is the requested output length, not the number of digits in the input. Count each Number operation and output append as constant-time work in this exercise's array model.",
     starter: `const countDown = n => {
   
 };
@@ -431,7 +432,7 @@ console.log(countDown(3));
 
   return result;
 };`,
-    hints: ["Push n, then decrease it while it is positive."],
+    hints: ["Think about which value must be emitted first, what makes the next value smaller, and the boundary where no values remain."],
     approach: [
       "Use a while loop that keeps going while n is still positive.",
       "Push the current value, then decrease it, so the first pushed value is n itself and the last is one.",
@@ -499,7 +500,7 @@ console.log(firstLetters(["red","blue"]));
     tier: 1,
     focus: ["some"],
     title: "Has adult",
-    prompt: "Write `hasAdult(ages)`, returning true when at least one age is 18 or more. Exactly 18 counts; an empty array is false.",
+    prompt: "For this exercise, an adult is any age at least 18. Write `hasAdult(ages)`, returning a boolean: true when at least one age qualifies, otherwise false. Exactly 18 counts and an empty array is false. Input is a dense array of finite nonnegative numbers and may be frozen; leave it unchanged. Target: O(n) time in the worst case, where n is the number of ages and Number comparisons count as constant-time work; a match may allow an earlier return.",
     starter: `const hasAdult = ages => {
   
 };
