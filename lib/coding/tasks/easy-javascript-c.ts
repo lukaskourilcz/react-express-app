@@ -312,7 +312,7 @@ console.log(countDigits(2026), countDigits(0));
     tier: 2,
     focus: ['do-while', 'push'],
     title: 'Read every page',
-    prompt: 'An API returns results one page at a time. `getPage(number)` returns `{ items, next }`: the page’s items, and the number of the page after it, or `null` on the last page. Write `readAll(getPage)`, which starts at page 1, collects every item in order and returns them in one array. You only learn whether there is another page after reading one, so use a `do...while` loop that stops once `next` is `null`, and add each page’s items with `push`.',
+    prompt: "An API returns results one page at a time. `getPage(number)` returns `{ items, next }`: the page’s items, and the number of the page after it, or `null` on the last page. Write `readAll(getPage)`, which starts at page 1, collects every item in order and returns them in one array. You only learn whether there is another page after reading one, so use a `do...while` loop that stops once `next` is `null`, and add each page’s items with `push`. This callback is synchronous, not a network request: getPage always returns a valid ordinary data object. Page 1 exists, and following next forms a finite acyclic chain of positive integer page numbers ending in null; the next number may skip or decrease. There are at most 10000 pages and 10000 item entries overall, with at most 1000 items per page. Each items array is ordinary and dense; empty pages do not end the chain. Call getPage exactly once for each page in chain order and never for null. Return a fresh shallow array, preserving item references, repeats and nested array values; do not change page objects, their arrays or stored values, and accept frozen pages. Target: O(n) time, where n is the page count plus total item count, assuming constant-time getPage lookup and reference copying.",
     starter: `const readAll = getPage => {
 
 };
@@ -330,7 +330,7 @@ console.log(readAll(number => pages[number]));
   } while (/* there is a next page */);
   return items;
 };`,
-    hints: ['A `do...while` loop reads the first page before it checks anything, which is right here: page 1 always exists. `items.push(...page.items)` adds every item of the page, each as its own element.'],
+    hints: ["Read the first page before checking its next link. Keep collecting even when a page has no items, and follow the returned number exactly; page numbers need not increase."],
     approach: [
       'Keep an empty result array and a page number that starts at 1.',
       'In the `do` block, fetch the page, push its items onto the result, and set the page number to `page.next`.',
@@ -344,6 +344,10 @@ console.log(readAll(number => pages[number]));
       { call: '(() => { const asked = []; readAll(n => { asked.push(n); return { items: [n], next: n < 3 ? n + 1 : null }; }); return asked; })()', expected: [1, 2, 3], label: 'each page is asked for once, starting at 1' },
       { call: 'readAll(() => ({ items: [], next: null }))', expected: [], label: 'the first page is empty', edge: true },
       { call: 'readAll(n => ({ 1: { items: ["x"], next: 5 }, 5: { items: ["y"], next: null } })[n])', expected: ['x', 'y'], label: 'next can skip page numbers', edge: true },
+      { call: "(() => {const asked=[],pages={1:{items:[\"a\"],next:7},7:{items:[],next:3},3:{items:[\"b\"],next:null}};const out=readAll(n=>{asked.push(n);return pages[n];});return [out,asked];})()", expected: [["a", "b"], [1, 7, 3]], label: "empty middle page and decreasing next number", edge: true },
+      { call: "(() => {const value={id:1},nested=[1,2],items=Object.freeze([value,nested,value]),page=Object.freeze({items,next:null});const out=readAll(()=>page);return out!==items&&out.length===3&&out[0]===value&&out[1]===nested&&out[2]===value&&value.id===1&&nested.length===2;})()", expected: true, label: "frozen page shallow references and nested array leaf", edge: true },
+      { call: "(() => {const items=[\"b\",\"a\"],page={items,next:null};readAll(()=>page);return page.items===items&&items[0]===\"b\"&&items[1]===\"a\";})()", expected: true, label: "page items stay unchanged", edge: true },
+      { call: "(() => {const items=[],page={items,next:null};const first=readAll(()=>page),second=readAll(()=>page);return first!==items&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty collections", edge: true },
     ],
   },
 
@@ -524,7 +528,7 @@ console.log(isMirror([1, 2, 3], [3, 2, 1]));
     tier: 1,
     focus: ['flat'],
     title: 'Flatten every level',
-    prompt: 'Write `flattenAll(list)`, returning a new array with every level of nesting removed, however deep it goes. `flat()` removes one level; pass it `Infinity` to remove them all. `flattenAll([1, [2, [3, [4]]]])` gives `[1, 2, 3, 4]`. Empty inner arrays disappear, and `list` is not changed.',
+    prompt: "Write `flattenAll(list)`, returning a fresh array with all nested array levels removed in left-to-right order. `flattenAll([1, [2, [3, [4]]]])` gives `[1, 2, 3, 4]`. Use flat with an unbounded depth setting; empty nested arrays add nothing. Inputs are finite ordinary dense arrays, with no cyclic arrays, at most 100 nesting levels and at most 10000 visited array entries. If an array is referenced twice, visit that branch twice. Non-array values, including objects, null and undefined, stay as single values with their original references. Do not change any input array or nested value; frozen arrays are valid. Always return a new array, including for already flat or empty input. Target: O(n) time, where n counts visited array entries and array nodes by occurrence, assuming constant-time reference copying.",
     starter: `const flattenAll = list => {
 
 };
@@ -535,12 +539,8 @@ console.log(flattenAll([1, [2, [3, [4]]]]));
     skeleton: `const flattenAll = list => {
   return list.flat(/* a depth no nesting can exceed */);
 };`,
-    hints: ['`flat(depth)` removes `depth` levels of nesting and returns a new array. `Infinity` is a number, so `flat(Infinity)` keeps going until nothing is nested.'],
-    approach: [
-      'Call `flat` on the list.',
-      'Pass `Infinity` as the depth, so no level of nesting is left.',
-      'Return the new array. `flat` never changes the array it is called on.',
-    ],
+    hints: ["The depth argument controls how many nested array levels flat removes. Choose a value that does not stop at a fixed finite depth; remember that non-array objects are leaves, not structures to traverse."],
+    approach: ["Call flat on the original list with Infinity as its depth. This input domain is finite and acyclic, so all array branches eventually end.", "Return its fresh result; flat copies leaf references without traversing non-array objects. It preserves order and repeated occurrences.", "Avoid repeatedly flattening one level at a time: that can rescan a growing result for each nesting level. The single traversal target counts every visited array entry and node."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -549,6 +549,9 @@ console.log(flattenAll([1, [2, [3, [4]]]]));
       { call: 'flattenAll([1, 2, 3])', expected: [1, 2, 3], label: 'nothing to flatten', edge: true },
       { call: 'flattenAll([[], [[]]])', expected: [], label: 'empty arrays disappear', edge: true },
       { call: '(() => { const list = [1, [2]]; flattenAll(list); return list; })()', expected: [1, [2]], label: 'list is not changed', edge: true },
+      { call: "(() => {let list=[\"deep\"];for(let i=0;i<32;i++)list=[list];return flattenAll(list);})()", expected: ["deep"], label: "more than six nesting levels", edge: true },
+      { call: "(() => {const value={id:1},inner=Object.freeze([value,null,undefined]),list=Object.freeze([inner,inner]);const out=flattenAll(list);return out!==list&&out!==inner&&out.length===6&&out[0]===value&&out[1]===null&&out[2]===undefined&&out[3]===value&&value.id===1;})()", expected: true, label: "frozen repeated branches preserve non-array references", edge: true },
+      { call: "(() => {const list=[];const first=flattenAll(list),second=flattenAll(list);return first!==list&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty arrays", edge: true },
     ],
   },
   {

@@ -68,7 +68,7 @@ console.log(average([]));
     format: 'debug',
     focus: ['map-set', 'objects'],
     title: 'The tally that counts nothing twice',
-    prompt: '`tally(words)` should return a Map from each word to how many times it appears. Every count comes back as 1, however many times a word occurs. Find the bug and fix it.',
+    prompt: "`tally(words)` should return a Map from each word to how many times it appears. Every count comes back as 1, however many times a word occurs. Find the bug and fix it. `words` is an ordinary dense array of primitive strings, each at most 128 UTF-16 code units. Keep exact case and spelling: empty strings, spaces and names such as __proto__ are ordinary word keys. Return a fresh Map with entries in the order each distinct word first appeared. Repeated words increase the existing count without moving the entry. Do not change words; frozen input is valid. Target: O(n) time on average, where n is the number of words, assuming average constant-time Map operations and bounded-length word comparison.",
     starter: `const tally = words => {
   const counts = new Map();
   for (const word of words) {
@@ -101,6 +101,10 @@ console.log(tally(["a", "b", "a"]));
       { call: '[...tally([]).entries()]', expected: [], label: 'no words, no counts', edge: true },
       { call: '[...tally(["x"]).entries()]', expected: [['x', 1]] },
       { call: '[...tally(["a", "a", "a"]).entries()]', expected: [['a', 3]] },
+      { call: "[...tally([\"z\",\"A\",\"z\",\"a\",\"\",\"__proto__\",\"\"]).entries()]", expected: [["z", 2], ["A", 1], ["a", 1], ["", 2], ["__proto__", 1]], label: "first-seen order case and empty keys", edge: true },
+      { call: "[...tally(Object.freeze([\"é\",\"e\\u0301\",\"é\",\" \"])).entries()]", expected: [["é", 2], ["é", 1], [" ", 1]], label: "literal Unicode spelling and frozen input", edge: true },
+      { call: "(() => {const words=[\"z\",\"a\"];tally(words);return words;})()", expected: ["z", "a"], label: "do not reorder words", edge: true },
+      { call: "(() => {const first=tally([\"a\"]),second=tally([\"a\",\"a\"]);return first instanceof Map&&second instanceof Map&&first!==second&&first.get(\"a\")===1&&second.get(\"a\")===2;})()", expected: true, label: "independent Maps across calls", edge: true },
     ],
   },
   {

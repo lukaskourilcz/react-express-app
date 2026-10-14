@@ -1,5 +1,37 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b008
+
+Reviewed all-depth flattening, ragged-grid search, the Map tally debug task,
+fixed-depth menus and synchronous page collection. Current coding coverage
+is **70/725**: thirty deployed, forty staged, **655 remaining**; native stays
+**60/263**.
+
+The original selection matched 26/40 expectations. The clarified domains and
+new fixtures catch finite-depth cutoffs, cloned leaves, loose/Object.is search
+semantics, input mutation, reordered/case-folded Map keys and filtered dish
+names. Flattening now states finite acyclic depth bounds and preserves leaf
+references. Two junior flat answers follow their intended one-call depth
+model. Ragged search explicitly uses strict equality; its linear cost counts
+rows plus cells. The tally retains its broken starter and a diagnostic hint
+scored 5/5, while tests preserve first-seen Map order and literal word spelling.
+
+Page collection explicitly models a synchronous valid callback with a finite
+chain. A 1→7→3 case crosses an empty page and a decreasing page number; frozen
+page data and nested item identities are preserved, and each page is called
+once. Its O(n) model includes pages plus items and assumes constant lookup
+cost; no real network or async behavior is implied.
+
+All **40/40 final-hash verdicts** pass (twenty valid, five starters, fifteen
+wrong), plus twenty authored-target/base-25-XP checks and the focused coding
+contracts. API types, launch contracts, registry/index generation, build,
+both production dependency audits (zero vulnerabilities), English copy sweep
+and diff checks pass. The three longest rewritten routes pass eighteen light
+and eighteen dark probes at 360–1440px with no issues or unprobed routes.
+The b008 JSONL records individual scores, primary sources and final model
+self-readings. Production/authenticated acceptance and independent/human
+review are not claimed; IDs, access and archived Czech remain unchanged.
+
 ## 15 October continuation — five-item batch b007
 
 Individually reviewed tag flattening, column totals, index-group totals,

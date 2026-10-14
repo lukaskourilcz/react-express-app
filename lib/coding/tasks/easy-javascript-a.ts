@@ -102,7 +102,7 @@ console.log(allTags([{ title: "A", tags: ["js", "css"] }, { title: "B", tags: ["
     tier: 2,
     focus: ['flat'],
     title: 'Two levels down',
-    prompt: 'A menu is an array of sections, each section is an array of groups, and each group is an array of dish names. Write `menuItems(menu)`, returning every dish in one flat array, in order, with a single call to `flat` given the right depth. `menuItems([[["soup"], ["bread", "salad"]], [["cake"]]])` gives `["soup", "bread", "salad", "cake"]`. Empty sections and empty groups add nothing.',
+    prompt: "A menu is an array of sections, each section is an array of groups, and each group is an array of dish names. Write `menuItems(menu)`, returning every dish in one flat array, in order, with a single call to `flat` given the right depth. `menuItems([[[\"soup\"], [\"bread\", \"salad\"]], [[\"cake\"]]])` gives `[\"soup\", \"bread\", \"salad\", \"cake\"]`. Empty sections and empty groups add nothing. All levels are ordinary dense arrays and every dish name is a primitive string, including empty strings, spaces and repeats. Keep every dish exactly as stored. Do not change any input level; frozen sections and groups are valid. Return a fresh array, even for one group or an empty menu. Target: O(n) time, where n counts sections, groups and dish entries together; copying string references takes constant time.",
     starter: `const menuItems = menu => {
 
 };
@@ -126,6 +126,10 @@ console.log(menuItems([[["soup"], ["bread", "salad"]], [["cake"]]]));
       { call: 'menuItems([[["tea", "coffee"]]])', expected: ['tea', 'coffee'] },
       { call: 'menuItems([[], [["pie"]], [[]]])', expected: ['pie'], label: 'empty sections and groups add nothing', edge: true },
       { call: 'menuItems([])', expected: [], label: 'an empty menu', edge: true },
+      { call: "menuItems([[[\"\",\"x\",\"x\",\" \"]],[]])", expected: ["", "x", "x", " "], label: "empty dish names and repetitions remain", edge: true },
+      { call: "menuItems(Object.freeze([Object.freeze([Object.freeze([\"b\",\"a\"])])]))", expected: ["b", "a"], label: "frozen nested input", edge: true },
+      { call: "(() => {const group=[\"b\",\"a\"],menu=[[group]];const out=menuItems(menu);return out!==group&&out!==menu&&out.length===2&&group[0]===\"b\"&&group[1]===\"a\";})()", expected: true, label: "fresh result and unchanged group order", edge: true },
+      { call: "(() => {const menu=[];const first=menuItems(menu),second=menuItems(menu);return first!==menu&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty results", edge: true },
     ],
   },
 
@@ -884,7 +888,7 @@ console.log(allPairs(["a", "b", "c"]));
     tier: 1,
     focus: ['nested-loops'],
     title: 'Find it in a grid',
-    prompt: 'Write `findInGrid(grid, target)`, where `grid` is an array of rows. Return `[row, column]` for the first cell equal to `target`, reading each row from left to right and the rows from top to bottom, or `null` when no cell matches. Stop as soon as you find it. `findInGrid([[1, 2], [3, 4]], 3)` gives `[1, 0]`.',
+    prompt: "Write `findInGrid(grid, target)`, where `grid` is an array of rows. Return `[row, column]` for the first cell equal to `target`, reading each row from left to right and the rows from top to bottom, or `null` when no cell matches. Stop as soon as you find it. `findInGrid([[1, 2], [3, 4]], 3)` gives `[1, 0]`. Match with strict equality (===): NaN never matches, 0 and -0 match, and objects match only by reference. Both levels are ordinary dense arrays; row lengths may differ and empty rows are valid. Treat equality as constant-time for this exercise. Do not mutate the grid, rows or stored values; frozen input is valid. A found coordinate pair must be a fresh array. Target: O(n) time in the worst case, where n is the number of rows plus all their cells; an early match may take less.",
     starter: `const findInGrid = (grid, target) => {
 
 };
@@ -914,6 +918,13 @@ console.log(findInGrid([[1, 2], [3, 4]], 3));
       { call: 'findInGrid([[1, 2], [3, 4]], 9)', expected: null, label: 'no match gives null', edge: true },
       { call: 'findInGrid([[5, 5], [5, 5]], 5)', expected: [0, 0], label: 'the first match wins', edge: true },
       { call: 'findInGrid([[], [8]], 8)', expected: [1, 0], label: 'rows can be empty or of different lengths', edge: true },
+      { call: "findInGrid([[\"1\",1]],1)", expected: [0, 1], label: "strict equality does not coerce strings", edge: true },
+      { call: "findInGrid([[NaN],[NaN]],NaN)", expected: null, label: "NaN does not match itself", edge: true },
+      { call: "findInGrid([[0,-0]],-0)", expected: [0, 0], label: "both zero signs compare equal", edge: true },
+      { call: "(() => {const target={id:1};return findInGrid([[{id:1},target]],target);})()", expected: [0, 1], label: "object reference equality", edge: true },
+      { call: "findInGrid(Object.freeze([Object.freeze([]),Object.freeze([1,2,3])]),3)", expected: [1, 2], label: "frozen ragged rows", edge: true },
+      { call: "(() => {const rows=[[1],[2]];findInGrid(rows,1);return rows.length===2&&rows[0][0]===1&&rows[1][0]===2;})()", expected: true, label: "preserve row order", edge: true },
+      { call: "(() => {const first=findInGrid([[1]],1),second=findInGrid([[1]],1);return first!==second&&first[0]===0&&first[1]===0;})()", expected: true, label: "fresh coordinate pairs", edge: true },
     ],
   },
 

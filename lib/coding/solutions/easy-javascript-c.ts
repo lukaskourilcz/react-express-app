@@ -389,10 +389,8 @@ export const EASY_JAVASCRIPT_C_SOLUTIONS: Record<string, CodingSolution> = {
   return list.flat(Infinity);
 };`,
     junior: `const flattenAll = list => {
-  let result = list.flat();
-  while (result.some(item => Array.isArray(item))) {
-    result = result.flat();
-  }
+  const depth = Infinity;
+  const result = list.flat(depth);
   return result;
 };`,
     senior: `const flattenAll = list => list.flat(Infinity);`,

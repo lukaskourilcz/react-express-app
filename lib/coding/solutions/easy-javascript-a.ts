@@ -51,8 +51,8 @@ const allTags = posts => posts.flatMap(({ tags }) => tags);`,
   return menu.flat(2);
 };`,
     junior: `const menuItems = menu => {
-  const groups = menu.flat();
-  const dishes = groups.flat();
+  const depth = 2;
+  const dishes = menu.flat(depth);
   return dishes;
 };`,
     senior: `const menuItems = menu => menu.flat(2);`,

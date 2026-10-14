@@ -26,4 +26,3 @@ console.log(JSON.stringify({id:task.id,label:'alternative-sorting-copy',time:rep
 console.log('PASS correct slower alternative reward rule');
 }
 console.log('PASS '+total+' selected authored O(n)/base-25-XP no-false-penalty checks');
-
