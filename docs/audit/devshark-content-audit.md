@@ -150,7 +150,8 @@ the stale-record check before the three affected records were reread. Raw expect
 objects remain data in the grader hash; canonical reuse binds the full ordinary
 task hash. The repository-relative native exporter supplies all 263 records.
 Twelve are recorded and 251 still need individual review. This staged partial
-wave does not add a complete-catalogue or runtime review claim.
+wave does not add a complete-catalogue or runtime review claim. PR #376 has now
+deployed these twelve records after final required CI and production smoke.
 
 The compatibility follow-up also removes the nonexistent Run instruction from
 46 native starter comments. That mechanical correction supplies no editorial
