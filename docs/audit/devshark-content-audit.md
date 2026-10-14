@@ -287,14 +287,53 @@ path references and 46 starter examples pass. Reproducible candidate and questio
 probes and item-specific JSONL scores are retained; final reading is explicitly
 same-session model self-review, without an independent/human claim.
 
-This branch has 48/263 exact native records: 36 deployed and 12 staged. Another
-215 native records and 705 issued coding tasks remain for #176. Final required
-CI and deployment verification for D04 are pending. PR #382 is its prerequisite
-for preserving open coding attempts across these authored/grader edits. The
+All 48/263 exact native records are deployed through PR #384. Required
+verify/SQL passed on 86aa0fb2 (Actions 38523068378); production
+`dpl_6s7uM17ohK9erevoKLGyvJkjP6v9` is READY on merge 0c3388c4 and
+eleven health, public-route and correct/wrong grading checks pass. Those signed-out
+checks create no progress, XP, score or shark name; they do not claim authenticated
+native-path production acceptance. Another 215 native records remain for #176.
+PR #382 preserves open coding attempts across these authored/grader edits. The
 automatic native retry also compares its prior seal before using a fresh one:
 a changed, legacy or expired attempt opens a latest-brief review instead of
 silently grading old code against unseen new rules. A matching current retry
 continues normally; typed source remains in the editor.
+
+### Coding wave 5 — typed strings, scores and optional fields
+
+Five further TypeScript tasks were read individually: Typed slug, Top three
+scores, Greeting with a default, Person interface and Optional nickname. Runtime
+and compiler requirements are stated separately. JavaScript whitespace/case rules,
+finite dense scores, duplicated occurrences, new tiny-output arrays, individually
+trimmed name parts and untouched optional fields are explicit. Equivalent named
+object type aliases pass alongside the recommended interfaces. Negative numeric,
+null and any-type cases and arbitrary-string/array positive calls check the API
+without filtering submitted source text.
+
+The final TypeScript 5.9.3/QuickJS checker returned 42/42 selected expected verdicts:
+fifteen revealed variants and five independent alternatives pass; five starters
+and seventeen wrong implementations fail. Frozen inputs and strict state snapshots
+reject source writes. The previous candidate set matched 30/40: typed any gaps
+are separated from newly explicit whitespace, encoding and tiny-array freshness
+policies. Materialized character-work goals define their input size; comparison-
+sort work is a model, not a universal engine timing claim.
+
+A local advisory probe reported O(1) for dynamic greeting output without an
+established output-construction model. Input-dependent templates and known string
+addition now report unknown, retain the base reward and produce no complexity
+line. Fixed literals, scalar numeric work and field reads remain analyzable.
+Both ordinary/native encrypted runtime tags move to v2 so older attempts cannot
+silently acquire these changed rules. This follow-up is #385.
+
+Five item-specific records have quality floors 4/5 and relevance 9–10/10, with
+same-session final reading clearly labelled self-review. Twenty-five of 725
+issued coding tasks are now recorded on this branch; 700 remain. No scores are
+inferred for another task from its execution. Required CI/deployment for this
+latest wave are pending; native review remains partial at 48/263, all deployed.
+The complete 770-task/725-issued coding execution contract, combined grading/Learn
+integrity, 20 selected advisory/reward checks and both production dependency
+audits pass locally. Production overrides were re-read during this release on 14 October: 485 hides,
+zero active rows, and the same sorted-ID digest as the earlier snapshot.
 
 ## 1. September inventory, retained as historical evidence
 

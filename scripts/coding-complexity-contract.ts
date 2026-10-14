@@ -66,6 +66,21 @@ export function complexityContracts() {
   assert.equal(check('const solve = xs => { let out = ""; for (let i=0;i<xs.length;i++) out+=xs[i]; return out; };').assessment, 'unknown');
   assert.equal(check('const solve = xs => /^(a+)+$/.test(xs);').assessment, 'unknown');
   assert.equal(check('const cache = mystery(); const solve = xs => cache[xs];').assessment, 'unknown');
+  for (const code of [
+    'const solve = text => `Hello, ${text}!`;',
+    'const solve = text => "Hello, " + text + "!";',
+    'function solve(text:string, suffix:string){return text+suffix;}',
+    'function solve(text:string){let prefix:string;prefix="Hello";return prefix+", "+text;}',
+  ]) {
+    assert.equal(check(code).time, null, 'unresolved string construction has no constant label');
+    assert.equal(codingPassXp(check(code)), 25, 'unknown string construction keeps its base reward');
+  }
+  const stringInputs = { ...task, tests: [{ call: 'solve("first", "second")', expected: 'firstsecond' }] };
+  assert.equal(assessComplexity(stringInputs, 'const solve = (left, right) => left + right;').time, null, 'tested string arguments do not become scalar arithmetic');
+  assert.equal(check('const solve = value => value + 1;').time, 'O(1)', 'scalar arithmetic remains analyzable');
+  assert.equal(check('const solve = value => value.name;').time, 'O(1)', 'field access has no output construction');
+  assert.equal(check('const solve = value => "a" + "b";').time, 'O(1)', 'fixed literals remain bounded');
+  assert.equal(check('const solve = value => `prefix${"fixed"}`;').time, 'O(1)', 'fixed template interpolation is bounded');
   const palindrome = codingTaskForHistory('alg-valid-palindrome')!;
   const report = assessComplexity(palindrome, solutionFor(palindrome.id)!.solution);
   assert.equal(report.guidance.targetTime, 'O(n)');

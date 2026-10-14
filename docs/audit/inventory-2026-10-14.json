@@ -1,7 +1,7 @@
 {
   "schema": "devshark-audit-inventory/v1",
   "reconciledOn": "2026-10-14",
-  "catalogueCommit": "527efaad6568f24e6390fda203c276ebca6a597b",
+  "catalogueCommit": "0c3388c4fbf0a7374b4ce1fd4ce353408060a2e9",
   "shippedLocales": [
     "en"
   ],
@@ -17,7 +17,8 @@
     "allEffectiveItemsHaveCurrentQuestionReviews": true,
     "newQuestionsNotYetDeployed": 0,
     "effectiveProductionAtSnapshot": 1820,
-    "overrideSnapshotSortedIdsMd5": "7271a4b58a6e2b174fe541351d7cbdc4"
+    "overrideSnapshotSortedIdsMd5": "7271a4b58a6e2b174fe541351d7cbdc4",
+    "overrideRecheckedOn": "2026-10-14"
   },
   "coding": {
     "authored": 770,
@@ -25,11 +26,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "Twenty individually recorded coding tasks deployed through PRs #372 and #377. Required verify/SQL passed on b062773b in Actions 38511335026; production dpl_6u64uVFgweVX7Tj9Xhwutup8VjSZ passed health and correct/wrong grading. Selected editorial verdicts are 88 plus 89; execution does not approve other tasks.",
-    "currentModelReviewedIssuedTasks": 20,
-    "issuedStillRequiringReview": 705,
+    "currentModelReviewedIssuedTasks": 25,
+    "issuedStillRequiringReview": 700,
     "deployedModelReviewedIssuedTasks": 20,
-    "stagedModelReviewedIssuedTasks": 0,
-    "stagedExecutionEvidence": "No additional coding review wave staged in this branch."
+    "stagedModelReviewedIssuedTasks": 5,
+    "stagedExecutionEvidence": "Five TypeScript foundation tasks individually read and recorded: 42/42 selected expected compiler/worker verdicts, 20 selected conservative advisory/25 XP checks. Complete coding execution contract passes locally. Required CI/deployment pending; no editorial approval inferred for other tasks."
   },
   "nativePaths": {
     "paths": 2,
@@ -42,12 +43,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 12,
+    "currentStagedModelReviewRecords": 0,
     "recordsStillRequiringReview": 215,
-    "reviewEvidence": "D01\u2013D03: 36 exact-bound native records deployed through PRs #376/#379/#381. Required verify/SQL for #381 passed on 997856f1 in Actions 38517372725; production dpl_9euzTfKBzbBNYgjiDQtkjSy2k8B3 passed health and correct/wrong grading. Partial editorial evidence; no complete-catalogue/runtime approval.",
-    "deployedModelReviewRecords": 36,
+    "reviewEvidence": "D01–D04: 48 exact-bound native records deployed through PRs #376/#379/#381/#384. Required verify/SQL for #384 passed on 86aa0fb2 in Actions 38523068378; production dpl_6s7uM17ohK9erevoKLGyvJkjP6v9 is READY on merge 0c3388c4 and passes eleven signed-out health/route/correct-wrong grading checks. Partial editorial evidence; no complete-catalogue or authenticated native-path production approval.",
+    "deployedModelReviewRecords": 48,
     "currentModelReviewRecords": 48,
-    "stagedReviewEvidence": "D04: twelve individually read stack/queue/bracket lesson/activity/question records; 21/21 selected expected worker verdicts, 33 authority/setup checks including exact 96 operations for 32 standard enqueue/read/clear cycles, and independently executed cost contexts. Final CI/deployment pending."
+    "stagedReviewEvidence": "No further native records staged on this branch."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
@@ -55,7 +56,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "Production inventory at the 14 October override snapshot; forty restored questions, twenty reviewed coding tasks and thirty-six native records are deployed. Twelve further D04 native records are staged.",
+    "Production overrides re-read 14 October at 07:25 UTC: 485 hides, no active rows, same sorted-ID digest. Forty restored questions, twenty reviewed coding tasks and forty-eight native records deployed. Five further TypeScript coding records staged.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

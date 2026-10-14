@@ -428,7 +428,11 @@ legacy unversioned sessions before grading or writing progress/XP. Reading the
 latest brief renews a linked session under the same validated Learn parent and
 attempt id; the editor keeps its draft. The version stays inside the encrypted
 token, and is not a public digest of answer material. Runtime-only grading or
-reward changes must bump the attempt tag in `lib/coding/session.ts`.
+reward changes must bump the attempt tag in `lib/coding/session.ts`. The current v2 tag also invalidates
+older advisory rules for unresolved string construction. Input-dependent templates
+and string additions with unresolved output work return no complexity label and
+keep the base reward; fixed literals and ordinary scalar/field reads remain
+analyzable.
 
 The same thread transpiles the TypeScript, so code nested too deeply for the
 compiler is an `error` verdict rather than an HTTP 500. Both thread pools bound

@@ -8,7 +8,7 @@ import type { MergedActivity } from './types';
 export function pathCodeAttemptVersion(activity: MergedActivity, rubricVersion: number): string | undefined {
   if (activity.kind !== 'code') return undefined;
   return createHash('sha256').update(JSON.stringify([
-    'path-code-attempt:v1', rubricVersion, nativeContentHash(activity), nativeGradingHash(activity),
+    'path-code-attempt:v2', rubricVersion, nativeContentHash(activity), nativeGradingHash(activity),
   ])).digest('hex');
 }
 
