@@ -513,6 +513,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
   // result instead of grading twice.
   const attempt = useRef<Attempt | null>(null);
   const [attemptUsedUp, setAttemptUsedUp] = useState(false);
+  const [briefChanged, setBriefChanged] = useState(false);
   // The autosave for the open activity: one save in flight at a time, the
   // revision the next one expects, and the newest content waiting behind it.
   const drafts = useRef<DraftChannel | null>(null);
@@ -526,6 +527,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     // editor's source, a form's fields, a check's answers) carries into the
     // next activity or is autosaved as its draft.
     setOpen(null);
+    setBriefChanged(false);
     setResult(null);
     setAttemptUsedUp(false);
     attempt.current = null;
@@ -648,10 +650,26 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
     setError(null);
   }, [open]);
 
+  const refreshBrief = async () => {
+    const current = attempt.current;
+    if (!open || !enrollment || !current || busy) return;
+    setBusy(true);
+    try {
+      const fresh = await startActivity({ enrollmentId: enrollment.enrollmentId, activityId: open.activity.id });
+      if (attempt.current !== current) return;
+      attempt.current = { session: fresh.session, expiresAt: fresh.expiresAt, key: newIdempotencyKey(), usedUp: false };
+      setOpen(fresh);
+      setBriefChanged(false);
+      setError(null);
+      setResult(null);
+    } catch (caught) { setError(friendlyError(caught)); }
+    finally { setBusy(false); }
+  };
+
   const submit = useCallback(
     async (payload: Record<string, unknown>) => {
       const current = attempt.current;
-      if (!open || !enrollment || !current) return;
+      if (!open || !enrollment || !current || briefChanged) return;
       const expired = Date.parse(current.expiresAt) <= Date.now();
       // A check's answers index its own attempt's order, so a check whose
       // attempt is used up is dealt again rather than resubmitted.
@@ -701,12 +719,13 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
           attempt.current.usedUp = true;
           setAttemptUsedUp(true);
         }
+        if (caught instanceof ApiError && caught.code === 'task_changed') setBriefChanged(true);
         setError(friendlyError(caught));
       } finally {
         setBusy(false);
       }
     },
-    [open, enrollment, retry, queryClient, userId, pathId],
+    [open, enrollment, retry, queryClient, userId, pathId, briefChanged],
   );
 
   if (catalog.isLoading) return <LoadingScreen label={t('paths.loading')} />;
@@ -811,6 +830,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
                 !
               </span>
               <span>{error}</span>
+              {briefChanged && <Button className="lp-brief-refresh" variant="secondary" isDisabled={busy} onClick={() => void refreshBrief()} label={t('coding.verdict.reloadBrief')} />}
             </div>
           )}
 
@@ -863,6 +883,7 @@ export function ModuleWorkspace({ pathId }: { pathId: LearningPathId }) {
             <CodeActivity
               key={open.activity.id}
               code={open.code}
+              submitBlocked={briefChanged}
               draft={draft}
               result={result}
               busy={busy}

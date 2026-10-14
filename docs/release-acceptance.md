@@ -3060,3 +3060,24 @@ Question overrides remain hidden. #176's full editorial wave is still open;
 `docs/audit/inventory-2026-10-14.json` records current coverage without turning
 execution evidence into editorial approval. Private preview links, cookies,
 sessions and proofs are absent from commits and evidence comments.
+
+
+## Coding attempt versions — 14 October 2026 (#380)
+
+New ordinary/linked/puzzle/design sessions and native code sessions carry their
+server-only authored/grader versions inside encrypted tokens. Legacy or stale
+unaccepted work is refused before grading/progress/evidence/XP writes. Latest-brief
+loading preserves typed code and the validated linked Learn parent. Native accepted
+network retries return the stored matching result without repeated grading/XP.
+
+Local API/script/client/tooling types, launch, path, coding ownership/version and
+full grading/Learn integrity checks pass. The stale-editor client checks pass
+(37 tests across two files). The final browser matrix passes light/dark at 360/1440, keyboard activation,
+44px refresh targets and 200% text at 1440. The first extended check found
+a 32px target; both refresh controls were corrected and the matrix rerun. The
+three-route light/dark reflow sweep passed 18 probes each at 360–1440. Both
+production dependency audits report zero vulnerabilities. Build/public/unused/
+security policies pass; initial production-shaped bundle is 242982/243000 bytes
+with the unchanged budget. Twelve physical API handlers remain. Required release
+CI, preview and production verification for this change are pending; no live
+account, score/name allocation or malicious production probe was used.

@@ -64,7 +64,7 @@ import {
   handleActivitySubmit,
   handleLearningPathCatalog,
 } from '../../lib/learning-paths/handlers';
-import { encodeCodingSession } from '../../lib/quiz-tokens';
+import { createCodingSession } from '../../lib/coding/session';
 import { SUBJECT_SCOPE_CATALOG } from '../../shared/subject-catalog';
 import { subjectForCategory, subjectForTopic, isScopeSubject, type ScopeSubjectId } from '../../shared/subject-catalog';
 import {
@@ -223,7 +223,7 @@ async function playableResponse(input: {
       ? {
           coding: codingTasks.map((task) => ({
             task: playableCodingTask(task),
-            session: encodeCodingSession({ taskId: task.id, track: task.track, userId: input.userId, roadmapAttemptId: attemptId }),
+            session: createCodingSession({ taskId: task.id, track: task.track, userId: input.userId, roadmapAttemptId: attemptId }),
           })),
         }
       : {}),

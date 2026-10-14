@@ -152,6 +152,7 @@ export interface CodingDesignKey {
   order?: number[];
 }
 interface CodingSessionPayload {
+  version?: string;
   kind: 'coding-session';
   taskId: string;
   track: CodingTrack;
@@ -170,6 +171,7 @@ interface CodingSessionPayload {
 // index per question after shuffling, so the browser holds the questions
 // without holding the answers.
 interface LearningPathSessionPayload {
+  version?: string;
   kind: 'learning-path-session';
   attemptId: string;
   enrollmentId: string;
@@ -518,6 +520,8 @@ const CODING_TTL_MS = 3 * 60 * 60 * 1000;
 const GITHUB_CONNECT_TTL_MS = 10 * 60 * 1000;
 
 export interface CodingSession {
+  /** Missing only on legacy tokens; submit refuses these before grading. */
+  version?: string;
   taskId: string;
   track: CodingSessionPayload['track'];
   attemptId: string;
@@ -531,6 +535,7 @@ export function encodeCodingSession(input: Omit<CodingSession, 'attemptId' | 'is
   const now = Date.now();
   return sealToken({
     kind: 'coding-session',
+    ...(input.version ? { version: input.version } : {}),
     taskId: input.taskId,
     track: input.track,
     attemptId: input.attemptId ?? b64url(randomBytes(18)),
@@ -541,6 +546,8 @@ export function encodeCodingSession(input: Omit<CodingSession, 'attemptId' | 'is
     exp: now + CODING_TTL_MS,
   });
 }
+
+const isAttemptVersion = (value: unknown): value is string => typeof value === 'string' && /^[a-f0-9]{64}$/.test(value);
 
 const isIndexList = (value: unknown, max: number): value is number[] =>
   Array.isArray(value) && value.length <= max && value.every((n) => Number.isInteger(n) && n >= 0 && n <= 25);
@@ -554,6 +561,7 @@ export function decodeCodingSession(token: string): CodingSession | null {
   // still naming four, so every Algorithms session sealed correctly and then
   // failed to open, and every submit came back as an expired session.
   if (!isCodingTrack(payload.track)) return null;
+  if (payload.version !== undefined && !isAttemptVersion(payload.version)) return null;
   if (typeof payload.attemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.attemptId)) return null;
   if (payload.userId !== null && (typeof payload.userId !== 'string' || payload.userId.length === 0 || payload.userId.length > 128)) return null;
   if (payload.roadmapAttemptId !== undefined && (typeof payload.roadmapAttemptId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.roadmapAttemptId))) return null;
@@ -578,6 +586,7 @@ export function decodeCodingSession(token: string): CodingSession | null {
     }
   }
   return {
+    ...(payload.version ? { version: payload.version } : {}),
     taskId: payload.taskId,
     track: payload.track!,
     attemptId: payload.attemptId,
@@ -605,6 +614,7 @@ export function decodeGithubConnectState(token: string): { userId: string } | nu
 const LEARNING_PATH_TTL_MS = 3 * 60 * 60 * 1000;
 
 export interface LearningPathSession {
+  version?: string;
   attemptId: string;
   enrollmentId: string;
   userId: string;
@@ -627,6 +637,7 @@ export function encodeLearningPathSession(
   return {
     token: sealToken({
       kind: 'learning-path-session',
+      ...(input.version ? { version: input.version } : {}),
       attemptId: input.attemptId,
       enrollmentId: input.enrollmentId,
       userId: input.userId,
@@ -654,6 +665,7 @@ export function decodeLearningPathSession(token: string): LearningPathSession | 
   if (typeof payload.enrollmentId !== 'string' || !/^[A-Za-z0-9_-]{16,64}$/.test(payload.enrollmentId)) return null;
   if (typeof payload.userId !== 'string' || payload.userId.length < 8 || payload.userId.length > 128) return null;
   if (!isLearningPathId(payload.pathId)) return null;
+  if (payload.version !== undefined && !isAttemptVersion(payload.version)) return null;
   if (typeof payload.activityId !== 'string' || !/^[a-z0-9-]{3,96}$/.test(payload.activityId)) return null;
   if (!['lesson', 'check', 'code', 'artifact'].includes(payload.activityKind ?? '')) return null;
   if (!['diagnostic', 'exercise', 'project'].includes(payload.purpose ?? '')) return null;
@@ -667,6 +679,7 @@ export function decodeLearningPathSession(token: string): LearningPathSession | 
   }
   return {
     attemptId: payload.attemptId,
+    ...(payload.version ? { version: payload.version } : {}),
     enrollmentId: payload.enrollmentId,
     userId: payload.userId,
     pathId: payload.pathId,

@@ -45,13 +45,13 @@ const outcome = (extra: Partial<RunOutcome>): RunOutcome => ({ results: [], logs
 const status = () => document.querySelector('.cd-workbench > [role="status"]')!;
 const editor = () => screen.getByLabelText('Test editor');
 
-function mount(props: { signedIn?: boolean; subject?: PlayableCodingTask; mode?: 'section' | 'landing' } = {}) {
+function mount(props: { signedIn?: boolean; subject?: PlayableCodingTask; mode?: 'section' | 'landing'; onRefreshTask?: (code: string) => Promise<void> } = {}) {
   return render(
     <MemoryRouter initialEntries={['/coding/javascript/js-test-state']}>
       <LanguageProvider>
         <Routes>
           <Route path="/coding/javascript/js-test-state" element={(
-            <CodingWorkbench task={props.subject ?? task} session="test-session" locked={null} initialCode={null} signedIn={props.signedIn ?? true} mode={props.mode ?? 'section'} />
+            <CodingWorkbench task={props.subject ?? task} session="test-session" locked={null} initialCode={null} signedIn={props.signedIn ?? true} mode={props.mode ?? 'section'} onRefreshTask={props.onRefreshTask} />
           )} />
           <Route path="/coding/:track/:taskId" element={<h1>Another task</h1>} />
         </Routes>
@@ -405,4 +405,41 @@ it('uses named icons and tooltips only for the homepage command buttons', () => 
   }
   expect(screen.getByRole('button', { name: 'Solution' })).toBeVisible();
   expect(screen.getByRole('button', { name: 'Report a problem with this task' })).toBeVisible();
+});
+
+
+it('keeps the draft and requires the latest brief after a stale Submit', async () => {
+  vi.mocked(submitCoding).mockRejectedValueOnce(new ApiError('Task changed', 409, 'task_changed'));
+  const refresh = vi.fn().mockResolvedValue(undefined);
+  mount({ onRefreshTask: refresh });
+  const source = 'const double = ns => ns.map(n => n * 2);';
+  fireEvent.change(editor(), { target: { value: source } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  await screen.findByText(/This task changed/);
+  expect(editor()).toHaveValue(source);
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(submitCoding).toHaveBeenCalledTimes(1);
+  expect(document.querySelector('.cd-completion')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: 'Load latest brief' }));
+  await waitFor(() => expect(refresh).toHaveBeenCalledWith(source));
+  await waitFor(() => expect(screen.queryByText(/This task changed/)).toBeNull());
+  expect(editor()).toHaveValue(source);
+  expect(screen.getByRole('button', { name: 'Submit' })).not.toHaveAttribute('aria-disabled', 'true');
+});
+
+it('keeps the stale draft when loading the latest brief fails', async () => {
+  vi.mocked(submitCoding).mockRejectedValueOnce(new ApiError('Task changed', 409, 'task_changed'));
+  const refresh = vi.fn().mockRejectedValue(new ApiError('Connection lost', 0));
+  mount({ onRefreshTask: refresh });
+  fireEvent.change(editor(), { target: { value: 'const kept = 1;' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  await screen.findByRole('button', { name: 'Load latest brief' });
+  fireEvent.click(screen.getByRole('button', { name: 'Load latest brief' }));
+  await waitFor(() => expect(refresh).toHaveBeenCalled());
+  await waitFor(() => expect(screen.getByRole('button', { name: 'Load latest brief' })).not.toBeDisabled());
+  expect(editor()).toHaveValue('const kept = 1;');
+  expect(screen.getByRole('button', { name: 'Submit' })).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(screen.getByRole('button', { name: 'Submit' }));
+  expect(submitCoding).toHaveBeenCalledTimes(1);
 });

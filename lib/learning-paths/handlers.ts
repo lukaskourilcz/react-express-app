@@ -27,7 +27,8 @@ import { secureShuffle } from '../quiz-runtime';
 import { shuffleWithOrder } from '../coding/grade';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from '../coding/grader-capacity';
 import { codingTaskById } from '../coding/active';
-import { decodeLearningPathSession, encodeLearningPathSession } from '../quiz-tokens';
+import { decodeLearningPathSession } from '../quiz-tokens';
+import { createLearningPathSession, pathCodeAttemptVersion } from './session';
 import {
   activityIn,
   activitySummary,
@@ -616,7 +617,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   const payload = await buildActivityPayload(path, activity, supabase, row.enrollment_id);
   if ('error' in payload) return jsonError(res, payload.status, payload.code, payload.message);
 
-  const session = encodeLearningPathSession({
+  const session = createLearningPathSession({
     attemptId,
     enrollmentId: row.enrollment_id,
     userId,
@@ -868,6 +869,31 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   const { module, activity } = found;
   if (activity.kind !== session.activityKind || activity.purpose !== session.purpose) {
     return jsonError(res, 409, 'session_mismatch', 'This attempt no longer matches the activity');
+  }
+
+  if (activity.kind === 'code' && session.version !== pathCodeAttemptVersion(activity, path.rubric.version)) {
+    // A response lost after an accepted write is still the recorded result,
+    // even when the catalogue changed before its network retry. Read only the
+    // bound attempt; never regrade it or pay its reward again.
+    const saved = await withTimeout(supabase.from('learning_path_attempts')
+      .select('user_id,enrollment_id,activity_id,state,idempotency_key,request_hash,accepted_result')
+      .eq('attempt_id', session.attemptId).eq('user_id', userId).maybeSingle());
+    if (saved.error) return jsonError(res, 503, 'progress_unavailable', 'Could not check the recorded attempt. Try again.');
+    const row = saved.data;
+    if (row?.state === 'accepted' && row.user_id === userId && row.enrollment_id === session.enrollmentId && row.activity_id === activity.id) {
+      const hash = requestHash({ answers: body.answers ?? null, code: body.code ?? null, artifact: null, acknowledged: body.acknowledged ?? null });
+      if (row.idempotency_key !== body.idempotencyKey || row.request_hash !== hash) {
+        return jsonError(res, 409, 'idempotency_conflict', 'That attempt was already checked with different work.');
+      }
+      if (row.accepted_result && typeof row.accepted_result === 'object') {
+        res.setHeader('Cache-Control', 'private, no-store');
+        return res.json({ ...row.accepted_result, replayed: true });
+      }
+    }
+    return jsonError(res, 409, 'task_changed', 'This activity changed while you were working. Load its latest brief before submitting. Your code has been kept.');
+  }
+  if (session.rubricVersion !== path.rubric.version) {
+    return jsonError(res, 409, 'version_conflict', 'The activity criteria changed while this attempt was open. Start it again.');
   }
 
   let state: EvidenceState = 'in_progress';

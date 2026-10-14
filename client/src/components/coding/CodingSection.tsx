@@ -676,7 +676,7 @@ export function CodingTaskScreen() {
   // A track the section does not offer (system design is hidden) is not
   // found. Its task is never fetched, so no session is issued.
   const track = isCodingSectionTrack(trackParam) ? trackParam : null;
-  const [learnLink] = useState(() => {
+  const [learnLink, setLearnLink] = useState(() => {
     const sealed = new URLSearchParams(window.location.hash.slice(1)).get('learn');
     try { return { taskId, session: sealed ?? sessionStorage.getItem(`devshark:learn-coding:${taskId}`) ?? undefined }; } catch { return { taskId, session: sealed ?? undefined }; }
   });
@@ -687,7 +687,13 @@ export function CodingTaskScreen() {
     if (new URLSearchParams(window.location.hash.slice(1)).has('learn')) window.history.replaceState(window.history.state, '', `${window.location.pathname}${window.location.search}`);
   }, [learnSession, taskId]);
   const task = useCodingTask(track ? taskId : undefined, learnSession);
+  useEffect(() => {
+    if (learnSession && task.data?.session && task.data.session !== learnSession && task.data.task.id === taskId) {
+      setLearnLink({ taskId, session: task.data.session });
+    }
+  }, [learnSession, task.data, taskId]);
   const [attempt, setAttempt] = useState(0);
+  const [refreshDraft, setRefreshDraft] = useState<{ taskId: string; code: string } | null>(null);
   const [completedTask, setCompletedTask] = useState<string | null>(null);
   const workbench = useWorkbench(track !== null, attempt);
   const bookmarks = useBookmarks(isAuthenticated);
@@ -818,7 +824,7 @@ export function CodingTaskScreen() {
       : next && next.id !== data.task.id ? `/coding/${next.track}/${next.id}` : null;
   const backHref = stage?.challenge.category === 'fullstack' ? '/coding/fullstack' : stage?.challenge.category === 'debugging' ? '/coding' : `/coding/${data.task.track}`;
   const previousLocal = stage?.previous ? deviceDraft(stage.previous) : null;
-  const initialCode = choice.code ?? (stage && previousLocal !== null
+  const initialCode = (refreshDraft?.taskId === taskId ? refreshDraft.code : null) ?? choice.code ?? (stage && previousLocal !== null
     ? prepareEvolvingDraft(previousLocal, stage.challenge, stage.index)
     : null);
 
@@ -851,6 +857,12 @@ export function CodingTaskScreen() {
             onDraft={onDraft}
             onEdit={onEdit}
             onVerdict={onVerdict}
+            onRefreshTask={async (code) => {
+              keepDeviceDraft(data.task.id, code, draftBase, draftEpoch);
+              setRefreshDraft({ taskId: data.task.id, code });
+              const refreshed = await task.refetch();
+              if (refreshed.error) throw refreshed.error;
+            }}
             nextHref={nextHref}
             backHref={backHref}
             // The star sits with the workbench's own utilities, beside the

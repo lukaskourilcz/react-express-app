@@ -1870,6 +1870,8 @@ export const en = {
   'coding.verdict.review': 'Comes back for review {when}.',
   'coding.verdict.signIn': 'Sign in to record this pass.',
   'coding.verdict.submitError': 'Could not submit. Check your connection and try again.',
+  'coding.verdict.taskChanged': 'This task changed. Load the latest brief before submitting. Your code has been kept.',
+  'coding.verdict.reloadBrief': 'Load latest brief',
   'coding.verdict.sessionExpired': 'This session expired. Reload the task and submit again.',
   'coding.verdict.notRecorded': 'Checked, not recorded: sign in to keep passes.',
   'coding.github.committed': 'Committed to {repo}',
