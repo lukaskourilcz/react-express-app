@@ -4,7 +4,7 @@ import { handleCodingSubmit, handleCodingTask } from '../lib/coding/handlers';
 import { codingTaskById } from '../lib/coding/active';
 import { codingAttemptVersion, createCodingSession } from '../lib/coding/session';
 import { decodeCodingSession, decodeLearningPathSession, encodeCodingSession, encodeLearningPathSession } from '../lib/quiz-tokens';
-import { handleActivitySubmit } from '../lib/learning-paths/handlers';
+import { handleActivityStart, handleActivitySubmit } from '../lib/learning-paths/handlers';
 import { activityIn, pathById } from '../lib/learning-paths/catalog';
 import { createLearningPathSession, pathCodeAttemptVersion } from '../lib/learning-paths/session';
 import { requestHash } from '../lib/learning-paths/grade';
@@ -92,12 +92,13 @@ const activity = activityIn(path, 'dsa-v1-d01-count-pairs')?.activity ?? path.mo
 const nativeInput = { attemptId: 'native-version-0123456789', enrollmentId: 'native-enroll-0123456789', userId: account, pathId: path.id, activityId: activity.id, activityKind: activity.kind, purpose: activity.purpose, curriculumVersion: path.version, rubricVersion: path.rubric.version };
 assert.equal(decodeLearningPathSession(createLearningPathSession(nativeInput).token)?.version, pathCodeAttemptVersion(activity, path.rubric.version));
 let accepted: Record<string, unknown> | null = null;
+let openedAttempts = 0;
 const nativeDb = {
   from(table: string) {
-    const chain = { select: () => chain, eq: () => chain, maybeSingle: async () => ({ data: table === 'learning_path_attempts' ? accepted : { enrollment_id: nativeInput.enrollmentId, user_id: account, path_id: path.id, curriculum_version: path.version, status: 'active' }, error: null }) };
+    const chain = { select: () => chain, eq: () => chain, then: <T>(resolve: (value: unknown) => T) => resolve({ data: [], error: null }), maybeSingle: async () => ({ data: table === 'learning_path_attempts' ? accepted : table === 'learning_path_enrollments' ? { enrollment_id: nativeInput.enrollmentId, user_id: account, path_id: path.id, curriculum_version: path.version, status: 'active' } : null, error: null }) };
     return chain;
   },
-  rpc() { writes++; throw new Error('A stale native attempt must not write'); },
+  rpc(name: string) { if (name === 'open_learning_path_attempt') { openedAttempts++; return { data: { ok: true }, error: null }; } writes++; throw new Error('A stale native attempt must not write'); },
 };
 for (const version of [undefined, '0'.repeat(64)]) {
   const out = res();
@@ -135,3 +136,27 @@ for (const sameWork of [true, false]) {
   assert.equal(writes, 0);
 }
 console.log('PASS attempt versions: accepted native replay survives catalogue changes, different work is refused, no repeated XP');
+
+const renew = async (previousSession?: string) => {
+  const out = res();
+  const req = { ...request(''), body: { user_id: account, enrollmentId: nativeInput.enrollmentId, activityId: activity.id, ...(previousSession ? { previousSession } : {}) } };
+  await withRequestContext(req as never, out as never, async () => {
+    await requestMemo(`tier:${account}`, async () => 'premium');
+    await handleActivityStart(req as never, out as never, nativeDb as never);
+  });
+  assert.equal(out.statusCode, 200, JSON.stringify(out.body));
+  return out.body as { needsBriefReview?: boolean; session: string };
+};
+const previousCurrent = createLearningPathSession(nativeInput).token;
+assert.equal((await renew(previousCurrent)).needsBriefReview, undefined);
+assert.equal((await renew(encodeLearningPathSession(nativeInput).token)).needsBriefReview, true);
+const savedPrompt = activity.code!.prompt.en;
+try {
+  activity.code!.prompt.en += ' Changed authored requirement.';
+  const renewed = await renew(previousCurrent);
+  assert.equal(renewed.needsBriefReview, true, 'an automatic renewal cannot silently grade a changed brief');
+  assert.equal(decodeLearningPathSession(renewed.session)?.version, pathCodeAttemptVersion(activity, path.rubric.version));
+} finally { activity.code!.prompt.en = savedPrompt; }
+assert.equal(openedAttempts, 3);
+assert.equal(writes, 0);
+console.log('PASS attempt versions: unchanged native renewal, legacy renewal and changed authored renewal before another Submit');

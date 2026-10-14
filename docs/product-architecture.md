@@ -729,7 +729,10 @@ canonical coding reward (migration 065): a reused ordinary task cannot earn a
 second first-pass reward. Non-coding activities keep their existing reward rules.
 Native code sessions bind exact activity/grader material and rubric version.
 A stale unaccepted session is refused before grading or evidence/XP writes;
-loading its latest brief keeps the editor source. An already accepted matching
+loading its latest brief keeps the editor source. Automatic retries send their previous
+seal when starting a replacement attempt; changed, legacy or expired code
+attempts require latest-brief review before another Submit. This metadata flag
+never changes the server's ownership/version checks or reward authority. An already accepted matching
 network retry returns the stored response read-only, without grading or paying
 again. Runtime-only native grading changes must bump the attempt tag in
 `lib/learning-paths/session.ts`.

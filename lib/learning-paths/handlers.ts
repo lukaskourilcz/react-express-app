@@ -591,6 +591,16 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   if (!found) return jsonError(res, 404, 'not_found', 'Unknown activity');
   const { module, activity } = found;
 
+  if (body.previousSession !== undefined && (typeof body.previousSession !== 'string' || body.previousSession.length > 16_384)) {
+    return jsonError(res, 400, 'bad_request', 'The previous session is invalid');
+  }
+  const previousAttempt = typeof body.previousSession === 'string' ? decodeLearningPathSession(body.previousSession) : null;
+  const needsBriefReview = activity.kind === 'code' && body.previousSession !== undefined && (
+    !previousAttempt || previousAttempt.userId !== userId || previousAttempt.enrollmentId !== row.enrollment_id || previousAttempt.activityId !== activity.id
+    || previousAttempt.curriculumVersion !== path.version || previousAttempt.rubricVersion !== path.rubric.version
+    || previousAttempt.version !== pathCodeAttemptVersion(activity, path.rubric.version)
+  );
+
   const attemptId = newId();
   // Purpose comes from the manifest, never from the request: it decides
   // whether a result can count as placement evidence or as core completion.
@@ -648,6 +658,7 @@ export async function handleActivityStart(req: VercelRequest, res: VercelRespons
   res.setHeader('Cache-Control', 'private, no-store');
   const out: StartActivityResponse = {
     attemptId,
+    ...(needsBriefReview ? { needsBriefReview: true } : {}),
     session: session.token,
     expiresAt: new Date(session.expiresAt).toISOString(),
     activity: activitySummary(activity),

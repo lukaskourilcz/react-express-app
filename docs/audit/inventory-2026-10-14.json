@@ -1,7 +1,7 @@
 {
   "schema": "devshark-audit-inventory/v1",
   "reconciledOn": "2026-10-14",
-  "catalogueCommit": "42d668637511fee675fd159d441b27fb7d4e0e7c",
+  "catalogueCommit": "527efaad6568f24e6390fda203c276ebca6a597b",
   "shippedLocales": [
     "en"
   ],
@@ -43,11 +43,11 @@
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
     "currentStagedModelReviewRecords": 12,
-    "recordsStillRequiringReview": 227,
-    "reviewEvidence": "D01 and D02: 24 exact-bound records deployed through PRs #376 and #379. Required verify/SQL for #379 passed on 59f27e60 in Actions 38512520280; production dpl_6cxcAkxCe5dT4kAsTmDLEMmbWnjq passed health and correct/wrong grading. Partial editorial evidence; no complete-catalogue/runtime approval.",
-    "deployedModelReviewRecords": 24,
-    "currentModelReviewRecords": 36,
-    "stagedReviewEvidence": "D03: twelve individually read Map/Set lesson/activity/question records and 21/21 selected expected candidate verdicts (7 valid, 3 starters, 11 wrong). Final CI/deployment pending."
+    "recordsStillRequiringReview": 215,
+    "reviewEvidence": "D01\u2013D03: 36 exact-bound native records deployed through PRs #376/#379/#381. Required verify/SQL for #381 passed on 997856f1 in Actions 38517372725; production dpl_9euzTfKBzbBNYgjiDQtkjSy2k8B3 passed health and correct/wrong grading. Partial editorial evidence; no complete-catalogue/runtime approval.",
+    "deployedModelReviewRecords": 36,
+    "currentModelReviewRecords": 48,
+    "stagedReviewEvidence": "D04: twelve individually read stack/queue/bracket lesson/activity/question records; 21/21 selected expected worker verdicts, 33 authority/setup checks including exact 96 operations for 32 standard enqueue/read/clear cycles, and independently executed cost contexts. Final CI/deployment pending."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
@@ -55,7 +55,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "Production inventory at the 14 October override snapshot; forty restored questions, twenty reviewed coding tasks and twenty-four native records are deployed. Twelve further D03 native records are staged.",
+    "Production inventory at the 14 October override snapshot; forty restored questions, twenty reviewed coding tasks and thirty-six native records are deployed. Twelve further D04 native records are staged.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]
