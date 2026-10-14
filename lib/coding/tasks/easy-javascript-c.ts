@@ -143,7 +143,7 @@ console.log(readCommand(["add", "milk", "eggs"]));
     tier: 1,
     focus: ['concat'],
     title: 'Add a header and a footer',
-    prompt: 'A table is an array of rows. Write `framed(rows, header, footer)`, returning a new array with `header` first, then every row, then `footer`, using `concat`. `framed(["a", "b"], "Name", "End")` gives `["Name", "a", "b", "End"]`. A row, the header or the footer can itself be an array of cells, and each one stays a single item. `rows` is not changed.',
+    prompt: "A table is an array of rows. Write `framed(rows, header, footer)`, returning a new array with `header` first, then every row, then `footer`, using `concat`. `framed([\"a\", \"b\"], \"Name\", \"End\")` gives `[\"Name\", \"a\", \"b\", \"End\"]`. A row, the header or the footer can itself be an array of cells, and each one stays a single item. `rows` is not changed. Inputs are ordinary dense arrays and data values, without custom concat behavior. Keep the original row, header and footer references; this is a shallow copy. Do not change any input, including nested values; frozen inputs are valid. Target: O(n) time, where n is the number of rows; copying a reference takes constant time.",
     starter: `const framed = (rows, header, footer) => {
 
 };
@@ -154,7 +154,7 @@ console.log(framed(["a", "b"], "Name", "End"));
     skeleton: `const framed = (rows, header, footer) => {
   return [header].concat(/* the rows, then the footer as one item */);
 };`,
-    hints: ['`concat` adds the items of any array you pass it, one level deep, and adds anything else as it is. Wrap the footer in brackets, `[footer]`, so a footer that is itself an array still arrives as one item.'],
+    hints: ["`concat` adds an array argument one level deep. How can you pass an array-valued footer as one item? The new outer array should still refer to the original rows."],
     approach: [
       'Start from an array holding only the header: `[header]`.',
       'Call `concat` on it with `rows` and `[footer]`. The rows are added one by one; the wrapped footer is added as one item.',
@@ -167,6 +167,8 @@ console.log(framed(["a", "b"], "Name", "End"));
       { call: 'framed([], "Name", "End")', expected: ['Name', 'End'], label: 'no rows', edge: true },
       { call: 'framed([["Ada", 36], ["Lin", 29]], ["name", "age"], ["total", 65])', expected: [['name', 'age'], ['Ada', 36], ['Lin', 29], ['total', 65]], label: 'rows, header and footer that are arrays each stay one item', edge: true },
       { call: '(() => { const rows = ["x"]; framed(rows, "H", "F"); return rows; })()', expected: ['x'], label: 'rows is not changed', edge: true },
+      { call: "(() => { const row={id:1},h=[\"H\"],f=[\"F\"]; const rows=Object.freeze([row,row]); const out=framed(rows,h,f); return Array.isArray(out)&&out!==rows&&out.length===4&&out[0]===h&&out[1]===row&&out[2]===row&&out[3]===f&&row.id===1&&h.length===1&&f.length===1; })()", expected: true, label: "shallow references, duplicate rows and frozen input", edge: true },
+      { call: "(() => { const rows=[]; return framed(rows,0,false)!==rows; })()", expected: true, label: "fresh result for no rows", edge: true },
     ],
   },
   {
@@ -177,7 +179,7 @@ console.log(framed(["a", "b"], "Name", "End"));
     tier: 1,
     focus: ['join'],
     title: 'One line of CSV',
-    prompt: 'Write `toCsvLine(values)`, returning the values as one line of text with a comma between each pair, using `join`. `toCsvLine(["Ada", 36, "London"])` gives `"Ada,36,London"`. A missing value must leave an empty cell, and `join` already writes `null` and `undefined` as empty text: `toCsvLine(["Ada", null, "London"])` gives `"Ada,,London"`. No values give an empty string.',
+    prompt: "Write `toCsvLine(values)`, returning the values as one line of text with a comma between each pair, using `join`. `toCsvLine([\"Ada\", 36, \"London\"])` gives `\"Ada,36,London\"`. A missing value must leave an empty cell, and `join` already writes `null` and `undefined` as empty text: `toCsvLine([\"Ada\", null, \"London\"])` gives `\"Ada,,London\"`. No values give an empty string. This is a restricted CSV exercise: values are primitive strings without commas, double quotes, carriage returns or newlines, finite numbers, booleans, null or undefined, in a dense array. Quoting and escaping arbitrary CSV fields are outside this task. Do not change the input; frozen arrays are valid. Target: O(n) time, where n is the number of cells plus the total length of their text in UTF-16 code units, using a linear join implementation.",
     starter: `const toCsvLine = values => {
 
 };
@@ -191,6 +193,7 @@ console.log(toCsvLine(["Ada", null, "London"]));
 };`,
     hints: ['`join` turns every item into text and puts the separator between them. It writes `null` and `undefined` as nothing at all, where `"" + null` would give the word `"null"`.'],
     approach: [
+      "A plain join is sufficient only because these fields exclude CSV delimiter, quote and line-break characters. A general CSV writer would need quoting and escaping.",
       'Call `join` on the values.',
       'Pass `","` as the separator. Without an argument, `join` uses a comma too, but saying so makes the format clear.',
       'Return the text. An empty array joins to an empty string, so it needs no special case.',
@@ -203,6 +206,10 @@ console.log(toCsvLine(["Ada", null, "London"]));
       { call: 'toCsvLine(["Ada", null, "London"])', expected: 'Ada,,London', label: 'null is an empty cell', edge: true },
       { call: 'toCsvLine([undefined, "x"])', expected: ',x', label: 'undefined is an empty cell too', edge: true },
       { call: 'toCsvLine([])', expected: '', label: 'no values', edge: true },
+      { call: "(() => { const values=[\"left\",null,\"right\"]; const line=toCsvLine(values); return line===\"left,,right\"&&values.length===3&&values[0]===\"left\"&&values[1]===null&&values[2]===\"right\"; })()", expected: true, label: "joining preserves input order and missing cells", edge: true },
+      { call: "toCsvLine(Object.freeze([\"\",false,0,undefined,\"🦈\"]))", expected: ",false,0,,🦈", label: "frozen mixed cells", edge: true },
+      { call: "toCsvLine([null,undefined,\"\"])", expected: ",,", label: "three empty cells", edge: true },
+      { call: "toCsvLine([\"  Ada  \", -1.5, true])", expected: "  Ada  ,-1.5,true", label: "keep spaces and primitive conversion", edge: true },
     ],
   },
 
@@ -215,7 +222,7 @@ console.log(toCsvLine(["Ada", null, "London"]));
     tier: 1,
     focus: ['slice'],
     title: 'The last few',
-    prompt: 'Write `lastFew(items, n)`, returning a new array of the last `n` items, using `slice` with a negative start. `lastFew(["a", "b", "c", "d"], 2)` gives `["c", "d"]`. Asking for more items than there are gives them all. Watch one edge: an `n` of 0 must give `[]`, but `slice(-0)` is the same as `slice(0)` and copies the whole array.',
+    prompt: "Write `lastFew(items, n)`, returning a new array of the last `n` items, using `slice` with a negative start. `lastFew([\"a\", \"b\", \"c\", \"d\"], 2)` gives `[\"c\", \"d\"]`. Asking for more items than there are gives them all. Watch one edge: an `n` of 0 must give `[]`, but `slice(-0)` is the same as `slice(0)` and copies the whole array. `items` is an ordinary dense array and `n` is an integer from 0 through 10000 (including numeric -0). Always create a fresh outer array, even for empty input; preserve the selected item references, order and repeats. Do not change the input or nested values; frozen arrays are valid. Target: O(n) time in the worst case, where n in this complexity statement is the number of input items, distinct from the requested count parameter. Copying each reference takes constant time.",
     starter: `const lastFew = (items, n) => {
 
 };
@@ -227,7 +234,7 @@ console.log(lastFew(["a", "b", "c", "d"], 2));
   if (/* n is 0 */) return [];
   return items.slice(/* a negative start */);
 };`,
-    hints: ['A negative start counts back from the end: `slice(-2)` copies the last two items. `-0` is the same number as `0`, so `slice(-0)` copies everything.'],
+    hints: ["A negative start counts back from the end. Decide what zero should return before using that start; then think about how copying differs from reusing the original array."],
     approach: [
       'When `n` is 0, return `[]`.',
       'Otherwise call `items.slice(-n)`. A start further back than the first item starts at the first item.',
@@ -241,6 +248,10 @@ console.log(lastFew(["a", "b", "c", "d"], 2));
       { call: 'lastFew([1, 2], 5)', expected: [1, 2], label: 'more than there are gives them all', edge: true },
       { call: 'lastFew([1, 2, 3], 0)', expected: [], label: 'none asked for', edge: true },
       { call: '(() => { const items = [1, 2, 3]; lastFew(items, 2); return items; })()', expected: [1, 2, 3], label: 'items is not changed', edge: true },
+      { call: "(() => { const item={id:1}; const items=Object.freeze([0,item,item]); const out=lastFew(items,2); return out!==items&&out.length===2&&out[0]===item&&out[1]===item&&item.id===1; })()", expected: true, label: "shallow copy with repeated references", edge: true },
+      { call: "(() => { const items=[]; const out=lastFew(items,3); return Array.isArray(out)&&out!==items&&out.length===0; })()", expected: true, label: "fresh empty result", edge: true },
+      { call: "lastFew([1,2],-0)", expected: [], label: "numeric negative zero", edge: true },
+      { call: "lastFew([1,2],10000)", expected: [1, 2], label: "maximum requested count", edge: true },
     ],
   },
 

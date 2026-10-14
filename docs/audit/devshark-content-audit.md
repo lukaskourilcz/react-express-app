@@ -1,5 +1,31 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b004
+
+Individually reviewed table framing, playlist append, restricted CSV joining,
+suffix copying and pagination. Current coding coverage is **50/725**:
+30 deployed, twenty staged, **675 remaining**; native stays **60/263**.
+
+The baseline matched 32/40 selected verdicts. Missing checks allowed cloned
+references, songs-array mutation, deduplication, mutation after joining and
+reuse of the caller array. New shallow-copy/read-only policies are explicit;
+old passes are not all represented as old-contract violations. CSV joining
+now limits fields to values that need no quoting and explains that arbitrary
+CSV requires escaping. Count and page inputs have precise integer bounds.
+Each authored O(n) target defines its cost unit, including total output text
+for joining and worst-case input length for slices.
+
+Final-hash QuickJS checks pass **40/40** (twenty valid, five starters, fifteen
+wrong), and twenty authored-target/base-25-XP checks pass. Primary sources,
+individual scores and final English self-readings are recorded in the b004
+JSONL; the basic playlist hint receives 3/5. This is model self-review only.
+
+API types, launch contracts, build, registry/index generation, both production
+dependency audits (zero vulnerabilities), copy-artifact sweep and diff checks
+pass. Thirty light and thirty dark task-route checks at 360–1440px pass with
+zero issues or unprobed routes. Production and authenticated acceptance remain
+separate. Task IDs, access rules and archived Czech are preserved.
+
 ## 15 October continuation — five-item batch b003
 
 Reviewed `js-average`, `js-short-words`, `js-object-keys`, `js-object-values`

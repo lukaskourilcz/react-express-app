@@ -1056,7 +1056,7 @@ console.log(outsideIn([1, 2, 3, 4, 5]));
     tier: 1,
     focus: ['slice'],
     title: 'One page of results',
-    prompt: 'Write `page(items, pageNumber, pageSize)`, returning the items on one page of a list that shows `pageSize` items per page, with pages counted from 1, using `slice`. `page(["a", "b", "c", "d", "e"], 2, 2)` gives `["c", "d"]`. The last page can be short, a page past the end is empty, and `items` is not changed.',
+    prompt: "Write `page(items, pageNumber, pageSize)`, returning the items on one page of a list that shows `pageSize` items per page, with pages counted from 1, using `slice`. `page([\"a\", \"b\", \"c\", \"d\", \"e\"], 2, 2)` gives `[\"c\", \"d\"]`. The last page can be short, a page past the end is empty, and `items` is not changed. `items` is an ordinary dense array. `pageNumber` and `pageSize` are positive integers no greater than 10000. Return a fresh outer array even for the whole list or an empty page; keep original item references, order and duplicates. Do not change the input or nested values; frozen arrays are valid. Target: O(n) time in the worst case, where n is the number of input items, assuming constant-time index arithmetic and reference copying.",
     starter: `const page = (items, pageNumber, pageSize) => {
 
 };
@@ -1068,7 +1068,7 @@ console.log(page(["a", "b", "c", "d", "e"], 2, 2));
   const start = /* how many items come before this page */;
   return items.slice(start, /* where this page ends */);
 };`,
-    hints: ['Page 1 starts at index 0 and page 2 at `pageSize`, so page `n` starts at `(n - 1) * pageSize`. `slice` stops before its end index and never reads past the array.'],
+    hints: ["Count how many full pages come before this one. Use that count to find the start index, then remember that the end index of `slice` is excluded."],
     approach: [
       'Work out the start index: every earlier page holds `pageSize` items, so it is `(pageNumber - 1) * pageSize`.',
       'The end index is the start plus `pageSize`. `slice` excludes it.',
@@ -1082,6 +1082,10 @@ console.log(page(["a", "b", "c", "d", "e"], 2, 2));
       { call: 'page(["a", "b", "c", "d", "e"], 3, 2)', expected: ['e'], label: 'the last page can be short', edge: true },
       { call: 'page([1, 2, 3], 5, 2)', expected: [], label: 'a page past the end is empty', edge: true },
       { call: '(() => { const items = [1, 2, 3, 4]; page(items, 1, 2); return items; })()', expected: [1, 2, 3, 4], label: 'the list is not changed', edge: true },
+      { call: "(() => { const item={id:1}; const items=Object.freeze([item,item,0]); const out=page(items,1,2); return out!==items&&out.length===2&&out[0]===item&&out[1]===item&&item.id===1; })()", expected: true, label: "frozen input and repeated object references", edge: true },
+      { call: "(() => { const items=[1,2]; const out=page(items,1,10000); return out!==items&&out.length===2&&out[0]===1&&out[1]===2; })()", expected: true, label: "fresh whole-list result", edge: true },
+      { call: "(() => { const items=[]; const out=page(items,1,1); return Array.isArray(out)&&out!==items&&out.length===0; })()", expected: true, label: "fresh empty page", edge: true },
+      { call: "page([1,2,3],10000,10000)", expected: [], label: "large valid page bounds", edge: true },
     ],
   },
 

@@ -180,7 +180,7 @@ console.log(parseQuery("page=2&sort=new"));
     tier: 1,
     focus: ['concat'],
     title: 'Add to a playlist',
-    prompt: 'Write `addSongs(playlist, songs)`, returning a new playlist with `songs` added at the end, using `concat`. `songs` can be an array of titles or a single title: `addSongs(["Intro"], ["Wave", "Tide"])` gives `["Intro", "Wave", "Tide"]`, and `addSongs(["Intro"], "Wave")` gives `["Intro", "Wave"]`. The original playlist is not changed.',
+    prompt: "Write `addSongs(playlist, songs)`, returning a new playlist with `songs` added at the end, using `concat`. `songs` can be an array of titles or a single title: `addSongs([\"Intro\"], [\"Wave\", \"Tide\"])` gives `[\"Intro\", \"Wave\", \"Tide\"]`, and `addSongs([\"Intro\"], \"Wave\")` gives `[\"Intro\", \"Wave\"]`. The original playlist is not changed. Both arrays are ordinary dense arrays of primitive string titles; empty titles and repeats are valid and keep their positions. Do not change either input; frozen arrays are valid. Return a fresh array even when nothing is added. Target: O(n) time, where n is the total number of titles in the playlist and songs (one for a single title); copying a title reference takes constant time.",
     starter: `const addSongs = (playlist, songs) => {
 
 };
@@ -204,6 +204,10 @@ console.log(addSongs(["Intro"], ["Wave", "Tide"]));
       { call: 'addSongs(["Intro"], "Wave")', expected: ['Intro', 'Wave'], label: 'a single title' },
       { call: 'addSongs([], [])', expected: [], label: 'nothing to add to nothing', edge: true },
       { call: '(() => { const list = ["Intro"]; addSongs(list, ["Wave"]); return list; })()', expected: ['Intro'], label: 'the original playlist is unchanged', edge: true },
+      { call: "addSongs([\"a\",\"a\",\"\"], [\"a\",\"\"])", expected: ["a", "a", "", "a", ""], label: "keep duplicates and empty titles", edge: true },
+      { call: "(() => { const list=Object.freeze([\"a\"]), songs=Object.freeze([\"b\"]); const out=addSongs(list,songs); return Array.isArray(out)&&out!==list&&out!==songs&&out.join(\"|\")===\"a|b\"&&list[0]===\"a\"&&songs[0]===\"b\"; })()", expected: true, label: "frozen source arrays", edge: true },
+      { call: "(() => { const songs=[\"b\",\"c\"]; addSongs([\"a\"],songs); return songs; })()", expected: ["b", "c"], label: "songs is unchanged", edge: true },
+      { call: "(() => { const list=[],songs=[]; const out=addSongs(list,songs); return out!==list&&out!==songs&&out.length===0; })()", expected: true, label: "fresh empty playlist", edge: true },
     ],
   },
   {
