@@ -1,0 +1,49 @@
+{
+  "schema": "devshark-audit-inventory/v1",
+  "reconciledOn": "2026-10-14",
+  "catalogueCommit": "f520045d889b5b40a6f24bda746d820c31551128",
+  "shippedLocales": [
+    "en"
+  ],
+  "questionBank": {
+    "authoredActiveCategories": 2168,
+    "eligibleStatic": 2014,
+    "withheldByContentGate": 154,
+    "overrideRows": 485,
+    "deletedOverrideRows": 485,
+    "activeEditedOrCustomRows": 0,
+    "eligibleHiddenByOverrides": 194,
+    "effectiveOnBranch": 1820,
+    "allEffectiveItemsHaveCurrentQuestionReviews": true,
+    "newQuestionsNotYetDeployed": 40
+  },
+  "coding": {
+    "authored": 770,
+    "issued": 725,
+    "hiddenSystemDesign": 45,
+    "editorialWaveComplete": false,
+    "executionEvidence": "Required full coding/client step passed in GitHub Actions 38486027732; release then held by initial bundle budget. Execution is not editorial approval."
+  },
+  "nativePaths": {
+    "paths": 2,
+    "modules": 24,
+    "lessons": 38,
+    "activities": 112,
+    "checkQuestions": 113,
+    "nativeCodeActivities": 46,
+    "reusedCodingActivities": 1,
+    "lessonActivityQuestionRecords": 263,
+    "editorialWaveComplete": false,
+    "deliveryDependsOnDeploymentFlagsAndStorage": true
+  },
+  "notDeliverable": {
+    "retiredSectionQuestions": 319,
+    "unreferencedQuestions": 312,
+    "legacyCoreQuestions": 795
+  },
+  "limits": [
+    "Branch inventory plus a current production deletion snapshot; the new content is not yet deployed.",
+    "No item-level coding or native-path review is manufactured from execution checks.",
+    "Re-read production overrides before claiming any later live coverage."
+  ]
+}

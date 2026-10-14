@@ -32,7 +32,7 @@
   {
    "id": "coding-catalog",
    "description": "lib/coding/catalog.ts",
-   "items": 249,
+   "items": 770,
    "countable": true
   },
   {
@@ -43,9 +43,9 @@
   },
   {
    "id": "question_edits",
-   "description": "Supabase override table (admin edits, custom questions, hides). Not readable from the repository.",
-   "items": null,
-   "countable": false
+   "description": "Production snapshot read on 2026-10-14: 485 deletion rows, zero active edits/custom questions. See docs/audit/inventory-2026-10-14.json. Future changes require another read.",
+   "items": 485,
+   "countable": true
   },
   {
    "id": "legacy-core",
@@ -55,11 +55,15 @@
   }
  ],
  "counts": {
-  "active": 2128,
+  "active": 2168,
+  "eligibleQuestions": 2014,
   "retiredSection": 319,
   "unreferenced": 312,
   "legacyCore": 795,
-  "codingTasks": 249
+  "codingTasks": 770,
+  "activeCodingTasks": 725,
+  "hiddenCodingTasks": 45,
+  "pathMaterials": 263
  },
  "items": [
   {

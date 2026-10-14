@@ -235,34 +235,21 @@ recorded in and share a rank; the time is shown and recorded but decides
 nothing. The all-time boards and Today arrive in order without a rank, and
 the Leaderboard screen numbers them so equal results share a rank there too.
 
-Names on the boards are opt-in. `user_stats.show_on_leaderboards` (049) is off
-for every learner, existing ones included, until they switch on "Show my name
-and photo on leaderboards" on the Profile or on the Leaderboard. Both switches
-read one query and write through `op=leaderboard-visibility` in
-`api/user/[op].ts` (GET `{ visible }`, PUT `{ visible }`; signed in only, each
-PUT charged to the account's write limit). Every board routine returns
-`display_name` and `picture` only while the flag is on and NULL otherwise, and
-the screen then shows "Learner" with the default avatar. From 055 the name is
-`board_display_name(user_id)`, one rule for every board, and any new board
-reads it too: NULL while the flag is off; with it on, the learner's
-sharkname, or their Google name when they chose "Friends see: your name";
-and, for a learner with no sharkname, the Google name, as 049 showed it. The
-picture still follows the flag alone (`CASE WHEN show_on_leaderboards THEN
-picture END`). The viewer's own
-30-day row follows the same rule, so it shows them what everybody else sees:
-a switch refetches every board the learner's tab has loaded, their personal
-board at once, and everyone else sees the change within about a minute, which
-the switch's hint says. The privacy policy says the same under
-"Leaderboards". The name and picture stored for a board are the ones on the
-account's Google identity (`identity_data.full_name` or `name`, `avatar_url`
-or `picture`), read in `verifiedProfile` (`api/user/[op].ts`), never
-`user_metadata`, which the account can rewrite from the browser. An account
-without a Google identity (email and password) has no name there: with the
-switch on it appears by its sharkname, and without a sharkname the boards
-say "Learner". The Biggest Shark Challenge's Hall of Fame shows the name a
-learner types when saving a score. That box starts empty: it takes the
-account's name only while this switch is on, fills it once so a cleared box
-stays clear, and says the name is shown publicly on the Hall of Fame.
+Leaderboard names are mandatory from migration 064. Profile's independent
+`leaderboard-name` operation chooses `nickname` (default) or `account`;
+`board_display_name(user_id)` applies that choice on every board. Account
+names come from the verified provider identity, or the local part of a
+confirmed email; the full email and browser-editable `user_metadata` are
+never accepted as public identity. Missing nicknames receive the server's
+unique generated shark name. This choice does not change what friends see.
+`user_stats.show_on_leaderboards` now controls only the optional public
+photo, retaining previous photo consent. `leaderboard-visibility` remains
+the photo operation and cannot remove a name from a board. Changes invalidate
+the learner's board caches; public reads refresh within about a minute.
+The viewer's own row follows the same name/photo rules. Challenge uses this
+server identity when automatically saving a completed positive score; guests
+get a generated name tied to the run. There is no name-entry form and zero
+scores create no score or guest-name allocation.
 `api/leaderboard.ts` serves every shared board (`period=30d`, `global`,
 `category` and `daily`) to everyone with `public, s-maxage=60` and no
 `stale-while-revalidate`, so the CDN never serves a board older than a
