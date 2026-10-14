@@ -260,7 +260,7 @@ console.log(reverse("cat"));
     tier: 1,
     focus: ["filter"],
     title: "Positive numbers",
-    prompt: "Write `positives(numbers)`, returning a new array of the values strictly above zero, in order. Zero is not positive, and an array with none gives an empty array.",
+    prompt: "Write `positives(numbers)`, returning a new array of the values strictly above zero, in their original order, including duplicates. Zero (including -0) is not positive. The input is a dense array of finite JavaScript numbers and may be frozen; leave it unchanged. Return a new array even when the input is empty or every value is positive. Target: O(n) time, where n is the number of input elements, treating Number comparisons as constant-time work.",
     starter: `const positives = numbers => {
   
 };
@@ -273,7 +273,7 @@ console.log(positives([-1,0,3]));
     return /* true to keep this item */;
   });`,
     hints: [
-      "A keep-or-drop decision on each value, and the only subtlety is the boundary: zero is not above zero.",
+      "Decide about each occurrence independently: keeping one value should not remove an equal value later. How can you keep the selected values in order without editing the input?",
     ],
     approach: [
       "Use filter with a strict greater-than-zero test.",
@@ -287,6 +287,7 @@ console.log(positives([-1,0,3]));
       { call: "positives([])", expected: [], label: "empty input", edge: true },
       { call: "positives([0])", expected: [], label: "zero is not positive", edge: true },
       { call: "positives([-5,-1])", expected: [], label: "nothing matches", edge: true },
+      { call: "positives([2,2,0.5,-0,0])", expected: [2, 2, 0.5], label: "keep duplicates and positive fractions", edge: true },
     ],
   },
   {
@@ -298,7 +299,7 @@ console.log(positives([-1,0,3]));
     tier: 1,
     focus: ["map"],
     title: "Square numbers",
-    prompt: "Write `squares(numbers)`, returning a new array with every number multiplied by itself. A negative squares to a positive; zero and decimals square normally.",
+    prompt: "Write `squares(numbers)`, returning a new array with each input number multiplied by itself, in order and without rounding. Use JavaScript Number arithmetic: negative inputs square to nonnegative results, and zero and decimals follow the same multiplication rule. The input is a dense array of finite numbers and may be frozen; leave it unchanged. Even an empty input must give a different array. Target: O(n) time, where n is the number of elements and each Number multiplication counts as constant-time work.",
     starter: `const squares = numbers => {
   
 };
@@ -311,7 +312,7 @@ console.log(squares([2,3]));
     return /* transformed item */;
   });`,
     hints: [
-      "One output for every input, and squaring is just a number multiplied by itself — the same shape as doubling.",
+      "Keep positions aligned: output position i comes from input position i. Build the output separately so the caller's original values stay available.",
     ],
     approach: [
       "Use map, since every input produces exactly one output.",
@@ -336,7 +337,7 @@ console.log(squares([2,3]));
     tier: 1,
     focus: ["for"],
     title: "Largest number",
-    prompt: "Write `largest(numbers)`, returning the biggest value in the array. It must still work when every value is negative, and when the maximum appears more than once. Assume at least one number.",
+    prompt: "Write `largest(numbers)`, returning its numerically greatest value. The input is a dense array of 1 to 10,000 finite JavaScript numbers; leave it unchanged, including when it is frozen. Handle all-negative inputs, fractions and repeated maxima. Either sign of zero is acceptable when zero is the maximum. Target: O(n) time, where n is the number of elements and Number comparisons count as constant-time work.",
     starter: `const largest = numbers => {
   
 };
@@ -353,9 +354,9 @@ console.log(largest([4,9,2]));
 
   return best;
 };`,
-    hints: ["Compare every value with the largest seen."],
+    hints: ["What initial candidate comes from the actual data, even when all the values are negative? Compare each later value with that candidate."],
     approach: [
-      "Either track the largest seen so far in a loop, or spread the array into Math.max.",
+      "Track the largest seen in a loop or reduce from the first value. Math.max with spread also works for this bounded exercise, but a scan avoids turning all elements into function arguments.",
       "Make sure the comparison still works when every value is negative — starting from zero would be wrong.",
     ],
     verify: "tests",
@@ -414,7 +415,7 @@ console.log(fizz(5));
     tier: 1,
     focus: ["while"],
     title: "Countdown",
-    prompt: "Write `countDown(n)`, returning an array counting down from n to 1 — `countDown(3)` gives `[3, 2, 1]`. `countDown(0)` gives an empty array.",
+    prompt: "Write `countDown(n)`, returning the integers from n down to 1, inclusive: `countDown(3)` gives `[3, 2, 1]`. The input n is an integer from 0 to 10,000; zero gives an empty array. Each value appears once and zero is never included. Target: O(n) time, where n is the requested output length, not the number of digits in the input. Count each Number operation and output append as constant-time work in this exercise's array model.",
     starter: `const countDown = n => {
   
 };
@@ -431,7 +432,7 @@ console.log(countDown(3));
 
   return result;
 };`,
-    hints: ["Push n, then decrease it while it is positive."],
+    hints: ["Think about which value must be emitted first, what makes the next value smaller, and the boundary where no values remain."],
     approach: [
       "Use a while loop that keeps going while n is still positive.",
       "Push the current value, then decrease it, so the first pushed value is n itself and the last is one.",
@@ -499,7 +500,7 @@ console.log(firstLetters(["red","blue"]));
     tier: 1,
     focus: ["some"],
     title: "Has adult",
-    prompt: "Write `hasAdult(ages)`, returning true when at least one age is 18 or more. Exactly 18 counts; an empty array is false.",
+    prompt: "For this exercise, an adult is any age at least 18. Write `hasAdult(ages)`, returning a boolean: true when at least one age qualifies, otherwise false. Exactly 18 counts and an empty array is false. Input is a dense array of finite nonnegative numbers and may be frozen; leave it unchanged. Target: O(n) time in the worst case, where n is the number of ages and Number comparisons count as constant-time work; a match may allow an earlier return.",
     starter: `const hasAdult = ages => {
   
 };
@@ -538,7 +539,7 @@ console.log(hasAdult([12,18]));
     tier: 1,
     focus: ["every"],
     title: "All positive",
-    prompt: "Write `allPositive(numbers)`, returning true only when every value is above zero. Zero makes it false, and an empty array is true.",
+    prompt: "Write `allPositive(numbers)`, returning a boolean: true only when every value is strictly above zero. Either sign of zero makes it false; an empty array is true because it contains no counterexample. Input is a dense array of finite JavaScript numbers and may be frozen; leave it unchanged. Target: O(n) time in the worst case, where n is the number of elements and each Number comparison counts as one operation; a counterexample permits an earlier return.",
     starter: `const allPositive = numbers => {
   
 };
@@ -551,7 +552,7 @@ console.log(allPositive([1,2,3]));
     return /* condition */;
   });`,
     hints: [
-      "The opposite question to the last one: every value has to qualify. Think about what that means for a list with nothing in it to disqualify.",
+      "Look for a counterexample rather than counting successes. What result remains when the search finishes without finding one, including in an empty list?",
     ],
     approach: [
       "Use every, which stops at the first failure and hands back a boolean.",
@@ -582,7 +583,7 @@ console.log(allPositive([1,2,3]));
     tier: 1,
     focus: ["reduce", "objects"],
     title: "Total price",
-    prompt: "Write `total(items)`, returning the sum of every item’s `price`. An empty array totals 0, and decimal prices add up normally.",
+    prompt: "Write `total(items)`, adding each item's price to a Number total that starts at zero, in array order. An empty array returns 0. Use ordinary JavaScript addition without rounding or applying quantity fields: 0.1 plus 0.2 gives 0.30000000000000004. Input is a dense array of plain objects with finite nonnegative numeric price properties; leave the array and objects unchanged, including when frozen. Target: O(n) time, where n is the number of items and property reads and Number additions count as constant-time work.",
     starter: `const total = items => {
   
 };
@@ -743,7 +744,7 @@ console.log(wordCount("one two three"));
     tier: 1,
     focus: ["find", "objects"],
     title: "Find user",
-    prompt: "Write `findUser(users, name)`, returning the first user object whose `name` matches. Return `undefined` when nothing matches, or when the list is empty.",
+    prompt: "Write `findUser(users, name)`, returning the original first object whose name is exactly equal to the query string, including case, spaces and empty strings. Preserve its identity and extra properties; return undefined for no match or an empty list. Input is a dense array of plain objects with string name properties; names and the query are at most 128 UTF-16 code units long. Leave the array and objects unchanged, including when frozen. Target: O(n) time, where n is the number of users; the name-length bound makes each string comparison bounded work.",
     starter: `const findUser = (users, name) => {
   
 };
@@ -786,7 +787,7 @@ console.log(findUser([{name:"Ana"}],"Ana"));
     tier: 2,
     focus: ["filter", "reduce"],
     title: "Odd sum",
-    prompt: "Write `oddSum(numbers)`, returning the total of just the odd values. Negative odds count; no odd values, or an empty array, totals 0.",
+    prompt: "Write `oddSum(numbers)`, returning the sum of every odd occurrence, including negative and repeated odd values. No odd values or an empty input returns 0. Input is a dense array of at most 10,000 JavaScript integer Numbers between -1,000,000 and 1,000,000; these bounds keep the sum exactly representable. Leave the input unchanged, including when frozen. Target: O(n) time, where n is the number of input values and Number remainder, comparison and addition count as constant-time operations.",
     starter: `const oddSum = numbers => {
   
 };
@@ -867,7 +868,7 @@ console.log(repeat("hi",3));
     tier: 2,
     focus: ["for", "push"],
     title: "Number range",
-    prompt: "Write `range(start, end)`, returning every integer from start through end, both included. Start may equal end, and a negative start works the same way.",
+    prompt: "Write `range(start, end)`, returning all integers in ascending order from start through end, both included. Equal endpoints give one value; start greater than end gives an empty array. Both inputs are integer Numbers between -10,000 and 10,000. Target: O(n) time for n output elements, with constant work for an empty interval; n is max(0, end - start + 1), rather than the size of either endpoint. Count Number operations and array appends as constant-time work in this exercise's array model.",
     starter: `const range = (start, end) => {
   
 };
@@ -885,10 +886,10 @@ console.log(range(2,4));
   return result;
 };`,
     hints: [
-      "Count up from start while you have not gone past end. The boundary is the whole exercise, because end is included in the result.",
+      "Check a one-value interval and a reversed interval before choosing a loop boundary. How many values must exist when the endpoints are equal?",
     ],
     approach: [
-      "Work out how many values the range holds before you build it: end minus start, plus one.",
+      "If start is greater than end, return an empty array. Otherwise the result holds end minus start, plus one values.",
       "Generate values by adding the index to the start, so a negative start works the same way.",
       "Use an inclusive comparison so the end value is part of the result.",
     ],

@@ -1,5 +1,90 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b002
+
+Individually reviewed `js-all-positive`, `js-total-price`, `js-find-user`,
+`js-odd-sum` and `js-number-range`. Current coding coverage is **40/725**:
+30 deployed and ten staged in b001–b002, with **685 coding tasks** still
+unreviewed. Native coverage remains **60/263**, leaving 203 records.
+
+The original selection matched 32/40 expectations. Case folding, cloned
+lookup results, duplicate removal and fixture memorization escaped tests;
+rounding and read-only policies were also insufficiently specified. The new
+briefs explicitly define these policies rather than retroactively treating
+all eight old passes as violations of the old wording. `allPositive` no longer
+depends on a prior question. Its finite-number domain makes all revealed
+predicate variants agree. `total` explicitly uses input-order Number addition;
+`findUser` preserves original identity and exact bounded string names;
+`oddSum` keeps repeated signed integers within exact-sum bounds; `range`
+defines reversed, singleton and bounded inclusive intervals with output-size n.
+
+All **40/40 final-hash worker verdicts** pass: twenty valid variants, five
+starters and fifteen wrong approaches. After the final range-explanation fix,
+its eight candidates were rerun and combined with the thirty-two unchanged
+current-hash verdicts. Twenty selected authored O(n)/base-25-XP checks pass.
+The find and odd-sum hints are deliberately scored 3/5 for their sound but
+basic guidance rather than assigned the batch's other scores automatically.
+Individual scores, relevance-marker rationale, primary documentation and
+final self-reading notes are in `review-2026-10-15-b002.jsonl`; candidate
+programs are in `candidates-2026-10-15-b002.json`. Use the existing b001
+complexity probe with the b002 candidate-file argument to repeat its checks.
+This is same-session model review, not independent or human approval.
+
+Batch b002 validation passes: registry/index generation, API typecheck,
+launch/room/caller contracts, build, both production dependency audits (zero
+vulnerabilities), the English copy-artifact sweep (zero hits/five items) and
+diff checks. Thirty light and thirty dark task-page probes at 360–1440 px
+report zero issues and zero unprobed routes. These are local fixture checks;
+the batch is not yet released or counted as authenticated acceptance.
+
+Earlier sections below are dated batch snapshots, not later live counts.
+
+## 15 October continuation — five-item batch b001
+
+The owner resumed the remaining audit with a commit after every five items.
+This batch reviews `js-positive-numbers`, `js-square-numbers`,
+`js-largest-number`, `js-countdown` and `js-has-adult` individually; it does
+not approve the rest of their source file. Current coverage is **35/725 coding
+tasks** (30 deployed, five staged) and **60/263 native records**. Another
+**690 coding tasks and 203 native records** still need individual review.
+Production overrides remain the explicitly dated 14 October snapshot.
+
+The original selection matched 39/46 expected verdicts. Reuse of an all-positive
+or empty input, duplicate removal and fixture memorization escaped checks.
+Read-only handling is now explicit; an old in-place-sort pass is not described
+as violating a no-mutation clause the old maximum/adult brief did not contain.
+Dense finite-number domains, numerical signed-zero equivalence and numeric
+output-size bounds make the requirements precise. Hints guide selection,
+position, initialization and termination without supplying complete code.
+
+The final current hashes pass **47/47 selected worker verdicts**: 27 valid
+variants/puzzle orders, five starters and fifteen wrong approaches. The two
+hint-only final changes were rerun on all sixteen affected candidates; the
+other thirty-one records keep their unchanged current hashes. Twenty linear
+variants receive the authored O(n) goal without a false penalty. A valid
+copy-then-sort maximum is accepted for correctness; the analyzer cannot
+determine its complexity, so it receives the base 25 XP without a label.
+No timing measurement is represented as a proof of Big O.
+
+Reproduce the per-item execution with `export-coding.ts`, `grade-task.ts` and
+`check-coding-candidates.mjs`, using
+`docs/audit/wip/coding/candidates-2026-10-15-b001.json`. The reward probe is
+`docs/audit/wip/tools/check-coding-2026-10-15-b001-complexity.ts`; the five
+individually authored decisions and their evidence are in
+`docs/audit/wip/coding/review-2026-10-15-b001.jsonl`. All final readings are
+same-session model self-review; no independent reader or human approval is
+claimed. IDs, access rules, archived Czech and historical progress are intact.
+
+Batch validation: API typecheck, launch/room/caller contracts, application
+build, generated-registry/index checks and both production dependency audits
+pass; the audits report zero vulnerabilities. The English learner-copy artifact
+sweep reports zero hits across these five items. Thirty light and thirty dark
+task-page probes at 360, 390, 768, 1024, 1280 and 1440 px report no overflow,
+escaping content or unprobed routes. Twelve physical API handlers remain.
+These are local/fixture results, not authenticated or production acceptance.
+
+The sections below are dated prior waves, not current coverage claims.
+
 The item-by-item audit that
 [#176](https://github.com/lukaskourilcz/react-express-app/issues/176) asks
 for, over every question a devShark learner can be served. This report says

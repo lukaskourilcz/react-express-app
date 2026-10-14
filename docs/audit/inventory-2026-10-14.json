@@ -1,7 +1,7 @@
 {
   "schema": "devshark-audit-inventory/v1",
-  "reconciledOn": "2026-10-14",
-  "catalogueCommit": "d47e3a9d273aa241e4440a40aab9ace4d37dc776",
+  "reconciledOn": "2026-10-15",
+  "catalogueCommit": "e032b4f780a3c16a1dce7b413c56fecac2d7d4cf",
   "shippedLocales": [
     "en"
   ],
@@ -25,12 +25,12 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "Twenty-five individually recorded coding tasks deployed through PRs #372/#377/#386. Required verify/SQL for #386 passed on 91e581c9 in Actions 38528432347; production dpl_Ay5qY4nrksapSrAihuVqt5uBVDv7 passed eleven signed-out route/grading checks on merge 29566b91. Execution does not approve unreviewed tasks.",
-    "currentModelReviewedIssuedTasks": 30,
-    "issuedStillRequiringReview": 695,
-    "deployedModelReviewedIssuedTasks": 25,
-    "stagedModelReviewedIssuedTasks": 5,
-    "stagedExecutionEvidence": "Five TypeScript union/tuple/dictionary tasks individually read and recorded: 40/40 selected expected compiler/worker verdicts and twenty selected authored-goal/base-25-XP checks. Full required CI/deployment pending."
+    "executionEvidence": "Thirty coding records deployed through #390; required verify/SQL run 38537395287 passes on 498c4b1f, production e032b4f7 is READY and passed eleven public/eight free-task server probes. Three Premium-only server probes remain dedicated-account acceptance, not fabricated passes.",
+    "currentModelReviewedIssuedTasks": 40,
+    "issuedStillRequiringReview": 685,
+    "deployedModelReviewedIssuedTasks": 30,
+    "stagedModelReviewedIssuedTasks": 10,
+    "stagedExecutionEvidence": "15 October five-item commits through b002: 10 staged reviews; latest batch 40/40 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released."
   },
   "nativePaths": {
     "paths": 2,
@@ -56,7 +56,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "The earlier 14 October production override snapshot remains unchanged at its recorded recheck: 485 hides, zero active rows, same sorted-ID digest. Forty restored questions, twenty-five reviewed coding tasks and sixty native records are production-verified. Five further coding records are staged; no additional native records are staged.",
+    "30 reviewed coding and sixty native records are deployed; 10 coding records are staged through b002. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]
