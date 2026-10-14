@@ -3,6 +3,8 @@
 // `en` is the source of truth; its keys define the TranslationKey type, so
 // `cs` is required to provide every key (the compiler enforces parity).
 // Interpolation: use {name} placeholders and pass vars to t(key, vars).
+// Empty values keep retired UI keys compatible with the archived Czech
+// dictionary; no current screen reads those removed labels or descriptions.
 
 export const en = {
   'designPreview.label': 'Compare interface designs',
@@ -495,7 +497,7 @@ export const en = {
   'challenge.topics': 'Choose your topics',
   'challenge.noTopics': 'Choose at least one topic to start.',
   'leaderboard.visibility.label': 'Show my name and photo on leaderboards',
-  'leaderboard.visibility.hint': 'Leaderboards are public. When on, they show your sharkname (or your name, if friends see your name) and your photo; without a sharkname, your name. When off, you appear as “Learner” with no photo. A change reaches the public boards within about a minute.',
+  'leaderboard.visibility.hint': '',
   'leaderboard.visibility.saveFailed': 'Your leaderboard setting wasn’t saved. Try again.',
   'leaderboard.visibility.loadFailed': 'Your leaderboard setting couldn’t be loaded.',
 
@@ -515,12 +517,12 @@ export const en = {
   'friends.loadFailed': 'Your friends did not load.',
   'friends.unavailable': 'Friends are not available yet on this deployment.',
   'friends.handleTitle': 'Your sharkname',
-  'friends.handleHelp': 'Friends add you by your sharkname. Nothing else about your account is searchable.',
+  'friends.handleHelp': '',
   'friends.handlePlaceholder': 'e.g. lukas-k',
   'friends.handleSave': 'Save',
   'friends.saving': 'Saving…',
   'friends.handleSaved': 'Saved.',
-  'friends.handleInvalid': '3–32 letters, numbers, hyphens or underscores, starting and ending with a letter or number.',
+  'friends.handleInvalid': '',
   'friends.discoverable': 'Let people find me by my sharkname',
   'friends.discoverableHelp': 'When off, nobody new can add you. Existing friends stay.',
   'friends.findTitle': 'Add a friend',
@@ -751,7 +753,7 @@ export const en = {
   'quiz.pendingResultLost': 'An earlier quiz result could not be saved to your account: a result has to be saved within an hour.',
   'quiz.shareCopied': 'Result copied to clipboard',
   'quiz.shareSaved': 'Share card saved and result text copied',
-  'quiz.shareCardTitle': 'Quiz result',
+  'quiz.shareCardTitle': '',
   'quiz.shareFailed': 'Could not share',
 
   // Generic errors
@@ -965,9 +967,9 @@ export const en = {
   'challenge.todaySet': "today's set",
   'challenge.finsStat': 'fins',
   'challenge.perQuestion': 'per question',
-  'challenge.relaxedPace': 'Relaxed pace',
-  'challenge.relaxedHint': '180 seconds per question. The result stays private and is not ranked.',
-  'challenge.practiceScore': 'Relaxed pace. Not ranked.',
+  'challenge.relaxedPace': '',
+  'challenge.relaxedHint': '',
+  'challenge.practiceScore': '',
   'challenge.todayBoard': "Today's board",
   'challenge.noChampion': 'No one has set a score yet. Be the first.',
   'challenge.boardUnavailable': 'The top scores could not be loaded. You can still play.',
@@ -991,13 +993,13 @@ export const en = {
   'challenge.nextQuestion': 'Next question',
   'challenge.seeResult': 'See result',
   'challenge.gameOver': 'Run ended',
-  'challenge.submitPrompt': 'Save your score:',
-  'challenge.nameLabel': 'Your name',
-  'challenge.nameRequired': 'Please enter a name',
-  'challenge.namePublicHint': 'Shown publicly on the Hall of Fame.',
+  'challenge.submitPrompt': '',
+  'challenge.nameLabel': '',
+  'challenge.nameRequired': '',
+  'challenge.namePublicHint': '',
   'challenge.nextQuestionFailed': 'Could not load the next question. Your run and score are kept.',
-  'challenge.submitScore': 'Submit score',
-  'challenge.scoreSubmitted': 'Score recorded.',
+  'challenge.submitScore': '',
+  'challenge.scoreSubmitted': '',
   'challenge.playAgain': 'Play again',
   'challenge.backToIntro': 'Back',
   'challenge.cta': 'Biggest Shark Challenge',
@@ -1085,7 +1087,7 @@ export const en = {
   // ── Non-webdev career-roadmap header ──────────────────────────────────
 
   // ── Misc previously-hardcoded strings ─────────────────────────────────
-  'quiz.shareText': 'I scored {pct}% on devShark ({correct}/{total}). Try it!',
+  'quiz.shareText': '',
   // Unrendered since #230: the quiz prompt that asked for voluntary support
   // left with the support page (#222). The keys stay because the retained
   // Czech file still has them, and their values say what is true now.
@@ -1180,7 +1182,7 @@ export const en = {
   'placement.subtitle': 'A few quick rounds that adjust to you. Answer honestly — there’s no penalty for not knowing yet.',
   'placement.idkYet': 'I don’t know yet',
   'placement.idkYetHint': 'No penalty — it just helps us place you.',
-  'placement.idkCounts': 'Counts as a miss — that’s okay.',
+  'placement.idkCounts': '',
   'placement.roundOf': 'Round {n} of {total}',
   'placement.steppingUp': 'Stepping up the difficulty',
   'placement.steppingUpHint': 'You’ve got this — here’s something harder.',
@@ -1192,7 +1194,7 @@ export const en = {
   'placement.next': 'Next',
   'placement.finish': 'Finish',
   'placement.done': 'Placement complete',
-  'placement.doneBody': 'We opened the paths that match where you are. You can retake this anytime.',
+  'placement.doneBody': '',
   'placement.applyFailed': 'Your score could not be saved to your account, so no paths opened. Try again.',
   'placement.retry': 'Retake placement',
   'placement.cancel': 'Cancel',
@@ -2229,10 +2231,10 @@ export const en = {
   'challenge.shareDetail': 'before three strikes',
   'challenge.shareDetailPractice': 'at relaxed pace',
   'challenge.shareText': 'I got {n} right before three strikes in the devShark Biggest Shark Challenge. Can you beat it?',
-  'typing.shareLabel': 'Typing racer',
-  'typing.shareHeadline': '{wpm} WPM',
-  'typing.shareDetail': '{pct}% accuracy',
-  'typing.shareText': 'I typed real code at {wpm} WPM with {pct}% accuracy on the devShark typing racer.',
+  'typing.shareLabel': '',
+  'typing.shareHeadline': '',
+  'typing.shareDetail': '',
+  'typing.shareText': '',
   // Question of the day, /daily (#239)
   'title.daily': 'Question of the day · devShark',
   'daily.kicker': 'devShark question of the day',

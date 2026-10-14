@@ -238,7 +238,9 @@
   border-radius: var(--radius-inner);
 }
 @media (max-width: 1023.98px) {
-  .ss-header-brand { margin-inline: 12px 8px; }
+  .ss-header-brand { margin-inline: 12px 8px; min-width: 0; }
+  .ss-header-brand svg { max-width: 100%; height: auto; }
+  .ss-slot > .ss-show-mobile { flex-shrink: 0; }
 }
 /* The product name keeps its spelling inside uppercase labels (kickers):
    devShark, never DEVSHARK. */
