@@ -555,7 +555,7 @@ const treeHeight = root => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const tree = { value: 4, left: { value: 2, left: null, right: null }, right: null };
 console.log(treeSize(tree), treeHeight(tree));
 `,
@@ -649,7 +649,7 @@ const levelOrder = root => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const tree = {
   value: 4,
   left: { value: 2, left: null, right: null },
@@ -768,7 +768,7 @@ const bstSearch = (root, value) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 let tree = null;
 for (const value of [8, 3, 10, 1, 6]) tree = bstInsert(tree, value);
 console.log(bstSearch(tree, 6));

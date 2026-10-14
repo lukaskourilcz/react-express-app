@@ -684,7 +684,9 @@ function App() {
           // viewport scroll here, keeping the chrome + ocean footer in place.
           flex: 1,
           minHeight: 0,
-          overflowY: 'auto',
+          // WebKit does not consistently reserve a stable gutter with auto.
+          // Keep the lane present as question heights change within a run.
+          overflowY: 'scroll',
           overflowX: 'hidden',
           // Reserve the scrollbar lane even on short pages, so content never
           // shifts sideways when navigating between scrolling and

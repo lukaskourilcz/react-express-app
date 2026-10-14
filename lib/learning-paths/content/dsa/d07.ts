@@ -496,7 +496,7 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(linearSearch([4, 9, 1, 9], 9));
 `,
         skeleton: `const linearSearch = (values, target) => {
@@ -589,7 +589,7 @@ console.log(linearSearch([4, 9, 1, 9], 9));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(firstOccurrence([1, 2, 2, 2, 3], 2));
 `,
         skeleton: `const firstOccurrence = (sorted, target) => {

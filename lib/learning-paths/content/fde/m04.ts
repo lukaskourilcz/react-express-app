@@ -545,7 +545,7 @@ const validateTriage = raw => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(JSON.stringify(validateTriage('{"ticketId": "TCK-1004", "category": "bug", "confidence": 0.82}')));
 `,
         skeleton: `const CATEGORIES = ['billing', 'bug', 'how-to', 'other'];

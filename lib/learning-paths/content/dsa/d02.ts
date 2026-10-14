@@ -456,7 +456,7 @@ console.log("and the returned array is the same object:", same === source);`,
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(reverseInPlace([1, 2, 3, 4]));
 `,
         skeleton: `const reverseInPlace = values => {
@@ -547,7 +547,7 @@ console.log(reverseInPlace([1, 2, 3, 4]));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(isPalindrome('racecar'));
 `,
         skeleton: `const isPalindrome = text => {
@@ -608,7 +608,7 @@ console.log(isPalindrome('racecar'));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const values = [1, 1, 2, 3, 3, 3, 4];
 console.log(removeDuplicatesSorted(values), values);
 `,

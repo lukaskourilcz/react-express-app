@@ -584,7 +584,7 @@ export const FDE_M10: ModuleSource = {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const demoDeps = {
   loadProposal: ticketId => Promise.resolve({
     proposal: { ticketId, revision: 7, action: 'refund', amountCents: 4200 },

@@ -556,7 +556,7 @@ const compare = (baseline, candidate) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(JSON.stringify(evaluate(__cases(), __predictions('baseline'))));
 `,
         skeleton: `const round4 = value => Math.round(value * 10000) / 10000;

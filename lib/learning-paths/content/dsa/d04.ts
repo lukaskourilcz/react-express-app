@@ -504,7 +504,7 @@ console.log("pop on empty", stack.pop());`,
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const stack = createStack();
 stack.push(1);
 stack.push(2);
@@ -624,7 +624,7 @@ console.log(stack.pop(), stack.size());
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const queue = createQueue();
 queue.enqueue('a');
 queue.enqueue('b');
@@ -741,7 +741,7 @@ console.log(queue.dequeue(), queue.size());
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(isBalanced('([]{})'));
 `,
         skeleton: `const isBalanced = text => {

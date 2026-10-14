@@ -434,7 +434,7 @@ const find = (head, value) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const list = prepend(prepend(null, 2), 1);
 console.log(find(list, 2));
 `,
@@ -516,7 +516,7 @@ const find = (head, value) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const list = { value: 1, next: { value: 2, next: null } };
 console.log(deleteFirst(list, 1));
 `,
@@ -596,7 +596,7 @@ console.log(deleteFirst(list, 1));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const list = { value: 1, next: { value: 2, next: { value: 3, next: null } } };
 console.log(reverseList(list));
 `,

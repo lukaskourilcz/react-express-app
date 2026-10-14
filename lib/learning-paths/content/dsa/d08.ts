@@ -597,7 +597,7 @@ export const DSA_D08: ModuleSource = {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(selectionSort([5, 2, 9, 1], (a, b) => a - b));
 `,
         skeleton: `const selectionSort = (values, compare) => {
@@ -692,7 +692,7 @@ console.log(selectionSort([5, 2, 9, 1], (a, b) => a - b));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(insertionSort([5, 2, 9, 1], (a, b) => a - b));
 `,
         skeleton: `const insertionSort = (values, compare) => {
@@ -790,7 +790,7 @@ console.log(insertionSort([5, 2, 9, 1], (a, b) => a - b));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(mergeSort([5, 2, 9, 1], (a, b) => a - b));
 `,
         skeleton: `const merge = (left, right, compare) => {

@@ -33,7 +33,11 @@ export default function BigOPage() {
         </svg>
         <figcaption>{t('bigO.chartCaption')}</figcaption>
       </figure>
-      <div className="bo-table-wrap" role="region" tabIndex={0} aria-labelledby="bo-examples-title"><table className="bo-table">
+      <div className="bo-table-wrap" role="region" tabIndex={0} aria-labelledby="bo-examples-title" onKeyDown={event => {
+        if (event.target !== event.currentTarget || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        event.currentTarget.scrollLeft += (event.key === 'ArrowRight' ? 1 : -1) * Math.max(80, event.currentTarget.clientWidth / 2);
+      }}><table className="bo-table">
         <caption id="bo-examples-title">{t('bigO.examplesTitle')}</caption>
         <thead><tr><th>{t('bigO.notation')}</th><th>{t('bigO.example')}</th><th>n = 10</th><th>n = 100</th></tr></thead>
         <tbody>{curves.map((curve, i) => <tr key={curve.label}><th scope="row"><span style={{ color: curve.color }}>{curve.label}</span></th><td>{t((['bigO.constant', 'bigO.logarithmic', 'bigO.linear', 'bigO.sorting', 'bigO.quadratic'] as const)[i])}</td><td>{Math.round(curve.growth(10))}</td><td>{Math.round(curve.growth(100))}</td></tr>)}</tbody>

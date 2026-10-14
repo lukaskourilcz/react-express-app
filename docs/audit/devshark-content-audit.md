@@ -27,21 +27,24 @@ questions; none is unavailable. The hidden questions remain hidden.
 
 ## Current inventory reconciliation — 14 October 2026
 
-The current implementation branch contains 2,168 authored questions in the
+The deployed implementation contains 2,168 authored questions in the
 active categories. The exact-content eligibility gate serves 2,014 and withholds
 154. Re-reading the production override layer found 485 deletion rows and zero
 active edits or custom questions. Of the eligible static items, 194 are hidden
-by those rows, leaving 1,820 effective questions on this branch. The forty new
-questions are included in that figure; this is a branch/database reconciliation,
-not a claim that the branch has already deployed. Every one of the 1,820 has a
+by those rows, leaving 1,820 effective questions at the 14 October snapshot.
+The forty new questions are deployed through PR #371. The sorted hidden IDs
+match the snapshot digest `7271a4b58a6e2b174fe541351d7cbdc4`; all 485 hides
+are preserved. Every one of the 1,820 has a
 current passing question-review record.
 
 The coding catalogue now contains 770 tasks, of which 725 are issued and 45
 system-design tasks remain hidden. Their executable grading checks are distinct
-from editorial review: the complete required CI coding/client test step passed
-on `f520045d` (run 38486027732), then the release was held by the initial bundle
-budget. The 501 React reference/junior/senior implementations also passed the new
-isolated engine locally. None of those runs supplies missing item-level scores.
+from editorial review: final required verify/SQL passed for PR #371
+(`fec381a3`, run 38494594258), the ten-task audit in PR #372
+(`5befb908`, run 38498381826) and native authority PR #374
+(`611e74bc`, run 38499204299). Each merged deployment passed actual production
+health and correct/wrong React/JavaScript grading checks. None of those runs
+supplies missing item-level scores.
 The coding editorial wave remains open; the old count of 249 below describes
 the September wave only.
 
@@ -92,7 +95,8 @@ Archived Czech is untouched and not approved for these new English versions.
 The coding scope remains incomplete: 715 issued tasks and the native-path
 editorial records still need individual review. Hidden system-design content
 remains hidden pending its separate return decision. This is a staged branch
-change, not a claim of deployed retirements or full audit completion.
+change when authored; PR #372 has now deployed these ten reviewed tasks.
+The wider audit remains incomplete.
 
 ### Coding wave 2 — five array tasks, 14 October 2026
 
@@ -120,6 +124,37 @@ Unique's slower valid alternative still passes correctness; its average O(n)
 goal states the membership-cost assumption and is not a universal engine claim.
 These execution results approve no other task. Ten of the 725 issued coding
 tasks now have current model records; the wider audit remains open.
+
+### Native wave 1 — DSA growth and space, 14 October 2026
+
+Twelve records were read individually: two lessons, two reading acknowledgements,
+the check activity and its four questions, and three coding exercises. The
+English now separates upper bounds from case choice and exact counts, states
+unit-cost and hash-table assumptions, qualifies output/preprocessing costs,
+and avoids universal JavaScript sort or wall-clock claims. Read-budget exercises
+state total original-input accesses; they do not claim to ban copies that their
+finite probes cannot detect. Input preservation is asserted separately.
+
+The actual protected grader returned all 21 selected candidate verdicts:
+eight valid implementations, including two copy-based alternatives, passed;
+three starters and ten wrong/mutating/forged implementations did not. Four
+question keys and their independently executed iteration/slot examples were
+read against the final explanation. Quality floors are 3–4/5 and relevance
+7–10/10, individually reasoned in
+`docs/audit/wip/native/review-2026-10-14-dsa-d01.jsonl`. The final reading is
+same-session model self-review; no independent or human review is claimed.
+
+`audit:native-reviews` validates each recorded content/grader binding, dimension
+floor, relevance total and N/A rationale. A changed starter demonstrably failed
+the stale-record check before the three affected records were reread. Raw expected
+objects remain data in the grader hash; canonical reuse binds the full ordinary
+task hash. The repository-relative native exporter supplies all 263 records.
+Twelve are recorded and 251 still need individual review. This staged partial
+wave does not add a complete-catalogue or runtime review claim.
+
+The compatibility follow-up also removes the nonexistent Run instruction from
+46 native starter comments. That mechanical correction supplies no editorial
+approval for the other records.
 
 ## 1. September inventory, retained as historical evidence
 

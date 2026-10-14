@@ -347,7 +347,7 @@ export const DSA_D10: ModuleSource = {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const index = buildIndex([{ id: 1, name: 'ada' }, { id: 4, name: 'bo' }, { id: 9, name: 'cy' }]);
 console.log(index.lookup(4), index.lookup(5));
 `,
@@ -474,7 +474,7 @@ const levelOrder = root => {
   return out;
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const tree = {
   value: 4,
   left: { value: 2, left: null, right: null },
@@ -577,7 +577,7 @@ console.log(levelOrder(tree));
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(mostFrequent(['a', 'b', 'a', 'c', 'a'], ['a', 'c', 'z']));
 `,
         skeleton: `const mostFrequent = (values, queries) => {

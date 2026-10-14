@@ -139,7 +139,7 @@ const mapAccount = (raw: RawAccount): MapResult => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(mapAccount({ account_id: '4821', company_name: 'Brightpier Freight', owner_email: 'ops@brightpier.example', signed_up_at: '', plan: 'growth' }));
 `,
         skeleton: `type Plan = 'starter' | 'growth' | 'enterprise';
@@ -358,7 +358,7 @@ const operatorReducer = (state, action) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(operatorReducer(initialOperatorState, { type: 'load', requestId: 1 }));
 `,
         skeleton: `const initialOperatorState = {

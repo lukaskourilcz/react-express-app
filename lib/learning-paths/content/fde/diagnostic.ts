@@ -301,7 +301,7 @@ const collectAll = async (fetchPage, known) => {
   return out;
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 const pages = [['a', 'b'], ['c', 'd'], ['e']];
 const fixture = n => Promise.resolve({ items: pages[n - 1], pageCount: pages.length });
 const seen = ['seed'];
@@ -431,7 +431,7 @@ const describeOutcome = (outcome: SyncOutcome): string => {
   return 'queued ' + outcome.recordId + ' in ' + outcome.retryAfterMs + 'ms';
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(describeOutcome({ state: 'rejected', recordId: 'r-3', error: 'MISSING_VAT' }));
 `,
         skeleton: `type SyncOutcome =

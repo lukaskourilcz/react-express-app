@@ -630,7 +630,7 @@ const answerFromResults = (query, results, viewer) => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad — change this before submitting.
 console.log(JSON.stringify(answerFromResults(
   'how long do we have to return a chilled order',
   [{ id: 'KB-118', tenantId: 'TEN-4021', visibility: 'published', updatedAt: '2026-03-18', score: 0.91, text: 'Chilled orders may be returned within 7 days of delivery.' }],

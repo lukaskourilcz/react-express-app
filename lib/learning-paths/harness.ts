@@ -4,24 +4,32 @@
  * or reach the counters and original function references they close over. */
 import ts from 'typescript';
 
-const cached = new Map<string, string>();
+interface PathHarness { before: string; after: string }
+const INITIALIZE = '__devsharkInitializePathHarness';
+const cached = new Map<string, PathHarness>();
 
-export function protectedPathHarness(harness: string, calls: readonly string[]): string {
-  const cacheKey = JSON.stringify([harness, calls]);
+export function protectedPathHarness(harness: string, calls: readonly string[], starter = ''): PathHarness {
+  const cacheKey = JSON.stringify([harness, calls, starter]);
   const previous = cached.get(cacheKey);
   if (previous) return previous;
   const file = ts.createSourceFile('authored-harness.js', harness, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   const declarations = new Set<string>();
+  const before: string[] = [];
+  const after: string[] = [];
   for (const statement of file.statements) {
     if (ts.isVariableStatement(statement)) {
+      before.push(statement.getText(file));
       for (const declaration of statement.declarationList.declarations) {
         if (!ts.isIdentifier(declaration.name)) throw new Error('Authored harness exports must be named bindings');
         declarations.add(declaration.name.text);
       }
-    } else if (ts.isFunctionDeclaration(statement) && statement.name) declarations.add(statement.name.text);
+    } else if (ts.isFunctionDeclaration(statement) && statement.name) {
+      before.push(statement.getText(file));
+      declarations.add(statement.name.text);
+    } else after.push(statement.getText(file));
   }
   const referenced = new Set<string>();
-  for (const call of calls) {
+  for (const call of [...calls, starter]) {
     const callFile = ts.createSourceFile('authored-call.js', call, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
     const visit = (node: ts.Node): void => {
       if (ts.isIdentifier(node)) referenced.add(node.text);
@@ -32,10 +40,16 @@ export function protectedPathHarness(harness: string, calls: readonly string[]):
   // Non-reserved bindings are APIs the brief intentionally gives the learner,
   // such as newQueueBuffer. Export only the reserved helpers trusted calls use.
   const names = [...declarations].filter(name => !name.startsWith('__') || referenced.has(name)).sort();
-  const prefix = names.length ? `const { ${names.join(', ')} } = ` : '';
-  const result = `${prefix}(() => {
-${harness}
-const __exported = { ${names.join(', ')} };
+  if (declarations.has(INITIALIZE)) throw new Error('Reserved authored harness initialization binding');
+  const result = { before: `const { ${[...names, INITIALIZE].join(', ')} } = (() => {
+${before.join('\n')}
+let __initialized = false;
+const ${INITIALIZE} = () => {
+  if (__initialized) return;
+  __initialized = true;
+  ${after.join('\n')}
+};
+const __exported = { ${[...names, INITIALIZE].join(', ')} };
 const __seen = __probe.setPrototypeOf([], null);
 const __seal = value => {
   if (value === null || (typeof value !== 'object' && typeof value !== 'function')) return value;
@@ -51,7 +65,7 @@ const __seal = value => {
   return __probe.freeze(value);
 };
 return __seal(__exported);
-})();`;
+})();`, after: `${INITIALIZE}();` };
   cached.set(cacheKey, result);
   return result;
 }
