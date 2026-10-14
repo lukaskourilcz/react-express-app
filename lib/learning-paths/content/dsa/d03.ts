@@ -45,7 +45,7 @@ export const DSA_D03: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'That computation is the hash function. It turns a key into a bucket index, deterministically: the same key always lands in the same bucket. Store the entry there, and a later lookup hashes the key again, goes straight to that bucket, and compares only what it finds. The bucket index also depends on table capacity and changes during resizing. With well-distributed hashes and a bounded load factor, the expected bucket search is constant; arbitrary key-length costs are outside that model.',
+            'That computation is the hash function. It turns a key into a bucket index, deterministically: with fixed table capacity and hash configuration, the same key lands in the same bucket. Store the entry there, and a later lookup hashes the key again, goes straight to that bucket, and compares only what it finds. The bucket index also depends on table capacity and changes during resizing. With well-distributed hashes and a bounded load factor, the expected bucket search is constant; arbitrary key-length costs are outside that model.',
         },
         {
           kind: 'code',
@@ -210,7 +210,7 @@ export const DSA_D03: ModuleSource = {
         {
           kind: 'prose',
           body:
-            '"Expected" is doing real work in those rows. It means the cost averaged over keys, under the assumption that the hash spreads them across the buckets. This expectation requires a suitable hashing distribution, bounded load and bounded key-hashing/equality work; it is an assumption to state, not a promise about every workload. It is not a statement about every individual lookup, and it is not a guarantee about every possible set of keys.',
+            '"Expected" is doing real work in those rows. It refers to an expectation under a suitable key/hashing distribution and bounded load. Resizing can add occasional linear work; spreading that work over insertions is an amortized argument, distinct from the expected bucket search. This expectation requires a suitable hashing distribution, bounded load and bounded key-hashing/equality work; it is an assumption to state, not a promise about every workload. It is not a statement about every individual lookup, and it is not a guarantee about every possible set of keys.',
         },
         {
           kind: 'trace',
@@ -355,7 +355,7 @@ export const DSA_D03: ModuleSource = {
         },
         {
           id: 'dsa-v1-d03-q2',
-          prompt: 'Assume bounded key comparisons/hashing and expected constant Set operations. `tags` has n entries, `banned` has m, and their lengths are unrelated. What is the tightest worst-case class for `flagged`, and the expected class after building a Set once?',
+          prompt: 'Assume bounded key comparisons/hashing and expected constant Set operations. `tags` has n entries and `banned` has m, with n,m ≥ 1 and unrelated lengths. What is the tightest worst-case class for `flagged`, and the expected class after building a Set once?',
           context: {
             language: 'javascript',
             code: 'const flagged = (tags, banned) => {\n  const out = [];\n  for (const tag of tags) {\n    if (banned.includes(tag)) out.push(tag);\n  }\n  return out;\n};',
