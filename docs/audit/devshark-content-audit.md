@@ -194,6 +194,39 @@ current records on this branch, including ten deployed earlier; 705 tasks and
 251 native records still require individual review. These two latest coding
 waves await final required CI and deployment verification.
 
+### Native wave 2 — arrays, strings and pointer walks
+
+Twelve D02 lesson/activity/question records were read individually and recorded
+with final content/grader bindings. The English distinguishes a dense-array cost
+model from engine implementation guarantees, counts both concat inputs and splice
+tail/removal work, qualifies accumulated-string copying, and no longer claims
+every algorithm over an n-element input uses O(n) total storage. Questions state
+their model and valid section bounds; executed mutation/movement/comparison
+examples agree with the final keys.
+
+A real built-worker candidate defined every reverse-output index three times,
+yet passed the old assignment-only write probe. Numeric property definitions
+and deletions now count alongside assignments through captured trusted
+operations. A one-definition-per-index implementation remains valid; repeated
+definitions, reflection definitions and delete/rewrite operations exceed the
+stated budget. The helper state remains private. This is the measured contract
+gap in #378, with no malicious production probe.
+
+The briefs now recommend the intended pointer techniques and state authored
+time/space goals without claiming their finite semantic/write assertions detect
+all temporary copying or prove arbitrary complexity. The actual worker returns
+all 24 selected expected verdicts: twelve valid reference/alternative/built-in/copy
+implementations pass; three starters and nine wrong implementations fail.
+All 47 path references and 46 authored starter examples pass, along with 27
+authority/setup checks. The repository-relative D02 checker reproduces candidates
+and question probes without assigning scores.
+
+Quality floors are 3–4/5 and relevance 7–10/10, individually reasoned with
+same-session model final reading. Twenty-four of 263 native records now have
+current bindings; 239 still need individual review. This latest twelve-record
+wave awaits required CI and deployment. Coding remains at twenty recorded
+tasks across the merged and pending waves; 705 still need review.
+
 ## 1. September inventory, retained as historical evidence
 
 Every place a devShark question can reach a learner was reconciled from the
