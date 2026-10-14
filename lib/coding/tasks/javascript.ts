@@ -827,7 +827,7 @@ console.log(oddSum([1,2,3]));
     tier: 2,
     focus: ["for", "strings"],
     title: "Repeat word",
-    prompt: "Write `repeat(word, times)`, returning the word repeated that many times with single spaces between — `repeat(\"hi\", 3)` gives `hi hi hi`. Once means no space at all, and zero times gives an empty string.",
+    prompt: "Write `repeat(word, times)`, where word is a string and times is a nonnegative integer. Return that many unchanged copies with one ASCII space between copies and none added around them. Preserve spaces and Unicode already in word; word may be empty. `repeat(\"hi\", 3)` gives `hi hi hi`; zero times gives `\"\"`. Target: O(n) time, where n = times × (word.length + 1) accounts for copied UTF-16 code units and separators.",
     starter: `const repeat = (word, times) => {
   
 };
@@ -1115,7 +1115,7 @@ console.log(activate({name:"Sam"}));
     tier: 2,
     focus: ["strings"],
     title: "Palindrome",
-    prompt: "Write `isPalindrome(text)`, returning true when the string reads the same backwards. Assume plain lowercase letters; an empty string and a single character are both palindromes.",
+    prompt: "Write `isPalindrome(text)`, returning a boolean for whether text reads the same forwards and backwards. Input contains only lowercase ASCII letters a–z; no normalization is needed. Empty text and one letter are palindromes. Target: O(n) time, where n is the number of letters in text.",
     starter: `const isPalindrome = text => {
   
 };
@@ -1127,7 +1127,7 @@ console.log(isPalindrome("level"));
   // transform or inspect text
   return /* result */;
 };`,
-    hints: ["Compare the word to its reversed version."],
+    hints: ["Compare matching positions from opposite ends. Decide when those positions have covered the whole word."],
     approach: [
       "Reverse the word using the same split, reverse, join route as the reverse-string challenge.",
       "Compare the reversed word with the original and return the comparison directly.",

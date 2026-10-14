@@ -39,6 +39,13 @@ export const EASY_JAVASCRIPT_B_SOLUTIONS: Record<string, CodingSolution> = {
 
 const isHexColour = text => HEX_COLOUR.test(text);`,
     hiddenTests: [
+      {"call": "isHexColour(\"#123456\\n\")", "expected": false},
+      {"call": "isHexColour(\"\\n#123456\\n\")", "expected": false},
+      {"call": "isHexColour(\"#123456\\r\\n\")", "expected": false},
+      {"call": "isHexColour(\"#123456 \")", "expected": false},
+      {"call": "isHexColour(\"#１２３４５６\")", "expected": false},
+      {"call": "isHexColour(\"#abc\")", "expected": false},
+      {"call": "isHexColour(\"#123456 \")", "expected": false},
       { call: 'isHexColour(" #123456")', expected: false },
       { call: 'isHexColour("#AbCdEf")', expected: true },
       { call: 'isHexColour("color: #123456")', expected: false },
@@ -59,6 +66,9 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 };`,
     senior: `const hashtags = text => [...text.matchAll(/#\\w+/g)].map(([tag]) => tag);`,
     hiddenTests: [
+      {"call": "hashtags(\"#Dup #Dup #dup\")", "expected": ["#Dup", "#Dup", "#dup"]},
+      {"call": "hashtags(\"x#A_9 ##two #café #你好 #١\")", "expected": ["#A_9", "#two", "#caf"]},
+      {"call": "hashtags(\"#_ #12\")", "expected": ["#_", "#12"]},
       { call: 'hashtags("#a1_b2 done")', expected: ['#a1_b2'] },
       { call: 'hashtags("ends with #last")', expected: ['#last'] },
       { call: 'hashtags("#Dup and #dup")', expected: ['#Dup', '#dup'] },
@@ -69,40 +79,40 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
   /* ── split ────────────────────────────────────────────────────────── */
   'js-easy3-read-query': {
     solution: `const parseQuery = query => {
-  const result = {};
-  // "".split("&") gives [""], so an empty query stops here.
-  if (query === "") return result;
+  const entries = [];
   for (const pair of query.split("&")) {
-    const [key, value] = pair.split("=");
-    result[key] = value ?? "";
+    if (pair === "") continue;
+    const index = pair.indexOf("=");
+    entries.push(index < 0 ? [pair, ""] : [pair.slice(0, index), pair.slice(index + 1)]);
   }
-  return result;
+  return Object.fromEntries(entries);
 };`,
     junior: `const parseQuery = query => {
   const result = {};
-  if (query.length === 0) {
-    return result;
-  }
   const pairs = query.split("&");
   for (let i = 0; i < pairs.length; i++) {
-    const parts = pairs[i].split("=");
-    const key = parts[0];
-    let value = parts[1];
-    if (value === undefined) {
-      value = "";
-    }
-    result[key] = value;
+    const pair = pairs[i];
+    if (pair === "") continue;
+    const index = pair.indexOf("=");
+    const key = index < 0 ? pair : pair.slice(0, index);
+    const value = index < 0 ? "" : pair.slice(index + 1);
+    Object.defineProperty(result, key, {
+      value, enumerable: true, configurable: true, writable: true,
+    });
   }
   return result;
 };`,
     senior: `const parseQuery = query =>
-  query === ""
-    ? {}
-    : Object.fromEntries(query.split("&").map(pair => {
-        const [key, value = ""] = pair.split("=");
-        return [key, value];
-      }));`,
+  Object.fromEntries(query.split("&").filter(pair => pair !== "").map(pair => {
+    const index = pair.indexOf("=");
+    return index < 0 ? [pair, ""] : [pair.slice(0, index), pair.slice(index + 1)];
+  }));`,
     hiddenTests: [
+      {"call": "parseQuery(\"&&a=1&&=zero&flag&\")", "expected": {"a": "1", "": "zero", "flag": ""}},
+      {"call": "parseQuery(\"a=b=c&x==&space= a b &plus=a+b&p=%20&?x=1\")", "expected": {"a": "b=c", "x": "=", "space": " a b ", "plus": "a+b", "p": "%20", "?x": "1"}},
+      {"call": "(() => { const out = parseQuery(\"__proto__=first&__proto__=last&constructor=custom\"); return [Object.keys(out).sort(), out[\"__proto__\"], out.constructor, Object.prototype.hasOwnProperty.call(out, \"__proto__\")]; })()", "expected": [["__proto__", "constructor"], "last", "custom", true]},
+      {"call": "parseQuery(\"en=cat&cs=dog\")", "expected": {"en": "cat", "cs": "dog"}},
+      {"call": "(() => { const first = parseQuery(\"a=1\"); const second = parseQuery(\"a=1\"); return first !== second; })()", "expected": true},
       { call: 'parseQuery("x=1&y=&z=3")', expected: { x: '1', y: '', z: '3' } },
       { call: 'parseQuery("limit=10")', expected: { limit: '10' } },
       { call: 'parseQuery("a=1&b=2&a=3")', expected: { a: '3', b: '2' } },
