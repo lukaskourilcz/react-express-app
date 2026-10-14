@@ -1,5 +1,33 @@
 # Release acceptance matrix
 
+## Ten JavaScript content reviews — 2026-10-15
+
+PR #392 merged at `c7e8e7de5627447282c17df4e124d746749a5747` after required
+verify and SQL checks passed in run 38650942972 on reviewed head 0797626c.
+Production deployment `dpl_AHXHkdxthYSGMAzLDeUpHkBgAJrY` is READY at that
+merge SHA and owns the devshark.app alias. Eleven general public checks and
+25 selected correct/wrong coding submissions pass there with zero signed-out
+XP and null progress. Five of the ten selected tasks return 402 to guests;
+authenticated Premium grading remains unverified. No Challenge score, guest
+name, owner progress or coins were used as disposable fixtures.
+
+The two five-item commits record 47/47 and 40/40 selected final-hash QuickJS
+verdicts, twenty authored-target/reward probes each, API types, launch
+contracts, builds, registry/index freshness, both production dependency audits
+(zero vulnerabilities), copy sweeps and sixty light/dark responsive probes per
+batch. Full protected verify and SQL passed. A puzzle-enumerator regression
+fix retains undecided prefixes before Boolean/arithmetic/string wrappers
+consume the sentinel; wrong complete arrangements still fail and the step
+budget stays unchanged. One helper EOF blank line found in the branch-wide
+whitespace check is removed in the follow-up PR #393.
+
+Forty coding reviews and sixty native records are now deployed. This does not
+complete #176: thirty further reviews through b008 are in PR #393 and b009 is
+local; individual review coverage is 75/725 coding and 60/263 native records.
+The ledger is same-session model review, not independent/human sign-off.
+Evidence: `/tmp/devshark-audit-2026-10-15/prod392-*.log` and the b001/b002
+candidate and review records committed in the repository.
+
 ## Premium Start free thank-you tooltip — 2026-10-12
 
 The existing English thank-you copy now has a newline before "Thank you! 💙".

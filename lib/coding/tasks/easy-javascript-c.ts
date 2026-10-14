@@ -405,7 +405,7 @@ console.log(placeTotals([5, 1, 4, 2]));
     tier: 2,
     focus: ['nested-loops'],
     title: 'Spot the differences',
-    prompt: 'Two grids have the same number of rows, and each row is the same length in both. Write `differences(a, b)`, returning the `[row, column]` position of every cell where the grids differ, compared with `!==`, row by row and left to right. Use one loop over the rows and a second loop inside it over that row’s columns. `differences([[1, 2], [3, 4]], [[1, 0], [3, 5]])` gives `[[0, 1], [1, 1]]`. Identical grids give `[]`.',
+    prompt: "Two grids have the same number of rows, and each row is the same length in both. Write `differences(a, b)`, returning the `[row, column]` position of every cell where the grids differ, compared with `!==`, row by row and left to right. Use one loop over the rows and a second loop inside it over that row’s columns. `differences([[1, 2], [3, 4]], [[1, 0], [3, 5]])` gives `[[0, 1], [1, 1]]`. Identical grids give `[]`. Both levels are ordinary dense arrays of data values. Rows may differ in length, but each corresponding pair of rows has the same length, with at most 100 rows and 100 cells per row. Use JavaScript strict inequality: NaN differs from NaN, 0 and -0 do not differ, and objects compare by reference. Treat comparison as constant-time for this exercise. Do not change either grid, its rows or stored values; frozen inputs are valid. Return a fresh outer list and a separate fresh coordinate pair for each difference. Target: O(n²) time, where n is the larger of the row count and the widest row length; each cell is compared once, so the actual work is proportional to rows plus visited cells and is bounded by this maximum-dimension model.",
     starter: `const differences = (a, b) => {
 
 };
@@ -436,6 +436,11 @@ console.log(differences([[1, 2], [3, 4]], [[1, 0], [3, 5]]));
       { call: 'differences([[1], [2], [3]], [[1], [9], [3]])', expected: [[1, 0]], label: 'one column' },
       { call: 'differences([["x", "o"], ["o", "x"]], [["x", "o"], ["o", "x"]])', expected: [], label: 'identical grids', edge: true },
       { call: 'differences([], [])', expected: [], label: 'empty grids', edge: true },
+      { call: "differences([[NaN,0,\"1\"]],[[NaN,-0,1]])", expected: [[0, 0], [0, 2]], label: "strict NaN zero and string semantics", edge: true },
+      { call: "(() => {const shared={id:1};return differences([[shared,{id:1}]],[[shared,{id:1}]]);})()", expected: [[0, 1]], label: "object reference comparison", edge: true },
+      { call: "differences([[],[1,2],[]],[[],[0,2],[]])", expected: [[1, 0]], label: "matching ragged row shapes", edge: true },
+      { call: "differences(Object.freeze([Object.freeze([1,2])]),Object.freeze([Object.freeze([0,2])]))", expected: [[0, 0]], label: "frozen grids", edge: true },
+      { call: "(() => {const a=[[1],[2]],b=[[3],[4]];const out=differences(a,b);return out!==a&&out!==b&&out[0]!==out[1]&&a[0][0]===1&&a[1][0]===2&&b[0][0]===3&&b[1][0]===4;})()", expected: true, label: "independent coordinates and unchanged sources", edge: true },
     ],
   },
 
@@ -448,7 +453,7 @@ console.log(differences([[1, 2], [3, 4]], [[1, 0], [3, 5]]));
     tier: 2,
     focus: ['two-pointer', 'strings'],
     title: 'Letters in the same order',
-    prompt: 'Write `inOrder(short, long)`, returning `true` when every character of `short` appears in `long` in the same order, though not necessarily side by side. `inOrder("ace", "abcde")` gives `true`, and `inOrder("aec", "abcde")` gives `false`. Keep one index in each string: move the `long` index on every step, and move the `short` index only when the two characters match. Each character of `long` can be used once. An empty `short` is always in order.',
+    prompt: "Write `inOrder(short, long)`, returning `true` when every character of `short` appears in `long` in the same order, though not necessarily side by side. `inOrder(\"ace\", \"abcde\")` gives `true`, and `inOrder(\"aec\", \"abcde\")` gives `false`. Keep one index in each string: move the `long` index on every step, and move the `short` index only when the two characters match. Each character of `long` can be used once. An empty `short` is always in order. Both inputs are primitive strings. This indexing exercise compares UTF-16 code units, the units used by string brackets and .length, rather than whole Unicode code points or visible graphemes. Case and spelling are exact; do not normalize or sort. A surrogate half can therefore match one indexed unit of a surrogate pair. Target: O(n) time, where n is the sum of the two UTF-16 string lengths and indexed comparison takes constant time.",
     starter: `const inOrder = (short, long) => {
 
 };
@@ -463,12 +468,8 @@ console.log(inOrder("ace", "abcde"), inOrder("aec", "abcde"));
   }
   return /* whether i reached the end of short */;
 };`,
-    hints: ['The two indexes move at different speeds. `j` visits every character of `long`; `i` only moves when it finds the character it is waiting for. If `i` reaches `short.length`, every character was found in order.'],
-    approach: [
-      'Start `i` at 0 for `short` and loop `j` over `long`.',
-      'When `short[i] === long[j]`, add 1 to `i`.',
-      'After the loop, return `i === short.length`.',
-    ],
+    hints: ["The short-string index records the next UTF-16 unit you still need. Move it only on a match, while the long-string index moves forward; using for...of on only one string would mix code points with indexed units."],
+    approach: ["Start i at zero for short and scan long by indexed UTF-16 units.", "When short[i] equals long[j], advance i. Advance j on every scanned unit; earlier long positions cannot be reused.", "Return whether i reached short.length. Keep the same unit model in every variant: for...of yields whole surrogate pairs, whereas brackets index individual code units."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -477,6 +478,12 @@ console.log(inOrder("ace", "abcde"), inOrder("aec", "abcde"));
       { call: 'inOrder("", "abc")', expected: true, label: 'an empty short string', edge: true },
       { call: 'inOrder("abc", "")', expected: false, label: 'an empty long string', edge: true },
       { call: 'inOrder("aa", "a")', expected: false, label: 'a character is used once', edge: true },
+      { call: "inOrder(\"🦈\",\"x🦈y\")", expected: true, label: "surrogate pairs can match as two indexed units", edge: true },
+      { call: "inOrder(\"\\ud83e\",\"🦈\")", expected: true, label: "the stated unit is a UTF-16 code unit", edge: true },
+      { call: "inOrder(\"🦈\",\"\\ud83ex\\udd88\")", expected: true, label: "subsequence units need not be adjacent", edge: true },
+      { call: "inOrder(\"A\",\"a\")", expected: false, label: "case is exact", edge: true },
+      { call: "inOrder(\"é\",\"e\\u0301\")", expected: false, label: "no normalization", edge: true },
+      { call: "inOrder(\"aba\",\"aaab\")", expected: false, label: "multiplicity and order both matter", edge: true },
     ],
   },
   {
@@ -487,7 +494,7 @@ console.log(inOrder("ace", "abcde"), inOrder("aec", "abcde"));
     tier: 2,
     focus: ['two-pointer'],
     title: 'Mirror images',
-    prompt: 'Write `isMirror(a, b)`, returning `true` when `b` holds the items of `a` in reverse order. Walk with two indexes: one moves forwards through `a` from the start, the other backwards through `b` from the end, and stop at the first pair that differs. Lists of different lengths are never mirrors. `isMirror([1, 2, 3], [3, 2, 1])` gives `true`. Neither list is changed.',
+    prompt: "Write `isMirror(a, b)`, returning `true` when `b` holds the items of `a` in reverse order. Walk with two indexes: one moves forwards through `a` from the start, the other backwards through `b` from the end, and stop at the first pair that differs. Lists of different lengths are never mirrors. `isMirror([1, 2, 3], [3, 2, 1])` gives `true`. Neither list is changed. Inputs are ordinary dense arrays of data values; frozen arrays are valid. Compare each pair with strict equality, so NaN never matches itself, 0 and -0 match, and distinct objects with the same fields still differ. Assume constant-time comparison for this exercise. Do not mutate either array or nested values. Target: O(n) time in the worst case, where n is the larger input length; differing lengths or an early mismatch can take less.",
     starter: `const isMirror = (a, b) => {
 
 };
@@ -516,6 +523,11 @@ console.log(isMirror([1, 2, 3], [3, 2, 1]));
       { call: 'isMirror([1, 2], [2, 1, 0])', expected: false, label: 'different lengths', edge: true },
       { call: 'isMirror([], [])', expected: true, label: 'two empty lists', edge: true },
       { call: '(() => { const a = [1, 2]; const b = [2, 1]; isMirror(a, b); return [a, b]; })()', expected: [[1, 2], [2, 1]], label: 'neither list is changed', edge: true },
+      { call: "isMirror([NaN],[NaN])", expected: false, label: "NaN does not match itself", edge: true },
+      { call: "isMirror([0],[-0])", expected: true, label: "both zero signs match", edge: true },
+      { call: "isMirror([{id:1}],[{id:1}])", expected: false, label: "distinct object references differ", edge: true },
+      { call: "(() => {const item={id:1};return isMirror(Object.freeze([item,\"x\"]),Object.freeze([\"x\",item]));})()", expected: true, label: "shared references and frozen arrays", edge: true },
+      { call: "(() => {const a=[1,2,3],b=[3,2,1];const out=isMirror(a,b);return out===true&&a[0]===1&&a[2]===3&&b[0]===3&&b[2]===1;})()", expected: true, label: "successful comparisons preserve longer arrays", edge: true },
     ],
   },
 

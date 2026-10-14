@@ -334,8 +334,8 @@ export const EASY_JAVASCRIPT_C_SOLUTIONS: Record<string, CodingSolution> = {
 };`,
     senior: `const inOrder = (short, long) => {
   let found = 0;
-  for (const char of long) {
-    if (char === short[found]) found++;
+  for (let index = 0; index < long.length; index++) {
+    if (long[index] === short[found]) found++;
   }
   return found === short.length;
 };`,

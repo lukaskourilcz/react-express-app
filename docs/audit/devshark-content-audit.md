@@ -1,5 +1,40 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b009
+
+Individually reviewed grid differences, quantity expansion, indexed string
+subsequences, mirror arrays and date ordering. Current coding coverage is
+**75/725**: forty verified deployed, thirty-five staged, **650 remaining**;
+native stays **60/263**. PR #392 is merged at c7e8e7d and its exact production
+deployment dpl_AHXHkdxthYSGMAzLDeUpHkBgAJrY is READY with devshark.app.
+Required verify/sql run 38650942972 passed; eleven general and twenty-five
+selected signed-out server checks pass. Five Premium tasks return 402; this
+is not authenticated Premium acceptance. PR #393 checks the next thirty
+reviews through b008 while this batch is prepared locally.
+
+The baseline matched 27/40 expectations. New fixtures distinguish strict
+inequality from Object.is/JSON comparison, preserve input and output
+references, retain empty names and repeated posts, and bound expanded output.
+Grid cost uses maximum dimension with actual visited-cell work explained;
+pick-list cost includes produced entries. Mirror comparison explicitly uses
+strict identity. Newest-first sorting states fixed-width valid date inputs
+and a comparison-sort time model without claiming every engine guarantees it.
+
+The old subsequence senior mixed code points and UTF-16 brackets: it passed
+only 9/11 new public checks while reference and junior passed 11/11. It now
+uses the same indexed-unit model as the other answers. The prompt explicitly
+explains surrogate-unit subsequences, exact case and no normalization.
+
+Final-hash worker checks pass **40/40** (twenty valid, five starters, fifteen
+wrong), and twenty authored-target/base-25-XP checks pass. Focused coding
+contracts, API types, launch contracts, registry/index generation, build,
+both production dependency audits (zero vulnerabilities), English copy sweep
+and diff checks pass. Eighteen light and eighteen dark probes of the three
+longest rewritten routes at 360–1440px pass with zero issues or unprobed
+routes. The b009 JSONL records individual scores, sources and final model
+self-reading. Independent/human and authenticated production acceptance are
+not claimed; historical IDs, access and archived Czech remain unchanged.
+
 ## 15 October continuation — five-item batch b008
 
 Reviewed all-depth flattening, ragged-grid search, the Map tally debug task,

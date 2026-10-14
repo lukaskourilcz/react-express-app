@@ -443,7 +443,7 @@ console.log(combinations(["S", "M"], ["red", "blue"]));
     tier: 2,
     focus: ['flat'],
     title: 'One line per item picked',
-    prompt: 'An order is an array of `{ name, qty }` items. Write `pickList(order)`, returning one entry for each thing to pick from the shelf: `qty` copies of each name, in order. Use `flatMap`, which maps every item to an array and then flattens those arrays by one level. `pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }])` gives `["apple", "apple", "pear"]`. An item with a `qty` of 0 adds nothing.',
+    prompt: "An order is an array of `{ name, qty }` items. Write `pickList(order)`, returning one entry for each thing to pick from the shelf: `qty` copies of each name, in order. Use `flatMap`, which maps every item to an array and then flattens those arrays by one level. `pickList([{ name: \"apple\", qty: 2 }, { name: \"pear\", qty: 1 }])` gives `[\"apple\", \"apple\", \"pear\"]`. An item with a `qty` of 0 adds nothing. The order is an ordinary dense array of data objects with own primitive string names and integer quantities from 0 through 10000. The order has at most 10000 items, and its total quantity is at most 10000. Keep literal names, including empty strings, spaces and repeats. Do not change the order, quantities, names or other values; frozen input is valid. Always return a fresh array. Target: O(n) time, where n is the number of order records plus the sum of their quantities; copying a name reference takes constant time.",
     starter: `const pickList = order => {
 
 };
@@ -456,7 +456,7 @@ console.log(pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }]));
     // return an array holding item.qty copies of item.name
   });
 };`,
-    hints: ['`Array(3).fill("x")` gives `["x", "x", "x"]`. When the `flatMap` callback returns an empty array, that item leaves no trace in the result.'],
+    hints: ["Think of each order record as producing its own small list, including no entries for a zero quantity. flatMap joins those per-record lists without merging repeated names."],
     approach: [
       'Call `flatMap` on the order.',
       'For each item, return an array of `item.qty` copies of `item.name`, for example `Array(item.qty).fill(item.name)`.',
@@ -469,6 +469,11 @@ console.log(pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }]));
       { call: 'pickList([{ name: "nail", qty: 3 }])', expected: ['nail', 'nail', 'nail'] },
       { call: 'pickList([{ name: "sold out", qty: 0 }, { name: "tape", qty: 1 }])', expected: ['tape'], label: 'a quantity of 0 adds nothing', edge: true },
       { call: 'pickList([])', expected: [], label: 'an empty order', edge: true },
+      { call: "pickList([{name:\"\",qty:2},{name:\" x \",qty:1},{name:\"\",qty:1}])", expected: ["", "", " x ", ""], label: "literal empty names and repeated records", edge: true },
+      { call: "pickList(Object.freeze([Object.freeze({name:\"x\",qty:0}),Object.freeze({name:\"y\",qty:2})]))", expected: ["y", "y"], label: "frozen records", edge: true },
+      { call: "(() => {const item={name:\"x\",qty:0,extra:1},order=[item];pickList(order);return order[0]===item&&item.name===\"x\"&&item.qty===0&&item.extra===1;})()", expected: true, label: "zero-quantity source records stay unchanged", edge: true },
+      { call: "(() => {const order=[];const first=pickList(order),second=pickList(order);return first!==order&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty lists", edge: true },
+      { call: "(() => {const out=pickList([{name:\"x\",qty:10000}]);return out.length===10000&&out.every(name=>name===\"x\");})()", expected: true, label: "bounded output-size work", edge: true },
     ],
   },
 
@@ -527,7 +532,7 @@ console.log(basket);
     tier: 2,
     focus: ['sort'],
     title: 'Newest first',
-    prompt: 'Each post is `{ title, date }`, where `date` is text such as `"2026-09-01"`. Dates written this way sort correctly as text. Write `newestFirst(posts)`, returning a new array with the latest date first, using `sort` with a compare function. Posts with the same date keep their original order, and `posts` itself is not changed.',
+    prompt: "Each post is `{ title, date }`, where `date` is text such as `\"2026-09-01\"`. Dates written this way sort correctly as text. Write `newestFirst(posts)`, returning a new array with the latest date first, using `sort` with a compare function. Posts with the same date keep their original order, and `posts` itself is not changed. Every date is a valid Gregorian calendar date in exactly ten-character YYYY-MM-DD form, with a four-digit year from 0001 through 9999 and zero-padded month/day; there are no times or offsets to parse. Posts are ordinary data objects in a dense array. Keep the original post and nested-value references, including repeated references; only the outer order changes. Do not modify any input, and accept frozen arrays/posts. Return a fresh array even when empty or already sorted. Target: O(n log n) time in the comparison-sort model, where n is the post count and fixed-length date comparison is constant-time; assume the chosen sort implementation meets that comparison bound.",
     starter: `const newestFirst = posts => {
 
 };
@@ -554,6 +559,9 @@ console.log(newestFirst([{ title: "A", date: "2026-01-05" }, { title: "B", date:
       { call: 'newestFirst([{ title: "x", date: "2026-05-01" }, { title: "y", date: "2026-05-01" }, { title: "z", date: "2026-06-01" }]).map(post => post.title)', expected: ['z', 'x', 'y'], label: 'posts on the same date keep their order', edge: true },
       { call: 'newestFirst([])', expected: [], label: 'no posts', edge: true },
       { call: '(() => { const posts = [{ title: "old", date: "2020-01-01" }, { title: "new", date: "2021-01-01" }]; newestFirst(posts); return posts.map(post => post.title); })()', expected: ['old', 'new'], label: 'the input keeps its order', edge: true },
+      { call: "(() => {const meta={id:1},early=Object.freeze({title:\"old\",date:\"0001-01-01\",meta}),late=Object.freeze({title:\"new\",date:\"9999-12-31\",meta}),posts=Object.freeze([early,late,late]);const out=newestFirst(posts);return out!==posts&&out.length===3&&out[0]===late&&out[1]===late&&out[2]===early&&out[0].meta===meta&&meta.id===1;})()", expected: true, label: "date bounds frozen posts and repeated identities", edge: true },
+      { call: "(() => {const posts=[];const first=newestFirst(posts),second=newestFirst(posts);return first!==posts&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty results", edge: true },
+      { call: "newestFirst([{title:\"leap\",date:\"2024-02-29\"},{title:\"march\",date:\"2024-03-01\"}]).map(p=>p.title)", expected: ["march", "leap"], label: "calendar boundary in fixed-width dates", edge: true },
     ],
   },
 
