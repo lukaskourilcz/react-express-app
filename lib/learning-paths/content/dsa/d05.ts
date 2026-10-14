@@ -1,6 +1,6 @@
 /** D05 — Singly linked lists.
  *
- * The first structure in this path that has no index. A node is
+ * A structure whose nodes have no positional index. A node is
  * `{ value, next }`, the tail's `next` is `null`, and the list is its head
  * node or `null`. Everything the module teaches follows from that: a walk is
  * the only way in, so searching costs a visit per node, while rewiring a link
@@ -15,8 +15,8 @@
 import type { ModuleSource } from '../../types';
 
 /** Builders and readers shared by the visible and hidden assertions of every
- * exercise in this module. Appended after the learner's code, so it cannot be
- * shadowed. Both walks stop after a fixed number of nodes: a submission that
+ * exercise in this module. The grader captures them in a private scope and
+ * exports immutable bindings. Both walks stop after a fixed number of nodes: a submission that
  * accidentally builds a cycle then fails an assertion instead of burning the
  * whole run's deadline. */
 const LIST_PROBE = `
@@ -30,7 +30,7 @@ var __toArray = function (head) {
   var out = [];
   var node = head;
   while (node && out.length < __LIST_LIMIT) {
-    out.push(node.value);
+    out[out.length] = node.value;
     node = node.next;
   }
   return out;
@@ -39,10 +39,31 @@ var __chain = function (head) {
   var out = [];
   var node = head;
   while (node && out.length < __LIST_LIMIT) {
-    out.push(node);
+    out[out.length] = node;
     node = node.next;
   }
   return out;
+};
+var __sameStoredValue = function (left, right) {
+  if (left !== right) return left !== left && right !== right;
+  return left !== 0 || 1 / left === 1 / right;
+};
+var __snapshot = function (head) {
+  var nodes = __chain(head), values = [], links = [];
+  for (var i = 0; i < nodes.length; i += 1) {
+    values[i] = nodes[i].value;
+    links[i] = nodes[i].next;
+  }
+  return { nodes: nodes, values: values, links: links };
+};
+var __unchanged = function (snapshot, linksToo) {
+  for (var i = 0; i < snapshot.nodes.length; i += 1) {
+    var node = snapshot.nodes[i];
+    if (!__sameStoredValue(node.value, snapshot.values[i])) return false;
+    if (__probe.keys(node).length !== 2) return false;
+    if (linksToo && node.next !== snapshot.links[i]) return false;
+  }
+  return true;
 };
 `.trim();
 
@@ -56,6 +77,7 @@ var __reusesNodes = function (values, run) {
   var before = __chain(head);
   var after = __chain(run(head));
   if (after.length !== before.length) return false;
+  if (after.length && after[after.length - 1].next !== null) return false;
   for (var i = 0; i < after.length; i += 1) {
     if (after[i] !== before[before.length - 1 - i]) return false;
   }
@@ -80,11 +102,11 @@ export const DSA_D05: ModuleSource = {
       summary: 'What a node holds, why the list is just its first node, and what it costs to look something up when you cannot jump.',
       estimatedMinutes: 20,
       sources: [
-        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-09-08' },
+        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-10-14' },
         {
           label: 'MDN — Working with objects',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Working_with_Objects',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
       ],
       sections: [
@@ -124,7 +146,7 @@ export const DSA_D05: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Nothing here is indexed. `values[900]` on an array is one read; reaching the same position in a list is 900 hops, because the only route to a node runs through the one in front of it. The chain does not know its own length either, and it has no idea where its middle is.',
+            'This module counts ordinary field reads/writes, comparisons of bounded values and allocation of a small node as constant work. Lists are finite and acyclic, with plain data fields and a null tail; getters, proxies and garbage-collection pauses are outside that model. Arrays use the dense-array model from the previous module, not an engine timing guarantee. Nothing here is indexed: position 900 needs 900 links from the head. The chain does not store its own length or middle.',
         },
         {
           kind: 'trace',
@@ -174,12 +196,12 @@ export const DSA_D05: ModuleSource = {
           kind: 'callout',
           tone: 'note',
           body:
-            'Equal growth classes do not mean equal speed. An array holds its elements in one object the engine can lay out compactly, while a list of n nodes is n separate objects, each reached by following a reference. Scanning the array and walking the list are both O(n), and the array scan usually wins on the clock.',
+            'Equal growth classes do not mean equal speed. A list follows a reference to a separate node at each step; an array uses indexed elements. Both scans are O(n) in this model, but engine layout and allocation costs affect actual time. Big O alone does not say which is faster.',
         },
         {
           kind: 'prose',
           body:
-            'So the shape earns its place when you add and remove at the front constantly and rarely ask for a position: the front of a queue, an undo chain, the buckets of a hash table. It earns nothing when you mostly index, and the queue with a head index from the previous module stays the cheaper answer there.',
+            'A linked list can suit frequent changes at the front or after a known node: an undo chain, a queue that also keeps a tail, or one possible hash-table bucket. It is a poor fit for frequent indexed access. A head-index queue is another option; choose from the operations you need rather than assuming one structure is always faster.',
         },
       ],
     },
@@ -189,18 +211,18 @@ export const DSA_D05: ModuleSource = {
       summary: 'Changing a list means assigning to somebody\'s `next`. The assignment is constant; the walk that reaches the right place is not.',
       estimatedMinutes: 20,
       sources: [
-        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-09-08' },
+        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-10-14' },
         {
           label: 'MDN — Memory management',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Memory_management',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
       ],
       sections: [
         {
           kind: 'prose',
           body:
-            'Every change to a singly linked list is an assignment to somebody\'s `next`. No values move, no memory is copied, and the nodes stay exactly where they were. What varies between operations is how far you walked before making the assignment.',
+            'Rewiring changes a node\'s `next` while keeping the existing nodes and their values. Insertion also creates one small node. These are changes to object references, not a promise about physical memory addresses or engine allocation. The walk to reach the right place can dominate the work.',
         },
         {
           kind: 'code',
@@ -211,7 +233,7 @@ export const DSA_D05: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'That is O(1), and it stays O(1) for ten nodes or ten million. `unshift` on an array answers the same request in O(n), because every existing element moves up one slot before index 0 is free. The list never pays that, however long it gets.',
+            'Under the stated field/allocation model, prepending is O(1) in the number of existing nodes. In the dense-array model, front insertion moves n elements and takes O(n). This compares counted work, not a guaranteed JavaScript engine duration.',
         },
         {
           kind: 'code',
@@ -223,12 +245,12 @@ export const DSA_D05: ModuleSource = {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Swap those two lines and the rest of the list is gone. Assign `node.next = inserted` first and nothing holds the old `node.next` any more, so every node after the insertion point drops off the chain. Point the new node at the rest before you repoint the node in front of it.',
+            'Save the old forward link before overwriting it. In this example the object literal saves it in `inserted.next`; assigning the existing node\'s link then keeps the rest reachable. Literally moving `node.next = inserted` above the `const` declaration throws because `inserted` has not been initialized. Building a new node with `next: null` and then overwriting the only old link would instead detach the rest.',
         },
         {
           kind: 'prose',
           body:
-            'Inserting after a node you hold is O(1). "Insert at position k" is not: you walk k nodes to reach the place first, so the honest class for the whole operation is O(n). The constant-time claim belongs to the rewiring, and only once somebody has handed you the node.',
+            'Inserting after a node you hold is O(1). Reaching zero-based position k first takes k links, so insertion there is O(k + 1), with O(n) worst-case work when k grows with a list of n nodes. A fixed small k is still constant. Separate the walk from the rewiring.',
         },
         {
           kind: 'prose',
@@ -245,7 +267,7 @@ export const DSA_D05: ModuleSource = {
           kind: 'callout',
           tone: 'note',
           body:
-            'Overwrite your only reference to the head and the list is gone. After `list = list.next.next`, nothing points at the first two nodes: no walk can reach them again, and the engine is free to reclaim them whenever it collects. They are not deleted at that instant — reclamation happens on the engine\'s schedule — but your program can no longer tell the difference.',
+            'Suppose a list has at least two nodes and no other references to those nodes are kept. After `list = list.next.next`, the first two nodes are unreachable from the program\'s remaining roots and may be reclaimed. The suffix stays reachable through the new head. This does not guarantee when garbage collection runs.',
         },
         {
           kind: 'prose',
@@ -298,7 +320,7 @@ export const DSA_D05: ModuleSource = {
           rows: [
             ['Prepend a value', 'O(1)', 'O(1)', 'One new node, one link, no walking'],
             ['Insert after a node you hold', 'O(1)', 'O(1)', 'Two assignments'],
-            ['Insert at position k', 'O(n)', 'O(1)', 'k hops to reach the place, then those two assignments'],
+            ['Insert at zero-based position k', 'O(k + 1), O(n) worst case', 'O(1)', 'k links to reach the place, then constant rewiring'],
             ['Find a value', 'O(n)', 'O(1)', 'No index, and an absent value visits every node'],
             ['Delete the first match', 'O(n)', 'O(1)', 'The search dominates; the unlink itself is one assignment'],
             ['Reverse in place', 'O(n)', 'O(1)', 'One pass, three references whatever the length'],
@@ -345,12 +367,12 @@ export const DSA_D05: ModuleSource = {
         {
           id: 'dsa-v1-d05-q1',
           prompt:
-            'A singly linked list holds n nodes. You already hold a reference to one of them and want to insert a new node directly after it. Separately, you want the first node holding a given value, starting from the head. What are the tightest growth classes for the two operations?',
+            'A finite, acyclic list holds n plain nodes with bounded values. Count ordinary field operations and one small-node allocation as constant work. You already hold the insertion node; search starts at the head. What are the tightest classes for inserting after that node and worst-case search?',
           options: [
-            'O(1) for the insert, because you hold the node; O(n) for the search, because it visits nodes one at a time.',
-            'O(1) for both, because a linked list never has to shift anything.',
-            'O(n) for both, because every list operation has to start at the head.',
-            'O(1) for the search and O(n) for the insert, because inserting has to relink every node after it.',
+            'Insert O(1), search O(n): the known node needs constant rewiring; an absent value needs a full walk.',
+            'Insert O(1), search O(1): neither operation shifts later elements, so neither grows with the list.',
+            'Insert O(n), search O(n): both operations must walk from the head, even with the insertion node supplied.',
+            'Insert O(n), search O(1): insertion rewrites all later links; search jumps directly to the matching value.',
           ],
           correct: 0,
           explanation:
@@ -360,12 +382,12 @@ export const DSA_D05: ModuleSource = {
         {
           id: 'dsa-v1-d05-q2',
           prompt:
-            'A program keeps its only reference to a list in `head`. To drop the first two entries it runs `head = head.next.next` and keeps no other reference to them. What is now true of those two nodes?',
+            'A finite list has at least three plain nodes. Its head is the only reference into the list, and there are no other strong references to the first two nodes. After `head = head.next.next`, what is true?',
           options: [
-            'Nothing in the program can reach them, so the engine may reclaim their memory; the rest of the list is untouched.',
-            'They are still reachable through the third node, because `next` links can be followed in both directions.',
-            'They are freed the instant the variable is reassigned, before the next statement runs.',
-            'The whole list becomes unreachable, because the head node is what holds the other nodes together.',
+            'The first two nodes become unreachable and may be collected; the suffix is still reachable from the new head.',
+            'The first two nodes remain reachable from the third, because each next link also points back to its predecessor.',
+            'The first two nodes are immediately freed by the assignment; the suffix survives without any collection delay.',
+            'All nodes become unreachable after the assignment, because losing the old head also removes every later link.',
           ],
           correct: 0,
           explanation:
@@ -374,16 +396,16 @@ export const DSA_D05: ModuleSource = {
         },
         {
           id: 'dsa-v1-d05-q3',
-          prompt: 'Which input makes `lastValue` throw, and what is the smallest fix?',
+          prompt: 'Lists are finite and acyclic, with plain nodes and a null tail. Which input makes `lastValue` throw, and what is the smallest fix?',
           context: {
             language: 'javascript',
             code: 'const lastValue = head => {\n  let node = head;\n  while (node.next !== null) node = node.next;\n  return node.value;\n};',
           },
           options: [
-            'An empty list: `head` is `null`, so the first `node.next` reads a property of `null`. Handle `head === null` before the loop.',
-            'A one-node list: the loop body never runs, so `node` is never given a value.',
-            'A two-node list: the loop steps one place past the tail and reads `null.value`.',
-            'No input throws: the `node.next !== null` test already covers the empty list.',
+            'An empty list reads null.next before the loop. Handle a null head before reading its next field.',
+            'A one-node list leaves node unassigned when the body is skipped. Assign node inside the loop instead.',
+            'A two-node list steps beyond the tail and reads null.value. Stop one link earlier in the loop.',
+            'No listed input throws because the condition guards the current node. Keep the function unchanged.',
           ],
           correct: 0,
           explanation:
@@ -393,16 +415,16 @@ export const DSA_D05: ModuleSource = {
         {
           id: 'dsa-v1-d05-q4',
           prompt:
-            'Two ways to reverse a list of n nodes. A collects every value into an array, then builds a fresh list from the array backwards. B walks the list once and points each node at the node it just came from. What is the tightest comparison?',
+            'Reverse a finite list of n plain nodes under constant field/allocation work and amortized constant array append. A collects values into an array, then builds a fresh list backwards. B walks once, rewiring with three local references. Which time and auxiliary-space comparison is tightest?',
           options: [
-            'Both take O(n) time. A uses O(n) auxiliary space, B uses O(1).',
-            'Both take O(n) time and both use O(n) auxiliary space, because both touch every node.',
-            'A takes O(n²) time because filling the array is quadratic; B takes O(n).',
-            'Both use O(1) auxiliary space, because A\'s array holds values the list already held.',
+            'Both take O(n) time; A needs O(n) temporary array slots, while B keeps O(1) working references.',
+            'Both take O(n) time and O(n) auxiliary space; visiting every node needs one temporary slot per node.',
+            'A takes O(n²) time to fill its array, while B takes O(n); both need O(1) working references.',
+            'Both take O(n) time and O(1) auxiliary space; A\'s extra references reuse values already stored.',
           ],
           correct: 0,
           explanation:
-            'Both make one pass per node, so both are linear in time. A allocates an array of n values and n new nodes, which is O(n) on top of the input; B keeps three references whatever the length, which is O(1). Touching every node is not the same as allocating for every node, so the second option confuses time with space. Filling an array with n appends is linear, not quadratic. And auxiliary space counts what a routine allocates beyond its input, so holding the same values again is exactly the cost being measured.',
+            'A makes one pass to collect values and one to build the result; B makes one rewiring pass. Both are O(n) under the stated model. Even when output nodes are excluded from auxiliary space, A\'s temporary array holds n entries; B keeps three local references. Touching n nodes does not require n temporary slots. Amortized constant append makes n appends O(n), and references to existing values still occupy array slots.',
           competencies: ['complexity', 'linked-lists'],
         },
       ],
@@ -419,7 +441,7 @@ export const DSA_D05: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          'A node is a plain object `{ value, next }`. `next` holds the node after it, and the last node\'s `next` is `null`. A list is its head node, or `null` when the list is empty.\n\nWrite two functions.\n\n`prepend(head, value)` builds one new node holding `value`, points it at the head it was given, and returns it as the new head. `prepend(null, 5)` gives a one-node list. The nodes already in the list keep their identity: `prepend(head, 1).next` is the same object as `head`, not a copy of it.\n\n`find(head, value)` walks from the head and returns the first node whose `value` is strictly equal (`===`) to the one asked for, or `null` when no node holds it. `find(null, 7)` is `null`. When several nodes hold the value, return the first one.',
+          'A node is a plain object `{ value, next }`. `next` holds the node after it, and the last node\'s `next` is `null`. A list is its head node, or `null` when the list is empty.\n\nWrite two functions.\n\n`prepend(head, value)` builds one new node holding `value`, points it at the head it was given, and returns it as the new head. `prepend(null, 5)` gives a one-node list. The nodes already in the list keep their identity: `prepend(head, 1).next` is the same object as `head`, not a copy of it.\n\n`find(head, value)` walks from the head and returns the first node whose `value` is strictly equal (`===`) to the one asked for, or `null` when no node holds it. `find(null, 7)` is `null`. When several nodes hold the value, return the first one. Both functions leave existing node values, links and fields unchanged. Inputs are finite, acyclic chains of plain data nodes ending in null; values may be primitive values or object/symbol references. Strict equality means NaN never matches, while -0 and 0 do.\n\nTarget: O(n) time for find, with O(1) prepend and O(1) auxiliary space. n is the number of nodes. Count ordinary field operations, bounded-value comparisons and one small-node allocation as constant work; getters, proxies and engine pauses are outside this model.',
         contract: [
           '`find` returns the node object itself, or `null` — never the value and never an index.',
           '`prepend` links one new node in front of the head it was given; it never copies or rebuilds the rest.',
@@ -453,7 +475,7 @@ const find = (head, value) => {
   return null;
 };`,
         hints: [
-          'An object literal is already the whole of `prepend`: `{ value, next: head }` points at whatever the list started with, and that object is the new head.',
+          'The returned node needs two fields: the supplied value and a reference to the original head. Think about why copying the old head would break the identity check.',
           'Walk with a variable rather than a counter. Start it at `head`; while it is not `null`, compare `node.value`, and otherwise reassign `node = node.next`.',
           'Both functions survive an empty list on their own. `prepend` links a new node at `null`, and `find` never enters its loop, so it falls through to `return null`.',
         ],
@@ -505,11 +527,11 @@ const find = (head, value) => {
       code: {
         language: 'javascript',
         prompt:
-          'A node is a plain object `{ value, next }`. `next` holds the node after it, and the last node\'s `next` is `null`. A list is its head node, or `null` when the list is empty.\n\nWrite `deleteFirst(head, value)`, which removes the first node whose `value` is strictly equal (`===`) to the one asked for and returns the head of the resulting list.\n\nFour cases have to work. Removing the head returns the second node, because the caller\'s head is gone. Removing a node in the middle or at the end returns the original head. A value that no node holds returns the list unchanged. `deleteFirst(null, 1)` returns `null`.\n\nOnly the first match goes: `deleteFirst` on 4 → 4 → 4 leaves 4 → 4. Remove the node by rewiring the `next` of the node in front of it; do not build new nodes and do not move values between the ones you have.',
+          'A node is a plain object `{ value, next }`. `next` holds the node after it, and the last node\'s `next` is `null`. A list is its head node, or `null` when the list is empty.\n\nWrite `deleteFirst(head, value)`, which removes the first node whose `value` is strictly equal (`===`) to the one asked for and returns the head of the resulting list.\n\nFour cases have to work. Removing the head returns the second node, because that node is no longer the resulting head. Removing a node in the middle or at the end returns the original head. A value that no node holds returns the list unchanged. `deleteFirst(null, 1)` returns `null`.\n\nOnly the first match goes: `deleteFirst` on 4 → 4 → 4 leaves 4 → 4. Remove the node by rewiring the `next` of the node in front of it; the resulting list uses the surviving original nodes with their original values. Do not move values or change unrelated fields. Inputs are finite, acyclic chains of plain data nodes with a null tail; values may be primitives or object/symbol references. Strict equality means NaN never matches, while -0 and 0 do.\n\nTarget: O(n) time and O(1) auxiliary space, where n is the node count. The goal counts ordinary field operations, bounded-value comparisons and small-node allocation as constant work; it excludes getters, proxies and engine pauses. Checks observe returned identity, values and links on finite fixtures, not arbitrary allocation or complexity.',
         contract: [
           'Return the head of the list after the removal, which differs from the head you were given only when you removed it.',
           'Remove exactly one node: later nodes holding the same value stay where they are.',
-          'Rewire the `next` of the node in front of the match. Do not allocate new nodes and do not copy a value from one node into another.',
+          'Rewire the predecessor link; retain surviving original nodes and their values. Do not change unrelated fields or the removed node.',
           'An absent value and an empty list both leave the caller holding what it had.',
         ],
         starter: `const deleteFirst = (head, value) => {
@@ -538,7 +560,7 @@ console.log(deleteFirst(list, 1));
         hints: [
           'The head is the only node with nothing in front of it, so deal with it first: when `head.value` matches, the new head is `head.next` and there is nothing else to do.',
           'For every other node you need the one *before* the match, because the links only point forward. Walk a `previous` variable and look at `previous.next`.',
-          'Unlinking is a single assignment: `previous.next = previous.next.next`. The removed node still points into the list, and that is fine — nothing points at it any more.',
+          'Keep the predecessor linked to the node after the match. Other callers may still hold the removed node, so changing the list does not mean that object disappears.',
         ],
         approach: [
           'Return `null` straight away when the head is `null`.',
@@ -579,17 +601,17 @@ console.log(deleteFirst(list, 1));
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Reverse the links',
-      summary: 'Turn the list around by reassigning `next` on the nodes you were handed, in constant auxiliary space.',
+      summary: 'Reverse existing links while preserving node/value identity; aim for constant auxiliary space.',
       competencies: ['linked-lists', 'complexity'],
       estimatedMinutes: 25,
       code: {
         language: 'javascript',
         prompt:
-          'A node is a plain object `{ value, next }`. `next` holds the node after it, and the last node\'s `next` is `null`. A list is its head node, or `null` when the list is empty.\n\nWrite `reverseList(head)`, which reverses the links and returns the new head — the node that used to be last. `reverseList(null)` returns `null`, and a one-node list comes back as that same node with its `next` still `null`. After reversing 1 → 2 → 3 the old head holds 1 and its `next` is `null`.\n\nDo it in O(1) auxiliary space: a fixed number of references, whatever the length. No new nodes, and no array of the values first. The grade walks the list you return and compares each node with the objects it handed you, so a fresh list built from the same values fails even though the values are in the right order.',
+          'A node is a plain object `{ value, next }`. `next` holds the node after it, and the last node\'s `next` is `null`. A list is its head node, or `null` when the list is empty.\n\nWrite `reverseList(head)`, which reverses the links and returns the new head — the node that used to be last. `reverseList(null)` returns `null`, and a one-node list comes back as that same node with its `next` still `null`. After reversing 1 → 2 → 3 the old head holds 1 and its `next` is `null`.\n\nKeep every original node, its value and any unrelated fields; only its next link changes. Values may include primitives and object/symbol references. Input is a finite, acyclic chain of plain data nodes with a null tail.\n\nTarget: O(n) time and O(1) auxiliary space, where n is the node count. Aim for a fixed number of working references rather than an array or recursion stack that grows with n. Count ordinary field work and bounded values as constant; getters, proxies and engine pauses are excluded. The grade observes finite returned-node identity, value preservation and link order. It does not measure temporary storage or prove the efficiency goal; a fresh list fails identity even if its values look equal.',
         contract: [
           'Reverse by reassigning `next` on the nodes you were given; the list you return must be made of those same node objects.',
-          'Do not build new nodes, and do not collect the values into an array on the way.',
-          'Use a fixed number of references whatever the list length: O(1) auxiliary space.',
+          'Do not replace returned nodes or their values, and do not change unrelated fields.',
+          'Efficiency goal: O(1) auxiliary space; finite identity checks alone do not measure temporary storage.',
           'An empty list returns `null`; a one-node list returns that node with `next` still `null`.',
         ],
         starter: `const reverseList = head => {
@@ -614,7 +636,7 @@ console.log(reverseList(list));
 };`,
         hints: [
           'Three references are enough: the part already reversed, the node in hand, and the rest of the list. Nothing else grows with the length.',
-          'Read `current.next` into a variable *before* you assign to it. Overwrite it first and the rest of the list has nothing pointing at it.',
+          'Keep a reference to the unprocessed suffix before changing the current link. Without another saved reference, the next step of the walk would be lost.',
           'The loop ends when the node in hand is `null`. At that point the reversed part is the whole list, and its first node is what you return.',
         ],
         approach: [
@@ -638,7 +660,7 @@ console.log(reverseList(list));
             critical: true,
             weight: 2,
             detail:
-              'The probe walked the list you returned and compared each node with the objects it handed in. Building a fresh list, or copying values into new nodes, shows up here even when the values come out in the right order.',
+              'Finite fixtures compare the returned nodes, their retained values and the final null tail with the original chain. New returned nodes or cloned values fail these observations. This does not measure temporary allocations or establish O(1) auxiliary space.',
           },
         ],
         tests: [
