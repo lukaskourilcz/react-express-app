@@ -194,7 +194,6 @@ const BASE_DAYS: Record<Speed, number> = { standard: 5, express: 2, overnight: 1
 
 const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed] + (weekend ? 1 : 0);`,
     hiddenTests: [
-      {"call": "shippingDays(\"express\",true)", "expected": 3},
       { call: "shippingDays(\"express\", true)", expected: 3 },
       { call: "[\"standard\",\"express\",\"overnight\"].map(speed => shippingDays(speed, true))", expected: [6, 3, 2] },
       { call: "[\"standard\",\"express\",\"overnight\"].map(speed => shippingDays(speed, false))", expected: [5, 2, 1] },

@@ -43,12 +43,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 12,
+    "currentStagedModelReviewRecords": 0,
     "recordsStillRequiringReview": 203,
-    "reviewEvidence": "D01–D04: 48 exact-bound native records deployed through PRs #376/#379/#381/#384. Required verify/SQL for #384 passed on 86aa0fb2 in Actions 38523068378; production dpl_6s7uM17ohK9erevoKLGyvJkjP6v9 is READY on merge 0c3388c4 and passes eleven signed-out health/route/correct-wrong grading checks. Partial editorial evidence; no complete-catalogue or authenticated native-path production approval.",
-    "deployedModelReviewRecords": 48,
+    "reviewEvidence": "D01–D05: sixty exact-bound native records deployed through PRs #376/#379/#381/#384/#388. Required verify/SQL for #388 passed on 5684fc4d in Actions 38531432787; production dpl_8YwxYfKKA7z3HMUZP5LoENM39t1t is READY on merge d47e3a9d and passes eleven signed-out health/route/correct-wrong grading checks. Partial editorial evidence; no complete-catalogue, authenticated native-path or activation claim.",
+    "deployedModelReviewRecords": 60,
     "currentModelReviewRecords": 60,
-    "stagedReviewEvidence": "D05: twelve individually read lesson/activity/question records with exact current content/grading bindings. 20/20 selected expected worker verdicts (7 valid, 3 starters, 10 wrong), independent question contexts and precise field/allocation assumptions. CI/deployment pending; identity tests do not measure arbitrary auxiliary space."
+    "stagedReviewEvidence": "No native records staged on this branch."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
@@ -56,7 +56,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "The earlier 14 October production override snapshot remains unchanged at its recorded recheck: 485 hides, zero active rows, same sorted-ID digest. Forty restored questions, twenty-five reviewed coding tasks and forty-eight native records are production-verified. Five further coding records are staged; twelve D05 native records are merged with production verification pending.",
+    "The earlier 14 October production override snapshot remains unchanged at its recorded recheck: 485 hides, zero active rows, same sorted-ID digest. Forty restored questions, twenty-five reviewed coding tasks and sixty native records are production-verified. Five further coding records are staged; no additional native records are staged.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

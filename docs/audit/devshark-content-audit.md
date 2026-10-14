@@ -361,8 +361,12 @@ literal line-swap ReferenceError and n exact walk/rewire counts. Per-item qualit
 floors are 4/5 and relevance 8–10/10; exact content/grading bindings cover all
 twelve. Sources and final reading are retained in
 `review-2026-10-14-dsa-d05.jsonl`, explicitly same-session model self-review.
-This is #387, with #386 as its prerequisite. The branch now records 60/263 native
-items (48 deployed, 12 staged); 203 native items and 700 coding tasks remain.
+PR #388 deployed the twelve D05 records after required verify/SQL passed on
+5684fc4d in Actions 38531432787. Production `dpl_8YwxYfKKA7z3HMUZP5LoENM39t1t`
+is READY on merge d47e3a9d and eleven signed-out health/public-route/correct-wrong
+grading checks pass without progress/XP/score/name writes. These are not
+authenticated native-path acceptance or activation of deployment flags. All
+60/263 native records are deployed; 203 remain.
 Local API/script types, launch, attempt-version authority, combined grading/Learn
 integrity, all path references/starter examples, 33 instrumentation authority
 checks, build/public/unused/security and both production dependency audits pass.
@@ -370,7 +374,7 @@ Twenty-four local public-wire activity layouts cover both themes at 360/1440,
 main focus and 200% text at 1440; eighteen light and eighteen dark public-route
 reflow probes pass at six widths. These fixtures do not establish authenticated
 production acceptance or activate deployment flags. Required CI/deployment for
-this partial wave are pending.
+this partial wave passed as recorded above.
 
 ### Coding wave 6 — unions, tuples and safe dictionary keys
 

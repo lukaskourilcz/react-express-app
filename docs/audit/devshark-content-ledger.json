@@ -230159,7 +230159,7 @@
    "objective": "Use a named literal union and boolean adjustment with a precise numeric API.",
    "intendedLevel": "foundation",
    "revision": 1,
-   "contentHash": "3cb6bc764b207c82",
+   "contentHash": "b2f008a41468d9e0",
    "hashSchema": "task-hash:v2",
    "previousHash": "73a51e88f12a7fb0",
    "previousHashSchema": "task-hash:v2",
@@ -230203,75 +230203,75 @@
     "cases": [
      {
       "id": "ts-shipping-speed",
-      "contentHash": "3cb6bc764b207c82",
+      "contentHash": "b2f008a41468d9e0",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
       "visible": 5,
-      "hidden": 4
+      "hidden": 3
      },
      {
       "id": "ts-shipping-speed",
-      "contentHash": "3cb6bc764b207c82",
+      "contentHash": "b2f008a41468d9e0",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
       "visible": 5,
-      "hidden": 4
+      "hidden": 3
      },
      {
       "id": "ts-shipping-speed",
-      "contentHash": "3cb6bc764b207c82",
+      "contentHash": "b2f008a41468d9e0",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
       "visible": 5,
-      "hidden": 4
+      "hidden": 3
      },
      {
       "id": "ts-shipping-speed",
-      "contentHash": "3cb6bc764b207c82",
+      "contentHash": "b2f008a41468d9e0",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
       "visible": 5,
-      "hidden": 4
+      "hidden": 3
      },
      {
       "id": "ts-shipping-speed",
-      "contentHash": "3cb6bc764b207c82",
+      "contentHash": "b2f008a41468d9e0",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
       "visible": 5,
-      "hidden": 4
+      "hidden": 3
      },
      {
       "id": "ts-shipping-speed",
-      "contentHash": "3cb6bc764b207c82",
+      "contentHash": "b2f008a41468d9e0",
       "label": "wrong-weekend",
       "expected": "failed",
       "verdict": "failed",
       "visible": 5,
-      "hidden": 4
+      "hidden": 3
      },
      {
       "id": "ts-shipping-speed",
-      "contentHash": "3cb6bc764b207c82",
+      "contentHash": "b2f008a41468d9e0",
       "label": "wrong-any-result",
       "expected": "failed",
       "verdict": "failed",
       "visible": 5,
-      "hidden": 4
+      "hidden": 3
      },
      {
       "id": "ts-shipping-speed",
-      "contentHash": "3cb6bc764b207c82",
+      "contentHash": "b2f008a41468d9e0",
       "label": "wrong-weekend-type",
       "expected": "failed",
       "verdict": "failed",
       "visible": 5,
-      "hidden": 4
+      "hidden": 3
      }
     ],
     "notes": "Finite worker/compiler evidence, not arbitrary input or complexity proof."
@@ -230301,7 +230301,7 @@
      "run: final selected TypeScript 5.9.3/QuickJS verdicts 40/40 (20 valid, 5 starters, 15 wrong); twenty selected authored-goal/base-25-XP checks pass.",
      "run: previous candidate set matched 32/40; newly stated input/key policies are distinguished from existing typing/reference defects."
     ],
-    "notes": "Read the alias and all public/hidden tests, including arbitrary Speed/boolean calls. The fixed three-entry rule is O(1) in the supplied model; no business forecast or compiler cost is claimed. Final full material reread; same-session model self-review, not human or independent review.",
+    "notes": "Read the alias and all public/hidden tests, including arbitrary Speed/boolean calls. The fixed three-entry rule is O(1) in the supplied model; no business forecast or compiler cost is claimed. Final full material reread; same-session model self-review, not human or independent review. A duplicate weekend runtime fixture was removed; all eight selected shipping verdicts were rerun on the final exact hash.",
     "pass": "second-reading"
    }
   },
