@@ -93,3 +93,14 @@ for (const [label, source, expected] of [
   await check('dsa-v1-d02-reverse-in-place', source, expected, label);
 }
 console.log('Native path authority checks passed. No production tampering probe was performed.');
+
+
+// D04 uses a separate counted-buffer proxy. Property definitions/deletions
+// must count there too, while plain assignment stays a single operation.
+for (const [label, source, accepted] of [
+  ['queue direct definitions are accepted', 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){Object.defineProperty(a,String(a.length),{value,writable:true,enumerable:true,configurable:true});},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', true],
+  ['queue repeated definitions exceed the budget', 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);for(let i=0;i<10;i++)Object.defineProperty(a,String(a.length-1),{value,writable:true,enumerable:true,configurable:true});},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', false],
+  ['queue reflection definitions exceed the budget', 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);for(let i=0;i<10;i++)Reflect.defineProperty(a,String(a.length-1),{value,writable:true,enumerable:true,configurable:true});},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', false],
+  ['queue repeated deletions and definitions exceed the budget', 'function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){a.push(value);const index=String(a.length-1);for(let i=0;i<10;i++){delete a[index];Object.defineProperty(a,index,{value,writable:true,enumerable:true,configurable:true});}},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', false],
+  ['queue captured definition survives global replacement', 'Object.defineProperty=()=>{throw new Error("replaced");};function createQueue(){const a=newQueueBuffer();let h=0;return {enqueue(value){Reflect.defineProperty(a,String(a.length),{value,writable:true,enumerable:true,configurable:true});},dequeue(){return h<a.length?a[h++]:null;},size(){return a.length-h;}};}', true],
+] as const) await check('dsa-v1-d04-head-index-queue', source, accepted, label);

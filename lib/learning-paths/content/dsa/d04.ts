@@ -6,7 +6,7 @@
  * nobody mentions: a head-index queue does not reclaim the slots it leaves
  * behind until you compact it.
  *
- * The queue exercise is graded on method. The learner stores values in a
+ * The queue exercise measures a finite trace of buffer operations. The learner stores values in a
  * buffer the harness hands them — a proxied array with `push`, `length` and
  * index access and nothing else — and the grade counts element reads and
  * writes. That is a bounded contract about this routine on these inputs, not
@@ -18,8 +18,8 @@ import type { ModuleSource } from '../../types';
  * through their queue. The buffer is a Proxy over a plain array: index reads
  * and writes are counted, `push` is counted once per call, and the
  * element-moving methods are simply absent, so `shift` cannot be reached and
- * a hand-written slide shows up in the counter. Appended after the learner's
- * code, so it cannot be shadowed, and it counts with the built-ins taken
+ * a hand-written slide shows up in the counter. Installed in a private scope before the learner's
+ * code, with immutable exports and initialization after declarations, and it counts with the built-ins taken
  * before that code ran (`__probe`, shared/coding-evaluate.ts), so replacing
  * `Proxy` changes nothing. */
 const QUEUE_PROBE = `
@@ -49,6 +49,15 @@ var newQueueBuffer = function () {
       target[prop] = value;
       return true;
     },
+    defineProperty: function (target, prop, descriptor) {
+      if (typeof prop === 'string' && __probe.isIndex(prop)) __bufferOps += 1;
+      __probe.defineProperty(target, prop, descriptor);
+      return true;
+    },
+    deleteProperty: function (target, prop) {
+      if (typeof prop === 'string' && __probe.isIndex(prop)) __bufferOps += 1;
+      return __probe.deleteProperty(target, prop);
+    },
   });
 };
 var __measureQueue = function (n) {
@@ -67,7 +76,7 @@ export const DSA_D04: ModuleSource = {
   title: 'Stacks and queues',
   outcomes: [
     'Predict what a stack and a queue hand back for a given sequence of operations, and say which end each one touches.',
-    'Cost a queue by its representation: why an array `shift` makes draining quadratic and a head index does not.',
+    'Cost a queue by its representation: why front removal is costly in the stated dense-array model and a head index avoids those moves.',
     'State the underflow contract and the memory tradeoff of the structure you built, instead of leaving either to chance.',
   ],
   competencies: ['stacks-queues', 'complexity'],
@@ -77,14 +86,14 @@ export const DSA_D04: ModuleSource = {
     {
       id: 'dsa-v1-d04-l1',
       title: 'LIFO and FIFO as access disciplines',
-      summary: 'Two structures that are defined by what they refuse to let you touch, traced step by step.',
+      summary: 'Two access orders, traced step by step, with a stated empty-case rule.',
       estimatedMinutes: 20,
       sources: [
-        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-09-08' },
+        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-10-14' },
         {
           label: 'MDN — Array.prototype.push',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
       ],
       sections: [
@@ -247,7 +256,7 @@ console.log("pop on empty", stack.pop());`,
           kind: 'callout',
           tone: 'warning',
           body:
-            'The restriction is the feature. Once you index into the middle of a stack, you have an array with extra steps, and the reasoning the discipline bought you is gone. That reasoning is what a stack is for: bracket matching is correct because the only opener you can reach is the most recent one, and no other invariant is needed to prove it.',
+            'The restriction is the feature. Once you index into the middle of a stack, you have an array with extra steps, and the reasoning the discipline bought you is gone. That reasoning is what a stack is for: bracket matching is correct because the only opener you can reach is the most recent one, together with the requirement that every closer matches and no opener remains at the end.',
         },
         {
           kind: 'prose',
@@ -259,43 +268,43 @@ console.log("pop on empty", stack.pop());`,
     {
       id: 'dsa-v1-d04-l2',
       title: 'What the representation costs',
-      summary: 'Amortised constant appends, the linear price of removing from the front, and the memory a head-index queue holds on to.',
+      summary: 'Amortized constant appends, the linear price of removing from the front, and the memory a head-index queue holds on to.',
       estimatedMinutes: 20,
       sources: [
         {
           label: 'MDN — Array.prototype.shift',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/shift',
-          reviewedOn: '2026-09-08',
+          reviewedOn: '2026-10-14',
         },
-        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-09-08' },
+        { label: 'Harvard CS50x — Data structures notes', url: 'https://cs50.harvard.edu/x/notes/5/', reviewedOn: '2026-10-14' },
       ],
       sections: [
         {
           kind: 'prose',
           body:
-            'A stack on an array is cheap because both of its operations work on the end. `push` writes one slot past the last one; `pop` reads the last slot and forgets it. No other element is touched, so neither cost depends on how many values are already there.',
+            'For these costs, assume a dense growable-array model with constant-time indexing, bounded-size values and a capacity that doubles when full. Removing from the end takes constant work; adding there can trigger a linear resize. These are model costs, not universal JavaScript engine timing guarantees.',
         },
         {
           kind: 'prose',
           body:
-            'The one wrinkle is growth. A growable array holds a block with spare capacity, and when the spare runs out it allocates a larger block and copies everything across. That copy is linear in the current length, so an individual `push` is not constant. Doubling the capacity keeps the copies rare enough that a run of n pushes costs O(n) in total, which is what "amortised constant" claims.',
+            'The one wrinkle is growth. In this model, a growable array holds a block with spare capacity, and when the spare runs out it allocates a larger block and copies everything across. That copy is linear in the current length, so an individual `push` is not constant. Doubling the capacity keeps the copies rare enough that a run of n pushes costs O(n) in total, which is what "amortized constant" claims.',
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'Amortised is a statement about a sequence, not about a single call. It says n pushes cost O(n) between them, so the average is constant. It does not say every push is cheap, and in a system where one slow call matters more than the total — a frame budget, an audio callback — the average is the wrong number to quote.',
+            'Amortized is a statement about a sequence, not about a single call. It says n pushes cost O(n) between them, so the average is constant. It does not say every push is cheap, and in a system where one slow call matters more than the total — a frame budget, an audio callback — the average is the wrong number to quote.',
         },
         {
           kind: 'prose',
           body:
-            'The front of an array is a different story. `shift` returns the element at index 0 and then moves every later element down one slot, because index 1 has to become index 0 for the array to still be an array. That is linear in the current length, and the one-word call gives no hint of it.',
+            'The front of an array is a different story. In the dense-array model, front removal returns index 0 and moves the survivors down one slot. JavaScript specifies the resulting indexed properties, but an engine can optimize the implementation. Count survivor moves here rather than claiming a universal elapsed-time cost.',
         },
         {
           kind: 'code',
           language: 'javascript',
-          code: '// Correct FIFO behaviour, and quadratic to drain.\nconst createShiftQueue = () => {\n  const items = [];\n  return {\n    enqueue: value => { items.push(value); },\n    dequeue: () => (items.length === 0 ? null : items.shift()),\n    size: () => items.length,\n  };\n};',
-          caption: 'The obvious queue. `enqueue` is amortised constant; `dequeue` moves every remaining element.',
+          code: '// Correct FIFO behavior, and quadratic to drain.\nconst createShiftQueue = () => {\n  const items = [];\n  return {\n    enqueue: value => { items.push(value); },\n    dequeue: () => (items.length === 0 ? null : items.shift()),\n    size: () => items.length,\n  };\n};',
+          caption: 'The obvious queue. `enqueue` is amortized constant; `dequeue` moves every remaining element.',
         },
         {
           kind: 'trace',
@@ -329,7 +338,7 @@ console.log("pop on empty", stack.pop());`,
               },
               {
                 cells: ['B', 'C', 'D'],
-                note: 'The array drops its last slot and the removal is done. Removing one value from a queue of four cost three moves, so a queue of k costs about k.',
+                note: 'The array drops its last slot and the removal is done. Removing one value from a queue of four cost three moves, so this dense-model removal from k values moves k − 1 survivors.',
                 counter: { label: 'Element moves', value: 3 },
               },
             ],
@@ -338,7 +347,7 @@ console.log("pop on empty", stack.pop());`,
         {
           kind: 'prose',
           body:
-            'Add those up over a full drain. Dequeuing from a queue of n costs about n moves, then n − 1, then n − 2, down to 1. The sum is n(n − 1)/2, roughly n²/2, so emptying the queue is O(n²) even though every individual call looks like one operation. Ten thousand messages is fifty million element moves.',
+            'Starting with n values and no later enqueues, the dense model moves n − 1 survivors on the first removal, then n − 2, down to 0. The total is n(n − 1)/2, plus n removals, giving O(n²) drain work. For n = 10,000, that is exactly 49,995,000 survivor moves.',
         },
         {
           kind: 'prose',
@@ -354,34 +363,34 @@ console.log("pop on empty", stack.pop());`,
         {
           kind: 'prose',
           body:
-            'Every operation here is constant, `enqueue` amortised so. `size()` is `items.length - head`, one subtraction. The queue is empty when the head has caught up with the end, which is the condition `dequeue` checks before it reads anything.',
+            'Every operation here is constant, `enqueue` amortized so. `size()` is `items.length - head`, one subtraction. The queue is empty when the head has caught up with the end, which is the condition `dequeue` checks before it reads anything.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'The memory is the honest part. Those slots before the head stay in the array. A queue that has handled a million messages holds a million-slot array even when two values are waiting, because nothing ever removed the first 999,998 slots. Writing `null` into a slot you have read releases the value it pointed at, so the value can be collected — but the slot itself stays.',
+            'The memory is the honest part. Those slots before the head stay in the array. A queue that has handled a million messages holds a million-slot array even when two values are waiting, because nothing ever removed the first 999,998 slots. Writing `null` into a slot you have read releases the value it pointed at, so it can be collected when no other reference keeps it alive — but the slot itself stays.',
         },
         {
           kind: 'prose',
           body:
-            'Compaction is what actually reclaims it: when the head passes some threshold, copy the live tail into a fresh array and reset the head to 0. One compaction costs O(live). Triggering it when the head reaches half the array length keeps the total copying linear in the number of dequeues, so the amortised cost per dequeue stays constant. A fixed-capacity ring buffer solves the same problem differently, by wrapping the indices around instead of growing.',
+            'Compaction is what actually reclaims it: when the head passes some threshold, copy the live tail into a fresh array and reset the head to 0. One compaction costs O(live + 1), including a new empty container when no values remain. Triggering it when the head reaches half the array length keeps the total copying linear in the number of dequeues, so the amortized cost per dequeue stays constant. A fixed-capacity ring buffer solves the same problem differently, by wrapping the indices around instead of growing.',
         },
         {
           kind: 'table',
-          caption: 'What each operation costs, by where it touches the array.',
+          caption: 'Costs in the stated dense-array model; n is the number of live values.',
           headers: ['Operation', 'Array end', 'Array front', 'Head-index queue'],
           rows: [
-            ['Add one value', 'Amortised O(1) with `push`', 'O(n) with `unshift`: every element moves up', 'Amortised O(1) at the back'],
+            ['Add one value', 'Amortized O(1) with `push`', 'O(n) with `unshift`: every element moves up', 'Amortized O(1) at the back'],
             ['Remove one value', 'O(1) with `pop`', 'O(n) with `shift`: every survivor moves down', 'O(1): read a slot, bump the head'],
             ['Report the size', 'O(1)', 'O(1)', 'O(1): length minus head'],
-            ['Memory held', 'Tracks the live values', 'Tracks the live values', 'Tracks total enqueues until you compact'],
+            ['Memory held', 'Live values plus spare capacity', 'Live values plus spare capacity', 'Used slots and spare capacity until compaction'],
           ],
         },
         {
           kind: 'prose',
           body:
-            'So there is no free representation, only a choice about which cost you can afford. A short queue drained inside one function will not notice `shift`. A long-lived queue behind a worker will notice both the quadratic drain and the array that never shrinks, and the head index plus compaction answers each of them separately.',
+            'So there is no free representation, only a choice about which cost you can afford. A short-lived queue can be simple; whether front removal is fast enough needs measurement in the actual workload. A long-lived queue also needs a policy for retained slots, and the head index plus compaction answers each of them separately.',
         },
       ],
     },
@@ -404,7 +413,7 @@ console.log("pop on empty", stack.pop());`,
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: what the representation costs',
-      summary: 'Amortised appends, the linear cost of `shift`, and the memory a head-index queue keeps until you compact.',
+      summary: 'Amortized appends, the linear cost of `shift`, and the memory a head-index queue keeps until you compact.',
       competencies: ['stacks-queues', 'complexity'],
       estimatedMinutes: 20,
       lessonId: 'dsa-v1-d04-l2',
@@ -415,14 +424,14 @@ console.log("pop on empty", stack.pop());`,
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Stack and queue checks',
-      summary: 'Four questions: what each discipline hands back, why a shift-based queue drains quadratically, what amortised claims, and what a head index holds on to.',
+      summary: 'Four questions: what each discipline hands back, why a shift-based queue drains quadratically, what amortized claims, and what a head index holds on to.',
       competencies: ['stacks-queues', 'complexity'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
       questions: [
         {
           id: 'dsa-v1-d04-q1',
-          prompt: 'Both structures receive A, then B, then C, and are then read twice. What do `fromStack` and `fromQueue` hold?',
+          prompt: "Using an initially empty LIFO stack and FIFO queue, what do fromStack and fromQueue hold after this code?",
           context: {
             language: 'javascript',
             code: "const stack = createStack();\nconst queue = createQueue();\n\nfor (const value of ['A', 'B', 'C']) {\n  stack.push(value);\n  queue.enqueue(value);\n}\n\nconst fromStack = [stack.pop(), stack.pop()];\nconst fromQueue = [queue.dequeue(), queue.dequeue()];",
@@ -440,44 +449,44 @@ console.log("pop on empty", stack.pop());`,
         },
         {
           id: 'dsa-v1-d04-q2',
-          prompt: 'A queue is built on a plain array: `enqueue` calls `push`, `dequeue` calls `shift`. n values go in and all n come back out. What does draining it cost in total, and why?',
+          prompt: "A dense-array model moves each survivor down one slot on front removal, at constant cost per move. All n queued values are removed with no new enqueues. What is the total drain work and why?",
           options: [
-            'O(n²), because each `shift` moves every remaining element down one slot, and n + (n − 1) + … + 1 moves add up to about n²/2.',
-            'O(n), because `shift` removes exactly one element per call and there are n calls.',
-            'O(n log n), because `shift` has to re-index the array and re-indexing costs a logarithmic pass.',
-            'O(n²), because `push` copies the whole array into a larger block every time the queue grows.',
+            "O(n²): the n removals also move n − 1, n − 2, …, 0 survivors.",
+            "O(n): count the n removed values and ignore the survivor moves.",
+            "O(n log n): each removal halves the number of survivors still waiting.",
+            "O(n²): each removal copies the array into a larger storage block.",
           ],
           correct: 0,
           explanation:
-            '`shift` returns the first element and then moves every later element down one slot, so a queue holding k values pays about k moves for one removal. Summing k from n down to 1 gives n(n − 1)/2, which is the quadratic family. Counting one removal per call ignores the moves that removal forces on everything behind it. There is no halving anywhere in `shift`, so nothing here is logarithmic. And `push` is not the culprit: a growable array doubles its capacity, so its copies amortise to constant work per push.',
+            "The stated model moves k − 1 survivors when removing from k values. Summing from n − 1 to 0 gives n(n − 1)/2 moves, plus n removals, so the drain is O(n²). Counting only removals misses those moves; there is no halving or growth during the drain. This is a model result, not a universal engine timing guarantee.",
           competencies: ['stacks-queues', 'complexity'],
         },
         {
           id: 'dsa-v1-d04-q3',
-          prompt: 'Appending to a growable array is described as amortised constant time. What is that claim?',
+          prompt: "A growable-array model starts with capacity 1 and doubles it when full, copying stored values. Index writes and copying one value have constant cost. What does amortized O(1) append mean?",
           options: [
-            'A run of n appends costs O(n) in total, so the average is constant — while the individual append that triggers a resize copies every element and is linear.',
-            'Every individual append runs in a fixed number of steps, because the array is allocated at its final size up front.',
-            'The average is taken across many programs, so any one program can still see linear cost on every append.',
-            'It is an average measured by benchmarking rather than a claim about counted steps.',
+            "A run of n appends costs O(n) total, though one resize append can cost O(n).",
+            "Every append costs O(1) individually, because resizing never copies stored values.",
+            "The average across different programs is O(1), with no bound on one sequence.",
+            "The average measured execution time is O(1), regardless of the counted work.",
           ],
           correct: 0,
           explanation:
-            'Amortised analysis spreads the cost of the occasional expensive operation over the cheap ones in the same sequence. Doubling the capacity keeps the total copying below the number of appends, so n appends cost O(n) and each averages out to constant work — but the append that triggers the copy really does touch every element already there. No engine allocates the final size up front, because it cannot know what that is. The average is over one sequence of operations, not over a population of programs. And it is a count of steps, not a stopwatch reading: timing measures the machine, and this claim is about growth.',
+            "Across n appends, the copied capacities form a geometric sum smaller than 2n, so copying plus the n writes is O(n). One append can still copy all stored values and take linear work. Amortized cost is a bound over one operation sequence, not an average across programs or a benchmark result.",
           competencies: ['stacks-queues', 'complexity'],
         },
         {
           id: 'dsa-v1-d04-q4',
-          prompt: 'A queue stores its values in an array and never removes them: `dequeue` reads the slot at a head index, then advances the head. What does that representation cost?',
+          prompt: "A queue appends to an array, reads a stored head index on dequeue, and never truncates or compacts the array. Assume constant-cost indexing and bounded-size values. Which storage statement is correct?",
           options: [
-            'The array keeps every slot it has ever used, so memory tracks the total number of enqueues rather than the current size, until you compact it.',
-            'Nothing extra: advancing the head releases the earlier slots, so the array shrinks as values leave.',
-            '`dequeue` becomes linear, because the head index has to be recovered by scanning from the start of the array.',
-            '`size()` becomes linear, because the values still waiting have to be counted from the head to the end.',
+            "Used array slots track total enqueues, even when few values are waiting.",
+            "Used array slots track only waiting values, because advancing the head shrinks the array.",
+            "Dequeue must scan from index zero, because the stored head cannot locate a value.",
+            "Size must scan every waiting value, because length minus head cannot count them.",
           ],
           correct: 0,
           explanation:
-            'Advancing an index shrinks nothing. The slots before the head stay in the array, so a queue that has handled a million messages holds a million-slot array even when two values are waiting. Writing `null` into a dequeued slot releases the value it referenced, but the slot itself stays until you copy the live tail into a fresh array and reset the head. Neither operation gets slower along the way: `dequeue` reads one slot and adds one to a stored index, and `size()` is `length − head`, a single subtraction.',
+            "Advancing the head changes no array length, so used slots track total enqueues until truncation or compaction. Clearing consumed slots removes those references, but other references may still keep values alive. In the stated model, dequeue uses a stored index and size is length minus head; neither needs a scan.",
           competencies: ['stacks-queues'],
         },
       ],
@@ -488,13 +497,13 @@ console.log("pop on empty", stack.pop());`,
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'A stack with a stated underflow rule',
-      summary: 'Build push, pop, peek and size over a private array, and decide in code what an empty stack returns.',
+      summary: "Build four stack methods with independent storage and an explicit empty-case rule.",
       competencies: ['stacks-queues'],
       estimatedMinutes: 20,
       code: {
         language: 'javascript',
         prompt:
-          'Write `createStack()`, returning an object with four methods:\n\n- `push(value)` puts a value on top. Its return value is never read.\n- `pop()` removes the top value and returns it.\n- `peek()` returns the top value and leaves the stack unchanged.\n- `size()` returns how many values the stack holds.\n\nThe underflow contract: `pop()` and `peek()` on an empty stack return `null` and leave it empty, and `size()` never goes below 0. Two stacks made by two calls to `createStack()` hold their own values and never share.\n\n`null` is a legal value to push, so a `null` from `pop()` cannot on its own mean the stack was empty — `size()` is what separates the two cases.',
+          "Write `createStack()`, returning an object with four methods:\n\n- `push(value)` puts a value on top. Its return value is never read.\n- `pop()` removes the top value and returns it.\n- `peek()` returns the top value and leaves the stack unchanged.\n- `size()` returns how many values the stack holds.\n\nThe underflow contract: `pop()` and `peek()` on an empty stack return `null` and leave it empty, and `size()` never goes below 0. Two stacks made by two calls to `createStack()` hold their own values and never share.\n\nReturn values unchanged, including object identity, undefined, false, 0 and the empty string. `null` is a legal value to push, so a `null` from `pop()` cannot on its own mean the stack was empty — `size()` is what separates the two cases.",
         contract: [
           'Every call to `createStack()` returns a fresh stack with its own storage.',
           '`pop()` and `peek()` return `null` on an empty stack rather than throwing or returning `undefined`.',
@@ -529,7 +538,7 @@ console.log(stack.pop(), stack.size());
   };
 };`,
         hints: [
-          'Hold the values in an array declared inside `createStack`, so each call gets its own. The end of that array is the top: `push` appends there and `pop` removes from there, and no other element moves.',
+          "Compare the end each operation uses. Keep storage inside the factory so a second stack cannot change the first.",
           'Guard both readers with the same emptiness check. An empty array hands back `undefined`, and the contract asks for `null`.',
         ],
         approach: [
@@ -605,18 +614,18 @@ console.log(stack.pop(), stack.size());
       kind: 'code',
       purpose: 'exercise',
       verification: 'machine_verified',
-      title: 'A queue that never moves its elements',
-      summary: 'Dequeue by advancing a head index instead of shifting, under a counted budget a shift-based queue cannot meet.',
+      title: "A queue under a measured buffer budget",
+      summary: "Use a head index and check its buffer work on the measured fill-and-drain sequences.",
       competencies: ['stacks-queues', 'complexity'],
       estimatedMinutes: 25,
       code: {
         language: 'javascript',
         prompt:
-          'Write `createQueue()`, returning an object with three methods:\n\n- `enqueue(value)` adds a value at the back. Its return value is never read.\n- `dequeue()` removes the value at the front and returns it, or `null` when the queue is empty.\n- `size()` returns how many values are waiting.\n\n`dequeue` must not move the values behind the one it removes. `Array.prototype.shift` is out, and so is a hand-written loop that slides them down. Keep a head index instead: read the slot the head points at, then add one to the head.\n\nStore the values in a buffer the grader hands you — call `newQueueBuffer()` where you would otherwise write `[]`. It supports `push(value)`, `length` and index access and nothing else, and it counts every element read and every element write.\n\nThe budget: enqueueing 32 values and then dequeuing all 32 must stay within 192 buffer operations, six per value. A head index costs three per value. Sliding the survivors down on every dequeue costs over a thousand, which is the whole point of the exercise.',
+          "Write `createQueue()`, returning an object with three methods:\n\n- `enqueue(value)` adds a value at the back. Its return value is never read.\n- `dequeue()` removes the value at the front and returns it, or `null` when the queue is empty.\n- `size()` returns how many values are waiting.\n\nUse a head index to avoid sliding waiting values down in the buffer. The fixed-input budget measures buffer operations, not work in other storage. With a head index: read the slot the head points at, then add one to the head.\n\nStore the values in a buffer the grader hands you — call `newQueueBuffer()` where you would otherwise write `[]`. It supports `push(value)`, `length` and index access and nothing else, and it counts indexed reads, assignments, property definitions and deletions; one push counts as one write.\n\nThe budget: enqueueing 32 values and then dequeuing all 32 must stay within 192 buffer operations, six per value. A head index costs three per value. A dense slide costs over a thousand on that sequence. Return values unchanged, including object identity and undefined/falsey values; separate queues keep independent state. Passing fixed cases does not prove asymptotic complexity.",
         contract: [
-          'Store the values in a buffer from `newQueueBuffer()`; a plain array is not counted and misses the budget.',
+          "Use a buffer from newQueueBuffer for the exercise; work in other storage is not counted.",
           'The buffer offers `push`, `length` and index access only — reaching for `shift` or `splice` throws.',
-          'A full round trip of 32 values costs at most 192 buffer operations, so `dequeue` cannot move the remaining values.',
+          "A measured 32-value fill and drain costs at most 192 buffer operations. The hidden 64-value run has the same six-per-value limit; these traces do not prove arbitrary complexity.",
           '`dequeue()` returns `null` on an empty queue, and `size()` never goes below 0.',
         ],
         starter: `const createQueue = () => {
@@ -648,7 +657,7 @@ console.log(queue.dequeue(), queue.size());
   };
 };`,
         hints: [
-          'Two pieces of state: the buffer and a `head` index starting at 0. The queue is empty when `head` has reached `items.length`, which is the check `dequeue` makes before it reads anything.',
+          "Keep separate positions for the stored end and the next value to return. Work out when they describe an empty queue.",
           '`dequeue` reads `items[head]` and then adds one to `head`. Nothing else changes, so the cost does not depend on how many values are waiting.',
           'Write `null` into the slot you just read before advancing the head. The slot stays in the buffer, but the value it referenced can be collected.',
         ],
@@ -669,10 +678,10 @@ console.log(queue.dequeue(), queue.size());
           },
           {
             id: 'constant-dequeue',
-            label: 'Dequeue leaves the remaining values where they are',
+            label: "The measured buffer trace stays within its budget",
             critical: true,
             weight: 2,
-            detail: 'The buffer counter went over six operations per value on a 32-value round trip, or the values never reached the counted buffer. Sliding the survivors down, with `shift` or by hand, lands here.',
+            detail: "The counter exceeds six buffer operations per value on a measured 32- or 64-value round trip, or too few buffer operations were observed. A dense slide fails these traces; other storage and untested inputs are outside the measurement.",
           },
         ],
         tests: [
@@ -712,7 +721,7 @@ console.log(queue.dequeue(), queue.size());
           {
             call: '__measureQueue(32).ops >= 32',
             expected: true,
-            label: 'the values really are stored in the counted buffer',
+            label: "at least 32 counted buffer operations are observed",
             criterion: 'constant-dequeue',
           },
         ],
@@ -758,9 +767,9 @@ console.log(isBalanced('([]{})'));
   return /* nothing left waiting */;
 };`,
         hints: [
-          'An opener has to be remembered until its partner arrives, and the partner always belongs to the most recent opener still waiting. That is a stack: push openers, and pop when a closer arrives.',
-          'Map each closer to the opener it expects: `)` to `(`, `]` to `[`, `}` to `{`. A closer is wrong when the value you popped is not what it expects, and also when there was nothing to pop.',
-          'Returning inside the loop is not enough. `([` reaches the end with two openers still waiting, so the final answer is whether the stack is empty.',
+          "When a closer arrives, identify which unmatched opener it belongs to. Try the overlapping example before choosing what to remember.",
+          "Separate two failure cases: no opener is waiting, or the waiting opener has the wrong kind.",
+          "What still needs checking after the final character? Compare an empty input with one that ends before every opener has closed.",
         ],
         approach: [
           'Start with an empty array holding the openers still waiting.',
