@@ -156,6 +156,43 @@ The compatibility follow-up also removes the nonexistent Run instruction from
 46 native starter comments. That mechanical correction supplies no editorial
 approval for the other records.
 
+### Coding waves 3 and 4 — strings, parsing and array boundaries
+
+Ten further tasks were read individually with their references, hidden cases,
+hints and any comparison/puzzle material. Wave 3 covers hexadecimal validation,
+ASCII hashtag extraction, literal query segments, repeated strings and ASCII
+palindromes. Wave 4 covers average debugging, Fizz output, one-level flattening,
+undo history and command extraction. Their exact records and reproducible
+candidate inputs are in `docs/audit/wip/coding/`; the ledger/runtime projection
+binds each approved English version to its complete task hash.
+
+Wave 3's actual QuickJS grader returned all 49 selected verdicts: fifteen revealed
+variants, five different valid alternatives, two comparisons and six puzzle
+arrangements passed; five starters and sixteen wrong implementations failed.
+The original pool matched 43/49. Multiline color matching and identical-tag
+deduplication were demonstrated gaps; Unicode boundaries, raw-delimiter policy,
+prototype-key data properties and preserving a repeated word's spaces are
+distinguished as newly explicit contracts rather than overstated old failures.
+The query parser keeps later equals signs, literal encoding characters and own
+`__proto__` properties; it is not described as a complete URL decoder.
+
+Wave 4 returned all 40 selected verdicts: fifteen revealed variants and five
+independent alternatives passed; five starters and fifteen wrong implementations
+failed. The old pool matched 35/40. A flat-array reuse was contrary to the old
+new-array requirement; the remaining passes are documented as newly explicit
+numeric ordering, preservation, undefined-entry and empty-args policies.
+The online mean was removed as a revealed equivalent because its rounding differs
+from the stated left-to-right sum. Flattening counts immediate child entries in
+its input size and preserves deeper identities. Undo uses length to distinguish
+an empty history from an existing falsey/undefined entry.
+
+Quality floors are 3–4/5 and relevance 8–10/10, individually reasoned. Final
+readings are explicitly same-session model self-review. Passing these 89 selected
+verdicts supplies no scores for another item. Twenty of 725 issued tasks now have
+current records on this branch, including ten deployed earlier; 705 tasks and
+251 native records still require individual review. These two latest coding
+waves await final required CI and deployment verification.
+
 ## 1. September inventory, retained as historical evidence
 
 Every place a devShark question can reach a learner was reconciled from the

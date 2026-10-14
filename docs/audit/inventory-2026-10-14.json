@@ -25,8 +25,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "PR #372 final required verify/sql passed on 5befb908 in GitHub Actions 38498381826; deployed production smoke passed. Ten individual current model records have separate 88-candidate editorial evidence; execution does not approve the remaining tasks.",
-    "currentModelReviewedIssuedTasks": 10,
-    "issuedStillRequiringReview": 715
+    "currentModelReviewedIssuedTasks": 20,
+    "issuedStillRequiringReview": 705,
+    "deployedModelReviewedIssuedTasks": 10,
+    "stagedModelReviewedIssuedTasks": 10,
+    "stagedExecutionEvidence": "Waves 3/4: 49/49 and 40/40 selected QuickJS candidate verdicts; individual scores and same-session final reading. Final CI/deployment pending."
   },
   "nativePaths": {
     "paths": 2,
