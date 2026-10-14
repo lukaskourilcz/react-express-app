@@ -363,7 +363,14 @@ twelve. Sources and final reading are retained in
 `review-2026-10-14-dsa-d05.jsonl`, explicitly same-session model self-review.
 This is #387, with #386 as its prerequisite. The branch now records 60/263 native
 items (48 deployed, 12 staged); 203 native items and 700 coding tasks remain.
-Required CI/deployment for this partial wave are pending.
+Local API/script types, launch, attempt-version authority, combined grading/Learn
+integrity, all path references/starter examples, 33 instrumentation authority
+checks, build/public/unused/security and both production dependency audits pass.
+Twenty-four local public-wire activity layouts cover both themes at 360/1440,
+main focus and 200% text at 1440; eighteen light and eighteen dark public-route
+reflow probes pass at six widths. These fixtures do not establish authenticated
+production acceptance or activate deployment flags. Required CI/deployment for
+this partial wave are pending.
 
 ## 1. September inventory, retained as historical evidence
 
