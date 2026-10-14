@@ -87,7 +87,7 @@ const NativeFunction = Function;
 const string = String, number = Number, is = Object.is;
 // What a check's probe counts with, taken before the learner's code runs
 // (see PROBE_LINE).
-const probe = Object.freeze({ Proxy, get: Reflect.get, isIndex: ${PROBE_IS_INDEX_SOURCE}, freeze: Object.freeze, keys: Object.keys, ownDescriptor: Object.getOwnPropertyDescriptor, setPrototypeOf: Object.setPrototypeOf });
+const probe = Object.freeze({ Proxy, get: Reflect.get, isIndex: ${PROBE_IS_INDEX_SOURCE}, freeze: Object.freeze, keys: Object.keys, ownDescriptor: Object.getOwnPropertyDescriptor, setPrototypeOf: Object.setPrototypeOf, defineProperty: Object.defineProperty, deleteProperty: Reflect.deleteProperty });
 const makeArray = () => setPrototype([], null);
 const packet = (...values) => setPrototype(values, null);
 let now = 0, nextId = 1, timers = makeArray(), logs = makeArray();

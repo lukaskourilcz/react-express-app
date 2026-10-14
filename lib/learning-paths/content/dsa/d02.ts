@@ -27,6 +27,15 @@ var __countWrites = function (values, run) {
       target[prop] = value;
       return true;
     },
+    defineProperty: function (target, prop, descriptor) {
+      if (typeof prop === 'string' && __probe.isIndex(prop)) writes += 1;
+      __probe.defineProperty(target, prop, descriptor);
+      return true;
+    },
+    deleteProperty: function (target, prop) {
+      if (typeof prop === 'string' && __probe.isIndex(prop)) writes += 1;
+      return __probe.deleteProperty(target, prop);
+    },
   });
   var result = run(proxy);
   return { writes: writes, same: result === proxy, values: values.slice(), result: result };
