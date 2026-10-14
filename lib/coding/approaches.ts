@@ -65,7 +65,7 @@ const APPROACHES: Record<string, CuratedApproach[]> = {
       time: 'O(n)',
       space: 'O(n)',
       assumptions: {
-        en: 'The same as above. Sizing the array up front avoids repeated growth, which is a small, real win.',
+        en: 'Every input element is a number. The output length is known before the loop starts; runtime performance depends on the engine and input.',
         cs: 'Totéž co výše. Předem daná velikost pole se vyhne opakovanému růstu, což je malý, ale skutečný zisk.',
       },
       tradeoffs: {
@@ -123,29 +123,29 @@ const APPROACHES: Record<string, CuratedApproach[]> = {
       time: 'O(n)',
       space: 'O(n)',
       assumptions: {
-        en: 'Reversing by code point is what is wanted. Combined emoji and combining marks still come apart — no single-line reverse handles those.',
+        en: 'This task reverses code points. Combining marks and joined emoji contain several points; preserving visual clusters is a different contract.',
         cs: 'Chceme obracet po code pointech. Složené emoji a kombinující znaky se i tak rozpadnou — to nezvládne žádné jednořádkové obrácení.',
       },
       tradeoffs: {
-        en: 'Builds two intermediate structures. Fine at any size a browser will hold.',
+        en: 'The code-point array and the returned string both need memory proportional to the input.',
         cs: 'Staví dvě mezistruktury. V jakékoli velikosti, kterou prohlížeč udrží, to nevadí.',
       },
     },
     {
       name: { en: 'Building from the end', cs: 'Skládání od konce' },
-      code: 'function reverse(text) {\n  let out = "";\n  for (let i = text.length - 1; i >= 0; i--) out += text[i];\n  return out;\n}',
+      code: 'function reverse(text) {\n  const points = Array.from(text);\n  const out = [];\n  for (let i = points.length - 1; i >= 0; i--) out.push(points[i]);\n  return out.join("");\n}',
       readability: {
-        en: 'The mechanics are explicit, which helps when you are learning why the index starts at length - 1.',
+        en: 'The loop makes the reverse traversal explicit. Its index belongs to a code-point array, not the original UTF-16 string.',
         cs: 'Mechanika je vidět, což pomáhá, když se učíš, proč index začíná na length - 1.',
       },
       time: 'O(n)',
       space: 'O(n)',
       assumptions: {
-        en: 'Indexing walks UTF-16 units, not code points, so it splits characters the spread version keeps whole.',
+        en: 'Array.from collects complete code points before the loop indexes them. Joined emoji and combining marks follow the same rule as the first approach.',
         cs: 'Indexování prochází jednotky UTF-16, ne code pointy, takže rozdělí znaky, které spread zachová celé.',
       },
       tradeoffs: {
-        en: 'Correct for plain text and wrong for the rest — the shorter version is also the more correct one here.',
+        en: 'Uses an additional array to make the traversal explicit. Push and join avoid repeatedly copying a growing output string.',
         cs: 'Pro prostý text správné, pro zbytek ne — kratší verze je tady zároveň správnější.',
       },
     },
@@ -190,38 +190,38 @@ const APPROACHES: Record<string, CuratedApproach[]> = {
   ],
   'js-word-count': [
     {
-      name: { en: 'A frequency map', cs: 'Mapa četností' },
-      code: 'function wordCount(text) {\n  const counts = new Map();\n  for (const word of text.toLowerCase().split(/\\s+/).filter(Boolean)) {\n    counts.set(word, (counts.get(word) ?? 0) + 1);\n  }\n  return counts;\n}',
+      name: { en: 'Count whitespace-separated runs', cs: 'Mapa četností' },
+      code: 'const wordCount = text => (text.match(/\\S+/g) ?? []).length;',
       readability: {
-        en: 'One pass, one structure. The ?? 0 is where the "first time I have seen this" case is handled.',
+        en: 'The pattern matches each non-whitespace run. No matches become an empty array, whose length is zero.',
         cs: 'Jeden průchod, jedna struktura. V ?? 0 je ošetřený případ „tohle vidím poprvé“.',
       },
-      time: 'O(n) expected',
-      space: 'O(k) for k distinct words',
+      time: 'O(n)',
+      space: 'O(n)',
       assumptions: {
-        en: 'Whitespace separates words and case does not matter. Expected O(1) lookup assumes no pathological key collisions.',
+        en: 'JavaScript whitespace separates words; n is the number of string positions. This counts tokens rather than performing natural-language segmentation.',
         cs: 'Slova dělí mezery a na velikosti písmen nezáleží. Očekávané O(1) vyhledání předpokládá, že klíče nekolidují patologicky.',
       },
       tradeoffs: {
-        en: 'A Map keeps insertion order and any key type; a plain object would be shorter and would inherit prototype keys.',
+        en: 'Short and direct, but the array of matches allocates memory even though only its length is needed.',
         cs: 'Map drží pořadí vkládání a libovolný typ klíče; prostý objekt by byl kratší a zdědil by klíče z prototypu.',
       },
     },
     {
-      name: { en: 'Sort, then count runs', cs: 'Seřadit a počítat úseky' },
-      code: 'function wordCount(text) {\n  const words = text.toLowerCase().split(/\\s+/).filter(Boolean).sort();\n  const counts = new Map();\n  for (let i = 0; i < words.length; i++) {\n    let run = 1;\n    while (words[i + 1] === words[i]) { run++; i++; }\n    counts.set(words[i], run);\n  }\n  return counts;\n}',
+      name: { en: 'Count transitions into a word', cs: 'Seřadit a počítat úseky' },
+      code: 'function wordCount(text) {\n  let count = 0;\n  let inside = false;\n  for (const character of text) {\n    const whitespace = /\\s/.test(character);\n    if (!whitespace && !inside) count++;\n    inside = !whitespace;\n  }\n  return count;\n}',
       readability: {
-        en: 'Harder to follow, and the reason to reach for it is not readability.',
+        en: 'The state records whether the previous character belonged to a word. Count only the transition from whitespace into a non-whitespace run.',
         cs: 'Hůř se to sleduje a důvod, proč po tom sáhnout, není čitelnost.',
       },
-      time: 'O(n log n)',
-      space: 'O(n)',
+      time: 'O(n)',
+      space: 'O(1)',
       assumptions: {
-        en: 'The same word rules. Sorting is what makes equal words adjacent, which is the whole idea.',
+        en: 'The same JavaScript whitespace rule applies. Each character is examined once, and the output is a single count.',
         cs: 'Stejná pravidla pro slova. Řazení dělá stejná slova sousedními, a o to celé jde.',
       },
       tradeoffs: {
-        en: 'Slower than the map for this job. It is here as a contrast: sorting is the right tool when you also need the order.',
+        en: 'Uses constant extra memory, with more state to explain and maintain than the matching expression.',
         cs: 'Na tuhle práci pomalejší než mapa. Je tu pro kontrast: řazení je správný nástroj, když potřebuješ i pořadí.',
       },
     },

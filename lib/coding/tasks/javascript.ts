@@ -14,7 +14,7 @@ export const JAVASCRIPT_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["map"],
     title: "Double numbers",
-    prompt: "Return a new, doubled array: `double(numbers)`.",
+    prompt: "Write `double(numbers)` for an array of finite numbers. Return a new array containing twice each number, in the same order, without changing the input. Empty input returns `[]`. Target: O(n) time, where n is the number of array elements.",
     starter: `const double = numbers => {
   
 };
@@ -26,7 +26,7 @@ console.log(double([1,2,3]));
   numbers.map(item => {
     return /* transformed item */;
   });`,
-    hints: ["Map returns one new value for every input value."],
+    hints: ["The result needs one position for every input position. Keep the source array separate from the values you produce."],
     approach: [
       "Reach for map, since you need exactly one output value for every input value.",
       "In the callback, return the number multiplied by two — map collects the returns into the new array for you.",
@@ -50,7 +50,7 @@ console.log(double([1,2,3]));
     tier: 1,
     focus: ["filter"],
     title: "Even numbers",
-    prompt: "Write `evens(numbers)`, returning a new array of only the even values, in their original order. Zero counts as even, negatives are judged the same way, and an array with no even values gives an empty array.",
+    prompt: "Write `evens(numbers)` for an array of integers. Return a new array containing only even values in their original order, without changing the input. Keep duplicates; zero and negative even integers qualify. No matches returns `[]`. Target: O(n) time, where n is the number of input elements.",
     starter: `const evens = numbers => {
   
 };
@@ -62,7 +62,7 @@ console.log(evens([1,2,3,4]));
   numbers.filter(item => {
     return /* true to keep this item */;
   });`,
-    hints: ["Even numbers have a remainder of 0 when divided by 2."],
+    hints: ["Decide whether to keep each value without changing it. Check your condition with zero and a negative number as well as positive values."],
     approach: [
       "Reach for filter, since you are keeping some values and dropping others rather than transforming them.",
       "Decide evenness with the remainder operator: a number divided by two leaves a remainder of zero. Watch that zero itself qualifies.",
@@ -86,7 +86,7 @@ console.log(evens([1,2,3,4]));
     tier: 1,
     focus: ["reduce"],
     title: "Sum array",
-    prompt: "Write `sum(numbers)`, returning the total of every value. An empty array totals 0, and negatives and decimals add up like anything else.",
+    prompt: "Write `sum(numbers)` for an array of finite numbers. Add them in input order using JavaScript number arithmetic, without changing the array. Empty input returns `0`; include negative values and decimals. Target: O(n) time, where n is the number of array elements.",
     starter: `const sum = numbers => {
   
 };
@@ -99,7 +99,7 @@ console.log(sum([2,3,4]));
     return /* next accumulator */;
   }, /* initial value */);`,
     hints: [
-      "You are collapsing many values into one, so reach for the method built for exactly that — and give it a starting total, or an empty array has no answer to return.",
+      "Consider what total you have before reading the first element. Keep that value as you visit the rest of the array.",
     ],
     approach: [
       "Use reduce with an accumulator that carries the running total.",
@@ -125,7 +125,7 @@ console.log(sum([2,3,4]));
     tier: 1,
     focus: ["for", "strings"],
     title: "Longest word",
-    prompt: "Write `longest(words)`, returning the longest string in the array. When two are equally long, keep the one that comes first; an empty array returns an empty string.",
+    prompt: "Write `longest(words)` for an array of strings. Compare JavaScript string lengths (UTF-16 code units, as measured by `.length`) and return the longest string. Keep the first when lengths tie. Empty input returns `\"\"`; do not change the array. Target: O(n) time, where n is the number of strings.",
     starter: `const longest = words => {
   
 };
@@ -143,7 +143,7 @@ console.log(longest(["cat","elephant","dog"]));
   return best;
 };`,
     hints: [
-      "Walk the list keeping the best candidate found so far, and replace it only when the new word is strictly longer. That “strictly” is what leaves a tie on the earlier word.",
+      "Keep a candidate while scanning. Before replacing it, consider what should happen when two strings have equal lengths.",
     ],
     approach: [
       "Track the best candidate seen so far, either in a loop variable or as a reduce accumulator.",
@@ -221,7 +221,7 @@ console.log(countVowels("hello"));
     tier: 1,
     focus: ["for", "strings"],
     title: "Reverse string",
-    prompt: "Write `reverse(text)`, returning the string with its characters in the opposite order. Spaces are characters like any other, and an empty or single-character string comes back unchanged.",
+    prompt: "Write `reverse(text)`, returning its Unicode code points in reverse order. A code point can take two JavaScript string positions: `reverse(\"a😀\")` gives `\"😀a\"`, keeping the emoji whole. Spaces count too, and an empty or single-code-point string comes back unchanged. Work with code points, not combined visual characters such as a family emoji. Target: O(n) time, where n is the number of code points.",
     starter: `const reverse = text => {
   
 };
@@ -230,13 +230,13 @@ console.log(countVowels("hello"));
 console.log(reverse("cat"));
 `,
     skeleton: `const reverse = text => {
-  const letters = /* the characters of text, as an array */;
+  const letters = /* the code points of text, as an array */;
   // reverse letters, then join them back into one string
   return /* the joined string */;
 };`,
-    hints: ["Add each letter to the front of a result string."],
+    hints: ["Compare what string indexing and string iteration give you for an emoji. Collect complete code points before changing their order."],
     approach: [
-      "Split the string into characters, since strings themselves cannot be reversed in place.",
+      "String iteration yields complete code points; spreading or Array.from avoids splitting a surrogate pair in two.",
       "Reverse the character array and join it back into a string.",
       "Check that an empty string and a single character both survive the round trip.",
     ],
@@ -248,6 +248,7 @@ console.log(reverse("cat"));
       { call: "reverse(\"\")", expected: "", label: "empty string", edge: true },
       { call: "reverse(\"a\")", expected: "a", label: "single character", edge: true },
       { call: "reverse(\"ab cd\")", expected: "dc ba", label: "keeps spaces", edge: true },
+      { call: "reverse(\"a😀\")", expected: "😀a", label: "keeps a two-position code point whole", edge: true },
     ],
   },
   {
@@ -456,7 +457,7 @@ console.log(countDown(3));
     tier: 1,
     focus: ["map", "strings"],
     title: "First letters",
-    prompt: "Write `firstLetters(words)`, returning an array of the first character of each word, in order and with its original case.",
+    prompt: "Write `firstLetters(words)`, returning an array of each string's first Unicode code point, in order and with its original case. An empty string contributes `\"\"`; an empty array gives `[]`. `firstLetters([\"😀reef\", \"\"])` gives `[\"😀\", \"\"]`. Leave `words` unchanged. Target: O(n) time, where n is the number of strings.",
     starter: `const firstLetters = words => {
   
 };
@@ -469,11 +470,11 @@ console.log(firstLetters(["red","blue"]));
     return /* transformed item */;
   });`,
     hints: [
-      "One output per input again: each word becomes only its opening character, and a string can be indexed the way an array can.",
+      "Keep one output per input, even when a string is empty. String iteration keeps a two-position code point together; indexing does not.",
     ],
     approach: [
       "Use map, which gives exactly one letter back for every word in the list.",
-      "Index the first character of each word, and keep its original case rather than changing it.",
+      "Take the first value from each string's iterator, defaulting to an empty string when the iterator has no value. Keep its original case.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -481,6 +482,7 @@ console.log(firstLetters(["red","blue"]));
       { call: "firstLetters([\"red\",\"blue\"])", expected: ["r", "b"] },
       { call: "firstLetters([\"one\",\"two\",\"three\"])", expected: ["o", "t", "t"] },
       { call: "firstLetters([])", expected: [], label: "empty input", edge: true },
+      { call: "firstLetters([\"\",\"😀reef\"])", expected: ["", "😀"], label: "empty string and complete code point", edge: true },
       { call: "firstLetters([\"solo\"])", expected: ["s"], label: "single word", edge: true },
       {
         call: "firstLetters([\"Red\",\"blue\"])",
@@ -625,7 +627,7 @@ console.log(total([{price:2},{price:3}]));
     tier: 1,
     focus: ["strings"],
     title: "Capitalize",
-    prompt: "Write `capitalize(text)`, returning the string with only its first character uppercased and the rest left alone — `hello world` becomes `Hello world`. An empty string comes back empty.",
+    prompt: "Write `capitalize(text)`, uppercasing only its first Unicode code point and leaving everything after it unchanged: `hello world` becomes `Hello world`. A code point can take two JavaScript string positions. Use JavaScript's `toUpperCase()` mapping, which may expand one code point: `ßeta` becomes `SSeta`. An empty string comes back empty. Target: O(n) time, where n is the number of code points.",
     starter: `const capitalize = text => {
   
 };
@@ -637,10 +639,10 @@ console.log(capitalize("hello"));
   // transform or inspect text
   return /* result */;
 };`,
-    hints: ["Combine the uppercase first character with slice(1)."],
+    hints: ["Separate the first complete code point from the unchanged remainder, and consider what happens when there is no first value."],
     approach: [
-      "Take the first character, uppercase it, and concatenate the rest of the string from index one onwards.",
-      "Guard the empty string first, because indexing character zero of an empty string gives undefined.",
+      "Iterate the string by code points, uppercase the first one and join it with the unchanged remaining points.",
+      "Use an empty first value for empty input; toUpperCase may produce more than one output character.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -649,6 +651,7 @@ console.log(capitalize("hello"));
       { call: "capitalize(\"hello world\")", expected: "Hello world" },
       { call: "capitalize(\"\")", expected: "", label: "empty string", edge: true },
       { call: "capitalize(\"a\")", expected: "A", label: "single character", edge: true },
+      { call: "capitalize(\"ßeta\")", expected: "SSeta", label: "uppercase mapping can expand", edge: true },
       {
         call: "capitalize(\"HELLO\")",
         expected: "HELLO",
@@ -666,7 +669,7 @@ console.log(capitalize("hello"));
     tier: 2,
     focus: ["map-set"],
     title: "Unique values",
-    prompt: "Write `unique(values)`, returning a new array with duplicates removed, each value kept at the position it was first seen. It works for strings as well as numbers.",
+    prompt: "Write `unique(values)` for an array of strings and finite numbers. Return a new array with duplicates removed in first-seen order, without changing the input. A number and its string representation are different values; `0` and `-0` count as the same value. Empty input returns `[]`. Target: O(n) time on average, where n is the number of input elements; assume average constant-time membership checks.",
     starter: `const unique = values => {
   
 };
@@ -678,7 +681,7 @@ console.log(unique([1,1,2]));
   const seen = new Set(values);
   return /* the set, back as an array */;
 };`,
-    hints: ["Create a Set, then spread it into an array."],
+    hints: ["You need to remember which values have appeared while preserving the order of their first appearances. Keep number and string identities distinct."],
     approach: [
       "Put the values into a Set, which discards duplicates and preserves first-seen order.",
       "Spread the Set back into an array so the return type matches the input.",
@@ -702,7 +705,7 @@ console.log(unique([1,1,2]));
     tier: 1,
     focus: ["split", "strings"],
     title: "Word count",
-    prompt: "Write `wordCount(sentence)`, returning how many words the sentence holds. Surrounding whitespace does not count, repeated spaces between words do not create extra ones, and an empty string gives 0.",
+    prompt: "Write `wordCount(sentence)`, counting runs of non-whitespace characters. Any JavaScript whitespace, including spaces, tabs and line breaks, separates words. Surrounding or repeated whitespace adds no words; empty or whitespace-only text gives 0. Target: O(n) time, where n is the number of JavaScript string positions.",
     starter: `const wordCount = sentence => {
   
 };
@@ -730,6 +733,7 @@ console.log(wordCount("one two three"));
       { call: "wordCount(\"\")", expected: 0, label: "empty string returns 0", edge: true },
       { call: "wordCount(\"  hi  \")", expected: 1, label: "surrounding whitespace", edge: true },
       { call: "wordCount(\"one  two\")", expected: 2, label: "repeated spaces", edge: true },
+      { call: "wordCount(\"one\\ttwo\\nthree\")", expected: 3, label: "tabs and line breaks separate words", edge: true },
     ],
   },
   {

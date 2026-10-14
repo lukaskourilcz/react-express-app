@@ -170,7 +170,7 @@ export const SKELETON_FILLS: Record<string, string> = {
 };
 `,
   'js-reverse-string': `const reverse = text => {
-  const letters = text.split("");
+  const letters = Array.from(text);
   // reverse letters, then join them back into one string
   return letters.reverse().join("");
 };

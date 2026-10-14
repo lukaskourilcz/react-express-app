@@ -42,6 +42,7 @@ const evens = numbers => numbers.filter(isEven);`,
       { call: "evens([7,10,3,8,6])", expected: [10, 8, 6] },
       { call: "evens([-4,-1,0,5])", expected: [-4, 0] },
       { call: "evens([9])", expected: [] },
+      { call: "evens([2,2,-4,-4,0,0,1])", expected: [2, 2, -4, -4, 0, 0] },
       { call: "(() => { const numbers = [1,2,3]; const kept = evens(numbers); return [kept, numbers, kept === numbers]; })()", expected: [[2], [1, 2, 3], false] },
     ],
   },
@@ -63,6 +64,8 @@ const sum = numbers => numbers.reduce(add, 0);`,
       { call: "sum([0.5,0.25])", expected: 0.75 },
       { call: "sum([-1,-2,-3])", expected: -6 },
       { call: "sum([100])", expected: 100 },
+      { call: "(() => { const numbers = [3,1,2]; const total = sum(numbers); return [total, numbers]; })()", expected: [6, [3, 1, 2]] },
+      { call: "sum([1e16,-1e16,1])", expected: 1 },
     ],
   },
   "js-longest-word": {
@@ -77,7 +80,7 @@ const sum = numbers => numbers.reduce(add, 0);`,
   return longestWord;
 };`,
     senior: `const longest = words => {
-  const longestLength = Math.max(0, ...words.map(word => word.length));
+  const longestLength = words.reduce((best, word) => Math.max(best, word.length), 0);
   // find returns the first word of that length, which settles a tie in favour of the earlier one
   return words.find(word => word.length === longestLength) ?? "";
 };`,
@@ -86,6 +89,8 @@ const sum = numbers => numbers.reduce(add, 0);`,
       { call: "longest([\"abc\",\"xyz\",\"ab\"])", expected: "abc" },
       { call: "longest([\"short\",\"longest\",\"longer\"])", expected: "longest" },
       { call: "longest([\"a\",\"\",\"\"])", expected: "a" },
+      { call: "longest([\"😀\",\"ab\",\"c\"])", expected: "😀" },
+      { call: "(() => { const words = [\"a\",\"longer\",\"bb\"]; const best = longest(words); return [best, words]; })()", expected: ["longer", ["a", "longer", "bb"]] },
     ],
   },
   "js-count-vowels": {
@@ -112,19 +117,22 @@ const countVowels = text => (text.match(/[aeiou]/gi) ?? []).length;`,
   "js-reverse-string": {
     solution: "const reverse = text => [...text].reverse().join(\"\");",
     junior: `const reverse = text => {
-  let reversed = "";
-  for (let index = text.length - 1; index >= 0; index -= 1) {
-    reversed = reversed + text[index];
+  const characters = Array.from(text);
+  const reversed = [];
+  for (let index = characters.length - 1; index >= 0; index -= 1) {
+    reversed.push(characters[index]);
   }
-  return reversed;
+  return reversed.join("");
 };`,
     senior: `// Spreading splits by code point, so an emoji stays whole where split("") would tear it in two.
-const reverse = text => [...text].reduceRight((reversed, character) => reversed + character, "");`,
+const reverse = text => Array.from(text).reverse().join("");`,
     hiddenTests: [
       { call: "reverse(\"stressed\")", expected: "desserts" },
       { call: "reverse(\" x\")", expected: "x " },
       { call: "reverse(\"a b c\")", expected: "c b a" },
       { call: "reverse(\"Z\")", expected: "Z" },
+      { call: "reverse(\"😀a🚀\")", expected: "🚀a😀" },
+      { call: "reverse(\"e\\u0301x\")", expected: "x́e" },
     ],
   },
   "js-positive-numbers": {
@@ -228,21 +236,27 @@ const fizz = n => Array.from({ length: n }, (_, index) => label(index + 1));`,
     ],
   },
   "js-first-letters": {
-    solution: "const firstLetters = words => words.map(word => word[0]);",
+    solution: "const firstLetters = words => words.map(([first = \"\"]) => first);",
     junior: `const firstLetters = words => {
   const letters = [];
   for (const word of words) {
-    const firstLetter = word.charAt(0);
+    let firstLetter = "";
+    for (const character of word) {
+      firstLetter = character;
+      break;
+    }
     letters.push(firstLetter);
   }
   return letters;
 };`,
     senior: `// A string is iterable, so destructuring its first element gives its first character.
-const firstLetters = words => words.map(([first]) => first);`,
+const firstLetters = words => words.map(word => word[Symbol.iterator]().next().value ?? "");`,
     hiddenTests: [
       { call: "firstLetters([\"apple\",\"Banana\",\"cherry\"])", expected: ["a", "B", "c"] },
       { call: "firstLetters([\"x\",\"y\"])", expected: ["x", "y"] },
       { call: "firstLetters([\"Zed\"])", expected: ["Z"] },
+      { call: "firstLetters([\"\",\"𐐨test\",\"🚀\"])", expected: ["", "𐐨", "🚀"] },
+      { call: "(() => { const words = [\"Red\",\"blue\"]; const result = firstLetters(words); return [result, words]; })()", expected: [["R", "b"], ["Red", "blue"]] },
     ],
   },
   "js-has-adult": {
@@ -301,22 +315,24 @@ const allPositive = numbers => !numbers.some(number => number <= 0);`,
     ],
   },
   "js-capitalize": {
-    solution: "const capitalize = word => word ? word[0].toUpperCase() + word.slice(1) : \"\";",
+    solution: "const capitalize = text => { const [first = \"\", ...rest] = text; return first.toUpperCase() + rest.join(\"\"); };",
     junior: `const capitalize = text => {
-  if (text.length === 0) {
+  const letters = Array.from(text);
+  if (letters.length === 0) {
     return "";
   }
-  const firstLetter = text.charAt(0).toUpperCase();
-  const rest = text.substring(1);
-  return firstLetter + rest;
+  letters[0] = letters[0].toUpperCase();
+  return letters.join("");
 };`,
     senior: `// charAt(0) is "" on an empty string, and so is slice(1), so no guard is needed.
-const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
+const capitalize = text => text.replace(/^./su, first => first.toUpperCase());`,
     hiddenTests: [
       { call: "capitalize(\"world\")", expected: "World" },
       { call: "capitalize(\"jAVA script\")", expected: "JAVA script" },
       { call: "capitalize(\"z\")", expected: "Z" },
       { call: "capitalize(\"already Done\")", expected: "Already Done" },
+      { call: "capitalize(\"𐐨abc\")", expected: "𐐀abc" },
+      { call: "capitalize(\"😀hello\")", expected: "😀hello" },
     ],
   },
   "js-unique-values": {
@@ -344,12 +360,15 @@ const capitalize = text => text.charAt(0).toUpperCase() + text.slice(1);`,
       { call: "unique([\"b\",\"a\",\"b\",\"c\",\"a\"])", expected: ["b", "a", "c"] },
       { call: "unique([5,5,5])", expected: [5] },
       { call: "(() => { const values = [1,1]; const result = unique(values); return [result, values]; })()", expected: [[1], [1, 1]] },
+      { call: "unique([1,\"1\",1,\"1\",0,-0,\"0\"])", expected: [1, "1", 0, "0"] },
+      { call: "(() => { const values = [1,2]; const result = unique(values); return [result, values, result === values]; })()", expected: [[1, 2], [1, 2], false] },
+      { call: "(() => { const values = []; return unique(values) === values; })()", expected: false },
     ],
   },
   "js-word-count": {
     solution: "const wordCount = sentence => sentence.trim() ? sentence.trim().split(/\\s+/).length : 0;",
     junior: `const wordCount = sentence => {
-  const pieces = sentence.trim().split(" ");
+  const pieces = sentence.trim().split(/\\s+/);
   let count = 0;
   for (const piece of pieces) {
     if (piece !== "") {
@@ -365,6 +384,8 @@ const wordCount = sentence => (sentence.match(/\\S+/g) ?? []).length;`,
       { call: "wordCount(\"the quick brown fox\")", expected: 4 },
       { call: "wordCount(\"  lead and trail  \")", expected: 3 },
       { call: "wordCount(\"one\")", expected: 1 },
+      { call: "wordCount(\"one\\u00a0two\\tthree\")", expected: 3 },
+      { call: "wordCount(\"\\t\\n\\u00a0\")", expected: 0 },
     ],
   },
   "js-find-user": {
