@@ -49,6 +49,8 @@ export const DSA_D01: ModuleSource = {
       estimatedMinutes: 20,
       sources: [
         { label: 'Harvard CS50x — Algorithms', url: 'https://cs50.harvard.edu/x/weeks/3/', reviewedOn: '2026-09-08' },
+        { label: 'NIST — Big O definition', url: 'https://xlinux.nist.gov/dads/HTML/bigOnotation.html', reviewedOn: '2026-10-14' },
+        { label: 'Cornell CS 2110 — Analyzing complexity', url: 'https://courses.cs.cornell.edu/courses/cs2110/2026fa/lectures/lec05/', reviewedOn: '2026-10-14' },
         {
           label: 'MDN — Loops and iteration',
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide/Loops_and_iteration',
@@ -75,7 +77,7 @@ export const DSA_D01: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Because O is an upper bound, O(n²) is technically true of a routine that runs in a single pass. It is also useless. So when a question asks for the growth class, it is asking for the tightest class the code supports: the smallest family you can honestly claim.',
+            'A linear-time routine also has an O(n²) upper bound, but that bound is looser than the O(n) one we can give. In this path, a question asking for the growth class wants the tightest supported class under the stated cost model.',
         },
         {
           kind: 'code',
@@ -117,7 +119,7 @@ console.log("n = 10 costs", steps, "steps");`,
           kind: 'callout',
           tone: 'warning',
           body:
-            'Dropping constants is a statement about growth, not about speed. A 2n routine really does take about twice as long as an n routine on the same input. Big O says they scale the same way, not that they cost the same.',
+            'Dropping constants describes growth, not elapsed time. In the equal-cost-step model, two full passes do about twice the work of one. Actual speed also depends on the operations, input and runtime.',
         },
         {
           kind: 'prose',
@@ -128,12 +130,12 @@ console.log("n = 10 costs", steps, "steps");`,
           kind: 'code',
           language: 'javascript',
           code: 'const crossPairs = (rows, columns) => {\n  const out = [];\n  for (const row of rows) {\n    for (const column of columns) out.push(row + column);\n  }\n  return out;\n};',
-          caption: 'Two independent inputs: the cost is O(nm), and calling that O(n²) hides which input to shrink.',
+          caption: 'For n rows and m columns, the body runs nm times. With constant-cost addition and append, running time is O(nm).',
         },
         {
           kind: 'prose',
           body:
-            'Two nested loops over two *different* collections cost O(nm). Two loops one after the other over two different collections cost O(n + m). Collapsing either into O(n²) throws away the thing you would act on — which of the two inputs is the expensive one.',
+            'For constant-cost loop bodies, nested traversals over independent collections of sizes n and m take O(nm) work. Sequential traversals take O(n + m). Keep both dimensions when their sizes can vary independently.',
         },
         {
           kind: 'table',
@@ -146,14 +148,14 @@ console.log("n = 10 costs", steps, "steps");`,
             ['O(n log n)', 'Logarithmically many levels, linear work per level', 'Merge sort'],
             ['O(n²)', 'Every pair of an n-sized input', 'Selection sort'],
             ['O(n³)', 'Three n-sized nested dimensions', 'Naive matrix multiplication'],
-            ['O(2ⁿ)', 'A two-way choice at every one of n steps', 'Enumerating every subset'],
-            ['O(n!)', 'Every ordering of n items', 'Enumerating every permutation'],
+            ['O(2ⁿ)', 'A two-way choice at every one of n steps', 'Visiting subset-choice states, excluding the cost of copying each output'],
+            ['O(n!)', 'Every ordering of n items', 'Visiting permutation states, excluding the cost of copying each output'],
           ],
         },
         {
           kind: 'prose',
           body:
-            'The last two are recognition targets, not implementation targets. You should be able to look at a routine that branches twice per step and say "this doubles with every extra element, so 40 elements is already out of reach" — without writing a subset enumerator to prove it.',
+            'The last two are recognition targets. A binary choice at each of 40 positions creates about a trillion possible combinations. You can recognize that growth without implementing a subset enumerator.',
         },
         {
           kind: 'trace',
@@ -199,6 +201,8 @@ console.log("n = 10 costs", steps, "steps");`,
           url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice',
           reviewedOn: '2026-09-08',
         },
+        { label: 'MDN — Array.prototype.sort', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort', reviewedOn: '2026-10-14' },
+        { label: 'MDN — Map', url: 'https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map', reviewedOn: '2026-10-14' },
       ],
       sections: [
         {
@@ -220,13 +224,13 @@ console.log("n = 10 costs", steps, "steps");`,
         {
           kind: 'prose',
           body:
-            'Copying is the usual source of the difference, and in JavaScript it is easy to do by accident. `slice`, `map`, `filter`, `concat` and spreading all build a new array. Inside a loop, an innocent-looking `values.slice(1)` turns a linear routine into a quadratic one, because each copy is itself linear.',
+            'Copying can add work and memory. `slice`, `map`, `filter`, `concat` and array spread produce new arrays. Copying a list of roughly n elements on each of n loop iterations takes quadratic copying work; one such copy takes linear work.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'The same trap applies to `shift` and `unshift`. Removing the first element of an array means every later element moves down one place, so it is linear in the array length — not the constant-time operation the one-word call suggests.',
+            'In this path’s array model, `shift` and `unshift` take linear work to change later indexed positions. Count them as linear operations; a short method name does not imply constant work.',
         },
         {
           kind: 'prose',
@@ -242,7 +246,7 @@ console.log("n = 10 costs", steps, "steps");`,
         {
           kind: 'prose',
           body:
-            'Preprocessing is the other side of the ledger. Sorting an array costs O(n log n) once. If that buys you binary search for every later lookup, a thousand lookups drop from a thousand linear scans to a thousand logarithmic ones, and the sort pays for itself many times over. One lookup, and it never does.',
+            'Preprocessing can pay for later queries. A comparison sort such as merge sort costs O(n log n) in the worst case; later binary searches cost O(log n) each. Compare the sorting cost plus the expected queries with repeated linear scans. JavaScript does not promise one particular complexity for its built-in sort.',
         },
         {
           kind: 'prose',
@@ -265,9 +269,9 @@ console.log("n = 10 costs", steps, "steps");`,
               'That any individual `push` is constant — the occasional resize is not',
             ],
             [
-              'Map and Set operations are expected constant',
-              '`get`, `set` and `has` average out to a fixed number of steps',
-              'A worst-case guarantee; heavy collisions degrade toward linear',
+              'Hash-table operations use expected constant work',
+              'This model assumes `get`, `set` and `has` average out to constant work',
+              'A guarantee for every JavaScript engine; Map and Set require average sublinear access, not a particular representation',
             ],
             [
               'A basic BST costs O(h)',
@@ -321,7 +325,7 @@ console.log("n = 10 costs", steps, "steps");`,
       questions: [
         {
           id: 'dsa-v1-d01-q1',
-          prompt: 'What is the tightest growth class for the running time of `summarise`, in terms of the length n of `values`?',
+          prompt: 'For an array of n numbers, what is the tightest running-time growth class for `summarise`? Use constant-cost numeric operations and array access.',
           context: {
             language: 'javascript',
             code: 'const summarise = values => {\n  let total = 0;\n  for (const value of values) total += value;\n\n  let smallest = values[0];\n  for (const value of values) if (value < smallest) smallest = value;\n\n  return { total, smallest, first: values[0] };\n};',
@@ -329,12 +333,12 @@ console.log("n = 10 costs", steps, "steps");`,
           options: ['O(n)', 'O(n²)', 'O(1)', 'O(n log n)'],
           correct: 0,
           explanation:
-            'Two loops run one after the other, so the work is 2n plus a couple of constant-time reads. Constant factors and lower-order terms drop, leaving O(n). Sequential loops add; only nesting multiplies. O(n²) would be a true upper bound but not the tightest one, and the question asks for the tightest.',
+            'Two full loops run sequentially, taking linear work in total under the stated cost model. A constant factor of two does not change the O(n) class. O(n²) is a looser upper bound, not the tightest one; nesting would need its own iteration-count analysis.',
           competencies: ['complexity'],
         },
         {
           id: 'dsa-v1-d01-q2',
-          prompt: '`labels` has n entries and `sizes` has m entries, and the two lengths are unrelated. What is the tightest growth class for `combine`?',
+          prompt: '`labels` has n entries and `sizes` has m entries; the lengths are unrelated. Assume each entry has bounded length, so creating one output string costs constant work. What is the tightest running-time growth class for `combine`?',
           context: {
             language: 'javascript',
             code: 'const combine = (labels, sizes) => {\n  const out = [];\n  for (const label of labels) {\n    for (const size of sizes) out.push(`${label}-${size}`);\n  }\n  return out;\n};',
@@ -342,21 +346,21 @@ console.log("n = 10 costs", steps, "steps");`,
           options: ['O(nm)', 'O(n²)', 'O(n + m)', 'O(n log m)'],
           correct: 0,
           explanation:
-            'The inner loop runs m times for each of the n outer iterations, so the body runs nm times. Calling it O(n²) would assume the two inputs grow together, and it hides the useful fact: shrinking whichever list is longer is what helps. O(n + m) would be the answer if the loops were sequential rather than nested.',
+            'The body runs m times for each of the n outer iterations, giving nm constant-cost outputs under the stated length assumption. The two dimensions are independent, so O(n²) does not describe their general cost. Sequential traversals would add to O(n + m); these traversals are nested.',
           competencies: ['complexity'],
         },
         {
           id: 'dsa-v1-d01-q3',
-          prompt: 'What is the auxiliary space — the memory used beyond the input itself — of `runningTotals`, for an input of length n?',
+          prompt: 'What is the auxiliary space of `runningTotals` for an array of n numbers? Count the returned array, and treat each number and array slot as fixed-size storage.',
           context: {
             language: 'javascript',
             code: 'const runningTotals = values => {\n  const out = [];\n  let sum = 0;\n  for (const value of values) {\n    sum += value;\n    out.push(sum);\n  }\n  return out;\n};',
           },
           options: [
-            'O(n) — the returned array grows to the length of the input',
-            'O(1) — only `sum` is allocated',
-            'O(n²) — one array entry per pair of inputs',
-            'O(log n) — the array doubles as it grows',
+            'O(n), because the output stores one total for each input element.',
+            'O(1), because only the accumulator counts as additional memory.',
+            'O(n²), because the loop stores one total for every input pair.',
+            'O(log n), because the array needs only logarithmically many resizes.',
           ],
           correct: 0,
           explanation:
@@ -367,10 +371,10 @@ console.log("n = 10 costs", steps, "steps");`,
           id: 'dsa-v1-d01-q4',
           prompt: 'A colleague says: "This lookup is O(n), so n steps is its worst case." What is wrong with that sentence?',
           options: [
-            'O(n) is an upper bound on whichever case is being analysed; it does not by itself mean the worst case.',
-            'Nothing — O(n) and "worst case" mean the same thing.',
-            'O(n) describes memory, so it cannot say anything about steps.',
-            'O(n) means exactly n steps, so "worst case" is redundant.',
+            'Big O bounds the chosen cost function; it need not describe worst-case cost.',
+            'Big O always bounds worst-case cost; saying worst case is simply redundant.',
+            'Big O only bounds space usage; it cannot describe the running time.',
+            'Big O gives an exact step count; the lookup must take exactly n steps.',
           ],
           correct: 0,
           explanation:
@@ -385,16 +389,16 @@ console.log("n = 10 costs", steps, "steps");`,
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'One pass, counted',
-      summary: 'Sum the even numbers in a single traversal, and prove it by staying inside a read budget of one read per element.',
+      summary: 'Sum even values while keeping original-input reads within an n-read budget.',
       competencies: ['complexity', 'arrays-strings'],
       estimatedMinutes: 15,
       code: {
         language: 'javascript',
         prompt:
-          'Write `sumOfEvens(values)`, returning the sum of the even numbers in an array of whole numbers. `sumOfEvens([1, 2, 3, 4])` gives 6, and an empty array gives 0. Negative even numbers count, and zero is even.\n\nThe grade counts how many times you read an element by index. One traversal is allowed: at most one read per element. Reading the same element twice, or scanning the array a second time, goes over budget even when the answer is right.',
+          'Write `sumOfEvens(values)` for an array of integers, without changing it. Return the sum of its even values: `[1, 2, 3, 4]` gives 6 and empty input gives 0. Include negative even integers and zero. Target: O(n) time, where n is the number of input elements.\n\nThe grade counts indexed reads of the original input and permits at most n reads in total. This is a bounded input-access check; it does not measure work on copies or prove your program’s memory use.',
         contract: [
-          'Read each element at most once — the graded budget is one read per element.',
-          'Do not sort, copy or slice the input; a copy reads every element again.',
+          'Use at most n indexed reads of the original input in total.',
+          'Do not change the input array.',
           'Return a number, and return 0 for an empty array.',
         ],
         starter: `const sumOfEvens = values => {
@@ -414,8 +418,8 @@ console.log(sumOfEvens([1, 2, 3, 4]));
   return total;
 };`,
         hints: [
-          'A single `for…of` loop visits each element exactly once, which is the whole budget — inside it, decide whether the value is even and add it or skip it.',
-          'A number is even when the remainder after dividing by two is zero. That test works for negatives too: -4 % 2 is 0.',
+          'Separate reading a value from deciding whether to include it. Accessing the same array index again uses another part of the read budget.',
+          'Check your condition with negative integers and zero as well as positive even numbers.',
         ],
         approach: [
           'Start a running total at zero.',
@@ -433,10 +437,10 @@ console.log(sumOfEvens([1, 2, 3, 4]));
           },
           {
             id: 'single-pass',
-            label: 'At most one read per element',
+            label: 'At most n input reads in total',
             critical: true,
             weight: 2,
-            detail: 'The read counter went over one per element. A second traversal, a copy, or re-reading an element inside the loop all show up here.',
+            detail: 'The total input-read counter exceeded n. Cache a value rather than reading its input slot again; a second input traversal also spends reads.',
           },
         ],
         tests: [
@@ -466,7 +470,7 @@ console.log(sumOfEvens([1, 2, 3, 4]));
       code: {
         language: 'javascript',
         prompt:
-          'Write `halvingSteps(n)`, returning how many times a whole number of 1 or more can be halved — rounding down each time — before it reaches 1. `halvingSteps(1)` gives 0, `halvingSteps(8)` gives 3, and `halvingSteps(10)` gives 3, because 10 goes to 5, then 2, then 1.\n\nThis is the count a binary search makes on an array of n elements, and it is why doubling the input adds one step rather than doubling the work.',
+          'Write `halvingSteps(n)` for an integer n of 1 or more. Count how many times it can be halved, rounding down each time, before it reaches 1. `halvingSteps(1)` gives 0, `halvingSteps(8)` gives 3 and `halvingSteps(10)` gives 3: 10, 5, 2, 1. Target: O(log n) time, where n is the starting numeric value.\n\nThis is the repeated-halving shape behind binary search. An actual search also counts its comparisons; those counts need not equal this exercise’s number of halvings.',
         contract: [
           'Halve by dividing by two and rounding down, not by dividing exactly.',
           'Count the halvings, not the values visited: reaching 1 from 1 is zero steps.',
@@ -490,8 +494,8 @@ console.log(halvingSteps(10));
   return steps;
 };`,
         hints: [
-          'Keep a counter and a working value. While the value is above 1, halve it with `Math.floor(value / 2)` and add one to the counter.',
-          'Starting at 1 means the loop body never runs, so the answer is 0. That is the base of the logarithm, not a special case to hard-code.',
+          'Track how many changes you make and the value after each change. Decide whether the initial value already meets the stopping rule.',
+          'Try an odd value such as 7. Check that each intermediate value remains an integer.',
         ],
         approach: [
           'Start the step counter at zero and copy the input into a working value.',
@@ -514,16 +518,16 @@ console.log(halvingSteps(10));
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'A pass instead of every pair',
-      summary: 'The widest gap in an array, under a read budget that rules out comparing every pair.',
+      summary: 'Find the widest gap while keeping original-input reads within a 2n-read budget.',
       competencies: ['complexity', 'arrays-strings'],
       estimatedMinutes: 25,
       code: {
         language: 'javascript',
         prompt:
-          'Write `maxGap(values)`, returning the difference between the largest and the smallest number in the array. `maxGap([3, 9, 1])` gives 8. An array with one element gives 0, and an empty array gives 0.\n\nComparing every pair would answer this too, and it would read the array about n²/2 times. The grade allows at most two reads per element, which a single pass tracking the smallest and largest values so far comfortably fits inside — and which a pairwise scan cannot.',
+          'Write `maxGap(values)` for an array of finite numbers, without changing it. Return the largest minus the smallest value; `[3, 9, 1]` gives 8. Empty or single-element input gives 0. Target: O(n) time, where n is the input length.\n\nThe grade permits at most 2n indexed reads of the original input in total on its checked inputs. A scan of every input pair exceeds that budget. Work performed on a copy is not counted by this probe.',
         contract: [
-          'Read each element at most twice — the graded budget is 2n reads for n elements.',
-          'Do not sort the array: sorting reads and writes far more than the budget allows.',
+          'Use at most 2n indexed reads of the original input in total.',
+          'Do not change the input array.',
           'An empty array and a single-element array both give 0.',
         ],
         starter: `const maxGap = values => {
@@ -546,8 +550,8 @@ console.log(maxGap([3, 9, 1]));
   return largest - smallest;
 };`,
         hints: [
-          'You do not need the pairs. The widest gap is always between the smallest and the largest element, so one pass that remembers both is enough.',
-          'Seed both the smallest and the largest with the first element, then compare each later element against them.',
+          'Think about which two values determine the widest gap. You need not store a result for each possible pair.',
+          'Try an array containing only negative numbers before choosing initial comparison values.',
         ],
         approach: [
           'Return 0 immediately when the array holds fewer than two elements.',
@@ -565,10 +569,10 @@ console.log(maxGap([3, 9, 1]));
           },
           {
             id: 'linear-budget',
-            label: 'At most two reads per element',
+            label: 'At most 2n input reads in total',
             critical: true,
             weight: 2,
-            detail: 'The read counter went over 2n. Comparing every pair, or sorting first, both land here — the answer can be right and still miss the point of the exercise.',
+            detail: 'The total input-read counter exceeded 2n. Comparing every input pair repeatedly accesses the original array; a result can be correct while exceeding this budget.',
           },
         ],
         tests: [
