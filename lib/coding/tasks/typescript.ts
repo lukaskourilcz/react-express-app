@@ -323,7 +323,7 @@ const displayName = (user: User): string => {
     tier: 2,
     focus: ["narrowing", "unions"],
     title: "Padded id",
-    prompt: "Write `idText(id: string | number): string`. A number comes back as text padded with leading zeros to four characters; a string comes back untouched. A number already four characters or longer keeps its own length.",
+    prompt: "Write idText(id: string | number): string. Return a string input exactly as it is. For a JavaScript number, first use its default String conversion, then add leading zeros until the text is at least four characters long. Never truncate longer text. Signs and decimal points are ordinary characters in this padding rule: -7 becomes \"00-7\", not \"-007\". The same rule handles NaN and Infinity; this is formatting practice, not validation of a real-world identifier.\n\nTarget: O(1) time in a fixed-width JavaScript Number model, with a fixed minimum output width of four. A string input is returned without scanning or copying its characters. Compiler work, coercion hooks and engine pauses are outside this model. Reject arguments outside string | number, and give the result a string type.",
     starter: `const idText = (id) => {
   
 };
@@ -362,10 +362,34 @@ console.log(idText(7));
       },
     ],
     typeTests: [
-      { code: "const __text: string = idText(7);", label: "a number gives back a string" },
-      { code: "const __same: string = idText(\"a1\");", label: "a string does too" },
-      { code: "idText(true);", label: "a boolean is not part of the union", rejects: true },
-    ],
+  {
+    "code": "const __text: string = idText(7);",
+    "label": "a number gives back a string"
+  },
+  {
+    "code": "const __same: string = idText(\"a1\");",
+    "label": "a string does too"
+  },
+  {
+    "code": "idText(true);",
+    "label": "a boolean is not part of the union",
+    "rejects": true
+  },
+  {
+    "code": "declare const __unionId: string | number; const __unionResult: string = idText(__unionId);",
+    "label": "arbitrary union input gives text"
+  },
+  {
+    "code": "const __notNumber: number = idText(7);",
+    "label": "the result is not number or any",
+    "rejects": true
+  },
+  {
+    "code": "idText(null);",
+    "label": "null is outside the input union",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-shipping-speed",
@@ -376,7 +400,7 @@ console.log(idText(7));
     tier: 1,
     focus: ["literal-types"],
     title: "Shipping speed",
-    prompt: "Declare a type alias named `Speed` allowing only `standard`, `express` or `overnight`, then write `shippingDays(speed: Speed, weekend: boolean): number` giving 5, 2 and 1 day respectively, with one extra day when the order was placed at the weekend.",
+    prompt: "Define a type alias Speed containing exactly \"standard\", \"express\" and \"overnight\". Write shippingDays(speed: Speed, weekend: boolean): number. Return 5, 2 and 1 respectively, with one extra day only when weekend is true. This is a supplied lookup rule for practice, not a real shipping forecast. The alias and function must reject other speeds; weekend accepts booleans, and the result has a number type.\n\nTarget: O(1) time: the fixed three-entry rule performs a bounded number of comparisons/field reads and one numeric adjustment. Compiler work is excluded.",
     starter: `const shippingDays = (speed, weekend) => {
   
 };
@@ -417,17 +441,39 @@ const shippingDays = (speed: Speed, weekend: boolean): number => {
       },
     ],
     typeTests: [
-      {
-        code: "const __days: number = shippingDays(\"express\", false);",
-        label: "gives back a number",
-      },
-      { code: "const __speed: Speed = \"overnight\";", label: "Speed is a type you can name" },
-      {
-        code: "shippingDays(\"next-day\", false);",
-        label: "an unlisted speed is refused",
-        rejects: true,
-      },
-    ],
+  {
+    "code": "const __days: number = shippingDays(\"express\", false);",
+    "label": "gives back a number"
+  },
+  {
+    "code": "const __speed: Speed = \"overnight\";",
+    "label": "Speed is a type you can name"
+  },
+  {
+    "code": "shippingDays(\"next-day\", false);",
+    "label": "an unlisted speed is refused",
+    "rejects": true
+  },
+  {
+    "code": "declare const __listedSpeed: Speed; declare const __weekendBoolean: boolean; const __shippingNumber: number = shippingDays(__listedSpeed, __weekendBoolean);",
+    "label": "all listed speeds and arbitrary booleans are accepted"
+  },
+  {
+    "code": "const __otherSpeed: Speed = \"next-day\";",
+    "label": "the named alias refuses unlisted values",
+    "rejects": true
+  },
+  {
+    "code": "shippingDays(\"express\", 1);",
+    "label": "weekend is boolean, not number or any",
+    "rejects": true
+  },
+  {
+    "code": "const __shippingText: string = shippingDays(\"express\", true);",
+    "label": "the result is number, not string or any",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-split-a-name",
@@ -438,7 +484,7 @@ const shippingDays = (speed: Speed, weekend: boolean): number => {
     tier: 2,
     focus: ["tuples", "split"],
     title: "Split a name",
-    prompt: "Write `splitName(text: string): [string, string]`, returning a tuple of the first word and everything after it. A single word gives an empty second half, an empty string gives two empty halves, and only the first space ever splits.",
+    prompt: "Write splitName(text: string): [string, string]. Split at the first ordinary space character (U+0020), returning the exact prefix and the entire remaining suffix. Do not trim or collapse whitespace; tabs and line breaks do not split. A leading space gives an empty prefix, a trailing space gives an empty suffix, no space gives [text, \"\"], and empty text gives [\"\", \"\"]. This is a literal text-splitting exercise, not a parser for all personal names. The result must be a two-string tuple, and non-string input is refused by type checking.\n\nTarget: O(n) time in a character-work/materialized-output model, where n is text.length in UTF-16 code units. Actual engine string representation may differ; compiler work is excluded.",
     starter: `const splitName = (text) => {
   
 };
@@ -452,7 +498,7 @@ console.log(splitName("Ada Lovelace"));
     hints: ["A tuple type fixes both how many values come back and what sits at each position."],
     approach: [
       "A tuple type pins down both how many values come back and what each position holds.",
-      "Find the first space by index rather than splitting, because splitting would break a three-word name into three pieces.",
+      "Preserve the exact prefix and suffix at the first ordinary space. An index search or a split-and-rejoin method can both satisfy the contract.",
       "No space at all is its own case: the whole text is the first half and the second half is empty.",
     ],
     verify: "tests",
@@ -469,21 +515,39 @@ console.log(splitName("Ada Lovelace"));
       { call: "splitName(\"\")", expected: ["", ""], label: "empty string", edge: true },
     ],
     typeTests: [
-      {
-        code: "const __pair: [string, string] = splitName(\"Ada Lovelace\");",
-        label: "gives back exactly two strings",
-      },
-      {
-        code: "const __first: string = splitName(\"Ada Lovelace\")[0];",
-        label: "each position holds a string",
-      },
-      {
-        code: "const __three: [string, string, string] = splitName(\"Ada Lovelace\");",
-        label: "two, not three",
-        rejects: true,
-      },
-      { code: "splitName(42);", label: "only text can be split", rejects: true },
-    ],
+  {
+    "code": "const __pair: [string, string] = splitName(\"Ada Lovelace\");",
+    "label": "gives back exactly two strings"
+  },
+  {
+    "code": "const __first: string = splitName(\"Ada Lovelace\")[0];",
+    "label": "each position holds a string"
+  },
+  {
+    "code": "const __three: [string, string, string] = splitName(\"Ada Lovelace\");",
+    "label": "two, not three",
+    "rejects": true
+  },
+  {
+    "code": "splitName(42);",
+    "label": "only text can be split",
+    "rejects": true
+  },
+  {
+    "code": "declare const __anyText: string; const __fixedPair: [string,string] = splitName(__anyText);",
+    "label": "arbitrary text gives a two-string tuple"
+  },
+  {
+    "code": "const __firstNumber: number = splitName(\"a b\")[0];",
+    "label": "the first field is string, not any",
+    "rejects": true
+  },
+  {
+    "code": "const __secondNumber: number = splitName(\"a b\")[1];",
+    "label": "the second field is string, not any",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-tally-votes",
@@ -494,7 +558,7 @@ console.log(splitName("Ada Lovelace"));
     tier: 2,
     focus: ["record", "for-of"],
     title: "Tally votes",
-    prompt: "Write `tally(votes: string[]): Record<string, number>`, counting how many times each string appears. The result has one key per distinct vote, and an empty list gives an object with no keys at all.",
+    prompt: "Write tally(votes: string[]): Record<string, number>. Count exact string values, including empty strings, whitespace, case differences and keys such as \"__proto__\", \"constructor\" and \"toString\". Return a fresh object with one enumerable own data key per distinct vote and its positive integer count; return no own keys for an empty list. An ordinary object or a null-prototype object is accepted. Never change the input array or sort its values. Input is a dense array of strings; the result fields have number types. Record describes the static value type, not a promise that absent keys exist at runtime.\n\nTarget: O(n) time under an average dictionary-operation model, with O(k) result entries, where n is votes.length and k is the number of distinct votes. This assumes bounded-length keys and average constant-time dictionary lookup; arbitrary key character work and engine hashing are not measured or guaranteed.",
     starter: `const tally = (votes) => {
   
 };
@@ -506,12 +570,12 @@ console.log(tally(["a","b","a"]));
   // build and return the answer
 };`,
     hints: [
-      "Record describes an object used as a lookup: what the keys are, and what every value stored under them is.",
+      "Separate an existing count from an inherited property. Think about how the result can safely store any input string as its own key.",
     ],
     approach: [
       "Record describes an object used as a lookup table: the type of its keys, then the type of every value under them.",
-      "Fold the list into an object, reading the count already stored under each vote and adding one to it.",
-      "A vote seen for the first time has no count stored yet, so treat a missing entry as zero before adding.",
+      "Make one pass over the votes and keep one local count per exact key. A safe dictionary or a Map can represent the counts.",
+      "Create each result entry as an enumerable own property. Inherited prototype names must not become starting counts, and the input stays unchanged.",
     ],
     verify: "tests",
     estimatedMinutes: 10,
@@ -533,17 +597,35 @@ console.log(tally(["a","b","a"]));
       },
     ],
     typeTests: [
-      {
-        code: "const __counts: Record<string, number> = tally([\"a\"]);",
-        label: "gives back a lookup of numbers",
-      },
-      {
-        code: "const __texts: Record<string, string> = tally([\"a\"]);",
-        label: "the values are numbers, not strings",
-        rejects: true,
-      },
-      { code: "tally([1, 2]);", label: "the votes are strings", rejects: true },
-    ],
+  {
+    "code": "const __counts: Record<string, number> = tally([\"a\"]);",
+    "label": "gives back a lookup of numbers"
+  },
+  {
+    "code": "const __texts: Record<string, string> = tally([\"a\"]);",
+    "label": "the values are numbers, not strings",
+    "rejects": true
+  },
+  {
+    "code": "tally([1, 2]);",
+    "label": "the votes are strings",
+    "rejects": true
+  },
+  {
+    "code": "declare const __stringVotes: string[]; const __numericCounts: Record<string,number> = tally(__stringVotes);",
+    "label": "arbitrary string votes produce numeric counts"
+  },
+  {
+    "code": "const __stringCount: string = tally([\"a\"])[\"a\"];",
+    "label": "count fields are numeric, not any",
+    "rejects": true
+  },
+  {
+    "code": "tally([null]);",
+    "label": "null is not a string vote",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-rotate-a-list",
@@ -554,7 +636,7 @@ console.log(tally(["a","b","a"]));
     tier: 2,
     focus: ["readonly", "slice"],
     title: "Rotate a list",
-    prompt: "Write `rotate(items: readonly string[]): string[]`, returning a new array with the first item moved to the end. The parameter is readonly, so the array you were handed comes back unchanged; an empty list and a single item both come back as they are.",
+    prompt: "Write rotate(items: readonly string[]): string[], moving the first item to the end while keeping every other item in order. Input is a dense array of strings, including duplicates, empty strings and whitespace. Return a fresh mutable array on every call, including zero or one item. Do not change the input, even by casting away readonly; preserve each string exactly. Type checking must accept readonly string arrays, reject other element types and give the result a mutable string-array type.\n\nTarget: O(n) time and O(n) output entries, where n is items.length, under a dense-array element-work model with constant indexed reads and amortized append. Strings are existing values rather than scanned characters; compiler work and engine timing are excluded.",
     starter: `const rotate = (items) => {
   
 };
@@ -582,16 +664,34 @@ console.log(rotate(["a","b","c"]));
       { call: "rotate([])", expected: [], label: "empty input", edge: true },
     ],
     typeTests: [
-      {
-        code: "const __moved: string[] = rotate([\"a\", \"b\"]);",
-        label: "gives back a normal array of strings",
-      },
-      {
-        code: "rotate([\"a\", \"b\"] as readonly string[]);",
-        label: "a readonly array is accepted",
-      },
-      { code: "rotate([1, 2]);", label: "numbers are not strings", rejects: true },
-    ],
+  {
+    "code": "const __moved: string[] = rotate([\"a\", \"b\"]);",
+    "label": "gives back a normal array of strings"
+  },
+  {
+    "code": "rotate([\"a\", \"b\"] as readonly string[]);",
+    "label": "a readonly array is accepted"
+  },
+  {
+    "code": "rotate([1, 2]);",
+    "label": "numbers are not strings",
+    "rejects": true
+  },
+  {
+    "code": "declare const __readonlyStrings: readonly string[]; const __normalResult: string[] = rotate(__readonlyStrings); __normalResult.push(\"new\");",
+    "label": "arbitrary readonly input produces a mutable string array"
+  },
+  {
+    "code": "const __resultNumber: number = rotate([\"a\"]);",
+    "label": "the result is array, not number or any",
+    "rejects": true
+  },
+  {
+    "code": "const __numericElement: number = rotate([\"a\"])[0];",
+    "label": "result elements are strings, not any",
+    "rejects": true
+  }
+],
   },
   {
     id: "ts-describe-a-value",

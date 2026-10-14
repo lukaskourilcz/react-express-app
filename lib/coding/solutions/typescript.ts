@@ -151,6 +151,13 @@ const displayName = (user: User): string => {
   return id.toString().padStart(4, "0");
 };`,
     hiddenTests: [
+      {"call": "idText(-7)", "expected": "00-7"},
+      {"call": "idText(1.5)", "expected": "01.5"},
+      {"call": "idText(NaN)", "expected": "0NaN"},
+      {"call": "idText(Infinity)", "expected": "Infinity"},
+      {"call": "idText(-0)", "expected": "0000"},
+      {"call": "idText(\" 7 \")", "expected": " 7 "},
+      {"call": "idText(\"İ💡\")", "expected": "İ💡"},
       { call: "idText(42)", expected: "0042" },
       { call: "idText(0)", expected: "0000" },
       { call: "idText(\"7\")", expected: "7" },
@@ -218,6 +225,11 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
   return [first, rest.join(" ")];
 };`,
     hiddenTests: [
+      {"call": "splitName(\" Ada\")", "expected": ["", "Ada"]},
+      {"call": "splitName(\"Ada \")", "expected": ["Ada", ""]},
+      {"call": "splitName(\"Ada\\tLovelace\")", "expected": ["Ada\tLovelace", ""]},
+      {"call": "splitName(\"A  B  C\")", "expected": ["A", " B  C"]},
+      {"call": "splitName(\"💡 a\")", "expected": ["💡", "a"]},
       { call: "splitName(\"Grace Brewster Murray Hopper\")", expected: ["Grace", "Brewster Murray Hopper"] },
       { call: "splitName(\"Cher\")", expected: ["Cher", ""] },
       { call: "splitName(\"Jo  Smith\")", expected: ["Jo", " Smith"] },
@@ -225,9 +237,9 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
     ],
   },
   "ts-tally-votes": {
-    solution: "const tally = (votes: string[]): Record<string, number> => votes.reduce<Record<string, number>>((counts, vote) => ({...counts, [vote]: (counts[vote] ?? 0) + 1}), {});",
+    solution: "const tally = (votes: string[]): Record<string, number> => votes.reduce<Record<string, number>>((counts, vote) => { counts[vote] = (counts[vote] ?? 0) + 1; return counts; }, Object.create(null) as Record<string, number>);",
     junior: `const tally = (votes: string[]): Record<string, number> => {
-  const counts: Record<string, number> = {};
+  const counts: Record<string, number> = Object.create(null);
   for (const vote of votes) {
     if (counts[vote] === undefined) {
       counts[vote] = 1;
@@ -243,6 +255,12 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
   return Object.fromEntries(counts);
 };`,
     hiddenTests: [
+      {"call": "(() => { const result = tally([\"__proto__\", \"constructor\", \"toString\", \"__proto__\"]); const keys = __probe.keys(result); return keys.length === 3 && result[\"__proto__\"] === 2 && result.constructor === 1 && result.toString === 1; })()", "expected": true},
+      {"call": "tally([\"\", \" \", \"A\", \"a\", \"\", \" \"])", "expected": {"": 2, " ": 2, "A": 1, "a": 1}},
+      {"call": "(() => { const votes = [\"z\", \"a\", \"z\"]; const result = tally(votes); return result.z === 2 && result.a === 1 && votes.length === 3 && votes[0] === \"z\" && votes[1] === \"a\" && votes[2] === \"z\"; })()", "expected": true},
+      {"call": "(() => { const votes = __probe.freeze([\"x\", \"x\"]); return tally(votes).x; })()", "expected": 2},
+      {"call": "(() => { const result = tally([\"__proto__\"]); const descriptor = __probe.ownDescriptor(result, \"__proto__\"); return !!descriptor && descriptor.enumerable && descriptor.value === 1; })()", "expected": true},
+      {"call": "(() => { const first = tally([]); const second = tally([]); return first !== second && __probe.keys(first).length === 0; })()", "expected": true},
       { call: "tally([\"yes\",\"no\",\"yes\",\"yes\"])", expected: { yes: 3, no: 1 } },
       { call: "tally([\"b\",\"a\",\"b\"])", expected: { b: 2, a: 1 } },
       { call: "tally([\"x\",\"y\",\"z\",\"x\",\"y\",\"x\"])", expected: { x: 3, y: 2, z: 1 } },
@@ -264,6 +282,11 @@ const shippingDays = (speed: Speed, weekend: boolean): number => BASE_DAYS[speed
     senior: `// Each slot takes the next item, and the modulo wraps the last slot back to the first.
 const rotate = (items: readonly string[]): string[] => items.map((_, index) => items[(index + 1) % items.length]);`,
     hiddenTests: [
+      {"call": "(() => { const values = []; return rotate(values) !== values; })()", "expected": true},
+      {"call": "(() => { const values = [\"one\"]; const result = rotate(values); return result !== values && result[0] === \"one\" && values[0] === \"one\"; })()", "expected": true},
+      {"call": "rotate([\"\", \"x\", \" \", \"x\"])", "expected": ["x", " ", "x", ""]},
+      {"call": "(() => { const values = __probe.freeze([\"a\", \"b\", \"c\"]); return rotate(values); })()", "expected": ["b", "c", "a"]},
+      {"call": "(() => { const result = rotate([\"a\", \"b\"]); result[0] = \"changed\"; return result; })()", "expected": ["changed", "a"]},
       { call: "rotate([\"x\",\"y\",\"z\",\"w\"])", expected: ["y", "z", "w", "x"] },
       { call: "(() => { const items = [\"p\",\"q\",\"r\"]; const rotated = rotate(items); return [rotated, items]; })()", expected: [["q", "r", "p"], ["p", "q", "r"]] },
       { call: "rotate([\"solo\"])", expected: ["solo"] },

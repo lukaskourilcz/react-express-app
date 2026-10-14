@@ -361,8 +361,12 @@ literal line-swap ReferenceError and n exact walk/rewire counts. Per-item qualit
 floors are 4/5 and relevance 8–10/10; exact content/grading bindings cover all
 twelve. Sources and final reading are retained in
 `review-2026-10-14-dsa-d05.jsonl`, explicitly same-session model self-review.
-This is #387, with #386 as its prerequisite. The branch now records 60/263 native
-items (48 deployed, 12 staged); 203 native items and 700 coding tasks remain.
+PR #388 deployed the twelve D05 records after required verify/SQL passed on
+5684fc4d in Actions 38531432787. Production `dpl_8YwxYfKKA7z3HMUZP5LoENM39t1t`
+is READY on merge d47e3a9d and eleven signed-out health/public-route/correct-wrong
+grading checks pass without progress/XP/score/name writes. These are not
+authenticated native-path acceptance or activation of deployment flags. All
+60/263 native records are deployed; 203 remain.
 Local API/script types, launch, attempt-version authority, combined grading/Learn
 integrity, all path references/starter examples, 33 instrumentation authority
 checks, build/public/unused/security and both production dependency audits pass.
@@ -370,7 +374,38 @@ Twenty-four local public-wire activity layouts cover both themes at 360/1440,
 main focus and 200% text at 1440; eighteen light and eighteen dark public-route
 reflow probes pass at six widths. These fixtures do not establish authenticated
 production acceptance or activate deployment flags. Required CI/deployment for
-this partial wave are pending.
+this partial wave passed as recorded above.
+
+### Coding wave 6 — unions, tuples and safe dictionary keys
+
+Padded id, Shipping speed, Split a name, Tally votes and Rotate a list were read
+individually with their full specifications, variants and grader/type fixtures.
+Number formatting uses default String conversion and a fixed minimum width;
+string inputs are untouched. Shipping uses the supplied three-entry literal rule.
+Name splitting preserves the exact first U+0020 prefix/suffix rather than
+normalizing whitespace. Rotation produces fresh mutable output, even for tiny
+inputs, while preserving readonly caller data.
+
+Actual supplemental worker probes showed that Tally's reference and junior
+failed ordinary prototype-named keys; the Map/fromEntries senior passed.
+A null-prototype local dictionary repairs both, and avoids copying a growing
+accumulator for every vote. Own enumerable data entries, duplicate counts,
+case/empty/whitespace values and input preservation are explicit. An ordinary
+object with explicit own-property definitions is a valid alternative. Bounded-key
+average dictionary cost is an authored model, not an engine/hash timing guarantee.
+
+The old selected candidate set matched 32/40. The final TypeScript 5.9.3/QuickJS
+worker returns 40/40 expected verdicts: 20 valid variants/alternatives, five
+starters and fifteen wrong approaches. Newly explicit preservation rules are
+separated from existing typing/reference defects. Twenty selected authored-goal
+and base-25-XP checks pass without unsupported above-target penalties. Per-item
+quality floors are 4/5 and relevance 9–10/10, with exact task-hash:v2 records and
+same-session final self-review. No independent or human review is claimed.
+
+This is #389. The branch records 30/725 coding tasks (25 deployed, five staged);
+695 still need individual review. Full required CI/deployment for this partial
+wave are pending. Native coverage remains partial at 60/263, with 203 further
+records still requiring individual review.
 
 ## 1. September inventory, retained as historical evidence
 
