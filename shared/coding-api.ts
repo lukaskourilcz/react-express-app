@@ -77,7 +77,8 @@ export interface CodingSolutionPair {
 }
 
 export interface CodingVerdictResponse {
-  /** Advisory server estimate for this exact submitted code; never affects rewards. */
+  /** Server estimate for this source. Only a reliable above-target result
+   * reduces the base reward; uncertainty keeps the ordinary reward. */
   complexity?: ComplexityReport;
   verdict: CodingOutcome;
   /** Visible tests, in task order (code tracks). */

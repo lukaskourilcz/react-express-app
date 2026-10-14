@@ -63,7 +63,23 @@ for (const [label, source, expected] of [
   ['shadowed freeze cannot unseal fixtures', 'var Object={freeze:value=>value,keys:()=>[]};function read(value){__fixture.value=99;return value;}', false],
   ['global freeze replacement cannot unseal fixtures', 'globalThis.Object.freeze=value=>value;function read(value){__fixture.value=99;return value;}', false],
 ] as const) {
-  const result = await runChecks({ code: `${source}\n;\n${protectedPathHarness(authored, [call.call])}`, visible: [call], hidden: [call], shuffle: values => values });
+  const harness = protectedPathHarness(authored, [call.call]);
+  const result = await runChecks({ code: `${harness.before}\n;\n${source}\n;\n${harness.after}`, visible: [call], hidden: [call], shuffle: values => values });
+  assert.equal(allPassed(result.visible) && Boolean(result.hidden && allPassed(result.hidden)), expected, label);
+  console.log(`PASS path authority: ${label}`);
+}
+const setupCall = { call: '__measure(3)', expected: { result: 6, calls: 1 } };
+const setupHarness = `var __calls=0;
+function __measure(value){__calls=0;const result=double(value);return {result,calls:__calls};}
+const original=double;
+double=value=>{__calls++;return original(value);};`;
+for (const [label, source, expected] of [
+  ['deferred wrapping sees learner declaration', 'function double(value){return value*2;}', true],
+  ['repeated initialization cannot double-wrap', 'function double(value){return value*2;} __devsharkInitializePathHarness();__devsharkInitializePathHarness();', true],
+  ['initialization binding cannot be replaced', 'function double(value){return value*2;} __devsharkInitializePathHarness=()=>{};', false],
+] as const) {
+  const harness = protectedPathHarness(setupHarness, [setupCall.call]);
+  const result = await runChecks({ code: `${harness.before}\n;\n${source}\n;\n${harness.after}`, visible: [setupCall], hidden: [setupCall], shuffle: values => values });
   assert.equal(allPassed(result.visible) && Boolean(result.hidden && allPassed(result.hidden)), expected, label);
   console.log(`PASS path authority: ${label}`);
 }

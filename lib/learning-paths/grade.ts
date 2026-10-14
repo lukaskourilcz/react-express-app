@@ -310,9 +310,10 @@ export async function gradePathCode(
     source = typed.javascript;
   }
 
-  const runnableSource = code.harness
-    ? `${source}\n;\n${protectedPathHarness(code.harness, [...visible, ...hidden].map(test => test.call))}\n`
-    : source;
+  const harness = code.harness ? protectedPathHarness(code.harness, [...visible, ...hidden].map(test => test.call), code.starter) : null;
+  // Provided APIs must exist for the starter's top-level scratch pad. Deferred
+  // wrappers run once after learner declarations, before any graded call.
+  const runnableSource = harness ? `${harness.before}\n;\n${source}\n;\n${harness.after}\n` : source;
   // The visible checks run together and their console output is what the
   // learner sees. The hidden ones run in a fresh program, shuffled for this
   // submission, as in the coding section (runChecks): a program that counted
