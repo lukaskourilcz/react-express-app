@@ -42,6 +42,7 @@ const evens = numbers => numbers.filter(isEven);`,
       { call: "evens([7,10,3,8,6])", expected: [10, 8, 6] },
       { call: "evens([-4,-1,0,5])", expected: [-4, 0] },
       { call: "evens([9])", expected: [] },
+      { call: "evens([2,2,-4,-4,0,0,1])", expected: [2, 2, -4, -4, 0, 0] },
       { call: "(() => { const numbers = [1,2,3]; const kept = evens(numbers); return [kept, numbers, kept === numbers]; })()", expected: [[2], [1, 2, 3], false] },
     ],
   },
@@ -63,6 +64,8 @@ const sum = numbers => numbers.reduce(add, 0);`,
       { call: "sum([0.5,0.25])", expected: 0.75 },
       { call: "sum([-1,-2,-3])", expected: -6 },
       { call: "sum([100])", expected: 100 },
+      { call: "(() => { const numbers = [3,1,2]; const total = sum(numbers); return [total, numbers]; })()", expected: [6, [3, 1, 2]] },
+      { call: "sum([1e16,-1e16,1])", expected: 1 },
     ],
   },
   "js-longest-word": {
@@ -77,7 +80,7 @@ const sum = numbers => numbers.reduce(add, 0);`,
   return longestWord;
 };`,
     senior: `const longest = words => {
-  const longestLength = Math.max(0, ...words.map(word => word.length));
+  const longestLength = words.reduce((best, word) => Math.max(best, word.length), 0);
   // find returns the first word of that length, which settles a tie in favour of the earlier one
   return words.find(word => word.length === longestLength) ?? "";
 };`,
@@ -86,6 +89,8 @@ const sum = numbers => numbers.reduce(add, 0);`,
       { call: "longest([\"abc\",\"xyz\",\"ab\"])", expected: "abc" },
       { call: "longest([\"short\",\"longest\",\"longer\"])", expected: "longest" },
       { call: "longest([\"a\",\"\",\"\"])", expected: "a" },
+      { call: "longest([\"😀\",\"ab\",\"c\"])", expected: "😀" },
+      { call: "(() => { const words = [\"a\",\"longer\",\"bb\"]; const best = longest(words); return [best, words]; })()", expected: ["longer", ["a", "longer", "bb"]] },
     ],
   },
   "js-count-vowels": {
@@ -355,6 +360,9 @@ const capitalize = text => text.replace(/^./su, first => first.toUpperCase());`,
       { call: "unique([\"b\",\"a\",\"b\",\"c\",\"a\"])", expected: ["b", "a", "c"] },
       { call: "unique([5,5,5])", expected: [5] },
       { call: "(() => { const values = [1,1]; const result = unique(values); return [result, values]; })()", expected: [[1], [1, 1]] },
+      { call: "unique([1,\"1\",1,\"1\",0,-0,\"0\"])", expected: [1, "1", 0, "0"] },
+      { call: "(() => { const values = [1,2]; const result = unique(values); return [result, values, result === values]; })()", expected: [[1, 2], [1, 2], false] },
+      { call: "(() => { const values = []; return unique(values) === values; })()", expected: false },
     ],
   },
   "js-word-count": {

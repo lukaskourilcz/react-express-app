@@ -62,8 +62,6 @@ read through the authenticated Supabase connection; no content was restored or
 rewritten in that database. No inaccessible override source is claimed in this
 dated snapshot. New edits after the snapshot require another reconciliation.
 
-## 1. September inventory, retained as historical evidence
-
 ### Coding wave 1 — five foundations, 14 October 2026
 
 Five tasks were read individually and rewritten: digits-only normalization,
@@ -85,14 +83,45 @@ orders passed; five starters and eleven wrong implementations failed. The array
 mutation check now rejects a mutating first-letter solution. These targeted
 checks are evidence for these five records only.
 
-`task-hash:v2` now includes comparison code/copy and puzzle lines/accepted orders.
+`task-hash:v2` now includes every revealed solution variant, hidden suite,
+authored reference and previous requirement, comparison code/copy, and puzzle
+lines/accepted orders.
 The public report version is keyed over that full hash; a fixture/grader,
 comparison or puzzle-key edit changes it and invalidates current review.
 Archived Czech is untouched and not approved for these new English versions.
-The coding scope remains incomplete: 720 issued tasks and the native-path
+The coding scope remains incomplete: 715 issued tasks and the native-path
 editorial records still need individual review. Hidden system-design content
 remains hidden pending its separate return decision. This is a staged branch
 change, not a claim of deployed retirements or full audit completion.
+
+### Coding wave 2 — five array tasks, 14 October 2026
+
+Double numbers, Even numbers, Sum array, Longest word and Unique values were
+read individually, with their visible/hidden cases, revealed variants,
+comparisons and the Sum array puzzle. Their final model scores have quality
+floors 3–4/5 and relevance 8–10/10. The same-session final reading is explicitly
+recorded as self-review. These five are also Learn level closers.
+
+The before-version probe returned 39 of 45 expected verdicts. It demonstrated
+two existing grader gaps: Even numbers accepted deduplication and Unique values
+accepted reusing an already-unique source array. Four further old passes concern
+mutation, Unicode length units and addition order that the old briefs did not
+state; they are contract clarifications, not claims of incorrect grading under
+the old wording. The new English states each boundary, adds mutation/result
+identity, duplicate and mixed-identity cases, and names JavaScript arithmetic
+and UTF-16 length where relevant. Longest word's senior variant no longer
+spreads an entire collection as function arguments. An unsupported universal
+allocation-performance claim in the Double numbers comparison was removed.
+
+The actual QuickJS checker returned all 45 final expected verdicts: 15 revealed
+variants, five independently written valid alternatives, four comparisons and
+one puzzle passed; five starters and fifteen wrong implementations failed.
+Unique's slower valid alternative still passes correctness; its average O(n)
+goal states the membership-cost assumption and is not a universal engine claim.
+These execution results approve no other task. Ten of the 725 issued coding
+tasks now have current model records; the wider audit remains open.
+
+## 1. September inventory, retained as historical evidence
 
 Every place a devShark question can reach a learner was reconciled from the
 code (`npm run audit:devshark-inventory`). The numbers are the repository's;

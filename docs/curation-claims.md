@@ -124,7 +124,7 @@ that cover them assert repository-wide properties rather than per-item ones, and
 claiming otherwise for four thousand items would be the exact failure this
 design exists to prevent.
 
-The 14 October coding wave adds five current model-review records. Those
+The 14 October coding waves add ten current model-review records. Those
 items receive the recorded model claim; the other issued tasks retain only
 their execution evidence. Each coding hash now includes every revealed solution
 variant, hidden grader material, authored reference and previous requirement,

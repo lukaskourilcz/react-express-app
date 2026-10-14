@@ -65,7 +65,7 @@ const APPROACHES: Record<string, CuratedApproach[]> = {
       time: 'O(n)',
       space: 'O(n)',
       assumptions: {
-        en: 'The same as above. Sizing the array up front avoids repeated growth, which is a small, real win.',
+        en: 'Every input element is a number. The output length is known before the loop starts; runtime performance depends on the engine and input.',
         cs: 'Totéž co výše. Předem daná velikost pole se vyhne opakovanému růstu, což je malý, ale skutečný zisk.',
       },
       tradeoffs: {
