@@ -14,6 +14,10 @@ export const DSA_D03_SOLUTIONS: Record<string, PathCodeSolution> = {
     solution:
       'const countFrequencies = values => {\n  const counts = new Map();\n  for (const value of values) {\n    counts.set(value, (counts.get(value) || 0) + 1);\n  }\n  return counts;\n};',
     hiddenTests: [
+      {"call": "(() => { const item = { id: 1 }; const other = { id: 1 }; const key = Symbol(\"key\"); const values = [item, item, other, key, key, NaN, NaN, undefined, null]; const map = countFrequencies(values); return [map.size, map.get(item), map.get(other), map.get(key), map.get(NaN), map.get(undefined), map.get(null), [...map.keys()][0] === item, values.length]; })()", "expected": [6, 2, 1, 2, 2, 1, 1, true, 9]},
+      {"call": "(() => { const values = [\"b\", \"a\", \"b\"]; const map = countFrequencies(values); return [[...map.entries()], values]; })()", "expected": [[["b", 2], ["a", 1]], ["b", "a", "b"]]},
+      {"call": "(() => { const map = countFrequencies([-0, 0]); return [map.size, map.get(0), map.get(-0)]; })()", "expected": [1, 2, 2]},
+      {"call": "countFrequencies([]) !== countFrequencies([])", "expected": true},
       { call: '(() => [...countFrequencies([true, false, true, true]).entries()])()', expected: [[true, 3], [false, 1]] },
       { call: 'countFrequencies([NaN, NaN, 5]).get(NaN)', expected: 2 },
       {
@@ -45,6 +49,12 @@ export const DSA_D03_SOLUTIONS: Record<string, PathCodeSolution> = {
     solution:
       'const firstUnique = values => {\n  const counts = new Map();\n  for (const value of values) {\n    counts.set(value, (counts.get(value) || 0) + 1);\n  }\n  for (const value of values) {\n    if (counts.get(value) === 1) return value;\n  }\n  return null;\n};',
     hiddenTests: [
+      {"call": "(() => { const item = { id: 1 }; const other = { id: 1 }; return firstUnique([item, other]) === item; })()", "expected": true},
+      {"call": "(() => { const key = Symbol(\"key\"); return firstUnique([false, false, key]) === key; })()", "expected": true},
+      {"call": "firstUnique([undefined]) === undefined", "expected": true},
+      {"call": "(() => { const value = firstUnique([NaN, 1, 1]); return value !== value; })()", "expected": true},
+      {"call": "firstUnique([-0, 0, false])", "expected": false},
+      {"call": "(() => { const values = [2, 2, 3]; const result = firstUnique(values); return [result, values]; })()", "expected": [3, [2, 2, 3]]},
       { call: 'firstUnique([1, 2, 3])', expected: 1 },
       { call: 'firstUnique([NaN, 8, NaN])', expected: 8 },
       { call: "firstUnique([0, '0', 0])", expected: '0' },
@@ -58,6 +68,11 @@ export const DSA_D03_SOLUTIONS: Record<string, PathCodeSolution> = {
     solution:
       'const intersection = (left, right) => {\n  const pool = new Set(right);\n  const taken = new Set();\n  const out = [];\n  for (const value of left) {\n    if (pool.has(value) && !taken.has(value)) {\n      taken.add(value);\n      out.push(value);\n    }\n  }\n  return out;\n};',
     hiddenTests: [
+      {"call": "(() => { const out = intersection([NaN, NaN, 1], [NaN]); const value = out[0]; return [out.length, value !== value]; })()", "expected": [1, true]},
+      {"call": "(() => { const item = { id: 1 }; const other = { id: 1 }; const key = Symbol(\"key\"); const out = intersection([item, other, key, item], [key, item]); return [out.length, out[0] === item, out[1] === key]; })()", "expected": [2, true, true]},
+      {"call": "(() => { const left = []; const right = []; const out = intersection(left, right); return [out !== left, out !== right]; })()", "expected": [true, true]},
+      {"call": "(() => { const out = intersection([undefined, null, false, undefined], [false, null, undefined]); return [out.length, out[0] === undefined, out[1] === null, out[2] === false]; })()", "expected": [3, true, true, true]},
+      {"call": "(() => { const out = intersection([-0, 0], [0]); return [out.length, out[0] === 0]; })()", "expected": [1, true]},
       {
         call: '(() => { const a = [1, 2, 3]; const b = [2, 3, 4]; intersection(a, b); return [a, b]; })()',
         expected: [[1, 2, 3], [2, 3, 4]],
