@@ -12,37 +12,14 @@ import type { CodingSolution } from '../types';
 
 export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   'alg-two-sum': {
-    solution: `const twoSum = (numbers, target) => {
-  const seen = new Map();
-  for (let index = 0; index < numbers.length; index += 1) {
-    const partner = target - numbers[index];
-    if (seen.has(partner)) return [seen.get(partner), index];
-    seen.set(numbers[index], index);
-  }
-  return [];
-};`,
-    junior: `const twoSum = (numbers, target) => {
-  for (let left = 0; left < numbers.length; left += 1) {
-    for (let right = left + 1; right < numbers.length; right += 1) {
-      const total = numbers[left] + numbers[right];
-      if (total === target) {
-        return [left, right];
-      }
-    }
-  }
-  return [];
-};`,
-    senior: `const twoSum = (numbers, target) => {
-  // Value -> index, written only after the lookup so a value never pairs with itself.
-  const seen = new Map();
-  for (const [index, value] of numbers.entries()) {
-    const partner = seen.get(target - value);
-    if (partner !== undefined) return [partner, index];
-    seen.set(value, index);
-  }
-  return [];
-};`,
+    solution: "const twoSum = (numbers, target) => {\n  const seen = new Map();\n  for (let index = 0; index < numbers.length; index += 1) {\n    const partner = target - numbers[index];\n    if (seen.has(partner)) return [seen.get(partner), index];\n    if (!seen.has(numbers[index])) seen.set(numbers[index], index);\n  }\n  return [];\n};",
+    junior: "const twoSum = (numbers, target) => {\n  const firstIndex = new Map();\n  for (let right = 0; right < numbers.length; right += 1) {\n    const value = numbers[right];\n    const needed = target - value;\n    if (firstIndex.has(needed)) {\n      return [firstIndex.get(needed), right];\n    }\n    if (!firstIndex.has(value)) {\n      firstIndex.set(value, right);\n    }\n  }\n  return [];\n};",
+    senior: "const twoSum = (numbers, target) => {\n  const seen = new Map();\n  for (const [index, value] of numbers.entries()) {\n    const partner = seen.get(target - value);\n    if (partner !== undefined) return [partner, index];\n    if (!seen.has(value)) seen.set(value, index);\n  }\n  return [];\n};",
     hiddenTests: [
+      { call: "[twoSum(Object.freeze([1,1,2]),3),twoSum(Object.freeze([1,2,3,4]),5),twoSum(Object.freeze([-0,0,0]),0),twoSum([1000000000,-1000000000],0)]", expected: [[0, 2], [1, 2], [0, 1], [0, 1]] },
+      { call: "(() => {const input=[2,7,11];const a=twoSum(input,9),b=twoSum(input,9);const empty=twoSum([],1),empty2=twoSum([],1);a.push(99);empty.push(1);return [input,a!==b,b,empty!==empty2,empty2];})()", expected: [[2, 7, 11], true, [0, 1], true, []] },
+      { call: "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>i));return [twoSum(input,1997),twoSum(input,3000),input[0],input[999]];})()", expected: [[998, 999], [], 0, 999] },
+
       { call: 'twoSum([-3, 4, 3, 90], 0)', expected: [0, 2] },
       { call: 'twoSum([5], 5)', expected: [] },
       { call: 'twoSum([1, -1], 0)', expected: [0, 1] },
@@ -51,41 +28,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-group-anagrams': {
-    solution: `const groupAnagrams = words => {
-  const groups = new Map();
-  for (const word of words) {
-    const key = [...word].sort().join("");
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(word);
-  }
-  return [...groups.values()];
-};`,
-    junior: `const groupAnagrams = words => {
-  const groups = new Map();
-  for (let index = 0; index < words.length; index += 1) {
-    const word = words[index];
-    const letters = word.split("");
-    letters.sort();
-    const key = letters.join("");
-    const existing = groups.get(key);
-    if (existing === undefined) {
-      groups.set(key, [word]);
-    } else {
-      existing.push(word);
-    }
-  }
-  const result = [];
-  groups.forEach(group => result.push(group));
-  return result;
-};`,
-    senior: `const groupAnagrams = words => {
-  // A Map keeps insertion order, so the groups come out in first-seen order
-  // and each group in input order without any extra bookkeeping.
-  const key = word => [...word].sort().join("");
-  const groups = words.reduce((acc, word) => acc.set(key(word), [...(acc.get(key(word)) ?? []), word]), new Map());
-  return [...groups.values()];
-};`,
+    solution: "const groupAnagrams = words => {\n  const groups = new Map();\n  for (const word of words) {\n    const key = [...word].sort().join(\"\");\n    if (!groups.has(key)) groups.set(key, []);\n    groups.get(key).push(word);\n  }\n  return [...groups.values()];\n};",
+    junior: "const groupAnagrams = words => {\n  const groups = new Map();\n  for (let index = 0; index < words.length; index += 1) {\n    const word = words[index];\n    const letters = Array.from(word);\n    letters.sort();\n    const key = letters.join(\"\");\n    const existing = groups.get(key);\n    if (existing === undefined) {\n      groups.set(key, [word]);\n    } else {\n      existing.push(word);\n    }\n  }\n  const result = [];\n  groups.forEach(group => result.push(group));\n  return result;\n};",
+    senior: "const groupAnagrams = words => {\n  const groups = words.reduce((groups, word) => {\n    const key = [...word].sort().join(\"\");\n    const group = groups.get(key);\n    if (group) group.push(word);\n    else groups.set(key, [word]);\n    return groups;\n  }, new Map());\n  return [...groups.values()];\n};",
     hiddenTests: [
+      { call: "(() => {const a=String.fromCodePoint(0x1f600,0x1d11e),b=String.fromCodePoint(0x1f51e,0x1d200),reverse=[...a].reverse().join(\"\");const groups=groupAnagrams(Object.freeze([a,b,reverse]));return [groups.length,groups[0][0]===a,groups[0][1]===reverse,groups[1][0]===b,groupAnagrams([\"\u00e9\",\"e\\u0301\",\"\\u0301e\"])];})()", expected: [2, true, true, true, [["\u00e9"], ["e\u0301", "\u0301e"]]] },
+      { call: "(() => {const input=[\"ab\",\"ba\",\"x\"];const a=groupAnagrams(input),b=groupAnagrams(input);const e=groupAnagrams([]),f=groupAnagrams([]);a[0].push(\"ab\");a.push([]);return [input,a!==b,a[0]!==b[0],a[0]!==a[1],b,e!==f,groupAnagrams([\"A\",\"a\",\" \",\"\",\" \"])];})()", expected: [["ab", "ba", "x"], true, true, true, [["ab", "ba"], ["x"]], true, [["A"], ["a"], [" ", " "], [""]]] },
+      { call: "(() => {const word=\"a\".repeat(100);const input=Object.freeze(Array.from({length:1000},()=>word));const out=groupAnagrams(input);return [out.length,out[0].length,out[0][999]===word,input.length];})()", expected: [1, 1000, true, 1000] },
+
       { call: 'groupAnagrams(["listen", "silent", "enlist", "google", "gooegl"])', expected: [['listen', 'silent', 'enlist'], ['google', 'gooegl']] },
       { call: 'groupAnagrams(["ab", "ba", "abc"])', expected: [['ab', 'ba'], ['abc']] },
       { call: 'groupAnagrams(["zz"])', expected: [['zz']] },
@@ -93,37 +43,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-first-unique-char': {
-    solution: `const firstUniqueChar = text => {
-  const counts = new Map();
-  for (const character of text) counts.set(character, (counts.get(character) ?? 0) + 1);
-  for (const character of text) if (counts.get(character) === 1) return character;
-  return null;
-};`,
-    junior: `const firstUniqueChar = text => {
-  const counts = {};
-  for (let index = 0; index < text.length; index += 1) {
-    const character = text[index];
-    if (counts[character] === undefined) {
-      counts[character] = 1;
-    } else {
-      counts[character] = counts[character] + 1;
-    }
-  }
-  for (let index = 0; index < text.length; index += 1) {
-    const character = text[index];
-    if (counts[character] === 1) {
-      return character;
-    }
-  }
-  return null;
-};`,
-    senior: `const firstUniqueChar = text => {
-  const counts = new Map();
-  for (const character of text) counts.set(character, (counts.get(character) ?? 0) + 1);
-  // find gives undefined when nothing is unique; the prompt asks for null.
-  return [...text].find(character => counts.get(character) === 1) ?? null;
-};`,
+    solution: "const firstUniqueChar = text => {\n  const counts = new Map();\n  for (const character of text) counts.set(character, (counts.get(character) ?? 0) + 1);\n  for (const character of text) if (counts.get(character) === 1) return character;\n  return null;\n};",
+    junior: "const firstUniqueChar = text => {\n  const counts = Object.create(null);\n  for (const character of text) {\n    if (counts[character] === undefined) counts[character] = 1;\n    else counts[character] += 1;\n  }\n  for (const character of text) {\n    if (counts[character] === 1) return character;\n  }\n  return null;\n};",
+    senior: "const firstUniqueChar = text => {\n  const counts = new Map();\n  for (const character of text) counts.set(character, (counts.get(character) ?? 0) + 1);\n  for (const [character, count] of counts) if (count === 1) return character;\n  return null;\n};",
     hiddenTests: [
+      { call: "[firstUniqueChar(\"\ud83d\ude00\ud83d\ude03\ud83d\ude00\"),firstUniqueChar(\"\ud83d\ude00\"),firstUniqueChar(\"e\\u0301e\"),firstUniqueChar(\"\\ud800x\\ud800\")]", expected: ["\ud83d\ude03", "\ud83d\ude00", "\u0301", "x"] },
+      { call: "[firstUniqueChar(\"b2a1b\"),firstUniqueChar(\"\\n a\\n\"),firstUniqueChar(\"\ud83d\ude00\ud83d\ude00\"),firstUniqueChar(\"0a0b\"),firstUniqueChar(\"a\"),firstUniqueChar(\"aa\")]", expected: ["2", " ", null, "a", "a", null] },
+      { call: "[firstUniqueChar(\"a\".repeat(999)+\"b\"),firstUniqueChar(\"a\".repeat(1000)),firstUniqueChar(\"\ud83d\ude00\".repeat(499)+\"\ud83d\ude03\")]", expected: ["b", null, "\ud83d\ude03"] },
+
       { call: 'firstUniqueChar("loveleetcode")', expected: 'v' },
       { call: 'firstUniqueChar("x")', expected: 'x' },
       { call: 'firstUniqueChar("aa b")', expected: ' ' },
