@@ -75,7 +75,7 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
         {
           id: 'fde-v1-diagnostic-q1',
           prompt:
-            'A nightly job pulls contacts from a vendor API. The vendor documents two things: a page may come back shorter than `page_size` when records are filtered out after the page is assembled, and `next_cursor` is `null` only on the last page. The job finishes without an error and stores about 4,000 of the 11,000 contacts. Which line explains it?',
+            'A nightly job pulls contacts from a vendor API. The vendor accepts page_size 500 and null as the initial cursor. It may return a short page after filtering, even when more contacts remain; next_cursor is null only on the last page. The expected total across all returned pages is 11000 contacts. The job finishes without an error and stores about 4,000 of the 11,000 contacts. Which line explains it?',
           context: {
             language: 'javascript',
             code: 'const pullContacts = async () => {\n  const contacts = [];\n  let cursor = null;\n\n  while (true) {\n    const page = await vendor.contacts({ cursor, page_size: 500 });\n    contacts.push(...page.items);\n    if (page.items.length < 500) break;\n    cursor = page.next_cursor;\n  }\n\n  return contacts;\n};',
@@ -88,7 +88,7 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'The vendor says a short page is normal and marks the end with `next_cursor: null`. Breaking on a short page stops at the first filtered page and reports success, which is the symptom: no error, most of the records missing. Spreading 500 arguments is well inside the engine limit, and going over it throws rather than dropping entries quietly. A null cursor is how a cursor scan starts, and the first page did arrive. A page size above the maximum would still come back with a `next_cursor`, so the loop would keep going instead of stopping early.',
+            'The vendor says a short page is normal and marks the end with `next_cursor: null`. Breaking on a short page stops at the first filtered page and reports success, which is the symptom: no error, most of the records missing. The shown push calls completed without an error; argument-limit failures would throw, not silently drop a tail. The documented initial cursor is null and the documented page size is accepted, so neither explains this successful but incomplete scan. Check page.next_cursor === null to stop, otherwise carry that cursor into the next request. An empty nonfinal page must also continue.',
           competencies: ['integration'],
         },
         {

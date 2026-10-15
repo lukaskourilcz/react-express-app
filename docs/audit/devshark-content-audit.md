@@ -1,5 +1,39 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n015
+
+Reviewed the final DSA project check and three code projects, plus the first FDE
+diagnostic question. Every one of the **129 DSA native records** now has an
+individual current model review. This does not complete the other path or the
+coding catalogue: coverage is **130/263 native**, **133 remaining**, and
+**95/725 coding**, **630 remaining**.
+
+Record-index briefs now specify unique finite sorted ids, original-object
+identity, frozen input and separate closures. Per-lookup probes supplement the
+unchanged aggregate/build budgets; counters remain bounded method evidence.
+Traversal repair preserves exact node links/descriptors. Frequency indexing
+explicitly uses SameValueZero across NaN, signed zeros and reference values,
+with fresh outputs, input ownership and declared upper bounds. All three have
+applicable authored targets and input models. The parent check no longer
+promises unseen questions on retries. The FDE pagination item states accepted
+request parameters and uses the cursor sentinel even for an empty nonfinal page.
+
+Baseline verdicts match **13/18**; five wrong programs pass the old cases.
+Final sandbox verdicts match **18/18**, including six valid programs. Six valid
+complexity analyses retain base 25 XP with unknowns unpenalized. Threshold
+checks confirm all ten single misses and distributed 80% pass while a missing
+domain rejects 80%. The initial proof incorrectly assumed exercise-style key
+disclosure; it now verifies the existing project rule (right/wrong after failure,
+full keys/explanations after passing), without changing production policy.
+The authored vendor stub confirms cursor termination handles an empty middle page.
+
+Native bindings, path contracts/authority, API/script types, launch, build, both
+production dependency audits (zero vulnerabilities), copy and diff checks pass.
+No UI structure changed; source/sandbox evidence is not authenticated activity
+or independent/human acceptance. PR #396 freezes n008–n014 at 758d1bbb; n015
+is local. Ninety-five coding and ninety-five native reviews are production-
+verified through PR #395.
+
 ## 15 October continuation — five-item native batch n014
 
 Reviewed the remaining five foundation-assessment questions. The literal-tree
