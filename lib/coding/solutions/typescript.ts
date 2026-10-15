@@ -384,9 +384,14 @@ const first = <T>(items: T[]): T | undefined => items.at(0);`,
   }
   return changed;
 };`,
-    senior: `// Array.from takes a mapper of its own, so the new list is built in one pass without a wrapper arrow.
-const transform = <T, R>(items: T[], change: (item: T) => R): R[] => Array.from(items, change);`,
+    senior: "function transform<T, R>(items: T[], change: (item: T) => R): R[] {\n  return Array.from(items, item => change(item));\n}",
+    hiddenTypeTests: [{"code": "const __auditObjects: { id: number }[] = transform([1], n => ({ id: n }));"}, {"code": "const __auditWrongResult: string[] = transform([1], n => n + 1);", "rejects": true}, {"code": "const __auditPromises: Promise<number>[] = transform([1], n => Promise.resolve(n));"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze([10,20,30]),seen=[];const output=transform(input,function(item){seen.push([item,arguments.length]);return item+1;});return [output,seen,input.join(',')];})()", expected: [[11, 21, 31], [[10, 1], [20, 1], [30, 1]], "10,20,30"] },
+      { call: "(()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x'),promise=Promise.resolve(1),values=Object.freeze([obj,fn,sym,undefined,NaN,-0,promise]);const a=transform(values,x=>x),b=transform(values,x=>x),empty=transform([],()=>99);a.push('new');return [a!==b,b!==values,b.length,b.every((x,i)=>Object.is(x,values[i])),empty.length,empty!==transform([],()=>0),a.length];})()", expected: [true, true, 7, true, 0, true, 8] },
+      { call: "(()=>{const reason=Symbol('stop'),seen=[];try{transform([1,2,3],item=>{seen.push(item);if(item===2)throw reason;return item;});return false;}catch(error){return [error===reason,seen];}})()", expected: [true, [1, 2]] },
+      { call: "(()=>{let calls=0;const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),output=transform(input,x=>{calls++;return x*2;});return [calls,output.length,output[0],output[999]];})()", expected: [1000, 1000, 0, 1998] },
+
       { call: "transform([3,4], n => n * n)", expected: [9, 16] },
       { call: "transform([\"x\",\"yy\",\"zzz\"], s => s.length)", expected: [1, 2, 3] },
       { call: "transform([{a:1},{a:2}], item => item.a)", expected: [1, 2] },

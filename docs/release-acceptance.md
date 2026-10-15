@@ -3958,3 +3958,70 @@ The owner requested ending this session and continuing the audit later. Current 
 No b047 content changes or reviews were started. Suggested next five IDs, to re-read against the then-current catalogue: `js-run-tasks-in-order`, `js-mh-thread-from-list`, `js-mh-batch-loader`, `js-mh-shared-request`, `js-lru-cache`. Resume only when the owner requests it, reconcile inventory/hashes first, and continue one commit per five reviewed items. Bank/override/copy/longest-option reconciliation, hidden system-design review, authenticated/independent acceptance and all recorded owner holds remain separate. Preserve historical hides and held draft #365.
 
 The completed B046 cohort is prepared as a separate PR. Its mandatory CI, merge, and exact production verification remain pending at session end. Do not infer completed release from local checks. No schema/auth/RLS, entitlements, dependency or handler changes; twelve physical API handlers remain. No owner account state, leaderboard identity or positive score was used as a fixture.
+
+## PR #412 verified release and resumed audit — 15 October 2026
+
+PR #412 passed required run 38727343919 at exact head 76c80b0af9715f29e414a512f5ea72b768ad89bd (verify 29m44s; SQL 56s), then merged at 137dbb786b567bd434cd64901306ec2c29a83617 on 15 October 2026 at 12:25:38 UTC. Preview dpl_D55uMQsJ9RWbRTF85sWUbULJZhNH and production dpl_7fTpF5BV7kKcwEhZ3KP4xCjEEZMW are READY at their exact head/merge; production owns devshark.app with no alias error. Eleven general guest checks pass on each, including actual correct/wrong React and JavaScript Submit, zero XP/null progress. B046 local evidence remains 31/31 selected current-hash verdicts, 21 target/base-25-XP checks and its permanent valid deferred-start variant. Shipped model-review coverage is 260/725 coding and 263/263 native. These guest checks do not establish authenticated execution of the five Premium tasks, independent/human review, physical-device or full-catalogue acceptance.
+
+The owner subsequently requested continuing the audit and remaining issues. Work resumes from current main, preserving held draft #365 and recorded owner decisions.
+
+## Five-item continuation B047 — 15 October 2026
+
+Five individual English reviews cover sequential task snapshots, typed-ID comment
+forests, independent timed loader batches, per-entry shared-request identity and
+the fixed five-entry LRU simulation. Newly explicit domains distinguish data
+contracts from prior failures. Keep IDs/history and correct alternatives; do not
+require synchronous first-task startup or producer-Promise identity.
+
+The original baseline matched 25/30 verdicts: all five meaningful wrongs passed.
+Final selected evidence is 30/30 (20 valid, five starters, five wrongs), with all
+twenty authored-target/base-25-XP checks passing. The two valid alternative
+scheduling/rethrowing forms are permanent canonical variants. Focused canonical
+coding passes isolated native Run and reversed hidden tests. All 265 current
+individual coding hashes match; 460 remain. Native remains 263/263. These are
+same-session model reviews, not authenticated Premium or independent acceptance.
+
+API/script types, complete grading/Learn integrity, launch/build, native bindings,
+curation/index generation, both production dependency audits (zero vulnerabilities)
+and diff checks pass. The five changed task routes pass 40/40 fixture-backed
+responsive probes at 320–1440 px in the default theme. The copy sweep has one
+reviewed false positive: “the first pass” describes the comment-tree algorithm,
+not reviewer workflow; no audit note or option-position clue is introduced.
+Twelve physical API handlers remain; no schema/RLS, dependency, reward or access
+policy changed. PR #412 is exact-production verified; these five B047 reviews
+still await their own checked release. The owner has resumed the audit.
+
+## Five-item continuation B048 — 15 October 2026
+
+Five TypeScript reviews cover inferred UTF-16 length totals, generic callback
+arity/results, round-robin absence versus empty names, one-pass extrema with
+earliest signed-zero ties, and identity-preserving generic tuple reversal.
+Correct alternatives remain accepted. The queue brief states the copied-shift
+approach's quadratic single-size upper bound and more precise O(w + t*w), while
+allowing faster indexing; it does not mislabel repeated shifts linear.
+
+The baseline matched 25/30 verdicts, accepting five meaningful wrongs. Final
+selected evidence is 30/30 (20 valid, five starters, five wrongs), and twenty
+authored-target/base-25-XP checks pass. Sixteen runtime and five hidden type
+assertions cover previously missing units, identity, ordering and generic output
+relationships. Canonical focused coding passes actual TypeScript checking,
+isolated native Run, reversed hidden checks and all model boards. All 270 current
+coding review hashes match; 455 remain. Native stays 263/263. API/script types,
+launch/build, native bindings, curation/index generation, both production audits
+(zero vulnerabilities), copy sweep (zero findings) and diff checks pass. B047
+also passes its dark-theme matrix, bringing that five-task cohort to 80/80
+responsive probes at 320–1440 px. No authenticated Premium, independent/human or
+complete-catalogue claim. B048 also passes 80/80 fixture-backed light/dark responsive probes at 320–1440 px, zero issues/unprobed. Both new cohorts still await checked release.
+
+## Production override and retention reconciliation — 15 October 2026
+
+Read-only production checks confirm 485 deleted overrides, no active edits/custom
+questions, the same deleted identities as 14 October (lexically sorted IDs joined
+with newline, MD5 7271a4b58a6e2b174fe541351d7cbdc4), and 1820 effective eligible
+questions after 194 eligible hides. Every effective question has a current
+review binding. The active retention schedule calls a function including practice
+purging; no checked excess TRUNCATE/REFERENCES/TRIGGER/MAINTAIN grant remains for
+anon/authenticated on the eleven tables in #236. The purge was not invoked.
+Evidence is docs/audit/question-overrides-2026-10-15.json; no database, learner
+state, historical hide or marketing setting changed. Copy/longest-option
+reconciliation and owner decisions remain open.

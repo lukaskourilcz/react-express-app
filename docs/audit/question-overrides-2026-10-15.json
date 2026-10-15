@@ -1,0 +1,39 @@
+{
+  "schema": "devshark-override-reconciliation/v1",
+  "observedOn": "2026-10-15",
+  "sourceBankCommit": "137dbb786b567bd434cd64901306ec2c29a83617",
+  "databaseRead": "Production question_edits aggregate and deleted question IDs only; read-only, no learner/auth data",
+  "overrideRows": 485,
+  "deletedOverrideRows": 485,
+  "activeEditedOrCustomRows": 0,
+  "sortedDeletedIdsNewlineMd5": "7271a4b58a6e2b174fe541351d7cbdc4",
+  "fingerprintMethod": "MD5 of lexically sorted question_id values joined by newline, with no trailing newline",
+  "sameDeletedIdentitiesAs14October": true,
+  "authoredActiveCategories": 2168,
+  "eligibleStatic": 2014,
+  "withheldByContentGate": 154,
+  "eligibleHiddenByOverrides": 194,
+  "effectiveEligible": 1820,
+  "allEffectiveItemsHaveCurrentQuestionReviews": true,
+  "limits": [
+    "This rechecks the override layer and current static eligibility, not new individual editorial approval.",
+    "No hides lifted, export published, learner data queried or database state changed.",
+    "Copy/longest-option reconciliation and full coding/independent acceptance remain open."
+  ],
+  "practiceRetentionRecheck": {
+    "scheduledRetentionActive": true,
+    "purgeFunctionIncludesPractice": true,
+    "checkedExcessPrivileges": 0,
+    "privilegesChecked": [
+      "TRUNCATE",
+      "REFERENCES",
+      "TRIGGER",
+      "MAINTAIN"
+    ],
+    "rolesChecked": [
+      "anon",
+      "authenticated"
+    ],
+    "scope": "Eleven tables named in #236; no purge invoked and no grants changed."
+  }
+}

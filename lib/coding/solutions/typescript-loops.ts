@@ -10,17 +10,13 @@ export const TYPESCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   for (const word of words) total += word.length;
   return total;
 };`,
-    junior: `const totalLength = (words: string[]): number => {
-  let total = 0;
-  for (let i = 0; i < words.length; i += 1) {
-    const word = words[i];
-    const wordLength = word.length;
-    total = total + wordLength;
-  }
-  return total;
-};`,
-    senior: `const totalLength = (words: string[]): number => words.reduce((total, word) => total + word.length, 0);`,
+    junior: "const totalLength = (words: string[]): number => {\n  let total = 0;\n  for (const word of words) {\n    const wordLength = word.length;\n    total = total + wordLength;\n  }\n  return total;\n};",
+    senior: "function totalLength(words: string[]): number {\n  let total = 0;\n  for (const { length } of words) total += length;\n  return total;\n}",
     hiddenTests: [
+      { call: "totalLength(Object.freeze(['\ud83e\udd88','e\u0301','\ud800','   ','']))", expected: 8 },
+      { call: "(()=>{const words=Object.freeze(Array(1000).fill('x'.repeat(1000)));return [totalLength(words),words.length,words[0].length];})()", expected: [1000000, 1000, 1000] },
+      { call: "[totalLength(['','0','\\n',' ']),totalLength([])]", expected: [3, 0] },
+
       { call: "totalLength([\"ab\", \"cde\", \"f\"])", expected: 6 },
       { call: "totalLength([\"   \"])", expected: 3 },
     ],
@@ -58,6 +54,10 @@ export const TYPESCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return Array.from({ length: turns }, (_, turn) => waiting[turn % waiting.length]);
 };`,
     hiddenTests: [
+      { call: "takeTurns(Object.freeze(['','\ud83e\udd88','']),5)", expected: ["", "\ud83e\udd88", "", "", "\ud83e\udd88"] },
+      { call: "(()=>{const input=Object.freeze(['a','a','b']),out=takeTurns(input,4),again=takeTurns(input,4),zero=takeTurns(input,0),empty=takeTurns([],10000);out.push('changed');return [again,input.join(','),out!==again,zero!==takeTurns(input,0),empty!==takeTurns([],0),empty.length];})()", expected: [["a", "a", "b", "a"], "a,a,b", true, true, true, 0] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>String(i))),output=takeTurns(input,10000);return [output.length,output[999],output[1000],output[9999],input.length];})()", expected: [10000, "999", "0", "999", 1000] },
+
       { call: "(() => { const waiting = [\"ada\", \"bo\"]; takeTurns(waiting, 3); return waiting; })()", expected: ["ada", "bo"] },
       { call: "takeTurns([\"a\", \"b\", \"c\"], 7)", expected: ["a", "b", "c", "a", "b", "c", "a"] },
     ],
@@ -99,25 +99,13 @@ export const TYPESCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   }
   return [low, high];
 };`,
-    junior: `const minMax = (values: number[]): [number, number] => {
-  if (values.length === 0) {
-    return [0, 0];
-  }
-  const sorted: number[] = [];
-  for (const value of values) {
-    sorted.push(value);
-  }
-  sorted.sort((a, b) => a - b);
-  const lowest = sorted[0];
-  const highest = sorted[sorted.length - 1];
-  return [lowest, highest];
-};`,
-    senior: `const minMax = (values: number[]): [number, number] => {
-  if (values.length === 0) return [0, 0];
-  // One pass rather than Math.min(...values), which spreads the whole list onto the call stack.
-  return values.reduce<[number, number]>(([low, high], value) => [Math.min(low, value), Math.max(high, value)], [values[0], values[0]]);
-};`,
+    junior: "const minMax = (values: number[]): [number, number] => {\n  if (values.length === 0) return [0, 0];\n  let lowest = values[0];\n  let highest = values[0];\n  for (let index = 1; index < values.length; index += 1) {\n    const value = values[index];\n    if (value < lowest) lowest = value;\n    if (value > highest) highest = value;\n  }\n  return [lowest, highest];\n};",
+    senior: "function minMax(values: number[]): [number, number] {\n  if (values.length === 0) return [0, 0];\n  let [low, high] = [values[0], values[0]];\n  for (const value of values) {\n    if (value < low) low = value;\n    if (value > high) high = value;\n  }\n  return [low, high];\n}",
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze([3.5,-2.25,1.1]),a=minMax(input),b=minMax(input),empty=minMax([]);a[0]=123;return [b,a!==b,input.join(','),empty.length,empty!==minMax([])];})()", expected: [[-2.25, 3.5], true, "3.5,-2.25,1.1", 2, true] },
+      { call: "(()=>{const a=minMax([-0,0]),b=minMax([0,-0]);return [Object.is(a[0],-0),Object.is(a[1],-0),Object.is(b[0],0),Object.is(b[1],0)];})()", expected: [true, true, true, true] },
+      { call: "minMax(Object.freeze(Array.from({length:10000},(_,i)=>i%2===0?1000000000000-i:-1000000000000+i)))", expected: [-999999999999, 1000000000000] },
+
       { call: "minMax([0, 0, 0])", expected: [0, 0] },
       { call: "minMax([2, 9, -4, 7])", expected: [-4, 9] },
     ],

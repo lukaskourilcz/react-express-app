@@ -317,7 +317,7 @@ console.log(cheapest([{ name: "a", price: 3 }, { name: "b", price: 1 }]));
     tier: 1,
     focus: ['destructuring', 'tuples'],
     title: 'Flip a pair',
-    prompt: 'Write `flip<A, B>([first, second]: [A, B]): [B, A]`, taking a tuple of two items and returning a new tuple with them the other way round. Pull the two items out with array destructuring in the parameter list. The types swap too: flipping `[1, "a"]` gives `["a", 1]`, typed `[string, number]`.',
+    prompt: "Write `flip<A, B>([first, second]: [A, B]): [B, A]`, taking a tuple of two items and returning a new tuple with them the other way round. Pull the two items out with array destructuring in the parameter list. The types swap too: flipping `[1, \"a\"]` gives `[\"a\", 1]`, typed `[string, number]`. Domain: an ordinary dense two-element tuple, possibly frozen at runtime. Its entries are opaque values, including undefined, functions, Symbols, NaN, signed zero, arrays and records. Return a fresh mutable two-element tuple containing the exact original entries/references in reverse order; do not clone, invoke, flatten or change them or mutate the input. Each call produces a distinct tuple even when both entries are the same value. Keep the two generic types distinct and preserve their positions. Target: O(1) time and output space: the pair always has two positions, regardless of the size of either opaque value.",
     starter: `const flip = (pair) => {
 
 };
