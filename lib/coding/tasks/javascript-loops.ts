@@ -1393,7 +1393,7 @@ const myFilter = (list, fn) => {
     tier: 3,
     focus: ["higher-order", "for", "callbacks"],
     title: "Write myReduce",
-    prompt: "Write `myReduce(list, fn, initial)` with a plain `for` loop instead of the built-in `reduce`: call `fn(accumulator, item, index)` for each item, starting the accumulator at `initial`, and return the final accumulator. When `initial` is `undefined`, the first item becomes the starting accumulator and the loop begins at the second. `myReduce([1, 2, 3], (total, n) => total + n, 0)` gives 6, and an empty list with an initial value returns that value.",
+    prompt: "Write `myReduce(list, fn, initial)` with a plain `for` loop instead of the built-in `reduce`: call `fn(accumulator, item, index)` for each item, starting the accumulator at `initial`, and return the final accumulator. When `initial` is `undefined`, the first item becomes the starting accumulator and the loop begins at the second. `myReduce([1, 2, 3], (total, n) => total + n, 0)` gives 6, and an empty list with an initial value returns that value. list is a read-only dense array of at most 10000 opaque values and may be frozen. fn is synchronous and does not mutate list. Call it once per processed item, in order, as a plain function with exactly the original accumulator, item and zero-based index. Preserve every returned value/reference, including undefined and falsy values. Propagate the original thrown value immediately without later calls. This deliberately simplified exercise treats omitted initial and explicit undefined the same; both select the first item when present, and empty input without a defined initial returns undefined without calling fn. This differs from native reduce and is not a complete polyfill. Use an indexed for loop as requested. Target: O(n) time for loop overhead, where n is 1 + list.length, excluding callback work.",
     starter: `const myReduce = (list, fn, initial) => {
 
 };
@@ -1439,7 +1439,7 @@ console.log(myReduce([1, 2, 3], (total, n) => total + n, 0));
     tier: 1,
     focus: ["map"],
     title: "Label numbers",
-    prompt: "Write `labelNumbers(numbers)`, returning a new array with the string `\"positive\"`, `\"negative\"` or `\"zero\"` for each number, decided by a ternary inside the `map` callback. `labelNumbers([3, -1, 0])` gives `[\"positive\", \"negative\", \"zero\"]`. An empty array gives an empty array.",
+    prompt: "Write `labelNumbers(numbers)`, returning a new array with the string `\"positive\"`, `\"negative\"` or `\"zero\"` for each number, decided by a ternary inside the `map` callback. `labelNumbers([3, -1, 0])` gives `[\"positive\", \"negative\", \"zero\"]`. An empty array gives an empty array. numbers is a read-only dense array of at most 10000 finite Numbers between -1000000 and 1000000 and may be frozen. Classify the original value without rounding: any positive magnitude is positive, any negative magnitude is negative, and both zero signs are zero. Return fresh arrays, including empty arrays, without changing input. Use a ternary expression inside map as requested. Target: O(n) time and output space, where n is 1 + numbers.length.",
     starter: `const labelNumbers = numbers => {
 
 };
@@ -1474,7 +1474,7 @@ console.log(labelNumbers([3, -1, 0]));
     tier: 1,
     focus: ["for-of"],
     title: "Sum mixed values",
-    prompt: "Write `sumMixed(values)`, returning the numeric total of an array that mixes numbers with numeric strings such as `\"4\"` or `\"2.5\"`, converting each value with `Number` inside a `for…of` loop before adding it. `sumMixed([1, \"2\", 3])` gives 6, a number, not `\"123\"`. An empty array gives 0.",
+    prompt: "Write `sumMixed(values)`, returning the numeric total of an array that mixes numbers with numeric strings such as `\"4\"` or `\"2.5\"`, converting each value with `Number` inside a `for…of` loop before adding it. `sumMixed([1, \"2\", 3])` gives 6, a number, not `\"123\"`. An empty array gives 0. values is a read-only dense array of at most 10000 Numbers or strings and may be frozen. Each Number is finite and between -1000000 and 1000000. Each string has at most 100 characters and Number(string) is finite in that same range; JavaScript numeric-string forms such as decimal exponents, hexadecimal and binary, and whitespace-only text (0) are allowed. Add Number(value) from 0 in original order, without rounding, trimming data in place or using parseFloat. Use for-of as requested. Target: O(n) time, where n is 1 + values.length under the stated bounded-string conversion model.",
     starter: `const sumMixed = values => {
 
 };
@@ -1515,7 +1515,7 @@ console.log(sumMixed([1, "2", 3]));
     tier: 1,
     focus: ["for-of", "filter"],
     title: "Compact an array",
-    prompt: "Write `compactLoop(values)` and `compactFilter(values)`, both returning a new array with every falsy value removed — `false`, `0`, `\"\"`, `null`, `undefined` and `NaN` — and leaving the input unchanged. The first uses a `for…of` loop with an `if` on the value itself; the second passes `Boolean` straight to `filter`. `compactLoop([0, 1, \"\", \"a\", null])` gives `[1, \"a\"]`.",
+    prompt: "Write `compactLoop(values)` and `compactFilter(values)`, both returning a new array with every falsy value removed — `false`, `0`, `\"\"`, `null`, `undefined` and `NaN` — and leaving the input unchanged. The first uses a `for…of` loop with an `if` on the value itself; the second passes `Boolean` straight to `filter`. `compactLoop([0, 1, \"\", \"a\", null])` gives `[1, \"a\"]`. values is a read-only dense array of at most 10000 ordinary JavaScript values and may be frozen. BigInt zero 0n and -0 are falsy too; strings such as \"0\" and \"false\", arrays, objects and functions are truthy. Keep the exact original truthy values/references in order, without cloning, coercing stored values or executing them. Return fresh arrays on every call, even when empty, and preserve input. compactLoop must use for-of and an if based on the value's truthiness; compactFilter must pass Boolean directly to filter, as requested. Target: O(n) time and output space, where n is 1 + values.length.",
     starter: `const compactLoop = values => {
 
 };
@@ -1561,7 +1561,7 @@ const compactFilter = values => values.filter(/* the function that answers truth
     tier: 3,
     focus: ["for-in", "objects", "recursion"],
     title: "Count nested keys",
-    prompt: "Write `countKeys(object)`, returning how many keys the object holds at every depth, visited with `for…in`: each key counts one, and when its value is a plain object its keys are counted the same way. `countKeys({ a: 1, b: { c: 2, d: { e: 3 } } })` gives 5. `null` and arrays count as plain values, and an empty object gives 0.",
+    prompt: "Write `countKeys(object)`, returning how many own enumerable string keys its data-record tree holds at every depth, visited with `for…in`: each key counts one, and when its value is a nested data record its keys are counted the same way. `countKeys({ a: 1, b: { c: 2, d: { e: 3 } } })` gives 5. `null` and arrays count as plain values, and an empty object gives 0. Input is a read-only finite tree of ordinary data records. Count only own enumerable string keys; ignore inherited keys, non-enumerable keys and symbol keys. Records may have ordinary prototypes with inherited enumerable data. All traversed non-null non-array objects are data records, not Dates, Maps or class instances. Arrays are opaque leaves and their contents are not visited. The traversed record tree has no cycles or shared records, at most 1000 records, depth at most 100 edges and at most 10000 total for-in key visits (including ignored inherited keys). Properties are data properties, names are bounded strings, and records may be frozen. Use for-in with an own-property guard and recursion; leave input unchanged. Target: O(n) time, where n is 1 + the total own and inherited enumerable key visits across the traversed records.",
     starter: `const countKeys = object => {
 
 };
@@ -1573,17 +1573,17 @@ console.log(countKeys({ a: 1, b: { c: 2, d: { e: 3 } } }));
   let count = 0;
 
   for (/* each key in object */) {
-    // count the key
-    // when the value is a plain object, add its own key count
+    // skip inherited keys, then count this own key
+    // recurse when the value is a nested data record
   }
 
   return count;
 };`,
-    hints: ["for-in visits each key, so count one per visit, and when the value under a key is itself a plain object, count its keys the same way by calling your function on it."],
+    hints: ["for-in also visits inherited names: first skip keys for which Object.hasOwn(object, key) is false. Count each remaining key, then recurse only into nested data records."],
     approach: [
-      "Start a count at zero and loop with for-in over the object’s keys.",
+      "Start a count at zero and loop with for-in over the object’s keys, skipping inherited names with Object.hasOwn.",
       "Add one for every key visited.",
-      "Look at the value under the key: when it is a plain object — not null and not an array — add the result of counting its keys with the same function.",
+      "Look at the value under the key: when it is a nested data record — not null and not an array — add the result of counting its keys with the same function.",
       "Return the count.",
     ],
     verify: "tests",
@@ -1593,7 +1593,7 @@ console.log(countKeys({ a: 1, b: { c: 2, d: { e: 3 } } }));
       { call: "countKeys({name:\"Ana\",age:3})", expected: 2 },
       { call: "countKeys({})", expected: 0, label: "an empty object has no keys", edge: true },
       { call: "countKeys({a:{}})", expected: 1, label: "an empty nested object adds nothing", edge: true },
-      { call: "countKeys({a:null,b:[1,2,3]})", expected: 2, label: "null and arrays count as plain values", edge: true },
+      { call: "countKeys({a:null,b:[1,2,3]})", expected: 2, label: "null and arrays count as leaf values", edge: true },
       { call: "countKeys({a:{b:{c:{d:1}}}})", expected: 4, label: "deep nesting", edge: true },
     ],
   },

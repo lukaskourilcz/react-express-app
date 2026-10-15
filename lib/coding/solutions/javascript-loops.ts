@@ -744,16 +744,12 @@ const myFilter = (list, fn) => {
   }
   return accumulator;
 };`,
-    senior: `const myReduce = (list, fn, initial) => {
-  const seeded = initial !== undefined;
-  let accumulator = seeded ? initial : list[0];
-  for (const [index, item] of list.entries()) {
-    if (index === 0 && !seeded) continue; // the first item is already the seed
-    accumulator = fn(accumulator, item, index);
-  }
-  return accumulator;
-};`,
+    senior: "const myReduce = (list, fn, initial) => {\n  let result = initial;\n  let i = 0;\n  if (initial === undefined && list.length) { result = list[0]; i = 1; }\n  for (; i < list.length; i++) result = fn(result, list[i], i);\n  return result;\n};",
     hiddenTests: [
+      { call: "(() => { const seed=Object.freeze({}),item=Object.freeze({}),list=Object.freeze([item,undefined]),out=Object.freeze([]),calls=[];const result=myReduce(list,(...args)=>{calls.push(args.length,args[0]===seed,args[1]===item,args[2]);return seed;},seed);let emptyCalls=0;const empty=myReduce(Object.freeze([]),()=>{emptyCalls++;},undefined);let oneCalls=0;const one=myReduce(Object.freeze([item]),()=>{oneCalls++;},undefined);return [result===seed,calls,empty===undefined,emptyCalls,one===item,oneCalls,myReduce(Object.freeze([]),()=>0,out)===out]; })()", expected: [true, [3, true, true, 0, 3, true, false, 1], true, 0, true, 0, true] },
+      { call: "(() => { const reason={},seen=[];try{myReduce(Object.freeze([1,2,3]),(acc,item,index)=>{seen.push(index);if(index===1)throw reason;return acc+item;},0);return [false,seen];}catch(error){return [error===reason,seen];} })()", expected: [true, [0, 1]] },
+      { call: "myReduce(Object.freeze(Array.from({length:10000},()=>1)),(acc,item)=>acc+item,0)", expected: 10000 },
+
       { call: "(() => { const list = [1,2,3,4]; list.reduce = null; return myReduce(list, (a, b) => a * b, 1); })()", expected: 24 },
       { call: "myReduce([[1],[2],[3]], (flat, part) => flat.concat(part), [])", expected: [1, 2, 3] },
       { call: "myReduce([\"x\"], (a, b) => a + b)", expected: "x" },
@@ -762,25 +758,12 @@ const myFilter = (list, fn) => {
   },
   "js-label-numbers": {
     solution: "const labelNumbers = numbers => numbers.map(number => number > 0 ? \"positive\" : number < 0 ? \"negative\" : \"zero\");",
-    junior: `const labelNumbers = numbers => {
-  const labels = [];
-  for (const number of numbers) {
-    if (number > 0) {
-      labels.push("positive");
-    } else if (number < 0) {
-      labels.push("negative");
-    } else {
-      labels.push("zero");
-    }
-  }
-  return labels;
-};`,
-    senior: `const labelNumbers = numbers => {
-  // Math.sign collapses every number to -1, 0 or 1, so one lookup replaces the nested ternary.
-  const bySign = { "1": "positive", "-1": "negative", "0": "zero" };
-  return numbers.map(number => bySign[Math.sign(number)]);
-};`,
+    junior: "const labelNumbers = numbers => {\n  return numbers.map(number => {\n    const label = number > 0 ? \"positive\" : number < 0 ? \"negative\" : \"zero\";\n    return label;\n  });\n};",
+    senior: "const labelNumbers = numbers => numbers.map(n => n === 0 ? \"zero\" : n > 0 ? \"positive\" : \"negative\");",
     hiddenTests: [
+      { call: "labelNumbers(Object.freeze([1e-9,-1e-9,0,-0,1000000,-1000000]))", expected: ["positive", "negative", "zero", "zero", "positive", "negative"] },
+      { call: "(() => { const input=Object.freeze(Array.from({length:10000},(_,i)=>i%2?1:-1)),a=labelNumbers(input);return [a.length,a[0],a[9999],a!==labelNumbers(input),labelNumbers(Object.freeze([]))!==labelNumbers(Object.freeze([]))]; })()", expected: [10000, "negative", "positive", true, true] },
+
       { call: "labelNumbers([1,-2,3,-4,0,5])", expected: ["positive", "negative", "positive", "negative", "zero", "positive"] },
       { call: "labelNumbers([-100])", expected: ["negative"] },
       { call: "(() => { const numbers = [1, -1]; labelNumbers(numbers); return numbers; })()", expected: [1, -1] },
@@ -799,9 +782,11 @@ const myFilter = (list, fn) => {
   }
   return total;
 };`,
-    senior: `// Number accepts both kinds of input, so one reduce covers the list; the seed 0 keeps the sum numeric.
-const sumMixed = values => values.reduce((total, value) => total + Number(value), 0);`,
+    senior: "const sumMixed = values => {\n  let total = 0;\n  for (const value of values) total += Number(value);\n  return total;\n};",
     hiddenTests: [
+      { call: "sumMixed(Object.freeze([\"0x10\",\"0b10\",\"1e2\",\" \",\"1.005\",-1]))", expected: 118.005 },
+      { call: "(() => { const values=Object.freeze(Array.from({length:10000},()=>\"-1000000\"));return [sumMixed(values),sumMixed(Object.freeze([1000000,\"-1000000\",\"1e-9\"]))===1e-9]; })()", expected: [-10000000000, true] },
+
       { call: "sumMixed([\"7\",\"8\",\"9\"])", expected: 24 },
       { call: "sumMixed([100,\"100\",100,\"100\"])", expected: 400 },
       { call: "sumMixed([\"0\", 0, \"0\"])", expected: 0 },
@@ -809,24 +794,7 @@ const sumMixed = values => values.reduce((total, value) => total + Number(value)
   },
   "js-compact-values": {
     solution: "const compactLoop = values => { const result = []; for (const value of values) { if (value) result.push(value); } return result; };\nconst compactFilter = values => values.filter(Boolean);",
-    junior: `const compactLoop = values => {
-  const kept = [];
-  for (const value of values) {
-    const isTruthy = Boolean(value);
-    if (isTruthy) {
-      kept.push(value);
-    }
-  }
-  return kept;
-};
-const compactFilter = values => {
-  return values.filter(value => {
-    if (value) {
-      return true;
-    }
-    return false;
-  });
-};`,
+    junior: "const compactLoop = values => {\n  const kept = [];\n  for (const value of values) {\n    if (value) { kept.push(value); }\n  }\n  return kept;\n};\nconst compactFilter = values => {\n  const kept = values.filter(Boolean);\n  return kept;\n};",
     senior: `const compactLoop = values => {
   const kept = [];
   for (const value of values) {
@@ -837,36 +805,23 @@ const compactFilter = values => {
 };
 const compactFilter = values => values.filter(Boolean);`,
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),fn=()=>{throw Error(\"do not execute\");},symbol=Symbol(\"x\"),input=Object.freeze([false,0,-0,0n,\"\",null,undefined,NaN,1n,\"0\",\"false\",a,b,fn,symbol]),expected=[1n,\"0\",\"false\",a,b,fn,symbol];const x=compactLoop(input),y=compactFilter(input);return [x.length,y.length,x.every((v,i)=>Object.is(v,expected[i])),y.every((v,i)=>Object.is(v,expected[i])),x!==y,compactLoop(Object.freeze([]))!==compactLoop(Object.freeze([])),compactFilter(Object.freeze([]))!==compactFilter(Object.freeze([]))]; })()", expected: [7, 7, true, true, true, true, true] },
+      { call: "(() => { const values=Object.freeze(Array.from({length:10000},(_,i)=>i%2?i:0));return [compactLoop(values).length,compactFilter(values)[4999],values.length]; })()", expected: [5000, 9999, 10000] },
+
       { call: "compactFilter([1, 0, 2, 0, 3, 0, 4, \"\"])", expected: [1, 2, 3, 4] },
       { call: "compactLoop([-1, \"false\", true])", expected: [-1, "false", true] },
       { call: "compactFilter([null, \"x\", undefined, \"y\"])", expected: ["x", "y"] },
     ],
   },
   "js-count-nested-keys": {
-    solution: "const countKeys = object => { let count = 0; for (const key in object) { count += 1; const value = object[key]; if (value !== null && typeof value === \"object\" && !Array.isArray(value)) count += countKeys(value); } return count; };",
-    junior: `const countKeys = object => {
-  let count = 0;
-  for (const key in object) {
-    count = count + 1;
-    const value = object[key];
-    const isObject = typeof value === "object";
-    const isNull = value === null;
-    const isArray = Array.isArray(value);
-    if (isObject && !isNull && !isArray) {
-      count = count + countKeys(value);
-    }
-  }
-  return count;
-};`,
-    senior: `// The tag check rules out null and arrays in one comparison.
-const isPlainObject = value => Object.prototype.toString.call(value) === "[object Object]";
-const countKeys = object => {
-  let count = 0;
-  // Object.values skips inherited keys, which for...in would also visit.
-  for (const value of Object.values(object)) count += 1 + (isPlainObject(value) ? countKeys(value) : 0);
-  return count;
-};`,
+    solution: "const countKeys = object => { let count = 0; for (const key in object) { if (!Object.hasOwn(object, key)) continue; count += 1; const value = object[key]; if (value !== null && typeof value === \"object\" && !Array.isArray(value)) count += countKeys(value); } return count; };",
+    junior: "const countKeys = object => {\n  let count = 0;\n  for (const key in object) {\n    if (!Object.hasOwn(object, key)) continue;\n    count = count + 1;\n    const value = object[key];\n    const isObject = typeof value === \"object\";\n    const isNull = value === null;\n    const isArray = Array.isArray(value);\n    if (isObject && !isNull && !isArray) count += countKeys(value);\n  }\n  return count;\n};",
+    senior: "const countKeys = object => {\n  let total = 0;\n  for (const key in object) {\n    if (!Object.hasOwn(object, key)) continue;\n    const value = object[key];\n    total += 1;\n    if (value && typeof value === \"object\" && !Array.isArray(value)) total += countKeys(value);\n  }\n  return total;\n};",
     hiddenTests: [
+      { call: "(() => { const proto=Object.freeze({inherited:{ignored:1}}),child=Object.create(proto);child.x=1;Object.freeze(child);const root=Object.create(proto);root.child=child;root.array=Object.freeze([{notCounted:1}]);root.nil=null;Object.defineProperty(root,\"hidden\",{value:3,enumerable:false});root[Symbol(\"s\")]=4;Object.freeze(root);return countKeys(root); })()", expected: 4 },
+      { call: "countKeys(Object.freeze(JSON.parse('{\"__proto__\":{\"x\":1},\"constructor\":2}')))", expected: 3 },
+      { call: "(() => { let deep=Object.freeze({leaf:1});for(let i=0;i<100;i++)deep=Object.freeze({next:deep});const wide=Object.create(null);for(let i=0;i<10000;i++)wide[\"k\"+i]=i;Object.freeze(wide);return [countKeys(deep),countKeys(wide)]; })()", expected: [101, 10000] },
+
       { call: "countKeys({a:1,b:2,c:3,d:{e:4,f:5,g:{h:6}}})", expected: 8 },
       { call: "countKeys({x:{y:{}},z:{}})", expected: 3 },
       { call: "countKeys(JSON.parse('{\"a\":{\"b\":1},\"c\":[{\"d\":1}]}'))", expected: 3 },

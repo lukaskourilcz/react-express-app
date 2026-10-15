@@ -1,5 +1,36 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b033
+
+Read every English field, starter/skeleton, board and check for simplified
+reduce, Number labels/conversion, truthy compaction and nested-key traversal.
+The authored myReduce keeps its existing undefined-as-no-seed behavior, now
+explicitly distinguished from native reduce, including empty no-seed input.
+Supplied map/ternary, for-of, indexed-for and direct Boolean-filter forms match
+their lessons. Truthy outputs preserve original opaque values, including BigInt,
+functions and symbols; inputs remain unchanged.
+
+Nested keys now mean own enumerable string keys of a bounded acyclic record
+tree. Every for-in board guards ownership before counting; arrays stay opaque
+leaves and inherited/nonenumerable/symbol keys are ignored. The final skeleton
+puts the guard before the count, and the cost includes ignored inherited visits.
+All 35 combined final-hash worker verdicts agree versus 25/35 before: 20 valid
+forms, five starters and ten wrongs. Fourteen compact/nested-key cases were
+rechecked after final wording/skeleton refinement. Twenty target/base 25 XP
+checks, zero-artifact copy sweep, focused coding, API/script types, launch,
+build, 263 native bindings, both zero-vulnerability production dependency audits
+and diff checks pass. Cases include exact callback arity/errors, tiny signed
+magnitudes, hexadecimal/binary strings, opaque truthiness, 100-edge depth and
+10000-element/key bounds. Same-session model review is not independent/human
+or arbitrary-program/asymptotic acceptance.
+
+Coverage is 195/725 coding, 530 remaining, and 263/263 native. Shipped coverage
+remains 155 coding / 263 native after PR #404. PR #405 freezes b026–b032 plus
+the UTC parity fixture repair at 58686aaa. Its initial required run found that
+stale unpadded-year example; full local grading/Learn integrity now passes and
+required CI is rerunning. The cohort's local responsive sweep passed all 264
+fixture-backed 320–1440 px probes. B033 remains local. No live user writes.
+
 ## 15 October continuation — five coding items b032
 
 Read every English field, starter/skeleton, board and check for variadic sum,
