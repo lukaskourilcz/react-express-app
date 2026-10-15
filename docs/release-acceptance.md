@@ -3515,3 +3515,14 @@ and diff checks pass. The local fixture-backed responsive sweep separately
 passes all 264 probes; its build stayed fixed while b033's later build waited.
 PR #405 remains frozen at the separate UTC-fixture repair; b033 is local.
 No real account, stored progress/balance, score or generated name was used.
+
+## Map and grouping content batch b034 — 15 October 2026
+
+Five individually scored model reviews raise coverage to 200/725 coding,
+525 remaining; native remains 263/263. All 35 current-hash QuickJS verdicts
+agree versus 25/35 before. Twenty target/base-25-XP checks and zero-artifact
+copy checks pass, as do focused coding, API/script types, launch, build, native
+bindings, both production dependency audits (zero vulnerabilities) and diff
+checks. Original references, Map ordering/SameValueZero, frozen records,
+nullish defaults and fresh groups use bounded local fixtures. PR #405 remains
+frozen separately; no production progress, score or name fixture was created.

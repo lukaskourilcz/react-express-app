@@ -1,5 +1,28 @@
 # devShark content audit — the question bank
 
+
+## 15 October continuation — five coding items b034
+
+Read all English material and supplied forms for nullish order totals, Map
+frequencies, filtered entries, zip and indexed chunks. The examples now use the
+requested loop forms. Bounds, read-only ownership, fresh outputs and exact
+opaque references are explicit. Map cases distinguish SameValueZero keys,
+original object keys and insertion order; total cases preserve zero quantities
+and unrounded Number arithmetic without writing defaults into records.
+
+All 35 final-hash worker verdicts agree versus 25/35 baseline, including twenty
+valid forms, five starters and ten selected wrongs. Twenty authored-target/base
+25 XP checks and the copy sweep pass. Focused coding, API/script types, launch,
+build, 263 native bindings, both production dependency audits (zero reported
+vulnerabilities) and diff checks pass. Fixtures include frozen records, missing
+quantities, NaN/signed zero, identity/freshness and 10000-item bounds. This is
+same-session model review and finite execution evidence.
+
+Coverage is 200/725 coding, 525 remaining, and 263/263 native. Shipped coverage
+is still 155 coding / 263 native. B033–b034 are local; PR #405 remains frozen
+at 58686aaa for required checks and exact-preview verification. No live user
+progress, score or generated-name fixture was written.
+
 ## 15 October continuation — five coding items b033
 
 Read every English field, starter/skeleton, board and check for simplified

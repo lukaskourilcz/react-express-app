@@ -1605,7 +1605,7 @@ console.log(countKeys({ a: 1, b: { c: 2, d: { e: 3 } } }));
     tier: 1,
     focus: ["for-of", "objects"],
     title: "Total with defaults",
-    prompt: "Write `orderTotal(items)`, returning the total of `price` times `quantity` over every item, where a missing or `null` quantity means 1 — supplied with `??` inside a `for…of` loop. `orderTotal([{ price: 5 }, { price: 2, quantity: 3 }])` gives 11. A quantity of 0 is a real quantity and contributes nothing, and an empty order totals 0.",
+    prompt: "Write `orderTotal(items)`, returning the total of `price` times `quantity` over every item, where a missing or `null` quantity means 1 — supplied with `??` inside a `for…of` loop. `orderTotal([{ price: 5 }, { price: 2, quantity: 3 }])` gives 11. A quantity of 0 is a real quantity and contributes nothing, and an empty order totals 0. items is a read-only dense array of at most 10000 ordinary records and may be frozen along with its records. price is a finite Number from 0 to 1000000. quantity is absent, undefined, null, or an integer from 0 to 1000. Use only null/undefined for the default, add from 0 in input order with normal Number arithmetic and do not round or write defaults into records. This is arithmetic on Numbers, not an exact-money representation. Use ?? inside for-of as requested. Target: O(n) time, where n is 1 + items.length.",
     starter: `const orderTotal = items => {
 
 };
@@ -1646,7 +1646,7 @@ console.log(orderTotal([{ price: 5 }, { price: 2, quantity: 3 }]));
     tier: 2,
     focus: ["map-set", "for-of"],
     title: "Frequency Map",
-    prompt: "Write `frequencies(values)`, returning a `Map` from each distinct value to how many times it appears, filled with `for…of` in first-seen order. `frequencies([\"a\", \"b\", \"a\"])` gives a Map with `\"a\"` → 2 and `\"b\"` → 1. Keys keep their type, so the number 1 and the string `\"1\"` are separate entries, and an empty array gives an empty Map.",
+    prompt: "Write `frequencies(values)`, returning a `Map` from each distinct value to how many times it appears, filled with `for…of` in first-seen order. `frequencies([\"a\", \"b\", \"a\"])` gives a Map with `\"a\"` → 2 and `\"b\"` → 1. Keys keep their type, so the number 1 and the string `\"1\"` are separate entries, and an empty array gives an empty Map. values is a read-only dense array of at most 10000 opaque values and may be frozen. Preserve original object identities and do not inspect, clone or coerce keys. Map uses SameValueZero: NaN values share a bucket, 0 and -0 share a bucket whose stored key is +0, and numeric/string values stay separate. Return a fresh Map on every call, including empty inputs, and preserve first-appearance order. Use for-of as requested. Target: O(n) time under expected constant-cost opaque Map-key access, where n is 1 + values.length; string keys are bounded to 1000 characters.",
     starter: `const frequencies = values => {
 
 };
@@ -1688,7 +1688,7 @@ console.log(frequencies(["a", "b", "a"]));
     tier: 2,
     focus: ["map-set", "for-of", "destructuring"],
     title: "Map entries to pairs",
-    prompt: "Write `entriesAtLeast(map, min)`, returning an array of `[key, value]` pairs for every entry of the `Map` whose value is at least `min`, in insertion order, gathered with `for…of` over the Map and destructuring in the loop head. With `new Map([[\"a\", 1], [\"b\", 5], [\"c\", 3]])` and a `min` of 3 it gives `[[\"b\", 5], [\"c\", 3]]`. Nothing qualifying, or an empty Map, gives an empty array, and the Map is not changed.",
+    prompt: "Write `entriesAtLeast(map, min)`, returning an array of `[key, value]` pairs for every entry of the `Map` whose value is at least `min`, in insertion order, gathered with `for…of` over the Map and destructuring in the loop head. With `new Map([[\"a\", 1], [\"b\", 5], [\"c\", 3]])` and a `min` of 3 it gives `[[\"b\", 5], [\"c\", 3]]`. Nothing qualifying, or an empty Map, gives an empty array, and the Map is not changed. map is an ordinary read-only Map with at most 10000 entries. Keys are opaque values under the usual constant-cost key model; string keys are bounded to 1000 characters. Values and min are finite Numbers between -1000000 and 1000000; fractional values and zero are valid and the comparison is >= without rounding. Preserve the stored key references, Map contents and insertion order. Return a fresh outer array and fresh two-element arrays on every call, even for empty results. Use for-of with [key, value] destructuring in the loop head as requested. Target: O(n) time and output space, where n is 1 + map.size.",
     starter: `const entriesAtLeast = (map, min) => {
 
 };
@@ -1730,7 +1730,7 @@ console.log(entriesAtLeast(new Map([["a", 1], ["b", 5], ["c", 3]]), 3));
     tier: 3,
     focus: ["for", "push"],
     title: "Chunk with a loop",
-    prompt: "Write `chunkBy(items, size)`, splitting the array into groups of `size` with a `for` loop that pushes each item into the current group and starts a fresh group whenever that one is full — without `slice`. `chunkBy([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]`. A size larger than the array gives one group, an empty array gives an empty array, and the input is not changed.",
+    prompt: "Write `chunkBy(items, size)`, splitting the array into groups of `size` with a `for` loop that pushes each item into the current group and starts a fresh group whenever that one is full — without `slice`. `chunkBy([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]`. A size larger than the array gives one group, an empty array gives an empty array, and the input is not changed. items is a read-only dense array of at most 10000 opaque values and may be frozen. size is an integer from 1 to 10000. Preserve every exact element/reference in order without inspecting or cloning it. Return fresh outer/group arrays on every call; no group may alias another group or the input. Empty input produces no groups. Use an indexed for loop and push, without slice, as requested. Target: O(n) time and output space, where n is 1 + items.length under amortized append.",
     starter: `const chunkBy = (items, size) => {
 
 };
@@ -1775,7 +1775,7 @@ console.log(chunkBy([1, 2, 3, 4, 5], 2));
     tier: 2,
     focus: ["for"],
     title: "Zip two lists",
-    prompt: "Write `zip(left, right)`, returning an array of `[left[i], right[i]]` pairs built with one `for` loop whose index reads both arrays at once, stopping at the shorter length. `zip([1, 2, 3], [\"a\", \"b\", \"c\"])` gives `[[1, \"a\"], [2, \"b\"], [3, \"c\"]]`. When one side is empty the result is empty, and neither input is changed.",
+    prompt: "Write `zip(left, right)`, returning an array of `[left[i], right[i]]` pairs built with one `for` loop whose index reads both arrays at once, stopping at the shorter length. `zip([1, 2, 3], [\"a\", \"b\", \"c\"])` gives `[[1, \"a\"], [2, \"b\"], [3, \"c\"]]`. When one side is empty the result is empty, and neither input is changed. left and right are read-only dense arrays with at most 10000 opaque values each and may be frozen. Preserve exact original references and values, including undefined, NaN and signed zero; do not inspect or clone elements. Return a fresh outer array and a separate fresh two-element array per position on every call, including empty inputs. Use a single indexed for loop as requested. Target: O(n) time as a combined-input upper bound, where n is 1 + left.length + right.length; more precisely, work and output are proportional to the shorter length plus one.",
     starter: `const zip = (left, right) => {
 
 };

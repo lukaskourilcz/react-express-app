@@ -829,20 +829,12 @@ const compactFilter = values => values.filter(Boolean);`,
   },
   "js-order-total": {
     solution: "const orderTotal = items => { let total = 0; for (const item of items) total += item.price * (item.quantity ?? 1); return total; };",
-    junior: `const orderTotal = items => {
-  let total = 0;
-  for (const item of items) {
-    let quantity = item.quantity;
-    if (quantity === undefined || quantity === null) {
-      quantity = 1;
-    }
-    total = total + item.price * quantity;
-  }
-  return total;
-};`,
-    senior: `// A destructuring default would only cover undefined, so ?? stays to treat null as a missing quantity too.
-const orderTotal = items => items.reduce((total, { price, quantity }) => total + price * (quantity ?? 1), 0);`,
+    junior: "const orderTotal = items => {\n  let total = 0;\n  for (const item of items) {\n    const quantity = item.quantity ?? 1;\n    const lineTotal = item.price * quantity;\n    total = total + lineTotal;\n  }\n  return total;\n};",
+    senior: "const orderTotal = items => {\n  let total = 0;\n  for (const { price, quantity } of items) total += price * (quantity ?? 1);\n  return total;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({price:1.005}),b=Object.freeze({price:2,quantity:null}),c=Object.freeze({price:99,quantity:0}),list=Object.freeze([a,b,c]);return [orderTotal(list),Object.hasOwn(a,\"quantity\"),b.quantity,c.quantity]; })()", expected: [3.005, false, null, 0] },
+      { call: "orderTotal(Object.freeze(Array.from({length:10000},()=>Object.freeze({price:1000000,quantity:1000}))))", expected: 10000000000000 },
+
       { call: "orderTotal([{price:1.5,quantity:2},{price:2.5},{price:0,quantity:9}])", expected: 5.5 },
       { call: "orderTotal([{price:7,quantity:undefined}])", expected: 7 },
       { call: "orderTotal([{price:2,quantity:0},{price:2}])", expected: 2 },
@@ -861,9 +853,11 @@ const orderTotal = items => items.reduce((total, { price, quantity }) => total +
   }
   return counts;
 };`,
-    senior: `// Map.set returns the map itself, so reduce can thread it through without a block body.
-const frequencies = values => values.reduce((counts, value) => counts.set(value, (counts.get(value) ?? 0) + 1), new Map());`,
+    senior: "const frequencies = values => {\n  const result = new Map();\n  for (const value of values) result.set(value, (result.get(value) ?? 0) + 1);\n  return result;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze({}),values=Object.freeze([a,b,a,NaN,NaN,0,-0,\"0\",undefined]);const m=frequencies(values),keys=[...m.keys()];return [m.size,m.get(a),m.get(b),m.get(NaN),m.get(0),m.get(\"0\"),m.get(undefined),keys[0]===a,keys[1]===b,Number.isNaN(keys[2]),Object.is(keys[3],0),keys[4]===\"0\",keys[5]===undefined,m!==frequencies(values),frequencies(Object.freeze([]))!==frequencies(Object.freeze([]))]; })()", expected: [6, 2, 1, 2, 2, 1, 1, true, true, true, true, true, true, true, true] },
+      { call: "(() => { const key=Object.freeze({}),values=Object.freeze(Array.from({length:10000},()=>key)),m=frequencies(values);return [m.size,m.get(key),[...m.keys()][0]===key,values.length]; })()", expected: [1, 10000, true, 10000] },
+
       { call: "[...frequencies([\"r\",\"g\",\"b\",\"g\",\"r\",\"r\"])]", expected: [["r", 3], ["g", 2], ["b", 1]] },
       { call: "frequencies([true,true,false]).get(true)", expected: 2 },
       { call: "frequencies([null, null]).get(null)", expected: 2 },
@@ -871,20 +865,13 @@ const frequencies = values => values.reduce((counts, value) => counts.set(value,
   },
   "js-map-entries-at-least": {
     solution: "const entriesAtLeast = (map, min) => { const pairs = []; for (const [key, value] of map) { if (value >= min) pairs.push([key, value]); } return pairs; };",
-    junior: `const entriesAtLeast = (map, min) => {
-  const matching = [];
-  for (const entry of map) {
-    const key = entry[0];
-    const value = entry[1];
-    if (value >= min) {
-      matching.push([key, value]);
-    }
-  }
-  return matching;
-};`,
-    senior: `// Spreading the Map gives its [key, value] pairs in insertion order; filter keeps the qualifying ones and touches nothing.
-const entriesAtLeast = (map, min) => [...map].filter(([, value]) => value >= min);`,
+    junior: "const entriesAtLeast = (map, min) => {\n  const matching = [];\n  for (const [key, value] of map) {\n    const qualifies = value >= min;\n    if (qualifies) matching.push([key, value]);\n  }\n  return matching;\n};",
+    senior: "const entriesAtLeast = (map, min) => {\n  const entries = [];\n  for (const [key, value] of map) if (value >= min) entries.push([key, value]);\n  return entries;\n};",
     hiddenTests: [
+      { call: "(() => { const key=Object.freeze({}),map=new Map([[key,0],[\"z\",3],[\"a\",3]]),a=entriesAtLeast(map,0),b=entriesAtLeast(map,0);return [a.length,a[0][0]===key,a[1][0],a[2][0],a!==b,a[0]!==b[0],a[0]!==a[1],map.size,map.get(key),[...map.keys()][0]===key]; })()", expected: [3, true, "z", "a", true, true, true, 3, 0, true] },
+      { call: "(() => { const map=new Map([[NaN,-1],[undefined,0],[-0,0.25]]),a=entriesAtLeast(map,-1);return [a.length,Number.isNaN(a[0][0]),a[1][0]===undefined,Object.is(a[2][0],0),a.map(pair=>pair[1]),entriesAtLeast(new Map(),0)!==entriesAtLeast(new Map(),0)]; })()", expected: [3, true, true, true, [-1, 0, 0.25], true] },
+      { call: "(() => { const map=new Map(Array.from({length:10000},(_,i)=>[i,i/10000])),a=entriesAtLeast(map,0);return [a.length,a[9999],map.size]; })()", expected: [10000, [9999, 0.9999], 10000] },
+
       { call: "entriesAtLeast(new Map([[\"p\",7],[\"q\",8],[\"r\",1],[\"s\",9]]), 8)", expected: [["q", 8], ["s", 9]] },
       { call: "entriesAtLeast(new Map([[1, 1],[2, 2]]), 2)", expected: [[2, 2]] },
       { call: "entriesAtLeast(new Map([[\"neg\",-1]]), -5)", expected: [["neg", -1]] },
@@ -904,13 +891,11 @@ const entriesAtLeast = (map, min) => [...map].filter(([, value]) => value >= min
   }
   return groups;
 };`,
-    senior: `const chunkBy = (items, size) => items.reduce((groups, item, index) => {
-  // A new group opens at every multiple of size; the item always lands in the latest one.
-  if (index % size === 0) groups.push([]);
-  groups[groups.length - 1].push(item);
-  return groups;
-}, []);`,
+    senior: "const chunkBy = (items, size) => {\n  const groups = [];\n  for (let i = 0; i < items.length; i++) {\n    if (i % size === 0) groups.push([]);\n    groups[groups.length - 1].push(items[i]);\n  }\n  return groups;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),items=Object.freeze([a,b,undefined,NaN,-0]),out=chunkBy(items,2),other=chunkBy(items,2);return [out.length,out[0][0]===a,out[0][1]===b,out[1][0]===undefined,Number.isNaN(out[1][1]),Object.is(out[2][0],-0),out!==other,out[0]!==other[0],out[0]!==out[1],out[0]!==items,items[0]===a,chunkBy(Object.freeze([]),10000)!==chunkBy(Object.freeze([]),10000)]; })()", expected: [3, true, true, true, true, true, true, true, true, true, true, true] },
+      { call: "(() => { const items=Object.freeze(Array.from({length:10000},(_,i)=>i)),a=chunkBy(items,1),b=chunkBy(items,10000);return [a.length,a[9999][0],a[0]!==a[1],b.length,b[0].length,b[0][9999],b[0]!==items]; })()", expected: [10000, 9999, true, 1, 10000, 9999, true] },
+
       { call: "(() => { const items = [1,2,3,4,5,6,7]; items.slice = null; return chunkBy(items, 3); })()", expected: [[1, 2, 3], [4, 5, 6], [7]] },
       { call: "chunkBy([1,2,3,4,5,6], 3)", expected: [[1, 2, 3], [4, 5, 6]] },
       { call: "chunkBy([9], 4)", expected: [[9]] },
@@ -930,9 +915,11 @@ const entriesAtLeast = (map, min) => [...map].filter(([, value]) => value >= min
   }
   return pairs;
 };`,
-    senior: `// The pair count is the shorter length, so Array.from can build the result from indexes alone.
-const zip = (left, right) => Array.from({ length: Math.min(left.length, right.length) }, (_, index) => [left[index], right[index]]);`,
+    senior: "const zip = (left, right) => {\n  const pairs = [];\n  for (let i = 0, end = Math.min(left.length, right.length); i < end; i++) pairs.push([left[i], right[i]]);\n  return pairs;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),c=Object.freeze({}),left=Object.freeze([a,undefined,NaN,-0]),right=Object.freeze([b,false,\"x\",c]),out=zip(left,right),other=zip(left,right);return [out.length,out[0][0]===a,out[0][1]===b,out[1][0]===undefined,Number.isNaN(out[2][0]),Object.is(out[3][0],-0),out[3][1]===c,out!==other,out[0]!==out[1],out[0]!==other[0],left[0]===a,zip(Object.freeze([]),right)!==zip(Object.freeze([]),right)]; })()", expected: [4, true, true, true, true, true, true, true, true, true, true, true] },
+      { call: "(() => { const left=Object.freeze(Array.from({length:10000},(_,i)=>i)),right=Object.freeze(Array.from({length:10000},(_,i)=>-i)),out=zip(left,right);return [out.length,out[0][0],out[9999][0],out[9999][1]]; })()", expected: [10000, 0, 9999, -9999] },
+
       { call: "zip([1,2,3,4,5], [5,4,3,2,1])", expected: [[1, 5], [2, 4], [3, 3], [4, 2], [5, 1]] },
       { call: "zip([\"a\"], [1,2,3,4])", expected: [["a", 1]] },
       { call: "(() => { const left = [1,2]; const right = [3,4]; zip(left, right); return [left, right]; })()", expected: [[1, 2], [3, 4]] },
