@@ -354,7 +354,7 @@ export const DSA_D06: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: base case, recursive case, termination',
-      summary: 'The two halves of a recursive definition, unreachable base cases, and the RangeError that ends them.',
+      summary: 'The two halves of a recursive definition, unreachable base cases, and engine-dependent stack exhaustion.',
       competencies: ['recursion'],
       estimatedMinutes: 20,
       lessonId: 'dsa-v1-d06-l1',
@@ -365,7 +365,7 @@ export const DSA_D06: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: what recursion costs',
-      summary: 'Calls against frames, a stack trace of the descent and the unwinding, and the loop that needs neither.',
+      summary: 'Call counts versus peak frames, a descent-and-unwinding trace, and a loop without a growing call stack.',
       competencies: ['recursion', 'complexity'],
       estimatedMinutes: 20,
       lessonId: 'dsa-v1-d06-l2',
@@ -414,12 +414,12 @@ export const DSA_D06: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'The arguments run 1000, 500, 250, 125, 62, 31, 15, 7, 3, 1, which is ten calls, and the tenth one hits the base case while the other nine are still waiting. Depth follows the number of halvings, so it is O(log n): a thousand times more input adds about ten frames. The second option counts every whole number in the range instead of the values actually passed. The third describes a loop: the call is made inside the returned expression, so the caller is still open when the callee starts. The fourth confuses "depends on n" with "grows like n", which is the distinction the growth class exists to make.',
+            'The arguments run 1000, 500, 250, 125, 62, 31, 15, 7, 3, 1, which is ten calls, and the tenth one hits the base case while the other nine are still waiting. Depth follows the number of halvings, so it is O(log n): a thousand times more input adds about ten frames. The 1000-frame claim counts every whole number in the range instead of the values actually passed. The one-frame claim describes a loop: the call is made inside the returned expression, so the caller is still open when the callee starts. The ten-frame O(n) claim confuses "depends on n" with "grows like n", which is the distinction the growth class exists to make.',
           competencies: ['recursion', 'complexity'],
         },
         {
           id: 'dsa-v1-d06-q3',
-          prompt: 'Both functions add up a linked list of n nodes and return the same number. What is the tightest comparison of their time and their auxiliary space?',
+          prompt: 'Both functions sum a finite, acyclic, null-terminated list of n numeric nodes. Under the unit-cost model, assuming enough stack to finish, how do their time and auxiliary space compare?',
           context: {
             language: 'javascript',
             code: 'const totalA = head => (head === null ? 0 : head.value + totalA(head.next));\n\nconst totalB = head => {\n  let total = 0;\n  for (let node = head; node !== null; node = node.next) total += node.value;\n  return total;\n};',
@@ -432,25 +432,25 @@ export const DSA_D06: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'Each function touches every node once and does a fixed amount of work there, so both are linear in time. A keeps a frame open for every call that is still waiting on the one it made, and the deepest point is n + 1 frames, so its auxiliary space is linear. B keeps a total and one reference. The second option is the common trap: the stack is memory the routine uses even though the body allocates nothing. The third misreads the recursive call, which advances one node rather than rescanning. The fourth invents storage the loop does not keep — `node` is reassigned, and the node it moved off is not retained by the loop.',
+            'Each function touches every node once and does a fixed amount of work there, so both are linear in time. A keeps a frame open for every call that is still waiting on the one it made, and the deepest point is n + 1 frames, so its auxiliary space is linear. B keeps a total and one reference. The claim that both use O(1) space is the common trap: the stack is memory the routine uses even though the body allocates nothing. The O(n²) claim misreads the recursive call, which advances one node rather than rescanning. The claim that the loop needs O(n) extra storage invents state it does not keep — `node` is reassigned, and the node it moved off is not retained by the loop.',
           competencies: ['recursion', 'complexity'],
         },
         {
           id: 'dsa-v1-d06-q4',
-          prompt: 'Under the unit-cost model this path uses, where one multiplication counts as one step, what is the tightest growth class for the running time of `factorial(n)` for whole n from 0 to 20?',
+          prompt: 'Treat n as a variable nonnegative integer and count each multiplication as one step, ignoring Number range limits. What is the tightest growth class of the multiplication count in `factorial(n)`?',
           context: {
             language: 'javascript',
             code: 'const factorial = n => {\n  let product = 1;\n  for (let i = 2; i <= n; i += 1) product *= i;\n  return product;\n};',
           },
           options: [
-            'O(n): the loop performs n - 1 multiplications. The returned value grows factorially, which describes the answer rather than the number of steps.',
+            'O(n): for n at least 2, the loop performs n - 1 multiplications, even though the returned value grows factorially.',
             'O(n!): the running time follows the value being computed, so the work and the result grow together.',
             'O(1): the loop body is a single multiplication, and one operation is constant work.',
             'O(2ⁿ): the product at least doubles at every step from i = 2 onwards, so the work doubles with it.',
           ],
           correct: 0,
           explanation:
-            'The loop runs once per value from 2 to n, which is n - 1 multiplications for n of 2 or more and none at all for 0 or 1, each one step under the stated model. That is linear. The size of a result says nothing about how many steps produced it, which rules out the second option: 20! is a nineteen-digit number reached in nineteen multiplications. The third option prices the loop body instead of the loop. The fourth confuses the growth of the product with the growth of the work: the product does more than double each step, and the step count still goes up by exactly one.',
+            'The loop runs once per value from 2 to n, which is n - 1 multiplications for n of 2 or more and none at all for 0 or 1, each one step under the stated model. That is linear. The size of a result says nothing about how many steps produced it, which rules out O(n!): 20! is a nineteen-digit number reached in nineteen multiplications. O(1) prices the loop body instead of the loop. O(2ⁿ) confuses the growth of the product with the growth of the work: from i = 2 the product at least doubles, but the multiplication count increases by one. This is an operation-count model, not a promise of exact Number results for arbitrary n; the coding exercise bounds n at 20.',
           competencies: ['complexity', 'recursion'],
         },
       ],

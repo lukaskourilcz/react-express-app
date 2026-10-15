@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 10,
-    "recordsStillRequiringReview": 193,
+    "currentStagedModelReviewRecords": 15,
+    "recordsStillRequiringReview": 188,
     "reviewEvidence": "D01–D05: sixty exact-bound native records deployed through PRs #376/#379/#381/#384/#388. Required verify/SQL for #388 passed on 5684fc4d in Actions 38531432787; production dpl_8YwxYfKKA7z3HMUZP5LoENM39t1t is READY on merge d47e3a9d and passes eleven signed-out health/route/correct-wrong grading checks. Partial editorial evidence; no complete-catalogue, authenticated native-path or activation claim.",
     "deployedModelReviewRecords": 60,
-    "currentModelReviewRecords": 70,
-    "stagedReviewEvidence": "15 October through n002: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
+    "currentModelReviewRecords": 75,
+    "stagedReviewEvidence": "15 October through n003: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,

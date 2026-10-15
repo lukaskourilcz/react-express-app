@@ -1,5 +1,27 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n003
+
+Reviewed two lesson-reading activities and the three remaining D06 questions.
+Reading summaries now distinguish engine-dependent exhaustion and a loop's
+constant stack from having no calls/frames. The halving explanation no longer
+uses option positions; the paired-list question states finite acyclic input,
+unit-cost arithmetic and enough stack to finish. The factorial question now
+asks for a variable multiplication count instead of an asymptotic class over
+only 0..20, qualifies n >= 2 and separates bounded Number examples. Its other
+explanations also identify claims by content rather than shuffled position.
+
+All five exact hashes have individual scores and final model readings.
+Native bindings, path contracts, authored-example proof, copy sweep (zero
+hits) and diff checks pass. The actual halving body peaks at ten frames for
+1000 and adds one per doubling; both sum bodies agree on frozen finite lists;
+the actual factorial loop makes max(0,n-1) multiplications for 0..20 and
+matches exact BigInt values there. Reading links retain self_reviewed policy.
+These finite examples support the manual reasoning, not arbitrary program or
+authenticated acceptance. Native coverage is **75/263**, **188 remaining**;
+coding is **90/725**, **635 remaining**. PR #394 freezes b009–b012 and
+n001–n002 while this next five-item batch remains local.
+
 ## 15 October continuation — five-item native batch n002
 
 Reviewed the sixth entry question, its complete optional parent diagnostic,
