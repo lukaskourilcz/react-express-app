@@ -17,6 +17,8 @@
   },
   "js-throttle-calls": {
     "alternative": "const throttle = (fn, ms) => { let accepted=null;return (...args)=>{const now=Date.now();if(accepted!==null&&now-accepted<ms)return;accepted=now;Reflect.apply(fn,undefined,args);}; };",
-    "wrong-reset-timer": "const throttle = (fn, waitMs) => {\n  let isWaiting = false;\n  return (...args) => {\n    if (isWaiting) {\n      return;\n    }\n    isWaiting = true;\n    fn(...args);\n    setTimeout(() => {\n      isWaiting = false;\n    }, waitMs);\n  };\n};"
+    "wrong-reset-timer": "const throttle = (fn, waitMs) => {\n  let isWaiting = false;\n  return (...args) => {\n    if (isWaiting) {\n      return;\n    }\n    isWaiting = true;\n    fn(...args);\n    setTimeout(() => {\n      isWaiting = false;\n    }, waitMs);\n  };\n};",
+    "alternative-date-constructor": "const ClockDate = Date; const throttle = (fn, ms) => { let last=-Infinity;return (...args)=>{const now=new ClockDate().getTime();if(now-last<ms)return;last=now;fn(...args);}; };",
+    "alternative-captured-clock": "const readClock = Date.now; const throttle = (fn, ms) => {let last=-Infinity;return (...args)=>{const now=readClock();if(now-last<ms)return;last=now;fn(...args);};};"
   }
 }

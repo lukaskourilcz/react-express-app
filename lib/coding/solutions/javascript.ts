@@ -792,14 +792,76 @@ const flatten = arrays => [].concat(...arrays);`,
   };
 };`,
     hiddenTests: [
-      { call: "(() => {const original=Date.now;let now=0;Date.now=()=>now;try{const seen=[],f=throttle((...args)=>{seen.push(args);return 99;},10);const result=f(\"a\");now=9;f(\"drop\");now=10;f(\"b\");now=19;f(\"drop2\");now=20;f(\"c\");return [result===undefined,seen];}finally{Date.now=original;}})()", expected: [true, [["a"], ["b"], ["c"]]] },
-      { call: "(() => {const original=Date.now;let now=100;Date.now=()=>now;try{const object=Object.freeze({}),symbol=Symbol(\"x\"),error=Object.freeze({}),seen=[];let f;f=throttle((...a)=>{seen.push([a.length,a[0]===object,a[1]===symbol,a[2]===undefined,Object.is(a[3],-0)]);f(\"nested\");throw error;},5);let caught=false;try{f(object,symbol,undefined,-0);}catch(e){caught=e===error;}f(\"dropped\");now=105;let again=false;try{f(object,symbol,undefined,-0);}catch(e){again=e===error;}return [caught,again,seen];}finally{Date.now=original;}})()", expected: [true, true, [[4, true, true, true, true], [4, true, true, true, true]]] },
-      { call: "(() => {const original=Date.now;let now=0;Date.now=()=>now;try{let count=0;const f=throttle(()=>count++,1);for(let i=0;i<10000;i++){now=i;f();}return count;}finally{Date.now=original;}})()", expected: 10000 },
-
-      { call: "throttle(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const send = throttle(n => log.push(n), 25); for (let n = 1; n <= 10; n += 1) { send(n); await wait(10); } return [log[0], log.length > 1]; })()", expected: [1, true], async: true },
-      { call: "throttle(value => value, 10) && (async () => { const log = []; const send = throttle(n => log.push(n), 20); send(1); send(2); send(3); await new Promise(done => setTimeout(done, 100)); return log; })()", expected: [1], async: true },
-      { call: "throttle(value => value, 10) && (async () => { const log = []; const send = throttle((a, b) => log.push(a * b), 50); send(3, 4); return log; })()", expected: [12], async: true },
+  {
+    "call": "(() => {const object=Object.freeze({}),symbol=Symbol(\"x\"),seen=[];const f=throttle((...a)=>{seen.push([a.length,a[0]===object,a[1]===symbol,a[2]===undefined,Object.is(a[3],-0)]);return 99;},50);const result=f(object,symbol,undefined,-0);return [result===undefined,seen];})()",
+    "expected": [
+      true,
+      [
+        [
+          4,
+          true,
+          true,
+          true,
+          true
+        ]
+      ]
+    ]
+  },
+  {
+    "call": "new Promise(done=>{const object=Object.freeze({}),symbol=Symbol(\"x\"),error=Object.freeze({}),seen=[];let f;f=throttle((...a)=>{seen.push([a.length,a[0]===object,a[1]===symbol,a[2]===undefined,Object.is(a[3],-0)]);f(\"nested\");throw error;},50);let caught=false;try{f(object,symbol,undefined,-0);}catch(e){caught=e===error;}f(\"dropped\");setTimeout(()=>{let again=false;try{f(object,symbol,undefined,-0);}catch(e){again=e===error;}done([caught,again,seen]);},100);})",
+    "expected": [
+      true,
+      true,
+      [
+        [
+          4,
+          true,
+          true,
+          true,
+          true
+        ],
+        [
+          4,
+          true,
+          true,
+          true,
+          true
+        ]
+      ]
     ],
+    "async": true
+  },
+  {
+    "call": "(() => {const seen=[];const f=throttle(n=>seen.push(n),1);for(let i=0;i<10000;i++)f(i);return [seen.length>=1,seen[0]===0,seen.every((n,i)=>n>=0&&n<10000&&(i===0||n>seen[i-1]))];})()",
+    "expected": [
+      true,
+      true,
+      true
+    ]
+  },
+  {
+    "call": "throttle(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const send = throttle(n => log.push(n), 25); for (let n = 1; n <= 10; n += 1) { send(n); await wait(10); } return [log[0], log.length > 1]; })()",
+    "expected": [
+      1,
+      true
+    ],
+    "async": true
+  },
+  {
+    "call": "throttle(value => value, 10) && (async () => { const log = []; const send = throttle(n => log.push(n), 20); send(1); send(2); send(3); await new Promise(done => setTimeout(done, 100)); return log; })()",
+    "expected": [
+      1
+    ],
+    "async": true
+  },
+  {
+    "call": "throttle(value => value, 10) && (async () => { const log = []; const send = throttle((a, b) => log.push(a * b), 50); send(3, 4); return log; })()",
+    "expected": [
+      12
+    ],
+    "async": true
+  }
+],
   },
   "js-sleep": {
     solution: "const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));",

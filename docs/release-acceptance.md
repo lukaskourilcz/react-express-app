@@ -3627,8 +3627,9 @@ production dependency audits and diff checks pass. Cases include Symbol/BigInt
 literal substitution, a three-million-unit expansion, 10000 total UTF-16 units
 and reader calls, repeated reusable flushes, a 1000-entry board, 10000 pending
 call replacements, zero-delay deferral, exact opaque argument identity, callback
-reentry/errors and 10000 timestamp-gated calls. Clock fixtures restore Date.now
-synchronously in finally; no await or global timer hooks are left installed.
+reentry/errors and a 10000-call burst. Revision 2 replaces the initial clock
+stubs after whole-integrity exposed a valid Date-constructor false rejection.
+Current normal-clock probes also accept captured Date.now/Date aliases.
 Structural factory-versus-method estimate scope remains explicitly tracked in
 #391; twenty no-false-penalty checks are not a scope-correctness claim.
 
@@ -3695,3 +3696,35 @@ reviews are staged after verified PR #406 (225 deployed). Same-session model
 self-review and finite execution only; no full-catalogue, independent/human or
 authenticated production acceptance claim. No live learner state, schema,
 grader engine, UI or entitlement-policy change.
+
+
+## 15 October correction — throttle clock compatibility, b040 revision 2
+
+The whole grading-integrity suite caught a false rejection introduced by the
+b040 Date.now-only clock stubs: its existing correct new Date().getTime()
+implementation failed. The task now accepts equivalent Date timestamp reads
+and captured aliases. Functional cases leave the coherent clock untouched and
+check exact original arguments, undefined returns, reentry, consumed original
+errors with later recovery, and increasing accepted payloads in a 10000-call
+burst. Exact >= boundary and drop-stamp rules are source-reviewed, not inferred
+from a fake clock or a precise wall-clock count. The supplied algorithms and
+runtime engine are unchanged. A permanent captured-Date.now integrity proof
+joins the existing Date-constructor proof.
+
+The previous record is preserved under coding/history; only throttle advances
+to revision 2, with no increase in unique coverage. All 32 current-hash b040
+verdicts agree (22 valid, five starters, five wrongs), including the two new
+clock aliases. Twenty original plus two alias target/base-25-XP checks pass.
+The complete updated grading/Learn integrity, focused coding (reversed hidden
+and native Run), API/script types, launch, build, 263 native bindings, both
+zero-vulnerability dependency audits and diff checks pass. The initial failure
+and superseded 30-case proof remain historical evidence, not final acceptance.
+
+The 15-review cohort b040–b042 now has 92/92 final-hash selected verdicts and
+62 no-false-penalty checks. Responsive validation passes 264 fixture-backed
+probes, 320–1440 px. All 1004 emitted HTML/JS/CSS files are byte-identical
+before/after this server-only fixture correction, so the sweep covers the
+unchanged client build. Preview/required CI and production acceptance for this
+cohort remain pending. Coverage is 240/725 coding, 485 remaining, with 225
+coding and 263 native records deployed. Same-session model and finite checks;
+no authenticated Premium, independent/human or complete-catalogue claim.

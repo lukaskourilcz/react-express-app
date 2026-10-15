@@ -263868,10 +263868,10 @@
    "level": 15,
    "objective": "Gate leading-edge calls by one Date.now timestamp, including exact boundaries and consumed error/reentry windows.",
    "intendedLevel": "intermediate",
-   "revision": 1,
-   "contentHash": "8096059a1051194d",
+   "revision": 2,
+   "contentHash": "1a47853f975100f3",
    "hashSchema": "task-hash:v2",
-   "previousHash": "7e26b7436f31aa79",
+   "previousHash": "8096059a1051194d",
    "previousHashSchema": "task-hash:v2",
    "quality": {
     "topicRelevance": 5,
@@ -263906,24 +263906,24 @@
    "decision": "rewrite",
    "retireReason": null,
    "defects": [
-    "Junior installed its reset timer after fn, so a thrown callback permanently blocked later calls.",
-    "Timer-reset junior disagreed with the timestamp skeleton at eligibility boundaries.",
-    "Reference read Date.now twice for one accepted call; opaque arguments and return/error contracts were unspecified."
+    "Before b040, junior installed its reset timer after fn, so a thrown callback permanently blocked later calls; reference read Date.now twice.",
+    "B040 revision 1 over-constrained clock access and its Date.now-only stubs rejected the existing valid new Date().getTime() integrity implementation. Captured clock aliases also require the unchanged coherent runtime clock."
    ],
-   "rationale": "Use one timestamp read and store-before-callback in reference/junior, retaining the existing timestamp senior. Explicitly author Date.now-based eligibility rather than reset timers, exact >= boundary, unchanged drop stamp, nonnegative nondecreasing integer clock values and receiver-independent exact opaque arguments. A thrown callback consumes the window but propagates its original value. Add synchronously restored local clock fixtures for zero/exact/just-before boundaries, drop non-extension, reentry, original errors/identities and 10000 accepted calls; retained real-time cases still test no trailing replay.",
+   "rationale": "Retain the corrected timestamp-based reference/junior/senior and the intended consumed-error/reentry window. Accept equivalent Date timestamp reads and aliases; do not replace a clock global inside functional grading. Replace fake-time exact-boundary cases with normal-clock opaque argument/undefined-return checks, consumed original-error and reentry checks followed by a comfortably later timer, and a 10000-call burst that asserts valid accepted ordering without inventing an exact count. Exact >= boundary and drop non-extension are established by reading the supplied implementations, not a wall-clock benchmark. Add valid captured Date-constructor and Date.now-alias candidates. The pre-existing whole grading-integrity suite caught the bad revision before this cohort was merged or deployed; its new Date proof is preserved and a captured Date.now proof is now permanent. No runtime-engine or reward-policy change.",
    "evidence": [
     "https://developer.mozilla.org/en-US/docs/Glossary/Throttle",
     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/now",
     "https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout",
-    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
-    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
-    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    "run: all 32 selected current-hash b040 QuickJS verdicts agree (22 valid, five starters, five wrongs); throttle has eight cases including the two new valid clock aliases.",
+    "run: twenty original b040 target/base-25-XP checks plus both additional aliases pass; unknown estimates stay unpenalized.",
+    "run: initial whole grading integrity failed its existing new Date clock-equivalence proof under the revision-1 fixtures; after fixture correction the complete grading/Learn integrity passed against stand-ins. The additional permanent captured-clock proof is included in final release gates.",
+    "history: docs/audit/wip/coding/history/review-2026-10-15-b040-clock-before.json; no new unique coverage."
    ],
    "graderChecks": {
     "cases": [
      {
       "id": "js-throttle-calls",
-      "contentHash": "8096059a1051194d",
+      "contentHash": "1a47853f975100f3",
       "label": "reference",
       "expected": "passed",
       "verdict": "passed",
@@ -263932,7 +263932,7 @@
      },
      {
       "id": "js-throttle-calls",
-      "contentHash": "8096059a1051194d",
+      "contentHash": "1a47853f975100f3",
       "label": "junior",
       "expected": "passed",
       "verdict": "passed",
@@ -263941,7 +263941,7 @@
      },
      {
       "id": "js-throttle-calls",
-      "contentHash": "8096059a1051194d",
+      "contentHash": "1a47853f975100f3",
       "label": "senior",
       "expected": "passed",
       "verdict": "passed",
@@ -263950,7 +263950,7 @@
      },
      {
       "id": "js-throttle-calls",
-      "contentHash": "8096059a1051194d",
+      "contentHash": "1a47853f975100f3",
       "label": "starter",
       "expected": "failed",
       "verdict": "failed",
@@ -263959,7 +263959,7 @@
      },
      {
       "id": "js-throttle-calls",
-      "contentHash": "8096059a1051194d",
+      "contentHash": "1a47853f975100f3",
       "label": "alternative",
       "expected": "passed",
       "verdict": "passed",
@@ -263968,15 +263968,33 @@
      },
      {
       "id": "js-throttle-calls",
-      "contentHash": "8096059a1051194d",
+      "contentHash": "1a47853f975100f3",
       "label": "wrong-reset-timer",
       "expected": "failed",
       "verdict": "failed",
       "visible": 5,
       "hidden": 6
+     },
+     {
+      "id": "js-throttle-calls",
+      "contentHash": "1a47853f975100f3",
+      "label": "alternative-date-constructor",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "js-throttle-calls",
+      "contentHash": "1a47853f975100f3",
+      "label": "alternative-captured-clock",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
      }
     ],
-    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+    "notes": "Finite behavior samples on the unmodified coherent clock. The 10000-call burst checks increasing accepted payloads, not 10000 accepted windows. No fake exact-boundary or asymptotic timing proof."
    },
    "cs": {
     "hash": null,
@@ -263990,7 +264008,7 @@
      "executable-recheck",
      "self-review-of-final-English"
     ],
-    "run": "Codex session 2026-10-15, sequential five-item batch b040; no independent/human reader claim"
+    "run": "Codex session 2026-10-15, b040 clock-fixture revision 2 after whole-integrity regression; same-session model self-review only"
    },
    "reviewedAt": "2026-10-15",
    "verification": {
@@ -264001,11 +264019,12 @@
      "https://developer.mozilla.org/en-US/docs/Glossary/Throttle",
      "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Date/now",
      "https://developer.mozilla.org/en-US/docs/Web/API/Window/setTimeout",
-     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
-     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
-     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+     "run: all 32 selected current-hash b040 QuickJS verdicts agree (22 valid, five starters, five wrongs); throttle has eight cases including the two new valid clock aliases.",
+     "run: twenty original b040 target/base-25-XP checks plus both additional aliases pass; unknown estimates stay unpenalized.",
+     "run: initial whole grading integrity failed its existing new Date clock-equivalence proof under the revision-1 fixtures; after fixture correction the complete grading/Learn integrity passed against stand-ins. The additional permanent captured-clock proof is included in final release gates.",
+     "history: docs/audit/wip/coding/history/review-2026-10-15-b040-clock-before.json; no new unique coverage."
     ],
-    "notes": "Read all final material and variants. Clock fixtures restore Date.now in finally before returning and never await while installed, so concurrent asynchronous checks cannot observe their temporary clock. Timestamp semantics are an explicit clarified policy, not a claim that all throttle implementations require the same technique. Final English material and execution reread; same-session self-review only.",
+    "notes": "Reread the complete task, all supplied timestamp implementations, two clock aliases and every current test. No Date global is modified or captured by fixtures. The error callback is caught synchronously, and a later ordinary timer tests the consumed window recovery. Exact-boundary rules are source-reviewed rather than faked. Same-session reread, no independent/human claim.",
     "pass": "second-reading"
    }
   },

@@ -30,7 +30,7 @@
     "issuedStillRequiringReview": 485,
     "deployedModelReviewedIssuedTasks": 225,
     "stagedModelReviewedIssuedTasks": 15,
-    "stagedExecutionEvidence": "15 October five-item commits through b042: 15 staged reviews; latest batch 30/30 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
+    "stagedExecutionEvidence": "15 October b040–b042: 15 staged reviews; 92/92 selected current-hash worker verdicts and 62 target/base-25-XP checks pass after the documented b040 clock revision 2. Full updated grading/Learn integrity and 264 responsive probes pass; 1004 emitted client files are unchanged by the server-only correction. Required CI/preview/production acceptance is pending.",
     "deployedExecutionEvidence": "PR #406 passed required run 38700013792 at exact ad6a0a5822b465dbd477f724e1db9845cb8fb420 (verify 31m39s; SQL 37s), merged at dca959f9839d43ad73ff7a8137b61e08cffa5fde. READY production dpl_5FuxpnzTardVzaqJPPsm8EBd1iW1 matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four changed-cohort actual Submit checks pass at zero XP/null progress; updated briefs, valid solutions and selected wrongs were verified. Shipped coverage is 225/725 coding and 263/263 native. No authenticated native/Premium, independent/human or complete editorial-coverage claim."
   },
   "nativePaths": {
