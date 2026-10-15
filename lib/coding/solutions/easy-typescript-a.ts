@@ -273,36 +273,14 @@ const toProfile = (raw: ApiUser): Profile => {
   const { user_name: name, avatar_url: avatar = null } = raw;
   return { name, avatar };
 };`,
-    junior: `interface ApiUser {
-  user_name: string;
-  avatar_url?: string;
-}
-
-interface Profile {
-  name: string;
-  avatar: string | null;
-}
-
-const toProfile = (raw: ApiUser): Profile => {
-  const name = raw.user_name;
-  let avatar: string | null = null;
-  if (raw.avatar_url !== undefined) {
-    avatar = raw.avatar_url;
-  }
-  return { name: name, avatar: avatar };
-};`,
-    senior: `interface ApiUser {
-  user_name: string;
-  avatar_url?: string;
-}
-
-interface Profile {
-  name: string;
-  avatar: string | null;
-}
-
-const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user_name, avatar: avatar_url ?? null });`,
+    junior: "interface ApiUser {\n  user_name: string;\n  avatar_url?: string;\n}\n\ninterface Profile {\n  name: string;\n  avatar: string | null;\n}\n\nconst toProfile = (raw: ApiUser): Profile => {\n  const { user_name: name, avatar_url: avatar = null } = raw;\n  const profile: Profile = { name: name, avatar: avatar };\n  return profile;\n};",
+    senior: "interface ApiUser {\n  user_name: string;\n  avatar_url?: string;\n}\ninterface Profile {\n  name: string;\n  avatar: string | null;\n}\nfunction toProfile(raw: ApiUser): Profile {\n  const { user_name: name, avatar_url: avatar = null } = raw;\n  return { name, avatar };\n}",
+    hiddenTypeTests: [{"code": "const __auditOptional: Profile = toProfile({user_name:\"a\",avatar_url:undefined});"}, {"code": "toProfile({user_name:\"a\",avatar_url:42});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const raw=Object.assign(Object.create(null),{user_name:' Ada \ud83e\udd88 ',avatar_url:' /a.png ',extra:'ignore'});Object.freeze(raw);const a=toProfile(raw),b=toProfile(raw);a.name='changed';return [a!==b,b.name,b.avatar,raw.user_name,Object.keys(b).sort().join(','),Object.getPrototypeOf(b)===Object.prototype];})()", expected: [true, " Ada \ud83e\udd88 ", " /a.png ", " Ada \ud83e\udd88 ", "avatar,name", true] },
+      { call: "[toProfile(Object.freeze({user_name:'',avatar_url:undefined})),toProfile(Object.freeze({user_name:'x',avatar_url:''})),toProfile(Object.freeze({user_name:'x'}))]", expected: [{"name": "", "avatar": null}, {"name": "x", "avatar": ""}, {"name": "x", "avatar": null}] },
+      { call: "(()=>{const name='x'.repeat(200),avatar='y'.repeat(200),out=toProfile({user_name:name,avatar_url:avatar});return [out.name===name,out.avatar===avatar];})()", expected: [true, true] },
+
       { call: 'toProfile({ user_name: "dee", avatar_url: undefined })', expected: { name: 'dee', avatar: null } },
       { call: 'Object.keys(toProfile({ user_name: "e", avatar_url: "/e.png" })).sort()', expected: ['avatar', 'name'] },
       { call: 'toProfile({ user_name: "f g", avatar_url: "https://x.dev/f.png" })', expected: { name: 'f g', avatar: 'https://x.dev/f.png' } },
@@ -371,7 +349,13 @@ const toProfile = ({ user_name, avatar_url }: ApiUser): Profile => ({ name: user
   if (!next.delete(id)) next.add(id);
   return next;
 };`,
+    hiddenTypeTests: [{"code": "const __auditSource: ReadonlySet<string> = new Set([\"a\"]); toggle(__auditSource,\"b\").add(\"c\");"}],
     hiddenTests: [
+      { call: "[...toggle(new Set(['z','a']), 'm')]", expected: ["z", "a", "m"] },
+      { call: "[...toggle(new Set([' A ','a','','A']), 'a')]", expected: [" A ", "", "A"] },
+      { call: "(()=>{const input=Object.freeze(new Set(['z','a'])),a=toggle(input,'z'),b=toggle(input,'z');a.add('changed');return [a instanceof Set,a!==input,a!==b,[...input],[...b],a.size];})()", expected: [true, true, true, ["z", "a"], ["a"], 2] },
+      { call: "(()=>{const input=new Set(Array.from({length:1000},(_,i)=>String(999-i))),out=toggle(input,'1000');return [input.size,out.size,[...out][0],[...out][1000],out.has('1000'),input.has('1000')];})()", expected: [1000, 1001, "999", "1000", true, false] },
+
       { call: '(() => { const selected = new Set(["a"]); return toggle(selected, "b") !== selected; })()', expected: true },
       { call: '[...toggle(toggle(new Set(["x"]), "y"), "y")]', expected: ['x'] },
       { call: 'toggle(new Set(["a", "b", "c"]), "b").size', expected: 2 },
@@ -842,44 +826,14 @@ const RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
 
 const byPriority = (tasks: readonly Task[]): Task[] =>
   [...tasks].sort((a, b) => RANK[a.priority] - RANK[b.priority]);`,
-    junior: `type Priority = "high" | "medium" | "low";
-
-interface Task {
-  title: string;
-  priority: Priority;
-}
-
-const byPriority = (tasks: readonly Task[]): Task[] => {
-  const result: Task[] = [];
-  for (const task of tasks) {
-    if (task.priority === "high") {
-      result.push(task);
-    }
-  }
-  for (const task of tasks) {
-    if (task.priority === "medium") {
-      result.push(task);
-    }
-  }
-  for (const task of tasks) {
-    if (task.priority === "low") {
-      result.push(task);
-    }
-  }
-  return result;
-};`,
-    senior: `type Priority = "high" | "medium" | "low";
-
-interface Task {
-  title: string;
-  priority: Priority;
-}
-
-const ORDER: readonly Priority[] = ["high", "medium", "low"];
-
-const byPriority = (tasks: readonly Task[]): Task[] =>
-  [...tasks].sort((a, b) => ORDER.indexOf(a.priority) - ORDER.indexOf(b.priority));`,
+    junior: "type Priority = \"high\" | \"medium\" | \"low\";\n\ninterface Task {\n  title: string;\n  priority: Priority;\n}\n\nconst RANK: Record<Priority, number> = { high: 0, medium: 1, low: 2 };\nconst byPriority = (tasks: readonly Task[]): Task[] => {\n  const result: Task[] = [];\n  for (const task of tasks) result.push(task);\n  result.sort((left, right) => RANK[left.priority] - RANK[right.priority]);\n  return result;\n};",
+    senior: "type Priority = \"high\" | \"medium\" | \"low\";\n\ninterface Task {\n  title: string;\n  priority: Priority;\n}\n\nconst RANK: Readonly<Record<Priority, number>> = { high: 0, medium: 1, low: 2 };\nfunction byPriority(tasks: readonly Task[]): Task[] {\n  return tasks.toSorted((left, right) => RANK[left.priority] - RANK[right.priority]);\n}",
+    hiddenTypeTests: [{"code": "const __auditTasks: readonly Task[] = [{title:\"a\",priority:\"high\"}]; const __auditSorted: Task[] = byPriority(__auditTasks);"}],
     hiddenTests: [
+      { call: "(()=>{const extra=Object.freeze({}),a=Object.freeze({title:'same',priority:'low',extra}),b=Object.freeze({title:'same',priority:'high',extra}),c=Object.freeze({title:'same',priority:'high',extra}),input=Object.freeze([a,b,c,b]),out=byPriority(input),again=byPriority(input);out.push(a);return [out!==input,out!==again,again.length,again[0]===b,again[1]===c,again[2]===b,again[3]===a,again[0].extra===extra,input[0]===a];})()", expected: [true, true, 4, true, true, true, true, true, true] },
+      { call: "(()=>{const item=Object.freeze({title:'',priority:'medium'}),input=Object.freeze([item]),out=byPriority(input),empty=byPriority([]);out.push(item);return [out!==input,out[0]===item,input.length,empty!==byPriority([]),empty.length];})()", expected: [true, true, 1, true, 0] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({title:String(i),priority:['low','high','medium'][i%3]}))),out=byPriority(input);const groups=['high','medium','low'];let ok=true,offset=0;for(const p of groups){for(const task of input)if(task.priority===p){ok=ok&&out[offset]===task;offset++;}}return [out.length,offset,ok,input[0].priority];})()", expected: [1000, 1000, true, "low"] },
+
       { call: 'byPriority([{ title: "a", priority: "medium" }, { title: "b", priority: "medium" }]).map((task) => task.title)', expected: ['a', 'b'] },
       { call: '(() => { const tasks = [{ title: "a", priority: "low" }, { title: "b", priority: "high" }]; byPriority(tasks); return tasks.map((task) => task.title); })()', expected: ['a', 'b'] },
       { call: 'byPriority([{ title: "1", priority: "low" }, { title: "2", priority: "medium" }, { title: "3", priority: "high" }, { title: "4", priority: "medium" }, { title: "5", priority: "low" }, { title: "6", priority: "high" }]).map((task) => task.title)', expected: ['3', '6', '2', '4', '1', '5'] },

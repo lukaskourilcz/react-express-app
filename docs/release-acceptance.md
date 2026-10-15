@@ -4077,3 +4077,39 @@ pass 80/80 fixture-backed light/dark responsive probes at 320–1440 px with zer
 issues/unprobed. These are same-session model reviews, not authenticated Premium
 or independent/full-catalogue acceptance. Exactly twelve handlers remain; no
 schema/RLS, dependency, entitlement, account-data or reward-policy change.
+
+## PR #413 exact production — 15 October 2026
+
+PR #413 passed required run 38737325851 at exact head 9c8f7265631ee2d025edc8a38d89b5f47587c0aa (verify 28m15s; SQL 49s), then merged at 0b754f3192b1514a4c5d5b51d2d9cb1cd65f49da on 15 October 2026 at 13:17:21 UTC. READY production dpl_FUWzWDu9seJZ9XMi3vmUr6984omJ matches that merge, owns devshark.app and has no alias error. Both exact preview and production pass eleven general guest checks plus twelve actual changed-task Submit verdicts: reference, valid alternative and meaningful wrong for four available TypeScript tasks. Six tasks return 402 and remain explicitly unverified through the dedicated Premium path. All guest submissions grant zero XP and return null progress. Local cohort evidence remains 60/60 final-hash selected verdicts, forty authored-target/base-25-XP checks and 160 light/dark responsive probes. Shipped model-review coverage is 270/725 coding and 263/263 native. No authenticated Premium, independent/human, physical-device or full-catalogue acceptance claim.
+
+PR #414 now targets main at fixed c01f700c8c34e612235141cdca265e20fe5f4e63. Its exact READY preview passes eleven general guest checks and six changed-task Submit verdicts at zero XP/null progress; eight tasks return402. Its SQL job passes and verify remains pending. B051 is developed separately from both frozen PR heads.
+
+## Five-item continuation B051 — 15 October 2026
+
+Five individual reviews cover closed Light transitions, typed priority ranks,
+doubling schedules, API field defaults and insertion-ordered Set toggles. Correct
+cycle shortcuts, stable linear buckets, frozen schedules and filter/copy variants
+remain accepted. Readonly terminology now describes static views accurately. The
+Set scratch demo waits until the function returns a Set, so an untouched starter
+fails checks without an accidental top-level spread error.
+
+The baseline matched 26/30 expected labels: three wrongs were falsely accepted
+and one starter returned error rather than failed; reverse-cycle and shared-output
+wrongs were already rejected. Final evidence is 30/30 (20 valid, five starters,
+five wrongs), with twenty authored-target/base-25-XP checks. Sixteen runtime/six
+type assertions cover bounds, stable references, output lifetime, exact strings,
+undefined defaults and Set order. All 285 current review hashes match; 440 coding
+tasks remain and native stays 263/263. Canonical TypeScript checks, isolated native
+Run, reversed hidden order, API/script types, launch/build, registry/index, native
+bindings, both production dependency audits (zero vulnerabilities), copy sweep
+(zero findings) and diff checks pass. The five changed routes pass 80/80 light/dark
+fixture-backed responsive probes at 320–1440 px, zero issues/unprobed.
+
+A development parameter-pattern default produced a real compiler error and was
+replaced by body destructuring before final approval; no failing board was
+approved. These are same-session model reviews with finite executable evidence.
+B049–B050 stay frozen in #414; B051 is separate and not yet released. No schema,
+RLS, dependencies, entitlements, real-account state or reward rules changed; twelve
+physical handlers remain. Direct production has_table_privilege checks additionally
+confirm zero excess grants over all 88 combinations, including MAINTAIN; this is
+stronger than relying only on information_schema table_privileges.

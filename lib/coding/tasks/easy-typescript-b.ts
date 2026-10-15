@@ -714,7 +714,7 @@ console.log(sortTitles(["Zebra", "apple", "Mango"]));
     tier: 1,
     focus: ['while', 'readonly'],
     title: 'Wait times between retries',
-    prompt: 'A client that cannot reach the server waits before it tries again, and doubles the wait each time. Write `retryDelays(first: number, cap: number): readonly number[]`, listing the waits in milliseconds: `first`, then twice that, and so on while the wait is no more than `cap`. `retryDelays(100, 1000)` gives `[100, 200, 400, 800]`. You do not know the count in advance, so use a `while` loop. A `first` of 0 or less never grows, so return `[]` for it. The `readonly` return type stops a caller from pushing a wait of their own.',
+    prompt: "A client that cannot reach the server waits before it tries again, and doubles the wait each time. Write `retryDelays(first: number, cap: number): readonly number[]`, listing the waits in milliseconds: `first`, then twice that, and so on while the wait is no more than `cap`. `retryDelays(100, 1000)` gives `[100, 200, 400, 800]`. Build the list with a `while` loop as the wait grows. A `first` of 0 or less never grows, so return `[]` for it. The `readonly` return type stops a caller from pushing a wait of their own. Domain: first and cap are finite integers from -1000000000 through 1000000000. Return [] whenever first <= 0 or the first positive wait exceeds cap; include a wait equal to cap. Every returned schedule must stay unchanged by later calls. The readonly result is a static view: runtime freezing is optional, not implied by the type. Return an array of the computed numbers without actually sleeping, scheduling retries or performing network requests. Target: O(log n) time and output space, where n is 2 + max(0, cap) as a numeric magnitude; for positive first the number of doublings is at most logarithmic in this bound.",
     starter: `const retryDelays = (first, cap) => {
 
 };
@@ -1153,7 +1153,7 @@ const errorsOf = (replies: readonly Reply[]): string[] =>
     tier: 1,
     focus: ['literal-types', 'record'],
     title: 'The next traffic light',
-    prompt: 'A traffic light shows `"red"`, then `"green"`, then `"amber"`, then red again. Declare `type Light = "red" | "green" | "amber"` and a table `const NEXT: Record<Light, Light>` that maps each light to the one after it. Then write `nextLight(light: Light, steps: number): Light`, moving through the table `steps` times. Typed as `Record<Light, Light>`, the table cannot leave a light out or misspell one without a compile error.',
+    prompt: "A traffic light shows `\"red\"`, then `\"green\"`, then `\"amber\"`, then red again. Declare `type Light = \"red\" | \"green\" | \"amber\"` and a table `const NEXT: Record<Light, Light>` that maps each light to the one after it. Then write `nextLight(light: Light, steps: number): Light`, moving through the table `steps` times. Typed as `Record<Light, Light>`, the table cannot leave a light out or misspell one without a compile error. Domain: light is exactly one of the three Light values and steps is an integer from 0 through 10000. NEXT has the stated fixed transitions and must remain unchanged across calls. Calls are independent and return the resulting Light synchronously. Target: O(n) time and O(1) retained state for the table-walking approach, where n is 1 + steps as a numeric magnitude rather than bit length. An equivalent cycle-reduction shortcut is also valid.",
     starter: `const nextLight = (light, steps) => {
 
 };

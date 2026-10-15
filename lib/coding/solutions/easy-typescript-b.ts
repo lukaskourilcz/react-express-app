@@ -623,12 +623,13 @@ const sortTitles = (titles: readonly string[]): string[] => titles.toSorted(byLo
   }
   return delays;
 };`,
-    senior: `const retryDelays = (first: number, cap: number): readonly number[] => {
-  const delays: number[] = [];
-  for (let wait = first; first > 0 && wait <= cap; wait *= 2) delays.push(wait);
-  return Object.freeze(delays);
-};`,
+    senior: "function retryDelays(first: number, cap: number): readonly number[] {\n  const delays: number[] = [];\n  if (first <= 0) return Object.freeze(delays);\n  let wait = first;\n  while (wait <= cap) {\n    delays.push(wait);\n    wait *= 2;\n  }\n  return Object.freeze(delays);\n}",
+    hiddenTypeTests: [{"code": "const __auditMutable: number[] = retryDelays(1,8);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const a=retryDelays(1,8),b=retryDelays(5,5),c=retryDelays(0,100);return [Array.isArray(a),a,b,c];})()", expected: [true, [1, 2, 4, 8], [5], []] },
+      { call: "(()=>{const result=retryDelays(1,1000000000);return [result.length,result[0],result[result.length-1],result.every((x,i)=>x===2**i)];})()", expected: [30, 1, 536870912, true] },
+      { call: "[retryDelays(1,-1),retryDelays(-1,-1),retryDelays(1000000000,1000000000),retryDelays(1000000000,999999999)]", expected: [[], [], [1000000000], []] },
+
       { call: 'retryDelays(1, 10)', expected: [1, 2, 4, 8] },
       { call: 'retryDelays(5, 5)', expected: [5] },
       { call: 'retryDelays(-10, 100)', expected: [] },
@@ -1007,13 +1008,13 @@ const nextLight = (light: Light, steps: number): Light => {
   }
   return current;
 };`,
-    senior: `type Light = "red" | "green" | "amber";
-
-const NEXT: Readonly<Record<Light, Light>> = { red: "green", green: "amber", amber: "red" };
-
-const nextLight = (light: Light, steps: number): Light =>
-  Array.from({ length: steps }).reduce<Light>((current) => NEXT[current], light);`,
+    senior: "type Light = \"red\" | \"green\" | \"amber\";\n\n// Record<Light, Light>: a missing light or a misspelt one is a compile error.\nconst NEXT: Record<Light, Light> = {\n  red: \"green\",\n  green: \"amber\",\n  amber: \"red\",\n};\n\nfunction nextLight(light: Light, steps: number): Light {\n  let current = light;\n  let remaining = steps;\n  while (remaining > 0) {\n    current = NEXT[current];\n    remaining -= 1;\n  }\n  return current;\n}",
+    hiddenTypeTests: [{"code": "nextLight(\"red\", \"2\");", "rejects": true}],
     hiddenTests: [
+      { call: "['red','green','amber'].map(light=>nextLight(light,10000))", expected: ["green", "amber", "red"] },
+      { call: "(()=>{const out=[];for(const start of ['red','green','amber']){let current=start;for(let i=0;i<30;i++){out.push(nextLight(start,i)===current);current=NEXT[current];}}return out.every(Boolean);})()", expected: true },
+      { call: "(()=>{const before=[NEXT.red,NEXT.green,NEXT.amber];nextLight('red',9999);nextLight('green',0);return [NEXT.red===before[0],NEXT.green===before[1],NEXT.amber===before[2],nextLight('amber',0)];})()", expected: [true, true, true, "amber"] },
+
       { call: 'nextLight("green", 2)', expected: 'red' },
       { call: 'nextLight("amber", 5)', expected: 'green' },
       { call: 'nextLight("red", 7)', expected: 'green' },
