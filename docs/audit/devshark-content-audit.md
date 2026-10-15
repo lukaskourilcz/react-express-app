@@ -1,5 +1,34 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n012
+
+Reviewed three tree coding exercises, the second reading and the full check.
+The reading now uses the lesson's nonempty edge-height h+1 convention; the
+parent check summary accurately names global bounds and ordered traversal.
+All three code briefs define finite ordinary trees through 128, preserve
+existing node identities/properties/descriptors, and state applicable O(n)
+worst-case targets with the explicit node-count and unit-cost model. The BST
+brief additionally gives the precise h+1 bound and one-new-leaf mutation rule.
+Traversal outputs must be independent and cannot alter previous results.
+
+Baseline expected verdicts match **14/18** after correcting the metadata
+counterexample's null guard: size/height accepts markers and cloned child
+links, traversal accepts markers, and BST code accepts markers. Final exact-
+hash sandbox results match **18/18**: six valid implementations, three starters
+and nine wrong implementations. New cases include ownership/descriptors,
+frozen 128-node chains, repeated numeric values/fractions, independent outputs,
+first-equal node identity and exact insertion changes. Existing four-node
+search budgets stay unchanged and are described as bounded fixture evidence.
+Six valid complexity analyses retain base 25 XP, including unknown results.
+
+All five individual manual reviews and final readings are recorded. Native
+bindings, path contracts, path-authority tests, API/script types, launch, build,
+both production dependency audits (zero vulnerabilities), copy sweep and diff
+checks pass. No live account progress/XP or authenticated activity acceptance
+is inferred. Coverage is **115/263 native**, **148 remaining**, and **95/725
+coding**, **630 remaining**. N008–n012 are local while PR #395's frozen head
+61900610 completes required verification; its preview/SQL evidence is retained.
+
 ## 15 October continuation — five-item native batch n011
 
 Reviewed both tree lessons, the first linked reading and questions three/four.
