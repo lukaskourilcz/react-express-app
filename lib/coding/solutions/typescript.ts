@@ -366,7 +366,12 @@ const first = <T>(items: T[]): T | undefined => items.at(0);`,
   if (value == null) return fallback;
   return value;
 };`,
+    hiddenTypeTests: [{"code": "const __auditNullable: string|null = orDefault<string|null>(null,null);"}, {"code": "const __auditUndefined: undefined = orDefault<undefined>(undefined,undefined);"}, {"code": "const __auditUnion: number|string = orDefault<number|string>(1,\"fallback\");"}, {"code": "const __auditNotNullable: string = orDefault<string|null>(null,null);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const obj=Object.freeze({}),fn=()=>{throw Error('not called');},sym=Symbol('x'),promise=Promise.resolve(1),values=[obj,fn,sym,promise,NaN,-0,0,false,''];return values.every(value=>Object.is(orDefault(value,obj),value)&&Object.is(orDefault(null,value),value)&&Object.is(orDefault(undefined,value),value));})()", expected: true },
+      { call: "[orDefault(null,null)===null,orDefault(undefined,undefined)===undefined,orDefault(undefined,null)===null,orDefault(null,undefined)===undefined]", expected: [true, true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array(10000).fill(Object.freeze({x:1}))),fallback=Object.freeze({value:input});return [orDefault(input,fallback)===input,orDefault(null,fallback)===fallback,input.length];})()", expected: [true, true, 10000] },
+
       { call: "orDefault(false, true)", expected: false },
       { call: "orDefault(undefined, 0)", expected: 0 },
       { call: "orDefault(\"set\", \"fallback\")", expected: "set" },

@@ -526,7 +526,7 @@ const setField = <K extends keyof Product>(product: Product, key: K, value: Prod
     tier: 1,
     focus: ['spread', 'filter'],
     title: 'Pin a chat to the top',
-    prompt: 'A messaging app lets you pin one chat above the others. Write `pinToTop(chats: readonly string[], chat: string): string[]`, returning a new list with `chat` first and every other chat after it, in the same order as before. Build it as `[chat, ...rest]`, where `rest` is the list without that chat. A chat that is not in the list is not added: return a copy of the list as it is.',
+    prompt: "A messaging app lets you pin one chat above the others. Write `pinToTop(chats: readonly string[], chat: string): string[]`, returning a new list with `chat` first and every other chat after it, in the same order as before. Build it as `[chat, ...rest]`, where `rest` is the list without that chat. A chat that is not in the list is not added: return a copy of the list as it is. Domain: a dense read-only array of at most 1000 strings and a string chat, each at most 200 UTF-16 units, possibly frozen at runtime. Match exact strings without trimming or case conversion; empty names and duplicates are ordinary values. If chat occurs more than once, place exactly one copy at the front and remove every other occurrence of that same chat. Preserve the order and duplicates of all other names. Return a fresh mutable array on every call, including when chat is missing, already first or the input is empty; never change input. Target: O(n) time and output space, where n is 1 + the chat count under bounded-width string comparison.",
     starter: `const pinToTop = (chats: readonly string[], chat: string): string[] => {
 
 };
@@ -567,7 +567,7 @@ console.log(pinToTop(["Ada", "Bo", "Cy"], "Cy"));
     tier: 2,
     focus: ['spread', 'objects'],
     title: 'Move to a new city',
-    prompt: 'Write `moveTo(user: User, city: string): User`, returning a new user whose address has the new `city` and keeps its `street`. The user you were given must not change, and neither must its address. Spread copies one level only: `{ ...user }` is a new user that still points at the old `address` object, so the address needs a spread of its own.',
+    prompt: "Write `moveTo(user: User, city: string): User`, returning a new user whose address has the new `city` and keeps its `street`. The user you were given must not change, and neither must its address. Spread copies one level only: `{ ...user }` is a new user that still points at the old `address` object, so the address needs a spread of its own. Domain: stable ordinary/null-prototype data records with the declared required fields, possibly frozen. name, street, old city and new city are strings up to 200 UTF-16 units, preserved exactly without trimming or validation. User and Address may each have up to 100 extra own enumerable string/Symbol data properties with opaque values. Preserve those fields and references except the replaced address/city; ignore inherited properties when copying. Return a fresh plain user and fresh plain address every call, even if the city is unchanged. Both result objects are mutable; nested opaque fields remain shared rather than deep-cloned. Leave all input objects unchanged. Target: O(n) time and shallow output space, where n is 1 + the own enumerable field counts of user and address, under bounded-key copying.",
     starter: `interface Address {
   street: string;
   city: string;

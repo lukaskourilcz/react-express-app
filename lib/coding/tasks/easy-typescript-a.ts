@@ -830,7 +830,7 @@ const headings = (columns: (keyof Contact)[]): string[] => {
     tier: 1,
     focus: ['spread', 'map'],
     title: 'Tick off a todo',
-    prompt: 'Write `markDone(todos: readonly Todo[], id: number): Todo[]`, returning a new list in which the todo with that `id` has `done: true` and every other todo is unchanged. Build the changed todo as a new object with spread, so the caller’s todos stay as they were. An id that matches nothing gives back an equal list. `Todo` is declared for you.',
+    prompt: "Write `markDone(todos: readonly Todo[], id: number): Todo[]`, returning a new list in which the todo with that `id` has `done: true` and every other todo is unchanged. Build the changed todo as a new object with spread, so the caller\u2019s todos stay as they were. An id that matches nothing gives back an equal list. `Todo` is declared for you. Domain: a dense read-only array of at most 1000 stable ordinary/null-prototype data records, possibly frozen. Every todo has integer id from 0 through 1000000000, text up to 200 UTF-16 units and boolean done, plus up to 20 extra own enumerable string/Symbol data properties with opaque values. Mark every matching id if duplicates exist. Always return a fresh mutable outer array. A matching record with done: false gets a fresh plain shallow copy with done: true. An already-done match may be reused or shallow-copied; preserve every other own enumerable property and its original reference either way. Nonmatching records retain exact identity. Ignore inherited properties when copying, leave all inputs unchanged and do not deep-clone opaque fields. Target: O(n) time and output space, where n is 1 + todo count + their total own enumerable field count.",
     starter: `interface Todo {
   id: number;
   text: string;

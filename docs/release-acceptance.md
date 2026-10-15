@@ -4034,22 +4034,46 @@ exact nested order formatting. Correct alternatives remain accepted. The readonl
 hint no longer claims runtime method removal, ASCII ordering is scoped correctly,
 and lowercase-key equality is distinguished from Unicode case folding.
 
-The baseline matched25/30, accepting five meaningful wrongs. Final evidence is
+The baseline matched 25/30, accepting five meaningful wrongs. Final evidence is
 30/30 selected current-hash verdicts (20 valid, five starters, five wrongs) and
 twenty target/base-25-XP checks. Nineteen runtime/four type assertions cover
 previously missing empty values, fresh mutable results, opaque row references,
 Unicode ordering, sparse item counts and maximum bounded inputs. Canonical
 coding passes actual TypeScript checking, reversed hidden checks and isolated
-native Run. All275 current coding review hashes match;450 remain. Native remains
+native Run. All 275 current coding review hashes match; 450 remain. Native remains
 263/263. API/script types, launch/build, native bindings, curation/index, both
 production dependency audits (zero vulnerabilities), copy sweep (zero findings)
-and diff checks pass. The five changed routes pass80/80 fixture-backed light/dark
-responsive probes at320–1440px with zero issues/unprobed. Same-session model
+and diff checks pass. The five changed routes pass 80/80 fixture-backed light/dark
+responsive probes at 320–1440 px with zero issues/unprobed. Same-session model
 review only; authenticated Premium/independent acceptance remains separate.
 
-PR #413 remains frozen at9c8f7265631ee2d025edc8a38d89b5f47587c0aa while B049 is
+PR #413 remains frozen at 9c8f7265631ee2d025edc8a38d89b5f47587c0aa while B049 is
 committed separately. That exact READY preview passes eleven general guest checks
 and twelve actual changed-task Submit verdicts (reference, valid alternative and
-wrong for four free tasks), all zero XP/null progress. Six tasks return402 and
+wrong for four free tasks), all zero XP/null progress. Six tasks return 402 and
 remain explicitly blocked for dedicated Premium acceptance. Required CI and
 production for #413 are pending; B049 is not part of that frozen PR.
+
+## Five-item continuation B050 — 15 October 2026
+
+Five individual object/default reviews cover guarded own expense keys, exact
+pinned-name consolidation, shallow todo metadata preservation, two-level user
+copies and accurate unconstrained generic nullish fallback. The todo senior's
+valid already-done no-op reuse remains allowed. Generic T may itself be nullable;
+no NonNullable constraint or unsupported always-present promise is introduced.
+
+The baseline matched 25/30 verdicts, accepting five meaningful wrongs. Final
+evidence is 30/30 selected current-hash verdicts (20 valid, five starters, five
+wrongs) and twenty target/base-25-XP checks. Eighteen runtime/seven type assertions
+exercise inherited/extra keys, exact opaque/Symbol/prototype-like metadata,
+shallow identity, duplicate IDs, nullable/undefined/union generic instantiations
+and maximum bounded inputs. Canonical coding passes actual TypeScript checking,
+reversed hidden cases and isolated native Run. All 280 current coding hashes
+match; 445 remain. Native stays 263/263. API/script types, launch/build, native
+bindings, registry/index generation, both production dependency audits (zero
+vulnerabilities), copy sweep (zero findings) and diff checks pass. Final complete
+grading/Learn integrity also passes on the B049–B050 tree. The five changed routes
+pass 80/80 fixture-backed light/dark responsive probes at 320–1440 px with zero
+issues/unprobed. These are same-session model reviews, not authenticated Premium
+or independent/full-catalogue acceptance. Exactly twelve handlers remain; no
+schema/RLS, dependency, entitlement, account-data or reward-policy change.

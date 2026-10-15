@@ -210,7 +210,7 @@ console.log(minMax([3, 1, 2]));
     tier: 2,
     focus: ["for-in", "keyof", "objects"],
     title: "Total expenses",
-    prompt: "Declare an interface named `Expenses` with `rent`, `food` and `travel`, all numbers, then write `totalExpenses(expenses: Expenses): number` adding the three up with a `for-in` loop. The loop variable is a plain `string`, so index the object with it as `keyof Expenses`. `totalExpenses({ rent: 800, food: 250, travel: 50 })` gives 1100.",
+    prompt: "Declare an interface named `Expenses` with `rent`, `food` and `travel`, all numbers, then write `totalExpenses(expenses: Expenses): number` adding the three up with a `for-in` loop. The loop variable is a plain `string`, so index the object with it as `keyof Expenses`. `totalExpenses({ rent: 800, food: 250, travel: 50 })` gives 1100. Domain: a stable ordinary data object or null-prototype record with its own enumerable rent, food and travel, each a finite number from -1000000000 through 1000000000. Other own or inherited enumerable properties may exist and must be ignored; values and prototypes may be frozen. There are at most 1000 enumerable string keys visited across a prototype chain of depth at most 20, with bounded key lengths. Read only the three own expense fields and leave input unchanged. A keyof assertion changes static checking, not runtime data: use own-property and allowed-key checks before treating an enumerated string as an expense key. Use ordinary Number addition, starting at 0, without currency rounding; different addition orders may have normal floating-point rounding differences. This is a typing exercise, not an exact decimal-money calculation. Target: O(n) time for the guarded for-in approach and O(1) retained state, where n is 1 + the enumerable string keys visited; direct reading of the three known fields is also a valid constant-time alternative.",
     starter: `interface Expenses {
   rent: number;
   food: number;
@@ -234,18 +234,18 @@ const totalExpenses = (expenses: Expenses): number => {
   let total = 0;
 
   for (const key in expenses) {
-    // add expenses[key as keyof Expenses]
+    // skip inherited and extra keys before adding expenses[key as keyof Expenses]
   }
 
   return total;
 };`,
     hints: [
-      "A for-in key is a string as far as the compiler knows, and a string is not proof that the property exists, until you assert it is one of the interface's keys.",
+      "A for-in loop can visit inherited and extra keys. Check ownership and the three allowed names before using a keyof assertion; an assertion alone does not validate runtime data.",
     ],
     approach: [
       "Write the interface with its three numeric properties, and start a running total at zero.",
       "Loop over the object with for-in; the loop variable is typed string, and the compiler refuses to index the object with it.",
-      "Assert the key as keyof Expenses inside the loop, add the value it reads, and return the total.",
+      "Skip inherited keys and names outside rent, food and travel. Assert the remaining key as keyof Expenses, add its value and return the total.",
     ],
     verify: "tests",
     estimatedMinutes: 7,

@@ -461,7 +461,13 @@ function setField<K extends keyof Product>(product: Readonly<Product>, key: K, v
 };`,
     senior: `const pinToTop = (chats: readonly string[], chat: string): string[] =>
   chats.includes(chat) ? [chat, ...chats.filter((other) => other !== chat)] : [...chats];`,
+    hiddenTypeTests: [{"code": "const __auditPinned = pinToTop([\"a\",\"b\"] as const,\"a\"); __auditPinned.push(\"c\");"}],
     hiddenTests: [
+      { call: "pinToTop(Object.freeze(['','a','','b','a','']), '')", expected: ["", "a", "b", "a"] },
+      { call: "[pinToTop(['A','a',' A ','a'],'a'),pinToTop(['A','a'],' A ')]", expected: [["a", "A", " A "], ["A", "a"]] },
+      { call: "(()=>{const input=Object.freeze(['a','b']),a=pinToTop(input,'a'),b=pinToTop(input,'x'),empty=pinToTop(Object.freeze([]),'');a.push('c');b[0]='changed';return [a!==input,b!==input,empty!==pinToTop([],''),input.join(','),a.length,b.length,empty.length];})()", expected: [true, true, true, "a,b", 3, 2, 0] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i%2?'other':'pin')),out=pinToTop(input,'pin');return [out.length,out[0],out.slice(1).every(x=>x==='other'),input.length];})()", expected: [501, "pin", true, 1000] },
+
       { call: 'pinToTop(Object.freeze(["a", "b", "c", "d"]), "c")', expected: ['c', 'a', 'b', 'd'] },
       { call: '(() => { const chats = ["a", "b"]; return pinToTop(chats, "x") !== chats; })()', expected: true },
       { call: 'pinToTop(["solo"], "solo")', expected: ['solo'] },
@@ -484,27 +490,7 @@ const moveTo = (user: User, city: string): User => ({
   // A second spread: without it the new user would share the old address object.
   address: { ...user.address, city },
 });`,
-    junior: `interface Address {
-  street: string;
-  city: string;
-}
-
-interface User {
-  name: string;
-  address: Address;
-}
-
-const moveTo = (user: User, city: string): User => {
-  const address: Address = {
-    street: user.address.street,
-    city: city,
-  };
-  const moved: User = {
-    name: user.name,
-    address: address,
-  };
-  return moved;
-};`,
+    junior: "interface Address {\n  street: string;\n  city: string;\n}\n\ninterface User {\n  name: string;\n  address: Address;\n}\n\nconst moveTo = (user: User, city: string): User => {\n  const address: Address = { ...user.address, city };\n  const moved: User = { ...user, address };\n  return moved;\n};",
     senior: `interface Address {
   street: string;
   city: string;
@@ -520,6 +506,10 @@ const moveTo = ({ address, ...rest }: Readonly<User>, city: string): User => ({
   address: { ...address, city },
 });`,
     hiddenTests: [
+      { call: "(()=>{const nested=Object.freeze({x:1}),key=Symbol('meta'),address=Object.assign(Object.create(null),{street:' s ',city:' old ',zone:nested}),user=Object.assign(Object.create(null),{name:'',address,prefs:nested});user[key]=nested;Object.defineProperty(address,'__proto__',{value:nested,enumerable:true});Object.freeze(address);Object.freeze(user);const a=moveTo(user,' new '),b=moveTo(user,' new ');a.name='changed';return [a!==user,a!==b,a.address!==address,a.address!==b.address,b.name,b.address.street,b.address.city,b.prefs===nested,b[key]===nested,b.address.zone===nested,Object.hasOwn(b.address,'__proto__'),b.address.__proto__===nested,Object.getPrototypeOf(b.address)===Object.prototype,user.name,address.city];})()", expected: [true, true, true, true, "", " s ", " new ", true, true, true, true, true, true, "", " old "] },
+      { call: "(()=>{const user=Object.freeze({name:'\ud83e\udd88',address:Object.freeze({street:'',city:'same'})}),a=moveTo(user,'same');a.address.street='new';return [a!==user,a.address!==user.address,user.address.street,a.address.city];})()", expected: [true, true, "", "same"] },
+      { call: "(()=>{const address={street:'s',city:'c'},user={name:'a',address};for(let i=0;i<100;i++){address['a'+i]=i;user['u'+i]=i;}Object.freeze(address);Object.freeze(user);const out=moveTo(user,'z');return [out.u99,out.address.a99,Object.keys(out).length,Object.keys(out.address).length,out.address.city,address.city];})()", expected: [99, 99, 102, 102, "z", "c"] },
+
       { call: '(() => { const u = { name: "Cy", address: { street: "3 Row", city: "Hull" } }; return moveTo(u, "Ely") !== u; })()', expected: true },
       { call: 'moveTo({ name: "Dee", address: { street: "", city: "" } }, "Wells")', expected: { name: 'Dee', address: { street: '', city: 'Wells' } } },
       { call: '(() => { const u = { name: "Eve", address: { street: "5 Lane", city: "Kent" } }; const moved = moveTo(u, "Ayr"); return [u.name, u.address.street, u.address.city, moved.address.street]; })()', expected: ['Eve', '5 Lane', 'Kent', '5 Lane'] },

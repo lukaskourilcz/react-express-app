@@ -671,24 +671,7 @@ const headings = (columns: readonly (keyof Contact)[]): string[] => columns.map(
 // The spread copies the todo, then done: true overwrites one property of the copy.
 const markDone = (todos: readonly Todo[], id: number): Todo[] =>
   todos.map((todo) => (todo.id === id ? { ...todo, done: true } : todo));`,
-    junior: `interface Todo {
-  id: number;
-  text: string;
-  done: boolean;
-}
-
-const markDone = (todos: readonly Todo[], id: number): Todo[] => {
-  const result: Todo[] = [];
-  for (const todo of todos) {
-    if (todo.id === id) {
-      const changed: Todo = { id: todo.id, text: todo.text, done: true };
-      result.push(changed);
-    } else {
-      result.push(todo);
-    }
-  }
-  return result;
-};`,
+    junior: "interface Todo {\n  id: number;\n  text: string;\n  done: boolean;\n}\n\n// The spread copies the todo, then done: true overwrites one property of the copy.\nconst markDone = (todos: readonly Todo[], id: number): Todo[] => {\n  const result: Todo[] = [];\n  for (const todo of todos) {\n    if (todo.id === id) {\n      const changed: Todo = { ...todo, done: true };\n      result.push(changed);\n    } else result.push(todo);\n  }\n  return result;\n};",
     senior: `interface Todo {
   id: number;
   text: string;
@@ -697,7 +680,13 @@ const markDone = (todos: readonly Todo[], id: number): Todo[] => {
 
 const markDone = (todos: readonly Todo[], id: number): Todo[] =>
   todos.map((todo) => (todo.id === id && !todo.done ? { ...todo, done: true } : todo));`,
+    hiddenTypeTests: [{"code": "const __auditTodos: readonly Todo[] = [Object.freeze({id:1,text:\"a\",done:true})]; const __auditDone: Todo[] = markDone(__auditTodos,1);"}],
     hiddenTests: [
+      { call: "(()=>{const nested=Object.freeze({tag:'x'}),key=Symbol('meta'),match=Object.assign(Object.create(null),{id:1,text:'',done:false,nested});match[key]=nested;Object.defineProperty(match,'__proto__',{value:nested,enumerable:true});Object.freeze(match);const other=Object.freeze({id:2,text:'x',done:false}),input=Object.freeze([match,other]),a=markDone(input,1),b=markDone(input,1);a[0].text='changed';return [a!==input,a!==b,a[0]!==match,a[0]!==b[0],a[1]===other,b[0].nested===nested,b[0][key]===nested,Object.hasOwn(b[0],'__proto__'),b[0].__proto__===nested,Object.getPrototypeOf(b[0])===Object.prototype,match.text,b[0].done];})()", expected: [true, true, true, true, true, true, true, true, true, true, "", true] },
+      { call: "(()=>{const a=Object.freeze({id:0,text:'a',done:false}),b=Object.freeze({id:0,text:'b',done:true}),input=Object.freeze([a,b]),out=markDone(input,0);return [out.length,out[0]!==a,out[1].done&&out[1].text===b.text,out.every(x=>x.done),a.done,b.done];})()", expected: [2, true, true, true, false, true] },
+      { call: "(()=>{const item=Object.freeze({id:1,text:'x',done:false}),input=Object.freeze([item]),a=markDone(input,9),empty=markDone([],9);a.push(item);return [a!==input,a[0]===item,input.length,empty!==markDone([],9),empty.length];})()", expected: [true, true, 1, true, 0] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i,text:String(i),done:false,meta:i}))),out=markDone(input,999);return [out.length,out[0]===input[0],out[999]!==input[999],out[999].done,out[999].meta,input[999].done];})()", expected: [1000, true, true, true, 999, false] },
+
       { call: '(() => { const todos = [{ id: 1, text: "a", done: false }]; return markDone(todos, 1) !== todos; })()', expected: true },
       { call: 'markDone([{ id: 3, text: "c", done: false }, { id: 1, text: "a", done: false }, { id: 2, text: "b", done: true }], 1)', expected: [{ id: 3, text: 'c', done: false }, { id: 1, text: 'a', done: true }, { id: 2, text: 'b', done: true }] },
       { call: '(() => { const todo = { id: 1, text: "a", done: false }; const [next] = markDone([todo], 1); return [todo.done, next.done, next === todo]; })()', expected: [false, true, false] },
