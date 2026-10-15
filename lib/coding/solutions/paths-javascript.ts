@@ -493,7 +493,7 @@ const MAP_AND_SET: Boards = {
 const OBJECTS: Boards = {
   reference: [
     `function countByCategory(list) {
-  const counts = {};
+  const counts = Object.create(null);
   for (const record of list) {
     // The key is in a variable, so square brackets, not counts.category.
     counts[record.category] = (counts[record.category] ?? 0) + 1;
@@ -501,7 +501,7 @@ const OBJECTS: Boards = {
   return counts;
 }`,
     `function groupByCategory(list) {
-  const groups = {};
+  const groups = Object.create(null);
   for (const record of list) {
     if (!groups[record.category]) groups[record.category] = [];
     groups[record.category].push(record.name);
@@ -509,8 +509,8 @@ const OBJECTS: Boards = {
   return groups;
 }`,
     `function summarize(list) {
-  const out = {};
-  const bestRating = {}; // category -> highest rating so far
+  const out = Object.create(null);
+  const bestRating = Object.create(null); // category -> highest rating so far
   for (const record of list) {
     const key = record.category;
     if (!out[key]) {
@@ -532,7 +532,7 @@ const OBJECTS: Boards = {
   return [...list].sort((a, b) => b.runs - a.runs || a.name.localeCompare(b.name));
 }`,
     `function topPerCategory(list, k) {
-  const out = {};
+  const out = Object.create(null);
   // Sorted once, so each category fills up with its best records first.
   for (const record of sortActors(list)) {
     if (!out[record.category]) out[record.category] = [];
@@ -543,7 +543,7 @@ const OBJECTS: Boards = {
   ],
   junior: [
     `function countByCategory(list) {
-  const counts = {};
+  const counts = Object.create(null);
   for (let i = 0; i < list.length; i++) {
     const category = list[i].category;
     if (counts[category] === undefined) {
@@ -554,7 +554,7 @@ const OBJECTS: Boards = {
   return counts;
 }`,
     `function groupByCategory(list) {
-  const groups = {};
+  const groups = Object.create(null);
   for (let i = 0; i < list.length; i++) {
     const record = list[i];
     if (groups[record.category] === undefined) {
@@ -565,8 +565,8 @@ const OBJECTS: Boards = {
   return groups;
 }`,
     `function summarize(list) {
-  const out = {};
-  const bestRating = {};
+  const out = Object.create(null);
+  const bestRating = Object.create(null);
   for (let i = 0; i < list.length; i++) {
     const record = list[i];
     const category = record.category;
@@ -590,19 +590,13 @@ const OBJECTS: Boards = {
     if (a.runs !== b.runs) {
       return b.runs - a.runs;
     }
-    if (a.name < b.name) {
-      return -1;
-    }
-    if (a.name > b.name) {
-      return 1;
-    }
-    return 0;
+    return a.name.localeCompare(b.name);
   });
   return copy;
 }`,
     `function topPerCategory(list, k) {
   const sorted = sortActors(list);
-  const out = {};
+  const out = Object.create(null);
   for (let i = 0; i < sorted.length; i++) {
     const record = sorted[i];
     if (out[record.category] === undefined) {
@@ -618,18 +612,18 @@ const OBJECTS: Boards = {
   ],
   senior: [
     `const countByCategory = (list) => {
-  const counts = {};
+  const counts = Object.create(null);
   for (const { category } of list) counts[category] = (counts[category] ?? 0) + 1;
   return counts;
 };`,
     `const groupByCategory = (list) => {
-  const groups = {};
+  const groups = Object.create(null);
   for (const { name, category } of list) (groups[category] ??= []).push(name);
   return groups;
 };`,
     `const summarize = (list) => {
-  const out = {};
-  const top = {};
+  const out = Object.create(null);
+  const top = Object.create(null);
   for (const { name, category, runs, rating } of list) {
     const summary = (out[category] ??= { count: 0, runs: 0, best: name });
     summary.count += 1;
@@ -644,7 +638,7 @@ const OBJECTS: Boards = {
     `const byRunsThenName = (a, b) => b.runs - a.runs || a.name.localeCompare(b.name);
 const sortActors = (list) => [...list].sort(byRunsThenName);`,
     `const topPerCategory = (list, k) => {
-  const out = {};
+  const out = Object.create(null);
   for (const { name, category } of sortActors(list)) {
     const names = (out[category] ??= []);
     if (names.length < k) names.push(name);
@@ -1287,12 +1281,143 @@ const HIDDEN: Record<string, Hidden> = {
     ]
 ],
   'js-path-objects': [
-    [['countByCategory([{category: "b"}, {category: "a"}]).b', 1], ['Object.keys(countByCategory([{category: "z"}, {category: "a"}]))', ['z', 'a']]],
-    [['groupByCategory([{name: "A", category: "x"}, {name: "A", category: "x"}])', { x: ['A', 'A'] }], ['Object.keys(groupByCategory([{name: "A", category: "b"}, {name: "B", category: "a"}]))', ['b', 'a']]],
-    [['summarize([{name: "A", category: "x", runs: 1, rating: 1}, {name: "B", category: "x", runs: 1, rating: 2}, {name: "C", category: "x", runs: 1, rating: 2}]).x.best', 'B'], ['summarize([{name: "A", category: "x", runs: 2, rating: 1}, {name: "B", category: "y", runs: 3, rating: 1}]).y.runs', 3]],
-    [['sortActors([{name: "b", runs: 0}, {name: "a", runs: 0}]).map((a) => a.name)', ['a', 'b']], ['sortActors([{name: "A", runs: 1}, {name: "B", runs: 2}, {name: "C", runs: 3}]).map((a) => a.runs)', [3, 2, 1]]],
-    [['topPerCategory([{name: "A", category: "x", runs: 1}, {name: "B", category: "y", runs: 2}], 1)', { x: ['A'], y: ['B'] }], ['topPerCategory([{name: "A", category: "x", runs: 5}, {name: "B", category: "x", runs: 5}, {name: "C", category: "x", runs: 9}], 2).x', ['C', 'A']]],
-  ],
+    [
+        [
+            "countByCategory([{category: \"b\"}, {category: \"a\"}]).b",
+            1
+        ],
+        [
+            "Object.keys(countByCategory([{category: \"z\"}, {category: \"a\"}]))",
+            [
+                "z",
+                "a"
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze(['__proto__','constructor','toString','','__proto__'].map(category=>Object.freeze({category})));const a=countByCategory(input),b=countByCategory(input);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__===2&&Object.hasOwn(a,'constructor')&&a.constructor===1&&a.toString===1&&a['']===1;})()",
+            true
+        ],
+        [
+            "Object.keys(countByCategory([{category:'4294967295'},{category:'01'},{category:'2'},{category:'10'},{category:'x'}]))",
+            [
+                "2",
+                "10",
+                "4294967295",
+                "01",
+                "x"
+            ]
+        ],
+        [
+            "countByCategory(Object.freeze(Array.from({length:1000},()=>Object.freeze({category:'same'}))))['same']",
+            1000
+        ]
+    ],
+    [
+        [
+            "groupByCategory([{name: \"A\", category: \"x\"}, {name: \"A\", category: \"x\"}])",
+            {
+                "x": [
+                    "A",
+                    "A"
+                ]
+            }
+        ],
+        [
+            "Object.keys(groupByCategory([{name: \"A\", category: \"b\"}, {name: \"B\", category: \"a\"}]))",
+            [
+                "b",
+                "a"
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze([Object.freeze({category:'__proto__',name:'  A  '}),Object.freeze({category:'constructor',name:''}),Object.freeze({category:'__proto__',name:'  A  '})]);const a=groupByCategory(input),b=groupByCategory(input);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.join(',')==='  A  ,  A  '&&Object.hasOwn(a,'constructor')&&a.constructor[0]===''&&a.__proto__!==b.__proto__;})()",
+            true
+        ],
+        [
+            "(() => {const a=groupByCategory(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({category:'x',name:'n'+i}))));return a.x.length===1000&&a.x.every((name,i)=>name==='n'+i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "summarize([{name: \"A\", category: \"x\", runs: 1, rating: 1}, {name: \"B\", category: \"x\", runs: 1, rating: 2}, {name: \"C\", category: \"x\", runs: 1, rating: 2}]).x.best",
+            "B"
+        ],
+        [
+            "summarize([{name: \"A\", category: \"x\", runs: 2, rating: 1}, {name: \"B\", category: \"y\", runs: 3, rating: 1}]).y.runs",
+            3
+        ],
+        [
+            "(() => {const input=Object.freeze([Object.freeze({category:'__proto__',name:'',runs:0,rating:0}),Object.freeze({category:'__proto__',name:'later',runs:1000000,rating:0}),Object.freeze({category:'constructor',name:'top',runs:1,rating:5})]);const a=summarize(input),b=summarize(input);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.count===2&&a.__proto__.runs===1000000&&a.__proto__.best===''&&a.constructor.best==='top'&&a.__proto__!==b.__proto__&&Object.keys(a.__proto__).sort().join(',')==='best,count,runs';})()",
+            true
+        ],
+        [
+            "summarize(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({category:'x',name:'n'+i,runs:1000000,rating:0})))).x",
+            {
+                "count": 1000,
+                "runs": 1000000000,
+                "best": "n0"
+            }
+        ]
+    ],
+    [
+        [
+            "sortActors([{name: \"b\", runs: 0}, {name: \"a\", runs: 0}]).map((a) => a.name)",
+            [
+                "a",
+                "b"
+            ]
+        ],
+        [
+            "sortActors([{name: \"A\", runs: 1}, {name: \"B\", runs: 2}, {name: \"C\", runs: 3}]).map((a) => a.runs)",
+            [
+                3,
+                2,
+                1
+            ]
+        ],
+        [
+            "(() => {const a=Object.freeze({name:'same',runs:10,id:1}),b=Object.freeze({name:'same',runs:10,id:2}),c=Object.freeze({name:'higher',runs:1000000,id:3}),input=Object.freeze([a,b,c]);const out=sortActors(input),empty=[];return out!==input&&out[0]===c&&out[1]===a&&out[2]===b&&input[0]===a&&sortActors(empty)!==empty&&sortActors(empty)!==sortActors(empty);})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(['Zebra','apple','éclair','alpha'].map(name=>Object.freeze({name,runs:1})));const out=sortActors(input);return out.every((r,i)=>input.includes(r)&&(i===0||out[i-1].name.localeCompare(r.name)<=0));})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:'x',runs:i})));const out=sortActors(input);return out.length===1000&&out.every((r,i)=>r===input[999-i]);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "topPerCategory([{name: \"A\", category: \"x\", runs: 1}, {name: \"B\", category: \"y\", runs: 2}], 1)",
+            {
+                "x": [
+                    "A"
+                ],
+                "y": [
+                    "B"
+                ]
+            }
+        ],
+        [
+            "topPerCategory([{name: \"A\", category: \"x\", runs: 5}, {name: \"B\", category: \"x\", runs: 5}, {name: \"C\", category: \"x\", runs: 9}], 2).x",
+            [
+                "C",
+                "A"
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze([Object.freeze({category:'__proto__',name:'B',runs:1}),Object.freeze({category:'__proto__',name:'A',runs:2}),Object.freeze({category:'constructor',name:'C',runs:3})]);const a=topPerCategory(input,2),b=topPerCategory(input,2);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.join(',')==='A,B'&&a.constructor[0]==='C'&&a.__proto__!==b.__proto__;})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({category:'x',name:'n'+i,runs:i})));const out=topPerCategory(input,1000);return out.x.length===1000&&out.x.every((name,i)=>name==='n'+(999-i));})()",
+            true
+        ]
+    ]
+],
   'js-path-lookups': [
     [['indexById([{id: "a", n: 1}]).get("a").n', 1], ['indexById([{id: 1}, {id: 2}]).get(2).id', 2]],
     // Two changed ids, listed in after order rather than before order.

@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b022
+
+Read all five cumulative object/grouping stages and every inherited board,
+requirement and check. Safe null-prototype dictionaries now replace inherited
+buckets in all counting, grouping, summary/auxiliary-rating and top-per-category
+reveals. Integer-looking category names follow actual object enumeration rules;
+the insertion-order label is scoped to non-index names. The junior sort now uses
+the same explicit localeCompare policy as the other boards, with stable ties and
+original record references. No locale-independent universal alphabet is claimed.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before. Twenty valid
+complexity analyses retain25XP; five starters and ten wrong variants fail.
+The final copy uses the precise array-index terminology and checks4294967295,
+01,2,10property names; all35cases were rerun after that refinement. Cases also
+cover frozen __proto__/constructor buckets, zero ratings/empty names, private
+tracking fields, one-billion exact run totals and1000records/k. Copy sweep,
+focused cumulative coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Review scores/final readings remain manual same-session model evidence.
+
+Current coding coverage is140/725;585remain. Native coverage stays263/263.
+PR #402 freezes b015–b021 (35coding reviews) at95674b5e; required SQL passes42s,
+verify remains pending and its READY preview is undergoing eleven guest checks.
+This new five-item batch stays local while that exact head is verified.
+
 ## 15 October continuation — five coding items b021 and PR #401 production
 
 Read all five cumulative Map-and-Set stages, their inherited requirements,
