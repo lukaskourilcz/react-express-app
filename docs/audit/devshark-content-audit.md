@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b021 and PR #401 production
+
+Read all five cumulative Map-and-Set stages, their inherited requirements,
+checks and revealed boards. Align every isomorphism implementation and its
+instructions on literal Unicode code points; the old senior mixed iteration
+units between the two strings. Specify exact lower-case/whitespace tokenization,
+opaque Map/Set identity, fresh ownership and unique typed/falsy document ids.
+Search keeps document order, deduplicates query words and states the posting-set
+cost axes and a combined upper bound rather than a linear guarantee.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before. Twenty valid
+complexity analyses retain25XP; five starters and ten wrong variants fail.
+Cases include punctuation, nonbreaking spaces, composed/decomposed tokens,
+1000-code-point strings, 1000 events/stop words and500documents. Copy sweep,
+focused cumulative coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Scores/final readings remain manual same-session model evidence.
+
+PR #401 passed verify30m32s/SQL41s at exact148c6100 and merged at a4e93494.
+READY production dpl_85vvsbrVkywqmGMUD674eSWhb7kA matches that SHA, owns
+devshark.app without alias errors and passes eleven general guest checks with
+zero XP/null progress. #397 is closed. Shipped coverage is100coding/263native;
+current coding coverage is135/725 (590remaining). B015–b021 are not yet shipped.
+No authenticated native/Premium or independent/human acceptance is inferred.
+
 ## 15 October continuation — five coding items b020
 
 Read all five cumulative Set stages and their inherited material: unique,
