@@ -1,5 +1,27 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n027
+
+Reviewed the four evaluation questions and their check. Tuning leakage now
+requires fresh unexposed evaluation rather than subtracting known copied cases.
+The hypothetical 400-case batch separates 240 answers into 228 correct and 12
+wrong, with 160 abstentions. Slice changes are six gains minus three losses,
+not five gains. Conditional accuracy, coverage and correct-answer yield have
+explicit denominators. Abstaining more does not necessarily improve accuracy;
+small observed samples do not establish a production forecast or significance.
+
+Arithmetic, authored keys, exercise threshold and review checks pass. These
+illustrations run no model and establish no statistical uncertainty bound.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Individual
+manual scores and final readings remain separate from execution.
+
+Coverage is **190/263 native**, **73 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 remains frozen at 5f0145fa pending verify; SQL and
+its eleven exact-preview general checks pass. N024–n027 are local. Production
+coverage remains 95 coding/125 native through PR #396. The FDE diagnostic
+parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n026
 
 Reviewed the four tool-boundary questions and their check. Argument-only schema
