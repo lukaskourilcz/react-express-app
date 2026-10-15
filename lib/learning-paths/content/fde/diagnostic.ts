@@ -186,15 +186,15 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
           ],
           correct: 2,
           explanation:
-            'An operator has to be able to tell "still working" from "this did not work", and the retry has to be theirs to press. A delay notice leaves the two states looking identical, which is the defect being described. The empty-queue message is worse than silence: an operator who reads "no cases waiting" stops looking, and the queue may be full. Silent retries hide the failure from the one person who could escalate it, and they keep hitting a service that is already failing. Retry if you like, with backoff, and still show the state.',
+            'An operator must be able to tell "still working" from "this did not work", with a way to retry. Automatic retries can supplement that control, but must not conceal a completed failure. A delay notice leaves the two states looking identical, which is the defect being described. The empty-queue message is worse than silence: an operator who reads "no cases waiting" stops looking, and the queue may be full. Silent retries hide the failure from the one person who could escalate it, and they keep hitting a service that is already failing. Retry if you like, with backoff, and still show the state.',
           competencies: ['handoff'],
         },
         {
           id: 'fde-v1-diagnostic-q8',
           prompt:
-            'Pressing Approve shows a green "Case approved" toast immediately, then sends the POST. About one POST in fifty fails, and nothing on the screen changes when it does. What is wrong with this?',
+            'Pressing Approve shows a green "Case approved" toast immediately, then sends the POST. About one POST in fifty fails, and nothing on the screen changes when it does. Which fix addresses the operator being told that a failed approval succeeded?',
           options: [
-            'The screen has told the operator something that is not true, and one case in fifty is now approved in their head and not in the system. Either wait for the write to confirm, or keep the optimistic update and reverse it visibly when the write fails.',
+            'Wait for confirmation, or visibly reverse the optimistic approval and report its failure.',
             'Nothing. Optimistic updates are the standard pattern, and a 2% failure rate sits inside normal tolerance for a background write.',
             'Nothing, as long as the failed request is retried in the background until it goes through.',
             'The toast should stay on screen longer, so the operator is still looking when the error arrives.',
@@ -207,31 +207,31 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
         {
           id: 'fde-v1-diagnostic-q9',
           prompt:
-            'Delete case sits in the row menu directly under Duplicate case, and it deletes immediately and permanently. Operators hit the wrong row roughly once a week. Which change addresses that?',
+            'Delete case sits directly under Duplicate case and deletes immediately and permanently. Wrong-row clicks recur, and a defined recovery window is allowed. Which change both reduces those slips and lets operators recover a mistaken deletion?',
           options: [
             'Add a confirmation dialog. A second deliberate click is what separates an accident from an intention.',
             'Make the operator type the case number to confirm the deletion.',
             'Restrict deleting to supervisors and have operators request a deletion instead.',
-            'Make the deletion recoverable — mark the case deleted, keep it, and offer a visible undo for a set window — and move the action away from Duplicate in the menu.',
+            'Use recoverable deletion with a visible undo window, and separate Delete from Duplicate.',
           ],
           correct: 3,
           explanation:
-            'Once a week means the mistake will keep happening, so the design has to survive it: recovery, plus separation from the neighbouring action people are actually aiming for. A confirmation dialog helps a little against a slip of the mouse and not at all against the operator who confirms the wrong row, and a dialog on a weekly action becomes a reflex within a fortnight. Typing the case number raises the cost of every legitimate deletion and still leaves nothing to recover. Moving the permission upward moves the mistake to someone else and blocks routine work; that fits a rare action with a wide blast radius, not a weekly one.',
+            'The stated goal needs both prevention and recovery: separate the adjacent actions and allow reversal during the permitted window. A confirmation or typed case number can help prevent mistakes, but neither alone recovers a deletion after the operator confirms the wrong case. Restricting permissions may fit other risk models, but does not supply the recovery required here. Retain records only for the permitted recovery window and apply the actual retention policy.',
           competencies: ['handoff'],
         },
         {
           id: 'fde-v1-diagnostic-q10',
           prompt:
-            'A case-routing model scores 0.94 accuracy over 1,000 held-out cases, against a 0.90 bar. Billing cases are 6% of the volume and score 0.41 on their own. What should the team do with that?',
+            'A routing model labels 940 of 1000 held-out cases correctly, passing a 90% overall bar. Billing accounts for 60 cases, with only 24 correct (40%). Which conclusion should guide readiness?',
           options: [
             'Ship it. The number clears the bar, and billing is 6% of the traffic.',
-            'Report the slices next to the average and decide on those. Sixty billing cases at 0.41 move a 1,000-case average by about three points, so no threshold on the average could have caught this.',
+            'The overall pass hides poor billing routing; report slices and apply billing-specific readiness criteria.',
             'Gather more billing cases until the billing slice reaches the bar.',
             'Re-weight the average so small slices count for more, then hold the weighted number to the same bar.',
           ],
           correct: 1,
           explanation:
-            'The arithmetic is the argument: the other 940 cases run at about 0.974, and folding in sixty cases at 0.41 costs roughly three points. An average over a thousand cases cannot surface a slice that small failing, whatever the bar is set to. Shipping on the average sends billing cases to the wrong queue six times in ten, and billing is where the money questions arrive. Collecting more billing cases measures the slice more precisely without changing it. Re-weighting produces a different single number that is still a single number: other slices can drag it back over the bar, and it never says which slice broke.',
+            'The counts are consistent: billing contributes 24 correct cases, and the other 940 contribute 916, for 940 correct overall. The 90% aggregate bar passes despite the observed 40% billing accuracy. A stricter aggregate threshold could reject this particular run, but this bar does not enforce a minimum for each slice. Report slice counts and quality, define their acceptance criteria, and address the billing failures before automating them. More labelled billing examples can reduce uncertainty; collecting them alone does not repair the model or guarantee a higher score. A weighted aggregate can be useful, but should not replace the slice results. These finite held-out results are evidence, not an exact forecast of future traffic.',
           competencies: ['evaluation'],
         },
         {
@@ -239,14 +239,14 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
           prompt:
             'The team wrote 120 labelled cases, then spent two weeks adjusting prompts, routing rules and thresholds until the score on those 120 went from 0.71 to 0.93. The report gives 0.93 as expected quality in production. What is wrong with the claim?',
           options: [
-            'The 120 cases steered every decision, so 0.93 measures how well the design fits them. A claim about unseen cases needs a set that was held back and never scored while the design was changing.',
+            'Those cases guided tuning; estimate unseen-case quality on an untouched test set.',
             'Nothing, provided the 120 cases were sampled at random from production traffic.',
             'Nothing, provided no case text was copied into the prompts.',
             'Nothing a split does not fix: score the finished design again on 24 of the 120 and report that number.',
           ],
           correct: 0,
           explanation:
-            'Tuning against a score is what leaks the set, whatever the prompt text contains. Every threshold that got nudged was nudged because of those cases, so the number that came out describes the fit rather than the future. Random sampling makes a set representative and does nothing about the leak: a representative set you optimised against is still a set you optimised against. Copying case text is one way to leak and not the one that happened here. A split made afterwards splits cases that all shaped the design already; the hold-out has to be set aside before the tuning starts, and scored as rarely as you can manage.',
+            'Tuning against a score is what leaks the set, whatever the prompt text contains. Every threshold that got nudged was nudged because of those cases, so the number that came out describes the fit rather than the future. Random sampling can improve representativeness, but it does not remove this tuning leak: a representative set you optimised against is still a set you optimised against. Copying case text is one way to leak and not the one that happened here. A split made afterwards splits cases that all shaped the design already; the hold-out has to be set aside before the tuning starts, and scored as rarely as you can manage.',
           competencies: ['evaluation'],
         },
         {

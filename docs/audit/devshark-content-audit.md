@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n017
+
+Reviewed FDE diagnostic questions seven through eleven. Error/retry copy now
+allows visible automatic retries; the false-success answer is concise and still
+requires confirmation or visible reversal. The deletion item states both
+prevention/recovery and a permitted window, acknowledges other useful safeguards,
+and drops the invented fortnight habituation claim. The evaluation slice now
+uses possible integer counts: 24/60 billing, 916/940 other and 940/1000 overall.
+A 95% aggregate bar disproves the old claim that no threshold could catch this;
+the actual 90% bar does not enforce billing quality. Hold-out copy separates
+random sampling from tuning leakage and shortens its oversized keyed option.
+
+Exact bindings and metric arithmetic pass; the UI/retention/hold-out conclusions
+are manual scenario/primary-document readings, not fabricated runtime acceptance.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. No policy,
+UI implementation, AI feature or live evaluation changes. Individual manual
+quality/relevance and final readings are recorded independently of these runs.
+
+Coverage is **140/263 native**, **123 remaining**, and **95/725 coding**,
+**630 remaining**. All 129 DSA records are reviewed; eleven FDE questions are
+reviewed. PR #396 remains frozen at 758d1bbb with SQL/exact-preview checks
+passing and required verify pending. N015–n017 remain local, with 95 coding
+and 95 native records production-verified through PR #395.
+
 ## 15 October continuation — five-item native batch n016
 
 Reviewed FDE diagnostic questions two through six individually. Invoice retries
