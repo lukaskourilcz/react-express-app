@@ -506,74 +506,62 @@ export const FDE_M09: ModuleSource = {
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Incident and rollout checks',
-      summary: 'Four decisions on one release: name the dependency from a trace, choose the first action, say what the rollback leaves behind, and pick the signal that would have caught it first.',
+      summary: 'Four bounded incident decisions: interpret inclusive trace timing, use a tested mitigation, identify code-only rollback limits and monitor slice abstention.',
       competencies: ['operations'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
       questions: [
         {
-          id: 'fde-v1-m09-q1',
-          prompt:
-            'Here is one trace from the slow window on Marlbrook’s triage endpoint. Durations are the total time of each span, and children are indented under their parent. Which dependency is holding the request?',
-          context: {
-            language: 'text',
-            code:
-              'POST /tickets/triage            trace 7f21        8 940 ms\n├─ auth.verify                                        12 ms\n├─ tickets.load                                       31 ms\n├─ kb.search                                       8 610 ms\n│  ├─ kb.embed                                        44 ms\n│  └─ kb.vector-query          3 attempts          8 540 ms\n├─ router.classify                                   180 ms\n└─ tickets.write                                      88 ms',
-          },
+          id: "fde-v1-m09-q1",
+          prompt: "This triage trace shows total elapsed durations, including children. Assume the shown synchronous children run sequentially without overlap and the endpoint waits for each. Which shown operation dominates this request?",
+          context: {"language": "text", "code": "POST /tickets/triage            trace 7f21        8 940 ms\n├─ auth.verify                                        12 ms\n├─ tickets.load                                       31 ms\n├─ kb.search                                       8 610 ms\n│  ├─ kb.embed                                        44 ms\n│  └─ kb.vector-query          3 attempts          8 540 ms\n├─ router.classify                                   180 ms\n└─ tickets.write                                      88 ms"},
           options: [
-            '`kb.vector-query`: 8 540 of the 8 940 ms sit in that one leaf span, and its three attempts say the handler retried a call that was already slow.',
-            '`router.classify`: the model call is the only span whose duration depends on an external system nobody controls.',
-            '`auth.verify`: it runs first, so every span after it is queued behind whatever delayed it.',
-            '`tickets.write`: the write is last, so it absorbs the delay that built up across the rest of the request.',
+            "kb.vector-query: its 8,540 ms covers most of the 8,940 ms request.",
+            "router.classify: every external model call must dominate retrieval time.",
+            "auth.verify: running first makes its duration include all later work.",
+            "tickets.write: running last makes its duration include all earlier work.",
           ],
           correct: 0,
-          explanation:
-            'Subtract as you walk down. Auth and the ticket read cost 43 ms between them, `router.classify` costs 180 ms and `tickets.write` costs 88 ms, which leaves `kb.search` holding 8 610 ms of the 8 940. `kb.search` is not a leaf: its child `kb.vector-query` holds 8 540 of that, so the wrapper spends 70 ms of its own and the vector store is the dependency. The model-call answer is the one people reach for first, and 180 ms rules it out — an external system is not automatically the slow one. Order is not blame either: `auth.verify` finished in 12 ms and released the request, and `tickets.write` took 88 ms whenever it ran. A span’s duration is its own time, not the time that elapsed before it started.',
+          explanation: "The vector-query operation accounts for about 95.5% of this request under the stated timing model. Its three attempts show retrying, not the duration or cause of any individual attempt. The search span includes its 44 ms embed child and 8,540 ms vector child: 8,610 − 44 − 8,540 = 26 ms remains outside those children. The endpoint children sum to 8,921 ms, leaving 19 ms outside them. Total span duration includes children, not time spent before a span started. One trace identifies where this request waited; broader traces and dependency telemetry are needed to diagnose the incident.",
           competencies: ['operations'],
         },
         {
-          id: 'fde-v1-m09-q2',
-          prompt:
-            'p95 on the triage endpoint is 8.9 s, twenty minutes after a release that put a knowledge-base lookup in front of the router. The lookup is behind a flag you can turn off. Operators are waiting and the manual queue is growing. What do you do first?',
+          id: "fde-v1-m09-q2",
+          prompt: "Triage p95 is 8.9 s after a release added a knowledge-base lookup. Operators are waiting. A tested flag safely bypasses this lookup and restores the prior manual workflow; incident policy allows using it. Traces and logs from the affected window are retained. What is the best immediate mitigation?",
           options: [
-            'Read the traces first and find the root cause before you change anything, so the mitigation does not hide the evidence you need.',
-            'Turn the flag off, confirm the latency comes back, and then diagnose from the traces and logs that the bad twenty minutes already produced.',
-            'Raise the client timeout from 2 s to 15 s so requests stop failing while you investigate.',
-            'Restart the service to clear whatever state has built up since the release, then watch whether it comes back.',
+            "Wait for a complete root-cause explanation before changing the affected workflow.",
+            "Disable the lookup, verify service recovery, then investigate the retained evidence.",
+            "Raise the client timeout to 15 s and assume the long-running dependency is repaired.",
+            "Restart every instance and assume the release no longer needs investigation.",
           ],
           correct: 1,
-          explanation:
-            'Restoring service and finding the cause are both your job, and only one of them has a customer waiting on it. The flag is the cheapest reversal available, and turning it off costs you nothing diagnostically: the traces, logs and metrics from those twenty minutes are already recorded and will read the same in an hour. Diagnosing first sounds disciplined and spends the outage on it. Raising the timeout removes the error without removing the wait, so connections and the operator queue both back up further behind the same slow dependency. Restarting is a guess with no hypothesis: it throws away the in-process state you might have inspected, and the release is still deployed, so the symptom returns within minutes.',
+          explanation: "The stated safe bypass offers a bounded way to reduce current impact. Verify latency, errors and the manual workflow after disabling it; recovery is not guaranteed merely because the flag changed. Retained evidence supports later diagnosis, but mitigation can change live state or remove opportunities to reproduce the fault, so preserve useful evidence when feasible. A longer timeout does not itself shorten dependency work. Restarting may sometimes help, but this scenario provides no reason to prefer it to the tested bypass, and does not establish that symptoms must return within minutes.",
           competencies: ['operations'],
         },
         {
-          id: 'fde-v1-m09-q3',
-          prompt:
-            'Release 2026-09-08.3 deployed new handler code, ran a migration that dropped `tickets.legacy_queue`, sent 4 100 “your ticket has moved” emails, and consumed idempotency keys at the billing partner. You redeploy the previous build. What is still in place afterwards?',
+          id: "fde-v1-m09-q3",
+          prompt: "A release dropped tickets.legacy_queue, delivered 4,100 notification emails and recorded billing-partner idempotency keys. The partner retains those keys through this incident. You now redeploy only the prior application artifact: no migration rollback, data restore or compensating partner operation runs. Which state is reversed automatically by this action?",
           options: [
-            'The dropped column, the sent emails and the consumed idempotency keys. Redeploying changes which code runs and nothing else.',
-            'Only the dropped column. The previous build re-sends the notifications correctly, and the partner releases an idempotency key once the request that claimed it is rolled back.',
-            'Only the sent emails. A migration is reversed when you redeploy a build that predates it, and idempotency keys expire within the hour.',
-            'Nothing, as long as the deployment tool offers one-click rollback. Reversing the release is exactly what that button is for.',
-          ],
-          correct: 0,
-          explanation:
-            'A rollback swaps the artifact that serves the next request. It has no reach into the database, into other people’s inboxes or into a partner’s records. The dropped column stays dropped, and the old build now queries a table that no longer has it, which is a second outage on top of the first. The 4 100 emails have been read; the only correction is another email somebody writes. And an idempotency key is consumed the moment the partner records the request, so the next identical call replays the first result rather than performing the work — nothing in that contract watches your deployments. The two answers that name a single survivor invent mechanisms that do not exist: no partner API releases a key because you redeployed, migrations do not reverse themselves when an older build starts, and key expiry is a property of the partner’s retention window rather than a rollback path. The one-click answer mistakes the interface for the scope — the button changes the artifact, and that is all it has ever changed.',
-          competencies: ['operations'],
-        },
-        {
-          id: 'fde-v1-m09-q4',
-          prompt:
-            'The failure you missed: after the release, the router returned “no confident queue” for 40% of returns tickets and dropped them into the manual pile. Every response was a 200, latency fell, and error rate and CPU stayed flat. It ran for nine days before an operations lead complained. Which signal would have caught it first?',
-          options: [
-            'An alert on the 5xx rate for `POST /tickets/triage`, which is where a router that has stopped answering correctly shows up.',
-            'A p95 latency alert on the triage endpoint, since a router in trouble takes longer to reach a decision.',
-            'An abstention rate per slice, compared each day against the baseline from the fortnight before the release, alerting when a slice moves several points.',
-            'A synthetic probe that posts a fixture ticket every minute and alerts when the endpoint does not return 200.',
+            "The missing column is restored because the prior code predates its removal.",
+            "The delivered messages are recalled because their sending code no longer runs.",
+            "None of these three external effects is automatically reversed.",
+            "The partner keys are released because the application artifact changed.",
           ],
           correct: 2,
-          explanation:
-            'Work backwards from the failure. This one produced correct-looking, fast, successful responses that happened to be useless, so every signal that watches for failure was flat by construction. Abstention per slice is the one number that moved, and it is a counter and a division — no model and no new system, which is worth saying because the cheap deterministic signal is often the right one. The 5xx alert never fires, because abstaining is a 200. The latency alert fires in the wrong direction if at all: abstaining is cheaper than answering, so p95 improved. And the synthetic probe asserts exactly the property that never broke — it proves the service answers, not that the answers are right, and those are two separate claims.',
+          explanation: "This explicitly code-only deployment does not restore the dropped column, recall delivered messages or clear retained partner records. Old code that still requires the removed column can fail; whether it does depends on what it executes. Delivery does not prove that all 4,100 messages were read. A partner may replay a recorded response according to its own idempotency contract; key lifetime and request-matching rules are not universal. Other deployment systems can include explicit migration or compensation steps, but none runs in this scenario.",
+          competencies: ['operations'],
+        },
+        {
+          id: "fde-v1-m09-q4",
+          prompt: "Returns-ticket abstention rises from a stable 10% baseline to 40% after release. Each daily slice has enough reviewed volume for the agreed alert rule: alert above 20%. Responses remain HTTP 200, p95 stays below its upper limit, and CPU is unchanged. Which monitor directly detects this quality regression?",
+          options: [
+            "An alert only when triage 5xx responses exceed their existing limit.",
+            "An alert only when triage p95 exceeds its existing upper limit.",
+            "A probe that checks only whether a fixture request returns HTTP 200.",
+            "The daily returns-slice abstention rate checked against the agreed 20% limit.",
+          ],
+          correct: 3,
+          explanation: "The stated 40% abstention exceeds the 20% rule, while the other monitors check conditions that remain healthy here. This identifies a relevant quality signal, not a guaranteed earliest detector across every possible monitor. Abstention may be appropriate for difficult inputs; a change requires investigation of traffic, labels and policy rather than assuming every handoff is an error. Faster responses do not generally imply abstention is cheaper, and HTTP 200 alone establishes neither routing correctness nor useful automation.",
           competencies: ['operations'],
         },
       ],

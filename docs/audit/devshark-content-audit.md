@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n029
+
+Reviewed four incident questions and their check. Inclusive sequential timing
+now accounts for both search children: 26 ms remains outside them, not 70;
+the endpoint has 19 ms outside shown children. One trace does not prove root
+cause or each retry's duration. The tested bypass has explicit safety and
+retained evidence, requires recovery verification and can affect live diagnosis.
+Code-only rollback has explicit scope and does not reverse delivered emails,
+a dropped column or retained partner keys. Slice monitoring has an actual
+10% baseline, 40% observation and 20% threshold, without an earliest-alert claim.
+
+Arithmetic, mixed keys and immediate exercise review pass. No live incident,
+telemetry, deployment, partner transaction, email or alert was executed. Native
+bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Manual
+quality/relevance/final readings remain separate from execution.
+
+Coverage is **200/263 native**, **63 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 merged at 46e0dd63 after exact-head verify (25m14s),
+SQL and eleven preview checks passed; production verification is pending.
+N024–n029 remain local. Production-verified coverage remains 95 coding/125
+native through #396 until the new deployment is checked. Diagnostic parent
+still awaits #397.
+
 ## 15 October continuation — five-item native batch n028
 
 Reviewed four security questions and their check against primary OWASP guidance.
