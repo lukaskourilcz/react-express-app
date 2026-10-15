@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n016
+
+Reviewed FDE diagnostic questions two through six individually. Invoice retries
+now require preserving automatic/concurrent retries and one persisted order key
+with atomic server handling; unsupported duplicate-rate claims are removed.
+CSV blanks explicitly target nullable text and return an array of empty-string
+matches, while JSON null remains distinct. Tenant-read exposure states known
+victim ids and an unrestricted database client without hidden row policies.
+The Vite question names a secret server key and browser delivery. Rollback
+states a code-only operation and the old column dependency, without inventing
+identical record failures or irretrievable copied data.
+
+Actual authored mapper/handler contexts run only against deterministic stubs;
+an in-memory claim illustrates stable-key behavior without pretending to test a
+provider or database transaction. Vite and dropped-column conclusions are
+manual primary-document/contract readings, not live secret or restore probes.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. These
+checks do not generate the individual editorial scores or independent approval.
+
+Coverage is **135/263 native**, **128 remaining**, and **95/725 coding**,
+**630 remaining**. PR #396 remains frozen at 758d1bbb, with required SQL and
+its exact READY preview's eleven general checks passing; verify is pending.
+N015–n016 are local. Ninety-five coding/ninety-five native records are shipped.
+
 ## 15 October continuation — five-item native batch n015
 
 Reviewed the final DSA project check and three code projects, plus the first FDE

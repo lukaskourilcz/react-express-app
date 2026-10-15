@@ -94,84 +94,84 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
         {
           id: 'fde-v1-diagnostic-q2',
           prompt:
-            'A connector posts one invoice per approved order. When the invoice service answers 504, the connector retries the same POST up to three times. Finance reports that roughly one order in two hundred produced two invoices. Which change stops the duplicates?',
+            'A connector posts one invoice per approved order. When the invoice service answers 504, the connector retries the same POST up to three times. Finance reports that roughly one order in two hundred produced two invoices. Which change prevents duplicate invoices while preserving automatic retries, including concurrent attempts for the same order?',
           options: [
             'Retry at most once, so at worst a single duplicate is created.',
             'Add exponential backoff with jitter between the attempts.',
-            'Send an idempotency key the connector generates once per order, and have the invoice service return the stored result for a repeated key instead of writing again.',
+            'Persist one idempotency key per order; the service atomically reuses the recorded result for repeated keys.',
             'Stop retrying on 504 and surface the timeout to the operator.',
           ],
           correct: 2,
           explanation:
-            'A 504 says the gateway stopped waiting, not that the write failed, so the invoice may already exist. Only a key the server remembers turns the second attempt into a read of the first result. Retrying once halves the duplicates and keeps making them. Backoff changes when the retry lands, never what it does when it gets there. Refusing to retry does avoid the second write, but it leaves the outcome unknown and hands the operator an order they will re-submit by hand, which duplicates it anyway.',
+            'A 504 says the gateway stopped waiting, not that the write failed, so the invoice may already exist. Reuse one persisted key for the same order and payload, with a server-side atomic claim/result record covering the retry window; concurrent attempts must not both create invoices. A fresh key on every retry would not help. Reducing retries can reduce exposure but does not make a retry safe, and backoff changes timing rather than write identity. Stopping retries can prevent that second automatic write, but fails the requirement to retry safely and leaves the first outcome unknown.',
           competencies: ['integration'],
         },
         {
           id: 'fde-v1-diagnostic-q3',
           prompt:
-            'The nightly CSV export leaves `vat_id` blank for customers who have none, and the CSV reader hands blanks over as `""`. The same field arrives as `null` from the vendor JSON API. What happens to a blank row here?',
+            'The nightly CSV export leaves `vat_id` blank for customers who have none, and the CSV reader hands blanks over as `""`. The same field arrives as `null` from the vendor JSON API. Assume a nullable text field with no extra validation. What does this mapper store for a CSV blank, and what does an empty-string lookup match?',
           context: {
             language: 'javascript',
             code: 'const toCustomer = row => ({\n  externalId: row.customer_id,\n  name: row.name,\n  vatId: row.vat_id !== null ? row.vat_id : null,\n});\n\nconst findByVat = (customers, vatId) =>\n  customers.filter(one => one.vatId === vatId);',
           },
           options: [
-            'The empty string is falsy, so the conditional stores `null` and the two sources end up agreeing.',
-            'The empty string is not `null`, so it is stored as a VAT id, and `findByVat(customers, "")` then returns every blank customer as one match.',
-            'The CSV reader converts a blank column to `null` before the mapper sees it, so the two sources already agree.',
-            'The insert fails, because a nullable column rejects an empty string.',
+            'The mapper stores null because the empty string is falsy; a lookup for the empty string finds none of those rows.',
+            'The mapper stores `""`; `findByVat(customers, "")` returns all customers whose mapped vatId is the empty string.',
+            'The mapper receives null because the CSV reader converts blanks; the two source formats therefore agree.',
+            'The nullable text field rejects the empty string, so no mapped customer can be stored.',
           ],
           correct: 1,
           explanation:
-            '`row.vat_id !== null` is a null check, and `""` passes it, so a blank becomes a stored value that compares equal to every other blank. Nothing raises an error; a lookup by VAT id just starts matching a whole class of customers at once. The empty string is falsy, but the code tests `!== null` rather than truthiness, so a falsiness argument describes code that is not on the screen. The reader hands the raw column over, which is exactly why the two sources disagree. And a nullable column accepts `""` without complaint: the empty string is a value, not the absence of one.',
+            '`row.vat_id !== null` is a null check, and `""` passes it, so a CSV blank becomes a value equal to every other empty string. A JSON null remains null and is not matched by an empty-string lookup. Nothing raises an error; a lookup by VAT id just starts matching a whole class of customers at once. The empty string is falsy, but the code tests `!== null` rather than truthiness, so a falsiness argument describes code that is not on the screen. The reader hands the raw column over, which is exactly why the two sources disagree. And a nullable column accepts `""` without complaint: the empty string is a value, not the absence of one.',
           competencies: ['integration'],
         },
         {
           id: 'fde-v1-diagnostic-q4',
           prompt:
-            'Every caller of this endpoint is authenticated, and the browser client always sends the tenant it is currently showing. What can a signed-in user of tenant A do?',
+            'The authenticated session authorizes only tenant A. The server database client can read every tenant, with no row policy or other authorization check. A user knows an existing tenant-B case id and can edit the request body. What can this handler expose?',
           context: {
             language: 'javascript',
             code: 'export default async function handler(req, res) {\n  const session = await requireSession(req);\n  const { tenantId, caseId } = req.body;\n\n  const record = await db.cases.findOne({ tenantId, id: caseId });\n  return res.json(record);\n}',
           },
           options: [
-            'Read any case from tenant B by putting tenant B’s id in the request body: the filter enforces the value the caller chose, not the one the session proves.',
+            'Tenant B’s requested case, because the server trusts the caller’s tenant and case ids.',
             'Nothing. The query is still filtered by tenant, so a user of tenant A gets no rows belonging to tenant B.',
             'Nothing, as long as the body is validated against a schema that requires `tenantId` to be a well-formed UUID.',
             'Nothing on reads. The pattern only matters for writes, where a wrong tenant id corrupts another tenant’s data.',
           ],
           correct: 0,
           explanation:
-            'The query filters on a value the caller supplies, so it enforces the caller’s claim instead of the session’s. Derive `tenantId` from the session and ignore the body field; a row-level policy scoped to the session tenant is the second layer, in the database rather than in the handler. Arguing that the filter protects the row assumes the attacker cannot change the filter, and changing it is the attack. A schema check proves the value is a well-formed UUID and never that it belongs to this user. Reads are not the lesser case either: the case body is the data, so reading tenant B’s case is the breach.',
+            'Authentication proves who called; this unrestricted database query still filters by the caller’s tenant claim rather than their authorized tenant. With both valid B ids supplied, the stated absence of another authorization layer lets the B record through. Derive `tenantId` from the session and ignore the body field; a row-level policy scoped to the session tenant is the second layer, in the database rather than in the handler. Arguing that the filter protects the row assumes the attacker cannot change the filter, and changing it is the attack. A schema check proves the value is a well-formed UUID and never that it belongs to this user. Reads are not the lesser case either: the case body is the data, so reading tenant B’s case is the breach.',
           competencies: ['boundaries'],
         },
         {
           id: 'fde-v1-diagnostic-q5',
           prompt:
-            'The operator dashboard calls a vendor API straight from the browser with a key read from `import.meta.env.VITE_VENDOR_KEY`. The value lives in the hosting provider’s encrypted environment settings and is never committed. Who can read the key?',
+            'A Vite-built operator dashboard calls a vendor API from the browser with a secret server API key read from `import.meta.env.VITE_VENDOR_KEY`. The value lives in the hosting provider’s encrypted environment settings and is never committed. Who can read the key?',
           options: [
             'Nobody outside the build. The value exists only in the encrypted settings and is injected at build time.',
             'Only someone with access to the hosting dashboard, because minification renames the variable in the output.',
-            'Anyone who loads the dashboard. A build-time variable is inlined into the JavaScript the browser downloads, so the key ships inside the bundle.',
+            'Anyone who loads the dashboard: the key ships to their browser in the client bundle.',
             'Anyone on the same network, unless the request is sent over TLS.',
           ],
           correct: 2,
           explanation:
-            'Injected at build time means injected into the artifact. The literal sits in the bundle, in the browser cache and in any proxy that saw the response. The repair is structural: move the call behind a server route that holds the key, then rotate the key that already shipped. Encrypted settings protect the value at rest inside the provider, not after a build copied it into the output. Minification renames identifiers and leaves string literals alone, and grepping a bundle for a key shape takes seconds. TLS protects the request in flight and does nothing about a secret the client already holds.',
+            'Injected at build time means injected into the artifact. Vite exposes VITE-prefixed values to client code. A user who loads this dashboard can inspect the compiled value or the vendor request carrying it; encryption in the hosting settings does not hide it from that browser. The repair is structural: move the call behind a server route that holds the key, then rotate the key that already shipped. Encrypted settings protect the value at rest inside the provider, not after a build copied it into the output. Minification or obfuscation does not make a credential secret from the client that must use it. TLS protects the request in flight and does nothing about a secret the client already holds.',
           competencies: ['boundaries', 'operations'],
         },
         {
           id: 'fde-v1-diagnostic-q6',
           prompt:
-            'Release 42 ships a migration that copies `legacy_owner` into a new `owner_id` column and then drops `legacy_owner`. Two hours later the new code is failing on a subset of records. The team redeploys release 41. What have they got?',
+            'Release 42 completes a migration that copies legacy_owner into owner_id and drops legacy_owner. Release 41 still reads legacy_owner. The team redeploys only release 41’s application artifact, without restoring data, changing schema or running migrations. What is the resulting compatibility problem?',
           options: [
             'A working system: redeploying release 41 also reverts the migrations release 42 applied.',
-            'Release 41 running against a schema with no `legacy_owner`, so it fails on the same records. The code rolled back and the schema did not.',
+            'Release 41 expects the removed legacy_owner column; redeploying its code leaves the changed schema in place.',
             'A working system, because release 41 recreates any column it needs from its own migration history when it starts.',
             'A working system, as long as the backfill is replayed in reverse from the application log first.',
           ],
           correct: 1,
           explanation:
-            'A deploy rollback moves code. It does not move a schema, and it cannot bring back the data in a dropped column. Release 41 reads `legacy_owner`, which is gone, so the rollback restores the previous failure rather than the previous behaviour. Migration tools do not run down-migrations because an older build started; a down-migration is a deliberate, separately tested step, and a drop is frequently not reversible at all. Replaying from the application log assumes the log holds every value and is complete, which describes a restore rather than a rollback. The way out is not to arrive here: add `owner_id`, write both columns, move readers across, and drop `legacy_owner` in a later release once no rollback target still needs it.',
+            'This code-only rollback changes the application artifact, not the schema. Release 41 still reads legacy_owner, so those reads now fail because that column is absent. Some values may still exist in owner_id, but redeploying old code does not reconstruct its expected column or prove a safe reverse migration. Migration tools do not run down-migrations because an older build started; a down-migration is a deliberate, separately tested step, and a drop is frequently not reversible at all. Replaying from the application log assumes the log holds every value and is complete, which describes a restore rather than a rollback. The way out is not to arrive here: add `owner_id`, write both columns, move readers across, and drop `legacy_owner` in a later release once no rollback target still needs it.',
           competencies: ['operations'],
         },
         {
