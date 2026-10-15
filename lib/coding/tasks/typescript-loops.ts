@@ -924,12 +924,12 @@ console.log(freezeCopy({ a: 1, b: "x" }));
     tier: 3,
     focus: ["generics", "filter"],
     title: "Values of a type",
-    prompt: "Declare `type TypeName = \"string\" | \"number\" | \"boolean\"` and a conditional type `OfType<N extends TypeName>` that resolves to `string`, `number` or `boolean` for the matching name. Then write `ofType<N extends TypeName>(values: unknown[], name: N): OfType<N>[]`, keeping the values whose `typeof` equals the name, in their original order, with `filter` and a type predicate. `ofType([1, \"a\", 2, true], \"number\")` gives `[1, 2]`.",
+    prompt: "Declare `type TypeName = \"string\" | \"number\" | \"boolean\"` and a conditional type `OfType<N extends TypeName>` that resolves to `string`, `number` or `boolean` for the matching name. Then write `ofType<N extends TypeName>(values: readonly unknown[], name: N): OfType<N>[]`, keeping the values whose `typeof` equals the name, in their original order, with `filter` and a type predicate. `ofType([1, \"a\", 2, true], \"number\")` gives `[1, 2]`. Domain: a dense ordinary readonly array of at most 1000 stable values, possibly frozen, without accessors/proxies. Use exact typeof matching without coercion: NaN, infinities and signed zero are numbers; boxed primitives, null, Symbols, bigint and functions match none of the three names. Preserve order, duplicates and exact values, leaving the input unchanged. Return a fresh mutable array on every call, including empty/all-matching inputs. The conditional alias distributes over a union of names; an explicit loop is also a valid implementation. Target: O(n) time and output space, where n is 1 + input length and each typeof check is constant work.",
     starter: `type TypeName = "string" | "number" | "boolean";
 
 type OfType<N extends TypeName> = N extends "string" ? string : N extends "number" ? number : boolean;
 
-const ofType = <N extends TypeName>(values: unknown[], name: N): OfType<N>[] => {
+const ofType = <N extends TypeName>(values: readonly unknown[], name: N): OfType<N>[] => {
 
 };
 
@@ -940,7 +940,7 @@ console.log(ofType([1, "a", 2, true], "number"));
 
 type OfType<N extends TypeName> = N extends "string" ? string : N extends "number" ? number : boolean;
 
-const ofType = <N extends TypeName>(values: unknown[], name: N): OfType<N>[] =>
+const ofType = <N extends TypeName>(values: readonly unknown[], name: N): OfType<N>[] =>
   values.filter((value): value is OfType<N> => {
     return /* typeof value compared with name */;
   });`,
@@ -977,10 +977,10 @@ const ofType = <N extends TypeName>(values: unknown[], name: N): OfType<N>[] =>
     tier: 3,
     focus: ["generics", "map-set", "for-of"],
     title: "Memoized run",
-    prompt: "Declare `type Output<F> = F extends (arg: number) => infer R ? R : never`, pulling the return type out of a function type with `infer`, then write `runMemoized<F extends (arg: number) => unknown>(fn: F, inputs: number[]): Output<F>[]`. Loop over the inputs with a `Map` as a cache, so an input seen before reuses the stored result instead of calling `fn` again, and return the results in input order. `runMemoized(n => n * 2, [1, 1, 2])` gives `[2, 2, 4]` and calls `fn` twice.",
+    prompt: "Declare `type Output<F> = F extends (arg: number) => infer R ? R : never`, pulling the return type out of a function type with `infer`, then write `runMemoized<F extends (arg: number) => unknown>(fn: F, inputs: readonly number[]): Output<F>[]`. Loop over the inputs with a `Map` as a cache, so an input seen before reuses the stored result instead of calling `fn` again, and return the results in input order. `runMemoized(n => n * 2, [1, 1, 2])` gives `[2, 2, 4]` and calls `fn` twice. Domain: a dense ordinary readonly array of at most 1000 primitive Numbers, possibly frozen, with no accessors/proxies. Any Number is valid, including NaN, infinities and signed zero. Cache keys follow Map equality: NaN repeats hit one entry, and -0/+0 share one entry. On the first occurrence call the non-overloaded synchronous fn as a plain function, with exactly one argument: the actual first input value. Evaluate new keys in input order, cache every returned value including undefined/null/false, and reuse exact returned references. Each run has its own cache and a fresh mutable result array; do not change the inputs or returned objects. Propagate a callback exception immediately without visiting later inputs. Promises, if returned, are opaque values and are not awaited. Target: O(n) time on average for bookkeeping and output/cache space, where n is 1 + input length with average constant Map operations; the work performed inside fn is additional and excluded from this bookkeeping goal.",
     starter: `type Output<F> = F extends (arg: number) => infer R ? R : never;
 
-const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]): Output<F>[] => {
+const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: readonly number[]): Output<F>[] => {
 
 };
 
@@ -989,7 +989,7 @@ console.log(runMemoized(n => n * 2, [1, 1, 2]));
 `,
     skeleton: `type Output<F> = F extends (arg: number) => infer R ? R : never;
 
-const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]): Output<F>[] => {
+const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: readonly number[]): Output<F>[] => {
   const cache = new Map<number, Output<F>>();
   const results: Output<F>[] = [];
 
@@ -999,9 +999,7 @@ const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]
 
   return results;
 };`,
-    hints: [
-      "infer names the part of the type you want to capture, and the conditional resolves to it whenever F matches the function shape.",
-    ],
+    hints: ["infer captures the return type in Output<F>. Use cache.has(input) to test membership: a stored undefined is still a cached result. Keep the Map inside runMemoized so calls do not share cache state."],
     approach: [
       "Write the conditional type with infer R in the return position of the function type and R as the true branch.",
       "Create a Map from number to Output<F> and an empty results array, then loop over the inputs with for-of.",
@@ -1036,10 +1034,10 @@ const runMemoized = <F extends (arg: number) => unknown>(fn: F, inputs: number[]
     tier: 3,
     focus: ["literal-types", "strings", "for-of"],
     title: "Tag every id",
-    prompt: "Declare a template literal type `Tag<P extends string>` for strings shaped `${P}-${number}`, then write `tagAll<P extends string>(prefix: P, ids: number[]): Tag<P>[]` building one tag per id in a `for-of` loop with a template string. `tagAll(\"user\", [1, 2])` gives `[\"user-1\", \"user-2\"]`, and no ids gives an empty list.",
+    prompt: "Declare a template literal type `Tag<P extends string>` for strings shaped `${P}-${number}`, then write `tagAll<P extends string>(prefix: P, ids: readonly number[]): Tag<P>[]` building one tag per id in a `for-of` loop with a template string. `tagAll(\"user\", [1, 2])` gives `[\"user-1\", \"user-2\"]`, and no ids gives an empty list. Domain: prefix is any primitive string of at most 100 UTF-16 units, including empty text, spaces, Unicode and dashes. ids is a dense ordinary readonly array of at most 1000 finite safe integers from -1000000000 through 1000000000, possibly frozen, without accessors/proxies. Keep input order and duplicates and use ordinary number interpolation: -0 becomes 0 and a negative ID keeps its minus sign after the separator. Leave prefix/ids unchanged and return a fresh mutable array every call, including empty/repeated requests. The Tag alias describes a string shape, not validation of arbitrary runtime numbers; nonfinite numbers are outside this exercise. Target: O(n) time and output space, where n is 1 + ID count and prefix/ID text lengths have the fixed bounds above.",
     starter: `type Tag<P extends string> = \`\${P}-\${number}\`;
 
-const tagAll = <P extends string>(prefix: P, ids: number[]): Tag<P>[] => {
+const tagAll = <P extends string>(prefix: P, ids: readonly number[]): Tag<P>[] => {
 
 };
 
@@ -1048,7 +1046,7 @@ console.log(tagAll("user", [1, 2]));
 `,
     skeleton: `type Tag<P extends string> = \`\${P}-\${number}\`;
 
-const tagAll = <P extends string>(prefix: P, ids: number[]): Tag<P>[] => {
+const tagAll = <P extends string>(prefix: P, ids: readonly number[]): Tag<P>[] => {
   const tags: Tag<P>[] = [];
 
   for (const id of ids) {
