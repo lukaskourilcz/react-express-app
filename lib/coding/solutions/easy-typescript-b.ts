@@ -104,12 +104,18 @@ const isComplete = (profile: Profile): profile is Required<Profile> => {
 const isComplete = (profile: Profile): profile is Required<Profile> =>
   Boolean(profile.email && profile.phone);`,
     hiddenTests: [
+      { call: "(()=>{return [isComplete({name:'',email:' ',phone:'\\t'}),isComplete({name:'',email:'0',phone:'0'}),isComplete({name:'x',email:'\u00e9',phone:'\ud83d\ude00'}),isComplete({name:'x',email:'',phone:' '})];})()", expected: [true, true, true, false] },
+      { call: "(()=>{const meta={},profile=Object.freeze(Object.assign(Object.create({email:' ',phone:'0'}),{name:'',meta})),empty=Object.freeze(Object.assign(Object.create(null),{name:'x',email:undefined,phone:'p'}));return [isComplete(profile),isComplete(profile),profile.meta===meta,Reflect.ownKeys(profile),isComplete(empty),empty.email===undefined];})()", expected: [true, true, true, ["name", "meta"], false, true] },
+      { call: "(()=>{const values=[undefined,'',' ','0','\u00e9'];return values.map(email=>values.map(phone=>{const p=Object.freeze({name:'x',email,phone});return isComplete(p)===(email!==undefined&&email!==''&&phone!==undefined&&phone!=='');})).every(row=>row.every(Boolean));})()", expected: true },
+
       { call: 'isComplete({ name: "Bo", phone: "555 0101" })', expected: false },
       { call: 'isComplete({ name: "Bo", email: "bo@example.com", phone: "" })', expected: false },
       { call: 'isComplete({ name: "Cy", email: "cy@example.com", phone: "0" })', expected: true },
       { call: '[{ name: "A", email: "a@example.com", phone: "1" }, { name: "B" }, { name: "C", email: "c@example.com", phone: "3" }].filter(isComplete).map((p) => p.name)', expected: ['A', 'C'] },
     ],
     hiddenTypeTests: [
+      {"code": "const __audit:Profile={name:\"x\"}; if(isComplete(__audit)){const __phone:string=__audit.phone; const __full:Required<Profile>=__audit;}"},
+
       { code: 'const __g: (p: Profile) => p is Required<Profile> = isComplete;', label: 'isComplete is a type predicate' },
     ],
   },

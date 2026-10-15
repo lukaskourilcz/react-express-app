@@ -1069,7 +1069,7 @@ console.log(pluck([{id:1},{id:2}], "id"));
     tier: 3,
     focus: ["utility-types", "spread"],
     title: "Apply a patch",
-    prompt: "Declare an interface named `Settings` with a `theme` string and a `fontSize` number, then write `applyPatch(settings: Settings, patch: Partial<Settings>): Settings`, returning a new settings object with whatever the patch supplies written over the original.",
+    prompt: "Declare an interface named `Settings` with a `theme` string and a `fontSize` number, then write `applyPatch(settings: Settings, patch: Partial<Settings>): Settings`, returning a new settings object with whatever the patch supplies written over the original. Policy: ignore an own patch field whose value is undefined, so the required Settings stays complete; inherited patch fields do not apply. Domain: stable ordinary/null-prototype settings with own theme text and a finite fontSize from -1000000000 through 1000000000, plus up to 100 own enumerable string/Symbol metadata fields with opaque values. A patch carries only theme and/or fontSize data, optionally undefined. Inputs may be frozen and have no accessors/proxies. Return a fresh plain mutable object even for an empty/no-op patch, preserving own enumerable metadata shallowly, including a literal __proto__ field, while excluding inherited metadata. Do not mutate sources or traverse opaque values. Target: O(n) time and output space, where n is 1 + the number of source/patch own enumerable fields under bounded property-key operations.",
     starter: `const applyPatch = (settings, patch) => {
   
 };
@@ -1085,38 +1085,11 @@ console.log(applyPatch({theme:"dark",fontSize:14}, {fontSize:16}));
 const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
   // build and return the answer
 };`,
-    hints: [
-      "Partial takes a type you already have and makes every property optional, which is exactly what a patch is.",
-    ],
-    approach: [
-      "Partial rewrites an existing type with every property optional, so a patch never needs a type of its own.",
-      "Spread the original first and the patch second, so anything the patch supplies wins.",
-      "Build a new object rather than assigning into the original, or the caller’s settings change under them.",
-    ],
+    hints: ["Partial makes properties optional, but an explicit undefined still type-checks here. Filter own entries to values other than undefined before spreading them after the source; defined empty text and zero must still win."],
+    approach: ["Keep only own patch entries whose values are not undefined.", "Spread the original settings first and the defined patch entries second.", "Return the new settings object even for an empty patch; leave both sources unchanged."],
     verify: "tests",
     estimatedMinutes: 10,
-    tests: [
-      {
-        call: "applyPatch({theme:\"dark\",fontSize:14}, {fontSize:16})",
-        expected: { theme: "dark", fontSize: 16 },
-      },
-      {
-        call: "applyPatch({theme:\"dark\",fontSize:14}, {theme:\"light\",fontSize:12})",
-        expected: { theme: "light", fontSize: 12 },
-      },
-      {
-        call: "applyPatch({theme:\"dark\",fontSize:14}, {})",
-        expected: { theme: "dark", fontSize: 14 },
-        label: "an empty patch changes nothing",
-        edge: true,
-      },
-      {
-        call: "applyPatch({theme:\"dark\",fontSize:14}, {fontSize:0})",
-        expected: { theme: "dark", fontSize: 0 },
-        label: "zero still overwrites",
-        edge: true,
-      },
-    ],
+    tests: [{"call": "applyPatch({theme:\"dark\",fontSize:14}, {fontSize:16})", "expected": {"theme": "dark", "fontSize": 16}}, {"call": "applyPatch({theme:\"dark\",fontSize:14}, {theme:\"light\",fontSize:12})", "expected": {"theme": "light", "fontSize": 12}}, {"call": "applyPatch({theme:\"dark\",fontSize:14}, {})", "expected": {"theme": "dark", "fontSize": 14}, "label": "an empty patch changes nothing", "edge": true}, {"call": "applyPatch({theme:\"dark\",fontSize:14}, {fontSize:0})", "expected": {"theme": "dark", "fontSize": 0}, "label": "zero still overwrites", "edge": true}, {"call": "applyPatch({theme:\"dark\",fontSize:14}, {theme:undefined,fontSize:undefined})", "expected": {"theme": "dark", "fontSize": 14}, "label": "undefined keeps the original settings", "edge": true}],
     typeTests: [
       {
         code: "const __next: Settings = applyPatch({ theme: \"dark\", fontSize: 14 }, { fontSize: 16 });",

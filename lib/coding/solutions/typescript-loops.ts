@@ -389,48 +389,15 @@ const countStatus = (items: Status[], wanted: Status): number =>
     ],
   },
   "ts-apply-patches-in-order": {
-    solution: `interface Profile {
-  name: string;
-  age: number;
-  city: string;
-}
-
-const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile => {
-  let current = profile;
-  for (const patch of patches) current = { ...current, ...patch };
-  return current;
-};`,
-    junior: `interface Profile {
-  name: string;
-  age: number;
-  city: string;
-}
-
-const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile => {
-  const current: Profile = { name: profile.name, age: profile.age, city: profile.city };
-  for (const patch of patches) {
-    if (patch.name !== undefined) {
-      current.name = patch.name;
-    }
-    if (patch.age !== undefined) {
-      current.age = patch.age;
-    }
-    if (patch.city !== undefined) {
-      current.city = patch.city;
-    }
-  }
-  return current;
-};`,
-    senior: `interface Profile {
-  name: string;
-  age: number;
-  city: string;
-}
-
-// Each patch spreads over the result of the one before it, so later patches win.
-const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile =>
-  patches.reduce<Profile>((current, patch) => ({ ...current, ...patch }), profile);`,
+    solution: "interface Profile {\n  name: string;\n  age: number;\n  city: string;\n}\n\nconst applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile => {\n  let current = profile;\n  for (const patch of patches) {\n    const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));\n    current = { ...current, ...defined };\n  }\n  return current;\n};",
+    junior: "interface Profile {\n  name: string;\n  age: number;\n  city: string;\n}\n\nconst applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile => {\n  let current = profile;\n  for (const patch of patches) {\n    const next: Profile = { ...current };\n    if (Object.hasOwn(patch, \"name\") && patch.name !== undefined) next.name = patch.name;\n    if (Object.hasOwn(patch, \"age\") && patch.age !== undefined) next.age = patch.age;\n    if (Object.hasOwn(patch, \"city\") && patch.city !== undefined) next.city = patch.city;\n    current = next;\n  }\n  return current;\n};",
+    senior: "interface Profile {\n  name: string;\n  age: number;\n  city: string;\n}\n\nconst applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile =>\n  patches.reduce<Profile>((current, patch) => {\n    const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));\n    return { ...current, ...defined };\n  }, profile);",
+    hiddenTypeTests: [{"code": "const __auditPatch:Partial<Profile>={age:undefined}; const __auditProfile:Profile=applyPatches({name:\"x\",age:1,city:\"y\"},[__auditPatch]);"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},profile=Object.freeze({name:'A',age:1,city:'X',extra:meta,[sym]:meta,['__proto__']:meta}),none=applyPatches(profile,[]),one=applyPatches(profile,[Object.freeze({})]),again=applyPatches(profile,[Object.freeze({})]);one.age=9;return [none===profile,one!==profile,one!==again,again.extra===meta,again[sym]===meta,Object.hasOwn(again,'__proto__'),again.__proto__===meta,Object.getPrototypeOf(again)===Object.prototype,profile.age,again.age];})()", expected: [true, true, true, true, true, true, true, true, 1, 1] },
+      { call: "(()=>{const profile=Object.freeze({name:'A',age:1,city:'X'}),inherited=Object.freeze(Object.create({name:'ignored',age:99})),patches=Object.freeze([Object.freeze({name:'',age:0}),Object.freeze({name:undefined,age:undefined,city:' '}),inherited]),out=applyPatches(profile,patches);return [out.name,out.age,out.city,profile.name,profile.age,patches[1].name===undefined];})()", expected: ["", 0, " ", "A", 1, true] },
+      { call: "(()=>{const meta={},profile={name:'A',age:1,city:'X'};for(let i=0;i<100;i++)profile['x'+i]=meta;Object.freeze(profile);const patches=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({age:i}))),out=applyPatches(profile,patches);return [out.age,Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),profile.age,patches.length];})()", expected: [999, 103, true, 1, 1000] },
+
       {
         call: "(() => { const profile = { name: \"Ada\", age: 36, city: \"London\" }; applyPatches(profile, [{ age: 1 }]); return profile.age; })()",
         expected: 36,

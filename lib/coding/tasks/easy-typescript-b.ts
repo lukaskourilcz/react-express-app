@@ -134,7 +134,7 @@ const clicks = (events: readonly UiEvent[]): Click[] =>
     tier: 2,
     focus: ['utility-types', 'type-guards'],
     title: 'Is the profile complete?',
-    prompt: 'A `Profile` needs only a `name`: the `email` and the `phone` are optional. `Required<Profile>` is the same type with every property required. Write `isComplete(profile: Profile): profile is Required<Profile>`, returning `true` when the email and the phone are both filled in, which means present and not an empty string. After `if (isComplete(profile))`, the compiler reads `profile.email` as a `string` instead of `string | undefined`.',
+    prompt: "A `Profile` needs only a `name`: the `email` and the `phone` are optional. `Required<Profile>` is the same type with every property required. Write `isComplete(profile: Profile): profile is Required<Profile>`, returning `true` when the email and the phone are both filled in, which means present and not an empty string. After `if (isComplete(profile))`, the compiler reads `profile.email` as a `string` instead of `string | undefined`. Domain: stable ordinary or null-prototype Profile records, possibly frozen, with name text and optional own or inherited email/phone data on a bounded prototype chain, with no accessors/proxies. A missing or undefined field is incomplete; null is outside Profile. Any string of positive UTF-16 length counts, including whitespace, Unicode and \"0\". Do not trim, normalize or validate real email/phone formats, and do not test the name for emptiness. Return an actual boolean without changing the record or unrelated opaque metadata. Target: O(1) time and working space for the two presence/empty-string checks; field contents are not traversed.",
     starter: `interface Profile {
   name: string;
   email?: string;

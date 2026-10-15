@@ -195,74 +195,17 @@ const groupRuns = <T>(items: readonly T[], keyOf: (item: T) => string): [string,
     ],
   },
   'ts-mh-check-a-form': {
-    solution: `type Check<V> = (value: V) => string | null;
-type Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };
-type Errors<T> = Partial<Record<keyof T, string>>;
-
-const checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {
-  const errors: Errors<T> = {};
-  // for...in gives each key as a key of T, so rules[key] and values[key]
-  // line up: the checks for a field accept exactly that field's type.
-  for (const key in rules) {
-    const checks = rules[key];
-    if (!checks) continue;
-    for (const check of checks) {
-      const message = check(values[key]);
-      // A later check may assume this one passed, so stop at the first message.
-      if (message !== null) {
-        errors[key] = message;
-        break;
-      }
-    }
-  }
-  return errors;
-};`,
-    junior: `type Check<V> = (value: V) => string | null;
-type Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };
-type Errors<T> = Partial<Record<keyof T, string>>;
-
-const checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {
-  const errors: Errors<T> = {};
-  for (const key in rules) {
-    const checks = rules[key];
-    if (checks === undefined) {
-      continue;
-    }
-    const value = values[key];
-    let index = 0;
-    while (index < checks.length) {
-      const message = checks[index](value);
-      if (message !== null) {
-        errors[key] = message;
-        index = checks.length;
-      } else {
-        index = index + 1;
-      }
-    }
-  }
-  return errors;
-};`,
-    senior: `type Check<V> = (value: V) => string | null;
-type Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };
-type Errors<T> = Partial<Record<keyof T, string>>;
-
-const firstMessage = <V>(checks: readonly Check<V>[], value: V): string | null => {
-  for (const check of checks) {
-    const message = check(value);
-    if (message !== null) return message;
-  }
-  return null;
-};
-
-const checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {
-  const errors: Errors<T> = {};
-  for (const key in rules) {
-    const message = firstMessage(rules[key] ?? [], values[key]);
-    if (message !== null) errors[key] = message;
-  }
-  return errors;
-};`,
+    solution: "type Check<V> = (value: V) => string | null;\ntype Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };\ntype Errors<T> = Partial<Record<keyof T, string>>;\n\nconst checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {\n  const errors = Object.create(null) as Errors<T>;\n  // A generic field keeps its value and checks linked as T[K].\n  const checkField = <K extends keyof T>(key: K): void => {\n    const checks = rules[key];\n    if (checks === undefined) return;\n    for (const check of checks) {\n      const message = check(values[key]);\n      if (message !== null) { errors[key] = message; break; }\n    }\n  };\n  for (const key of Reflect.ownKeys(rules)) {\n    if (!Object.prototype.propertyIsEnumerable.call(rules, key)) continue;\n    // The input contract limits own rule keys to keyof T, including symbols.\n    checkField(key as keyof T);\n  }\n  return errors;\n};",
+    junior: "type Check<V> = (value: V) => string | null;\ntype Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };\ntype Errors<T> = Partial<Record<keyof T, string>>;\n\nconst checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {\n  const errors = Object.create(null) as Errors<T>;\n  const checkField = <K extends keyof T>(key: K): void => {\n    const checks = rules[key];\n    if (checks === undefined) return;\n    const value = values[key];\n    let index = 0;\n    while (index < checks.length) {\n      const check = checks[index];\n      const message = check(value);\n      if (message !== null) { errors[key] = message; return; }\n      index += 1;\n    }\n  };\n  for (const key of Reflect.ownKeys(rules)) {\n    if (Object.prototype.propertyIsEnumerable.call(rules, key)) checkField(key as keyof T);\n  }\n  return errors;\n};",
+    senior: "type Check<V> = (value: V) => string | null;\ntype Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };\ntype Errors<T> = Partial<Record<keyof T, string>>;\n\nconst firstMessage = <V>(checks: readonly Check<V>[], value: V): string | null => {\n  for (const check of checks) {\n    const message = check(value);\n    if (message !== null) return message;\n  }\n  return null;\n};\nconst checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {\n  const errors = Object.create(null) as Errors<T>;\n  const checkField = <K extends keyof T>(key: K): void => {\n    const message = firstMessage(rules[key] ?? [], values[key]);\n    if (message !== null) errors[key] = message;\n  };\n  for (const key of Reflect.ownKeys(rules)) {\n    if (Object.prototype.propertyIsEnumerable.call(rules, key)) checkField(key as keyof T);\n  }\n  return errors;\n};",
     hiddenTests: [
+      { call: "(()=>{const seen=[];const out=checkForm({a:1},{a:[function(value){\"use strict\";seen.push(this===undefined);return null},function(value){\"use strict\";seen.push(this===undefined);return null}]});return [seen,Reflect.ownKeys(out).length];})()", expected: [[true, true], 0] },
+      { call: "(()=>{const sym=Symbol('field'),marker={},values=Object.freeze({constructor:1,['__proto__']:2,[sym]:marker}),rules=Object.freeze({constructor:[()=> 'c'],['__proto__']:[()=> 'p'],[sym]:[value=>value===marker?'s':null]}),out=checkForm(values,rules),empty=checkForm(values,{});return [Object.hasOwn(out,'constructor'),out.constructor,Object.hasOwn(out,'__proto__'),out.__proto__,out[sym],Reflect.ownKeys(out).length,empty.constructor===undefined,empty.__proto__===undefined,Reflect.ownKeys(empty).length];})()", expected: [true, "c", true, "p", "s", 3, true, true, 0] },
+      { call: "(()=>{const sym=Symbol('last'),seen=[],rules=Object.create({inherited:[()=>{throw 'inherited'}]});rules.b=[function(value){seen.push(['b',value,arguments.length]);return ''},()=>{throw 'after message'}];rules['2']=[function(value){seen.push(['2',value,arguments.length]);return null}];rules[sym]=[function(value){seen.push(['s',value,arguments.length]);return ' s '}];Object.defineProperty(rules,'hidden',{value:[()=>{throw 'hidden'}],enumerable:false});Object.freeze(rules);const values=Object.freeze({b:0,'2':false,[sym]:null}),out=checkForm(values,rules);return [seen,out.b,out[sym],Reflect.ownKeys(out).length,Object.hasOwn(out,'b')];})()", expected: [[["2", false, 1], ["b", 0, 1], ["s", null, 1]], "", " s ", 2, true] },
+      { call: "(()=>{const marker={},seen=[];try{checkForm({a:marker,b:2},{a:[function(value){seen.push([value===marker,arguments.length]);return null},()=>{throw marker},()=>{seen.push('late');return null}],b:[()=>{seen.push('later field');return null}]})}catch(error){return [error===marker,seen]}return false;})()", expected: [true, [[true, 1]]] },
+      { call: "(()=>{const values=Object.freeze({a:1}),rules=Object.freeze({a:Object.freeze([()=> 'wrong'])}),a=checkForm(values,rules),b=checkForm(values,rules);a.a='changed';a.extra='later';return [a!==b,b.a,Reflect.ownKeys(b),values.a,rules.a.length,checkForm(values,{a:undefined}).a===undefined];})()", expected: [true, "wrong", ["a"], 1, 1, true] },
+      { call: "(()=>{let calls=0;const values={},rules={};for(let i=0;i<100;i++){values['f'+i]=i;rules['f'+i]=Object.freeze(Array.from({length:20},()=>value=>{calls++;return null}));}Object.freeze(values);Object.freeze(rules);const out=checkForm(values,rules);return [calls,Reflect.ownKeys(out).length,Object.keys(rules).length];})()", expected: [2000, 0, 100] },
+
       { call: '(() => { let calls = 0; checkForm({ name: "" }, { name: [() => "Required", () => { calls += 1; return null; }] }); return calls; })()', expected: 0 },
       { call: 'checkForm({ a: 1 }, { a: [] })', expected: {} },
       { call: 'checkForm({ a: 1 }, { a: undefined })', expected: {} },
@@ -271,6 +214,8 @@ const checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {
       { call: 'checkForm(Object.freeze({ code: "12" }), Object.freeze({ code: [(v) => (/^\\d{4}$/.test(v) ? null : "Four digits")] }))', expected: { code: 'Four digits' } },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditKey=Symbol(); const __auditErrors=checkForm({[__auditKey]:Symbol()},{[__auditKey]:[value=>value.description??null]}); const __auditMaybe:string|undefined=__auditErrors[__auditKey];"},
+
       { code: 'const __errors: Partial<Record<"email" | "age", string>> = checkForm({ email: "", age: 1 }, {});' },
       { code: 'checkForm({ email: "" }, { email: [(email: string) => 5] });', rejects: true },
     ],

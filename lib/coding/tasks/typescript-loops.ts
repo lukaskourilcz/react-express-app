@@ -770,7 +770,7 @@ console.log(pluckAll([{ id: 1, name: "a" }, { id: 2, name: "b" }], ["id", "name"
     tier: 3,
     focus: ["utility-types", "for-of", "spread"],
     title: "Apply patches in order",
-    prompt: "Declare an interface named `Profile` with a `name` string, an `age` number and a `city` string, then write `applyPatches(profile: Profile, patches: Partial<Profile>[]): Profile`, applying every patch in order and building a new object each time, so the profile handed in is never changed. `applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }, { city: \"Paris\" }])` gives `{ name: \"Ada\", age: 37, city: \"Paris\" }`.",
+    prompt: "Declare an interface named `Profile` with a `name` string, an `age` number and a `city` string, then write `applyPatches(profile: Profile, patches: Partial<Profile>[]): Profile`, applying every patch in order and building a new object each time, so the profile handed in is never changed. `applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }, { city: \"Paris\" }])` gives `{ name: \"Ada\", age: 37, city: \"Paris\" }`. Policy: ignore an own patch field whose value is undefined, so the required Profile stays complete. Apply defined own fields only; inherited patch fields do not apply. Domain: a stable ordinary/null-prototype profile with own name/city text, finite age from -1000000000 through 1000000000, and up to 100 own enumerable string/Symbol metadata fields with opaque values. Patches form a dense ordinary array of at most 1000 stable records carrying only a subset of the three Profile keys, optionally undefined; inputs may be frozen, with no accessors/proxies. Preserve own enumerable source metadata shallowly, including a literal __proto__ field, without copying inherited metadata or mutating any input. No patches returns the exact original profile. Every supplied patch, even empty or all undefined, produces a fresh plain mutable object. Target: O(n*m) time and total allocation, where n is 1 + patch count and m is 1 + starting own enumerable field count; patches cannot add extra metadata keys, so m bounds each copy.",
     starter: `interface Profile {
   name: string;
   age: number;
@@ -794,49 +794,16 @@ const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile =>
   let current = profile;
 
   for (const patch of patches) {
-    // replace current with a new object: current first, then the patch
+    // replace current with a new object: current, then defined own patch entries
   }
 
   return current;
 };`,
-    hints: [
-      "Partial<Profile> lets a patch carry any subset of the properties, and spreading it after the current object is what makes the later patch win.",
-    ],
-    approach: [
-      "Keep a variable holding the current profile, starting from the one passed in.",
-      "Loop over the patches with for-of and replace the current profile with a new object spread from the current one, then from the patch.",
-      "Return the current profile; when there are no patches it is the original object, and the original is never mutated.",
-    ],
+    hints: ["Partial makes properties optional, but an explicit undefined still type-checks here. Filter own entries to values other than undefined before spreading them after the source; defined empty text and zero must still win."],
+    approach: ["Start with the original profile; zero patches returns that exact object.", "For every patch in order, collect its own entries whose values are not undefined, then spread them after the current profile into a new object.", "Return the current profile, leaving every input unchanged."],
     verify: "tests",
     estimatedMinutes: 8,
-    tests: [
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }])",
-        expected: { name: "Ada", age: 37, city: "London" },
-      },
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ city: \"Paris\" }, { city: \"Rome\", age: 40 }])",
-        expected: { name: "Ada", age: 40, city: "Rome" },
-      },
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [])",
-        expected: { name: "Ada", age: 36, city: "London" },
-        label: "no patches",
-        edge: true,
-      },
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{}])",
-        expected: { name: "Ada", age: 36, city: "London" },
-        label: "an empty patch changes nothing",
-        edge: true,
-      },
-      {
-        call: "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 0 }])",
-        expected: { name: "Ada", age: 0, city: "London" },
-        label: "zero still overwrites",
-        edge: true,
-      },
-    ],
+    tests: [{"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }])", "expected": {"name": "Ada", "age": 37, "city": "London"}}, {"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ city: \"Paris\" }, { city: \"Rome\", age: 40 }])", "expected": {"name": "Ada", "age": 40, "city": "Rome"}}, {"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [])", "expected": {"name": "Ada", "age": 36, "city": "London"}, "label": "no patches", "edge": true}, {"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{}])", "expected": {"name": "Ada", "age": 36, "city": "London"}, "label": "an empty patch changes nothing", "edge": true}, {"call": "applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 0 }])", "expected": {"name": "Ada", "age": 0, "city": "London"}, "label": "zero still overwrites", "edge": true}, {"call": "applyPatches({name:\"Ada\",age:36,city:\"London\"}, [{age:37},{name:undefined,age:undefined}])", "expected": {"name": "Ada", "age": 37, "city": "London"}, "label": "undefined keeps the previously applied value", "edge": true}],
     typeTests: [
       {
         code: "const __next: Profile = applyPatches({ name: \"Ada\", age: 36, city: \"London\" }, [{ age: 37 }]);",

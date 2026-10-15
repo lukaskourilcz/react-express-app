@@ -215,7 +215,7 @@ console.log(groupRuns([{ from: "Ada", text: "Hi" }, { from: "Ada", text: "Free n
     tier: 3,
     focus: ['keyof', 'utility-types', 'generics'],
     title: 'Check a sign-up form',
-    prompt: 'A form library lets every field list its own checks. A check takes the field’s value and returns a message when something is wrong, or `null` when the value is fine. The types in the starter describe it. `Rules<T>` maps each key of the form `T` to a list of checks for that field’s own type, `T[K]`, so a check on `age` receives a number and a check on `email` receives a string. Write `checkForm<T extends object>(values: T, rules: Rules<T>): Errors<T>`. For every field that has checks, run them in order and stop at the first message: that message is the field’s error, and the checks after it do not run, because a later check may assume the earlier ones passed. A field with no checks, or whose checks all return `null`, does not appear in the result. `Errors<T>` is `Partial<Record<keyof T, string>>`, so an error may be missing for any field.',
+    prompt: "A form library lets every field list its own checks. A check takes the field\u2019s value and returns a message when something is wrong, or `null` when the value is fine. The types in the starter describe it. `Rules<T>` maps each key of the form `T` to a list of checks for that field\u2019s own type, `T[K]`, so a check on `age` receives a number and a check on `email` receives a string. Write `checkForm<T extends object>(values: T, rules: Rules<T>): Errors<T>`. For every field that has checks, run them in order and stop at the first message: that message is the field\u2019s error, and the checks after it do not run, because a later check may assume the earlier ones passed. A field with no checks, or whose checks all return `null`, does not appear in the result. `Errors<T>` is `Partial<Record<keyof T, string>>`, so an error may be missing for any field. Domain: stable ordinary/null-prototype values and rules objects, possibly frozen, with no accessors/proxies. Only own enumerable rule keys are checked, in Reflect.ownKeys order with nonenumerable keys skipped; keys may be strings, numbers or symbols belonging to T. A missing/undefined rule list or an empty list has no error. There are at most 100 ruled fields and 20 checks per field. Invoke each check as a plain function without a receiver. Each synchronous check gets exactly one argument, the exact field value (own or inherited on a bounded prototype chain), and does not modify inputs. Call checks in field/list order, stop that field at its first string including empty text, and propagate the exact thrown value without later calls. Return a fresh mutable prototype-safe error dictionary whose own keys are exactly failing fields, with unchanged literal messages. Missing keys read as undefined, including prototype-like names. Leave all inputs and opaque field values unchanged. Target: O(n) time and output space, where n is 1 + own rule-key count + total rule-list entries, excluding callback work and under bounded property-key operations.",
     starter: `type Check<V> = (value: V) => string | null;
 type Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };
 type Errors<T> = Partial<Record<keyof T, string>>;
@@ -230,24 +230,9 @@ console.log(checkForm({ email: "ada", age: 17 }, {
   age: [(age) => (age >= 18 ? null : "You must be 18 or over")],
 }));
 `,
-    skeleton: `const checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {
-  const errors: Errors<T> = {};
-  for (const key in rules) {
-    const checks = rules[key];
-    // no checks for this field: move on
-    // run each check on values[key]; the first message is the error, then stop
-  }
-  return errors;
-};`,
-    hints: [
-      '`for (const key in rules)` gives each key as a key of `T`, so `rules[key]` is the list of checks for that field and `values[key]` is a value of the type those checks accept. No cast is needed.',
-      'A `for...of` loop over the checks can stop with `break` as soon as one returns a message. Compare the result with `null`: a message is any string.',
-    ],
-    approach: [
-      'Start an empty `Errors<T>` object.',
-      'Loop over the keys of `rules`. Skip a key whose list is missing.',
-      'Run the checks on `values[key]` in order. At the first result that is not `null`, store it under `key` and stop checking that field.',
-    ],
+    skeleton: "type Check<V> = (value: V) => string | null;\ntype Rules<T> = { [K in keyof T]?: readonly Check<T[K]>[] };\ntype Errors<T> = Partial<Record<keyof T, string>>;\n\nconst checkForm = <T extends object>(values: T, rules: Rules<T>): Errors<T> => {\n  const errors = Object.create(null) as Errors<T>;\n  const checkField = <K extends keyof T>(key: K): void => {\n    const checks = rules[key];\n    // skip absent lists; run checks until the first non-null message\n  };\n  for (const key of Reflect.ownKeys(rules)) {\n    if (Object.prototype.propertyIsEnumerable.call(rules, key)) checkField(key as keyof T);\n  }\n  return errors;\n};",
+    hints: ["Use a generic field helper <K extends keyof T> so rules[key] and values[key] stay linked as T[K]. Reflect.ownKeys includes symbols; filter to own enumerable keys. The input contract makes the boundary cast to keyof T valid.", "A for-of loop can stop at the first message. Compare with null because even empty text is a message. A null-prototype error dictionary prevents inherited names from appearing as errors."],
+    approach: ["Create a fresh prototype-safe Errors<T> dictionary.", "Visit own enumerable rule keys in Reflect.ownKeys order and pass each to a generic field helper.", "Run its checks once in list order on the exact field value. Store the first non-null message and stop that field."],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [

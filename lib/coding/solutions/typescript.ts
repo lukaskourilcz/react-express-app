@@ -469,28 +469,8 @@ const pluck = <T, K extends keyof T>(items: T[], key: K): T[K][] => items.map(({
     ],
   },
   "ts-apply-a-patch": {
-    solution: `interface Settings {
-  theme: string;
-  fontSize: number;
-}
-
-const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => ({...settings, ...patch});`,
-    junior: `interface Settings {
-  theme: string;
-  fontSize: number;
-}
-
-const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
-  let theme = settings.theme;
-  if (patch.theme !== undefined) {
-    theme = patch.theme;
-  }
-  let fontSize = settings.fontSize;
-  if (patch.fontSize !== undefined) {
-    fontSize = patch.fontSize;
-  }
-  return { theme: theme, fontSize: fontSize };
-};`,
+    solution: "interface Settings {\n  theme: string;\n  fontSize: number;\n}\n\nconst applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {\n  const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));\n  return { ...settings, ...defined };\n};",
+    junior: "interface Settings {\n  theme: string;\n  fontSize: number;\n}\n\nconst applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {\n  const next: Settings = { ...settings };\n  if (Object.hasOwn(patch, \"theme\") && patch.theme !== undefined) next.theme = patch.theme;\n  if (Object.hasOwn(patch, \"fontSize\") && patch.fontSize !== undefined) next.fontSize = patch.fontSize;\n  return next;\n};",
     senior: `interface Settings {
   theme: string;
   fontSize: number;
@@ -501,7 +481,12 @@ const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
   const defined = Object.fromEntries(Object.entries(patch).filter(([, value]) => value !== undefined));
   return { ...settings, ...defined };
 };`,
+    hiddenTypeTests: [{"code": "const __auditPatch:Partial<Settings>={fontSize:undefined}; const __auditSettings:Settings=applyPatch({theme:\"x\",fontSize:1},__auditPatch);"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},settings=Object.freeze({theme:' ',fontSize:-0,extra:meta,[sym]:meta,['__proto__']:meta}),patch=Object.freeze({theme:undefined,fontSize:undefined}),a=applyPatch(settings,patch),b=applyPatch(settings,{});a.theme='later';return [a!==settings,a!==b,b.theme,Object.is(b.fontSize,-0),b.extra===meta,b[sym]===meta,Object.hasOwn(b,'__proto__'),b.__proto__===meta,Object.getPrototypeOf(b)===Object.prototype,settings.theme,patch.theme===undefined];})()", expected: [true, true, " ", true, true, true, true, true, true, " ", true] },
+      { call: "(()=>{const settings=Object.freeze(Object.assign(Object.create(null),{theme:'A',fontSize:1})),patch=Object.freeze(Object.assign(Object.create({theme:'ignored'}),{fontSize:0})),out=applyPatch(settings,patch);return [out.theme,out.fontSize,settings.fontSize,Object.hasOwn(patch,'theme'),Object.getPrototypeOf(out)===Object.prototype];})()", expected: ["A", 0, 1, false, true] },
+      { call: "(()=>{const meta={},settings={theme:'A',fontSize:1};for(let i=0;i<100;i++)settings['x'+i]=meta;Object.freeze(settings);const out=applyPatch(settings,{theme:'',fontSize:-0.5});return [out.theme,out.fontSize,Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),settings.theme];})()", expected: ["", -0.5, 102, true, "A"] },
+
       { call: "(() => { const settings = {theme:\"dark\",fontSize:14}; const next = applyPatch(settings, {fontSize:20}); return [settings, next, next === settings]; })()", expected: [{ theme: "dark", fontSize: 14 }, { theme: "dark", fontSize: 20 }, false] },
       { call: "applyPatch({theme:\"light\",fontSize:10}, {theme:\"solarized\"})", expected: { theme: "solarized", fontSize: 10 } },
       { call: "applyPatch({theme:\"x\",fontSize:1}, {theme:\"\",fontSize:0})", expected: { theme: "", fontSize: 0 } },
