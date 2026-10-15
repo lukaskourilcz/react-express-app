@@ -25,13 +25,13 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "PR #409 passed required run 38717316234 at exact 57dff6387d0a3f6b521afe1c9483bcfe3148d604 (verify 30m05s; SQL 41s), merged at da47f1957a6a012b70a085e59e42f8ef5ab51168. READY production dpl_BAbKFtd8CPMbsnunkdDXyS7WtQ3J matches that merge, owns devshark.app and has no alias error. All eleven general guest checks pass with zero XP/null progress. Three actual served Run-worker contracts block a captured native Promise.all alias, accept manual aggregation under the restriction and retain native aggregation for another task. Those worker checks make no server submission. Shipped coverage is 245/725 coding and 263/263 native. This does not establish authenticated server-side Premium, physical-device, independent/human or complete-catalogue acceptance. Fifteen b044–b046 reviews remain staged; all selected final-hash verdicts and sixty-one authored-target/base-25-XP checks pass.",
+    "executionEvidence": "PR #411 passed required run 38722800635 at exact head 60caa1e873ac97fe8c094449be91080d5638a450 (verify 25m03s; SQL 39s), and merged at ad67b83113b06408fe68c2cba16b0160e1a3927f on 15 October 2026 at 11:18:23 UTC. READY production dpl_9aEaAboGu1kQn4xrPZW3TdJGKB4u matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four actual factory Submit checks pass on that production: valid free running-average/cancel-timer factories return null-time/unknown with authored targets preserved, and wrong implementations fail. All submissions grant zero XP and return null progress. Shipped coverage is 255/725 coding reviews and 263/263 native reviews. This does not establish authenticated Premium, physical-device, independent/human or full-catalogue acceptance. Five completed b046 reviews remain staged; audit is deferred by owner request.",
     "currentModelReviewedIssuedTasks": 260,
     "issuedStillRequiringReview": 465,
-    "deployedModelReviewedIssuedTasks": 245,
-    "stagedModelReviewedIssuedTasks": 15,
-    "stagedExecutionEvidence": "Fifteen b044–b046 reviews remain staged. B046 revision 2 passes 31/31 selected current-hash verdicts, 21 target/base-25-XP checks, canonical native Run/reversed hidden order and the extra valid deferred-start form. The fixture correction adds zero unique coverage.",
-    "deployedExecutionEvidence": "PR #409 passed required run 38717316234 at exact 57dff6387d0a3f6b521afe1c9483bcfe3148d604 (verify 30m05s; SQL 41s), merged at da47f1957a6a012b70a085e59e42f8ef5ab51168. READY production dpl_BAbKFtd8CPMbsnunkdDXyS7WtQ3J matches that merge, owns devshark.app and has no alias error. All eleven general guest checks pass with zero XP/null progress. Three actual served Run-worker contracts block a captured native Promise.all alias, accept manual aggregation under the restriction and retain native aggregation for another task. Those worker checks make no server submission. Shipped coverage is 245/725 coding and 263/263 native. This does not establish authenticated server-side Premium, physical-device, independent/human or complete-catalogue acceptance."
+    "deployedModelReviewedIssuedTasks": 255,
+    "stagedModelReviewedIssuedTasks": 5,
+    "stagedExecutionEvidence": "Five b046 reviews remain staged in codex/content-audit-b046-onward (e7888215 plus revision 2 at 244245da). They pass 31/31 selected current-hash verdicts, 21 target/base-25-XP checks, canonical native Run/reversed hidden order and the extra valid deferred-start form. The revision adds zero unique coverage. Local release gates pass; mandatory PR checks, merge and exact production are pending. Further audit is deferred by owner request.",
+    "deployedExecutionEvidence": "PR #411 passed required run 38722800635 at exact head 60caa1e873ac97fe8c094449be91080d5638a450 (verify 25m03s; SQL 39s), and merged at ad67b83113b06408fe68c2cba16b0160e1a3927f on 15 October 2026 at 11:18:23 UTC. READY production dpl_9aEaAboGu1kQn4xrPZW3TdJGKB4u matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four actual factory Submit checks pass on that production: valid free running-average/cancel-timer factories return null-time/unknown with authored targets preserved, and wrong implementations fail. All submissions grant zero XP and return null progress. Shipped coverage is 255/725 coding reviews and 263/263 native reviews. This does not establish authenticated Premium, physical-device, independent/human or full-catalogue acceptance."
   },
   "nativePaths": {
     "paths": 2,
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "245 reviewed coding and 263 native records are deployed; 15 coding records are staged through b046. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "255 reviewed coding and 263 native records are deployed; five coding records are staged through b046. Audit is deferred by owner request. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]
