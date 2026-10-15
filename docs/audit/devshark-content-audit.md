@@ -1,5 +1,26 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n028
+
+Reviewed four security questions and their check against primary OWASP guidance.
+A valid order amount does not imply approval: the refund now has an explicit
+50 EUR consent boundary. A permitted quoted attack remains content in a
+summarizer without export authority. Fixed-tenant derivation is a stated API
+contract; strict mismatch rejection can also be secure. Deletion limits bound
+one call and recovery depends on a working permitted restore window; approval
+can reduce mistakes and repeated calls require cumulative controls.
+
+Mixed keys, exercise feedback and explicit premises pass the authored proof.
+No refund, model, export, tenant authorization or recovery was executed. Native
+bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Manual
+quality/relevance/final readings remain separate from execution.
+
+Coverage is **195/263 native**, **68 remaining**, and **95/725 coding**,
+**630 remaining**. N024–n028 are local while PR #398 remains frozen at
+5f0145fa pending verify, with SQL and eleven preview checks passing. Production
+coverage remains 95 coding/125 native through #396. Diagnostic parent awaits #397.
+
 ## 15 October continuation — five-item native batch n027
 
 Reviewed the four evaluation questions and their check. Tuning leakage now
