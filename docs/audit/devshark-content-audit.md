@@ -1,5 +1,31 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n034
+
+Reviewed both architecture/output lessons, reading activities and validator.
+Rules still have costs, workflows can branch/retry/parallelize, and dependency
+between steps alone does not require an agent. The268/300sample is explicitly
+89.3% coverage with32unresolved cases. Own-key rule lookup prevents inherited
+names from becoming queues. The illustrative caller handles provider failure,
+binds ticket identity and maps categories to actual queues; its client/protocol
+assumptions are explicit. Schema, truth, current authority and calibration are
+separate, and the model-first retry trace is distinct from rule-first routing.
+
+Six real validator sandbox verdicts pass, including a loop alternative and
+precedence/negative-zero/casefold wrongs. Two valid target analyses retain
+base25. Trusted routing examples verify the old prototype-key defect, revised
+queue mapping and failure fallbacks. Partial parser and arithmetic checks pass;
+no real model, protocol, calibration, business accuracy or architecture benchmark
+is claimed. Native bindings, paths, API/script types, launch, build, both
+production dependency audits (zero vulnerabilities), copy and diff checks pass.
+Individual manual editorial/final readings remain separate from execution.
+
+Coverage is **225/263 native**, **38 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 freezes n024–n031 at d3064e1f with SQL, eleven
+exact-preview checks and six catalogue probes per theme passing; verify is
+pending. N032–n034 are local. Production coverage is95 coding/170 native
+through #398. Diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n033
 
 Reviewed both tenant/lifecycle lessons, their reading activities and wrapper.
