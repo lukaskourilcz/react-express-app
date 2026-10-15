@@ -1,5 +1,41 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b040
+
+Read template filling, streamed line buffering, bounded scores, debounce and
+throttle individually. Senior template replacement now uses replace/String,
+including Symbol primitives. Score boards use the requested findIndex/splice.
+Throttle stores one accepted timestamp before invoking its callback, so a thrown
+callback consumes the window without leaving it permanently blocked. Exact
+boundary semantics follow the stated Date.now clock model. Correct line-reader
+and debounce boards are retained under explicit supported callback domains.
+
+All 30 final-hash worker verdicts agree (20 valid, five starters, five wrongs),
+versus 25/30 baseline. Distinct valid alternatives, twenty target/base-25-XP
+checks, copy sweep, focused coding including reversed hidden/native Run,
+API/script types, launch, build, 263 native bindings, both zero-vulnerability
+production dependency audits and diff checks pass. Cases include Symbol/BigInt
+literal substitution, a three-million-unit expansion, 10000 total UTF-16 units
+and reader calls, repeated reusable flushes, a 1000-entry board, 10000 pending
+call replacements, zero-delay deferral, exact opaque argument identity, callback
+reentry/errors and 10000 timestamp-gated calls. Clock fixtures restore Date.now
+synchronously in finally; no await or global timer hooks are left installed.
+Structural factory-versus-method estimate scope remains explicitly tracked in
+#391; twenty no-false-penalty checks are not a scope-correctness claim.
+
+Coverage is 230/725 coding, 495 remaining, and 263/263 native. PR #406 ships
+225 coding reviews; b040 adds five staged reviews after the owner's explicit
+request to continue. Same-session model self-review and finite execution only;
+no independent/human, authenticated production or full-catalogue claim.
+
+
+## PR #406 exact production and audit resumption — 15 October 2026
+
+PR #406 passed required run 38700013792 at exact ad6a0a5822b465dbd477f724e1db9845cb8fb420 (verify 31m39s; SQL 37s), merged at dca959f9839d43ad73ff7a8137b61e08cffa5fde. READY production dpl_5FuxpnzTardVzaqJPPsm8EBd1iW1 matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four changed-cohort actual Submit checks pass at zero XP/null progress; updated briefs, valid solutions and selected wrongs were verified. Shipped coverage is 225/725 coding and 263/263 native. No authenticated native/Premium, independent/human or complete editorial-coverage claim.
+
+The owner requested continuing after shipment. The next five-item batch resumes the remaining 500 coding reviews; historical stop-current-cohort notes describe the earlier instruction only. Existing owner holds remain unchanged.
+
+
 
 ## 15 October continuation — five coding items b039
 

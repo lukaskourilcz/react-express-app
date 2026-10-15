@@ -26,14 +26,11 @@ export const MEDIUM_HARD_JAVASCRIPT_A_SOLUTIONS: Record<string, CodingSolution> 
   };
   return template.replace(pattern, replaceBlank);
 };`,
-    senior: `const BLANK = /\\{\\s*(?<name>\\w+)\\s*\\}/g;
-
-const fill = (template, values) =>
-  template.replaceAll(BLANK, (blank, ...rest) => {
-    const { name } = rest.at(-1); // with named groups, the groups object comes last
-    return Object.hasOwn(values, name) ? \`\${values[name]}\` : blank;
-  });`,
+    senior: "const BLANK = /\\{\\s*(?<name>\\w+)\\s*\\}/g;\n\nconst fill = (template, values) =>\n  template.replace(BLANK, (blank, ...rest) => {\n    const { name } = rest.at(-1);\n    return Object.hasOwn(values, name) ? String(values[name]) : blank;\n  });",
     hiddenTests: [
+      { call: "(() => {const values=Object.freeze(Object.assign(Object.create(null),{s:Symbol(\"fin\"),n:null,u:undefined,b:12n,x:\"{s} $&\"}));return [fill(\"{s}|{n}|{u}|{b}|{x}\",values),fill(\"{\\t s \\n}|{\u00e9}|{s-s}|{ missing }\",values),Object.keys(values).length];})()", expected: ["Symbol(fin)|null|undefined|12|{s} $&", "Symbol(fin)|{\u00e9}|{s-s}|{ missing }", 5] },
+      { call: "(() => {const values=Object.freeze({x:\"z\".repeat(1000)});const out=fill(\"{x}\".repeat(3000),values);return [out.length,out.slice(0,3),out.slice(-3),fill(\"\",values),fill(\"{ x }\",{})];})()", expected: [3000000, "zzz", "zzz", "", "{ x }"] },
+
       { call: 'fill("{toString} and {constructor}", {})', expected: '{toString} and {constructor}' },
       { call: 'fill("{x}", { x: "$&" })', expected: '$&' },
       { call: 'fill("{user_1} / {User1}", { user_1: "a", User1: "b" })', expected: 'a / b' },
@@ -205,6 +202,9 @@ const fill = (template, values) =>
   };
 };`,
     hiddenTests: [
+      { call: "(() => {const seen=[];const r=createLineReader((...args)=>{seen.push(args);return 99;});r.push(\" \\r\\r\\n\\r\");r.end();r.end();r.push(\"later\\r\");r.end();r.push(\"\\n\");return seen;})()", expected: [[" \r"], [""], ["later"], [""]] },
+      { call: "(() => {let count=0,first,last;const r=createLineReader(line=>{count++;if(count===1)first=line;last=line;});for(let i=0;i<9999;i++)r.push(i%2?\"x\":\"\ud83d\ude00\".slice(0,1));r.push(\"\\n\");return [count,first.length,last===first,first.charCodeAt(0),first.slice(-1)];})()", expected: [1, 9999, true, 55357, "\ud83d"] },
+
       { call: '(() => { const lines = []; const reader = createLineReader(line => lines.push(line)); for (const char of "ab\\ncd\\n\\ne") reader.push(char); reader.end(); return lines; })()', expected: ['ab', 'cd', '', 'e'] },
       { call: '(() => { const lines = []; const reader = createLineReader(line => lines.push(line)); reader.push(""); reader.push("q\\n"); reader.push(""); reader.end(); return lines; })()', expected: ['q'] },
       { call: '(() => { const lines = []; const reader = createLineReader(line => lines.push(line)); reader.push("1\\n2\\n3\\n4"); return lines; })()', expected: ['1', '2', '3'] },

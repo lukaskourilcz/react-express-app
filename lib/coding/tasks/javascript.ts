@@ -1362,7 +1362,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["timers", "closures"],
     title: "Debounce calls",
-    prompt: "Write `debounce(fn, waitMs)`, returning a debounced function. Each call restarts the timer, so only the last call in a burst runs, `waitMs` after it and with that last call’s arguments. Two debounced functions keep separate timers.",
+    prompt: "Write `debounce(fn, waitMs)`, returning a debounced function. Each call restarts the timer, so only the last call in a burst runs, `waitMs` after it and with that last call’s arguments. Two debounced functions keep separate timers. waitMs is an integer from 0 to 1000. Use host timers: even a zero delay runs later, never inline, and delays are minimum waits rather than exact deadlines. A call made while a timer is pending replaces that pending call, including all its arguments. Forward the last argument list unchanged, with exact arity and original opaque values/references; do not clone it. fn does not depend on this, returns normally and may start another burst by calling the wrapper. The wrapper returns undefined and ignores fn’s result. Each wrapper receives at most 10000 calls with at most 100 arguments each. Target: O(n) time per wrapper call and its eventual delivery under a rest/spread copying model, where n is 1 + the argument count; retain O(n) argument/timer data per pending wrapper, excluding waiting, host timer management and fn work.",
     starter: `const debounce = (fn, waitMs) => {
   
 };
@@ -1429,7 +1429,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 4,
     focus: ["timers", "closures"],
     title: "Throttle calls",
-    prompt: "Write `throttle(fn, waitMs)`, returning a throttled function with a leading edge: the first call runs immediately, and any call made during the next `waitMs` is dropped rather than replayed later. Two throttled functions keep separate windows.",
+    prompt: "Write `throttle(fn, waitMs)`, returning a throttled function with a leading edge: the first call runs immediately, and any call made during the next `waitMs` is dropped rather than replayed later. Two throttled functions keep separate windows. Use Date.now() timestamps to decide eligibility, rather than waiting for a reset timer: run when elapsed time is at least waitMs, including the exact boundary, and do not move the window when dropping a call. Read now once per call and store the accepted timestamp before calling fn, so reentrant calls see the active window. waitMs is an integer from 1 to 1000; observed clock values are nonnegative, nondecreasing integer milliseconds at most 1000000000000000. Forward exactly the accepted call’s arguments with original opaque values/references. fn does not depend on this; ignore its result and return undefined. If it throws, propagate the original value synchronously while keeping that window consumed. Each wrapper gets at most 10000 calls and 100 arguments per call. Target: O(n) time per wrapper call under a rest/spread copying model, where n is 1 + argument count, with O(1) retained timestamp state, excluding fn work.",
     starter: `const throttle = (fn, waitMs) => {
   
 };
@@ -1446,10 +1446,10 @@ console.log(flatten([[1,2],[3]]));
     // otherwise: note the time now, and call fn with args straight away
   };
 };`,
-    hints: ["Remember when the last run happened and compare it with now."],
+    hints: ["A reset timer may run late even after enough clock time has passed. Which timestamp should a dropped call leave unchanged?"],
     approach: [
       "Record the time of the last run in the closure, starting it far enough in the past that the very first call is allowed through.",
-      "Compare now against that stamp on each call: run and update it once the window has passed, and otherwise drop the call.",
+      "Compare now against that stamp on each call: once the window has passed, store the new stamp before invoking fn; otherwise drop the call.",
       "Dropped calls are forgotten rather than queued, so nothing replays them when the window reopens.",
     ],
     verify: "tests",

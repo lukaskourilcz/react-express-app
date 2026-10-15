@@ -450,62 +450,12 @@ const readLog = (text, minLevel) => {
     top: () => board.map(({ name, score }) => ({ name, score })),
   };
 };`,
-    junior: `const createLeaderboard = size => {
-  const entries = [];
-  const add = (name, score) => {
-    let oldIndex = -1;
-    for (let i = 0; i < entries.length; i++) {
-      if (entries[i].name === name) {
-        oldIndex = i;
-      }
-    }
-    if (oldIndex !== -1) {
-      if (score <= entries[oldIndex].score) {
-        return oldIndex + 1;
-      }
-      entries.splice(oldIndex, 1);
-    }
-    let place = entries.length;
-    for (let i = 0; i < entries.length; i++) {
-      if (entries[i].score < score) {
-        place = i;
-        break;
-      }
-    }
-    if (place >= size) {
-      return null;
-    }
-    entries.splice(place, 0, { name: name, score: score });
-    if (entries.length > size) {
-      entries.splice(size, entries.length - size);
-    }
-    return place + 1;
-  };
-  const top = () => {
-    const copy = [];
-    for (const entry of entries) {
-      copy.push({ name: entry.name, score: entry.score });
-    }
-    return copy;
-  };
-  return { add: add, top: top };
-};`,
-    senior: `const createLeaderboard = size => {
-  const board = [];
-  const indexOr = (index, fallback) => (index === -1 ? fallback : index);
-  const add = (name, score) => {
-    const old = board.findIndex(entry => entry.name === name);
-    if (old !== -1 && board[old].score >= score) return old + 1;
-    if (old !== -1) board.splice(old, 1);
-    const at = indexOr(board.findIndex(entry => entry.score < score), board.length);
-    if (at >= size) return null;
-    board.splice(at, 0, { name, score });
-    board.length = Math.min(board.length, size);
-    return at + 1;
-  };
-  return { add, top: () => board.map(entry => ({ ...entry })) };
-};`,
+    junior: "const createLeaderboard = size => {\n  const entries = [];\n  const add = (name, score) => {\n    const oldIndex = entries.findIndex(entry => entry.name === name);\n    if (oldIndex !== -1) {\n      if (score <= entries[oldIndex].score) {\n        return oldIndex + 1;\n      }\n      entries.splice(oldIndex, 1);\n    }\n    const lower = entries.findIndex(entry => entry.score < score);\n    const place = lower === -1 ? entries.length : lower;\n    if (place >= size) {\n      return null;\n    }\n    entries.splice(place, 0, { name: name, score: score });\n    if (entries.length > size) {\n      entries.splice(size, entries.length - size);\n    }\n    return place + 1;\n  };\n  const top = () => {\n    const copy = [];\n    for (const entry of entries) {\n      copy.push({ name: entry.name, score: entry.score });\n    }\n    return copy;\n  };\n  return { add: add, top: top };\n};",
+    senior: "const createLeaderboard = size => {\n  const board = [];\n  const indexOr = (index, fallback) => (index === -1 ? fallback : index);\n  const add = (name, score) => {\n    const old = board.findIndex(entry => entry.name === name);\n    if (old !== -1 && board[old].score >= score) return old + 1;\n    if (old !== -1) board.splice(old, 1);\n    const at = indexOr(board.findIndex(entry => entry.score < score), board.length);\n    if (at >= size) return null;\n    board.splice(at, 0, { name, score });\n    board.splice(size);\n    return at + 1;\n  };\n  return { add, top: () => board.map(entry => ({ ...entry })) };\n};",
     hiddenTests: [
+      { call: "(() => {const z=createLeaderboard(0);const b=createLeaderboard(3);const ranks=[b.add(\"__proto__\",-0.5),b.add(\"A\",-1),b.add(\"a\",-0.5),b.add(\"A\",0),b.add(\"a\",-2)];const one=b.top(),two=b.top();one[0].score=999;one.length=0;return [z.add(\"x\",1),z.top(),ranks,two,b.top()[0]!==two[0],b.top()!==two,z.top()!==z.top()];})()", expected: [null, [], [1, 2, 2, 1, 3], [{"name": "A", "score": 0}, {"name": "__proto__", "score": -0.5}, {"name": "a", "score": -0.5}], true, true, true] },
+      { call: "(() => {const b=createLeaderboard(1000);let rank;for(let i=0;i<1000;i++)rank=b.add(\"p\"+i,i);const out=b.top();return [rank,out.length,out[0].name,out[999].name,b.add(\"tie\",0),b.add(\"p0\",1001),b.top()[0].name,b.top().length];})()", expected: [1, 1000, "p999", "p0", null, 1, "p0", 1000] },
+
       {
         call: '(() => { const board = createLeaderboard(2); board.add("A", 10); board.add("B", 20); board.add("C", 15); return [board.add("A", 25), board.top()]; })()',
         expected: [1, [{ name: 'A', score: 25 }, { name: 'B', score: 20 }]],
