@@ -3810,6 +3810,13 @@ async function main() {
   assert.deepEqual(honest.left, [], 'the guest deletes its input before learner code runs');
   const honestResult = readGuestResult(honest.stdout, honest.nonce, guestSuite);
   assert.equal(honestResult.failed, 0, JSON.stringify(honestResult));
+  const sortSuite = "import React from 'react';\nimport { render, screen } from '@testing-library/react';\nimport App from './App';\ntest('sort keeps Node24 writeback behavior in the learner VM', () => { render(<App />); expect(screen.getByText('blocked:1:0')).toBeInTheDocument(); });";
+  const sortGuest = guest(sortSuite, "export default function App() { let status='missed'; try { Object.freeze([0,1]).sort((a,b)=>a-b); } catch (error) { if (error.name==='TypeError') status='blocked'; } let writes=0; const value={length:2,1:2}; Object.defineProperty(value,0,{get(){return 1},set(){writes++}}); Array.prototype.sort.call(value,(a,b)=>a-b); let reads=0; Array.prototype.sort.call({length:1,get 0(){reads++;return 1}}); return <p>{status+':'+writes+':'+reads}</p>; }");
+  assert.equal(sortGuest.status, 0);
+  assert.deepEqual(sortGuest.left, []);
+  const sortGuestResult = readGuestResult(sortGuest.stdout, sortGuest.nonce, sortSuite);
+  assert.equal(sortGuestResult.failed, 0, JSON.stringify(sortGuestResult));
+  assert.equal(sortGuestResult.passed, 1, JSON.stringify(sortGuestResult));
   assert.equal(splitHiddenCases(honestResult.cases).hidden.length, 3, 'the hidden cases ran');
   assert.throws(() => readGuestResult(honest.stdout, randomBytes(24).toString('hex'), guestSuite), /no result/, 'a line without this run\'s nonce is not a result');
   assert.throws(() => readGuestResult(`${honest.stdout}${honest.stdout}`, honest.nonce, guestSuite), /no result/, 'two result lines are refused');

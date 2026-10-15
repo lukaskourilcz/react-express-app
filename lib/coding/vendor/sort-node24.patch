@@ -1,0 +1,31 @@
+--- a/vendor/quickjs/quickjs.c
++++ b/vendor/quickjs/quickjs.c
+@@ -42746,6 +42746,10 @@
+     if (js_get_length64(ctx, &len, obj))
+         goto exception;
+ 
++    /* Match the supported Node 24 runtime: no index reads/writes for len < 2. */
++    if (len < 2)
++        return obj;
++
+     /* XXX: should special case fast arrays */
+     for (i = 0; i < len; i++) {
+         if (pos >= array_size) {
+@@ -42780,13 +42784,10 @@
+     while (n < pos) {
+         if (array[n].str)
+             JS_FreeValue(ctx, JS_MKPTR(JS_TAG_STRING, array[n].str));
+-        if (array[n].pos == n) {
+-            JS_FreeValue(ctx, array[n].val);
+-        } else {
+-            if (JS_SetPropertyInt64(ctx, obj, n, array[n].val) < 0) {
+-                n++;
+-                goto exception;
+-            }
++        /* Set is observable even when a sorted value keeps its position. */
++        if (JS_SetPropertyInt64(ctx, obj, n, array[n].val) < 0) {
++            n++;
++            goto exception;
+         }
+         n++;
+     }

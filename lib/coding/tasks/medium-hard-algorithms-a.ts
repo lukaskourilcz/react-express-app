@@ -101,7 +101,7 @@ console.log(threeSum([-1, 0, 1, 2, -1, -4]));
     tier: 3,
     focus: ['sort', 'two-pointer', 'for'],
     title: 'How many meeting rooms?',
-    prompt: 'Each meeting is `[start, end]` in minutes from the start of the day. A meeting holds its room from `start` up to but not including `end`, so a meeting that ends at 10 and one that starts at 10 can use the same room. Write `roomsNeeded(meetings)`, returning the fewest rooms that fit every meeting. `roomsNeeded([[0, 30], [5, 10], [15, 20]])` gives 2. Pull the starts and the ends into two lists and sort each as numbers. Walk the starts with a `for` loop and keep a second pointer into the ends. A meeting that starts before the earliest end the pointer has not passed yet needs one more room. Otherwise some meeting has finished: move the end pointer on, and the new meeting takes that room. Leave `meetings` unchanged. Target: O(n log n) time and O(n) space.',
+    prompt: "Each meeting is `[start, end]` in minutes from the start of the day. A meeting holds its room from `start` up to but not including `end`, so a meeting that ends at 10 and one that starts at 10 can use the same room. Write `roomsNeeded(meetings)`, returning the fewest rooms that fit every meeting. `roomsNeeded([[0, 30], [5, 10], [15, 20]])` gives 2. Pull the starts and the ends into two lists and sort each as numbers. Walk the starts with a `for` loop and keep a second pointer into the ends. A meeting that starts before the earliest end the pointer has not passed yet needs one more room. Otherwise some meeting has finished: move the end pointer on, and the new meeting takes that room. Leave `meetings` unchanged. Target: O(n log n) time and O(n) space. Input is a dense array of at most 2000 [start,end] pairs of finite Number minutes in 0..1440, with start <= end; fractional minutes are valid. An empty interval (start === end) uses no room. The outer array and its pairs may be frozen and must stay unchanged. n is meetings.length. The rooms counter in the suggested scan is maximum allocated capacity, not current occupancy; an empty interval contributes a start and an end at the same time and never raises capacity. A grouped event sweep is also valid.",
     starter: `const roomsNeeded = meetings => {
 
 };
@@ -132,6 +132,7 @@ console.log(roomsNeeded([[0, 30], [5, 10], [15, 20]]));
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "roomsNeeded([[0, 0.5], [0.25, 0.75]])", "expected": 2, "label": "fractional minutes keep their boundaries"},
       { call: 'roomsNeeded([[0, 30], [5, 10], [15, 20]])', expected: 2 },
       { call: 'roomsNeeded([[7, 10], [2, 4]])', expected: 1 },
       { call: 'roomsNeeded([[1, 5], [2, 6], [3, 7], [4, 8]])', expected: 4, label: 'all at the same time' },
@@ -149,7 +150,7 @@ console.log(roomsNeeded([[0, 30], [5, 10], [15, 20]]));
     tier: 3,
     focus: ['while', 'two-pointer'],
     title: 'Search a rotated list',
-    prompt: 'A sorted list of different numbers has been rotated: part of its front was cut off and moved to the back, so `[10, 20, 30, 40, 50]` may arrive as `[40, 50, 10, 20, 30]`. Write `findRotated(values, target)`, returning the index of `target`, or -1 when it is not there. Reading every value finds it, but the checks count how many values you read, and a list of 65,536 allows at most 200 reads. A binary search still works. Keep `low` and `high`, and look at the middle `while (low <= high)`. One of the two halves around the middle is always in order: check whether the target lies inside the ordered half, and keep that half if it does and the other half if it does not. The list may not be rotated at all, and it may be empty. Target: O(log n) time and O(1) space.',
+    prompt: "A sorted list of different numbers has been rotated: part of its front was cut off and moved to the back, so `[10, 20, 30, 40, 50]` may arrive as `[40, 50, 10, 20, 30]`. Write `findRotated(values, target)`, returning the index of `target`, or -1 when it is not there. Reading every value finds it, but the checks count how many values you read, and a list of 65,536 allows at most 200 reads. A binary search still works. Keep `low` and `high`, and look at the middle `while (low <= high)`. One of the two halves around the middle is always in order: check whether the target lies inside the ordered half, and keep that half if it does and the other half if it does not. The list may not be rotated at all, and it may be empty. Target: O(log n) time and O(1) space. Input is a dense array of at most 65536 distinct finite Numbers in [-1000000000,1000000000], obtained by one rotation of a strictly increasing list. Fractions and a single signed zero are valid; zero signs compare equal, so target -0 matches a stored 0 and conversely. target is a finite Number in the same bounds. Inputs may be frozen or wrapped only to count reads; do not mutate them. For length 65536, use at most 200 numeric-index reads, including misses; other property reads do not count. n is values.length. The fixed size bound keeps the shown midpoint arithmetic exact; a pivot-first or virtual-order binary search is also valid.",
     starter: `const findRotated = (values, target) => {
 
 };
@@ -181,6 +182,7 @@ console.log(findRotated([40, 50, 10, 20, 30], 20));
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "findRotated([0], -0)", "expected": 0, "label": "the sign of zero does not change membership", "edge": true},
       { call: 'findRotated([40, 50, 10, 20, 30], 20)', expected: 3 },
       { call: 'findRotated([40, 50, 10, 20, 30], 50)', expected: 1, label: 'in the part that was moved' },
       { call: 'findRotated([40, 50, 10, 20, 30], 35)', expected: -1, label: 'not in the list' },

@@ -372,16 +372,16 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return best;
 };`,
     junior: `const maxArea = heights => {
+  let left = 0;
+  let right = heights.length - 1;
   let best = 0;
-  for (let left = 0; left < heights.length; left += 1) {
-    for (let right = left + 1; right < heights.length; right += 1) {
-      const width = right - left;
-      const height = Math.min(heights[left], heights[right]);
-      const area = width * height;
-      if (area > best) {
-        best = area;
-      }
-    }
+  while (left < right) {
+    const leftHeight = heights[left];
+    const rightHeight = heights[right];
+    const area = (right - left) * Math.min(leftHeight, rightHeight);
+    if (area > best) best = area;
+    if (leftHeight <= rightHeight) left += 1;
+    else right -= 1;
   }
   return best;
 };`,
@@ -396,6 +396,10 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return best;
 };`,
     hiddenTests: [
+      { call: "(() => {const input=[1,4,2],copy=input.slice();return [maxArea(input),input.every((v,i)=>Object.is(v,copy[i])),maxArea(Object.freeze([.5,3,.5])),maxArea(Object.freeze([-0,0])),maxArea(Object.freeze([]))];})()", expected: [2, true, 1, 0, 0] },
+      { call: "(() => {const alphabet=[0,.5,1,3];for(let n=0;n<=5;n++){for(let code=0;code<Math.pow(4,n);code++){let digits=code;const heights=[];for(let i=0;i<n;i++){heights.push(alphabet[digits%4]);digits=Math.floor(digits/4);}let wanted=0;for(let left=0;left<n;left++)for(let right=left+1;right<n;right++)wanted=Math.max(wanted,(right-left)*Math.min(heights[left],heights[right]));if(maxArea(Object.freeze(heights))!==wanted)return false;}}return true;})()", expected: true },
+      { call: "[maxArea(Object.freeze(Array(2000).fill(1000000))),maxArea(Object.freeze(Array(2000).fill(0))),maxArea(Object.freeze([1,1000000,1])),maxArea(Object.freeze([1000000,1,1000000]))]", expected: [1999000000, 0, 2, 2000000] },
+
       { call: 'maxArea([2, 3, 4, 5, 18, 17, 6])', expected: 17 },
       { call: 'maxArea([1, 2, 1])', expected: 2 },
       { call: 'maxArea([3, 9, 3, 4, 7, 2, 12, 6])', expected: 45 },
@@ -416,20 +420,16 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return numbers;
 };`,
     junior: `const moveZeroes = numbers => {
-  const kept = [];
-  let zeroCount = 0;
-  for (let index = 0; index < numbers.length; index += 1) {
-    if (numbers[index] === 0) {
-      zeroCount = zeroCount + 1;
-    } else {
-      kept.push(numbers[index]);
+  let write = 0;
+  for (let read = 0; read < numbers.length; read += 1) {
+    if (numbers[read] !== 0) {
+      numbers[write] = numbers[read];
+      write += 1;
     }
   }
-  for (let index = 0; index < kept.length; index += 1) {
-    numbers[index] = kept[index];
-  }
-  for (let index = 0; index < zeroCount; index += 1) {
-    numbers[kept.length + index] = 0;
+  while (write < numbers.length) {
+    numbers[write] = 0;
+    write += 1;
   }
   return numbers;
 };`,
@@ -446,6 +446,10 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return numbers;
 };`,
     hiddenTests: [
+      { call: "(() => {const values=[NaN,-0,0,Infinity,-Infinity,Number.MIN_VALUE,-2,2.5];const returned=moveZeroes(values);return [returned===values,values.length,Number.isNaN(values[0]),values[1]===Infinity,values[2]===-Infinity,values[3]===Number.MIN_VALUE,values[4]===-2,values[5]===2.5,values[6]===0,values[7]===0];})()", expected: [true, 8, true, true, true, true, true, true, true, true] },
+      { call: "(() => {const alphabet=[0,-0,NaN,-2,Infinity];for(let n=0;n<=4;n++){for(let code=0;code<Math.pow(5,n);code++){let digits=code;const values=[];for(let i=0;i<n;i++){values.push(alphabet[digits%5]);digits=Math.floor(digits/5);}const kept=values.filter(value=>value!==0),wanted=kept.concat(Array(n-kept.length).fill(0));if(moveZeroes(values)!==values||values.length!==n||Object.keys(values).length!==n||!values.every((value,i)=>value===wanted[i]||(Number.isNaN(value)&&Number.isNaN(wanted[i]))))return false;}}return true;})()", expected: true },
+      { call: "(() => {const values=Array.from({length:2000},(_,i)=>i%2?i:0);const result=moveZeroes(values);const zeros=[-0,0,-0],empty=[];return [result===values,values.length,values.slice(0,1000).every((v,i)=>v===i*2+1),values.slice(1000).every(v=>v===0),moveZeroes(zeros)===zeros,zeros.every(v=>v===0),moveZeroes(empty)===empty];})()", expected: [true, 2000, true, true, true, true, true] },
+
       { call: '(() => { const values = [4, 0, 5, 0, 0, 6]; moveZeroes(values); return values; })()', expected: [4, 5, 6, 0, 0, 0] },
       { call: '(() => { const values = [0]; return [moveZeroes(values) === values, values]; })()', expected: [true, [0]] },
       { call: '(() => { const values = [0, 0, 1]; moveZeroes(values); return values; })()', expected: [1, 0, 0] },

@@ -317,19 +317,15 @@ const makeChange = (cents) => {
   return slow;
 };`,
     junior: `const middle = head => {
-  let length = 0;
-  let node = head;
-  while (node !== null) {
-    length = length + 1;
-    node = node.next;
+  let slow = head;
+  let fast = head;
+  while (fast !== null) {
+    const next = fast.next;
+    if (next === null) break;
+    slow = slow.next;
+    fast = next.next;
   }
-  let steps = Math.floor(length / 2);
-  node = head;
-  while (steps > 0) {
-    node = node.next;
-    steps = steps - 1;
-  }
-  return node;
+  return slow;
 };`,
     senior: `const middle = (head) => {
   let slow = head;
@@ -341,6 +337,10 @@ const makeChange = (cents) => {
   return slow;
 };`,
     hiddenTests: [
+      { call: "(() => {const payload=Object.freeze({id:1}),last=Object.freeze({value:payload,next:null}),head=Object.freeze({value:undefined,next:last});const a=middle(last),b=middle(head);return [a===last,b===last,head.next===last,last.value===payload,last.next===null,middle(null)===null];})()", expected: [true, true, true, true, true, true] },
+      { call: "(() => {for(let n=0;n<=32;n++){const nodes=[];let head=null;for(let i=n-1;i>=0;i--){nodes[i]=Object.freeze(Object.assign(Object.create(null),{value:i%2?undefined:0,next:head}));head=nodes[i];}if(middle(head)!==(nodes[Math.floor(n/2)]??null))return false;for(let i=0;i<n;i++)if(nodes[i].next!==(nodes[i+1]??null))return false;}return true;})()", expected: true },
+      { call: "(() => {const nodes=[];let head=null;for(let i=1999;i>=0;i--){nodes[i]=Object.freeze({value:Symbol(\"node\"),next:head});head=nodes[i];}const result=middle(head);return [result===nodes[1000],nodes.every((node,i)=>node.next===(nodes[i+1]??null)),middle(head)===result];})()", expected: [true, true, true] },
+
       { call: withList('return middle(list(1, 2)).value;'), expected: 2 },
       { call: withList('return middle(list(1, 2, 3, 4, 5, 6, 7)).value;'), expected: 4 },
       { call: withList('const head = list(5, 5, 5, 5); return middle(head) === head.next.next;'), expected: true },

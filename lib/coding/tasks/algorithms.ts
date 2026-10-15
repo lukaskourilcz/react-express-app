@@ -655,7 +655,7 @@ console.log(maxSumSubarray([2, 1, 5, 1, 3, 2], 3));
     tier: 3,
     focus: ['two-pointer', 'while'],
     title: 'Container with most water',
-    prompt: 'Write `maxArea(heights)`, returning the most water two of the lines can hold between them: the distance between their positions times the shorter of the two heights. `maxArea([1, 8, 6, 2, 5, 4, 8, 3, 7])` gives 49. Start with a pointer at each end and always move the shorter one inwards — moving the taller one can only lose width without ever gaining height, which is why one pass is enough. Fewer than two lines hold nothing, so give 0. Target: O(n) time and O(1) space; every pair would be O(n²).',
+    prompt: "Write `maxArea(heights)`, returning the most water two of the lines can hold between them: the distance between their positions times the shorter of the two heights. `maxArea([1, 8, 6, 2, 5, 4, 8, 3, 7])` gives 49. Start with a pointer at each end and always move the shorter one inwards \u2014 moving the taller one can only lose width without ever gaining height, which is why one pass is enough. Fewer than two lines hold nothing, so give 0. Target: O(n) time and O(1) space; every pair would be O(n\u00b2). Input is a dense array of at most 2000 finite Number heights in 0..1000000, including fractional heights and signed zero. It may be frozen and must stay unchanged. Use ordinary Number multiplication for each candidate area, with no extra rounding; either zero sign is equivalent. The line positions are consecutive array indices, so width is right - left, not an inclusive count. When heights tie either pointer may move. n is heights.length.",
     starter: `const maxArea = heights => {
 
 };
@@ -705,7 +705,7 @@ console.log(maxArea([1, 8, 6, 2, 5, 4, 8, 3, 7]));
     tier: 2,
     focus: ['two-pointer', 'for'],
     title: 'Move zeroes to the end',
-    prompt: 'Write `moveZeroes(numbers)`, moving every zero to the end of the array that was passed in while the other values keep their order, and returning that same array. `moveZeroes([0, 1, 0, 3, 12])` gives `[1, 3, 12, 0, 0]`. Keep a write position, copy each non-zero value into it, then fill whatever is left with zeros. An array of zeros alone, and an empty array, both come back unchanged. Target: O(n) time and O(1) extra space — building a filtered copy and reassigning would not change the caller\'s array at all.',
+    prompt: "Write `moveZeroes(numbers)`, moving every zero to the end of the array that was passed in while the other values keep their order, and returning that same array. `moveZeroes([0, 1, 0, 3, 12])` gives `[1, 3, 12, 0, 0]`. Keep a write position, copy each non-zero value into it, then fill whatever is left with zeros. An array of zeros alone, and an empty array, both come back unchanged. Target: O(n) time and O(1) extra space \u2014 building a filtered copy and reassigning would not change the caller's array at all. Input is a dense mutable array of at most 2000 primitive Numbers. NaN, infinities, fractions and signed zero are valid. A zero means value === 0, so both signs move to the end and either sign in that tail is acceptable. NaN and every other nonzero value keep their original order; truthiness is not the zero test. Preserve the exact array identity, length and nonzero numeric values. The empty/all-zero promise is numeric, without preserving zero signs. n is numbers.length; a stable in-place swap or block-copy approach is also valid.",
     starter: `const moveZeroes = numbers => {
 
 };
@@ -735,6 +735,7 @@ console.log(values);
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      {"call": "(() => {const values=[NaN,0,1];moveZeroes(values);return [Number.isNaN(values[0]),values[1],values[2]];})()", "expected": [true, 1, 0], "label": "NaN is a nonzero Number"},
       { call: '(() => { const values = [0, 1, 0, 3, 12]; const returned = moveZeroes(values); return [values, returned === values]; })()', expected: [[1, 3, 12, 0, 0], true], label: 'it moves them in place and returns the same array' },
       { call: '(() => { const values = [1, 2, 3]; moveZeroes(values); return values; })()', expected: [1, 2, 3] },
       { call: '(() => { const values = []; moveZeroes(values); return values; })()', expected: [], label: 'empty input', edge: true },
