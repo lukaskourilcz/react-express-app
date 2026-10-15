@@ -540,6 +540,10 @@ const happyChildren = (appetites, snacks) => {
 };`,
     senior: `const gcd = (a, b) => (b === 0 ? a : gcd(b, a % b));`,
     hiddenTests: [
+      { call: "(() => {for(let a=0;a<=50;a++)for(let b=0;b<=50;b++){let wanted=0;for(let divisor=Math.max(a,b);divisor>=1;divisor--)if(a%divisor===0&&b%divisor===0){wanted=divisor;break;}if(gcd(a,b)!==wanted)return false;}return true;})()", expected: true },
+      { call: "(() => {const pairs=[[Number.MAX_SAFE_INTEGER,0],[0,Number.MAX_SAFE_INTEGER],[Number.MAX_SAFE_INTEGER,Number.MAX_SAFE_INTEGER-2],[8944394323791464,5527939700884757],[4294967296,2147483648],[9007199254740990,4503599627370495],[Number.MAX_SAFE_INTEGER,3]];for(const [a,b]of pairs){let x=BigInt(a),y=BigInt(b);while(y!==0n){const next=x%y;x=y;y=next;}const actual=gcd(a,b);if(!Number.isSafeInteger(actual)||actual<0||BigInt(actual)!==x)return false;}return true;})()", expected: true },
+      { call: "[gcd(-0,0)===0,gcd(0,-0)===0,gcd(0,9),gcd(9,0),gcd(12,12),gcd(17,19),gcd(48,18),gcd(18,48)]", expected: [true, true, 9, 9, 12, 1, 6, 6] },
+
       { call: 'gcd(0, 9)', expected: 9 },
       { call: 'gcd(1071, 462)', expected: 21 },
       { call: 'gcd(270, 192)', expected: 6 },
@@ -576,6 +580,10 @@ const happyChildren = (appetites, snacks) => {
   return memo.get(n);
 };`,
     hiddenTests: [
+      { call: "(() => {let a=0n,b=1n;for(let n=0;n<=78;n++){const expected=Number(a),memo=new Map();if(fib(n)!==expected||fib(n,memo)!==expected)return false;if(n>=2&&memo.get(n)!==expected)return false;const size=memo.size;if(fib(n,memo)!==expected||memo.size!==size)return false;[a,b]=[b,a+b];}return fib(-0)===0;})()", expected: true },
+      { call: "(() => {for(const seed of [0,-5,.5,100,NaN,Infinity,-Infinity,-0]){const marker=Symbol(\"note\"),key={},memo=new Map([[5,seed],[0,999],[1,888],[\"note\",marker],[key,marker]]);if(!Object.is(fib(6,memo),seed+3)||!Object.is(memo.get(5),seed)||memo.get(0)!==999||memo.get(1)!==888||memo.get(\"note\")!==marker||memo.get(key)!==marker||fib(0,memo)!==0||fib(1,memo)!==1)return false;}return Object.is(fib(6,new Map([[6,-0]])),-0);})()", expected: true },
+      { call: "(() => {const memo=new Map([[12,-7],[\"keep\",undefined]]),before=[...memo];const hit=fib(12,memo);return [hit,memo.size,memo.get(\"keep\")===undefined,memo.has(\"keep\"),[...memo].every(([k,v],i)=>k===before[i][0]&&Object.is(v,before[i][1])),fib(78),fib(0),fib(1)];})()", expected: [-7, 2, true, true, true, 8944394323791464, 0, 1] },
+
       { call: 'fib(70)', expected: 190392490709135 },
       { call: 'fib(78)', expected: 8944394323791464 },
       { call: 'fib(2)', expected: 1 },
@@ -609,6 +617,10 @@ const happyChildren = (appetites, snacks) => {
     ? [prefix]
     : [...binaryStrings(n, prefix + "0"), ...binaryStrings(n, prefix + "1")];`,
     hiddenTests: [
+      { call: "(() => {for(let n=0;n<=12;n++){const out=binaryStrings(n);if(out.length!==2**n)return false;for(let index=0;index<out.length;index++){const wanted=n===0?\"\":index.toString(2).padStart(n,\"0\");if(out[index]!==wanted)return false;}}return true;})()", expected: true },
+      { call: "(() => {const first=binaryStrings(3),second=binaryStrings(3);if(first===second)return false;first.pop();return [first.length,second.length,binaryStrings(3).length,binaryStrings(0)[0],binaryStrings(-0)[0],binaryStrings(0)!==binaryStrings(0)];})()", expected: [7, 8, 8, "", "", true] },
+      { call: "(() => {const out=binaryStrings(12);return [new Set(out).size,out[0],out[2048],out[4095],out.every(text=>typeof text===\"string\"&&text.length===12&&/^[01]+$/.test(text))];})()", expected: [4096, "000000000000", "100000000000", "111111111111", true] },
+
       { call: 'binaryStrings(4)', expected: ['0000', '0001', '0010', '0011', '0100', '0101', '0110', '0111', '1000', '1001', '1010', '1011', '1100', '1101', '1110', '1111'] },
       { call: 'binaryStrings(5)[21]', expected: '10101' },
       { call: 'binaryStrings(10).length', expected: 1024 },
