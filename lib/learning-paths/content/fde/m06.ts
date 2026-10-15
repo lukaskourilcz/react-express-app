@@ -451,69 +451,61 @@ export const FDE_M06: ModuleSource = {
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Tool boundary checks',
-      summary: 'Four questions: where an argument check belongs, what an unknown protocol version costs, which call needs approval, and why an approved call gets re-checked.',
+      summary: 'Four tool decisions: static argument validation, documented version compatibility, policy-required approval and current preconditions enforced with the effect.',
       competencies: ['tools'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
       questions: [
         {
           id: 'fde-v1-m06-q1',
-          prompt:
-            'Marlbrook’s `refunds.create` tool takes `{ orderId, amountCents, currency }`. Four checks have to run before the handler moves money. Which one belongs in the argument schema rather than in the handler?',
+          prompt: "This tool uses a static argument-only JSON Schema with a fixed currency allowlist; it performs no stateful lookups. Before refunds.create can move money, which check can that schema decide from {orderId, amountCents, currency} alone?",
           options: [
-            '`currency` must be one of "USD", "EUR" or "GBP".',
+            "currency is one of the fixed allowed values USD, EUR or GBP.",
             '`amountCents` must not exceed the order’s remaining refundable balance.',
             'The operator’s session must hold the `refunds.write` scope.',
             'The order must have no refund recorded against it in the last hour.',
           ],
           correct: 0,
-          explanation:
-            'A schema check is decidable from the arguments alone: the allowed currencies are fixed when the tool is registered, so the value in front of you settles it. The other three each need something the arguments do not carry. The balance needs the order the id only names, the scope needs the session that authenticated the operator, and the recent-refund check needs the store and the clock. Putting any of those in the schema would mean either passing state into the validator or trusting an argument to describe it, and an argument the model chose can never establish a permission. All four still run before the handler acts; the split is about what each check can see, not about which one matters.',
+          explanation: "The fixed enum can be checked from the submitted currency alone. Remaining balance, current session scope and recent refunds require trusted live state and separate operation checks. A custom validator could be supplied such context, but that is outside this stated argument-only schema; it does not make model-chosen claims authoritative. All required checks still apply before the effect, with mutable preconditions protected against races. Structural validity is not permission or a guarantee of available funds.",
           competencies: ['tools'],
         },
         {
           id: 'fde-v1-m06-q2',
-          prompt:
-            'Your client connects to a tool server that announces a protocol version your client does not implement. What should the client do with the tool list that follows?',
+          prompt: "A tool response declares a protocol version your client cannot interpret. Which condition must hold before the client uses that versioned tool list or invokes its tools?",
           options: [
-            'Treat the tool list as unusable: either refuse the connection and report which versions it speaks, or propose a version it does implement and act only if the server agrees to it.',
+            "Establish a mutually supported version through the protocol’s documented flow; otherwise stop with a compatibility error.",
             'Read the tool list and ignore any field it does not recognise, since protocol changes are additive by convention.',
             'Read the tool list under the newest version the client implements and log a warning, since the server will reject anything it cannot handle.',
             'Fall back automatically to the oldest version the client still supports, so the widest range of servers keeps working.',
           ],
           correct: 0,
-          explanation:
-            'An unknown version tells you the rules for reading the payload may have moved, so the only safe moves are refusing or negotiating down to a version both sides implement. Ignoring unrecognised fields assumes the change was additive, which is precisely what you cannot know from a version you have never seen — a field you do recognise may have changed meaning and will still parse. Leaning on the server to reject bad requests puts your safety in the peer’s hands and misses the failures that are silent rather than rejected. Falling back to the oldest supported version is still a guess: the server may not implement it either, and picking without confirming leaves both sides reading the same bytes by different rules.',
+          explanation: "Do not treat an unsupported payload version as compatible because its JSON parses or some fields look familiar. Follow the protocol revision actually in use. In modern MCP 2026-07-28, requests declare their version; an UnsupportedProtocolVersionError lists supported versions so the client can select a common one and retry, or report no compatible version. Legacy initialization-based revisions say the client SHOULD disconnect when the server-selected version is unsupported. Neither flow licenses guessing the oldest/newest version or silently reinterpreting unknown semantics. Any retry must also respect the normal operation and retry policy.",
           competencies: ['tools'],
         },
         {
           id: 'fde-v1-m06-q3',
-          prompt:
-            'Marlbrook’s assistant has four tools, all of them scope-checked against the operator’s session. Which one needs a human approval step before it runs?',
+          prompt: "Company policy allows the listed scoped reads and unsent local drafts automatically, but requires human approval for transfers of money. All four calls already pass current session-scope checks. Which call additionally needs the policy’s approval?",
           options: [
-            '`refunds.create`, which moves money out of Marlbrook’s account and cannot be undone by re-running the assistant.',
+            "refunds.create, which moves money and is not undone by simply rerunning the assistant.",
             '`orders.read`, which returns orders the operator can already open in the admin console.',
             '`tickets.search`, which searches the operator’s own tenant and returns ticket summaries.',
             '`draft.compose`, which writes a reply into the operator’s editor that nobody sends until they press send.',
           ],
           correct: 0,
-          explanation:
-            'Approval buys you a person between the model and an effect that is expensive to reverse, and a refund is exactly that. The two read-only tools change nothing, so an approval step would only add a click; their protection is the scope check, and approval is never a substitute for it. `draft.compose` is the interesting distractor: it does write something, but the operator already has to press send, so a second confirmation adds a habit of clicking through prompts without reading them. Every approval you add costs the attention of the approvals that matter.',
+          explanation: "The explicit money-transfer policy adds approval for refunds.create; session authorization remains a separate requirement. The listed reads and unsent local draft are permitted automatically in this scenario. That does not make every read harmless or establish a universal rule that reads never need approval: sensitive exports and other policies may differ. Keep the draft visible and reversible before its separate send action. An approval should cover the actual effect/parameters and must not replace current authorization or live business checks.",
           competencies: ['tools'],
         },
         {
           id: 'fde-v1-m06-q4',
-          prompt:
-            'An operator approved `refunds.create` on ORD-4471 for 24050 cents at 09:12. The dispatcher reaches the call at 09:17, and at 09:15 a colleague refunded the same order by hand. Why must the dispatcher re-run its checks before executing?',
+          prompt: "Approval records intent but reserves no balance. At 09:12 an operator approved a 24050-cent refund, equal to the remaining refundable balance. A colleague fully refunded that order at 09:15; the dispatcher reaches the approved call at 09:17. Why must it revalidate before the effect?",
           options: [
-            'The approval records that a person agreed to the effect described at 09:12, not that the preconditions still hold, so the dispatcher has to re-read them and refuse when they moved.',
+            "Consent is not a reservation; atomically enforce current authorization, balance and replay protections, and refuse the exhausted balance.",
             'The approval is stale, and every approval must carry a time limit shorter than five minutes.',
             'The dispatcher cannot rely on the operator’s judgement, so it re-evaluates the decision itself before acting.',
             'The retry budget resets when a call is approved, so the call has to be re-validated to avoid a duplicate attempt.',
           ],
           correct: 0,
-          explanation:
-            'The approval is a record of consent to a described effect at a point in time. It says nothing about the balance, and the balance is what changed. A time limit is a useful second control, but five minutes is arbitrary and a thirty-second-old approval has the same defect, so an expiry does not remove the need to re-check. The dispatcher is not second-guessing the operator either — the person judged correctly on the facts they were shown, and those facts moved. The retry budget bounds how many attempts one call gets and has nothing to say about whether the world changed between approval and execution.',
+          explanation: "The approval refers to the described effect, not a guarantee that its mutable preconditions remain true. Here the refundable balance is now zero, so the approved amount is no longer allowed. Enforce the live checks together with the effect using the appropriate transaction/conditional operation so another change cannot race between checking and writing. Approval expiry can be an additional policy control, but no universal five-minute limit follows from this example. Revalidation is not replacing the operator’s judgement; it applies current facts and permission. A retry budget alone does not prevent duplicate writes or reserve funds.",
           competencies: ['tools'],
         },
       ],

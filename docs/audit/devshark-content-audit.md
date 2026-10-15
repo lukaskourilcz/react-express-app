@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n026
+
+Reviewed the four tool-boundary questions and their check. Argument-only schema
+behavior and financial approval are explicit scenario contracts rather than
+universal claims about every validator/read. Compatibility now uses documented
+mutually supported semantics, distinguishes modern MCP2026-07-28 per-request
+version errors from legacy initialization's SHOULD-disconnect rule, and does
+not guess a version. The refund case explicitly reserves no balance and has a
+full intervening refund; current conditions must be enforced with the effect,
+not merely re-read before another race. Prior consent does not supply funds.
+
+Primary versioned specifications, small enum/common-version/balance examples
+and exercise review agree. No MCP connection, schema infrastructure, grant,
+financial effect or atomic database operation is tested by those illustrations.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. All manual
+quality/relevance/final readings remain distinct from the runs.
+
+Coverage is **185/263 native**, **78 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 freezes n015–n023 at 5f0145fa with SQL/eleven exact-
+preview checks passing and verify pending. N024–n026 are local. Source shipped
+coverage remains95 coding/125 native through PR #396; #397 still blocks the FDE
+diagnostic parent.
+
 ## 15 October continuation — five-item native batch n025
 
 Reviewed the four grounding questions and their check. The supplied authorized
