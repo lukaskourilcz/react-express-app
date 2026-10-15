@@ -500,6 +500,10 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   return stack.length === 0;
 };`,
     hiddenTests: [
+      { call: "[isValid(\"(\".repeat(10000)+\")\".repeat(10000)),isValid(\"[\".repeat(10000)+\"]\".repeat(9999)),isValid(\"{\".repeat(9999)+\"[\"+\")\"+\"}\".repeat(9999))]", expected: [true, false, false] },
+      { call: "(() => {const chars=\"()[]{}\";for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let x=code,text=\"\";for(let i=0;i<n;i++){text+=chars[x%6];x=Math.floor(x/6);}let reduced=text,previous;do{previous=reduced;reduced=reduced.replace(/[(][)]|[\\[][\\]]|[{][}]/g,\"\");}while(reduced!==previous);if(isValid(text)!==(reduced.length===0))return false;}return true;})()", expected: true },
+      { call: "[isValid(\"{[(\".repeat(100)+\")]}\".repeat(100)),isValid(\"()[]{}\".repeat(3000)),isValid(\"([)]\"),isValid(\"\"),isValid(\"[]\")]", expected: [true, true, false, true, true] },
+
       { call: 'isValid("()[]{}")', expected: true },
       { call: 'isValid("([]")', expected: false },
       { call: 'isValid("]}")', expected: false },
@@ -555,6 +559,10 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
       return merged;
     }, []);`,
     hiddenTests: [
+      { call: "(() => {const source=[[0,.5],[.5,1],[2,2]],copy=source.map(p=>p.slice()),out=mergeIntervals(source);if(out===source||out.some(pair=>source.includes(pair))||new Set(out).size!==out.length)return false;out[0][1]=99;const frozen=Object.freeze(source.map(pair=>Object.freeze(pair.slice())));return source.every((pair,i)=>pair.every((v,j)=>Object.is(v,copy[i][j])))&&JSON.stringify(mergeIntervals(frozen))===\"[[0,1],[2,2]]\";})()", expected: true },
+      { call: "(() => {const choices=[[0,0],[0,.5],[.5,.5],[.5,1],[1,1],[2,3]];for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code;const input=[];for(let i=0;i<n;i++){input.push(Object.freeze(choices[digits%6].slice()));digits=Math.floor(digits/6);}const visited=new Set(),wanted=[];for(let i=0;i<n;i++){if(visited.has(i))continue;const stack=[i];visited.add(i);let low=input[i][0],high=input[i][1];while(stack.length){const at=stack.pop();low=Math.min(low,input[at][0]);high=Math.max(high,input[at][1]);for(let j=0;j<n;j++)if(!visited.has(j)&&Math.max(input[at][0],input[j][0])<=Math.min(input[at][1],input[j][1])){visited.add(j);stack.push(j);}}wanted.push([low,high]);}wanted.sort((a,b)=>a[0]-b[0]);if(JSON.stringify(mergeIntervals(Object.freeze(input)))!==JSON.stringify(wanted))return false;}return true;})()", expected: true },
+      { call: "(() => {const input=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze([i/2,(i+1)/2]))),points=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze([i*2,i*2]))),a=mergeIntervals(input),b=mergeIntervals(points),empty=[];return [a,b.length,b.every((pair,i)=>pair!==points[i]&&pair[0]===i*2&&pair[1]===i*2),mergeIntervals(empty)!==empty,mergeIntervals(empty)!==mergeIntervals(empty)];})()", expected: [[[0, 1000]], 2000, true, true, true] },
+
       { call: 'mergeIntervals([[2, 3], [2, 3]])', expected: [[2, 3]] },
       { call: 'mergeIntervals([[1, 4], [0, 4]])', expected: [[0, 4]] },
       { call: '(() => { const source = [[3, 4], [1, 2]]; mergeIntervals(source); return source; })()', expected: [[3, 4], [1, 2]] },
@@ -594,6 +602,10 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
 // A zero from the first comparison is what lets the second one speak.
 const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - left.priority || byName(left, right));`,
     hiddenTests: [
+      { call: "(() => {const payload=Symbol(\"payload\"),a=Object.freeze(Object.assign(Object.create(null),{name:\"a\",priority:.5,payload})),b=Object.freeze({name:\"Z\",priority:.5}),source=Object.freeze([a,b]),out=sortTasks(source);out.push(a);return [out!==source,out[0]===b,out[1]===a,out[1].payload===payload,source[0]===a,sortTasks(Object.freeze([]))!==sortTasks(Object.freeze([])),sortTasks(Object.freeze([{name:\"x\",priority:-0},{name:\"x\",priority:0}])).map(x=>Object.is(x.priority,-0))];})()", expected: [true, true, true, true, true, true, [true, false]] },
+      { call: "(() => {const choices=[{name:\"\",priority:0},{name:\"a\",priority:.5},{name:\"Z\",priority:.5},{name:\"\u00e4\",priority:-1},{name:\"\ud83d\ude00\",priority:.5},{name:\"a\",priority:.5}];for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code;const input=[];for(let i=0;i<n;i++){input.push(Object.freeze({...choices[digits%6],index:i}));digits=Math.floor(digits/6);}const wanted=input.slice();const before=(a,b)=>a.priority>b.priority||(a.priority===b.priority&&(a.name<b.name||(a.name===b.name&&a.index<b.index)));for(let i=0;i<n;i++){let at=i;for(let j=i+1;j<n;j++)if(before(wanted[j],wanted[at]))at=j;const value=wanted.splice(at,1)[0];wanted.splice(i,0,value);}const got=sortTasks(Object.freeze(input));if(got===input||got.length!==n||got.some((value,i)=>value!==wanted[i]))return false;}return true;})()", expected: true },
+      { call: "(() => {const input=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze({name:\"same\",priority:1,index:i}))),out=sortTasks(input),names=[\"a\",\"Z\",\"\u00e4\",\"\ud83d\ude00\",\"\\ud800\\udc00\",\"\\ud800\",\"\\udfff\",\"\"];const records=Object.freeze(names.map(name=>Object.freeze({name,priority:0}))),sorted=sortTasks(records);return [out!==input,out.every((record,i)=>record===input[i]),sorted.map(record=>record.name),sorted.every(record=>records.includes(record))];})()", expected: [true, true, ["", "Z", "a", "\u00e4", "\ud800", "\ud800\udc00", "\ud83d\ude00", "\udfff"], true] },
+
       { call: 'sortTasks([{ name: "a", priority: 1 }])', expected: [{ name: 'a', priority: 1 }] },
       { call: 'sortTasks([{ name: "b", priority: 0 }, { name: "a", priority: 0 }, { name: "c", priority: 9 }])', expected: [{ name: 'c', priority: 9 }, { name: 'a', priority: 0 }, { name: 'b', priority: 0 }] },
       { call: 'sortTasks([{ name: "x", priority: 2 }, { name: "y", priority: 20 }, { name: "z", priority: 3 }]).map(task => task.priority)', expected: [20, 3, 2] },

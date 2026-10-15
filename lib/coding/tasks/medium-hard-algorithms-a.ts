@@ -200,7 +200,7 @@ console.log(findRotated([40, 50, 10, 20, 30], 20));
     tier: 3,
     focus: ['two-pointer', 'while', 'objects'],
     title: 'Remove the nth node from the end',
-    prompt: 'Write `removeFromEnd(head, n)` for a linked list of `{ value, next }` nodes, removing the `n`th node counted from the end, where 1 is the last node, and returning the head of the changed list. The list 1, 2, 3, 4, 5 with `n` of 2 becomes 1, 2, 3, 5. You can do it in one pass with two pointers. Move a `lead` pointer `n` nodes ahead, then move `lead` and a `trail` pointer on together `while` `lead` has a next node: `trail` then stops just before the node to remove, and `trail.next = trail.next.next` unlinks it. Removing the head is the case that needs care, because no node comes before it. A placeholder node in front of the head, `{ value: null, next: head }`, makes it the same as every other case. Change the links of the list you were given rather than building a new one. `n` is always between 1 and the length of the list. Target: O(L) time for a list of L nodes and O(1) space: a recursive walk needs a stack frame per node, and the hidden list of 5,000 nodes does not leave room for that.',
+    prompt: "Write `removeFromEnd(head, n)` for a linked list of `{ value, next }` nodes, removing the `n`th node counted from the end, where 1 is the last node, and returning the head of the changed list. The list 1, 2, 3, 4, 5 with `n` of 2 becomes 1, 2, 3, 5. You can do it in one pass with two pointers. Move a `lead` pointer `n` nodes ahead, then move `lead` and a `trail` pointer on together `while` `lead` has a next node: `trail` then stops just before the node to remove, and `trail.next = trail.next.next` unlinks it. Removing the head is the case that needs care, because no node comes before it. A placeholder node in front of the head, `{ value: null, next: head }`, makes it the same as every other case. Change the links of the list you were given rather than building a new one. `n` is always between 1 and the length of the list. Target: O(L) time for a list of L nodes and O(1) space: a recursive walk needs a stack frame per node, and the hidden list of 5,000 nodes does not leave room for that. Input is a nonempty finite acyclic chain of at most 5,000 distinct plain or null-prototype node objects. next is a node or null; value is an opaque payload, including undefined, null, NaN, Symbols or objects. n is a primitive integer in 1..L. Return the exact original surviving head (or null for the sole node). Preserve every payload and every next link except the predecessor link that bypasses the removed node; removing the head changes no original links. In particular, leave the detached node and its next link unchanged. A two-pass O(L) scan with constant auxiliary storage is also valid; the two-pointer scan avoids counting first.",
     starter: `const removeFromEnd = (head, n) => {
 
 };
@@ -233,6 +233,7 @@ console.log(JSON.stringify(removeFromEnd(list(1, 2, 3, 4, 5), 2)));
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "(() => {const tail={value:3,next:null},removed={value:2,next:tail},head={value:1,next:removed};removeFromEnd(head,2);return removed.next===tail;})()", "expected": true, "label": "the detached node keeps its next link"},
       { call: withList(`${LIST_VALUES} return values(removeFromEnd(list(1, 2, 3, 4, 5), 2));`), expected: [1, 2, 3, 5] },
       { call: withList(`${LIST_VALUES} return values(removeFromEnd(list(1, 2, 3), 1));`), expected: [1, 2], label: 'the last node' },
       { call: withList(`${LIST_VALUES} return values(removeFromEnd(list(1, 2), 2));`), expected: [2], label: 'the head' },
@@ -299,7 +300,7 @@ console.log(countStretches([1, 1, 1], 2));
     tier: 3,
     focus: ['recursion', 'strings'],
     title: 'Every balanced string of brackets',
-    prompt: 'Write `balanced(pairs)`, returning every balanced string made of `pairs` opening and `pairs` closing round brackets, in alphabetical order, where `"("` comes before `")"`. `balanced(2)` gives `["(())", "()()"]`. Building every string of `(` and `)` and throwing away the unbalanced ones wastes most of the work: for 11 pairs that is over four million strings for 58,786 answers, and the hidden check asks for 11. Build each string one character at a time instead, with a recursive helper that knows how many of each bracket it has used. Add `(` while fewer than `pairs` have been opened, and add `)` only while it closes something still open. Trying `(` before `)` at every step gives the alphabetical order for free. `balanced(0)` gives `[""]`, the one empty string. Target: time in proportion to the answers, and O(n) stack depth.',
+    prompt: "Write `balanced(pairs)`, returning every balanced string made of `pairs` opening and `pairs` closing round brackets, in alphabetical order, where `\"(\"` comes before `\")\"`. `balanced(2)` gives `[\"(())\", \"()()\"]`. Building every string of `(` and `)` and throwing away the unbalanced ones wastes most of the work: for 11 pairs that is over four million strings for 58,786 answers, and the hidden check asks for 11. Build each string one character at a time instead, with a recursive helper that knows how many of each bracket it has used. Add `(` while fewer than `pairs` have been opened, and add `)` only while it closes something still open. Trying `(` before `)` at every step gives the alphabetical order for free. `balanced(0)` gives `[\"\"]`, the one empty string. Build only prefixes that can still become balanced. `pairs` is a primitive integer in 0..11. Each call returns a fresh mutable array of strings; changing a previous result must not affect later calls. Let n be pairs and C_n the number of balanced strings (the Catalan number); every answer contains 2n characters. Target: O(n * C_n) time and O(n) extra space, excluding the returned array and strings. Use one mutable character buffer with push/pop to avoid retaining a separate prefix string at every depth. An explicit depth-first stack is also valid when it retains only O(n) frames and a shared character buffer.",
     starter: `const balanced = pairs => {
 
 };
@@ -309,12 +310,13 @@ console.log(balanced(2));
 `,
     skeleton: `const balanced = pairs => {
   const found = [];
-  const build = (text, opened, closed) => {
-    // a full string: keep it
-    // room for another "(": build on with it
-    // something open to close: build on with ")"
+  const path = [];
+  const build = (opened, closed) => {
+    // every pair closed: keep path.join("")
+    // if room remains, push "(", recurse, then pop
+    // if an opener remains, push ")", recurse, then pop
   };
-  build("", 0, 0);
+  build(0, 0);
   return found;
 };`,
     hints: [
@@ -322,10 +324,11 @@ console.log(balanced(2));
       'Build with `"("` before `")"` at every step and the answers come out in alphabetical order, because `"("` is the smaller character.',
     ],
     approach: [
-      'Write `build(text, opened, closed)`. When `text.length === 2 * pairs`, push `text` and return.',
-      'If `opened < pairs`, call `build(text + "(", opened + 1, closed)`.',
-      'If `closed < opened`, call `build(text + ")", opened, closed + 1)`.',
-      'Start with `build("", 0, 0)` and return what was found.',
+      'Keep one character buffer. build(opened, closed) tracks the prefix counts.',
+      'When closed equals pairs, save path.join("").',
+      'If opened is below pairs, push "(", recurse with one more opener, then pop.',
+      'If closed is below opened, push ")", recurse with one more closer, then pop.',
+      'Try the opener first for alphabetical order. Output construction takes O(n * C_n) time; the buffer and call stack use O(n) extra space.',
     ],
     verify: 'tests',
     estimatedMinutes: 20,
@@ -346,7 +349,7 @@ console.log(balanced(2));
     tier: 3,
     focus: ['recursion', 'objects'],
     title: 'Is it a search tree?',
-    prompt: 'In a binary search tree, every value in a node’s left subtree is smaller than the node’s value, and every value in its right subtree is larger. Write `isSearchTree(root)` for a tree of `{ value, left, right }` nodes, returning `true` or `false`. Comparing each node only with its own two children is not enough: when the root is 10, a 12 below its left child 5 is larger than 5 and still breaks the rule for 10. Pass the allowed range down instead. A recursive helper takes a node, the value it must be above and the value it must be below, and narrows the range for each child it visits. Equal values are not allowed anywhere. An empty tree, `null`, is a search tree. Target: O(n) time and O(h) space for a tree of height h.',
+    prompt: "In a binary search tree, every value in a node\u2019s left subtree is smaller than the node\u2019s value, and every value in its right subtree is larger. Write `isSearchTree(root)` for a tree of `{ value, left, right }` nodes, returning `true` or `false`. Comparing each node only with its own two children is not enough: when the root is 10, a 12 below its left child 5 is larger than 5 and still breaks the rule for 10. Pass the allowed range down instead. A recursive helper takes a node, the value it must be above and the value it must be below, and narrows the range for each child it visits. Equal values are not allowed anywhere. An empty tree, `null`, is a search tree. Target: O(n) time and O(h) space for a tree of height h. Input is null or an acyclic tree of at most 2,000 distinct plain or null-prototype node objects, with finite primitive Number values in [-1000000000000,1000000000000]; fractions and signed zero are valid. Each left/right is a node or null, and no node is shared by two parents. Nodes may be frozen and all values/links must remain unchanged. n is the node count and h is the number of nodes on the longest root-to-leaf path (0 for null), at most 128 so the taught recursive helper fits the practice runtime. Comparisons are strict: -0 and 0 are equal and cannot appear as a valid duplicate. An iterative traversal is also valid. A full inorder-values array uses O(n) extra space and does not meet the O(h) goal on a shallow tree; stream the previous value instead.",
     starter: `const isSearchTree = root => {
 
 };
@@ -365,7 +368,7 @@ console.log(isSearchTree(node(2, node(1), node(3))));
 };`,
     hints: [
       'Every node sits inside a range that all its ancestors set together: going left lowers the ceiling to the parent’s value, and going right raises the floor. A node’s own children cannot tell you that range.',
-      'Start with `-Infinity` and `Infinity`, so the root may hold any number and no special value is needed for "no limit yet". A check like `if (low && value <= low)` skips a floor of 0.',
+      'Start with `-Infinity` and `Infinity`, so the root may hold any finite Number and no special value is needed for "no limit yet". A check like `if (low && value <= low)` skips a floor of 0.',
     ],
     approach: [
       'Write `within(node, low, high)`. A `null` node returns `true`.',
