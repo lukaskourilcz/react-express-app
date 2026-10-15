@@ -26,11 +26,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "PR #406 passed required run 38700013792 at exact ad6a0a5822b465dbd477f724e1db9845cb8fb420 (verify 31m39s; SQL 37s), merged at dca959f9839d43ad73ff7a8137b61e08cffa5fde. READY production dpl_5FuxpnzTardVzaqJPPsm8EBd1iW1 matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four changed-cohort actual Submit checks pass at zero XP/null progress; updated briefs, valid solutions and selected wrongs were verified. Shipped coverage is 225/725 coding and 263/263 native. No authenticated native/Premium, independent/human or complete editorial-coverage claim.",
-    "currentModelReviewedIssuedTasks": 240,
-    "issuedStillRequiringReview": 485,
+    "currentModelReviewedIssuedTasks": 245,
+    "issuedStillRequiringReview": 480,
     "deployedModelReviewedIssuedTasks": 225,
-    "stagedModelReviewedIssuedTasks": 15,
-    "stagedExecutionEvidence": "15 October b040–b042: 15 staged reviews; 92/92 selected current-hash worker verdicts and 62 target/base-25-XP checks pass after the documented b040 clock revision 2. Full updated grading/Learn integrity and 264 responsive probes pass; 1004 emitted client files are unchanged by the server-only correction. Required CI/preview/production acceptance is pending.",
+    "stagedModelReviewedIssuedTasks": 20,
+    "stagedExecutionEvidence": "15 October five-item commits through b043: 20 staged reviews; latest batch 31/31 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
     "deployedExecutionEvidence": "PR #406 passed required run 38700013792 at exact ad6a0a5822b465dbd477f724e1db9845cb8fb420 (verify 31m39s; SQL 37s), merged at dca959f9839d43ad73ff7a8137b61e08cffa5fde. READY production dpl_5FuxpnzTardVzaqJPPsm8EBd1iW1 matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four changed-cohort actual Submit checks pass at zero XP/null progress; updated briefs, valid solutions and selected wrongs were verified. Shipped coverage is 225/725 coding and 263/263 native. No authenticated native/Premium, independent/human or complete editorial-coverage claim."
   },
   "nativePaths": {
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "225 reviewed coding and 263 native records are deployed; 15 coding records are staged through b042. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "225 reviewed coding and 263 native records are deployed; 20 coding records are staged through b043. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

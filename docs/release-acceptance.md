@@ -3728,3 +3728,35 @@ unchanged client build. Preview/required CI and production acceptance for this
 cohort remain pending. Coverage is 240/725 coding, 485 remaining, with 225
 coding and 263 native records deployed. Same-session model and finite checks;
 no authenticated Premium, independent/human or complete-catalogue claim.
+
+
+## Native promise content batch b043 — 15 October 2026
+
+Read fulfillment mapping, fallback recovery, Promise.all totals, timer firing
+order and allSettled error messages individually. Supplied then/catch variants
+now follow the stated objective. Timer jobs capture original names and count,
+so later caller edits cannot change or prevent completion. Contracts preserve
+opaque fulfilled/fallback/error identity, adopt a promised fallback outcome,
+consume initial promise-array membership and keep input-order Number folds.
+Error messages include empty/duplicate text and are read after every settlement.
+
+All 31 final-hash worker verdicts agree (20 valid, five starters, six wrongs),
+versus 25/31 baseline. Twenty authored-target/base-25-XP checks, copy sweep,
+focused coding including reversed hidden/native Run, API/script types, launch,
+build, 263 native bindings, both zero-vulnerability production dependency
+audits and diff checks pass. All 245 coding records match current full hashes.
+Cases include exact opaque rejection/fulfillment/fallback references, literal
+function/Symbol fallback values, promised fallback rejection, signed zero,
+frozen native promises, fail-fast rejection beside a never-settling input,
+input-order floating-point addition, post-call membership/name edits, deferred
+microtask-versus-timer behavior, 1000 prices/zero-delay jobs/repeated errors and
+current messages after a slower producer finishes. No global clock/timer hooks.
+Finite watchdogs turn incorrect noncompletion into a case failure rather than
+claiming exact physical timing. Targets exclude producer work and waiting.
+
+Coverage is 245/725 coding, 480 remaining, and 263/263 native. Twenty coding
+reviews are staged above verified #406: fifteen are frozen in #407 at f8fba18d,
+with eleven exact-preview guest checks and required CI in progress; b043 adds
+five on a separate continuation branch. No claim of authenticated changed-
+Premium acceptance, independent/human reading or complete-catalogue coverage.
+No runtime-engine, schema, UI, entitlement or reward-policy change.

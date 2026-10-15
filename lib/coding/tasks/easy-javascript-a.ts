@@ -269,7 +269,7 @@ console.log(ownKeys(item));
     tier: 2,
     focus: ['promises'],
     title: 'Double it when it arrives',
-    prompt: 'Write `doubleLater(promise)`, returning a promise of twice the number `promise` resolves to, using `.then`. `doubleLater(Promise.resolve(4))` resolves to 8. When `promise` rejects, the promise you return rejects with the same error.',
+    prompt: "Write `doubleLater(promise)`, returning a promise of twice the number `promise` resolves to, using `.then`. `doubleLater(Promise.resolve(4))` resolves to 8. When `promise` rejects, the promise you return rejects with the same error. The input is an ordinary native Promise with standard methods, possibly pending. Fulfillment is a finite Number between -1000000000 and 1000000000, including -0; use normal Number multiplication without rounding. Return a new native Promise immediately, distinct from the input; fulfillment handlers run asynchronously. Rejection reasons can be any value: preserve the exact original value/reference, not just an Error message. Do not change user-visible properties of the input promise. Target: O(1) time for wrapper work and O(1) space for retained chain state, excluding waiting, producer work and host promise scheduling.",
     starter: `const doubleLater = promise => {
 
 };
@@ -306,7 +306,7 @@ console.log(ownKeys(item));
     tier: 2,
     focus: ['promises'],
     title: 'Fall back on failure',
-    prompt: 'Write `withFallback(promise, fallback)`, returning a promise that resolves to whatever `promise` resolves to, or to `fallback` when `promise` rejects, using `.catch`. `withFallback(Promise.resolve("fresh"), "cached")` resolves to `"fresh"`, and a rejected promise gives `"cached"`. A resolved `0` or `undefined` is a success and is kept.',
+    prompt: "Write `withFallback(promise, fallback)`, returning a promise that resolves to whatever `promise` resolves to, or to `fallback` when `promise` rejects, using `.catch`. `withFallback(Promise.resolve(\"fresh\"), \"cached\")` resolves to `\"fresh\"`, and a rejected promise gives `\"cached\"`. A resolved `0` or `undefined` is a success and is kept. promise is an ordinary native Promise with standard methods, possibly pending. Preserve the exact fulfilled value/reference, including false, empty text, NaN, -0, functions, Symbols and frozen records; never clone or coerce it. fallback is an opaque nonthenable value or an ordinary native Promise. A rejection uses that exact value; a promise fallback is adopted, including its rejection. A function fallback is a value, not a factory to invoke. A successful input must not use the fallback. Return a new native Promise immediately and leave user-visible input properties unchanged. Target: O(1) time for wrapper work and O(1) space for retained chain state, excluding waiting, producer work, adopted-promise work and host scheduling.",
     starter: `const withFallback = (promise, fallback) => {
 
 };
@@ -319,7 +319,7 @@ console.log(ownKeys(item));
     return /* the value to use instead */;
   });
 };`,
-    hints: ['`.catch(callback)` runs only when the promise rejects, and the promise it returns resolves to what the callback returns. A resolved value passes through untouched.'],
+    hints: ['`.catch(callback)` runs only when the promise rejects, and the promise it returns resolves to what the callback returns. A resolved value passes through untouched. Returning a promise from catch makes the chain follow that promise’s outcome.'],
     approach: [
       'Chain `.catch` onto the promise you were given and return the result.',
       'In the callback, ignore the error and return the fallback.',
@@ -343,7 +343,7 @@ console.log(ownKeys(item));
     tier: 2,
     focus: ['promises'],
     title: 'Total once every price arrives',
-    prompt: 'Write `totalWhenReady(prices)`, where `prices` is an array of promises that each resolve to a number. Wait for all of them with `Promise.all` and resolve to their sum. `totalWhenReady([Promise.resolve(3), Promise.resolve(4)])` resolves to 7, and an empty array resolves to 0. If any price rejects, the total rejects with that error.',
+    prompt: "Write `totalWhenReady(prices)`, where `prices` is an array of promises that each resolve to a number. Wait for all of them with `Promise.all` and resolve to their sum. `totalWhenReady([Promise.resolve(3), Promise.resolve(4)])` resolves to 7, and an empty array resolves to 0. If any price rejects, the total rejects with that error. prices is a read-only dense array of at most 1000 ordinary native Promises and may be frozen. Capture its initial membership during the call; later caller edits must not change this total. Fulfillments are finite Numbers of absolute value at most 10000000000000000. Add from +0 in input order with ordinary Number + and no rounding; floating-point addition order matters. Reject with the exact first observed rejection reason/reference without waiting for still-pending inputs, even if another input never settles. Rejection does not cancel those other producers. Return a native Promise immediately. Target: O(n) time for wrapper registration/fold work and O(n) space for retained values/handlers, where n is 1 + prices.length, excluding waiting, producer work and host scheduling.",
     starter: `const totalWhenReady = prices => {
 
 };
@@ -457,7 +457,7 @@ repeat(n => console.log(n), 3, 10);
     tier: 2,
     focus: ['timers', 'promises'],
     title: 'Finish in order of delay',
-    prompt: 'Write `inDelayOrder(jobs)`, where each job is `{ name, ms }`. Start a `setTimeout` for every job at once, record each name when its timer fires, and resolve to the names in the order they fired once the last one has. `inDelayOrder([{ name: "slow", ms: 30 }, { name: "fast", ms: 10 }])` resolves to `["fast", "slow"]`. Jobs with the same delay fire in the order they were started, and an empty list resolves to `[]`.',
+    prompt: "Write `inDelayOrder(jobs)`, where each job is `{ name, ms }`. Start a `setTimeout` for every job at once, record each name when its timer fires, and resolve to the names in the order they fired once the last one has. `inDelayOrder([{ name: \"slow\", ms: 30 }, { name: \"fast\", ms: 10 }])` resolves to `[\"fast\", \"slow\"]`. Jobs with the same delay fire in the order they were started, and an empty list resolves to `[]`. jobs is a read-only dense array of at most 1000 ordinary data records, possibly frozen with its records. name is literal text of at most 1000 UTF-16 code units, including empty/duplicate names; ms is an integer from 0 to 1000. Capture each name/delay and the original job count while registering timers, so caller edits after return cannot change this run. Return a native Promise immediately; even zero-delay callbacks run later, and a nonempty run must stay pending until its timers fire. Record actual callback order rather than sorting the input by numeric delays. Equal delays retain registration order in the checker; waits are minimum delays, not exact physical deadlines. Separate calls and output arrays are independent. Target: O(n) time for wrapper registration/callback work and O(n) space for timers/results, where n is 1 + jobs.length, excluding waiting and host timer management.",
     starter: `const inDelayOrder = jobs => {
 
 };
@@ -467,6 +467,7 @@ repeat(n => console.log(n), 3, 10);
 `,
     skeleton: `const inDelayOrder = jobs => new Promise(resolve => {
   const fired = [];
+  const total = jobs.length; // capture the original count
   if (/* no jobs */) return resolve(fired);
 
   for (const { name, ms } of jobs) {
@@ -475,10 +476,10 @@ repeat(n => console.log(n), 3, 10);
     }, ms);
   }
 });`,
-    hints: ['Wrap the timers in `new Promise(resolve => …)`. Each timer pushes its name, and the one that makes the list as long as `jobs` calls `resolve`.'],
+    hints: ['Wrap the timers in `new Promise(resolve => …)`. Each timer pushes its name, and the one that makes the list as long as the original job count calls `resolve`.'],
     approach: [
       'Return a new promise and keep an array of fired names inside it.',
-      'Start one `setTimeout` per job. Its callback pushes the job’s name, and calls `resolve` with the array when the array has as many names as there are jobs.',
+      'Capture each name/delay and start one `setTimeout` per original job. Its callback pushes the job’s name, and calls `resolve` with the array when the array has as many names as the captured original count.',
       'With no jobs no timer ever fires, so resolve with the empty array straight away.',
     ],
     verify: 'tests',
