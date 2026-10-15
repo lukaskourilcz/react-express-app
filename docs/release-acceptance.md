@@ -1,5 +1,54 @@
 # Release acceptance matrix
 
+## Twenty-five native and five coding reviews — 2026-10-15
+
+PR #395 merged at `1c8c04341a14f6463c38dfa458a6276386ca3747` after exact
+61900610 passed required run 38661780936 (verify 30m52s, SQL 38s). The first
+run's stale grader-privacy fixture assumptions were corrected without changing
+production grading; full final checks include the deterministic phase-isolation
+regression. Production `dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM` is READY at that
+merge SHA, owns devshark.app and has no alias error.
+
+Eleven general checks and twenty selected correct/wrong submissions across
+four accessible b013 tasks pass, with guest zero XP/null progress. The fifth
+binary task returns 402; authenticated Premium/native activity acceptance is
+not inferred. No Challenge/name/owner-progress fixtures were created. B013 has
+40/40 selected worker verdicts and 20 no-false-penalty checks; n003–n007 bind
+25 individual native reviews to exact source/grading hashes and model readings.
+Ninety-five coding and ninety-five native records are now shipped. Current local
+coverage through n014 is 95/725 coding and 125/263 native, with 630 and 138
+remaining respectively. N010's five goal revisions add no duplicate coverage.
+Evidence: `/tmp/devshark-audit-2026-10-15/prod395-*.log` and committed reviews.
+Same-session model evidence is not independent/human or authenticated native
+acceptance.
+
+## Twenty coding and ten native reviews — 2026-10-15
+
+PR #394 merged at `158cf64adad473bc50125a682af86480d3795520` after required
+verify and SQL run 38658122812 passed on exact 70803596 (verify 30m28s).
+Production `dpl_89oFHcKJWc4rbZF5foU8hv95r7t1` is READY at that merge SHA,
+owns devshark.app and has no alias error. Eleven general public checks and
+five selected correct/wrong submissions on the accessible task pass, with
+zero guest XP and null progress. Nineteen other tasks return guest 402;
+authenticated Premium/native activity acceptance is not inferred. No
+Challenge/name or owner-progress fixtures were created.
+
+B009–b012 each have forty selected worker verdicts and twenty no-false-penalty
+checks. N001–n002 have exact native bindings and manually read/executed entry,
+diagnostic, recursion/stack and factorial examples. Local release gates,
+dependency audits (zero vulnerabilities) and documented responsive probes
+pass. Ninety coding and seventy native records are shipped. Current local
+coverage through b013/n008 is 95/725 coding and 100/263 native: 630 coding
+and 163 native records remain. Same-session model review is not independent
+or human sign-off. Evidence: `/tmp/devshark-audit-2026-10-15/prod394-*.log`.
+
+PR #395 freezes the next five coding/twenty-five native records. Its first
+required run exposed stale privacy-test fixture assumptions; a follow-up
+preserves complete hidden-case checks and exact visible-only logging, with a
+deterministic fresh-program phase marker. Full grading/Learn integrity and
+script types pass locally; required checks rerun on 61900610. N008 is outside
+that frozen head.
+
 ## Thirty JavaScript content reviews — 2026-10-15
 
 PR #393 merged at `3c5d0abcfe6ee2220c3dc9544cf376ceea3e4944` after required

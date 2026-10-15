@@ -1,5 +1,199 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n014
+
+Reviewed the remaining five foundation-assessment questions. The literal-tree
+inorder item is retained. Exact binary-search reads now name the midpoint and
+bound convention. The sorting snapshot is restricted to completed passes of
+the taught implementations, rather than pretending to identify arbitrary source.
+Sort replacement examples use valid separate scopes, distinguish same-array
+aliasing from new output even on sorted input, and qualify worst-case comparison
+and unspecified space behavior. Tree bounds name nonempty edge-height and
+remove positional references from shuffled feedback.
+
+Authored examples verify the 20-probe maximum, actual insertion pass, valid
+sort-call syntax, stable reference order, all four tree traversal choices and
+height-path bounds. Native bindings, path contracts, API/script types, launch,
+build, both production dependency audits (zero vulnerabilities), copy sweep and
+diff checks pass. Six public DSA catalogue probes per theme pass at 360–1440;
+they do not exercise authenticated activities, physical devices, keyboard or zoom. Manual scores and final model readings are individual; these
+checks are not independent/human or authenticated activity acceptance.
+
+Coverage is **125/263 native**, **138 remaining**, and **95/725 coding**,
+**630 remaining**. PR #395 is merged at 1c8c0434, its exact production deployment
+is READY with devshark.app, and eleven general plus twenty selected correct/
+wrong submissions pass. One binary task returns guest 402. Ninety-five coding
+and ninety-five native reviews are shipped. N008–n014 add thirty unique native
+records plus five existing-record target revisions outside that release.
+
+## 15 October continuation — five-item native batch n013
+
+Reviewed foundation-assessment questions one through five, with exact source
+hashes, individual quality/relevance scores and separate final model readings.
+The triangular-loop question now states its two independent sizes and unit/
+amortized costs. Run storage explicitly includes returned arrays, removing the
+ambiguity of output-excluding auxiliary-space conventions. The handler registry
+uses a declared hash model and distinguishes the language's sublinear Map
+requirement from a universal constant-time claim. Parenthesis options are now
+parallel literals. Binary-search feedback names the behavior rather than the
+position of a shuffled option, and the finite ascending domain is explicit.
+
+Actual authored contexts verify triangular counts, run slots, numeric-looking
+key order, all four parenthesis choices and the missed-singleton defect/closed-
+interval repair. A signed-zero expectation in the proof was corrected before
+recording final results; application equality rules were untouched. Native
+bindings, path contracts, API/script types, launch, final build, both production
+dependency audits (zero vulnerabilities), copy sweep and diff checks pass.
+No authenticated activity or independent/human acceptance is claimed.
+
+Coverage is **120/263 native**, **143 remaining**, and **95/725 coding**,
+**630 remaining**. PR #395 merged at 1c8c0434 after exact-head required verify
+30m52s and SQL passed. Its production build is still pending, so the shipped
+counts remain ninety coding/seventy native until exact deployment verification.
+N008–n013 are outside that merged PR.
+
+## 15 October continuation — five-item native batch n012
+
+Reviewed three tree coding exercises, the second reading and the full check.
+The reading now uses the lesson's nonempty edge-height h+1 convention; the
+parent check summary accurately names global bounds and ordered traversal.
+All three code briefs define finite ordinary trees through 128, preserve
+existing node identities/properties/descriptors, and state applicable O(n)
+worst-case targets with the explicit node-count and unit-cost model. The BST
+brief additionally gives the precise h+1 bound and one-new-leaf mutation rule.
+Traversal outputs must be independent and cannot alter previous results.
+
+Baseline expected verdicts match **14/18** after correcting the metadata
+counterexample's null guard: size/height accepts markers and cloned child
+links, traversal accepts markers, and BST code accepts markers. Final exact-
+hash sandbox results match **18/18**: six valid implementations, three starters
+and nine wrong implementations. New cases include ownership/descriptors,
+frozen 128-node chains, repeated numeric values/fractions, independent outputs,
+first-equal node identity and exact insertion changes. Existing four-node
+search budgets stay unchanged and are described as bounded fixture evidence.
+Six valid complexity analyses retain base 25 XP, including unknown results.
+
+All five individual manual reviews and final readings are recorded. Native
+bindings, path contracts, path-authority tests, API/script types, launch, build,
+both production dependency audits (zero vulnerabilities), copy sweep and diff
+checks pass. No live account progress/XP or authenticated activity acceptance
+is inferred. Coverage is **115/263 native**, **148 remaining**, and **95/725
+coding**, **630 remaining**. N008–n012 are local while PR #395's frozen head
+61900610 completes required verification; its preview/SQL evidence is retained.
+
+## 15 October continuation — five-item native batch n011
+
+Reviewed both tree lessons, the first linked reading and questions three/four.
+The reading is retained. Lessons now state the finite-tree/unit-cost model,
+correct the search direction for 10 at root 8, count cached-value comparisons,
+and distinguish edge-height h+1, output, call stack and retained queue storage.
+Nondecreasing inorder alone cannot validate strict-left duplicates; the lesson
+now gives the root-5/left-5 counterexample. The questions specify a perfect
+versus plain ascending-built tree and a traversal guarantee over all valid shapes.
+
+Actual authored examples confirm all four traversal outputs, seven queue
+frontiers, seven inorder frames, the two search paths and exact worst-case
+10/1023 visited nodes. These are deterministic example checks, not heap or
+physical timing measurements. All five records have individual manual quality,
+relevance and final model readings. Native bindings, path contracts, API/script
+types, launch, build, both production dependency audits (zero vulnerabilities),
+copy sweep and diff checks pass. No UI structure changed; authenticated activity
+acceptance and independent/human approval are not claimed.
+
+Coverage is **110/263 native**, **153 remaining**, and **95/725 coding**,
+**630 remaining**. N008–n011 are local; PR #395 remains frozen at 61900610
+while its required verification runs. Ninety coding/seventy native records
+are shipped through PR #394.
+
+## 15 October continuation — five-item goal revision n010
+
+Revisited exactly five already reviewed native coding activities: recursive
+list sum, bounded factorial, iterative countdown, linear search and first
+occurrence. Each now has its applicable authored time target and explicit
+input/cost model. The native UI already renders this guidance through the
+shared component; no parser, reward rule, handler or permission changed.
+
+Current root review records are revised individually, and all five complete
+prior records are preserved in the non-current history snapshot. Manual
+quality/relevance readings are retained and refreshed for the appended goals.
+This adds **zero** unique coverage: native remains **105/263**, **158
+remaining**; coding remains **95/725**, **630 remaining**.
+
+All **36/36** selected exact-hash sandbox verdicts agree (ten valid, five
+starters, twenty-one wrong). Ten reference/alternative complexity analyses
+retain base 25 XP, with unknowns unpenalized. Reconstructing each prior prompt
+reproduces its old hashes and gives a different sealed coding-attempt version,
+so a changed target cannot silently reuse that old version. Native bindings,
+path contracts, API/script types, launch, path-authority checks, build, both
+production dependency audits (zero vulnerabilities), copy sweep and diff checks
+pass. No live account XP or production tampering probe was used.
+
+N008–n010 remain local while PR #395 is frozen at 61900610. Its protected
+preview passes eleven general and twenty selected signed-out submissions;
+the binary Premium task returns 402. Required SQL passes and verify is pending.
+No independent/human, physical timing or authenticated native acceptance is
+inferred. Ninety coding/seventy native reviewed records are shipped.
+
+## 15 October continuation — five-item native batch n009
+
+Reviewed three sorting code exercises and the first two tree questions. The
+single-node height item is retained. The BST explanation now correctly follows
+10 right at 8, then left at 12 into null; its misplaced descendant and correct
+key are unchanged. Sorting briefs define dense input through 128, consistent
+finite comparators, original item references/multiplicity and unrelated array
+metadata. New assertions cover frozen item references, stable repeated identities,
+metadata/descriptors, zero comparisons for empty/single input and maximum-size
+counts. Existing eight-element method budgets stay unchanged and are described
+as finite fixture contracts rather than universal algorithm detectors.
+
+Baseline expected verdicts matched **12/18**: each sort accepted added input
+fields and cloned records. Final exact-hash sandbox verdicts are **18/18**
+(six valid, three starters, nine wrong). Six authored-target/base-25 analyses
+pass, including conservative unknowns. The goal text follows the existing
+parser's immediate time form; no parser or grading rule changed. Selection and
+insertion target quadratic time; merge targets n log n with explicit unit and
+live-space models. Actual tree-context/edge-height evidence matches the keys.
+
+All five records have manual scores and final model readings. Native bindings,
+path contracts, authored proof, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy sweep and diff checks pass.
+No UI structure changed; authenticated activity acceptance remains separate.
+Coverage is **105/263 native**, **158 remaining**, and **95/725 coding**,
+**630 remaining**. Five older native code records still need the applicable
+authored-goal follow-up; that will revise five records without inflating unique
+coverage. PR #395's exact 61900610 preview passes eleven general and twenty
+selected signed-out submissions; its one Premium binary task returns 402.
+Required verify is pending, SQL passes, and n008–n009 remain local.
+
+## 15 October continuation — five-item native batch n008
+
+Reviewed both sorting lessons, their two self-reviewed reading links and the
+complete four-question check. The three activity records are retained; lessons
+now state consistent finite comparators, unit/reference cost assumptions,
+empty-input and strict-descending qualifications. Bubble writes are separated
+from insertion shifts plus final saved-element writes. Merge-level output
+writes are separated from reads/slicing, doubling includes more work at every
+old level, and peak live storage differs from cumulative allocations. Quicksort
+stack/expectation and practical algorithm recommendations are qualified.
+
+Actual authored snippets and all three traces agree. Sorted eight merge-sort
+inputs use twelve comparisons; all 40320 permutations of eight distinct values
+have a maximum of seventeen. The empty merge and insertion-versus-bubble write
+counterexample execute. These are finite content examples, not timing/heap or
+arbitrary-program proof. The copy sweep's first-pass hit refers to the actual
+selection/bubble algorithm iteration; it is hand-settled for this exact lesson
+field. Position-based answer references remain rejected.
+
+All five exact hashes have individual scores and final English model readings.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), final copy sweep and diff checks pass.
+No UI structure changed; public-catalogue probes do not establish signed-in
+lesson acceptance. Native coverage is **100/263**, **163 remaining**; coding is
+**95/725**, **630 remaining**. PR #394's exact production checks pass, shipping
+ninety coding/seventy native reviews. PR #395 freezes b013/n003–n007, with its
+privacy-test fixture correction at 61900610 pending required checks. This batch
+remains local; the full audit and owner-dependent issue work are unfinished.
+
 ## 15 October continuation — five-item native batch n007
 
 Reviewed the canonical binary-search reuse activity and all four D08 sorting

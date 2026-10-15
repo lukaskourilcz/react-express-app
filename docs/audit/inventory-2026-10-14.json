@@ -25,13 +25,13 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "15 October: PR #393 merged at 3c5d0abcfe6ee2220c3dc9544cf376ceea3e4944 after required verify/sql run 38654051545 passed on c91873a6. Production dpl_8FZR1sD41REBVFcNuVcmJUuzVyRL is READY at that merge SHA with devshark.app alias. Eleven general and twenty selected correct/wrong signed-out submissions pass across four accessible tasks; twenty-six Premium tasks return 402, not authenticated acceptance. Seventy coding reviews are deployed.",
+    "executionEvidence": "15 October: PR #395 merged at 1c8c04341a14f6463c38dfa458a6276386ca3747 after required verify/sql run 38661780936 passed on exact 61900610 (verify 30m52s). Production dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM is READY at that merge SHA, owns devshark.app and has no alias error. Eleven general and twenty selected signed-out correct/wrong submissions pass, with guest zero XP/null progress; js-binary-search returns 402 and is outside authenticated Premium acceptance. Ninety-five coding reviews are shipped; no Challenge/name/owner-progress fixtures were used.",
     "currentModelReviewedIssuedTasks": 95,
     "issuedStillRequiringReview": 630,
-    "deployedModelReviewedIssuedTasks": 70,
-    "stagedModelReviewedIssuedTasks": 25,
-    "stagedExecutionEvidence": "15 October five-item commits through b013: 25 staged reviews; latest batch 40/40 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
-    "deployedExecutionEvidence": "15 October: PR #393 merged at 3c5d0abcfe6ee2220c3dc9544cf376ceea3e4944 after required verify/sql run 38654051545 passed on c91873a6. Production dpl_8FZR1sD41REBVFcNuVcmJUuzVyRL is READY at that merge SHA with devshark.app alias. Eleven general and twenty selected correct/wrong signed-out submissions pass across four accessible tasks; twenty-six Premium tasks return 402, not authenticated acceptance. Seventy coding reviews are deployed."
+    "deployedModelReviewedIssuedTasks": 95,
+    "stagedModelReviewedIssuedTasks": 0,
+    "stagedExecutionEvidence": "All 95 current coding reviews are production-verified through PR #395. The other 630 issued tasks remain outside individual editorial coverage.",
+    "deployedExecutionEvidence": "15 October: PR #395 merged at 1c8c04341a14f6463c38dfa458a6276386ca3747 after required verify/sql run 38661780936 passed on exact 61900610 (verify 30m52s). Production dpl_A7o9JHZ1pV14hDnPnkTF4urbYvaM is READY at that merge SHA, owns devshark.app and has no alias error. Eleven general and twenty selected signed-out correct/wrong submissions pass, with guest zero XP/null progress; js-binary-search returns 402 and is outside authenticated Premium acceptance. Ninety-five coding reviews are shipped; no Challenge/name/owner-progress fixtures were used."
   },
   "nativePaths": {
     "paths": 2,
@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 35,
-    "recordsStillRequiringReview": 168,
-    "reviewEvidence": "D01–D05: sixty exact-bound native records deployed through PRs #376/#379/#381/#384/#388. Required verify/SQL for #388 passed on 5684fc4d in Actions 38531432787; production dpl_8YwxYfKKA7z3HMUZP5LoENM39t1t is READY on merge d47e3a9d and passes eleven signed-out health/route/correct-wrong grading checks. Partial editorial evidence; no complete-catalogue, authenticated native-path or activation claim.",
-    "deployedModelReviewRecords": 60,
-    "currentModelReviewRecords": 95,
-    "stagedReviewEvidence": "15 October through n007: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
+    "currentStagedModelReviewRecords": 30,
+    "recordsStillRequiringReview": 138,
+    "reviewEvidence": "Ninety-five native records shipped through PR #395: D01–D05, n001–n007. Exact main 1c8c0434 is READY with public general/coding checks passing. This is partial source/release evidence, not authenticated native-path acceptance or activation.",
+    "deployedModelReviewRecords": 95,
+    "currentModelReviewRecords": 125,
+    "stagedReviewEvidence": "15 October through n014: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "Seventy reviewed coding and sixty native records are deployed; twenty-five coding and thirty-five native records are staged through b013/n007. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "Ninety reviewed coding and seventy native records are shipped; five coding and thirty-five native records are staged through b013/n009, with five existing records revised by n010. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]
