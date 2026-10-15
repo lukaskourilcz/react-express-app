@@ -83,7 +83,13 @@ export const TYPESCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   const missing = Math.max(0, size - scores.length);
   return scores.concat(Array.from({ length: missing }, () => 0));
 };`,
+    hiddenTypeTests: [{"code": "const __auditPadded = padScores([1,2] as const,4); __auditPadded.push(3);"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze([NaN,Infinity,-Infinity,-0]),a=padScores(input,2),b=padScores(input,4);a.push(9);return [a!==input,a!==b,b.length,b.every((x,i)=>Object.is(x,input[i])),input.length,a.length];})()", expected: [true, true, 4, true, 4, 5] },
+      { call: "(()=>{const a=padScores(Object.freeze([]),0),b=padScores(Object.freeze([]),0);a.push(1);return [a!==b,a.length,b.length,Object.is(padScores([-0],3)[1],0)];})()", expected: [true, 1, 0, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),out=padScores(input,10000);return [out.length,out[999],out.slice(1000).every(x=>Object.is(x,0)),input.length];})()", expected: [10000, 999, true, 1000] },
+      { call: "(()=>{const input=Object.freeze(Array(10000).fill(3)),out=padScores(input,0);out[0]=4;return [out.length,input[0],out[0]];})()", expected: [10000, 3, 4] },
+
       { call: "(() => { const scores = [1, 2]; padScores(scores, 4); return scores; })()", expected: [1, 2] },
       { call: "padScores([5, 5], 2)", expected: [5, 5] },
     ],

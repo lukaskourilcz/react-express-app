@@ -237,25 +237,20 @@ const flip = <A, B>([first, second]: [A, B]): [B, A] => [second, first];`,
   const [header = [], ...body] = rows;
   return { header, body };
 };`,
-    junior: `const splitHeader = (rows: string[][]): { header: string[]; body: string[][] } => {
-  let header: string[] = [];
-  const body: string[][] = [];
-  for (let i = 0; i < rows.length; i++) {
-    if (i === 0) {
-      header = rows[i];
-    } else {
-      body.push(rows[i]);
-    }
-  }
-  return { header: header, body: body };
-};`,
+    junior: "const splitHeader = (rows: string[][]): { header: string[]; body: string[][] } => {\n  const [header = [], ...remainingRows] = rows;\n  const body = remainingRows;\n  return { header: header, body: body };\n};",
     senior: `interface Table {
   header: string[];
   body: string[][];
 }
 
 const splitHeader = ([header = [], ...body]: readonly string[][]): Table => ({ header, body });`,
+    hiddenTypeTests: [{"code": "const __auditWrongBody: string[] = splitHeader([[\"a\"]]).body;", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const header=Object.freeze([' h ','\ud83e\udd88']),row=Object.freeze(['','1']),rows=Object.freeze([header,row]),a=splitHeader(rows),b=splitHeader(rows);a.body.push(['new']);return [a!==b,a.header===header,a.body[0]===row,a.body!==rows,a.body!==b.body,b.body.length,rows.length,Object.keys(a).sort().join(',')];})()", expected: [true, true, true, true, true, 1, 2, "body,header"] },
+      { call: "(()=>{const row=Object.freeze([]),rows=Object.freeze([row]),out=splitHeader(rows);return [out.header===row,out.body.length,out.body!==row];})()", expected: [true, 0, true] },
+      { call: "(()=>{const a=splitHeader(Object.freeze([])),b=splitHeader(Object.freeze([]));a.header.push('x');a.body.push(['y']);return [a.header!==a.body,a.header!==b.header,a.body!==b.body,b.header.length,b.body.length];})()", expected: [true, true, true, 0, 0] },
+      { call: "(()=>{const rows=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze([String(i)]))),out=splitHeader(rows);return [out.header===rows[0],out.body.length,out.body[998]===rows[999],rows.length];})()", expected: [true, 999, true, 1000] },
+
       { call: 'splitHeader([[], ["x"]])', expected: { header: [], body: [['x']] } },
       { call: '(() => { const rows = [["h"], ["1"], ["2"]]; return splitHeader(rows).body !== rows; })()', expected: true },
       { call: 'splitHeader([["a", "b"], ["1", "2"], ["3", "4"], ["5", "6"]]).body.length', expected: 3 },

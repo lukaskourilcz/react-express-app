@@ -110,7 +110,7 @@ console.log(takeTurns(["ada", "bo"], 3));
     tier: 2,
     focus: ["readonly", "spread", "push"],
     title: "Pad a readonly list",
-    prompt: "Write `padScores(scores: readonly number[], size: number): number[]`, returning a copy of the scores with zeros added at the end until it holds `size` values. The parameter is readonly, so `push` is not available on it and the copy has to be made with spread first. `padScores([7, 9], 4)` gives `[7, 9, 0, 0]`, and a list already at or beyond the size comes back as a plain copy.",
+    prompt: "Write `padScores(scores: readonly number[], size: number): number[]`, returning a copy of the scores with zeros added at the end until it holds `size` values. The readonly type prevents pushing onto the parameter in checked TypeScript. Make a new mutable array before padding; spread is one way to copy it. The type does not freeze an array at runtime. `padScores([7, 9], 4)` gives `[7, 9, 0, 0]`, and a list already at or beyond the size comes back as a plain copy. Domain: an ordinary dense array of at most 10000 numbers, possibly frozen at runtime, and an integer size from 0 through 10000. Existing values, including NaN, infinities and signed zero, stay in order without conversion; every new padding value is +0. Never truncate scores or change input. Return a fresh mutable dense array on every call, even when no padding is needed or both input and target are empty. Target: O(n) time and output space, where n is 1 + max(scores.length, size). Equivalent nonmutating copying approaches are valid.",
     starter: `const padScores = (scores: readonly number[], size: number): number[] => {
 
 };
@@ -128,7 +128,7 @@ console.log(padScores([7, 9], 4));
   return padded;
 };`,
     hints: [
-      "The compiler removes every mutating method from a readonly array, so the only array you can push onto is the one you build yourself.",
+      "A readonly array type exposes no mutating methods; it does not freeze the array at runtime. Make a mutable copy before padding.",
     ],
     approach: [
       "Spread the readonly array into a new, ordinary number[]; the copy has push even though the original does not.",

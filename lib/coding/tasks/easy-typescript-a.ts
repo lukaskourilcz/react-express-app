@@ -357,7 +357,7 @@ console.log(flip([1, "a"]));
     tier: 1,
     focus: ['destructuring'],
     title: 'Header row and the rest',
-    prompt: 'A CSV file parsed into rows starts with a row of column names. Write `splitHeader(rows: string[][]): { header: string[]; body: string[][] }`, returning the first row as `header` and every later row in `body`. Use one array destructuring with a rest element, and give the header a default of `[]`, so a file with no rows at all gives two empty lists.',
+    prompt: "A CSV file parsed into rows starts with a row of column names. Write `splitHeader(rows: string[][]): { header: string[]; body: string[][] }`, returning the first row as `header` and every later row in `body`. Use one array destructuring with a rest element, and give the header a default of `[]`, so a file with no rows at all gives two empty lists. Domain: an ordinary dense array of at most 1000 dense string-array rows, with at most 10000 cells in total and strings up to 200 UTF-16 units. Outer/row arrays may be frozen at runtime. Rows may have different lengths, including zero; no CSV parsing or rectangular-table validation is required. Return a fresh plain object containing only header and body. A present first row is the exact original header reference, including an empty row; each body row keeps its original reference. Only the body outer array is copied. For no rows, create separate fresh empty header and body arrays on every call. Leave the input and rows unchanged; do not deep-clone cell rows. Target: O(n) time and body-array space, where n is 1 + the row count, excluding the untouched cell contents.",
     starter: `const splitHeader = (rows) => {
 
 };

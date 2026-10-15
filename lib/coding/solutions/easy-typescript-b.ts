@@ -298,9 +298,14 @@ const replaceById = <T extends { id: number }>(items: readonly T[], edited: T): 
   }
   return pairs;
 };`,
-    senior: `const legs = (stops: readonly string[]): [string, string][] =>
-  stops.slice(1).map((to, i): [string, string] => [stops[i], to]);`,
+    senior: "function legs(stops: readonly string[]): [string, string][] {\n  const pairs: [string, string][] = [];\n  for (let from = 0; from + 1 < stops.length; from += 1) {\n    pairs.push([stops[from], stops[from + 1]]);\n  }\n  return pairs;\n}",
+    hiddenTypeTests: [{"code": "const __auditLegs: [string,string][] = legs(['','x'] as const);"}],
     hiddenTests: [
+      { call: "legs(Object.freeze(['',' B ','','\ud83e\udd88']))", expected: [["", " B "], [" B ", ""], ["", "\ud83e\udd88"]] },
+      { call: "(()=>{const input=Object.freeze(['a','a','a']),a=legs(input),b=legs(input);a[0][1]='changed';a.push(['x','y']);return [a!==b,b[0]!==b[1],b[0]!==a[0],b,input.join(',')];})()", expected: [true, true, true, [["a", "a"], ["a", "a"]], "a,a,a"] },
+      { call: "(()=>{const a=legs([]),b=legs(['']);a.push(['x','y']);return [a!==legs([]),b!==legs(['']),b.length,a.length];})()", expected: [true, true, 0, 1] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>String(i))),out=legs(input);return [out.length,out[0],out[998],new Set(out).size,input.length];})()", expected: [999, ["0", "1"], ["998", "999"], 999, 1000] },
+
       { call: 'legs(["a", "b", "c", "d"]).length', expected: 3 },
       { call: 'legs(["x", "y", "z", "w"])[2]', expected: ['z', 'w'] },
       { call: 'legs(Object.freeze(["p", "q"]))', expected: [['p', 'q']] },
@@ -561,7 +566,7 @@ const moveTo = ({ address, ...rest }: Readonly<User>, city: string): User => ({
     const right = b.toLowerCase();
     if (left < right) return -1;
     if (left > right) return 1;
-    // 0 for titles that differ only in case keeps them in their order.
+    // 0 for equal lower-case keys keeps their input order.
     return 0;
   });`,
     junior: `const sortTitles = (titles: readonly string[]): string[] => {
@@ -587,6 +592,11 @@ const moveTo = ({ address, ...rest }: Readonly<User>, city: string): User => ({
 
 const sortTitles = (titles: readonly string[]): string[] => titles.toSorted(byLowerCase);`,
     hiddenTests: [
+      { call: "sortTitles(Object.freeze(['Z',' z','a',' A ','',' ']))", expected: ["", " ", " A ", " z", "a", "Z"] },
+      { call: "sortTitles(['\ud83e\udd88','\u00e9','\u00e4','Zebra','\u00c4','a','\ud800'])", expected: ["a", "Zebra", "\u00e4", "\u00c4", "\u00e9", "\ud800", "\ud83e\udd88"] },
+      { call: "sortTitles(['\u0130','i','I','e\u0301','\u00e9'])", expected: ["e\u0301", "i", "I", "\u0130", "\u00e9"] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>['B','b','A','a'][i%4])),out=sortTitles(input),empty=sortTitles([]),single=Object.freeze(['x']),one=sortTitles(single);one.push('y');return [out.length,out.every((x,i)=>i<500?x===(i%2?'a':'A'):x===(i%2?'b':'B')),input[0],out!==input,empty!==sortTitles([]),one!==single,one.length];})()", expected: [1000, true, "B", true, true, true, 2] },
+
       { call: 'sortTitles(["the Hobbit", "The Road", "the end"])', expected: ['the end', 'the Hobbit', 'The Road'] },
       { call: 'sortTitles(Object.freeze(["c", "B", "a"]))', expected: ['a', 'B', 'c'] },
       { call: 'sortTitles(["ab", "AA", "Ac"])', expected: ['AA', 'ab', 'Ac'] },
@@ -728,32 +738,14 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
   const word = items.length === 1 ? "item" : "items";
   return \`#\${id} \${name}, \${items.length} \${word}\`;
 };`,
-    junior: `interface Order {
-  id: number;
-  customer: { name: string; email: string };
-  items: string[];
-}
-
-const orderLine = (order: Order): string => {
-  const { id, customer, items } = order;
-  const { name } = customer;
-  let word = "items";
-  if (items.length === 1) {
-    word = "item";
-  }
-  return "#" + id + " " + name + ", " + items.length + " " + word;
-};`,
-    senior: `interface Order {
-  id: number;
-  customer: { name: string; email: string };
-  items: string[];
-}
-
-const counted = (count: number, word: string): string => \`\${count} \${word}\${count === 1 ? "" : "s"}\`;
-
-const orderLine = ({ id, customer: { name }, items: { length } }: Order): string =>
-  \`#\${id} \${name}, \${counted(length, "item")}\`;`,
+    junior: "interface Order {\n  id: number;\n  customer: { name: string; email: string };\n  items: string[];\n}\nconst orderLine = ({ id, customer: { name }, items }: Order): string => {\n  let word = \"items\";\n  if (items.length === 1) word = \"item\";\n  return `#${id} ${name}, ${items.length} ${word}`;\n};",
+    senior: "interface Order {\n  id: number;\n  customer: { name: string; email: string };\n  items: string[];\n}\n\nconst counted = (count: number, word: string): string => `${count} ${word}${count === 1 ? \"\" : \"s\"}`;\n\nconst orderLine = ({ id, customer: { name }, items }: Order): string =>\n  `#${id} ${name}, ${counted(items.length, \"item\")}`;",
+    hiddenTypeTests: [{"code": "orderLine({id:1,customer:{name:\"a\",email:\"e\"},items:[1]});", "rejects": true}],
     hiddenTests: [
+      { call: "[orderLine({id:1,customer:{name:' Ada ',email:'private@example.test'},items:['','x']}),orderLine({id:0,customer:{name:'',email:''},items:[]})]", expected: ["#1  Ada , 2 items", "#0 , 0 items"] },
+      { call: "(()=>{const items=Array(5);items[2]='';Object.freeze(items);const customer=Object.freeze({name:'\ud83e\udd88',email:'do-not-print'}),order=Object.freeze({id:9,customer,items});const output=orderLine(order);return [output,items.length,2 in items,0 in items,order.customer===customer];})()", expected: ["#9 \ud83e\udd88, 5 items", 5, true, false, true] },
+      { call: "orderLine(Object.freeze({id:1000000000,customer:Object.freeze({name:'\ud83e\udd88',email:''}),items:Object.freeze(Array(10000).fill('same'))}))", expected: "#1000000000 \ud83e\udd88, 10000 items" },
+
       { call: 'orderLine({ id: 0, customer: { name: "Eve", email: "" }, items: ["x", "y", "z", "w"] })', expected: '#0 Eve, 4 items' },
       { call: 'orderLine({ id: 45, customer: { name: "Fay", email: "fay@example.com" }, items: ["one"] })', expected: '#45 Fay, 1 item' },
       { call: 'orderLine({ id: 9, customer: { name: "Gus", email: "gus@example.com" }, items: ["a", "a"] })', expected: '#9 Gus, 2 items' },
