@@ -906,15 +906,14 @@ const sleep = async (ms = 0) => {
   }
   throw lastError;
 };`,
-    senior: `const retry = async (fn, attempts) => {
-  try {
-    return await fn(); // await inside the try, or a rejection would slip past the catch
-  } catch (error) {
-    if (attempts <= 1) throw error;
-    return retry(fn, attempts - 1);
-  }
-};`,
+    senior: "async function retry(fn, attempts) {\n  let last;\n  for (let i = 0; i < attempts; i++) {\n    try { return await fn(); }\n    catch (reason) { last = reason; }\n  }\n  throw last;\n}",
     hiddenTests: [
+      { call: "(async()=>{let calls=0;const result=retry(()=>{calls++;return Promise.resolve('wrong');},0);return result.then(()=>false,reason=>[reason===undefined,calls,result instanceof Promise]);})()", expected: [true, 0, true], async: true },
+      { call: "(async()=>{const reason=Symbol('last'),reasons=[Object.freeze({}),undefined,reason];let calls=0;return retry(()=>Promise.reject(reasons[calls++]),3).then(()=>false,error=>[error===reason,calls]);})()", expected: [true, 3], async: true },
+      { call: "(async()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x'),out=[];for(const value of [obj,fn,sym,undefined,NaN,-0]){let calls=0,arity=true;const result=await retry(function(){calls++;arity=arity&&arguments.length===0;if(calls===1)throw null;return Promise.resolve(value);},3);out.push([Object.is(result,value),calls,arity]);}return out;})()", expected: [[true, 2, true], [true, 2, true], [true, 2, true], [true, 2, true], [true, 2, true], [true, 2, true]], async: true },
+      { call: "(async()=>{const reason=Object.freeze({});let calls=0,active=0,maximum=0;const result=retry(()=>{calls++;active++;maximum=Math.max(maximum,active);return Promise.resolve().then(()=>{active--;throw reason;});},1000);return result.then(()=>false,error=>[error===reason,calls,maximum,active]);})()", expected: [true, 1000, 1, 0], async: true },
+      { call: "(async()=>{let calls=0;const result=retry(()=>{calls++;return new Promise(()=>{});},5);return Promise.race([result.then(()=>false,()=>false),new Promise(done=>setTimeout(()=>done(calls),50))]);})()", expected: 1, async: true },
+
       { call: "(() => { let runs = 0; return retry(async () => { runs += 1; if (runs < 2) throw new Error(\"no\"); return \"yes\"; }, 5).then(value => [value, runs]); })()", expected: ["yes", 2], async: true },
       { call: "(() => { let runs = 0; return retry(async () => { runs += 1; throw new Error(\"down \" + runs); }, 4).catch(error => [error.message, runs]); })()", expected: ["down 4", 4], async: true },
       { call: "(() => { let runs = 0; return retry(async () => { runs += 1; if (runs < 3) throw new Error(\"not yet\"); return runs; }, 3); })()", expected: 3, async: true },

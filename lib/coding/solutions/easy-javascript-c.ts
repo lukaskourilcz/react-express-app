@@ -898,6 +898,10 @@ const toPublicJson = user => JSON.stringify(user, PUBLIC_FIELDS);`,
   }
 };`,
     hiddenTests: [
+      { call: "(async()=>{const reason=Object.freeze({}),log=[];const output=withSpinner(function(){log.push(arguments.length);throw reason;},()=>log.push('hide'),()=>{log.push('task');return Promise.resolve(1);});return [output instanceof Promise,await output.then(()=>false,error=>error===reason),log];})()", expected: [true, true, [0]], async: true },
+      { call: "(async()=>{const taskReason=Symbol('task'),hideReason=Object.freeze({}),out=[];for(const failTask of [false,true]){const log=[];const result=withSpinner(function(){log.push(['show',arguments.length]);},function(){log.push(['hide',arguments.length]);throw hideReason;},function(){log.push(['task',arguments.length]);return failTask?Promise.reject(taskReason):Promise.resolve(1);});out.push([await result.then(()=>false,error=>error===hideReason),log]);}return out;})()", expected: [[true, [["show", 0], ["task", 0], ["hide", 0]]], [true, [["show", 0], ["task", 0], ["hide", 0]]]], async: true },
+      { call: "(async()=>{const value=Object.freeze({}),fn=()=>1,symbol=Symbol('x'),out=[];for(const item of [value,fn,symbol,undefined,NaN,-0])out.push(Object.is(await withSpinner(()=>{},()=>{},()=>Promise.resolve(item)),item));const reason=Object.freeze({});let hides=0;const result=withSpinner(()=>{},()=>{hides++;},()=>{throw reason;});return [out,await result.then(()=>false,error=>error===reason),hides];})()", expected: [[true, true, true, true, true, true], true, 1], async: true },
+
       { call: '(() => { let hides = 0; return withSpinner(() => {}, () => { hides += 1; }, async () => "x").then(() => hides); })()', expected: 1, async: true },
       { call: '(() => { let hides = 0; return withSpinner(() => {}, () => { hides += 1; }, async () => { throw new Error("no"); }).catch(() => hides); })()', expected: 1, async: true },
       { call: 'withSpinner(() => {}, () => {}, () => Promise.resolve([1, 2]))', expected: [1, 2], async: true },

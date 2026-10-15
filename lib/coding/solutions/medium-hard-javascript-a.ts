@@ -674,43 +674,15 @@ const paintBucket = (grid, row, col, colour) => {
     ],
   },
   'js-mh-in-batches': {
-    solution: `const inBatches = async (items, size, worker) => {
-  const results = [];
-  for (let start = 0; start < items.length; start += size) {
-    const batch = items.slice(start, start + size);
-    // Start the whole batch, then wait for all of it: the await holds the loop,
-    // so the next batch cannot start early. A rejection leaves the loop.
-    const done = await Promise.all(batch.map(item => worker(item)));
-    results.push(...done);
-  }
-  return results;
-};`,
-    junior: `const inBatches = async (items, size, worker) => {
-  const allResults = [];
-  let index = 0;
-  while (index < items.length) {
-    const batch = items.slice(index, index + size);
-    const promises = [];
-    for (const item of batch) {
-      promises.push(worker(item));
-    }
-    const batchResults = await Promise.all(promises);
-    for (const result of batchResults) {
-      allResults.push(result);
-    }
-    index = index + size;
-  }
-  return allResults;
-};`,
-    senior: `const inBatches = async (items, size, worker) => {
-  const batches = Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size));
-  const results = [];
-  for (const batch of batches) {
-    results.push(...(await Promise.all(batch.map(item => worker(item)))));
-  }
-  return results;
-};`,
+    solution: "async function inBatches(items, size, worker) {\n  const input = items.slice();\n  const results = [];\n  for (let start = 0; start < input.length; start += size) {\n    const batch = input.slice(start, start + size);\n    const done = await Promise.all(batch.map(item => worker(item)));\n    results.push(...done);\n  }\n  return results;\n}",
+    junior: "const inBatches = async (items, size, worker) => {\n  const input = items.slice();\n  const results = [];\n  let start = 0;\n  while (start < input.length) {\n    const batch = input.slice(start, start + size);\n    const pending = [];\n    for (const item of batch) pending.push(worker(item));\n    const values = await Promise.all(pending);\n    for (const value of values) results.push(value);\n    start += size;\n  }\n  return results;\n};",
+    senior: "const inBatches = async (items, size, worker) => {\n  const input = items.slice();\n  const batches = Array.from({ length: Math.ceil(input.length / size) }, (_, i) => input.slice(i * size, (i + 1) * size));\n  const results = [];\n  for (const batch of batches) results.push(...await Promise.all(batch.map(item => worker(item))));\n  return results;\n};",
     hiddenTests: [
+      { call: "(async()=>{let release;const items=[1,2,3],seen=[];const result=inBatches(items,2,item=>{seen.push(item);return item===1?new Promise(done=>{release=done;}):Promise.resolve(item);});items[2]=99;items.push(4);release(1);return [await result,seen];})()", expected: [[1, 2, 3], [1, 2, 3]], async: true },
+      { call: "(async()=>{const reason=Symbol('bad'),started=[];const result=inBatches([1,2,3,4],2,item=>{started.push(item);return item===1?new Promise(()=>{}):Promise.reject(reason);});const rejected=await Promise.race([result.then(()=>false,error=>error===reason),new Promise(done=>setTimeout(()=>done(false),100))]);return [rejected,started];})()", expected: [true, [1, 2]], async: true },
+      { call: "(async()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x'),items=Object.freeze([obj,fn,sym,NaN,-0,undefined]);let arity=true;const output=await inBatches(items,2,function(item){arity=arity&&arguments.length===1;return Promise.resolve(item);});return [arity,output!==items,output.length,...output.map((value,index)=>Object.is(value,items[index]))];})()", expected: [true, true, 6, true, true, true, true, true, true], async: true },
+      { call: "(async()=>{let active=0,maximum=0,calls=0;const output=await inBatches(Object.freeze(Array.from({length:1000},(_,i)=>i)),1000,item=>{active++;calls++;maximum=Math.max(maximum,active);return Promise.resolve().then(()=>{active--;return item;});});return [output.length,output[0],output[999],calls,maximum,active];})()", expected: [1000, 0, 999, 1000, 1000, 0], async: true },
+
       { call: 'inBatches([5, 4, 3, 2, 1, 0, 9], 3, n => new Promise(done => setTimeout(() => done(n), n)))', expected: [5, 4, 3, 2, 1, 0, 9], async: true },
       { call: '(async () => { const log = []; await inBatches([1, 2, 3, 4], 2, async n => { log.push("start " + n); await new Promise(done => setTimeout(done, n === 1 ? 40 : 5)); log.push("end " + n); }); return log; })()', expected: ['start 1', 'start 2', 'end 2', 'end 1', 'start 3', 'start 4', 'end 3', 'end 4'], async: true },
       { call: '(async () => { const started = []; try { await inBatches(["a", "b", "c", "d", "e"], 2, async s => { started.push(s); await new Promise(done => setTimeout(done, 1)); if (s === "d") throw new Error("no " + s); return s; }); return "resolved"; } catch (error) { return [error.message, started]; } })()', expected: ['no d', ['a', 'b', 'c', 'd']], async: true },
@@ -755,21 +727,14 @@ const paintBucket = (grid, row, col, colour) => {
   };
   return run;
 };`,
-    senior: `const latestOnly = search => {
-  let latest = 0;
-  return (...args) => {
-    const id = ++latest;
-    const isStale = () => id !== latest;
-    return Promise.resolve(search(...args)).then(
-      value => (isStale() ? { stale: true } : { stale: false, value }),
-      error => {
-        if (isStale()) return { stale: true };
-        throw error;
-      },
-    );
-  };
-};`,
+    senior: "function latestOnly(search) {\n  let started = 0;\n  return async (...args) => {\n    const mine = ++started;\n    try {\n      const value = await search(...args);\n      return mine === started ? { stale: false, value } : { stale: true };\n    } catch (reason) {\n      if (mine !== started) return { stale: true };\n      throw reason;\n    }\n  };\n}",
     hiddenTests: [
+      { call: "(async()=>{const run=latestOnly(value=>Promise.resolve(value)),a=run('first'),b=run('second');return [await a,await b];})()", expected: [{"stale": true}, {"stale": false, "value": "second"}], async: true },
+      { call: "(async()=>{const reason=Object.freeze({}),run=latestOnly(()=>{throw reason;});let output;try{output=run();}catch{return false;}return [output instanceof Promise,await output.then(()=>false,error=>error===reason)];})()", expected: [true, true], async: true },
+      { call: "(async()=>{const reason=Symbol('old');let run,inner;run=latestOnly(value=>{if(value==='old'){inner=run('new');throw reason;}return Promise.resolve(value);});const outer=run('old');return [await outer,await inner];})()", expected: [{"stale": true}, {"stale": false, "value": "new"}], async: true },
+      { call: "(async()=>{const obj=Object.freeze({}),fn=()=>1,sym=Symbol('x'),args=[obj,fn,sym,undefined,NaN,-0];let exact=false;const run=latestOnly(function(...got){exact=got.length===args.length&&got.every((value,index)=>Object.is(value,args[index]));return Promise.resolve(obj);});const output=await run(...args);const reason=Symbol('failure'),bad=latestOnly(()=>Promise.reject(reason));return [exact,output.value===obj,Object.keys(output).sort().join(','),await bad().then(()=>false,error=>error===reason)];})()", expected: [true, true, "stale,value", true], async: true },
+      { call: "(async()=>{const run=latestOnly(value=>Promise.resolve(value)),pending=Array.from({length:1000},(_,i)=>run(i));const results=await Promise.all(pending);return [results.slice(0,-1).every(result=>Object.keys(result).join(',')==='stale'&&result.stale===true),results[999].value,results[999].stale];})()", expected: [true, 999, false], async: true },
+
       { call: '(async () => { const calls = []; const run = latestOnly(async (...args) => { calls.push(args); return args.length; }); const pending = run(1, 2, 3); const seenBeforeAwait = calls.length; return [seenBeforeAwait, await pending, calls]; })()', expected: [1, { stale: false, value: 3 }, [[1, 2, 3]]], async: true },
       { call: '(async () => { const wait = (value, ms) => new Promise(done => setTimeout(() => done(value), ms)); const run = latestOnly(wait); return Promise.all([run("a", 30), run("b", 5), run("c", 20)]); })()', expected: [{ stale: true }, { stale: true }, { stale: false, value: 'c' }], async: true },
       { call: '(async () => { const wait = (value, ms) => new Promise(done => setTimeout(() => done(value), ms)); const run = latestOnly(wait); const first = run(1, 20); await run(2, 5); const third = await run(3, 5); return [await first, third]; })()', expected: [{ stale: true }, { stale: false, value: 3 }], async: true },
@@ -1619,48 +1584,17 @@ const diffSettings = (before, after) => {
   };
   return JSON.stringify(copy(value));
 };`,
-    junior: `const safeStringify = value => {
-  const ancestors = [];
-  const copy = current => {
-    if (current === null) {
-      return null;
-    }
-    if (typeof current !== "object") {
-      return current;
-    }
-    if (ancestors.includes(current)) {
-      return "[Circular]";
-    }
-    ancestors.push(current);
-    let result;
-    if (Array.isArray(current)) {
-      result = [];
-      for (const item of current) {
-        result.push(copy(item));
-      }
-    } else {
-      result = {};
-      for (const key of Object.keys(current)) {
-        result[key] = copy(current[key]);
-      }
-    }
-    ancestors.pop();
-    return result;
-  };
-  return JSON.stringify(copy(value));
-};`,
-    senior: `const safeStringify = value => {
-  const ancestors = [];
-  return JSON.stringify(value, function (key, current) {
-    if (typeof current !== "object" || current === null) return current;
-    // this is the object that holds current: drop every ancestor below it.
-    while (ancestors.length > 0 && ancestors[ancestors.length - 1] !== this) ancestors.pop();
-    if (ancestors.includes(current)) return "[Circular]";
-    ancestors.push(current);
-    return current;
-  });
-};`,
+    junior: "function safeStringify(value) {\n  const path = new Set();\n  const copy = current => {\n    if (current === null || typeof current !== 'object') return current;\n    if (path.has(current)) return '[Circular]';\n    path.add(current);\n    let output;\n    if (Array.isArray(current)) output = current.map(copy);\n    else {\n      output = Object.create(null);\n      for (const key of Object.keys(current)) output[key] = copy(current[key]);\n    }\n    path.delete(current);\n    return output;\n  };\n  return JSON.stringify(copy(value));\n}",
+    senior: "const safeStringify = value => {\n  const ancestors = new Set();\n  const visit = node => {\n    if (node === null || typeof node !== \"object\") return node;\n    if (ancestors.has(node)) return \"[Circular]\";\n    ancestors.add(node);\n    const result = Array.isArray(node)\n      ? node.map(visit)\n      : Object.fromEntries(Object.keys(node).map(key => [key, visit(node[key])]));\n    ancestors.delete(node);\n    return result;\n  };\n  return JSON.stringify(visit(value));\n};",
     hiddenTests: [
+      { call: "(()=>{const root=Object.create(null);root.__proto__=root;root.constructor={value:1};Object.freeze(root.constructor);Object.freeze(root);return safeStringify(root);})()", expected: "{\"__proto__\":\"[Circular]\",\"constructor\":{\"value\":1}}",  },
+      { call: "(()=>{const array=[1];array.length=4;array[2]=array;array.extra=array;Object.freeze(array);return safeStringify(array);})()", expected: "[1,null,\"[Circular]\",null]",  },
+      { call: "(()=>{const shared={v:1};shared.self=shared;Object.freeze(shared);return safeStringify(Object.freeze({left:shared,right:shared}));})()", expected: "{\"left\":{\"v\":1,\"self\":\"[Circular]\"},\"right\":{\"v\":1,\"self\":\"[Circular]\"}}",  },
+      { call: "(()=>{const root={},nodes=[root];let current=root;for(let i=0;i<99;i++){current.next={};current=current.next;nodes.push(current);}current.back=root;nodes.forEach(Object.freeze);let parsed=JSON.parse(safeStringify(root));for(let i=0;i<99;i++)parsed=parsed.next;return [parsed.back,current.back===root,nodes.every(Object.isFrozen)];})()", expected: ["[Circular]", true, true],  },
+      { call: "(()=>{const shared=Object.freeze({id:1}),input=Object.freeze(Array(1000).fill(shared)),text=safeStringify(input),parsed=JSON.parse(text);return [parsed.length,parsed.every(value=>value.id===1),text.includes('[Circular]')];})()", expected: [1000, true, false],  },
+      { call: "[null,false,42,-0,NaN,Infinity,-Infinity,'\u00e9\ud83e\udd88','\ud800',[],{}].map(value=>safeStringify(value)===JSON.stringify(value))", expected: [true, true, true, true, true, true, true, true, true, true, true],  },
+      { call: "(()=>{const value=Object.create(null);value.toJSON='data';value['2']='two';value['1']='one';Object.defineProperty(value,'hidden',{value});value[Symbol('hidden')]=value;return safeStringify(value);})()", expected: "{\"1\":\"one\",\"2\":\"two\",\"toJSON\":\"data\"}",  },
+
       { call: '(() => { const a = { name: "a" }; const b = { name: "b", back: a }; a.next = b; return safeStringify({ start: a }); })()', expected: '{"start":{"name":"a","next":{"name":"b","back":"[Circular]"}}}' },
       { call: '(() => { const tag = { id: 1 }; return safeStringify([tag, tag, [tag]]); })()', expected: '[{"id":1},{"id":1},[{"id":1}]]' },
       { call: '(() => { const shared = { v: 1 }; return safeStringify({ first: { inner: shared }, second: shared }); })()', expected: '{"first":{"inner":{"v":1}},"second":{"v":1}}' },

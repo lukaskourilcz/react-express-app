@@ -3902,3 +3902,29 @@ and diff checks pass. All forty b044–b045 target/base-25-XP checks pass again
 against the final inspector. All 1004 emitted UI files remain byte-identical;
 the existing 80-probe ten-task matrix therefore still applies. No new unique
 review or live user-data action. #410 awaits checked release.
+
+## Five-item continuation b046 — 15 October 2026
+
+Five async/graph tasks now define finally cleanup/exception precedence,
+initial batch membership and fail-fast current-batch rejection, latest-only
+observation timing and synchronous reentry, own-key-safe ancestor-Set JSON
+copying, and sequential retry budgets including zero. Correct spinner boards
+are retained; conflicting method variants are aligned. The latest-only target
+is per run, with factory analysis withheld under #410. Expanded graph/output
+size counts repeated shared subtrees, not only unique objects.
+
+Final evidence is 30/30 selected current-hash worker verdicts (20 valid forms,
+five starters, five wrongs), versus the original baseline's 25/30 labels. All
+twenty authored-target/base-25-XP checks pass. Cases include 1000 concurrent
+batch workers, 1000 overlapping wrapper calls, depth-100 frozen cyclic data,
+1000 shared records, lone surrogates and 1000 sequential failed attempts.
+No timer/clock is stubbed and no elapsed duration is used to infer Big O.
+
+Individual scores/final reading are in review-2026-10-15-b046.jsonl. All 260
+coding hashes match; 465 coding tasks remain and native stays 263/263.
+Curation/index generation, canonical coding with reversed hidden/native Run,
+API/script types, launch/build, native bindings, both production dependency
+audits (zero vulnerabilities), copy sweep (zero findings) and diff checks pass.
+B046 is not released. Frozen #411 contains only b044–b045 and scope #410;
+#409/runtime #408 are exact-production verified. No live-account, authenticated
+Premium, independent/human or complete-catalogue acceptance claim.
