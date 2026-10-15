@@ -1,5 +1,175 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n007
+
+Reviewed the canonical binary-search reuse activity and all four D08 sorting
+questions. The reuse summary/source comment now match the actual shared coding
+reward handler, including repeat/revealed limits and no duplicate first reward,
+instead of incorrectly promising no coding XP. It binds the b013-reviewed task.
+Sorting questions now specify prior order within equal dates, peak live space
+including outputs/slices/frames, repeated original-value pairs versus fixed loop
+counts, and a variable-size level argument with an explicit linear merge.
+Option-position references and length cues are removed without changing keys.
+
+Eight canonical submissions through the native grading projection agree,
+including four valid forms whose base reward analyses return 25. This does not
+write live XP or establish authenticated enrollment acceptance. Actual authored
+sort snippets preserve or reverse the shown customer ties as stated, make 28
+selection comparisons on each eight-element input and repeat the 2/3 pair in
+the reverse-three example. Eight-element merges have sizes 2,2,2,2,4,4,8;
+space reasoning is manual and does not claim a heap measurement.
+
+All five exact-hash records have individual scores and final English model
+readings. Native bindings, path contracts, authored proof, API/script types,
+launch contracts, build, both production dependency audits (zero vulnerabilities),
+copy sweep and diff checks pass. No interface structure or permissions changed;
+previous public-catalogue probes do not establish authenticated question UI
+acceptance. Coverage is **95/263 native**, **168 remaining**, and **95/725
+coding**, **630 remaining**. Seventy coding/sixty native records are deployed;
+twenty-five coding/thirty-five native reviews await release. PR #394 is still
+frozen at 70803596 pending required verify; SQL and exact protected preview pass.
+
+## 15 October continuation — five-item coding batch b013
+
+Reviewed canonical binary search, digit sum, inclusive multiple counting,
+word-length counting and queue service. Domains now distinguish finite sorted
+numbers, nonnegative safe integers, a positive divisor with signed endpoints,
+literal UTF-16 tokens and arbitrary queue values/references. All five have
+authored cost targets and input-size explanations. The binary read budget
+remains a bounded fixture; correct interval forms stay unknown to conservative
+analysis and receive base 25 XP. A faster closed-form multiple counter is also
+accepted without a penalty.
+
+Baseline expected verdicts matched **31/40**. New cases reject fractional-target
+rounding, added input fields, six-digit truncation, ignored negative multiples,
+empty-token/code-point/normalization mistakes, falsy fallback and cloned queue
+items. The primary word solution and skeleton now handle empty input at length
+zero; executing the old primary against the new cases fails. The senior queue
+form consistently demonstrates push then shift, including empty input.
+
+Final exact-hash sandbox verdicts are **40/40** (twenty valid, five starters,
+fifteen wrong), plus twenty authored-target/base-25 checks. Registry/index
+freshness, all ninety existing native bindings, API/script types, launch,
+focused coding contracts, build, both production dependency audits (zero
+vulnerabilities), copy sweep and diff checks pass. The three longest rewritten
+routes pass eighteen light and eighteen dark probes at 360–1440px with no
+issues or unprobed routes. Scores and final readings are manual same-session
+model evidence; no independent/human or authenticated acceptance is inferred.
+
+Coverage is **95/725 coding**, **630 remaining**, and **90/263 native**,
+**173 remaining**. Seventy coding/sixty native records are deployed; twenty-five
+coding/thirty native records await release. PR #394 remains frozen at 70803596
+while later five-item commits accumulate locally.
+
+## 15 October continuation — five-item native batch n006
+
+Reviewed both D07 reading activities, the complete search check, linear search
+and first occurrence. The three metadata/check records are retained; both
+coding activities get explicit dense bounded domains, equality/ownership
+rules, frozen inputs and honestly scoped read-counter evidence. New hidden
+checks cover descriptors/prototypes, reference identity, NaN, signed zero,
+actual undefined entries, fractional targets and the 10000-element boundary.
+
+The recorded baseline was **10/15**: added properties in both activities,
+Object.is matching, cached structural equality and rounded targets passed.
+The initial uncached structural mutant already exceeded a read budget; caching
+it isolated the semantic gap before the recorded baseline. Final exact-hash
+sandbox verdicts are **15/15** (four valid, two starters, nine wrong). Existing
+read budgets stay unchanged, including rejection of full scans and walking
+left after a binary match. The reused canonical binary task is outside this
+five-item batch and remains explicitly unreviewed here.
+
+Individual scores/final model readings, exact native bindings, actual reading
+links, four-question threshold/feedback, authored proof, path contracts,
+API/script types, launch contracts, build, both production dependency audits
+(zero vulnerabilities), copy sweep and diff checks pass. Public-catalogue
+responsive evidence from n005 does not establish authenticated activity
+acceptance; no interface structure changed in this batch. Native coverage is
+**90/263**, **173 remaining**; coding is **90/725**, **635 remaining**.
+Seventy coding and sixty native records are deployed; twenty coding/thirty
+native records await release. Same-session model review is not independent,
+human or an arbitrary-program complexity proof.
+
+## 15 October continuation — five-item native batch n005
+
+Reviewed the binary-search lesson and all four search questions. The lesson
+caches one midpoint read, names probes separately from comparisons, states
+finite ordered input, preserves at least one matching position with duplicates,
+and defines the half-open lower-bound interval. Sortedness can be validated
+at linear cost; unsorted input can silently miss rather than inevitably fail.
+Preparation costs are a model, not an exact timing or re-sorting guarantee.
+The four questions now use explicit interval/midpoint conventions, balanced
+options and qualified causes/costs; all correct indices stay unchanged.
+
+Five exact-hash records have individual manual scores and final English model
+readings. Authored proof matches the four-read trace, bounded invariants,
+duplicate midpoint, unsorted counterexample and preparation arithmetic. A
+virtual indexed input checks table counts through length one billion without
+allocating that array or claiming measured performance. A quoting typo found
+while compiling the draft was corrected before the final proof. Final native
+bindings/path contracts, API/script types, launch contracts, build, both
+production dependency audits (zero vulnerabilities), copy sweep and diff checks
+pass. Public catalogue light/dark probes each pass six widths, 360–1440px;
+authenticated lesson acceptance is not inferred. N004 grading-integrity and
+full local release checks also pass.
+
+Coverage is **85/263 native**, **178 remaining**, and **90/725 coding**,
+**635 remaining**. PR #394's exact 70803596 protected preview passes eleven
+general checks and five selected signed-out submissions; nineteen tasks are
+Premium-locked with 402. Its required SQL passes and verify is pending.
+No independent/human, arbitrary-program or authenticated acceptance is claimed.
+
+## 15 October continuation — five-item native batch n004
+
+Reviewed the complete D06 exercise check, three coding activities and the D07
+linear-search lesson. The check is retained with all four separately reviewed
+children and its all-four threshold. Coding domains, factorial loop versus
+recursive multiplication counts, exact-but-unsafe Number terminology and the
+countdown counter's helper-recursion limits are explicit. New hidden assertions
+check list descriptors/identity, frozen nodes, all factorial inputs 0..20 and
+interleaved fresh zero countdowns. The original three broken starters remain.
+
+Baseline selected results were 17/21: extra fields, replaced same-valued links,
+a sole wrong factorial(4) and a shared zero array were incorrectly accepted.
+Final exact-hash real sandbox results are **21/21** (six valid, three starters,
+twelve wrong). Authored proof checks the parent threshold/review, actual
+linear/predicate/binary snippets, trace counters and successful uniform mean.
+A proof-only copied-element formula initially produced negative zero at n=0;
+its integer count was corrected, without changing product equality rules.
+
+The search lesson fixes average-case tightness, runnable predicate input,
+midpoint-probe versus comparison counts, quadratic retained suffix copies,
+qualified small-input/unsorted-search claims and Set versus strict equality.
+All five items have individual scores and final English model readings.
+Native bindings, path contracts, copy sweep and diff checks pass; release gates
+will run over this next group before publication. Native coverage is
+**80/263**, **183 remaining**; coding stays **90/725**, **635 remaining**.
+PR #393's exact production verification passes; seventy coding and sixty
+native records are deployed, with twenty of each prepared locally/in #394.
+No independent/human, arbitrary-method or authenticated-path proof is claimed.
+
+## 15 October continuation — five-item native batch n003
+
+Reviewed two lesson-reading activities and the three remaining D06 questions.
+Reading summaries now distinguish engine-dependent exhaustion and a loop's
+constant stack from having no calls/frames. The halving explanation no longer
+uses option positions; the paired-list question states finite acyclic input,
+unit-cost arithmetic and enough stack to finish. The factorial question now
+asks for a variable multiplication count instead of an asymptotic class over
+only 0..20, qualifies n >= 2 and separates bounded Number examples. Its other
+explanations also identify claims by content rather than shuffled position.
+
+All five exact hashes have individual scores and final model readings.
+Native bindings, path contracts, authored-example proof, copy sweep (zero
+hits) and diff checks pass. The actual halving body peaks at ten frames for
+1000 and adds one per doubling; both sum bodies agree on frozen finite lists;
+the actual factorial loop makes max(0,n-1) multiplications for 0..20 and
+matches exact BigInt values there. Reading links retain self_reviewed policy.
+These finite examples support the manual reasoning, not arbitrary program or
+authenticated acceptance. Native coverage is **75/263**, **188 remaining**;
+coding is **90/725**, **635 remaining**. PR #394 freezes b009–b012 and
+n001–n002 while this next five-item batch remains local.
+
 ## 15 October continuation — five-item native batch n002
 
 Reviewed the sixth entry question, its complete optional parent diagnostic,

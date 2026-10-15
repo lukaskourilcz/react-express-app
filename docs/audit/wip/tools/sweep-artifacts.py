@@ -42,6 +42,9 @@ ALLOW = {
     # The Czech of the same item, same reason: OWASP's ranking of password
     # hashing functions, not this item's option order.
     ('rm-security-28', 'cs.explanation', 'první volba'),
+    # This native lesson discusses the first iteration of selection/bubble
+    # sort. Both actual trace uses were read; neither describes review work.
+    ('dsa-v1-d08-l1', 'question', 'the first pass'),
 }
 
 

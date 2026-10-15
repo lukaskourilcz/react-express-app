@@ -510,21 +510,21 @@ export const DSA_D08: ModuleSource = {
         {
           id: 'dsa-v1-d08-q1',
           prompt:
-            'A report is sorted by customer name, then sorted again by order date. Rows sharing a date must stay grouped by customer. Which of the three sorts in this module can perform that second sort on their own and preserve the grouping?',
+            'A report is already ordered by customer name. Sort it by order date only, keeping the existing customer-name order among equal dates. Which of the implementations in this module preserves that earlier order?',
           options: [
-            'Insertion sort and merge sort, provided the merge takes from the left run when the comparator reports a tie',
+            'Insertion sort, and merge sort that takes the left item first on comparator ties',
             'Selection sort and merge sort, because both compare every pair of elements exactly once',
             'Selection sort only, because it performs the fewest swaps of the three',
             'None of the three, because a comparator that returns zero leaves the resulting order undefined',
           ],
           correct: 0,
           explanation:
-            'Insertion sort stops shifting at the first element that is not strictly greater, so it never walks past an equal element, and merge sort keeps ties in order as long as `<= 0` sends the left run first. Selection sort is the unstable one, which rules out the second and third options: its swap drops a distant element into the gap and jumps over any equal elements in between. The second option also misdescribes the work, since selection sort checks each remaining element against a running minimum rather than each element against every other. Swap count says nothing about stability, and a comparator returning zero is the case a stable sort defines rather than leaves open.',
+            'Insertion sort stops shifting at the first element that is not strictly greater, so it never walks past an equal element, and merge sort keeps ties in order as long as `<= 0` sends the left run first. The shown selection sort is unstable: its swap drops a distant element into the gap and jumps over any equal elements in between. The claim that both sorts compare every pair once also misdescribes the work, since selection sort checks each remaining element against a running minimum rather than each element against every other. Swap count says nothing about stability, and a comparator returning zero is the case a stable sort defines rather than leaves open.',
           competencies: ['sorting'],
         },
         {
           id: 'dsa-v1-d08-q2',
-          prompt: 'For an input of n elements, what auxiliary space — the memory used beyond the input array itself — do selection sort, insertion sort and the merge sort from this lesson need?',
+          prompt: 'For the implementations in this module on n elements, what is the peak live space beyond the input array, including returned arrays, temporary slices and recursive frames? Treat element references as constant-size.',
           options: [
             'Selection O(1), insertion O(1), merge O(n)',
             'Selection O(1), insertion O(n), merge O(n)',
@@ -533,7 +533,7 @@ export const DSA_D08: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'Selection sort and insertion sort both rearrange the array in place and hold a fixed number of indices and one saved element, so their auxiliary space is constant. Insertion sort shifts elements inside the same array rather than building a second one, which rules out the second option. Merge sort writes each merge into a fresh array, so it holds O(n) elements beyond the input; that dominates the O(log n) recursion stack it also borrows, which is why the answer is O(n) and not O(n log n).',
+            'Selection sort and insertion sort both rearrange the array in place and hold a fixed number of indices and one saved element, so their auxiliary space is constant. Insertion sort shifts elements inside the same array rather than building a second one, so insertion does not need a second n-element buffer. Merge sort writes each merge into a fresh array, so it holds O(n) elements beyond the input; that dominates the O(log n) recursion stack it also borrows, which is why the answer is O(n) and not O(n log n).',
           competencies: ['sorting', 'complexity'],
         },
         {
@@ -551,18 +551,18 @@ export const DSA_D08: ModuleSource = {
           ],
           correct: 0,
           explanation:
-            'The inner loop runs from `start + 1` to the end whatever the comparator says; the result only ever updates `smallest`. So the count is (n-1) + (n-2) + … + 1 = n(n-1)/2 on every input. The second option reaches that same number through a mechanism selection sort does not use: it checks each remaining element against a running minimum, never one element against every other, so the count by itself is not what makes the input irrelevant — the fixed loop bounds are. Swaps are skipped when `smallest === start`, so they are neither fixed at n-1 nor a source of comparisons. And the remainder is not partly ordered; selection sort learns nothing about it between passes.',
+            'The inner loop runs from `start + 1` to the end whatever the comparator says; the result only ever updates `smallest`. So the count is (n-1) + (n-2) + … + 1 = n(n-1)/2 on every input. The every-pair-once claim confuses the count with the compared identities. The running minimum changes: on [3,2,1], the comparisons are (2,3), (1,2), then (3,2). The pair 2/3 is repeated while 1/3 is never compared. Fixed loop bounds, not unique element pairs, make the count input-independent. Swaps are skipped when `smallest === start`, so they are neither fixed at n-1 nor a source of comparisons. The remainder may happen to be ordered, but this implementation does not use that to shorten its next scan.',
           competencies: ['sorting', 'complexity'],
         },
         {
           id: 'dsa-v1-d08-q4',
-          prompt: 'A merge sort runs on 8 elements. Which description of its cost is right, and why?',
+          prompt: 'Assume merge does linear work in the combined run length, using constant-cost comparisons and writes. For powers-of-two input sizes n, illustrated here with 8 elements, which level argument gives the growth of this merge sort?',
           context: {
             language: 'javascript',
             code: 'const mergeSort = (values, compare) => {\n  if (values.length < 2) return values.slice();\n  const middle = Math.floor(values.length / 2);\n  return merge(\n    mergeSort(values.slice(0, middle), compare),\n    mergeSort(values.slice(middle), compare),\n    compare,\n  );\n};',
           },
           options: [
-            'Three levels of merging, each doing O(n) work across its merges, so O(n log n) in total',
+            'Three merge levels for 8; O(n) across each level gives O(n log n) for variable n',
             'Eight levels of merging, one per element, each doing constant work, so O(n) in total',
             'Three levels of merging, each doing O(log n) work, so O(log² n) in total',
             'Three levels of merging, but the final merge dominates the rest, so O(n) in total',

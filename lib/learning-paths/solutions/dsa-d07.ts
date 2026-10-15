@@ -22,6 +22,14 @@ export const DSA_D07_SOLUTIONS: Record<string, PathCodeSolution> = {
       { call: 'linearSearch([false, 0, 1], 0)', expected: 1 },
       { call: 'linearSearch([9, 9, 9, 9], 9)', expected: 0 },
       { call: 'linearSearch([1, 2, 3], 3)', expected: 2 },
+      { call: "(() => { const values = [3, 1, 2]; const keys = Reflect.ownKeys(values); const proto = Object.getPrototypeOf(values); const before = keys.map(key => Object.getOwnPropertyDescriptor(values, key)); linearSearch(values, 1); const after = Reflect.ownKeys(values); return Object.getPrototypeOf(values) === proto && keys.length === after.length && keys.every((key, i) => { const now = Object.getOwnPropertyDescriptor(values, key), old = before[i]; return after[i] === key && now && now.value === old.value && now.writable === old.writable && now.enumerable === old.enumerable && now.configurable === old.configurable; }); })()", expected: true },
+      { call: 'linearSearch([NaN, 0], NaN)', expected: -1 },
+      { call: 'linearSearch([-0, 1], 0)', expected: 0 },
+      { call: 'linearSearch([null, undefined, false], undefined)', expected: 1 },
+      { call: '(() => { const shared = { name: "reef" }; const other = { name: "reef" }; const values = Object.freeze([other, shared, shared]); const found = linearSearch(values, shared); return [found, shared.name, other.name]; })()', expected: [1, 'reef', 'reef'] },
+      { call: 'linearSearch(Object.freeze([3, 1, 2]), 1)', expected: 1 },
+      { call: 'linearSearch(Array.from({ length: 10000 }, (_, i) => i), 9999)', expected: 9999 },
+
       { call: '(() => { const values = [3, 1, 2]; linearSearch(values, 1); return values; })()', expected: [3, 1, 2] },
       {
         call: '__countReads([1, 2, 3, 4, 5, 6, 7, 8, 9, 10], function (view) { return linearSearch(view, 10); }).reads <= 10',
@@ -44,6 +52,13 @@ export const DSA_D07_SOLUTIONS: Record<string, PathCodeSolution> = {
       { call: 'firstOccurrence([1, 1, 1, 1, 2], 2)', expected: 4 },
       { call: 'firstOccurrence([-9, -4, -4, 0, 3], -4)', expected: 1 },
       { call: 'firstOccurrence([1, 3, 5, 7], 2)', expected: -1 },
+      { call: "(() => { const values = [1, 2, 2, 3]; const keys = Reflect.ownKeys(values); const proto = Object.getPrototypeOf(values); const before = keys.map(key => Object.getOwnPropertyDescriptor(values, key)); firstOccurrence(values, 2); const after = Reflect.ownKeys(values); return Object.getPrototypeOf(values) === proto && keys.length === after.length && keys.every((key, i) => { const now = Object.getOwnPropertyDescriptor(values, key), old = before[i]; return after[i] === key && now && now.value === old.value && now.writable === old.writable && now.enumerable === old.enumerable && now.configurable === old.configurable; }); })()", expected: true },
+      { call: 'firstOccurrence([-0.5, 0, 0.5, 1], 0.5)', expected: 2 },
+      { call: 'firstOccurrence([-0.5, 0, 0.5, 1], 0.25)', expected: -1 },
+      { call: 'firstOccurrence([-0, 0, 1], 0)', expected: 0 },
+      { call: 'firstOccurrence(Object.freeze([-2.5, -1, 0, 0, 1.25]), 0)', expected: 2 },
+      { call: 'firstOccurrence(Array.from({ length: 10000 }, (_, i) => Math.floor(i / 2)), 4999)', expected: 9998 },
+
       { call: '(() => { const values = [1, 2, 2, 3]; firstOccurrence(values, 2); return values; })()', expected: [1, 2, 2, 3] },
       {
         call: '__countReads(__same64(), function (view) { return firstOccurrence(view, 5); }).result',

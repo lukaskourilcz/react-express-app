@@ -1,5 +1,28 @@
 # Release acceptance matrix
 
+## Thirty JavaScript content reviews — 2026-10-15
+
+PR #393 merged at `3c5d0abcfe6ee2220c3dc9544cf376ceea3e4944` after required
+verify and SQL run 38654051545 passed on exact c91873a6. Production deployment
+`dpl_8FZR1sD41REBVFcNuVcmJUuzVyRL` is READY at that merge SHA with the
+devshark.app alias and no alias error. Eleven general checks and twenty
+selected correct/wrong submissions across four accessible tasks pass, with
+zero guest XP and null progress. Twenty-six other tasks return guest 402;
+authenticated Premium grading is not inferred from those denials. Pacing
+respects the existing task-open limit. No Challenge score/name or owner
+progress/coins were used as disposable fixtures.
+
+Six five-item commits b003–b008 have 42/42, 40/40, 40/40, 45/45, 40/40 and
+40/40 selected worker verdicts, 120 authored-target/base-reward probes, local
+release gates and documented light/dark responsive probes. The scroll-clip
+measurement fix retains six actual-visible-overlap regressions and the same
+threshold. Seventy coding and sixty native records are deployed. Current
+local coverage through n004 is 90/725 coding and 80/263 native; the remaining
+635 coding and 183 native records still need individual review. Same-session
+model evidence is not independent/human or authenticated native acceptance.
+Evidence: `/tmp/devshark-audit-2026-10-15/prod393-*.log` and committed batch
+candidates/reviews; PR #394 freezes the next twenty coding/ten native records.
+
 ## Ten JavaScript content reviews — 2026-10-15
 
 PR #392 merged at `c7e8e7de5627447282c17df4e124d746749a5747` after required
