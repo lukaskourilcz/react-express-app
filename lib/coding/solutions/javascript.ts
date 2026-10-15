@@ -771,26 +771,17 @@ const flatten = arrays => [].concat(...arrays);`,
   };
 };`,
     hiddenTests: [
+      { call: "new Promise(done=>{const object=Object.freeze({}),symbol=Symbol(\"x\"),seen=[];const f=debounce((...args)=>{seen.push([args.length,args[0]===object,args[1]===symbol,args[2]===undefined,Object.is(args[3],-0)]);return 99;},0);for(let i=0;i<9999;i++)f(i);const result=f(object,symbol,undefined,-0);const before=seen.length;setTimeout(()=>done([result===undefined,before,seen]),80);})", expected: [true, 0, [[4, true, true, true, true]]], async: true },
+      { call: "new Promise(done=>{const seen=[];const f=debounce(value=>{seen.push(value);if(value===1)f(2);},5);f(1);setTimeout(()=>done(seen),80);})", expected: [1, 2], async: true },
+
       { call: "debounce(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const save = debounce(n => log.push(n), 50); save(1); await wait(10); save(2); await wait(10); save(3); await wait(150); return log; })()", expected: [3], async: true },
       { call: "debounce(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const save = debounce(n => log.push(n), 50); save(1); save(2); await wait(150); save(3); save(4); await wait(150); return log; })()", expected: [2, 4], async: true },
       { call: "debounce(value => value, 10) && (async () => { const log = []; const a = debounce(x => log.push(\"a\" + x), 20); const b = debounce(x => log.push(\"b\" + x), 20); a(1); b(1); a(2); await new Promise(done => setTimeout(done, 60)); return log.sort(); })()", expected: ["a2", "b1"], async: true },
     ],
   },
   "js-throttle-calls": {
-    solution: "const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { if (Date.now() - last >= ms) { last = Date.now(); fn(...args); } }; };",
-    junior: `const throttle = (fn, waitMs) => {
-  let isWaiting = false;
-  return (...args) => {
-    if (isWaiting) {
-      return;
-    }
-    isWaiting = true;
-    fn(...args);
-    setTimeout(() => {
-      isWaiting = false;
-    }, waitMs);
-  };
-};`,
+    solution: "const throttle = (fn, waitMs) => {\n  let last = -Infinity;\n  return (...args) => {\n    const now = Date.now();\n    if (now - last < waitMs) return;\n    last = now;\n    fn(...args);\n  };\n};",
+    junior: "const throttle = (fn, waitMs) => {\n  let lastRun = -Infinity;\n  return (...args) => {\n    const currentTime = Date.now();\n    const elapsed = currentTime - lastRun;\n    if (elapsed >= waitMs) {\n      lastRun = currentTime;\n      fn(...args);\n    }\n  };\n};",
     senior: `const throttle = (fn, waitMs) => {
   let windowClosesAt = 0;
   return (...args) => {
@@ -801,10 +792,76 @@ const flatten = arrays => [].concat(...arrays);`,
   };
 };`,
     hiddenTests: [
-      { call: "throttle(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const send = throttle(n => log.push(n), 25); for (let n = 1; n <= 10; n += 1) { send(n); await wait(10); } return [log[0], log.length > 1]; })()", expected: [1, true], async: true },
-      { call: "throttle(value => value, 10) && (async () => { const log = []; const send = throttle(n => log.push(n), 20); send(1); send(2); send(3); await new Promise(done => setTimeout(done, 100)); return log; })()", expected: [1], async: true },
-      { call: "throttle(value => value, 10) && (async () => { const log = []; const send = throttle((a, b) => log.push(a * b), 50); send(3, 4); return log; })()", expected: [12], async: true },
+  {
+    "call": "(() => {const object=Object.freeze({}),symbol=Symbol(\"x\"),seen=[];const f=throttle((...a)=>{seen.push([a.length,a[0]===object,a[1]===symbol,a[2]===undefined,Object.is(a[3],-0)]);return 99;},50);const result=f(object,symbol,undefined,-0);return [result===undefined,seen];})()",
+    "expected": [
+      true,
+      [
+        [
+          4,
+          true,
+          true,
+          true,
+          true
+        ]
+      ]
+    ]
+  },
+  {
+    "call": "new Promise(done=>{const object=Object.freeze({}),symbol=Symbol(\"x\"),error=Object.freeze({}),seen=[];let f;f=throttle((...a)=>{seen.push([a.length,a[0]===object,a[1]===symbol,a[2]===undefined,Object.is(a[3],-0)]);f(\"nested\");throw error;},50);let caught=false;try{f(object,symbol,undefined,-0);}catch(e){caught=e===error;}f(\"dropped\");setTimeout(()=>{let again=false;try{f(object,symbol,undefined,-0);}catch(e){again=e===error;}done([caught,again,seen]);},100);})",
+    "expected": [
+      true,
+      true,
+      [
+        [
+          4,
+          true,
+          true,
+          true,
+          true
+        ],
+        [
+          4,
+          true,
+          true,
+          true,
+          true
+        ]
+      ]
     ],
+    "async": true
+  },
+  {
+    "call": "(() => {const seen=[];const f=throttle(n=>seen.push(n),1);for(let i=0;i<10000;i++)f(i);return [seen.length>=1,seen[0]===0,seen.every((n,i)=>n>=0&&n<10000&&(i===0||n>seen[i-1]))];})()",
+    "expected": [
+      true,
+      true,
+      true
+    ]
+  },
+  {
+    "call": "throttle(value => value, 10) && (async () => { const wait = ms => new Promise(done => setTimeout(done, ms)); const log = []; const send = throttle(n => log.push(n), 25); for (let n = 1; n <= 10; n += 1) { send(n); await wait(10); } return [log[0], log.length > 1]; })()",
+    "expected": [
+      1,
+      true
+    ],
+    "async": true
+  },
+  {
+    "call": "throttle(value => value, 10) && (async () => { const log = []; const send = throttle(n => log.push(n), 20); send(1); send(2); send(3); await new Promise(done => setTimeout(done, 100)); return log; })()",
+    "expected": [
+      1
+    ],
+    "async": true
+  },
+  {
+    "call": "throttle(value => value, 10) && (async () => { const log = []; const send = throttle((a, b) => log.push(a * b), 50); send(3, 4); return log; })()",
+    "expected": [
+      12
+    ],
+    "async": true
+  }
+],
   },
   "js-sleep": {
     solution: "const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));",

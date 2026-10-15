@@ -832,6 +832,8 @@ export default function App() {
   assert.ok(sloppy.run.results.every((one) => one.pass === false && /total/.test(one.error ?? '')), 'Run reports an undeclared assignment, as Submit does');
   const timed = await agree('js-throttle-calls', 'const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { const now = new Date().getTime(); if (now - last >= ms) { last = now; fn(...args); } }; };');
   assert.ok(allPassed(timed.submit), `new Date() reads the same clock as the timers: ${JSON.stringify(timed.submit.results)}`);
+  const capturedClock = await agree('js-throttle-calls', 'const readClock = Date.now; const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { const now = readClock(); if (now - last >= ms) { last = now; fn(...args); } }; };');
+  assert.ok(allPassed(capturedClock.submit), `A captured Date.now alias keeps the same clock: ${JSON.stringify(capturedClock.submit.results)}`);
   const cloned = await agree('alg-deep-clone', 'const deepClone = (value) => structuredClone(value);');
   assert.ok(allPassed(cloned.submit), `structuredClone copies like the browser's: ${JSON.stringify(cloned.submit.results)}`);
   const semantics = await runInSandbox({

@@ -3600,3 +3600,131 @@ and capture-time reminder values use local fixtures. No live user-state writes,
 no engine/schema/UI-policy change and no independent/human acceptance claim.
 The owner requested completing and shipping current work; further audit batches
 remain in #176/#391. B033–b039 form the next 35-review release cohort.
+
+
+## PR #406 exact production and audit resumption — 15 October 2026
+
+PR #406 passed required run 38700013792 at exact ad6a0a5822b465dbd477f724e1db9845cb8fb420 (verify 31m39s; SQL 37s), merged at dca959f9839d43ad73ff7a8137b61e08cffa5fde. READY production dpl_5FuxpnzTardVzaqJPPsm8EBd1iW1 matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four changed-cohort actual Submit checks pass at zero XP/null progress; updated briefs, valid solutions and selected wrongs were verified. Shipped coverage is 225/725 coding and 263/263 native. No authenticated native/Premium, independent/human or complete editorial-coverage claim.
+
+The owner requested continuing after shipment. The next five-item batch resumes the remaining 500 coding reviews; historical stop-current-cohort notes describe the earlier instruction only. Existing owner holds remain unchanged.
+
+
+## Stateful text and timing content batch b040 — 15 October 2026
+
+Read template filling, streamed line buffering, bounded scores, debounce and
+throttle individually. Senior template replacement now uses replace/String,
+including Symbol primitives. Score boards use the requested findIndex/splice.
+Throttle stores one accepted timestamp before invoking its callback, so a thrown
+callback consumes the window without leaving it permanently blocked. Exact
+boundary semantics follow the stated Date.now clock model. Correct line-reader
+and debounce boards are retained under explicit supported callback domains.
+
+All 30 final-hash worker verdicts agree (20 valid, five starters, five wrongs),
+versus 25/30 baseline. Distinct valid alternatives, twenty target/base-25-XP
+checks, copy sweep, focused coding including reversed hidden/native Run,
+API/script types, launch, build, 263 native bindings, both zero-vulnerability
+production dependency audits and diff checks pass. Cases include Symbol/BigInt
+literal substitution, a three-million-unit expansion, 10000 total UTF-16 units
+and reader calls, repeated reusable flushes, a 1000-entry board, 10000 pending
+call replacements, zero-delay deferral, exact opaque argument identity, callback
+reentry/errors and a 10000-call burst. Revision 2 replaces the initial clock
+stubs after whole-integrity exposed a valid Date-constructor false rejection.
+Current normal-clock probes also accept captured Date.now/Date aliases.
+Structural factory-versus-method estimate scope remains explicitly tracked in
+#391; twenty no-false-penalty checks are not a scope-correctness claim.
+
+Coverage is 230/725 coding, 495 remaining, and 263/263 native. PR #406 ships
+225 coding reviews; b040 adds five staged reviews after the owner's explicit
+request to continue. Same-session model self-review and finite execution only;
+no independent/human, authenticated production or full-catalogue claim.
+
+
+## Parsing and graph content batch b041 — 15 October 2026
+
+Read dotted version sorting, heading trees, flood fill, JSON log lines and role
+inheritance individually. Heading boards now ignore trimmed-empty titles before
+changing the parent stack and preserve internal Unicode line-separator text.
+The format is explicitly a simplified heading/fence exercise. Roles’ junior and
+senior now follow the requested recursive includes/some predicate. Numeric
+version limits make Number conversion exact; recursion/ownership and raw JSON
+whitespace rules are explicit. Correct sort and fill algorithms remain intact.
+
+All 30 final-hash worker verdicts agree (20 valid, five starters, five wrongs),
+versus 25/30 baseline. Twenty authored-target/base-25-XP checks, copy sweep,
+focused coding including reversed hidden/native Run, API/script types, launch,
+build, 263 native bindings, both zero-vulnerability production dependency
+audits and diff checks pass. All 235 coding records match current full hashes.
+Cases cover 1000 versions/twenty parts, 5000 headings and independent children,
+100 frozen/shared-row cells and empty colour values, literal NBSP/BOM JSON
+framing, duplicate/prototype-like JSON data, 5000 bad lines/exact 100000-unit
+input and 100-level cyclic roles with duplicate edges/1000 roots. Cost targets
+state their parsing, comparison-sort and average constant-time Set models;
+finite checks are not universal engine guarantees or measured asymptotics.
+
+Coverage is 235/725 coding, 490 remaining, and 263/263 native. Ten coding
+reviews are staged after PR #406’s verified 225-review release. Same-session
+model self-review only; no live learner state, schema, grader engine, UI or
+entitlement policy change. Continue sequential five-item commits under #176/#391.
+
+
+## Grid and tree content batch b042 — 15 October 2026
+
+Read Game of Life, folder rendering, deep equality, cinema ranking and sudoku
+individually. Folder dictionaries are now null-prototype objects for every
+literal name; the unfinished starter no longer calls join on undefined. Deep
+equality compares every numeric position, treating holes as undefined, while
+ignoring unrelated array metadata; it is symmetric and checks array length.
+Sudoku rejects malformed shapes/cells and uses twenty-seven independent Sets.
+Supplied Life/seat variants now follow their authored map/offset/while/sort
+objectives, with exact finite input and complexity models.
+
+All 30 final-hash worker verdicts agree (20 valid, five starters, five wrongs),
+versus 24/30 baseline: five old false passes plus the folder starter error.
+Twenty target/base-25-XP checks, copy sweep, focused coding including reversed
+hidden/native Run, API/script types, launch, build, 263 native bindings, both
+zero-vulnerability production dependency audits and diff checks pass. All 240
+coding records match their current hashes; archived Czech is unchanged.
+Cases cover every 3x3 Life state (512, independently enumerated), 100x100 grids,
+1000 filenames/twenty segments/prototype-like names, sparse-array symmetry,
+10000 entries/depth 100, exact ragged/empty-row and half-seat ties, invalid
+sudoku values/shapes and a locally valid but unsatisfiable partial board.
+An initial authoring compile caught an escaped-template property-boundary
+replacement; it was repaired before recording any review or passing gate.
+
+Coverage is 240/725 coding, 485 remaining, and 263/263 native. Fifteen coding
+reviews are staged after verified PR #406 (225 deployed). Same-session model
+self-review and finite execution only; no full-catalogue, independent/human or
+authenticated production acceptance claim. No live learner state, schema,
+grader engine, UI or entitlement-policy change.
+
+
+## 15 October correction — throttle clock compatibility, b040 revision 2
+
+The whole grading-integrity suite caught a false rejection introduced by the
+b040 Date.now-only clock stubs: its existing correct new Date().getTime()
+implementation failed. The task now accepts equivalent Date timestamp reads
+and captured aliases. Functional cases leave the coherent clock untouched and
+check exact original arguments, undefined returns, reentry, consumed original
+errors with later recovery, and increasing accepted payloads in a 10000-call
+burst. Exact >= boundary and drop-stamp rules are source-reviewed, not inferred
+from a fake clock or a precise wall-clock count. The supplied algorithms and
+runtime engine are unchanged. A permanent captured-Date.now integrity proof
+joins the existing Date-constructor proof.
+
+The previous record is preserved under coding/history; only throttle advances
+to revision 2, with no increase in unique coverage. All 32 current-hash b040
+verdicts agree (22 valid, five starters, five wrongs), including the two new
+clock aliases. Twenty original plus two alias target/base-25-XP checks pass.
+The complete updated grading/Learn integrity, focused coding (reversed hidden
+and native Run), API/script types, launch, build, 263 native bindings, both
+zero-vulnerability dependency audits and diff checks pass. The initial failure
+and superseded 30-case proof remain historical evidence, not final acceptance.
+
+The 15-review cohort b040–b042 now has 92/92 final-hash selected verdicts and
+62 no-false-penalty checks. Responsive validation passes 264 fixture-backed
+probes, 320–1440 px. All 1004 emitted HTML/JS/CSS files are byte-identical
+before/after this server-only fixture correction, so the sweep covers the
+unchanged client build. Preview/required CI and production acceptance for this
+cohort remain pending. Coverage is 240/725 coding, 485 remaining, with 225
+coding and 263 native records deployed. Same-session model and finite checks;
+no authenticated Premium, independent/human or complete-catalogue claim.

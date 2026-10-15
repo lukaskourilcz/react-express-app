@@ -28,7 +28,7 @@ export const MEDIUM_HARD_JAVASCRIPT_A_TASKS: CodingTaskSource[] = [
     tier: 3,
     focus: ['regex', 'callbacks', 'objects'],
     title: 'Fill in a template',
-    prompt: 'An email template marks each blank with a name in braces: `"Hi {name}, your order {orderId} has shipped."`. Write `fill(template, values)`, returning the text with every blank replaced by its value from the `values` object. Use `replace` with a regular expression that has the `g` flag, and pass a callback that works out each replacement. A name is made of letters, digits and underscores, and spaces just inside the braces are allowed, so `{ name }` is the same blank as `{name}`. A blank whose name is not an own property of `values` stays exactly as written, braces included, so a missing value is easy to spot. The values `0`, `false` and `""` are real values: fill them in, turned into text with `String`.',
+    prompt: "An email template marks each blank with a name in braces: `\"Hi {name}, your order {orderId} has shipped.\"`. Write `fill(template, values)`, returning the text with every blank replaced by its value from the `values` object. Use `replace` with a regular expression that has the `g` flag, and pass a callback that works out each replacement. A name is made of letters, digits and underscores, and whitespace just inside the braces is allowed, so `{ name }` is the same blank as `{name}`. A blank whose name is not an own property of `values` stays exactly as written, braces included, so a missing value is easy to spot. The values `0`, `false` and `\"\"` are real values: fill them in, turned into text with `String`. Letters are ASCII A-Z/a-z; digits are 0-9. Whitespace around a name follows JavaScript \\s, including tabs and line breaks. Other characters inside a name make that blank invalid. Process matches once, left to right: inserted text is literal and is not scanned again; an inner valid blank in {{name}} is still replaced. template has at most 10000 UTF-16 code units. values is a read-only ordinary data record, possibly frozen or with a null prototype, with at most 1000 own properties; values are primitives, including null, undefined, BigInt and Symbol, with String(value) at most 1000 code units. No getters or custom conversion methods are involved. Leave values unchanged. Target: O(n²) time as a conservative backtracking/copying upper bound and O(n) output space, where n is 1 + template length + output length; this is an authored upper bound, not a universal regex-engine speed guarantee.",
     starter: `const fill = (template, values) => {
 
 };
@@ -47,7 +47,7 @@ console.log(fill("Hi {name}, your order {orderId} has shipped.", { name: "Ada", 
       'Capture the name with `(\\w+)` and allow `\\s*` on either side of it. `Object.hasOwn(values, name)` tells a value the object really holds from one it only inherits, such as `toString`.',
     ],
     approach: [
-      'Write the pattern: an opening brace, optional spaces, a captured name of `\\w` characters, optional spaces, a closing brace. Add the `g` flag so every blank is found.',
+      'Write the pattern: an opening brace, optional JavaScript whitespace, a captured ASCII name of `\\w` characters, optional JavaScript whitespace, a closing brace. Add the `g` flag so every blank is found.',
       'Call `template.replace(pattern, (blank, name) => ...)`.',
       'In the callback, return `String(values[name])` when `values` has its own property `name`, and `blank`, the text that matched, when it does not.',
     ],
@@ -70,7 +70,7 @@ console.log(fill("Hi {name}, your order {orderId} has shipped.", { name: "Ada", 
     tier: 3,
     focus: ['split', 'map', 'sort'],
     title: 'Sort version numbers',
-    prompt: 'Release tags such as `"1.10.0"` and `"1.9.2"` are whole numbers separated by dots. Sorted as text, `"1.10.0"` lands before `"1.9.2"`, because the character `1` comes before `9`. Write `sortVersions(versions)`, returning a new array from oldest to newest. Split each version on `"."`, turn the parts into numbers with `map`, and give `sort` a compare function that walks the parts from the left: the first part that differs decides. A missing part counts as 0, so `"2.1"` and `"2.1.0"` are equal, and equal versions keep the order they came in. Leave `versions` unchanged.',
+    prompt: "Release tags such as `\"1.10.0\"` and `\"1.9.2\"` are whole numbers separated by dots. Sorted as text, `\"1.10.0\"` lands before `\"1.9.2\"`, because the character `1` comes before `9`. Write `sortVersions(versions)`, returning a new array from oldest to newest. Split each version on `\".\"`, turn the parts into numbers with `map`, and give `sort` a compare function that walks the parts from the left: the first part that differs decides. A missing part counts as 0, so `\"2.1\"` and `\"2.1.0\"` are equal, and equal versions keep the order they came in. Leave `versions` unchanged. This is numeric dotted-version ordering, not full SemVer: no signs, suffixes or build metadata. versions is a read-only dense array of at most 1000 strings and may be frozen. Each string has 1 to 20 nonempty decimal parts of 1 to 10 ASCII digits, each worth at most 1000000000; leading zeros are allowed and do not change numeric value. These bounds make Number conversion exact. Preserve original strings and return a fresh array even for empty or single input. Target: O(n log n) time under the usual stable comparison-sort model and O(n) additional/output storage, where n is 2 + versions.length; version lengths are bounded here, and JavaScript does not guarantee native sort complexity.",
     starter: `const sortVersions = versions => {
 
 };
@@ -88,7 +88,7 @@ console.log(sortVersions(["1.10.0", "1.9.2", "1.2.10"]));
   return /* a sorted copy */;
 };`,
     hints: [
-      'A compare function returns a negative number when `a` comes first, a positive one when `b` does, and 0 when they are equal. `sort` keeps equal items in their original order, but only if you really return 0 for them.',
+      'A compare function returns a negative number when `a` comes first, a positive one when `b` does, and 0 when they are equal. Return 0 for equal versions so stable `sort` keeps their input order.',
       '`"1.10".split(".").map(Number)` gives `[1, 10]`. Read a part that is not there as 0 with `left[i] ?? 0`.',
     ],
     approach: [
@@ -172,7 +172,7 @@ console.log(parseCsvLine('Ada,"London, UK",36'));
     tier: 3,
     focus: ['closures', 'split', 'callbacks'],
     title: 'Lines from chunks',
-    prompt: 'A download arrives in chunks of text, and a chunk can end in the middle of a line. Write `createLineReader(onLine)`, returning an object with two methods. `push(chunk)` adds a chunk and calls `onLine(line)` once for every line the text so far has completed, in order, without its `"\\n"`. Text after the last `"\\n"` is not a line yet: keep it in the closure until a later chunk finishes it. `end()` calls `onLine` with that last piece if it is not empty. Split the text you hold on `"\\n"`: every piece but the last is a finished line, and the last piece is what you keep. Empty lines in the middle are lines too. Windows ends lines with `"\\r\\n"`, so drop a `"\\r"` from the end of a line before you report it. Each reader keeps its own text.',
+    prompt: "A download arrives in chunks of text, and a chunk can end in the middle of a line. Write `createLineReader(onLine)`, returning an object with two methods. `push(chunk)` adds a chunk and calls `onLine(line)` once for every line the text so far has completed, in order, without its `\"\\n\"`. Text after the last `\"\\n\"` is not a line yet: keep it in the closure until a later chunk finishes it. `end()` calls `onLine` with that last piece if it is not empty. Split the text you hold on `\"\\n\"`: every piece but the last is a finished line, and the last piece is what you keep. Empty lines in the middle are lines too. Windows ends lines with `\"\\r\\n\"`, so drop a `\"\\r\"` from the end of a line before you report it. Each reader keeps its own text. Split only on LF; spaces and other whitespace stay literal. Remove exactly one final CR from each reported piece, including the piece flushed by end. A nonempty remainder consisting of one CR therefore reports an empty string. end clears the remainder after reporting it; repeating end without new text reports nothing, and later push calls start a new remainder on the same reader. onLine is synchronous, returns normally, does not call the reader again and does not depend on this; invoke it with exactly one argument and ignore its result. Method return values are unspecified. Across at most 10000 push/end calls, input contains at most 10000 UTF-16 code units. Target: O(n²) time for the complete sequence under a string-copying/split cost model, where n is 1 + total input code units + method calls: many small chunks can repeatedly copy an unfinished line. Peak buffered/split space is O(n), excluding callback work.",
     starter: `const createLineReader = onLine => {
 
 };
@@ -439,7 +439,7 @@ console.log(spiral([[1, 2, 3], [4, 5, 6], [7, 8, 9]]));
     tier: 3,
     focus: ['recursion', 'map'],
     title: 'Paint bucket',
-    prompt: 'A paint program stores a picture as a grid of colour names, one array per row. Write `paintBucket(grid, row, col, colour)`, returning a new grid in which the cell at `[row, col]`, and every cell joined to it through cells of the same colour, is painted `colour`. Cells are joined up, down, left and right, never diagonally. Copy the grid first with `map`, row by row, so the caller’s grid is not changed. Then paint with a recursive function that paints one cell and calls itself for its four neighbours. It stops at the edge of the grid and at any cell that is not the starting colour. If the starting cell already has `colour`, return an unchanged copy.',
+    prompt: "A paint program stores a picture as a grid of colour names, one array per row. Write `paintBucket(grid, row, col, colour)`, returning a new grid in which the cell at `[row, col]`, and every cell joined to it through cells of the same colour, is painted `colour`. Cells are joined up, down, left and right, never diagonally. Copy the grid first with `map`, row by row, so the caller’s grid is not changed. Then paint with a recursive function that paints one cell and calls itself for its four neighbours. It stops at the edge of the grid and at any cell that is not the starting colour. If the starting cell already has `colour`, return an unchanged copy. grid is a read-only dense nonempty rectangular array, possibly frozen with its rows, with 1 to 10 rows and columns. Starting indices are valid integers. Colours are literal strings of at most 50 UTF-16 code units, including the empty string, and compare by ===. Return a fresh outer array and a fresh independent copy of every row on every call, including unchanged rows and same-colour calls; the input may share row references. The small grid keeps this recursion exercise within a practical call-stack bound; larger images should use an explicit work stack. Target: O(n) time and copy/recursion space, where n is 1 + the number of cells, under bounded colour comparison.",
     starter: `const paintBucket = (grid, row, col, colour) => {
 
 };
@@ -460,7 +460,7 @@ console.log(paintBucket([["w", "w", "b"], ["w", "b", "b"], ["b", "w", "w"]], 0, 
 };`,
     hints: [
       '`grid.map(row => [...row])` copies every row. `[...grid]` alone copies only the outer array, and the rows would still be the caller’s.',
-      'A painted cell no longer has the starting colour, so the recursion never visits it twice. That is also why a starting cell that already has `colour` must stop straight away: every cell would look unpainted forever.',
+      'Changing a cell’s colour marks it as processed, so later recursive calls stop there. Why must the same-colour case return before recursion starts?',
     ],
     approach: [
       'Copy the grid row by row with `map`, and read the starting colour from the copy.',
@@ -486,7 +486,7 @@ console.log(paintBucket([["w", "w", "b"], ["w", "b", "b"], ["b", "w", "w"]], 0, 
     tier: 3,
     focus: ['nested-loops', 'map-set', 'every'],
     title: 'Is this sudoku valid so far?',
-    prompt: 'A sudoku board is 9 rows of 9 cells, each a digit from 1 to 9, or 0 for an empty cell. Write `isValidSudoku(board)`, returning `true` when no digit repeats within any row, any column or any of the nine 3 × 3 boxes. Empty cells never clash, and the board does not have to be complete or solvable. First check with `every` that the board has 9 rows of 9 cells, and return `false` if it does not. Then walk the board with two nested loops and remember what each row, column and box has seen in a `Set`, 27 sets in all. The box of cell `[r, c]` is number `Math.floor(r / 3) * 3 + Math.floor(c / 3)`.',
+    prompt: "A sudoku board is 9 rows of 9 cells, each a digit from 1 to 9, or 0 for an empty cell. Write `isValidSudoku(board)`, returning `true` when no digit repeats within any row, any column or any of the nine 3 × 3 boxes. Empty cells never clash, and the board does not have to be complete or solvable. First check with `every` that the board has 9 rows of 9 cells, and return `false` if it does not. Then walk the board with two nested loops and remember what each row, column and box has seen in a `Set`, 27 sets in all. The box of cell `[r, c]` is number `Math.floor(r / 3) * 3 + Math.floor(c / 3)`. Treat this as validation: return false for a non-array board, any shape other than nine dense array rows of nine own cells, or any cell that is not an integer Number from 0 to 9. This includes sparse rows, strings, null, NaN, infinities and fractions; -0 is an empty cell. Ignore unrelated array properties. Inputs have ordinary data properties without getters or proxies and may be frozen; never change them. Check shape with every over a dense index list, then reject an invalid cell before checking its row/column/box Sets. Target: O(1) time and space, because this task fixes the board at 9 by 9 and 27 Sets; invalid larger shapes are rejected from their lengths. Nested loops over this fixed board do not imply growth in a variable n.",
     starter: `const isValidSudoku = board => {
 
 };
@@ -503,7 +503,7 @@ console.log(isValidSudoku(rows.map(row => [...row].map(Number))));
   for (let r = 0; r < 9; r++) {
     for (let c = 0; c < 9; c++) {
       const digit = board[r][c];
-      // skip an empty cell
+      // reject a missing/noninteger/out-of-range cell, then skip zero
       // a digit this row, column or box has seen already is a clash
       // otherwise remember it in all three
     }
@@ -515,9 +515,9 @@ console.log(isValidSudoku(rows.map(row => [...row].map(Number))));
       'Each cell belongs to exactly one row Set, one column Set and one box Set. Check all three before adding the digit to any of them.',
     ],
     approach: [
-      'Return `false` unless the board has 9 rows and `every` row has 9 cells.',
+      'Use Array.isArray and length checks, then every over all nine indices to require nine own array rows of length nine.',
       'Make nine Sets each for the rows, the columns and the boxes.',
-      'Loop over every cell. Skip a 0. Work out the box number, and return `false` if the row’s, the column’s or the box’s Set already has the digit.',
+      'Loop over every cell. Reject missing own cells or values outside integer 0..9, then skip a 0. Work out the box number, and return `false` if the row’s, the column’s or the box’s Set already has the digit.',
       'Add the digit to all three Sets. If the loops finish, return `true`.',
     ],
     verify: 'tests',
@@ -638,7 +638,7 @@ console.log(balances([{ paidBy: "Ada", amount: 3000, split: ["Ada", "Ben", "Cy"]
     tier: 3,
     focus: ['recursion', 'objects', 'every'],
     title: 'Equal all the way down',
-    prompt: '`===` compares objects and arrays by identity, so two separately built `{ a: [1, 2] }` are not equal. Write `deepEqual(a, b)` for values made of numbers, strings, booleans, `null`, `undefined`, arrays and plain objects. Two values are equal when `Object.is` says they are; or when both are arrays of the same length whose items are equal at every index; or when both are plain objects that are not arrays, with the same keys and equal values under each key. Compare the children by calling `deepEqual` on them, and use `every` to check all of them. The order of the keys does not matter. An array never equals an object, not even an object with the keys `"0"` and `"1"`, and `NaN` equals `NaN`.',
+    prompt: "`===` compares objects and arrays by identity, so two separately built `{ a: [1, 2] }` are not equal. Write `deepEqual(a, b)` for values made of numbers, strings, booleans, `null`, `undefined`, arrays and plain objects. Two values are equal when `Object.is` says they are; or when both are arrays of the same length whose items are equal at every index; or when both are plain objects that are not arrays, with the same keys and equal values under each key. Compare the children by calling `deepEqual` on them, and use `every` to check all of them. The order of the keys does not matter. An array never equals an object, not even an object with the keys `\"0\"` and `\"1\"`, and `NaN` equals `NaN`. Arrays compare length and every numeric position only; a missing own index counts as undefined, and extra named/symbol array properties are ignored. Build a dense list of indices before every, because every on a sparse array skips holes. Records compare own enumerable string keys only: ignore nonenumerable/symbol keys and the difference between Object.prototype and null prototypes. Inputs are read-only data without getters, functions, exotic objects or cycles; arrays may be sparse/frozen, and ordinary records have a default or null prototype. Shared subtrees are allowed, but unfolding each input has at most 10000 container entries, depth at most 100 and at most 100000 string-value code units; key lengths are at most 100. Object.is means signed zeros differ while NaN matches itself. Target: O(n) time under bounded-key access and O(n) worst-case key/index/recursion storage, where n is 1 + expanded entry occurrences + string-value code units across both input trees, including repeated shared occurrences.",
     starter: `const deepEqual = (a, b) => {
 
 };
@@ -650,17 +650,17 @@ console.log(deepEqual({ a: [1, 2] }, { a: [1, 2] }));
   if (Object.is(a, b)) return true;
   // both must be objects, and not null, to be equal from here on
   // an array only equals an array
-  // arrays: the same length, and every item equal
+  // arrays: same length, then every numeric index (including holes) equal
   // objects: the same number of keys, and every key of a in b with an equal value
 };`,
     hints: [
-      '`typeof null` is `"object"`, so check for `null` yourself before reading keys. `Array.isArray` is the only reliable way to tell an array from an object.',
+      '`typeof null` is `"object"`, so check for `null` yourself before reading keys. `Array.isArray` reliably distinguishes arrays from ordinary records here.',
       'Comparing key counts is not enough on its own: `{ a: undefined }` and `{ b: undefined }` have one key each. Check that every key of `a` is an own key of `b` with `Object.hasOwn`.',
     ],
     approach: [
       'Return `true` when `Object.is(a, b)`. That covers numbers, strings, booleans, `null`, `undefined`, `NaN` and the same object twice.',
       'Return `false` unless both are objects and neither is `null`, and unless both are arrays or neither is.',
-      'For arrays, compare the lengths, then use `every` to call `deepEqual` on the items at each index.',
+      'For arrays, compare lengths, create every index with Array.from({ length: a.length }, (_, i) => i), then use every to compare own values at those indices; a hole reads undefined.',
       'For objects, compare the number of keys, then use `every` over the keys of `a`: each must be an own key of `b` whose value is `deepEqual` to `a`’s.',
     ],
     verify: 'tests',
