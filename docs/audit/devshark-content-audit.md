@@ -1,5 +1,27 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b020
+
+Read all five cumulative Set stages and their inherited material: unique,
+intersection, difference, first repeat and duplicate reporting. Specify bounded
+immutable opaque values and SameValueZero, original object identity, fresh array
+results and combined sizes for two-array work. Array results accept either zero
+sign as one Set value, retaining all correct existing reveals; firstRepeat
+returns the actual second encounter, including its zero sign. Duplicate order
+is the order counts reach two, not first-appearance order.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before; twenty valid
+complexity analyses retain 25 XP. Five starters and ten wrong variants fail.
+Checks cover NaN/undefined/BigInt/object identity, frozen structures, two
+1000-item arrays, a repeat at item 1000 and reversed second-appearance order.
+Copy sweep, focused cumulative coding, API/script types, launch, build,
+263 native bindings, both zero-vulnerability production dependency audits and
+diff checks pass. The scores/final readings are manual same-session model work;
+finite execution is not independent/human review or an asymptotic proof.
+
+Current coding coverage is 130/725; 595 remain. Native coverage is 263/263.
+B015–b020 remain local while frozen PR #401 finishes required verification.
+
 ## 15 October continuation — five coding items b019
 
 Read all five cumulative Map stages: counts, most common, two sum, top K and

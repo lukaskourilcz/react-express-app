@@ -1030,12 +1030,115 @@ const HIDDEN: Record<string, Hidden> = {
     ]
 ],
   'js-path-set': [
-    [['unique([true, false, true])', [true, false]], ['unique([NaN, NaN]).length', 1]],
-    [['common(["a", "b"], ["b", "a"])', ['a', 'b']], ['common([1, 2, 2, 3], [2, 2])', [2]]],
-    [['difference([0, "0", 0], ["0"])', [0]], ['difference(["x", "y", "x"], ["y"])', ['x']]],
-    [['firstRepeat(["b", "a", "a", "b"])', 'a'], ['firstRepeat([false, true, false])', false]],
-    [['duplicates(["a", "b", "b", "a", "c"])', ['b', 'a']], ['duplicates([0, false, 0, false])', [0, false]]],
-  ],
+    [
+        [
+            "unique([true, false, true])",
+            [
+                true,
+                false
+            ]
+        ],
+        [
+            "unique([NaN, NaN]).length",
+            1
+        ],
+        [
+            "(() => {const a=Object.freeze(Object.defineProperty({x:1},'unused',{get(){throw Error('inspect');}})),b=Object.freeze({x:1});const out=unique(Object.freeze([a,b,a,NaN,NaN,undefined,undefined,1n,1,'1',-0,+0]));return out.length===8&&out[0]===a&&out[1]===b&&Number.isNaN(out[2])&&out[3]===undefined&&out[4]===1n&&out[5]===1&&out[6]==='1'&&out[7]===0;})()",
+            true
+        ],
+        [
+            "(() => {const a=unique([]),b=unique([]),input=Object.freeze(Array.from({length:1000},(_,i)=>i));const out=unique(input);return a!==b&&out!==input&&out.length===1000&&out.every((x,i)=>x===i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "common([\"a\", \"b\"], [\"b\", \"a\"])",
+            [
+                "a",
+                "b"
+            ]
+        ],
+        [
+            "common([1, 2, 2, 3], [2, 2])",
+            [
+                2
+            ]
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});const out=common(Object.freeze([x,y,x,NaN,undefined,-0,'1',1]),Object.freeze([y,NaN,undefined,+0,1]));return out.length===5&&out[0]===y&&Number.isNaN(out[1])&&out[2]===undefined&&out[3]===0&&out[4]===1;})()",
+            true
+        ],
+        [
+            "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i)),b=Object.freeze(Array.from({length:1000},(_,i)=>i+500));const x=common(a,b),y=common([],[]),z=common([],[]);return y!==z&&x.length===500&&x.every((v,i)=>v===i+500);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "difference([0, \"0\", 0], [\"0\"])",
+            [
+                0
+            ]
+        ],
+        [
+            "difference([\"x\", \"y\", \"x\"], [\"y\"])",
+            [
+                "x"
+            ]
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});const out=difference(Object.freeze([x,y,x,NaN,undefined,-0,'1',1]),Object.freeze([y,NaN,undefined,+0,1]));return out.length===2&&out[0]===x&&out[1]==='1';})()",
+            true
+        ],
+        [
+            "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i)),b=Object.freeze(Array.from({length:1000},(_,i)=>i+500));const x=difference(a,b),y=difference([],[]),z=difference([],[]);return y!==z&&x.length===500&&x.every((v,i)=>v===i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "firstRepeat([\"b\", \"a\", \"a\", \"b\"])",
+            "a"
+        ],
+        [
+            "firstRepeat([false, true, false])",
+            false
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});return firstRepeat(Object.freeze([x,y]))===null&&firstRepeat(Object.freeze([x,y,y,x]))===y&&Number.isNaN(firstRepeat([NaN,1,NaN]))&&firstRepeat([undefined,undefined])===undefined&&Object.is(firstRepeat([+0,-0]),-0);})()",
+            true
+        ],
+        [
+            "firstRepeat(Object.freeze([...Array.from({length:999},(_,i)=>i),500]))",
+            500
+        ]
+    ],
+    [
+        [
+            "duplicates([\"a\", \"b\", \"b\", \"a\", \"c\"])",
+            [
+                "b",
+                "a"
+            ]
+        ],
+        [
+            "duplicates([0, false, 0, false])",
+            [
+                0,
+                false
+            ]
+        ],
+        [
+            "(() => {const x=Object.freeze({v:1}),y=Object.freeze({v:1});const out=duplicates(Object.freeze([x,y,NaN,x,undefined,y,NaN,undefined,undefined]));return out.length===4&&out[0]===x&&out[1]===y&&Number.isNaN(out[2])&&out[3]===undefined;})()",
+            true
+        ],
+        [
+            "(() => {const a=duplicates([]),b=duplicates([]),input=Object.freeze([...Array.from({length:500},(_,i)=>i),...Array.from({length:500},(_,i)=>499-i)]);const out=duplicates(input);return a!==b&&out.length===500&&out.every((v,i)=>v===499-i);})()",
+            true
+        ]
+    ]
+],
   'js-path-mapset': [
     [['[...countWords("a\\tb\\na", [])]', [['a', 2], ['b', 1]]], ['countWords("Stop stop", ["stop"]).size', 0]],
     [['[...tagsByUser([{user: "b", tag: "1"}, {user: "a", tag: "2"}]).keys()]', ['b', 'a']], ['tagsByUser([{user: "a", tag: "x"}]).has("b")', false]],
