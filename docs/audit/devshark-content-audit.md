@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n025
+
+Reviewed the four grounding questions and their check. The supplied authorized
+input makes the shown depot-van/carrier contradiction a synthesis failure,
+without inventing universal score/context repairs. Late filtering is judged
+against an explicit pre-ranking access policy and a relevant authorized sixth
+candidate, without claiming an inevitable external leak or bad answer. Current-
+policy eligibility is distinguished from similarity and authorized historical
+retrieval. Citation metadata enables inspection only with the stipulated retained
+version/chunk resolver and actual source support; it does not preserve content
+or prove truth by itself. Positional answer references are removed.
+
+The actual transcript/citation JSON, bounded candidate example and exercise
+threshold/review checks pass. No real retriever, archive access, generation,
+recall benchmark or index policy is exercised. Native bindings, path contracts,
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Individual manual scores and final
+readings remain distinct from execution.
+
+Coverage is **180/263 native**, **83 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 remains frozen at 5f0145fa with SQL and eleven exact-
+preview general checks passing; verify is pending. N024–n025 are local. Source
+shipped coverage is 95 coding/125 native through production-verified PR #396.
+The FDE diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n024
 
 Reviewed four architecture/output questions and their check. Routing arithmetic
