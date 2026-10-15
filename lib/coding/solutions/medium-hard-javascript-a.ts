@@ -132,47 +132,13 @@ const fill = (template, values) =>
   fields.push(field); // the last field has no comma after it
   return fields;
 };`,
-    junior: `const parseCsvLine = line => {
-  const fields = [];
-  let current = "";
-  let insideQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const char = line[i];
-    if (insideQuotes) {
-      if (char === '"' && line[i + 1] === '"') {
-        current = current + '"';
-        i = i + 1;
-      } else if (char === '"') {
-        insideQuotes = false;
-      } else {
-        current = current + char;
-      }
-    } else {
-      if (char === '"') {
-        insideQuotes = true;
-      } else if (char === ",") {
-        fields.push(current);
-        current = "";
-      } else {
-        current = current + char;
-      }
-    }
-  }
-  fields.push(current);
-  return fields;
-};`,
-    senior: `// One field and the separator after it: a quoted field, or anything up to a comma.
-const FIELD = /(?:"((?:[^"]|"")*)"|([^,]*))(,|$)/g;
-
-const parseCsvLine = line => {
-  const fields = [];
-  for (const [, quoted, plain, separator] of line.matchAll(FIELD)) {
-    fields.push(quoted === undefined ? plain : quoted.replaceAll('""', '"'));
-    if (separator === "") break; // the end of the line: the pattern would match "" there again
-  }
-  return fields;
-};`,
+    junior: "const parseCsvLine = line => {\n  const fields = [];\n  let current = \"\", previous = \"\";\n  let inside = false;\n  for (const char of line) {\n    if (char === '\"') {\n      if (inside === false && previous === '\"') current += '\"';\n      inside = !inside;\n    } else if (char === \",\" && inside === false) {\n      fields.push(current);\n      current = \"\";\n    } else { current += char; }\n    previous = char;\n  }\n  fields.push(current);\n  return fields;\n};",
+    senior: "const parseCsvLine = line => {\n  const fields = [];\n  let field = \"\", quoted = false, previous = \"\";\n  for (const character of line) {\n    if (character === '\"') {\n      field += !quoted && previous === '\"' ? '\"' : \"\";\n      quoted = !quoted;\n    } else if (character === \",\" && !quoted) {\n      fields.push(field);\n      field = \"\";\n    } else { field += character; }\n    previous = character;\n  }\n  fields.push(field);\n  return fields;\n};",
     hiddenTests: [
+      { call: "parseCsvLine(\"\\\"a\\r\\nb\\\",\\\"\\ud83d\\ude00\\\",\\\"\\\"\\\"\\\",,\\\" \\\"\")", expected: ["a\r\nb", "\ud83d\ude00", "\"", "", " "] },
+      { call: "(() => {const a=parseCsvLine(\"x\");return [a!==parseCsvLine(\"x\"),parseCsvLine(\"\")!==parseCsvLine(\"\")];})()", expected: [true, true] },
+      { call: "(() => {const a=parseCsvLine(\"x\".repeat(10000)),b=parseCsvLine(\",\".repeat(9999));return [a.length,a[0].length,b.length,b.every(x=>x===\"\")];})()", expected: [1, 10000, 10000, true] },
+
       { call: 'parseCsvLine(\'"a,b,c"\')', expected: ['a,b,c'] },
       { call: 'parseCsvLine(\'""""\')', expected: ['"'] },
       { call: 'parseCsvLine(\'1,"two ""2""",3,"4,5"\')', expected: ['1', 'two "2"', '3', '4,5'] },
@@ -329,6 +295,10 @@ const parseCsvLine = line => {
   };
 };`,
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze({}),b=Object.freeze([]),h=createHistory(a);h.set(b);h.set(undefined);const u=h.undo(),v=h.undo(),w=h.redo(),x=h.redo();h.set(NaN);const nan=Number.isNaN(h.current());h.set(-0);const zero=Object.is(h.current(),-0);h.undo();h.set(a);return [u===b,v===a,w===b,x===undefined,nan,zero,h.redo()===a,h!==createHistory(a),a===h.current()];})()", expected: [true, true, true, true, true, true, true, true, true] },
+      { call: "(() => {const h=createHistory(0);for(let i=1;i<=3333;i++)h.set(i);let x;for(let i=0;i<3333;i++)x=h.undo();let y;for(let i=0;i<3333;i++)y=h.redo();return [x,y,h.current()];})()", expected: [0, 3333, 3333] },
+      { call: "(() => {const h=createHistory(\"a\");h.set(\"b\");h.set(\"b\");return [h.undo(),h.undo()];})()", expected: ["b", "a"] },
+
       { call: '(() => { const history = createHistory("x"); history.set("y"); history.undo(); history.redo(); history.undo(); return [history.current(), history.redo(), history.redo()]; })()', expected: ['x', 'y', 'y'] },
       { call: '(() => { const history = createHistory(0); history.set(""); history.set(false); return [history.undo(), history.undo(), history.undo(), history.redo()]; })()', expected: ['', 0, 0, ''] },
       { call: '(() => { const history = createHistory(0); for (let i = 1; i <= 5; i++) history.set(i); history.undo(); history.undo(); history.undo(); history.set(9); const seen = []; for (let i = 0; i < 5; i++) seen.push(history.undo()); return seen; })()', expected: [2, 1, 0, 0, 0] },
@@ -397,6 +367,10 @@ const parseCsvLine = line => {
   return { allow, remaining };
 };`,
     hiddenTests: [
+      { call: "(() => {const a=createLimiter(1000,100),b=createLimiter(0,1);let accepted=0;for(let i=0;i<1000;i++)if(a.allow(0))accepted++;const refused=a.allow(99),before=a.remaining(99),after=a.remaining(100),same=a.remaining(100);return [accepted,refused,before,after,same,b.allow(0),b.remaining(1000000000000),a.allow(100),a.remaining(100)];})()", expected: [1000, false, 0, 1000, 1000, false, 0, true, 999] },
+      { call: "(() => {const a=createLimiter(1,1000000000);return [a.allow(999000000000),a.allow(999999999999),a.remaining(1000000000000),a.allow(1000000000000)];})()", expected: [true, false, 1, true] },
+      { call: "(() => {const a=createLimiter(1,1);let accepted=0;for(let i=0;i<10000;i++)if(a.allow(i))accepted++;return accepted;})()", expected: 10000 },
+
       { call: '(() => { const limiter = createLimiter(3, 100); limiter.allow(0); limiter.allow(1); limiter.allow(2); return [limiter.remaining(2), limiter.remaining(500)]; })()', expected: [0, 3] },
       { call: '(() => { const limiter = createLimiter(0, 1000); return [limiter.allow(0), limiter.remaining(0), limiter.allow(5000)]; })()', expected: [false, 0, false] },
       { call: '(() => { const limiter = createLimiter(1, 100); limiter.remaining(0); limiter.remaining(1); return [limiter.allow(2), limiter.allow(3)]; })()', expected: [true, false] },
@@ -431,6 +405,11 @@ const parseCsvLine = line => {
   return args.length >= fn.length ? fn(...args) : (...more) => curried(...args, ...more);
 };`,
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze({}),b=Object.freeze([]),out=Object.freeze({});const pair=curry((x,y)=>[x,y]),p=pair(a),one=p(b),two=p(undefined);const r=curry((x,y)=>out)(a)(b);return [one[0]===a,one[1]===b,two[0]===a,two[1]===undefined,r===out];})()", expected: [true, true, true, true, true] },
+      { call: "(() => {let calls=0;const f=curry((a,b=2,...rest)=>{calls++;return [a,b,rest.length];});const before=typeof f;const a=f(1),b=f(1,3,4,5);const zero=curry((...args)=>args.length);return [before,a,b,calls,zero(),zero(1,2)];})()", expected: ["function", [1, 2, 0], [1, 3, 2], 2, 0, 2] },
+      { call: "(() => {const error=Object.freeze({});let calls=0;const f=curry((a,b)=>{calls++;throw error;}),p=f(-0);let same=0;for(let i=0;i<2;i++){try{p(undefined);}catch(e){if(e===error)same++;}}return [calls,same,typeof p];})()", expected: [2, 2, "function"] },
+      { call: "(() => {let calls=0;const fn=(...args)=>{calls++;return [args.length,args[0],args[999]];};Object.defineProperty(fn,\"length\",{value:100});const f=curry(fn),a=Array.from({length:1000},(_,i)=>i);return [f(...a),calls];})()", expected: [[1000, 0, 999], 1] },
+
       { call: '(() => { const volume = (l, w, h) => l * w * h; const base = curry(volume)(2); const wide = base(3); return [wide(4), wide(5), base(1)(1), base(1, 1)]; })()', expected: [24, 30, 2, 2] },
       { call: '(() => { const pair = (a, b) => [a, b]; const one = curry(pair); const two = curry(pair); one("x"); return [two("y")("z"), one("p")("q")]; })()', expected: [['y', 'z'], ['p', 'q']] },
       { call: 'curry((a, b) => a + b)(1)()(2)', expected: 3 },
@@ -497,18 +476,11 @@ const parseCsvLine = line => {
   }
   return result;
 };`,
-    senior: `const spiral = grid => {
-  const rows = grid.map(row => [...row]); // peel a copy, never the caller's grid
-  const values = [];
-  while (rows.length > 0) {
-    values.push(...rows.shift());
-    for (const row of rows) if (row.length > 0) values.push(row.pop());
-    if (rows.length > 0) values.push(...rows.pop().reverse());
-    for (let r = rows.length - 1; r >= 0; r--) if (rows[r].length > 0) values.push(rows[r].shift());
-  }
-  return values;
-};`,
+    senior: "const spiral = grid => {\n  const values = [];\n  let top = 0, bottom = grid.length - 1;\n  let left = 0, right = grid.length ? grid[0].length - 1 : -1;\n  while (top <= bottom && left <= right) {\n    for (let c = left; c <= right; c++) values.push(grid[top][c]);\n    top++;\n    for (let r = top; r <= bottom; r++) values.push(grid[r][right]);\n    right--;\n    if (top <= bottom) {\n      for (let c = right; c >= left; c--) values.push(grid[bottom][c]);\n      bottom--;\n    }\n    if (left <= right) {\n      for (let r = bottom; r >= top; r--) values.push(grid[r][left]);\n      left++;\n    }\n  }\n  return values;\n};",
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze({}),b=Object.freeze([]),grid=Object.freeze([Object.freeze([a,undefined,NaN]),Object.freeze([b,-0,false])]),x=spiral(grid);return [x.length,x[0]===a,x[1]===undefined,Number.isNaN(x[2]),x[3]===false,Object.is(x[4],-0),x[5]===b,x!==spiral(grid),grid[0][0]===a,spiral([[],[]]).length,spiral([])!==spiral([])];})()", expected: [6, true, true, true, true, true, true, true, true, 0, true] },
+      { call: "(() => {const grid=Object.freeze(Array.from({length:100},(_,r)=>Object.freeze(Array.from({length:100},(_,c)=>r*100+c)))),a=spiral(grid);return [a.length,new Set(a).size,a.slice(0,3),a.slice(98,103),a[a.length-1]];})()", expected: [10000, 10000, [0, 1, 2], [98, 99, 199, 299, 399], 5049] },
+
       { call: 'spiral([[1, 2, 3, 4], [5, 6, 7, 8], [9, 10, 11, 12], [13, 14, 15, 16]])', expected: [1, 2, 3, 4, 8, 12, 16, 15, 14, 13, 9, 5, 6, 7, 11, 10] },
       { call: 'spiral([[1, 2, 3, 4, 5], [6, 7, 8, 9, 10], [11, 12, 13, 14, 15]])', expected: [1, 2, 3, 4, 5, 10, 15, 14, 13, 12, 11, 6, 7, 8, 9] },
       { call: 'spiral([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15]])', expected: [1, 2, 3, 6, 9, 12, 15, 14, 13, 10, 7, 4, 5, 8, 11] },
@@ -742,56 +714,14 @@ const paintBucket = (grid, row, col, colour) => {
 
   /* ── Medium: sums, deep values and async batches ──────────────────── */
   'js-mh-who-owes-what': {
-    solution: `const balances = expenses =>
-  expenses.reduce((totals, { paidBy, amount, split }) => {
-    totals[paidBy] = (totals[paidBy] ?? 0) + amount;
-    const share = Math.floor(amount / split.length);
-    const leftOver = amount % split.length;
-    split.forEach((name, index) => {
-      // The first leftOver people pay one cent more, so the shares add up to amount.
-      totals[name] = (totals[name] ?? 0) - share - (index < leftOver ? 1 : 0);
-    });
-    return totals;
-  }, {});`,
-    junior: `const balances = expenses => {
-  const totals = {};
-  for (const expense of expenses) {
-    const payer = expense.paidBy;
-    if (totals[payer] === undefined) {
-      totals[payer] = 0;
-    }
-    totals[payer] = totals[payer] + expense.amount;
-    const people = expense.split.length;
-    const share = Math.floor(expense.amount / people);
-    let leftOver = expense.amount - share * people;
-    for (const name of expense.split) {
-      if (totals[name] === undefined) {
-        totals[name] = 0;
-      }
-      let owes = share;
-      if (leftOver > 0) {
-        owes = owes + 1;
-        leftOver = leftOver - 1;
-      }
-      totals[name] = totals[name] - owes;
-    }
-  }
-  return totals;
-};`,
-    senior: `const addTo = (totals, name, cents) => {
-  totals[name] = (totals[name] ?? 0) + cents;
-  return totals;
-};
-
-const balances = expenses =>
-  expenses.reduce((totals, { paidBy, amount, split }) => {
-    const share = Math.floor(amount / split.length);
-    const extra = amount % split.length;
-    addTo(totals, paidBy, amount);
-    split.forEach((name, i) => addTo(totals, name, -(share + (i < extra ? 1 : 0))));
-    return totals;
-  }, {});`,
+    solution: "const balances = expenses =>\n  expenses.reduce((totals, { paidBy, amount, split }) => {\n    totals[paidBy] = (totals[paidBy] ?? 0) + amount;\n    const share = Math.floor(amount / split.length);\n    const leftOver = amount % split.length;\n    split.forEach((name, index) => {\n      // The first leftOver people pay one cent more, so the shares add up to amount.\n      totals[name] = (totals[name] ?? 0) - share - (index < leftOver ? 1 : 0);\n    });\n    return totals;\n  }, Object.create(null));",
+    junior: "const balances = expenses => expenses.reduce((totals, { paidBy, amount, split }) => {\n  totals[paidBy] = (totals[paidBy] ?? 0) + amount;\n  const share = Math.floor(amount / split.length);\n  let remainder = amount % split.length;\n  for (const name of split) {\n    let owes = share;\n    if (remainder > 0) { owes++; remainder--; }\n    totals[name] = (totals[name] ?? 0) - owes;\n  }\n  return totals;\n}, Object.create(null));",
+    senior: "const addTo = (totals, name, cents) => {\n  totals[name] = (totals[name] ?? 0) + cents;\n  return totals;\n};\n\nconst balances = expenses =>\n  expenses.reduce((totals, { paidBy, amount, split }) => {\n    const share = Math.floor(amount / split.length);\n    const extra = amount % split.length;\n    addTo(totals, paidBy, amount);\n    split.forEach((name, i) => addTo(totals, name, -(share + (i < extra ? 1 : 0))));\n    return totals;\n  }, Object.create(null));",
     hiddenTests: [
+      { call: "(() => {const split=Object.freeze([\"__proto__\",\"constructor\",\"toString\"]),e=Object.freeze([Object.freeze({paidBy:\"__proto__\",amount:10,split})]),a=balances(e),b=balances(e);return [Object.keys(a).length,Object.hasOwn(a,\"__proto__\"),a[\"__proto__\"],a.constructor,a.toString,Object.values(a).reduce((s,v)=>s+v,0),a!==b,e[0].amount,split[0]];})()", expected: [3, true, 6, -3, -3, 0, true, 10, "__proto__"] },
+      { call: "(() => {const x=balances([{paidBy:\"0\",amount:0,split:[\" \",\"A\",\"a\"]}]);return [Object.keys(x).length,x[\"0\"],x[\" \"],x.A,x.a,balances([])!==balances([])];})()", expected: [4, 0, 0, 0, 0, true] },
+      { call: "(() => {const split=Object.freeze(Array.from({length:100},(_,i)=>\"p\"+i)),expenses=Object.freeze(Array.from({length:1000},()=>Object.freeze({paidBy:\"outside\",amount:1000000000,split}))),x=balances(expenses);return [Object.keys(x).length,x.outside,x.p0,x.p99,Object.values(x).reduce((a,b)=>a+b,0)];})()", expected: [101, 1000000000000, -10000000000, -10000000000, 0] },
+
       { call: 'balances([{ paidBy: "A", amount: 10, split: ["A", "B", "C", "D"] }])', expected: { A: 7, B: -3, C: -2, D: -2 } },
       { call: 'balances([{ paidBy: "x", amount: 997, split: ["x", "y", "z"] }, { paidBy: "y", amount: 101, split: ["z", "x"] }, { paidBy: "z", amount: 50, split: ["y"] }])', expected: { x: 614, y: -281, z: -333 } },
       { call: 'balances([{ paidBy: "Solo", amount: 999, split: ["Solo"] }])', expected: { Solo: 0 } },

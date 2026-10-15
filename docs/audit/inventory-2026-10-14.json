@@ -25,13 +25,13 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "15 October: PR #404 passed required run38688593761 on exact3e8d209deab49e8c62f973fd47a8f38cdcb7b710 (verify30m53s; SQL41s), merged at9a85c3683f46cf1a3a4fcb13bdda74a3946efc94. READY production dpl_XG32jkhw1h5fYCWtWyEeBdy6BXBY matches that merge, owns devshark.app and has no alias error. Eleven general guest checks and four direct actual-Submit clone contracts pass at zero XP/null progress, with no Challenge/name/owner-state fixture. The clone probes cover own-key aliases/descriptors, self-cycles, arrays and captured defineProperty despite a learner replacement. Shipped coding coverage is155/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance.",
-    "currentModelReviewedIssuedTasks": 190,
-    "issuedStillRequiringReview": 535,
-    "deployedModelReviewedIssuedTasks": 155,
+    "executionEvidence": "15 October: PR #405 passed required run 38693420570 at exact 58686aaa22e7cd924a75b5952dc21e60d6903a5c (verify 30m50s; SQL 41s), merged at fe214b686ffeff1c951dab07ae64a25919fc791a. READY production dpl_CJbygg7tdYp3P4tuAa25ePVbtPj5 matches that merge, owns devshark.app and has no alias error. Eleven general guest checks pass at zero XP/null progress, with no Challenge/name/owner-state fixture. Shipped coverage is 190/725 coding and 263/263 native; no authenticated native/Premium or independent/human acceptance claim.",
+    "currentModelReviewedIssuedTasks": 225,
+    "issuedStillRequiringReview": 500,
+    "deployedModelReviewedIssuedTasks": 190,
     "stagedModelReviewedIssuedTasks": 35,
-    "stagedExecutionEvidence": "15 October five-item commits through b032:35staged reviews; latest combined current-hash matrix35/35 and twenty no-false-penalty checks pass. B032 tally was rechecked after its final call-bound refinement. Runtime #403 is now shipped and production-verified.",
-    "deployedExecutionEvidence": "15 October: PR #404 passed required run38688593761 on exact3e8d209deab49e8c62f973fd47a8f38cdcb7b710 (verify30m53s; SQL41s), merged at9a85c3683f46cf1a3a4fcb13bdda74a3946efc94. READY production dpl_XG32jkhw1h5fYCWtWyEeBdy6BXBY matches that merge, owns devshark.app and has no alias error. Eleven general guest checks and four direct actual-Submit clone contracts pass at zero XP/null progress, with no Challenge/name/owner-state fixture. The clone probes cover own-key aliases/descriptors, self-cycles, arrays and captured defineProperty despite a learner replacement. Shipped coding coverage is155/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance."
+    "stagedExecutionEvidence": "15 October five-item commits through b039: 35 staged reviews; latest batch 30/30 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
+    "deployedExecutionEvidence": "15 October: PR #405 passed required run 38693420570 at exact 58686aaa22e7cd924a75b5952dc21e60d6903a5c (verify 30m50s; SQL 41s), merged at fe214b686ffeff1c951dab07ae64a25919fc791a. READY production dpl_CJbygg7tdYp3P4tuAa25ePVbtPj5 matches that merge, owns devshark.app and has no alias error. Eleven general guest checks pass at zero XP/null progress, with no Challenge/name/owner-state fixture. Shipped coverage is 190/725 coding and 263/263 native; no authenticated native/Premium or independent/human acceptance claim."
   },
   "nativePaths": {
     "paths": 2,
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "155reviewed coding and263native records are deployed;35coding records are staged through b032. Override data remains the explicitly dated14October snapshot, not a new live-count claim.",
+    "190 reviewed coding and 263 native records are deployed; 35 coding records are staged through b039. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

@@ -684,50 +684,25 @@ const clamp = (value, min = 0, max = 100) => {
     return reported + 1;
   }, 0);`,
     hiddenTests: [
+      { call: "(() => {const seen=[];const count=eachLine(\"\\n \\n\\r\\n\ud83d\ude00\\n\",(...args)=>{seen.push(args);return 999;});return [count,seen];})()", expected: [3, [[" ", 2], ["\r", 3], ["\ud83d\ude00", 4]]] },
+      { call: "(() => {const error=Object.freeze({}),seen=[];let same=false;try{eachLine(\"a\\nb\\nc\",(line,n)=>{seen.push(n);if(n===2)throw error;});}catch(e){same=e===error;}return [seen,same];})()", expected: [[1, 2], true] },
+      { call: "(() => {let calls=0,first,last;const count=eachLine(\"x\\n\".repeat(5000),(line,n)=>{calls++;if(!first)first=n;last=n;});return [count,calls,first,last];})()", expected: [5000, 5000, 1, 5000] },
+
       { call: '(() => { const seen = []; const count = eachLine("one", line => seen.push(line)); return [count, seen]; })()', expected: [1, ['one']] },
       { call: '(() => { const seen = []; eachLine("\\nstart\\n", (line, number) => seen.push(number)); return seen; })()', expected: [2] },
       { call: 'eachLine("a\\n\\n\\nb\\nc", () => {})', expected: 3 },
     ],
   },
   'js-easy4-report-changes': {
-    solution: `const applyChanges = (settings, changes, onChange) => {
-  let changed = 0;
-  for (const key in changes) {
-    // Read the old value before it is overwritten.
-    const oldValue = settings[key];
-    const newValue = changes[key];
-    if (oldValue === newValue) continue;
-    settings[key] = newValue;
-    onChange(key, oldValue, newValue);
-    changed++;
-  }
-  return changed;
-};`,
-    junior: `const applyChanges = (settings, changes, onChange) => {
-  let changed = 0;
-  for (const key in changes) {
-    const oldValue = settings[key];
-    const newValue = changes[key];
-    if (oldValue !== newValue) {
-      settings[key] = newValue;
-      onChange(key, oldValue, newValue);
-      changed = changed + 1;
-    }
-  }
-  return changed;
-};`,
-    senior: `const applyChanges = (settings, changes, onChange) => {
-  let changed = 0;
-  for (const key in changes) {
-    const [before, after] = [settings[key], changes[key]];
-    if (before === after) continue;
-    settings[key] = after;
-    onChange(key, before, after);
-    changed += 1;
-  }
-  return changed;
-};`,
+    solution: "const applyChanges = (settings, changes, onChange) => {\n  let changed = 0;\n  for (const key in changes) {\n    if (!Object.hasOwn(changes, key)) continue;\n    // Read the old value before it is overwritten.\n    const oldValue = Object.hasOwn(settings, key) ? settings[key] : undefined;\n    const newValue = changes[key];\n    if (oldValue === newValue) continue;\n    Object.defineProperty(settings, key, { value: newValue, writable: true, enumerable: true, configurable: true });\n    onChange(key, oldValue, newValue);\n    changed++;\n  }\n  return changed;\n};",
+    junior: "const applyChanges = (settings, changes, onChange) => {\n  let changed = 0;\n  for (const key in changes) {\n    if (!Object.hasOwn(changes, key)) continue;\n    const oldValue = Object.hasOwn(settings, key) ? settings[key] : undefined;\n    const newValue = changes[key];\n    if (oldValue !== newValue) {\n      Object.defineProperty(settings, key, { value: newValue, writable: true, enumerable: true, configurable: true });\n      onChange(key, oldValue, newValue);\n      changed = changed + 1;\n    }\n  }\n  return changed;\n};",
+    senior: "const applyChanges = (settings, changes, onChange) => {\n  let changed = 0;\n  for (const key in changes) {\n    if (!Object.hasOwn(changes, key)) continue;\n    const [before, after] = [Object.hasOwn(settings, key) ? settings[key] : undefined, changes[key]];\n    if (before === after) continue;\n    Object.defineProperty(settings, key, { value: after, writable: true, enumerable: true, configurable: true });\n    onChange(key, before, after);\n    changed += 1;\n  }\n  return changed;\n};",
     hiddenTests: [
+      { call: "(() => {const inherited={ignored:7},changes=Object.assign(Object.create(inherited),{constructor:3});Object.defineProperty(changes,\"__proto__\",{value:42,enumerable:true});Object.defineProperty(changes,\"hidden\",{value:8});changes[Symbol(\"skip\")]=9;const settings={},seen=[];const count=applyChanges(settings,changes,(...args)=>seen.push([args.length,args[0],args[1]===undefined,args[2],Object.hasOwn(settings,args[0])]));return [count,seen,Object.getPrototypeOf(settings)===Object.prototype,Object.hasOwn(settings,\"__proto__\"),settings.__proto__,Object.hasOwn(settings,\"ignored\"),Object.hasOwn(settings,\"hidden\")];})()", expected: [2, [[3, "constructor", true, 3, true], [3, "__proto__", true, 42, true]], true, true, 42, false, false] },
+      { call: "(() => {const a=Object.freeze({}),b=Object.freeze({}),settings={zero:0,nan:NaN,same:a,different:a},changes=Object.freeze({zero:-0,nan:NaN,same:a,different:b,absent:undefined}),seen=[];const count=applyChanges(settings,changes,(key,old,value)=>seen.push([key,key===\"different\"?old===a&&value===b:Number.isNaN(old)&&Number.isNaN(value)]));return [count,seen,Object.is(settings.zero,0),settings.different===b,Object.hasOwn(settings,\"absent\")];})()", expected: [2, [["nan", true], ["different", true]], true, true, false] },
+      { call: "(() => {const error=Object.freeze({}),settings={},seen=[];let same=false;try{applyChanges(settings,{a:1,b:2},key=>{seen.push(key);throw error;});}catch(e){same=e===error;}return [same,seen,settings.a,Object.hasOwn(settings,\"b\")];})()", expected: [true, ["a"], 1, false] },
+      { call: "(() => {const settings={},changes=Object.freeze(Object.fromEntries(Array.from({length:10000},(_,i)=>[\"k\"+i,i])));let calls=0;const count=applyChanges(settings,changes,()=>{calls++;});return [count,calls,settings.k0,settings.k9999,Object.keys(settings).length];})()", expected: [10000, 10000, 0, 9999, 10000] },
+
       { call: '(() => { const seen = []; const settings = { a: 1, b: 2, c: 3 }; const count = applyChanges(settings, { a: 1, b: 20, c: 30 }, key => seen.push(key)); return [count, seen, settings]; })()', expected: [2, ['b', 'c'], { a: 1, b: 20, c: 30 }] },
       { call: '(() => { const settings = { on: false }; return [applyChanges(settings, { on: 0 }, () => {}), settings.on]; })()', expected: [1, 0] },
       { call: '(() => { const seen = []; applyChanges({ x: "a" }, { x: "b" }, (...args) => seen.push(args)); return seen; })()', expected: [['x', 'a', 'b']] },
@@ -766,6 +741,9 @@ const clamp = (value, min = 0, max = 100) => {
   }, ms);
 };`,
     hiddenTests: [
+      { call: "new Promise(done => {let calls=0,sum=0,last,arity=true;countdown(100,1,(...a)=>{calls++;sum+=a[0];last=a[0];arity=arity&&a.length===1;});const immediate=calls;setTimeout(()=>done([immediate,calls,sum,last,arity]),600);})", expected: [0, 100, 5050, 1, true], async: true },
+      { call: "new Promise(done => {const seen=[];countdown(2,5,x=>seen.push(\"a\"+x));countdown(1,7,x=>seen.push(\"b\"+x));setTimeout(()=>done(seen),60);})", expected: ["a2", "b1", "a1"], async: true },
+
       { call: 'new Promise(resolve => { const ticks = []; countdown(5, 5, n => ticks.push(n)); setTimeout(() => resolve([...ticks]), 150); })', expected: [5, 4, 3, 2, 1], async: true },
       { call: 'new Promise(resolve => { const ticks = []; countdown(4, 20, n => ticks.push(n)); setTimeout(() => resolve([...ticks]), 30); })', expected: [4], async: true },
       { call: 'new Promise(resolve => { const ticks = []; countdown(1, 10, n => ticks.push(n)); setTimeout(() => resolve([...ticks]), 60); })', expected: [1], async: true },
@@ -782,25 +760,17 @@ const clamp = (value, min = 0, max = 100) => {
   });
   return scheduled;
 };`,
-    junior: `const scheduleReminders = (events, now, remind) => {
-  let scheduled = 0;
-  events.forEach(function (event) {
-    if (event.at > now) {
-      const delay = event.at - now;
-      setTimeout(function () {
-        remind(event.title);
-      }, delay);
-      scheduled = scheduled + 1;
-    }
-  });
-  return scheduled;
-};`,
+    junior: "const scheduleReminders = (events, now, remind) => {\n  let scheduled = 0;\n  events.forEach(function (event) {\n    if (event.at > now) {\n      const delay = event.at - now;\n      const title = event.title;\n      setTimeout(function () {\n        remind(title);\n      }, delay);\n      scheduled = scheduled + 1;\n    }\n  });\n  return scheduled;\n};",
     senior: `const scheduleReminders = (events, now, remind) => {
   const upcoming = events.filter(event => event.at > now);
   upcoming.forEach(({ title, at }) => setTimeout(remind, at - now, title));
   return upcoming.length;
 };`,
     hiddenTests: [
+      { call: "new Promise(done => {const events=Object.freeze([...Array.from({length:999},()=>Object.freeze({title:\"past\",at:0})),Object.freeze({title:\"last\",at:11})]),seen=[];const count=scheduleReminders(events,10,title=>seen.push(title));setTimeout(()=>done([count,seen]),30);})", expected: [1, ["last"]], async: true },
+      { call: "new Promise(done => {const events=[{title:\"original\",at:10},{title:\"duplicate\",at:10},{title:\"skip\",at:0}],seen=[];const count=scheduleReminders(events,0,(...args)=>seen.push(args));const immediate=seen.length;events[0].title=\"changed\";events.length=0;setTimeout(()=>done([count,immediate,seen,events.length]),60);})", expected: [2, 0, [["original"], ["duplicate"]], 0], async: true },
+      { call: "(() => {const events=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({title:\"past\"+i,at:i})));let calls=0;return [scheduleReminders(events,1000,()=>{calls++;}),calls,events.length,events[999].title];})()", expected: [0, 0, 1000, "past999"] },
+
       { call: 'new Promise(resolve => { const seen = []; scheduleReminders([{ title: "b", at: 2040 }, { title: "a", at: 2020 }, { title: "c", at: 2070 }], 2000, title => seen.push(title)); setTimeout(() => resolve([...seen]), 55); })', expected: ['a', 'b'], async: true },
       { call: 'new Promise(resolve => { const seen = []; scheduleReminders([{ title: "old", at: 5 }, { title: "new", at: 30 }], 10, title => seen.push(title)); setTimeout(() => resolve([...seen]), 80); })', expected: ['new'], async: true },
       { call: 'scheduleReminders([], 0, () => {})', expected: 0 },

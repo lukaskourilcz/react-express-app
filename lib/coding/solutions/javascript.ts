@@ -733,26 +733,10 @@ const flatten = arrays => [].concat(...arrays);`,
   };
   return counter;
 };`,
-    senior: `class Counter {
-  #count = 0; // private, so nothing outside can change it except through the methods
-
-  increment() {
-    this.#count += 1;
-    return this;
-  }
-
-  reset() {
-    this.#count = 0;
-    return this;
-  }
-
-  value() {
-    return this.#count;
-  }
-}
-
-const makeCounter = () => new Counter();`,
+    senior: "const makeCounter = () => {\n  let count = 0;\n  const counter = {\n    increment() { count++; return counter; },\n    reset() { count = 0; return counter; },\n    value() { return count; },\n  };\n  return counter;\n};",
     hiddenTests: [
+      { call: "(() => {const a=makeCounter(),b=makeCounter();const first=a.increment(),second=a.reset();for(let i=0;i<9994;i++)a.increment();return [first===a,second===a,a!==b,a.value(),a.value(),b.value()];})()", expected: [true, true, true, 9994, 9994, 0] },
+
       { call: "(() => { const a = makeCounter(); const b = makeCounter(); a.increment(); a.increment(); b.increment(); return [a.value(), b.value()]; })()", expected: [2, 1] },
       { call: "(() => { const counter = makeCounter(); counter.increment(); counter.increment(); return counter.value(); })()", expected: 2 },
       { call: "(() => { const a = makeCounter(); a.increment().increment(); const b = makeCounter(); b.increment(); a.reset(); return [a.value(), b.value()]; })()", expected: [0, 1] },
@@ -1008,21 +992,7 @@ const chunk = (items, size) =>
   },
   "js-memoize-results": {
     solution: "const memoize = fn => { const cache = new Map(); return (...args) => { if (!cache.has(args[0])) cache.set(args[0], fn(...args)); return cache.get(args[0]); }; };",
-    junior: `const memoize = fn => {
-  const seenArguments = [];
-  const seenResults = [];
-  return (...args) => {
-    const firstArgument = args[0];
-    const position = seenArguments.indexOf(firstArgument);
-    if (position !== -1) {
-      return seenResults[position];
-    }
-    const result = fn(...args);
-    seenArguments.push(firstArgument);
-    seenResults.push(result);
-    return result;
-  };
-};`,
+    junior: "const memoize = fn => {\n  const cache = new Map();\n  return (...args) => {\n    const key = args[0];\n    if (cache.has(key)) {\n      return cache.get(key);\n    }\n    const result = fn(...args);\n    cache.set(key, result);\n    return result;\n  };\n};",
     senior: `const memoizeBy = keyOf => fn => {
   const cache = new Map();
   return (...args) => {
@@ -1037,67 +1007,26 @@ const chunk = (items, size) =>
 // The task keys on the first argument; the factory lets another caller key on all of them.
 const memoize = memoizeBy(([first]) => first);`,
     hiddenTests: [
+      { call: "(() => {let calls=0;const a=Object.freeze({}),b=Object.freeze({}),result=Object.freeze({}),m=memoize((...args)=>{calls++;return result;});const x=m(a,1),y=m(a,2),z=m(b),nan1=m(NaN),nan2=m(NaN),zero1=m(-0),zero2=m(0);m(\"0\");m(0);return [x===result,y===result,z===result,nan1===result,nan2===result,zero1===result,zero2===result,calls];})()", expected: [true, true, true, true, true, true, true, 5] },
+      { call: "(() => {let runs=0;const m=memoize((...args)=>{runs++;return args.length;});const a=m(),b=m(undefined,123);let u=0;const missing=memoize(()=>{u++;return undefined;});const x=missing(1),y=missing(1);return [a,b,runs,x===undefined,y===undefined,u];})()", expected: [0, 0, 1, true, true, 1] },
+      { call: "(() => {const error=Object.freeze({}),key=Object.freeze({});let calls=0;const m=memoize(x=>{calls++;if(calls<3)throw error;return x;});let same=0;for(let i=0;i<2;i++){try{m(key);}catch(e){if(e===error)same++;}}const a=m(key),b=m(key);return [same,calls,a===key,b===key];})()", expected: [2, 3, true, true] },
+      { call: "(() => {let calls=0;const m=memoize(x=>{calls++;return x;});for(let i=0;i<500;i++)m(i);for(let i=0;i<500;i++)m(i);return calls;})()", expected: 500 },
+
       { call: "memoize(() => { let runs = 0; const square = memoize(n => { runs += 1; return n * n; }); return [square(3), square(4), square(3), square(4), runs]; })()", expected: [9, 16, 9, 16, 2] },
       { call: "memoize(() => { let runs = 0; const isEmpty = memoize(text => { runs += 1; return text.length === 0; }); return [isEmpty(\"x\"), isEmpty(\"x\"), runs]; })()", expected: [false, false, 1] },
       { call: "memoize(() => { let runs = 0; const add = memoize((a, b) => { runs += 1; return a + b; }); return [add(1, 2), add(1, 100), runs]; })()", expected: [3, 3, 1] },
     ],
   },
   "js-event-emitter": {
-    solution: "const createEmitter = () => { const listeners = {}; const emitter = {on: (name, listener) => ((listeners[name] ??= []).push(listener), emitter), off: (name, listener) => (listeners[name] = listener ? (listeners[name] ?? []).filter(one => one !== listener) : [], emitter), emit: (name, payload) => (listeners[name] ?? []).map(listener => listener(payload))}; return emitter; };",
-    junior: `const createEmitter = () => {
-  const listeners = {};
-  const emitter = {};
-  emitter.on = function (name, listener) {
-    if (listeners[name] === undefined) {
-      listeners[name] = [];
-    }
-    listeners[name].push(listener);
-    return emitter;
-  };
-  emitter.off = function (name, listener) {
-    const current = listeners[name] || [];
-    const kept = [];
-    if (listener !== undefined) {
-      for (const one of current) {
-        if (one !== listener) {
-          kept.push(one);
-        }
-      }
-    }
-    listeners[name] = kept;
-    return emitter;
-  };
-  emitter.emit = function (name, payload) {
-    const current = listeners[name] || [];
-    const results = [];
-    for (const listener of current) {
-      results.push(listener(payload));
-    }
-    return results;
-  };
-  return emitter;
-};`,
-    senior: `const createEmitter = () => {
-  const listeners = new Map();
-  const emitter = {
-    on(name, listener) {
-      if (!listeners.has(name)) listeners.set(name, []);
-      listeners.get(name).push(listener);
-      return emitter;
-    },
-    off(name, listener) {
-      // off(name) alone clears the event; with a listener it removes that one by identity
-      const kept = listener ? (listeners.get(name) ?? []).filter(one => one !== listener) : [];
-      listeners.set(name, kept);
-      return emitter;
-    },
-    emit(name, payload) {
-      return (listeners.get(name) ?? []).map(listener => listener(payload));
-    },
-  };
-  return emitter;
-};`,
+    solution: "const createEmitter = () => { const listeners = Object.create(null); const emitter = {on: (name, listener) => ((listeners[name] ??= []).push(listener), emitter), off: (name, listener) => (listeners[name] = listener ? (listeners[name] ?? []).filter(one => one !== listener) : [], emitter), emit: (name, payload) => [...(listeners[name] ?? [])].map(listener => listener(payload))}; return emitter; };",
+    junior: "const createEmitter = () => {\n  const listeners = Object.create(null);\n  const emitter = {};\n  emitter.on = function (name, listener) {\n    if (listeners[name] === undefined) {\n      listeners[name] = [];\n    }\n    listeners[name].push(listener);\n    return emitter;\n  };\n  emitter.off = function (name, listener) {\n    const current = listeners[name] || [];\n    const kept = [];\n    if (listener !== undefined) {\n      for (const one of current) {\n        if (one !== listener) {\n          kept.push(one);\n        }\n      }\n    }\n    listeners[name] = kept;\n    return emitter;\n  };\n  emitter.emit = function (name, payload) {\n    const current = [...(listeners[name] || [])];\n    const results = [];\n    for (const listener of current) {\n      results.push(listener(payload));\n    }\n    return results;\n  };\n  return emitter;\n};",
+    senior: "const createEmitter = () => {\n  const listeners = new Map();\n  const emitter = {\n    on(name, listener) {\n      if (!listeners.has(name)) listeners.set(name, []);\n      listeners.get(name).push(listener);\n      return emitter;\n    },\n    off(name, listener) {\n      const kept = listener ? (listeners.get(name) ?? []).filter(one => one !== listener) : [];\n      listeners.set(name, kept);\n      return emitter;\n    },\n    emit(name, payload) {\n      return [...(listeners.get(name) ?? [])].map(listener => listener(payload));\n    },\n  };\n  return emitter;\n};",
     hiddenTests: [
+      { call: "(() => {const bus=createEmitter(),a=Object.freeze({}),b=Object.freeze([]);let arity;const fn=(...args)=>{arity=args.length;return args[0];};const on=bus.on(\"__proto__\",fn),off=bus.off(\"none\",fn);bus.on(\"constructor\",()=>b);const x=bus.emit(\"__proto__\",a),y=bus.emit(\"constructor\");return [on===bus,off===bus,x[0]===a,y[0]===b,arity,x!==bus.emit(\"__proto__\",a),bus.emit(\"none\")!==bus.emit(\"none\"),bus!==createEmitter()];})()", expected: [true, true, true, true, 1, true, true, true] },
+      { call: "(() => {const bus=createEmitter(),log=[];const late=()=>{log.push(\"late\");return \"late\";};const second=()=>{log.push(\"second\");return \"second\";};let first=true;bus.on(\"\",()=>{log.push(\"first\");if(first){first=false;bus.on(\"\",late).off(\"\",second);}return \"first\";}).on(\"\",second);const a=bus.emit(\"\"),b=bus.emit(\"\");return [a,b,log];})()", expected: [["first", "second"], ["first", "late"], ["first", "second", "first", "late"]] },
+      { call: "(() => {const bus=createEmitter(),error=Object.freeze({});let calls=0;const fn=()=>{calls++;return undefined;};bus.on(\"x\",fn).on(\"x\",fn);const first=bus.emit(\"x\");bus.off(\"x\",fn);const empty=bus.emit(\"x\");bus.on(\"bad\",()=>{throw error;}).on(\"bad\",()=>{calls+=100;});let same=false;try{bus.emit(\"bad\");}catch(e){same=e===error;}return [calls,first.length,first[0]===undefined,first[1]===undefined,empty.length,same];})()", expected: [2, 2, true, true, 0, true] },
+      { call: "(() => {const bus=createEmitter();for(let i=0;i<1000;i++)bus.on(\"max\",()=>i);const out=bus.emit(\"max\");return [out.length,out[0],out[999]];})()", expected: [1000, 0, 999] },
+
       { call: "(() => { const bus = createEmitter(); const double = n => n * 2; bus.on(\"x\", double).on(\"x\", n => n + 1).off(\"x\", double); return bus.emit(\"x\", 5); })()", expected: [6] },
       { call: "(() => { const bus = createEmitter(); bus.on(\"a\", n => \"a\" + n).on(\"b\", n => \"b\" + n).off(\"a\"); return [bus.emit(\"a\", 1), bus.emit(\"b\", 2)]; })()", expected: [[], ["b2"]] },
       { call: "createEmitter().on(\"e\", () => 1).on(\"e\", () => 2).on(\"e\", () => 3).emit(\"e\")", expected: [1, 2, 3] },

@@ -1292,7 +1292,7 @@ console.log(flatten([[1,2],[3]]));
     tier: 3,
     focus: ["closures"],
     title: "Counter object",
-    prompt: "Write `makeCounter()`, returning a counter object. `increment` and `reset` change the count and return the counter so calls chain; `value()` returns the current count, starting at 0. Two counters never share a count.",
+    prompt: "Write `makeCounter()`, returning a counter object. `increment` and `reset` change the count and return the counter so calls chain; `value()` returns the current count, starting at 0. Two counters never share a count. Keep the count in the factory closure and increment it by exactly one each time. increment and reset return the exact same counter object, not a copy. Calls use the returned object as their receiver; detached method calls are outside this exercise. Each factory returns a new object whose count is private to that instance, and up to 10000 method calls may occur per instance. value reads without changing the count. Target: O(1) time and auxiliary space per factory or method call.",
     starter: `const makeCounter = () => {
   
 };
@@ -1876,7 +1876,7 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 4,
     focus: ["closures", "map-set"],
     title: "Memoize results",
-    prompt: "Write `memoize(fn)`, returning a wrapped function that caches by its first argument, so `fn` runs once per distinct argument. A falsy result is cached too, and each wrapper has its own cache.",
+    prompt: "Write `memoize(fn)`, returning a wrapped function that caches by its first argument, so `fn` runs once per distinct argument. A falsy result is cached too, and each wrapper has its own cache. Keys use Map SameValueZero: NaN matches itself, +0 and -0 share a key, object/function keys match only by identity, and strings and numbers stay separate. The wrapper forwards every original argument to fn only on a miss and returns the exact cached result reference/value, including undefined, without cloning it. Calls with no arguments and an explicit first undefined share a key. Later arguments do not affect the cache key. A synchronous throw propagates unchanged and is not cached, so a retry calls fn again. fn does not depend on this or reenter the wrapper. Each wrapper has at most 1000 calls, at most 10 arguments per call and bounded 1000-character string keys; keys/results are opaque. Target: O(1) time for wrapper work per call under expected constant-cost Map access, excluding fn work; retained cache space is O(k) for k distinct successful keys. This is an access-cost model, not a language guarantee that Map operations always take constant time.",
     starter: `const memoize = fn => {
   
 };
@@ -1935,7 +1935,7 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 4,
     focus: ["closures", "objects", "callbacks"],
     title: "Event emitter",
-    prompt: "Write `createEmitter()`, returning an emitter with `on`, `off` and `emit`. `on` and `off` return the emitter so calls chain; `off(name, listener)` drops that one listener while `off(name)` drops every listener for that event; `emit(name, payload)` calls each listener with the payload and returns their results as an array.",
+    prompt: "Write `createEmitter()`, returning an emitter with `on`, `off` and `emit`. `on` and `off` return the emitter so calls chain; `off(name, listener)` drops that one listener while `off(name)` drops every listener for that event; `emit(name, payload)` calls each listener with the payload and returns their results as an array. Event names are strings of at most 1000 characters, including empty/prototype-like names, and must not collide with inherited properties. Registering the same listener twice creates two ordered registrations; off(name, listener) removes every registration with that exact function. Omitting the listener or passing undefined clears that event. on/off return the exact emitter. emit takes a snapshot of registrations at its start: on/off changes made by a listener affect later emits, not that snapshot. Call each snapshot listener in registration order with exactly one argument, preserving the opaque payload and result references/values without cloning; stop and propagate the original synchronous error if one throws. An unknown event returns a fresh empty array. Each emitter has separate state, at most 1000 registrations and 10000 method calls. Listeners do not depend on this. Target: O(n) time for off/emit wrapper work, where n is 1 + the registrations for that event, excluding listener work and assuming bounded-name lookup; on is amortized constant work and emit uses O(n) result/snapshot space.",
     starter: `const createEmitter = () => {
   
 };
@@ -1961,12 +1961,12 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
   };
   return emitter;
 };`,
-    hints: ["Keep an object of listener arrays, one per event name."],
+    hints: ["Keep a null-prototype object or Map of listener arrays, one per event name. Copy the current array before calling listeners."],
     approach: [
-      "Keep an object in the closure mapping each event name to the array of listeners registered against it.",
+      "Keep a null-prototype object or Map in the closure mapping each event name to the array of listeners registered against it.",
       "Registering appends the listener to that name and hands the emitter back, which is what lets registrations chain.",
-      "Removal filters the listener out by identity, so the caller has to pass the very same function it registered earlier.",
-      "Emitting looks up the array for the name, calls each listener with the payload and collects what they return; an unknown name gives an empty array.",
+      "Removal filters every matching registration out by listener identity, so the caller has to pass the very same function it registered earlier.",
+      "Emitting copies the array for the name, calls each snapshot listener with the payload and collects what they return; an unknown name gives an empty array.",
     ],
     verify: "tests",
     estimatedMinutes: 20,

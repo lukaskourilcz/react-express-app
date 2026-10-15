@@ -942,7 +942,7 @@ console.log(typeof add === "function" ? add(2, 3) : add, calls);
     tier: 2,
     focus: ['callbacks', 'split'],
     title: 'Call back for each line',
-    prompt: 'Write `eachLine(text, onLine)`, which splits `text` on `"\\n"` and calls `onLine(line, number)` for every line that is not empty. Lines are numbered from 1 in the order they appear, and empty lines still take up a number, the way an editor counts them. `eachLine` returns how many times it called `onLine`. What happens to each line is up to the callback.',
+    prompt: "Write `eachLine(text, onLine)`, which splits `text` on `\"\\n\"` and calls `onLine(line, number)` for every line that is not empty. Lines are numbered from 1 in the order they appear, and empty lines still take up a number, the way an editor counts them. `eachLine` returns how many times it called `onLine`. What happens to each line is up to the callback. text has at most 10000 UTF-16 code units. Split only on LF: CR and whitespace-only lines are literal nonempty content, with no trimming. Invoke onLine synchronously in line order with exactly two arguments and ignore its return value. If onLine throws, stop and propagate that original value; earlier callbacks stay completed. onLine does not depend on this. Target: O(n) time and split storage, where n is 1 + text.length, excluding callback work.",
     starter: `const eachLine = (text, onLine) => {
 
 };
@@ -982,7 +982,7 @@ eachLine("first\\n\\nthird", (line, number) => console.log(number, line));
     tier: 2,
     focus: ['callbacks', 'for-in'],
     title: 'Report what changed',
-    prompt: 'Write `applyChanges(settings, changes, onChange)`. Go through the keys of `changes` with `for...in`. For each key whose new value differs from the one in `settings` (compare with `!==`), store the new value in `settings` and call `onChange(key, oldValue, newValue)`. A key whose value is already the same is left alone and not reported. Return how many keys changed.',
+    prompt: "Write `applyChanges(settings, changes, onChange)`. Go through the keys of `changes` with `for...in`. For each key whose new value differs from the one in `settings` (compare with `!==`), store the new value in `settings` and call `onChange(key, oldValue, newValue)`. A key whose value is already the same is left alone and not reported. Return how many keys changed. Visit only own enumerable string keys of changes, in normal for-in key order; ignore inherited, nonenumerable and symbol keys. settings is a mutable extensible ordinary record whose existing own data properties are writable/configurable, while changes is read-only and may be frozen. Keys, including __proto__ and constructor, are literal data keys: preserve the prototype of settings. A missing own settings key reads undefined, even if its prototype has that name. If old and new are both undefined, leave an absent key absent. Values are opaque references/values; use exactly !==, so NaN differs from itself while both zero signs compare equal. Store the new own data value before calling onChange synchronously with exactly three original arguments; do not clone values. Propagate an original callback error and stop, keeping changes already stored. Callbacks do not mutate the input records. Both records/visited prototype keys have at most 10000 properties; key lengths are bounded to 1000. Target: O(n) time under bounded-key access, where n is 1 + all enumerable string keys visited by for-in, including ignored inherited keys; auxiliary work space is O(1), excluding callback work.",
     starter: `const applyChanges = (settings, changes, onChange) => {
 
 };
@@ -995,17 +995,18 @@ console.log(settings);
     skeleton: `const applyChanges = (settings, changes, onChange) => {
   let changed = 0;
   for (const key in changes) {
-    const oldValue = settings[key];
+    if (!Object.hasOwn(changes, key)) continue;
+    const oldValue = Object.hasOwn(settings, key) ? settings[key] : undefined;
     const newValue = changes[key];
-    // skip an unchanged key; otherwise store it, call back and count it
+    // skip an unchanged key; otherwise define an own data property, call back and count it
   }
   return changed;
 };`,
-    hints: ['`for (const key in changes)` visits each key of `changes`. Read the old value before you overwrite it, or the callback will be told the new value twice.'],
+    hints: ['`for (const key in changes)` also sees inherited keys, so guard with Object.hasOwn. Define changed values as own data properties to handle __proto__ safely. Read the old value before you overwrite it, or the callback will be told the new value twice.'],
     approach: [
-      'Loop over the keys of `changes` with `for...in`.',
+      'Loop over the keys of `changes` with `for...in`, skipping keys that are not its own.',
       'Read the old and the new value. When they are the same with `===`, move on to the next key.',
-      'Otherwise store the new value, call `onChange(key, oldValue, newValue)` and add 1 to the count. Return the count.',
+      'Otherwise define the own data value with Object.defineProperty (writable, enumerable and configurable), call `onChange(key, oldValue, newValue)` and add 1 to the count. Return the count.',
     ],
     verify: 'tests',
     estimatedMinutes: 10,
@@ -1027,7 +1028,7 @@ console.log(settings);
     tier: 2,
     focus: ['timers'],
     title: 'Count down, one tick at a time',
-    prompt: 'Write `countdown(from, ms, onTick)`, which calls `onTick(from)` after `ms` milliseconds, then `onTick(from - 1)` `ms` milliseconds after that, and so on down to `onTick(1)`. Chain `setTimeout` calls rather than using `setInterval`: each tick schedules the next one, and the last tick schedules nothing. `countdown` itself returns straight away, before any tick. A `from` of 0 never calls `onTick`.',
+    prompt: "Write `countdown(from, ms, onTick)`, which calls `onTick(from)` after `ms` milliseconds, then `onTick(from - 1)` `ms` milliseconds after that, and so on down to `onTick(1)`. Chain `setTimeout` calls rather than using `setInterval`: each tick schedules the next one, and the last tick schedules nothing. `countdown` itself returns straight away, before any tick. A `from` of 0 never calls `onTick`. from is an integer from 0 to 1000 and ms is an integer from 1 to 1000. onTick is synchronous, returns normally and does not depend on this; pass exactly one argument and ignore its return value. Each countdown has independent state and keeps only the next tick scheduled. Delays are minimum waits, not exact wall-clock deadlines. The return value is unspecified. Target: O(n) time for the complete sequence of wrapper callbacks, where n is 1 + from, with O(1) simultaneously retained timer/state space, excluding host timer management, waiting and onTick work.",
     starter: `const countdown = (from, ms, onTick) => {
 
 };
@@ -1064,7 +1065,7 @@ countdown(3, 100, n => console.log(n));
     tier: 2,
     focus: ['timers', 'forEach'],
     title: 'A reminder for each event',
-    prompt: 'Each event is `{ title, at }`, where `at` is a time in milliseconds on the same clock as `now`. Write `scheduleReminders(events, now, remind)`, which uses `forEach` to start one `setTimeout` per event, calling `remind(title)` when that event’s time comes, `at - now` milliseconds from now. An event at or before `now` has already started: skip it. Return how many reminders were scheduled.',
+    prompt: "Each event is `{ title, at }`, where `at` is a time in milliseconds on the same clock as `now`. Write `scheduleReminders(events, now, remind)`, which uses `forEach` to start one `setTimeout` per event, calling `remind(title)` when that event’s time comes, `at - now` milliseconds from now. An event at or before `now` has already started: skip it. Return how many reminders were scheduled. events is a read-only dense array of at most 1000 ordinary read-only records and may be frozen with its records. title is a string of at most 1000 characters; now and at are nonnegative integer timestamps at most 1000000000000. Every future event is at most 1000 milliseconds ahead. Capture title and delay when scheduling, so later caller edits to records/arrays do not change queued reminders. Invoke remind with exactly one title argument; it is synchronous, returns normally and does not depend on this. Duplicate events each get their own timer, and equal delays keep input registration order. Leave the input untouched. Timer waits are minimum delays, not exact wall-clock deadlines. Target: O(n) time to register reminders and O(n) retained timer data, where n is 1 + events.length, excluding host timer management, waiting and remind work.",
     starter: `const scheduleReminders = (events, now, remind) => {
 
 };
@@ -1083,7 +1084,7 @@ console.log(scheduleReminders([{ title: "standup", at: 1300 }, { title: "coffee"
     approach: [
       'Call `forEach` on the events and keep a count.',
       'Skip an event whose `at` is less than or equal to `now`.',
-      'For any other event, call `setTimeout(() => remind(event.title), event.at - now)` and add 1 to the count. Return the count.',
+      'For any other event, first capture its title and delay, then call `setTimeout(() => remind(title), delay)` and add 1 to the count. Return the count.',
     ],
     verify: 'tests',
     estimatedMinutes: 10,

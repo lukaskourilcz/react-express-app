@@ -1393,7 +1393,7 @@ const myFilter = (list, fn) => {
     tier: 3,
     focus: ["higher-order", "for", "callbacks"],
     title: "Write myReduce",
-    prompt: "Write `myReduce(list, fn, initial)` with a plain `for` loop instead of the built-in `reduce`: call `fn(accumulator, item, index)` for each item, starting the accumulator at `initial`, and return the final accumulator. When `initial` is `undefined`, the first item becomes the starting accumulator and the loop begins at the second. `myReduce([1, 2, 3], (total, n) => total + n, 0)` gives 6, and an empty list with an initial value returns that value.",
+    prompt: "Write `myReduce(list, fn, initial)` with a plain `for` loop instead of the built-in `reduce`: call `fn(accumulator, item, index)` for each item, starting the accumulator at `initial`, and return the final accumulator. When `initial` is `undefined`, the first item becomes the starting accumulator and the loop begins at the second. `myReduce([1, 2, 3], (total, n) => total + n, 0)` gives 6, and an empty list with an initial value returns that value. list is a read-only dense array of at most 10000 opaque values and may be frozen. fn is synchronous and does not mutate list. Call it once per processed item, in order, as a plain function with exactly the original accumulator, item and zero-based index. Preserve every returned value/reference, including undefined and falsy values. Propagate the original thrown value immediately without later calls. This deliberately simplified exercise treats omitted initial and explicit undefined the same; both select the first item when present, and empty input without a defined initial returns undefined without calling fn. This differs from native reduce and is not a complete polyfill. Use an indexed for loop as requested. Target: O(n) time for loop overhead, where n is 1 + list.length, excluding callback work.",
     starter: `const myReduce = (list, fn, initial) => {
 
 };
@@ -1439,7 +1439,7 @@ console.log(myReduce([1, 2, 3], (total, n) => total + n, 0));
     tier: 1,
     focus: ["map"],
     title: "Label numbers",
-    prompt: "Write `labelNumbers(numbers)`, returning a new array with the string `\"positive\"`, `\"negative\"` or `\"zero\"` for each number, decided by a ternary inside the `map` callback. `labelNumbers([3, -1, 0])` gives `[\"positive\", \"negative\", \"zero\"]`. An empty array gives an empty array.",
+    prompt: "Write `labelNumbers(numbers)`, returning a new array with the string `\"positive\"`, `\"negative\"` or `\"zero\"` for each number, decided by a ternary inside the `map` callback. `labelNumbers([3, -1, 0])` gives `[\"positive\", \"negative\", \"zero\"]`. An empty array gives an empty array. numbers is a read-only dense array of at most 10000 finite Numbers between -1000000 and 1000000 and may be frozen. Classify the original value without rounding: any positive magnitude is positive, any negative magnitude is negative, and both zero signs are zero. Return fresh arrays, including empty arrays, without changing input. Use a ternary expression inside map as requested. Target: O(n) time and output space, where n is 1 + numbers.length.",
     starter: `const labelNumbers = numbers => {
 
 };
@@ -1474,7 +1474,7 @@ console.log(labelNumbers([3, -1, 0]));
     tier: 1,
     focus: ["for-of"],
     title: "Sum mixed values",
-    prompt: "Write `sumMixed(values)`, returning the numeric total of an array that mixes numbers with numeric strings such as `\"4\"` or `\"2.5\"`, converting each value with `Number` inside a `for…of` loop before adding it. `sumMixed([1, \"2\", 3])` gives 6, a number, not `\"123\"`. An empty array gives 0.",
+    prompt: "Write `sumMixed(values)`, returning the numeric total of an array that mixes numbers with numeric strings such as `\"4\"` or `\"2.5\"`, converting each value with `Number` inside a `for…of` loop before adding it. `sumMixed([1, \"2\", 3])` gives 6, a number, not `\"123\"`. An empty array gives 0. values is a read-only dense array of at most 10000 Numbers or strings and may be frozen. Each Number is finite and between -1000000 and 1000000. Each string has at most 100 characters and Number(string) is finite in that same range; JavaScript numeric-string forms such as decimal exponents, hexadecimal and binary, and whitespace-only text (0) are allowed. Add Number(value) from 0 in original order, without rounding, trimming data in place or using parseFloat. Use for-of as requested. Target: O(n) time, where n is 1 + values.length under the stated bounded-string conversion model.",
     starter: `const sumMixed = values => {
 
 };
@@ -1515,7 +1515,7 @@ console.log(sumMixed([1, "2", 3]));
     tier: 1,
     focus: ["for-of", "filter"],
     title: "Compact an array",
-    prompt: "Write `compactLoop(values)` and `compactFilter(values)`, both returning a new array with every falsy value removed — `false`, `0`, `\"\"`, `null`, `undefined` and `NaN` — and leaving the input unchanged. The first uses a `for…of` loop with an `if` on the value itself; the second passes `Boolean` straight to `filter`. `compactLoop([0, 1, \"\", \"a\", null])` gives `[1, \"a\"]`.",
+    prompt: "Write `compactLoop(values)` and `compactFilter(values)`, both returning a new array with every falsy value removed — `false`, `0`, `\"\"`, `null`, `undefined` and `NaN` — and leaving the input unchanged. The first uses a `for…of` loop with an `if` on the value itself; the second passes `Boolean` straight to `filter`. `compactLoop([0, 1, \"\", \"a\", null])` gives `[1, \"a\"]`. values is a read-only dense array of at most 10000 ordinary JavaScript values and may be frozen. BigInt zero 0n and -0 are falsy too; strings such as \"0\" and \"false\", arrays, objects and functions are truthy. Keep the exact original truthy values/references in order, without cloning, coercing stored values or executing them. Return fresh arrays on every call, even when empty, and preserve input. compactLoop must use for-of and an if based on the value's truthiness; compactFilter must pass Boolean directly to filter, as requested. Target: O(n) time and output space, where n is 1 + values.length.",
     starter: `const compactLoop = values => {
 
 };
@@ -1561,7 +1561,7 @@ const compactFilter = values => values.filter(/* the function that answers truth
     tier: 3,
     focus: ["for-in", "objects", "recursion"],
     title: "Count nested keys",
-    prompt: "Write `countKeys(object)`, returning how many keys the object holds at every depth, visited with `for…in`: each key counts one, and when its value is a plain object its keys are counted the same way. `countKeys({ a: 1, b: { c: 2, d: { e: 3 } } })` gives 5. `null` and arrays count as plain values, and an empty object gives 0.",
+    prompt: "Write `countKeys(object)`, returning how many own enumerable string keys its data-record tree holds at every depth, visited with `for…in`: each key counts one, and when its value is a nested data record its keys are counted the same way. `countKeys({ a: 1, b: { c: 2, d: { e: 3 } } })` gives 5. `null` and arrays count as plain values, and an empty object gives 0. Input is a read-only finite tree of ordinary data records. Count only own enumerable string keys; ignore inherited keys, non-enumerable keys and symbol keys. Records may have ordinary prototypes with inherited enumerable data. All traversed non-null non-array objects are data records, not Dates, Maps or class instances. Arrays are opaque leaves and their contents are not visited. The traversed record tree has no cycles or shared records, at most 1000 records, depth at most 100 edges and at most 10000 total for-in key visits (including ignored inherited keys). Properties are data properties, names are bounded strings, and records may be frozen. Use for-in with an own-property guard and recursion; leave input unchanged. Target: O(n) time, where n is 1 + the total own and inherited enumerable key visits across the traversed records.",
     starter: `const countKeys = object => {
 
 };
@@ -1573,17 +1573,17 @@ console.log(countKeys({ a: 1, b: { c: 2, d: { e: 3 } } }));
   let count = 0;
 
   for (/* each key in object */) {
-    // count the key
-    // when the value is a plain object, add its own key count
+    // skip inherited keys, then count this own key
+    // recurse when the value is a nested data record
   }
 
   return count;
 };`,
-    hints: ["for-in visits each key, so count one per visit, and when the value under a key is itself a plain object, count its keys the same way by calling your function on it."],
+    hints: ["for-in also visits inherited names: first skip keys for which Object.hasOwn(object, key) is false. Count each remaining key, then recurse only into nested data records."],
     approach: [
-      "Start a count at zero and loop with for-in over the object’s keys.",
+      "Start a count at zero and loop with for-in over the object’s keys, skipping inherited names with Object.hasOwn.",
       "Add one for every key visited.",
-      "Look at the value under the key: when it is a plain object — not null and not an array — add the result of counting its keys with the same function.",
+      "Look at the value under the key: when it is a nested data record — not null and not an array — add the result of counting its keys with the same function.",
       "Return the count.",
     ],
     verify: "tests",
@@ -1593,7 +1593,7 @@ console.log(countKeys({ a: 1, b: { c: 2, d: { e: 3 } } }));
       { call: "countKeys({name:\"Ana\",age:3})", expected: 2 },
       { call: "countKeys({})", expected: 0, label: "an empty object has no keys", edge: true },
       { call: "countKeys({a:{}})", expected: 1, label: "an empty nested object adds nothing", edge: true },
-      { call: "countKeys({a:null,b:[1,2,3]})", expected: 2, label: "null and arrays count as plain values", edge: true },
+      { call: "countKeys({a:null,b:[1,2,3]})", expected: 2, label: "null and arrays count as leaf values", edge: true },
       { call: "countKeys({a:{b:{c:{d:1}}}})", expected: 4, label: "deep nesting", edge: true },
     ],
   },
@@ -1605,7 +1605,7 @@ console.log(countKeys({ a: 1, b: { c: 2, d: { e: 3 } } }));
     tier: 1,
     focus: ["for-of", "objects"],
     title: "Total with defaults",
-    prompt: "Write `orderTotal(items)`, returning the total of `price` times `quantity` over every item, where a missing or `null` quantity means 1 — supplied with `??` inside a `for…of` loop. `orderTotal([{ price: 5 }, { price: 2, quantity: 3 }])` gives 11. A quantity of 0 is a real quantity and contributes nothing, and an empty order totals 0.",
+    prompt: "Write `orderTotal(items)`, returning the total of `price` times `quantity` over every item, where a missing or `null` quantity means 1 — supplied with `??` inside a `for…of` loop. `orderTotal([{ price: 5 }, { price: 2, quantity: 3 }])` gives 11. A quantity of 0 is a real quantity and contributes nothing, and an empty order totals 0. items is a read-only dense array of at most 10000 ordinary records and may be frozen along with its records. price is a finite Number from 0 to 1000000. quantity is absent, undefined, null, or an integer from 0 to 1000. Use only null/undefined for the default, add from 0 in input order with normal Number arithmetic and do not round or write defaults into records. This is arithmetic on Numbers, not an exact-money representation. Use ?? inside for-of as requested. Target: O(n) time, where n is 1 + items.length.",
     starter: `const orderTotal = items => {
 
 };
@@ -1646,7 +1646,7 @@ console.log(orderTotal([{ price: 5 }, { price: 2, quantity: 3 }]));
     tier: 2,
     focus: ["map-set", "for-of"],
     title: "Frequency Map",
-    prompt: "Write `frequencies(values)`, returning a `Map` from each distinct value to how many times it appears, filled with `for…of` in first-seen order. `frequencies([\"a\", \"b\", \"a\"])` gives a Map with `\"a\"` → 2 and `\"b\"` → 1. Keys keep their type, so the number 1 and the string `\"1\"` are separate entries, and an empty array gives an empty Map.",
+    prompt: "Write `frequencies(values)`, returning a `Map` from each distinct value to how many times it appears, filled with `for…of` in first-seen order. `frequencies([\"a\", \"b\", \"a\"])` gives a Map with `\"a\"` → 2 and `\"b\"` → 1. Keys keep their type, so the number 1 and the string `\"1\"` are separate entries, and an empty array gives an empty Map. values is a read-only dense array of at most 10000 opaque values and may be frozen. Preserve original object identities and do not inspect, clone or coerce keys. Map uses SameValueZero: NaN values share a bucket, 0 and -0 share a bucket whose stored key is +0, and numeric/string values stay separate. Return a fresh Map on every call, including empty inputs, and preserve first-appearance order. Use for-of as requested. Target: O(n) time under expected constant-cost opaque Map-key access, where n is 1 + values.length; string keys are bounded to 1000 characters.",
     starter: `const frequencies = values => {
 
 };
@@ -1688,7 +1688,7 @@ console.log(frequencies(["a", "b", "a"]));
     tier: 2,
     focus: ["map-set", "for-of", "destructuring"],
     title: "Map entries to pairs",
-    prompt: "Write `entriesAtLeast(map, min)`, returning an array of `[key, value]` pairs for every entry of the `Map` whose value is at least `min`, in insertion order, gathered with `for…of` over the Map and destructuring in the loop head. With `new Map([[\"a\", 1], [\"b\", 5], [\"c\", 3]])` and a `min` of 3 it gives `[[\"b\", 5], [\"c\", 3]]`. Nothing qualifying, or an empty Map, gives an empty array, and the Map is not changed.",
+    prompt: "Write `entriesAtLeast(map, min)`, returning an array of `[key, value]` pairs for every entry of the `Map` whose value is at least `min`, in insertion order, gathered with `for…of` over the Map and destructuring in the loop head. With `new Map([[\"a\", 1], [\"b\", 5], [\"c\", 3]])` and a `min` of 3 it gives `[[\"b\", 5], [\"c\", 3]]`. Nothing qualifying, or an empty Map, gives an empty array, and the Map is not changed. map is an ordinary read-only Map with at most 10000 entries. Keys are opaque values under the usual constant-cost key model; string keys are bounded to 1000 characters. Values and min are finite Numbers between -1000000 and 1000000; fractional values and zero are valid and the comparison is >= without rounding. Preserve the stored key references, Map contents and insertion order. Return a fresh outer array and fresh two-element arrays on every call, even for empty results. Use for-of with [key, value] destructuring in the loop head as requested. Target: O(n) time and output space, where n is 1 + map.size.",
     starter: `const entriesAtLeast = (map, min) => {
 
 };
@@ -1730,7 +1730,7 @@ console.log(entriesAtLeast(new Map([["a", 1], ["b", 5], ["c", 3]]), 3));
     tier: 3,
     focus: ["for", "push"],
     title: "Chunk with a loop",
-    prompt: "Write `chunkBy(items, size)`, splitting the array into groups of `size` with a `for` loop that pushes each item into the current group and starts a fresh group whenever that one is full — without `slice`. `chunkBy([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]`. A size larger than the array gives one group, an empty array gives an empty array, and the input is not changed.",
+    prompt: "Write `chunkBy(items, size)`, splitting the array into groups of `size` with a `for` loop that pushes each item into the current group and starts a fresh group whenever that one is full — without `slice`. `chunkBy([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]`. A size larger than the array gives one group, an empty array gives an empty array, and the input is not changed. items is a read-only dense array of at most 10000 opaque values and may be frozen. size is an integer from 1 to 10000. Preserve every exact element/reference in order without inspecting or cloning it. Return fresh outer/group arrays on every call; no group may alias another group or the input. Empty input produces no groups. Use an indexed for loop and push, without slice, as requested. Target: O(n) time and output space, where n is 1 + items.length under amortized append.",
     starter: `const chunkBy = (items, size) => {
 
 };
@@ -1775,7 +1775,7 @@ console.log(chunkBy([1, 2, 3, 4, 5], 2));
     tier: 2,
     focus: ["for"],
     title: "Zip two lists",
-    prompt: "Write `zip(left, right)`, returning an array of `[left[i], right[i]]` pairs built with one `for` loop whose index reads both arrays at once, stopping at the shorter length. `zip([1, 2, 3], [\"a\", \"b\", \"c\"])` gives `[[1, \"a\"], [2, \"b\"], [3, \"c\"]]`. When one side is empty the result is empty, and neither input is changed.",
+    prompt: "Write `zip(left, right)`, returning an array of `[left[i], right[i]]` pairs built with one `for` loop whose index reads both arrays at once, stopping at the shorter length. `zip([1, 2, 3], [\"a\", \"b\", \"c\"])` gives `[[1, \"a\"], [2, \"b\"], [3, \"c\"]]`. When one side is empty the result is empty, and neither input is changed. left and right are read-only dense arrays with at most 10000 opaque values each and may be frozen. Preserve exact original references and values, including undefined, NaN and signed zero; do not inspect or clone elements. Return a fresh outer array and a separate fresh two-element array per position on every call, including empty inputs. Use a single indexed for loop as requested. Target: O(n) time as a combined-input upper bound, where n is 1 + left.length + right.length; more precisely, work and output are proportional to the shorter length plus one.",
     starter: `const zip = (left, right) => {
 
 };
@@ -1817,7 +1817,7 @@ console.log(zip([1, 2, 3], ["a", "b", "c"]));
     tier: 3,
     focus: ["for", "push"],
     title: "Rotate by n",
-    prompt: "Write `rotateBy(list, n)`, returning a new array with every element moved `n` places to the right and the ones pushed past the end wrapping round to the front, built with a `for` loop and remainder arithmetic rather than `slice`. `rotateBy([1, 2, 3, 4, 5], 2)` gives `[4, 5, 1, 2, 3]`. A negative `n` rotates left, an `n` beyond the length wraps around, an empty array gives an empty array, and the input is not changed.",
+    prompt: "Write `rotateBy(list, n)`, returning a new array with every element moved `n` places to the right and the ones pushed past the end wrapping round to the front, built with a `for` loop and remainder arithmetic rather than `slice`. `rotateBy([1, 2, 3, 4, 5], 2)` gives `[4, 5, 1, 2, 3]`. A negative `n` rotates left, an `n` beyond the length wraps around, an empty array gives an empty array, and the input is not changed. list is a read-only dense array of at most 10000 opaque values and may be frozen. n is an integer between -1000000000 and 1000000000. Preserve original values/references (including undefined, NaN and signed zero) without inspecting them. Return a fresh array on every call, even for zero shifts and empty inputs. Use a for loop as requested. Target: O(n) time and output space, where the n in this bound means 1 + list.length, not the shift argument.",
     starter: `const rotateBy = (list, n) => {
 
 };
@@ -1863,7 +1863,7 @@ console.log(rotateBy([1, 2, 3, 4, 5], 2));
     tier: 3,
     focus: ["for", "strings"],
     title: "Run-length encode",
-    prompt: "Write `runLength(text)`, returning the string with each run of the same character replaced by the run’s length followed by the character, found with one `for` loop that counts while the next character matches. `runLength(\"aaabccdddd\")` gives `\"3a1b2c4d\"`. Runs are case-sensitive, a single character gives `\"1\"` plus that character, and an empty string gives an empty string.",
+    prompt: "Write `runLength(text)`, returning the string with each run of the same character replaced by the run’s length followed by the character, found with one `for` loop that counts while the next character matches. `runLength(\"aaabccdddd\")` gives `\"3a1b2c4d\"`. Runs are case-sensitive, a single character gives `\"1\"` plus that character, and an empty string gives an empty string. Here a character means one UTF-16 code unit, as returned by text[index], not a Unicode code point or grapheme. text has at most 10000 code units; whitespace, digits, surrogate units and lone surrogates are preserved literally. Counts are decimal strings with no delimiter; this exercise encodes runs and does not promise an unambiguous decoder. Use one indexed for loop. Target: O(n²) time as a portable conservative bound when accumulating immutable strings, where n is 1 + text.length; this is not a claim that every engine copies the whole prefix on each append.",
     starter: `const runLength = text => {
 
 };
@@ -1907,7 +1907,7 @@ console.log(runLength("aaabccdddd"));
     tier: 3,
     focus: ["two-pointer", "while"],
     title: "Pair with a sum",
-    prompt: "Write `pairWithSum(sorted, target)`, taking an array sorted in ascending order and returning the two values that add up to `target` as `[smaller, larger]`, found with one index moving in from each end in a `while` loop, or `null` when no such pair exists. `pairWithSum([1, 2, 4, 7, 11], 9)` gives `[2, 7]`. When several pairs qualify, return the one with the smallest first value; a single value cannot pair with itself.",
+    prompt: "Write `pairWithSum(sorted, target)`, taking an array sorted in ascending order and returning the two values that add up to `target` as `[smaller, larger]`, found with one index moving in from each end in a `while` loop, or `null` when no such pair exists. `pairWithSum([1, 2, 4, 7, 11], 9)` gives `[2, 7]`. When several pairs qualify, return the one with the smallest first value; a single value cannot pair with itself. sorted is a read-only dense array of at most 10000 integer Numbers from -1000000 to 1000000 in nondecreasing order, and may be frozen. target is an integer Number from -2000000 to 2000000. Duplicate values may form a pair when stored at different indices. Preserve the input and return a fresh pair array per successful call, including repeated calls. Either sign of zero is accepted as zero. Use inward-moving pointers in a while loop as requested. Target: O(n) time and O(1) auxiliary space, where n is 1 + sorted.length.",
     starter: `const pairWithSum = (sorted, target) => {
 
 };
@@ -1999,7 +1999,7 @@ console.log(binarySearch([1, 3, 5, 7, 9], 7));
     tier: 3,
     focus: ["nested-loops", "for"],
     title: "Sliding window max",
-    prompt: "Write `windowMax(numbers, size)`, returning an array with the largest value of every window of `size` consecutive numbers, from left to right, using an outer `for` loop over the window starts and an inner one that scans each window. `windowMax([1, 3, 2, 5, 4], 3)` gives `[3, 5, 5]`. A window wider than the array gives an empty array, and a window as wide as the array gives a single value.",
+    prompt: "Write `windowMax(numbers, size)`, returning an array with the largest value of every window of `size` consecutive numbers, from left to right, using an outer `for` loop over the window starts and an inner one that scans each window. `windowMax([1, 3, 2, 5, 4], 3)` gives `[3, 5, 5]`. A window wider than the array gives an empty array, and a window as wide as the array gives a single value. numbers is a read-only dense array of at most 1000 finite Numbers between -1000000 and 1000000 and may be frozen. size is an integer from 1 to 1000; empty input returns a fresh empty array. Do not sort, round or change the input. A largest value of zero may have either sign. Return a fresh array each call, using the two for loops described above. Target: O(n²) time as a worst-case bound, where n is 1 + numbers.length; the tighter scan cost is O((length - size + 1) * size) when a full window fits.",
     starter: `const windowMax = (numbers, size) => {
 
 };
@@ -2045,7 +2045,7 @@ console.log(windowMax([1, 3, 2, 5, 4], 3));
     tier: 3,
     focus: ["nested-loops", "for"],
     title: "Matrix transpose",
-    prompt: "Write `transpose(matrix)`, returning a new matrix whose rows are the columns of the input, built with a `for` loop over the columns and an inner `for` loop over the rows; assume every row has the same length. `transpose([[1, 2, 3], [4, 5, 6]])` gives `[[1, 4], [2, 5], [3, 6]]`. An empty matrix gives an empty array, and the input is not changed.",
+    prompt: "Write `transpose(matrix)`, returning a new matrix whose rows are the columns of the input, built with a `for` loop over the columns and an inner `for` loop over the rows; assume every row has the same length. `transpose([[1, 2, 3], [4, 5, 6]])` gives `[[1, 4], [2, 5], [3, 6]]`. An empty matrix gives an empty array, and the input is not changed. matrix is a read-only dense rectangular array with 0 to 100 rows and 0 to 100 columns; the outer array and rows may be frozen. Elements are opaque: preserve exact references/values, including undefined, NaN and signed zero, without inspecting or cloning them. Return fresh outer and row arrays on every call, with no row/input aliasing. No rows, or any number of zero-width rows, gives a fresh empty array. Use the specified column-then-row indexed for loops. Target: O(n²) time and output space as an upper bound, where n is 1 + the larger of the row/column counts; the tighter cell traversal is O(1 + rows * columns).",
     starter: `const transpose = matrix => {
 
 };

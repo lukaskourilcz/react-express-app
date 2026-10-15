@@ -744,16 +744,12 @@ const myFilter = (list, fn) => {
   }
   return accumulator;
 };`,
-    senior: `const myReduce = (list, fn, initial) => {
-  const seeded = initial !== undefined;
-  let accumulator = seeded ? initial : list[0];
-  for (const [index, item] of list.entries()) {
-    if (index === 0 && !seeded) continue; // the first item is already the seed
-    accumulator = fn(accumulator, item, index);
-  }
-  return accumulator;
-};`,
+    senior: "const myReduce = (list, fn, initial) => {\n  let result = initial;\n  let i = 0;\n  if (initial === undefined && list.length) { result = list[0]; i = 1; }\n  for (; i < list.length; i++) result = fn(result, list[i], i);\n  return result;\n};",
     hiddenTests: [
+      { call: "(() => { const seed=Object.freeze({}),item=Object.freeze({}),list=Object.freeze([item,undefined]),out=Object.freeze([]),calls=[];const result=myReduce(list,(...args)=>{calls.push(args.length,args[0]===seed,args[1]===item,args[2]);return seed;},seed);let emptyCalls=0;const empty=myReduce(Object.freeze([]),()=>{emptyCalls++;},undefined);let oneCalls=0;const one=myReduce(Object.freeze([item]),()=>{oneCalls++;},undefined);return [result===seed,calls,empty===undefined,emptyCalls,one===item,oneCalls,myReduce(Object.freeze([]),()=>0,out)===out]; })()", expected: [true, [3, true, true, 0, 3, true, false, 1], true, 0, true, 0, true] },
+      { call: "(() => { const reason={},seen=[];try{myReduce(Object.freeze([1,2,3]),(acc,item,index)=>{seen.push(index);if(index===1)throw reason;return acc+item;},0);return [false,seen];}catch(error){return [error===reason,seen];} })()", expected: [true, [0, 1]] },
+      { call: "myReduce(Object.freeze(Array.from({length:10000},()=>1)),(acc,item)=>acc+item,0)", expected: 10000 },
+
       { call: "(() => { const list = [1,2,3,4]; list.reduce = null; return myReduce(list, (a, b) => a * b, 1); })()", expected: 24 },
       { call: "myReduce([[1],[2],[3]], (flat, part) => flat.concat(part), [])", expected: [1, 2, 3] },
       { call: "myReduce([\"x\"], (a, b) => a + b)", expected: "x" },
@@ -762,25 +758,12 @@ const myFilter = (list, fn) => {
   },
   "js-label-numbers": {
     solution: "const labelNumbers = numbers => numbers.map(number => number > 0 ? \"positive\" : number < 0 ? \"negative\" : \"zero\");",
-    junior: `const labelNumbers = numbers => {
-  const labels = [];
-  for (const number of numbers) {
-    if (number > 0) {
-      labels.push("positive");
-    } else if (number < 0) {
-      labels.push("negative");
-    } else {
-      labels.push("zero");
-    }
-  }
-  return labels;
-};`,
-    senior: `const labelNumbers = numbers => {
-  // Math.sign collapses every number to -1, 0 or 1, so one lookup replaces the nested ternary.
-  const bySign = { "1": "positive", "-1": "negative", "0": "zero" };
-  return numbers.map(number => bySign[Math.sign(number)]);
-};`,
+    junior: "const labelNumbers = numbers => {\n  return numbers.map(number => {\n    const label = number > 0 ? \"positive\" : number < 0 ? \"negative\" : \"zero\";\n    return label;\n  });\n};",
+    senior: "const labelNumbers = numbers => numbers.map(n => n === 0 ? \"zero\" : n > 0 ? \"positive\" : \"negative\");",
     hiddenTests: [
+      { call: "labelNumbers(Object.freeze([1e-9,-1e-9,0,-0,1000000,-1000000]))", expected: ["positive", "negative", "zero", "zero", "positive", "negative"] },
+      { call: "(() => { const input=Object.freeze(Array.from({length:10000},(_,i)=>i%2?1:-1)),a=labelNumbers(input);return [a.length,a[0],a[9999],a!==labelNumbers(input),labelNumbers(Object.freeze([]))!==labelNumbers(Object.freeze([]))]; })()", expected: [10000, "negative", "positive", true, true] },
+
       { call: "labelNumbers([1,-2,3,-4,0,5])", expected: ["positive", "negative", "positive", "negative", "zero", "positive"] },
       { call: "labelNumbers([-100])", expected: ["negative"] },
       { call: "(() => { const numbers = [1, -1]; labelNumbers(numbers); return numbers; })()", expected: [1, -1] },
@@ -799,9 +782,11 @@ const myFilter = (list, fn) => {
   }
   return total;
 };`,
-    senior: `// Number accepts both kinds of input, so one reduce covers the list; the seed 0 keeps the sum numeric.
-const sumMixed = values => values.reduce((total, value) => total + Number(value), 0);`,
+    senior: "const sumMixed = values => {\n  let total = 0;\n  for (const value of values) total += Number(value);\n  return total;\n};",
     hiddenTests: [
+      { call: "sumMixed(Object.freeze([\"0x10\",\"0b10\",\"1e2\",\" \",\"1.005\",-1]))", expected: 118.005 },
+      { call: "(() => { const values=Object.freeze(Array.from({length:10000},()=>\"-1000000\"));return [sumMixed(values),sumMixed(Object.freeze([1000000,\"-1000000\",\"1e-9\"]))===1e-9]; })()", expected: [-10000000000, true] },
+
       { call: "sumMixed([\"7\",\"8\",\"9\"])", expected: 24 },
       { call: "sumMixed([100,\"100\",100,\"100\"])", expected: 400 },
       { call: "sumMixed([\"0\", 0, \"0\"])", expected: 0 },
@@ -809,24 +794,7 @@ const sumMixed = values => values.reduce((total, value) => total + Number(value)
   },
   "js-compact-values": {
     solution: "const compactLoop = values => { const result = []; for (const value of values) { if (value) result.push(value); } return result; };\nconst compactFilter = values => values.filter(Boolean);",
-    junior: `const compactLoop = values => {
-  const kept = [];
-  for (const value of values) {
-    const isTruthy = Boolean(value);
-    if (isTruthy) {
-      kept.push(value);
-    }
-  }
-  return kept;
-};
-const compactFilter = values => {
-  return values.filter(value => {
-    if (value) {
-      return true;
-    }
-    return false;
-  });
-};`,
+    junior: "const compactLoop = values => {\n  const kept = [];\n  for (const value of values) {\n    if (value) { kept.push(value); }\n  }\n  return kept;\n};\nconst compactFilter = values => {\n  const kept = values.filter(Boolean);\n  return kept;\n};",
     senior: `const compactLoop = values => {
   const kept = [];
   for (const value of values) {
@@ -837,36 +805,23 @@ const compactFilter = values => {
 };
 const compactFilter = values => values.filter(Boolean);`,
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),fn=()=>{throw Error(\"do not execute\");},symbol=Symbol(\"x\"),input=Object.freeze([false,0,-0,0n,\"\",null,undefined,NaN,1n,\"0\",\"false\",a,b,fn,symbol]),expected=[1n,\"0\",\"false\",a,b,fn,symbol];const x=compactLoop(input),y=compactFilter(input);return [x.length,y.length,x.every((v,i)=>Object.is(v,expected[i])),y.every((v,i)=>Object.is(v,expected[i])),x!==y,compactLoop(Object.freeze([]))!==compactLoop(Object.freeze([])),compactFilter(Object.freeze([]))!==compactFilter(Object.freeze([]))]; })()", expected: [7, 7, true, true, true, true, true] },
+      { call: "(() => { const values=Object.freeze(Array.from({length:10000},(_,i)=>i%2?i:0));return [compactLoop(values).length,compactFilter(values)[4999],values.length]; })()", expected: [5000, 9999, 10000] },
+
       { call: "compactFilter([1, 0, 2, 0, 3, 0, 4, \"\"])", expected: [1, 2, 3, 4] },
       { call: "compactLoop([-1, \"false\", true])", expected: [-1, "false", true] },
       { call: "compactFilter([null, \"x\", undefined, \"y\"])", expected: ["x", "y"] },
     ],
   },
   "js-count-nested-keys": {
-    solution: "const countKeys = object => { let count = 0; for (const key in object) { count += 1; const value = object[key]; if (value !== null && typeof value === \"object\" && !Array.isArray(value)) count += countKeys(value); } return count; };",
-    junior: `const countKeys = object => {
-  let count = 0;
-  for (const key in object) {
-    count = count + 1;
-    const value = object[key];
-    const isObject = typeof value === "object";
-    const isNull = value === null;
-    const isArray = Array.isArray(value);
-    if (isObject && !isNull && !isArray) {
-      count = count + countKeys(value);
-    }
-  }
-  return count;
-};`,
-    senior: `// The tag check rules out null and arrays in one comparison.
-const isPlainObject = value => Object.prototype.toString.call(value) === "[object Object]";
-const countKeys = object => {
-  let count = 0;
-  // Object.values skips inherited keys, which for...in would also visit.
-  for (const value of Object.values(object)) count += 1 + (isPlainObject(value) ? countKeys(value) : 0);
-  return count;
-};`,
+    solution: "const countKeys = object => { let count = 0; for (const key in object) { if (!Object.hasOwn(object, key)) continue; count += 1; const value = object[key]; if (value !== null && typeof value === \"object\" && !Array.isArray(value)) count += countKeys(value); } return count; };",
+    junior: "const countKeys = object => {\n  let count = 0;\n  for (const key in object) {\n    if (!Object.hasOwn(object, key)) continue;\n    count = count + 1;\n    const value = object[key];\n    const isObject = typeof value === \"object\";\n    const isNull = value === null;\n    const isArray = Array.isArray(value);\n    if (isObject && !isNull && !isArray) count += countKeys(value);\n  }\n  return count;\n};",
+    senior: "const countKeys = object => {\n  let total = 0;\n  for (const key in object) {\n    if (!Object.hasOwn(object, key)) continue;\n    const value = object[key];\n    total += 1;\n    if (value && typeof value === \"object\" && !Array.isArray(value)) total += countKeys(value);\n  }\n  return total;\n};",
     hiddenTests: [
+      { call: "(() => { const proto=Object.freeze({inherited:{ignored:1}}),child=Object.create(proto);child.x=1;Object.freeze(child);const root=Object.create(proto);root.child=child;root.array=Object.freeze([{notCounted:1}]);root.nil=null;Object.defineProperty(root,\"hidden\",{value:3,enumerable:false});root[Symbol(\"s\")]=4;Object.freeze(root);return countKeys(root); })()", expected: 4 },
+      { call: "countKeys(Object.freeze(JSON.parse('{\"__proto__\":{\"x\":1},\"constructor\":2}')))", expected: 3 },
+      { call: "(() => { let deep=Object.freeze({leaf:1});for(let i=0;i<100;i++)deep=Object.freeze({next:deep});const wide=Object.create(null);for(let i=0;i<10000;i++)wide[\"k\"+i]=i;Object.freeze(wide);return [countKeys(deep),countKeys(wide)]; })()", expected: [101, 10000] },
+
       { call: "countKeys({a:1,b:2,c:3,d:{e:4,f:5,g:{h:6}}})", expected: 8 },
       { call: "countKeys({x:{y:{}},z:{}})", expected: 3 },
       { call: "countKeys(JSON.parse('{\"a\":{\"b\":1},\"c\":[{\"d\":1}]}'))", expected: 3 },
@@ -874,20 +829,12 @@ const countKeys = object => {
   },
   "js-order-total": {
     solution: "const orderTotal = items => { let total = 0; for (const item of items) total += item.price * (item.quantity ?? 1); return total; };",
-    junior: `const orderTotal = items => {
-  let total = 0;
-  for (const item of items) {
-    let quantity = item.quantity;
-    if (quantity === undefined || quantity === null) {
-      quantity = 1;
-    }
-    total = total + item.price * quantity;
-  }
-  return total;
-};`,
-    senior: `// A destructuring default would only cover undefined, so ?? stays to treat null as a missing quantity too.
-const orderTotal = items => items.reduce((total, { price, quantity }) => total + price * (quantity ?? 1), 0);`,
+    junior: "const orderTotal = items => {\n  let total = 0;\n  for (const item of items) {\n    const quantity = item.quantity ?? 1;\n    const lineTotal = item.price * quantity;\n    total = total + lineTotal;\n  }\n  return total;\n};",
+    senior: "const orderTotal = items => {\n  let total = 0;\n  for (const { price, quantity } of items) total += price * (quantity ?? 1);\n  return total;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({price:1.005}),b=Object.freeze({price:2,quantity:null}),c=Object.freeze({price:99,quantity:0}),list=Object.freeze([a,b,c]);return [orderTotal(list),Object.hasOwn(a,\"quantity\"),b.quantity,c.quantity]; })()", expected: [3.005, false, null, 0] },
+      { call: "orderTotal(Object.freeze(Array.from({length:10000},()=>Object.freeze({price:1000000,quantity:1000}))))", expected: 10000000000000 },
+
       { call: "orderTotal([{price:1.5,quantity:2},{price:2.5},{price:0,quantity:9}])", expected: 5.5 },
       { call: "orderTotal([{price:7,quantity:undefined}])", expected: 7 },
       { call: "orderTotal([{price:2,quantity:0},{price:2}])", expected: 2 },
@@ -906,9 +853,11 @@ const orderTotal = items => items.reduce((total, { price, quantity }) => total +
   }
   return counts;
 };`,
-    senior: `// Map.set returns the map itself, so reduce can thread it through without a block body.
-const frequencies = values => values.reduce((counts, value) => counts.set(value, (counts.get(value) ?? 0) + 1), new Map());`,
+    senior: "const frequencies = values => {\n  const result = new Map();\n  for (const value of values) result.set(value, (result.get(value) ?? 0) + 1);\n  return result;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze({}),values=Object.freeze([a,b,a,NaN,NaN,0,-0,\"0\",undefined]);const m=frequencies(values),keys=[...m.keys()];return [m.size,m.get(a),m.get(b),m.get(NaN),m.get(0),m.get(\"0\"),m.get(undefined),keys[0]===a,keys[1]===b,Number.isNaN(keys[2]),Object.is(keys[3],0),keys[4]===\"0\",keys[5]===undefined,m!==frequencies(values),frequencies(Object.freeze([]))!==frequencies(Object.freeze([]))]; })()", expected: [6, 2, 1, 2, 2, 1, 1, true, true, true, true, true, true, true, true] },
+      { call: "(() => { const key=Object.freeze({}),values=Object.freeze(Array.from({length:10000},()=>key)),m=frequencies(values);return [m.size,m.get(key),[...m.keys()][0]===key,values.length]; })()", expected: [1, 10000, true, 10000] },
+
       { call: "[...frequencies([\"r\",\"g\",\"b\",\"g\",\"r\",\"r\"])]", expected: [["r", 3], ["g", 2], ["b", 1]] },
       { call: "frequencies([true,true,false]).get(true)", expected: 2 },
       { call: "frequencies([null, null]).get(null)", expected: 2 },
@@ -916,20 +865,13 @@ const frequencies = values => values.reduce((counts, value) => counts.set(value,
   },
   "js-map-entries-at-least": {
     solution: "const entriesAtLeast = (map, min) => { const pairs = []; for (const [key, value] of map) { if (value >= min) pairs.push([key, value]); } return pairs; };",
-    junior: `const entriesAtLeast = (map, min) => {
-  const matching = [];
-  for (const entry of map) {
-    const key = entry[0];
-    const value = entry[1];
-    if (value >= min) {
-      matching.push([key, value]);
-    }
-  }
-  return matching;
-};`,
-    senior: `// Spreading the Map gives its [key, value] pairs in insertion order; filter keeps the qualifying ones and touches nothing.
-const entriesAtLeast = (map, min) => [...map].filter(([, value]) => value >= min);`,
+    junior: "const entriesAtLeast = (map, min) => {\n  const matching = [];\n  for (const [key, value] of map) {\n    const qualifies = value >= min;\n    if (qualifies) matching.push([key, value]);\n  }\n  return matching;\n};",
+    senior: "const entriesAtLeast = (map, min) => {\n  const entries = [];\n  for (const [key, value] of map) if (value >= min) entries.push([key, value]);\n  return entries;\n};",
     hiddenTests: [
+      { call: "(() => { const key=Object.freeze({}),map=new Map([[key,0],[\"z\",3],[\"a\",3]]),a=entriesAtLeast(map,0),b=entriesAtLeast(map,0);return [a.length,a[0][0]===key,a[1][0],a[2][0],a!==b,a[0]!==b[0],a[0]!==a[1],map.size,map.get(key),[...map.keys()][0]===key]; })()", expected: [3, true, "z", "a", true, true, true, 3, 0, true] },
+      { call: "(() => { const map=new Map([[NaN,-1],[undefined,0],[-0,0.25]]),a=entriesAtLeast(map,-1);return [a.length,Number.isNaN(a[0][0]),a[1][0]===undefined,Object.is(a[2][0],0),a.map(pair=>pair[1]),entriesAtLeast(new Map(),0)!==entriesAtLeast(new Map(),0)]; })()", expected: [3, true, true, true, [-1, 0, 0.25], true] },
+      { call: "(() => { const map=new Map(Array.from({length:10000},(_,i)=>[i,i/10000])),a=entriesAtLeast(map,0);return [a.length,a[9999],map.size]; })()", expected: [10000, [9999, 0.9999], 10000] },
+
       { call: "entriesAtLeast(new Map([[\"p\",7],[\"q\",8],[\"r\",1],[\"s\",9]]), 8)", expected: [["q", 8], ["s", 9]] },
       { call: "entriesAtLeast(new Map([[1, 1],[2, 2]]), 2)", expected: [[2, 2]] },
       { call: "entriesAtLeast(new Map([[\"neg\",-1]]), -5)", expected: [["neg", -1]] },
@@ -949,13 +891,11 @@ const entriesAtLeast = (map, min) => [...map].filter(([, value]) => value >= min
   }
   return groups;
 };`,
-    senior: `const chunkBy = (items, size) => items.reduce((groups, item, index) => {
-  // A new group opens at every multiple of size; the item always lands in the latest one.
-  if (index % size === 0) groups.push([]);
-  groups[groups.length - 1].push(item);
-  return groups;
-}, []);`,
+    senior: "const chunkBy = (items, size) => {\n  const groups = [];\n  for (let i = 0; i < items.length; i++) {\n    if (i % size === 0) groups.push([]);\n    groups[groups.length - 1].push(items[i]);\n  }\n  return groups;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),items=Object.freeze([a,b,undefined,NaN,-0]),out=chunkBy(items,2),other=chunkBy(items,2);return [out.length,out[0][0]===a,out[0][1]===b,out[1][0]===undefined,Number.isNaN(out[1][1]),Object.is(out[2][0],-0),out!==other,out[0]!==other[0],out[0]!==out[1],out[0]!==items,items[0]===a,chunkBy(Object.freeze([]),10000)!==chunkBy(Object.freeze([]),10000)]; })()", expected: [3, true, true, true, true, true, true, true, true, true, true, true] },
+      { call: "(() => { const items=Object.freeze(Array.from({length:10000},(_,i)=>i)),a=chunkBy(items,1),b=chunkBy(items,10000);return [a.length,a[9999][0],a[0]!==a[1],b.length,b[0].length,b[0][9999],b[0]!==items]; })()", expected: [10000, 9999, true, 1, 10000, 9999, true] },
+
       { call: "(() => { const items = [1,2,3,4,5,6,7]; items.slice = null; return chunkBy(items, 3); })()", expected: [[1, 2, 3], [4, 5, 6], [7]] },
       { call: "chunkBy([1,2,3,4,5,6], 3)", expected: [[1, 2, 3], [4, 5, 6]] },
       { call: "chunkBy([9], 4)", expected: [[9]] },
@@ -975,9 +915,11 @@ const entriesAtLeast = (map, min) => [...map].filter(([, value]) => value >= min
   }
   return pairs;
 };`,
-    senior: `// The pair count is the shorter length, so Array.from can build the result from indexes alone.
-const zip = (left, right) => Array.from({ length: Math.min(left.length, right.length) }, (_, index) => [left[index], right[index]]);`,
+    senior: "const zip = (left, right) => {\n  const pairs = [];\n  for (let i = 0, end = Math.min(left.length, right.length); i < end; i++) pairs.push([left[i], right[i]]);\n  return pairs;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),c=Object.freeze({}),left=Object.freeze([a,undefined,NaN,-0]),right=Object.freeze([b,false,\"x\",c]),out=zip(left,right),other=zip(left,right);return [out.length,out[0][0]===a,out[0][1]===b,out[1][0]===undefined,Number.isNaN(out[2][0]),Object.is(out[3][0],-0),out[3][1]===c,out!==other,out[0]!==out[1],out[0]!==other[0],left[0]===a,zip(Object.freeze([]),right)!==zip(Object.freeze([]),right)]; })()", expected: [4, true, true, true, true, true, true, true, true, true, true, true] },
+      { call: "(() => { const left=Object.freeze(Array.from({length:10000},(_,i)=>i)),right=Object.freeze(Array.from({length:10000},(_,i)=>-i)),out=zip(left,right);return [out.length,out[0][0],out[9999][0],out[9999][1]]; })()", expected: [10000, 0, 9999, -9999] },
+
       { call: "zip([1,2,3,4,5], [5,4,3,2,1])", expected: [[1, 5], [2, 4], [3, 3], [4, 2], [5, 1]] },
       { call: "zip([\"a\"], [1,2,3,4])", expected: [["a", 1]] },
       { call: "(() => { const left = [1,2]; const right = [3,4]; zip(left, right); return [left, right]; })()", expected: [[1, 2], [3, 4]] },
@@ -1001,12 +943,11 @@ const zip = (left, right) => Array.from({ length: Math.min(left.length, right.le
   }
   return result;
 };`,
-    senior: `const rotateBy = (list, n) => {
-  const { length } = list;
-  // Each slot reads from (index - n) mod length, made non-negative so left turns and a large n wrap alike.
-  return list.map((_, index) => list[(((index - n) % length) + length) % length]);
-};`,
+    senior: "const rotateBy = (list, n) => {\n  const length = list.length;\n  if (!length) return [];\n  const shift = ((n % length) + length) % length;\n  const result = [];\n  for (let i = 0; i < length; i++) result.push(list[(i + length - shift) % length]);\n  return result;\n};",
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze({}),b=Object.freeze([]),list=Object.freeze([a,undefined,NaN,-0,b]),x=rotateBy(list,-1),y=rotateBy(list,0);return [x.length,x[0]===undefined,Number.isNaN(x[1]),Object.is(x[2],-0),x[3]===b,x[4]===a,y!==list,y[0]===a,y!==rotateBy(list,0),rotateBy(Object.freeze([]),0)!==rotateBy(Object.freeze([]),0),list[0]===a];})()", expected: [5, true, true, true, true, true, true, true, true, true, true] },
+      { call: "(() => {const a=Object.freeze(Array.from({length:10000},(_,i)=>i)),x=rotateBy(a,-1000000000),y=rotateBy(a,1000000000);return [x.length,x[0],x[9999],y[0],y[9999]];})()", expected: [10000, 0, 9999, 0, 9999] },
+
       { call: "rotateBy([1,2,3,4], 4)", expected: [1, 2, 3, 4] },
       { call: "rotateBy([1,2,3,4,5,6], -8)", expected: [3, 4, 5, 6, 1, 2] },
       { call: "(() => { const list = [1,2,3]; rotateBy(list, 1); return list; })()", expected: [1, 2, 3] },
@@ -1034,17 +975,13 @@ const zip = (left, right) => Array.from({ length: Math.min(left.length, right.le
   encoded = encoded + count + current;
   return encoded;
 };`,
-    senior: `const runLength = text => {
-  let encoded = "";
-  for (let start = 0; start < text.length; ) {
-    let end = start;
-    while (text[end] === text[start]) end += 1; // past the end text[end] is undefined, which closes the run
-    encoded += \`\${end - start}\${text[start]}\`;
-    start = end;
-  }
-  return encoded;
-};`,
+    senior: "const runLength = text => {\n  let encoded = \"\", count = 0;\n  for (let i = 0; i < text.length; i++) {\n    count++;\n    if (text[i] === text[i + 1]) continue;\n    encoded += String(count) + text[i];\n    count = 0;\n  }\n  return encoded;\n};",
     hiddenTests: [
+      { call: "runLength(\"\\ud83d\\ude00\\ud83d\\ude00\").split(\"\").map(c => c.charCodeAt(0))", expected: [49, 55357, 49, 56832, 49, 55357, 49, 56832] },
+      { call: "runLength(\"\\ud800\\ud800\\n\\t\\t111\").split(\"\").map(c => c.charCodeAt(0))", expected: [50, 55296, 49, 10, 50, 9, 51, 49] },
+      { call: "runLength(\"a\".repeat(10000))", expected: "10000a" },
+      { call: "runLength(\"ab\".repeat(5000))", expected: "1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b1a1b" },
+
       { call: "runLength(\"xxxxyyyxxz\")", expected: "4x3y2x1z" },
       { call: "runLength(\"ab\")", expected: "1a1b" },
       { call: "runLength(\"       \")", expected: "7 " },
@@ -1052,28 +989,13 @@ const zip = (left, right) => Array.from({ length: Math.min(left.length, right.le
   },
   "js-pair-with-sum": {
     solution: "const pairWithSum = (sorted, target) => { let left = 0; let right = sorted.length - 1; while (left < right) { const sum = sorted[left] + sorted[right]; if (sum === target) return [sorted[left], sorted[right]]; if (sum < target) left += 1; else right -= 1; } return null; };",
-    junior: `const pairWithSum = (sorted, target) => {
-  for (let first = 0; first < sorted.length; first += 1) {
-    for (let second = first + 1; second < sorted.length; second += 1) {
-      const sum = sorted[first] + sorted[second];
-      if (sum === target) {
-        return [sorted[first], sorted[second]];
-      }
-    }
-  }
-  return null;
-};`,
-    senior: `const pairWithSum = (sorted, target) => {
-  for (let left = 0, right = sorted.length - 1; left < right; ) {
-    const sum = sorted[left] + sorted[right];
-    if (sum === target) return [sorted[left], sorted[right]];
-    // Too small even with the largest value still in play, so this left value can never pair: skip it for good.
-    if (sum < target) left += 1;
-    else right -= 1;
-  }
-  return null;
-};`,
+    junior: "const pairWithSum = (sorted, target) => {\n  let left = 0;\n  let right = sorted.length - 1;\n  while (left < right) {\n    const sum = sorted[left] + sorted[right];\n    if (sum === target) {\n      return [sorted[left], sorted[right]];\n    } else if (sum < target) {\n      left = left + 1;\n    } else {\n      right = right - 1;\n    }\n  }\n  return null;\n};",
+    senior: "const pairWithSum = (sorted, target) => {\n  let left = 0, right = sorted.length - 1;\n  while (left < right) {\n    const sum = sorted[left] + sorted[right];\n    if (sum === target) return [sorted[left], sorted[right]];\n    sum < target ? left++ : right--;\n  }\n  return null;\n};",
     hiddenTests: [
+      { call: "(() => {let writes=0;const input=new Proxy([1,2,3,4],{set(){writes++;throw new Error(\"read only\");}});const pair=pairWithSum(input,5);return [pair,writes];})()", expected: [[1,4],0] },
+      { call: "(() => {const a=Object.freeze([-8,-3,-3,0,3,3,8]),x=pairWithSum(a,0),y=pairWithSum(a,0);return [x,y,x!==y,a.length,a[0],pairWithSum(Object.freeze([3,3]),6),pairWithSum(Object.freeze([3]),6)];})()", expected: [[-8, 8], [-8, 8], true, 7, -8, [3, 3], null] },
+      { call: "(() => {const a=Object.freeze(Array.from({length:10000},(_,i)=>i));return [pairWithSum(a,19997),pairWithSum(a,-1),a[9999]];})()", expected: [[9998, 9999], null, 9999] },
+
       { call: "pairWithSum([2,3,5,8,13,21], 26)", expected: [5, 21] },
       { call: "pairWithSum([1,1,2,2], 2)", expected: [1, 1] },
       { call: "pairWithSum([10,20,30,40,50], 90)", expected: [40, 50] },
@@ -1139,12 +1061,11 @@ const zip = (left, right) => Array.from({ length: Math.min(left.length, right.le
   }
   return maxes;
 };`,
-    senior: `const windowMax = (numbers, size) => {
-  // One entry per window start; Math.max over a slice scans the window without a hand-written inner loop.
-  const windows = Math.max(0, numbers.length - size + 1);
-  return Array.from({ length: windows }, (_, start) => Math.max(...numbers.slice(start, start + size)));
-};`,
+    senior: "const windowMax = (numbers, size) => {\n  const maxima = [];\n  for (let start = 0, end = numbers.length - size; start <= end; start++) {\n    let best = numbers[start];\n    for (let i = start + 1; i < start + size; i++) best = numbers[i] > best ? numbers[i] : best;\n    maxima.push(best);\n  }\n  return maxima;\n};",
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze([-0,0,-0]),x=windowMax(a,2);return [x.length,x.every(v=>v===0),x!==windowMax(a,2),windowMax(Object.freeze([]),1)!==windowMax(Object.freeze([]),1),windowMax(Object.freeze([-1.005,-1.001,-2]),2)];})()", expected: [2, true, true, true, [-1.001, -1.001]] },
+      { call: "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i)),x=windowMax(a,500);return [x.length,x[0],x[500],windowMax(a,1000),windowMax(a,1).length,a[0],a[999]];})()", expected: [501, 499, 999, [999], 1000, 0, 999] },
+
       { call: "windowMax([9,8,7,6,5,4,3,2,1], 4)", expected: [9, 8, 7, 6, 5, 4] },
       { call: "windowMax([1,2,3,4,5,6], 1)", expected: [1, 2, 3, 4, 5, 6] },
       { call: "windowMax([2,2,2,2], 3)", expected: [2, 2] },
@@ -1152,24 +1073,12 @@ const zip = (left, right) => Array.from({ length: Math.min(left.length, right.le
   },
   "js-matrix-transpose": {
     solution: "const transpose = matrix => { const result = []; if (matrix.length === 0) return result; for (let column = 0; column < matrix[0].length; column += 1) { const row = []; for (let line = 0; line < matrix.length; line += 1) row.push(matrix[line][column]); result.push(row); } return result; };",
-    junior: `const transpose = matrix => {
-  const result = [];
-  for (let row = 0; row < matrix.length; row += 1) {
-    for (let column = 0; column < matrix[row].length; column += 1) {
-      if (result[column] === undefined) {
-        result[column] = [];
-      }
-      result[column][row] = matrix[row][column];
-    }
-  }
-  return result;
-};`,
-    senior: `const transpose = matrix => {
-  if (matrix.length === 0) return []; // no first row to take the column count from
-  // Walk the columns of the first row; each becomes a row made of that column from every input row.
-  return matrix[0].map((_, column) => matrix.map(row => row[column]));
-};`,
+    junior: "const transpose = matrix => {\n  const result = [];\n  if (matrix.length === 0) return result;\n  for (let column = 0; column < matrix[0].length; column++) {\n    const newRow = [];\n    for (let row = 0; row < matrix.length; row++) {\n      const value = matrix[row][column];\n      newRow.push(value);\n    }\n    result.push(newRow);\n  }\n  return result;\n};",
+    senior: "const transpose = matrix => {\n  const columns = [];\n  if (!matrix.length) return columns;\n  for (let c = 0; c < matrix[0].length; c++) {\n    const values = [];\n    for (let r = 0; r < matrix.length; r++) values.push(matrix[r][c]);\n    columns.push(values);\n  }\n  return columns;\n};",
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze({}),b=Object.freeze([]),m=Object.freeze([Object.freeze([a,undefined,NaN]),Object.freeze([b,-0,false])]),x=transpose(m),y=transpose(m);return [x.length,x[0][0]===a,x[0][1]===b,x[1][0]===undefined,Object.is(x[1][1],-0),Number.isNaN(x[2][0]),x[2][1]===false,x!==y,x[0]!==y[0],x[0]!==x[1],x[0]!==m[0],transpose(Object.freeze([Object.freeze([]),Object.freeze([])])).length,transpose([])!==transpose([])];})()", expected: [3, true, true, true, true, true, true, true, true, true, true, 0, true] },
+      { call: "(() => {const m=Object.freeze(Array.from({length:100},(_,r)=>Object.freeze(Array.from({length:100},(_,c)=>r*100+c)))),x=transpose(m);return [x.length,x[0].length,x[0][99],x[99][0],x[99][99],m[99][0]];})()", expected: [100, 100, 9900, 99, 9999, 9900] },
+
       { call: "transpose([[1,2,3,4],[5,6,7,8],[9,10,11,12]])", expected: [[1, 5, 9], [2, 6, 10], [3, 7, 11], [4, 8, 12]] },
       { call: "transpose([[\"a\",\"b\"],[\"c\",\"d\"],[\"e\",\"f\"]])", expected: [["a", "c", "e"], ["b", "d", "f"]] },
       { call: "(() => { const out = transpose([[1,2],[3,4]]); return out[0] !== out[1]; })()", expected: true },

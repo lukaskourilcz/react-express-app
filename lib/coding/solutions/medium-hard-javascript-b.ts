@@ -31,50 +31,11 @@ export const MEDIUM_HARD_JAVASCRIPT_B_SOLUTIONS: Record<string, CodingSolution> 
   }
   return marks.join("");
 };`,
-    junior: `const mark = (guess, answer) => {
-  const marks = [];
-  const leftOver = {};
-  for (let i = 0; i < 5; i++) {
-    if (guess[i] === answer[i]) {
-      marks.push("G");
-    } else {
-      marks.push(".");
-      const letter = answer[i];
-      if (leftOver[letter] === undefined) {
-        leftOver[letter] = 0;
-      }
-      leftOver[letter] = leftOver[letter] + 1;
-    }
-  }
-  for (let i = 0; i < 5; i++) {
-    const letter = guess[i];
-    if (marks[i] !== "G" && leftOver[letter] > 0) {
-      marks[i] = "Y";
-      leftOver[letter] = leftOver[letter] - 1;
-    }
-  }
-  let result = "";
-  for (const one of marks) {
-    result = result + one;
-  }
-  return result;
-};`,
-    senior: `const mark = (guess, answer) => {
-  const green = [...guess].map((letter, i) => letter === answer[i]);
-  const left = {};
-  for (let i = 0; i < answer.length; i++) {
-    if (!green[i]) left[answer[i]] = (left[answer[i]] ?? 0) + 1;
-  }
-  return [...guess]
-    .map((letter, i) => {
-      if (green[i]) return "G";
-      if (!left[letter]) return ".";
-      left[letter]--;
-      return "Y";
-    })
-    .join("");
-};`,
+    junior: "const mark = (guess, answer) => {\n  const marks = [];\n  const leftOver = {};\n  for (let i = 0; i < 5; i++) {\n    if (guess[i] === answer[i]) {\n      marks.push(\"G\");\n    } else {\n      marks.push(\".\");\n      const letter = answer[i];\n      if (leftOver[letter] === undefined) {\n        leftOver[letter] = 0;\n      }\n      leftOver[letter] = leftOver[letter] + 1;\n    }\n  }\n  for (let i = 0; i < 5; i++) {\n    const letter = guess[i];\n    if (marks[i] !== \"G\" && leftOver[letter] > 0) {\n      marks[i] = \"Y\";\n      leftOver[letter] = leftOver[letter] - 1;\n    }\n  }\n  return marks.join(\"\");\n};",
+    senior: "const mark = (guess, answer) => {\n  const marks = Array(5).fill(\".\");\n  const remaining = {};\n  for (let i = 0; i < 5; i++) {\n    if (guess[i] === answer[i]) marks[i] = \"G\";\n    else remaining[answer[i]] = (remaining[answer[i]] ?? 0) + 1;\n  }\n  for (let i = 0; i < 5; i++) {\n    if (marks[i] === \"G\" || !(remaining[guess[i]] > 0)) continue;\n    marks[i] = \"Y\";\n    remaining[guess[i]]--;\n  }\n  return marks.join(\"\");\n};",
     hiddenTests: [
+      { call: "(() => {let checked=0;for(let a=0;a<32;a++){const answer=Array.from({length:5},(_,i)=>(a>>i)&1?\"b\":\"a\").join(\"\");for(let g=0;g<32;g++){const guess=Array.from({length:5},(_,i)=>(g>>i)&1?\"b\":\"a\").join(\"\"),expected=Array(5).fill(\".\"),used=Array(5).fill(false);for(let i=0;i<5;i++)if(guess[i]===answer[i]){expected[i]=\"G\";used[i]=true;}for(let i=0;i<5;i++){if(expected[i]===\"G\")continue;for(let j=0;j<5;j++)if(!used[j]&&guess[i]===answer[j]){used[j]=true;expected[i]=\"Y\";break;}}if(mark(guess,answer)!==expected.join(\"\"))return false;checked++;}}return checked;})()", expected: 1024 },
+
       { call: 'mark("speed", "abide")', expected: '..Y.Y' },
       { call: 'mark("array", "radar")', expected: 'YYYG.' },
       { call: 'mark("lllll", "hello")', expected: '..GG.' },
@@ -430,43 +391,7 @@ const readLog = (text, minLevel) => {
   }
   return totals;
 };`,
-    junior: `const scorecard = rolls => {
-  const totals = [];
-  let total = 0;
-  let roll = 0;
-  let frame = 1;
-  while (frame <= 10) {
-    const first = rolls[roll];
-    const second = rolls[roll + 1];
-    const third = rolls[roll + 2];
-    if (first === undefined) {
-      break;
-    }
-    if (first === 10) {
-      if (second === undefined || third === undefined) {
-        break;
-      }
-      total = total + 10 + second + third;
-      roll = roll + 1;
-    } else {
-      if (second === undefined) {
-        break;
-      }
-      if (first + second === 10) {
-        if (third === undefined) {
-          break;
-        }
-        total = total + 10 + third;
-      } else {
-        total = total + first + second;
-      }
-      roll = roll + 2;
-    }
-    totals.push(total);
-    frame = frame + 1;
-  }
-  return totals;
-};`,
+    junior: "const scorecard = rolls => {\n  const hasRoll = index => index < rolls.length;\n  const isStrike = index => rolls[index] === 10;\n  const isSpare = index => rolls[index] + rolls[index + 1] === 10;\n  const totals = [];\n  let total = 0;\n  let roll = 0;\n  while (totals.length < 10) {\n    if (isStrike(roll)) {\n      if (!hasRoll(roll + 2)) break;\n      total = total + 10 + rolls[roll + 1] + rolls[roll + 2];\n      roll = roll + 1;\n    } else {\n      if (!hasRoll(roll + 1)) break;\n      if (isSpare(roll)) {\n        if (!hasRoll(roll + 2)) break;\n        total = total + 10 + rolls[roll + 2];\n      } else { total = total + rolls[roll] + rolls[roll + 1]; }\n      roll = roll + 2;\n    }\n    totals.push(total);\n  }\n  return totals;\n};",
     senior: `const scorecard = rolls => {
   const pins = i => rolls[i];
   const bowled = (...indexes) => indexes.every(i => i < rolls.length);
@@ -488,6 +413,9 @@ const readLog = (text, minLevel) => {
   return totals;
 };`,
     hiddenTests: [
+      { call: "(() => {const rolls=Object.freeze([10,7,3,9,0]),a=scorecard(rolls),b=scorecard(rolls);return [a,b,a!==b,rolls.length,rolls[0],scorecard([])!==scorecard([])];})()", expected: [[20, 39, 48], [20, 39, 48], true, 5, 10, true] },
+      { call: "(() => {const full=Object.freeze([...Array(18).fill(0),10,7,3]);return [scorecard(full.slice(0,19)),scorecard(full.slice(0,20)),scorecard(full),full.length];})()", expected: [[0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0], [0, 0, 0, 0, 0, 0, 0, 0, 0, 20], 21] },
+
       { call: 'scorecard(Array(11).fill(10))', expected: [30, 60, 90, 120, 150, 180, 210, 240, 270] },
       { call: 'scorecard([0, 10, 5, 3])', expected: [15, 23] },
       { call: 'scorecard([...Array(18).fill(0), 7, 3, 10])', expected: [0, 0, 0, 0, 0, 0, 0, 0, 0, 20] },

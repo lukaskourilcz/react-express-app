@@ -3502,3 +3502,101 @@ The local cohort build passes all 264 fixture-backed responsive route/viewport
 probes, 320–1440 px, with zero issues/unprobed routes. Its exact initial preview
 at 533776fa also passes eleven general guest checks at zero XP/null progress.
 New b033 content remains uncommitted and is outside this 35-task PR.
+
+## Dense reducers/truthiness content batch b033 — 15 October 2026
+
+Five individual model reviews raise coverage to 195/725 coding, 530 remaining;
+native remains 263/263. Combined current-hash QuickJS results agree 35/35
+(20 valid, five starters, ten wrongs) versus 25/35 before. Fourteen compact/
+nested-key cases were rechecked after final wording/skeleton edits. Twenty
+target/base 25 XP checks, copy sweep, focused coding, API/script types, launch,
+build, native bindings, both zero-vulnerability production dependency audits
+and diff checks pass. The local fixture-backed responsive sweep separately
+passes all 264 probes; its build stayed fixed while b033's later build waited.
+PR #405 remains frozen at the separate UTC-fixture repair; b033 is local.
+No real account, stored progress/balance, score or generated name was used.
+
+## Map and grouping content batch b034 — 15 October 2026
+
+Five individually scored model reviews raise coverage to 200/725 coding,
+525 remaining; native remains 263/263. All 35 current-hash QuickJS verdicts
+agree versus 25/35 before. Twenty target/base-25-XP checks and zero-artifact
+copy checks pass, as do focused coding, API/script types, launch, build, native
+bindings, both production dependency audits (zero vulnerabilities) and diff
+checks. Original references, Map ordering/SameValueZero, frozen records,
+nullish defaults and fresh groups use bounded local fixtures. PR #405 remains
+frozen separately; no production progress, score or name fixture was created.
+
+## Rotation, encoding and matrix batch b035 — 15 October 2026
+
+Five individual model reviews raise coverage to 205/725 coding, 520 remaining;
+native remains 263/263. All 34 selected current-hash QuickJS verdicts agree
+(20 valid, five starters, nine wrongs), versus 26/34 selected baseline. The
+unobservable already-sorted-sort negative was removed from both selected sets;
+original baseline is retained privately. New surrogate tests compare numeric
+code units and use escaped record literals. Twenty target/base-25-XP checks,
+copy sweep, focused coding, API/script types, launch, build, native bindings,
+both production dependency audits (zero vulnerabilities) and diff checks pass.
+PR #405's updated exact preview at 58686aaa passed eleven guest checks, all
+zero XP/null progress. Required verify is still pending. No user-state fixture.
+
+## Safe balances and stateful content batch b036 — 15 October 2026
+
+Five individual model reviews raise coverage to 210/725 coding, 515 remaining;
+native remains 263/263. All 30 current-hash QuickJS verdicts agree versus 25/30
+before, with 20 valid, five starters and five selected wrongs. Twenty authored-
+target/base-25-XP checks, copy sweep, focused coding, API/script types, launch,
+build, native bindings, both production dependency audits (zero vulnerabilities)
+and diff checks pass. Safe own-name dictionaries, CSV logical-record grammar,
+opaque history references, identity-preserving chain methods and bounded grid/
+operation sequences use local fixtures. No runtime/schema/UI policy change,
+no live user-state writes and no independent/human acceptance claim.
+
+## Cache, arity and scoring batch b037 — 15 October 2026
+
+Five individual model reviews raise coverage to 215/725 coding, 510 remaining;
+native remains 263/263. All 30 current-hash QuickJS verdicts agree versus 27/30
+before. Twenty authored-target/base-25-XP checks, copy sweep, focused coding,
+API/script types, launch, build, native bindings, both production dependency
+audits (zero vulnerabilities) and diff checks pass. NaN cache keys, exact
+opaque/error identity, all 1024 binary-word pairs, default/rest arity, high
+limiter bounds and incomplete bowling bonuses use local fixtures. No grader
+engine/schema/UI-policy change or live user-state write; same-session model
+and finite execution evidence only. PR #405 remains frozen separately.
+
+## PR #405 exact production — 15 October 2026
+
+Required run 38693420570 passes at exact 58686aaa (verify 30m50s; SQL 41s).
+PR #405 merged at fe214b686ffeff1c951dab07ae64a25919fc791a. READY production
+dpl_CJbygg7tdYp3P4tuAa25ePVbtPj5 matches, owns devshark.app and has no alias
+error. Eleven general guest checks pass at zero XP/null progress. Shipped
+coverage is 190/725 coding and 263/263 native. No authenticated native/Premium,
+independent/human or full editorial-coverage claim.
+
+## Event and timer content batch b038 — 15 October 2026
+
+Five individual model reviews raise coverage to 220/725 coding, 505 remaining;
+native remains 263/263. All 30 final-hash QuickJS verdicts agree versus 26/30
+before. Twenty target/base-25-XP checks, copy sweep, focused coding (including
+reversed hidden order and native Run), API/script types, launch, build, native
+bindings, both production dependency audits (zero vulnerabilities) and diff
+checks pass. Initial gate failures were a new 1000-tick native wait-limit case
+and a pre-existing cleanup fixture tracking another hidden check's interval.
+The final 100-tick test fits the wait limit; scoped allocation/firing observation
+removes cross-check cancellation hooks. Both failures are retained privately.
+Snapshot delivery, prototype-safe names, callback errors/arity and bounded
+1000-listener/10000-call cases use local fixtures. No live user-state writes.
+
+## Sorting and callback content batch b039 — 15 October 2026
+
+Five individual model reviews raise coverage to 225/725 coding, 500 remaining;
+native remains 263/263. All 30 current-hash QuickJS verdicts agree versus 25/30
+before. Twenty target/base-25-XP checks, copy sweep, focused coding including
+reversed hidden/native Run, API/script types, launch, build, native bindings,
+both production dependency audits (zero vulnerabilities) and diff checks pass.
+Opaque undefined sorting, own safe settings keys, exact callback values/errors,
+10000-item/key and 5000-line boundaries, 100 native-compatible timer callbacks
+and capture-time reminder values use local fixtures. No live user-state writes,
+no engine/schema/UI-policy change and no independent/human acceptance claim.
+The owner requested completing and shipping current work; further audit batches
+remain in #176/#391. B033–b039 form the next 35-review release cohort.

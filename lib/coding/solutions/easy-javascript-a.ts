@@ -221,6 +221,10 @@ const schedule = (task, ms) => {
   return () => clearTimeout(id);
 };`,
     hiddenTests: [
+      { call: "new Promise(done => {const log=[];let args;const cancel=schedule((...a)=>{args=a;log.push(\"ran\");},0);log.push(\"returned\");setTimeout(()=>{if(typeof cancel===\"function\"){cancel();cancel();}done([log,args?.length??-1]);},20);})", expected: [["returned", "ran"], 0], async: true },
+      { call: "new Promise(done => {let calls=0;const cancel=schedule(()=>{calls++;},1000);if(typeof cancel===\"function\"){cancel();cancel();}setTimeout(()=>done([calls,typeof cancel]),60);})", expected: [0, "function"], async: true },
+      { call: "new Promise(done => {const log=[];const a=schedule(()=>log.push(\"a\"),20),b=schedule(()=>log.push(\"b\"),10);setTimeout(a,5);setTimeout(()=>{if(typeof b===\"function\")b();done(log);},60);})", expected: ["b"], async: true },
+
       { call: 'new Promise(done => { const log = []; schedule(() => log.push("slow"), 30); schedule(() => log.push("fast"), 10); setTimeout(() => done(log), 70); })', expected: ['fast', 'slow'], async: true },
       { call: '(() => { let runs = 0; const cancel = schedule(() => { runs += 1; }, 0); return new Promise(done => setTimeout(done, 30)).then(() => { cancel(); return runs; }); })()', expected: 1, async: true },
       { call: 'new Promise(done => { const log = []; schedule(() => log.push("a"), 20); const cancelB = schedule(() => log.push("b"), 20); cancelB(); setTimeout(() => done(log), 60); })', expected: ['a'], async: true },
@@ -260,10 +264,13 @@ const schedule = (task, ms) => {
   }, ms);
 };`,
     hiddenTests: [
+      { call: "new Promise(done => {let calls=0,total=0,last=0,arity=true;repeat((...args)=>{calls++;total+=args[0];last=args[0];arity=arity&&args.length===1;},100,1);const immediate=calls;setTimeout(()=>done([immediate,calls,total,last,arity]),500);})", expected: [0, 100, 5050, 100, true], async: true },
+      { call: "new Promise(done => {const native=setInterval;let started=0;globalThis.setInterval=(...args)=>{started++;return native(...args);};repeat(()=>{},0,1000);globalThis.setInterval=native;setTimeout(()=>done(started),10);})", expected: 0, async: true },
+
       { call: 'new Promise(done => { const log = []; repeat(n => log.push(n), 4, 5); setTimeout(() => done(log), 150); })', expected: [1, 2, 3, 4], async: true },
       { call: 'new Promise(done => { let calls = 0; repeat(() => { calls += 1; }, 2, 5); setTimeout(() => done(calls), 120); })', expected: 2, async: true },
       { call: 'new Promise(done => { const log = []; repeat(n => log.push("a" + n), 2, 5); repeat(n => log.push("b" + n), 1, 5); setTimeout(() => done(log.length), 120); })', expected: 3, async: true },
-      { call: 'new Promise(done => { const setRepeat = setInterval, stopRepeat = clearInterval, stopTimer = clearTimeout; const open = new Set(); globalThis.setInterval = (...args) => { const id = setRepeat(...args); open.add(id); return id; }; globalThis.clearInterval = id => { open.delete(id); stopRepeat(id); }; globalThis.clearTimeout = id => { open.delete(id); stopTimer(id); }; repeat(() => {}, 2, 5); repeat(() => {}, 3, 5); setTimeout(() => { globalThis.setInterval = setRepeat; globalThis.clearInterval = stopRepeat; globalThis.clearTimeout = stopTimer; done(open.size); }, 100); })', expected: 0, async: true },
+      { call: "new Promise(done => {const start=setInterval,watches=[];let expected=2;globalThis.setInterval=(fn,ms,...args)=>{const watch={fires:0,expected};watches.push(watch);return start((...received)=>{watch.fires++;fn(...received);},ms,...args);};try{repeat(()=>{},2,5);expected=3;repeat(()=>{},3,5);}finally{globalThis.setInterval=start;}setTimeout(()=>done(watches.reduce((extra,watch)=>extra+Math.max(0,watch.fires-watch.expected),0)),100);})", expected: 0, async: true },
     ],
   },
   'js-easy2-fire-in-delay-order': {
@@ -360,6 +367,10 @@ const times = (n, callback) => Array.from({ length: n }, (_, index) => callback(
   callback(null, a / b);
 };`,
     hiddenTests: [
+      { call: "(() => {const trace=[];let first,second;const x=safeDivide(1.005,2,(...args)=>{trace.push(\"callback\");first=args;return 999;});trace.push(\"returned\");const y=safeDivide(1,-0,(...args)=>{second=args;return 999;});return [trace,first.length,first[0]===null,first[1],second.length,second[0] instanceof Error,second[0].message,x===undefined,y===undefined];})()", expected: [["callback", "returned"], 2, true, 0.5025, 1, true, "Cannot divide by zero", true, true] },
+      { call: "(() => {const error=Object.freeze({});let calls=0,same=0;for(const b of [0,2]){try{safeDivide(-4,b,()=>{calls++;throw error;});}catch(e){if(e===error)same++;}}return [calls,same];})()", expected: [2, 2] },
+      { call: "(() => {let value;safeDivide(-0,1,(_,x)=>{value=x;});return Object.is(value,-0);})()", expected: true },
+
       { call: '(() => { let out; safeDivide(7, 2, (error, value) => { out = value; }); return out; })()', expected: 3.5 },
       { call: '(() => { let out; safeDivide(-9, 3, (error, value) => { out = [error, value]; }); return out; })()', expected: [null, -3] },
       { call: '(() => { let calls = 0; safeDivide(1, 0, () => { calls += 1; }); return calls; })()', expected: 1 },
@@ -392,6 +403,10 @@ const times = (n, callback) => Array.from({ length: n }, (_, index) => callback(
   };
 };`,
     hiddenTests: [
+      { call: "(() => {let calls=0,args;const f=after(10000,(...a)=>{calls++;args=a;});for(let i=0;i<9999;i++)f(\"ignored\");const before=calls;f(\"ignored\");return [before,calls,args.length,f!==after(10000,()=>{})];})()", expected: [0, 1, 0, true] },
+      { call: "(() => {let calls=0;const error=Object.freeze({}),f=after(1,()=>{calls++;throw error;});let same=false;try{f();}catch(e){same=e===error;}f();f();return [calls,same];})()", expected: [1, true] },
+      { call: "(() => {let calls=0;const f=after(1,()=>{calls++;f();});f();return calls;})()", expected: 1 },
+
       { call: '(() => { let fired = 0; const finish = after(4, () => { fired += 1; }); finish(); finish(); finish(); return fired; })()', expected: 0 },
       { call: '(() => { const log = []; const finish = after(2, () => log.push("done")); finish(); log.push("one"); finish(); log.push("two"); return log; })()', expected: ['one', 'done', 'two'] },
       { call: '(() => { let args; const finish = after(1, (...received) => { args = received; }); finish("ignored"); return args; })()', expected: [] },
@@ -429,19 +444,8 @@ const negate = test => function (...args) {
     ],
   },
   'js-easy2-sort-by-key': {
-    solution: `const sortBy = (list, pick) => {
-  // Copy first: sort changes the array it is called on.
-  return [...list].sort((a, b) => pick(a) - pick(b));
-};`,
-    junior: `const sortBy = (list, pick) => {
-  const copy = list.slice();
-  copy.sort((first, second) => {
-    const firstKey = pick(first);
-    const secondKey = pick(second);
-    return firstKey - secondKey;
-  });
-  return copy;
-};`,
+    solution: "const sortBy = (list, pick) => {\n  const entries = list.map((item, index) => ({ item, index, key: pick(item) }));\n  entries.sort((a, b) => a.key - b.key || a.index - b.index);\n  return entries.map(entry => entry.item);\n};",
+    junior: "const sortBy = (list, pick) => {\n  const decorated = list.map((item, index) => {\n    const key = pick(item);\n    return { item, key, index };\n  });\n  decorated.sort((first, second) => {\n    const byKey = first.key - second.key;\n    return byKey === 0 ? first.index - second.index : byKey;\n  });\n  return decorated.map(entry => entry.item);\n};",
     senior: `// pick runs once per item, not once per comparison.
 const sortBy = (list, pick) =>
   list
@@ -449,6 +453,10 @@ const sortBy = (list, pick) =>
     .sort((a, b) => a.key - b.key || a.index - b.index)
     .map(({ item }) => item);`,
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze({}),b=Object.freeze([]),list=Object.freeze([a,undefined,b,NaN,-0]),seen=[];const key=new Map([[a,2],[undefined,-1],[b,2],[NaN,0],[-0,0]]);let arity=true;const x=sortBy(list,(...args)=>{arity=arity&&args.length===1;seen.push(args[0]);return key.get(args[0]);});return [x.length,x[0]===undefined,Number.isNaN(x[1]),Object.is(x[2],-0),x[3]===a,x[4]===b,seen.length,seen[0]===a,seen[1]===undefined,arity,x!==sortBy(list,x=>key.get(x)),list[0]===a,sortBy([],()=>0)!==sortBy([],()=>0)];})()", expected: [5, true, true, true, true, true, 5, true, true, true, true, true, true] },
+      { call: "(() => {const error=Object.freeze({}),list=Object.freeze([3,2,1]);let calls=0,same=false;try{sortBy(list,()=>{calls++;throw error;});}catch(e){same=e===error;}return [calls,same,list[0]];})()", expected: [1, true, 3] },
+      { call: "(() => {const list=Object.freeze(Array.from({length:10000},(_,i)=>Object.freeze({i,k:i%2}))),out=sortBy(list,x=>x.k);return [out.length,out[0]===list[0],out[4999]===list[9998],out[5000]===list[1],out[9999]===list[9999]];})()", expected: [10000, true, true, true, true] },
+
       { call: 'sortBy([], n => n)', expected: [] },
       { call: 'sortBy([-1, -5, 3], n => Math.abs(n))', expected: [-1, 3, -5] },
       { call: 'sortBy([{ t: "x", p: 5 }, { t: "y", p: -2 }], o => o.p).map(o => o.t)', expected: ['y', 'x'] },

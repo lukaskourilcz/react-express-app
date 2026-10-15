@@ -382,7 +382,7 @@ console.log(ownKeys(item));
     tier: 2,
     focus: ['timers', 'closures'],
     title: 'Schedule with a cancel button',
-    prompt: 'Write `schedule(task, ms)`, which starts a `setTimeout` that calls `task` after `ms` milliseconds and returns a function that cancels that timer with `clearTimeout`. Call the cancel function before the timer fires and `task` never runs. Calling it after the task has run, or twice, does nothing.',
+    prompt: "Write `schedule(task, ms)`, which starts a `setTimeout` that calls `task` after `ms` milliseconds and returns a function that cancels that timer with `clearTimeout`. Call the cancel function before the timer fires and `task` never runs. Calling it after the task has run, or twice, does nothing. ms is an integer from 0 to 1000. task is a synchronous function that returns normally, takes no arguments and does not depend on this; ignore its return value. Scheduling never calls task inline, including for ms zero. Every schedule call owns a separate cancel function/timer, and the cancel function return value is unspecified. Delays are minimum waits, not a wall-clock scheduling guarantee. Target: O(1) time and auxiliary space for this wrapper per schedule/cancel call, excluding host timer management and task work.",
     starter: `const schedule = (task, ms) => {
 
 };
@@ -419,7 +419,7 @@ schedule(() => console.log("ran"), 100);
     tier: 2,
     focus: ['timers'],
     title: 'Repeat, then stop',
-    prompt: 'Write `repeat(task, times, ms)`, which uses `setInterval` to call `task` every `ms` milliseconds, passing the call number (1, then 2, and so on), and stops with `clearInterval` after exactly `times` calls. `repeat(n => console.log(n), 3, 10)` prints 1, 2 and 3, then nothing more. A `times` of 0 never calls `task`.',
+    prompt: "Write `repeat(task, times, ms)`, which uses `setInterval` to call `task` every `ms` milliseconds, passing the call number (1, then 2, and so on), and stops with `clearInterval` after exactly `times` calls. `repeat(n => console.log(n), 3, 10)` prints 1, 2 and 3, then nothing more. A `times` of 0 never calls `task`. times is an integer from 0 to 1000 and ms is an integer from 1 to 1000. task is synchronous, returns normally and does not depend on this; ignore its return value. Each invocation receives exactly one argument, its 1-based call number. No call happens inline before repeat returns, and times zero starts no interval. Separate repeat calls keep separate counters/timers; the function return value is unspecified. Timer delays are minimum waits rather than precise wall-clock deadlines. Target: O(n) time for all wrapper callback dispatches, where n is 1 + times, excluding host timer management, waiting and task work; wrapper state uses O(1) auxiliary space.",
     starter: `const repeat = (task, times, ms) => {
 
 };
@@ -542,7 +542,7 @@ console.log(times(3, i => i * 10));
     tier: 2,
     focus: ['callbacks'],
     title: 'Error-first callback',
-    prompt: 'Node-style functions report through one callback whose first argument is an error, or `null` when nothing went wrong. Write `safeDivide(a, b, callback)`: when `b` is 0, call `callback` with an `Error` whose message is `"Cannot divide by zero"`; otherwise call `callback(null, a / b)`. Call it exactly once either way. `safeDivide` itself returns nothing.',
+    prompt: "Node-style functions report through one callback whose first argument is an error, or `null` when nothing went wrong. Write `safeDivide(a, b, callback)`: when `b` is 0, call `callback` with an `Error` whose message is `\"Cannot divide by zero\"`; otherwise call `callback(null, a / b)`. Call it exactly once either way. `safeDivide` itself returns nothing. a and b are finite Numbers between -1000000 and 1000000; a nonzero b has magnitude at least 0.000001. Both signs of zero count as a zero denominator. Invoke callback synchronously with exactly one argument on error, or exactly two on success, and ignore its return value. Do not round the normal Number quotient. If callback throws, propagate that original value without retrying the callback. The normal return value is undefined. Target: O(1) time and auxiliary space, excluding callback work.",
     starter: `const safeDivide = (a, b, callback) => {
 
 };
@@ -581,7 +581,7 @@ safeDivide(1, 0, (error, value) => console.log(error && error.message, value));
     tier: 2,
     focus: ['callbacks', 'closures'],
     title: 'Done after n calls',
-    prompt: 'Write `after(count, done)`, where `count` is at least 1. Return a function that calls `done`, with no arguments, on its `count`-th call and at no other time. Three uploads that each call the returned function when they finish trigger `done` once, after the last. Calls after the `count`-th do nothing.',
+    prompt: "Write `after(count, done)`, where `count` is at least 1. Return a function that calls `done`, with no arguments, on its `count`-th call and at no other time. Three uploads that each call the returned function when they finish trigger `done` once, after the last. Calls after the `count`-th do nothing. count is an integer from 1 to 10000 and each returned function may receive up to 10000 calls. Every factory returns a distinct independent function. The returned function ignores its arguments and invokes done synchronously with zero arguments, exactly on the count-th call; its own return value is unspecified. If done throws, propagate that original value and still regard the count-th call as consumed, so later calls never invoke it again. done does not depend on this. Target: O(1) time and auxiliary space per factory/returned-function call, excluding done work.",
     starter: `const after = (count, done) => {
 
 };
@@ -659,7 +659,7 @@ safeDivide(1, 0, (error, value) => console.log(error && error.message, value));
     tier: 2,
     focus: ['higher-order', 'sort'],
     title: 'Sort by what a function picks',
-    prompt: 'Write `sortBy(list, pick)`, returning a new array sorted from smallest to largest by the number `pick(item)` returns for each item. `sortBy([{ name: "b", age: 30 }, { name: "a", age: 20 }], person => person.age)` puts the 20-year-old first. Items that pick the same number keep their original order, and `list` itself is not changed.',
+    prompt: "Write `sortBy(list, pick)`, returning a new array sorted from smallest to largest by the number `pick(item)` returns for each item. `sortBy([{ name: \"b\", age: 30 }, { name: \"a\", age: 20 }], person => person.age)` puts the 20-year-old first. Items that pick the same number keep their original order, and `list` itself is not changed. list is a read-only dense array of at most 10000 opaque values, including undefined, and may be frozen. Preserve original references/values and return a fresh array on every call, including empty input. Call pick exactly once per item in original input order with exactly that one argument before sorting, storing its finite Number key (between -1000000 and 1000000). pick is synchronous and does not mutate the list; propagate its original thrown value if it fails. Decorate values with their key/index, sort those records and unwrap: native sort puts raw undefined values last without calling the comparator, so sorting raw values would break this contract. Target: O(n log n) time under the usual stable comparison-sort cost model and O(n) wrapper/output space, where n is 2 + list.length, excluding pick work; JavaScript does not specify a universal native-sort time bound.",
     starter: `const sortBy = (list, pick) => {
 
 };
@@ -667,16 +667,9 @@ safeDivide(1, 0, (error, value) => console.log(error && error.message, value));
 // Scratch pad. Change this and press Run.
 console.log(sortBy(["ccc", "a", "bb"], word => word.length));
 `,
-    skeleton: `const sortBy = (list, pick) => {
-  const copy = /* a copy of list */;
-  return copy.sort((a, b) => /* compare what pick gives for a and b */);
-};`,
-    hints: ['`sort` takes a compare function that returns a negative number when `a` goes first. `pick(a) - pick(b)` does exactly that, and sorting a copy leaves `list` alone.'],
-    approach: [
-      'Copy the list first, because `sort` changes the array it is called on.',
-      'Sort the copy with a compare function that subtracts `pick(b)` from `pick(a)`, so smaller numbers come first.',
-      'The compare function works on numbers, so `10` sorts after `9`. JavaScript’s sort is stable, so ties keep their order.',
-    ],
+    skeleton: "const sortBy = (list, pick) => {\n  const decorated = list.map((item, index) => ({ item, index, key: /* pick this item once */ }));\n  decorated.sort((a, b) => /* compare numeric keys, then original indices */);\n  return decorated.map(entry => /* original item */);\n};",
+    hints: ["Cache each picked number on a wrapper record before sorting. Native sort moves raw undefined values to the end without calling its comparator; sorting wrapper records avoids that special case."],
+    approach: ["Map each original item to a record carrying that item, its picked numeric key and its original index.", "Sort those records by key, then index for ties.", "Map the records back to their original items. The input stays unchanged and every pick ran once before sorting."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [

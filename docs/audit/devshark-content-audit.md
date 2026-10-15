@@ -1,5 +1,198 @@
 # devShark content audit — the question bank
 
+
+## 15 October continuation — five coding items b039
+
+Read numeric-key sorting, LF line callbacks, settings changes, timeout countdown
+and reminder registration individually. Sorting now decorates opaque values
+before native sort, so undefined follows its picked key rather than its native
+special position; every key is collected once in original order. Settings writes
+guard own keys and define data properties, preserving the prototype even for
+__proto__. Reminder junior captures its title at registration, matching the
+other boards. All affected teaching material and final programs were reread.
+
+All 30 current-hash worker verdicts agree (20 valid, five starters, five wrongs)
+versus 25/30 baseline. Twenty authored-target/base-25-XP checks, copy sweep,
+focused coding including reversed hidden/native Run, API/script types, launch,
+build, 263 native bindings, both zero-vulnerability production dependency audits
+and diff checks pass. Cases include 10000 stable records/own keys, 5000 literal
+line callbacks, original identities/errors, NaN versus signed-zero comparison,
+100 native-compatible ticks, post-registration caller mutation and a future
+reminder after 999 skipped records. Supported larger timer counts are source-
+reviewed, with no maximum-count physical timing claim.
+
+Coverage is 225/725 coding, 500 remaining, and 263/263 native. B033–b039 add
+35 local reviews beyond the 190 coding records shipped by PR #405. At the
+owner's stop-current-work instruction, no next batch is started. Remaining
+individual reviews and bank/override/acceptance work remain under #176/#391.
+All reviews are same-session model work, not independent/human acceptance.
+
+
+## 15 October continuation — five coding items b038
+
+Read the emitter, cancellable timer, bounded interval, error-first callback
+and after-count callback individually. Emitter registries now handle prototype
+names safely and every board emits an ordered registration snapshot. Duplicate
+removal, exact chaining/payload/result identity, callback arity and original
+errors are explicit. Correct timer/counting/division boards remain unchanged.
+
+All 30 final-hash verdicts agree (20 valid, five starters, five wrongs) versus
+26/30 baseline. Twenty target/base-25-XP checks, copy sweep, focused coding,
+API/script types, launch, build, 263 native bindings, both zero-vulnerability
+production dependency audits and diff checks pass. The initial 1000-tick test
+passed production QuickJS but exceeded the auxiliary native VM wait limit;
+the final 100-tick case fits that limit. A pre-existing cleanup fixture also
+tracked other hidden cases' intervals under reversed order. It now wraps only
+its own synchronous allocations, restores setInterval immediately and observes
+excess actual firings, without global cancellation hooks. Reversed hidden and
+native Run checks pass after repair. Initial failures remain in private logs.
+
+Cases cover prototype/empty event names, snapshot mutation, 1000 registrations,
+deferred/zero-delay cancellation, 100 numbered ticks, exact callback arguments,
+signed-zero division, original errors and a 10000-call completion threshold.
+The 1000-count supported interval bound is source-reviewed, not claimed as a
+maximum-count native timing test. Same-session model and finite execution only.
+Coverage is 220/725 coding, 505 remaining; native is 263/263. B033–b038 add
+30 local reviews beyond the 190 coding records now shipped. No live user writes.
+
+## PR #405 exact production — 15 October 2026
+
+Required run 38693420570 passes at 58686aaa (verify 30m50s; SQL 41s).
+PR #405 merged at fe214b686ffeff1c951dab07ae64a25919fc791a. READY production
+dpl_CJbygg7tdYp3P4tuAa25ePVbtPj5 matches that merge, owns devshark.app and has
+no alias error. All eleven general guest checks pass with zero XP/null progress.
+Production ships 190/725 coding reviews and 263/263 native; broader editorial,
+authenticated native/Premium and independent/human acceptance remain incomplete.
+
+
+## 15 October continuation — five coding items b037
+
+Read memoization, fixed-five-letter marking, the sliding limiter, curry and
+bowling scoring individually. Memoize junior now uses Map so NaN keys cache
+correctly; opaque results and synchronous throw retries are explicit. Marking
+examples use the required two indexed passes. Curry explains fn.length with
+default/rest parameters and immutable reusable argument prefixes. Bowling
+junior now exposes the requested rule helpers; legal-prefix scoring is retained.
+
+All 30 current-hash worker verdicts agree (20 valid, five starters, five wrongs)
+versus 27/30 baseline. Twenty target/base-25-XP checks, zero-artifact copy sweep,
+focused coding, API/script types, launch, build, 263 native bindings, both
+zero-vulnerability production dependency audits and diff checks pass. Cases
+include an independent consumed-position oracle for all 1024 binary-alphabet
+word pairs, 1000-key/call bounds, original error/reference predicates, equal
+expiry timestamps, 10000 limiter calls and pending tenth-frame bowling bonuses.
+Stateful/host/callback costs are described separately; structure estimates and
+finite execution are not measured asymptotic or arbitrary-program proof.
+
+Coverage is 215/725 coding, 510 remaining, and 263/263 native. Shipped coding
+coverage remains 155. B033–b037 are local and outside frozen PR #405. No live
+user progress, score/name or payment fixture was created. Same-session model
+review is not independent or human review.
+
+
+## 15 October continuation — five coding items b036
+
+Individually read spiral traversal, expense balances, CSV parsing, undo/redo
+and the counter object. Balances now use safe null-prototype accumulators in
+all supplied boards and teaching material; arbitrary names such as __proto__,
+constructor and toString remain own numeric balances. Junior reduce matches
+the lesson. Spiral and CSV examples use the requested loop forms, and the
+counter senior uses closure state. All correct history boards remain intact.
+
+All 30 final-hash verdicts agree (20 valid forms, five starters, five wrongs),
+versus 25/30 baseline. Twenty target/base-25-XP checks, zero-artifact copy sweep,
+focused coding, API/script types, launch, build, 263 native bindings, both
+zero-vulnerability production dependency audits and diff checks pass. Local
+fixtures cover original references/undefined, literal CSV CRLF/Unicode, safe
+integer-cent conservation through 100000 share visits, a 100×100 grid and
+10000 history/counter calls. Stateful targets distinguish whole-sequence work
+from per-call work; finite execution does not measure asymptotic performance.
+
+Coverage is 210/725 coding, 515 remaining; native is 263/263. Shipped coding
+coverage remains 155. B033–b036 are local and outside frozen PR #405. No live
+user progress, score/name or payment fixture was created. Review is same-session
+model work, with no independent/human or complete-catalogue acceptance claim.
+
+
+## 15 October continuation — five coding items b035
+
+Read all English material for signed rotation, run-length encoding, pair sum,
+window maxima and transpose. Supplied examples now match the requested loop
+forms; input-size meanings, integer/finite bounds, opaque references and fresh
+outputs are explicit. Run-length means UTF-16 units, including surrogate units,
+and does not promise reversible delimiter-free decoding. Its literal examples
+were individually exempted from the copy scanner's hex-hash heuristic.
+
+All 34 selected final-hash worker verdicts agree (20 valid, five starters, nine
+wrongs), versus 26/34 baseline. An already-sorted in-place-sort candidate produced
+no observable write in this runtime and was removed from both selected sets;
+the original baseline remains privately retained. Initial newline/surrogate
+transport in a new test was repaired with escaped input and numeric code-unit
+output checks before final evidence. Twenty authored-target/base-25-XP checks,
+copy sweep, focused coding, API/script types, launch, build, 263 native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Bounds include 10000 items/code units, 1000 windows and a 100×100 matrix.
+Same-session model/finite execution evidence does not prove arbitrary programs.
+
+Coverage is 205/725 coding, 520 remaining, and 263/263 native. Shipped coding
+coverage remains 155. B033–b035 are local, outside frozen PR #405 at 58686aaa;
+its eleven updated exact-preview guest checks pass with zero XP/null progress.
+Required verify remains pending. No live score, account/name or progress writes.
+
+
+## 15 October continuation — five coding items b034
+
+Read all English material and supplied forms for nullish order totals, Map
+frequencies, filtered entries, zip and indexed chunks. The examples now use the
+requested loop forms. Bounds, read-only ownership, fresh outputs and exact
+opaque references are explicit. Map cases distinguish SameValueZero keys,
+original object keys and insertion order; total cases preserve zero quantities
+and unrounded Number arithmetic without writing defaults into records.
+
+All 35 final-hash worker verdicts agree versus 25/35 baseline, including twenty
+valid forms, five starters and ten selected wrongs. Twenty authored-target/base
+25 XP checks and the copy sweep pass. Focused coding, API/script types, launch,
+build, 263 native bindings, both production dependency audits (zero reported
+vulnerabilities) and diff checks pass. Fixtures include frozen records, missing
+quantities, NaN/signed zero, identity/freshness and 10000-item bounds. This is
+same-session model review and finite execution evidence.
+
+Coverage is 200/725 coding, 525 remaining, and 263/263 native. Shipped coverage
+is still 155 coding / 263 native. B033–b034 are local; PR #405 remains frozen
+at 58686aaa for required checks and exact-preview verification. No live user
+progress, score or generated-name fixture was written.
+
+## 15 October continuation — five coding items b033
+
+Read every English field, starter/skeleton, board and check for simplified
+reduce, Number labels/conversion, truthy compaction and nested-key traversal.
+The authored myReduce keeps its existing undefined-as-no-seed behavior, now
+explicitly distinguished from native reduce, including empty no-seed input.
+Supplied map/ternary, for-of, indexed-for and direct Boolean-filter forms match
+their lessons. Truthy outputs preserve original opaque values, including BigInt,
+functions and symbols; inputs remain unchanged.
+
+Nested keys now mean own enumerable string keys of a bounded acyclic record
+tree. Every for-in board guards ownership before counting; arrays stay opaque
+leaves and inherited/nonenumerable/symbol keys are ignored. The final skeleton
+puts the guard before the count, and the cost includes ignored inherited visits.
+All 35 combined final-hash worker verdicts agree versus 25/35 before: 20 valid
+forms, five starters and ten wrongs. Fourteen compact/nested-key cases were
+rechecked after final wording/skeleton refinement. Twenty target/base 25 XP
+checks, zero-artifact copy sweep, focused coding, API/script types, launch,
+build, 263 native bindings, both zero-vulnerability production dependency audits
+and diff checks pass. Cases include exact callback arity/errors, tiny signed
+magnitudes, hexadecimal/binary strings, opaque truthiness, 100-edge depth and
+10000-element/key bounds. Same-session model review is not independent/human
+or arbitrary-program/asymptotic acceptance.
+
+Coverage is 195/725 coding, 530 remaining, and 263/263 native. Shipped coverage
+remains 155 coding / 263 native after PR #404. PR #405 freezes b026–b032 plus
+the UTC parity fixture repair at 58686aaa. Its initial required run found that
+stale unpadded-year example; full local grading/Learn integrity now passes and
+required CI is rerunning. The cohort's local responsive sweep passed all 264
+fixture-backed 320–1440 px probes. B033 remains local. No live user writes.
+
 ## 15 October continuation — five coding items b032
 
 Read every English field, starter/skeleton, board and check for variadic sum,
