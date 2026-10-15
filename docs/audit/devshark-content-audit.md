@@ -4,11 +4,11 @@
 
 315/725 coding reviews match current hashes;410 remain. B057 passes30/30 selected verdicts,20 no-false-penalty checks,canonical coding/type contracts,release gates and80 responsive probes. #416 is verified in production (300 coding plus263 native). Fifteen later reviews remain separate: ten frozen in #417 and five in this continuation. Same-session model/finite execution; no whole-catalogue or authenticated Premium claim.
 
-## Current release checkpoint — 15 October 2026, PR #416
+## Current release checkpoint — 15 October 2026, PR #417
 
-PR #416 passed required run 38750173289 at exact head 808dcb1def07618d95e9cbcab87168df7d1e81b4 (verify 25m24s; SQL 43s), then merged at 9827c3b293b6b04dcb882048fa4c16dbf170210d on 15 October 2026 at 14:44:44 UTC. READY production dpl_6ap6UQNPJa92x8FfCFE4kT91EPk5 matches that merge, owns devshark.app and has no alias error. Both exact preview and production pass eleven general guest checks plus six actual changed-task Submit verdicts: reference, valid alternative and meaningful wrong for the file-filter and parsed-object-guard tasks. Eight changed tasks return 402 and remain explicitly unverified through dedicated Premium acceptance. All guest submissions grant zero XP and return null progress. Local cohort evidence remains 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark responsive probes. Shipped model-review coverage is 300/725 coding and 263/263 native. No authenticated Premium, independent/human, physical-device or full-catalogue acceptance claim.
+PR #417 passed required run 38753165919 at exact head 86a5b1ebadcc67d42d27f18213d21d35dcd24e43 (verify 24m58s; SQL 43s), then merged at 901fc0533ab5e09e8f44f76a56ccb2e852f85510 on 15 October 2026 at 15:16:50 UTC. READY production dpl_CDHb5FE8ZG6pfRrJzpGVAnWhsDKY matches that merge, owns devshark.app and has no alias error. Both exact preview and production pass eleven general guest checks; all ten changed tasks return 402, with zero changed-task Submit verdicts, and remain explicitly unverified through dedicated Premium acceptance. All actual general guest submissions grant zero XP and return null progress. Local cohort evidence remains 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark responsive probes. Shipped model-review coverage is 310/725 coding and 263/263 native. No authenticated Premium, independent/human, physical-device or full-catalogue acceptance claim.
 
-Historical entries below retain their original checkpoints. Fifteen later B055–B057 source reviews remain separate from this verified release.
+Historical entries below retain their original checkpoints. Ten later B057–B058 source reviews remain separate from this verified release.
 
 ## 15 October continuation — five coding items b043
 

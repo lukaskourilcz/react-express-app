@@ -274,7 +274,7 @@ console.log(onlyActive([{ name: "ada", active: true }, { name: "bo", active: fal
     tier: 2,
     focus: ['constraints', 'reduce'],
     title: 'The cheapest offer',
-    prompt: 'Write `cheapest<T extends { price: number }>(items: T[]): T | null`, returning the item with the lowest `price`, or `null` for an empty list. Find it with `reduce`. On a tie the first of the equal items wins. Return the item itself, with all its properties, rather than its price.',
+    prompt: "Write `cheapest<T extends { price: number }>(items: T[]): T | null`, returning the item with the lowest `price`, or `null` for an empty list. Find it with `reduce`. On a tie the first of the equal items wins. Return the item itself, with all its properties, rather than its price. Domain: a dense ordinary array of at most 1000 stable records, possibly frozen, with finite Number prices from -1000000000 through 1000000000, including fractional or negative values. Price may be an own or inherited data property on a bounded prototype chain; no accessors/proxies are involved. Return the exact original winner with its opaque extra fields. Equal prices, including signed zero, keep the earlier record. Leave all records and array order unchanged. Target: O(n) time and O(1) working state, where n is 1 + item count under bounded numeric comparisons.",
     starter: `const cheapest = (items) => {
 
 };

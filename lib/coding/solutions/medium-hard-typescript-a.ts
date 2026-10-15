@@ -93,39 +93,7 @@ const pageAfter = <T extends { id: string }>(items: readonly T[], cursor: string
   const hasMore = start + size < items.length;
   return { items: page, next: hasMore ? page[page.length - 1].id : null };
 };`,
-    junior: `interface Page<T> {
-  items: T[];
-  next: string | null;
-}
-
-const pageAfter = <T extends { id: string }>(items: readonly T[], cursor: string | null, size: number): Page<T> => {
-  let start = 0;
-  if (cursor !== null) {
-    let found = -1;
-    for (let i = 0; i < items.length; i++) {
-      if (items[i].id === cursor) {
-        found = i;
-        break;
-      }
-    }
-    if (found === -1) {
-      return { items: [], next: null };
-    }
-    start = found + 1;
-  }
-
-  const page: T[] = [];
-  for (let i = start; i < items.length && page.length < size; i++) {
-    page.push(items[i]);
-  }
-
-  let next: string | null = null;
-  const lastIndex = start + page.length - 1;
-  if (page.length > 0 && lastIndex < items.length - 1) {
-    next = page[page.length - 1].id;
-  }
-  return { items: page, next: next };
-};`,
+    junior: "interface Page<T> {\n  items: T[];\n  next: string | null;\n}\n\nconst pageAfter = <T extends { id: string }>(items: readonly T[], cursor: string | null, size: number): Page<T> => {\n  let start = 0;\n  if (cursor !== null) {\n    const index = items.findIndex((item) => item.id === cursor);\n    if (index === -1) return { items: [], next: null };\n    start = index + 1;\n  }\n  const page = items.slice(start, start + size);\n  let next: string | null = null;\n  if (start + size < items.length) next = page[page.length - 1].id;\n  return { items: page, next };\n};",
     senior: `interface Page<T> {
   items: T[];
   next: string | null;
@@ -139,6 +107,11 @@ const pageAfter = <T extends { id: string }>(items: readonly T[], cursor: string
   return { items: page, next: end < items.length ? page.at(-1)!.id : null };
 };`,
     hiddenTests: [
+      { call: "(()=>{const meta={},a=Object.freeze({id:'',meta}),b=Object.freeze({id:' x ',meta}),input=Object.freeze([a,b]),first=pageAfter(input,null,1),again=pageAfter(input,null,1);first.items.push(b);first.next='changed';return [first!==again,first.items!==again.items,again.items[0]===a,again.items[0].meta===meta,again.next,input.length,pageAfter(input,'',1).items[0]===b];})()", expected: [true, true, true, true, "", 2, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:'p'+i}))),seen=[];let cursor=null,pages=0;do{const page=pageAfter(input,cursor,137);seen.push(...page.items);cursor=page.next;pages++;}while(cursor!==null&&pages<20);return [pages,seen.length,seen.every((item,i)=>item===input[i]),cursor,input.length];})()", expected: [8, 1000, true, null, 1000] },
+      { call: "(()=>{const input=Object.freeze([{id:'__proto__'},{id:' x '},{id:'x'}]);return [pageAfter(input,'__proto__',1).next,pageAfter(input,' x ',1).items[0]===input[2],pageAfter(input,' X ',1).items.length];})()", expected: [" x ", true, 0] },
+      { call: "(()=>{const input=Object.freeze([{id:'a'}]),a=pageAfter(input,'missing',1),b=pageAfter(input,'a',1000000000),c=pageAfter(input,null,1000000000);a.items.push({id:'later'});return [a!==b,b.items.length,b.next,c.items[0]===input[0],c.next,input.length,pageAfter([],null,1)!==pageAfter([],null,1)];})()", expected: [true, 0, null, true, null, 1, true] },
+
       { call: 'pageAfter([{ id: "" }, { id: "x" }], "", 1)', expected: { items: [{ id: 'x' }], next: null } },
       { call: 'pageAfter([{ id: "" }, { id: "x" }], null, 1)', expected: { items: [{ id: '' }], next: '' } },
       { call: '(() => { const list = Array.from({ length: 23 }, (_, i) => ({ id: "u" + i })); const seen = []; let cursor = null; let pages = 0; do { const page = pageAfter(list, cursor, 5); seen.push(...page.items.map((item) => item.id)); cursor = page.next; pages += 1; } while (cursor !== null && pages < 50); return [pages, seen.join(",") === list.map((item) => item.id).join(",")]; })()', expected: [5, true] },

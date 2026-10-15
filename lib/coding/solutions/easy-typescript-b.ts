@@ -247,11 +247,13 @@ const replaceById = <T extends { id: number }>(items: readonly T[], edited: T): 
   }
   return result;
 };`,
-    senior: `const replaceById = <T extends { readonly id: number }>(items: readonly T[], edited: T): T[] => {
-  const index = items.findIndex(({ id }) => id === edited.id);
-  return index === -1 ? [...items] : items.with(index, edited);
-};`,
+    senior: "const replaceById = <T extends { readonly id: number }>(items: readonly T[], edited: T): T[] =>\n  items.map((item) => item.id === edited.id ? edited : item);",
+    hiddenTypeTests: [{"code": "const __auditInput: readonly {id:number;payload:symbol}[] = [{id:1,payload:Symbol()}]; const __auditSymbol: symbol = replaceById(__auditInput,{id:1,payload:Symbol()})[0].payload;"}],
     hiddenTests: [
+      { call: "(()=>{const a=Object.freeze({id:0}),b=Object.freeze({id:1}),c=Object.freeze({id:-0}),edited=Object.freeze({id:0}),input=Object.freeze([a,b,c]),out=replaceById(input,edited);return [out[0]===edited,out[1]===b,out[2]===edited,input[0]===a,input[2]===c];})()", expected: [true, true, true, true, true] },
+      { call: "(()=>{const meta={},record=Object.freeze({id:-1,meta}),edited=Object.freeze({id:9,meta}),input=Object.freeze([record]),a=replaceById(input,edited),b=replaceById(input,edited);a.push(edited);return [a!==input,a!==b,b[0]===record,b[0].meta===meta,b.length,input.length,replaceById([],edited)!==replaceById([],edited)];})()", expected: [true, true, true, true, 1, 1, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i%2,n:i}))),edited=Object.freeze({id:0,n:-1}),out=replaceById(input,edited);return [out.length,out.every((item,i)=>i%2?item===input[i]:item===edited),input[0].n,input[998].n];})()", expected: [1000, true, 0, 998] },
+
       { call: '(() => { const a = { id: 1 }; const b = { id: 2 }; const out = replaceById([a, b], { id: 2 }); return out[0] === a; })()', expected: true },
       { call: '(() => { const list = [{ id: 1 }]; return replaceById(list, { id: 5 }) !== list; })()', expected: true },
       { call: 'replaceById([{ id: 4, v: "a" }, { id: 5, v: "b" }, { id: 6, v: "c" }], { id: 6, v: "z" }).map((x) => x.v)', expected: ['a', 'b', 'z'] },

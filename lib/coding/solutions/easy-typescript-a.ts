@@ -199,21 +199,15 @@ const onlyActive = <T extends { active: boolean }>(items: T[]): T[] => items.fil
   // Strictly lower, so the first of two equal prices stays.
   return items.reduce((best, item) => (item.price < best.price ? item : best));
 };`,
-    junior: `const cheapest = <T extends { price: number }>(items: T[]): T | null => {
-  if (items.length === 0) {
-    return null;
-  }
-  let best = items[0];
-  for (let i = 1; i < items.length; i++) {
-    if (items[i].price < best.price) {
-      best = items[i];
-    }
-  }
-  return best;
-};`,
+    junior: "const cheapest = <T extends { price: number }>(items: T[]): T | null => {\n  if (items.length === 0) return null;\n  return items.reduce((best, item) => {\n    if (item.price < best.price) return item;\n    return best;\n  });\n};",
     senior: `const cheapest = <T extends { price: number }>(items: readonly T[]): T | null =>
   items.reduce<T | null>((best, item) => (best === null || item.price < best.price ? item : best), null);`,
+    hiddenTypeTests: [{"code": "const __auditWinner = cheapest([{price:1,payload:Symbol()}]); if (__auditWinner !== null) { const __auditSymbol: symbol = __auditWinner.payload; }"}],
     hiddenTests: [
+      { call: "(()=>{const a=Object.freeze({price:3,id:'a'}),b=Object.freeze({price:1,id:'b'}),input=Object.freeze([a,b]);return [cheapest(input)===b,input[0]===a,input[1]===b,input.length];})()", expected: [true, true, true, 2] },
+      { call: "(()=>{const meta={},a=Object.freeze({price:-0,meta}),b=Object.freeze({price:0}),c=Object.freeze(Object.assign(Object.create({price:-0.5}),{meta}));return [cheapest([a,b])===a,Object.is(cheapest([a,b]).price,-0),cheapest([a,c])===c,c.meta===meta];})()", expected: [true, true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({price:1000-i,id:i})));return [cheapest(input)===input[999],input[0].price,input.length,cheapest([])];})()", expected: [true, 1000, 1000, null] },
+
       { call: 'cheapest([{ name: "a", price: 4 }, { name: "b", price: 4 }, { name: "c", price: 3 }, { name: "d", price: 3 }])', expected: { name: 'c', price: 3 } },
       { call: 'cheapest([{ name: "z", price: 1 }, { name: "y", price: 9 }])', expected: { name: 'z', price: 1 } },
       { call: 'cheapest([{ name: "free", price: 0 }, { name: "a", price: 5 }])', expected: { name: 'free', price: 0 } },

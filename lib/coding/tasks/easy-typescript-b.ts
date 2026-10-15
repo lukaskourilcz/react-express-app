@@ -284,7 +284,7 @@ console.log(latest([{ id: "a", version: 1, text: "Hi" }, { id: "b", version: 1, 
     tier: 2,
     focus: ['constraints', 'map'],
     title: 'Swap in the edited item',
-    prompt: 'An edit form saves one item of a list. Write `replaceById<T extends { id: number }>(items: readonly T[], edited: T): T[]`, returning a new array in which the item with the same `id` as `edited` is replaced by it. Every other item stays as it was, in the same place. When no item has that id, the new array holds the same items as before. Use `map`: the constraint lets you read `.id`, and `T` keeps the caller’s own item type on the way out.',
+    prompt: "An edit form saves one item of a list. Write `replaceById<T extends { id: number }>(items: readonly T[], edited: T): T[]`, returning a new array in which the item with the same `id` as `edited` is replaced by it. Every other item stays as it was, in the same place. When no item has that id, the new array holds the same items as before. Use `map`: the constraint lets you read `.id`, and `T` keeps the caller\u2019s own item type on the way out. Domain: a dense readonly ordinary array of at most 1000 stable records, possibly frozen, with own integer ids from -1000000000 through 1000000000 and no accessors/proxies. Duplicate ids are allowed: replace every matching position with the exact edited object. Each nonmatching position keeps the exact original object; do not merge or clone record fields. Leave the input and edited record unchanged. Return a fresh mutable array on every call, including no-match and empty input. Target: O(n) time and output space, where n is 1 + item count.",
     starter: `const replaceById = (items, edited) => {
 
 };

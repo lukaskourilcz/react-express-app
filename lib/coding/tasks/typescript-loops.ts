@@ -621,16 +621,16 @@ console.log(zip([1, 2], ["a", "b"]));
     tier: 3,
     focus: ["constraints", "record", "for-of"],
     title: "Group by key",
-    prompt: "Write `groupBy<T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Record<K, T[]>`, collecting every item under the key the callback gives it, with a `for-of` loop. The constraint keeps the key something an object can be indexed by. `groupBy([1, 2, 3, 4], n => n % 2 === 0 ? \"even\" : \"odd\")` gives `{ odd: [1, 3], even: [2, 4] }`, and an empty list gives an empty object.",
-    starter: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Record<K, T[]> => {
+    prompt: "Write `groupBy<T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Partial<Record<K, T[]>>`, collecting every item under the key the callback gives it, with a `for-of` loop. The constraint keeps the key something an object can be indexed by. `groupBy([1, 2, 3, 4], n => n % 2 === 0 ? \"even\" : \"odd\")` gives `{ odd: [1, 3], even: [2, 4] }`, and an empty list gives an empty object. Only keys actually returned for an item have groups. A possible key that was never observed reads as undefined, which is why the return type is Partial. Domain: a dense ordinary array of at most 1000 opaque values, possibly frozen. Call keyOf once per item, in input order, with exactly one positional argument; the synchronous callback does not change input membership. Propagate its exact thrown value and stop later calls. Keys are primitive strings of at most 200 UTF-16 units, Numbers or symbols. Numeric keys use ordinary property-key string conversion, so 1 and \"1\" share a group and signed zeros share \"0\"; symbols retain identity. Prototype-like names are valid own group keys, with no inherited groups. Missing keys read as undefined. Return a fresh mutable dictionary whose own keys are exactly the observed coerced keys, with fresh mutable group arrays across keys/calls. Preserve item values/references and duplicates without cloning or other coercion; leave input unchanged. Target: O(n) time and output space, where n is 1 + item count under bounded key hashing/property operations, excluding callback work.",
+    starter: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Partial<Record<K, T[]>> => {
 
 };
 
 // Scratch pad — change this and press Run.
 console.log(groupBy([1, 2, 3, 4], n => n % 2 === 0 ? "even" : "odd"));
 `,
-    skeleton: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Record<K, T[]> => {
-  const groups = {} as Record<K, T[]>;
+    skeleton: `const groupBy = <T, K extends PropertyKey>(items: T[], keyOf: (item: T) => K): Partial<Record<K, T[]>> => {
+  const groups = Object.create(null) as Partial<Record<K, T[]>>;
 
   for (const item of items) {
     const key = keyOf(item);
@@ -639,14 +639,8 @@ console.log(groupBy([1, 2, 3, 4], n => n % 2 === 0 ? "even" : "odd"));
 
   return groups;
 };`,
-    hints: [
-      "PropertyKey is the union of everything that can name a property, and constraining K to it is what makes Record<K, ...> legal.",
-    ],
-    approach: [
-      "Start with an empty object asserted to the return type, because the compiler cannot see that the keys will be filled in.",
-      "Loop over the items, ask the callback for each item's key, and create an empty group the first time a key appears.",
-      "Push the item onto its group and return the object; the keys of the result are exactly the values the callback can return.",
-    ],
+    hints: ["PropertyKey is TypeScript\u2019s string | number | symbol key type. Partial means a group may be missing: read groups[key] into a variable, then create its array when it is undefined. Use a dictionary with no inherited group names so __proto__ and constructor are ordinary keys."],
+    approach: ["Create a prototype-safe empty dictionary typed Partial<Record<K, T[]>>; unobserved keys are absent.", "Loop over the items and call keyOf once for each item. Initialize the group when absent, otherwise append to it.", "Return the dictionary. Only observed keys exist, and each group keeps original items in input order."],
     verify: "tests",
     estimatedMinutes: 10,
     tests: [
@@ -663,19 +657,7 @@ console.log(groupBy([1, 2, 3, 4], n => n % 2 === 0 ? "even" : "odd"));
         label: "whole items land in the groups",
       },
     ],
-    typeTests: [
-      {
-        code: "const __parity: Record<\"even\" | \"odd\", number[]> = groupBy([1, 2], n => n % 2 === 0 ? \"even\" : \"odd\");",
-        label: "the keys are the values the callback returns",
-      },
-      { code: "const __lengths: Record<number, string[]> = groupBy([\"a\"], w => w.length);", label: "a number can be a key too" },
-      { code: "groupBy([1], n => [n]);", label: "an array cannot be a key", rejects: true },
-      {
-        code: "const __wrong: Record<string, string[]> = groupBy([1], n => String(n));",
-        label: "the groups hold the items, not the keys",
-        rejects: true,
-      },
-    ],
+    typeTests: [{"code": "const __parity: Partial<Record<\"even\" | \"odd\", number[]>> = groupBy([1,2], n => n % 2 === 0 ? \"even\" : \"odd\");", "label": "only observed keys have groups"}, {"code": "const __lengths: Partial<Record<number, string[]>> = groupBy([\"a\"], w => w.length);", "label": "number keys are allowed"}, {"code": "groupBy([1], n => [n]);", "label": "an array is not a PropertyKey", "rejects": true}, {"code": "const __wrong: Partial<Record<string, string[]>> = groupBy([1], n => String(n));", "label": "groups retain the item type", "rejects": true}, {"code": "const __groups = groupBy([1], n => n % 2 === 0 ? \"even\" : \"odd\"); const __required: number[] = __groups.even;", "label": "a possible group may be missing", "rejects": true}],
   },
   {
     id: "ts-write-reduce",
@@ -685,7 +667,7 @@ console.log(groupBy([1, 2, 3, 4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 3,
     focus: ["generics", "for", "reduce"],
     title: "Write reduce by hand",
-    prompt: "Write `myReduce<T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U`, folding a list into one value with a plain `for` loop instead of calling `reduce`. The accumulator starts as `initial` and is replaced by what `step` returns for every item. `myReduce([1, 2, 3], (acc, n) => acc + n, 0)` gives 6, and an empty list gives back `initial` untouched.",
+    prompt: "Write `myReduce<T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U`, folding a list into one value with a plain `for` loop instead of calling `reduce`. The accumulator starts as `initial` and is replaced by what `step` returns for every item. `myReduce([1, 2, 3], (acc, n) => acc + n, 0)` gives 6, and an empty list gives back `initial` untouched. Domain: a dense ordinary array of at most 1000 opaque values, possibly frozen, with stable membership and no accessors/proxies. Call step exactly once per item in input order with exactly two positional arguments: current accumulator, then item. Pass the exact initial value and each returned value onward without cloning, coercion, calling or awaiting them. Empty input returns the exact initial value with no callback calls. The callback may change its own accumulator but does not change input membership; the wrapper does not reorder or modify the input array. If step throws, propagate that exact value and make no later calls. Target: O(n) time and O(1) wrapper working state, where n is 1 + item count, excluding callback work and storage it allocates for the accumulator.",
     starter: `const myReduce = <T, U>(items: T[], step: (acc: U, item: T) => U, initial: U): U => {
 
 };
