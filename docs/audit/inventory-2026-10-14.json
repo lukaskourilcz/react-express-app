@@ -25,13 +25,13 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "15 October: PR #401 merged at a4e934948e8522a036726868da89669bca6c1316 after required run38681978040 passed on exact148c6100646b7359e0a1b43378cfd6606053f8c7 (verify30m32s; SQL41s). READY production dpl_85vvsbrVkywqmGMUD674eSWhb7kA matches the merge SHA, owns devshark.app and has no alias error. Eleven general guest checks pass with zero XP/null progress and no Challenge/name/owner-state fixture. This does not establish authenticated native/Premium acceptance or an independent/human review.",
-    "currentModelReviewedIssuedTasks": 150,
-    "issuedStillRequiringReview": 575,
-    "deployedModelReviewedIssuedTasks": 100,
-    "stagedModelReviewedIssuedTasks": 50,
-    "stagedExecutionEvidence": "15 October five-item commits through b024: 50 staged reviews; latest batch 36/36 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
-    "deployedExecutionEvidence": "15 October: PR #401 merged at a4e934948e8522a036726868da89669bca6c1316 after required run38681978040 passed on exact148c6100646b7359e0a1b43378cfd6606053f8c7 (verify30m32s; SQL41s). READY production dpl_85vvsbrVkywqmGMUD674eSWhb7kA matches the merge SHA, owns devshark.app and has no alias error. Eleven general guest checks pass with zero XP/null progress and no Challenge/name/owner-state fixture. This does not establish authenticated native/Premium acceptance or an independent/human review."
+    "executionEvidence": "15 October: PR #402 passed required run38685241521 on exact95674b5e180ee5ca511fb6a4d8836d1e353d96b0 (verify30m37s; SQL42s), merged at8ea7ce7919140c4cad99f4082ee9264d5f20991f. READY production dpl_FYPZbZ64Crs8u8frbYcXG5KodXSH matches that merge, owns devshark.app and has no alias error. Eleven general guest checks pass at zero XP/null progress, with no Challenge/name/owner-state fixture. Shipped coding coverage is135/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance.",
+    "currentModelReviewedIssuedTasks": 155,
+    "issuedStillRequiringReview": 570,
+    "deployedModelReviewedIssuedTasks": 135,
+    "stagedModelReviewedIssuedTasks": 20,
+    "stagedExecutionEvidence": "15 October five-item commits through b025:20staged reviews; latest batch35/35final-hash worker verdicts and twenty no-false-penalty checks pass. Runtime own-key fix #403 is local and unreleased.",
+    "deployedExecutionEvidence": "15 October: PR #402 passed required run38685241521 on exact95674b5e180ee5ca511fb6a4d8836d1e353d96b0 (verify30m37s; SQL42s), merged at8ea7ce7919140c4cad99f4082ee9264d5f20991f. READY production dpl_FYPZbZ64Crs8u8frbYcXG5KodXSH matches that merge, owns devshark.app and has no alias error. Eleven general guest checks pass at zero XP/null progress, with no Challenge/name/owner-state fixture. Shipped coding coverage is135/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance."
   },
   "nativePaths": {
     "paths": 2,
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "100 reviewed coding and 263 native records are deployed; 50 coding records are staged through b024. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "135reviewed coding and263native records are deployed;20coding records are staged through b025. Override data remains the explicitly dated14October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

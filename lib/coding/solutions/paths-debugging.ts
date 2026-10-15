@@ -263,7 +263,8 @@ const TRACING: Boards = {
   // runs the loop has finished. let gives each pass its own i.
   const reminders = [];
   for (let i = 0; i < names.length; i++) {
-    reminders.push(() => \`\${i + 1}. \${names[i]} owes you\`);
+    const name = names[i];
+    reminders.push(() => \`\${i + 1}. \${name} owes you\`);
   }
   return reminders;
 }`,
@@ -347,19 +348,15 @@ function withTip(fields, percent) {
   for (let i = 0; i < ids.length; i++) {
     pending.push(fetchReceipt(ids[i]));
   }
-  const receipts = [];
-  for (let i = 0; i < pending.length; i++) {
-    const receipt = await pending[i];
-    receipts.push(receipt);
-  }
-  return receipts;
+  // Attach handlers to all pending promises together, including rejections.
+  return Promise.all(pending);
 }`,
     `function readAmount(field) {
   const text = field.value.trim();
   if (text === "") {
     return 0;
   }
-  return parseFloat(text);
+  return Number(text);
 }
 
 function sumAmounts(fields) {
@@ -397,15 +394,19 @@ function withTip(fields, percent) {
 };
 
 const TRACING_HIDDEN: Hidden = [
-  [['weeklyTotals([1, 1, 1, 1, 1, 1, 1, 1])', [7, 1]], ['weeklyTotals([1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3])', [7, 14, 21]], ['weeklyTotals([0, 0, 0, 0, 0, 0, 0, 5])', [0, 5]]],
-  [['makeReminders(["x", "y"]).reverse().map((remind) => remind())', ['2. y owes you', '1. x owes you']], ['(() => { const reminders = makeReminders(["p", "q"]); reminders[1](); return reminders[0](); })()', '1. p owes you']],
-  [['(() => { const expenses = [{ label: "x", amount: 2 }, { label: "y", amount: 9 }]; const top = largestExpenses(expenses, 2); return [top.map((e) => e.label), expenses.map((e) => e.label)]; })()', [['y', 'x'], ['x', 'y']]], ['(() => { const expenses = [{ label: "x", amount: 2 }]; return largestExpenses(expenses, 1) !== expenses; })()', true]],
+  [['weeklyTotals([1, 1, 1, 1, 1, 1, 1, 1])', [7, 1]], ['weeklyTotals([1, 1, 1, 1, 1, 1, 1, 2, 2, 2, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 3])', [7, 14, 21]], ['weeklyTotals([0, 0, 0, 0, 0, 0, 0, 5])', [0, 5]], ["(() => { const d=Object.freeze([0.1,0.2,-0.1,0,0,0,0,0.25]); const a=weeklyTotals(d),b=weeklyTotals(d);return [a,a!==b,d.length]; })()", [[0.20000000000000004, 0.25], true, 8]], ["(() => { const out=weeklyTotals(Object.freeze(Array.from({length:1000},()=>1000000))); return [out.length,out[0],out[142]]; })()", [143, 7000000, 6000000]]],
+  [['makeReminders(["x", "y"]).reverse().map((remind) => remind())', ['2. y owes you', '1. x owes you']], ['(() => { const reminders = makeReminders(["p", "q"]); reminders[1](); return reminders[0](); })()', '1. p owes you'], ["(() => { const names=[\"same\",\"same\",\"\"];const r=makeReminders(names);names[0]=\"changed\";names.length=0;return [r.map(f=>f()),r[0]!==r[1],r[1](),r[0]()]; })()", [["1. same owes you", "2. same owes you", "3.  owes you"], true, "2. same owes you", "1. same owes you"]], ["(() => { const names=Object.freeze(Array.from({length:1000},(_,i)=>\"n\"+i));const a=makeReminders(names),b=makeReminders(names);return [a.length,a[999](),a!==b,a[0]!==b[0]]; })()", [1000, "1000. n999 owes you", true, true]]],
+  [['(() => { const expenses = [{ label: "x", amount: 2 }, { label: "y", amount: 9 }]; const top = largestExpenses(expenses, 2); return [top.map((e) => e.label), expenses.map((e) => e.label)]; })()', [['y', 'x'], ['x', 'y']]], ['(() => { const expenses = [{ label: "x", amount: 2 }]; return largestExpenses(expenses, 1) !== expenses; })()', true], ["(() => { const a=Object.freeze({label:\"a\",amount:0}),b=Object.freeze({label:\"b\",amount:0}),c=Object.freeze({label:\"c\",amount:-0.25});const input=Object.freeze([a,b,c]);const out=largestExpenses(input,1000);return [out!==input,out.length,out[0]===a,out[1]===b,out[2]===c,largestExpenses(input,0).length]; })()", [true, 3, true, true, true, 0]], ["(() => { const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({label:String(i),amount:i-500})));const out=largestExpenses(input,1000);return [out.length,out[0]===input[999],out[999]===input[0]]; })()", [1000, true, true]]],
   [
+    ["(async () => { const id={},ids=Object.freeze([id,id,0,\"0\"]),box=Object.freeze({ok:true}),values=[box,undefined,null,0],calls=[];let count=0;const pending=loadReceipts(ids,(...args)=>{calls.push(args);return Promise.resolve(values[count++]);});const started=calls.length;const out=await pending;const other=await loadReceipts(Object.freeze([]),()=>{throw Error(\"no call\");});return [started,out.length,out.every((v,i)=>Object.is(v,values[i])),calls.every((a,i)=>a.length===1&&Object.is(a[0],ids[i])),out!==other,other.length]; })()", [4, 4, true, true, true, 0]],
+    ["(async () => { const reason={code:\"local\"};try{await loadReceipts([1,2],id=>id===2?Promise.reject(reason):Promise.resolve(id));return false;}catch(error){return error===reason;} })()", true],
+    ["(async () => { const ids=Object.freeze(Array.from({length:50},(_,i)=>i));let starts=0;const out=await loadReceipts(ids,id=>{starts++;return Promise.resolve(id);});return [starts,out.length,out[49]]; })()", [50, 50, 49]],
     ['(async () => { let running = 0; let most = 0; const fetchReceipt = (id) => { running += 1; most = Math.max(most, running); return new Promise((done) => setTimeout(() => { running -= 1; done({ id }); }, 5)); }; await loadReceipts([1, 2, 3, 4], fetchReceipt); return most; })()', 4],
     ['(async () => loadReceipts([5], (id) => Promise.resolve({ id, amount: 2 })))()', [{ id: 5, amount: 2 }]],
   ],
-  [['withTip([{ label: "a", value: "10" }], 0)', 10], ['Number.isNaN(withTip([{ label: "a", value: "1.10" }, { label: "b", value: "2.20" }], 5))', false], ['readAmount({ label: "a", value: "" })', 0]],
+  [['withTip([{ label: "a", value: "10" }], 0)', 10], ['Number.isNaN(withTip([{ label: "a", value: "1.10" }, { label: "b", value: "2.20" }], 5))', false], ['readAmount({ label: "a", value: "" })', 0], ["(() => { const fields=Object.freeze([Object.freeze({label:\"x\",value:\" 1.005 \"}),Object.freeze({label:\"y\",value:\"1e2\"}),Object.freeze({label:\"z\",value:\" -.25 \"})]);return [readAmount(fields[0]),sumAmounts(fields),withTip(fields,10)]; })()", [1.005, 100.755, 110.83]], ["(() => { const f=Object.freeze(Array.from({length:1000},()=>Object.freeze({label:\"\",value:\"1000000\"})));return [sumAmounts(f),withTip(f,100),readAmount({label:\"blank\",value:\" \\t\\n \"})]; })()", [1000000000, 2000000000, 0]]],
 ];
+
 
 /* ── Edges and inputs ─────────────────────────────────────────────────── */
 

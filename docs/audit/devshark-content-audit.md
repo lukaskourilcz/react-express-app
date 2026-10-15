@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b025
+
+Read all five cumulative tracing stages, their inherited fields and every board.
+Weekly totals retain unrounded left-to-right Number arithmetic and caller
+ownership. Reminders capture fixed names as well as per-iteration positions;
+the reference now agrees with junior/senior snapshots after caller mutation.
+Top-expense results retain original immutable records, stable ties and fresh
+arrays. Receipt aggregation attaches Promise.all handlers to all started
+promises, retains exact opaque values and propagates original rejection reasons.
+Numeric form text follows one explicit bounded Number conversion/rounding policy,
+without claiming exact financial arithmetic or a universal NaN pattern.
+
+All35final-hash worker verdicts agree versus25/35before:20valid forms pass,
+five starters and ten wrongs fail. Twenty authored-target/base25XP checks pass;
+copy sweep has zero artifacts. Focused cumulative coding, API/script types,
+launch, build,263native bindings, both zero-vulnerability production dependency
+audits and diff checks pass. Finite execution is not arbitrary-program or
+asymptotic proof. Scores and final readings are manual same-session model work.
+Coverage is155/725coding,570remaining,263/263native. B022–b025 and runtime
+#403 remain staged; PR #402's exact-head required checks have passed and it is
+merged at8ea7ce7919140c4cad99f4082ee9264d5f20991f. READY production dpl_FYPZbZ64Crs8u8frbYcXG5KodXSH matches that merge,
+owns devshark.app and has no alias error. Eleven general guest checks pass at
+zero XP/null progress. Shipped coverage is135coding/263native;20coding
+reviews and the #403 runtime repair are local.
+
 ## 15 October continuation — five coding items b024
 
 Read every field and all cumulative boards in the five logging/debugging stages.

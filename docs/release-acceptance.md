@@ -3383,3 +3383,18 @@ failed; the final probe compares ordinary clones from the same realm while
 retaining the own-key/independence assertions. No checker policy changed.
 The content relies on local runtime fix #403; checked release/deployment and
 authenticated acceptance are pending. No owner progress or balances were used.
+
+## Tracing-path content batch b025 — 15 October 2026
+
+Five individual model reviews raise coding coverage to155/725,570remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty authored-target/base25XP
+checks and copy sweep pass. Focused cumulative coding, API/script types, launch,
+build, native bindings, both zero-vulnerability production dependency audits
+and diff checks pass. Callback/source ownership and local promises are tested
+without live accounts/network or balance changes. Release/independent and
+authenticated acceptance remain separate.
+
+## PR #402 exact production — 15 October 2026
+
+15 October: PR #402 passed required run38685241521 on exact95674b5e180ee5ca511fb6a4d8836d1e353d96b0 (verify30m37s; SQL42s), merged at8ea7ce7919140c4cad99f4082ee9264d5f20991f. READY production dpl_FYPZbZ64Crs8u8frbYcXG5KodXSH matches that merge, owns devshark.app and has no alias error. Eleven general guest checks pass at zero XP/null progress, with no Challenge/name/owner-state fixture. Shipped coding coverage is135/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance.
