@@ -110,7 +110,7 @@ console.log(takeTurns(["ada", "bo"], 3));
     tier: 2,
     focus: ["readonly", "spread", "push"],
     title: "Pad a readonly list",
-    prompt: "Write `padScores(scores: readonly number[], size: number): number[]`, returning a copy of the scores with zeros added at the end until it holds `size` values. The parameter is readonly, so `push` is not available on it and the copy has to be made with spread first. `padScores([7, 9], 4)` gives `[7, 9, 0, 0]`, and a list already at or beyond the size comes back as a plain copy.",
+    prompt: "Write `padScores(scores: readonly number[], size: number): number[]`, returning a copy of the scores with zeros added at the end until it holds `size` values. The readonly type prevents pushing onto the parameter in checked TypeScript. Make a new mutable array before padding; spread is one way to copy it. The type does not freeze an array at runtime. `padScores([7, 9], 4)` gives `[7, 9, 0, 0]`, and a list already at or beyond the size comes back as a plain copy. Domain: an ordinary dense array of at most 10000 numbers, possibly frozen at runtime, and an integer size from 0 through 10000. Existing values, including NaN, infinities and signed zero, stay in order without conversion; every new padding value is +0. Never truncate scores or change input. Return a fresh mutable dense array on every call, even when no padding is needed or both input and target are empty. Target: O(n) time and output space, where n is 1 + max(scores.length, size). Equivalent nonmutating copying approaches are valid.",
     starter: `const padScores = (scores: readonly number[], size: number): number[] => {
 
 };
@@ -128,7 +128,7 @@ console.log(padScores([7, 9], 4));
   return padded;
 };`,
     hints: [
-      "The compiler removes every mutating method from a readonly array, so the only array you can push onto is the one you build yourself.",
+      "A readonly array type exposes no mutating methods; it does not freeze the array at runtime. Make a mutable copy before padding.",
     ],
     approach: [
       "Spread the readonly array into a new, ordinary number[]; the copy has push even though the original does not.",
@@ -210,7 +210,7 @@ console.log(minMax([3, 1, 2]));
     tier: 2,
     focus: ["for-in", "keyof", "objects"],
     title: "Total expenses",
-    prompt: "Declare an interface named `Expenses` with `rent`, `food` and `travel`, all numbers, then write `totalExpenses(expenses: Expenses): number` adding the three up with a `for-in` loop. The loop variable is a plain `string`, so index the object with it as `keyof Expenses`. `totalExpenses({ rent: 800, food: 250, travel: 50 })` gives 1100.",
+    prompt: "Declare an interface named `Expenses` with `rent`, `food` and `travel`, all numbers, then write `totalExpenses(expenses: Expenses): number` adding the three up with a `for-in` loop. The loop variable is a plain `string`, so index the object with it as `keyof Expenses`. `totalExpenses({ rent: 800, food: 250, travel: 50 })` gives 1100. Domain: a stable ordinary data object or null-prototype record with its own enumerable rent, food and travel, each a finite number from -1000000000 through 1000000000. Other own or inherited enumerable properties may exist and must be ignored; values and prototypes may be frozen. There are at most 1000 enumerable string keys visited across a prototype chain of depth at most 20, with bounded key lengths. Read only the three own expense fields and leave input unchanged. A keyof assertion changes static checking, not runtime data: use own-property and allowed-key checks before treating an enumerated string as an expense key. Use ordinary Number addition, starting at 0, without currency rounding; different addition orders may have normal floating-point rounding differences. This is a typing exercise, not an exact decimal-money calculation. Target: O(n) time for the guarded for-in approach and O(1) retained state, where n is 1 + the enumerable string keys visited; direct reading of the three known fields is also a valid constant-time alternative.",
     starter: `interface Expenses {
   rent: number;
   food: number;
@@ -234,18 +234,18 @@ const totalExpenses = (expenses: Expenses): number => {
   let total = 0;
 
   for (const key in expenses) {
-    // add expenses[key as keyof Expenses]
+    // skip inherited and extra keys before adding expenses[key as keyof Expenses]
   }
 
   return total;
 };`,
     hints: [
-      "A for-in key is a string as far as the compiler knows, and a string is not proof that the property exists, until you assert it is one of the interface's keys.",
+      "A for-in loop can visit inherited and extra keys. Check ownership and the three allowed names before using a keyof assertion; an assertion alone does not validate runtime data.",
     ],
     approach: [
       "Write the interface with its three numeric properties, and start a running total at zero.",
       "Loop over the object with for-in; the loop variable is typed string, and the compiler refuses to index the object with it.",
-      "Assert the key as keyof Expenses inside the loop, add the value it reads, and return the total.",
+      "Skip inherited keys and names outside rent, food and travel. Assert the remaining key as keyof Expenses, add its value and return the total.",
     ],
     verify: "tests",
     estimatedMinutes: 7,

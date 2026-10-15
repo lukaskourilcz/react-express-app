@@ -327,7 +327,7 @@ console.log(replaceById([{ id: 1, name: "Ada" }, { id: 2, name: "Bo" }], { id: 2
     tier: 1,
     focus: ['for', 'tuples'],
     title: 'Each stop and the next',
-    prompt: 'A bus route is a list of stops in order. Write `legs(stops: readonly string[]): [string, string][]`, returning one `[from, to]` pair per leg: each stop with the stop after it. `legs(["Depot", "Park", "Station"])` gives `[["Depot", "Park"], ["Park", "Station"]]`. Use a `for` loop whose index stops one short of the last stop. A route with fewer than two stops has no legs.',
+    prompt: "A bus route is a list of stops in order. Write `legs(stops: readonly string[]): [string, string][]`, returning one `[from, to]` pair per leg: each stop with the stop after it. `legs([\"Depot\", \"Park\", \"Station\"])` gives `[[\"Depot\", \"Park\"], [\"Park\", \"Station\"]]`. Use a `for` loop whose index stops one short of the last stop. A route with fewer than two stops has no legs. Domain: a dense read-only array of at most 1000 strings, each at most 200 UTF-16 units, possibly frozen. Empty names, duplicates, whitespace and Unicode are ordinary stop names; determine whether a next stop exists by its index, not truthiness. Preserve names exactly and leave input unchanged. Return a fresh mutable outer array and a distinct fresh mutable two-element pair per leg on every call, even when consecutive legs have equal values. Empty/single-stop outputs are fresh empty arrays. Target: O(n) time and output space, where n is 1 + the stop count; strings are retained as values without character traversal.",
     starter: `const legs = (stops) => {
 
 };
@@ -337,7 +337,7 @@ console.log(legs(["Depot", "Park", "Station"]));
 `,
     skeleton: `const legs = (stops: readonly string[]): [string, string][] => {
   const pairs: [string, string][] = [];
-  // loop i from 0 while stops[i + 1] exists, pushing [stops[i], stops[i + 1]]
+  // loop i from 0 while i + 1 < stops.length, pushing [stops[i], stops[i + 1]]
   return pairs;
 };`,
     hints: ['Annotate the result as `[string, string][]`, a list of pairs. Without that, TypeScript infers `[a, b]` as `string[]`, which may hold any number of strings. Stop the loop at `i < stops.length - 1`, so `stops[i + 1]` always exists.'],
@@ -526,7 +526,7 @@ const setField = <K extends keyof Product>(product: Product, key: K, value: Prod
     tier: 1,
     focus: ['spread', 'filter'],
     title: 'Pin a chat to the top',
-    prompt: 'A messaging app lets you pin one chat above the others. Write `pinToTop(chats: readonly string[], chat: string): string[]`, returning a new list with `chat` first and every other chat after it, in the same order as before. Build it as `[chat, ...rest]`, where `rest` is the list without that chat. A chat that is not in the list is not added: return a copy of the list as it is.',
+    prompt: "A messaging app lets you pin one chat above the others. Write `pinToTop(chats: readonly string[], chat: string): string[]`, returning a new list with `chat` first and every other chat after it, in the same order as before. Build it as `[chat, ...rest]`, where `rest` is the list without that chat. A chat that is not in the list is not added: return a copy of the list as it is. Domain: a dense read-only array of at most 1000 strings and a string chat, each at most 200 UTF-16 units, possibly frozen at runtime. Match exact strings without trimming or case conversion; empty names and duplicates are ordinary values. If chat occurs more than once, place exactly one copy at the front and remove every other occurrence of that same chat. Preserve the order and duplicates of all other names. Return a fresh mutable array on every call, including when chat is missing, already first or the input is empty; never change input. Target: O(n) time and output space, where n is 1 + the chat count under bounded-width string comparison.",
     starter: `const pinToTop = (chats: readonly string[], chat: string): string[] => {
 
 };
@@ -567,7 +567,7 @@ console.log(pinToTop(["Ada", "Bo", "Cy"], "Cy"));
     tier: 2,
     focus: ['spread', 'objects'],
     title: 'Move to a new city',
-    prompt: 'Write `moveTo(user: User, city: string): User`, returning a new user whose address has the new `city` and keeps its `street`. The user you were given must not change, and neither must its address. Spread copies one level only: `{ ...user }` is a new user that still points at the old `address` object, so the address needs a spread of its own.',
+    prompt: "Write `moveTo(user: User, city: string): User`, returning a new user whose address has the new `city` and keeps its `street`. The user you were given must not change, and neither must its address. Spread copies one level only: `{ ...user }` is a new user that still points at the old `address` object, so the address needs a spread of its own. Domain: stable ordinary/null-prototype data records with the declared required fields, possibly frozen. name, street, old city and new city are strings up to 200 UTF-16 units, preserved exactly without trimming or validation. User and Address may each have up to 100 extra own enumerable string/Symbol data properties with opaque values. Preserve those fields and references except the replaced address/city; ignore inherited properties when copying. Return a fresh plain user and fresh plain address every call, even if the city is unchanged. Both result objects are mutable; nested opaque fields remain shared rather than deep-cloned. Leave all input objects unchanged. Target: O(n) time and shallow output space, where n is 1 + the own enumerable field counts of user and address, under bounded-key copying.",
     starter: `interface Address {
   street: string;
   city: string;
@@ -669,7 +669,7 @@ console.log(ranked({ Ada: 7, Bo: 12, Cy: 3 }));
     tier: 2,
     focus: ['sort', 'strings'],
     title: 'Sort titles, ignoring case',
-    prompt: 'A reading list shows its titles from A to Z. `sort` with no compare function orders by character code, where every capital letter comes before every lower-case one, so `"Zebra"` lands before `"apple"`. Write `sortTitles(titles: readonly string[]): string[]`, returning a new array sorted by the lower-case form of each title, compared with `<` and `>`. Titles that differ only in case keep their original order.',
+    prompt: "A reading list shows its titles from A to Z. `sort` with no compare function orders by character code, so uppercase ASCII letters come before lowercase ASCII letters, so `\"Zebra\"` lands before `\"apple\"`. Write `sortTitles(titles: readonly string[]): string[]`, returning a new array sorted by the lower-case form of each title, compared with `<` and `>`. Titles with equal lower-case keys keep their original order. Domain: an ordinary dense read-only array of at most 1000 strings, each at most 200 UTF-16 units, possibly frozen. Apply standard locale-independent toLowerCase to the whole string, then compare those keys lexicographically by UTF-16 units using < and >. Do not trim, normalize Unicode, use locale/dictionary ordering or alter the original strings. Empty text, whitespace, punctuation, Unicode and unpaired surrogates are ordinary data. Equal lower-case keys retain input order. Return a fresh mutable array, including for empty or singleton input, and leave input unchanged. Target: O(n log n) time in the comparison-sort model with bounded-width strings, where n is 1 + the title count. For unbounded string lengths, key creation/comparison adds a length factor; sort implementation costs are model assumptions, not an ECMAScript guarantee. Result storage is O(n).",
     starter: `const sortTitles = (titles: readonly string[]): string[] => {
 
 };
@@ -849,7 +849,7 @@ console.log(passed({ Ada: 72, Bo: 48, Cy: 90 }, 50));
     tier: 1,
     focus: ['destructuring', 'strings'],
     title: 'One line per order',
-    prompt: 'An order list shows each order on one line, such as `#12 Ada, 3 items`. Write `orderLine(order: Order): string`. Destructure the `id`, the customer’s `name` and the `items` in the parameter list: a nested pattern reaches into `customer`. Write `item` for exactly one item and `items` for any other count, 0 included.',
+    prompt: "An order list shows each order on one line, such as `#12 Ada, 3 items`. Write `orderLine(order: Order): string`. Destructure the `id`, the customer\u2019s `name` and the `items` in the parameter list: a nested pattern reaches into `customer`. Write `item` for exactly one item and `items` for any other count, 0 included. Domain: stable read-only data records matching Order, possibly frozen at runtime. id is an integer from 0 through 1000000000; name and email are strings up to 200 UTF-16 units, including empty text, whitespace and Unicode. items is an array of at most 10000 entries; it may be sparse or frozen and every present entry is a string. Count items.length, including holes, empty strings and duplicates; do not scan, deduplicate or filter items. Keep the name exactly as given without trimming, use normal decimal id/count text, and do not include email. Leave all inputs unchanged. Target: O(n) time and output space for constructing the line, where n is 1 + its UTF-16 length; item contents and email are not part of that work.",
     starter: `interface Order {
   id: number;
   customer: { name: string; email: string };

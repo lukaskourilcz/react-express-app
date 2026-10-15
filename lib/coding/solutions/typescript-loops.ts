@@ -83,7 +83,13 @@ export const TYPESCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   const missing = Math.max(0, size - scores.length);
   return scores.concat(Array.from({ length: missing }, () => 0));
 };`,
+    hiddenTypeTests: [{"code": "const __auditPadded = padScores([1,2] as const,4); __auditPadded.push(3);"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze([NaN,Infinity,-Infinity,-0]),a=padScores(input,2),b=padScores(input,4);a.push(9);return [a!==input,a!==b,b.length,b.every((x,i)=>Object.is(x,input[i])),input.length,a.length];})()", expected: [true, true, 4, true, 4, 5] },
+      { call: "(()=>{const a=padScores(Object.freeze([]),0),b=padScores(Object.freeze([]),0);a.push(1);return [a!==b,a.length,b.length,Object.is(padScores([-0],3)[1],0)];})()", expected: [true, 1, 0, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),out=padScores(input,10000);return [out.length,out[999],out.slice(1000).every(x=>Object.is(x,0)),input.length];})()", expected: [10000, 999, true, 1000] },
+      { call: "(()=>{const input=Object.freeze(Array(10000).fill(3)),out=padScores(input,0);out[0]=4;return [out.length,input[0],out[0]];})()", expected: [10000, 3, 4] },
+
       { call: "(() => { const scores = [1, 2]; padScores(scores, 4); return scores; })()", expected: [1, 2] },
       { call: "padScores([5, 5], 2)", expected: [5, 5] },
     ],
@@ -111,38 +117,16 @@ export const TYPESCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
     ],
   },
   "ts-total-expenses": {
-    solution: `interface Expenses {
-  rent: number;
-  food: number;
-  travel: number;
-}
-
-const totalExpenses = (expenses: Expenses): number => {
-  let total = 0;
-  for (const key in expenses) total += expenses[key as keyof Expenses];
-  return total;
-};`,
-    junior: `interface Expenses {
-  rent: number;
-  food: number;
-  travel: number;
-}
-
-const totalExpenses = (expenses: Expenses): number => {
-  const rent = expenses.rent;
-  const food = expenses.food;
-  const travel = expenses.travel;
-  return rent + food + travel;
-};`,
-    senior: `interface Expenses {
-  rent: number;
-  food: number;
-  travel: number;
-}
-
-// Object.values is typed number[] here, so a new expense line is counted without touching this function.
-const totalExpenses = (expenses: Expenses): number => Object.values(expenses).reduce((total, amount) => total + amount, 0);`,
+    solution: "interface Expenses {\n  rent: number;\n  food: number;\n  travel: number;\n}\n\nconst totalExpenses = (expenses: Expenses): number => {\n  let total = 0;\n  for (const key in expenses) {\n    if (!Object.hasOwn(expenses, key)) continue;\n    if (key !== \"rent\" && key !== \"food\" && key !== \"travel\") continue;\n    total += expenses[key as keyof Expenses];\n  }\n  return total;\n};",
+    junior: "interface Expenses {\n  rent: number;\n  food: number;\n  travel: number;\n}\n\nconst totalExpenses = (expenses: Expenses): number => {\n  let total = 0;\n  for (const key in expenses) {\n    const isExpense = key === \"rent\" || key === \"food\" || key === \"travel\";\n    if (isExpense && Object.hasOwn(expenses, key)) {\n      const amount = expenses[key as keyof Expenses];\n      total = total + amount;\n    }\n  }\n  return total;\n};",
+    senior: "interface Expenses {\n  rent: number;\n  food: number;\n  travel: number;\n}\n\nfunction totalExpenses(expenses: Expenses): number {\n  let total = 0;\n  for (const key in expenses) {\n    if (Object.hasOwn(expenses, key) && [\"rent\", \"food\", \"travel\"].includes(key)) {\n      total += expenses[key as keyof Expenses];\n    }\n  }\n  return total;\n}",
+    hiddenTypeTests: [{"code": "const __auditWrongKey: keyof Expenses = \"bonus\";", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.assign(Object.create({extra:100,food:999}),{rent:1.5,food:2.5,travel:-1,bonus:50,label:'ignore'});Object.freeze(input);return [totalExpenses(input),input.food,input.bonus];})()", expected: [3, 2.5, 50] },
+      { call: "(()=>{const input=Object.create(null);Object.assign(input,{rent:100,food:20,travel:30,__proto__:999,constructor:999});Object.defineProperty(input,'__proto__',{value:999,enumerable:true});Object.freeze(input);return [totalExpenses(input),Object.getPrototypeOf(input)===null];})()", expected: [150, true] },
+      { call: "(()=>{const input={rent:1,food:2,travel:3};for(let i=0;i<997;i++)input['extra'+i]=100;Object.freeze(input);return totalExpenses(input);})()", expected: 6 },
+      { call: "(()=>{const x={travel:0.1,rent:1000000000,food:-1000000000};return Math.abs(totalExpenses(Object.freeze(x))-0.1)<0.000001;})()", expected: true },
+
       { call: "totalExpenses({ rent: 10, food: 20, travel: 30 })", expected: 60 },
       { call: "totalExpenses({ rent: -5, food: 5, travel: 0 })", expected: 0 },
     ],

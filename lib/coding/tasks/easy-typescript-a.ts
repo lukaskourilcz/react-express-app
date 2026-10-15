@@ -357,7 +357,7 @@ console.log(flip([1, "a"]));
     tier: 1,
     focus: ['destructuring'],
     title: 'Header row and the rest',
-    prompt: 'A CSV file parsed into rows starts with a row of column names. Write `splitHeader(rows: string[][]): { header: string[]; body: string[][] }`, returning the first row as `header` and every later row in `body`. Use one array destructuring with a rest element, and give the header a default of `[]`, so a file with no rows at all gives two empty lists.',
+    prompt: "A CSV file parsed into rows starts with a row of column names. Write `splitHeader(rows: string[][]): { header: string[]; body: string[][] }`, returning the first row as `header` and every later row in `body`. Use one array destructuring with a rest element, and give the header a default of `[]`, so a file with no rows at all gives two empty lists. Domain: an ordinary dense array of at most 1000 dense string-array rows, with at most 10000 cells in total and strings up to 200 UTF-16 units. Outer/row arrays may be frozen at runtime. Rows may have different lengths, including zero; no CSV parsing or rectangular-table validation is required. Return a fresh plain object containing only header and body. A present first row is the exact original header reference, including an empty row; each body row keeps its original reference. Only the body outer array is copied. For no rows, create separate fresh empty header and body arrays on every call. Leave the input and rows unchanged; do not deep-clone cell rows. Target: O(n) time and body-array space, where n is 1 + the row count, excluding the untouched cell contents.",
     starter: `const splitHeader = (rows) => {
 
 };
@@ -830,7 +830,7 @@ const headings = (columns: (keyof Contact)[]): string[] => {
     tier: 1,
     focus: ['spread', 'map'],
     title: 'Tick off a todo',
-    prompt: 'Write `markDone(todos: readonly Todo[], id: number): Todo[]`, returning a new list in which the todo with that `id` has `done: true` and every other todo is unchanged. Build the changed todo as a new object with spread, so the caller’s todos stay as they were. An id that matches nothing gives back an equal list. `Todo` is declared for you.',
+    prompt: "Write `markDone(todos: readonly Todo[], id: number): Todo[]`, returning a new list in which the todo with that `id` has `done: true` and every other todo is unchanged. Build the changed todo as a new object with spread, so the caller\u2019s todos stay as they were. An id that matches nothing gives back an equal list. `Todo` is declared for you. Domain: a dense read-only array of at most 1000 stable ordinary/null-prototype data records, possibly frozen. Every todo has integer id from 0 through 1000000000, text up to 200 UTF-16 units and boolean done, plus up to 20 extra own enumerable string/Symbol data properties with opaque values. Mark every matching id if duplicates exist. Always return a fresh mutable outer array. A matching record with done: false gets a fresh plain shallow copy with done: true. An already-done match may be reused or shallow-copied; preserve every other own enumerable property and its original reference either way. Nonmatching records retain exact identity. Ignore inherited properties when copying, leave all inputs unchanged and do not deep-clone opaque fields. Target: O(n) time and output space, where n is 1 + todo count + their total own enumerable field count.",
     starter: `interface Todo {
   id: number;
   text: string;

@@ -270224,6 +270224,1549 @@
     "notes": "Read all fields, scaffold/hint/approach, original/final boards and public/hidden runtime/type assertions. Reversed position types are independently checked from value identity. Method alignment is instructional rather than a claimed syntax-enforcement rule. Final English material and execution reread; same-session self-review only.",
     "pass": "second-reading"
    }
+  },
+  {
+   "id": "ts-easy3-route-legs",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 4,
+   "objective": "Build exact adjacent-stop tuples using index bounds, including empty names, without sharing mutable pair arrays.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "ccc6de876b8d8372",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "88f25aa241767e99",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Readonly arrays and tuple outputs remain standard TypeScript concepts.",
+    "practicalUtility": "Adjacent pairs are useful for route legs, transitions and neighboring records.",
+    "transferable": "Index existence versus truthiness and fresh nested outputs transfer to other array transforms.",
+    "audienceFit": "A one-short index bound and tuple annotation fit a foundational loop exercise.",
+    "riskOutcome": "Prevents dropped empty names and unintended output aliasing in this bounded task."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Scaffold said the next stop exists without making the index test explicit.",
+    "Senior used slice/map rather than the requested for-loop example.",
+    "A truthiness-based stop condition passed all previous nonempty-name cases.",
+    "Domain, fresh per-pair identity and cost variable were unstated."
+   ],
+   "rationale": "Retain correct reference/junior; align the senior instructional board to a bounded for loop while preserving the valid slice/map alternative in execution evidence. Define read-only dense/frozen inputs through1000, exact empty/whitespace/Unicode names, distinct fresh mutable pairs and outer arrays. Four cases cover empty names, pair and cross-call aliasing, mutable empty/single outputs and a1000-stop input. O(n) time/result uses stop count and never traverses names. No syntax-based grading restriction is claimed.",
+   "evidence": [
+    "https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types",
+    "https://www.typescriptlang.org/docs/handbook/2/objects.html#readonlyarray",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-easy3-route-legs",
+      "contentHash": "ccc6de876b8d8372",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy3-route-legs",
+      "contentHash": "ccc6de876b8d8372",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy3-route-legs",
+      "contentHash": "ccc6de876b8d8372",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy3-route-legs",
+      "contentHash": "ccc6de876b8d8372",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy3-route-legs",
+      "contentHash": "ccc6de876b8d8372",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy3-route-legs",
+      "contentHash": "ccc6de876b8d8372",
+      "label": "wrong-truthy-stops",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b049; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types",
+     "https://www.typescriptlang.org/docs/handbook/2/objects.html#readonlyarray",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all English fields, three final boards and all type/runtime assertions. Recomputed n-1 pair count and end positions. Index bounds allow an empty next name; fresh pair mutation does not change another pair, another result or input. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "ts-pad-a-readonly-list",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 4,
+   "objective": "Copy a readonly numeric array into a fresh mutable result before padding with positive zero.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "d51c6bba8c3a8f4c",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "b89af780517be670",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Readonly array types and nonmutating copies remain current TypeScript foundations.",
+    "practicalUtility": "Padding without damaging a caller array is a practical data preparation task.",
+    "transferable": "Compile-time readonly versus runtime freezing transfers to other API contracts.",
+    "audienceFit": "An ordinary copy/push loop is a bounded introduction to readonly inputs.",
+    "riskOutcome": "A shared return can mutate caller state and readonly alone is not runtime protection."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Hint said the compiler removes methods, which could imply runtime changes.",
+    "Prompt falsely required spread as the only copy mechanism while boards correctly used loops and concat.",
+    "Returning the input when already long enough passed all old checks.",
+    "Numeric/size bounds, exact special Number values and fresh mutable empty output were unstated."
+   ],
+   "rationale": "Retain all three correct boards and explicitly distinguish type checking from runtime freezing; copying approaches remain interchangeable. Define dense/frozen input and integer size0..10000, no truncation, exact NaN/infinities/signed zero and +0 padding, fresh mutable output even with no padding. Cases inspect aliasing on frozen long-enough input, independent empty outputs,10000-element padding and a10000-element input with target0. Target linear work in1+max(input length,size) and result space; no timing benchmark.",
+   "evidence": [
+    "https://www.typescriptlang.org/docs/handbook/2/objects.html#readonlyarray",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-pad-a-readonly-list",
+      "contentHash": "d51c6bba8c3a8f4c",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-pad-a-readonly-list",
+      "contentHash": "d51c6bba8c3a8f4c",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-pad-a-readonly-list",
+      "contentHash": "d51c6bba8c3a8f4c",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-pad-a-readonly-list",
+      "contentHash": "d51c6bba8c3a8f4c",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-pad-a-readonly-list",
+      "contentHash": "d51c6bba8c3a8f4c",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-pad-a-readonly-list",
+      "contentHash": "d51c6bba8c3a8f4c",
+      "label": "wrong-alias-long-enough",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 6
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b049; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://www.typescriptlang.org/docs/handbook/2/objects.html#readonlyarray",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every English field and board with public/hidden runtime/type checks. Readonly static acceptance remains tested; frozen runtime cases independently guard input mutation. Array.concat preserves copied primitive values and its result is mutable, so the correct senior is kept. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "ts-easy3-sort-ignoring-case",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 4,
+   "objective": "Stably sort unchanged titles by standard lowercase UTF-16 keys rather than trimmed or locale-dependent alternatives.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "a64757fc50f93984",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "be55afe1d82dc1e5",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Comparator contracts, stable sorting and nonmutating arrays remain current JavaScript/TypeScript.",
+    "practicalUtility": "Ordered labels and titles are common UI data work with an explicit ordering policy.",
+    "transferable": "Key normalization, comparison units and ties transfer to other deterministic sorts.",
+    "audienceFit": "Bounded title strings and a three-way comparator fit the intended array lesson.",
+    "riskOutcome": "Implicit trimming or locale changes can silently reorder distinct data."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Intro generalized ASCII uppercase/lowercase order to all characters.",
+    "Equal-lowercase-key ordering needed to be distinguished from broader Unicode case folding.",
+    "A comparator that trims titles before sorting passed all prior checks.",
+    "Bounded width, exact strings, fresh empty/single outputs and Unicode comparison units were unstated."
+   ],
+   "rationale": "Keep all three correct stable sorts, narrow the ASCII example and define locale-independent whole-string toLowerCase then UTF-16 < and >, with no trimming, Unicode normalization or numeric/locale collation. Equal keys keep input order. Cases inspect leading/empty/space keys, non-ASCII/emoji/lone-surrogate order, dotted-I/decomposed-accent keys and1000 stable ties plus fresh mutable outputs. Target O(n log n) in the stated comparison-sort/bounded200-unit-string model; explain that unbounded strings add a length factor and language sort complexity is not guaranteed. The valid decorated-key alternative remains accepted.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-easy3-sort-ignoring-case",
+      "contentHash": "a64757fc50f93984",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "ts-easy3-sort-ignoring-case",
+      "contentHash": "a64757fc50f93984",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "ts-easy3-sort-ignoring-case",
+      "contentHash": "a64757fc50f93984",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "ts-easy3-sort-ignoring-case",
+      "contentHash": "a64757fc50f93984",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "ts-easy3-sort-ignoring-case",
+      "contentHash": "a64757fc50f93984",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "ts-easy3-sort-ignoring-case",
+      "contentHash": "a64757fc50f93984",
+      "label": "wrong-trims-sort-key",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 9
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b049; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/sort",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read full English material, scaffold, hints, three boards and every runtime/type check. Recomputed UTF-16 key order and stable tie positions. The input ä precedes Ä in the Unicode case and must remain so; standard lowercase is not locale collation or full Unicode case folding. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "ts-easy2-header-and-rows",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 5,
+   "objective": "Separate a header and shallow body copy using destructuring/rest while preserving each original row reference.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "091b10115878a34c",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "2cb941d9e92db360",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Destructuring defaults and rest elements remain current JavaScript/TypeScript syntax.",
+    "practicalUtility": "Separating parsed tabular headers from rows is common data preparation.",
+    "transferable": "Shallow outer copying versus element identity transfers to array APIs.",
+    "audienceFit": "A first/rest/default pattern is a small foundational destructuring objective.",
+    "riskOutcome": "Unnecessary deep copying loses row identity and shared outer arrays can corrupt input."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Junior loop did not demonstrate the requested destructuring/rest operation.",
+    "Row identity, default identity and shallow rather than deep copying were unstated.",
+    "JSON cloning header/body passed the old structural assertions."
+   ],
+   "rationale": "Retain correct reference/senior and align junior to first/default/rest destructuring. Define dense bounded rows/cells without rectangular validation or CSV parsing, frozen runtime inputs, a fresh plain result and fresh body outer array, original header/body row references and separate fresh defaults for empty input. Four cases inspect row identity, empty present header, independently mutable empty defaults and1000 frozen rows. Add a negative body type check. O(n) uses row count only, because cell contents remain untouched. Newly explicit shallow-reference behavior is stated as the clarified contract rather than fabricated prior grader enforcement.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring",
+    "https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-easy2-header-and-rows",
+      "contentHash": "091b10115878a34c",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy2-header-and-rows",
+      "contentHash": "091b10115878a34c",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy2-header-and-rows",
+      "contentHash": "091b10115878a34c",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy2-header-and-rows",
+      "contentHash": "091b10115878a34c",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy2-header-and-rows",
+      "contentHash": "091b10115878a34c",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy2-header-and-rows",
+      "contentHash": "091b10115878a34c",
+      "label": "wrong-deep-copy",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 8
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b049; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring",
+     "https://www.typescriptlang.org/docs/handbook/2/objects.html#tuple-types",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all fields, final model boards and all assertions. An empty first row is present, so it is retained rather than replaced by a default. Rest creates a fresh body array but does not clone its row entries. Public mutable string[][] input type remains; runtime freezing does not silently add a readonly static signature requirement. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "ts-easy3-order-line",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 5,
+   "objective": "Read nested order fields and format an exact pluralized line without changing names or scanning items.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "23bc00e9bc64a253",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "7a6807fc094345ed",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Nested destructuring and template literals remain current language foundations.",
+    "practicalUtility": "Order-summary formatting is a concrete UI task.",
+    "transferable": "Nested patterns, exact text preservation and length-based counts transfer to other view formatting.",
+    "audienceFit": "A fixed typed record and singular/plural branch fit an introductory exercise.",
+    "riskOutcome": "Prevents basic count/text mistakes without claiming localization or production order validation."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Junior did not demonstrate the requested nested parameter destructuring or template literal.",
+    "Senior destructured items.length directly rather than binding the requested items field.",
+    "Trimming the customer name passed all previous examples.",
+    "Name/ID/item domain, sparse count and output-size cost were unstated."
+   ],
+   "rationale": "Retain correct reference and align junior/senior to the taught nested parameter fields; keep the semantically valid original junior as an alternative. Define stable/frozen records, exact empty/whitespace/Unicode names, bounded nonnegative IDs, dense or sparse arrays through10000 with count by length, no email in output and no mutation. Cases preserve spaces/empty names, frozen sparse length despite holes/empty entries and maximum ID/count with Unicode name. A hidden type check rejects numeric items. Author O(n) output-construction work for1+line UTF-16 length, not a scan of item contents. Unknown estimates remain unpenalized.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals",
+    "https://www.typescriptlang.org/docs/handbook/2/objects.html",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-easy3-order-line",
+      "contentHash": "23bc00e9bc64a253",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-order-line",
+      "contentHash": "23bc00e9bc64a253",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-order-line",
+      "contentHash": "23bc00e9bc64a253",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-order-line",
+      "contentHash": "23bc00e9bc64a253",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-order-line",
+      "contentHash": "23bc00e9bc64a253",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-order-line",
+      "contentHash": "23bc00e9bc64a253",
+      "label": "wrong-trims-name",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b049; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Destructuring",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Template_literals",
+     "https://www.typescriptlang.org/docs/handbook/2/objects.html",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read complete material, interfaces, model boards and public/hidden checks. Plural uses exactly count===1, including zero as items. This is explicitly fixed English formatting, not locale/currency/email validation or access-control logic; no real email/user fixture is used. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "ts-total-expenses",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 5,
+   "objective": "Narrow an enumerated runtime key before a keyof assertion and sum only the three own expense fields.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "5c71754d1efa8041",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "3822f1626e370de7",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Structural interfaces, keyof and own-property checks remain current TypeScript/JavaScript.",
+    "practicalUtility": "Summing a named record while ignoring unrelated data is practical application work.",
+    "transferable": "Static assertions versus runtime ownership/allowed-key checks transfer to other typed object APIs.",
+    "audienceFit": "Three known fields provide a bounded key-narrowing exercise.",
+    "riskOutcome": "Unchecked enumeration can include inherited or extra values despite the declared interface."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Reference for-in included inherited and extra enumerable properties; Object.values senior included extra own keys.",
+    "Junior directly read fields rather than illustrating the authored for-in/keyof approach.",
+    "Hint incorrectly suggested an assertion proves a runtime property is an interface key.",
+    "The unchecked reference passed every original closed-literal example."
+   ],
+   "rationale": "Guard own membership and allowed rent/food/travel names before asserting keyof in all instructional boards; retain direct-three-field reads as a valid faster alternative. Define stable ordinary/null-prototype data records, own required finite amounts, extra/inherited enumerable keys through1000 and bounded prototype depth. State ordinary Number rather than decimal-money arithmetic. Cases inspect frozen inherited/extra string/numeric keys, null-prototype __proto__/constructor extras,1000 keys and a fractional cancellation case with tolerance for ordinary addition-order rounding. O(n) counts visited enumerable keys for the taught guarded loop; the constant direct alternative is accepted.",
+   "evidence": [
+    "https://www.typescriptlang.org/docs/handbook/2/keyof-types.html",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-total-expenses",
+      "contentHash": "5c71754d1efa8041",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-total-expenses",
+      "contentHash": "5c71754d1efa8041",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-total-expenses",
+      "contentHash": "5c71754d1efa8041",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-total-expenses",
+      "contentHash": "5c71754d1efa8041",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-total-expenses",
+      "contentHash": "5c71754d1efa8041",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 6
+     },
+     {
+      "id": "ts-total-expenses",
+      "contentHash": "5c71754d1efa8041",
+      "label": "wrong-unchecked-keys",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 6
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b050; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://www.typescriptlang.org/docs/handbook/2/keyof-types.html",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all English fields, original/final boards, scaffolds and every runtime/type assertion. The new key guard is a runtime check; as keyof alone is not. Added negative keyof test retains exactly the three declared names. No real financial/user data or billing behavior is involved. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "ts-easy3-pin-to-top",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 7,
+   "objective": "Pin an exact chat value once while preserving other names, duplicates and independent mutable output.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "aa780132b302ebae",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "d767de5a0b063a19",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Readonly arrays, filter and spread remain standard TypeScript foundations.",
+    "practicalUtility": "Pinning an existing UI list item is a concrete application transform.",
+    "transferable": "Stable filtering, exact matching and no-op copy identity transfer to list updates.",
+    "audienceFit": "One membership check and a filtered spread fit the introductory objective.",
+    "riskOutcome": "Prevents basic duplicate/order and caller-mutation mistakes within a small exercise."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Duplicate pinned-name behavior, exact empty/case/space matching and array mutability were unstated.",
+    "Moving only the first occurrence passed all existing examples."
+   ],
+   "rationale": "Keep all three correct boards and explicitly consolidate all occurrences of the selected name into one front entry. Preserve every other duplicate and order, exact strings and fresh mutable output for every path. Bound dense/frozen input to1000 and names to200 units. Tests include repeated empty target names, case/space distinctions, fresh mutable already-first/missing/empty outputs and1000 repeated names. Author O(n) input traversal/output under bounded comparison; missing names remain absent. This is a clarified value-list policy, not a claim to identify real users by display name.",
+   "evidence": [
+    "https://www.typescriptlang.org/docs/handbook/2/objects.html#readonlyarray",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-easy3-pin-to-top",
+      "contentHash": "aa780132b302ebae",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy3-pin-to-top",
+      "contentHash": "aa780132b302ebae",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy3-pin-to-top",
+      "contentHash": "aa780132b302ebae",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy3-pin-to-top",
+      "contentHash": "aa780132b302ebae",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy3-pin-to-top",
+      "contentHash": "aa780132b302ebae",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 8
+     },
+     {
+      "id": "ts-easy3-pin-to-top",
+      "contentHash": "aa780132b302ebae",
+      "label": "wrong-first-only",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 8
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b050; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://www.typescriptlang.org/docs/handbook/2/objects.html#readonlyarray",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read complete English material, scaffold, hints, three unchanged boards and every assertion. Existing filter/loop implementations already consolidate duplicates consistently; a first-only splice is the meaningful old false pass. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "ts-easy2-tick-off-a-todo",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 7,
+   "objective": "Apply a shallow immutable todo update while preserving metadata and unchanged-record identity.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "34e5b29680ac5962",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "0db07c426c7446f1",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Shallow immutable updates and structural typing remain standard application patterns.",
+    "practicalUtility": "Marking a todo without losing caller state is direct UI data work.",
+    "transferable": "Own-field copying and reference preservation transfer to reducer/state updates.",
+    "audienceFit": "A readonly list with one changed boolean is an appropriate foundational update.",
+    "riskOutcome": "Dropping extra metadata or mutating original records can corrupt application state."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Junior manually rebuilt only three known fields, losing extra own metadata allowed by structural objects.",
+    "Fresh outer output, matching duplicate policy and shallow opaque-field identity were incompletely stated.",
+    "The field-dropping junior passed all previous basic-shape examples."
+   ],
+   "rationale": "Use spread in junior and keep correct reference/senior. In particular retain the valid senior optimization that reuses an already-done matching record; a fresh shallow copy is also allowed. Undone matches must be newly copied, nonmatches retain identity, duplicate IDs are all marked and outer output is always fresh/mutable. Define bounded stable/frozen plain/null-prototype data records with extra own enumerable string/Symbol properties. Cases preserve nested references, symbols and literal __proto__ as data, test duplicate/already-done behavior without requiring its identity choice, inspect no-match/empty outputs and1000 todos. O(n) includes list entries and own-field copying.",
+   "evidence": [
+    "https://www.typescriptlang.org/docs/handbook/2/objects.html",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-easy2-tick-off-a-todo",
+      "contentHash": "34e5b29680ac5962",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy2-tick-off-a-todo",
+      "contentHash": "34e5b29680ac5962",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy2-tick-off-a-todo",
+      "contentHash": "34e5b29680ac5962",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy2-tick-off-a-todo",
+      "contentHash": "34e5b29680ac5962",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy2-tick-off-a-todo",
+      "contentHash": "34e5b29680ac5962",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-easy2-tick-off-a-todo",
+      "contentHash": "34e5b29680ac5962",
+      "label": "wrong-drops-fields",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b050; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://www.typescriptlang.org/docs/handbook/2/objects.html",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every field, final boards and all runtime/type cases. The initial review design was corrected before approval to allow legitimate already-done no-op reuse, rather than inventing an always-copy restriction. No test mutates a reused frozen already-done record. Newly copied records remain plain and safe for prototype-like own keys. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "ts-easy3-move-house",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 7,
+   "objective": "Copy both levels of an address update while retaining unrelated own metadata and shared opaque references.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "42d27e4e9bebb961",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "52927b5af886c04d",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Nested shallow copies remain current JavaScript/TypeScript state-update practice.",
+    "practicalUtility": "Updating an address without changing the original is a concrete data operation.",
+    "transferable": "Copy depth versus opaque nested sharing transfers to other immutable updates.",
+    "audienceFit": "Two typed object levels make the spread boundary visible to beginners.",
+    "riskOutcome": "Manual reconstruction can drop fields, while one shallow copy can mutate nested caller state."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Junior rebuilt only name/street/city and lost additional own properties.",
+    "Fresh objects on same-city calls, exact text, symbols and metadata identity were unstated.",
+    "The field-dropping junior passed all old minimal-shape checks."
+   ],
+   "rationale": "Retain correct reference/senior and change junior to shallow-copy both user and address. Define stable frozen/plain/null-prototype records with bounded extra own enumerable string/Symbol data; preserve references and exact text, ignore inherited fields and return fresh plain mutable outer/address objects even for same city. Cases inspect nested metadata/symbol/__proto__ data, independently mutable same-city results and100 extra fields on each level. O(n) measures copied own fields rather than traversing opaque metadata.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax",
+    "https://www.typescriptlang.org/docs/handbook/2/objects.html",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-easy3-move-house",
+      "contentHash": "42d27e4e9bebb961",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-move-house",
+      "contentHash": "42d27e4e9bebb961",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-move-house",
+      "contentHash": "42d27e4e9bebb961",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-move-house",
+      "contentHash": "42d27e4e9bebb961",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-move-house",
+      "contentHash": "42d27e4e9bebb961",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 6
+     },
+     {
+      "id": "ts-easy3-move-house",
+      "contentHash": "42d27e4e9bebb961",
+      "label": "wrong-drops-fields",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 6
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b050; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Spread_syntax",
+     "https://www.typescriptlang.org/docs/handbook/2/objects.html",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read all English material, interfaces, boards and every assertion. The original caller/address remain unchanged; other nested values intentionally remain shared rather than claiming deep immutability. No account-profile data is used: these are local task records only. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "ts-fall-back-to-a-default",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "typescript",
+   "topic": "typescript",
+   "level": 7,
+   "objective": "Substitute only nullish values while preserving opaque identity and accurately describing an unconstrained generic result.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "7f6160145fea63ce",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "4d0b72d448f501d3",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 5,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 5
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Nullish coalescing and generic unions remain current language foundations.",
+    "practicalUtility": "Defaulting configuration/data without replacing valid falsy values is practical work.",
+    "transferable": "Distinguishing a type parameter from NonNullable and preserving identity transfers to generic APIs.",
+    "audienceFit": "A constant-time branch is a focused foundational generic exercise.",
+    "riskOutcome": "False non-null guarantees can lead to unsound downstream assumptions and runtime errors."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Hint/approach said the answer can never be missing although unconstrained T may itself include null or undefined.",
+    "The shared-type sentence overstated rejection of different variants when callers can explicitly select a union.",
+    "JSON-cloning an object fallback passed all original structural checks.",
+    "Opaque identity and nullable/union instantiations were not verified."
+   ],
+   "rationale": "Keep all three correct implementations and the public unconstrained signature. Correct the hint, approach and public label: T describes the result, and nullable T/fallback can still yield nullish output. Define synchronous exact-reference selection with no cloning/invocation/await; preserve functions, Symbols, Promises, NaN and signed zero. Runtime cases inspect all opaque branches, nullish fallback combinations and a10000-element untouched array. Hidden compiler checks accept nullable, undefined and explicit mixed unions and reject treating nullable output as string. Author constant wrapper cost; type-level work does not substitute for the runtime branch.",
+   "evidence": [
+    "https://www.typescriptlang.org/docs/handbook/2/generics.html",
+    "https://www.typescriptlang.org/docs/handbook/utility-types.html#nonnullabletype",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing",
+    "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+    "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "ts-fall-back-to-a-default",
+      "contentHash": "7f6160145fea63ce",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-fall-back-to-a-default",
+      "contentHash": "7f6160145fea63ce",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-fall-back-to-a-default",
+      "contentHash": "7f6160145fea63ce",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-fall-back-to-a-default",
+      "contentHash": "7f6160145fea63ce",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-fall-back-to-a-default",
+      "contentHash": "7f6160145fea63ce",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "ts-fall-back-to-a-default",
+      "contentHash": "7f6160145fea63ce",
+      "label": "wrong-clones-values",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b050; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://www.typescriptlang.org/docs/handbook/2/generics.html",
+     "https://www.typescriptlang.org/docs/handbook/utility-types.html#nonnullabletype",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Nullish_coalescing",
+     "run: 30/30 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 5 wrong).",
+     "run: baseline matched 25/30 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read every English field and all boards, plus public/hidden runtime/type cases. The existing truthiness protection is retained and exact identity is now checked. Same model/session separate final reading verifies the new nullable examples against the actual project TypeScript checker; no new NonNullable constraint or implicit signature change is introduced. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
   }
  ]
 }

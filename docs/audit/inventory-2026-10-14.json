@@ -27,11 +27,11 @@
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
     "executionEvidence": "PR #412 passed required run 38727343919 at exact head 76c80b0af9715f29e414a512f5ea72b768ad89bd (verify 29m44s; SQL 56s), then merged at 137dbb786b567bd434cd64901306ec2c29a83617 on 15 October 2026 at 12:25:38 UTC. Preview dpl_D55uMQsJ9RWbRTF85sWUbULJZhNH and production dpl_7fTpF5BV7kKcwEhZ3KP4xCjEEZMW are READY at their exact head/merge; production owns devshark.app with no alias error. Eleven general guest checks pass on each, including actual correct/wrong React and JavaScript Submit, zero XP/null progress. B046 local evidence remains 31/31 selected current-hash verdicts, 21 target/base-25-XP checks and its permanent valid deferred-start variant. Shipped model-review coverage is 260/725 coding and 263/263 native. These guest checks do not establish authenticated execution of the five Premium tasks, independent/human review, physical-device or full-catalogue acceptance. The owner subsequently requested continuing the audit in five-item commits.",
-    "currentModelReviewedIssuedTasks": 270,
-    "issuedStillRequiringReview": 455,
+    "currentModelReviewedIssuedTasks": 280,
+    "issuedStillRequiringReview": 445,
     "deployedModelReviewedIssuedTasks": 260,
-    "stagedModelReviewedIssuedTasks": 10,
-    "stagedExecutionEvidence": "15 October five-item commits through b048: 10 staged reviews; latest batch 30/30 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
+    "stagedModelReviewedIssuedTasks": 20,
+    "stagedExecutionEvidence": "15 October five-item commits through b050: 20 staged reviews; latest batch 30/30 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
     "deployedExecutionEvidence": "PR #412 passed required run 38727343919 at exact head 76c80b0af9715f29e414a512f5ea72b768ad89bd (verify 29m44s; SQL 56s), then merged at 137dbb786b567bd434cd64901306ec2c29a83617 on 15 October 2026 at 12:25:38 UTC. Preview dpl_D55uMQsJ9RWbRTF85sWUbULJZhNH and production dpl_7fTpF5BV7kKcwEhZ3KP4xCjEEZMW are READY at their exact head/merge; production owns devshark.app with no alias error. Eleven general guest checks pass on each, including actual correct/wrong React and JavaScript Submit, zero XP/null progress. B046 local evidence remains 31/31 selected current-hash verdicts, 21 target/base-25-XP checks and its permanent valid deferred-start variant. Shipped model-review coverage is 260/725 coding and 263/263 native. These guest checks do not establish authenticated execution of the five Premium tasks, independent/human review, physical-device or full-catalogue acceptance."
   },
   "nativePaths": {
@@ -58,7 +58,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "260 reviewed coding and 263 native records are deployed; ten coding records are staged through B048. Overrides were read-only rechecked on 15 October with the same 485 deletion identities and 1820 effective eligible questions; this is not new individual editorial approval.",
+    "260 reviewed coding and 263 native records are deployed; twenty coding records are staged through B050. Overrides were read-only rechecked on 15 October with the same 485 deletion identities and 1820 effective eligible questions; this is not new individual editorial approval.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

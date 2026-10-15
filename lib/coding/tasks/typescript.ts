@@ -814,7 +814,7 @@ console.log(first([1,2,3]));
     tier: 2,
     focus: ["unions", "generics"],
     title: "Fall back to a default",
-    prompt: "Write `orDefault<T>(value: T | null | undefined, fallback: T): T`, returning the value unless it is null or undefined, in which case the fallback. Zero, an empty string and false are real values and come back as they are.",
+    prompt: "Write `orDefault<T>(value: T | null | undefined, fallback: T): T`, returning the value unless it is null or undefined, in which case the fallback. Zero, an empty string and false are real values and come back as they are. Treat values as opaque: return the selected original value/reference without cloning, invoking, awaiting or converting it. This includes arrays, records, functions, Symbols, native Promises, NaN and signed zero. The function is synchronous and does not change either argument. T is unconstrained: callers may explicitly choose a union, including null or undefined. If the fallback itself is nullish, the result may still be nullish; the function substitutes once rather than promising a non-null result for every possible T. Target: O(1) time and retained state; neither argument is traversed.",
     starter: `const orDefault = (value, fallback) => {
   
 };
@@ -826,11 +826,11 @@ console.log(orDefault(null, 5));
   // build and return the answer
 };`,
     hints: [
-      "The point of the function is that the answer can no longer be missing, which is why the return type is the plain type.",
+      "Test only for null and undefined. Preserve falsy values such as zero, false, empty text, NaN and signed zero.",
     ],
     approach: [
-      "The value may be missing but the fallback may not, which is what makes the return type the plain type again.",
-      "Both parameters share one type parameter, so a caller cannot pass a fallback of a different type by accident.",
+      "Return the value when it is non-nullish, otherwise the fallback; the selected value keeps its exact identity.",
+      "Both parameters share T and the result returns T. Callers may choose a union; if T includes null or undefined, the fallback and result can still be nullish.",
       "Use the fallback operator that steps in only for null and undefined, or a legitimate zero gets replaced.",
     ],
     verify: "tests",
@@ -853,7 +853,7 @@ console.log(orDefault(null, 5));
       },
     ],
     typeTests: [
-      { code: "const __sure: number = orDefault(null, 5);", label: "null can never come back out" },
+      { code: "const __sure: number = orDefault(null, 5);", label: "a non-nullish fallback gives a number here" },
       {
         code: "const __word: string = orDefault(\"a\", \"b\");",
         label: "the type follows what went in",
