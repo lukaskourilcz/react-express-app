@@ -15,9 +15,10 @@
 
 import { hideMissingGlobals } from './coding-checker-globals';
 import { LOCALE_SOURCE } from './coding-locale';
+import { installTaskRuntimePolicy, type TaskRuntimePolicy } from './coding-task-runtime';
 import { installUtcTime } from './coding-utc-time';
 
-export function prepareRunRealm(global: typeof globalThis): ReadonlySet<string> {
+export function prepareRunRealm(global: typeof globalThis, runtimePolicy?: TaskRuntimePolicy): ReadonlySet<string> {
   installUtcTime(global);
   (new Function(`return ${LOCALE_SOURCE};`)() as (realm: typeof globalThis) => void)(global);
   const clock = global.performance;
@@ -25,5 +26,6 @@ export function prepareRunRealm(global: typeof globalThis): ReadonlySet<string> 
     const now = clock.now.bind(clock);
     Object.defineProperty(global, 'performance', { value: { now: () => now() }, writable: true, enumerable: false, configurable: true });
   }
+  installTaskRuntimePolicy(global, runtimePolicy);
   return hideMissingGlobals(global);
 }

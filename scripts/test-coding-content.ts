@@ -1,3 +1,4 @@
+import { runtimePolicyForTask } from '../shared/coding-task-runtime';
 // Content contract for the coding catalogue.
 //   npm run test:coding
 // Opt-in:
@@ -768,18 +769,18 @@ async function main() {
       }
       // The Run button's realm: UTC, the grader's built-ins and none
       // of the browser's others (scripts/run-realm-node.ts).
-      const run = await withTimeout(evaluateInRunRealm({ code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
+      const run = await withTimeout(evaluateInRunRealm({ runtimePolicy: runtimePolicyForTask(task.id), code, calls: task.tests.map((t) => t.call), expectations: task.tests.map((t) => t.expected) }), 8_000, label);
       // The production grader: the hidden checks in a fresh program and, here,
       // in reverse order, so no solution leans on the order they run in or on
       // state the visible calls left behind.
-      const server = await runChecks({ code, visible: task.tests, hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
+      const server = await runChecks({ runtimePolicy: runtimePolicyForTask(task.id), code, visible: task.tests, hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
       if (!allPassed(server.visible) || (server.hidden && !allPassed(server.hidden))) fail(`${label}: solution fails the production QuickJS grader: ${JSON.stringify(server).slice(0,500)}`);
       if (!allPassed(run)) {
         const wrong = run.results.map((r, i) => (r.pass ? null : `${task.tests![i].call} → ${r.error ?? r.actual}`)).filter(Boolean);
         fail(`${label}: solution fails visible tests: ${run.codeError ?? wrong.join('; ')}`);
       }
       if (solution.hiddenTests?.length) {
-        const hidden = await withTimeout(evaluateInRunRealm({ code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, label);
+        const hidden = await withTimeout(evaluateInRunRealm({ runtimePolicy: runtimePolicyForTask(task.id), code, calls: solution.hiddenTests.map((t) => t.call), expectations: solution.hiddenTests.map((t) => t.expected) }), 8_000, label);
         if (!allPassed(hidden)) fail(`${label}: solution fails hidden tests: ${hidden.codeError ?? hidden.results.map((r, i) => (r.pass ? null : solution.hiddenTests![i].call)).filter(Boolean).join('; ')}`);
       }
     }
@@ -990,7 +991,7 @@ async function main() {
     } else {
       const typed = task.track !== 'typescript' || (typesPassed(checker.check(filled, task.typeTests ?? [])) && typesPassed(checker.check(filled, solution.hiddenTypeTests ?? [])));
       const code = task.track === 'typescript' ? checker.toJavaScript(filled) : filled;
-      const server = await runChecks({ code, visible: task.tests ?? [], hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
+      const server = await runChecks({ runtimePolicy: runtimePolicyForTask(task.id), code, visible: task.tests ?? [], hidden: solution.hiddenTests ?? [], shuffle: (list) => [...list].reverse() });
       if (!typed || !allPassed(server.visible) || (server.hidden && !allPassed(server.hidden))) fail(`${id}: the filled-in skeleton fails its checks: ${JSON.stringify(server).slice(0, 400)}`);
     }
   }
@@ -1407,7 +1408,7 @@ async function stagesPromisesAndSignatures({ fail, checker, ts, byId }: {
   // The production grader's verdict: the visible checks and, in a fresh
   // program, the hidden ones.
   const passesChecks = async (task: ContentTask, code: string): Promise<boolean> => {
-    const run = await withTimeout(runChecks({ code, visible: task.tests ?? [], hidden: solutionFor(task.id)?.hiddenTests ?? [], shuffle: (list) => list }), 8_000, task.id);
+    const run = await withTimeout(runChecks({ runtimePolicy: runtimePolicyForTask(task.id), code, visible: task.tests ?? [], hidden: solutionFor(task.id)?.hiddenTests ?? [], shuffle: (list) => list }), 8_000, task.id);
     return allPassed(run.visible) && (!run.hidden || allPassed(run.hidden));
   };
   // The same with the type tests (visible and hidden) first for TypeScript,

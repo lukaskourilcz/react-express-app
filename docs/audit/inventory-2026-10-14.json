@@ -25,13 +25,13 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "PR #406 passed required run 38700013792 at exact ad6a0a5822b465dbd477f724e1db9845cb8fb420 (verify 31m39s; SQL 37s), merged at dca959f9839d43ad73ff7a8137b61e08cffa5fde. READY production dpl_5FuxpnzTardVzaqJPPsm8EBd1iW1 matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four changed-cohort actual Submit checks pass at zero XP/null progress; updated briefs, valid solutions and selected wrongs were verified. Shipped coverage is 225/725 coding and 263/263 native. No authenticated native/Premium, independent/human or complete editorial-coverage claim.",
+    "executionEvidence": "PR #407 passed required run 38710148788 at exact f8fba18d8e7351c7cc8b5db5542aaa0d675bdc78 (verify 29m14s; SQL 50s), merged at f19169f107c3325fd22d635954937a99e0e2fe6d. READY production dpl_3rJe7gAv39RThwTcoEUGEbqQbJLt matches that merge, owns devshark.app and has no alias error. All eleven general guest checks pass with zero XP/null progress. These checks do not exercise the fifteen changed Premium tasks as an authenticated learner. Shipped coverage is 240/725 coding and 263/263 native; no independent/human or complete-catalogue acceptance claim. Five b043 reviews remain staged with 31/31 final-hash verdicts and twenty target/base-25-XP checks.",
     "currentModelReviewedIssuedTasks": 245,
     "issuedStillRequiringReview": 480,
-    "deployedModelReviewedIssuedTasks": 225,
-    "stagedModelReviewedIssuedTasks": 20,
-    "stagedExecutionEvidence": "15 October five-item commits through b043: 20 staged reviews; latest batch 31/31 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
-    "deployedExecutionEvidence": "PR #406 passed required run 38700013792 at exact ad6a0a5822b465dbd477f724e1db9845cb8fb420 (verify 31m39s; SQL 37s), merged at dca959f9839d43ad73ff7a8137b61e08cffa5fde. READY production dpl_5FuxpnzTardVzaqJPPsm8EBd1iW1 matches that merge, owns devshark.app and has no alias error. All eleven general guest checks and four changed-cohort actual Submit checks pass at zero XP/null progress; updated briefs, valid solutions and selected wrongs were verified. Shipped coverage is 225/725 coding and 263/263 native. No authenticated native/Premium, independent/human or complete editorial-coverage claim."
+    "deployedModelReviewedIssuedTasks": 240,
+    "stagedModelReviewedIssuedTasks": 5,
+    "stagedExecutionEvidence": "15 October b043 has five staged model reviews: 31/31 final-hash worker verdicts and twenty authored-target/base-25-XP checks pass. Runtime restriction repair #408 and the next five-item audit continue separately.",
+    "deployedExecutionEvidence": "PR #407 passed required run 38710148788 at exact f8fba18d8e7351c7cc8b5db5542aaa0d675bdc78 (verify 29m14s; SQL 50s), merged at f19169f107c3325fd22d635954937a99e0e2fe6d. READY production dpl_3rJe7gAv39RThwTcoEUGEbqQbJLt matches that merge, owns devshark.app and has no alias error. All eleven general guest checks pass with zero XP/null progress. These checks do not exercise the fifteen changed Premium tasks as an authenticated learner. Shipped coverage is 240/725 coding and 263/263 native; no independent/human or complete-catalogue acceptance claim."
   },
   "nativePaths": {
     "paths": 2,
@@ -57,7 +57,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "225 reviewed coding and 263 native records are deployed; 20 coding records are staged through b043. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
+    "240 reviewed coding and 263 native records are deployed; five coding records are staged through b043. Override data remains the explicitly dated 14 October snapshot, not a new live-count claim.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

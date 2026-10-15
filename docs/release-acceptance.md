@@ -3760,3 +3760,44 @@ with eleven exact-preview guest checks and required CI in progress; b043 adds
 five on a separate continuation branch. No claim of authenticated changed-
 Premium acceptance, independent/human reading or complete-catalogue coverage.
 No runtime-engine, schema, UI, entitlement or reward-policy change.
+
+## PR #407 exact production — 15 October 2026
+
+PR #407 passed required run 38710148788 at exact f8fba18d8e7351c7cc8b5db5542aaa0d675bdc78 (verify 29m14s; SQL 50s), merged at f19169f107c3325fd22d635954937a99e0e2fe6d. READY production dpl_3rJe7gAv39RThwTcoEUGEbqQbJLt matches that merge, owns devshark.app and has no alias error. All eleven general guest checks pass with zero XP/null progress. These checks do not exercise the fifteen changed Premium tasks as an authenticated learner. Shipped coverage is 240/725 coding and 263/263 native; no independent/human or complete-catalogue acceptance claim.
+
+The release covers b040–b042 and the current b040 throttle revision, with no duplicate review count. Five later b043 reviews are committed separately; they are not part of this production proof.
+
+## 15 October — pre-initialization Promise.all restriction (#408)
+
+The actual QuickJS grader accepted a top-level captured/bound native Promise.all
+alias despite the task's prohibition. Its hidden check patched the function only
+after learner initialization and immediately restored it. The new shared runtime
+policy replaces the original native implementation before initialization in the
+fresh Submit realm and disposable Run worker. Coding derives the rule from its
+canonical task ID; reused Learn code carries it server-side. The Run controller's
+aggregation helper stays outside learner scope. No host Promise is patched.
+The obsolete hidden monkeypatch is removed; the next five-item content audit
+will separately review the clone task's sparse-input/snapshot contracts.
+
+Twelve selected programs are checked in both actual Submit (visible and hidden
+partitions) and isolated Run: direct calls, initialized aliases, constructor and
+reflection access, inheritance, dynamic Function and replacement/deletion attempts
+are rejected; two manual aggregation forms pass. Two actual reused Learn grades
+accept the manual form and reject the saved native alias. Other tasks and the
+Node host retain native Promise.all. The real Chromium workbench rejects the
+saved alias and then passes the reference on a second fresh worker.
+
+API/script types, focused canonical coding (reversed hidden order and native
+Run), complete updated grading/Learn integrity, launch, production build, all
+263 native bindings, both production dependency audits (zero vulnerabilities)
+and diff checks pass. The final additional reused-Learn assertions pass in the
+focused suite and script typecheck. Twelve physical API handlers remain.
+
+The first local browser attempt lacked a preview server; the second used a build
+without CI's placeholder authentication configuration and failed the signed-in
+run test while the other 22 checks passed. Neither attempt is a complete pass.
+The final fixture-configured build uses CI's documented placeholder Auth URL/key,
+with requests intercepted locally; it creates no real account/progress/name.
+Final CI-fixture browser suite passes 23/23 checks; responsive validation passes all 264 probes (320–1440 px), with zero issues and zero unprobed routes. Authenticated
+production Premium acceptance and physical devices remain unverified. This is
+local evidence until the new PR's required checks, merge and exact release.

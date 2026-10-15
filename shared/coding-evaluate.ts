@@ -6,6 +6,9 @@
 
 import { learnerConsoleFactory } from './coding-console';
 
+// Captured in the controller module, never passed into learner scope.
+const collectOutcomes = Promise.all.bind(Promise);
+
 export const RUN_TIMEOUT_MS = 2_000;
 /** Timer- and promise-based tasks need longer than a synchronous one. */
 export const ASYNC_TIMEOUT_MS = 6_000;
@@ -158,7 +161,7 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   const sink = learnerConsoleFactory()(emit, formatArg, () => (typeof performance === 'undefined' ? Date.now() : performance.now()));
   const grading = Array.isArray(input.expectations);
 
-  let evaluate: (calls: string[], console: typeof sink, probe: typeof PROBE) => Promise<{ ok: boolean; value?: unknown; error?: string }[]>;
+  let evaluate: (console: typeof sink, probe: typeof PROBE) => (source: string) => unknown;
   try {
     // Declarations from the learner's code are in scope for the direct eval of
     // each call, so a suite sees the functions the code defines. Strict mode,
@@ -166,12 +169,7 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
     // as a stray global would otherwise fail only on Submit. The first line
     // also declares `__probe` (PROBE_LINE), on the line "use strict" had, so
     // the learner's line numbers stay as they were.
-    evaluate = new Function('__calls__', 'console', `${PROBE_LINE}\n${input.code}\n${[
-      'return Promise.all(__calls__.map(async source => {',
-      '  try { return { ok: true, value: await eval(source) }; }',
-      '  catch (error) { return { ok: false, error: String((error && error.message) || error) }; }',
-      '}));',
-    ].join('\n')}`) as typeof evaluate;
+    evaluate = new Function('console', `${PROBE_LINE}\n${input.code}\nreturn source => eval(source);`) as typeof evaluate;
   } catch (error) {
     // Code that does not parse, named as the grading sandbox names it.
     const syntax = error instanceof Error && error.name === 'SyntaxError';
@@ -179,7 +177,11 @@ export async function evaluateCalls(input: { code: string; calls: string[]; expe
   }
 
   try {
-    const outcomes = await evaluate(input.calls, sink, PROBE);
+    const evaluateCall = evaluate(sink, PROBE);
+    const outcomes = await collectOutcomes(input.calls.map(async (source) => {
+      try { return { ok: true, value: await evaluateCall(source), error: undefined }; }
+      catch (error) { return { ok: false, value: undefined, error: errorText(error) }; }
+    }));
     const results = outcomes.map((outcome, index): CallOutcome => {
       if (!outcome.ok) return { pass: false, actual: null, error: explainHidden(outcome.error ?? 'Error', input.hidden) };
       return {

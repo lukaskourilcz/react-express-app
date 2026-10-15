@@ -13,6 +13,7 @@ import { Editor } from './Editor';
 import { CodingCompletion, ComplexityInfo } from './CodingCompletion';
 import { formatCode } from './runner/format';
 import { runCodeTests, runPassed, warmRunner, type RunOutcome, type RunPhase } from './runner/run-tests';
+import { runtimePolicyForTask } from '../../../shared/coding-task-runtime';
 import { TYPE_CHECK_STOPPED_MESSAGE } from '../../../shared/coding-evaluate';
 import { HARNESS_URL, useReactHarness, type HarnessRun } from './useReactHarness';
 import { attemptStarted, canGiveUp, giveUpAfter, ladderRungs, MIN_ATTEMPT_MS, type LadderRung } from './hint-ladder';
@@ -314,7 +315,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
       } else {
         setRunPhase('starting');
         const outcome = await runCodeTests({
-          track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, onPhase: setRunPhase,
+          runtimePolicy: runtimePolicyForTask(task.id), track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, onPhase: setRunPhase,
         });
         setRun(outcome);
         setServerChecked(false);
@@ -383,7 +384,7 @@ export function CodingWorkbench(props: CodingWorkbenchProps) {
         // comes first, the server's run replaces it.
         const preview = new AbortController();
         localRun.current = preview;
-        void runCodeTests({ track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, signal: preview.signal }).then((local) => {
+        void runCodeTests({ runtimePolicy: runtimePolicyForTask(task.id), track: codeTrack, code, tests: task.tests ?? [], typeTests: task.typeTests, grade: true, signal: preview.signal }).then((local) => {
           if (preview.signal.aborted) return;
           setRun(local);
           setServerChecked(false);

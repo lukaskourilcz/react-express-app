@@ -23,6 +23,7 @@ import { codingPassXp, type ComplexityReport } from '../../shared/coding-complex
 import { solutionFor } from './solutions';
 import { splitHiddenCases, withHiddenCases } from './react-hidden';
 import { runChecks } from './sandbox';
+import { runtimePolicyForTask } from '../../shared/coding-task-runtime';
 import { checkTypes, TRANSPILE_FAILED_MESSAGE, TYPE_CHECK_STOPPED_MESSAGE } from './ts-check-pool';
 import { GRADING_PER_CALLER, GRADING_PER_TASK, GraderBusyError, gradingItem } from './grader-capacity';
 import { codeOutcome, giveUpAfter, gradeDesign, ladderLength, prepareDesign } from './grade';
@@ -420,7 +421,7 @@ async function gradeCode(task: CodingTask, code: string): Promise<Graded> {
   // Only the visible checks' console output comes back: a learner who logs
   // inside their function must not read the hidden checks' inputs. The hidden
   // checks run in a fresh program, in an order shuffled for this submission.
-  const { visible, hidden: hiddenRun } = await runChecks({ code: codeToRun, visible: tests, hidden: hiddenTests, shuffle: secureShuffle });
+  const { visible, hidden: hiddenRun } = await runChecks({ runtimePolicy: runtimePolicyForTask(task.id), code: codeToRun, visible: tests, hidden: hiddenTests, shuffle: secureShuffle });
   const run = { logs: visible.logs, codeError: visible.codeError ?? hiddenRun?.codeError ?? null, timedOut: Boolean(visible.timedOut || hiddenRun?.timedOut) };
   let verdict = codeOutcome({ visible, hidden: hiddenRun, check });
   if (verdict === 'passed' && hiddenTypeFailures > 0) verdict = 'failed';

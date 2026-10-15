@@ -960,7 +960,6 @@ const sleep = async (ms = 0) => {
     hiddenTests: [
       { call: "promiseAll([new Promise(done => setTimeout(() => done(\"a\"), 30)), new Promise(done => setTimeout(() => done(\"b\"), 10)), \"c\"])", expected: ["a", "b", "c"], async: true },
       { call: "Promise.race([promiseAll([new Promise(done => setTimeout(() => done(\"slow\"), 100)), new Promise((_, fail) => setTimeout(() => fail(new Error(\"early\")), 10))]).catch(error => \"rejected: \" + error.message), new Promise(done => setTimeout(() => done(\"waited for the slow one\"), 50))])", expected: "rejected: early", async: true },
-      { call: "(() => { const all = Promise.all; Promise.all = () => { throw new Error(\"Promise.all is off limits\"); }; try { return promiseAll([1, Promise.resolve(2)]); } finally { Promise.all = all; } })()", expected: [1, 2], async: true },
     ],
   },
   "js-run-tasks-in-order": {

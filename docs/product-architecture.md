@@ -487,6 +487,14 @@ the grader lacks (`shared/coding-checker-globals.ts`, `Intl`, `crypto`,
 `fetch` and some two hundred more), and using one reads "`Intl` isn't
 available in the checker. Submit runs without it." React tasks keep the full
 browser and Node built-ins, in both of their runners.
+Task-specific built-in restrictions live in `shared/coding-task-runtime.ts`.
+The server derives them from the canonical task ID, and reused Learn code
+carries the same policy. Clone Promise.all replaces the original native
+`Promise.all` with a non-replaceable throwing function before learner
+initialization; aliases cannot capture the native implementation first.
+The disposable Run worker mirrors this rule. Its controller collects outcomes
+outside the learner's scope, without handing that native helper to learner
+code. Other tasks retain their own fresh, unrestricted realm.
 A failed or partly right system-design submission returns, per step, only
 whether it was right and the learner's own answer (`gradeDesign`): the correct
 options, orders and ranges, the explanations (which name the right option) and

@@ -99,6 +99,19 @@ function runInWorker(page: Page, url: string, calls: string[], expectations: unk
 
 const announced = (page: Page) => page.locator('.cd-workbench > [role="status"]');
 
+test('Clone Promise.all: Run blocks an initialization-time native alias and accepts manual aggregation', async ({ page }) => {
+  await prepare(page);
+  const id = 'js-clone-promise-all';
+  await openTask(page, `/coding/javascript/${id}`);
+  await fillEditor(page, 'const original = Promise.all.bind(Promise); const promiseAll = items => original(items);');
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(page.getByRole('tabpanel')).toContainText('Promise.all is unavailable in this exercise.', { timeout: 30_000 });
+  await fillEditor(page, solutionFor(id)!.solution);
+  await page.getByRole('button', { name: 'Run', exact: true }).click();
+  await expect(announced(page)).toHaveText('5 of 5 passing', { timeout: 30_000 });
+});
+
+
 test('React success stays compact and toolbar labels switch at 1220px with keyboard tooltips', async ({ page }) => {
   await prepare(page, { signedIn: true, verdict: {
     xpAwarded: 25, applied: true, firstPass: true,
