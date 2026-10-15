@@ -20,7 +20,7 @@ const evaluate = (cases, predictions) => {
   const caseList = Array.isArray(cases) ? cases : [];
   const predictionList = Array.isArray(predictions) ? predictions : [];
 
-  const answers = {};
+  const answers = Object.create(null);
   for (const prediction of predictionList) {
     if (!prediction || typeof prediction !== 'object') continue;
     const caseId = prediction.caseId;
@@ -31,7 +31,7 @@ const evaluate = (cases, predictions) => {
 
   const tally = () => ({ total: 0, answered: 0, abstained: 0, correct: 0 });
   const overall = tally();
-  const slices = {};
+  const slices = Object.create(null);
 
   for (const item of caseList) {
     if (!item || typeof item !== 'object') continue;
@@ -66,7 +66,7 @@ const evaluate = (cases, predictions) => {
     accuracyWhenAnswered: rate(counts.correct, counts.answered),
   });
 
-  const bySlice = {};
+  const bySlice = Object.create(null);
   for (const name of Object.keys(slices).sort()) bySlice[name] = shape(slices[name]);
   return { ...shape(overall), bySlice };
 };
@@ -80,15 +80,18 @@ const compare = (baseline, candidate) => {
     sliceMismatch: [],
     aggregateHidesRegression: false,
   };
-  const usable = report => Boolean(report) && typeof report === 'object'
-    && Boolean(report.bySlice) && typeof report.bySlice === 'object'
-    && typeof report.accuracy === 'number' && typeof report.coverage === 'number';
+  const object = value => Boolean(value) && typeof value === 'object' && !Array.isArray(value);
+  const validRate = value => Number.isFinite(value) && value >= 0 && value <= 1;
+  const usable = report => object(report) && object(report.bySlice)
+    && validRate(report.accuracy) && validRate(report.coverage)
+    && Object.keys(report.bySlice).every(name => object(report.bySlice[name]) && validRate(report.bySlice[name].accuracy));
   if (!usable(baseline) || !usable(candidate)) return blank;
 
   const baseNames = Object.keys(baseline.bySlice);
   const candidateNames = Object.keys(candidate.bySlice);
-  const mismatch = baseNames.filter(name => candidateNames.indexOf(name) === -1)
-    .concat(candidateNames.filter(name => baseNames.indexOf(name) === -1))
+  const baseSet = new Set(baseNames), candidateSet = new Set(candidateNames);
+  const mismatch = baseNames.filter(name => !candidateSet.has(name))
+    .concat(candidateNames.filter(name => !baseSet.has(name)))
     .sort();
   if (mismatch.length > 0) return { ...blank, sliceMismatch: mismatch };
 
@@ -124,6 +127,12 @@ export const FDE_M07_SOLUTIONS: Record<string, PathCodeSolution> = {
   'fde-v1-m07-evaluation-metrics': {
     solution: METRICS,
     hiddenTests: [
+      {"call": "(function(){var r=evaluate([{id:'__proto__',slice:'__proto__',expected:'yes'},{id:'constructor',slice:'constructor',expected:'yes'}],[{caseId:'__proto__',answer:'yes'},{caseId:'constructor',answer:'yes'}]);return {total:r.total,correct:r.correct,keys:Object.keys(r.bySlice).sort(),proto:Object.prototype.hasOwnProperty.call(r.bySlice,'__proto__')&&r.bySlice.__proto__.correct};})()", "expected": {"total": 2, "correct": 2, "keys": ["__proto__", "constructor"], "proto": 1}},
+      {"call": "[compare({accuracy:NaN,coverage:1,bySlice:{}},{accuracy:0.5,coverage:1,bySlice:{}}),compare({accuracy:0.5,coverage:1,bySlice:{x:null}},{accuracy:0.5,coverage:1,bySlice:{x:{accuracy:0.5}}}),compare({accuracy:0.5,coverage:1,bySlice:{x:{accuracy:Infinity}}},{accuracy:0.5,coverage:1,bySlice:{x:{accuracy:0.5}}})]", "expected": [{"better": "not-comparable", "accuracyDelta": 0, "coverageDelta": 0, "regressedSlices": [], "sliceMismatch": [], "aggregateHidesRegression": false}, {"better": "not-comparable", "accuracyDelta": 0, "coverageDelta": 0, "regressedSlices": [], "sliceMismatch": [], "aggregateHidesRegression": false}, {"better": "not-comparable", "accuracyDelta": 0, "coverageDelta": 0, "regressedSlices": [], "sliceMismatch": [], "aggregateHidesRegression": false}]},
+      {"call": "(function(){var cases=Object.freeze([Object.freeze({id:'A',slice:'s',expected:'yes'}),Object.freeze({id:'B',slice:'s',expected:'yes'})]);var predictions=Object.freeze([Object.freeze({caseId:'A',answer:null}),Object.freeze({caseId:'A',answer:'yes'}),Object.freeze({caseId:'B',answer:' yes '})]);var r=evaluate(cases,predictions);return {total:r.total,answered:r.answered,correct:r.correct,abstained:r.abstained,accuracy:r.accuracy,coverage:r.coverage};})()", "expected": {"total": 2, "answered": 1, "correct": 0, "abstained": 1, "accuracy": 0, "coverage": 0.5}},
+      {"call": "(function(){var cases=[],predictions=[];for(var i=0;i<1000;i++){cases.push({id:'C'+i,slice:'s'+i,expected:'y'});predictions.push({caseId:'C'+i,answer:'y'});}for(var j=0;j<1000;j++)predictions.push({caseId:'C'+j,answer:'wrong'});var r=evaluate(cases,predictions);var c=compare(r,r);return {total:r.total,correct:r.correct,slices:Object.keys(r.bySlice).length,better:c.better,regressions:c.regressedSlices.length};})()", "expected": {"total": 1000, "correct": 1000, "slices": 1000, "better": "tie", "regressions": 0}},
+      {"call": "(function(){var b=Object.freeze({accuracy:0.5,coverage:1,bySlice:Object.freeze({x:Object.freeze({accuracy:0.5})})});var c=Object.freeze({accuracy:0.51,coverage:0.95,bySlice:Object.freeze({x:Object.freeze({accuracy:0.51})})});return compare(b,c);})()", "expected": {"better": "tie", "accuracyDelta": 0.01, "coverageDelta": -0.05, "regressedSlices": [], "sliceMismatch": [], "aggregateHidesRegression": false}},
+
       {
         call:
           "(function () { var b = evaluate(__cases(), __predictions('baseline')); var r = compare(b, evaluate(__cases(), __predictions('baseline'))); return { better: r.better, accuracyDelta: r.accuracyDelta, coverageDelta: r.coverageDelta, regressedSlices: r.regressedSlices, aggregateHidesRegression: r.aggregateHidesRegression }; })()",

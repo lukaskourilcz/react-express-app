@@ -1,5 +1,32 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n037
+
+Reviewed both evaluation lessons, reading activities and metrics exercise.
+The24/12partition now uses count-compatible prompt variants rather than
+impossible rates or misleading abstention-threshold gains. Regression cases
+remain known after shipping; synthetic provenance alone is not leakage and
+frozen repeat runs can measure variability. Metric denominators, no-answer
+API conventions, cost-per-answer direction and percentile methods are explicit.
+The1880msmean/nearest-rank400msp95/30sp99 example does not add component
+percentiles or imply significance. Comparison policy cannot prove case identity.
+
+Safe dictionaries preserve prototype-like ids/slices; malformed/nonfinite summary
+rates are refused. Set membership replaces quadratic mismatch scans. Six real
+sandbox verdicts pass, including1000slices/2000predictions, frozen inputs and
+exact rounding thresholds; two valid targets retain base25. Trusted arithmetic
+checks pass without real model/dataset/performance inference. Native bindings,
+paths, API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Four exact c/a/e fixture patterns
+are exempted from the hash-artifact scanner for this item/field only; unrelated
+hashes/items remain rejected in explicit probes. Manual editorial/final readings
+remain separate from execution.
+
+Coverage is **240/263 native**, **23 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 is now exact-production verified at cabbaac4 with
+all eleven general checks passing; shipped coverage is95 coding/210 native.
+N032–n037 remain local. Diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n036
 
 Reviewed both tool/execution lessons, reading activities and dispatcher.

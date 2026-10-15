@@ -120,7 +120,7 @@ export const FDE_M07: ModuleSource = {
       id: 'fde-v1-m07-l1',
       title: 'Reference cases and leakage',
       summary:
-        'Where labelled cases come from, what one case record has to carry, why the held-out half is split off before you tune anything, and the three quiet ways an answer from it gets back into the system.',
+        'Label policy, sampled versus regression cases, recorded partitions and what makes evaluation information contaminate selection.',
       estimatedMinutes: 25,
       sources: [
         {
@@ -143,69 +143,69 @@ export const FDE_M07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The cheapest source of good cases is your own defect list. Every ticket an operator re-routed by hand is a case where somebody already decided what the right answer was. Pull thirty of those, keep the original text, and you have a set that fails for the reasons your system actually fails, rather than for the reasons you imagined at the whiteboard.',
+            'Escaped defects and operator corrections are useful regression cases, but they form a selected sample of problems rather than a representative traffic baseline. Verify labels and combine appropriate traffic sampling with deliberate difficult/safety cases. Use authorized, minimized or redacted data; do not put sensitive customer content into an unrestricted repository.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code: "const evaluationCase = {\n  id: 'C-27',\n  slice: 'returns',            // the labelled group this case belongs to\n  input: 'Sent back two chilled trays on Tuesday, still no credit.',\n  expected: 'tier-2',          // the queue an operator agreed it belongs in\n  sourceTicket: 'TKT-88104',   // where the case came from\n  labelledBy: 'ops-lead',\n  labelledOn: '2026-08-14',\n};",
-          caption: 'One case. `expected` is the only field the grader compares; the rest exists so somebody can argue with the label later.',
+          caption: 'A hypothetical case with one expected queue for this exercise. Id supports joining predictions and slice supports grouped metrics; provenance helps review a disputed label.',
         },
         {
           kind: 'prose',
           body:
-            'Four properties make a case usable. It has exactly one right answer that two operators would agree on. It carries a slice label, so you can ask how the system does on returns tickets rather than only how it does overall. It records who labelled it and when, because a label is a judgement and judgements get revised. And it keeps the input as it arrived, misspellings included, because cleaning the input turns the case into a test of a system nobody is running.',
+            'Define the task and labelling policy, including ambiguous cases, acceptable alternatives and adjudication. This exercise uses one expected string per case, but real tasks need not have exactly one universally agreed answer. Preserve relevant input behavior while following data-minimization/access rules, and document any preprocessing. Record provenance, labels and relevant slices so disagreements and changes can be investigated.',
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'Every case, prediction, accuracy and latency figure in this module is an authored fixture, fixed at the value you see. Nothing here calls a model. A live model asked the same question twice can give two different answers, and the whole point of a fixture is that it does not, which is what makes an exercise gradeable and what makes it a poor imitation of production.',
+            'All cases, predictions and reported figures here are authored fixtures, not measured model performance. Real systems can be deterministic or variable depending on their implementation and configuration. Use actual repeat-run evidence when variability matters; fixture repeatability alone does not establish production realism.',
         },
         {
           kind: 'prose',
           body:
-            'Split the set in two before you touch anything. One half is where you experiment: change the prompt, move the confidence threshold, swap the router, watch the number. The other half stays closed. Seed the draw so the same tickets land in the same half every time you rebuild the file, and write the split into the repository rather than regenerating it — Python’s `random` module documents both halves of that habit, `random.sample` for a draw without replacement and a seeded `Random` for a draw you can reproduce.',
+            'Choose development and held-out partitions before fitting or selecting the system. Split related cases together and respect time/tenant boundaries appropriate to the intended evaluation. A seeded draw can help reproduce a split for fixed input ordering and runtime/algorithm; it is not a guarantee across arbitrary data or library changes. Persist the actual split ids and versioned sampling method. A 50/50 split is not required; this example uses 24 development and 12 held-out cases.',
         },
         {
           kind: 'trace',
-          caption: 'Four tuning rounds on the dev half, one run against the held-out half, and the run that destroys it.',
+          caption: 'Development prompt variants and held-out feedback, with explicit correct/total counts.',
           trace: {
             shape: 'array',
             frames: [
               {
-                cells: ['dev · 24 cases', 'held-out · 12 cases', 'threshold 0.50', 'dev accuracy 0.71', 'held-out accuracy —'],
-                note: 'The 36 cases are split once, 24 for experimenting and 12 held back, and the split is recorded. The first threshold is a guess and the dev half scores 0.71. The held-out half has not run.',
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v1", "dev 17/24 ≈ 0.71", "held-out —"],
+                note: 'The fixed partition has 24 development and 12 held-out cases. All cases are answered in this trace; prompt v1 gets 17 of 24 development labels right. No held-out result has been used.',
                 counter: { label: 'Held-out runs', value: 0 },
               },
               {
-                cells: ['dev · 24 cases', 'held-out · 12 cases', 'threshold 0.60', 'dev accuracy 0.78', 'held-out accuracy —'],
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v2", "dev 18/24 = 0.75", "held-out —"],
                 marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
-                note: 'Raising the threshold to 0.60 takes the dev half to 0.78. That is what the dev half is for, and the held-out half still has not run.',
+                note: 'Prompt v2 gets 18 of 24 development labels right. The held-out partition stays untouched.',
                 counter: { label: 'Held-out runs', value: 0 },
               },
               {
-                cells: ['dev · 24 cases', 'held-out · 12 cases', 'threshold 0.68', 'dev accuracy 0.83', 'held-out accuracy —'],
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v3", "dev 20/24 ≈ 0.83", "held-out —"],
                 marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
-                note: '0.68 reaches 0.83 on the dev half. Each round picks the value that suits these particular 24 tickets a little better than the last one did.',
+                note: 'Prompt v3 gets 20 of 24 development labels right. This is selection using the same development cases, not fresh external evidence.',
                 counter: { label: 'Held-out runs', value: 0 },
               },
               {
-                cells: ['dev · 24 cases', 'held-out · 12 cases', 'threshold 0.71', 'dev accuracy 0.85', 'held-out accuracy —'],
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v4", "dev 21/24 = 0.875", "held-out —"],
                 marks: [{ index: 2, role: 'active' }, { index: 3, role: 'compare' }],
-                note: 'The fourth round settles on 0.71 and 0.85. Four rounds of fitting have gone into that number, and every one of them saw the same 24 tickets.',
+                note: 'Prompt v4 gets 21 of 24 development labels right and is selected before the held-out run.',
                 counter: { label: 'Held-out runs', value: 0 },
               },
               {
-                cells: ['dev · 24 cases', 'held-out · 12 cases', 'threshold 0.71', 'dev accuracy 0.85', 'held-out accuracy 0.74'],
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v4", "dev 21/24 = 0.875", "held-out 8/12 ≈ 0.67"],
                 marks: [{ index: 4, role: 'settled' }],
-                note: 'The held-out half runs once, at the threshold the dev half chose, and scores 0.74. That is the number you report. The gap to 0.85 is what four rounds of tuning bought themselves on cases they had already seen.',
+                note: 'The selected v4 gets 8 of 12 held-out labels right. Report the actual counts and sampling limits. The difference from development performance does not isolate tuning bias or establish statistical significance.',
                 counter: { label: 'Held-out runs', value: 1 },
               },
               {
-                cells: ['dev · 24 cases', 'held-out · 12 cases', 'threshold 0.76', 'dev accuracy 0.84', 'held-out accuracy 0.79'],
+                cells: ["dev · 24 cases", "held-out · 12 cases", "prompt v5", "dev 20/24 ≈ 0.83", "held-out 9/12 = 0.75"],
                 marks: [{ index: 4, role: 'excluded' }],
-                note: 'Somebody nudges the threshold to 0.76 because it lifts the held-out score to 0.79. The held-out half has now steered a decision, so it is a second dev half, 0.79 measures nothing that was held back, and no clean number is left to report.',
+                note: 'Prompt v5 is then selected because its held-out score rises to 9 of 12. Those cases have now influenced model/prompt selection and are development evidence for that decision. A fresh unexposed evaluation is needed for an independent estimate; the old observations remain reportable with their role disclosed.',
                 counter: { label: 'Held-out runs', value: 2 },
               },
             ],
@@ -214,50 +214,50 @@ export const FDE_M07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'That last frame is leakage, and it has one definition worth memorising: the held-out answers influenced the thing they were meant to measure. It never announces itself. Nobody copies the answer key into the code. Somebody runs the held-out set a second time, or reuses a case they once pasted into a prompt, and the number goes up while the system stays the same.',
+            'Evaluation contamination occurs when evaluation information influences the system or selection it was intended to assess independently. Re-running an unchanged frozen system to measure variability is not automatically leakage; using the feedback to choose prompts, thresholds or candidates is. Document what was exposed and used, and preserve a genuinely independent evaluation for the claim you need.',
         },
         {
           kind: 'table',
-          caption: 'Three quiet leaks, what each inflates, and the repair.',
+          caption: 'Three contamination or coverage risks, with repairs appropriate to the evidence claim.',
           headers: ['How it happens', 'What it inflates', 'What to do about it'],
           rows: [
             [
               'You run the held-out set after each change and keep the variant that scored best',
-              'The held-out number, by the amount your choices fitted those particular cases. The more variants you tried, the larger the lift',
-              'Tune on the dev half only. Run the held-out set once per decision, and record how many times it has been run',
+              'Selecting from test feedback can bias the reported estimate; the amount is not guaranteed to grow on every added trial',
+              'Tune on development data, record assessment exposure and obtain independent evidence when earlier assessment feedback has guided later development',
             ],
             [
               'Few-shot examples in the prompt were copied out of the evaluation set',
-              'Accuracy on exactly those cases, because the system is being shown its own answer key',
-              'Move every case used as an example into the dev half, permanently. An example is training material, not a test',
+              'Exposure to the same labelled examples undermines an independent generalization claim, whether or not the observed score rises',
+              'Remove exposed cases/related examples from claims of independent evaluation and obtain fresh unexposed evidence; deleting only known copied cases may not undo broader selection effects',
             ],
             [
               'The same generator produced both the fixtures the system was built against and the cases it is measured on',
-              'Everything, invisibly. The set shares the generator’s vocabulary, its edge cases and its blind spots',
-              'Take held-out cases from real traffic. Keep generated cases for the dev half, and label them as generated in the file',
+              'Shared templates can narrow coverage or introduce related-case overlap; a common generator alone does not prove label leakage',
+              'Use independently constructed, appropriately sampled cases for the intended population. Authorized real traffic or carefully separated synthetic cases can be valid; record provenance and limits',
             ],
           ],
         },
         {
           kind: 'prose',
           body:
-            'The third leak is the one people argue about, so it is worth being concrete. If your fixture generator writes returns tickets in the shape “Sent back N items on DAY, still no credit”, and your held-out cases came out of the same generator, then a router that keys on “still no credit” scores well on both. It will score badly on the customer who writes “nobody has refunded me”. The set never contained that sentence, so the evaluation never had a chance to tell you.',
+            'A shared template may miss useful variation: a keyword rule fitted to “still no credit” might fail on “nobody has refunded me.” That is a coverage risk to test, not proof it must fail or that all synthetic evaluation is invalid. Separate related/template-derived examples and evaluate the intended task population.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'A held-out set of twelve cases moves by eight points every time one case flips. A candidate that beats the baseline by one case has told you almost nothing, and reporting that as an improvement is a claim the set cannot support. Say how many cases the number came from, next to the number.',
+            'On 12 cases, one changed correctness result is 1/12≈8.33 percentage points. That observed change is real for the sample but may be imprecise evidence about wider performance. Report counts, paired errors, relevant uncertainty and sampling limits; do not call a one-case difference statistically established or meaningless without analysis.',
         },
         {
           kind: 'prose',
           body:
-            'The set is not finished when you first build it. Every escaped defect is a case you did not have, so the habit is: reproduce the failure, write it down as a case with the answer an operator agrees to, and put it in the dev half if you are about to fix it. It joins the held-out half only after the fix has shipped, or you have quietly gone back to tuning against your test set.',
+            'Once a defect case has guided a fix, keep it as development/regression evidence. Shipping the fix does not make that known case unseen again. New independent cases may join a future held-out evaluation under a documented separation policy; use an additional untouched set when known test feedback has steered development.',
         },
         {
           kind: 'prose',
           body:
-            'Keep the file under version control with the code, and note in each case where it came from and who labelled it. NIST’s AI Risk Management Framework puts documentation and traceability among the practices that make a system’s behaviour reviewable, and in an evaluation set that is not paperwork. Six months from now the argument will be about whether case C-27 was ever really a tier-2 ticket, and the answer to that lives in the record or nowhere.',
+            'Version evaluation definitions, split ids and permitted provenance with the code or an appropriately protected data registry. Keep sensitive source content/access references under the applicable retention and access policy. Labels can change; record who adjudicated them, when and under which policy rather than treating a versioned answer as unquestionable truth.',
         },
       ],
     },
@@ -265,7 +265,7 @@ export const FDE_M07: ModuleSource = {
       id: 'fde-v1-m07-l2',
       title: 'Quality against cost and latency',
       summary:
-        'Four numbers instead of one, why an accuracy computed over answered cases climbs as a system answers less, the slice a rising aggregate hides, and the comparison rule you have to write down before you run it.',
+        'Explicit denominators, coverage and conditional quality, observed slice changes, cost/latency distributions and a predeclared comparison policy.',
       estimatedMinutes: 25,
       sources: [
         {
@@ -283,7 +283,7 @@ export const FDE_M07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Somebody will ask you for the accuracy number. Give them four numbers instead, because a change that improves any one of them usually pays for it out of another, and a single figure lets that trade happen without anybody noticing it happened.',
+            'Report the metrics needed to assess the agreed quality, coverage, latency and cost objectives. Improvements can trade off, but not every improvement necessarily worsens another metric. Name each denominator, sample and measurement method before comparing candidates.',
         },
         {
           kind: 'table',
@@ -291,7 +291,7 @@ export const FDE_M07: ModuleSource = {
           headers: ['Number', 'What it answers', 'What it cannot tell you'],
           rows: [
             [
-              'Accuracy over all cases',
+              'Correct-answer yield over all cases',
               'Of everything that arrived, how much did the system get right',
               'Whether it got there by answering everything badly or answering a little very well',
             ],
@@ -302,7 +302,7 @@ export const FDE_M07: ModuleSource = {
             ],
             [
               'Cost per case',
-              'What one ticket costs to process, in tokens or in calls',
+              'Total agreed processing cost divided by all input cases; state which costs are included',
               'What an abstention costs, because that bill arrives as an operator’s time',
             ],
             [
@@ -315,19 +315,19 @@ export const FDE_M07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Coverage is the one that hides in plain sight. A system that answers 24 of 36 cases and is right on 22 of them can be reported two ways: 22 of 36, which is 0.61, or 22 of 24, which is 0.92. Both are arithmetic. The second is what most reporting code computes by accident, because dividing by the number of rows you produced is easier than dividing by the number of rows you were asked about.',
+            'Coverage is the one that hides in plain sight. A system that answers 24 of 36 cases and is right on 22 of them can be reported two ways: 22 of 36, which is 0.61, or 22 of 24, which is 0.92. Both are arithmetic. They measure different quantities; label the denominator and coverage so conditional accuracy is not confused with all-case correct yield.',
         },
         {
           kind: 'code',
           language: 'javascript',
-          code: "const report = {\n  total: 36,\n  answered: 24,\n  abstained: 12,\n  correct: 22,\n  accuracy: 0.6111,             // correct / total — abstentions count against you\n  coverage: 0.6667,             // answered / total\n  accuracyWhenAnswered: 0.9167, // correct / answered — never call this 'accuracy'\n  costPerCaseUsd: 0.004,\n  p95LatencyMs: 1840,\n};",
-          caption: 'The same run, reported honestly. The two accuracy fields differ by thirty points and only their names keep them apart.',
+          code: 'const report = {\n  total: 36, answered: 24, abstained: 12, correct: 22,\n  accuracy: 0.6111, // this exercise: correct / total, a correct-answer yield\n  coverage: 0.6667, // answered / total\n  accuracyWhenAnswered: 0.9167, // correct / answered, explicitly conditional accuracy\n  costPerCaseUsd: 0.004, // hypothetical included processing cost / total\n  p95LatencyMs: 1840, // hypothetical, with quantile method to be specified\n};',
+          caption: 'One authored run with explicit denominators. Conditional accuracy and correct-answer yield differ by about 30.56 percentage points.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Publishing `accuracyWhenAnswered` under the label “accuracy” is the most common quiet lie in an evaluation report, and it has a gradient: the number rises every time the system declines a case it would have got wrong. A system tuned to abstain more will look like a system getting better, right up until somebody counts what the operators are now reading.',
+            'Answered-case accuracy is a legitimate metric when labelled and accompanied by coverage. Removing a wrong answer raises it; removing a correct answer can lower it. Abstaining more is not inherently monotonic improvement. With no answers, the conditional ratio has no observations; this exercise returns 0 as an explicit API convention, not evidence of zero quality or calibration. Whether abstention counts as an error is the scoring policy, not a universal definition.',
         },
         {
           kind: 'prose',
@@ -370,29 +370,29 @@ export const FDE_M07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Report latency as a percentile, not a mean. The mean of a run where 95 cases take 400 ms and 5 cases take 30 s is under two seconds, and every one of those five was somebody staring at a spinner. The SRE book makes the same argument for service level objectives: the distribution is the thing users experience, and a percentile describes it where an average smooths it away. Your traces already hold the raw numbers — OpenTelemetry models a request as a tree of spans with start and end times, so the retrieval step and the model call each have their own duration and you can say which half of the p95 belongs to which.',
+            'Inspect latency distributions as well as any useful mean. For 95 requests at 400 ms and 5 at 30 s, the mean is 1880 ms; nearest-rank p95 is 400 ms and p99 is 30 s. Other quantile conventions can interpolate differently, so name the method and sample size. Include relevant failures/timeouts. Per-request spans can help explain waits/critical paths, but component p95 values do not generally add to endpoint p95 and traces do not automatically contain every measurement.',
         },
         {
           kind: 'prose',
           body:
-            'Cost has the same two-denominators problem as accuracy. Cost per case and cost per answered case diverge as abstention rises, and the second one flatters a cautious system. The bill also has a part that never reaches your invoice: an abstained ticket is read by an operator, and if operator minutes are the baseline you are trying to beat, an abstention is a case where you did not beat it.',
+            'If included total cost is fixed, dividing by fewer answered cases makes cost per answered case higher than cost per input case, not lower. Compare actual totals and denominators; abstention may change processing cost and operator work. A handoff may still save part of the work, so measure operator time rather than assuming every abstention yields zero benefit.',
         },
         {
           kind: 'table',
-          caption: 'The deterministic baseline, measured on the same set as everything else.',
+          caption: 'An authored candidate comparison on the same fixed cases.',
           headers: ['Candidate', 'Accuracy · coverage', 'Cost and p95', 'What it argues'],
           rows: [
             [
               'Keyword router, 40 rules',
               '0.75 · 1.00',
-              '0.0000 USD · 12 ms',
-              'The floor. Anything slower and dearer has to beat this by enough to be worth the difference',
+              '0.0000 USD displayed · 12 ms',
+              'The authored baseline for the stated evaluation; compare all agreed objectives, not only speed and per-call cost',
             ],
             [
               'Single model call, no retrieval',
               '0.83 · 1.00',
               '0.0035 USD · 900 ms',
-              'Eight points for a third of a cent and most of a second per ticket',
+              'About 8.33 percentage points on this sample for a hypothetical 0.35 US cents and 900 ms per ticket',
             ],
             [
               'Model call with an abstention threshold',
@@ -405,23 +405,23 @@ export const FDE_M07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'The keyword router in that first row is a real answer, not a straw man. It costs nothing, it returns in twelve milliseconds, it can be read by the operations lead, and it fails in ways somebody can fix on a Tuesday afternoon. If the constraint is a 200 ms budget or a rule the customer’s auditor has to read, the deterministic router wins on the merits, and “use a model” is the answer to a question nobody asked.',
+            'The rule baseline is a serious candidate, but displayed 0.0000 USD is a rounded hypothetical included cost, not proof of zero compute/maintenance cost. The 12 ms figure is authored here, not a universal deterministic latency. Decide whether a candidate meets the actual quality, coverage, auditability and latency objectives; a 200 ms constraint alone does not establish every part of a release decision.',
         },
         {
           kind: 'prose',
           body:
-            'Write the rule that decides the winner before you run the comparison. Ours for the exercise: a candidate that answers a lot less than the baseline loses whatever its accuracy says, and otherwise the higher overall accuracy wins if the gap is bigger than a point. Fixing the rule first is what stops the comparison from becoming a search for the framing under which your candidate wins, and it is the same discipline as splitting the set before you tune.',
+            'Choose the comparison rule before seeing results. This exercise first rejects a coverage loss greater than 0.05, then prefers a correct-yield gain greater than 0.01 or the baseline for a loss below -0.01; otherwise it ties. A 0.05 rate difference is five percentage points and 0.01 is one percentage point. These are percentage-point differences in rates, not significance tests or universal release rules. Matching slice names is necessary for this summary comparison but cannot prove matching case ids, labels or sampling windows; verify those upstream. Report regressions and uncertainty even when the toy rule selects a candidate.',
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'The costs and latencies in the table above are authored figures for this lesson. They are the right shape for a routing workload and they are not measurements of any provider. Price your own candidates from your own runs, and re-measure after any change to the model, the prompt length or the retrieval step.',
+            'Costs/latencies here are authored figures, not measured provider prices or realistic-performance guarantees. Measure the full candidates, state included costs and operator effort, and re-evaluate when inputs, provider, model, prompt, policy or retrieval change.',
         },
         {
           kind: 'prose',
           body:
-            'What the report still cannot tell you is worth saying out loud when you hand it over. It measures 36 tickets from last quarter. It says nothing about a ticket type that started arriving in March, nothing about the days your retrieval index was six weeks stale, and nothing about how a live model would answer the same tickets tomorrow. Those are the sentences that belong under the table, and leaving them out is how a number that was honest on Monday becomes a claim by Friday.',
+            'State the limits below the report: these 36 authored cases are not a measured representative production sample. Even a real fixed evaluation cannot guarantee performance on unseen ticket types, different source/index conditions or future model versions. Its evidence has a scope, uncertainty and date; document those before generalizing.',
         },
       ],
     },
@@ -433,7 +433,7 @@ export const FDE_M07: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: reference cases and leakage',
-      summary: 'Building a labelled set from real failures, the four properties of a usable case, the split made once, and the three quiet leaks.',
+      summary: 'Label policy, representative versus regression cases, recorded independent partitions and contamination limits.',
       competencies: ['evaluation'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m07-l1',
@@ -444,7 +444,7 @@ export const FDE_M07: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: quality against cost and latency',
-      summary: 'Four numbers instead of one, the abstention lever on accuracy, the slice an aggregate hides, and the deterministic baseline measured the same way.',
+      summary: 'Explicit metric denominators, abstention behavior, slice changes, quantile methods and a bounded comparison policy.',
       competencies: ['evaluation'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m07-l2',
@@ -508,7 +508,7 @@ export const FDE_M07: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          'Marlbrook’s held-out set holds 36 support tickets, twelve in each of three slices — `billing`, `delivery` and `returns` — and each case records the queue an operator agreed it belongs in. You are writing the two functions the release check runs over it.\n\n**`evaluate(cases, predictions)`** returns one report:\n\n`{ total, answered, abstained, correct, accuracy, coverage, accuracyWhenAnswered, bySlice }`\n\n`cases` is an array of `{ id, slice, expected }`. `predictions` is an array of `{ caseId, answer }`. Count like this:\n\n1. **Every case counts once**, whether or not a prediction exists for it. A case with no prediction is an abstention, not a missing row.\n2. **First prediction wins.** A second prediction for the same `caseId` is ignored, whatever it says. The pipeline delivers duplicates.\n3. **A prediction whose `caseId` matches no case is ignored.** It came from another run.\n4. **An answer counts as answered only when it is a string that is non-empty after trimming.** `null`, `undefined`, a number, an object and `\'   \'` are all abstentions.\n5. `accuracy` is `correct / total`, so an abstention counts against you. `coverage` is `answered / total`. `accuracyWhenAnswered` is `correct / answered`. Report `0` for any of them when the denominator is `0`.\n6. **Round every rate** with `Math.round(value * 10000) / 10000`. Counts stay integers.\n7. `bySlice` maps each slice name to an object with the same seven fields, over that slice’s cases only. A case whose `slice` is not a non-empty string joins the slice named `unlabelled`.\n8. A `cases` that is not an array gives a report of zeros with an empty `bySlice`. A `predictions` that is not an array means everything abstained.\n\n**`compare(baseline, candidate)`** takes two of those reports and returns:\n\n`{ better, accuracyDelta, coverageDelta, regressedSlices, sliceMismatch, aggregateHidesRegression }`\n\n- If either argument is not a usable report — not an object, or missing `bySlice`, `accuracy` or `coverage` — return `better: \'not-comparable\'` with both deltas `0` and both arrays empty.\n- `sliceMismatch` lists, sorted ascending, every slice name present in one report and not the other. If it is non-empty the two runs were not the same set, so return `better: \'not-comparable\'`, both deltas `0` and `regressedSlices: []`, keeping the mismatch list.\n- Otherwise `accuracyDelta` is `candidate.accuracy - baseline.accuracy` and `coverageDelta` is `candidate.coverage - baseline.coverage`, each computed from the already-rounded rates and rounded again the same way.\n- `regressedSlices` holds one `{ slice, baselineAccuracy, candidateAccuracy, delta }` for every slice whose accuracy fell, sorted by slice name ascending. `delta` is candidate minus baseline, rounded.\n- **The rule for `better`, applied in this order:** `coverageDelta < -0.05` gives `\'baseline\'`, because a candidate that answers far less has bought its accuracy by handing work back. Then `accuracyDelta > 0.01` gives `\'candidate\'`, `accuracyDelta < -0.01` gives `\'baseline\'`, and anything left is `\'tie\'`.\n- `aggregateHidesRegression` is `true` when `better` is `\'candidate\'` or `\'tie\'` and `regressedSlices` is not empty. That is the flag: the aggregate did not lose, and at least one slice did.\n\nOne fixture matters more than the others. `__predictions(\'candidate\')` beats `__predictions(\'baseline\')` 30 correct to 27 while its returns slice falls from 10 of 12 to 7 of 12, so a comparison that only reads the aggregate reports a clean win over three tickets that stopped reaching the right queue.\n\n`__cases`, `__predictions`, `__CASE_ROWS` and `__PATTERNS` come from the task harness. Every case, label and prediction in them is authored for this exercise and identical on every run. Nothing here calls a model or opens a network connection, and a fixture accuracy is not evidence about how a live router would score these tickets.',
+          'Marlbrook’s held-out set holds 36 support tickets, twelve in each of three slices — `billing`, `delivery` and `returns` — and each case records the queue an operator agreed it belongs in. You are writing the two functions the release check runs over it.\n\n**`evaluate(cases, predictions)`** returns one report:\n\n`{ total, answered, abstained, correct, accuracy, coverage, accuracyWhenAnswered, bySlice }`\n\n`cases` is an array of `{ id, slice, expected }`. `predictions` is an array of `{ caseId, answer }`. Count like this:\n\n1. **Every case counts once**, whether or not a prediction exists for it. A case with no prediction is an abstention, not a missing row.\n2. **First prediction wins.** A second prediction for the same `caseId` is ignored, whatever it says. The pipeline delivers duplicates.\n3. **A prediction whose `caseId` matches no case is ignored.** It came from another run.\n4. **An answer counts as answered only when it is a string that is non-empty after trimming.** `null`, `undefined`, a number, an object and `\'   \'` are all abstentions.\n5. `accuracy` is `correct / total`, so an abstention counts against you. `coverage` is `answered / total`. `accuracyWhenAnswered` is `correct / answered`. Report `0` for any of them when the denominator is `0`.\n6. **Round every rate** with `Math.round(value * 10000) / 10000`. Counts stay integers.\n7. `bySlice` maps each slice name to an object with the same seven fields, over that slice’s cases only. A case whose `slice` is not a non-empty string joins the slice named `unlabelled`.\n8. A `cases` that is not an array gives a report of zeros with an empty `bySlice`. A `predictions` that is not an array means everything abstained.\n\n**`compare(baseline, candidate)`** takes two of those reports and returns:\n\n`{ better, accuracyDelta, coverageDelta, regressedSlices, sliceMismatch, aggregateHidesRegression }`\n\n- If either argument is not a usable report — not an object, or missing `bySlice`, `accuracy` or `coverage` — return `better: \'not-comparable\'` with both deltas `0` and both arrays empty and aggregateHidesRegression:false. A usable report is a non-array ordinary object with finite accuracy/coverage rates in [0,1] and an ordinary non-array bySlice map whose own entries are non-array objects with finite accuracy in [0,1].\n- `sliceMismatch` lists, sorted ascending, every slice name present in one report and not the other. If it is non-empty the summary partitions differ under this comparison policy, so return `better: \'not-comparable\'`, both deltas `0` and `regressedSlices: []`, keeping the mismatch list.\n- Otherwise `accuracyDelta` is `candidate.accuracy - baseline.accuracy` and `coverageDelta` is `candidate.coverage - baseline.coverage`, each computed from the already-rounded rates and rounded again the same way.\n- `regressedSlices` holds one `{ slice, baselineAccuracy, candidateAccuracy, delta }` for every slice whose accuracy fell, sorted by slice name ascending. `delta` is candidate minus baseline, rounded.\n- **The rule for `better`, applied in this order:** `coverageDelta < -0.05` gives `\'baseline\'`, because a candidate that answers far less has bought its accuracy by handing work back. Then `accuracyDelta > 0.01` gives `\'candidate\'`, `accuracyDelta < -0.01` gives `\'baseline\'`, and anything left is `\'tie\'`.\n- `aggregateHidesRegression` is `true` when `better` is `\'candidate\'` or `\'tie\'` and `regressedSlices` is not empty. That is the flag: the aggregate did not lose, and at least one slice did.\n\nOne fixture matters more than the others. `__predictions(\'candidate\')` beats `__predictions(\'baseline\')` 30 correct to 27 while its returns slice falls from 10 of 12 to 7 of 12, so a comparison that only reads the aggregate reports a clean win while the observed returns count regresses. Slice-name equality alone does not establish identical case ids/labels or a valid statistical comparison; callers must verify dataset identity upstream.\n\nDomain: at most 1,000 ordinary case objects with unique non-empty string ids and string expected labels; unusable slice values join unlabelled. Predictions contain at most 2,000 ordinary values, with malformed entries ignored as described. Strings have at most 100 UTF-16 code units; no getters/proxies. Correctness compares the original answer string exactly to expected; trimming decides only whether an answer is non-empty. Preserve arbitrary valid ids and slice names, including __proto__. Comparison inputs follow the usable-report shape or are rejected and never mutated.\n\nTarget: O(n log n) time, where n is the combined input entry/slice count for each operation, using bounded-length fields and the usual dictionary/set model.\n\n`__cases`, `__predictions`, `__CASE_ROWS` and `__PATTERNS` come from the task harness. Every case, label and prediction in them is authored for this exercise and identical on every run. Nothing here calls a model or opens a network connection, and a fixture accuracy is not evidence about how a live router would score these tickets.',
         contract: [
           'Count every case in `cases` exactly once, including cases no prediction mentions.',
           'The first prediction for a `caseId` wins; later ones are ignored. A `caseId` that matches no case is ignored.',
