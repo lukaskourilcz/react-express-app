@@ -517,7 +517,7 @@ console.log(countMatches(["a", "b", "a"], "a"));
     tier: 2,
     focus: ["two-pointer", "while"],
     title: "Reverse in place",
-    prompt: "Write `reverseInPlace(list)`, reversing the array itself with two indexes that start at the ends and swap their way towards the middle, without `reverse()` or a copy, and returning the same array. `reverseInPlace([1, 2, 3, 4])` gives `[4, 3, 2, 1]`. Odd lengths, a single item and an empty array all work.",
+    prompt: "Write `reverseInPlace(list)`, reversing the array itself with two indexes that start at the ends and swap their way towards the middle, without `reverse()` or a copy, and returning the same array. `reverseInPlace([1, 2, 3, 4])` gives `[4, 3, 2, 1]`. Odd lengths, a single item and an empty array all work. list is an ordinary mutable dense array with at most 10000 opaque values. Preserve exact original references and values, including objects, undefined, NaN and signed zero. Return the same list even for empty and single-item arrays. Use two indexes and swaps, with constant auxiliary storage; do not call reverse or allocate a full-size copy. Target: O(n) time, where n is 1 + list.length.",
     starter: `const reverseInPlace = list => {
 
 };
@@ -604,7 +604,7 @@ console.log(countdownBy(10, 3));
     tier: 1,
     focus: ["while"],
     title: "First divisible",
-    prompt: "Write `firstDivisible(numbers, divisor)`, returning the first number in the array that divides by `divisor` with no remainder, or `null` when there is none. Walk the array with a `while` loop and use `break` the moment you find it. `firstDivisible([7, 9, 12, 20], 4)` gives 12, and zero is divisible by everything.",
+    prompt: "Write `firstDivisible(numbers, divisor)`, returning the first number in the array that divides by `divisor` with no remainder, or `null` when there is none. Walk the array with a `while` loop and use `break` the moment you find it. `firstDivisible([7, 9, 12, 20], 4)` gives 12, and zero is divisible by every nonzero integer. numbers is a read-only dense array of at most 10000 safe integers between -1000000000 and 1000000000. divisor is a nonzero integer between -1000000 and 1000000. Preserve the input and return the original first matching Number, including signed zero. Do not read later entries after finding a match. Use while and break as requested. Target: O(n) time in the worst case, where n is 1 + numbers.length; an early match stops sooner.",
     starter: `const firstDivisible = (numbers, divisor) => {
 
 };
@@ -637,7 +637,7 @@ console.log(firstDivisible([7, 9, 12, 20], 4));
       { call: "firstDivisible([5,10,15], 5)", expected: 5 },
       { call: "firstDivisible([1,2,3], 7)", expected: null, label: "nothing divisible gives null", edge: true },
       { call: "firstDivisible([], 2)", expected: null, label: "empty input", edge: true },
-      { call: "firstDivisible([3,0,6], 4)", expected: 0, label: "zero is divisible by everything", edge: true },
+      { call: "firstDivisible([3,0,6], 4)", expected: 0, label: "zero is divisible by every nonzero integer", edge: true },
     ],
   },
   {
@@ -648,7 +648,7 @@ console.log(firstDivisible([7, 9, 12, 20], 4));
     tier: 2,
     focus: ["do-while", "callbacks"],
     title: "Attempt until success",
-    prompt: "Write `attemptUntil(attempt, limit)`. The function `attempt` returns `true` when it succeeds; call it at least once with a `do…while` loop, and keep calling it until it succeeds or `limit` calls have been made. Return how many calls it took, or -1 when none succeeded — with an `attempt` that succeeds on its third call, `attemptUntil(attempt, 5)` gives 3.",
+    prompt: "Write `attemptUntil(attempt, limit)`. The function `attempt` returns `true` when it succeeds; call it at least once with a `do…while` loop, and keep calling it until it succeeds or `limit` calls have been made. Return how many calls it took, or -1 when none succeeded — with an `attempt` that succeeds on its third call, `attemptUntil(attempt, 5)` gives 3. limit is an integer from 1 to 1000. attempt is a synchronous callback returning a Boolean, or throwing any value. Invoke it as a plain function with no arguments and stop immediately after the first true. If it throws, propagate the original thrown value and make no further calls. Use do-while as requested. Target: O(n) time for loop overhead, where n is 1 + limit, excluding callback work; successful early termination may use fewer calls.",
     starter: `const attemptUntil = (attempt, limit) => {
 
 };
@@ -692,7 +692,7 @@ console.log(attemptUntil(() => ++tries === 3, 5));
     tier: 1,
     focus: ["for-of", "strings"],
     title: "Join with for-of",
-    prompt: "Write `joinWords(words, separator)`, building one string with the separator between neighbouring words using a `for…of` loop rather than `join`. `joinWords([\"a\", \"b\", \"c\"], \"-\")` gives `\"a-b-c\"`. A single word gets no separator, and an empty array gives an empty string.",
+    prompt: "Write `joinWords(words, separator)`, building one string with the separator between neighbouring words using a `for…of` loop rather than `join`. `joinWords([\"a\", \"b\", \"c\"], \"-\")` gives `\"a-b-c\"`. A single word gets no separator, and an empty array gives an empty string. words is a read-only dense array of at most 1000 strings, each at most 1000 UTF-16 code units; separator is a string of at most 100 code units. Preserve all text exactly, including empty strings, whitespace and Unicode; do not trim or normalize it. Inputs may be frozen. Use for-of and string concatenation, not join. Target: O(n²) time as a conservative upper bound for repeatedly copying growing string prefixes, where n is 1 + words.length + the final output length in UTF-16 code units. Engines may optimize concatenation; this exercise does not promise universally linear copying.",
     starter: `const joinWords = (words, separator) => {
 
 };
@@ -734,7 +734,7 @@ console.log(joinWords(["a", "b", "c"], "-"));
     tier: 1,
     focus: ["for-of", "destructuring"],
     title: "Number the items",
-    prompt: "Write `numberItems(items)`, returning a new array where each item becomes a string of its one-based position, a dot, a space and the item, using `for…of` over `items.entries()` so the loop hands you the index and the value together. `numberItems([\"milk\", \"eggs\"])` gives `[\"1. milk\", \"2. eggs\"]`, and an empty array gives an empty array.",
+    prompt: "Write `numberItems(items)`, returning a new array where each item becomes a string of its one-based position, a dot, a space and the item, using `for…of` over `items.entries()` so the loop hands you the index and the value together. `numberItems([\"milk\", \"eggs\"])` gives `[\"1. milk\", \"2. eggs\"]`, and an empty array gives an empty array. items is a read-only dense array of at most 1000 values, each either a string of at most 1000 UTF-16 code units or a finite Number from -1000000 to 1000000. Use normal JavaScript string conversion for Numbers, including -0 becoming \"0\"; preserve string contents exactly, including whitespace and Unicode. Inputs may be frozen. Return a fresh array on every call, even when empty, and leave items unchanged. Use for-of over items.entries() as requested. Target: O(n) time, where n is 1 + items.length + the total output string length, under amortized array append.",
     starter: `const numberItems = items => {
 
 };

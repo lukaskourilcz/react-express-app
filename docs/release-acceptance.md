@@ -3435,3 +3435,15 @@ fixed-one-element slice retains25XP againstO(1); uncertain countdown analysis
 remains unpenalized. Identity, strict-equality and10000-item cases are local
 fixtures; no real user progress, balances, scores or names were created.
 B026–b028are local and #404 remains frozen separately.
+
+## Search/text/callback content batch b029 — 15 October 2026
+
+Five individual model reviews raise coding coverage to175/725,550remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus26/35before. Twenty target/base25XP and copy checks
+pass, as do focused coding, API/script types, launch, build, native bindings,
+both zero-vulnerability production dependency audits and diff checks. Text
+copying costs are explicitly conservative/output-sensitive; finite execution
+and supplied-source reading are separate from arbitrary program guarantees.
+Original callback errors/counts and opaque references use isolated local data.
+B026–b029are local, and #404 remains frozen separately.

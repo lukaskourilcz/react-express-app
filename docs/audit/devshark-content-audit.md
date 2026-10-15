@@ -1,5 +1,34 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b029
+
+Read all English fields, starters/skeletons, checks and boards for first-divisible,
+for-of joining/numbering, in-place reversal and do-while attempts. Divisibility
+now explicitly excludes a zero divisor and all supplied search boards use the
+requested while/break, preserving signed zero and stopping before later reads.
+Number labels use for-of entries on senior too. Correct join, reversal and
+attempt algorithms are retained under explicit ownership/input domains.
+
+Exact text survives whitespace/newlines/Unicode and long separators. Repeated
+string concatenation uses a conservative quadratic upper bound in output size
+plus count, not an unqualified universal linear-copy claim. Callback attempts
+have a positive bounded budget, exact zero-argument calls and original thrown
+values. Reversal keeps original opaque references with constant auxiliary
+storage, established for supplied forms by reading their source.
+
+All35final-hash worker verdicts agree versus26/35before:20valid forms,
+five starters and ten wrongs. The old search tests already caught the selected
+absolute-value candidate; nine other wrongs previously passed. Twenty authored
+target/base25XP checks and zero-artifact copy sweep pass. Cases cover original
+identities, early tail-read refusal,10000-entry searches/swaps,1000text items,
+large text/separators and1000callback attempts. Finite execution is not a proof
+for arbitrary learner methods/asymptotics or independent/human acceptance.
+
+Focused coding, API/script types, launch, build,263native bindings, both
+zero-vulnerability production dependency audits and diff checks pass.
+Coverage is175/725coding,550remaining,263/263native. B026–b029are local;
+PR #404 stays frozen at3e8d209d while required CI runs. No live user writes.
+
 ## 15 October continuation — five coding items b028
 
 Read every English field, starter/skeleton, board and probe for rotation,

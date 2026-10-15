@@ -314,6 +314,9 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return list;
 };`,
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),list=[a,NaN,undefined,-0,b];const out=reverseInPlace(list);return [out===list,list[0]===b,Object.is(list[1],-0),list[2]===undefined,Number.isNaN(list[3]),list[4]===a]; })()", expected: [true, true, true, true, true, true] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);const out=reverseInPlace(list);const empty=[],one=[undefined];return [out===list,list[0],list[9999],reverseInPlace(empty)===empty,reverseInPlace(one)===one,one.length]; })()", expected: [true, 9999, 0, true, true, 1] },
+
       { call: "(() => { const list = [1,2,3,4,5]; list.reverse = () => { throw new Error(\"reverse() is not allowed here\"); }; return reverseInPlace(list); })()", expected: [5, 4, 3, 2, 1] },
       { call: "(() => { const list = [1,2]; return reverseInPlace(list) === list; })()", expected: true },
       { call: "(() => { const list = [\"x\",\"y\",\"z\",\"w\"]; reverseInPlace(list); return list.join(\"\"); })()", expected: "wzyx" },
@@ -345,25 +348,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-first-divisible": {
     solution: "const firstDivisible = (numbers, divisor) => { let found = null; let index = 0; while (index < numbers.length) { if (numbers[index] % divisor === 0) { found = numbers[index]; break; } index += 1; } return found; };",
-    junior: `const firstDivisible = (numbers, divisor) => {
-  let index = 0;
-  let result = null;
-  let found = false;
-  while (index < numbers.length && !found) {
-    const number = numbers[index];
-    if (number % divisor === 0) {
-      result = number;
-      found = true;
-    }
-    index += 1;
-  }
-  return result;
-};`,
-    senior: `const firstDivisible = (numbers, divisor) => {
-  // find stops at the first hit; ?? keeps a found 0 while turning "nothing found" into null.
-  return numbers.find(number => number % divisor === 0) ?? null;
-};`,
+    junior: "const firstDivisible = (numbers, divisor) => {\n  let index = 0;\n  let result = null;\n  while (index < numbers.length) {\n    const number = numbers[index];\n    if (number % divisor === 0) {\n      result = number;\n      break;\n    }\n    index += 1;\n  }\n  return result;\n};",
+    senior: "const firstDivisible = (numbers, divisor) => {\n  let i = 0, found = null;\n  while (i < numbers.length) {\n    const value = numbers[i++];\n    if (value % divisor === 0) { found = value; break; }\n  }\n  return found;\n};",
     hiddenTests: [
+      { call: "(() => { const values=Object.freeze([7,-12,24]);return [firstDivisible(values,-4),Object.is(firstDivisible(Object.freeze([-0,4]),2),-0)]; })()", expected: [-12, true] },
+      { call: "(() => { const values=Object.freeze(Array.from({length:10000},(_,i)=>i===9999?1000000000:3));return firstDivisible(values,1000000); })()", expected: 1000000000 },
+      { call: "(() => { const values=new __probe.Proxy([4,8,12],{get(target,key,receiver){if(key===\"1\"||key===\"2\")throw Error(\"read after match\");return __probe.get(target,key,receiver);}});return firstDivisible(values,2); })()", expected: 4 },
+
       { call: "firstDivisible([13,17,19,21,22], 11)", expected: 22 },
       { call: "firstDivisible([8,16,24], 8)", expected: 8 },
       { call: "firstDivisible([-6,9], 3)", expected: -6 },
@@ -395,6 +386,10 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return -1;
 };`,
     hiddenTests: [
+      { call: "(() => { const calls=[];const result=attemptUntil(function(...args){calls.push(args.length);return calls.length===3;},5);return [result,calls]; })()", expected: [3, [0, 0, 0]] },
+      { call: "(() => { const reason={code:\"local\"};let calls=0;try{attemptUntil(()=>{calls++;if(calls===2)throw reason;return false;},5);return [false,calls];}catch(error){return [error===reason,calls];} })()", expected: [true, 2] },
+      { call: "(() => { let calls=0;const result=attemptUntil(()=>{calls++;return calls===1000;},1000);return [result,calls]; })()", expected: [1000, 1000] },
+
       { call: "(() => { let calls = 0; const result = attemptUntil(() => { calls += 1; return calls === 6; }, 10); return [result, calls]; })()", expected: [6, 6] },
       { call: "(() => { let calls = 0; attemptUntil(() => { calls += 1; return true; }, 10); return calls; })()", expected: 1 },
       { call: "(() => { let calls = 0; attemptUntil(() => { calls += 1; return false; }, 3); return calls; })()", expected: 3 },
@@ -423,6 +418,10 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return result;
 };`,
     hiddenTests: [
+      { call: "joinWords(Object.freeze([\" a \",\"\\n\",\"🦈\",\"\",\"b\"]),\" ---> \")", expected: " a  ---> \n ---> 🦈 --->  ---> b" },
+      { call: "(() => { const word=\"x\".repeat(1000),sep=\"-\".repeat(100),words=Object.freeze([word,word,word]);const result=joinWords(words,sep);return [result.length,result===word+sep+word+sep+word]; })()", expected: [3200, true] },
+      { call: "(() => { const words=Object.freeze(Array.from({length:1000},()=>\"x\"));const out=joinWords(words,\"|\");return [out.length,out.slice(0,3),out.slice(-3)]; })()", expected: [1999, "x|x", "x|x"] },
+
       { call: "joinWords([\"one\",\"two\",\"three\",\"four\"], \" | \")", expected: "one | two | three | four" },
       { call: "(() => { const words = [\"x\",\"y\"]; words.join = () => { throw new Error(\"join() is not allowed here\"); }; return joinWords(words, \"+\"); })()", expected: "x+y" },
       { call: "joinWords([\"\",\"\"], \"-\")", expected: "-" },
@@ -439,9 +438,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   }
   return result;
 };`,
-    senior: `// map already pairs each item with its index; the template literal does the formatting.
-const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item}\`);`,
+    senior: "const numberItems = items => {\n  const labels = [];\n  for (const [i, item] of items.entries()) labels.push(String(i + 1) + \". \" + item);\n  return labels;\n};",
     hiddenTests: [
+      { call: "numberItems(Object.freeze([\" a \",\"\\n🦈\",-0,1.25]))", expected: ["1.  a ", "2. \n🦈", "3. 0", "4. 1.25"] },
+      { call: "(() => { const input=Object.freeze(Array.from({length:1000},()=>\"x\"));const a=numberItems(input),b=numberItems(input),empty=Object.freeze([]);return [a.length,a[999],a!==b,numberItems(empty)!==numberItems(empty)]; })()", expected: [1000, "1000. x", true, true] },
+      { call: "numberItems(Object.freeze([\"x\".repeat(1000)]))[0].length", expected: 1003 },
+
       { call: "numberItems([\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\",\"h\",\"i\",\"j\",\"k\"])[10]", expected: "11. k" },
       { call: "numberItems([\"\", \"x\"])", expected: ["1. ", "2. x"] },
       { call: "(() => { const items = [\"a\"]; numberItems(items); return items; })()", expected: ["a"] },
