@@ -436,7 +436,7 @@ console.log(fewestCoins([1, 3, 4], 6));
     tier: 4,
     focus: ['two-pointer', 'while'],
     title: 'Rain between the walls',
-    prompt: 'A row of walls, each one unit wide, is given by their heights: `[0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]`. After rain, water stands above each position up to the lower of two walls: the tallest one at or to its left and the tallest one at or to its right. Write `trappedWater(heights)`, returning how many units of water the row holds; that example holds 6. Looking left and right from every position is O(n²), and the hidden rows of fifty thousand walls need better. Walk two pointers in from both ends `while` they have not met, and keep the tallest wall seen from each side. Move the side whose tallest wall is lower. The water above that position is settled by its own side, because the other side is known to have a wall at least as tall. Target: O(n) time and O(1) space.',
+    prompt: "A row of walls, each one unit wide, is given by their heights: `[0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]`. After rain, water stands above each position up to the lower of two walls: the tallest one at or to its left and the tallest one at or to its right. Write `trappedWater(heights)`, returning how many units of water the row holds; that example holds 6. Looking left and right from every position is O(n\u00b2), and the hidden rows of fifty thousand walls need better. Walk two pointers in from both ends `while` they have not met, and keep the tallest wall seen from each side. Move the side whose tallest wall is lower. The water above that position is settled by its own side, because the other side is known to have a wall at least as tall. Target: O(n) time and O(1) space. Input is a dense array of at most 50,000 primitive nonnegative integer heights in 0..1000000. Either zero sign is equivalent; preserve the caller's exact values/order, including source zero signs. The array may be frozen. n is heights.length. Integer bounds keep every water amount and the total exact and safe; no rounding or bitwise narrowing is allowed. Fewer than three walls hold zero water. The auxiliary-space target excludes the input; a global-maximum pivot with a scan from either end is also valid.",
     starter: `const trappedWater = heights => {
 
 };
@@ -469,6 +469,7 @@ console.log(trappedWater([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1]));
     verify: 'tests',
     estimatedMinutes: 30,
     tests: [
+      {"call": "trappedWater([1000000,...Array(3000).fill(0),1000000])", "expected": 3000000000, "label": "water totals can exceed 32 bits"},
       { call: 'trappedWater([0, 1, 0, 2, 1, 0, 1, 3, 2, 1, 2, 1])', expected: 6 },
       { call: 'trappedWater([4, 2, 0, 3, 2, 5])', expected: 9 },
       { call: 'trappedWater([3, 0, 3])', expected: 3, label: 'one dip' },

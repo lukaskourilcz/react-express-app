@@ -671,8 +671,8 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   'alg-deep-clone': {
     solution: `const deepClone = value => {
   if (value === null || typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(item => deepClone(item));
-  const copy = {};
+  if (Array.isArray(value)) return Array.from({ length: value.length }, (_, index) => deepClone(value[index]));
+  const copy = Object.create(null);
   for (const key of Object.keys(value)) copy[key] = deepClone(value[key]);
   return copy;
 };`,
@@ -690,7 +690,7 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
     }
     return items;
   }
-  const copy = {};
+  const copy = Object.create(null);
   const keys = Object.keys(value);
   for (let index = 0; index < keys.length; index += 1) {
     const key = keys[index];
@@ -699,14 +699,16 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   return copy;
 };`,
     senior: `const deepClone = value => {
-  // typeof null is "object", so the null check has to come first or the
-  // recursion walks into it and comes back with {}.
   if (value === null || typeof value !== "object") return value;
   return Array.isArray(value)
-    ? value.map(deepClone)
+    ? Array.from({ length: value.length }, (_, index) => deepClone(value[index]))
     : Object.fromEntries(Object.entries(value).map(([key, child]) => [key, deepClone(child)]));
 };`,
     hiddenTests: [
+      { call: "(() => {const hidden=Symbol(\"hidden\"),source=Object.defineProperty({constructor:{data:1},prototype:[2]},\"__proto__\",{value:{safe:3},enumerable:true,writable:true,configurable:true});Object.defineProperty(source,\"secret\",{value:{ignore:1},enumerable:false});source[hidden]={ignore:2};Object.freeze(source.constructor);Object.freeze(source.prototype);Object.freeze(source.__proto__);Object.freeze(source);const out=deepClone(source),descriptor=Object.getOwnPropertyDescriptor(out,\"__proto__\");if(!descriptor||descriptor.value===source.__proto__||descriptor.value.safe!==3||!descriptor.writable||!descriptor.enumerable||!descriptor.configurable||Object.hasOwn(out,\"secret\")||Object.getOwnPropertySymbols(out).length||out.constructor===source.constructor||out.prototype===source.prototype||![Object.prototype,null].includes(Object.getPrototypeOf(out)))return false;out.__proto__.safe=9;return source.__proto__.safe===3&&Object.getPrototypeOf(source)===Object.prototype;})()", expected: true },
+      { call: "(() => {const token=Symbol(\"leaf\");let calls=0;const fn=()=>{calls++;},array=(()=>{const values=Object.setPrototypeOf([undefined,-0,NaN,Infinity,3n,token,fn],null);values.extra=Object.freeze({ignored:1});values[Symbol.iterator]=()=>{calls++;throw Error(\"ignored iterator invoked\");};return Object.freeze(values);})(),shared=Object.freeze({x:1}),source=Object.freeze(Object.assign(Object.create(null),{array,a:shared,b:shared})),out=deepClone(source),again=deepClone(source);const distinct=deepClone({a:{x:1},b:{x:1}});if(distinct.a===distinct.b||Object.hasOwn(out.array,\"extra\")||Object.getOwnPropertySymbols(out.array).length||out===source||out===again||out.array===array||out.array===again.array||out.a===shared||out.b===shared||out.a===again.a||out.b===again.b||!Array.isArray(out.array)||out.array.length!==7)return false;for(let i=0;i<7;i++)if(!Object.hasOwn(out.array,i)||!Object.is(out.array[i],array[i]))return false;out.array[0]=9;out.a.x=7;return array[0]===undefined&&shared.x===1&&again.a.x===1&&calls===0&&deepClone(fn)===fn&&deepClone(token)===token&&Object.is(deepClone(-0),-0);})()", expected: true },
+      { call: "(() => {const choices=[null,undefined,-0,Object.freeze({a:Object.freeze([1,2])}),Object.freeze([NaN,3n]),Symbol(\"leaf\")],verify=(source,out,originals)=>{if(source===null||typeof source!==\"object\")return Object.is(source,out);if(out===null||typeof out!==\"object\"||originals.has(out)||Array.isArray(source)!==Array.isArray(out))return false;const keys=Array.isArray(source)?Array.from({length:source.length},(_,i)=>String(i)):Object.keys(source);if(Array.isArray(source)&&out.length!==source.length||Object.keys(out).length!==keys.length)return false;return keys.every(key=>Object.hasOwn(out,key)&&verify(source[key],out[key],originals));};for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code;const source=[];for(let i=0;i<n;i++){source.push(choices[digits%6]);digits=Math.floor(digits/6);}Object.freeze(source);const originals=new Set([source]);const collect=value=>{if(value!==null&&typeof value===\"object\"&&!originals.has(value)){originals.add(value);for(const child of Object.values(value))collect(child);}};for(const child of source)collect(child);if(!verify(source,deepClone(source),originals))return false;}let nested=Object.freeze({leaf:1});for(let i=1;i<64;i++)nested=Object.freeze({child:nested});let out=deepClone(nested),input=nested;for(let i=1;i<64;i++){if(out===input)return false;out=out.child;input=input.child;}if(out===input||out.leaf!==1)return false;const wide=Object.freeze(Array.from({length:20000},(_,i)=>i)),copy=deepClone(wide);return copy!==wide&&copy.length===20000&&copy.every((v,i)=>v===i)&&deepClone(Object.freeze([]))!==deepClone(Object.freeze([]));})()", expected: true },
+
       { call: '(() => { const source = { x: { y: { z: 1 } } }; const copy = deepClone(source); copy.x.y.z = 2; return [source.x.y.z, copy.x.y.z]; })()', expected: [1, 2] },
       { call: 'deepClone("text")', expected: 'text' },
       { call: '(() => { const source = { list: [1, 2] }; const copy = deepClone(source); return copy.list === source.list; })()', expected: false },
@@ -752,6 +754,10 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   return Object.values(value).reduce((total, child) => total + sumValues(child), 0);
 };`,
     hiddenTests: [
+      { call: "(() => {const hidden=Symbol(\"ignored\"),bag=Object.assign(Object.create({inherited:100}),{own:2,missing:undefined});bag[hidden]=1000;Object.defineProperty(bag,\"secret\",{value:1000,enumerable:false});Object.freeze(bag);const array=Array(3);array[1]=2;array.extra=4;Object.freeze(array);let calls=0;const fn=()=>{calls++;};fn.ignored=99;Object.freeze(fn);return [sumValues(bag),sumValues(array),sumValues(fn),calls,sumValues({a:1e9,b:[-1e9,1e-8]}),Number.isNaN(sumValues({a:[Infinity,-Infinity]})),sumValues([NaN,Infinity])===Infinity,sumValues(-0)===0,sumValues(3n),sumValues(Symbol(\"leaf\"))];})()", expected: [2, 6, 0, 0, 0, true, true, true, 0, 0] },
+      { call: "(() => {let calls=0;const fn=()=>{calls++;};fn.notVisited=999;Object.freeze(fn);const object=Object.freeze(Object.assign(Object.create(null),{x:3,ignore:\"4\"})),choices=[{value:1,sum:1},{value:NaN,sum:0},{value:Object.freeze([-2,.5]),sum:-1.5},{value:object,sum:3},{value:Object.freeze({x:Object.freeze([1,-1]),ignore:undefined}),sum:0},{value:fn,sum:0}];for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code,wanted=0;const input=[];for(let i=0;i<n;i++){const chosen=choices[digits%6];digits=Math.floor(digits/6);input.push(chosen.value);wanted+=chosen.sum;}if(sumValues(Object.freeze(input))!==wanted)return false;}return calls===0;})()", expected: true },
+      { call: "(() => {let nested=7;for(let i=0;i<64;i++)nested=Object.freeze({child:nested});const array=Object.freeze(Array(20000).fill(1)),object=Object.freeze(Object.fromEntries(Array.from({length:20000},(_,i)=>[\"k\"+i,1]))),shared=Object.freeze({a:3}),source=Object.freeze({a:shared,b:shared});return [sumValues(nested),sumValues(array),sumValues(object),sumValues(source),source.a===shared,source.b===shared,shared.a];})()", expected: [7, 20000, 20000, 6, true, true, 3] },
+
       { call: 'sumValues([])', expected: 0 },
       { call: 'sumValues(null)', expected: 0 },
       { call: 'sumValues({ a: { b: { c: { d: 10 } } } })', expected: 10 },

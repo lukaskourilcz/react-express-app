@@ -593,29 +593,23 @@ const isSearchTree = (node, low = -Infinity, high = Infinity) =>
   return water;
 };`,
     junior: `const trappedWater = heights => {
-  const count = heights.length;
-  const tallestFromLeft = [];
-  let tallest = 0;
-  for (let i = 0; i < count; i++) {
-    if (heights[i] > tallest) {
-      tallest = heights[i];
+  let left = 0;
+  let right = heights.length - 1;
+  let leftMax = 0;
+  let rightMax = 0;
+  let total = 0;
+  while (left < right) {
+    leftMax = Math.max(leftMax, heights[left]);
+    rightMax = Math.max(rightMax, heights[right]);
+    if (leftMax <= rightMax) {
+      total += leftMax - heights[left];
+      left += 1;
+    } else {
+      total += rightMax - heights[right];
+      right -= 1;
     }
-    tallestFromLeft.push(tallest);
   }
-  const tallestFromRight = [];
-  tallest = 0;
-  for (let i = count - 1; i >= 0; i--) {
-    if (heights[i] > tallest) {
-      tallest = heights[i];
-    }
-    tallestFromRight[i] = tallest;
-  }
-  let water = 0;
-  for (let i = 0; i < count; i++) {
-    const level = Math.min(tallestFromLeft[i], tallestFromRight[i]);
-    water = water + level - heights[i];
-  }
-  return water;
+  return total;
 };`,
     senior: `const trappedWater = heights => {
   let [left, right] = [0, heights.length - 1];
@@ -633,6 +627,10 @@ const isSearchTree = (node, low = -Infinity, high = Infinity) =>
   return water;
 };`,
     hiddenTests: [
+      { call: "(() => {const values=[3,-0,3],copy=values.slice(),answer=trappedWater(values);return [answer,values.every((v,i)=>Object.is(v,copy[i])),trappedWater(Object.freeze([2,0,1])),trappedWater(Object.freeze([])),trappedWater(Object.freeze([1,2]))];})()", expected: [3, true, 1, 0, 0] },
+      { call: "(() => {const alphabet=[0,1,3,5];for(let n=0;n<=5;n++)for(let code=0;code<4**n;code++){let digits=code;const values=[];for(let i=0;i<n;i++){values.push(alphabet[digits%4]);digits=Math.floor(digits/4);}let wanted=0;for(let i=0;i<n;i++){let a=0,b=0;for(let j=0;j<=i;j++)a=Math.max(a,values[j]);for(let j=i;j<n;j++)b=Math.max(b,values[j]);wanted+=Math.min(a,b)-values[i];}if(trappedWater(Object.freeze(values))!==wanted)return false;}return true;})()", expected: true },
+      { call: "[trappedWater(Object.freeze(Array.from({length:50000},(_,i)=>i===0||i===49999?1000000:0))),trappedWater(Object.freeze(Array(50000).fill(1000000))),trappedWater(Object.freeze(Array.from({length:50000},(_,i)=>i))),trappedWater(Object.freeze(Array(50000).fill(0)))]", expected: [49998000000, 0, 0, 0] },
+
       { call: 'trappedWater([2, 0, 2, 0, 2])', expected: 4 },
       { call: 'trappedWater([0, 0, 0])', expected: 0 },
       { call: 'trappedWater([3, 1, 2, 1, 3])', expected: 5 },

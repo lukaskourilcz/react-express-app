@@ -949,16 +949,14 @@ console.log(deepFlatten([1, [2, [3, [4]], 5]]));
     tier: 3,
     focus: ['recursion', 'objects'],
     title: 'Deep clone',
-    prompt: 'Write `deepClone(value)`, returning a copy that shares no array or object with the original, without `JSON.parse(JSON.stringify(...))` and without `structuredClone`. Arrays clone into arrays, plain objects into objects, and everything else — numbers, strings, booleans, `null`, `undefined` — comes back as it is, since there is nothing to copy. Changing a nested value on the copy must leave the original alone. Mind that `typeof null` is `"object"`, so a null check has to come first. Target: O(n) time and O(n) space in the number of values.',
+    prompt: "Write `deepClone(value)`, copying arrays and data objects without native cloning shortcuts. JSON.parse and structuredClone are unavailable in this exercise, in Run, Submit and reused Learn. JSON.stringify remains available for debugging. Copy dense arrays by their numeric slots; copy an object's enumerable own string-keyed data properties. Ignore inherited, nonenumerable and symbol-keyed properties, and non-index array extras. Primitive leaves, including undefined, NaN, infinities, zero signs, BigInts and Symbols, return unchanged; functions are opaque leaves retained by identity. Containers are arrays or ordinary/null-prototype data objects, may be frozen, and must stay unchanged. Arrays may have null prototypes. Do not invoke functions or accessors; input accessors and other exotic objects are outside this task. Return fresh mutable containers with no original-container aliases; output object prototypes may be Object.prototype or null. Preserve an own `__proto__` key as data, without changing a prototype. Distinct source containers must not be merged into one output container. A repeated source container may be cloned independently or retain aliases within the copy; each call must still have entirely fresh output containers. Container cycles are outside this task. Array length is at most 20,000 and container depth at most 64. n counts visited values and inspected own slots, including repeated shared occurrences and ignored metadata, at most 50,000. Target: O(n) time and O(n) space, including the returned copy. A null/type check ends recursion for leaves; an explicit work stack is also valid.",
     starter: `const deepClone = value => {
 
 };
 
-// Scratch pad — change this and press Run.
+// Scratch pad: inspect the copy without assuming an unfinished function works.
 const source = { a: [1, { b: 2 }] };
-const copy = deepClone(source);
-copy.a[1].b = 99;
-console.log(source.a[1].b, copy.a[1].b);
+console.log(source, deepClone(source));
 `,
     skeleton: `const deepClone = value => {
   if (value === null || typeof value !== "object") return value;
@@ -971,12 +969,13 @@ console.log(source.a[1].b, copy.a[1].b);
     approach: [
       'Return the value untouched when it is null or not an object; that covers every primitive and ends the recursion.',
       'Check Array.isArray next, and build a new array whose items are clones of the originals.',
-      'Otherwise build a new object and clone each own value under the same key.',
-      'Because every branch makes a fresh container, no array or object is ever shared with the original.',
+      "Otherwise clone each enumerable own string key. A null-prototype output object keeps an own `__proto__` key as ordinary data.",
+      'Create a new container for each copied array or object. Return primitive and function leaves unchanged.',
     ],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
+      {"call": "(() => {const source=Object.defineProperty({},\"__proto__\",{value:{x:1},enumerable:true});return Object.hasOwn(deepClone(source),\"__proto__\");})()", "expected": true, "label": "an own __proto__ key stays data"},
       { call: '(() => { const source = { a: [1, { b: 2 }] }; const copy = deepClone(source); copy.a[1].b = 99; return [source.a[1].b, copy.a[1].b]; })()', expected: [2, 99], label: 'changing the copy leaves the original alone' },
       { call: '(() => { const source = { a: 1 }; const copy = deepClone(source); return [copy, copy === source]; })()', expected: [{ a: 1 }, false], label: 'equal in value, not the same object' },
       { call: 'deepClone(null)', expected: null, label: 'null is not an object to walk into', edge: true },
@@ -999,7 +998,7 @@ console.log(source.a[1].b, copy.a[1].b);
     tier: 3,
     focus: ['recursion', 'objects'],
     title: 'Sum the numbers in a nested object',
-    prompt: 'Write `sumValues(value)`, adding up every number anywhere inside a structure of nested objects and arrays. `sumValues({ a: 1, b: { c: 2, d: [3, 4] } })` gives 10. Walk arrays and objects, add numbers, and ignore strings, booleans, `null` and `undefined` rather than coercing them — `"5"` contributes nothing. `NaN` is a number as far as `typeof` is concerned, so leave it out explicitly or one bad value poisons the total. An empty object or array totals 0. Target: O(n) time and O(d) stack space for depth d.',
+    prompt: "Write `sumValues(value)`, adding up every number anywhere inside a structure of nested objects and arrays. `sumValues({ a: 1, b: { c: 2, d: [3, 4] } })` gives 10. Walk arrays and objects, add numbers, and ignore strings, booleans, `null` and `undefined` rather than coercing them \u2014 `\"5\"` contributes nothing. `NaN` is a number as far as `typeof` is concerned, so leave it out explicitly or one bad value poisons the total. An empty object or array totals 0. Target: O(n) time and O(n) extra space; the call stack alone has depth O(d), while retained Object.values lists can use O(n) storage. Visit only enumerable own string-keyed data properties of objects; arrays use the same enumeration, including enumerable extras and ignoring holes. Inherited, nonenumerable and symbol-keyed properties contribute nothing. Functions and primitive non-Numbers are ignored, without invocation or coercion. Objects are used only as data property bags; accessors and exotic proxies are outside this task. Number leaves contribute themselves except NaN, which contributes 0; infinities are valid and ordinary addition may still produce NaN from opposing infinities. Within each container, add recursively computed child subtotals left-to-right from 0 in Object.values order, using ordinary Number rounding. Either zero sign in the result is equivalent. Preserve every input field; frozen and null-prototype containers are valid. Selected container links are acyclic; shared containers count again for every occurrence. Array length is at most 20,000, depth d at most 64. n counts visited values and inspected own slots/array lengths, including repeat visits and ignored metadata, at most 50,000. An iterative postorder stack preserving the same grouping is also valid.",
     starter: `const sumValues = value => {
 
 };
@@ -1023,6 +1022,7 @@ console.log(sumValues({ a: 1, b: { c: 2, d: [3, 4] } }));
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      {"call": "sumValues(Object.assign(Object.create({ignored:100}),{own:2}))", "expected": 2, "label": "only own enumerable values contribute"},
       { call: 'sumValues({ a: 1, b: { c: 2, d: [3, 4] } })', expected: 10 },
       { call: 'sumValues([1, [2, [3]]])', expected: 6 },
       { call: 'sumValues({})', expected: 0, label: 'empty input', edge: true },
