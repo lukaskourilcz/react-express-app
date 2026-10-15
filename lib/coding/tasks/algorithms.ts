@@ -318,7 +318,7 @@ console.log(isPalindrome("A man, a plan, a canal: Panama"));
     tier: 2,
     focus: ['strings', 'split', 'join'],
     title: 'Reverse words in a string',
-    prompt: 'Write `reverseWords(text)`, returning the words in reverse order separated by exactly one space. `reverseWords("  the sky   is blue ")` gives `"blue is sky the"`. Leading, trailing and repeated spaces all disappear, so splitting on a single space is not enough — trim first and split on runs of whitespace, or filter the empty pieces out. The letters inside a word are not touched, and a string of spaces alone gives `""`. Target: O(n) time and O(n) space.',
+    prompt: "Write `reverseWords(text)`, returning the words in reverse order separated by exactly one space. `reverseWords(\"  the sky   is blue \")` gives `\"blue is sky the\"`. Use runs of JavaScript whitespace as delimiters. Trim first, or discard empty edge pieces; splitting only on literal spaces misses other whitespace. The letters inside a word are not touched, and a string of spaces alone gives `\"\"`. Target: O(n) time and O(n) space. text is primitive text of at most 1000 UTF-16 units. Delimiters are exactly JavaScript /\\s/ characters, including tabs, line breaks, nonbreaking spaces and BOM; zero-width space and U+0085 are not delimiters. A word is a maximal nonempty run of non-whitespace units and its exact text/case is preserved, including Unicode or unpaired surrogates. Join reversed words with one ASCII space and keep no cross-call state. n is 1 + text UTF-16 length; scanning from right to left is another valid linear approach.",
     starter: `const reverseWords = text => {
 
 };
@@ -331,12 +331,12 @@ console.log(reverseWords("  the sky   is blue "));
 
   return words.reverse().join(" ");
 };`,
-    hints: ['Splitting "a  b" on a single space leaves an empty string between the words. Split on a run of whitespace instead, or drop the empty pieces before joining.'],
+    hints: ["Use a whitespace-run split such as /\\s+/ or a non-whitespace match such as /\\S+/g. Without trimming, drop empty edge pieces. Splitting only on a literal space misses tabs and line breaks."],
     approach: [
       'Trim the ends so a leading or trailing space cannot become an empty word.',
       'Split on one-or-more whitespace characters rather than on a single space, which collapses the runs between words.',
       'Reverse the list of words and join it with a single space.',
-      'A string that is only whitespace trims to nothing and gives an empty list, which joins to the empty string.',
+      'Whitespace-only input returns an empty string. After trimming, split may leave one empty placeholder that joins back to empty; filtering empty pieces is another valid approach.',
     ],
     verify: 'tests',
     estimatedMinutes: 10,
@@ -362,7 +362,7 @@ console.log(reverseWords("  the sky   is blue "));
     tier: 1,
     focus: ['slice', 'for'],
     title: 'Chunk an array',
-    prompt: 'Write `chunk(items, size)`, splitting the array into consecutive pieces of at most `size` items, in order. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]` — the last piece holds whatever is left, so it may be shorter. An empty array gives `[]`, a `size` that is not a positive whole number gives `[]` rather than looping for ever, and the array passed in is never changed. Target: O(n) time and O(n) space.',
+    prompt: "Write `chunk(items, size)`, splitting the array into consecutive pieces of at most `size` items, in order. `chunk([1, 2, 3, 4, 5], 2)` gives `[[1, 2], [3, 4], [5]]` \u2014 the last piece holds whatever is left, so it may be shorter. An empty array gives `[]`, a `size` that is not a positive whole number gives `[]` rather than looping for ever, and the array passed in is never changed. Target: O(n) time and O(n) space. Domain: a dense ordinary readonly array of at most 1000 stable opaque items with standard array methods, possibly frozen, without accessors/proxies. Preserve exact values/references, including undefined, null, Symbols, functions and signed zero; do not clone or inspect item fields. size may be any value: accept only a primitive finite Number for which Number.isInteger(size) is true and size>0, with no coercion. A huge finite integer size is valid and gives one short piece for nonempty input. Return a fresh mutable outer array and fresh independent mutable piece arrays on every call; empty/invalid-size results are fresh too. n is 1 + input length and output reference copies are included in O(n) space.",
     starter: `const chunk = (items, size) => {
 
 };
@@ -390,6 +390,7 @@ console.log(chunk([1, 2, 3, 4, 5], 2));
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
+      {"call": "chunk([1, 2], \"2\")", "expected": [], "label": "a numeric string is not a Number size", "edge": true},
       { call: 'chunk([1, 2, 3, 4, 5], 2)', expected: [[1, 2], [3, 4], [5]] },
       { call: 'chunk([1, 2, 3, 4], 2)', expected: [[1, 2], [3, 4]] },
       { call: 'chunk([], 3)', expected: [], label: 'empty input', edge: true },
@@ -411,7 +412,7 @@ console.log(chunk([1, 2, 3, 4, 5], 2));
     tier: 2,
     focus: ['two-pointer', 'while'],
     title: 'Merge two sorted arrays',
-    prompt: 'Write `mergeSorted(a, b)`, merging two arrays that are already sorted ascending into one sorted array, without calling `sort`. `mergeSorted([1, 3, 5], [2, 4])` gives `[1, 2, 3, 4, 5]`. Walk both arrays with a pointer each and always take the smaller head, then append whatever is left over when one side runs out. Duplicates are kept, either array may be empty, and neither input is changed. Target: O(n + m) time and O(n + m) space — sorting the concatenation would be O((n + m) log (n + m)) and throws away what you already know.',
+    prompt: "Write `mergeSorted(a, b)`, merging two arrays that are already sorted ascending into one sorted array, without calling `sort`. `mergeSorted([1, 3, 5], [2, 4])` gives `[1, 2, 3, 4, 5]`. Walk both arrays with a pointer each and always take the smaller head, then append whatever is left over when one side runs out. Duplicates are kept, either array may be empty, and neither input is changed. Target: O(n + m) time and O(n + m) space \u2014 sorting the concatenation would be O((n + m) log (n + m)) and throws away what you already know. Domain: dense ordinary readonly arrays of at most 1000 finite Numbers each, within [-1000000000,1000000000] and already nondecreasing, possibly frozen, without accessors/proxies. Fractions and signed zero are valid; NaN is outside this ordering domain. Preserve exact values, duplicates and both inputs, including when they are the same array. When values compare equal take from a first, preserving order within each side and the signs of zeros. Return a fresh mutable array every call, including empty/one-sided inputs. n is 1 + a.length and m is 1 + b.length; a generator-based nonmutating merge is also valid, with no sort call.",
     starter: `const mergeSorted = (a, b) => {
 
 };
@@ -431,7 +432,7 @@ console.log(mergeSorted([1, 3, 5], [2, 4]));
   // one side is spent; append the rest of the other
   return merged;
 };`,
-    hints: ['The loop that compares both heads can only run while both sides still have one. When it ends, exactly one array has values left — append them as they are, since they are already in order.'],
+    hints: ['The loop that compares both heads can only run while both sides still have one. When it ends, at most one array has values left — append them as they are, since they are already in order.'],
     approach: [
       'Keep an index into each array and build a third array to write into.',
       'While both indices are still inside their array, compare the two heads and push the smaller one, advancing only the pointer you took from.',

@@ -72,42 +72,14 @@ export const EASY_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> = {
 
   /* ── strings and one-pass scans ────────────────────────────────────── */
   'alg-easy2-common-prefix': {
-    solution: `const commonPrefix = words => {
-  if (words.length === 0) return "";
-  const first = words[0];
-  for (let i = 0; i < first.length; i++) {
-    for (const word of words) {
-      // A shorter word reads undefined here, which also ends the prefix.
-      if (word[i] !== first[i]) return first.slice(0, i);
-    }
-  }
-  return first;
-};`,
-    junior: `const commonPrefix = words => {
-  if (words.length === 0) {
-    return "";
-  }
-  let prefix = "";
-  for (let i = 0; i < words[0].length; i++) {
-    const char = words[0][i];
-    for (let j = 1; j < words.length; j++) {
-      if (words[j][i] !== char) {
-        return prefix;
-      }
-    }
-    prefix = prefix + char;
-  }
-  return prefix;
-};`,
-    senior: `const commonPrefix = (words) => {
-  if (words.length === 0) return "";
-  let prefix = words[0];
-  for (const word of words) {
-    while (!word.startsWith(prefix)) prefix = prefix.slice(0, -1);
-  }
-  return prefix;
-};`,
+    solution: "const commonPrefix = words => {\n  if (words.length === 0) return \"\";\n  const first = words[0];\n  for (let i = 0; i < first.length; i++) {\n    for (const word of words) {\n      // A shorter word reads undefined here, which also ends the prefix.\n      if (word[i] !== first[i]) return first.slice(0, i);\n    }\n  }\n  return first;\n};",
+    junior: "const commonPrefix = words => {\n  if (words.length === 0) return \"\";\n  const first = words[0];\n  let length = 0;\n  for (; length < first.length; length += 1) {\n    const character = first[length];\n    for (let word = 1; word < words.length; word += 1) {\n      if (words[word][length] !== character) return first.slice(0, length);\n    }\n  }\n  return first.slice(0, length);\n};",
+    senior: "const commonPrefix = words => {\n  if (words.length === 0) return \"\";\n  const first = words[0];\n  let length = first.length;\n  for (let word = 1; word < words.length && length > 0; word += 1) {\n    let shared = 0;\n    while (shared < length && shared < words[word].length && first[shared] === words[word][shared]) shared += 1;\n    length = shared;\n  }\n  return first.slice(0, length);\n};",
     hiddenTests: [
+      { call: "(() => {const input=[\"flow\",\"flower\",\"flight\"];const result=commonPrefix(input);const units=commonPrefix(Object.freeze([\"\ud83d\ude00a\",\"\ud83d\ude03b\"]));return [result,input,units.length,units.charCodeAt(0),commonPrefix([\"e\\u0301\",\"\u00e9\"]),commonPrefix([\" A\",\" a\"]),commonPrefix([\"abc\",\"\"])];})()", expected: ["fl", ["flow", "flower", "flight"], 1, 55357, "", " ", ""] },
+      { call: "[commonPrefix(Object.freeze([\"a\\u0000b\",\"a\\u0000c\"])),commonPrefix(Object.freeze([\"\\ud800x\",\"\\ud800y\"])),commonPrefix(Object.freeze([])),commonPrefix(Object.freeze([\"\",\"\"])),commonPrefix([\"abc\",\"abc\"])]", expected: ["a\u0000", "\ud800", "", "", "abc"] },
+      { call: "(() => {const word=\"a\".repeat(1000);const many=Object.freeze(Array.from({length:1000},()=>word));return [commonPrefix(many)===word,commonPrefix([word,\"a\".repeat(500)+\"b\".repeat(500)]).length,many.length];})()", expected: [true, 500, 1000] },
+
       { call: 'commonPrefix(["interview", "internet", "interval", "in"])', expected: 'in' },
       { call: 'commonPrefix(["abc", "abd", "xbc"])', expected: '' },
       { call: 'commonPrefix(["", "abc"])', expected: '' },
@@ -115,44 +87,14 @@ export const EASY_ALGORITHMS_A_SOLUTIONS: Record<string, CodingSolution> = {
     ],
   },
   'alg-easy2-roman-numerals': {
-    solution: `const VALUES = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
-
-const fromRoman = numeral => {
-  let total = 0;
-  for (let i = 0; i < numeral.length; i++) {
-    const value = VALUES[numeral[i]];
-    // Past the end there is no next letter, so the last one is always added.
-    const next = VALUES[numeral[i + 1]] ?? 0;
-    total += value < next ? -value : value;
-  }
-  return total;
-};`,
-    junior: `const fromRoman = numeral => {
-  const values = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
-  let total = 0;
-  for (let i = 0; i < numeral.length; i++) {
-    const value = values[numeral[i]];
-    if (i + 1 < numeral.length && value < values[numeral[i + 1]]) {
-      total = total - value;
-    } else {
-      total = total + value;
-    }
-  }
-  return total;
-};`,
-    senior: `const VALUES = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };
-
-const fromRoman = (numeral) => {
-  let total = 0;
-  let previous = 0;
-  for (let i = numeral.length - 1; i >= 0; i--) {
-    const value = VALUES[numeral[i]];
-    total += value < previous ? -value : value;
-    previous = value;
-  }
-  return total;
-};`,
+    solution: "const VALUES = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };\n\nconst fromRoman = numeral => {\n  let total = 0;\n  for (let i = 0; i < numeral.length; i++) {\n    const value = VALUES[numeral[i]];\n    // Past the end there is no next letter, so the last one is always added.\n    const next = VALUES[numeral[i + 1]] ?? 0;\n    total += value < next ? -value : value;\n  }\n  return total;\n};",
+    junior: "const fromRoman = numeral => {\n  const values = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };\n  let total = 0;\n  for (let i = 0; i < numeral.length; i++) {\n    const value = values[numeral[i]];\n    if (i + 1 < numeral.length && value < values[numeral[i + 1]]) {\n      total = total - value;\n    } else {\n      total = total + value;\n    }\n  }\n  return total;\n};",
+    senior: "const VALUES = { I: 1, V: 5, X: 10, L: 50, C: 100, D: 500, M: 1000 };\n\nconst fromRoman = (numeral) => {\n  let total = 0;\n  let previous = 0;\n  for (let i = numeral.length - 1; i >= 0; i--) {\n    const value = VALUES[numeral[i]];\n    total += value < previous ? -value : value;\n    previous = value;\n  }\n  return total;\n};",
     hiddenTests: [
+      { call: "[fromRoman(\"I\"),fromRoman(\"V\"),fromRoman(\"X\"),fromRoman(\"L\"),fromRoman(\"C\"),fromRoman(\"D\"),fromRoman(\"M\"),fromRoman(\"\")]", expected: [1, 5, 10, 50, 100, 500, 1000, 0] },
+      { call: "[\"IV\",\"IX\",\"XL\",\"XC\",\"CD\",\"CM\",\"MMMDCCCLXXXVIII\"].map(fromRoman)", expected: [4, 9, 40, 90, 400, 900, 3888] },
+      { call: "(() => {const thousands=[\"\",\"M\",\"MM\",\"MMM\"],hundreds=[\"\",\"C\",\"CC\",\"CCC\",\"CD\",\"D\",\"DC\",\"DCC\",\"DCCC\",\"CM\"],tens=[\"\",\"X\",\"XX\",\"XXX\",\"XL\",\"L\",\"LX\",\"LXX\",\"LXXX\",\"XC\"],ones=[\"\",\"I\",\"II\",\"III\",\"IV\",\"V\",\"VI\",\"VII\",\"VIII\",\"IX\"];for(let n=1;n<=3999;n++){const numeral=thousands[Math.floor(n/1000)]+hundreds[Math.floor(n/100)%10]+tens[Math.floor(n/10)%10]+ones[n%10];if(fromRoman(numeral)!==n)return false;}return true;})()", expected: true },
+
       { call: 'fromRoman("XL")', expected: 40 },
       { call: 'fromRoman("CDXLIV")', expected: 444 },
       { call: 'fromRoman("MMXXVI")', expected: 2026 },

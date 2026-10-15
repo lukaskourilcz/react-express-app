@@ -108,26 +108,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-reverse-words': {
-    solution: `const reverseWords = text => text.trim().split(/\\s+/).reverse().join(" ");`,
-    junior: `const reverseWords = text => {
-  const pieces = text.split(/\\s+/);
-  const words = [];
-  for (let index = 0; index < pieces.length; index += 1) {
-    if (pieces[index] !== "") {
-      words.push(pieces[index]);
-    }
-  }
-  const reversed = [];
-  for (let index = words.length - 1; index >= 0; index -= 1) {
-    reversed.push(words[index]);
-  }
-  return reversed.join(" ");
-};`,
-    senior: `const reverseWords = text =>
-  // filter(Boolean) drops the empty pieces a run of spaces leaves behind, so
-  // no trim is needed and a whitespace-only string falls out as "".
-  text.split(/\\s+/).filter(Boolean).reverse().join(" ");`,
+    solution: "const reverseWords = text => text.trim().split(/\\s+/).reverse().join(\" \");",
+    junior: "const reverseWords = text => {\n  const pieces = text.split(/\\s+/);\n  const words = [];\n  for (let index = 0; index < pieces.length; index += 1) {\n    if (pieces[index] !== \"\") {\n      words.push(pieces[index]);\n    }\n  }\n  const reversed = [];\n  for (let index = words.length - 1; index >= 0; index -= 1) {\n    reversed.push(words[index]);\n  }\n  return reversed.join(\" \");\n};",
+    senior: "const reverseWords = text =>\n  text.split(/\\s+/).filter(Boolean).reverse().join(\" \");",
     hiddenTests: [
+      { call: "[reverseWords(\"one\\ntwo\\r\\nthree\"),reverseWords(\"\\ufeffa\\u00a0b\\ufeff\"),reverseWords(\"a\\u200bb c\"),reverseWords(\"a\\u0085b c\"),reverseWords(\"\\t\\n\\r\\u00a0\\ufeff\")]", expected: ["three two one", "b a", "c a\u200bb", "c a\u0085b", ""] },
+      { call: "[reverseWords(\"\ud83d\ude00a e\\u0301\"),reverseWords(\"\\ud800x y\\udc00\"),reverseWords(\"  AbC!\\tX.Y  \"),reverseWords(\"one\"),reverseWords(\"\"),reverseWords(\"one two\")]", expected: ["e\u0301 \ud83d\ude00a", "y\udc00 \ud800x", "X.Y AbC!", "one", "", "two one"] },
+      { call: "(() => {const input=\"a \".repeat(499)+\"bc\";const result=reverseWords(input);return [input.length,result.startsWith(\"bc a\"),result.split(\" \").length,reverseWords(\" \".repeat(1000))];})()", expected: [1000, true, 500, ""] },
+
       { call: 'reverseWords("a good   example")', expected: 'example good a' },
       { call: 'reverseWords("  x  ")', expected: 'x' },
       { call: 'reverseWords("one two three four")', expected: 'four three two one' },
@@ -135,39 +123,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-chunk-array': {
-    solution: `const chunk = (items, size) => {
-  if (!Number.isInteger(size) || size < 1) return [];
-  const pieces = [];
-  for (let start = 0; start < items.length; start += size) {
-    pieces.push(items.slice(start, start + size));
-  }
-  return pieces;
-};`,
-    junior: `const chunk = (items, size) => {
-  if (Number.isInteger(size) === false || size < 1) {
-    return [];
-  }
-  const pieces = [];
-  let current = [];
-  for (let index = 0; index < items.length; index += 1) {
-    current.push(items[index]);
-    if (current.length === size) {
-      pieces.push(current);
-      current = [];
-    }
-  }
-  if (current.length > 0) {
-    pieces.push(current);
-  }
-  return pieces;
-};`,
-    senior: `const chunk = (items, size) =>
-  // slice clamps the final piece to the end of the array, so the short last
-  // chunk needs no special case.
-  Number.isInteger(size) && size > 0
-    ? Array.from({ length: Math.ceil(items.length / size) }, (_, piece) => items.slice(piece * size, piece * size + size))
-    : [];`,
+    solution: "const chunk = (items, size) => {\n  if (!Number.isInteger(size) || size < 1) return [];\n  const pieces = [];\n  for (let start = 0; start < items.length; start += size) {\n    pieces.push(items.slice(start, start + size));\n  }\n  return pieces;\n};",
+    junior: "const chunk = (items, size) => {\n  if (Number.isInteger(size) === false || size < 1) {\n    return [];\n  }\n  const pieces = [];\n  let current = [];\n  for (let index = 0; index < items.length; index += 1) {\n    current.push(items[index]);\n    if (current.length === size) {\n      pieces.push(current);\n      current = [];\n    }\n  }\n  if (current.length > 0) {\n    pieces.push(current);\n  }\n  return pieces;\n};",
+    senior: "const chunk = (items, size) =>\n  Number.isInteger(size) && size > 0\n    ? Array.from({ length: Math.ceil(items.length / size) }, (_, piece) => items.slice(piece * size, piece * size + size))\n    : [];",
     hiddenTests: [
+      { call: "(() => {const object=Object.freeze({x:1}),symbol=Symbol(\"s\"),fn=()=>0;const input=Object.freeze([object,undefined,symbol,fn,null,-0]);const a=chunk(input,2),b=chunk(input,2);a[0].push(9);return [a.length,a[0][0]===object,a[0][1]===undefined,a[1][0]===symbol,a[1][1]===fn,a[2][0]===null,Object.is(a[2][1],-0),a!==b,a[0]!==b[0],a[0]!==a[1],b[0].length,input.length];})()", expected: [3, true, true, true, true, true, true, true, true, true, 2, 6] },
+      { call: "(() => {const input=[1,2];const a=chunk(input,5),b=chunk(input,Number.MAX_VALUE);a[0].push(3);const empty=chunk([],1),empty2=chunk([],1),bad=chunk(input,\"2\"),bad2=chunk(input,\"2\");bad.push([]);const invalid=[NaN,Infinity,-Infinity,0,-0,-1,1.5,\"2\",true,null,undefined,2n,Symbol(\"s\"),new Number(2),{valueOf(){throw Error(\"no coercion\");}}].map(size=>chunk(input,size).length);return [input,a[0]!==input,b[0]!==input,b,empty!==empty2,bad!==bad2,bad2.length,invalid];})()", expected: [[1, 2], true, true, [[1, 2]], true, true, 0, [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]] },
+      { call: "(() => {const input=Object.freeze(Array.from({length:1000},(_,i)=>i));const ones=chunk(input,1),parts=chunk(input,333);return [ones.length,ones[0][0],ones[999][0],parts.map(part=>part.length),parts[3][0],input.length];})()", expected: [1000, 0, 999, [333, 333, 333, 1], 999, 1000] },
+
       { call: 'chunk([1, 2, 3], -1)', expected: [] },
       { call: 'chunk([1, 2, 3], 1.5)', expected: [] },
       { call: 'chunk(["a", "b", "c"], 2)', expected: [['a', 'b'], ['c']] },
@@ -176,54 +139,14 @@ export const ALGORITHM_SOLUTIONS: Record<string, CodingSolution> = {
   },
 
   'alg-merge-sorted': {
-    solution: `const mergeSorted = (a, b) => {
-  const merged = [];
-  let i = 0;
-  let j = 0;
-  while (i < a.length && j < b.length) {
-    if (a[i] <= b[j]) { merged.push(a[i]); i += 1; }
-    else { merged.push(b[j]); j += 1; }
-  }
-  while (i < a.length) { merged.push(a[i]); i += 1; }
-  while (j < b.length) { merged.push(b[j]); j += 1; }
-  return merged;
-};`,
-    junior: `const mergeSorted = (a, b) => {
-  const merged = [];
-  let indexA = 0;
-  let indexB = 0;
-  while (indexA < a.length && indexB < b.length) {
-    const left = a[indexA];
-    const right = b[indexB];
-    if (left <= right) {
-      merged.push(left);
-      indexA = indexA + 1;
-    } else {
-      merged.push(right);
-      indexB = indexB + 1;
-    }
-  }
-  for (let index = indexA; index < a.length; index += 1) {
-    merged.push(a[index]);
-  }
-  for (let index = indexB; index < b.length; index += 1) {
-    merged.push(b[index]);
-  }
-  return merged;
-};`,
-    senior: `const mergeSorted = (a, b) => {
-  const merged = [];
-  let i = 0;
-  let j = 0;
-  // One loop over the combined length: whichever side is spent loses its
-  // comparison and the other drains, so no tail loop is needed.
-  while (i < a.length || j < b.length) {
-    const takeLeft = j >= b.length || (i < a.length && a[i] <= b[j]);
-    merged.push(takeLeft ? a[i++] : b[j++]);
-  }
-  return merged;
-};`,
+    solution: "const mergeSorted = (a, b) => {\n  const merged = [];\n  let i = 0;\n  let j = 0;\n  while (i < a.length && j < b.length) {\n    if (a[i] <= b[j]) { merged.push(a[i]); i += 1; }\n    else { merged.push(b[j]); j += 1; }\n  }\n  while (i < a.length) { merged.push(a[i]); i += 1; }\n  while (j < b.length) { merged.push(b[j]); j += 1; }\n  return merged;\n};",
+    junior: "const mergeSorted = (a, b) => {\n  const merged = [];\n  let indexA = 0;\n  let indexB = 0;\n  while (indexA < a.length && indexB < b.length) {\n    const left = a[indexA];\n    const right = b[indexB];\n    if (left <= right) {\n      merged.push(left);\n      indexA = indexA + 1;\n    } else {\n      merged.push(right);\n      indexB = indexB + 1;\n    }\n  }\n  for (let index = indexA; index < a.length; index += 1) {\n    merged.push(a[index]);\n  }\n  for (let index = indexB; index < b.length; index += 1) {\n    merged.push(b[index]);\n  }\n  return merged;\n};",
+    senior: "const mergeSorted = (a, b) => {\n  const merged = [];\n  let i = 0;\n  let j = 0;\n  while (i < a.length || j < b.length) {\n    const takeLeft = j >= b.length || (i < a.length && a[i] <= b[j]);\n    merged.push(takeLeft ? a[i++] : b[j++]);\n  }\n  return merged;\n};",
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze([-0,0.5,2]),b=Object.freeze([0,0.5,1]);const out=mergeSorted(a,b);return [out.length,Object.is(out[0],-0),Object.is(out[1],0),out.slice(2),a.length,b.length,mergeSorted(a,a).slice(2)];})()", expected: [6, true, true, [0.5, 0.5, 1, 2], 3, 3, [0.5, 0.5, 2, 2]] },
+      { call: "(() => {const a=[1,3],b=[2];const out=mergeSorted(a,b),again=mergeSorted(a,b);out.push(4);const empty=mergeSorted([],[]),empty2=mergeSorted([],[]),left=[],right=[1,2];const single=mergeSorted(left,right);single.push(3);return [a,b,out!==again,again,empty!==empty2,left,right,single!==right,mergeSorted(Object.freeze([1,2]),Object.freeze([]))];})()", expected: [[1, 3], [2], true, [1, 2, 3], true, [], [1, 2], true, [1, 2]] },
+      { call: "(() => {const a=Object.freeze(Array.from({length:1000},(_,i)=>i*2)),b=Object.freeze(Array.from({length:1000},(_,i)=>i*2+1));const out=mergeSorted(a,b);return [out.length,out[0],out[1999],out.every((value,index)=>value===index),a.length,b.length];})()", expected: [2000, 0, 1999, true, 1000, 1000] },
+
       { call: 'mergeSorted([5], [])', expected: [5] },
       { call: 'mergeSorted([1, 4, 7], [2, 3, 8, 9])', expected: [1, 2, 3, 4, 7, 8, 9] },
       { call: '(() => { const left = [1, 3]; const right = [2]; mergeSorted(left, right); return [left, right]; })()', expected: [[1, 3], [2]] },
