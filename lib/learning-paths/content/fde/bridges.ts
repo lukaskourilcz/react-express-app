@@ -525,17 +525,17 @@ const operatorReducer = (state, action) => {
         },
         {
           id: 'fde-v1-bridge-incident-q3',
-          prompt: 'It is 11:52. On-call has the timeline up to that point and the cross-tenant reads are still happening. What is the safe immediate action?',
+          prompt: 'It is 11:52 and cross-tenant reads continue. A tested, schema-compatible previous release is ready for immediate rollback, with no cache kill switch. Before diagnosing the exact cause, which listed action best contains the active disclosure?',
           context: { language: 'text', code: INCIDENT_TIMELINE },
           options: [
-            'Roll 41c7 back to the previous release, then work out which replies already quoted another tenant’s article.',
+            'Restore the known-good release, verify disclosure has stopped, and investigate replies already sent.',
             'Add the tenant id to the cache key and deploy the fix forward.',
             'Flush the cache on all 12 instances and leave 41c7 running.',
             'Cut the cache time to live to 30 seconds and watch whether the reports stop.',
           ],
           correct: 0,
           explanation:
-            'Rolling back returns the service to a state that ran for months without leaking, and it stops the disclosure while the investigation continues. Fixing forward means writing, reviewing and shipping a change under time pressure with the leak still running, and a wrong cache key is easy to get wrong twice. Flushing empties the cache but the next request refills it under the same slug-only key, so the leak resumes within minutes. Cutting the time to live shortens each leaked window without closing it; a tenant boundary is not a timing question.',
+            'Under the stated conditions, restoring the tested compatible release is the available immediate containment; verify the cross-tenant responses stop rather than assuming deployment success proves it. At 11:52 the exact cache-key defect is not yet known, and writing/reviewing a forward fix would leave the disclosure active. Once the defect is established, flushing or shortening TTL still allows the same unsafe key to refill. Preserve incident evidence and investigate earlier disclosures alongside containment. A rollback is not automatically the right choice when compatibility or its ability to contain a fault is unknown.',
           competencies: ['operations'],
         },
         {
@@ -543,14 +543,14 @@ const operatorReducer = (state, action) => {
           prompt: 'The rollback finished at 12:20 and new cross-tenant reads stopped at 12:26. What has the rollback not undone?',
           context: { language: 'text', code: INCIDENT_TIMELINE },
           options: [
-            'The two replies already sent, one of them by email, quoting CALDERA’s article to NORTHWIND. A rollback stops new reads; it cannot retract a disclosure that has already left the service.',
+            'The two replies already sent, including the email; changing deployed code cannot retract them.',
             'Nothing. All 12 instances are back on the previous release, so the incident is closed.',
             'The 90 ms repeated-lookup latency, which the rollback has now made permanent.',
             'The cached entries themselves, which survive the rollback and keep answering with CALDERA’s article.',
           ],
           correct: 0,
           explanation:
-            'A rollback restores code, not consequences. Two replies are already out, one of them in a customer’s inbox, so the incident continues into notification and tenant follow-up regardless of what the service does now. Calling it closed skips that work. The 90 ms figure is the behaviour from before 41c7 rather than a new regression, so the rollback restored it instead of making it permanent. And the cache lived in the process memory of the instances that were replaced during the rollback, which is why the reads stopped at 12:26.',
+            'The two replies are already outside the service, one in a customer inbox. Restoring code does not recall them. Assess the scope, preserve evidence and coordinate the appropriate incident and tenant follow-up; stopping new reads alone does not settle those consequences. The 90 ms figure is the behaviour from before 41c7 rather than a new regression, so the rollback restored it instead of making it permanent. The timeline says new cross-tenant reads stopped at 12:26, which contradicts the claim that those entries keep answering afterward. It does not specify the exact process-replacement or cache-cleanup mechanism, so do not infer one.',
           competencies: ['operations'],
         },
       ],
@@ -569,7 +569,7 @@ const operatorReducer = (state, action) => {
       questions: [
         {
           id: 'fde-v1-bridge-python-q1',
-          prompt: 'What does this signature promise a caller about the return value?',
+          prompt: 'According to the return annotation, which values must a caller be prepared to handle? This is a static type contract; Python does not validate input or return types from annotations at runtime.',
           context: {
             language: 'python',
             code: `from typing import Optional
@@ -589,7 +589,7 @@ def owner_email(account: dict, fallback: Optional[str] = None) -> Optional[str]:
           ],
           correct: 0,
           explanation:
-            '`Optional[str]` is `str | None`, and the two returns show both: `fallback` when the key is missing, a lowercased string otherwise. The default value on the parameter is the `= None`, which is a separate thing from the annotation. `Optional` says nothing about exceptions. And the None case is the opposite way round: the function returns None when the key is missing and no fallback was passed, whereas passing a fallback is what stops it returning None.',
+            '`Optional[str]` is `str | None`, and the two returns show both: `fallback` when the key is missing, a lowercased string otherwise. The default value on the parameter is the `= None`, which is a separate thing from the annotation. `Optional` says nothing about exceptions. A missing key or a value of None returns fallback. Its default is None, and passing None explicitly still permits None; passing a string fallback supplies that string. An existing blank string instead becomes a blank string after strip/lower. These annotations do not validate arbitrary values inside the unparameterized dict; a non-string email can raise when strip is called.',
           competencies: ['python-reading'],
         },
         {
@@ -606,14 +606,14 @@ def collect(client, tenant_id: str) -> list[dict]:
     return fetch_tickets(client, tenant_id)`,
           },
           options: [
-            'A coroutine object. Nothing inside `fetch_tickets` has run, so the annotated `list[dict]` never arrives.',
+            'A coroutine object; the body has not run at this point despite the list return annotation.',
             'The list of ticket dicts. Python runs the coroutine to completion when a synchronous function calls it.',
             'An empty list, because the awaits inside it have not resolved yet.',
             'A RuntimeError, because an async function cannot be called from a synchronous one.',
           ],
           correct: 0,
           explanation:
-            'Calling an `async def` builds a coroutine and runs none of its body; the work starts at `await` or when something like `asyncio.run` drives it. The annotation on `collect` says `list[dict]` and is wrong, which is exactly the kind of thing a type checker catches and the interpreter does not. Python never runs a coroutine implicitly, and the call itself raises nothing: you get the coroutine object, plus a "coroutine was never awaited" warning when it is garbage collected.',
+            'Calling an `async def` builds a coroutine and runs none of its body; the work starts at `await` or when something like `asyncio.run` drives it. The annotation on `collect` says `list[dict]` and is wrong, which is exactly the kind of thing a type checker catches and the interpreter does not. This call does not drive the coroutine and returns its object without running the body. Awaiting or scheduling it later can produce the list. Discarding it unawaited can produce a RuntimeWarning when finalized; warning filters and collection timing affect whether and when it is seen.',
           competencies: ['python-reading'],
         },
         {

@@ -1,5 +1,30 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n019
+
+Reviewed the two remaining incident questions and the first three Python reading
+questions. The literal record mapping is retained. Immediate rollback now has
+explicit tested compatibility/availability assumptions and requires verifying
+containment. Already sent replies remain consequences, without inventing an
+instance-replacement/cache-cleanup mechanism or an unconditional notification
+rule. Optional annotations are distinguished from runtime validation, including
+explicit None fallback and invalid dictionary contents. Coroutine creation is
+distinguished from later execution and warning timing is qualified.
+
+Three exact authored Python contexts pass locally under Python 3.9.6: Optional
+branches/defaults/runtime error, no client effects until a coroutine is driven,
+and the complete record mapping. Incident reasoning is manual against the
+fixture; no actual rollout, notification, Python server grader or static type-
+checker run is inferred. Native bindings, path contracts, API/script types,
+launch, build, both production dependency audits (zero vulnerabilities), copy
+and diff checks pass. Scores and final model readings remain individual.
+
+Coverage is **150/263 native**, **113 remaining**, and **95/725 coding**,
+**630 remaining**. Issue #397 still blocks acceptance of the FDE diagnostic
+parent. PR #396 freezes n008–n014 at 758d1bbb with SQL/exact-preview checks
+passing and verify pending; n015–n019 are local. Ninety-five coding and ninety-
+five native records are production-verified through PR #395.
+
 ## 15 October continuation — five-item native batch n018
 
 Reviewed the last FDE diagnostic question, both diagnostic coding tasks and
