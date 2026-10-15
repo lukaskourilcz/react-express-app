@@ -24,6 +24,16 @@ export function complexityContracts() {
   assert.equal(codingPassXp(nested), 15);
   assert.equal(codingPassXp(check('const solve = xs => xs.map(x => x);')), 25);
   assert.equal(codingPassXp(check('const solve = xs => mystery(xs);')), 25);
+  for (const authored of ['O(n*m)', 'O(n*m + L)', 'O(n + m)', 'O(log min(a, b))', 'O(k)']) {
+    const independent = { ...task, prompt: { en: `Target: ${authored} time; n and m are independent input sizes.`, cs: '' }, tests: [{ call: 'solve([1,2], [3,4,5])', expected: [[4,5,6],[5,6,7]] }] };
+    const scoped = assessComplexity(independent, 'const solve = (left, right) => left.map(x => right.map(y => x+y));');
+    assert.equal(scoped.time, null, authored + ': unsupported authored dimensions have no single-n label');
+    assert.equal(scoped.assessment, 'unknown', authored);
+    assert.equal(scoped.guidance.targetTime, authored, 'the applicable authored target remains visible');
+    assert.equal(codingPassXp(scoped), 25, authored + ': an unavailable estimate retains the base reward');
+  }
+  const withoutTarget = { ...task, prompt: { en: 'Collect all pairs.', cs: '' } };
+  assert.equal(assessComplexity(withoutTarget, 'const solve = xs => xs.map(x => xs.map(y => x+y));').time, 'O(n^2)', 'supported structural estimates without an authored target remain available');
   assert.equal(check('const solve = xs => xs.map(x => [1, 2, 3].includes(x));').time, 'O(n)', 'a fixed inner scan is constant work');
   assert.equal(check('const solve = xs => [1, 2, 3].map(x => xs.includes(x));').time, 'O(n)', 'a fixed outer scan does not multiply input growth');
   assert.equal(check('function solve(xs) { const fixed = [1,2,3]; for (const x of fixed) { fixed.includes(x); } return xs; }').time, 'O(1)');

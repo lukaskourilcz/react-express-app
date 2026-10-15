@@ -137,6 +137,9 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
   const assumptions = 'Static estimate, not a proof. Assumes input-sized collections, bounded callbacks, constant-time indexing and average constant-time Map/Set operations. Numeric loop bounds are treated as magnitudes, not bit lengths. Sort is modelled as n log n; actual engine behaviour can differ. Timing and extra space are not measured.';
   const unknown = (explanation: string): ComplexityReport => ({ time: null, assessment: 'unknown', explanation, assumptions, guidance });
   if (task.track === 'react' || task.track === 'system-design' || !task.tests?.length) return unknown(guidance.note);
+  // The cost model collapses input traversals into a single n. It cannot
+  // label independently sized inputs or output-sensitive authored targets.
+  if (guidance.targetTime && !targetCost(guidance.targetTime)) return unknown('The authored input-size model needs manual complexity review.');
   if (code.length > 20_000) return unknown('This submission is too large for the structural estimate.');
   const file = ts.createSourceFile('solution.ts', code, ts.ScriptTarget.Latest, true, ts.ScriptKind.TS);
   if ((file as ts.SourceFile & { parseDiagnostics: unknown[] }).parseDiagnostics.length) return unknown('Fix the syntax before assessing complexity.');
