@@ -3829,3 +3829,27 @@ Czech are unchanged. PR #409 is frozen separately with b043/runtime #408; b044 i
 not yet released. No live-account, authenticated Premium, independent/human or
 complete-catalogue acceptance claim. Stateful factory complexity scope remains
 open under #391.
+
+## Five-item continuation b045 — 15 October 2026
+
+Five cache/request/await tasks now define own-key cache semantics and safe
+literal __proto__ storage, exact opaque values/reasons, correct request/json
+arity and receiver, HTTP status versus parsing errors, dependency ordering and
+fresh POST options/headers. All boards align with the authored async/await
+lessons. The null JSON mock uses HTTP 200; a separate 204-like parsing failure
+is forwarded. Bounds exercised include a 1000-unit cache key, a frozen sparse
+1000-slot posts array and a 10000-unit serialized body. No real network is used.
+
+Final evidence is 30/30 selected current-hash worker verdicts (20 valid forms,
+five starters, five wrongs), versus the original baseline's 25/30 labels. All
+twenty authored-target/base-25-XP checks pass, with unknown estimates unpenalized.
+Individual scores and final reading are in review-2026-10-15-b045.jsonl. All 255
+current coding hashes match; 470 coding items remain, and native is 263/263.
+Curation/index generation, canonical coding including reverse hidden/native Run,
+API/script types, launch, build, native bindings, both production dependency
+audits (zero vulnerabilities), copy sweep (zero findings) and diff checks pass.
+
+B044–b045 are not yet released; frozen PR #409 separately contains b043 and
+runtime #408, with exact READY preview and eleven general guest checks. Required
+CI/production remain pending. No live-account, authenticated Premium,
+independent/human or complete-catalogue acceptance claim. Owner holds remain.

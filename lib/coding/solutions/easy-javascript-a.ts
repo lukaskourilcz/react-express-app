@@ -850,9 +850,12 @@ const reverseVowels = text => {
   }
   return result;
 };`,
-    senior: `// Calling load inside the executor turns a synchronous throw into a rejection.
-const loadOr = (load, fallback) => new Promise(resolve => resolve(load())).catch(() => fallback);`,
+    senior: "const loadOr = async (load, fallback) => {\n  try { return await load(); }\n  catch { return fallback; }\n};",
     hiddenTests: [
+      { call: "(async()=>{const fn=()=>1,sym=Symbol('x'),obj=Object.freeze({}),out=[];for(const value of [undefined,false,'',NaN,-0,fn,sym,obj])out.push(Object.is(await loadOr(()=>Promise.resolve(value),'unused'),value));return out;})()", expected: [true, true, true, true, true, true, true, true], async: true },
+      { call: "(async()=>{let calls=0;const fn=()=>{calls++;},sym=Symbol('x'),obj=Object.freeze({}),out=[];for(const fallback of [fn,sym,obj,undefined,-0]){out.push(Object.is(await loadOr(()=>{throw null;},fallback),fallback));out.push(Object.is(await loadOr(()=>Promise.reject(false),fallback),fallback));}return [out,calls];})()", expected: [[true, true, true, true, true, true, true, true, true, true], 0], async: true },
+      { call: "(async()=>{let calls=0,args=-1;const out=loadOr(function(){calls++;args=arguments.length;return Promise.resolve(0);},1);return [out instanceof Promise,await out,calls,args];})()", expected: [true, 0, 1, 0], async: true },
+
       { call: 'loadOr(() => new Promise(resolve => setTimeout(() => resolve([1, 2]), 10)), [])', expected: [1, 2], async: true },
       { call: 'loadOr(() => new Promise((resolve, reject) => setTimeout(() => reject(new Error("late failure")), 10)), "fallback")', expected: 'fallback', async: true },
       { call: 'loadOr(() => Promise.resolve(null), "default")', expected: null, async: true },

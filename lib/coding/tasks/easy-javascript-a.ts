@@ -1159,7 +1159,7 @@ addBoth(Promise.resolve(2), Promise.resolve(3)).then(total => console.log(total)
     tier: 2,
     focus: ['async-await'],
     title: 'Try, await, fall back',
-    prompt: 'Write an `async` function `loadOr(load, fallback)`. Call `load()`, which returns a promise, and `await` it inside `try`. Return what it resolves to, or return `fallback` from the `catch` when it rejects. `load` may also throw before it returns a promise, and that counts as a failure too. A resolved `0` or `null` is a success and is kept.',
+    prompt: "Write an `async` function `loadOr(load, fallback)`. Call `load()`, which returns a promise, and `await` it inside `try`. Return what it resolves to, or return `fallback` from the `catch` when it rejects. `load` may also throw before it returns a promise, and that counts as a failure too. A resolved `0` or `null` is a success and is kept. Call the supplied ordinary function exactly once with no arguments; it returns an ordinary native Promise or throws synchronously. Preserve exact successful nonthenable values/references, including undefined, false, empty text, functions, Symbols, NaN and -0. fallback is an opaque nonthenable value; return that exact value after any throw/rejection, without invoking it or cloning it. Return a fresh native Promise immediately, on success or failure. Target: O(1) time and wrapper state, excluding load work, waiting and host scheduling.",
     starter: `const loadOr = async (load, fallback) => {
 
 };
