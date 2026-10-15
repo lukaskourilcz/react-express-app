@@ -1,5 +1,32 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n035
+
+Reviewed both retrieval lessons, reading activities and selection exercise.
+Provenance needs an authorized retained resolver; immutable URLs can identify
+source text. Chunking/context and overlapping evidence have bounded claims,
+real retrieval can be deterministic, and stored revision/ingestion timestamps
+alone do not prove current freshness. Actual generation input, score semantics,
+selection policy and historical retrieval modes are explicit. Similarity and
+minimal id/timestamp projections do not verify a generated answer or citation.
+
+The reference could match an undefined result tenant against a missing viewer;
+it now requires a valid nonblank viewer identity. Six real sandbox verdicts pass:
+reference/loop alternative pass; starter, old missing-viewer, input-mutation and
+strict-threshold wrongs fail. Frozen input, malformed entries, clearance shape,
+1000result ties and original metadata pass. Two valid target analyses retain
+base25. Authored transcript/candidate/timestamp examples pass without claiming
+live retrieval, source resolution or semantic accuracy. Native bindings, paths,
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Manual editorial/final readings
+remain separate from execution.
+
+Coverage is **230/263 native**, **33 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 freezes n024–n031 at d3064e1f with SQL, eleven
+exact-preview checks and six catalogue probes per theme passing; verify is
+pending. N032–n035 are local. Production coverage is95 coding/170 native
+through #398. Diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n034
 
 Reviewed both architecture/output lessons, reading activities and validator.

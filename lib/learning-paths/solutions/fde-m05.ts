@@ -24,7 +24,11 @@ export const FDE_M05_SOLUTIONS: Record<string, PathCodeSolution> = {
       'const answerFromResults = (query, results, viewer) => {',
       "  if (typeof query !== 'string' || query.trim() === '') return { answered: false, reason: 'no-query' };",
       '',
-      '  const list = Array.isArray(results) ? results : [];',
+      "  if (!viewer || typeof viewer !== 'object' || Array.isArray(viewer) ||",
+      "      typeof viewer.tenantId !== 'string' || viewer.tenantId.trim() === '') {",
+      "    return { answered: false, reason: 'no-permitted-results' };",
+      "  }",
+      "  const list = Array.isArray(results) ? results : [];",
       "  const account = viewer && typeof viewer === 'object' ? viewer : {};",
       '  const clearances = Array.isArray(account.clearances) ? account.clearances : [];',
       '',
@@ -57,6 +61,13 @@ export const FDE_M05_SOLUTIONS: Record<string, PathCodeSolution> = {
       '};',
     ].join('\n'),
     hiddenTests: [
+      {"call": "[undefined,null,{},[],{tenantId:''},{tenantId:'   '},{tenantId:null},{tenantId:42}].map(function(viewer){return answerFromResults('q',[{id:'X',visibility:'published',text:'x',score:1,updatedAt:'now'}],viewer);})", "expected": [{"answered": false, "reason": "no-permitted-results"}, {"answered": false, "reason": "no-permitted-results"}, {"answered": false, "reason": "no-permitted-results"}, {"answered": false, "reason": "no-permitted-results"}, {"answered": false, "reason": "no-permitted-results"}, {"answered": false, "reason": "no-permitted-results"}, {"answered": false, "reason": "no-permitted-results"}, {"answered": false, "reason": "no-permitted-results"}], "criterion": "access-filter"},
+      {"call": "(function(){var rows=Object.freeze([Object.freeze({id:'B',tenantId:'TEN-4021',visibility:'published',text:'x',score:0.7,updatedAt:'v1'}),Object.freeze({id:'A',tenantId:'TEN-4021',visibility:'published',text:'x',score:0.9,updatedAt:'v2'})]);var viewer=Object.freeze({tenantId:'TEN-4021',clearances:Object.freeze([])});var out=answerFromResults('q',rows,viewer);return {out:out,unchanged:rows[0].id==='B'&&rows[1].id==='A'};})()", "expected": {"out": {"answered": true, "citations": [{"sourceId": "A", "updatedAt": "v2"}, {"sourceId": "B", "updatedAt": "v1"}], "usedIds": ["A", "B"]}, "unchanged": true}},
+      {"call": "answerFromResults('q',[null,42,'bad',{id:'X',tenantId:'TEN-4021',visibility:'published',text:'x',score:Infinity,updatedAt:'x'},{id:'Y',tenantId:'TEN-4021',visibility:'published',text:'x',score:NaN,updatedAt:'x'}],{tenantId:'TEN-4021',clearances:'kb-restricted'})", "expected": {"answered": false, "reason": "no-permitted-results"}},
+      {"call": "answerFromResults('q',[{id:'R',tenantId:'TEN-4021',visibility:'restricted',text:'x',score:1,updatedAt:'v'}],{tenantId:'TEN-4021',clearances:'kb-restricted'})", "expected": {"answered": false, "reason": "no-permitted-results"}, "criterion": "access-filter"},
+      {"call": "(function(){var rows=[];for(var i=0;i<1000;i++)rows.push({id:'R'+('0000'+i).slice(-4),tenantId:'T',visibility:'published',text:'x',score:0.8,updatedAt:'v'});return answerFromResults('q',rows.reverse(),{tenantId:'T',clearances:[]});})()", "expected": {"answered": true, "citations": [{"sourceId": "R0000", "updatedAt": "v"}, {"sourceId": "R0001", "updatedAt": "v"}, {"sourceId": "R0002", "updatedAt": "v"}], "usedIds": ["R0000", "R0001", "R0002"]}},
+      {"call": "answerFromResults('q',[{id:' A ',tenantId:'T',visibility:'published',text:'x',score:0.6,updatedAt:'v'}],{tenantId:'T',clearances:[]})", "expected": {"answered": true, "citations": [{"sourceId": " A ", "updatedAt": "v"}], "usedIds": [" A "]}},
+
       {
         call: "answerFromResults('return window for chilled goods', __set('unknownState'), __viewer('support'))",
         expected: {
