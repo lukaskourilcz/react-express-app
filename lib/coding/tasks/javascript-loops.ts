@@ -1164,7 +1164,7 @@ console.log(totalOf([["food", 12], ["rent", 500], ["food", 8]], "food"));
     tier: 2,
     focus: ["spread", "slice"],
     title: "Immutable list edits",
-    prompt: "Write `withInserted(list, index, item)`, `withoutIndex(list, index)` and `withReplaced(list, index, item)`. Each returns a new array built from two `slice` copies spread into a fresh array literal, and never changes the array it was given. `withInserted([1, 3], 1, 2)` gives `[1, 2, 3]`, `withoutIndex([1, 2, 3], 0)` gives `[2, 3]`, and `withReplaced([1, 2, 3], 2, 9)` gives `[1, 2, 9]`.",
+    prompt: "Write `withInserted(list, index, item)`, `withoutIndex(list, index)` and `withReplaced(list, index, item)`. Each returns a new array built from two `slice` copies spread into a fresh array literal, and never changes the array it was given. `withInserted([1, 3], 1, 2)` gives `[1, 2, 3]`, `withoutIndex([1, 2, 3], 0)` gives `[2, 3]`, and `withReplaced([1, 2, 3], 2, 9)` gives `[1, 2, 9]`. list is a read-only dense array of at most 10000 opaque values and may be frozen. withInserted accepts integer indexes from 0 through list.length. withoutIndex accepts 0 through list.length; index equal to length removes nothing but still returns a fresh array. withReplaced requires an existing integer index from 0 through list.length - 1. Return fresh shallow arrays on every call, preserving original object/array references and exact undefined, NaN and signed-zero values. Insert or replace item as one element, even when it is an array; do not inspect or clone elements. Use slice pieces and array-literal spread as requested. Target: O(n) time and output space per edit, where n is 1 + list.length.",
     starter: `const withInserted = (list, index, item) => {
 
 };
@@ -1216,7 +1216,7 @@ const withReplaced = (list, index, item) => [
     tier: 1,
     focus: ["spread", "for-of"],
     title: "Variadic sum",
-    prompt: "Write `sumAll(...numbers)`, taking any number of arguments through a rest parameter and returning their total from a `for…of` loop over that array. `sumAll(1, 2, 3)` gives 6. With no arguments the total is 0, and an array can be spread into the call: `sumAll(...[4, 5])` gives 9.",
+    prompt: "Write `sumAll(...numbers)`, taking any number of arguments through a rest parameter and returning their total from a `for…of` loop over that array. `sumAll(1, 2, 3)` gives 6. With no arguments the total is 0, and an array can be spread into the call: `sumAll(...[4, 5])` gives 9. There are at most 1000 arguments, each a finite Number between -1000000 and 1000000. Begin at 0 and add in argument order with normal Number arithmetic, without rounding or sorting. Spreading a caller array must not change it. Use the rest parameter and for-of as requested. Target: O(n) time and rest-array space, where n is 1 + the number of arguments.",
     starter: `const sumAll = () => {
 
 };
@@ -1257,7 +1257,7 @@ console.log(sumAll(1, 2, 3));
     tier: 2,
     focus: ["functions", "closures", "for-of"],
     title: "Tally factory",
-    prompt: "Write `makeTally(start)`, returning a function that keeps a running total in the factory’s scope: each call takes any number of values, loops over them adding each to the total, and returns the new total. With `tally = makeTally(10)`, `tally(1, 2)` gives 13 and a later `tally(5)` gives 18. A call with no values returns the total as it is, and two tallies never share a total.",
+    prompt: "Write `makeTally(start)`, returning a function that keeps a running total in the factory’s scope: each call takes any number of values, loops over them adding each to the total, and returns the new total. With `tally = makeTally(10)`, `tally(1, 2)` gives 13 and a later `tally(5)` gives 18. A call with no values returns the total as it is, and two tallies never share a total. start and each supplied value are finite Numbers between -1000000 and 1000000. A tally is called at most 1000 times, with at most 1000 arguments per call. Add values directly to the saved total one at a time in argument order using normal Number arithmetic; do not first sum a batch and add it once, round the total, or reset it between calls. No arguments means no additions and the existing total is returned unchanged. Every factory call returns its own fresh function and private total. Target: O(n) time per tally call, where n is 1 + that call's argument count; factory creation is O(1), excluding the returned rest-array allocation at invocation.",
     starter: `const makeTally = start => {
 
 };
@@ -1298,13 +1298,13 @@ console.log(sumAll(1, 2, 3));
     tier: 2,
     focus: ["for", "closures"],
     title: "Handlers keep their index",
-    prompt: "Write `makeHandlers(count)`, returning an array of `count` functions built in a `for` loop whose counter is declared with `let`, so that the function at position i returns i when called — the way click handlers made in a loop each remember their own index. `makeHandlers(3).map(handler => handler())` gives `[0, 1, 2]`. A count of zero gives an empty array.",
+    prompt: "Write `makeHandlers(count)`, returning an array of `count` functions built in a `for` loop whose counter is declared with `let`, so that the function at position i returns i when called — the way click handlers made in a loop each remember their own index. `makeHandlers(3).map(handler => handler())` gives `[0, 1, 2]`. A count of zero gives an empty array. count is an integer from 0 to 10000. Allocate a fresh output array and fresh functions on every factory call. Each handler always returns its original zero-based index, regardless of call order, repeated calls, or later edits to the returned array. Use a for loop with a let counter as requested. Target: O(n) time and output space to build handlers, where n is 1 + count; each handler call is O(1).",
     starter: `const makeHandlers = count => {
 
 };
 
-// Scratch pad — change this and press Run.
-console.log(makeHandlers(3).map(handler => handler()));
+// Scratch pad — uncomment once your function returns an array.
+// console.log(makeHandlers(3).map(handler => handler()));
 `,
     skeleton: `const makeHandlers = count => {
   const handlers = [];
@@ -1340,7 +1340,7 @@ console.log(makeHandlers(3).map(handler => handler()));
     tier: 3,
     focus: ["higher-order", "for", "callbacks"],
     title: "Write myMap and myFilter",
-    prompt: "Write `myMap(list, fn)` and `myFilter(list, fn)` with plain `for` loops instead of the built-in `map` and `filter`. `myMap` returns a new array of `fn(item, index)` results, and `myFilter` returns a new array of the items for which `fn(item, index)` is truthy; neither changes the list. `myMap([1, 2, 3], n => n * 2)` gives `[2, 4, 6]` and `myFilter([1, 2, 3, 4], n => n % 2 === 0)` gives `[2, 4]`.",
+    prompt: "Write `myMap(list, fn)` and `myFilter(list, fn)` with plain `for` loops instead of the built-in `map` and `filter`. `myMap` returns a new array of `fn(item, index)` results, and `myFilter` returns a new array of the items for which `fn(item, index)` is truthy; neither changes the list. `myMap([1, 2, 3], n => n * 2)` gives `[2, 4, 6]` and `myFilter([1, 2, 3, 4], n => n % 2 === 0)` gives `[2, 4]`. list is a read-only dense array of at most 10000 opaque values and may be frozen. fn is synchronous and does not mutate list. Call it exactly once per position, in input order, as a plain function with exactly two arguments: the original value and its zero-based index. Preserve each myMap result exactly, including undefined or an object reference. myFilter keeps original item references when the result is truthy, without coercing stored values. Propagate the original thrown value immediately and do not call later positions. Return fresh arrays, including empty ones, and preserve list. These are dense-array exercises, not complete native sparse-array/polyfill implementations. Use plain indexed for loops instead of map/filter as requested. Target: O(n) time for bookkeeping and output space, where n is 1 + list.length, excluding callback work.",
     starter: `const myMap = (list, fn) => {
 
 };

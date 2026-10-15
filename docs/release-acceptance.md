@@ -3470,3 +3470,21 @@ bindings, both zero-vulnerability production dependency audits and diff checks.
 Safe normalized own keys, exact callbacks/error identity, tuple labels and
 10000-item arrays use local fixtures. B026–b031are local and #404 remains
 frozen separately. No progress, account/name or score fixture was created.
+
+## PR #404 exact production — 15 October 2026
+
+15 October: PR #404 passed required run38688593761 on exact3e8d209deab49e8c62f973fd47a8f38cdcb7b710 (verify30m53s; SQL41s), merged at9a85c3683f46cf1a3a4fcb13bdda74a3946efc94. READY production dpl_XG32jkhw1h5fYCWtWyEeBdy6BXBY matches that merge, owns devshark.app and has no alias error. Eleven general guest checks and four direct actual-Submit clone contracts pass at zero XP/null progress, with no Challenge/name/owner-state fixture. The clone probes cover own-key aliases/descriptors, self-cycles, arrays and captured defineProperty despite a learner replacement. Shipped coding coverage is155/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance.
+
+## Rest/closure/callback content batch b032 — 15 October 2026
+
+Five individual model reviews raise coverage to 190/725 coding, 535 remaining;
+native remains 263/263. Combined current-hash QuickJS results agree 35/35
+(20 valid, five starters, ten wrongs) versus 24/35 exact baseline labels. The
+old handler starter already failed to boot; its scratch example is now safely
+commented and it fails grading normally. Seven tally candidates were rerun after
+the final call-bound probe refinement. Twenty target/base 25 XP checks and copy
+checks pass, as do focused coding, API/script types, launch, build, native
+bindings, both zero-vulnerability production dependency audits and diff checks.
+PR #404 is merged and exact-production verified (11 general + 4 direct clone
+checks); #403 is closed. B026–b032 remain local and add 35 coding reviews.
+No live account, stored balance, score or generated name was used.

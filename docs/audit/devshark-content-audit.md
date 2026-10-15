@@ -1,5 +1,36 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b032
+
+Read every English field, starter/skeleton, board and check for variadic sum,
+immutable edits, tally closures, index handlers and manual map/filter. Supplied
+methods now match rest/for-of, slice/spread, for/let and indexed callback loops.
+The tally senior adds each argument directly to saved state, preserving the
+specified Number grouping and unchanged no-argument reads. Exact callback
+arity, opaque value identity, truthiness and original errors are explicit.
+
+The handler scratch pad is commented until an array is returned, avoiding a
+boot-time map-on-undefined error while the empty starter still fails its checks.
+All 35 combined final-hash worker verdicts agree (20 valid, five starters, ten
+wrongs). The baseline matched 24/35 exact labels: ten wrongs passed, while the
+handler starter was already rejected with error instead of failed. A final tally
+probe refinement saves the 1000th return rather than making a 1001st call; all
+seven tally candidates were rechecked at that final hash. Twenty target/base
+25 XP checks and the zero-artifact copy sweep pass. Focused coding, API/script
+types, launch, build, 263 native bindings, both zero-vulnerability production
+dependency audits and diff checks pass. Cases include 1000 arguments/calls,
+10000-item arrays/closures, independent state and fresh shallow edits.
+
+Coverage is 190/725 coding, 535 remaining, and 263/263 native. PR #404 passed
+required verify 30m53s / SQL 41s at 3e8d209d, merged at 9a85c368, and READY
+production dpl_XG32jkhw1h5fYCWtWyEeBdy6BXBY matches the merge, owns devshark.app
+and has no alias error. Eleven general guest checks plus four direct Submit
+clone probes pass at zero XP/null progress. Issue #403 is closed with that
+concrete evidence. Shipped coverage is 155 coding / 263 native; b026–b032 add
+35 local reviews. No Challenge, name or owner-state fixture was written.
+Finite execution and same-session readings do not claim independent/human,
+authenticated native/Premium or arbitrary-program acceptance.
+
 ## 15 October continuation — five coding items b031
 
 Read all English fields, starters/skeletons, boards and checks for key counts,

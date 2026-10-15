@@ -620,27 +620,16 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-immutable-list-edits": {
     solution: "const withInserted = (list, index, item) => [...list.slice(0, index), item, ...list.slice(index)];\nconst withoutIndex = (list, index) => [...list.slice(0, index), ...list.slice(index + 1)];\nconst withReplaced = (list, index, item) => [...list.slice(0, index), item, ...list.slice(index + 1)];",
-    junior: `const withInserted = (list, index, item) => {
-  const copy = list.slice();
-  copy.splice(index, 0, item);
-  return copy;
-};
-const withoutIndex = (list, index) => {
-  const copy = list.slice();
-  copy.splice(index, 1);
-  return copy;
-};
-const withReplaced = (list, index, item) => {
-  const copy = list.slice();
-  copy[index] = item;
-  return copy;
-};`,
+    junior: "const withInserted = (list, index, item) => {\n  const head = list.slice(0, index);\n  const tail = list.slice(index);\n  return [...head, item, ...tail];\n};\nconst withoutIndex = (list, index) => {\n  const head = list.slice(0, index);\n  const tail = list.slice(index + 1);\n  return [...head, ...tail];\n};\nconst withReplaced = (list, index, item) => {\n  const head = list.slice(0, index);\n  const tail = list.slice(index + 1);\n  return [...head, item, ...tail];\n};",
     senior: `// One non-mutating splice covers all three edits: copy up to the index, add the new items, copy the rest.
 const spliced = (list, index, remove, ...insert) => [...list.slice(0, index), ...insert, ...list.slice(index + remove)];
 const withInserted = (list, index, item) => spliced(list, index, 0, item);
 const withoutIndex = (list, index) => spliced(list, index, 1);
 const withReplaced = (list, index, item) => spliced(list, index, 1, item);`,
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),item=Object.freeze([1]),list=Object.freeze([a,undefined,NaN,-0,b]);const ins=withInserted(list,1,item),rep=withReplaced(list,1,item),rem=withoutIndex(list,1),nothing=withoutIndex(list,list.length);return [ins!==list,ins[0]===a,ins[1]===item,ins[2]===undefined,rep[1]===item,Number.isNaN(rep[2]),Object.is(rep[3],-0),rem[0]===a,Number.isNaN(rem[1]),rem[3]===b,nothing!==list,nothing.length,withInserted(Object.freeze([]),0,item)[0]===item,withoutIndex(Object.freeze([]),0)!==withoutIndex(Object.freeze([]),0)]; })()", expected: [true, true, true, true, true, true, true, true, true, true, true, 5, true, true] },
+      { call: "(() => { const list=Object.freeze(Array.from({length:10000},(_,i)=>i)),a=withInserted(list,10000,null),b=withoutIndex(list,9999),c=withReplaced(list,0,null);return [a.length,a[10000],b.length,b[9998],c.length,c[0],c[9999],list[0]]; })()", expected: [10001, null, 9999, 9998, 10000, null, 9999, 0] },
+
       { call: "withReplaced([\"a\",\"b\",\"c\",\"d\"], 0, \"z\")", expected: ["z", "b", "c", "d"] },
       { call: "(() => { const list = [\"a\",\"b\"]; const out = withInserted(list, 1, \"x\"); return out !== list && out.length === 3 && list.length === 2; })()", expected: true },
       { call: "withoutIndex([5,6,7,8], 3)", expected: [5, 6, 7] },
@@ -648,16 +637,12 @@ const withReplaced = (list, index, item) => spliced(list, index, 1, item);`,
   },
   "js-variadic-sum": {
     solution: "const sumAll = (...numbers) => { let total = 0; for (const number of numbers) total += number; return total; };",
-    junior: `const sumAll = (...numbers) => {
-  let total = 0;
-  for (let index = 0; index < numbers.length; index += 1) {
-    total = total + numbers[index];
-  }
-  return total;
-};`,
-    senior: `// The rest parameter is a real array, so reduce folds it straight into a total; no arguments leaves the seed 0.
-const sumAll = (...numbers) => numbers.reduce((total, number) => total + number, 0);`,
+    junior: "const sumAll = (...numbers) => {\n  let total = 0;\n  for (const number of numbers) {\n    total = total + number;\n  }\n  return total;\n};",
+    senior: "const sumAll = (...numbers) => {\n  let sum = 0;\n  for (const value of numbers) sum += value;\n  return sum;\n};",
     hiddenTests: [
+      { call: "sumAll(1.005)", expected: 1.005 },
+      { call: "(() => { const values=Object.freeze([1000000,-1000000,1e-9]);return [sumAll(...values)===1e-9,values[0],sumAll(...Object.freeze(Array.from({length:1000},()=>-1000000)))]; })()", expected: [true, 1000000, -1000000000] },
+
       { call: "sumAll(1,2,3,4,5,6,7,8,9,10)", expected: 55 },
       { call: "sumAll(7)", expected: 7 },
       { call: "(() => { const values = [2, 4, 8]; return sumAll(...values, 16); })()", expected: 30 },
@@ -675,15 +660,11 @@ const sumAll = (...numbers) => numbers.reduce((total, number) => total + number,
   };
   return tally;
 };`,
-    senior: `const makeTally = start => {
-  let total = start;
-  // Each call folds its own arguments first, then adds that to the total the closure keeps.
-  return (...values) => {
-    total += values.reduce((sum, value) => sum + value, 0);
-    return total;
-  };
-};`,
+    senior: "const makeTally = start => {\n  let total = start;\n  return (...values) => {\n    for (const value of values) total += value;\n    return total;\n  };\n};",
     hiddenTests: [
+      { call: "(() => { const tally=makeTally(1000000);const value=tally(-1000000,1e-9);return [value===1e-9,tally()===value,makeTally(0)!==makeTally(0)]; })()", expected: [true, true, true] },
+      { call: "(() => { const a=makeTally(0),b=makeTally(-1);const first=a(1.005);a(...Array.from({length:1000},()=>1000000));let lastB;for(let i=0;i<1000;i++)lastB=b(1);return [first,a(),lastB]; })()", expected: [1.005, 1000000001.005, 999] },
+
       { call: "(() => { const tally = makeTally(1); tally(1); tally(1); tally(1); return tally(1); })()", expected: 5 },
       { call: "(() => { const tally = makeTally(0); return [tally(2), tally(2), tally(2)]; })()", expected: [2, 4, 6] },
       { call: "(() => { const tally = makeTally(5); tally(...[1, 2, 3]); return tally(); })()", expected: 11 },
@@ -702,9 +683,11 @@ const sumAll = (...numbers) => numbers.reduce((total, number) => total + number,
   }
   return handlers;
 };`,
-    senior: `// Each callback closes over its own index, which the mapping function receives as a parameter.
-const makeHandlers = count => Array.from({ length: count }, (_, index) => () => index);`,
+    senior: "const makeHandlers = count => {\n  const handlers = [];\n  for (let i = 0; i < count; i++) handlers.push(() => i);\n  return handlers;\n};",
     hiddenTests: [
+      { call: "(() => { const a=makeHandlers(3),b=makeHandlers(3),first=a[0],last=a[2];a[0]=()=>99;a.length=0;return [a!==b,first!==b[0],last(),first(),last(),b.map(f=>f()),makeHandlers(0)!==makeHandlers(0)]; })()", expected: [true, true, 2, 0, 2, [0, 1, 2], true] },
+      { call: "(() => { const h=makeHandlers(10000);return [h.length,h[9999](),h[0](),h[5000]()]; })()", expected: [10000, 9999, 0, 5000] },
+
       { call: "makeHandlers(6).map(handler => handler())", expected: [0, 1, 2, 3, 4, 5] },
       { call: "makeHandlers(5)[2]()", expected: 2 },
       { call: "(() => { const handlers = makeHandlers(2); return handlers[0] !== handlers[1]; })()", expected: true },
@@ -732,20 +715,12 @@ const myFilter = (list, fn) => {
   }
   return result;
 };`,
-    senior: `const myMap = (list, fn) => {
-  // The output length is known, so allocate it once and fill by index instead of pushing.
-  const result = new Array(list.length);
-  for (let index = 0; index < list.length; index += 1) result[index] = fn(list[index], index);
-  return result;
-};
-const myFilter = (list, fn) => {
-  const result = [];
-  for (const [index, item] of list.entries()) {
-    if (fn(item, index)) result.push(item);
-  }
-  return result;
-};`,
+    senior: "const myMap = (list, fn) => {\n  const result = new Array(list.length);\n  for (let index = 0; index < list.length; index += 1) result[index] = fn(list[index], index);\n  return result;\n};\nconst myFilter = (list, fn) => {\n  const result = [];\n  for (let i = 0; i < list.length; i++) if (fn(list[i], i)) result.push(list[i]);\n  return result;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),input=Object.freeze([a,b,undefined]),calls=[];const values=[b,undefined,a];const mapped=myMap(input,(...args)=>{calls.push(args);return values[args[1]];});const filtered=myFilter(input,(...args)=>{calls.push(args);return args[1]===0?{}:args[1]===1?0:\"yes\";});return [mapped!==input,mapped.every((v,i)=>Object.is(v,values[i])),filtered[0]===a,filtered[1]===undefined,filtered.length,calls.length,calls.every((args,i)=>args.length===2&&args[1]===i%3&&Object.is(args[0],input[i%3])),myMap(Object.freeze([]),()=>0)!==myMap(Object.freeze([]),()=>0),myFilter(Object.freeze([]),()=>true)!==myFilter(Object.freeze([]),()=>true)]; })()", expected: [true, true, true, true, 2, 6, true, true, true] },
+      { call: "(() => { const reason={},seen=[];const run=fn=>{try{fn(Object.freeze([1,2,3]),(v,i)=>{seen.push(i);if(i===1)throw reason;return v;});return false;}catch(error){return error===reason;}};return [run(myMap),run(myFilter),seen]; })()", expected: [true, true, [0, 1, 0, 1]] },
+      { call: "(() => { const list=Object.freeze(Array.from({length:10000},(_,i)=>i));const a=myMap(list,(v,i)=>v+i),b=myFilter(list,(v,i)=>i%2===0);return [a.length,a[9999],b.length,b[4999],list[9999]]; })()", expected: [10000, 19998, 5000, 9998, 9999] },
+
       { call: "(() => { const list = [3,4,5]; list.map = null; list.filter = null; return [myMap(list, n => n + 1), myFilter(list, n => n > 3)]; })()", expected: [[4, 5, 6], [4, 5]] },
       { call: "myFilter([0, 1, \"\", \"a\", null], item => item)", expected: [1, "a"] },
       { call: "myMap([1,2,3,4,5,6], (n, index) => n * index)", expected: [0, 2, 6, 12, 20, 30] },
