@@ -61,8 +61,8 @@ const LOGGING: Boards = {
 }
 
 function checkout(account, basket) {
-  // console.count("addPoints") printed 2 under every checkout heading: the
-  // return line called addPoints again just to read the balance.
+  // console.count("addPoints") increased twice per checkout (1, 2, then
+  // 3, 4): the return line called addPoints again to read the balance.
   const total = basketSummary(basket).total;
   const points = addPoints(account, total);
   return { total, points };
@@ -75,14 +75,19 @@ function checkout(account, basket) {
 
 function bestSeller(orders) {
   if (orders.length === 0) return null;
-  const totals = {};
+  const totals = Object.create(null);
+  const names = [];
   for (const order of orders) {
-    totals[order.name] = (totals[order.name] ?? 0) + order.qty;
+    if (!Object.hasOwn(totals, order.name)) {
+      totals[order.name] = 0;
+      names.push(order.name);
+    }
+    totals[order.name] += order.qty;
   }
-  // debug("ranked", ...) printed the smallest total first: the comparator
-  // sorted ascending. b - a puts the largest first, and sort is stable, so
-  // the name seen first still wins a tie.
-  const ranked = debug("ranked", Object.entries(debug("totals", totals)).sort((a, b) => b[1] - a[1]));
+  debug("totals", totals);
+  // Keep explicit first-appearance order even for numeric-looking names.
+  const ranked = debug("ranked", names.map((name) => [name, totals[name]])
+    .sort((a, b) => b[1] - a[1]));
   return ranked[0][0];
 }`,
   ],
@@ -114,10 +119,7 @@ function bestSeller(orders) {
   return basket[bestIndex].name;
 }`,
     `function priceHistory(basket, changes) {
-  const current = [];
-  for (let i = 0; i < basket.length; i++) {
-    current.push({ ...basket[i] });
-  }
+  const current = structuredClone(basket);
   const history = [];
   for (let i = 0; i < changes.length; i++) {
     const change = changes[i];
@@ -126,10 +128,7 @@ function bestSeller(orders) {
         current[j].price = change.price;
       }
     }
-    const snapshot = [];
-    for (let j = 0; j < current.length; j++) {
-      snapshot.push({ ...current[j] });
-    }
+    const snapshot = structuredClone(current);
     history.push(snapshot);
   }
   return history;
@@ -152,26 +151,24 @@ function checkout(account, basket) {
 }
 
 function bestSeller(orders) {
-  if (orders.length === 0) {
-    return null;
-  }
-  const totals = {};
+  if (orders.length === 0) return null;
+  const totals = Object.create(null);
   const names = [];
   for (let i = 0; i < orders.length; i++) {
     const order = orders[i];
-    if (totals[order.name] === undefined) {
+    if (!Object.hasOwn(totals, order.name)) {
       totals[order.name] = 0;
       names.push(order.name);
     }
     totals[order.name] = totals[order.name] + order.qty;
   }
-  let best = names[0];
-  for (let i = 1; i < names.length; i++) {
-    if (totals[names[i]] > totals[best]) {
-      best = names[i];
-    }
+  debug("totals", totals);
+  const entries = [];
+  for (let i = 0; i < names.length; i++) {
+    entries.push([names[i], totals[names[i]]]);
   }
-  return best;
+  const ranked = debug("ranked", entries.sort((a, b) => b[1] - a[1]));
+  return ranked[0][0];
 }`,
   ],
   senior: [
@@ -202,10 +199,12 @@ function checkout(account, basket) {
     `const debug = (label, value) => (console.log(label, value), value);
 
 function bestSeller(orders) {
+  if (orders.length === 0) return null;
   const totals = new Map();
   for (const { name, qty } of orders) totals.set(name, (totals.get(name) ?? 0) + qty);
-  const [best] = [...totals].sort((a, b) => b[1] - a[1]);
-  return best ? best[0] : null;
+  debug("totals", Object.fromEntries(totals));
+  const ranked = debug("ranked", [...totals].sort((a, b) => b[1] - a[1]));
+  return ranked[0][0];
 }`,
   ],
 };
@@ -217,14 +216,19 @@ function bestSeller(orders) {
 const printedBy = (call: string) => `(() => { const printed = []; const methods = ["log", "info", "debug", "warn", "error"]; const kept = methods.map((name) => console[name]); methods.forEach((name) => { console[name] = (...args) => { printed.push(args.map((arg) => (typeof arg === "string" ? arg : JSON.stringify(arg))).join(" ")); }; }); try { const back = ${call}; return { back, printed }; } finally { methods.forEach((name, index) => { console[name] = kept[index]; }); } })()`;
 
 const LOGGING_HIDDEN: Hidden = [
-  [['basketSummary([{ name: "x", price: 3, qty: 5 }, { name: "y", price: 1, qty: 2 }])', { lines: 2, units: 7, total: 17 }], ['Object.keys(basketSummary([]))', ['lines', 'units', 'total']]],
-  [['cheapest([{ name: "p", price: 1 }, { name: "q", price: 0 }])', 'q'], ['cheapest([{ name: "solo", price: 9 }])', 'solo']],
-  [['priceHistory([{ name: "a", price: 1 }, { name: "b", price: 1 }], [{ name: "a", price: 2 }, { name: "b", price: 3 }])', [[{ name: 'a', price: 2 }, { name: 'b', price: 1 }], [{ name: 'a', price: 2 }, { name: 'b', price: 3 }]]], ['(() => { const basket = [{ name: "a", price: 1 }]; return priceHistory(basket, [{ name: "a", price: 2 }])[0] !== basket; })()', true]],
-  [['checkout({ points: 1 }, [{ name: "a", price: 1.5, qty: 3 }])', { total: 4.5, points: 5 }], ['(() => { const account = { points: 0 }; checkout(account, [{ name: "a", price: 7, qty: 1 }]); checkout(account, []); return account.points; })()', 7]],
+  [['basketSummary([{ name: "x", price: 3, qty: 5 }, { name: "y", price: 1, qty: 2 }])', { lines: 2, units: 7, total: 17 }], ['Object.keys(basketSummary([]))', ['lines', 'units', 'total']], ["(() => { const b = Object.freeze([Object.freeze({name:\"\",price:0.1,qty:1})]); const a=basketSummary(b),c=basketSummary(b);return [a,a!==c,b.length]; })()", [{"lines": 1, "units": 1, "total": 0.1}, true, 1]], ["basketSummary(Object.freeze(Array.from({length:1000},()=>Object.freeze({name:\"x\",price:1000000,qty:1000}))))", {"lines": 1000, "units": 1000000, "total": 1000000000000}]],
+  [['cheapest([{ name: "p", price: 1 }, { name: "q", price: 0 }])', 'q'], ['cheapest([{ name: "solo", price: 9 }])', 'solo'], ["cheapest(Object.freeze([Object.freeze({name:\"\",price:0}),Object.freeze({name:\"next\",price:0})]))", ""], ["cheapest(Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({name:String(i),price:1000-i+0.25}))))", "999"]],
+  [['priceHistory([{ name: "a", price: 1 }, { name: "b", price: 1 }], [{ name: "a", price: 2 }, { name: "b", price: 3 }])', [[{ name: 'a', price: 2 }, { name: 'b', price: 1 }], [{ name: 'a', price: 2 }, { name: 'b', price: 3 }]]], ['(() => { const basket = [{ name: "a", price: 1 }]; return priceHistory(basket, [{ name: "a", price: 2 }])[0] !== basket; })()', true], ["(() => { const meta=JSON.parse('{\"nested\":{\"n\":1},\"__proto__\":{\"tag\":\"data\"}}');Object.freeze(meta.nested);Object.freeze(meta.__proto__);Object.freeze(meta);const b=Object.freeze([Object.freeze({name:\"\",price:2,meta})]);const changes=Object.freeze([Object.freeze({name:\"\",price:0}),Object.freeze({name:\"\",price:3})]);const h=priceHistory(b,changes);h[0][0].meta.nested.n=9;return [h.map(x=>x[0].price),h[1][0].meta.nested.n,meta.nested.n,Object.hasOwn(h[0][0].meta,\"__proto__\"),h[0][0].meta.__proto__.tag,Object.getPrototypeOf(h[0][0].meta)===Object.getPrototypeOf(structuredClone({})),h[0][0].meta!==h[1][0].meta]; })()", [[0, 3], 1, 1, true, "data", true, true]], ["(() => { const b=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({name:String(i),price:i})));const c=Object.freeze(Array.from({length:100},(_,i)=>Object.freeze({name:String(i),price:0})));const h=priceHistory(b,c);return [h.length,h.every(x=>x.length===100),h[0][99].price,h[99].every(x=>x.price===0),b[99].price]; })()", [100, true, 99, true, 99]]],
+  [['checkout({ points: 1 }, [{ name: "a", price: 1.5, qty: 3 }])', { total: 4.5, points: 5 }], ['(() => { const account = { points: 0 }; checkout(account, [{ name: "a", price: 7, qty: 1 }]); checkout(account, []); return account.points; })()', 7], ["(() => { const a={points:7,tag:\"keep\"}; const b=Object.freeze([Object.freeze({name:\"a\",price:0.5,qty:1}),Object.freeze({name:\"b\",price:0.5,qty:1})]);return [checkout(a,b),a.points,a.tag]; })()", [{"total": 1, "points": 8}, 8, "keep"]], ["checkout({points:1000000000000},Object.freeze(Array.from({length:1000},()=>Object.freeze({name:\"\",price:1000000,qty:1000}))))", {"total": 1000000000000, "points": 2000000000000}]],
   [
+    ["(() => { const kept=console.log,calls=[];console.log=(...a)=>calls.push(a);try{const box={n:1},values=[box,undefined,0,false,\"\",null,Symbol(\"s\")];const back=values.map(v=>debug(\"label\",v));return [calls.length,calls.every((a,i)=>a.length===2&&a[0]===\"label\"&&Object.is(a[1],values[i])),back.every((v,i)=>Object.is(v,values[i]))];}finally{console.log=kept;} })()", [7, true, true]],
+    ["(() => { const kept=console.log,calls=[];console.log=(...a)=>calls.push(a);try{const b=Object.freeze([Object.freeze({name:\"10\",qty:1}),Object.freeze({name:\"2\",qty:1})]);const best=bestSeller(b);return [best,calls.map(a=>a[0]),calls.length===2&&calls[1][1][0][0]===\"10\"]; }finally{console.log=kept;} })()", ["10", ["totals", "ranked"], true]],
+    ["bestSeller(Object.freeze([Object.freeze({name:\"__proto__\",qty:3}),Object.freeze({name:\"constructor\",qty:2}),Object.freeze({name:\"__proto__\",qty:1})]))", "__proto__"],
+    ["bestSeller([{name:\"\",qty:0},{name:\"toString\",qty:0}])", ""],
+    ["bestSeller(Object.freeze(Array.from({length:1000},()=>Object.freeze({name:\"__proto__\",qty:1000}))))", "__proto__"],
     // One printed line that names the label and shows the value, and the
-    // value itself back. `console.log(label, value)` and
-    // `console.log({ [label]: value })` both pass.
+    // value itself back. The exact two-argument console.log contract is
+    // checked separately below; this older rendered-text check is retained.
     [`(() => { const { back, printed } = ${printedBy('debug("total", 42)')}; return [back, printed.length, printed.join(" ").includes("total"), printed.join(" ").includes("42")]; })()`, [42, 1, true, true]],
     ['debug("zero", 0)', 0],
     ['bestSeller([{ name: "x", qty: 1 }, { name: "y", qty: 4 }, { name: "x", qty: 4 }])', 'x'],
@@ -232,6 +236,7 @@ const LOGGING_HIDDEN: Hidden = [
     ['bestSeller([{ name: "tea", qty: 5 }, { name: "cake", qty: 1 }])', 'tea'],
   ],
 ];
+
 
 /* ── Trace the state ──────────────────────────────────────────────────── */
 

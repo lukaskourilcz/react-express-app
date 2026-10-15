@@ -3369,3 +3369,17 @@ O(n), so neither is penalized and no estimated-complexity line is shown. Initial
 bundle 242995/243000, unchanged budget. Required release CI and deployment
 verification are pending; visual checks for the final combined build are recorded
 when complete. Twelve API handlers, no migration/dependency or live user writes.
+
+## Logging-path content batch b024 — 15 October 2026
+
+Five individually read and manually scored coding records raise coverage to
+150/725, with575remaining and263/263native. Final-hash QuickJS verdicts agree
+36/36 (20valid,5starters,11wrong), compared with25/36before. Twenty authored
+complexity-target checks retain25XP; copy sweep has zero artifacts. Focused
+cumulative coding, API/script types, launch, build, native bindings, both
+production dependency audits (zero vulnerabilities) and diff checks pass.
+The first new native clone probe compared different realms' prototypes and
+failed; the final probe compares ordinary clones from the same realm while
+retaining the own-key/independence assertions. No checker policy changed.
+The content relies on local runtime fix #403; checked release/deployment and
+authenticated acceptance are pending. No owner progress or balances were used.

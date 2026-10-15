@@ -1,5 +1,33 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b024
+
+Read every field and all cumulative boards in the five logging/debugging stages.
+Bounded read-only baskets retain unrounded Number totals, first cheapest ties
+and empty names. Price histories now deep-copy nested metadata on the junior
+board too, preserve own prototype-like data and keep snapshots independent.
+The Console explanation distinguishes immediate app formatting from lazy
+inspection in some browser DevTools. Counter groups do not reset cumulative
+counts, and virtual Submit timing is not evidence of a fast program.
+
+All three final bestseller reveals now use the requested debug helper, safe
+keys and explicit first-appearance order before stable descending sorting.
+The helper's exact two-argument console.log/reference contract is separate from
+the retained broad rendered-text probe. Future broken starter functions remain
+unchanged until their repair stage. A first native contract run exposed a
+cross-realm prototype assertion in the new probe; comparing with a fresh clone
+from the same clone realm fixes that probe without weakening own-key checks.
+
+Final-hash execution agrees on36/36verdicts versus25/36before:20valid,
+five starters and11wrong variants. Twenty target/base25XP checks pass;
+uncertain complexity remains unpenalized. Copy sweep finds zero artifacts.
+Focused cumulative coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Own-key clone parity relies on the local #403 fix; neither b024 nor that runtime
+change has shipped. Coverage is150/725coding,575remaining,263/263native.
+These are manual same-session model reviews, not independent/human acceptance
+or a proof over arbitrary learner programs.
+
 ## 15 October continuation — five coding items b023
 
 Read all five cumulative lookup/graph stages and every inherited requirement,
