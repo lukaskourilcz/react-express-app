@@ -1,6 +1,43 @@
 # devShark content audit — the question bank
 
 
+## 15 October continuation — five coding items b038
+
+Read the emitter, cancellable timer, bounded interval, error-first callback
+and after-count callback individually. Emitter registries now handle prototype
+names safely and every board emits an ordered registration snapshot. Duplicate
+removal, exact chaining/payload/result identity, callback arity and original
+errors are explicit. Correct timer/counting/division boards remain unchanged.
+
+All 30 final-hash verdicts agree (20 valid, five starters, five wrongs) versus
+26/30 baseline. Twenty target/base-25-XP checks, copy sweep, focused coding,
+API/script types, launch, build, 263 native bindings, both zero-vulnerability
+production dependency audits and diff checks pass. The initial 1000-tick test
+passed production QuickJS but exceeded the auxiliary native VM wait limit;
+the final 100-tick case fits that limit. A pre-existing cleanup fixture also
+tracked other hidden cases' intervals under reversed order. It now wraps only
+its own synchronous allocations, restores setInterval immediately and observes
+excess actual firings, without global cancellation hooks. Reversed hidden and
+native Run checks pass after repair. Initial failures remain in private logs.
+
+Cases cover prototype/empty event names, snapshot mutation, 1000 registrations,
+deferred/zero-delay cancellation, 100 numbered ticks, exact callback arguments,
+signed-zero division, original errors and a 10000-call completion threshold.
+The 1000-count supported interval bound is source-reviewed, not claimed as a
+maximum-count native timing test. Same-session model and finite execution only.
+Coverage is 220/725 coding, 505 remaining; native is 263/263. B033–b038 add
+30 local reviews beyond the 190 coding records now shipped. No live user writes.
+
+## PR #405 exact production — 15 October 2026
+
+Required run 38693420570 passes at 58686aaa (verify 30m50s; SQL 41s).
+PR #405 merged at fe214b686ffeff1c951dab07ae64a25919fc791a. READY production
+dpl_CJbygg7tdYp3P4tuAa25ePVbtPj5 matches that merge, owns devshark.app and has
+no alias error. All eleven general guest checks pass with zero XP/null progress.
+Production ships 190/725 coding reviews and 263/263 native; broader editorial,
+authenticated native/Premium and independent/human acceptance remain incomplete.
+
+
 ## 15 October continuation — five coding items b037
 
 Read memoization, fixed-five-letter marking, the sliding limiter, curry and

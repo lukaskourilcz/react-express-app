@@ -3563,3 +3563,26 @@ opaque/error identity, all 1024 binary-word pairs, default/rest arity, high
 limiter bounds and incomplete bowling bonuses use local fixtures. No grader
 engine/schema/UI-policy change or live user-state write; same-session model
 and finite execution evidence only. PR #405 remains frozen separately.
+
+## PR #405 exact production — 15 October 2026
+
+Required run 38693420570 passes at exact 58686aaa (verify 30m50s; SQL 41s).
+PR #405 merged at fe214b686ffeff1c951dab07ae64a25919fc791a. READY production
+dpl_CJbygg7tdYp3P4tuAa25ePVbtPj5 matches, owns devshark.app and has no alias
+error. Eleven general guest checks pass at zero XP/null progress. Shipped
+coverage is 190/725 coding and 263/263 native. No authenticated native/Premium,
+independent/human or full editorial-coverage claim.
+
+## Event and timer content batch b038 — 15 October 2026
+
+Five individual model reviews raise coverage to 220/725 coding, 505 remaining;
+native remains 263/263. All 30 final-hash QuickJS verdicts agree versus 26/30
+before. Twenty target/base-25-XP checks, copy sweep, focused coding (including
+reversed hidden order and native Run), API/script types, launch, build, native
+bindings, both production dependency audits (zero vulnerabilities) and diff
+checks pass. Initial gate failures were a new 1000-tick native wait-limit case
+and a pre-existing cleanup fixture tracking another hidden check's interval.
+The final 100-tick test fits the wait limit; scoped allocation/firing observation
+removes cross-check cancellation hooks. Both failures are retained privately.
+Snapshot delivery, prototype-safe names, callback errors/arity and bounded
+1000-listener/10000-call cases use local fixtures. No live user-state writes.

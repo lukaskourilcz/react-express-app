@@ -382,7 +382,7 @@ console.log(ownKeys(item));
     tier: 2,
     focus: ['timers', 'closures'],
     title: 'Schedule with a cancel button',
-    prompt: 'Write `schedule(task, ms)`, which starts a `setTimeout` that calls `task` after `ms` milliseconds and returns a function that cancels that timer with `clearTimeout`. Call the cancel function before the timer fires and `task` never runs. Calling it after the task has run, or twice, does nothing.',
+    prompt: "Write `schedule(task, ms)`, which starts a `setTimeout` that calls `task` after `ms` milliseconds and returns a function that cancels that timer with `clearTimeout`. Call the cancel function before the timer fires and `task` never runs. Calling it after the task has run, or twice, does nothing. ms is an integer from 0 to 1000. task is a synchronous function that returns normally, takes no arguments and does not depend on this; ignore its return value. Scheduling never calls task inline, including for ms zero. Every schedule call owns a separate cancel function/timer, and the cancel function return value is unspecified. Delays are minimum waits, not a wall-clock scheduling guarantee. Target: O(1) time and auxiliary space for this wrapper per schedule/cancel call, excluding host timer management and task work.",
     starter: `const schedule = (task, ms) => {
 
 };
@@ -419,7 +419,7 @@ schedule(() => console.log("ran"), 100);
     tier: 2,
     focus: ['timers'],
     title: 'Repeat, then stop',
-    prompt: 'Write `repeat(task, times, ms)`, which uses `setInterval` to call `task` every `ms` milliseconds, passing the call number (1, then 2, and so on), and stops with `clearInterval` after exactly `times` calls. `repeat(n => console.log(n), 3, 10)` prints 1, 2 and 3, then nothing more. A `times` of 0 never calls `task`.',
+    prompt: "Write `repeat(task, times, ms)`, which uses `setInterval` to call `task` every `ms` milliseconds, passing the call number (1, then 2, and so on), and stops with `clearInterval` after exactly `times` calls. `repeat(n => console.log(n), 3, 10)` prints 1, 2 and 3, then nothing more. A `times` of 0 never calls `task`. times is an integer from 0 to 1000 and ms is an integer from 1 to 1000. task is synchronous, returns normally and does not depend on this; ignore its return value. Each invocation receives exactly one argument, its 1-based call number. No call happens inline before repeat returns, and times zero starts no interval. Separate repeat calls keep separate counters/timers; the function return value is unspecified. Timer delays are minimum waits rather than precise wall-clock deadlines. Target: O(n) time for all wrapper callback dispatches, where n is 1 + times, excluding host timer management, waiting and task work; wrapper state uses O(1) auxiliary space.",
     starter: `const repeat = (task, times, ms) => {
 
 };
@@ -542,7 +542,7 @@ console.log(times(3, i => i * 10));
     tier: 2,
     focus: ['callbacks'],
     title: 'Error-first callback',
-    prompt: 'Node-style functions report through one callback whose first argument is an error, or `null` when nothing went wrong. Write `safeDivide(a, b, callback)`: when `b` is 0, call `callback` with an `Error` whose message is `"Cannot divide by zero"`; otherwise call `callback(null, a / b)`. Call it exactly once either way. `safeDivide` itself returns nothing.',
+    prompt: "Node-style functions report through one callback whose first argument is an error, or `null` when nothing went wrong. Write `safeDivide(a, b, callback)`: when `b` is 0, call `callback` with an `Error` whose message is `\"Cannot divide by zero\"`; otherwise call `callback(null, a / b)`. Call it exactly once either way. `safeDivide` itself returns nothing. a and b are finite Numbers between -1000000 and 1000000; a nonzero b has magnitude at least 0.000001. Both signs of zero count as a zero denominator. Invoke callback synchronously with exactly one argument on error, or exactly two on success, and ignore its return value. Do not round the normal Number quotient. If callback throws, propagate that original value without retrying the callback. The normal return value is undefined. Target: O(1) time and auxiliary space, excluding callback work.",
     starter: `const safeDivide = (a, b, callback) => {
 
 };
@@ -581,7 +581,7 @@ safeDivide(1, 0, (error, value) => console.log(error && error.message, value));
     tier: 2,
     focus: ['callbacks', 'closures'],
     title: 'Done after n calls',
-    prompt: 'Write `after(count, done)`, where `count` is at least 1. Return a function that calls `done`, with no arguments, on its `count`-th call and at no other time. Three uploads that each call the returned function when they finish trigger `done` once, after the last. Calls after the `count`-th do nothing.',
+    prompt: "Write `after(count, done)`, where `count` is at least 1. Return a function that calls `done`, with no arguments, on its `count`-th call and at no other time. Three uploads that each call the returned function when they finish trigger `done` once, after the last. Calls after the `count`-th do nothing. count is an integer from 1 to 10000 and each returned function may receive up to 10000 calls. Every factory returns a distinct independent function. The returned function ignores its arguments and invokes done synchronously with zero arguments, exactly on the count-th call; its own return value is unspecified. If done throws, propagate that original value and still regard the count-th call as consumed, so later calls never invoke it again. done does not depend on this. Target: O(1) time and auxiliary space per factory/returned-function call, excluding done work.",
     starter: `const after = (count, done) => {
 
 };

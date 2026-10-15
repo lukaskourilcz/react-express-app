@@ -1018,61 +1018,15 @@ const memoize = memoizeBy(([first]) => first);`,
     ],
   },
   "js-event-emitter": {
-    solution: "const createEmitter = () => { const listeners = {}; const emitter = {on: (name, listener) => ((listeners[name] ??= []).push(listener), emitter), off: (name, listener) => (listeners[name] = listener ? (listeners[name] ?? []).filter(one => one !== listener) : [], emitter), emit: (name, payload) => (listeners[name] ?? []).map(listener => listener(payload))}; return emitter; };",
-    junior: `const createEmitter = () => {
-  const listeners = {};
-  const emitter = {};
-  emitter.on = function (name, listener) {
-    if (listeners[name] === undefined) {
-      listeners[name] = [];
-    }
-    listeners[name].push(listener);
-    return emitter;
-  };
-  emitter.off = function (name, listener) {
-    const current = listeners[name] || [];
-    const kept = [];
-    if (listener !== undefined) {
-      for (const one of current) {
-        if (one !== listener) {
-          kept.push(one);
-        }
-      }
-    }
-    listeners[name] = kept;
-    return emitter;
-  };
-  emitter.emit = function (name, payload) {
-    const current = listeners[name] || [];
-    const results = [];
-    for (const listener of current) {
-      results.push(listener(payload));
-    }
-    return results;
-  };
-  return emitter;
-};`,
-    senior: `const createEmitter = () => {
-  const listeners = new Map();
-  const emitter = {
-    on(name, listener) {
-      if (!listeners.has(name)) listeners.set(name, []);
-      listeners.get(name).push(listener);
-      return emitter;
-    },
-    off(name, listener) {
-      // off(name) alone clears the event; with a listener it removes that one by identity
-      const kept = listener ? (listeners.get(name) ?? []).filter(one => one !== listener) : [];
-      listeners.set(name, kept);
-      return emitter;
-    },
-    emit(name, payload) {
-      return (listeners.get(name) ?? []).map(listener => listener(payload));
-    },
-  };
-  return emitter;
-};`,
+    solution: "const createEmitter = () => { const listeners = Object.create(null); const emitter = {on: (name, listener) => ((listeners[name] ??= []).push(listener), emitter), off: (name, listener) => (listeners[name] = listener ? (listeners[name] ?? []).filter(one => one !== listener) : [], emitter), emit: (name, payload) => [...(listeners[name] ?? [])].map(listener => listener(payload))}; return emitter; };",
+    junior: "const createEmitter = () => {\n  const listeners = Object.create(null);\n  const emitter = {};\n  emitter.on = function (name, listener) {\n    if (listeners[name] === undefined) {\n      listeners[name] = [];\n    }\n    listeners[name].push(listener);\n    return emitter;\n  };\n  emitter.off = function (name, listener) {\n    const current = listeners[name] || [];\n    const kept = [];\n    if (listener !== undefined) {\n      for (const one of current) {\n        if (one !== listener) {\n          kept.push(one);\n        }\n      }\n    }\n    listeners[name] = kept;\n    return emitter;\n  };\n  emitter.emit = function (name, payload) {\n    const current = [...(listeners[name] || [])];\n    const results = [];\n    for (const listener of current) {\n      results.push(listener(payload));\n    }\n    return results;\n  };\n  return emitter;\n};",
+    senior: "const createEmitter = () => {\n  const listeners = new Map();\n  const emitter = {\n    on(name, listener) {\n      if (!listeners.has(name)) listeners.set(name, []);\n      listeners.get(name).push(listener);\n      return emitter;\n    },\n    off(name, listener) {\n      const kept = listener ? (listeners.get(name) ?? []).filter(one => one !== listener) : [];\n      listeners.set(name, kept);\n      return emitter;\n    },\n    emit(name, payload) {\n      return [...(listeners.get(name) ?? [])].map(listener => listener(payload));\n    },\n  };\n  return emitter;\n};",
     hiddenTests: [
+      { call: "(() => {const bus=createEmitter(),a=Object.freeze({}),b=Object.freeze([]);let arity;const fn=(...args)=>{arity=args.length;return args[0];};const on=bus.on(\"__proto__\",fn),off=bus.off(\"none\",fn);bus.on(\"constructor\",()=>b);const x=bus.emit(\"__proto__\",a),y=bus.emit(\"constructor\");return [on===bus,off===bus,x[0]===a,y[0]===b,arity,x!==bus.emit(\"__proto__\",a),bus.emit(\"none\")!==bus.emit(\"none\"),bus!==createEmitter()];})()", expected: [true, true, true, true, 1, true, true, true] },
+      { call: "(() => {const bus=createEmitter(),log=[];const late=()=>{log.push(\"late\");return \"late\";};const second=()=>{log.push(\"second\");return \"second\";};let first=true;bus.on(\"\",()=>{log.push(\"first\");if(first){first=false;bus.on(\"\",late).off(\"\",second);}return \"first\";}).on(\"\",second);const a=bus.emit(\"\"),b=bus.emit(\"\");return [a,b,log];})()", expected: [["first", "second"], ["first", "late"], ["first", "second", "first", "late"]] },
+      { call: "(() => {const bus=createEmitter(),error=Object.freeze({});let calls=0;const fn=()=>{calls++;return undefined;};bus.on(\"x\",fn).on(\"x\",fn);const first=bus.emit(\"x\");bus.off(\"x\",fn);const empty=bus.emit(\"x\");bus.on(\"bad\",()=>{throw error;}).on(\"bad\",()=>{calls+=100;});let same=false;try{bus.emit(\"bad\");}catch(e){same=e===error;}return [calls,first.length,first[0]===undefined,first[1]===undefined,empty.length,same];})()", expected: [2, 2, true, true, 0, true] },
+      { call: "(() => {const bus=createEmitter();for(let i=0;i<1000;i++)bus.on(\"max\",()=>i);const out=bus.emit(\"max\");return [out.length,out[0],out[999]];})()", expected: [1000, 0, 999] },
+
       { call: "(() => { const bus = createEmitter(); const double = n => n * 2; bus.on(\"x\", double).on(\"x\", n => n + 1).off(\"x\", double); return bus.emit(\"x\", 5); })()", expected: [6] },
       { call: "(() => { const bus = createEmitter(); bus.on(\"a\", n => \"a\" + n).on(\"b\", n => \"b\" + n).off(\"a\"); return [bus.emit(\"a\", 1), bus.emit(\"b\", 2)]; })()", expected: [[], ["b2"]] },
       { call: "createEmitter().on(\"e\", () => 1).on(\"e\", () => 2).on(\"e\", () => 3).emit(\"e\")", expected: [1, 2, 3] },

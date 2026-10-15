@@ -1935,7 +1935,7 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
     tier: 4,
     focus: ["closures", "objects", "callbacks"],
     title: "Event emitter",
-    prompt: "Write `createEmitter()`, returning an emitter with `on`, `off` and `emit`. `on` and `off` return the emitter so calls chain; `off(name, listener)` drops that one listener while `off(name)` drops every listener for that event; `emit(name, payload)` calls each listener with the payload and returns their results as an array.",
+    prompt: "Write `createEmitter()`, returning an emitter with `on`, `off` and `emit`. `on` and `off` return the emitter so calls chain; `off(name, listener)` drops that one listener while `off(name)` drops every listener for that event; `emit(name, payload)` calls each listener with the payload and returns their results as an array. Event names are strings of at most 1000 characters, including empty/prototype-like names, and must not collide with inherited properties. Registering the same listener twice creates two ordered registrations; off(name, listener) removes every registration with that exact function. Omitting the listener or passing undefined clears that event. on/off return the exact emitter. emit takes a snapshot of registrations at its start: on/off changes made by a listener affect later emits, not that snapshot. Call each snapshot listener in registration order with exactly one argument, preserving the opaque payload and result references/values without cloning; stop and propagate the original synchronous error if one throws. An unknown event returns a fresh empty array. Each emitter has separate state, at most 1000 registrations and 10000 method calls. Listeners do not depend on this. Target: O(n) time for off/emit wrapper work, where n is 1 + the registrations for that event, excluding listener work and assuming bounded-name lookup; on is amortized constant work and emit uses O(n) result/snapshot space.",
     starter: `const createEmitter = () => {
   
 };
@@ -1961,12 +1961,12 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
   };
   return emitter;
 };`,
-    hints: ["Keep an object of listener arrays, one per event name."],
+    hints: ["Keep a null-prototype object or Map of listener arrays, one per event name. Copy the current array before calling listeners."],
     approach: [
-      "Keep an object in the closure mapping each event name to the array of listeners registered against it.",
+      "Keep a null-prototype object or Map in the closure mapping each event name to the array of listeners registered against it.",
       "Registering appends the listener to that name and hands the emitter back, which is what lets registrations chain.",
-      "Removal filters the listener out by identity, so the caller has to pass the very same function it registered earlier.",
-      "Emitting looks up the array for the name, calls each listener with the payload and collects what they return; an unknown name gives an empty array.",
+      "Removal filters every matching registration out by listener identity, so the caller has to pass the very same function it registered earlier.",
+      "Emitting copies the array for the name, calls each snapshot listener with the payload and collects what they return; an unknown name gives an empty array.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
