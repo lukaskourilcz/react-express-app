@@ -96,7 +96,7 @@ export const DSA_D07: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A linear search walks the collection from one end and stops at the first element that matches. It asks nothing of the data: no order, no index, no preparation. That is its whole appeal, and it is why every other search in this path is measured against it.',
+            'A linear search walks the collection from one end and stops at the first element that matches. It needs no sorted order or prepared lookup index. The examples here use dense, stable arrays and constant-cost strict-equality comparisons. That is its whole appeal, and it is why every other search in this path is measured against it.',
         },
         {
           kind: 'code',
@@ -110,23 +110,24 @@ export const DSA_D07: ModuleSource = {
           code: `const sorted = [1, 4, 7, 9, 12, 15, 21, 30, 44, 51];
 
 const binarySearch = (values, target) => {
-  let comparisons = 0;
+  let probes = 0;
   let low = 0;
   let high = values.length - 1;
   while (low <= high) {
     const mid = Math.floor((low + high) / 2);
-    comparisons += 1;
-    if (values[mid] === target) return { index: mid, comparisons };
-    if (values[mid] < target) low = mid + 1;
+    probes += 1;
+    const value = values[mid];
+    if (value === target) return { index: mid, probes };
+    if (value < target) low = mid + 1;
     else high = mid - 1;
   }
-  return { index: -1, comparisons };
+  return { index: -1, probes };
 };
 
 console.log("found 44:", binarySearch(sorted, 44));
 console.log("missing 43:", binarySearch(sorted, 43));`,
-          caption: 'Binary search over ten sorted values, counting the comparisons it actually makes.',
-          note: 'Double the length of the list and see how little the comparison count moves. Then unsort it and watch the answer stop being trustworthy.',
+          caption: 'Binary search over ten sorted values, counting one midpoint probe per iteration, not individual equality/order comparisons.',
+          note: 'Double the length of the list and see how little the midpoint-probe count moves. Then unsort it and watch the answer stop being trustworthy.',
         },
         {
           kind: 'prose',
@@ -137,7 +138,7 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
           kind: 'callout',
           tone: 'note',
           body:
-            'Those are three different cost functions on the same routine. The best case is 1 read, the worst case is n reads, and a target that is present at a uniformly random position averages about n/2. All three are O(n) as an upper bound; only the worst case makes O(n) the tightest thing you can say.',
+            'Those are three different cost functions on the same routine. The best case is 1 read, the worst case is n reads, and a target that is present at a uniformly random position averages about n/2. For a nonempty array and a uniformly distributed successful target, the mean is exactly (n + 1) / 2 reads. Best-case cost is O(1); both this average and the worst case have tight O(n) growth.',
         },
         {
           kind: 'trace',
@@ -204,29 +205,29 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
         {
           kind: 'prose',
           body:
-            'Nothing in that walk depended on the values ascending. Move the 7 anywhere and the routine still finds it, at a cost that changes but never breaks. A binary search on the same array would answer wrongly, which is the trade the next lesson spells out.',
+            'Nothing in that walk depended on the values ascending. Move the 7 anywhere and the routine still finds it, at a cost that changes but never breaks. Binary search on unsorted data can miss an existing target, which is the trade the next lesson spells out.',
         },
         {
           kind: 'prose',
           body:
-            'A linear scan is the right answer more often than its reputation suggests. Unsorted data with one lookup coming: sorting first costs more than the scan you were trying to avoid. A handful of elements: the constant factors dominate and the scan wins outright. A predicate rather than an equality test: "the first order over 500 CZK" has no sorted key to bisect on unless you built one.',
+            'A linear scan is the right answer more often than its reputation suggests. Unsorted data with one lookup coming: sorting first costs more than the scan you were trying to avoid. A handful of elements: constant factors can dominate, so measure before assuming preparation pays off. A predicate rather than an equality test: "the first order over 500 CZK" has no sorted key to bisect on unless you built one.',
         },
         {
           kind: 'code',
           language: 'javascript',
-          code: 'const findFirst = (values, matches) => {\n  for (let index = 0; index < values.length; index += 1) {\n    if (matches(values[index])) return index;\n  }\n  return -1;\n};\n\nfindFirst(orders, order => order.total > 500);',
+          code: 'const orders = [{ total: 200 }, { total: 750 }, { total: 900 }];\n\nconst findFirst = (values, matches) => {\n  for (let index = 0; index < values.length; index += 1) {\n    if (matches(values[index])) return index;\n  }\n  return -1;\n};\n\nfindFirst(orders, order => order.total > 500);',
           caption: 'The same walk with a predicate. Binary search has no way in here: the array is not ordered by the thing being tested.',
         },
         {
           kind: 'prose',
           body:
-            'Structure matters too. A singly linked list has no index to bisect on, so reaching the middle node already costs a walk of half the list. Searching one is linear whatever you do, which is why D05 pairs cheap insertion at a known position with expensive lookup.',
+            'Structure matters too. A singly linked list has no index to bisect on, so reaching the middle node already costs a walk of half the list. Without an auxiliary index, a general equality search has a linear worst-case walk, which is why D05 pairs cheap insertion at a known position with expensive lookup.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Recursive "scan the rest" implementations often hide a copy. `search(values.slice(1), target)` reads and allocates the whole tail on every step, so a linear routine turns quadratic in time and linear in auxiliary space. Pass an index along instead of slicing.',
+            'Recursive "scan the rest" implementations often hide a copy. `search(values.slice(1), target)` reads and allocates the whole tail on every step, so an unsuccessful walk copies (n - 1) + (n - 2) + ... + 1 elements: O(n²) copying work. With ordinary waiting frames retaining those tails, peak auxiliary storage can also be O(n²), plus the call stack. An index avoids the tail copies; a loop also avoids the growing stack.',
         },
         {
           kind: 'table',
@@ -235,13 +236,13 @@ console.log("missing 43:", binarySearch(sorted, 43));`,
           rows: [
             ['Linear scan', 'None', 'O(n) worst case', 'Unsorted data, few lookups, small arrays, predicate tests'],
             ['Sort once, then binary search', 'O(n log n) sort', 'O(log n)', 'Many lookups on stable data, and range or nearest-value queries'],
-            ['Build a Set, then test membership', 'O(n) insertions', 'Expected O(1), not a worst-case guarantee', 'Many equality lookups where order is irrelevant'],
+            ['Build a Set, then test membership', 'O(n) insertions', 'Expected O(1) in a hash-table model; no fixed ECMAScript time guarantee', 'Many equality lookups where order is irrelevant'],
           ],
         },
         {
           kind: 'prose',
           body:
-            '`indexOf` and `findIndex` are this scan, written for you. They still read up to n elements, so reaching for one does not change the growth class of the code around it. The exercise below asks you to write the loop because the next lesson takes it apart.',
+            '`indexOf` and `findIndex` are this scan, written for you. On the dense arrays used here they inspect up to n positions, so they retain linear worst-case scan work when the comparison or predicate has constant cost. indexOf uses strict equality and cannot find NaN. Set uses SameValueZero and can contain NaN, so membership and an indexOf scan are not interchangeable for every value. The exercise below asks you to write the loop because the next lesson takes it apart.',
         },
       ],
     },

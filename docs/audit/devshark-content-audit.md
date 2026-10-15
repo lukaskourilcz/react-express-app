@@ -1,5 +1,34 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n004
+
+Reviewed the complete D06 exercise check, three coding activities and the D07
+linear-search lesson. The check is retained with all four separately reviewed
+children and its all-four threshold. Coding domains, factorial loop versus
+recursive multiplication counts, exact-but-unsafe Number terminology and the
+countdown counter's helper-recursion limits are explicit. New hidden assertions
+check list descriptors/identity, frozen nodes, all factorial inputs 0..20 and
+interleaved fresh zero countdowns. The original three broken starters remain.
+
+Baseline selected results were 17/21: extra fields, replaced same-valued links,
+a sole wrong factorial(4) and a shared zero array were incorrectly accepted.
+Final exact-hash real sandbox results are **21/21** (six valid, three starters,
+twelve wrong). Authored proof checks the parent threshold/review, actual
+linear/predicate/binary snippets, trace counters and successful uniform mean.
+A proof-only copied-element formula initially produced negative zero at n=0;
+its integer count was corrected, without changing product equality rules.
+
+The search lesson fixes average-case tightness, runnable predicate input,
+midpoint-probe versus comparison counts, quadratic retained suffix copies,
+qualified small-input/unsorted-search claims and Set versus strict equality.
+All five items have individual scores and final English model readings.
+Native bindings, path contracts, copy sweep and diff checks pass; release gates
+will run over this next group before publication. Native coverage is
+**80/263**, **183 remaining**; coding stays **90/725**, **635 remaining**.
+PR #393's exact production verification passes; seventy coding and sixty
+native records are deployed, with twenty of each prepared locally/in #394.
+No independent/human, arbitrary-method or authenticated-path proof is claimed.
+
 ## 15 October continuation — five-item native batch n003
 
 Reviewed two lesson-reading activities and the three remaining D06 questions.

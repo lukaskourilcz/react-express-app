@@ -59,7 +59,8 @@ var __callsToSum = function (values) {
 `.trim();
 
 /** Wraps `countdownSteps` the same way, for the opposite verdict: exactly one
- * call for one invocation is what a loop produces, and no recursion can. */
+ * observed call is what a loop produces. Calls through a separately named
+ * recursive helper are outside this counter; the prompt states that limit. */
 const COUNTDOWN_PROBE = `
 var __countdownCalls = 0;
 var __countdownWrapped = false;
@@ -467,7 +468,7 @@ export const DSA_D06: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          'A node is a plain object `{ value, next }`. `next` holds the node after it, the last node\'s `next` is `null`, and a list is its head node or `null` when empty.\n\nWrite `sumList(head)`, returning the sum of every value in the list. `sumList(null)` is 0, a one-node list gives that node\'s value, and negative values and zeros count like any other number. Leave the list as you found it: no node changes and no node is added or removed.\n\nDo it recursively, with the empty list as the only base case. The grade replaces the `sumList` binding with a wrapper that counts every call, including the calls the function makes on itself, and expects one call per node plus one final call that receives `null`: four nodes means five calls. A loop makes one call and fails that check; a second base case for the last node makes one call too few and fails it as well.',
+          'A node is a plain object `{ value, next }`. `next` holds the node after it, the last node\'s `next` is `null`, and a list is its head node or `null` when empty.\n\nWrite `sumList(head)`, returning the sum of every value in the list. `sumList(null)` is 0, a one-node list gives that node\'s value, and negative values and zeros count like any other number. Leave the list as you found it: no node changes and no node is added or removed. Lists are finite, acyclic and null-terminated, with at most 100 nodes. Values are finite Numbers with absolute value at most 1000000. Add in the recursive order `head.value + sumList(head.next)`, without rounding; fractional Number additions follow that order.\n\nDo it recursively, with the empty list as the only base case. The grade replaces the `sumList` binding with a wrapper that counts every call, including the calls the function makes on itself, and expects one call per node plus one final call that receives `null`: four nodes means five calls. A loop makes one call and fails that check; a second base case for the last node makes one call too few and fails it as well.',
         contract: [
           'Recurse on `sumList` itself. A nested helper function that does the walking is not counted, because the wrapper only sees calls to `sumList`.',
           'Use exactly one base case: `head === null` returns 0. The graded count is the number of nodes plus one.',
@@ -543,14 +544,14 @@ console.log(sumList({ value: 1, next: { value: 2, next: null } }));
       kind: 'code',
       purpose: 'exercise',
       verification: 'machine_verified',
-      title: 'Factorial inside the safe range',
-      summary: 'A linear-time function whose result grows factorially, bounded at 20 so every answer is exact.',
+      title: 'Factorial with exact results',
+      summary: 'Count the work separately from result growth, with exact Number results for inputs 0 through 20.',
       competencies: ['recursion', 'complexity'],
       estimatedMinutes: 15,
       code: {
         language: 'javascript',
         prompt:
-          'Write `factorial(n)`, returning the product of every whole number from 1 to n. `factorial(5)` is 120, `factorial(1)` is 1, and `factorial(0)` is 1 because the product of no numbers at all is 1.\n\nThe caller guarantees a whole number from 0 to 20 inclusive, so you do not have to validate it. That bound is about the result, not the method: 18! is 6402373705728000, the last factorial below `Number.MAX_SAFE_INTEGER` (9007199254740991). 19! and 20! are past that mark and still come out exactly, and 23! comes back wrong, so the range stops where every expected answer is still an exact integer.\n\nRecursion or a loop, whichever you prefer. Either way the function performs n - 1 multiplications for n of 2 or more, so under the unit-cost model its running time is linear in n. Only the number it returns grows factorially, and confusing the two is the mistake this exercise exists to prevent.',
+          'Write `factorial(n)`, returning the product of every whole number from 1 to n. `factorial(5)` is 120, `factorial(1)` is 1, and `factorial(0)` is 1 because the product of no numbers at all is 1.\n\nThe caller guarantees a whole number from 0 to 20 inclusive, so you do not have to validate it. That bound is about the result, not the method: 18! is 6402373705728000, the last factorial below `Number.MAX_SAFE_INTEGER` (9007199254740991). 19! and 20! are past that mark and still come out exactly, and 23! comes back wrong, so this exercise uses a bounded domain whose expected results are all exactly representable.\n\nRecursion or a loop, whichever you prefer. The loop from 2 through n uses n - 1 multiplications for n of 2 or more; the recursive form with a base case at 0 uses n. Both have a linear multiplication count in the usual variable-n, unit-cost model. The actual Number exercise remains bounded at 20. Only the number it returns grows factorially, and confusing the two is the mistake this exercise exists to prevent.',
         contract: [
           'The input is a whole number from 0 to 20 inclusive; no validation is required.',
           '`factorial(0)` and `factorial(1)` are both 1, because an empty product is 1 rather than 0.',
@@ -574,9 +575,9 @@ console.log(factorial(5));
   return product;
 }`,
         hints: [
-          'Start a running product at 1 and multiply it by 2, 3, and so on up to n. When n is 0 or 1 the loop never runs, so both answers fall out of the starting value.',
+          'What value should a product have before any factor is included? It must leave the next factor unchanged, and it must already answer inputs 0 and 1.',
           'Recursively it is `n * factorial(n - 1)` with `n === 0` returning 1. That makes n + 1 calls and opens n + 1 frames, which is fine at n = 20 and is the reason the next exercise is written as a loop.',
-          'Count the multiplications before you quote a growth class. There are n - 1 of them for n of 2 or more, whatever the size of the number they build.',
+          'Count the operations in your chosen form. A loop starting at 2 uses n - 1 multiplications for n >= 2; a recursion that multiplies down to a base case at 0 uses n. Both counts grow linearly in the model.',
         ],
         approach: [
           'Start a product at 1, which is already the answer for 0 and for 1.',
@@ -609,13 +610,13 @@ console.log(factorial(5));
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Countdown without a stack',
-      summary: 'Build the countdown from n to 0 in one call, at an input size where a recursion would run out of stack.',
+      summary: 'Build a fresh countdown from n to 0 with a loop, for inputs through 10000.',
       competencies: ['recursion', 'complexity'],
       estimatedMinutes: 20,
       code: {
         language: 'javascript',
         prompt:
-          'Write `countdownSteps(n)`, returning the array `[n, n - 1, ..., 1, 0]`. `countdownSteps(3)` gives `[3, 2, 1, 0]` and `countdownSteps(0)` gives `[0]`, so the array always holds n + 1 numbers. Return a fresh array on every call.\n\nBuild it iteratively, in a constant number of stack frames. n runs from 0 to 10000, which is the point of the bound: a recursive version opens a frame per step, and a few thousand frames is where engines start throwing a RangeError. The exact depth that fails depends on the engine and on what was already on the stack, so it is not a limit to design against.\n\nThe grade replaces the `countdownSteps` binding with a wrapper that counts every call and expects exactly one call for one invocation. A loop produces one. Any recursion produces more.',
+          'Write `countdownSteps(n)`, returning the array `[n, n - 1, ..., 1, 0]`. `countdownSteps(3)` gives `[3, 2, 1, 0]` and `countdownSteps(0)` gives `[0]`, so the array always holds n + 1 numbers. Return a fresh array on every call.\n\nBuild it iteratively, in a constant number of stack frames. n runs from 0 to 10000. Ordinary recursion can use a frame per step and exhaust the available stack. The failure depth and error type depend on the engine and existing stack; there is no portable safe-depth cutoff.\n\nThe grade replaces the `countdownSteps` binding with a wrapper that counts every call and expects exactly one call for one invocation. A loop produces one. Recursion through `countdownSteps` produces more. This counter does not see separately named helpers, so it is bounded evidence about these calls, not a proof that arbitrary code uses constant stack. Recursive helpers do not meet the requested iterative method.',
         contract: [
           'One call does the whole job: no recursion, and no helper that calls `countdownSteps` again.',
           'The array runs from n down to 0 inclusive, so its length is n + 1 and its last entry is 0.',
@@ -641,7 +642,7 @@ console.log(countdownSteps(3));
         hints: [
           'Count downwards in the loop itself: start at n, stop once the counter goes below 0, and subtract one each time. Appending in that order needs no reversal afterwards.',
           'The stopping condition is `>= 0`, not `> 0`. Stopping at 1 leaves the final 0 out and makes the length n instead of n + 1.',
-          'Nothing here needs a second frame. One array, one counter, and the array is the only thing that grows with n.',
+          'No recursive calls are needed: keep one counter and append to one result array. The result uses O(n) space even though the loop uses constant auxiliary stack space.',
         ],
         approach: [
           'Create an empty array to collect the numbers.',
@@ -660,11 +661,11 @@ console.log(countdownSteps(3));
           },
           {
             id: 'no-recursion',
-            label: 'One call, one frame',
+            label: 'One observed call through countdownSteps',
             critical: true,
             weight: 2,
             detail:
-              'The grader wrapped `countdownSteps` and counted every call. One invocation must produce exactly one call, which a loop does and a recursion cannot. A `const` binding cannot be wrapped and reports none at all, which is why the contract asks for the `function` form.',
+              'The grader wrapped `countdownSteps` and counted every call. One invocation must produce exactly one observed call through this binding. Recursion through a different helper is not counted; the finite checks do not prove an arbitrary program uses constant stack. A `const` binding cannot be wrapped and reports none at all, which is why the contract asks for the `function` form.',
           },
         ],
         tests: [
