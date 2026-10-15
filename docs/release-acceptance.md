@@ -3398,3 +3398,107 @@ authenticated acceptance remain separate.
 ## PR #402 exact production — 15 October 2026
 
 15 October: PR #402 passed required run38685241521 on exact95674b5e180ee5ca511fb6a4d8836d1e353d96b0 (verify30m37s; SQL42s), merged at8ea7ce7919140c4cad99f4082ee9264d5f20991f. READY production dpl_FYPZbZ64Crs8u8frbYcXG5KodXSH matches that merge, owns devshark.app and has no alias error. Eleven general guest checks pass at zero XP/null progress, with no Challenge/name/owner-state fixture. Shipped coding coverage is135/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance.
+
+## Edge/input content batch b026 — 15 October 2026
+
+Five individual model reviews raise coding coverage to160/725,565remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty target/base25XP and copy checks
+pass. Focused cumulative coding (including date probes in four non-UTC host
+zones), API/script types, launch, build, native bindings, both zero-vulnerability
+production dependency audits and diff checks pass. The final checks explicitly
+observe post-call price order and1.005without premature rounding. Exact READY
+PR #404 preview at3e8d209d passes11general guest checks; SQL41s passes, verify
+is pending. B026 is local and not part of that frozen PR. No real profile,
+billing transaction, progress, score or generated-name allocation is involved.
+
+## Array mutation/copy content batch b027 — 15 October 2026
+
+Five individual model reviews raise coding coverage to165/725,560remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty target/base25XP and copy checks
+pass. Focused coding, API/script types, launch, build, native bindings, both
+zero-vulnerability production dependency audits and diff checks pass. Initial
+identical insertion boards were corrected to distinct explicit/literal argument
+forms and the final35verdicts/20target checks rerun. Ownership and normalization
+checks include10000-element arrays; finite tests do not prove arbitrary method
+conformance or asymptotics. B026–b027are local; #404 remains frozen separately.
+
+## Loop/fallback content batch b028 — 15 October 2026
+
+Five individual model reviews raise coding coverage to170/725,555remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty target/base25XP and copy checks
+pass, as do focused coding, API/script types, launch, build, native bindings,
+both zero-vulnerability production dependency audits and diff checks. Correct
+fixed-one-element slice retains25XP againstO(1); uncertain countdown analysis
+remains unpenalized. Identity, strict-equality and10000-item cases are local
+fixtures; no real user progress, balances, scores or names were created.
+B026–b028are local and #404 remains frozen separately.
+
+## Search/text/callback content batch b029 — 15 October 2026
+
+Five individual model reviews raise coding coverage to175/725,550remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus26/35before. Twenty target/base25XP and copy checks
+pass, as do focused coding, API/script types, launch, build, native bindings,
+both zero-vulnerability production dependency audits and diff checks. Text
+copying costs are explicitly conservative/output-sensitive; finite execution
+and supplied-source reading are separate from arbitrary program guarantees.
+Original callback errors/counts and opaque references use isolated local data.
+B026–b029are local, and #404 remains frozen separately.
+
+## Array predicates/reduce content batch b030 — 15 October 2026
+
+Five individual model reviews raise coding coverage to180/725,545remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty target/base25XP and copy checks
+pass, as do focused coding, API/script types, launch, build, native bindings,
+both zero-vulnerability production dependency audits and diff checks. Explicit
+NaN membership-versus-index semantics, fresh100×100rows, fractional thresholds,
+strict opaque ids and10000-item scans are covered. Only the fresh final export/
+execution after a private edit-helper boundary repair is recorded as evidence.
+B026–b030are local and #404 remains frozen separately; no live account changes.
+
+## Reduce/destructuring content batch b031 — 15 October 2026
+
+Five individual model reviews raise coding coverage to185/725,540remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty target/base25XP and copy
+checks pass, as do focused coding, API/script types, launch, build, native
+bindings, both zero-vulnerability production dependency audits and diff checks.
+Safe normalized own keys, exact callbacks/error identity, tuple labels and
+10000-item arrays use local fixtures. B026–b031are local and #404 remains
+frozen separately. No progress, account/name or score fixture was created.
+
+## PR #404 exact production — 15 October 2026
+
+15 October: PR #404 passed required run38688593761 on exact3e8d209deab49e8c62f973fd47a8f38cdcb7b710 (verify30m53s; SQL41s), merged at9a85c3683f46cf1a3a4fcb13bdda74a3946efc94. READY production dpl_XG32jkhw1h5fYCWtWyEeBdy6BXBY matches that merge, owns devshark.app and has no alias error. Eleven general guest checks and four direct actual-Submit clone contracts pass at zero XP/null progress, with no Challenge/name/owner-state fixture. The clone probes cover own-key aliases/descriptors, self-cycles, arrays and captured defineProperty despite a learner replacement. Shipped coding coverage is155/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance.
+
+## Rest/closure/callback content batch b032 — 15 October 2026
+
+Five individual model reviews raise coverage to 190/725 coding, 535 remaining;
+native remains 263/263. Combined current-hash QuickJS results agree 35/35
+(20 valid, five starters, ten wrongs) versus 24/35 exact baseline labels. The
+old handler starter already failed to boot; its scratch example is now safely
+commented and it fails grading normally. Seven tally candidates were rerun after
+the final call-bound probe refinement. Twenty target/base 25 XP checks and copy
+checks pass, as do focused coding, API/script types, launch, build, native
+bindings, both zero-vulnerability production dependency audits and diff checks.
+PR #404 is merged and exact-production verified (11 general + 4 direct clone
+checks); #403 is closed. B026–b032 remain local and add 35 coding reviews.
+No live account, stored balance, score or generated name was used.
+
+## PR #405 UTC parity fixture — 15 October 2026
+
+Required run 38692289923 passed SQL in 40 seconds but verify stopped at the
+UTC task-parity fixture: its local-getter example did not pad years to four
+digits, unlike the expanded b026 task contract. The example now pads only the
+year; timezone policy, task checks and expected outcomes are unchanged. Full
+local grading integrity and Learn integrity against the stand-in database pass
+after the fix. Required exact-head CI will rerun; the failed run is not a pass.
+
+The local cohort build passes all 264 fixture-backed responsive route/viewport
+probes, 320–1440 px, with zero issues/unprobed routes. Its exact initial preview
+at 533776fa also passes eleven general guest checks at zero XP/null progress.
+New b033 content remains uncommitted and is outside this 35-task PR.

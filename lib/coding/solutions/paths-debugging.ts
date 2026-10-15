@@ -521,7 +521,7 @@ const EDGES: Boards = {
   const counts = {};
   for (let i = 0; i < timestamps.length; i++) {
     const date = new Date(timestamps[i]);
-    const year = date.getUTCFullYear();
+    const year = String(date.getUTCFullYear()).padStart(4, "0");
     const month = String(date.getUTCMonth() + 1).padStart(2, "0");
     const day = String(date.getUTCDate()).padStart(2, "0");
     const key = year + "-" + month + "-" + day;
@@ -561,12 +561,13 @@ function ordersPerDay(timestamps) {
 };
 
 const EDGES_HIDDEN: Hidden = [
-  [['orderTotal([{ id: 9, amount: 0 }])', 0], ['orderTotal([{ id: 1, amount: -2 }, { id: 2, amount: 5 }])', 3]],
-  [['profileLine({ name: "Fay", address: { city: "Rome" } })', 'Fay · Rome · unknown credits'], ['profileLine({ credits: 0 })', 'Guest · no city · 0 credits']],
-  [['stockStatus("0.0")', 'sold out'], ['stockStatus("3")', 'in stock'], ['[stockStatus("00"), stockStatus("\\t")]', ['sold out', 'missing']]],
-  [['splitBill([19.99, 5.01, 0.1], 3)', [8.37, 8.37, 8.36]], ['splitBill([0.07], 1)', [0.07]]],
-  [['ordersPerDay(["2026-05-02T01:00:00+02:00", "2026-05-01T08:00:00Z"])', { '2026-05-01': 2 }], ['ordersPerDay(["2026-06-15T12:00:00+05:30"])', { '2026-06-15': 1 }]],
+  [['orderTotal(Object.freeze([Object.freeze({amount:1.005})]))', 1.005], ['orderTotal([{ id: 9, amount: 0 }])', 0], ['orderTotal([{ id: 1, amount: -2 }, { id: 2, amount: 5 }])', 3], ["orderTotal(Object.freeze([Object.freeze({id:0,amount:0.1}),Object.freeze({id:\"\",amount:0.2})]))", 0.30000000000000004], ["orderTotal(Object.freeze(Array.from({length:1000},()=>Object.freeze({amount:-1000000}))))", -1000000000]],
+  [['profileLine({ name: "Fay", address: { city: "Rome" } })', 'Fay · Rome · unknown credits'], ['profileLine({ credits: 0 })', 'Guest · no city · 0 credits'], ["profileLine(Object.freeze({name:\"\",address:Object.freeze({city:\"\"}),credits:0}))", " ·  · 0 credits"], ["profileLine(Object.freeze({address:Object.freeze({}),credits:-0.25}))", "Guest · no city · -0.25 credits"], ["(() => { const name=\"x\".repeat(1000),city=\"y\".repeat(1000);return profileLine(Object.freeze({name,address:Object.freeze({city}),credits:1000000}))===name+\" · \"+city+\" · 1000000 credits\"; })()", true]],
+  [['stockStatus("0.0")', 'sold out'], ['stockStatus("3")', 'in stock'], ['[stockStatus("00"), stockStatus("\\t")]', ['sold out', 'missing']], ["[stockStatus(\"-1\"),stockStatus(\"-0e0\"),stockStatus(\"+1.2e3\"),stockStatus(\"\\u00a0\\ufeff\")]", ["in stock", "sold out", "in stock", "missing"]], ["stockStatus(\" \".repeat(95)+\"-1.5\")", "in stock"]],
+  [['(() => { const prices=[3,1,2];splitBill(prices,2);return prices; })()', [3,1,2]], ['splitBill([19.99, 5.01, 0.1], 3)', [8.37, 8.37, 8.36]], ['splitBill([0.07], 1)', [0.07]], ["(() => { const p=Object.freeze([0.01,0.02]),a=splitBill(p,1000),b=splitBill(p,1000);return [a.length,a.slice(0,5),a.reduce((sum,x)=>sum+Math.round(x*100),0),a!==b]; })()", [1000, [0.01, 0.01, 0.01, 0, 0], 3, true]], ["(() => { const a=splitBill(Object.freeze(Array.from({length:1000},()=>1000000)),1000);return [a.length,a.every(x=>x===1000000),splitBill(Object.freeze([]),1000).every(x=>x===0)]; })()", [1000, true, true]]],
+  [['ordersPerDay(["2026-05-02T01:00:00+02:00", "2026-05-01T08:00:00Z"])', { '2026-05-01': 2 }], ['ordersPerDay(["2026-06-15T12:00:00+05:30"])', { '2026-06-15': 1 }], ["ordersPerDay(Object.freeze([\"0001-01-01T00:00:00+01:00\",\"0099-03-02T12:00:00Z\",\"9998-12-31T23:30:00-02:00\"]))", {"0000-12-31": 1, "0099-03-02": 1, "9999-01-01": 1}], ["(() => { const a=ordersPerDay(Object.freeze([\"2026-03-02T10:00:00Z\",\"2026-03-01T10:00:00Z\",\"2026-03-02T11:00:00Z\"]));return [Object.keys(a),a[\"2026-03-02\"],Object.getPrototypeOf(a)===Object.getPrototypeOf({})]; })()", [["2026-03-02", "2026-03-01"], 2, true]], ["(() => { const input=Object.freeze(Array.from({length:1000},()=>\"2026-02-28T23:59:59Z\"));const a=ordersPerDay(input),b=ordersPerDay(input);return [a[\"2026-02-28\"],a!==b,Object.keys(a).length]; })()", [1000, true, 1]]],
 ];
+
 
 export const DEBUGGING_PATH_SOLUTIONS: Record<string, CodingSolution> = Object.fromEntries([
   ...repairLevels('js-path-logging', LOGGING_STARTER, LOGGING, LOGGING_HIDDEN),

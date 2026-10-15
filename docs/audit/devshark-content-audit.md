@@ -1,5 +1,191 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b032
+
+Read every English field, starter/skeleton, board and check for variadic sum,
+immutable edits, tally closures, index handlers and manual map/filter. Supplied
+methods now match rest/for-of, slice/spread, for/let and indexed callback loops.
+The tally senior adds each argument directly to saved state, preserving the
+specified Number grouping and unchanged no-argument reads. Exact callback
+arity, opaque value identity, truthiness and original errors are explicit.
+
+The handler scratch pad is commented until an array is returned, avoiding a
+boot-time map-on-undefined error while the empty starter still fails its checks.
+All 35 combined final-hash worker verdicts agree (20 valid, five starters, ten
+wrongs). The baseline matched 24/35 exact labels: ten wrongs passed, while the
+handler starter was already rejected with error instead of failed. A final tally
+probe refinement saves the 1000th return rather than making a 1001st call; all
+seven tally candidates were rechecked at that final hash. Twenty target/base
+25 XP checks and the zero-artifact copy sweep pass. Focused coding, API/script
+types, launch, build, 263 native bindings, both zero-vulnerability production
+dependency audits and diff checks pass. Cases include 1000 arguments/calls,
+10000-item arrays/closures, independent state and fresh shallow edits.
+
+Coverage is 190/725 coding, 535 remaining, and 263/263 native. PR #404 passed
+required verify 30m53s / SQL 41s at 3e8d209d, merged at 9a85c368, and READY
+production dpl_XG32jkhw1h5fYCWtWyEeBdy6BXBY matches the merge, owns devshark.app
+and has no alias error. Eleven general guest checks plus four direct Submit
+clone probes pass at zero XP/null progress. Issue #403 is closed with that
+concrete evidence. Shipped coverage is 155 coding / 263 native; b026–b032 add
+35 local reviews. No Challenge, name or owner-state fixture was written.
+Finite execution and same-session readings do not claim independent/human,
+authenticated native/Premium or arbitrary-program acceptance.
+
+## 15 October continuation — five coding items b031
+
+Read all English fields, starters/skeletons, boards and checks for key counts,
+running totals, value pipelines, labelled-pair totals and neighbour swaps.
+Key-count dictionaries now use own safe buckets and normalize string/numeric
+keys before lookup on every board; the Map form no longer loses collisions
+between numeric1and string1. All supplied reducers/loops now match their explicit
+lessons: output-array reduce, current-value reduce, loop-head tuple destructuring
+and two-step destructuring swaps. Deferred callback composition is replaced by
+a direct value accumulator without inventing an observed stack-overflow claim.
+
+All35final-hash worker verdicts agree versus25/35before:20valid forms,
+five starters and ten wrongs. Twenty authored-target/base25XP checks, zero-artifact
+copy sweep, focused coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Cases include reserved/empty/numeric keys, exact callback counts/arguments/errors,
+original opaque/falsy values, unrounded Number sums, frozen nested tuples,
+fresh copies and10000-item outputs/scans. Callback overhead is separated from
+callback work in the cost model. Finite probes and same-session readings do not
+establish arbitrary learner-source, asymptotic or independent/human acceptance.
+
+Coverage is185/725coding,540remaining,263/263native. B026–b031are local;
+PR #404 stays frozen at3e8d209d while required CI runs. No live user writes.
+
+## 15 October continuation — five coding items b030
+
+Read all English fields, starters/skeletons, boards and checks for times tables,
+any/all thresholds, locate, remove-by-id and highest-reduce. The locate prompt
+now distinguishes includes SameValueZero from indexOf strict equality; both
+junior/senior forms call both methods and correctly return true/-1 for NaN.
+The junior any/all and remove-by-id and senior times-table boards now show the
+explicitly requested methods/loops. Correct maximum-reduce forms are retained
+with finite Numbers and either equal zero sign accepted.
+
+All35final-hash worker verdicts agree versus25/35before:20valid forms,
+five starters and ten wrongs. Twenty authored-target/base25XP checks, zero-artifact
+copy sweep, focused coding, API/script types, launch, build,263native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Cases cover100×100independent fresh table rows, fractional thresholds, NaN/
+opaque membership, original strict-id removal, unrounded maxima and10000-item
+scans. The first private edit helper stopped at a nested reducer delimiter;
+the final helper uses the actual top-level boundary, followed by fresh exports
+and35/35execution. That discarded intermediate run is not release evidence.
+
+Coverage is180/725coding,545remaining,263/263native. B026–b030are local;
+PR #404 stays frozen at3e8d209d while required CI runs. Method conformance of
+supplied forms is read directly; finite tests do not prove arbitrary programs,
+asymptotic measurements or independent/human acceptance. No live user writes.
+
+## 15 October continuation — five coding items b029
+
+Read all English fields, starters/skeletons, checks and boards for first-divisible,
+for-of joining/numbering, in-place reversal and do-while attempts. Divisibility
+now explicitly excludes a zero divisor and all supplied search boards use the
+requested while/break, preserving signed zero and stopping before later reads.
+Number labels use for-of entries on senior too. Correct join, reversal and
+attempt algorithms are retained under explicit ownership/input domains.
+
+Exact text survives whitespace/newlines/Unicode and long separators. Repeated
+string concatenation uses a conservative quadratic upper bound in output size
+plus count, not an unqualified universal linear-copy claim. Callback attempts
+have a positive bounded budget, exact zero-argument calls and original thrown
+values. Reversal keeps original opaque references with constant auxiliary
+storage, established for supplied forms by reading their source.
+
+All35final-hash worker verdicts agree versus26/35before:20valid forms,
+five starters and ten wrongs. The old search tests already caught the selected
+absolute-value candidate; nine other wrongs previously passed. Twenty authored
+target/base25XP checks and zero-artifact copy sweep pass. Cases cover original
+identities, early tail-read refusal,10000-entry searches/swaps,1000text items,
+large text/separators and1000callback attempts. Finite execution is not a proof
+for arbitrary learner methods/asymptotics or independent/human acceptance.
+
+Focused coding, API/script types, launch, build,263native bindings, both
+zero-vulnerability production dependency audits and diff checks pass.
+Coverage is175/725coding,550remaining,263/263native. B026–b029are local;
+PR #404 stays frozen at3e8d209d while required CI runs. No live user writes.
+
+## 15 October continuation — five coding items b028
+
+Read every English field, starter/skeleton, board and probe for rotation,
+last-item fallback, indexed sum/matches and while countdown. The last-item
+senior no longer substitutes fallback for a present undefined element: an
+explicit length check precedes its one-item slice. Revealed rotation, sum,
+match counting and countdown now use their requested shift/push, indexed-for
+or while technique. The countdown hint no longer falsely claims its output
+length cannot be known in advance; its cost uses that output length.
+
+All35final-hash worker verdicts agree versus25/35before:20valid forms pass,
+five starters and ten wrongs fail. Twenty authored-target/base25XP checks,
+zero-artifact copy sweep, focused coding, API/script types, launch, build,
+263native bindings, both zero-vulnerability production dependency audits and
+diff checks pass. Cases include original/fallback references, present undefined,
+NaN and signed zero, strict object equality, unrounded order-sensitive Number
+sums, fresh empty arrays and10000-element scans/countdowns. The final supplied
+source was read for requested techniques; finite tests do not establish
+arbitrary source conformance or asymptotic timing. Same-session model review only.
+
+Coverage is170/725coding,555remaining,263/263native. B026–b028are local and
+PR #404 stays frozen at3e8d209d while required CI runs. No live user state changes.
+
+## 15 October continuation — five coding items b027
+
+Read all English fields, starters/skeletons, checks and boards for swap-top,
+prepend, remove-range, copy-range and insert-at. Revealed methods now match the
+explicit pop/push, unshift, slice and splice lessons. The junior range removal
+uses one splice instead of repeated suffix shifts, and copying normalizes
+negative endpoints through slice rather than raw comparisons/manual indexes.
+Opaque references, NaN, signed zero, undefined, fresh shallow results and
+mutable/read-only ownership are explicit. Insert-at is scoped to valid positions;
+range methods retain their documented negative-index behavior.
+
+All35final-hash worker verdicts agree versus25/35before, with20valid,
+five starters and ten wrongs. Twenty authored-target/base25XP checks and the
+zero-artifact copy sweep pass. Cases include10000-entry arrays, original value
+identities, normalized negative ranges, empty fresh arrays and exact caller-list
+identity. An initial content-contract run found identical insertion boards;
+the final junior names deleteCount explicitly, senior uses zero directly, and
+all35cases were rerun against the final hashes. Direct code reading establishes
+method conformance for supplied forms; probes do not prove arbitrary source
+style or asymptotic complexity. No independent/human review is claimed.
+
+Focused coding, API/script types, launch, build,263native bindings, both
+zero-vulnerability production dependency audits and diff checks pass.
+Coverage is165/725coding,560remaining,263/263native. B026–b027remain local;
+PR #404 stays frozen at3e8d209d while required CI runs. Archived Czech is untouched.
+
+## 15 October continuation — five coding items b026
+
+Read all five cumulative edge/input stages and every inherited board and check.
+The order reducer now states unrounded bounded Number aggregation; profile
+fallbacks preserve empty strings and zero without adding defaults to the input.
+Stock text uses the full JavaScript trim-whitespace domain and distinguishes
+negative nonzero amounts from zero. Bill shares use bounded safe integer cents,
+with an explicit warning that summing converted euro Numbers need not be exact.
+The junior UTC-day formatter now pads years to four digits, including offset
+transitions into year0000 or9999, while output days retain first-appearance order.
+
+All35final-hash sandbox verdicts agree versus25/35before:20valid forms,
+five starters and ten wrongs. Twenty authored-target/base25XP checks and the
+zero-artifact copy sweep pass. A direct post-call order check was added after
+sorting an already-sorted frozen price fixture failed to distinguish mutation;
+the final wrong sorter is rejected. The1.005amount also exercises the no-rounding
+policy beyond a tiny floating-point difference. Earlier repair requirements,
+level numbers and intentionally broken future starter functions are preserved.
+
+Coverage is160/725coding,565remaining,263/263native. PR #404 freezes20reviews
+b022–b025 plus runtime fix #403 at3e8d209deab49e8c62f973fd47a8f38cdcb7b710.
+Its exact READY preview dpl_BrFkbkj82mHtC9mAWoc4JnF8GiHK passes eleven general
+guest checks, zero XP/null progress; required SQL41s passes and verify is pending.
+Focused cumulative coding (including four non-UTC host zones), API/script
+types, launch, build,263native bindings, both zero-vulnerability production
+dependency audits and diff checks pass. B026 remains local. Same-session manual model readings do not establish
+independent/human, whole-catalogue or authenticated production acceptance.
+
 ## 15 October continuation — five coding items b025
 
 Read all five cumulative tracing stages, their inherited fields and every board.

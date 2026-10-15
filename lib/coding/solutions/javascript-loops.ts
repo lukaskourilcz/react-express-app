@@ -139,12 +139,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   stack.push(item);
   return removed;
 };`,
-    senior: `const swapTop = (stack, item) => {
-  // splice(-1, 1, item) is pop-then-push in one call; on an empty stack it removes nothing and returns [].
-  const [top] = stack.splice(-1, 1, item);
-  return top;
-};`,
+    senior: "const swapTop = (stack, item) => {\n  const removed = stack.pop();\n  stack.push(item);\n  return removed;\n};",
     hiddenTests: [
+      { call: "(() => { const first=Object.freeze({n:1}),top=Object.freeze({n:2}),item=Object.freeze([3]),stack=[first,top];const removed=swapTop(stack,item);return [removed===top,stack[0]===first,stack[1]===item,stack.length]; })()", expected: [true, true, true, 2] },
+      { call: "(() => { const stack=[NaN];const top=swapTop(stack,undefined);const other=[-0];const zero=swapTop(other,null);return [Number.isNaN(top),stack.length,stack[0]===undefined,Object.is(zero,-0),other[0]===null]; })()", expected: [true, 1, true, true, true] },
+      { call: "(() => { const stack=Array.from({length:10000},(_,i)=>i);const top=swapTop(stack,\"last\");return [top,stack.length,stack[0],stack[9999]]; })()", expected: [9999, 10000, 0, "last"] },
+
       { call: "(() => { const stack = [7,8,9,10]; const top = swapTop(stack, 0); return [top, stack.length, stack[3]]; })()", expected: [10, 4, 0] },
       { call: "(() => { const stack = []; swapTop(stack, 1); swapTop(stack, 2); return stack; })()", expected: [2] },
       { call: "(() => { const stack = [\"x\"]; return swapTop(stack, \"y\") === \"x\" && stack[0] === \"y\"; })()", expected: true },
@@ -157,12 +157,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   const newLength = list.length;
   return newLength;
 };`,
-    senior: `const addToFront = (list, item) => {
-  // An insert at index 0 through splice; the new length is then read straight off the list.
-  list.splice(0, 0, item);
-  return list.length;
-};`,
+    senior: "const addToFront = (list, item) => list.unshift(item);",
     hiddenTests: [
+      { call: "(() => { const old=Object.freeze({n:1}),item=Object.freeze([2]),list=[old];const size=addToFront(list,item);return [size,list[0]===item,list[1]===old,list.length]; })()", expected: [2, true, true, 2] },
+      { call: "(() => { const list=[NaN,-0];const size=addToFront(list,undefined);return [size,list[0]===undefined,Number.isNaN(list[1]),Object.is(list[2],-0)]; })()", expected: [3, true, true, true] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);return [addToFront(list,null),list[0],list[10000]]; })()", expected: [10001, null, 9999] },
+
       { call: "(() => { const list = [5,6,7,8]; const length = addToFront(list, 4); return [length, list[0], list.length]; })()", expected: [5, 4, 5] },
       { call: "(() => { const list = []; addToFront(list, null); return list; })()", expected: [null] },
       { call: "(() => { const list = [\"x\"]; return addToFront(list, \"y\") === 2 && list[0] === \"y\" && list[1] === \"x\"; })()", expected: true },
@@ -170,23 +170,17 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-remove-a-range": {
     solution: "const removeRange = (list, start, count) => list.splice(start, count);",
-    junior: `const removeRange = (list, start, count) => {
-  const removed = [];
-  for (let step = 0; step < count; step += 1) {
-    if (start >= list.length) {
-      break;
-    }
-    const taken = list.splice(start, 1);
-    removed.push(taken[0]);
-  }
-  return removed;
-};`,
+    junior: "const removeRange = (list, start, count) => {\n  const removed = list.splice(start, count);\n  return removed;\n};",
     senior: `const removeRange = (list, start, count) => {
   // Nothing to take out: leave the list alone rather than asking splice for zero items.
   if (count <= 0 || start >= list.length) return [];
   return list.splice(start, count);
 };`,
     hiddenTests: [
+      { call: "(() => { const first={},second=Object.freeze({}),last=Object.freeze([]),list=[first,second,last];const removed=removeRange(list,-2,1);const a=removeRange(list,2,0),b=removeRange(list,2,0);return [removed[0]===second,removed!==list,list[0]===first,list[1]===last,a!==b,a.length]; })()", expected: [true, true, true, true, true, 0] },
+      { call: "(() => { const a=[0,1,2,3];return [removeRange(a,-10000,2),a,removeRange(a,0,-1),a]; })()", expected: [[0, 1], [2, 3], [], [2, 3]] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);const out=removeRange(list,1,9998);return [out.length,out[0],out[9997],list]; })()", expected: [9998, 1, 9998, [0, 9999]] },
+
       { call: "(() => { const list = [10,20,30,40,50,60]; const removed = removeRange(list, 2, 3); return [removed, list]; })()", expected: [[30, 40, 50], [10, 20, 60]] },
       { call: "(() => { const list = [\"p\",\"q\",\"r\",\"s\"]; removeRange(list, 3, 1); return list; })()", expected: ["p", "q", "r"] },
       { call: "(() => { const list = [1,2]; return [removeRange(list, 2, 1), list]; })()", expected: [[], [1, 2]] },
@@ -194,20 +188,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-copy-a-range": {
     solution: "const copyRange = (list, start, end) => list.slice(start, end);",
-    junior: `const copyRange = (list, start, end) => {
-  if (start >= end) {
-    return [];
-  }
-  const copy = list.slice(start, end);
-  return copy;
-};`,
-    senior: `const copyRange = (list, start, end) => {
-  // Clamp the end first, then build the copy from a known length; the source is never touched.
-  const stop = Math.min(end, list.length);
-  const length = Math.max(0, stop - start);
-  return Array.from({ length }, (_, offset) => list[start + offset]);
-};`,
+    junior: "const copyRange = (list, start, end) => {\n  const copy = list.slice(start, end);\n  return copy;\n};",
+    senior: "const copyRange = (list, start, end) => list.slice(start, end);",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),input=Object.freeze([a,b,undefined,NaN,-0]);const out=copyRange(input,0,10000),empty=copyRange(input,3,2);return [out!==input,out[0]===a,out[1]===b,out[2]===undefined,Number.isNaN(out[3]),Object.is(out[4],-0),empty.length,empty!==copyRange(input,3,2)]; })()", expected: [true, true, true, true, true, true, 0, true] },
+      { call: "[copyRange([0,1,2,3],1,-1),copyRange([0,1,2,3],-3,3),copyRange([0,1,2,3],-10000,10000),copyRange([0,1,2,3],-1,-3)]", expected: [[1, 2], [1, 2], [0, 1, 2, 3], []] },
+      { call: "(() => { const list=Object.freeze(Array.from({length:10000},(_,i)=>i));const out=copyRange(list,1,9999);return [out.length,out[0],out[9997],list[0]]; })()", expected: [9998, 1, 9998, 0] },
+
       { call: "copyRange([5,6,7,8,9], 2, 5)", expected: [7, 8, 9] },
       { call: "(() => { const list = [\"x\",\"y\",\"z\"]; const copy = copyRange(list, 0, 3); copy.push(\"w\"); return [list, copy.length]; })()", expected: [["x", "y", "z"], 4] },
       { call: "copyRange([], 0, 1)", expected: [] },
@@ -215,20 +202,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-insert-at-index": {
     solution: "const insertAt = (list, index, item) => { list.splice(index, 0, item); return list; };",
-    junior: `const insertAt = (list, index, item) => {
-  for (let slot = list.length; slot > index; slot -= 1) {
-    list[slot] = list[slot - 1];
-  }
-  list[index] = item;
-  return list;
-};`,
-    senior: `const insertAt = (list, index, item) => {
-  // Clamp so a negative index cannot count from the end, which splice would otherwise do.
-  const at = Math.min(Math.max(index, 0), list.length);
-  list.splice(at, 0, item);
-  return list;
-};`,
+    junior: "const insertAt = (list, index, item) => {\n  const deleteCount = 0;\n  list.splice(index, deleteCount, item);\n  return list;\n};",
+    senior: "const insertAt = (list, index, item) => {\n  list.splice(index, 0, item);\n  return list;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),item=Object.freeze({value:1}),list=[a,b];const out=insertAt(list,1,item);return [out===list,list.length,list[0]===a,list[1]===item,list[2]===b]; })()", expected: [true, 3, true, true, true] },
+      { call: "(() => { const list=[undefined,-0];const out=insertAt(list,1,NaN);return [out===list,list[0]===undefined,Number.isNaN(list[1]),Object.is(list[2],-0)]; })()", expected: [true, true, true, true] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);const out=insertAt(list,0,null);return [out===list,list.length,list[0],list[10000]]; })()", expected: [true, 10001, null, 9999] },
+
       { call: "insertAt([10,20,30,40], 3, 35)", expected: [10, 20, 30, 35, 40] },
       { call: "(() => { const list = [\"a\",\"b\",\"c\"]; return insertAt(list, 1, \"z\") === list; })()", expected: true },
       { call: "insertAt([1,2,3], 1, [0])", expected: [1, [0], 2, 3] },
@@ -244,12 +224,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   list.push(first);
   return list;
 };`,
-    senior: `const rotateOnce = list => {
-  // splice(0, 1) is [] on an empty list, so spreading it pushes nothing and no guard is needed.
-  list.push(...list.splice(0, 1));
-  return list;
-};`,
+    senior: "const rotateOnce = list => {\n  if (!list.length) return list;\n  list.push(list.shift());\n  return list;\n};",
     hiddenTests: [
+      { call: "(() => { const first=Object.freeze({}),second=Object.freeze([]),list=[first,second];const out=rotateOnce(list),empty=[],single=[first];return [out===list,list[0]===second,list[1]===first,rotateOnce(empty)===empty,empty.length,rotateOnce(single)===single,single[0]===first]; })()", expected: [true, true, true, true, 0, true, true] },
+      { call: "(() => { const list=[NaN,undefined,-0];rotateOnce(list);return [list[0]===undefined,Object.is(list[1],-0),Number.isNaN(list[2])]; })()", expected: [true, true, true] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);const out=rotateOnce(list);return [out===list,list.length,list[0],list[9999]]; })()", expected: [true, 10000, 1, 0] },
+
       { call: "rotateOnce([1,2,3,4,5])", expected: [2, 3, 4, 5, 1] },
       { call: "(() => { const list = [1,2,3]; rotateOnce(list); rotateOnce(list); return list; })()", expected: [3, 1, 2] },
       { call: "rotateOnce([]).length", expected: 0 },
@@ -264,12 +244,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   const lastIndex = list.length - 1;
   return list[lastIndex];
 };`,
-    senior: `const lastItem = (list, fallback) => {
-  // slice(-1) is [] on an empty list, so the destructuring default applies only then.
-  const [last = fallback] = list.slice(-1);
-  return last;
-};`,
+    senior: "const lastItem = (list, fallback) => list.length ? list.slice(-1)[0] : fallback;",
     hiddenTests: [
+      { call: "(() => { const fallback=Object.freeze({}),value=Object.freeze({}),list=Object.freeze([value]);return [lastItem(Object.freeze([]),fallback)===fallback,lastItem(list,fallback)===value,lastItem(Object.freeze([undefined]),fallback)===undefined,lastItem(Object.freeze([null]),fallback)===null,lastItem(Object.freeze([false]),fallback)===false]; })()", expected: [true, true, true, true, true] },
+      { call: "(() => { return [Number.isNaN(lastItem(Object.freeze([NaN]),0)),Object.is(lastItem(Object.freeze([-0]),1),-0),lastItem(Object.freeze([\"\"]),\"fallback\")]; })()", expected: [true, true, ""] },
+      { call: "lastItem(Object.freeze(Array.from({length:10000},(_,i)=>i)),null)", expected: 9999 },
+
       { call: "lastItem([10,20,30,40], -1)", expected: 40 },
       { call: "(() => { const list = [\"x\",\"y\"]; return [lastItem(list, \"?\"), list.length]; })()", expected: ["y", 2] },
       { call: "lastItem([], null)", expected: null },
@@ -277,23 +257,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-sum-with-for": {
     solution: "const addUp = numbers => { let total = 0; for (let index = 0; index < numbers.length; index += 1) total += numbers[index]; return total; };",
-    junior: `const addUp = numbers => {
-  if (numbers.length === 0) {
-    return 0;
-  }
-  let total = numbers[0];
-  for (let index = 1; index < numbers.length; index += 1) {
-    total = total + numbers[index];
-  }
-  return total;
-};`,
-    senior: `const addUp = numbers => {
-  let total = 0;
-  // The index is only ever used to read, so for...of says the same thing with less to get wrong.
-  for (const number of numbers) total += number;
-  return total;
-};`,
+    junior: "const addUp = numbers => {\n  let total = 0;\n  for (let index = 0; index < numbers.length; index += 1) {\n    total = total + numbers[index];\n  }\n  return total;\n};",
+    senior: "const addUp = numbers => {\n  let sum = 0;\n  for (let i = 0; i < numbers.length; i++) sum += numbers[i];\n  return sum;\n};",
     hiddenTests: [
+      { call: "addUp(Object.freeze([1.005]))", expected: 1.005 },
+      { call: "(() => { const numbers=[3,1,2];const total=addUp(numbers);return [total,numbers,addUp(Object.freeze([1000000,0.1,-1000000]))]; })()", expected: [6, [3, 1, 2], 0.09999999997671694] },
+      { call: "addUp(Object.freeze(Array.from({length:10000},()=>-1000000)))", expected: -10000000000 },
+
       { call: "addUp([100,200,300,400])", expected: 1000 },
       { call: "addUp([7])", expected: 7 },
       { call: "addUp([1,1,1,1,1,1,1,1,1,1])", expected: 10 },
@@ -311,11 +281,11 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   }
   return count;
 };`,
-    senior: `const countMatches = (items, target) => {
-  // Keep the matches, then count them; filter compares strictly, so "1" never matches 1.
-  return items.filter(item => item === target).length;
-};`,
+    senior: "const countMatches = (items, target) => {\n  let count = 0;\n  for (let i = 0; i < items.length; i++) count += items[i] === target ? 1 : 0;\n  return count;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({x:1}),b=Object.freeze({x:1}),items=Object.freeze([a,b,a,NaN,0,-0,undefined,null]);return [countMatches(items,a),countMatches(items,NaN),countMatches(items,0),countMatches(items,-0),countMatches(items,undefined),countMatches(items,null)]; })()", expected: [2, 0, 2, 2, 1, 1] },
+      { call: "countMatches(Object.freeze(Array.from({length:10000},()=>\"x\")),\"x\")", expected: 10000 },
+
       { call: "countMatches([true,false,true,true], true)", expected: 3 },
       { call: "countMatches([0,0,0,0,0], 0)", expected: 5 },
       { call: "countMatches([null, undefined, null], null)", expected: 2 },
@@ -344,6 +314,9 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return list;
 };`,
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),list=[a,NaN,undefined,-0,b];const out=reverseInPlace(list);return [out===list,list[0]===b,Object.is(list[1],-0),list[2]===undefined,Number.isNaN(list[3]),list[4]===a]; })()", expected: [true, true, true, true, true, true] },
+      { call: "(() => { const list=Array.from({length:10000},(_,i)=>i);const out=reverseInPlace(list);const empty=[],one=[undefined];return [out===list,list[0],list[9999],reverseInPlace(empty)===empty,reverseInPlace(one)===one,one.length]; })()", expected: [true, 9999, 0, true, true, 1] },
+
       { call: "(() => { const list = [1,2,3,4,5]; list.reverse = () => { throw new Error(\"reverse() is not allowed here\"); }; return reverseInPlace(list); })()", expected: [5, 4, 3, 2, 1] },
       { call: "(() => { const list = [1,2]; return reverseInPlace(list) === list; })()", expected: true },
       { call: "(() => { const list = [\"x\",\"y\",\"z\",\"w\"]; reverseInPlace(list); return list.join(\"\"); })()", expected: "wzyx" },
@@ -363,12 +336,11 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   }
   return values;
 };`,
-    senior: `const countdownBy = (start, step) => {
-  // How many values sit above zero is known up front, so build the array directly.
-  const count = Math.max(0, Math.ceil(start / step));
-  return Array.from({ length: count }, (_, index) => start - index * step);
-};`,
+    senior: "const countdownBy = (start, step) => {\n  const values = [];\n  while (start > 0) {\n    values.push(start);\n    start -= step;\n  }\n  return values;\n};",
     hiddenTests: [
+      { call: "(() => { const a=countdownBy(-10000,10000),b=countdownBy(0,1),c=countdownBy(1,10000);return [a.length,b.length,a!==b,c,c!==countdownBy(1,10000)]; })()", expected: [0, 0, true, [1], true] },
+      { call: "(() => { const a=countdownBy(10000,1),b=countdownBy(10000,9999);return [a.length,a[0],a[9999],b]; })()", expected: [10000, 10000, 1, [10000, 1]] },
+
       { call: "countdownBy(20, 7)", expected: [20, 13, 6] },
       { call: "countdownBy(1, 1)", expected: [1] },
       { call: "countdownBy(9, 3)", expected: [9, 6, 3] },
@@ -376,25 +348,13 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   },
   "js-first-divisible": {
     solution: "const firstDivisible = (numbers, divisor) => { let found = null; let index = 0; while (index < numbers.length) { if (numbers[index] % divisor === 0) { found = numbers[index]; break; } index += 1; } return found; };",
-    junior: `const firstDivisible = (numbers, divisor) => {
-  let index = 0;
-  let result = null;
-  let found = false;
-  while (index < numbers.length && !found) {
-    const number = numbers[index];
-    if (number % divisor === 0) {
-      result = number;
-      found = true;
-    }
-    index += 1;
-  }
-  return result;
-};`,
-    senior: `const firstDivisible = (numbers, divisor) => {
-  // find stops at the first hit; ?? keeps a found 0 while turning "nothing found" into null.
-  return numbers.find(number => number % divisor === 0) ?? null;
-};`,
+    junior: "const firstDivisible = (numbers, divisor) => {\n  let index = 0;\n  let result = null;\n  while (index < numbers.length) {\n    const number = numbers[index];\n    if (number % divisor === 0) {\n      result = number;\n      break;\n    }\n    index += 1;\n  }\n  return result;\n};",
+    senior: "const firstDivisible = (numbers, divisor) => {\n  let i = 0, found = null;\n  while (i < numbers.length) {\n    const value = numbers[i++];\n    if (value % divisor === 0) { found = value; break; }\n  }\n  return found;\n};",
     hiddenTests: [
+      { call: "(() => { const values=Object.freeze([7,-12,24]);return [firstDivisible(values,-4),Object.is(firstDivisible(Object.freeze([-0,4]),2),-0)]; })()", expected: [-12, true] },
+      { call: "(() => { const values=Object.freeze(Array.from({length:10000},(_,i)=>i===9999?1000000000:3));return firstDivisible(values,1000000); })()", expected: 1000000000 },
+      { call: "(() => { const values=new __probe.Proxy([4,8,12],{get(target,key,receiver){if(key===\"1\"||key===\"2\")throw Error(\"read after match\");return __probe.get(target,key,receiver);}});return firstDivisible(values,2); })()", expected: 4 },
+
       { call: "firstDivisible([13,17,19,21,22], 11)", expected: 22 },
       { call: "firstDivisible([8,16,24], 8)", expected: 8 },
       { call: "firstDivisible([-6,9], 3)", expected: -6 },
@@ -426,6 +386,10 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return -1;
 };`,
     hiddenTests: [
+      { call: "(() => { const calls=[];const result=attemptUntil(function(...args){calls.push(args.length);return calls.length===3;},5);return [result,calls]; })()", expected: [3, [0, 0, 0]] },
+      { call: "(() => { const reason={code:\"local\"};let calls=0;try{attemptUntil(()=>{calls++;if(calls===2)throw reason;return false;},5);return [false,calls];}catch(error){return [error===reason,calls];} })()", expected: [true, 2] },
+      { call: "(() => { let calls=0;const result=attemptUntil(()=>{calls++;return calls===1000;},1000);return [result,calls]; })()", expected: [1000, 1000] },
+
       { call: "(() => { let calls = 0; const result = attemptUntil(() => { calls += 1; return calls === 6; }, 10); return [result, calls]; })()", expected: [6, 6] },
       { call: "(() => { let calls = 0; attemptUntil(() => { calls += 1; return true; }, 10); return calls; })()", expected: 1 },
       { call: "(() => { let calls = 0; attemptUntil(() => { calls += 1; return false; }, 3); return calls; })()", expected: 3 },
@@ -454,6 +418,10 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   return result;
 };`,
     hiddenTests: [
+      { call: "joinWords(Object.freeze([\" a \",\"\\n\",\"🦈\",\"\",\"b\"]),\" ---> \")", expected: " a  ---> \n ---> 🦈 --->  ---> b" },
+      { call: "(() => { const word=\"x\".repeat(1000),sep=\"-\".repeat(100),words=Object.freeze([word,word,word]);const result=joinWords(words,sep);return [result.length,result===word+sep+word+sep+word]; })()", expected: [3200, true] },
+      { call: "(() => { const words=Object.freeze(Array.from({length:1000},()=>\"x\"));const out=joinWords(words,\"|\");return [out.length,out.slice(0,3),out.slice(-3)]; })()", expected: [1999, "x|x", "x|x"] },
+
       { call: "joinWords([\"one\",\"two\",\"three\",\"four\"], \" | \")", expected: "one | two | three | four" },
       { call: "(() => { const words = [\"x\",\"y\"]; words.join = () => { throw new Error(\"join() is not allowed here\"); }; return joinWords(words, \"+\"); })()", expected: "x+y" },
       { call: "joinWords([\"\",\"\"], \"-\")", expected: "-" },
@@ -470,9 +438,12 @@ export const JAVASCRIPT_LOOP_SOLUTIONS: Record<string, CodingSolution> = {
   }
   return result;
 };`,
-    senior: `// map already pairs each item with its index; the template literal does the formatting.
-const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item}\`);`,
+    senior: "const numberItems = items => {\n  const labels = [];\n  for (const [i, item] of items.entries()) labels.push(String(i + 1) + \". \" + item);\n  return labels;\n};",
     hiddenTests: [
+      { call: "numberItems(Object.freeze([\" a \",\"\\n🦈\",-0,1.25]))", expected: ["1.  a ", "2. \n🦈", "3. 0", "4. 1.25"] },
+      { call: "(() => { const input=Object.freeze(Array.from({length:1000},()=>\"x\"));const a=numberItems(input),b=numberItems(input),empty=Object.freeze([]);return [a.length,a[999],a!==b,numberItems(empty)!==numberItems(empty)]; })()", expected: [1000, "1000. x", true, true] },
+      { call: "numberItems(Object.freeze([\"x\".repeat(1000)]))[0].length", expected: 1003 },
+
       { call: "numberItems([\"a\",\"b\",\"c\",\"d\",\"e\",\"f\",\"g\",\"h\",\"i\",\"j\",\"k\"])[10]", expected: "11. k" },
       { call: "numberItems([\"\", \"x\"])", expected: ["1. ", "2. x"] },
       { call: "(() => { const items = [\"a\"]; numberItems(items); return items; })()", expected: ["a"] },
@@ -490,12 +461,11 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   }
   return table;
 };`,
-    senior: `const timesTable = size => {
-  const range = Array.from({ length: size }, (_, index) => index + 1);
-  // Every row is the range scaled by its own number.
-  return range.map(row => range.map(column => row * column));
-};`,
+    senior: "const timesTable = size => {\n  const table = [];\n  for (let r = 1; r <= size; r++) {\n    const row = [];\n    for (let c = 1; c <= size; c++) row.push(r * c);\n    table.push(row);\n  }\n  return table;\n};",
     hiddenTests: [
+      { call: "(() => { const a=timesTable(3),b=timesTable(3);a[0][0]=99;return [a!==b,a[0]!==a[1],b[0][0],a[1][0],timesTable(0)!==timesTable(0)]; })()", expected: [true, true, 1, 2, true] },
+      { call: "(() => { const t=timesTable(100);return [t.length,t.every(row=>row.length===100),t[99][99],t[0][99],t[99][0],new Set(t).size]; })()", expected: [100, true, 10000, 100, 100, 100] },
+
       { call: "timesTable(5)[4][4]", expected: 25 },
       { call: "timesTable(6).length", expected: 6 },
       { call: "timesTable(7)[2]", expected: [3, 6, 9, 12, 15, 18, 21] },
@@ -503,24 +473,17 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   },
   "js-some-and-every": {
     solution: "const passReport = (scores, passMark) => ({ anyPassed: scores.some(score => score >= passMark), allPassed: scores.every(score => score >= passMark) });",
-    junior: `const passReport = (scores, passMark) => {
-  let anyPassed = false;
-  let allPassed = true;
-  for (const score of scores) {
-    if (score >= passMark) {
-      anyPassed = true;
-    } else {
-      allPassed = false;
-    }
-  }
-  return { anyPassed: anyPassed, allPassed: allPassed };
-};`,
+    junior: "const passReport = (scores, passMark) => {\n  const anyPassed = scores.some(score => score >= passMark);\n  const allPassed = scores.every(score => score >= passMark);\n  return { anyPassed: anyPassed, allPassed: allPassed };\n};",
     senior: `const passReport = (scores, passMark) => {
   // One predicate serves both questions; some and every already give the right answers for an empty list.
   const passes = score => score >= passMark;
   return { anyPassed: scores.some(passes), allPassed: scores.every(passes) };
 };`,
     hiddenTests: [
+      { call: "passReport(Object.freeze([40.5,40.25]),40.6)", expected: {"anyPassed": false, "allPassed": false} },
+      { call: "(() => { const scores=[70,40],a=passReport(scores,50),b=passReport(scores,50);return [scores,a,a!==b]; })()", expected: [[70, 40], {"anyPassed": true, "allPassed": false}, true] },
+      { call: "passReport(Object.freeze(Array.from({length:10000},(_,i)=>i===9999?99.5:0)),99.5)", expected: {"anyPassed": true, "allPassed": false} },
+
       { call: "passReport([49,50,51], 50)", expected: { anyPassed: true, allPassed: false } },
       { call: "passReport([100,99,98,97], 97)", expected: { anyPassed: true, allPassed: true } },
       { call: "passReport([0], 1)", expected: { anyPassed: false, allPassed: false } },
@@ -528,23 +491,13 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   },
   "js-locate-item": {
     solution: "const locate = (list, item) => ({ present: list.includes(item), index: list.indexOf(item) });",
-    junior: `const locate = (list, item) => {
-  let index = -1;
-  for (let position = 0; position < list.length; position += 1) {
-    if (list[position] === item) {
-      index = position;
-      break;
-    }
-  }
-  const present = index !== -1;
-  return { present: present, index: index };
-};`,
-    senior: `const locate = (list, item) => {
-  // indexOf answers both questions in one scan; includes would walk the list a second time.
-  const index = list.indexOf(item);
-  return { present: index !== -1, index };
-};`,
+    junior: "const locate = (list, item) => {\n  const present = list.includes(item);\n  const index = list.indexOf(item);\n  return { present: present, index: index };\n};",
+    senior: "const locate = (list, item) => {\n  const index = list.indexOf(item);\n  return { present: list.includes(item), index };\n};",
     hiddenTests: [
+      { call: "locate(Object.freeze([NaN,1,NaN]),NaN)", expected: {"present": true, "index": -1} },
+      { call: "(() => { const a=Object.freeze({x:1}),b=Object.freeze({x:1}),list=Object.freeze([a,-0,undefined]);return [locate(list,a),locate(list,b),locate(list,0),locate(list,undefined),locate(list,a)!==locate(list,a)]; })()", expected: [{"present": true, "index": 0}, {"present": false, "index": -1}, {"present": true, "index": 1}, {"present": true, "index": 2}, true] },
+      { call: "locate(Object.freeze(Array.from({length:10000},(_,i)=>i)),9999)", expected: {"present": true, "index": 9999} },
+
       { call: "locate([\"x\",\"y\",\"z\",\"w\"], \"w\")", expected: { present: true, index: 3 } },
       { call: "locate([0, false, \"\"], false)", expected: { present: true, index: 1 } },
       { call: "locate([null], undefined)", expected: { present: false, index: -1 } },
@@ -552,21 +505,7 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   },
   "js-remove-by-id": {
     solution: "const removeById = (items, id) => { const index = items.findIndex(item => item.id === id); if (index === -1) return null; return items.splice(index, 1)[0]; };",
-    junior: `const removeById = (items, id) => {
-  let position = -1;
-  for (let index = 0; index < items.length; index += 1) {
-    if (items[index].id === id) {
-      position = index;
-      break;
-    }
-  }
-  if (position === -1) {
-    return null;
-  }
-  const removed = items[position];
-  items.splice(position, 1);
-  return removed;
-};`,
+    junior: "const removeById = (items, id) => {\n  const position = items.findIndex(item => item.id === id);\n  if (position === -1) {\n    return null;\n  }\n  const removed = items[position];\n  items.splice(position, 1);\n  return removed;\n};",
     senior: `const removeById = (items, id) => {
   const index = items.findIndex(item => item.id === id);
   // splice hands back the removed items as an array; with no match there is nothing to splice.
@@ -574,6 +513,10 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   return removed;
 };`,
     hiddenTests: [
+      { call: "(() => { const key={},first=Object.freeze({id:key}),other=Object.freeze({id:{}}),last=Object.freeze({id:key}),items=[first,other,last];const out=removeById(items,key);return [out===first,items.length,items[0]===other,items[1]===last]; })()", expected: [true, 2, true, true] },
+      { call: "(() => { const a=Object.freeze({id:1}),b=Object.freeze({id:\"1\"}),c=Object.freeze({id:NaN}),items=[a,b,c];const out=removeById(items,\"1\");const missing=removeById(items,NaN);return [out===b,missing===null,items[0]===a,items[1]===c]; })()", expected: [true, true, true, true] },
+      { call: "(() => { const items=Array.from({length:10000},(_,id)=>Object.freeze({id})),last=items[9999];const removed=removeById(items,9999);return [removed===last,items.length,items[9998].id]; })()", expected: [true, 9999, 9998] },
+
       { call: "(() => { const items = [{id:\"a\"},{id:\"b\"},{id:\"c\"},{id:\"d\"}]; const removed = removeById(items, \"d\"); return [removed.id, items.length]; })()", expected: ["d", 3] },
       { call: "(() => { const items = [{id:1},{id:2},{id:3}]; removeById(items, 42); return items.length; })()", expected: 3 },
       { call: "(() => { const items = [{id:1}]; return removeById(items, 1) !== null && items.length === 0; })()", expected: true },
@@ -599,35 +542,24 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   return numbers.reduce((best, number) => Math.max(best, number));
 };`,
     hiddenTests: [
+      { call: "highest(Object.freeze([1.005,0.5,-1]))", expected: 1.005 },
+      { call: "(() => { const numbers=[3,1,2];const result=highest(numbers);return [result,numbers,highest(Object.freeze([-0,0]))===0]; })()", expected: [3, [3, 1, 2], true] },
+      { call: "highest(Object.freeze(Array.from({length:10000},(_,i)=>i===9999?-0.000001:-1000000)))", expected: -1e-06 },
+
       { call: "highest([10,100,1000,999])", expected: 1000 },
       { call: "highest([0,-1])", expected: 0 },
       { call: "highest([2.5,2.75,2.6])", expected: 2.75 },
     ],
   },
   "js-count-by-key": {
-    solution: "const countBy = (items, keyFn) => items.reduce((counts, item) => { const key = keyFn(item); counts[key] = (counts[key] ?? 0) + 1; return counts; }, {});",
-    junior: `const countBy = (items, keyFn) => {
-  const counts = {};
-  for (const item of items) {
-    const key = keyFn(item);
-    if (counts[key] === undefined) {
-      counts[key] = 1;
-    } else {
-      counts[key] = counts[key] + 1;
-    }
-  }
-  return counts;
-};`,
-    senior: `const countBy = (items, keyFn) => {
-  // Count in a Map, which takes any key as it is, then hand back the plain object the caller expects.
-  const counts = new Map();
-  for (const item of items) {
-    const key = keyFn(item);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return Object.fromEntries(counts);
-};`,
+    solution: "const countBy = (items, keyFn) => items.reduce((counts, item) => { const key = String(keyFn(item)); counts[key] = (counts[key] ?? 0) + 1; return counts; }, Object.create(null));",
+    junior: "const countBy = (items, keyFn) => {\n  const counts = Object.create(null);\n  return items.reduce((result, item) => {\n    const key = String(keyFn(item));\n    const previous = Object.hasOwn(result, key) ? result[key] : 0;\n    result[key] = previous + 1;\n    return result;\n  }, counts);\n};",
+    senior: "const countBy = (items, keyFn) => {\n  const counts = items.reduce((map, item) => {\n    const key = String(keyFn(item));\n    map.set(key, (map.get(key) ?? 0) + 1);\n    return map;\n  }, new Map());\n  return Object.fromEntries(counts);\n};",
     hiddenTests: [
+      { call: "(() => { const keys=[\"__proto__\",\"constructor\",\"toString\",\"\",1,\"1\",-0,\"0\"],items=Object.freeze(keys.map(key=>Object.freeze({key}))),calls=[];const out=countBy(items,(...args)=>{calls.push(args);return args[0].key;});return [out.__proto__,out.constructor,out.toString,out[\"\"],out[\"1\"],out[\"0\"],Object.hasOwn(out,\"__proto__\"),calls.length,calls.every((a,i)=>a.length===1&&a[0]===items[i]),out!==countBy(Object.freeze([]),()=>\"x\")]; })()", expected: [1, 1, 1, 1, 2, 2, true, 8, true, true] },
+      { call: "(() => { const reason={},calls=[];try{countBy(Object.freeze([1,2,3]),value=>{calls.push(value);if(value===2)throw reason;return \"x\";});return [false,calls];}catch(error){return [error===reason,calls];} })()", expected: [true, [1, 2]] },
+      { call: "countBy(Object.freeze(Array.from({length:10000},()=>0)),()=>\"__proto__\").__proto__", expected: 10000 },
+
       { call: "countBy([{team:\"red\"},{team:\"blue\"},{team:\"red\"},{team:\"red\"}], person => person.team)", expected: { red: 3, blue: 1 } },
       { call: "countBy([\"aa\",\"b\",\"cc\",\"ddd\"], word => word.length)", expected: { "1": 1, "2": 2, "3": 1 } },
       { call: "countBy([true,false,true], value => String(value))", expected: { true: 2, false: 1 } },
@@ -635,21 +567,12 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   },
   "js-running-totals": {
     solution: "const runningTotals = numbers => numbers.reduce((totals, number) => { const previous = totals.length > 0 ? totals[totals.length - 1] : 0; totals.push(previous + number); return totals; }, []);",
-    junior: `const runningTotals = numbers => {
-  const totals = [];
-  let runningSum = 0;
-  for (const number of numbers) {
-    runningSum = runningSum + number;
-    totals.push(runningSum);
-  }
-  return totals;
-};`,
-    senior: `const runningTotals = numbers => {
-  let sum = 0;
-  // map keeps one output per input; the closure carries the running sum between calls.
-  return numbers.map(number => (sum += number));
-};`,
+    junior: "const runningTotals = numbers => {\n  return numbers.reduce((totals, number) => {\n    const previous = totals.length === 0 ? 0 : totals[totals.length - 1];\n    const next = previous + number;\n    totals.push(next);\n    return totals;\n  }, []);\n};",
+    senior: "const runningTotals = numbers => numbers.reduce((out, number) => {\n  out.push((out.length ? out[out.length - 1] : 0) + number);\n  return out;\n}, []);",
     hiddenTests: [
+      { call: "(() => { const input=Object.freeze([1.005,-1.005,0.1,0.2]);const a=runningTotals(input),b=runningTotals(input);return [a,a!==input,a!==b,runningTotals(Object.freeze([]))!==runningTotals(Object.freeze([]))]; })()", expected: [[1.005, 0, 0.1, 0.30000000000000004], true, true, true] },
+      { call: "(() => { const input=Object.freeze(Array.from({length:10000},()=>-1000000)),out=runningTotals(input);return [out.length,out[0],out[9999],input[9999]]; })()", expected: [10000, -1000000, -10000000000, -1000000] },
+
       { call: "runningTotals([10,20,30,40,50])", expected: [10, 30, 60, 100, 150] },
       { call: "(() => { const numbers = [1,2,3]; runningTotals(numbers); return numbers; })()", expected: [1, 2, 3] },
       { call: "runningTotals([0.5,0.5,0.5])", expected: [0.5, 1, 1.5] },
@@ -657,19 +580,13 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   },
   "js-apply-all": {
     solution: "const applyAll = (value, steps) => steps.reduce((current, step) => step(current), value);",
-    junior: `const applyAll = (value, steps) => {
-  let current = value;
-  for (const step of steps) {
-    current = step(current);
-  }
-  return current;
-};`,
-    senior: `const applyAll = (value, steps) => {
-  // Fold the steps into one pipeline function first, then run it once; no steps leaves the identity.
-  const pipeline = steps.reduce((run, step) => input => step(run(input)), input => input);
-  return pipeline(value);
-};`,
+    junior: "const applyAll = (value, steps) => {\n  return steps.reduce((current, step) => {\n    const next = step(current);\n    return next;\n  }, value);\n};",
+    senior: "const applyAll = (value, steps) => steps.reduce((result, fn) => fn(result), value);",
     hiddenTests: [
+      { call: "(() => { const box=Object.freeze({}),calls=[],steps=Object.freeze([(...args)=>{calls.push(args.length,args[0]===box);return undefined;},(...args)=>{calls.push(args.length,args[0]===undefined);return false;},(...args)=>{calls.push(args.length,args[0]===false);return box;}]);return [applyAll(box,steps)===box,calls,applyAll(box,Object.freeze([]))===box]; })()", expected: [true, [1, true, 1, true, 1, true], true] },
+      { call: "(() => { const reason={},calls=[];try{applyAll(0,Object.freeze([v=>{calls.push(1);return v+1;},v=>{calls.push(2);throw reason;},v=>{calls.push(3);return v;} ]));return [false,calls];}catch(error){return [error===reason,calls];} })()", expected: [true, [1, 2]] },
+      { call: "applyAll(0,Object.freeze(Array.from({length:1000},()=>value=>value+1)))", expected: 1000 },
+
       { call: "applyAll(1, [n => n + 1, n => n + 1, n => n + 1, n => n + 1])", expected: 5 },
       { call: "applyAll(0, [n => n - 1])", expected: -1 },
       { call: "applyAll(\"a\", [text => text + \"b\", text => text + \"c\", text => text.length])", expected: 3 },
@@ -677,22 +594,12 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   },
   "js-swap-pairs": {
     solution: "const swapPairs = list => { const result = list.slice(); for (let index = 0; index + 1 < result.length; index += 2) { [result[index], result[index + 1]] = [result[index + 1], result[index]]; } return result; };",
-    junior: `const swapPairs = list => {
-  const copy = list.slice();
-  for (let index = 0; index < copy.length - 1; index += 2) {
-    const first = copy[index];
-    const second = copy[index + 1];
-    copy[index] = second;
-    copy[index + 1] = first;
-  }
-  return copy;
-};`,
-    senior: `const swapPairs = list => list.map((item, index, all) => {
-  // Even positions look one to the right, odd ones look one to the left; an odd tail has no partner.
-  const partner = index % 2 === 0 ? index + 1 : index - 1;
-  return partner < all.length ? all[partner] : item;
-});`,
+    junior: "const swapPairs = list => {\n  const copy = list.slice();\n  for (let index = 0; index + 1 < copy.length; index += 2) {\n    const partner = index + 1;\n    [copy[index], copy[partner]] = [copy[partner], copy[index]];\n  }\n  return copy;\n};",
+    senior: "const swapPairs = list => {\n  const out = [...list];\n  for (let i = 0; i + 1 < out.length; i += 2) [out[i], out[i + 1]] = [out[i + 1], out[i]];\n  return out;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),input=Object.freeze([a,b,undefined,NaN,-0]);const out=swapPairs(input);return [out!==input,out[0]===b,out[1]===a,Number.isNaN(out[2]),out[3]===undefined,Object.is(out[4],-0),input[0]===a,swapPairs(Object.freeze([]))!==swapPairs(Object.freeze([]))]; })()", expected: [true, true, true, true, true, true, true, true] },
+      { call: "(() => { const list=Object.freeze(Array.from({length:10000},(_,i)=>i)),out=swapPairs(list);return [out.length,out[0],out[1],out[9998],out[9999],out!==list]; })()", expected: [10000, 1, 0, 9999, 9998, true] },
+
       { call: "swapPairs([1,2,3,4,5,6,7,8])", expected: [2, 1, 4, 3, 6, 5, 8, 7] },
       { call: "swapPairs([true,false])", expected: [false, true] },
       { call: "(() => { const list = [\"x\",\"y\",\"z\"]; const out = swapPairs(list); return out !== list && out.join(\"\") === \"yxz\"; })()", expected: true },
@@ -700,20 +607,12 @@ const numberItems = items => items.map((item, index) => \`\${index + 1}. \${item
   },
   "js-sum-labelled-pairs": {
     solution: "const totalOf = (pairs, label) => { let total = 0; for (const [name, value] of pairs) { if (name === label) total += value; } return total; };",
-    junior: `const totalOf = (pairs, label) => {
-  let total = 0;
-  for (const pair of pairs) {
-    const name = pair[0];
-    const value = pair[1];
-    if (name === label) {
-      total = total + value;
-    }
-  }
-  return total;
-};`,
-    senior: `// Destructure each pair in the reducer's parameter list; a non-matching label passes the total through.
-const totalOf = (pairs, label) => pairs.reduce((total, [name, value]) => (name === label ? total + value : total), 0);`,
+    junior: "const totalOf = (pairs, label) => {\n  let total = 0;\n  for (const [name, value] of pairs) {\n    if (name === label) {\n      total = total + value;\n    }\n  }\n  return total;\n};",
+    senior: "const totalOf = (pairs, label) => {\n  let sum = 0;\n  for (const [name, value] of pairs) if (name === label) sum += value;\n  return sum;\n};",
     hiddenTests: [
+      { call: "totalOf(Object.freeze([Object.freeze([\" x \",1.005]),Object.freeze([\"x\",99]),Object.freeze([\" x \",0.2])]),\" x \")", expected: 1.2049999999999998 },
+      { call: "(() => { const pairs=Object.freeze(Array.from({length:10000},(_,i)=>Object.freeze([i%2?\"🦈\":\"\",-1000000])));return [totalOf(pairs,\"🦈\"),totalOf(pairs,\"\")]; })()", expected: [-5000000000, -5000000000] },
+
       { call: "totalOf([[\"tea\",3],[\"coffee\",4],[\"tea\",3],[\"tea\",3]], \"tea\")", expected: 9 },
       { call: "totalOf([[\"k\",0.5],[\"k\",0.25]], \"k\")", expected: 0.75 },
       { call: "totalOf([[\"n\",1],[\"N\",100]], \"n\")", expected: 1 },
@@ -721,27 +620,16 @@ const totalOf = (pairs, label) => pairs.reduce((total, [name, value]) => (name =
   },
   "js-immutable-list-edits": {
     solution: "const withInserted = (list, index, item) => [...list.slice(0, index), item, ...list.slice(index)];\nconst withoutIndex = (list, index) => [...list.slice(0, index), ...list.slice(index + 1)];\nconst withReplaced = (list, index, item) => [...list.slice(0, index), item, ...list.slice(index + 1)];",
-    junior: `const withInserted = (list, index, item) => {
-  const copy = list.slice();
-  copy.splice(index, 0, item);
-  return copy;
-};
-const withoutIndex = (list, index) => {
-  const copy = list.slice();
-  copy.splice(index, 1);
-  return copy;
-};
-const withReplaced = (list, index, item) => {
-  const copy = list.slice();
-  copy[index] = item;
-  return copy;
-};`,
+    junior: "const withInserted = (list, index, item) => {\n  const head = list.slice(0, index);\n  const tail = list.slice(index);\n  return [...head, item, ...tail];\n};\nconst withoutIndex = (list, index) => {\n  const head = list.slice(0, index);\n  const tail = list.slice(index + 1);\n  return [...head, ...tail];\n};\nconst withReplaced = (list, index, item) => {\n  const head = list.slice(0, index);\n  const tail = list.slice(index + 1);\n  return [...head, item, ...tail];\n};",
     senior: `// One non-mutating splice covers all three edits: copy up to the index, add the new items, copy the rest.
 const spliced = (list, index, remove, ...insert) => [...list.slice(0, index), ...insert, ...list.slice(index + remove)];
 const withInserted = (list, index, item) => spliced(list, index, 0, item);
 const withoutIndex = (list, index) => spliced(list, index, 1);
 const withReplaced = (list, index, item) => spliced(list, index, 1, item);`,
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),item=Object.freeze([1]),list=Object.freeze([a,undefined,NaN,-0,b]);const ins=withInserted(list,1,item),rep=withReplaced(list,1,item),rem=withoutIndex(list,1),nothing=withoutIndex(list,list.length);return [ins!==list,ins[0]===a,ins[1]===item,ins[2]===undefined,rep[1]===item,Number.isNaN(rep[2]),Object.is(rep[3],-0),rem[0]===a,Number.isNaN(rem[1]),rem[3]===b,nothing!==list,nothing.length,withInserted(Object.freeze([]),0,item)[0]===item,withoutIndex(Object.freeze([]),0)!==withoutIndex(Object.freeze([]),0)]; })()", expected: [true, true, true, true, true, true, true, true, true, true, true, 5, true, true] },
+      { call: "(() => { const list=Object.freeze(Array.from({length:10000},(_,i)=>i)),a=withInserted(list,10000,null),b=withoutIndex(list,9999),c=withReplaced(list,0,null);return [a.length,a[10000],b.length,b[9998],c.length,c[0],c[9999],list[0]]; })()", expected: [10001, null, 9999, 9998, 10000, null, 9999, 0] },
+
       { call: "withReplaced([\"a\",\"b\",\"c\",\"d\"], 0, \"z\")", expected: ["z", "b", "c", "d"] },
       { call: "(() => { const list = [\"a\",\"b\"]; const out = withInserted(list, 1, \"x\"); return out !== list && out.length === 3 && list.length === 2; })()", expected: true },
       { call: "withoutIndex([5,6,7,8], 3)", expected: [5, 6, 7] },
@@ -749,16 +637,12 @@ const withReplaced = (list, index, item) => spliced(list, index, 1, item);`,
   },
   "js-variadic-sum": {
     solution: "const sumAll = (...numbers) => { let total = 0; for (const number of numbers) total += number; return total; };",
-    junior: `const sumAll = (...numbers) => {
-  let total = 0;
-  for (let index = 0; index < numbers.length; index += 1) {
-    total = total + numbers[index];
-  }
-  return total;
-};`,
-    senior: `// The rest parameter is a real array, so reduce folds it straight into a total; no arguments leaves the seed 0.
-const sumAll = (...numbers) => numbers.reduce((total, number) => total + number, 0);`,
+    junior: "const sumAll = (...numbers) => {\n  let total = 0;\n  for (const number of numbers) {\n    total = total + number;\n  }\n  return total;\n};",
+    senior: "const sumAll = (...numbers) => {\n  let sum = 0;\n  for (const value of numbers) sum += value;\n  return sum;\n};",
     hiddenTests: [
+      { call: "sumAll(1.005)", expected: 1.005 },
+      { call: "(() => { const values=Object.freeze([1000000,-1000000,1e-9]);return [sumAll(...values)===1e-9,values[0],sumAll(...Object.freeze(Array.from({length:1000},()=>-1000000)))]; })()", expected: [true, 1000000, -1000000000] },
+
       { call: "sumAll(1,2,3,4,5,6,7,8,9,10)", expected: 55 },
       { call: "sumAll(7)", expected: 7 },
       { call: "(() => { const values = [2, 4, 8]; return sumAll(...values, 16); })()", expected: 30 },
@@ -776,15 +660,11 @@ const sumAll = (...numbers) => numbers.reduce((total, number) => total + number,
   };
   return tally;
 };`,
-    senior: `const makeTally = start => {
-  let total = start;
-  // Each call folds its own arguments first, then adds that to the total the closure keeps.
-  return (...values) => {
-    total += values.reduce((sum, value) => sum + value, 0);
-    return total;
-  };
-};`,
+    senior: "const makeTally = start => {\n  let total = start;\n  return (...values) => {\n    for (const value of values) total += value;\n    return total;\n  };\n};",
     hiddenTests: [
+      { call: "(() => { const tally=makeTally(1000000);const value=tally(-1000000,1e-9);return [value===1e-9,tally()===value,makeTally(0)!==makeTally(0)]; })()", expected: [true, true, true] },
+      { call: "(() => { const a=makeTally(0),b=makeTally(-1);const first=a(1.005);a(...Array.from({length:1000},()=>1000000));let lastB;for(let i=0;i<1000;i++)lastB=b(1);return [first,a(),lastB]; })()", expected: [1.005, 1000000001.005, 999] },
+
       { call: "(() => { const tally = makeTally(1); tally(1); tally(1); tally(1); return tally(1); })()", expected: 5 },
       { call: "(() => { const tally = makeTally(0); return [tally(2), tally(2), tally(2)]; })()", expected: [2, 4, 6] },
       { call: "(() => { const tally = makeTally(5); tally(...[1, 2, 3]); return tally(); })()", expected: 11 },
@@ -803,9 +683,11 @@ const sumAll = (...numbers) => numbers.reduce((total, number) => total + number,
   }
   return handlers;
 };`,
-    senior: `// Each callback closes over its own index, which the mapping function receives as a parameter.
-const makeHandlers = count => Array.from({ length: count }, (_, index) => () => index);`,
+    senior: "const makeHandlers = count => {\n  const handlers = [];\n  for (let i = 0; i < count; i++) handlers.push(() => i);\n  return handlers;\n};",
     hiddenTests: [
+      { call: "(() => { const a=makeHandlers(3),b=makeHandlers(3),first=a[0],last=a[2];a[0]=()=>99;a.length=0;return [a!==b,first!==b[0],last(),first(),last(),b.map(f=>f()),makeHandlers(0)!==makeHandlers(0)]; })()", expected: [true, true, 2, 0, 2, [0, 1, 2], true] },
+      { call: "(() => { const h=makeHandlers(10000);return [h.length,h[9999](),h[0](),h[5000]()]; })()", expected: [10000, 9999, 0, 5000] },
+
       { call: "makeHandlers(6).map(handler => handler())", expected: [0, 1, 2, 3, 4, 5] },
       { call: "makeHandlers(5)[2]()", expected: 2 },
       { call: "(() => { const handlers = makeHandlers(2); return handlers[0] !== handlers[1]; })()", expected: true },
@@ -833,20 +715,12 @@ const myFilter = (list, fn) => {
   }
   return result;
 };`,
-    senior: `const myMap = (list, fn) => {
-  // The output length is known, so allocate it once and fill by index instead of pushing.
-  const result = new Array(list.length);
-  for (let index = 0; index < list.length; index += 1) result[index] = fn(list[index], index);
-  return result;
-};
-const myFilter = (list, fn) => {
-  const result = [];
-  for (const [index, item] of list.entries()) {
-    if (fn(item, index)) result.push(item);
-  }
-  return result;
-};`,
+    senior: "const myMap = (list, fn) => {\n  const result = new Array(list.length);\n  for (let index = 0; index < list.length; index += 1) result[index] = fn(list[index], index);\n  return result;\n};\nconst myFilter = (list, fn) => {\n  const result = [];\n  for (let i = 0; i < list.length; i++) if (fn(list[i], i)) result.push(list[i]);\n  return result;\n};",
     hiddenTests: [
+      { call: "(() => { const a=Object.freeze({}),b=Object.freeze([]),input=Object.freeze([a,b,undefined]),calls=[];const values=[b,undefined,a];const mapped=myMap(input,(...args)=>{calls.push(args);return values[args[1]];});const filtered=myFilter(input,(...args)=>{calls.push(args);return args[1]===0?{}:args[1]===1?0:\"yes\";});return [mapped!==input,mapped.every((v,i)=>Object.is(v,values[i])),filtered[0]===a,filtered[1]===undefined,filtered.length,calls.length,calls.every((args,i)=>args.length===2&&args[1]===i%3&&Object.is(args[0],input[i%3])),myMap(Object.freeze([]),()=>0)!==myMap(Object.freeze([]),()=>0),myFilter(Object.freeze([]),()=>true)!==myFilter(Object.freeze([]),()=>true)]; })()", expected: [true, true, true, true, 2, 6, true, true, true] },
+      { call: "(() => { const reason={},seen=[];const run=fn=>{try{fn(Object.freeze([1,2,3]),(v,i)=>{seen.push(i);if(i===1)throw reason;return v;});return false;}catch(error){return error===reason;}};return [run(myMap),run(myFilter),seen]; })()", expected: [true, true, [0, 1, 0, 1]] },
+      { call: "(() => { const list=Object.freeze(Array.from({length:10000},(_,i)=>i));const a=myMap(list,(v,i)=>v+i),b=myFilter(list,(v,i)=>i%2===0);return [a.length,a[9999],b.length,b[4999],list[9999]]; })()", expected: [10000, 19998, 5000, 9998, 9999] },
+
       { call: "(() => { const list = [3,4,5]; list.map = null; list.filter = null; return [myMap(list, n => n + 1), myFilter(list, n => n > 3)]; })()", expected: [[4, 5, 6], [4, 5]] },
       { call: "myFilter([0, 1, \"\", \"a\", null], item => item)", expected: [1, "a"] },
       { call: "myMap([1,2,3,4,5,6], (n, index) => n * index)", expected: [0, 2, 6, 12, 20, 30] },

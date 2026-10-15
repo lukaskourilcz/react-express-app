@@ -183,7 +183,7 @@ console.log(serveNext(line, "Cy"), line);
     tier: 1,
     focus: ["push", "pop"],
     title: "Swap the top",
-    prompt: "Write `swapTop(stack, item)`, replacing the top of a stack in place: remove the last element with `pop`, put `item` in its place with `push`, and return the removed element. With `stack = [1, 2, 3]`, `swapTop(stack, 9)` returns 3 and leaves `stack` as `[1, 2, 9]`. On an empty stack there is nothing to remove, so the item is pushed and `undefined` comes back.",
+    prompt: "Write `swapTop(stack, item)`, replacing the top of a stack in place: remove the last element with `pop`, put `item` in its place with `push`, and return the removed element. With `stack = [1, 2, 3]`, `swapTop(stack, 9)` returns 3 and leaves `stack` as `[1, 2, 9]`. On an empty stack there is nothing to remove, so the item is pushed and `undefined` comes back. stack is an ordinary mutable dense array with at most 10000 elements. Elements and item are opaque values: preserve their exact identities, including objects, undefined, NaN and signed zero. Do not inspect or clone them. Keep every earlier stack element unchanged. Use pop followed by push as requested. Target: O(1) time under the usual amortized dynamic-array append model; input size n is 1 + the original stack length.",
     starter: `const swapTop = (stack, item) => {
 
 };
@@ -221,7 +221,7 @@ console.log(swapTop(stack, 9), stack);
     tier: 1,
     focus: ["unshift"],
     title: "Add to the front",
-    prompt: "Write `addToFront(list, item)`, adding the item at the front of the list in place with `unshift` and returning the new length, which is what `unshift` itself returns. With `list = [2, 3]`, `addToFront(list, 1)` returns 3 and leaves `list` as `[1, 2, 3]`. An empty list gains its first item and returns 1.",
+    prompt: "Write `addToFront(list, item)`, adding the item at the front of the list in place with `unshift` and returning the new length, which is what `unshift` itself returns. With `list = [2, 3]`, `addToFront(list, 1)` returns 3 and leaves `list` as `[1, 2, 3]`. An empty list gains its first item and returns 1. list is an ordinary mutable dense array with at most 10000 elements. Treat every element and item as opaque: preserve exact references and values, including undefined and NaN. Add item as one element even when it is an array; preserve the order of all existing elements. Use unshift as requested. Target: O(n) time, where n is 1 + the original list length, because existing elements move to the right.",
     starter: `const addToFront = (list, item) => {
 
 };
@@ -256,7 +256,7 @@ console.log(addToFront(list, 1), list);
     tier: 1,
     focus: ["splice"],
     title: "Remove a range",
-    prompt: "Write `removeRange(list, start, count)`, removing `count` items in place beginning at index `start` with `splice` and returning the removed items as an array. With `list = [1, 2, 3, 4, 5]`, `removeRange(list, 1, 2)` returns `[2, 3]` and leaves `list` as `[1, 4, 5]`. A count of zero removes nothing, and a count past the end stops at the end.",
+    prompt: "Write `removeRange(list, start, count)`, removing `count` items in place beginning at index `start` with `splice` and returning the removed items as an array. With `list = [1, 2, 3, 4, 5]`, `removeRange(list, 1, 2)` returns `[2, 3]` and leaves `list` as `[1, 4, 5]`. A count of zero removes nothing, and a count past the end stops at the end. list is an ordinary mutable dense array of at most 10000 opaque values. start and count are integers from -10000 to 10000. Follow splice normalization: a negative start counts from the end and clips at zero; start beyond the end removes nothing; nonpositive count removes nothing. Return a fresh array of the original removed references in order, preserve all remaining references and do not inspect or clone elements. Use a single splice call rather than repeatedly shifting a growing tail. Target: O(n) time, where n is 1 + the original list length, including the removed output and shifted suffix.",
     starter: `const removeRange = (list, start, count) => {
 
 };
@@ -292,7 +292,7 @@ console.log(removeRange(list, 1, 2), list);
     tier: 1,
     focus: ["slice"],
     title: "Copy a range",
-    prompt: "Write `copyRange(list, start, end)`, returning a new array with the items from index `start` up to but not including `end`, taken with `slice` so the original list is never changed. `copyRange([1, 2, 3, 4], 1, 3)` gives `[2, 3]`. An end past the length stops at the end, and equal indexes give an empty array.",
+    prompt: "Write `copyRange(list, start, end)`, returning a new array with the items from index `start` up to but not including `end`, taken with `slice` so the original list is never changed. `copyRange([1, 2, 3, 4], 1, 3)` gives `[2, 3]`. An end past the length stops at the end, and equal indexes give an empty array. list is an ordinary read-only dense array of at most 10000 opaque values and may be frozen. start and end are integers from -10000 to 10000. Follow slice normalization: negative indexes count from the end and clip to zero, indexes past the length clip to the length, and an end before the normalized start gives an empty array. Return a fresh shallow array with the original element references, even when the range is empty; do not clone or inspect elements. Use slice as requested. Target: O(n) time as an upper bound, where n is 1 + list.length; more precisely, copying k returned elements costs O(k + 1).",
     starter: `const copyRange = (list, start, end) => {
 
 };
@@ -326,7 +326,7 @@ console.log(copyRange([1, 2, 3, 4], 1, 3));
     tier: 1,
     focus: ["splice"],
     title: "Insert at an index",
-    prompt: "Write `insertAt(list, index, item)`, inserting the item at that position in place with `splice` without removing anything, and returning the list. `insertAt([1, 3], 1, 2)` gives `[1, 2, 3]`. Index 0 puts the item first, and an index equal to the length appends it.",
+    prompt: "Write `insertAt(list, index, item)`, inserting the item at that position in place with `splice` without removing anything, and returning the list. `insertAt([1, 3], 1, 2)` gives `[1, 2, 3]`. Index 0 puts the item first, and an index equal to the length appends it. list is an ordinary mutable dense array with at most 10000 opaque values. index is an integer from 0 through list.length; out-of-range indexes are outside this exercise. Insert exactly one item, including when item is an array, and preserve every original value/reference and its relative order. Return the exact same list object, not a copy, without inspecting or cloning elements. Use splice as requested. Target: O(n) time, where n is 1 + the original list length, because the suffix may move right.",
     starter: `const insertAt = (list, index, item) => {
 
 };
@@ -361,7 +361,7 @@ console.log(insertAt([1, 3], 1, 2));
     tier: 1,
     focus: ["shift", "push"],
     title: "Rotate once",
-    prompt: "Write `rotateOnce(list)`, moving the first element to the end in place with `shift` and `push`, and returning the list. `rotateOnce([1, 2, 3])` gives `[2, 3, 1]`. An empty list stays empty — watch what `shift` returns there — and a single item stays where it is.",
+    prompt: "Write `rotateOnce(list)`, moving the first element to the end in place with `shift` and `push`, and returning the list. `rotateOnce([1, 2, 3])` gives `[2, 3, 1]`. An empty list stays empty — watch what `shift` returns there — and a single item stays where it is. list is an ordinary mutable dense array with at most 10000 elements. Treat elements as opaque values and preserve exact identities, including objects, undefined, NaN and signed zero. Return that same list object, including when it is empty or has one item. Use shift and push as requested. Target: O(n) time, where n is 1 + list.length, because removing the front can move the remaining elements.",
     starter: `const rotateOnce = list => {
 
 };
@@ -399,7 +399,7 @@ console.log(rotateOnce([1, 2, 3]));
     tier: 1,
     focus: ["slice"],
     title: "Last item safely",
-    prompt: "Write `lastItem(list, fallback)`, returning the last element of the list without changing it, or `fallback` when the list is empty. `lastItem([1, 2, 3], 0)` gives 3 and `lastItem([], \"none\")` gives `\"none\"`. A last element that happens to be falsy, such as 0, is still returned rather than the fallback.",
+    prompt: "Write `lastItem(list, fallback)`, returning the last element of the list without changing it, or `fallback` when the list is empty. `lastItem([1, 2, 3], 0)` gives 3 and `lastItem([], \"none\")` gives `\"none\"`. A last element that happens to be falsy, such as 0, is still returned rather than the fallback. list is an ordinary read-only dense array with at most 10000 opaque values and may be frozen. Return the original last value/reference, including undefined, null, false, NaN, signed zero or an empty string. Only list.length === 0 selects the original fallback value/reference. Do not inspect, clone or change elements. Target: O(1) time under direct indexed access or a one-element slice; input size n is 1 + list.length.",
     starter: `const lastItem = (list, fallback) => {
 
 };
@@ -435,7 +435,7 @@ console.log(lastItem([1, 2, 3], 0));
     tier: 1,
     focus: ["for"],
     title: "Sum with for",
-    prompt: "Write `addUp(numbers)`, returning the total of every number using a `for` loop with an index rather than `reduce`. `addUp([1, 2, 3])` gives 6. An empty array totals 0, and negatives and decimals add up like anything else.",
+    prompt: "Write `addUp(numbers)`, returning the total of every number using a `for` loop with an index rather than `reduce`. `addUp([1, 2, 3])` gives 6. An empty array totals 0, and negatives and decimals add up like anything else. numbers is a read-only dense array of at most 10000 finite Numbers between -1000000 and 1000000. Start the total at 0 and add in original left-to-right order with normal Number arithmetic, without rounding or sorting. Preserve the input, which may be frozen. Use an indexed for loop as requested. Target: O(n) time, where n is 1 + numbers.length.",
     starter: `const addUp = numbers => {
 
 };
@@ -476,7 +476,7 @@ console.log(addUp([1, 2, 3]));
     tier: 1,
     focus: ["for"],
     title: "Count matches",
-    prompt: "Write `countMatches(items, target)`, returning how many elements are strictly equal to `target`, counted with a `for` loop over the indexes. `countMatches([\"a\", \"b\", \"a\"], \"a\")` gives 2. No matches, or an empty array, gives 0, and a string `\"1\"` never matches the number 1.",
+    prompt: "Write `countMatches(items, target)`, returning how many elements are strictly equal to `target`, counted with a `for` loop over the indexes. `countMatches([\"a\", \"b\", \"a\"], \"a\")` gives 2. No matches, or an empty array, gives 0, and a string `\"1\"` never matches the number 1. items is a read-only dense array with at most 10000 opaque values and may be frozen. Use === exactly: object references match only themselves, NaN never matches NaN, and 0 and -0 match each other. Do not inspect, clone or change values. Use an indexed for loop as requested. Target: O(n) time, where n is 1 + items.length, using the usual constant-cost opaque comparison model.",
     starter: `const countMatches = (items, target) => {
 
 };
@@ -517,7 +517,7 @@ console.log(countMatches(["a", "b", "a"], "a"));
     tier: 2,
     focus: ["two-pointer", "while"],
     title: "Reverse in place",
-    prompt: "Write `reverseInPlace(list)`, reversing the array itself with two indexes that start at the ends and swap their way towards the middle, without `reverse()` or a copy, and returning the same array. `reverseInPlace([1, 2, 3, 4])` gives `[4, 3, 2, 1]`. Odd lengths, a single item and an empty array all work.",
+    prompt: "Write `reverseInPlace(list)`, reversing the array itself with two indexes that start at the ends and swap their way towards the middle, without `reverse()` or a copy, and returning the same array. `reverseInPlace([1, 2, 3, 4])` gives `[4, 3, 2, 1]`. Odd lengths, a single item and an empty array all work. list is an ordinary mutable dense array with at most 10000 opaque values. Preserve exact original references and values, including objects, undefined, NaN and signed zero. Return the same list even for empty and single-item arrays. Use two indexes and swaps, with constant auxiliary storage; do not call reverse or allocate a full-size copy. Target: O(n) time, where n is 1 + list.length.",
     starter: `const reverseInPlace = list => {
 
 };
@@ -561,7 +561,7 @@ console.log(reverseInPlace([1, 2, 3, 4]));
     tier: 1,
     focus: ["while", "push"],
     title: "Countdown by step",
-    prompt: "Write `countdownBy(start, step)`, returning the values from `start` downwards in steps of `step` while they are still above zero, collected with a `while` loop. `countdownBy(10, 3)` gives `[10, 7, 4, 1]`. Zero is never included, so a start of zero or below gives an empty array; assume `step` is at least 1.",
+    prompt: "Write `countdownBy(start, step)`, returning the values from `start` downwards in steps of `step` while they are still above zero, collected with a `while` loop. `countdownBy(10, 3)` gives `[10, 7, 4, 1]`. Zero is never included, so a start of zero or below gives an empty array; assume `step` is at least 1. start is an integer from -10000 to 10000 and step is an integer from 1 to 10000. Return a fresh array on every call, including when the result is empty. Use a while loop and push as requested. Target: O(n) time, where n is 1 + Math.max(0, Math.ceil(start / step)), the output length plus one; output space is O(n).",
     starter: `const countdownBy = (start, step) => {
 
 };
@@ -579,7 +579,7 @@ console.log(countdownBy(10, 3));
 
   return result;
 };`,
-    hints: ["A while loop suits a countdown because you do not know in advance how many values there are — keep going only while the current value is still above zero."],
+    hints: ["A while loop states the stopping condition directly: keep going while the current value is above zero, then subtract the positive step after each push."],
     approach: [
       "Start with an empty result and a value equal to the start.",
       "While the value is above zero, push it and subtract the step.",
@@ -604,7 +604,7 @@ console.log(countdownBy(10, 3));
     tier: 1,
     focus: ["while"],
     title: "First divisible",
-    prompt: "Write `firstDivisible(numbers, divisor)`, returning the first number in the array that divides by `divisor` with no remainder, or `null` when there is none. Walk the array with a `while` loop and use `break` the moment you find it. `firstDivisible([7, 9, 12, 20], 4)` gives 12, and zero is divisible by everything.",
+    prompt: "Write `firstDivisible(numbers, divisor)`, returning the first number in the array that divides by `divisor` with no remainder, or `null` when there is none. Walk the array with a `while` loop and use `break` the moment you find it. `firstDivisible([7, 9, 12, 20], 4)` gives 12, and zero is divisible by every nonzero integer. numbers is a read-only dense array of at most 10000 safe integers between -1000000000 and 1000000000. divisor is a nonzero integer between -1000000 and 1000000. Preserve the input and return the original first matching Number, including signed zero. Do not read later entries after finding a match. Use while and break as requested. Target: O(n) time in the worst case, where n is 1 + numbers.length; an early match stops sooner.",
     starter: `const firstDivisible = (numbers, divisor) => {
 
 };
@@ -637,7 +637,7 @@ console.log(firstDivisible([7, 9, 12, 20], 4));
       { call: "firstDivisible([5,10,15], 5)", expected: 5 },
       { call: "firstDivisible([1,2,3], 7)", expected: null, label: "nothing divisible gives null", edge: true },
       { call: "firstDivisible([], 2)", expected: null, label: "empty input", edge: true },
-      { call: "firstDivisible([3,0,6], 4)", expected: 0, label: "zero is divisible by everything", edge: true },
+      { call: "firstDivisible([3,0,6], 4)", expected: 0, label: "zero is divisible by every nonzero integer", edge: true },
     ],
   },
   {
@@ -648,7 +648,7 @@ console.log(firstDivisible([7, 9, 12, 20], 4));
     tier: 2,
     focus: ["do-while", "callbacks"],
     title: "Attempt until success",
-    prompt: "Write `attemptUntil(attempt, limit)`. The function `attempt` returns `true` when it succeeds; call it at least once with a `do…while` loop, and keep calling it until it succeeds or `limit` calls have been made. Return how many calls it took, or -1 when none succeeded — with an `attempt` that succeeds on its third call, `attemptUntil(attempt, 5)` gives 3.",
+    prompt: "Write `attemptUntil(attempt, limit)`. The function `attempt` returns `true` when it succeeds; call it at least once with a `do…while` loop, and keep calling it until it succeeds or `limit` calls have been made. Return how many calls it took, or -1 when none succeeded — with an `attempt` that succeeds on its third call, `attemptUntil(attempt, 5)` gives 3. limit is an integer from 1 to 1000. attempt is a synchronous callback returning a Boolean, or throwing any value. Invoke it as a plain function with no arguments and stop immediately after the first true. If it throws, propagate the original thrown value and make no further calls. Use do-while as requested. Target: O(n) time for loop overhead, where n is 1 + limit, excluding callback work; successful early termination may use fewer calls.",
     starter: `const attemptUntil = (attempt, limit) => {
 
 };
@@ -692,7 +692,7 @@ console.log(attemptUntil(() => ++tries === 3, 5));
     tier: 1,
     focus: ["for-of", "strings"],
     title: "Join with for-of",
-    prompt: "Write `joinWords(words, separator)`, building one string with the separator between neighbouring words using a `for…of` loop rather than `join`. `joinWords([\"a\", \"b\", \"c\"], \"-\")` gives `\"a-b-c\"`. A single word gets no separator, and an empty array gives an empty string.",
+    prompt: "Write `joinWords(words, separator)`, building one string with the separator between neighbouring words using a `for…of` loop rather than `join`. `joinWords([\"a\", \"b\", \"c\"], \"-\")` gives `\"a-b-c\"`. A single word gets no separator, and an empty array gives an empty string. words is a read-only dense array of at most 1000 strings, each at most 1000 UTF-16 code units; separator is a string of at most 100 code units. Preserve all text exactly, including empty strings, whitespace and Unicode; do not trim or normalize it. Inputs may be frozen. Use for-of and string concatenation, not join. Target: O(n²) time as a conservative upper bound for repeatedly copying growing string prefixes, where n is 1 + words.length + the final output length in UTF-16 code units. Engines may optimize concatenation; this exercise does not promise universally linear copying.",
     starter: `const joinWords = (words, separator) => {
 
 };
@@ -734,7 +734,7 @@ console.log(joinWords(["a", "b", "c"], "-"));
     tier: 1,
     focus: ["for-of", "destructuring"],
     title: "Number the items",
-    prompt: "Write `numberItems(items)`, returning a new array where each item becomes a string of its one-based position, a dot, a space and the item, using `for…of` over `items.entries()` so the loop hands you the index and the value together. `numberItems([\"milk\", \"eggs\"])` gives `[\"1. milk\", \"2. eggs\"]`, and an empty array gives an empty array.",
+    prompt: "Write `numberItems(items)`, returning a new array where each item becomes a string of its one-based position, a dot, a space and the item, using `for…of` over `items.entries()` so the loop hands you the index and the value together. `numberItems([\"milk\", \"eggs\"])` gives `[\"1. milk\", \"2. eggs\"]`, and an empty array gives an empty array. items is a read-only dense array of at most 1000 values, each either a string of at most 1000 UTF-16 code units or a finite Number from -1000000 to 1000000. Use normal JavaScript string conversion for Numbers, including -0 becoming \"0\"; preserve string contents exactly, including whitespace and Unicode. Inputs may be frozen. Return a fresh array on every call, even when empty, and leave items unchanged. Use for-of over items.entries() as requested. Target: O(n) time, where n is 1 + items.length + the total output string length, under amortized array append.",
     starter: `const numberItems = items => {
 
 };
@@ -775,7 +775,7 @@ console.log(numberItems(["milk", "eggs"]));
     tier: 2,
     focus: ["nested-loops", "for"],
     title: "Times table",
-    prompt: "Write `timesTable(size)`, returning a square table as an array of rows, where the cell in row r and column c (both counted from 1) holds r times c, built with one `for` loop nested inside another. `timesTable(3)` gives `[[1, 2, 3], [2, 4, 6], [3, 6, 9]]`. `timesTable(0)` gives an empty array.",
+    prompt: "Write `timesTable(size)`, returning a square table as an array of rows, where the cell in row r and column c (both counted from 1) holds r times c, built with one `for` loop nested inside another. `timesTable(3)` gives `[[1, 2, 3], [2, 4, 6], [3, 6, 9]]`. `timesTable(0)` gives an empty array. size is an integer from 0 to 100. Return a fresh table and separate fresh row arrays on every call, so changing one result or row cannot change another. Every cell is the exact integer product; do not cap the requested size. Use nested for loops as requested. Target: O(n²) time and output space, where n is 1 + size, because there are size × size cells.",
     starter: `const timesTable = size => {
 
 };
@@ -821,7 +821,7 @@ console.log(timesTable(3));
     tier: 1,
     focus: ["some", "every"],
     title: "Any and all",
-    prompt: "Write `passReport(scores, passMark)`, returning `{ anyPassed, allPassed }`: whether at least one score reaches the pass mark, answered with `some`, and whether every score does, answered with `every`. `passReport([40, 70], 50)` gives `{ anyPassed: true, allPassed: false }`. The pass mark itself passes, and for an empty list `some` says false while `every` says true.",
+    prompt: "Write `passReport(scores, passMark)`, returning `{ anyPassed, allPassed }`: whether at least one score reaches the pass mark, answered with `some`, and whether every score does, answered with `every`. `passReport([40, 70], 50)` gives `{ anyPassed: true, allPassed: false }`. The pass mark itself passes, and for an empty list `some` says false while `every` says true. scores is a read-only dense array with at most 10000 finite Numbers from 0 to 100, and passMark is a finite Number in that range. Fractional values are allowed: compare with >= without rounding. The array may be frozen; leave it unchanged and return a fresh result object with Boolean fields. Use some and every as requested. Target: O(n) time in the worst case, where n is 1 + scores.length; each method can stop early.",
     starter: `const passReport = (scores, passMark) => {
 
 };
@@ -857,7 +857,7 @@ console.log(passReport([40, 70], 50));
     tier: 1,
     focus: ["includes", "indexOf"],
     title: "Locate an item",
-    prompt: "Write `locate(list, item)`, returning `{ present, index }`: whether the item is in the list, answered with `includes`, and the position of its first appearance, answered with `indexOf`, which is -1 when it is missing. `locate([\"a\", \"b\", \"c\"], \"b\")` gives `{ present: true, index: 1 }`. Both methods compare strictly, so the string `\"1\"` never matches the number 1.",
+    prompt: "Write `locate(list, item)`, returning `{ present, index }`: whether the item is in the list, answered with `includes`, and the position of its first appearance, answered with `indexOf`, which is -1 when it is missing. `locate([\"a\", \"b\", \"c\"], \"b\")` gives `{ present: true, index: 1 }`. Neither method coerces types, so the string `\"1\"` never matches the number 1. Their NaN behavior differs, as described below. list is a read-only dense array of at most 10000 opaque values and may be frozen. Do not inspect or clone elements. includes uses SameValueZero, so it finds NaN; indexOf uses strict equality, so it never finds NaN. Thus locate([NaN], NaN) returns { present: true, index: -1 }. Both methods match object references only by identity and treat 0 and -0 as equal. Preserve list and return a fresh result object. Use both includes and indexOf as requested. Target: O(n) time in the worst case, where n is 1 + list.length, under the usual opaque comparison model.",
     starter: `const locate = (list, item) => {
 
 };
@@ -894,7 +894,7 @@ console.log(locate(["a", "b", "c"], "b"));
     tier: 2,
     focus: ["findIndex", "splice"],
     title: "Remove by id",
-    prompt: "Write `removeById(items, id)`, removing the first object whose `id` equals the given id from the array in place and returning the removed object, or `null` when no object matches — in which case the array is left untouched. Find the position with `findIndex`, then take the object out with `splice`. With `items = [{ id: 1 }, { id: 2 }]`, `removeById(items, 2)` returns `{ id: 2 }` and leaves `items` as `[{ id: 1 }]`.",
+    prompt: "Write `removeById(items, id)`, removing the first object whose `id` equals the given id from the array in place and returning the removed object, or `null` when no object matches — in which case the array is left untouched. Find the position with `findIndex`, then take the object out with `splice`. With `items = [{ id: 1 }, { id: 2 }]`, `removeById(items, 2)` returns `{ id: 2 }` and leaves `items` as `[{ id: 1 }]`. items is an ordinary mutable dense array with at most 10000 non-null ordinary records, each with an own id field. Records may be frozen; id and the requested id are opaque values. Compare ids with ===, so numeric/string ids differ, NaN never matches and object ids match only the original reference. Duplicates are allowed: remove only the first matching record and return that exact object without cloning it. Preserve all remaining records and their order, and do not inspect other fields. Use findIndex and splice as requested. Target: O(n) time, where n is 1 + items.length before removal, including search and suffix movement.",
     starter: `const removeById = (items, id) => {
 
 };
@@ -932,7 +932,7 @@ console.log(removeById(items, 2), items);
     tier: 1,
     focus: ["reduce"],
     title: "Highest with reduce",
-    prompt: "Write `highest(numbers)`, returning the largest value using `reduce`, with the accumulator holding the best value seen so far. `highest([3, 9, 2])` gives 9. It must work when every value is negative, and an empty array gives `null` — `reduce` with no initial value throws on one, so decide that case first.",
+    prompt: "Write `highest(numbers)`, returning the largest value using `reduce`, with the accumulator holding the best value seen so far. `highest([3, 9, 2])` gives 9. It must work when every value is negative, and an empty array gives `null` — `reduce` with no initial value throws on one, so decide that case first. numbers is a read-only dense array of at most 10000 finite Numbers between -1000000 and 1000000 and may be frozen. Do not sort, mutate or round values. Both signs of zero compare as equal and either zero sign is accepted as the largest value. Use reduce as requested; empty input returns null before reducing. Target: O(n) time, where n is 1 + numbers.length.",
     starter: `const highest = numbers => {
 
 };
@@ -970,7 +970,7 @@ console.log(highest([3, 9, 2]));
     tier: 2,
     focus: ["reduce", "objects"],
     title: "Count by key",
-    prompt: "Write `countBy(items, keyFn)`, returning an object that maps each key `keyFn` returns to how many items produced it, built with `reduce` starting from an empty object. `countBy([\"apple\", \"avocado\", \"banana\"], word => word[0])` gives `{ a: 2, b: 1 }`. An empty array gives an empty object, and a numeric key becomes a string key as object keys always do.",
+    prompt: "Write `countBy(items, keyFn)`, returning an object that maps each key `keyFn` returns to how many items produced it, built with `reduce` starting from a safe empty dictionary. `countBy([\"apple\", \"avocado\", \"banana\"], word => word[0])` gives `{ a: 2, b: 1 }`. An empty array gives an empty object, and a numeric key becomes a string key under the string-key policy used here. items is a read-only dense array of at most 10000 opaque values and may be frozen. keyFn is synchronous, does not mutate items, and returns a string of at most 1000 characters or a finite Number between -1000000 and 1000000. Call it exactly once per original item in order, with that item as its only argument. Normalize returned keys with String before counting, so numeric 1 and string \"1\" share a bucket; any string, including empty, __proto__ and constructor, is valid. Return a fresh dictionary whose own enumerable keys hold the counts; its prototype is not part of the answer. Preserve inputs and propagate the original callback error without further calls. Use reduce as requested, with a safe empty dictionary. Target: O(n) time for bookkeeping under expected bounded-key access, where n is 1 + items.length, excluding callback work.",
     starter: `const countBy = (items, keyFn) => {
 
 };
@@ -1007,7 +1007,7 @@ console.log(countBy(["apple", "avocado", "banana"], word => word[0]));
     tier: 2,
     focus: ["reduce"],
     title: "Running totals",
-    prompt: "Write `runningTotals(numbers)`, returning a new array where each position holds the sum of every number up to and including that position, built with `reduce` whose accumulator is the output array. `runningTotals([1, 2, 3, 4])` gives `[1, 3, 6, 10]`. An empty array gives an empty array, and the input is not changed.",
+    prompt: "Write `runningTotals(numbers)`, returning a new array where each position holds the sum of every number up to and including that position, built with `reduce` whose accumulator is the output array. `runningTotals([1, 2, 3, 4])` gives `[1, 3, 6, 10]`. An empty array gives an empty array, and the input is not changed. numbers is a read-only dense array of at most 10000 finite Numbers between -1000000 and 1000000 and may be frozen. Begin from 0 and add in original order using normal Number arithmetic without rounding. Return fresh output arrays, including empty arrays, and leave the input unchanged. Use reduce with the output array as its accumulator as requested. Target: O(n) time and output space, where n is 1 + numbers.length, under amortized append; do not repeatedly copy the growing accumulator.",
     starter: `const runningTotals = numbers => {
 
 };
@@ -1044,7 +1044,7 @@ console.log(runningTotals([1, 2, 3, 4]));
     tier: 2,
     focus: ["reduce", "higher-order"],
     title: "Reduce as a pipeline",
-    prompt: "Write `applyAll(value, steps)`, running the value through each function in `steps` from left to right and returning the final result, with `reduce` over the functions and the value as the initial accumulator. `applyAll(3, [n => n + 1, n => n * 2])` gives 8. An empty `steps` array returns the value unchanged, and a step may return a different type from the one it received.",
+    prompt: "Write `applyAll(value, steps)`, running the value through each function in `steps` from left to right and returning the final result, with `reduce` over the functions and the value as the initial accumulator. `applyAll(3, [n => n + 1, n => n * 2])` gives 8. An empty `steps` array returns the value unchanged, and a step may return a different type from the one it received. steps is a read-only dense array of at most 1000 synchronous functions and may be frozen. The initial and intermediate values are opaque; preserve exact references and values, including objects, undefined and falsy values, without cloning or coercion. Invoke each step once in array order, as a plain function with only the previous result as its argument. Propagate the original thrown value immediately and make no later calls. Use reduce with the current value as its accumulator, not a nested chain of deferred functions. Target: O(n) time for pipeline overhead, where n is 1 + steps.length, excluding work inside callbacks.",
     starter: `const applyAll = (value, steps) => {
 
 };
@@ -1080,7 +1080,7 @@ console.log(applyAll(3, [n => n + 1, n => n * 2]));
     tier: 2,
     focus: ["destructuring", "for"],
     title: "Swap pairs",
-    prompt: "Write `swapPairs(list)`, returning a new array in which every two neighbours have traded places, swapped with array destructuring inside a `for` loop that steps by two over a copy of the list. `swapPairs([1, 2, 3, 4])` gives `[2, 1, 4, 3]`. With an odd length the last item stays where it is, an empty array gives an empty array, and the input is never changed.",
+    prompt: "Write `swapPairs(list)`, returning a new array in which every two neighbours have traded places, swapped with array destructuring inside a `for` loop that steps by two over a copy of the list. `swapPairs([1, 2, 3, 4])` gives `[2, 1, 4, 3]`. With an odd length the last item stays where it is, an empty array gives an empty array, and the input is never changed. list is a read-only dense array with at most 10000 opaque values and may be frozen. Make a fresh shallow array on every call, including empty and single-item inputs; preserve original references and values, including objects, undefined, NaN and signed zero. Do not inspect or clone elements. Use the requested for loop stepping by two over a copy, with an array-destructuring swap. Target: O(n) time and output space, where n is 1 + list.length.",
     starter: `const swapPairs = list => {
 
 };
@@ -1123,7 +1123,7 @@ console.log(swapPairs([1, 2, 3, 4]));
     tier: 1,
     focus: ["for-of", "destructuring"],
     title: "Sum labelled pairs",
-    prompt: "Write `totalOf(pairs, label)`, where `pairs` is an array of `[label, value]` pairs, returning the total of the values whose label matches, destructured straight in the head of a `for…of` loop. `totalOf([[\"food\", 12], [\"rent\", 500], [\"food\", 8]], \"food\")` gives 20. No matching label, or an empty array, gives 0.",
+    prompt: "Write `totalOf(pairs, label)`, where `pairs` is an array of `[label, value]` pairs, returning the total of the values whose label matches, destructured straight in the head of a `for…of` loop. `totalOf([[\"food\", 12], [\"rent\", 500], [\"food\", 8]], \"food\")` gives 20. No matching label, or an empty array, gives 0. pairs is a read-only dense array of at most 10000 ordinary two-element arrays; each contains a string label of at most 1000 characters and a finite Number from -1000000 to 1000000. The requested label has the same string domain. Compare labels with ===, preserving whitespace, case and Unicode exactly. Add matching values from 0 in input order with normal Number arithmetic, without rounding or modifying any array; inputs and pairs may be frozen. Use for-of with [name, value] destructuring in the loop head as requested. Target: O(n) time, where n is 1 + pairs.length under the stated bounded-label comparison model.",
     starter: `const totalOf = (pairs, label) => {
 
 };
@@ -1164,7 +1164,7 @@ console.log(totalOf([["food", 12], ["rent", 500], ["food", 8]], "food"));
     tier: 2,
     focus: ["spread", "slice"],
     title: "Immutable list edits",
-    prompt: "Write `withInserted(list, index, item)`, `withoutIndex(list, index)` and `withReplaced(list, index, item)`. Each returns a new array built from two `slice` copies spread into a fresh array literal, and never changes the array it was given. `withInserted([1, 3], 1, 2)` gives `[1, 2, 3]`, `withoutIndex([1, 2, 3], 0)` gives `[2, 3]`, and `withReplaced([1, 2, 3], 2, 9)` gives `[1, 2, 9]`.",
+    prompt: "Write `withInserted(list, index, item)`, `withoutIndex(list, index)` and `withReplaced(list, index, item)`. Each returns a new array built from two `slice` copies spread into a fresh array literal, and never changes the array it was given. `withInserted([1, 3], 1, 2)` gives `[1, 2, 3]`, `withoutIndex([1, 2, 3], 0)` gives `[2, 3]`, and `withReplaced([1, 2, 3], 2, 9)` gives `[1, 2, 9]`. list is a read-only dense array of at most 10000 opaque values and may be frozen. withInserted accepts integer indexes from 0 through list.length. withoutIndex accepts 0 through list.length; index equal to length removes nothing but still returns a fresh array. withReplaced requires an existing integer index from 0 through list.length - 1. Return fresh shallow arrays on every call, preserving original object/array references and exact undefined, NaN and signed-zero values. Insert or replace item as one element, even when it is an array; do not inspect or clone elements. Use slice pieces and array-literal spread as requested. Target: O(n) time and output space per edit, where n is 1 + list.length.",
     starter: `const withInserted = (list, index, item) => {
 
 };
@@ -1216,7 +1216,7 @@ const withReplaced = (list, index, item) => [
     tier: 1,
     focus: ["spread", "for-of"],
     title: "Variadic sum",
-    prompt: "Write `sumAll(...numbers)`, taking any number of arguments through a rest parameter and returning their total from a `for…of` loop over that array. `sumAll(1, 2, 3)` gives 6. With no arguments the total is 0, and an array can be spread into the call: `sumAll(...[4, 5])` gives 9.",
+    prompt: "Write `sumAll(...numbers)`, taking any number of arguments through a rest parameter and returning their total from a `for…of` loop over that array. `sumAll(1, 2, 3)` gives 6. With no arguments the total is 0, and an array can be spread into the call: `sumAll(...[4, 5])` gives 9. There are at most 1000 arguments, each a finite Number between -1000000 and 1000000. Begin at 0 and add in argument order with normal Number arithmetic, without rounding or sorting. Spreading a caller array must not change it. Use the rest parameter and for-of as requested. Target: O(n) time and rest-array space, where n is 1 + the number of arguments.",
     starter: `const sumAll = () => {
 
 };
@@ -1257,7 +1257,7 @@ console.log(sumAll(1, 2, 3));
     tier: 2,
     focus: ["functions", "closures", "for-of"],
     title: "Tally factory",
-    prompt: "Write `makeTally(start)`, returning a function that keeps a running total in the factory’s scope: each call takes any number of values, loops over them adding each to the total, and returns the new total. With `tally = makeTally(10)`, `tally(1, 2)` gives 13 and a later `tally(5)` gives 18. A call with no values returns the total as it is, and two tallies never share a total.",
+    prompt: "Write `makeTally(start)`, returning a function that keeps a running total in the factory’s scope: each call takes any number of values, loops over them adding each to the total, and returns the new total. With `tally = makeTally(10)`, `tally(1, 2)` gives 13 and a later `tally(5)` gives 18. A call with no values returns the total as it is, and two tallies never share a total. start and each supplied value are finite Numbers between -1000000 and 1000000. A tally is called at most 1000 times, with at most 1000 arguments per call. Add values directly to the saved total one at a time in argument order using normal Number arithmetic; do not first sum a batch and add it once, round the total, or reset it between calls. No arguments means no additions and the existing total is returned unchanged. Every factory call returns its own fresh function and private total. Target: O(n) time per tally call, where n is 1 + that call's argument count; factory creation is O(1), excluding the returned rest-array allocation at invocation.",
     starter: `const makeTally = start => {
 
 };
@@ -1298,13 +1298,13 @@ console.log(sumAll(1, 2, 3));
     tier: 2,
     focus: ["for", "closures"],
     title: "Handlers keep their index",
-    prompt: "Write `makeHandlers(count)`, returning an array of `count` functions built in a `for` loop whose counter is declared with `let`, so that the function at position i returns i when called — the way click handlers made in a loop each remember their own index. `makeHandlers(3).map(handler => handler())` gives `[0, 1, 2]`. A count of zero gives an empty array.",
+    prompt: "Write `makeHandlers(count)`, returning an array of `count` functions built in a `for` loop whose counter is declared with `let`, so that the function at position i returns i when called — the way click handlers made in a loop each remember their own index. `makeHandlers(3).map(handler => handler())` gives `[0, 1, 2]`. A count of zero gives an empty array. count is an integer from 0 to 10000. Allocate a fresh output array and fresh functions on every factory call. Each handler always returns its original zero-based index, regardless of call order, repeated calls, or later edits to the returned array. Use a for loop with a let counter as requested. Target: O(n) time and output space to build handlers, where n is 1 + count; each handler call is O(1).",
     starter: `const makeHandlers = count => {
 
 };
 
-// Scratch pad — change this and press Run.
-console.log(makeHandlers(3).map(handler => handler()));
+// Scratch pad — uncomment once your function returns an array.
+// console.log(makeHandlers(3).map(handler => handler()));
 `,
     skeleton: `const makeHandlers = count => {
   const handlers = [];
@@ -1340,7 +1340,7 @@ console.log(makeHandlers(3).map(handler => handler()));
     tier: 3,
     focus: ["higher-order", "for", "callbacks"],
     title: "Write myMap and myFilter",
-    prompt: "Write `myMap(list, fn)` and `myFilter(list, fn)` with plain `for` loops instead of the built-in `map` and `filter`. `myMap` returns a new array of `fn(item, index)` results, and `myFilter` returns a new array of the items for which `fn(item, index)` is truthy; neither changes the list. `myMap([1, 2, 3], n => n * 2)` gives `[2, 4, 6]` and `myFilter([1, 2, 3, 4], n => n % 2 === 0)` gives `[2, 4]`.",
+    prompt: "Write `myMap(list, fn)` and `myFilter(list, fn)` with plain `for` loops instead of the built-in `map` and `filter`. `myMap` returns a new array of `fn(item, index)` results, and `myFilter` returns a new array of the items for which `fn(item, index)` is truthy; neither changes the list. `myMap([1, 2, 3], n => n * 2)` gives `[2, 4, 6]` and `myFilter([1, 2, 3, 4], n => n % 2 === 0)` gives `[2, 4]`. list is a read-only dense array of at most 10000 opaque values and may be frozen. fn is synchronous and does not mutate list. Call it exactly once per position, in input order, as a plain function with exactly two arguments: the original value and its zero-based index. Preserve each myMap result exactly, including undefined or an object reference. myFilter keeps original item references when the result is truthy, without coercing stored values. Propagate the original thrown value immediately and do not call later positions. Return fresh arrays, including empty ones, and preserve list. These are dense-array exercises, not complete native sparse-array/polyfill implementations. Use plain indexed for loops instead of map/filter as requested. Target: O(n) time for bookkeeping and output space, where n is 1 + list.length, excluding callback work.",
     starter: `const myMap = (list, fn) => {
 
 };
