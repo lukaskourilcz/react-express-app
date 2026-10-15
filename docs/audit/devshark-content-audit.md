@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n001
+
+Individually reviewed the first five optional DSA entry questions. Four are
+retained; the indexing question now supplies a concrete array and distinguishes
+negative bracket properties from supported at(-1). Its key remains unique.
+The parent diagnostic and sixth question are outside this batch. Current
+native coverage is **65/263**, leaving **198**; coding is **90/725**, leaving
+**635**. Review records bind the exact English hashes and explicitly identify
+same-session model review, not independent/human approval.
+
+All five authored contexts execute with unique keyed outcomes. Supplementary
+checks cover mutation returns, a named negative array property, recursive
+return propagation and Map replacement/size. Native bindings, path contracts,
+API/script types, launch contracts, build, both production dependency audits
+(zero vulnerabilities), copy sweep and diff checks pass. The public DSA
+catalogue passes six widths in each theme; this does not exercise the
+signed-in entry activity. An initial probe used the nonexistent
+/learning-paths route and failed; it was corrected to the actual catalogue
+route, without weakening the probe.
+
+PR #393 merged at 3c5d0abc after required verify/sql run 38654051545 passed
+on c91873a6. Production verification of its thirty coding records is pending.
+No account data, entitlements, question IDs or archived Czech files changed.
+
 ## 15 October continuation — five-item batch b012
 
 Reviewed last-dot filename suffixes, next workflow labels, all matching

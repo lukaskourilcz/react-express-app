@@ -60,11 +60,15 @@ export const DSA_ENTRY: ModuleSource = {
         },
         {
           id: 'dsa-v1-entry-q3',
-          prompt: 'Which expression reads the last element of a non-empty array `values`?',
-          options: ['values[values.length - 1]', 'values[values.length]', 'values.last', 'values[-1]'],
+          prompt: 'Which expression evaluates to the last element of this array?',
+          context: {
+            language: 'javascript',
+            code: 'const values = [10, 20, 30];',
+          },
+          options: ['values[values.length - 1]', 'values[values.length]', 'values[values.length - 2]', 'values[-1]'],
           correct: 0,
           explanation:
-            'Indices run from 0 to `length - 1`, so the last element sits one below the length. `values[values.length]` is past the end and gives `undefined`, and JavaScript arrays have no `last` property and no negative indexing.',
+            'The last index is `length - 1`, so this expression gives 30. The index `length` is past the end, while `length - 2` gives 20. Brackets such as `values[-1]` read a property named "-1", which this array does not have; they do not count back from the end. `values.at(-1)` is a supported alternative for reading the last element.',
           competencies: ['arrays-strings'],
         },
         {
