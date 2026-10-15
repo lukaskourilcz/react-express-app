@@ -1,6 +1,32 @@
 # devShark content audit — the question bank
 
 
+## 15 October continuation — five coding items b035
+
+Read all English material for signed rotation, run-length encoding, pair sum,
+window maxima and transpose. Supplied examples now match the requested loop
+forms; input-size meanings, integer/finite bounds, opaque references and fresh
+outputs are explicit. Run-length means UTF-16 units, including surrogate units,
+and does not promise reversible delimiter-free decoding. Its literal examples
+were individually exempted from the copy scanner's hex-hash heuristic.
+
+All 34 selected final-hash worker verdicts agree (20 valid, five starters, nine
+wrongs), versus 26/34 baseline. An already-sorted in-place-sort candidate produced
+no observable write in this runtime and was removed from both selected sets;
+the original baseline remains privately retained. Initial newline/surrogate
+transport in a new test was repaired with escaped input and numeric code-unit
+output checks before final evidence. Twenty authored-target/base-25-XP checks,
+copy sweep, focused coding, API/script types, launch, build, 263 native bindings,
+both zero-vulnerability production dependency audits and diff checks pass.
+Bounds include 10000 items/code units, 1000 windows and a 100×100 matrix.
+Same-session model/finite execution evidence does not prove arbitrary programs.
+
+Coverage is 205/725 coding, 520 remaining, and 263/263 native. Shipped coding
+coverage remains 155. B033–b035 are local, outside frozen PR #405 at 58686aaa;
+its eleven updated exact-preview guest checks pass with zero XP/null progress.
+Required verify remains pending. No live score, account/name or progress writes.
+
+
 ## 15 October continuation — five coding items b034
 
 Read all English material and supplied forms for nullish order totals, Map

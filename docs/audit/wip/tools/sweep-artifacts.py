@@ -36,6 +36,10 @@ PATTERNS = [
 # Matches that read as an artifact but are the item's own subject, each
 # settled by hand. Keyed by item, field and the matched text.
 ALLOW = {
+    # Run-length encoding's literal example input and encoded output contain
+    # only hex characters. Read in this exact task, they are data, not revisions.
+    ('js-run-length-encode', 'question', 'aaabccdddd'),
+    ('js-run-length-encode', 'question', '3a1b2c4d'),
     # OWASP ranks password hashing functions; "first choice" is its ranking,
     # not this item's option order.
     ('rm-security-25', 'explanation', 'the first choice'),

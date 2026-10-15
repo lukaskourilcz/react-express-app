@@ -3526,3 +3526,16 @@ bindings, both production dependency audits (zero vulnerabilities) and diff
 checks. Original references, Map ordering/SameValueZero, frozen records,
 nullish defaults and fresh groups use bounded local fixtures. PR #405 remains
 frozen separately; no production progress, score or name fixture was created.
+
+## Rotation, encoding and matrix batch b035 — 15 October 2026
+
+Five individual model reviews raise coverage to 205/725 coding, 520 remaining;
+native remains 263/263. All 34 selected current-hash QuickJS verdicts agree
+(20 valid, five starters, nine wrongs), versus 26/34 selected baseline. The
+unobservable already-sorted-sort negative was removed from both selected sets;
+original baseline is retained privately. New surrogate tests compare numeric
+code units and use escaped record literals. Twenty target/base-25-XP checks,
+copy sweep, focused coding, API/script types, launch, build, native bindings,
+both production dependency audits (zero vulnerabilities) and diff checks pass.
+PR #405's updated exact preview at 58686aaa passed eleven guest checks, all
+zero XP/null progress. Required verify is still pending. No user-state fixture.
