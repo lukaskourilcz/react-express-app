@@ -45,6 +45,13 @@ ALLOW = {
     # This native lesson discusses the first iteration of selection/bubble
     # sort. Both actual trace uses were read; neither describes review work.
     ('dsa-v1-d08-l1', 'question', 'the first pass'),
+    # The metrics harness encodes correct/abstaining/empty predictions as
+    # twelve-character c/a/e runs. These exact four runs are authored input
+    # patterns, not Git revisions; no other item/hash is exempted.
+    ('fde-v1-m07-evaluation-metrics', 'question', 'cccccccccccc'),
+    ('fde-v1-m07-evaluation-metrics', 'question', 'ccccccccaaaa'),
+    ('fde-v1-m07-evaluation-metrics', 'question', 'aaaaaaaaaaaa'),
+    ('fde-v1-m07-evaluation-metrics', 'question', 'eeeeeeeeeeee'),
 }
 
 
@@ -54,6 +61,8 @@ def scan(text, item_id, field, out):
         if m and (item_id, field, m.group(0)) not in ALLOW:
             out.append((item_id, field, name, m.group(0), context(text, m)))
     for m in HASH.finditer(text):
+        if (item_id, field, m.group(0)) in ALLOW:
+            continue
         if UUID.search(text, max(0, m.start() - 40), m.end() + 40):
             continue  # an example UUID is content, not a commit
         out.append((item_id, field, 'commit hash', m.group(0), context(text, m)))

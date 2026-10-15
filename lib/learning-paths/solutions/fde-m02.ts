@@ -50,7 +50,7 @@ export const FDE_M02_SOLUTIONS: Record<string, PathCodeSolution> = {
       records.push({ id, customerId, subject: ticket.subject });
     }
 
-    if (page.nextCursor === null || page.nextCursor === undefined) break;
+    if (page.nextCursor === null) break;
     cursor = page.nextCursor;
   }
 
@@ -58,6 +58,12 @@ export const FDE_M02_SOLUTIONS: Record<string, PathCodeSolution> = {
   return { records, skipped, duplicates };
 };`,
     hiddenTests: [
+      {"call": "(function(){var pages=[{cursor:null,nextCursor:null,tickets:[{id:12,customerId:'C',subject:'x'},{id:'A',customerId:12,subject:'x'},{id:false,customerId:'C',subject:'x'},{id:' A ',customerId:' C ',subject:'  keep  '},{id:'A',customerId:'C',subject:'later'}]}];return syncTickets(__makeClient(pages,{throttleCursor:'__none'}));})()", "expected": {"records": [{"id": "A", "customerId": "C", "subject": "  keep  "}], "skipped": 3, "duplicates": 1}, "async": true},
+      {"call": "(function(){var ids=['__proto__','constructor','a','Z','é','e\\u0301'];var pages=[{cursor:null,nextCursor:null,tickets:ids.map(function(id){return {id:id,customerId:'C',subject:''};})}];return syncTickets(__makeClient(pages,{throttleCursor:'__none'})).then(__ids);})()", "expected": ["Z", "__proto__", "a", "constructor", "é", "é"], "async": true},
+      {"call": "(function(){var c=__makeClient(__PAGES,{throttleCursor:'p2',throttles:3,retryAfterMs:20});return syncTickets(c).then(function(out){var attempts=__attempts(c,'p2');return {count:out.records.length,tries:attempts.length,waited:attempts[3].at-attempts[0].at>=60};});})()", "expected": {"count": 4, "tries": 4, "waited": true}, "criterion": "throttling", "async": true},
+      {"call": "(function(){var ticket=Object.freeze({id:' A ',customerId:' C ',subject:'  unchanged  ',extra:1});var page=Object.freeze({tickets:Object.freeze([ticket]),nextCursor:null});var calls=0;return syncTickets({listTickets:function(cursor){calls++;if(cursor!==null)throw new Error('cursor');return Promise.resolve(page);}}).then(function(out){return {out:out,calls:calls,unchanged:ticket.id===' A '&&ticket.customerId===' C '&&ticket.extra===1};});})()", "expected": {"out": {"records": [{"id": "A", "customerId": "C", "subject": "  unchanged  "}], "skipped": 0, "duplicates": 0}, "calls": 1, "unchanged": true}, "async": true},
+      {"call": "(function(){var pages=[];for(var p=0;p<20;p++){var tickets=[];for(var j=0;j<50;j++){var i=p*50+j;tickets.push({id:'T'+('0000'+i).slice(-4),customerId:'C',subject:'x'});}pages.push({cursor:p===0?null:'p'+p,nextCursor:p===19?null:'p'+(p+1),tickets:tickets});}var c=__makeClient(pages,{throttleCursor:'__none'});return syncTickets(c).then(function(out){return {count:out.records.length,first:out.records[0].id,last:out.records[999].id,requests:c.requests.length,skipped:out.skipped,duplicates:out.duplicates};});})()", "expected": {"count": 1000, "first": "T0000", "last": "T0999", "requests": 20, "skipped": 0, "duplicates": 0}, "async": true},
+
       {
         call:
           "(function () { var pages = [{ cursor: null, nextCursor: 'b', tickets: [{ id: 'TCK-3001', customerId: 'CUS-1', subject: 'First' }] }, { cursor: 'b', nextCursor: 'c', tickets: [{ id: 'TCK-3001', customerId: 'CUS-1', subject: 'Second' }] }, { cursor: 'c', nextCursor: null, tickets: [{ id: 'TCK-3001', customerId: 'CUS-9', subject: 'Third' }] }]; return syncTickets(__makeClient(pages, { throttleCursor: '__none' })).then(function (out) { return { records: out.records, skipped: out.skipped, duplicates: out.duplicates }; }); })()",

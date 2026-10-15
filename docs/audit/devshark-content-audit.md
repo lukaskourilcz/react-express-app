@@ -1,5 +1,167 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n037
+
+Reviewed both evaluation lessons, reading activities and metrics exercise.
+The24/12partition now uses count-compatible prompt variants rather than
+impossible rates or misleading abstention-threshold gains. Regression cases
+remain known after shipping; synthetic provenance alone is not leakage and
+frozen repeat runs can measure variability. Metric denominators, no-answer
+API conventions, cost-per-answer direction and percentile methods are explicit.
+The1880msmean/nearest-rank400msp95/30sp99 example does not add component
+percentiles or imply significance. Comparison policy cannot prove case identity.
+
+Safe dictionaries preserve prototype-like ids/slices; malformed/nonfinite summary
+rates are refused. Set membership replaces quadratic mismatch scans. Six real
+sandbox verdicts pass, including1000slices/2000predictions, frozen inputs and
+exact rounding thresholds; two valid targets retain base25. Trusted arithmetic
+checks pass without real model/dataset/performance inference. Native bindings,
+paths, API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Four exact c/a/e fixture patterns
+are exempted from the hash-artifact scanner for this item/field only; unrelated
+hashes/items remain rejected in explicit probes. Manual editorial/final readings
+remain separate from execution.
+
+Coverage is **240/263 native**, **23 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 is now exact-production verified at cabbaac4 with
+all eleven general checks passing; shipped coverage is95 coding/210 native.
+N032–n037 remain local. Diagnostic parent still awaits #397.
+
+## 15 October continuation — five-item native batch n036
+
+Reviewed both tool/execution lessons, reading activities and dispatcher.
+Custom typeof schema gates are distinguished from JSON Schema/MCP and handler
+invariants. Version-specific MCP compatibility replaces connection-only rules.
+Three retries at three layers can mean64attempts, versus27for three total
+attempts per layer. The async illustration awaits errors and requires a safe-
+replay policy. Durable idempotency, authorized cached-result access, immutable
+approval identity and atomic current-state execution are distinct from this
+fixed-context synchronous in-memory exercise.
+
+Null-prototype state fixes __proto__ replay; private primitive argument snapshots
+prevent a caller changing pending approval, and empty Error messages survive.
+Six real sandbox verdicts pass, covering frozen contexts, special/empty keys,
+failed-call/approval key clearing and scope/retry wrongs. Two valid no-target
+analyses retain base25; no misleading single stateful complexity target is
+invented. Trusted async/budget arithmetic passes without actual MCP, provider,
+concurrent storage, human approval or financial effects. Native bindings, paths,
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Individual manual editorial/final
+readings remain separate from execution.
+
+Coverage is **235/263 native**, **28 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 merged at cabbaac4 after exact-head verify29m57s,
+SQL40s, eleven preview checks and six catalogue probes per theme passed.
+Production verification is pending. N032–n036 are local; exact-production-
+verified coverage remains95 coding/170 native through #398. Diagnostic parent
+still awaits #397.
+
+## 15 October continuation — five-item native batch n035
+
+Reviewed both retrieval lessons, reading activities and selection exercise.
+Provenance needs an authorized retained resolver; immutable URLs can identify
+source text. Chunking/context and overlapping evidence have bounded claims,
+real retrieval can be deterministic, and stored revision/ingestion timestamps
+alone do not prove current freshness. Actual generation input, score semantics,
+selection policy and historical retrieval modes are explicit. Similarity and
+minimal id/timestamp projections do not verify a generated answer or citation.
+
+The reference could match an undefined result tenant against a missing viewer;
+it now requires a valid nonblank viewer identity. Six real sandbox verdicts pass:
+reference/loop alternative pass; starter, old missing-viewer, input-mutation and
+strict-threshold wrongs fail. Frozen input, malformed entries, clearance shape,
+1000result ties and original metadata pass. Two valid target analyses retain
+base25. Authored transcript/candidate/timestamp examples pass without claiming
+live retrieval, source resolution or semantic accuracy. Native bindings, paths,
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Manual editorial/final readings
+remain separate from execution.
+
+Coverage is **230/263 native**, **33 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 freezes n024–n031 at d3064e1f with SQL, eleven
+exact-preview checks and six catalogue probes per theme passing; verify is
+pending. N032–n035 are local. Production coverage is95 coding/170 native
+through #398. Diagnostic parent still awaits #397.
+
+## 15 October continuation — five-item native batch n034
+
+Reviewed both architecture/output lessons, reading activities and validator.
+Rules still have costs, workflows can branch/retry/parallelize, and dependency
+between steps alone does not require an agent. The268/300sample is explicitly
+89.3% coverage with32unresolved cases. Own-key rule lookup prevents inherited
+names from becoming queues. The illustrative caller handles provider failure,
+binds ticket identity and maps categories to actual queues; its client/protocol
+assumptions are explicit. Schema, truth, current authority and calibration are
+separate, and the model-first retry trace is distinct from rule-first routing.
+
+Six real validator sandbox verdicts pass, including a loop alternative and
+precedence/negative-zero/casefold wrongs. Two valid target analyses retain
+base25. Trusted routing examples verify the old prototype-key defect, revised
+queue mapping and failure fallbacks. Partial parser and arithmetic checks pass;
+no real model, protocol, calibration, business accuracy or architecture benchmark
+is claimed. Native bindings, paths, API/script types, launch, build, both
+production dependency audits (zero vulnerabilities), copy and diff checks pass.
+Individual manual editorial/final readings remain separate from execution.
+
+Coverage is **225/263 native**, **38 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 freezes n024–n031 at d3064e1f with SQL, eleven
+exact-preview checks and six catalogue probes per theme passing; verify is
+pending. N032–n034 are local. Production coverage is95 coding/170 native
+through #398. Diagnostic parent still awaits #397.
+
+## 15 October continuation — five-item native batch n033
+
+Reviewed both tenant/lifecycle lessons, their reading activities and wrapper.
+Request authority is current, service roles need not read every tenant, and a
+scoped method name is not storage enforcement. Two duplicate-declaration code
+blocks now compile. Broad reads violate this workbench policy without proving
+an inevitable payload leak. Lifecycle text inventories actual copies, protects
+ids, scopes derived cleanup and states durable retry/completion limits. Backup
+capabilities vary; audit references alone do not reconstruct historical decisions.
+Expiry/revocation and per-batch continuation follow an explicit policy, including
+checkpoint validation before resume.
+
+Six real sandbox verdicts pass. Expiry-refusal reads and proposed-tenant access
+mutants both passed the old suite and fail the new zero-read/accessor probes.
+Frozen inputs and100grant/1000row projection boundaries pass; two valid target
+analyses retain base25. Trusted snippet syntax/scope, audit JSON and batch timing
+checks pass. No live RLS, deletion, retention/restore or database acceptance is
+inferred. Native bindings, paths, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Individual
+manual editorial readings remain separate from execution.
+
+Coverage is **220/263 native**, **43 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 remains frozen at d3064e1f with SQL, eleven exact-
+preview general checks and six catalogue probes per theme passing; verify is
+pending. N032–n033 are local. Production coverage is95 coding/170 native through
+#398. Diagnostic parent still awaits #397.
+
+## 15 October continuation — five-item native batch n032
+
+Reviewed both integration lessons, their reading activities and the connector.
+The false NBSP trimming example, digit-count precision rule, universal delivery
+and retry guarantees are corrected. Rich schemas can validate usable values;
+boundary validation does not remove authorization/current-state checks. The
+idempotency illustration now states local transaction, serialization, scoped
+key and trusted fingerprint assumptions; it does not make external provider
+effects atomic. Retry-After is optional, 429 does not prove no effects, and a
+parsed zero delay is honored. Persistent upsert differs from per-run deduplication.
+
+Six real sandbox verdicts pass, including a Map alternative and coercion/wait/
+budget counterexamples. Inputs cover1000tickets, three retries then success,
+code-unit ordering and frozen pages. Two valid authored-target analyses retain
+base25. Trusted lesson Unicode/number/partial-mapper/backoff examples pass;
+the transactional sketch is syntax-checked only, not database/payment tested.
+Native bindings, paths, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. All
+manual editorial/final readings remain separate from these executions.
+
+Coverage is **215/263 native**, **48 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 freezes n024–n031 at d3064e1f, with required SQL,
+eleven exact-preview general checks and six catalogue probes per theme passing;
+verify is pending. N032 is local. Production coverage is95 coding/170 native
+through exact-production-verified #398. Diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n031
 
 Reviewed both discovery lessons, their reading activities and the backend

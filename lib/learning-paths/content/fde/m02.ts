@@ -151,7 +151,7 @@ export const FDE_M02: ModuleSource = {
         },
         {
           kind: 'table',
-          caption: 'Four gaps from one week of reading Marlbrook’s ticket feed, and what each one costs you if you find it in production instead.',
+          caption: 'Four hypothetical contract mismatches and possible downstream failures if validation does not catch them.',
           headers: ['The documentation says', 'What arrives', 'What it costs you later'],
           rows: [
             [
@@ -162,12 +162,12 @@ export const FDE_M02: ModuleSource = {
             [
               '`priority`: one of low, normal, high',
               '`urgent`, from a workflow rule added last quarter',
-              'A switch with no default silently classifies the loudest tickets as normal',
+              'An unhandled priority can be rejected, dropped or misclassified depending on the implementation',
             ],
             [
               '`openedAt`: ISO 8601 timestamp',
               '`2026-03-02 02:14:00`, no `T`, no offset, in the desk’s local time',
-              'Every ticket shifts by an hour twice a year and nobody can reproduce the report',
+              'An unspecified timezone or ambiguous local time can produce incorrect instants and inconsistent reports',
             ],
             [
               '`tags`: array of strings',
@@ -180,24 +180,24 @@ export const FDE_M02: ModuleSource = {
           kind: 'code',
           language: 'json',
           code: '{\n  "id": "TCK-1007",\n  "customerId": "",\n  "subject": "Invoice question",\n  "priority": "urgent",\n  "openedAt": "2026-03-02 08:40:00",\n  "tags": null,\n  "assignee": { "id": null, "name": null }\n}',
-          caption: 'One real-shaped ticket. Every field is present and typed, and four of them are unusable.',
+          caption: 'A hypothetical ticket with present fields that violate the stated usable-record contract. A complete schema can reject these values.',
         },
         {
           kind: 'prose',
           body:
-            'Notice what the payload above does not do: it does not omit anything. A schema check that only asks “is `customerId` a string” passes it. Presence and usability are different questions, and the second one is the one your code depends on. An empty string, a null inside an object that exists, a date that parses into the wrong hour — all of these survive a shape check and break the step after it.',
+            'A presence/type-only check can accept an empty customerId. A richer schema can enforce non-empty values, nullable alternatives and enum constraints. The issue is the actual validation contract, not an inherent inability of schemas to express useful rules. Missing offsets also require an explicit timestamp interpretation policy; do not silently guess the desk timezone.',
         },
         {
           kind: 'prose',
           body:
-            'So put the check at the boundary. One function turns whatever arrived into either a record your code can rely on or a stated reason it cannot, and nothing downstream of it re-checks anything. The alternative spreads `if (ticket.customerId)` through six call sites, five of which agree and one of which does not.',
+            'Validate external data at the boundary and return a clearly defined usable record or rejection. Downstream code can then rely on the validated fields within that scope. It still needs authorization, current-state checks and any additional invariants required for the effect it performs. Avoid inconsistent duplicate input checks across callers.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code:
             'const text = value => (typeof value === \'string\' ? value.trim() : \'\');\n\n// One place decides. Downstream code gets a record or a reason, never a maybe.\nconst toRecord = ticket => {\n  const id = text(ticket.id);\n  const customerId = text(ticket.customerId);\n  if (id === \'\') return { ok: false, reason: \'no ticket id\' };\n  if (customerId === \'\') return { ok: false, reason: \'no customer id\' };\n  return { ok: true, record: { id, customerId, subject: text(ticket.subject) } };\n};',
-          caption: 'A boundary that returns a record or a reason. `text` collapses the missing, the null and the whitespace-only into one case.',
+          caption: 'A deliberately partial boundary for ordinary ticket objects: it validates only ids and normalizes subject text. It does not validate the full ticket, authorization or ownership.',
         },
         {
           kind: 'callout',
@@ -208,20 +208,20 @@ export const FDE_M02: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Encoding is the second family of surprises, and it hurts most when you use a field as a key. Two strings that look identical on screen can differ byte for byte. A trailing space from a CSV export, a non-breaking space pasted out of a spreadsheet, or `é` written as one code point in one system and as `e` plus a combining accent in another: all three compare unequal, so the lookup misses and the sync creates a second customer.',
+            'Visually similar strings can differ in code points and fail exact equality. Decide normalization rules from the identifier contract before changing keys: trimming or Unicode normalization can merge values a source intended to keep distinct. NFC handles canonical Unicode equivalence, not every visually similar character or identifier ambiguity.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code:
-            'const a = \'Jos\\u00e9\';        // é as one code point\nconst b = \'Jose\\u0301\';       // e + combining acute\na === b;                      // false\na.normalize(\'NFC\') === b.normalize(\'NFC\');  // true\n\n\'CUS-12\\u00a0\'.trim();        // still \'CUS-12\\u00a0\' in older engines: NBSP is not always trimmed\n\'CUS-12\\u00a0\'.replace(/\\s+$/u, \'\');        // \'CUS-12\'',
-          caption: 'Normalize before you compare, and decide deliberately which whitespace counts as whitespace.',
+            'const a = \'Jos\\u00e9\';\nconst b = \'Jose\\u0301\';\na === b; // false\na.normalize(\'NFC\') === b.normalize(\'NFC\'); // true\n\n\'CUS-12\\u00a0\'.trim(); // \'CUS-12\': ECMAScript trim removes NBSP\n\'CUS-12\\u200b\'.trim(); // keeps U+200B ZERO WIDTH SPACE',
+          caption: 'Test the exact characters and the source contract. NBSP is trimmed; zero-width space is not. Normalization is not a general identity or authorization check.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'JSON numbers are the trap nobody sees coming. `JSON.parse` produces a double, so a 19-digit account id arrives rounded and the last two digits are wrong. It fails silently: the value is a number, the schema check passes, and the id no longer matches anything. If an identifier is longer than about fifteen digits, insist it crosses the wire as a string.',
+            'JavaScript JSON.parse normally represents JSON numbers as binary64 Number values. Integers beyond Number.MAX_SAFE_INTEGER are not all exactly representable: parsing 9007199254740993 produces 9007199254740992. Some larger integers are exactly representable, so digit count alone is not the precise boundary. Preserve opaque or potentially large identifiers as JSON strings end to end; validate numeric ranges before converting any identifier to Number.',
         },
         {
           kind: 'prose',
@@ -249,48 +249,48 @@ export const FDE_M02: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Exactly-once delivery is not something a network gives you. A sender writes a request, the receiver processes it, and the acknowledgement is lost on the way back. The sender cannot tell that outcome apart from a request that never arrived, so it sends again. Every queue, every webhook and every retry loop you will meet delivers at least once, which means duplicates are the normal case and your handler is the thing that has to survive them.',
+            'A sender can lose the acknowledgement after the receiver processes a request. Retrying can then duplicate the effect. Delivery guarantees depend on the queue, webhook or client: some systems use at-most-once delivery, while bounded retries can still fail to deliver. Do not assume every transport delivers at least once. Design for the documented loss, duplication and ordering behavior.',
         },
         {
           kind: 'prose',
           body:
-            'An idempotency key is how the receiver survives them. The sender picks a stable identifier for the operation and sends it with every attempt. The receiver stores the key together with the result of the first attempt. A second request with the same key returns the stored result instead of doing the work again. The key has to be stable across attempts, which is exactly what a fresh UUID per attempt is not.',
+            'For a service with an idempotency contract, reuse a stable operation key across attempts. The receiver must scope it to the caller or tenant and operation, bind it to the intended request, and coordinate the claim, effect and result against concurrent requests and crashes. Document replay behavior, mismatched payloads, failures and retention. A fresh key per attempt defeats deduplication; a key alone does not implement it.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code:
-            '// Receiver side. The key is the caller\'s, the result is ours, and the pair is\n// written in one transaction so a crash between them cannot lose either half.\nconst applyRefund = async (key, amount) => {\n  const stored = await store.get(key);\n  if (stored) return stored;                 // second delivery: same answer, no second refund\n\n  const result = await ledger.refund(amount);\n  await store.put(key, result);\n  return result;\n};',
-          caption: 'The whole mechanism: look up the key, do the work once, remember what you answered.',
+            '// Illustrative APIs. Trusted server code derives tenantId and fingerprint,\n// checks current actor authorization before this call, and keeps all writes local\n// to one transactional database; lockOperation serializes the scoped key.\nconst applyRefund = (tenantId, key, request) =>\n  database.transaction(async tx => {\n    await tx.lockOperation(tenantId, key);\n    const prior = await tx.operations.get(tenantId, key);\n    if (prior) {\n      if (prior.fingerprint !== request.fingerprint) throw new Error(\'key reused\');\n      return prior.result;\n    }\n    // This assumed operation enforces current authorization, approval and balance.\n    const result = await tx.ledger.applyApprovedRefund(tenantId, request);\n    await tx.operations.insert({ tenantId, key, fingerprint: request.fingerprint, result });\n    return result;\n  });',
+          caption: 'A transaction/lock sketch for a local ledger, with an assumed unique scoped operation key. It cannot make an external payment-provider effect atomic with this database; that requires the provider contract and recovery design.',
         },
         {
           kind: 'callout',
           tone: 'note',
           body:
-            'The right duplicate key depends on what a row means. A sync that reads the current state of every ticket stores one row per ticket, so the ticket id alone identifies it and a second delivery of the same id is a duplicate. A feed of ticket updates stores one row per version, so the key is the id together with the version, and using the id alone would throw away every real update after the first.',
+            'For current-state sync, use a stable tenant-scoped ticket id as the upsert identity, not a permanent reason to discard all future updates. An immutable update feed may use tenant, ticket id and version as its event identity. Event ids are another common contract. The connector exercise deliberately keeps the first delivery within one unchanged fixture run; it does not implement persistent current-state synchronization.',
         },
         {
           kind: 'prose',
           body:
-            'Retrying is the sender’s half of the same problem, and the question is always what a second attempt would do to the server. RFC 9110 separates safe methods, which do not change server state, from idempotent methods, where sending the request twice leaves the same state as sending it once. GET is both. DELETE is idempotent but not safe: the second one finds nothing to delete and the end state matches. POST is neither, which is why a POST needs an idempotency key before you may retry it automatically.',
+            'RFC 9110 defines safe methods by their requested read-only semantics; logging and other incidental effects can still occur. Idempotence concerns the intended effect of repeated identical requests, not identical responses or an absence of logs. GET is safe and idempotent; DELETE is idempotent but not safe under standard semantics. POST is not inherently idempotent, but a documented application contract or other reliable knowledge may justify retries. Bound retries and recheck the specific service contract.',
         },
         {
           kind: 'table',
-          caption: 'What a client may retry on its own, and what it must not.',
+          caption: 'Retry considerations for an API following standard HTTP semantics. These are not unconditional promises about every service.',
           headers: ['Failure', 'Retry without asking?', 'Why'],
           rows: [
-            ['GET returned 429 or 503', 'Yes', 'Reading again changes nothing at the source; wait the delay first'],
-            ['GET timed out with no response', 'Yes', 'The read either happened or did not, and neither outcome left a mark'],
-            ['POST timed out with no response, no idempotency key', 'No', 'You cannot tell a lost request from a lost acknowledgement, so a retry may do the work twice'],
-            ['POST returned 500, with an idempotency key', 'Yes', 'The key makes the second attempt return the first result instead of repeating the work'],
-            ['Any request returned 400 or 422', 'No', 'The payload is wrong, and the same payload will be wrong every time'],
-            ['Any request returned 401 or 403', 'No', 'Retrying a credential failure burns your rate limit and locks the account'],
+            ['GET returned 429 or 503', 'Usually eligible for bounded retry', 'Respect a valid Retry-After when supplied; read-only requested semantics do not forbid incidental effects'],
+            ['GET timed out with no response', 'Usually eligible for bounded retry', 'The representation may change; retry with an appropriate budget and cancellation policy'],
+            ['POST timed out, no deduplication contract', 'Do not assume it is safe to replay', 'The effect may have happened before the acknowledgement was lost'],
+            ['POST returned 500, key supplied', 'Inspect the actual idempotency contract', 'A header alone does not establish atomicity, stored failure behavior or successful replay'],
+            ['400 or 422 with unchanged invalid input', 'Usually fix the input before retrying', 'Status alone is not a universal claim that all future attempts fail forever'],
+            ['401 or 403', 'Resolve credentials or authorization first', 'Avoid blind loops; documented token refresh may permit a later request'],
           ],
         },
         {
           kind: 'prose',
           body:
-            'When a server throttles you it says so. RFC 6585 defines 429 Too Many Requests for exactly this, and RFC 9110 defines the `Retry-After` header the response carries, either as a number of seconds or as an HTTP date. A 429 means the request was refused: nothing was read, nothing changed, and the work still has to happen. Dropping the page is the one response that guarantees missing data.',
+            '429 indicates rate limiting. RFC 6585 permits, but does not require, a Retry-After header; its value may be seconds or an HTTP date. The status alone does not establish that nothing was read or changed. For this exercise, the synthetic read rejection returns no page and preserves the cursor. Follow the documented contract, respect a valid delay and stop or defer when the retry budget is exhausted.',
         },
         {
           kind: 'trace',
@@ -316,7 +316,7 @@ export const FDE_M02: ModuleSource = {
                   { index: 0, role: 'settled' },
                   { index: 1, role: 'excluded' },
                 ],
-                note: 'Cursor p2 comes back 429 Too Many Requests with Retry-After: 2. Nothing was read, so no record is added and the cursor does not move.',
+                note: 'In this synthetic read, cursor p2 rejects with a two-second delay and no page. No record is added and the cursor stays at p2; that is the fixture contract, not a universal 429 guarantee.',
                 counter: { label: 'Requests sent', value: 2 },
               },
               {
@@ -326,7 +326,7 @@ export const FDE_M02: ModuleSource = {
                   { index: 1, role: 'excluded' },
                   { index: 2, role: 'active' },
                 ],
-                note: 'The client waits the two seconds the server asked for. Retrying sooner spends the next request on another 429 and makes the throttle last longer.',
+                note: 'The client waits the supplied two seconds. An earlier retry would violate this delay; whether it receives another 429 or extends a limiter window depends on the service.',
                 counter: { label: 'Requests sent', value: 2 },
               },
               {
@@ -358,20 +358,20 @@ export const FDE_M02: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'When the server gives you no delay, you have to invent one, and the shape that works is exponential: 1 second, then 2, then 4, then 8. Constant retries hammer a system that is already failing. What exponential backoff alone does not fix is synchronisation. If fifty clients were throttled by the same overload, all fifty wake up at the same instant and the next wave is identical to the one that caused the problem. Jitter breaks that up by spreading each client’s wait randomly across its window.',
+            'When the service supplies no usable delay, capped exponential backoff with jitter is a common policy. Choose it alongside the service contract, total deadline and retry budget; exponential timing is not universally optimal. What exponential backoff alone does not fix is synchronisation. If fifty clients were throttled by the same overload, all fifty wake up at the same instant and the next wave is identical to the one that caused the problem. Jitter breaks that up by spreading each client’s wait randomly across its window.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code:
-            'const nextDelay = (attempt, retryAfterMs) => {\n  if (retryAfterMs) return retryAfterMs;          // the server told you; do not argue\n  const ceiling = Math.min(1000 * 2 ** attempt, 30_000);\n  return Math.random() * ceiling;                  // full jitter: anywhere in the window\n};',
-          caption: 'Honour the header when there is one. Otherwise double the ceiling and pick a random point below it.',
+            'const nextDelay = (attempt, retryAfterMs) => {\n  if (Number.isFinite(retryAfterMs) && retryAfterMs >= 0) return retryAfterMs;\n  const ceiling = Math.min(1000 * 2 ** attempt, 30_000);\n  return Math.random() * ceiling;\n};',
+          caption: 'This helper receives an already parsed finite nonnegative delay, including zero, or null. Attempt is an integer 0–30. Parse HTTP dates elsewhere; apply the total deadline and retry limit outside this helper.',
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'Give every retry loop a budget. A client that retries forever turns a five-minute dependency blip into a self-inflicted outage, and it does it while reporting that everything is fine. Three or four attempts, then stop, surface the failure with the cursor you were on, and let the next scheduled run resume from there.',
+            'Give every retry loop a budget. A client that retries forever turns a five-minute dependency blip into a self-inflicted outage, and it does it while reporting that everything is fine. Choose a documented attempt/deadline budget, stop when exhausted and surface useful recovery context. Resuming later requires a persisted valid checkpoint and the source cursor contract; a cursor alone may expire or omit state needed for a consistent resume.',
         },
       ],
     },
@@ -383,7 +383,7 @@ export const FDE_M02: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: contracts and the data you actually get',
-      summary: 'The documented shape against the wire, fields that are usable rather than merely present, encoding traps, and one boundary that decides.',
+      summary: 'Documented and observed field contracts, boundary validation, explicit identifier normalization and safe numeric ranges.',
       competencies: ['integration'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m02-l1',
@@ -394,7 +394,7 @@ export const FDE_M02: ModuleSource = {
       purpose: 'exercise',
       verification: 'self_reviewed',
       title: 'Read: retries, duplicates and idempotency',
-      summary: 'At-least-once delivery, idempotency keys, which failures a client may retry alone, Retry-After, and backoff with jitter.',
+      summary: 'Documented delivery semantics, atomic scoped idempotency, retry eligibility, optional Retry-After delays and bounded recovery.',
       competencies: ['integration'],
       estimatedMinutes: 25,
       lessonId: 'fde-v1-m02-l2',
@@ -488,7 +488,7 @@ export const FDE_M02: ModuleSource = {
       code: {
         language: 'javascript',
         prompt:
-          'Write `syncTickets(client)`, returning a promise for `{ records, skipped, duplicates }`.\n\n`client.listTickets(cursor)` is the only way in. Call it with `null` for the first page. It resolves with `{ tickets, nextCursor }`; keep calling with the `nextCursor` it hands you until that is `null`. Each ticket carries `id`, `customerId`, `subject` and fields you do not need.\n\nFour things go wrong on the way, and all four are graded:\n\n1. **A ticket you cannot use.** Trim `id` and `customerId`. If either is missing, null, or nothing but whitespace, do not keep the ticket: add one to `skipped` and move on. A ticket you skipped never becomes a record, so a second delivery of it is skipped again rather than counted as a duplicate.\n2. **The same ticket twice.** One id arrives on two different pages. Keep the first copy exactly as it was, add one to `duplicates`, and do not overwrite anything.\n3. **Three pages behind a cursor.** An empty `tickets` array does not mean the walk is over. Only a `nextCursor` of `null` does.\n4. **A throttled page.** One call rejects with `{ status: 429, retryAfterMs }`. Nothing was read, so the page still has to be fetched: `await sleep(retryAfterMs)`, then request the same cursor again. Give a page at most three retries; if it is still throttled after that, let the rejection reach your caller. A rejection whose status is not 429 is never retried and always propagates.\n\nA kept record is exactly `{ id, customerId, subject }` with the trimmed id and customer id, and `subject` copied through unchanged. Sort `records` by `id` ascending, comparing the ids as text, so `TCK-10` sorts before `TCK-9`.\n\nRun `syncTickets` twice on the same client and it must return the same thing both times, with the same counts. Keep every array, set and counter inside the function.\n\nThe client is a fixture written for this exercise, not a live API. `sleep` runs on the sandbox’s virtual clock, so a 500 ms wait finishes instantly and still records as a 500 ms gap. Nothing here opens a network connection, and no real customer data appears in the pages.',
+          'Write `syncTickets(client)`, returning a promise for `{ records, skipped, duplicates }`.\n\n`client.listTickets(cursor)` is the only way in. Call it with `null` for the first page. It resolves with `{ tickets, nextCursor }`; keep calling with the `nextCursor` it hands you until that is `null`. Each ticket carries `id`, `customerId`, `subject` and fields you do not need.\n\nFour things go wrong on the way, and all four are graded:\n\n1. **A ticket you cannot use.** Trim `id` and `customerId`. If either is not a string or is empty after trimming, do not keep the ticket: add one to `skipped` and move on. A ticket you skipped never becomes a record, so a second delivery of it is skipped again rather than counted as a duplicate.\n2. **The same ticket twice.** One id arrives on two different pages. Keep the first copy exactly as it was, add one to `duplicates`, and do not overwrite anything.\n3. **Three pages behind a cursor.** An empty `tickets` array does not mean the walk is over. Only a `nextCursor` of `null` does.\n4. **A throttled page.** One call rejects with `{ status: 429, retryAfterMs }`. In this fixture no page was returned, so the page still has to be fetched: `await sleep(retryAfterMs)`, then request the same cursor again. Give a page at most three retries; if it is still throttled after that, let the rejection reach your caller. A rejection whose status is not 429 is never retried and always propagates.\n\nA kept record is exactly `{ id, customerId, subject }` with the trimmed id and customer id, and `subject` copied through unchanged. Sort `records` by `id` ascending, comparing their UTF-16 code units with ordinary < and > (not locale collation), so `TCK-10` sorts before `TCK-9`.\n\nRun `syncTickets` twice on the same client and it must return the same thing both times, with the same counts. Keep every array, set and counter inside the function.\n\nInput bounds: 1–20 finite cursor-linked pages, at most 50 ordinary ticket objects per page; no cycles, getters or proxies. Non-null cursors are strings. Subjects are strings copied unchanged; string fields have at most 1,000 UTF-16 code units. A throttle delay is finite and nonnegative. Do not mutate the returned page or ticket objects.\n\nTarget: O(n log n) time, where n is the total page and ticket count, using bounded-length text comparisons and the usual hash-set cost model; network/virtual waiting is excluded.\n\nThe client is a fixture written for this exercise, not a live API. `sleep` runs on the sandbox’s virtual clock, so a 500 ms wait finishes instantly and still records as a 500 ms gap. Nothing here opens a network connection, and no real customer data appears in the pages.',
         contract: [
           '`client.listTickets(cursor)` is the only source of tickets. Start at `null` and follow `nextCursor` until it is `null`.',
           'Request each page once, plus its retries. Do not restart the walk from the first page after a failure.',
