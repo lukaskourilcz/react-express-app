@@ -665,7 +665,11 @@ const isSearchTree = (node, low = -Infinity, high = Infinity) =>
     settled.add(current);
     if (current === goal) {
       const route = [goal];
-      while (route[0] !== start) route.unshift(cameFrom.get(route[0]));
+      for (let at = goal; at !== start; ) {
+        at = cameFrom.get(at);
+        route.push(at);
+      }
+      route.reverse();
       return { minutes: time.get(goal), route };
     }
     for (const [next, minutes] of neighbours.get(current) ?? []) {
@@ -730,53 +734,46 @@ const isSearchTree = (node, low = -Infinity, high = Infinity) =>
   return null;
 };`,
     senior: `const fastestRoute = (tracks, start, goal) => {
-  const neighbours = new Map();
-  for (const [a, b, minutes] of tracks) {
+  const edges = new Map();
+  for (const [a, b, cost] of tracks) {
     for (const [from, to] of [[a, b], [b, a]]) {
-      if (!neighbours.has(from)) neighbours.set(from, []);
-      neighbours.get(from).push([to, minutes]);
+      if (!edges.has(from)) edges.set(from, []);
+      edges.get(from).push([to, cost]);
     }
   }
-  // A binary heap of [minutes, station, cameFrom], quickest on top: the part a big map needs.
-  const heap = [];
-  const swap = (i, j) => { [heap[i], heap[j]] = [heap[j], heap[i]]; };
-  const push = entry => {
-    heap.push(entry);
-    for (let i = heap.length - 1; i > 0 && heap[(i - 1) >> 1][0] > heap[i][0]; i = (i - 1) >> 1) swap(i, (i - 1) >> 1);
-  };
-  const pop = () => {
-    const top = heap[0];
-    const last = heap.pop();
-    if (heap.length === 0) return top;
-    heap[0] = last;
-    for (let i = 0; ; ) {
-      let smallest = i;
-      for (const child of [2 * i + 1, 2 * i + 2]) {
-        if (child < heap.length && heap[child][0] < heap[smallest][0]) smallest = child;
+  const distance = new Map([[start, 0]]);
+  const parent = new Map();
+  const done = new Set();
+  while (true) {
+    let node;
+    let minimum = Infinity;
+    for (const [candidate, cost] of distance) {
+      if (!done.has(candidate) && cost < minimum) {
+        node = candidate;
+        minimum = cost;
       }
-      if (smallest === i) return top;
-      swap(i, smallest);
-      i = smallest;
     }
-  };
-  const cameFrom = new Map(); // a station is settled once it is in here
-  push([0, start, null]);
-  while (heap.length > 0) {
-    const [minutes, station, from] = pop();
-    if (cameFrom.has(station)) continue; // an older, slower entry for a settled station
-    cameFrom.set(station, from);
-    if (station === goal) {
+    if (node === undefined) return null;
+    if (node === goal) {
       const route = [];
-      for (let at = goal; at !== null; at = cameFrom.get(at)) route.unshift(at);
-      return { minutes, route };
+      for (let at = goal; at !== undefined; at = parent.get(at)) route.push(at);
+      return { minutes: minimum, route: route.reverse() };
     }
-    for (const [next, length] of neighbours.get(station) ?? []) {
-      if (!cameFrom.has(next)) push([minutes + length, next, station]);
+    done.add(node);
+    for (const [next, cost] of edges.get(node) ?? []) {
+      const through = minimum + cost;
+      if (through < (distance.get(next) ?? Infinity)) {
+        distance.set(next, through);
+        parent.set(next, node);
+      }
     }
   }
-  return null;
 };`,
     hiddenTests: [
+      { call: "(() => {const names=[\"\",\"__proto__\",\"x\"],pairs=[[0,1],[0,2],[1,2]];for(let code=0;code<27;code++){let digits=code;const tracks=[],dist=names.map((_,i)=>names.map((_,j)=>i===j?0:Infinity));for(const[a,b]of pairs){const choice=digits%3;digits=Math.floor(digits/3);if(choice){const w=choice===1?0:2;tracks.push(Object.freeze([names[a],names[b],w]));dist[a][b]=dist[b][a]=w;}}Object.freeze(tracks);for(let k=0;k<3;k++)for(let i=0;i<3;i++)for(let j=0;j<3;j++)dist[i][j]=Math.min(dist[i][j],dist[i][k]+dist[k][j]);for(let s=0;s<3;s++)for(let g=0;g<3;g++){const out=fastestRoute(tracks,names[s],names[g]),wanted=dist[s][g];if(wanted===Infinity){if(out!==null)return false;continue;}if(!out||out.minutes!==wanted||!Array.isArray(out.route)||out.route[0]!==names[s]||out.route[out.route.length-1]!==names[g]||new Set(out.route).size!==out.route.length)return false;let sum=0;for(let at=1;at<out.route.length;at++){let edge=Infinity;for(const[a,b,w]of tracks)if(a===out.route[at-1]&&b===out.route[at]||b===out.route[at-1]&&a===out.route[at])edge=Math.min(edge,w);sum+=edge;}if(sum!==wanted)return false;}}return true;})()", expected: true },
+      { call: "(() => {const tracks=Object.freeze([Object.freeze([\"\",\"constructor\",0]),Object.freeze([\"constructor\",\"goal\",999999999]),Object.freeze([\"\",\"goal\",1000000000]),Object.freeze([\"goal\",\"goal\",0])]),one=fastestRoute(tracks,\"\",\"goal\"),two=fastestRoute(tracks,\"\",\"goal\");if(one.minutes!==999999999||one.route.join(\"|\")!==\"|constructor|goal\"||one.route===two.route)return false;one.route[0]=\"changed\";return two.route[0]===\"\"&&tracks[0][0]===\"\"&&fastestRoute([],\"absent\",\"other\")===null;})()", expected: true },
+      { call: "(() => {const tracks=Object.freeze(Array.from({length:199},(_,i)=>Object.freeze([\"n\"+i,\"n\"+(i+1),1000000000]))),out=fastestRoute(tracks,\"n0\",\"n199\"),many=Object.freeze(Array.from({length:10000},(_,i)=>Object.freeze([\"a\",\"b\",i+1])));return [out.minutes,out.route.length,out.route.every((v,i)=>v===\"n\"+i),fastestRoute(many,\"a\",\"b\").minutes];})()", expected: [199000000000, 200, true, 1] },
+
       { call: 'fastestRoute([["S", "A", 1], ["S", "B", 4], ["A", "B", 1], ["B", "T", 1]], "S", "T")', expected: { minutes: 3, route: ['S', 'A', 'B', 'T'] } },
       { call: 'fastestRoute([["A", "B", 0], ["B", "C", 3], ["A", "C", 4]], "A", "C")', expected: { minutes: 3, route: ['A', 'B', 'C'] } },
       { call: 'fastestRoute([["A", "B", 1], ["C", "D", 1]], "A", "D")', expected: null },
@@ -840,6 +837,10 @@ const longestRising = scores =>
     return tails;
   }, []).length;`,
     hiddenTests: [
+      { call: "(() => {const alphabet=[-1,-0,.5,2];for(let n=0;n<=5;n++)for(let code=0;code<4**n;code++){let digits=code;const values=[];for(let i=0;i<n;i++){values.push(alphabet[digits%4]);digits=Math.floor(digits/4);}let best=0;for(let mask=0;mask<2**n;mask++){let previous=-Infinity,count=0,valid=true;for(let i=0;i<n;i++)if(mask&(1<<i)){if(!(previous<values[i]))valid=false;previous=values[i];count++;}if(valid)best=Math.max(best,count);}if(longestRising(Object.freeze(values))!==best)return false;}return true;})()", expected: true },
+      { call: "(() => {const values=[-0,0,.1,.2,.3,1000000000000],copy=values.slice();return [longestRising(values),values.every((v,i)=>Object.is(v,copy[i])),longestRising(Object.freeze([.2,.1,.15,.3])),longestRising(Object.freeze([-1000000000000,0,1000000000000]))];})()", expected: [5, true, 3, 3] },
+      { call: "[longestRising(Object.freeze(Array.from({length:20000},(_,i)=>i/10))),longestRising(Object.freeze(Array.from({length:20000},(_,i)=>-i/10))),longestRising(Object.freeze(Array(20000).fill(.1)))]", expected: [20000, 1, 1] },
+
       { call: 'longestRising([3, 10, 2, 1, 20])', expected: 3 },
       { call: 'longestRising([4, 10, 4, 3, 8, 9])', expected: 3 },
       { call: 'longestRising([-5, -3, -4, 0, -1, 2])', expected: 4 },
@@ -878,12 +879,17 @@ const deserialize = text => {
   return read();
 };`,
     junior: `const serialize = root => {
-  if (root === null) {
-    return "#";
-  }
-  const left = serialize(root.left);
-  const right = serialize(root.right);
-  return root.value + "," + left + "," + right;
+  const parts = [];
+  const write = node => {
+    if (node === null) parts.push("#");
+    else {
+      parts.push(String(node.value));
+      write(node.left);
+      write(node.right);
+    }
+  };
+  write(root);
+  return parts.join(",");
 };
 
 const deserialize = text => {
@@ -902,10 +908,21 @@ const deserialize = text => {
   };
   return readNode();
 };`,
-    senior: `const serialize = node => (node ? \`\${node.value},\${serialize(node.left)},\${serialize(node.right)}\` : "#");
+    senior: `const serialize = root => {
+  const parts = [];
+  const write = node => {
+    if (node === null) parts.push("#");
+    else {
+      parts.push(String(node.value));
+      write(node.left);
+      write(node.right);
+    }
+  };
+  write(root);
+  return parts.join(",");
+};
 
 const deserialize = text => {
-  // An iterator is a reading position that every read shares.
   const items = text.split(",")[Symbol.iterator]();
   const read = () => {
     const { value: item } = items.next();
@@ -914,6 +931,10 @@ const deserialize = text => {
   return read();
 };`,
     hiddenTests: [
+      { call: "(() => {const memo=[[null]],shapes=n=>{if(memo[n])return memo[n];const out=[];for(let k=0;k<n;k++)for(const a of shapes(k))for(const b of shapes(n-k-1))out.push([a,b]);return memo[n]=out;};for(let n=0;n<=5;n++)for(const shape of shapes(n)){let serial=0;const tokens=[],make=s=>{if(s===null){tokens.push(\"#\");return null;}const value=[-9007199254740991,-0,120,9007199254740991][serial++%4];tokens.push(String(value));return Object.freeze(Object.assign(Object.create(null),{value,left:make(s[0]),right:make(s[1])}));},root=make(shape),text=tokens.join(\",\");if(serialize(root)!==text)return false;const copy=deserialize(text),stack=[[root,copy]],seen=new Set();while(stack.length){const[a,b]=stack.pop();if(a===null){if(b!==null)return false;continue;}if(!b||a===b||seen.has(b)||a.value!==b.value||![\"value\",\"left\",\"right\"].every(key=>Object.hasOwn(b,key)))return false;seen.add(b);stack.push([a.left,b.left],[a.right,b.right]);}}return true;})()", expected: true },
+      { call: "(() => {const text=\"9007199254740991,-9007199254740991,#,#,0,#,#\",a=deserialize(text),b=deserialize(text);a.left.value=3;a.right=null;return [b.value,b.left.value,b.right.value,a!==b,a.left!==b.left,serialize(Object.freeze({value:-0,left:null,right:null}))];})()", expected: [9007199254740991, -9007199254740991, 0, true, true, "0,#,#"] },
+      { call: "(() => {let root=null;const tokens=[];for(let i=511;i>=0;i--)root=Object.freeze({value:i,left:root,right:null});for(let i=0;i<512;i++)tokens.push(String(i));for(let i=0;i<513;i++)tokens.push(\"#\");const text=tokens.join(\",\");if(serialize(root)!==text||serialize(deserialize(text))!==text)return false;const build=(lo,hi)=>{if(lo>=hi)return null;const mid=Math.floor((lo+hi)/2);return Object.freeze({value:mid,left:build(lo,mid),right:build(mid+1,hi)});},wide=build(0,2000),encoded=serialize(wide),copy=deserialize(encoded);return encoded.split(\",\").length===4001&&serialize(copy)===encoded&&copy!==wide;})()", expected: true },
+
       { call: 'deserialize("5,4,11,7,#,#,2,#,#,#,8,13,#,#,4,#,1,#,#")', expected: tree(5, tree(4, tree(11, tree(7), tree(2))), tree(8, tree(13), tree(4, null, tree(1)))) },
       { call: withTree('serialize(node(5, node(4, node(11, node(7), node(2))), node(8, node(13), node(4, null, node(1)))))'), expected: '5,4,11,7,#,#,2,#,#,#,8,13,#,#,4,#,1,#,#' },
       { call: withTree('serialize(node(0))'), expected: '0,#,#' },

@@ -1042,9 +1042,9 @@ console.log(sumValues({ a: 1, b: { c: 2, d: [3, 4] } }));
     topic: 'algorithms',
     level: 22,
     tier: 4,
-    focus: ['map-set', 'while', 'shift'],
+    focus: ['map-set', 'while', 'for'],
     title: 'Shortest path in a crawl graph',
-    prompt: 'Write `shortestPath(graph, start, goal)` for an unweighted graph given as an adjacency list — `{ a: ["b", "c"], b: ["d"] }` — returning one shortest route from `start` to `goal` as an array of nodes, or `null` when none exists. `shortestPath({ a: ["b"], b: ["c"], c: [] }, "a", "c")` gives `["a", "b", "c"]`. Go breadth first with a queue of routes and a `visited` set, marking a node when it is queued rather than when it is taken, so a link cycle cannot send the crawl round for ever. Breadth first is what makes the first route that reaches the goal a shortest one. `start` equal to `goal` gives `[start]`, and a node with no entry in the graph has no neighbours. Target: O(V + E) time and O(V) space.',
+    prompt: "Write `shortestPath(graph, start, goal)` for a directed unweighted graph given as an adjacency-list data object, returning any shortest route from start to goal as an array of node names, or null when none exists. For example, {a:[\"b\"],b:[\"c\"],c:[]} from \"a\" to \"c\" gives [\"a\",\"b\",\"c\"]. Tied shortest routes are equally valid. Use breadth-first traversal: queue node names with a head index, record each predecessor when first queued, and reconstruct the route only once at the goal. Marking on enqueue keeps cycles and duplicate links finite; copying a full route at each step or shifting a growing queue can exceed the target. Read only own adjacency entries; an absent or inherited entry has no neighbours. The graph is an ordinary or null-prototype object with dense ordinary arrays of string neighbours. Names, start and goal are primitive strings of at most 80 UTF-16 code units; empty text and names such as \"__proto__\" and \"constructor\" are valid. Self-links, duplicate links and cycles are valid. V counts all own entry names, neighbour names and both endpoints, at most 2,000; E counts all stored adjacency slots, at most 10,000. The graph and arrays may be frozen and must stay unchanged. start===goal returns a fresh [start], even without an entry. Every returned route is fresh and mutable. Target: O(V + E) time and O(V) auxiliary space, excluding the input. A layered frontier with predecessors is also valid.",
     starter: `const shortestPath = (graph, start, goal) => {
 
 };
@@ -1053,29 +1053,22 @@ console.log(sumValues({ a: 1, b: { c: 2, d: [3, 4] } }));
 console.log(shortestPath({ a: ["b"], b: ["c"], c: [] }, "a", "c"));
 `,
     skeleton: `const shortestPath = (graph, start, goal) => {
-  const visited = new Set([start]);
-  const queue = [[start]];
-
-  while (queue.length > 0) {
-    const route = queue.shift();
-    // the goal ends it; otherwise queue each unvisited neighbour
+  const previous = new Map([[start, null]]);
+  const queue = [start];
+  for (let head = 0; head < queue.length; head += 1) {
+    const node = queue[head];
+    // At the goal, reconstruct through previous and reverse once.
+    // Otherwise queue each unseen own-entry neighbour, recording its predecessor.
   }
-
   return null;
 };`,
     hints: ['Mark a node as visited the moment you queue it, not when you take it off. Marking late lets the same node be queued several times before any of them is examined.'],
-    approach: [
-      'Seed a queue with the one-node route that is just the start, and a visited set holding the start.',
-      'Take the first route off the queue; if its last node is the goal, that route is a shortest one, because breadth first reaches every node by its shortest route first.',
-      'Otherwise look up that node\'s neighbours, treating a node missing from the graph as having none.',
-      'Queue each unvisited neighbour as the current route plus that neighbour, and mark it visited as you queue it, which is what keeps a cycle finite.',
-      'An empty queue means the goal was never reachable.',
-    ],
+    approach: ["Seed a node queue and a predecessor Map with start mapped to null. Advance a head index instead of shifting the queue.", "When the goal is taken, follow predecessors into a new array, then reverse it once.", "Read neighbours only when Object.hasOwn(graph,node); a missing or inherited entry has none.", "For each unseen neighbour, record its predecessor and queue it immediately. The Map also marks visited nodes.", "An exhausted queue means no route exists. Each node is queued once; each stored outgoing link is considered at most once."],
     verify: 'tests',
     estimatedMinutes: 30,
     tests: [
       { call: 'shortestPath({ a: ["b"], b: ["c"], c: [] }, "a", "c")', expected: ['a', 'b', 'c'] },
-      { call: 'shortestPath({ a: ["b", "c"], b: ["d"], c: ["d"], d: [] }, "a", "d")', expected: ['a', 'b', 'd'], label: 'the first of two equally short routes' },
+      {"call": "(() => {const graph={a:[\"b\",\"c\"],b:[\"d\"],c:[\"d\"],d:[]},route=shortestPath(graph,\"a\",\"d\");return Array.isArray(route)&&route.length===3&&route[0]===\"a\"&&route[2]===\"d\"&&graph.a.includes(route[1])&&graph[route[1]].includes(\"d\");})()", "expected": true, "label": "either equally short route is valid"},
       { call: 'shortestPath({}, "a", "b")', expected: null, label: 'empty input', edge: true },
       { call: 'shortestPath({ a: [] }, "a", "a")', expected: ['a'], label: 'the start is already the goal', edge: true },
       { call: 'shortestPath({ a: ["b"], b: ["a"] }, "a", "z")', expected: null, label: 'a cycle must not loop for ever', edge: true },
@@ -1093,9 +1086,9 @@ console.log(shortestPath({ a: ["b"], b: ["c"], c: [] }, "a", "c"));
     topic: 'algorithms',
     level: 23,
     tier: 4,
-    focus: ['while', 'shift', 'objects'],
+    focus: ['while', 'for', 'objects'],
     title: 'Binary tree level-order traversal',
-    prompt: 'Write `levelOrder(root)` for a binary tree of `{ value, left, right }` nodes, returning one array of values per depth, top to bottom and left to right within a level. A root of 3 with children 9 and 20 gives `[[3], [9, 20]]`. The trick is knowing where a level ends: record how many nodes the queue holds before you start the level, and take exactly that many. A `null` root gives `[]`, and a missing child is `null` rather than absent. Target: O(n) time and O(n) space.',
+    prompt: "Write `levelOrder(root)` for a binary tree of `{ value, left, right }` nodes, returning one array of values per depth, top to bottom and left to right within a level. A root of 3 with children 9 and 20 gives `[[3], [9, 20]]`. The trick is knowing where a level ends: record how many unprocessed nodes the queue holds before you start the level, and take exactly that many. A `null` or `undefined` root gives `[]`, and a missing child is `null` rather than absent. Target: O(n) time and O(n) space. Input is an acyclic tree of at most 20,000 distinct ordinary/null-prototype nodes without shared children, with height at most 512. Children are a node or null; undefined is allowed only for the root. n is the node count. Nodes may be frozen and every source field must remain unchanged. Values are opaque: retain exact object/function/Symbol/BigInt/undefined/zero identities without cloning or invoking them. Return a fresh mutable outer array and fresh mutable level arrays on every call. Use a queue head index or separate current/next level arrays to avoid moving the remaining queue with shift. An iterative depth-first traversal collecting values by depth is also valid.",
     starter: `const levelOrder = root => {
 
 };
@@ -1109,24 +1102,26 @@ console.log(levelOrder(node(3, node(9), node(20))));
   const levels = [];
   const queue = [root];
 
-  while (queue.length > 0) {
-    const width = queue.length; // how many nodes this level holds
+  let head = 0;
+  while (head < queue.length) {
+    const width = queue.length - head; // unprocessed nodes in this level
     // take exactly that many, collecting values and queueing children
   }
 
   return levels;
 };`,
-    hints: ['Everything in the queue when a level begins belongs to that level. Read the length into a variable first — the queue grows as you add children, so reading it inside the loop would run the levels together.'],
+    hints: ['Every unprocessed queue entry when a level begins belongs to that level. Read queue.length - head into a variable first — the queue grows as you add children, so reading it inside the loop would run the levels together.'],
     approach: [
       'A missing root has no levels at all, so answer with an empty array before anything else.',
-      'Seed a queue with the root, and loop while the queue still holds nodes.',
-      'At the top of each pass, record the queue length: those nodes, and only those, are the current level.',
-      'Take that many nodes off the front, collect their values into one array, and push each non-null child onto the back for the next level.',
+      'Seed a queue with the root, and loop while unprocessed nodes remain.',
+      'At the top of each pass, record queue.length - head: those nodes, and only those, are the current level.',
+      'Read that many nodes while advancing the head index, collect their values into one array, and push each non-null child onto the back for the next level.',
       'Push the collected values as one level and let the loop carry on with whatever the children left behind.',
     ],
     verify: 'tests',
     estimatedMinutes: 25,
     tests: [
+      {"call": "(() => {const payload={id:1};return levelOrder({value:payload,left:null,right:null})[0][0]===payload;})()", "expected": true, "label": "retain opaque payload identity"},
       { call: '(() => { const node = (value, left = null, right = null) => ({ value, left, right }); return levelOrder(node(3, node(9), node(20, node(15), node(7)))); })()', expected: [[3], [9, 20], [15, 7]] },
       { call: '(() => { const node = (value, left = null, right = null) => ({ value, left, right }); return levelOrder(node(1)); })()', expected: [[1]], label: 'a root with no children is one level' },
       { call: 'levelOrder(null)', expected: [], label: 'empty input', edge: true },
