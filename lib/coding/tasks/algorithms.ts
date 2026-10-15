@@ -903,7 +903,7 @@ console.log(sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])
     tier: 3,
     focus: ['recursion', 'for-of'],
     title: 'Deep flatten',
-    prompt: 'Write `deepFlatten(items)`, returning every value from an array nested to any depth, in order, without calling `flat` or `flatMap`. `deepFlatten([1, [2, [3, [4]], 5]])` gives `[1, 2, 3, 4, 5]`. Recurse into anything `Array.isArray` accepts and keep everything else as it is — `null`, `false` and `0` are values, not empties, so none of them may be dropped. Empty arrays at any depth simply add nothing. Target: O(n) time in the total number of values and O(d) stack space for depth d.',
+    prompt: "Write `deepFlatten(items)`, returning the non-array values from nested arrays in order, without native `Array.prototype.flat` or `flatMap`. For example, deepFlatten([1, [2, [3, [4]], 5]]) gives [1, 2, 3, 4, 5]. Walk anything Array.isArray accepts and keep every other value unchanged, including undefined, null, false, zero signs, NaN, infinities, BigInts, Symbols, functions and object identities. Non-array values are opaque: do not call them or traverse their properties. Empty arrays add nothing. Use one output accumulator shared by the whole walk rather than copying each child result or the growing output. An iterative stack of array/index frames is also valid. Input is a dense acyclic array structure whose arrays may be frozen or have null prototypes. Shared subarrays are visited once per occurrence, preserving repeated leaf references; cycles through arrays are outside this task. At most 20,000 array slots are visited in total, counting shared arrays again per occurrence. Depth d is at most 64, including the root array. n counts the root plus those visited slots. Preserve every input slot/value/link and return a fresh mutable dense array, including for empty input. Target: O(n) time and O(d) extra space, excluding the output. Native flatten methods are unavailable only in this exercise, in Run, Submit and reused Learn.",
     starter: `const deepFlatten = items => {
 
 };
@@ -912,24 +912,22 @@ console.log(sortTasks([{ name: "b", priority: 2 }, { name: "a", priority: 10 }])
 console.log(deepFlatten([1, [2, [3, [4]], 5]]));
 `,
     skeleton: `const deepFlatten = items => {
-  const flat = [];
-
-  for (const item of items) {
-    // an array is walked into; anything else is kept
-  }
-
-  return flat;
+  const output = [];
+  const visit = values => {
+    for (let index = 0; index < values.length; index++) {
+      const value = values[index];
+      // visit an array; otherwise push the exact leaf into output
+    }
+  };
+  visit(items);
+  return output;
 };`,
-    hints: ['Array.isArray is the only test that matters — typeof calls an array an object, and a truthiness check would quietly drop 0, false and null.'],
-    approach: [
-      'Build a result array and walk the input one item at a time.',
-      'When the item is an array, flatten it the same way and append everything that comes back.',
-      'When it is not, push it unchanged — decide that with Array.isArray, so a falsy value is still a value.',
-      'An empty array at any depth contributes nothing, which needs no special case at all.',
-    ],
+    hints: ["Array.isArray decides whether to walk deeper. Every other value is pushed unchanged, including undefined, Symbols and opaque objects.", "Share one output array across the whole traversal. Copying a child result at each parent or copying a growing prefix can repeat work."],
+    approach: ["Create one output array and an indexed visit(values) helper.", "For each slot, recurse into an actual array or push the exact non-array value.", "Use numeric indices so dense arrays with null prototypes also work.", "Return the output once the root has been walked. Call frames or explicit array/index frames need O(d) extra space; no child result arrays are copied."],
     verify: 'tests',
     estimatedMinutes: 15,
     tests: [
+      {"call": "(() => {const leaf={id:1};return deepFlatten([[leaf]])[0]===leaf;})()", "expected": true, "label": "an object leaf keeps its identity"},
       { call: 'deepFlatten([1, [2, [3, [4]], 5]])', expected: [1, 2, 3, 4, 5] },
       { call: 'deepFlatten([[1], [2], [3]])', expected: [1, 2, 3] },
       { call: 'deepFlatten([])', expected: [], label: 'empty input', edge: true },

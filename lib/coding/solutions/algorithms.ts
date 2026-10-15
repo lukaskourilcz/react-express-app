@@ -614,30 +614,53 @@ const sortTasks = tasks => [...tasks].sort((left, right) => right.priority - lef
   'alg-deep-flatten': {
     solution: `const deepFlatten = items => {
   const flat = [];
-  for (const item of items) {
-    if (Array.isArray(item)) flat.push(...deepFlatten(item));
-    else flat.push(item);
-  }
+  const visit = values => {
+    for (let index = 0; index < values.length; index++) {
+      const value = values[index];
+      if (Array.isArray(value)) visit(value);
+      else flat.push(value);
+    }
+  };
+  visit(items);
   return flat;
 };`,
     junior: `const deepFlatten = items => {
-  let flat = [];
-  for (let index = 0; index < items.length; index += 1) {
-    const item = items[index];
-    if (Array.isArray(item) === true) {
-      const inner = deepFlatten(item);
-      flat = flat.concat(inner);
-    } else {
-      flat.push(item);
+  const output = [];
+  const walk = values => {
+    let index = 0;
+    while (index < values.length) {
+      const value = values[index];
+      if (Array.isArray(value)) {
+        walk(value);
+      } else {
+        output.push(value);
+      }
+      index += 1;
     }
-  }
-  return flat;
+  };
+  walk(items);
+  return output;
 };`,
-    senior: `const deepFlatten = items =>
-  // Array.isArray is the only test that works here: typeof calls an array an
-  // object, and a truthiness check would quietly swallow 0, false and null.
-  items.reduce((flat, item) => (Array.isArray(item) ? [...flat, ...deepFlatten(item)] : [...flat, item]), []);`,
+    senior: `const deepFlatten = items => {
+  const output = [];
+  const frames = [{ values: items, next: 0 }];
+  while (frames.length) {
+    const current = frames[frames.length - 1];
+    if (current.next === current.values.length) {
+      frames.pop();
+      continue;
+    }
+    const value = current.values[current.next++];
+    if (Array.isArray(value)) frames.push({ values: value, next: 0 });
+    else output.push(value);
+  }
+  return output;
+};`,
     hiddenTests: [
+      { call: "(() => {const token=Symbol(\"leaf\"),payload={};payload.self=payload;Object.freeze(payload);let calls=0;const fn=()=>{calls++;},date=new Date(0),nested=Object.freeze([null,false,0,-0,NaN,Infinity,token,3n,payload,fn,date]),source=Object.freeze([undefined,nested]),out=deepFlatten(source);const ok=Array.isArray(out)&&out!==source&&out.length===12&&Object.hasOwn(out,0)&&out[0]===undefined&&out[1]===null&&out[2]===false&&Object.is(out[3],0)&&Object.is(out[4],-0)&&Number.isNaN(out[5])&&out[6]===Infinity&&out[7]===token&&out[8]===3n&&out[9]===payload&&out[10]===fn&&out[11]===date&&calls===0&&date.getTime()===0;out[0]=\"changed\";return ok&&source[0]===undefined&&source[1]===nested&&payload.self===payload;})()", expected: true },
+      { call: "(() => {const marker=Object.freeze({leaf:1}),choices=[{value:null,want:[null]},{value:undefined,want:[undefined]},{value:Object.freeze([]),want:[]},{value:Object.freeze([0,false]),want:[0,false]},{value:Object.freeze([Object.freeze([marker]),-0]),want:[marker,-0]},{value:Object.freeze([Object.freeze([undefined]),\"\"]),want:[undefined,\"\"]}];for(let n=0;n<=4;n++)for(let code=0;code<6**n;code++){let digits=code;const input=[],wanted=[];for(let i=0;i<n;i++){const chosen=choices[digits%6];digits=Math.floor(digits/6);input.push(chosen.value);for(const value of chosen.want)wanted.push(value);}const out=deepFlatten(Object.freeze(input));if(out===input||out.length!==wanted.length||out.some((value,i)=>!Object.is(value,wanted[i])))return false;}return true;})()", expected: true },
+      { call: "(() => {const marker=Object.freeze({id:1});let nested=Object.freeze([marker]);for(let i=1;i<64;i++)nested=Object.freeze([nested]);const deep=deepFlatten(nested),wide=deepFlatten(Object.freeze(Array.from({length:20000},(_,i)=>i))),shared=Object.freeze([marker]),repeated=deepFlatten(Object.freeze([shared,shared])),nullProto=Object.freeze(Object.setPrototypeOf([1,Object.freeze([2])],null)),empty=Object.freeze([]),a=deepFlatten(empty),b=deepFlatten(empty);a.push(marker);return [deep.length,deep[0]===marker,wide.length,wide.every((value,i)=>value===i),repeated.length,repeated[0]===marker&&repeated[1]===marker,deepFlatten(nullProto),a!==b,b.length];})()", expected: [1, true, 20000, true, 2, true, [1, 2], true, 0] },
+
       { call: 'deepFlatten([[[[[1]]]]])', expected: [1] },
       { call: 'deepFlatten([1, 2, 3])', expected: [1, 2, 3] },
       { call: 'deepFlatten([[1, [2]], [[3], 4], 5])', expected: [1, 2, 3, 4, 5] },

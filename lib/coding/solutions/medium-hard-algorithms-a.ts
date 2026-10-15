@@ -510,23 +510,20 @@ const isSearchTree = (node, low = -Infinity, high = Infinity) =>
   },
   'alg-mh-fewest-coins': {
     solution: `const fewestCoins = (coins, amount) => {
-  // Amount left -> fewest coins that pay it, or Infinity when none can.
-  const memo = new Map();
-  const best = left => {
-    if (left === 0) return 0;
-    if (left < 0) return Infinity;
-    if (memo.has(left)) return memo.get(left);
-    let fewest = Infinity;
+  if (amount === 0) return 0;
+  if (coins.length === 0) return -1;
+  const best = Array(amount + 1).fill(Infinity);
+  best[0] = 0;
+  for (let total = 1; total <= amount; total++) {
     for (const coin of coins) {
-      fewest = Math.min(fewest, 1 + best(left - coin));
+      if (coin <= total) best[total] = Math.min(best[total], 1 + best[total - coin]);
     }
-    memo.set(left, fewest); // failures are remembered as well as successes
-    return fewest;
-  };
-  const answer = best(amount);
-  return answer === Infinity ? -1 : answer;
+  }
+  return best[amount] === Infinity ? -1 : best[amount];
 };`,
     junior: `const fewestCoins = (coins, amount) => {
+  if (amount === 0) return 0;
+  if (coins.length === 0) return -1;
   const fewest = [0];
   for (let total = 1; total <= amount; total++) {
     let best = Infinity;
@@ -546,16 +543,24 @@ const isSearchTree = (node, low = -Infinity, high = Infinity) =>
   return fewest[amount];
 };`,
     senior: `const fewestCoins = (coins, amount) => {
+  if (amount === 0) return 0;
+  if (coins.length === 0) return -1;
   const memo = new Map([[0, 0]]);
-  const best = left => {
-    if (left < 0) return Infinity;
-    if (!memo.has(left)) memo.set(left, 1 + Math.min(...coins.map(coin => best(left - coin))));
-    return memo.get(left);
-  };
-  const answer = best(amount);
+  for (let left = 1; left <= amount; left++) {
+    let count = Infinity;
+    for (const coin of coins) {
+      if (coin <= left) count = Math.min(count, 1 + memo.get(left - coin));
+    }
+    memo.set(left, count);
+  }
+  const answer = memo.get(amount);
   return Number.isFinite(answer) ? answer : -1;
 };`,
     hiddenTests: [
+      { call: "(() => {const coins=[4,1,3],copy=coins.slice(),a=fewestCoins(coins,6);return [a,coins.every((value,i)=>Object.is(value,copy[i])),fewestCoins(Object.freeze([4,1,3]),6),fewestCoins(Object.freeze([]),0),fewestCoins(Object.freeze([]),10),fewestCoins(Object.freeze([7,7]),14)];})()", expected: [2, true, 2, 0, -1, 2] },
+      { call: "(() => {for(let mask=0;mask<32;mask++){const coins=[];for(let coin=1;coin<=5;coin++)if(mask&(1<<(coin-1)))coins.push(coin);const enumerate=(index,left)=>{if(left===0)return 0;if(index===coins.length)return Infinity;let best=Infinity;for(let count=0;count*coins[index]<=left;count++)best=Math.min(best,count+enumerate(index+1,left-count*coins[index]));return best;};for(let amount=0;amount<=20;amount++){const value=enumerate(0,amount),wanted=value===Infinity?-1:value;if(fewestCoins(Object.freeze(coins.slice().reverse()),amount)!==wanted)return false;}}return true;})()", expected: true },
+      { call: "[fewestCoins(Object.freeze([1]),10000),fewestCoins(Object.freeze(Array(20).fill(1)),10000),fewestCoins(Object.freeze([9999,10000]),10000),fewestCoins(Object.freeze([4,6]),9999),fewestCoins(Object.freeze([10000]),1),fewestCoins(Object.freeze([]),10000),fewestCoins(Object.freeze([1]),-0)]", expected: [10000, 10000, 1, -1, -1, -1, 0] },
+
       { call: 'fewestCoins([2, 5], 3)', expected: -1 },
       { call: 'fewestCoins([1, 5, 11], 15)', expected: 3 },
       { call: 'fewestCoins([25, 10, 1], 30)', expected: 3 },

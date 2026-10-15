@@ -395,7 +395,7 @@ console.log(isSearchTree(node(2, node(1), node(3))));
     tier: 3,
     focus: ['recursion', 'map-set', 'for-of'],
     title: 'Fewest coins when greedy fails',
-    prompt: 'Taking the largest coin that fits, again and again, gives the fewest coins for euro coins, but not for every set of coins: with coins of 1, 3 and 4, that way pays 6 as 4 + 1 + 1, and 3 + 3 is one coin fewer. Write `fewestCoins(coins, amount)`, returning the smallest number of coins that add up to `amount`, or -1 when no mix of the coins can. Every coin can be used any number of times. Write a recursive helper `best(left)`: 0 needs no coins, and otherwise try each coin with `for...of` and take one more than the best way to pay what is left. The same `left` comes up again and again, so keep every answer in a `Map`, the amounts that cannot be paid included, and look there first. Without it the hidden amounts of several hundred never finish. Target: O(amount × c) time for c coins, and O(amount) space.',
+    prompt: "Taking the largest fitting coin can fail: with coins 1, 3 and 4, paying 6 as 4 + 1 + 1 uses more coins than 3 + 3. Write `fewestCoins(coins, amount)`, returning the smallest number of coins that sum to amount, or -1 when it is impossible. Each denomination can be used any number of times. Build answers for amounts from 0 upward: 0 needs no coins; for each positive total, try one more coin after a reachable smaller total and keep the best count. Keep unreachable totals as Infinity too. Bottom-up dynamic programming avoids a recursive call chain proportional to amount. A memoized explicit stack or a breadth-first amount search is also valid. Input coins is a dense, possibly frozen array of at most 20 primitive positive integers in 1..10000, with duplicates and any order allowed; leave it unchanged. amount is a primitive integer in 0..10000. Empty coins pays only amount 0; either zero sign for amount is equivalent. c is coins.length. Target: O(amount \u00d7 c) time and O(amount) space for positive amount and nonempty coins; zero amount and empty coins return in O(1) time.",
     starter: `const fewestCoins = (coins, amount) => {
 
 };
@@ -404,28 +404,21 @@ console.log(isSearchTree(node(2, node(1), node(3))));
 console.log(fewestCoins([1, 3, 4], 6));
 `,
     skeleton: `const fewestCoins = (coins, amount) => {
-  const memo = new Map(); // amount left -> fewest coins, or Infinity when it cannot be paid
-  const best = left => {
-    // 0 needs no coins; below 0 cannot be paid
-    // an answer in the memo: use it
-    // otherwise try each coin, keep the smallest 1 + best(left - coin), and remember it
-  };
-  const answer = best(amount);
-  return answer === Infinity ? -1 : answer;
+  if (amount === 0) return 0;
+  if (coins.length === 0) return -1;
+  const best = Array(amount + 1).fill(Infinity);
+  best[0] = 0;
+  for (let total = 1; total <= amount; total++) {
+    // try every fitting coin after its already-solved smaller total
+  }
+  return best[amount] === Infinity ? -1 : best[amount];
 };`,
-    hints: [
-      '`best(6)` with coins 1, 3 and 4 is one more than the smallest of `best(5)`, `best(3)` and `best(2)`. Each of those asks the same question about a smaller amount, down to `best(0)`, which is 0.',
-      'Remember the amounts that cannot be paid as well: keep `Infinity` for them in the Map. If you only remember the successes, an amount like 999 with coins of 4 and 6 is worked out again every time it comes up.',
-    ],
-    approach: [
-      'Write `best(left)`: return 0 for 0, and `Infinity` for anything below 0.',
-      'Look in the Map first, and return what it holds when `left` is there.',
-      'Otherwise start from `Infinity`, and for each coin keep the smaller of that and `1 + best(left - coin)`. Store the result under `left` before you return it.',
-      'Call `best(amount)` and turn `Infinity` into -1.',
-    ],
+    hints: ["For each total from 1 through amount, try every coin no larger than that total. The smaller total has already been solved.", "Keep Infinity for unreachable totals too. Adding one coin to Infinity still cannot pay an amount."],
+    approach: ["Return 0 for zero amount and -1 for empty coins with a positive amount.", "Set best[0] to 0 and every other entry to Infinity.", "Visit totals in ascending order. For every fitting coin, consider 1 + best[total - coin].", "Return the stored minimum, replacing Infinity with -1. A Map can hold the same bottom-up states."],
     verify: 'tests',
     estimatedMinutes: 25,
     tests: [
+      {"call": "fewestCoins([1],10000)", "expected": 10000, "label": "bottom-up states avoid a long recursive call chain"},
       { call: 'fewestCoins([1, 3, 4], 6)', expected: 2, label: 'where the largest coin first goes wrong' },
       { call: 'fewestCoins([1, 2, 5], 11)', expected: 3 },
       { call: 'fewestCoins([9, 6, 1], 12)', expected: 2, label: '6 + 6, not 9 + 1 + 1 + 1' },

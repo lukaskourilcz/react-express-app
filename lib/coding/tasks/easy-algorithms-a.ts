@@ -676,7 +676,7 @@ console.log(happyChildren([1, 2, 3], [1, 1]));
     tier: 1,
     focus: ['recursion'],
     title: 'Greatest common divisor',
-    prompt: 'The greatest common divisor of two whole numbers is the largest number that divides both. Write `gcd(a, b)` with Euclid\'s rule: `gcd(a, 0)` is `a`, and otherwise `gcd(a, b)` equals `gcd(b, a % b)`. `gcd(48, 18)` gives 6. Write it as a function that calls itself, with `b === 0` as the base case that stops the calls. Both numbers are 0 or more, and `gcd(0, 0)` gives 0. Target: O(log min(a, b)) calls.',
+    prompt: "The greatest common divisor of two whole numbers is the largest number that divides both. Write `gcd(a, b)` with Euclid's rule: `gcd(a, 0)` is `a`, and otherwise `gcd(a, b)` equals `gcd(b, a % b)`. `gcd(48, 18)` gives 6. A recursive function calls itself with `b === 0` as its stopping case; an iterative Euclid loop is also valid. Both numbers are 0 or more, and `gcd(0, 0)` gives 0. Target: O(log n) time and O(log n) space for the recursive form, where n = max(2, min(a, b)) is the smaller numeric magnitude with a floor of 2. An iterative form uses O(1) extra space. Both arguments are primitive nonnegative safe integers, at most Number.MAX_SAFE_INTEGER. Either zero sign is valid and equivalent in the result. These bounds keep integer remainders exact; fractions, negative values and coercion are outside this task.",
     starter: `const gcd = (a, b) => {
 
 };
@@ -697,6 +697,7 @@ console.log(gcd(48, 18));
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
+      {"call": "gcd(4294967296,2147483648)", "expected": 2147483648, "label": "safe integers can exceed 32 bits"},
       { call: 'gcd(48, 18)', expected: 6 },
       { call: 'gcd(18, 48)', expected: 6, label: 'the order of the arguments does not matter' },
       { call: 'gcd(17, 5)', expected: 1, label: 'no common divisor but 1' },
@@ -712,7 +713,7 @@ console.log(gcd(48, 18));
     tier: 2,
     focus: ['recursion', 'map-set'],
     title: 'Fibonacci with a memo',
-    prompt: 'Fibonacci numbers start 0, 1, and each later one is the sum of the two before it: 0, 1, 1, 2, 3, 5, 8. Write `fib(n, memo = new Map())`, returning number `n` of the sequence, so `fib(0)` is 0 and `fib(10)` is 55. The plain recursive version works out the same `n` again and again, and by `n = 40` it takes seconds. Store each answer in `memo` the first time you work it out, check `memo` before doing any work, and pass the same `memo` to every recursive call. Target: O(n) time and O(n) space.',
+    prompt: "Fibonacci numbers start 0, 1, and each later one is the sum of the two before it: 0, 1, 1, 2, 3, 5, 8. Write `fib(n, memo = new Map())`, returning number `n` of the sequence, so `fib(0)` is 0 and `fib(10)` is 55. The plain recursive version works out the same `n` again and again, and by `n = 40` it takes seconds. Handle the base cases first. For every other n, return an existing memo entry; otherwise compute the answer and store it. Pass the same memo to both recursive calls. Target: O(n) time and O(n) space. n is a primitive integer in 0..78, so the unseeded result is an exact safe integer. Either sign of zero means index 0; either zero sign in the result is equivalent. A supplied memo is a mutable Map. Existing entries for integer keys 2..78 contain primitive Numbers and are authoritative, including zero, NaN and infinities; computed answers use ordinary Number addition. These entries may differ from the usual sequence: fib(6, new Map([[5, 0]])) is 3. Base cases 0 and 1 always return n, ignoring any cached base entry without deleting it. Preserve every existing entry, including unrelated opaque keys/values; add missing nonbase answers as needed. Exact insertion order and extra valid lower answers are not part of the contract. A cache hit for n returns immediately without expanding lower entries. Each omitted memo is fresh; a bottom-up implementation that honors the same cache/base rules is also valid.",
     starter: `const fib = (n, memo = new Map()) => {
 
 };
@@ -736,6 +737,7 @@ console.log(fib(10));
     verify: 'tests',
     estimatedMinutes: 8,
     tests: [
+      {"call": "fib(6,new Map([[5,0]]))", "expected": 3, "label": "a cached zero is still an authoritative cache hit"},
       { call: 'fib(10)', expected: 55 },
       { call: 'fib(20)', expected: 6765 },
       { call: '(() => { const memo = new Map(); fib(10, memo); return [memo.get(10), memo.get(9), memo.get(5)]; })()', expected: [55, 34, 5], label: 'the memo keeps what fib worked out' },
@@ -751,7 +753,7 @@ console.log(fib(10));
     tier: 2,
     focus: ['recursion', 'strings'],
     title: 'Every binary string of a length',
-    prompt: 'Write `binaryStrings(n)`, returning every string of `n` characters made of `"0"` and `"1"`, in counting order. `binaryStrings(2)` gives `["00", "01", "10", "11"]`. Build them with a function that calls itself: a string of length `n` is `"0"` or `"1"` followed by a string of length `n - 1`. The base case is `n` of 0, which has one string, the empty one, so `binaryStrings(0)` gives `[""]`. Target: O(n · 2ⁿ) time, the size of the answer.',
+    prompt: "Write `binaryStrings(n)`, returning every string of `n` characters made of `\"0\"` and `\"1\"`, in counting order. `binaryStrings(2)` gives `[\"00\", \"01\", \"10\", \"11\"]`. Build them with a function that calls itself: a string of length `n` is `\"0\"` or `\"1\"` followed by a string of length `n - 1`. The base case is `n` of 0, which has one string, the empty one, so `binaryStrings(0)` gives `[\"\"]`. Target: O(n \u00b7 2\u207f) time, the size of the answer. n is a primitive integer in 0..12; either zero sign means length 0. Every result has exactly 2 ** n distinct strings of length n, with leading zeroes preserved, in ascending counting/lexicographic order. The only characters are 0 and 1. Each call returns a fresh mutable array; modifying one result must not affect another call. n is the requested string length; the time target includes constructing every output character. A mutable-buffer depth-first generator is also valid.",
     starter: `const binaryStrings = n => {
 
 };
@@ -773,6 +775,7 @@ console.log(binaryStrings(2));
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
+      {"call": "(() => {const all=binaryStrings(8);return [all[0],all[255]];})()", "expected": ["00000000", "11111111"], "label": "leading zeroes and order survive at larger lengths"},
       { call: 'binaryStrings(2)', expected: ['00', '01', '10', '11'] },
       { call: 'binaryStrings(1)', expected: ['0', '1'] },
       { call: 'binaryStrings(3)', expected: ['000', '001', '010', '011', '100', '101', '110', '111'] },
