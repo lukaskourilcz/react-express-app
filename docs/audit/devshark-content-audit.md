@@ -1,5 +1,27 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n002
+
+Reviewed the sixth entry question, its complete optional parent diagnostic,
+and both recursion lessons plus the unreachable-base-case question. The two
+entry records are retained; three recursion records are rewritten. Current
+native coverage is **70/263**, leaving **193**; coding remains **90/725**.
+Engine-dependent errors, finite acyclic lists, bounded Number arithmetic,
+per-call work and real stack/resource limits are now explicit. The question
+states the no-tail-call-elimination model, balances its options and identifies
+distractors by content after the copy sweep caught a shuffled-position reference.
+
+Five exact-hash records have manual scores and final model readings. Authored
+execution checks the nested value, diagnostic 5/6 versus 4/6 threshold and
+failure feedback, bounded sums, broken recursion in V8, the eight-state stack
+trace and exact factorial values against BigInt through 23. Native bindings,
+path contracts, API/script types, launch contracts, final build, both production
+dependency audits (zero vulnerabilities), final copy sweep and diff checks
+pass. Six public-catalogue probes in each theme pass over 360–1440px; this is
+not authenticated entry/lesson acceptance or a portable stack-depth proof.
+PR #393 is merged; its production is READY at 3c5d0abc with devshark.app,
+and selected production submission verification is in progress.
+
 ## 15 October continuation — five-item native batch n001
 
 Individually reviewed the first five optional DSA entry questions. Four are
