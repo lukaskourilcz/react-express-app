@@ -1,5 +1,37 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n018
+
+Reviewed the last FDE diagnostic question, both diagnostic coding tasks and
+the first two incident-bridge questions. Demo evidence now describes chosen
+examples without claiming wider readiness. Pagination has explicit sequential
+fetch, reference/descriptor preservation, empty-page and declared upper bounds;
+the runtime TypeScript formatter specifies exact text, input ownership and
+state-only dispatch. Both have applicable authored input/output cost models.
+Incident monitoring asks for a direct tenant invariant rather than an inevitable
+first alert, and cache reuse is correctly scoped to one process/instance.
+Unobserved CPU decreases and a universal TTL-only-freshness claim are removed.
+
+Baseline expected sandbox verdicts match **8/12**: metadata writes, concurrent
+page requests and cloned entries passed old cases. Final verdicts are **12/12**,
+including compiler checks and four valid implementations. Four valid complexity
+analyses retain base 25 XP with unknown estimates unpenalized. A maximum 11000-
+entry collection, frozen values, overlapping-fetch rejection, Unicode/empty text
+and large delays are covered. The shared audit worker now selects each actual
+path instead of assuming DSA. Illustrative cache checks use no live tenant data.
+
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Individual
+manual scores/readings remain distinct from execution. Coverage is **145/263
+native**, **118 remaining**, and **95/725 coding**, **630 remaining**.
+
+The FDE diagnostic parent remains unreviewed: implementation issue #397 records
+that its competency labels use aggregate rather than individual competency
+results. It must be corrected and verified before that parent is accepted; filing
+an issue adds no coverage. PR #396 stays frozen at 758d1bbb with its SQL and exact
+preview passing, verify pending. N015–n018 are local; 95 coding/95 native records
+are shipped through PR #395.
+
 ## 15 October continuation — five-item native batch n017
 
 Reviewed FDE diagnostic questions seven through eleven. Error/retry copy now

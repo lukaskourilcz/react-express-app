@@ -495,17 +495,17 @@ const operatorReducer = (state, action) => {
       questions: [
         {
           id: 'fde-v1-bridge-incident-q1',
-          prompt: 'Every dashboard stayed inside its normal range while the fault ran for two and a half hours. Which signal would have caught this first?',
+          prompt: 'Latency, 5xx rate and CPU stayed normal during the cross-tenant reads. Which additional signal directly tests the failure shown in the timeline?',
           context: { language: 'text', code: INCIDENT_TIMELINE },
           options: [
-            'A check in the lookup path that compares the tenant id on the cached article against the tenant making the request, counted as a failure and alerted on.',
-            'A p95 latency alert on the article-lookup span.',
+            'Count and alert when a cached article’s tenant differs from the request’s authorized tenant.',
+            'A high-latency threshold alert on the article-lookup span.',
             'An error-rate alert on triage-api responses in the 5xx range.',
             'A CPU saturation alert on the instances serving the cache.',
           ],
           correct: 0,
           explanation:
-            'The fault produced a fast, successful, wrong answer. Only a check that compares the tenant on the returned article against the tenant asking for it can tell that apart from a correct hit, which is why the alert has to be on that comparison. Latency moved the wrong way for detection — repeated lookups dropped from 90 ms to 1 ms, so a p95 alert had less to fire on than before. No exception was raised and no 5xx was returned, so an error-rate alert had nothing to see. CPU fell too, because the cache removed work.',
+            'The returned article can be fast and have a successful HTTP response while violating tenant isolation. Comparing its tenant against the authorized request tenant directly detects that invariant violation and should also block the response. A high-latency threshold would not catch the drop from 90 ms to 1 ms. The timeline reports no increased 5xx rate or CPU saturation. Other security signals could help; these choices do not establish which alert would fire first in every deployment.',
           competencies: ['operations'],
         },
         {
@@ -513,14 +513,14 @@ const operatorReducer = (state, action) => {
           prompt: 'Which explanation fits the whole timeline?',
           context: { language: 'text', code: INCIDENT_TIMELINE },
           options: [
-            'Change 41c7 keys the cache on the article slug alone, so the first tenant to request a slug fills an entry that every other tenant then reads.',
+            'A slug-only cache can reuse one tenant’s article for another tenant requesting that slug on the same instance.',
             'The knowledge base has NORTHWIND and CALDERA sharing an article namespace, so the lookup returned an article both tenants were entitled to.',
             'The canary at 09:02 covered 3 of 12 instances, too few for the fault to appear.',
             'Cached entries outlived their time to live and were served after the tenant session that created them had ended.',
           ],
           correct: 0,
           explanation:
-            'The 12:14 entry names the defect: the key is the slug, with no tenant id in it, so one tenant’s article answers another tenant’s lookup. A shared namespace would not have been fixed by rolling back 41c7 at 12:20, and nothing in the timeline touched the knowledge base. The canary size affects how fast a fault is noticed, not whether it exists; the fault was on all 12 instances from 09:20 and still fired no alert. A time-to-live problem serves a tenant its own stale article, which is a freshness bug rather than a boundary one.',
+            'The 12:14 entry names the defect: the key is the slug, with no tenant id in it, so one tenant’s article answers another tenant’s lookup. A shared namespace would not have been fixed by rolling back 41c7 at 12:20, and nothing in the timeline touched the knowledge base. The canary size affects how fast a fault is noticed, not whether it exists; the fault was on all 12 instances from 09:20 and still fired no alert. The timeline supplies no TTL change. Its explicit missing tenant dimension explains cross-tenant reuse without inventing expiration behavior; stale permissions can create other authorization problems, but are not the stated evidence here.',
           competencies: ['operations'],
         },
         {
