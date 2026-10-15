@@ -791,7 +791,7 @@ console.log(binaryStrings(2));
     tier: 2,
     focus: ['recursion', 'objects'],
     title: 'Mirror a binary tree',
-    prompt: 'A binary tree is made of `{ value, left, right }` nodes, and a missing child is `null`. Write `mirror(root)`, returning a new tree that is the mirror image: each node\'s left and right children swap places, all the way down. A root of 1 with 2 on the left and 3 on the right mirrors to 3 on the left and 2 on the right. Build new node objects and leave the tree you were given as it was. An empty tree gives `null`. Target: O(n) time, and O(h) space for the calls on a tree of height h.',
+    prompt: "A binary tree is made of `{ value, left, right }` nodes, and a missing child is `null`. Write `mirror(root)`, returning a new tree that is the mirror image: each node's left and right children swap places, all the way down. A root of 1 with 2 on the left and 3 on the right mirrors to 3 on the left and 2 on the right. Build new node objects and leave the tree you were given as it was. An empty tree gives `null`. Target: O(n) time, and O(h) space for the calls on a tree of height h. Input is null or an acyclic tree of at most 2,000 distinct plain or null-prototype node objects, with no shared child nodes. left/right are a node or null. n is the node count and h is the longest root-to-leaf node count, at most 128. Values are opaque, including objects, functions, undefined, Symbols and zero signs: retain each exact payload rather than cloning or invoking it. Nodes may be frozen; preserve every original link/value. Every output topology node must be fresh and mutable, with own value/left/right fields and an ordinary or null prototype. No output node may be an original topology node, and separate calls share no output nodes. Extra input metadata need not be copied. The O(h) extra-space target excludes returned nodes; an explicit depth-first stack is also valid.",
     starter: `const mirror = root => {
 
 };
@@ -817,6 +817,7 @@ console.log(mirror(node(1, node(2), node(3))));
     verify: 'tests',
     estimatedMinutes: 8,
     tests: [
+      {"call": "(() => {const payload={id:1},root={value:payload,left:null,right:null};return mirror(root).value===payload;})()", "expected": true, "label": "copy nodes, retain opaque payloads"},
       { call: withTree('mirror(node(1, node(2), node(3)))'), expected: tree(1, tree(3), tree(2)) },
       { call: withTree('mirror(node(4, node(2, node(1), node(3)), node(7, node(6), node(9))))'), expected: tree(4, tree(7, tree(9), tree(6)), tree(2, tree(3), tree(1))), label: 'three levels' },
       { call: withTree('mirror(node(1, node(2, node(3))))'), expected: tree(1, null, tree(2, null, tree(3))), label: 'a tree that leans left leans right' },
@@ -832,7 +833,7 @@ console.log(mirror(node(1, node(2), node(3))));
     tier: 2,
     focus: ['recursion', 'objects'],
     title: 'A root-to-leaf path with a sum',
-    prompt: 'A binary tree is made of `{ value, left, right }` nodes, and a missing child is `null`. Write `hasPathSum(root, target)`, returning `true` when some path from the root down to a leaf adds up to `target`. A leaf is a node with no children at all. Recurse with what is left to find: subtract the node\'s value from `target` and ask each child the same question. An empty tree has no paths, so it gives `false`. Target: O(n) time, and O(h) space for the calls on a tree of height h.',
+    prompt: "A binary tree is made of `{ value, left, right }` nodes, and a missing child is `null`. Write `hasPathSum(root, target)`, returning `true` when some path from the root down to a leaf adds up to `target`. A leaf is a node with no children at all. Recurse with what is left to find: subtract the node's value from `target` and ask each child the same question. An empty tree has no paths, so it gives `false`. Target: O(n) time, and O(h) space for the calls on a tree of height h. Input is null or an acyclic tree of at most 2,000 distinct plain or null-prototype node objects, without shared children. Each child is a node or null, and each value is a primitive integer in [-1000000000,1000000000]. target is a primitive integer in [-1000000000000,1000000000000]. Fractions and coercion are outside this task; these bounds keep every path sum/subtraction exact. Zero signs compare equal and negative values may cancel earlier values, so do not prune merely because a partial sum exceeds target. Nodes may be frozen and all fields must stay unchanged. n is the node count and h is the longest root-to-leaf node count, at most 128. Return a Boolean. An iterative depth-first stack is also valid; only a full root-to-leaf path counts.",
     starter: `const hasPathSum = (root, target) => {
 
 };
@@ -856,6 +857,7 @@ console.log(hasPathSum(node(1, node(2), node(3)), 4));
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
+      {"call": "(() => {const node=(value,left=null,right=null)=>({value,left,right});return hasPathSum(node(1000000000,null,node(1000000000,null,node(1000000000))),3000000000);})()", "expected": true, "label": "path sums can exceed 32 bits"},
       { call: withTree(`hasPathSum(${PATH_TREE}, 22)`), expected: true, label: '5 + 4 + 11 + 2' },
       { call: withTree(`hasPathSum(${PATH_TREE}, 26)`), expected: true, label: '5 + 8 + 13' },
       { call: withTree(`hasPathSum(${PATH_TREE}, 9)`), expected: false, label: 'the path must end at a leaf' },

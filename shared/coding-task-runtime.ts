@@ -4,11 +4,13 @@
 export interface TaskRuntimePolicy {
   forbidNativePromiseAll?: true;
   forbidNativeArrayFlatten?: true;
+  forbidNativeCloneHelpers?: true;
 }
 
 export const runtimePolicyForTask = (id: string): TaskRuntimePolicy | undefined =>
   id === 'js-clone-promise-all' ? { forbidNativePromiseAll: true }
-    : id === 'alg-deep-flatten' ? { forbidNativeArrayFlatten: true } : undefined;
+    : id === 'alg-deep-flatten' ? { forbidNativeArrayFlatten: true }
+    : id === 'alg-deep-clone' ? { forbidNativeCloneHelpers: true } : undefined;
 
 /** Self-contained so QuickJS and the Run realm install exactly the same rule,
  * before learner initialization can capture the original native function.
@@ -27,6 +29,14 @@ export const TASK_RUNTIME_POLICY_SOURCE = `(realm, policy) => {
     for (const name of ['flat', 'flatMap']) {
       realm.Object.defineProperty(realm.Array.prototype, name, {
         value: function () { throw new NativeError('Array.prototype.' + name + ' is unavailable in this exercise. Walk the nested arrays yourself.'); },
+        writable: false, configurable: false
+      });
+    }
+  }
+  if (policy.forbidNativeCloneHelpers === true) {
+    for (const [target, name, label] of [[realm.JSON, 'parse', 'JSON.parse'], [realm, 'structuredClone', 'structuredClone']]) {
+      realm.Object.defineProperty(target, name, {
+        value: function () { throw new NativeError(label + ' is unavailable in this exercise. Copy the containers yourself.'); },
         writable: false, configurable: false
       });
     }

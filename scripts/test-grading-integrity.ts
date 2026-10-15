@@ -840,8 +840,22 @@ export default function App() {
   assert.ok(allPassed(timed.submit), `new Date() reads the same clock as the timers: ${JSON.stringify(timed.submit.results)}`);
   const capturedClock = await agree('js-throttle-calls', 'const readClock = Date.now; const throttle = (fn, ms) => { let last = -Infinity; return (...args) => { const now = readClock(); if (now - last >= ms) { last = now; fn(...args); } }; };');
   assert.ok(allPassed(capturedClock.submit), `A captured Date.now alias keeps the same clock: ${JSON.stringify(capturedClock.submit.results)}`);
-  const cloned = await agree('alg-deep-clone', 'const deepClone = (value) => structuredClone(value);');
-  assert.ok(allPassed(cloned.submit), `structuredClone copies like the browser's: ${JSON.stringify(cloned.submit.results)}`);
+  // Runtime capability is separate from the manual-copy exercise: that task
+  // retains opaque functions/Symbols, which native structuredClone rejects.
+  // Its per-task prohibition is checked by checkCodingTaskRuntimePolicy.
+  const cloneCases = [
+    { call: '(() => {const source={a:[1,{b:2}]},copy=structuredClone(source);copy.a[1].b=99;return [source.a[1].b,copy.a[1].b,copy!==source,copy.a!==source.a];})()', expected: [2, 99, true, true] },
+    { call: '(() => {const source=[],copy=structuredClone(source);return [copy,copy!==source];})()', expected: [[], true] },
+    { call: 'structuredClone(null)', expected: null },
+    { call: 'structuredClone(undefined)', expected: undefined },
+    { call: 'structuredClone([1,[2,[3]]])', expected: [1, [2, [3]]] },
+    { call: '(() => {const copy=structuredClone([NaN,Infinity,-0,3n]);return [Number.isNaN(copy[0]),copy[1]===Infinity,Object.is(copy[2],-0),copy[3]===3n];})()', expected: [true, true, true, true] },
+    { call: '(() => {try{structuredClone(Symbol("leaf"));return "cloned";}catch(error){return error.name;}})()', expected: 'DataCloneError' },
+  ];
+  const cloneInput = { code: '', calls: cloneCases.map(one => one.call), expectations: cloneCases.map(one => one.expected) };
+  for (const cloned of [await evaluateInRunRealm(cloneInput), await runInSandbox(cloneInput)]) {
+    assert.ok(allPassed(cloned), `unrestricted structuredClone semantics: ${JSON.stringify(cloned.results)}`);
+  }
   const semantics = await runInSandbox({
     code: '',
     calls: [
