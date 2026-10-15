@@ -1,5 +1,24 @@
 # Release acceptance matrix
 
+## 15 October — PR #401 initial-load correction
+
+The first required verify run38679526564 failed the production-shaped initial
+bundle budget:243182gzip bytes against243000. SQL passed38s; the earlier exact
+preview passed eleven general checks, but neither result overrides failed verify.
+The overview now loads its English-only route copy with the existing lazy path
+screens, following the established privacy/draft dictionaries. Strings and
+access/assessment behavior are unchanged; the budget was not raised. The full
+client suite passes104files/1002tests after the diagnostic dictionary move.
+Focused rechecks pass29tests; the final production-shaped build and both
+isolated report browser tests pass. The measured initial download is242983gzip
+bytes against the unchanged243000limit. An attempted extra move of archived-key
+copy was reverted after a type check; archived Czech files remain untouched.
+
+B014 adds five individual coding reviews:100/725current,625remaining. N042finishes
+263/263current native records, adding3new and revising2existing records with
+preserved history. These local reviews are not shipped by PR #400 and do not
+establish independent/human or authenticated production acceptance.
+
 ## 15 October — local diagnostic competency follow-up (#397)
 
 The diagnostic records trusted gradeCheck correct/item counts per competency in
@@ -28,8 +47,8 @@ revision shape succeeds with zero rows; no owner data, enrollment, evidence,
 progress, score or account fixture was written. Supabase order/maybeSingle docs
 and changelog were checked; the announced future legacy TLS cipher retirement
 requires no query/API change for this Node24 implementation. #397 remains open
-until the fix is merged; the last three native records still need individual
-review. This source follow-up is not in production PR #400.
+until the fix is merged. The final three native records have since received
+individual reviews in n042. This source follow-up is not in production PR #400.
 
 ## 15 October — PR #400 exact production
 

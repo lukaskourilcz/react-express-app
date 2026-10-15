@@ -17,6 +17,7 @@ import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../lib/auth';
 import { useT } from '../../i18n/LanguageContext';
+import { pathsEn as pathCopy } from '../../i18n/translations.paths';
 import { ApiError, friendlyError } from '../../lib/api';
 import { isBarred, useLocks } from '../../lib/locks';
 import { openUpgradeSheet } from '../../lib/upgradeSheet';
@@ -387,8 +388,8 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
 
       {progress.data && diagnosticModule && progress.data.competencies.length > 0 && (
         <section className="lp-card lp-section" aria-labelledby="path-diagnostic-title">
-          <h2 id="path-diagnostic-title">{t('paths.diagnosticTitle')}</h2>
-          <p className="lp-lead">{t('paths.diagnosticNote')}</p>
+          <h2 id="path-diagnostic-title">{pathCopy['paths.diagnosticTitle']}</h2>
+          <p className="lp-lead">{pathCopy['paths.diagnosticNote']}</p>
           <ul className="lp-list">
             {progress.data.competencies.map(result => {
               const competency = manifest.competencies.find(one => one.id === result.competencyId);
@@ -396,18 +397,18 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
               return (
                 <li key={result.competencyId}>
                   <strong>{loc(competency.title)}</strong>{' — '}
-                  {t(`paths.competency.${result.state}`)}
+                  {pathCopy[`paths.competency.${result.state}`]}
                   {result.score !== null && result.assessedItems > 0 && (
-                    <> · {t('paths.diagnosticItems', { percent: Math.round(result.score * 100), count: result.assessedItems })}</>
+                    <> · {pathCopy['paths.diagnosticItems'].replace('{percent}', String(Math.round(result.score * 100))).replace('{count}', String(result.assessedItems))}</>
                   )}
                 </li>
               );
             })}
           </ul>
-          <p className="lp-note">{t('paths.diagnosticRetakeNote')}</p>
+          <p className="lp-note">{pathCopy['paths.diagnosticRetakeNote']}</p>
           {reachable && manifest.diagnosticActivityId && (
             <Link to={activityHref(pathId, diagnosticModule.id, manifest.diagnosticActivityId)}>
-              {t('paths.openDiagnostic')}
+              {pathCopy['paths.openDiagnostic']}
             </Link>
           )}
         </section>
