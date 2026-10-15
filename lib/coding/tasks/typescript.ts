@@ -874,7 +874,7 @@ console.log(orDefault(null, 5));
     tier: 2,
     focus: ["generics", "map"],
     title: "Transform a list",
-    prompt: "Write `transform<T, R>(items: T[], change: (item: T) => R): R[]`, running the callback over every item and collecting the results. The callback takes one argument, and the type it returns is the element type of the array that comes back.",
+    prompt: "Write `transform<T, R>(items: T[], change: (item: T) => R): R[]`, running the callback over every item and collecting the results. The callback takes one argument, and the type it returns is the element type of the array that comes back. Domain: an ordinary dense array of at most 1000 opaque values, possibly frozen at runtime. Call change once per item in ascending index order with exactly that item as its only argument; do not pass an index or the input array. change does not mutate items. Store its exact returned value/reference without awaiting or cloning it, including undefined, functions, Symbols, NaN, -0 and native Promises. A synchronous throw stops iteration and propagates the exact reason, without invoking later items. Return a fresh dense mutable result array synchronously, including for empty input; do not alter the input or returned values. Keep the input and callback-result types connected through the two generic parameters. Target: O(n) time and result space, where n is 1 + the item count, excluding callback work.",
     starter: `const transform = (items, change) => {
   
 };

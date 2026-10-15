@@ -12,7 +12,7 @@ export const TYPESCRIPT_LOOP_TASKS: CodingTaskSource[] = [
     tier: 1,
     focus: ["annotations", "for-of"],
     title: "Inferred total",
-    prompt: "Write `totalLength(words: string[]): number`, adding up the length of every word. Start the running total at `0` without a type annotation and let the compiler infer `number` from that starting value, then add each length in a `for-of` loop. `totalLength([\"hi\", \"there\"])` gives 7, and an empty list gives 0.",
+    prompt: "Write `totalLength(words: string[]): number`, adding up the length of every word. Start the running total at `0` without a type annotation and let the compiler infer `number` from that starting value, then add each length in a `for-of` loop. `totalLength([\"hi\", \"there\"])` gives 7, and an empty list gives 0. Domain: an ordinary dense array of at most 1000 strings, each at most 1000 UTF-16 code units, possibly frozen at runtime. Leave it unchanged. Count JavaScript string.length units, not Unicode code points or displayed characters: a shark emoji contributes 2 and e followed by a combining accent contributes 2. Return 0 for no words. Type inference checks the program statically; it does not add runtime guards. Target: O(n) time and O(1) accumulator space, where n is 1 + the word count; reading an existing string length does not scan its characters.",
     starter: `const totalLength = (words: string[]): number => {
 
 };
@@ -60,7 +60,7 @@ console.log(totalLength(["hi", "there"]));
     tier: 1,
     focus: ["push", "shift", "while"],
     title: "Take turns",
-    prompt: "Write `takeTurns(waiting: string[], turns: number): string[]`, serving people from a queue in a round robin: the person at the front is served, then goes to the back, until `turns` people have been served. Copy the list first so the caller's array stays as it was. `takeTurns([\"ada\", \"bo\"], 3)` gives `[\"ada\", \"bo\", \"ada\"]`, and an empty queue gives an empty list however many turns are asked for.",
+    prompt: "Write `takeTurns(waiting: string[], turns: number): string[]`, serving people from a queue in a round robin: the person at the front is served, then goes to the back, until `turns` people have been served. Keep the caller's array unchanged. `takeTurns([\"ada\", \"bo\"], 3)` gives `[\"ada\", \"bo\", \"ada\"]`, and an empty queue gives an empty list however many turns are asked for. Domain: an ordinary dense array of at most 1000 strings, each up to 200 UTF-16 units, possibly frozen at runtime, and an integer turns from 0 through 10000. Empty and repeated names are ordinary queue entries. Return a fresh dense mutable result array per call, even for zero turns or an empty queue, and leave waiting unchanged. A copied shift/push queue is the teaching approach; an index-based cycle with the same results is also valid. Target: O(n\u00b2) time as a worst-case upper bound for the copied shift/push approach, where n is 1 + waiting.length + turns. More precisely its work is O(w + t*w) for w waiting entries and t turns under a linear shift model; an index-based cycle can be faster. Queue/result storage is O(w + t).",
     starter: `const takeTurns = (waiting: string[], turns: number): string[] => {
 
 };
@@ -159,7 +159,7 @@ console.log(padScores([7, 9], 4));
     tier: 1,
     focus: ["tuples", "for"],
     title: "Lowest and highest",
-    prompt: "Write `minMax(values: number[]): [number, number]`, returning the smallest and the largest value as a tuple, found in a single `for` loop over the list. `minMax([3, 1, 2])` gives `[1, 3]`, a single value is both ends, and an empty list gives `[0, 0]`.",
+    prompt: "Write `minMax(values: number[]): [number, number]`, returning the smallest and the largest value as a tuple, found in a single `for` loop over the list. `minMax([3, 1, 2])` gives `[1, 3]`, a single value is both ends, and an empty list gives `[0, 0]`. Domain: an ordinary read-only dense array of at most 10000 finite numbers between -1000000000000 and 1000000000000, possibly frozen at runtime. Do not sort or change the input. Compare using numeric < and >; on equality retain the earliest occurrence for each end, including the sign of zero. Return a fresh mutable two-element tuple on every call, including [0, 0] for empty input. Target: O(n) time and O(1) retained state besides the pair, where n is 1 + the value count. One pass is sufficient; avoid sorting to find two extremes.",
     starter: `const minMax = (values: number[]): [number, number] => {
 
 };

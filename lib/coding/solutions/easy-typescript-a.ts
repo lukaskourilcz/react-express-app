@@ -216,16 +216,16 @@ const onlyActive = <T extends { active: boolean }>(items: T[]): T[] => items.fil
   'ts-easy2-flip-a-pair': {
     solution: `// The pattern [first, second] is annotated as a whole, after the brackets.
 const flip = <A, B>([first, second]: [A, B]): [B, A] => [second, first];`,
-    junior: `const flip = <A, B>(pair: [A, B]): [B, A] => {
-  const first = pair[0];
-  const second = pair[1];
-  const flipped: [B, A] = [second, first];
-  return flipped;
-};`,
+    junior: "const flip = <A, B>([first, second]: [A, B]): [B, A] => {\n  const flipped: [B, A] = [second, first];\n  return flipped;\n};",
     senior: `function flip<A, B>([first, second]: readonly [A, B]): [B, A] {
   return [second, first];
 }`,
+    hiddenTypeTests: [{"code": "const __auditExact: [true, 'a'] = flip(['a' as const, true as const]);"}, {"code": "const __auditPair: [number, string] = flip<number, string>([1, \"a\"]);", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const record=Object.freeze({a:1}),array=Object.freeze([2]),input=Object.freeze([record,array]),a=flip(input),b=flip(input);a.push(3);return [a!==b,b!==input,b.length,b[0]===array,b[1]===record,input[0]===record,a.length];})()", expected: [true, true, 2, true, true, true, 3] },
+      { call: "(()=>{const fn=()=>1,symbol=Symbol('x'),pairs=[[fn,symbol],[undefined,NaN],[-0,null]];return pairs.every(pair=>{const result=flip(Object.freeze(pair));return result.length===2&&Object.is(result[0],pair[1])&&Object.is(result[1],pair[0]);});})()", expected: true },
+      { call: "(()=>{const value=Object.freeze({}),pair=Object.freeze([value,value]),a=flip(pair),b=flip(pair);return a!==b&&a[0]===value&&a[1]===value;})()", expected: true },
+
       { call: 'flip(["", 1])', expected: [1, ''] },
       { call: 'flip([[1], { a: 2 }])', expected: [{ a: 2 }, [1]] },
       { call: '(() => { const pair = [1, 2]; return flip(pair) !== pair; })()', expected: true },

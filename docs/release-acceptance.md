@@ -3990,3 +3990,38 @@ not reviewer workflow; no audit note or option-position clue is introduced.
 Twelve physical API handlers remain; no schema/RLS, dependency, reward or access
 policy changed. PR #412 is exact-production verified; these five B047 reviews
 still await their own checked release. The owner has resumed the audit.
+
+## Five-item continuation B048 — 15 October 2026
+
+Five TypeScript reviews cover inferred UTF-16 length totals, generic callback
+arity/results, round-robin absence versus empty names, one-pass extrema with
+earliest signed-zero ties, and identity-preserving generic tuple reversal.
+Correct alternatives remain accepted. The queue brief states the copied-shift
+approach's quadratic single-size upper bound and more precise O(w + t*w), while
+allowing faster indexing; it does not mislabel repeated shifts linear.
+
+The baseline matched 25/30 verdicts, accepting five meaningful wrongs. Final
+selected evidence is 30/30 (20 valid, five starters, five wrongs), and twenty
+authored-target/base-25-XP checks pass. Sixteen runtime and five hidden type
+assertions cover previously missing units, identity, ordering and generic output
+relationships. Canonical focused coding passes actual TypeScript checking,
+isolated native Run, reversed hidden checks and all model boards. All 270 current
+coding review hashes match; 455 remain. Native stays 263/263. API/script types,
+launch/build, native bindings, curation/index generation, both production audits
+(zero vulnerabilities), copy sweep (zero findings) and diff checks pass. B047
+also passes its dark-theme matrix, bringing that five-task cohort to 80/80
+responsive probes at 320–1440 px. No authenticated Premium, independent/human or
+complete-catalogue claim. B048 also passes 80/80 fixture-backed light/dark responsive probes at 320–1440 px, zero issues/unprobed. Both new cohorts still await checked release.
+
+## Production override and retention reconciliation — 15 October 2026
+
+Read-only production checks confirm 485 deleted overrides, no active edits/custom
+questions, the same deleted identities as 14 October (lexically sorted IDs joined
+with newline, MD5 7271a4b58a6e2b174fe541351d7cbdc4), and 1820 effective eligible
+questions after 194 eligible hides. Every effective question has a current
+review binding. The active retention schedule calls a function including practice
+purging; no checked excess TRUNCATE/REFERENCES/TRIGGER/MAINTAIN grant remains for
+anon/authenticated on the eleven tables in #236. The purge was not invoked.
+Evidence is docs/audit/question-overrides-2026-10-15.json; no database, learner
+state, historical hide or marketing setting changed. Copy/longest-option
+reconciliation and owner decisions remain open.
