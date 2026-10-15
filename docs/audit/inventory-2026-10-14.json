@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 45,
-    "recordsStillRequiringReview": 48,
+    "currentStagedModelReviewRecords": 50,
+    "recordsStillRequiringReview": 43,
     "reviewEvidence": "170 native records shipped through PR #398 at 46e0dd6372606e2a3912aa3395b1b60db9fc5112 after exact 5f0145fa passed required verify/sql run 38668758560 (verify 25m14s; SQL 38s). Production dpl_DTiUbPTR5PELasM5gYD1o4diEreK is READY at that merge SHA with devshark.app and no alias error. Eleven general public health/Big O/correct-and-wrong coding checks pass with guest zero XP/null progress. Partial source/release evidence is not authenticated native acceptance or activation; n010 revisions add no unique coverage.",
     "deployedModelReviewRecords": 170,
-    "currentModelReviewRecords": 215,
-    "stagedReviewEvidence": "15 October through n032: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
+    "currentModelReviewRecords": 220,
+    "stagedReviewEvidence": "15 October through n033: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,

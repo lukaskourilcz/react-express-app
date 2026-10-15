@@ -1,5 +1,32 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n033
+
+Reviewed both tenant/lifecycle lessons, their reading activities and wrapper.
+Request authority is current, service roles need not read every tenant, and a
+scoped method name is not storage enforcement. Two duplicate-declaration code
+blocks now compile. Broad reads violate this workbench policy without proving
+an inevitable payload leak. Lifecycle text inventories actual copies, protects
+ids, scopes derived cleanup and states durable retry/completion limits. Backup
+capabilities vary; audit references alone do not reconstruct historical decisions.
+Expiry/revocation and per-batch continuation follow an explicit policy, including
+checkpoint validation before resume.
+
+Six real sandbox verdicts pass. Expiry-refusal reads and proposed-tenant access
+mutants both passed the old suite and fail the new zero-read/accessor probes.
+Frozen inputs and100grant/1000row projection boundaries pass; two valid target
+analyses retain base25. Trusted snippet syntax/scope, audit JSON and batch timing
+checks pass. No live RLS, deletion, retention/restore or database acceptance is
+inferred. Native bindings, paths, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Individual
+manual editorial readings remain separate from execution.
+
+Coverage is **220/263 native**, **43 remaining**, and **95/725 coding**,
+**630 remaining**. PR #399 remains frozen at d3064e1f with SQL, eleven exact-
+preview general checks and six catalogue probes per theme passing; verify is
+pending. N032–n033 are local. Production coverage is95 coding/170 native through
+#398. Diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n032
 
 Reviewed both integration lessons, their reading activities and the connector.
