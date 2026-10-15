@@ -67,7 +67,7 @@ export const FDE_DIAGNOSTIC: ModuleSource = {
       verification: 'machine_verified',
       title: 'Twelve situations',
       summary:
-        'Three questions each on APIs and data, security and operations, the operator screen, and evaluating an AI result. Optional and retryable. It recommends bridges, exempts you from nothing, completes nothing on its own, and reports a competency it did not measure as not assessed rather than as a zero.',
+        'Twelve scenarios across APIs/data, boundaries/operations, operator state and evaluation. The latest accepted answers determine each tagged competency separately, including questions with multiple tags. An overall pass can still leave an area to practise. Older aggregate-only results and uncovered areas are not assessed; retake to record current evidence. Optional and retryable: no unlock, exemption or path completion.',
       competencies: ['integration', 'boundaries', 'operations', 'handoff', 'evaluation'],
       estimatedMinutes: 16,
       passThreshold: 0.8,

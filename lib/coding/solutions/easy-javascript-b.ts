@@ -476,13 +476,14 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
   return { name, role, active };
 };`,
-    junior: `const makeUser = (options = {}) => {
-  const { name = "Guest", role = "viewer", active = true } = options;
-  const user = { name: name, role: role, active: active };
-  return user;
-};`,
+    junior: "const makeUser = ({ name = \"Guest\", role = \"viewer\", active = true } = {}) => {\n  const user = { name: name, role: role, active: active };\n  return user;\n};",
     senior: `const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => ({ name, role, active });`,
     hiddenTests: [
+      {"call": "makeUser(Object.freeze({name:0,role:'',active:false}))", "expected": {"name": 0, "role": "", "active": false}, "label": "zero empty string and false are preserved"},
+      {"call": "(() => {const options={name:undefined};Object.defineProperty(options,'unused',{enumerable:true,get(){throw new Error('extra field read');}});const out=makeUser(Object.freeze(options));return out.name==='Guest'&&out.role==='viewer'&&out.active===true&&Object.keys(out).sort().join(',')==='active,name,role';})()", "expected": true, "label": "read exactly named fields without enumerating ignored extras or mutating frozen input"},
+      {"call": "(() => {const value=Object.freeze({id:1});const o=Object.freeze({name:value,role:null,active:0});const a=makeUser(o),b=makeUser(o);return a!==b&&a!==o&&a.name===value&&a.role===null&&a.active===0;})()", "expected": true, "label": "shallow identity and a fresh exact output on every call"},
+      {"call": "makeUser(Object.freeze(Object.create({name:'Inherited',role:'editor',active:false})))", "expected": {"name": "Inherited", "role": "editor", "active": false}, "label": "destructuring reads inherited named data properties"},
+
       { call: 'makeUser({})', expected: { name: 'Guest', role: 'viewer', active: true } },
       { call: 'makeUser({ name: "Lin", role: "owner", active: true })', expected: { name: 'Lin', role: 'owner', active: true } },
       { call: 'makeUser({ extra: 1, role: "" })', expected: { name: 'Guest', role: '', active: true } },
@@ -503,6 +504,10 @@ const makeUser = ({ name = "Guest", role = "viewer", active = true } = {}) => {
 };`,
     senior: `const highest = scores => (scores.length ? Math.max(...scores) : null);`,
     hiddenTests: [
+      {"call": "[Object.is(highest([-0,+0]),+0),Object.is(highest([-0]),-0)]", "expected": [true, true], "label": "Math.max signed-zero semantics"},
+      {"call": "(() => {const input=Object.freeze([-9,4,1,-2]);return highest(input)===4&&input.join(',')==='-9,4,1,-2';})()", "expected": true, "label": "frozen caller order is preserved"},
+      {"call": "highest(Object.freeze(Array.from({length:10000},(_,i)=>i-10000)))", "expected": -1, "label": "ten thousand negative scores have a negative maximum"},
+
       { call: 'highest([0, -1])', expected: 0 },
       { call: 'highest([1.5, 1.25])', expected: 1.5 },
       { call: 'highest([100, 3, 100])', expected: 100 },

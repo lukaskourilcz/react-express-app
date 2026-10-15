@@ -1987,8 +1987,9 @@ export const en = {
   'paths.portfolioRequired': 'All {total} are required to complete the path. An automated check confirms each part is filled in and within its limit; nobody grades the writing, so you compare it with the rubric yourself.',
   'paths.portfolioCount': '{submitted} of {total} submitted',
   'paths.completionNote': 'Completion describes what you passed in these exercises. It is not a certification, not evidence of production experience, and not a claim about employment.',
-  'paths.bridgesTitle': 'Suggested bridges',
   'paths.bridgesNote': 'Based on what the diagnostic measured. Recommendations only — none of these is required, and none grants an exemption.',
+  // Diagnostic overview copy is loaded with the path screens in translations.paths.ts.
+  'paths.bridgesTitle': 'Suggested bridges',
   'paths.result': 'Result',
   'paths.score': 'Score {percent}%',
   'paths.replayed': 'This is the result already recorded for this submission. Nothing was graded twice.',

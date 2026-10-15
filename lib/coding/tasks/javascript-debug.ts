@@ -168,9 +168,9 @@ console.log(without(original, "a"), original);
     level: 10,
     tier: 2,
     format: 'debug',
-    focus: ['find', 'closures'],
+    focus: ['find', 'for'],
     title: 'The search that never finds the first one',
-    prompt: '`firstLongerThan(words, length)` should return the first word longer than `length`, or `null` when there is none. It returns the last matching word instead of the first. Fix it.',
+    prompt: "`firstLongerThan(words, length)` should return the first word whose JavaScript `.length` is strictly greater than length, or null if none qualifies. The starter keeps the last matching word instead: fix it and stop reading input after the first match. String.length counts UTF-16 code units, so an emoji such as \"😀\" has length 2; do not trim, normalize or count code points instead. A negative threshold can make an empty string the valid answer: preserve it rather than replacing it with null. Do not mutate words. Domain: at most 2,000 strings, each at most 1,000 UTF-16 units, and an integer threshold from -1,000 through 1,000. The array may be frozen; entries after the first match may be getters that throw if read. Target: O(n) time in the worst case, where n is the number of words and cached string-length reads count as constant cost.",
     starter: `const firstLongerThan = (words, length) => {
   let found = null;
   for (const word of words) {

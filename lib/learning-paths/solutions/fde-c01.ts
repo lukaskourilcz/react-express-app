@@ -84,6 +84,12 @@ export const FDE_C01_SOLUTIONS: Record<string, PathCodeSolution> = {
   return { cases, skipped, duplicates };
 };`,
     hiddenTests: [
+      {"call": "(async function(){var calls=0;var c={listTickets:function(){calls++;return Promise.reject(null);}};var result=await buildCaseList(c,'customer_id,tenant_id,company').then(function(){return false;},function(e){return e===null;});return {same:result,calls:calls};})()", "expected": {"same": true, "calls": 1}, "label": "a null rejection propagates unchanged without retry", "async": true},
+      {"call": "(async function(){var c=__makeClient([{cursor:null,nextCursor:null,tickets:[]}],{throttleCursor:null,retryAfterMs:0});await buildCaseList(c,'customer_id,tenant_id,company');return {calls:c.requests.length,gap:c.requests[1].at-c.requests[0].at};})()", "expected": {"calls": 2, "gap": 0}, "label": "a zero retryAfterMs remains zero", "async": true},
+      {"call": "(async function(){var ticket=Object.freeze({id:' 2 ',customerId:' C ',subject:'  keep this spacing  '});var c={listTickets:function(cursor){if(cursor!==null)throw new Error('bad cursor');return Promise.resolve(Object.freeze({tickets:Object.freeze([ticket]),nextCursor:null}));}};return await buildCaseList(c,'customer_id,tenant_id,company\\r\\nC,T,\"comma, company\"\\r\\n');})()", "expected": {"cases": [{"id": "2", "tenantId": "T", "customerId": "C", "subject": "  keep this spacing  "}], "skipped": [], "duplicates": 0}, "label": "CRLF restricted CSV and frozen ticket preserve original subject", "async": true},
+      {"call": "(async function(){var c=__makeClient([{cursor:null,nextCursor:'__proto__',tickets:[]},{cursor:'__proto__',nextCursor:null,tickets:[{id:'I',customerId:'__proto__',subject:'S'}]}],{throttleCursor:'__proto__',retryAfterMs:0});var out=await buildCaseList(c,'customer_id,tenant_id,company\\n__proto__,T,Company');return {cases:out.cases,tries:__attempts(c,'__proto__').length};})()", "expected": {"cases": [{"id": "I", "tenantId": "T", "customerId": "__proto__", "subject": "S"}], "tries": 2}, "label": "prototype-like cursor and customer ids are ordinary data under the fixture contract", "async": true},
+      {"call": "(async function(){var rows=['customer_id,tenant_id,company'];var tickets=[];for(var i=999;i>=0;i--){rows.push('C'+i+',T,Company');tickets.push({id:String(i).padStart(4,'0'),customerId:'C'+i,subject:'S'});}var c=__makeClient([{cursor:null,nextCursor:null,tickets:tickets}],{throttleCursor:'none'});var out=await buildCaseList(c,rows.join('\\n'));return {count:out.cases.length,first:out.cases[0].id,last:out.cases[999].id,skipped:out.skipped.length};})()", "expected": {"count": 1000, "first": "0000", "last": "0999", "skipped": 0}, "label": "one thousand rows and reverse-ordered tickets sort by text id", "async": true},
+
       {
         call:
           "(function () { var pages = [{ cursor: null, nextCursor: null, tickets: [{ id: 'TCK-9001', customerId: 'CUS-99', subject: 'Unknown account' }] }]; return buildCaseList(__makeClient(pages, { throttleCursor: '__none' }), __csv()).then(function (out) { return out.skipped; }); })()",
@@ -174,24 +180,29 @@ const proposeAction = (viewer, results, modelOutput) => {
   if (ALLOWED_ACTIONS.indexOf(parsed.action) === -1) return refuse('unknown-action');
 
   const byId = new Map(permitted.map(article => [article.id, article]));
-  const cited = [];
+  const cited = new Set();
   for (const id of parsed.articleIds) {
     if (typeof id !== 'string' || !byId.has(id)) return refuse('uncited-article');
-    if (cited.indexOf(id) === -1) cited.push(id);
+    cited.add(id);
   }
-  if (cited.length === 0) return refuse('uncited-article');
+  if (cited.size === 0) return refuse('uncited-article');
 
-  const best = cited.reduce((top, id) => Math.max(top, byId.get(id).score), 0);
+  const best = Array.from(cited).reduce((top, id) => Math.max(top, byId.get(id).score), 0);
   if (best < SUPPORT_THRESHOLD) return refuse('weak-support');
 
   return {
     status: 'proposed',
     action: parsed.action,
-    articleIds: permitted.filter(article => cited.indexOf(article.id) !== -1).map(article => article.id),
+    articleIds: permitted.filter(article => cited.has(article.id)).map(article => article.id),
     reason: '',
   };
 };`,
     hiddenTests: [
+      {"call": "(function(){var r=Object.freeze({id:'I',tenantId:'T',visibility:'published',updatedAt:'2026-01-01',score:0.6,get text(){throw new Error('untrusted text read');}});return proposeAction(Object.freeze({tenantId:'T',clearances:Object.freeze([])}),Object.freeze([r]),'{\"action\":\"route_billing\",\"articleIds\":[\"I\"]}');})()", "expected": {"status": "proposed", "action": "route_billing", "articleIds": ["I"], "reason": ""}, "label": "exact support threshold permits a frozen article without reading text"},
+      {"call": "(function(){var r=[{id:'__proto__',tenantId:'T',visibility:'published',updatedAt:'2026-01-01',score:0.7}];return proposeAction({tenantId:'T',clearances:[]},r,'{\"action\":\"route_billing\",\"articleIds\":[\"__proto__\",\"__proto__\"]}');})()", "expected": {"status": "proposed", "action": "route_billing", "articleIds": ["__proto__"], "reason": ""}, "label": "prototype-like ids deduplicate as ordinary strings"},
+      {"call": "(function(){var r=[];var ids=[];for(var i=999;i>=0;i--){var id=String(i).padStart(4,'0');r.push(Object.freeze({id:id,tenantId:'T',visibility:'published',updatedAt:'2026-01-01',score:0.8}));ids.push(id);}var out=proposeAction({tenantId:'T',clearances:[]},Object.freeze(r),JSON.stringify({action:'route_access',articleIds:ids}));return {status:out.status,count:out.articleIds.length,first:out.articleIds[0],last:out.articleIds[999],original:r[0].id};})()", "expected": {"status": "proposed", "count": 1000, "first": "0000", "last": "0999", "original": "0999"}, "label": "one thousand tied citations rank safely without mutating results"},
+      {"call": "proposeAction(__viewer('dunfold'),__set('plain'),'{\"action\":\"unknown\",\"articleIds\":[false]}')", "expected": {"status": "refused", "action": "needs_human", "articleIds": [], "reason": "unknown-action"}, "label": "unknown action refuses before malformed citation contents"},
+
       {
         call: "proposeAction(__viewer('dunfold'), __set('superseded'), __model('good'))",
         expected: { status: 'refused', action: 'needs_human', articleIds: [], reason: 'uncited-article' },
@@ -248,7 +259,7 @@ const scoreCandidate = (candidate, heldOut) => {
   const latencies = [];
 
   for (const row of heldOut) {
-    const prediction = predictions[row.id];
+    const prediction = Object.prototype.hasOwnProperty.call(predictions, row.id) ? predictions[row.id] : null;
     const action = prediction ? prediction.action : null;
     const hit = action === row.expected;
     if (hit) correct += 1;
@@ -262,7 +273,7 @@ const scoreCandidate = (candidate, heldOut) => {
   }
 
   latencies.sort((a, b) => a - b);
-  const bySlice = {};
+  const bySlice = Object.create(null);
   for (const [name, slice] of slices) bySlice[name] = round3(slice.correct / slice.total);
 
   return {
@@ -271,7 +282,7 @@ const scoreCandidate = (candidate, heldOut) => {
     abstention: round3(abstained / heldOut.length),
     bySlice,
     costPerCase: round3(cost / heldOut.length),
-    latencyP50: latencies[Math.ceil(latencies.length / 2) - 1],
+    latencyP50: round3(latencies[Math.ceil(latencies.length / 2) - 1]),
   };
 };
 
@@ -296,7 +307,7 @@ const compareCandidates = (dataset, candidates, baselineId) => {
     if (report.id === baselineId) continue;
     if (report.accuracy <= baseline.accuracy) continue;
     const regressed = Object.keys(baseline.bySlice).some(
-      slice => (report.bySlice[slice] === undefined ? 0 : report.bySlice[slice]) < baseline.bySlice[slice] - 0.02,
+      slice => Math.round((report.bySlice[slice] === undefined ? 0 : report.bySlice[slice]) * 1000) < Math.round(baseline.bySlice[slice] * 1000) - 20,
     );
     if (regressed) blocked.push(report.id);
     else eligible.push(report);
@@ -319,6 +330,12 @@ const compareCandidates = (dataset, candidates, baselineId) => {
   };
 };`,
     hiddenTests: [
+      {"call": "(function(){var rows=[{id:'A',slice:'s',expected:'yes',split:'holdout'},{id:'B',slice:'s',expected:'yes',split:'holdout'}];var out=compareCandidates(rows,[{id:'base',predictions:{A:{action:'yes',costUnits:0,latencyMs:1.23456},B:{action:'yes',costUnits:0,latencyMs:3.5}}}],'base');return out.reports[0].latencyP50;})()", "expected": 1.235, "label": "fractional lower-median latency rounds to three decimals"},
+      {"call": "(function(){var data=[{id:'A',slice:'__proto__',expected:'yes',split:'holdout'},{id:'B',slice:'constructor',expected:'yes',split:'holdout'}];var out=compareCandidates(data,[{id:'base',predictions:{A:{action:'yes',costUnits:0,latencyMs:1},B:{action:'yes',costUnits:0,latencyMs:1}}}],'base').reports[0];return {keys:Object.keys(out.bySlice).sort(),own:Object.prototype.hasOwnProperty.call(out.bySlice,'__proto__'),values:[out.bySlice.__proto__,out.bySlice.constructor]};})()", "expected": {"keys": ["__proto__", "constructor"], "own": true, "values": [1, 1]}, "label": "prototype-like slice names remain own report keys"},
+      {"call": "(function(){var data=[{id:'A',slice:'s',expected:'yes',split:'holdout'}];var predictions=Object.create({A:{action:'yes',costUnits:9,latencyMs:9}});return compareCandidates(data,[{id:'base',predictions:predictions}],'base').reports[0];})()", "expected": {"id": "base", "accuracy": 0, "abstention": 0, "bySlice": {"s": 0}, "costPerCase": 0, "latencyP50": 0}, "label": "an inherited prediction is missing rather than scored"},
+      {"call": "(function(){var rows=[],base={},candidate={};for(var i=0;i<200;i++){var id='R'+i;rows.push({id:id,slice:i<100?'s':'t',expected:'yes',split:'holdout'});base[id]={action:i<5?'yes':'no',costUnits:0,latencyMs:1};candidate[id]={action:(i<3||(i>=100&&i<120))?'yes':'no',costUnits:0,latencyMs:1};}var out=compareCandidates(rows,[{id:'base',predictions:base},{id:'candidate',predictions:candidate}],'base');return {winner:out.winner,blocked:out.blocked,baseline:out.reports[0].bySlice.s,candidate:out.reports[1].bySlice.s};})()", "expected": {"winner": "candidate", "blocked": [], "baseline": 0.05, "candidate": 0.03}, "label": "exact rounded 0.02 slice regression is permitted despite binary subtraction noise"},
+      {"call": "(function(){var rows=[],candidates=[];for(var i=0;i<200;i++)rows.push(Object.freeze({id:'R'+i,slice:'s'+i%3,expected:'yes',split:'holdout'}));for(var j=0;j<10;j++){var predictions=Object.create(null);rows.forEach(function(row){predictions[row.id]=Object.freeze({action:j===0?'no':'yes',costUnits:0,latencyMs:1.23456});});candidates.push(Object.freeze({id:j===0?'base':'C'+j,predictions:Object.freeze(predictions)}));}var out=compareCandidates(Object.freeze(rows),Object.freeze(candidates),'base');return {scored:out.scored,reports:out.reports.length,winner:out.winner,p50:out.reports[9].latencyP50};})()", "expected": {"scored": 200, "reports": 10, "winner": "C1", "p50": 1.235}, "label": "two hundred frozen cases and ten candidates preserve order and deterministic tie breaking"},
+
       {
         call:
           "(function () { var out = compareCandidates(__dataset('swapped'), __candidates('main'), 'baseline'); return { scored: out.scored, winner: out.winner, blocked: out.blocked }; })()",
@@ -432,25 +449,31 @@ const routeCase = request => {
   if (ALLOWED_ACTIONS.indexOf(parsed.action) === -1) return refuse('assisted', 'unknown-action');
 
   const byId = new Map(permitted.map(article => [article.id, article]));
-  const cited = [];
+  const cited = new Set();
   for (const id of parsed.articleIds) {
     if (typeof id !== 'string' || !byId.has(id)) return refuse('assisted', 'uncited-article');
-    if (cited.indexOf(id) === -1) cited.push(id);
+    cited.add(id);
   }
-  if (cited.length === 0) return refuse('assisted', 'uncited-article');
+  if (cited.size === 0) return refuse('assisted', 'uncited-article');
 
-  const best = cited.reduce((top, id) => Math.max(top, byId.get(id).score), 0);
+  const best = Array.from(cited).reduce((top, id) => Math.max(top, byId.get(id).score), 0);
   if (best < SUPPORT_THRESHOLD) return refuse('assisted', 'weak-support');
 
   return {
     status: 'proposed',
     path: 'assisted',
     action: parsed.action,
-    articleIds: permitted.filter(article => cited.indexOf(article.id) !== -1).map(article => article.id),
+    articleIds: permitted.filter(article => cited.has(article.id)).map(article => article.id),
     reason: '',
   };
 };`,
     hiddenTests: [
+      {"call": "(function(){var request={ticket:{subject:'Invoice return access'},timings:{retrievalMs:2,projectedModelMs:0},budgetMs:1};for(var key of ['viewer','results','modelOutput'])Object.defineProperty(request,key,{get:function(){throw new Error('over-budget data read');}});return routeCase(Object.freeze(request));})()", "expected": {"status": "proposed", "path": "deterministic", "action": "route_billing", "articleIds": [], "reason": "latency-budget"}, "label": "over-budget routing reads no viewer results or model output and follows first substring rule"},
+      {"call": "(function(){return [null,''].map(function(restricted){return routeCase({ticket:{subject:'access',tenantId:'T'},viewer:{tenantId:'T',clearances:['kb-restricted']},results:[{id:'I',tenantId:'SHARED',visibility:'published',restrictedTo:restricted,updatedAt:'2026-01-01',score:1,text:''}],modelOutput:'{\"action\":\"route_access\",\"articleIds\":[\"I\"]}',budgetMs:10,timings:{retrievalMs:0,projectedModelMs:0}});});})()", "expected": [{"status": "refused", "path": "assisted", "action": "needs_human", "articleIds": [], "reason": "no-permitted-article"}, {"status": "refused", "path": "assisted", "action": "needs_human", "articleIds": [], "reason": "no-permitted-article"}], "label": "null and empty restriction values cannot widen shared access"},
+      {"call": "(function(){var article=Object.freeze({id:'I',tenantId:'SHARED',visibility:'published',updatedAt:'2026-01-01',score:0.6,get text(){throw new Error('text read');}});return routeCase(Object.freeze({ticket:Object.freeze({subject:'return',tenantId:'T'}),viewer:Object.freeze({tenantId:'T',clearances:Object.freeze([])}),results:Object.freeze([article]),modelOutput:'{\"action\":\"route_returns\",\"articleIds\":[\"I\",\"I\"]}',budgetMs:10,timings:Object.freeze({retrievalMs:4,projectedModelMs:6})}));})()", "expected": {"status": "proposed", "path": "assisted", "action": "route_returns", "articleIds": ["I"], "reason": ""}, "label": "exact timing and support thresholds allow a frozen shared citation without reading text"},
+      {"call": "(function(){var req=__req('access','ardwell','ardwellLeak','ardwellCite','ok');return {sameTenant:req.ticket.tenantId===req.viewer.tenantId,out:routeCase(req)};})()", "expected": {"sameTenant": true, "out": {"status": "proposed", "path": "assisted", "action": "route_access", "articleIds": ["KB-950"], "reason": ""}}, "label": "Ardwell fixture uses a ticket authorized for that viewer"},
+      {"call": "(function(){var results=[],ids=[];for(var i=999;i>=0;i--){var id=String(i).padStart(4,'0');results.push(Object.freeze({id:id,tenantId:'T',visibility:'published',updatedAt:'2026-01-01',score:0.8}));ids.push(id);}var out=routeCase({ticket:{tenantId:'T',subject:'access'},viewer:{tenantId:'T',clearances:[]},results:Object.freeze(results),modelOutput:JSON.stringify({action:'route_access',articleIds:ids}),budgetMs:1,timings:{retrievalMs:0,projectedModelMs:0}});return {count:out.articleIds.length,first:out.articleIds[0],last:out.articleIds[999],original:results[0].id};})()", "expected": {"count": 1000, "first": "0000", "last": "0999", "original": "0999"}, "label": "one thousand tied citations retain ranked order without input mutation"},
+
       {
         call: "routeCase(__req('access', 'dunfoldRestricted', 'restricted', 'restrictedCite', 'ok'))",
         expected: { status: 'proposed', path: 'assisted', action: 'route_access', articleIds: ['KB-777'], reason: '' },

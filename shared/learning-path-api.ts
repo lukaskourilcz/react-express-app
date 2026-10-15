@@ -120,6 +120,7 @@ export interface CompetencyResult {
   state: CompetencyState;
   /** 0..1 over the diagnostic items that touched this competency. */
   score: number | null;
+  /** Actual accepted item count, or zero when no per-item evidence exists. */
   assessedItems: number;
 }
 

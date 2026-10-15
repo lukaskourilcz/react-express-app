@@ -1,0 +1,18 @@
+{
+  "kind": "final-native-five-item-batch",
+  "reviewedIds": [
+    "fde-v1-diagnostic-check",
+    "fde-v1-c01-evaluation",
+    "fde-v1-c01-change-request",
+    "fde-v1-m01-q3",
+    "fde-v1-m01-checks"
+  ],
+  "uniqueCoverageAdded": 3,
+  "currentReviewFiles": [
+    "review-2026-10-15-n021.jsonl",
+    "review-2026-10-15-n042.jsonl"
+  ],
+  "history": "docs/audit/wip/native/history/review-2026-10-15-n042-before.json",
+  "proof": "docs/audit/wip/tools/check-native-2026-10-15-n042.ts",
+  "note": "Three remaining records plus two concrete date/provenance corrections; no duplicate coverage or automatic editorial scoring."
+}

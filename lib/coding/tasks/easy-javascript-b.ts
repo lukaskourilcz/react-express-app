@@ -744,7 +744,7 @@ console.log(isComplete({ name: "Ada", email: "" }));
     tier: 1,
     focus: ['destructuring'],
     title: 'Options with defaults',
-    prompt: 'Write `makeUser(options)`, returning `{ name, role, active }` from an options object. Destructure the options in the parameter list and give each one a default: `name` is `"Guest"`, `role` is `"viewer"` and `active` is `true`. `makeUser({ name: "Ada" })` gives `{ name: "Ada", role: "viewer", active: true }`, and `makeUser()` with no argument gives the three defaults. A default applies only when a value is missing or `undefined`, so `active: false` and `name: null` are kept.',
+    prompt: "Write `makeUser(options)`, returning a fresh object with exactly `{ name, role, active }`. Destructure those options in the parameter list with defaults: name is \"Guest\", role is \"viewer\" and active is true. Omitting options or passing undefined uses an empty object. A field default applies only when the field is missing or undefined: preserve null, false, 0 and empty strings. Return values unchanged, including object references. Read only these three fields, ignore extra fields and do not mutate input. Domain: options is omitted, undefined or an ordinary object with data properties; named fields may also be inherited data properties. Ignored extra fields may have throwing getters and the object may be frozen. A null whole argument is outside this contract. Target: O(1) time under constant-cost field access: the number of extra options does not change the three fields read.",
     starter: `const makeUser = options => {
 
 };
@@ -779,7 +779,7 @@ console.log(makeUser({ name: "Ada" }));
     tier: 1,
     focus: ['spread'],
     title: 'Highest with Math.max',
-    prompt: 'Write `highest(scores)`, returning the largest number in the array by spreading it into `Math.max`. `highest([3, 9, 4])` gives 9. `Math.max()` with no arguments gives `-Infinity`, so return `null` for an empty array instead.',
+    prompt: "Write `highest(scores)`, returning the largest number by spreading the array into Math.max. highest([3, 9, 4]) is 9. Return null for an empty array instead of Math.max()’s -Infinity. Keep Math.max numeric semantics: a mixture of -0 and +0 returns +0, while only -0 returns -0. Do not modify the array. Domain: an ordinary dense array of at most 10,000 finite Numbers, including signed zero; it may be frozen. The bound keeps the spread argument list within the exercise’s supported size; unbounded argument spreading is not safe in every engine. Target: O(n) time, where n is the score count, under unit-cost Number comparison. Spreading the argument list can also allocate O(n) temporary space.",
     starter: `const highest = scores => {
 
 };

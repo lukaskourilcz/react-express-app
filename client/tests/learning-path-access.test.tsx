@@ -16,10 +16,13 @@ const lesson = (id: string, title: string) => ({
 });
 const pathManifest = (id: 'fde' | 'dsa-foundations') => ({
   id, kind: id === 'fde' ? 'role_specialization' : 'skill_path', version: 1, title: loc(id === 'fde' ? 'Forward Deployed Engineer' : 'DSA Foundations'),
-  summary: loc(''), outcomes: { en: [], cs: [] }, nonGoals: { en: [], cs: [] }, entryRequirement: loc(''), competencies: [], bridges: [],
-  rubric: { version: 1, dimensions: [] }, diagnosticActivityId: null, estimatedHours: { min: 1, max: 2 }, sources: [], reviewedOn: '2026-01-01',
+  summary: loc(''), outcomes: { en: [], cs: [] }, nonGoals: { en: [], cs: [] }, entryRequirement: loc(''), competencies: id === 'fde' ? [{ id: 'integration', title: loc('Integration and data') }, { id: 'handoff', title: loc('Adoption and handoff') }, { id: 'python-reading', title: loc('Python comprehension') }] : [], bridges: [],
+  rubric: { version: 1, dimensions: [] }, diagnosticActivityId: id === 'fde' && state.diagnosticResults.length ? 'fde-diagnostic-check' : null, estimatedHours: { min: 1, max: 2 }, sources: [], reviewedOn: '2026-01-01',
   completionLabel: loc('done'),
-  modules: [{
+  modules: [...(id === 'fde' && state.diagnosticResults.length ? [{
+    id: 'fde-diagnostic', title: loc('Optional diagnostic'), optional: true, outcomes: { en: [], cs: [] }, competencies: [], dependsOn: [], lessons: [],
+    activities: [{ ...lesson('fde-diagnostic-check', 'Diagnostic check'), kind: 'check', purpose: 'diagnostic' }], requires: [], estimatedMinutes: 10,
+  }] : []), {
     id: `${id}-m01`, title: loc('Module one'), outcomes: { en: [], cs: [] }, competencies: [], dependsOn: [], lessons: [],
     activities: [lesson(`${id}-m01-l1-read`, `${id} first lesson`)], requires: [], estimatedMinutes: 10,
   }],
@@ -31,6 +34,7 @@ const state = vi.hoisted(() => ({
   availability: 'available',
   enrollments: [] as { enrollmentId: string; pathId: string; curriculumVersion: number; status: string }[],
   progressLoaded: true,
+  diagnosticResults: [] as { competencyId: string; state: 'demonstrated' | 'gap' | 'not_assessed'; score: number | null; assessedItems: number }[],
   metadata: {} as Record<string, unknown>,
   changes: [] as Record<string, unknown>[],
   saves: [] as unknown[][],
@@ -57,7 +61,7 @@ vi.mock('../src/lib/trackPref', async (importOriginal) => ({
 vi.mock('../src/lib/learningPaths', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../src/lib/learningPaths')>();
   const progressFor = (pathId: string) => ({
-    enrollment: null, modules: [], competencies: [], recommendedBridges: [], guidedComplete: false,
+    enrollment: null, modules: [], competencies: pathId === 'fde' ? state.diagnosticResults : [], recommendedBridges: [], guidedComplete: false,
     // FDE's modules require three written pieces; DSA has none.
     artifacts: pathId === 'fde' ? { submitted: 1, total: 3 } : { submitted: 0, total: 0 },
     dueActivityIds: [], nextActivityId: `${pathId}-m01-l1-read`,
@@ -114,6 +118,7 @@ beforeEach(() => {
   state.availability = 'available';
   state.enrollments = [];
   state.progressLoaded = true;
+  state.diagnosticResults = [];
   state.metadata = {};
   state.changes.length = 0;
   state.saves.length = 0;
@@ -142,6 +147,34 @@ const overview = (pathId: 'fde' | 'dsa-foundations') => mount('/p', '/p', async 
 });
 
 describe('the path page', () => {
+  it('shows distinct diagnostic states and assessed counts, with a reachable retake link', async () => {
+    state.enrollments = [enrolled('fde')];
+    state.diagnosticResults = [
+      { competencyId: 'integration', state: 'gap', score: 0.3333, assessedItems: 3 },
+      { competencyId: 'handoff', state: 'demonstrated', score: 1, assessedItems: 3 },
+      { competencyId: 'python-reading', state: 'not_assessed', score: null, assessedItems: 0 },
+    ];
+    await overview('fde');
+    const report = screen.getByRole('region', { name: 'Diagnostic overview' });
+    expect(within(report).getByText(/Worth practising/)).toHaveTextContent('33% · Items assessed: 3');
+    expect(within(report).getByText(/Demonstrated in this check/)).toHaveTextContent('100% · Items assessed: 3');
+    const unknown = within(report).getByText(/Not assessed/);
+    expect(unknown).toHaveTextContent('Python comprehension');
+    expect(unknown).not.toHaveTextContent('0%');
+    expect(within(report).getByRole('link', { name: 'Open the diagnostic' })).toHaveAttribute('href', '/roadmap/specializations/fde/fde-diagnostic?activity=fde-diagnostic-check');
+  });
+
+  it('keeps old unassessed diagnostic results readable when access is paused, without an active start link', async () => {
+    state.availability = 'disabled';
+    state.enrollments = [enrolled('fde', 'paused')];
+    state.diagnosticResults = [{ competencyId: 'integration', state: 'not_assessed', score: null, assessedItems: 0 }];
+    await overview('fde');
+    const report = screen.getByRole('region', { name: 'Diagnostic overview' });
+    expect(within(report).getByText(/Not assessed/)).not.toHaveTextContent('0%');
+    expect(within(report).getByText(/Results without per-question evidence/)).toBeInTheDocument();
+    expect(within(report).queryByRole('link', { name: 'Open the diagnostic' })).toBeNull();
+  });
+
   it('on the free plan, Start carries the Premium mark and asks for Premium instead of enrolling', async () => {
     state.tier = 'free';
     await overview('fde');

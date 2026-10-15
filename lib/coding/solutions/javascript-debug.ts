@@ -117,6 +117,12 @@ const without = (items, unwanted) => reject(items, item => item === unwanted);`,
     senior: `// find gives undefined when nothing matches; ?? turns that into the null the contract promises.
 const firstLongerThan = (words, length) => words.find(word => word.length > length) ?? null;`,
     hiddenTests: [
+      {"call": "firstLongerThan(['','later'],-1)", "expected": "", "label": "a negative threshold can make the empty string the first answer"},
+      {"call": "firstLongerThan(['😀','ab'],1)", "expected": "😀", "label": "JavaScript string length uses UTF-16 units"},
+      {"call": "(() => {const words=['first'];Object.defineProperty(words,'1',{get(){throw new Error('read past first match');}});Object.freeze(words);return firstLongerThan(words,1);})()", "expected": "first", "label": "do not read later entries after finding the first match"},
+      {"call": "firstLongerThan(Object.freeze(['  x ','longer']),3)", "expected": "  x ", "label": "preserve exact whitespace and original order"},
+      {"call": "firstLongerThan(Object.freeze(Array(2000).fill('x'.repeat(1000))),1000)", "expected": null, "label": "maximum count and word length with no strictly longer match"},
+
       { call: 'firstLongerThan(["aa", "bbb", "cccc"], 1)', expected: 'aa' },
       { call: 'firstLongerThan(["a", "b"], 0)', expected: 'a' },
       { call: 'firstLongerThan(["abc"], 3)', expected: null, label: 'longer than means strictly longer' },

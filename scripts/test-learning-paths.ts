@@ -27,6 +27,7 @@ import { moduleComplete, nextActivityId, pathInventory, type EvidenceState } fro
 import { PATH_LIMITS } from '../shared/learning-path-api';
 import { moduleRequirements, recordedState } from '../lib/learning-paths/handlers';
 import { handlerContracts } from './learning-path-handler-contracts';
+import { diagnosticCompetencyContracts } from './diagnostic-competency-contracts';
 import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 const ONLY = process.env.PATHS_ONLY ?? '';
@@ -524,6 +525,7 @@ async function main() {
   assert.doesNotMatch(catalogSource, /from '\.\/solutions/, 'the catalogue must not import the solutions');
 
   /* ── the handlers: availability, refusals, rate limits ─────────────── */
+  diagnosticCompetencyContracts();
   await handlerContracts(fail);
 
   if (failures.length > 0) {

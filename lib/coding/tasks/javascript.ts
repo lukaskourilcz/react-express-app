@@ -1200,7 +1200,7 @@ console.log(countLetters("aba"));
     tier: 3,
     focus: ["reduce", "flat"],
     title: "Flatten arrays",
-    prompt: "Write `flatten(arrays)`, returning one array holding the items of each inner array, in order. Flatten a single level only, and do it without `Array.prototype.flat`.",
+    prompt: "Write `flatten(arrays)`, returning a fresh array holding each inner array’s items in their original order. Flatten exactly one level, preserve item references/values and do not modify any input. Do not use Array.prototype.flat. Empty input or only empty inner arrays returns a fresh empty array. Domain: at most 1,000 ordinary dense inner arrays with at most 10,000 total item slots, no overridden iterators or concat-spread behavior; items are opaque values, including nested arrays, null and undefined. Inputs may be frozen. Target: O(n) time, where n is 1 plus the number of outer entries and total inner item slots, under amortized array append. Repeatedly copying the accumulated output can take quadratic work.",
     starter: `const flatten = arrays => {
   
 };
@@ -1208,14 +1208,11 @@ console.log(countLetters("aba"));
 // Scratch pad — change this and press Run.
 console.log(flatten([[1,2],[3]]));
 `,
-    skeleton: `const flatten = arrays =>
-  arrays.reduce((accumulator, item) => {
-    return /* next accumulator */;
-  }, /* initial value */);`,
-    hints: ["Reduce by concatenating each inner array."],
+    skeleton: "const flatten = arrays =>\n  arrays.reduce((result, array) => {\n    // append each item into this new result, then return it\n    return result;\n  }, []);",
+    hints: ["Use one fresh result array and append each inner item once; changing your own result is different from changing an input array."],
     approach: [
       "Reduce the outer array into a single result array.",
-      "At each step, concatenate the inner array onto the accumulator — spreading it works and keeps the update immutable.",
+      "Append each inner item to the same new result. Repeated spread/concat of the growing accumulator copies earlier items again and can be quadratic.",
       "Start from an empty array so both an empty input and an empty inner array behave.",
     ],
     verify: "tests",
@@ -1812,7 +1809,7 @@ console.log(chunk([1,2,3,4], 2));
     tier: 3,
     focus: ["reduce", "objects"],
     title: "Group by key",
-    prompt: "Write `groupBy(items, keyFn)`, returning an object that groups the items by whatever `keyFn` returns for each. That return becomes an object key — so numbers arrive as strings — and each value is the array of matching items, in order.",
+    prompt: "Write `groupBy(items, keyFn)`, returning a fresh object with one own bucket array for each key. Call keyFn exactly once per item in input order. Its result is a string or finite number: numeric keys use String(result), so 1 and \"1\" share a bucket. Preserve the original item references and order within every group. Keys such as \"__proto__\", \"constructor\", \"toString\" and the empty string are ordinary group names, never inherited buckets. The result can have a null prototype or safely defined own data properties; its prototype is not graded. Do not mutate input. Empty input returns a fresh empty object. Domain: at most 2,000 dense items and keys at most 1,000 UTF-16 units; keyFn is synchronous, nonthrowing, bounded-cost and does not mutate input. Inputs/items may be frozen. Target: O(n) time, where n is the item count, using expected constant-time key lookup and amortized append.",
     starter: `const groupBy = (items, keyFn) => {
   
 };
@@ -1824,11 +1821,11 @@ console.log(groupBy([1,2,3,4], n => n % 2 === 0 ? "even" : "odd"));
   // transform or inspect items
   return /* result */;
 };`,
-    hints: ["Reduce into an object, pushing each item into its key’s array."],
+    hints: ["Use an object without inherited buckets, such as Object.create(null), and append into the selected own array."],
     approach: [
-      "Fold over the items and build the result object as you go, starting from an object with no keys at all.",
+      "Fold over the items and build the result object as you go, starting from an object with no inherited bucket names, or defining every own bucket safely.",
       "Ask the key function which bucket each item belongs to, create that bucket as an empty array when it is missing, then push the item in.",
-      "Object keys are strings, so a number handed back by the key function shows up as its text form in the result.",
+      "The accepted keys are strings or finite numbers; convert numeric keys to strings so numeric 1 and string 1 share a bucket. Call keyFn once for each item.",
     ],
     verify: "tests",
     estimatedMinutes: 20,

@@ -1,5 +1,169 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b014
+
+Individually read flattening, grouping, parameter defaults, Math.max spreading
+and first-match debugging. Replace quadratic accumulator copying and unsafe
+inherited buckets; align the junior default example with parameter destructuring.
+Clarify input sizes, ownership, signed zero, UTF-16 and short-circuit reads.
+Forty final-hash QuickJS verdicts agree, compared with29/40 before; all20valid
+reference/junior/senior/alternative forms retain25XP. Unknown estimates are not
+penalized. Five deliberately incomplete starters and fifteen wrong variants fail.
+Copy sweep reports zero findings. Focused coding contracts, API/script types,
+launch, build, both zero-vulnerability production dependency audits and diff checks
+pass. This is manual same-session model review plus bounded execution, not an
+independent/human review or an arbitrary-program complexity proof.
+
+Current coverage is100/725coding (625remain) and263/263native. Shipped coverage
+remains95coding/240native via PR #400. PR #401's first verify run failed the
+initial-download budget by182gzip bytes; it has not been merged. Route-local
+copy loading is being corrected before rerunning the required check.
+
+## 15 October continuation — final five-item native batch n042
+
+All263native lesson/activity/question records now have current individual model
+reviews. This final five-item batch adds the three remaining records (diagnostic
+parent, evaluation and change request) and revises two existing discovery records
+for a date-complete2027target and working authorized evidence references. The two
+prior records are preserved in history; coverage increases by3, not5.
+
+The diagnostic uses the #397trusted per-item implementation and preserves complete
+review/optionality. Its twelve child hashes remain unchanged. Evaluation fixes
+fractional lower-median rounding, inherited prediction lookup, prototype-like
+slice keys and a false exact.02slice refusal caused by binary subtraction. Its
+policy, missing-versus-abstaining semantics and two cost axes are explicit.
+Change-request fixtures align ticket/viewer tenants; budget-first reads, shared
+restriction metadata, semantic-grounding limits and a sorting target are clear.
+Set membership removes quadratic citation scans.
+
+Fourteen real sandbox verdicts agree, exposing eight previously accepted wrong
+implementations. Four valid analyses retain25XP without false penalty. Boundary
+checks cover200cases×10candidates,1000citations, fractional metrics, exact.02and.6,
+frozen inputs and ignored getters. Native bindings now pass263/263; paths,
+API/script types, launch, build, both zero-vulnerability production dependency
+audits, copy and diff checks pass. Scores/final readings remain manual same-session
+judgments; no independent/human or full-catalogue acceptance is claimed.
+
+Coding coverage remains95/725, with630tasks remaining. PR #401 freezes n038–n041
+and #397 at e65d15fc with SQL38s and eleven exact-preview general checks passing;
+verify is pending. N042islocal. Shipped coverage remains95coding/240native via
+exact-production-verified #400 at9a7b1ab9. Bank/override/longest-option residual
+checks and remaining issue review still follow the coding audit.
+
+## 15 October — diagnostic runtime follow-up (#397)
+
+Fixed the aggregate-score propagation discovered during audit. Trusted per-item
+correct/count evidence now drives actual per-competency results and bridge
+recommendations from the latest accepted attempt. Old aggregate-only data stays
+unassessed. Multi-tag, weaker-retake and replay/persistence cases are covered;
+module completion and diagnostic optionality remain unchanged. The UI now shows
+those distinct states and an access-aware diagnostic link. Full path/launch,
+API/script types,104client files/1002tests, placeholder build, both zero-vulnerability
+production audits and scoped browser reflow/zoom/keyboard/Axe checks pass. A
+production read-only query-shape check returned no rows; no account fixture or
+owner state was written. See release-acceptance for precise bounds. Coverage
+remains260/263 native and95/725 coding; this is a runtime fix, not three new
+editorial reviews. It is local and #397 is not yet closed.
+
+## 15 October continuation — five-item native batch n041
+
+Reviewed the optional operator reducer, discovery/handoff artifacts, case-list
+adapter and guarded proposal. Valid caller-allocated ids and immutable no-ops
+replace misleading React repaint/null claims. Written work now requests explicit
+unknowns/measurement plans rather than invented interviews, baselines or UAT.
+Incident logs do not prove the rebuild caused the fault. Structural artifact
+checks accept nonsubstantive text; they do not certify portfolio quality.
+
+Restricted CSV dialect, stable replay, bounded fields, trusted metadata and
+score-policy limits are explicit. A null-prototype fixture throttle budget handles
+prototype-like cursors; Set membership meets the proposal sorting target.
+Eighteen real sandbox verdicts pass, including seven newly exposed shortcuts,
+1000row/ticket/citation inputs, exact.6threshold, zero waits, null errors and frozen
+state. Six valid analyses retain25XP, with targets only where applicable.
+Artifact required/blank/exact/over-cap and optional https shape checks pass.
+Native bindings, paths, API/script types, launch, build, both production dependency
+audits (zero vulnerabilities), copy and diff pass. Six public catalogue probes
+per theme pass at360–1440; authenticated activity, keyboard, zoom and physical
+acceptance remain separate. Editorial/final readings are individual model judgments.
+
+Coverage is **260/263 native**, **3 remaining**, and **95/725 coding**,
+**630 remaining**. PR #400 merged at9a7b1ab9 after verify24m31s/SQL54s and eleven
+exact-preview checks. READY exact production dpl_ANq6kFzBzDrpmFNVH21DcNDRGz6t
+owns devshark.app with no alias error and passes eleven general guest checks
+(zeroXP/null progress). Shipped coverage is95 coding/240 native; n038–n041 are
+local. The diagnostic parent still awaits #397.
+
+## 15 October continuation — five-item native batch n040
+
+Reviewed handoff lessons, reading activities and operator state exercise.
+Warnings follow explicit policy; client abort/local cancellation do not reverse
+server effects. Safe replay and actual accessible delivery require their own
+contracts/evidence. Conditional UAT acceptance needs authority, and recurring
+sites of one customer do not establish cross-customer demand. Runbook escalation
+now matches its15minute rule and platform rota. Demo measurements remain bounded.
+
+The reference now preserves empty Error messages and ignores repeated notices
+once a proposal is superseded. Cancellation/approval-error messages acknowledge
+unknown server outcomes. Six sandbox verdicts agree across old/isolated wrongs,
+late failed replies, refusal/id accounting, warning and revision boundaries.
+Both no-target analyses retain25XP. Trusted status recorder and timing arithmetic
+pass. Native bindings, paths, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff pass. Editorial/final
+readings are individual same-session judgments; no screen-reader, real payment,
+server reconciliation or operational acceptance is inferred.
+
+Coverage is **255/263 native**, **8 remaining**, and **95/725 coding**,
+**630 remaining**. PR #400 remains frozen at c550b98a with SQL/eleven exact-preview
+general checks passing; verify pending. N038–n040 are local. Production remains
+95 coding/210 native through #399. Parent still awaits #397.
+
+## 15 October continuation — five-item native batch n039
+
+Reviewed operations lessons, reading activities and retry/circuit exercise.
+Corrected impossible400msmean/9secondtail arithmetic, coarse slice counts and
+an impossible156ticket error rate. Small samples can cross a threshold but
+cannot establish safety; continuation is a policy decision. Span subtraction
+needs explicit timing assumptions. The9600msretry sketch is separate from the
+8540mstrace. Safe mitigation, evidence preservation, HTTP replay and code-only
+rollback no longer imply universal guarantees or automatic reversibility.
+
+Six real sandbox verdicts agree; three previously accepted shortcuts now fail
+at exact failure-window equality, zero retries and statuses outside the fixture
+policy. Additional probes cover cooldown boundaries, primitive synchronous
+throws, frozen configuration/request identity and independent instances.
+Both no-target implementations retain25XP. Native bindings, path contracts,
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Structured-log and arithmetic
+illustrations use inert host fixtures, not live incident/provider evidence.
+Manual scores and final readings remain separate from execution.
+
+Coverage is **250/263 native**, **13 remaining**, and **95/725 coding**,
+**630 remaining**. PR #400 still freezes n032–n037 with SQL/eleven exact-preview
+general checks passing and verify pending. N038–n039 are local; production
+coverage remains95 coding/210 native through #399. Parent still awaits #397.
+
+## 15 October continuation — five-item native batch n038
+
+Reviewed both AI-security lessons, reading activities and export-gate repair.
+Prompt defenses and structured metadata are distinguished from execution authority;
+allow-lists alone do not establish consent. Trace refusal ordering is corrected.
+The 25-id cap is enforced before the inert database recorder, with whole-call
+refusal and separately approved replacement rather than automatic truncation.
+Restore/purge and cumulative limits remain explicit implementation obligations.
+
+Six real sandbox verdicts agree, rejecting three previously accepted shortcuts
+that read ignored fields/text or send normalized rather than original stored
+contact identity. Frozen inputs, throwing ignored-field accessors and 1000-entry
+boundaries pass. Both valid O(n) implementations retain25XP. Native review
+bindings, paths, API/script types, launch, build, both production dependency
+audits (zero vulnerabilities), copy and diff checks pass. Editorial scores and
+final readings are individual same-session judgments, not execution results.
+
+Coverage is **245/263 native**, **18 remaining**, and **95/725 coding**,
+**630 remaining**. PR #400 freezes n032–n037 with SQL and eleven exact-preview
+general checks passing; required verify is pending. Shipped coverage remains
+95 coding/210 native through #399. Diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n037
 
 Reviewed both evaluation lessons, reading activities and metrics exercise.
