@@ -64,7 +64,7 @@ console.log(flattenOnce([1, [2, 3], [4]]));
     tier: 1,
     focus: ['flat', 'map'],
     title: 'Every tag in one list',
-    prompt: 'Each post is `{ title, tags }`, where `tags` is an array of strings. Write `allTags(posts)`, returning one array of every tag, post by post and in order: map each post to its tags, then flatten the result with `flat()`. `allTags([{ title: "A", tags: ["js", "css"] }, { title: "B", tags: ["html"] }])` gives `["js", "css", "html"]`. A tag used twice appears twice, and a post with no tags adds nothing.',
+    prompt: "Each post is `{ title, tags }`, where `tags` is an array of strings. Write `allTags(posts)`, returning one array of every tag, post by post and in order: map each post to its tags, then flatten the result with `flat()`. `allTags([{ title: \"A\", tags: [\"js\", \"css\"] }, { title: \"B\", tags: [\"html\"] }])` gives `[\"js\", \"css\", \"html\"]`. A tag used twice appears twice, and a post with no tags adds nothing. Inputs are ordinary dense arrays and data objects with own tags arrays of primitive strings; empty tag strings are valid. Always return a fresh array, including for one post or no posts. Do not change posts, titles or tag arrays; frozen inputs are valid. Target: O(n) time, where n is the number of posts plus the total number of tag entries; copying a string reference takes constant time.",
     starter: `const allTags = posts => {
 
 };
@@ -89,6 +89,9 @@ console.log(allTags([{ title: "A", tags: ["js", "css"] }, { title: "B", tags: ["
       { call: 'allTags([{ title: "A", tags: ["js"] }, { title: "B", tags: ["js", "node"] }])', expected: ['js', 'js', 'node'], label: 'a repeated tag stays' },
       { call: 'allTags([{ title: "A", tags: [] }, { title: "B", tags: ["x"] }])', expected: ['x'], label: 'a post with no tags adds nothing', edge: true },
       { call: 'allTags([])', expected: [], label: 'no posts', edge: true },
+      { call: "(() => {const tags=[\"b\",\"a\"],post={title:\"A\",tags};const out=allTags([post]);return out!==tags&&out.length===2&&out[0]===\"b\"&&out[1]===\"a\"&&post.title===\"A\"&&post.tags===tags&&tags[0]===\"b\"&&tags[1]===\"a\";})()", expected: true, label: "fresh result and unchanged source tag order", edge: true },
+      { call: "allTags(Object.freeze([Object.freeze({title:\"A\",tags:Object.freeze([\"\",\"x\",\"\"])}),Object.freeze({title:\"B\",tags:Object.freeze([])})]))", expected: ["", "x", ""], label: "frozen inputs and empty tag values", edge: true },
+      { call: "(() => {const posts=[];const a=allTags(posts),b=allTags(posts);return a!==posts&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty results", edge: true },
     ],
   },
   {
@@ -99,7 +102,7 @@ console.log(allTags([{ title: "A", tags: ["js", "css"] }, { title: "B", tags: ["
     tier: 2,
     focus: ['flat'],
     title: 'Two levels down',
-    prompt: 'A menu is an array of sections, each section is an array of groups, and each group is an array of dish names. Write `menuItems(menu)`, returning every dish in one flat array, in order, with a single call to `flat` given the right depth. `menuItems([[["soup"], ["bread", "salad"]], [["cake"]]])` gives `["soup", "bread", "salad", "cake"]`. Empty sections and empty groups add nothing.',
+    prompt: "A menu is an array of sections, each section is an array of groups, and each group is an array of dish names. Write `menuItems(menu)`, returning every dish in one flat array, in order, with a single call to `flat` given the right depth. `menuItems([[[\"soup\"], [\"bread\", \"salad\"]], [[\"cake\"]]])` gives `[\"soup\", \"bread\", \"salad\", \"cake\"]`. Empty sections and empty groups add nothing. All levels are ordinary dense arrays and every dish name is a primitive string, including empty strings, spaces and repeats. Keep every dish exactly as stored. Do not change any input level; frozen sections and groups are valid. Return a fresh array, even for one group or an empty menu. Target: O(n) time, where n counts sections, groups and dish entries together; copying string references takes constant time.",
     starter: `const menuItems = menu => {
 
 };
@@ -123,6 +126,10 @@ console.log(menuItems([[["soup"], ["bread", "salad"]], [["cake"]]]));
       { call: 'menuItems([[["tea", "coffee"]]])', expected: ['tea', 'coffee'] },
       { call: 'menuItems([[], [["pie"]], [[]]])', expected: ['pie'], label: 'empty sections and groups add nothing', edge: true },
       { call: 'menuItems([])', expected: [], label: 'an empty menu', edge: true },
+      { call: "menuItems([[[\"\",\"x\",\"x\",\" \"]],[]])", expected: ["", "x", "x", " "], label: "empty dish names and repetitions remain", edge: true },
+      { call: "menuItems(Object.freeze([Object.freeze([Object.freeze([\"b\",\"a\"])])]))", expected: ["b", "a"], label: "frozen nested input", edge: true },
+      { call: "(() => {const group=[\"b\",\"a\"],menu=[[group]];const out=menuItems(menu);return out!==group&&out!==menu&&out.length===2&&group[0]===\"b\"&&group[1]===\"a\";})()", expected: true, label: "fresh result and unchanged group order", edge: true },
+      { call: "(() => {const menu=[];const first=menuItems(menu),second=menuItems(menu);return first!==menu&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty results", edge: true },
     ],
   },
 
@@ -135,7 +142,7 @@ console.log(menuItems([[["soup"], ["bread", "salad"]], [["cake"]]]));
     tier: 1,
     focus: ['for-in', 'objects'],
     title: 'Keys that hold a value',
-    prompt: 'Write `keysWithValue(object, value)`, returning an array of the keys whose value is strictly equal to `value`, in the order a `for…in` loop visits them. `keysWithValue({ a: 1, b: 2, c: 1 }, 1)` gives `["a", "c"]`. No match gives an empty array, and the string `"1"` does not match the number `1`.',
+    prompt: "Write `keysWithValue(object, value)`, returning an array of the keys whose value is strictly equal to `value`, in the order a `for…in` loop visits them. `keysWithValue({ a: 1, b: 2, c: 1 }, 1)` gives `[\"a\", \"c\"]`. No match gives an empty array, and the string `\"1\"` does not match the number `1`. This exercise deliberately includes inherited enumerable string keys, exactly as `for...in` does; symbol and non-enumerable keys are excluded. Own properties shadow inherited properties of the same name, even when the own property is non-enumerable. Inputs are ordinary data objects without getters or proxies; do not mutate them or their prototypes, and accept null-prototype or frozen objects. Strict equality means NaN never matches, 0 matches -0, and object values match only by reference. Target: O(n) time, where n counts property names and prototype objects inspected; assume constant-time property access and equality.",
     starter: `const keysWithValue = (object, value) => {
 
 };
@@ -152,12 +159,8 @@ console.log(keysWithValue({ a: 1, b: 2, c: 1 }, 1));
 
   return keys;
 };`,
-    hints: ['`for (const key in object)` hands you each key name. Read the value with `object[key]` and compare it with `===`.'],
-    approach: [
-      'Start an empty array for the matching keys.',
-      'Loop over the keys with `for…in` and read each value with bracket notation, since the key is in a variable.',
-      'Push the key when its value is strictly equal to the one you were given, then return the array.',
-    ],
+    hints: ["Compare the value read with bracket notation using strict equality. Unlike Object.keys, a for...in loop also reaches inherited enumerable keys; decide whether an own key hides an inherited one."],
+    approach: ["Start a fresh array, then visit enumerable string keys with for...in. In this exercise inherited keys are intentionally included.", "Read object[key] and append the key only when the value is strictly equal to the query. Do not replace === with Object.is or coercive equality.", "Return the array. For an application that needs only own keys, add Object.hasOwn or use Object.keys instead; that is a different contract."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -166,6 +169,12 @@ console.log(keysWithValue({ a: 1, b: 2, c: 1 }, 1));
       { call: 'keysWithValue({ a: 1 }, 5)', expected: [], label: 'no match gives an empty array', edge: true },
       { call: 'keysWithValue({ a: "1", b: 1 }, 1)', expected: ['b'], label: 'a string never equals a number', edge: true },
       { call: 'keysWithValue({}, 0)', expected: [], label: 'an empty object', edge: true },
+      { call: "(() => { const parent={p:1,a:1}; const o=Object.create(parent);o.b=1;o.a=2;return keysWithValue(o,1); })()", expected: ["b", "p"], label: "inherited keys with own shadowing", edge: true },
+      { call: "(() => { const o=Object.create({x:1,y:1});Object.defineProperty(o,\"x\",{value:1,enumerable:false});o[Symbol(\"s\")]=1;return keysWithValue(o,1); })()", expected: ["y"], label: "non-enumerable own key hides inherited key", edge: true },
+      { call: "keysWithValue({a:NaN,b:NaN},NaN)", expected: [], label: "NaN is not strictly equal to itself", edge: true },
+      { call: "keysWithValue({a:0,b:-0},-0)", expected: ["a", "b"], label: "strict equality includes both zero signs", edge: true },
+      { call: "(() => { const value={id:1}; const o=Object.freeze(Object.assign(Object.create(null),{a:value,b:{id:1},c:value})); return keysWithValue(o,value); })()", expected: ["a", "c"], label: "reference equality and frozen null-prototype input", edge: true },
+      { call: "keysWithValue({\"10\":1,\"2\":1,z:1},1)", expected: ["2", "10", "z"], label: "integer key order", edge: true },
     ],
   },
   {
@@ -176,7 +185,7 @@ console.log(keysWithValue({ a: 1, b: 2, c: 1 }, 1));
     tier: 1,
     focus: ['for-in', 'objects'],
     title: 'Swap keys and values',
-    prompt: 'Write `invert(object)`, returning a new object whose keys are the original values and whose values are the original keys, built with a `for…in` loop. `invert({ a: "x", b: "y" })` gives `{ x: "a", y: "b" }`. When two keys share a value, the key the loop visits last wins. An empty object gives an empty object, and the input is not changed.',
+    prompt: "Write `invert(object)`, returning a fresh dictionary whose keys are the original values and whose values are the original keys. Consider only own enumerable string keys, in Object.keys order; loop with `for...in` and ignore inherited keys. For example, `invert({ a: \"x\", b: \"y\" })` gives `{ x: \"a\", y: \"b\" }`. When values repeat, the last visited original key wins. Values are primitive strings or finite numbers; convert numbers to property names with JavaScript string conversion. All string names, including `__proto__`, `constructor` and the empty string, must work as own data keys. Inputs are ordinary data objects without getters or proxies, including null-prototype and frozen objects. Do not change the input. The result may have a null prototype. Target: O(n) time, where n counts inspected property names and prototype objects, plus the total length of those names and converted own values, using average constant-time dictionary access.",
     starter: `const invert = object => {
 
 };
@@ -184,21 +193,9 @@ console.log(keysWithValue({ a: 1, b: 2, c: 1 }, 1));
 // Scratch pad. Change this and press Run.
 console.log(invert({ a: "x", b: "y" }));
 `,
-    skeleton: `const invert = object => {
-  const inverted = {};
-
-  for (const key in object) {
-    // store key under the name object[key]
-  }
-
-  return inverted;
-};`,
-    hints: ['Inside the loop, `object[key]` is the value. Use it as the new key: `inverted[object[key]] = key`.'],
-    approach: [
-      'Create an empty object for the result.',
-      'Visit each key with `for…in` and assign the key to the result under the name of its value.',
-      'A later key with the same value overwrites the earlier one, which is the rule the task asks for.',
-    ],
+    skeleton: "const invert = object => {\n  const inverted = Object.create(null);\n  for (const key in object) {\n    // ignore inherited keys, then store the old key under the old value\n  }\n  return inverted;\n};",
+    hints: ["Use the old value as a dictionary key and the old key as its value. A null-prototype dictionary avoids inherited setters and reserved property names; check ownership while iterating the input."],
+    approach: ["Create a dictionary with Object.create(null), so names such as __proto__ are ordinary data keys.", "Visit enumerable string keys with for...in and keep only keys for which Object.hasOwn(object, key) is true.", "Assign each original key under its converted value. Assignment overwrites an earlier match, so the last visited key wins. Return the dictionary."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -207,6 +204,11 @@ console.log(invert({ a: "x", b: "y" }));
       { call: 'invert({ first: "same", second: "same" })', expected: { same: 'second' }, label: 'the last key with a value wins', edge: true },
       { call: 'invert({})', expected: {}, label: 'an empty object', edge: true },
       { call: '(() => { const input = { a: "b" }; invert(input); return input; })()', expected: { a: 'b' }, label: 'the input is not changed', edge: true },
+      { call: "(() => { const o=Object.create({inherited:\"bad\"});o.own=\"ok\";Object.defineProperty(o,\"hidden\",{value:\"secret\"});o[Symbol(\"s\")]=\"symbol\";return invert(o); })()", expected: {"ok": "own"}, label: "ignore inherited non-enumerable and symbol keys", edge: true },
+      { call: "(() => { const out=invert(Object.freeze({a:\"__proto__\",b:\"constructor\",c:\"\"})); return Object.hasOwn(out,\"__proto__\")&&out.__proto__===\"a\"&&Object.hasOwn(out,\"constructor\")&&out.constructor===\"b\"&&out[\"\"]===\"c\"; })()", expected: true, label: "special names are own data keys", edge: true },
+      { call: "invert({\"10\":\"same\",\"2\":\"same\",a:\"same\"})", expected: {"same": "a"}, label: "last visited key follows property order", edge: true },
+      { call: "invert(Object.assign(Object.create(null),{a:0,b:-0,c:1.5}))", expected: {"0": "b", "1.5": "c"}, label: "numeric conversion and null-prototype input", edge: true },
+      { call: "(() => { const o={}; const out=invert(o); return out!==o&&Object.keys(out).length===0; })()", expected: true, label: "fresh empty dictionary", edge: true },
     ],
   },
   {
@@ -217,7 +219,7 @@ console.log(invert({ a: "x", b: "y" }));
     tier: 2,
     focus: ['for-in', 'objects'],
     title: 'Own keys only',
-    prompt: 'A `for…in` loop also visits keys an object inherits from its prototype. Write `ownKeys(object)`, returning only the keys the object holds itself, in loop order, by checking each key with `Object.hasOwn(object, key)` inside a `for…in` loop. With `const item = Object.create({ shared: true })` and then `item.name = "pen"`, `ownKeys(item)` gives `["name"]`. An object with no keys of its own gives an empty array.',
+    prompt: "A `for…in` loop also visits keys an object inherits from its prototype. Write `ownKeys(object)`, returning only the keys the object holds itself, in loop order, by checking each key with `Object.hasOwn(object, key)` inside a `for…in` loop. With `const item = Object.create({ shared: true })` and then `item.name = \"pen\"`, `ownKeys(item)` gives `[\"name\"]`. An object with no keys of its own gives an empty array. Only enumerable string keys are included; symbol and non-enumerable keys are excluded. For ordinary objects, array-index names come first in numeric order, followed by other string names in creation order. Inputs have data properties without getters or proxies; accept null-prototype and frozen objects, including a key named hasOwnProperty. Return a fresh array and do not mutate the input or its prototypes. Target: O(n) time, where n counts property names and prototype objects inspected, assuming constant-time ownership checks.",
     starter: `const ownKeys = object => {
 
 };
@@ -250,6 +252,11 @@ console.log(ownKeys(item));
       { call: 'ownKeys(Object.create({ inherited: 1 }))', expected: [], label: 'only inherited keys', edge: true },
       { call: 'ownKeys({})', expected: [], label: 'an empty object', edge: true },
       { call: 'ownKeys(Object.assign(Object.create({ size: "M" }), { size: "L" }))', expected: ['size'], label: 'an own key that shadows an inherited one appears once', edge: true },
+      { call: "(() => {const o=Object.assign(Object.create(null),{hasOwnProperty:0,a:1});return ownKeys(Object.freeze(o));})()", expected: ["hasOwnProperty", "a"], label: "borrowed ownership checks work without a prototype", edge: true },
+      { call: "(() => {const o={a:1};Object.defineProperty(o,\"hidden\",{value:2});o[Symbol(\"s\")]=3;return ownKeys(o);})()", expected: ["a"], label: "exclude non-enumerable and symbol keys", edge: true },
+      { call: "ownKeys({\"10\":1,\"2\":1,z:1})", expected: ["2", "10", "z"], label: "integer names precede other keys", edge: true },
+      { call: "(() => {const o=Object.create({x:1});Object.defineProperty(o,\"x\",{value:2,enumerable:false});return ownKeys(o);})()", expected: [], label: "hidden own property is not emitted", edge: true },
+      { call: "(() => {const o={a:1};ownKeys(o);return o.a===1&&Object.keys(o).length===1;})()", expected: true, label: "preserve the source object", edge: true },
     ],
   },
 
@@ -881,7 +888,7 @@ console.log(allPairs(["a", "b", "c"]));
     tier: 1,
     focus: ['nested-loops'],
     title: 'Find it in a grid',
-    prompt: 'Write `findInGrid(grid, target)`, where `grid` is an array of rows. Return `[row, column]` for the first cell equal to `target`, reading each row from left to right and the rows from top to bottom, or `null` when no cell matches. Stop as soon as you find it. `findInGrid([[1, 2], [3, 4]], 3)` gives `[1, 0]`.',
+    prompt: "Write `findInGrid(grid, target)`, where `grid` is an array of rows. Return `[row, column]` for the first cell equal to `target`, reading each row from left to right and the rows from top to bottom, or `null` when no cell matches. Stop as soon as you find it. `findInGrid([[1, 2], [3, 4]], 3)` gives `[1, 0]`. Match with strict equality (===): NaN never matches, 0 and -0 match, and objects match only by reference. Both levels are ordinary dense arrays; row lengths may differ and empty rows are valid. Treat equality as constant-time for this exercise. Do not mutate the grid, rows or stored values; frozen input is valid. A found coordinate pair must be a fresh array. Target: O(n) time in the worst case, where n is the number of rows plus all their cells; an early match may take less.",
     starter: `const findInGrid = (grid, target) => {
 
 };
@@ -911,6 +918,13 @@ console.log(findInGrid([[1, 2], [3, 4]], 3));
       { call: 'findInGrid([[1, 2], [3, 4]], 9)', expected: null, label: 'no match gives null', edge: true },
       { call: 'findInGrid([[5, 5], [5, 5]], 5)', expected: [0, 0], label: 'the first match wins', edge: true },
       { call: 'findInGrid([[], [8]], 8)', expected: [1, 0], label: 'rows can be empty or of different lengths', edge: true },
+      { call: "findInGrid([[\"1\",1]],1)", expected: [0, 1], label: "strict equality does not coerce strings", edge: true },
+      { call: "findInGrid([[NaN],[NaN]],NaN)", expected: null, label: "NaN does not match itself", edge: true },
+      { call: "findInGrid([[0,-0]],-0)", expected: [0, 0], label: "both zero signs compare equal", edge: true },
+      { call: "(() => {const target={id:1};return findInGrid([[{id:1},target]],target);})()", expected: [0, 1], label: "object reference equality", edge: true },
+      { call: "findInGrid(Object.freeze([Object.freeze([]),Object.freeze([1,2,3])]),3)", expected: [1, 2], label: "frozen ragged rows", edge: true },
+      { call: "(() => {const rows=[[1],[2]];findInGrid(rows,1);return rows.length===2&&rows[0][0]===1&&rows[1][0]===2;})()", expected: true, label: "preserve row order", edge: true },
+      { call: "(() => {const first=findInGrid([[1]],1),second=findInGrid([[1]],1);return first!==second&&first[0]===0&&first[1]===0;})()", expected: true, label: "fresh coordinate pairs", edge: true },
     ],
   },
 
@@ -1056,7 +1070,7 @@ console.log(outsideIn([1, 2, 3, 4, 5]));
     tier: 1,
     focus: ['slice'],
     title: 'One page of results',
-    prompt: 'Write `page(items, pageNumber, pageSize)`, returning the items on one page of a list that shows `pageSize` items per page, with pages counted from 1, using `slice`. `page(["a", "b", "c", "d", "e"], 2, 2)` gives `["c", "d"]`. The last page can be short, a page past the end is empty, and `items` is not changed.',
+    prompt: "Write `page(items, pageNumber, pageSize)`, returning the items on one page of a list that shows `pageSize` items per page, with pages counted from 1, using `slice`. `page([\"a\", \"b\", \"c\", \"d\", \"e\"], 2, 2)` gives `[\"c\", \"d\"]`. The last page can be short, a page past the end is empty, and `items` is not changed. `items` is an ordinary dense array. `pageNumber` and `pageSize` are positive integers no greater than 10000. Return a fresh outer array even for the whole list or an empty page; keep original item references, order and duplicates. Do not change the input or nested values; frozen arrays are valid. Target: O(n) time in the worst case, where n is the number of input items, assuming constant-time index arithmetic and reference copying.",
     starter: `const page = (items, pageNumber, pageSize) => {
 
 };
@@ -1068,7 +1082,7 @@ console.log(page(["a", "b", "c", "d", "e"], 2, 2));
   const start = /* how many items come before this page */;
   return items.slice(start, /* where this page ends */);
 };`,
-    hints: ['Page 1 starts at index 0 and page 2 at `pageSize`, so page `n` starts at `(n - 1) * pageSize`. `slice` stops before its end index and never reads past the array.'],
+    hints: ["Count how many full pages come before this one. Use that count to find the start index, then remember that the end index of `slice` is excluded."],
     approach: [
       'Work out the start index: every earlier page holds `pageSize` items, so it is `(pageNumber - 1) * pageSize`.',
       'The end index is the start plus `pageSize`. `slice` excludes it.',
@@ -1082,6 +1096,10 @@ console.log(page(["a", "b", "c", "d", "e"], 2, 2));
       { call: 'page(["a", "b", "c", "d", "e"], 3, 2)', expected: ['e'], label: 'the last page can be short', edge: true },
       { call: 'page([1, 2, 3], 5, 2)', expected: [], label: 'a page past the end is empty', edge: true },
       { call: '(() => { const items = [1, 2, 3, 4]; page(items, 1, 2); return items; })()', expected: [1, 2, 3, 4], label: 'the list is not changed', edge: true },
+      { call: "(() => { const item={id:1}; const items=Object.freeze([item,item,0]); const out=page(items,1,2); return out!==items&&out.length===2&&out[0]===item&&out[1]===item&&item.id===1; })()", expected: true, label: "frozen input and repeated object references", edge: true },
+      { call: "(() => { const items=[1,2]; const out=page(items,1,10000); return out!==items&&out.length===2&&out[0]===1&&out[1]===2; })()", expected: true, label: "fresh whole-list result", edge: true },
+      { call: "(() => { const items=[]; const out=page(items,1,1); return Array.isArray(out)&&out!==items&&out.length===0; })()", expected: true, label: "fresh empty page", edge: true },
+      { call: "page([1,2,3],10000,10000)", expected: [], label: "large valid page bounds", edge: true },
     ],
   },
 

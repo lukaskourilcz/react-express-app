@@ -1,5 +1,190 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item batch b008
+
+Reviewed all-depth flattening, ragged-grid search, the Map tally debug task,
+fixed-depth menus and synchronous page collection. Current coding coverage
+is **70/725**: thirty deployed, forty staged, **655 remaining**; native stays
+**60/263**.
+
+The original selection matched 26/40 expectations. The clarified domains and
+new fixtures catch finite-depth cutoffs, cloned leaves, loose/Object.is search
+semantics, input mutation, reordered/case-folded Map keys and filtered dish
+names. Flattening now states finite acyclic depth bounds and preserves leaf
+references. Two junior flat answers follow their intended one-call depth
+model. Ragged search explicitly uses strict equality; its linear cost counts
+rows plus cells. The tally retains its broken starter and a diagnostic hint
+scored 5/5, while tests preserve first-seen Map order and literal word spelling.
+
+Page collection explicitly models a synchronous valid callback with a finite
+chain. A 1→7→3 case crosses an empty page and a decreasing page number; frozen
+page data and nested item identities are preserved, and each page is called
+once. Its O(n) model includes pages plus items and assumes constant lookup
+cost; no real network or async behavior is implied.
+
+All **40/40 final-hash verdicts** pass (twenty valid, five starters, fifteen
+wrong), plus twenty authored-target/base-25-XP checks and the focused coding
+contracts. API types, launch contracts, registry/index generation, build,
+both production dependency audits (zero vulnerabilities), English copy sweep
+and diff checks pass. The three longest rewritten routes pass eighteen light
+and eighteen dark probes at 360–1440px with no issues or unprobed routes.
+The b008 JSONL records individual scores, primary sources and final model
+self-readings. Production/authenticated acceptance and independent/human
+review are not claimed; IDs, access and archived Czech remain unchanged.
+
+## 15 October continuation — five-item batch b007
+
+Individually reviewed tag flattening, column totals, index-group totals,
+size/colour combinations and in-place discounts. Current coding coverage is
+**65/725**: thirty deployed, thirty-five staged, **660 remaining**; native
+remains **60/263**.
+
+The original suite matched 30/40 selected expectations. New cases detect
+source/result aliasing, mutation after computation, reused result objects,
+dropped duplicates and trimmed text. Numeric domains and cost units are now
+explicit. Grid and Cartesian-product targets use the larger dimension, with
+the exact two-length product explained; tag cost counts all nested entries.
+
+Half-cent checks exposed a real disagreement between revealed discount
+answers: the junior pre-divided factor and senior subtraction factor both
+failed, giving the intermediate 38/40 result. They now multiply bounded
+integer cents before division and agree with the reference on 5 cents at
+90% and 25 cents at 42%. Existing item identities and other fields stay intact,
+even in a frozen outer array; only writable prices change.
+
+Final-hash worker evidence passes **40/40** (twenty valid, five starters,
+fifteen wrong) and twenty authored-target/base-25-XP checks. Focused coding
+contracts, API/script types, launch contracts, registry/index generation,
+build, both production dependency audits (zero vulnerabilities), English
+copy sweep and diff checks pass. The three longest rewritten routes pass
+eighteen light and eighteen dark probes at 360–1440px with zero issues or
+unprobed routes. Scores and primary-source rationale are individually
+recorded in b007 JSONL; no independent/human review or production acceptance
+is claimed. Historical IDs, access and archived Czech are intact.
+
+## 15 October continuation — five-item batch b006
+
+Reviewed own-key enumeration, typeof counting, character frequencies, ASCII
+vowels and decimal digits individually. Current coding coverage is **60/725**:
+30 deployed, thirty staged, **665 remaining**; native remains **60/263**.
+
+The baseline matched 37/45 expectations. New ownership, Unicode and numeric
+boundary cases distinguish hidden keys, unsafe instance-method calls,
+inherited enumeration, code-unit splitting, case normalization and rounded
+logarithms. Type counting now includes inherited keys consistently across its
+revealed answers and covers all eight typeof labels. Character counting states
+iterator units and uses one growing accumulator. Vowel reference, junior,
+puzzle and skeleton-fill fixture now match the literal ASCII policy of the
+senior; lowercasing dotted İ no longer introduces an unintended vowel.
+Digit counting has a safe finite domain and an O(log n) numeric-magnitude
+target, with zero handled separately.
+
+All **45/45 final-hash worker verdicts** agree: twenty-five valid variants and
+puzzle arrangements, five starters, fifteen wrong programs. Twenty explicit
+authored-target/base-25-XP checks pass, including the logarithmic digit target;
+unknown estimates stay unknown without a penalty. Focused coding contracts
+verify all six puzzle enumerations and the updated skeleton filling, and
+grading/Learn authority tests pass. The five item scores, sources and separate
+final English self-readings are in the b006 JSONL. This is model review only.
+
+Registry/index generation, API/script types, launch contracts, build, both
+production dependency audits (zero vulnerabilities), copy-artifact sweep and
+diff checks pass. The three longest rewritten task routes pass eighteen light
+and eighteen dark probes at 360–1440px, with zero issues or unprobed routes.
+Authenticated and production acceptance remain separate; IDs, access rules
+and archived Czech stay intact.
+
+## 15 October continuation — five-item batch b005
+
+Reviewed recent-search history, list wording, matching keys, dictionary
+inversion and configuration defaults. Current coding coverage is **55/725**:
+30 deployed, twenty-five staged, **670 remaining**; native is **60/263**.
+
+The baseline matched 32/40 selected verdicts. Duplicate removal, empty-item
+filtering, Object.is equality and dictionary membership mistakes escaped
+checks. The for-in selection exercise now deliberately includes inherited
+keys consistently in every revealed answer; invert and defaults explicitly
+select own enumerable string properties. All special string names work as
+own dictionary data. Defaults preserve an explicitly stored undefined value.
+Recent history has a nonnegative integer cap, avoiding an unbounded negative
+pop loop; sentence formatting preserves literal punctuation and empty items.
+
+Actual old revealed answers against new fixtures scored matching keys
+11/11, 11/11 and 9/11; inversion 8/10, 8/10 and 9/10; defaults 8/10, 8/10 and
+9/10. The final replacement variants and selected wrong answers pass **40/40
+expected verdicts** (twenty valid, five starters, fifteen wrong). Twenty
+authored-target/base-25-XP checks and the focused Run/Submit/puzzle contract
+pass. Cost units include inspected prototype names/objects where for-in
+walks them. Individual scores and final readings are in the b005 JSONL;
+this is same-session model review, not independent or human approval.
+
+API types, launch contracts, registry/index generation, the final build, both
+production dependency audits (zero vulnerabilities), copy-artifact sweep and
+diff checks pass. The three longest rewritten task pages pass eighteen light
+and eighteen dark probes over 360–1440px with zero unprobed routes. An earlier
+footer-clearance failure was a measurement error: bounds of rows outside a
+nested scrollport were counted as painted text. The separate tooling fix
+intersects ancestor clip bounds; six browser regression scenarios still
+recognize actual visible and partial overlap while excluding clipped content.
+No product CSS workaround or relaxed overlap threshold was introduced.
+Production and authenticated acceptance remain separate.
+
+## 15 October continuation — five-item batch b004
+
+Individually reviewed table framing, playlist append, restricted CSV joining,
+suffix copying and pagination. Current coding coverage is **50/725**:
+30 deployed, twenty staged, **675 remaining**; native stays **60/263**.
+
+The baseline matched 32/40 selected verdicts. Missing checks allowed cloned
+references, songs-array mutation, deduplication, mutation after joining and
+reuse of the caller array. New shallow-copy/read-only policies are explicit;
+old passes are not all represented as old-contract violations. CSV joining
+now limits fields to values that need no quoting and explains that arbitrary
+CSV requires escaping. Count and page inputs have precise integer bounds.
+Each authored O(n) target defines its cost unit, including total output text
+for joining and worst-case input length for slices.
+
+Final-hash QuickJS checks pass **40/40** (twenty valid, five starters, fifteen
+wrong), and twenty authored-target/base-25-XP checks pass. Primary sources,
+individual scores and final English self-readings are recorded in the b004
+JSONL; the basic playlist hint receives 3/5. This is model self-review only.
+
+API types, launch contracts, build, registry/index generation, both production
+dependency audits (zero vulnerabilities), copy-artifact sweep and diff checks
+pass. Thirty light and thirty dark task-route checks at 360–1440px pass with
+zero issues or unprobed routes. Production and authenticated acceptance remain
+separate. Task IDs, access rules and archived Czech are preserved.
+
+## 15 October continuation — five-item batch b003
+
+Reviewed `js-average`, `js-short-words`, `js-object-keys`, `js-object-values`
+and `js-activate-user` individually. Current coverage is **45/725 coding**:
+30 deployed, fifteen staged, **680 remaining**. Native remains **60/263**.
+
+The object exercises now distinguish own enumerable string keys, symbol keys,
+property order and shallow identity. Actual old revealed variants failed
+null-prototype or shadowed-method inputs; the activation variants also lost
+symbols, copied inherited properties or invoked the legacy `__proto__` setter.
+Their replacements retain the stated data without changing caller objects.
+The mean specifies numeric results and a bounded tolerance; the short-word
+filter explicitly counts UTF-16 code units. New counterexamples caught an
+intermediate coercive mean check and an activation fixture that did not yet
+detect nested mutation; both fixtures were strengthened before recording.
+
+All **42/42 final-hash worker verdicts** agree with expectations: twenty valid,
+five starters and seventeen wrong programs. Twenty authored O(n)/base-25-XP
+checks pass. The focused coding contract proves Run/Submit consistency for
+all five tasks and the six puzzle enumerations. Individual manually chosen
+scores, primary sources and final English self-readings are recorded in
+`review-2026-10-15-b003.jsonl`; this remains same-session model review.
+
+Registry/index generation, API types, launch contracts, build, both production
+dependency audits (zero vulnerabilities), copy-artifact sweep and diff checks
+pass. Thirty light and thirty dark task-route probes at 360–1440px pass with
+no unprobed routes. These are local checks, not production or authenticated
+acceptance. No access rules, historical IDs, API handlers or archived Czech
+were changed.
+
 ## 15 October continuation — five-item batch b002
 
 Individually reviewed `js-all-positive`, `js-total-price`, `js-find-user`,

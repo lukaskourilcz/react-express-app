@@ -81,9 +81,9 @@ const PUZZLES: Record<string, AuthoredPuzzle> = {
   'js-count-vowels': {
     lines: [
       { id: 'a', code: 'function countVowels(text) {' },
-      { id: 'b', code: '  const vowels = "aeiou";' },
+      { id: 'b', code: '  const vowels = "aeiouAEIOU";' },
       { id: 'c', code: '  let count = 0;' },
-      { id: 'd', code: '  for (const letter of text.toLowerCase()) {' },
+      { id: 'd', code: '  for (const letter of text) {' },
       { id: 'e', code: '    if (vowels.includes(letter)) count++;' },
       { id: 'f', code: '  }' },
       { id: 'g', code: '  return count;' },

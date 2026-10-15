@@ -179,7 +179,7 @@ console.log(longest(["cat","elephant","dog"]));
     tier: 1,
     focus: ["for-of", "strings"],
     title: "Count vowels",
-    prompt: "Write `countVowels(text)`, returning how many vowels (a, e, i, o, u) the string holds. Uppercase vowels count too; a string with none, or an empty string, gives 0.",
+    prompt: "Write `countVowels(text)`, returning the number of literal ASCII vowels `a e i o u A E I O U` in a primitive string. Empty text or text with none gives 0. Count every occurrence; y, accented vowels and other Unicode letters do not count. Do not normalize text or lowercase the entire Unicode string: for example, `İ` is not ASCII I and contributes 0, while the ASCII a followed by a combining accent still contributes 1. Target: O(n) time, where n is the UTF-16 length of the input; membership in the fixed ten-character vowel set takes constant time.",
     starter: `const countVowels = text => {
   
 };
@@ -187,21 +187,9 @@ console.log(longest(["cat","elephant","dog"]));
 // Scratch pad — change this and press Run.
 console.log(countVowels("hello"));
 `,
-    skeleton: `const countVowels = text => {
-  let count = 0;
-
-  for (const letter of /* text, in lower case */) {
-    // add one to count when "aeiou" includes letter
-  }
-
-  return count;
-};`,
-    hints: ["Loop through lowercase letters and check \"aeiou\"."],
-    approach: [
-      "Lowercase the text first so uppercase vowels are counted the same way.",
-      "Walk the characters and test membership against the five vowels; a string of vowels plus includes is enough.",
-      "Return how many matched, not the matches themselves.",
-    ],
+    skeleton: "const countVowels = text => {\n  let count = 0;\n  for (const letter of text) {\n    // count membership in the fixed uppercase/lowercase ASCII vowel set\n  }\n  return count;\n};",
+    hints: ["Compare each original character with a fixed set containing both uppercase and lowercase ASCII vowels. Converting Unicode text to lowercase can introduce an ASCII letter that was not in the original input."],
+    approach: ["Use the fixed vowel set aeiouAEIOU, or a regular expression restricted to these ASCII letters.", "Walk the original string and increment a counter for each matching item. Do not count unique letters only.", "Return the count. Unicode normalization and whole-string lowercasing are unnecessary and can change which original characters match."],
     verify: "tests",
     estimatedMinutes: 10,
     tests: [
@@ -210,6 +198,10 @@ console.log(countVowels("hello"));
       { call: "countVowels(\"\")", expected: 0, label: "empty string", edge: true },
       { call: "countVowels(\"HELLO\")", expected: 2, label: "uppercase counts too", edge: true },
       { call: "countVowels(\"xyz\")", expected: 0, label: "no vowels", edge: true },
+      { call: "countVowels(\"İıáéíóúＡＥＩＯＵ𝒜\")", expected: 0, label: "only literal ASCII vowels", edge: true },
+      { call: "countVowels(\"a\\u0301ÉIİ\")", expected: 2, label: "combining marks do not change literal ASCII matches", edge: true },
+      { call: "countVowels(\"aaAAeeEEiiIIooOOuuUU\")", expected: 20, label: "count every uppercase and lowercase occurrence", edge: true },
+      { call: "countVowels(\"🦈 yY 123 !\")", expected: 0, label: "emoji y digits and punctuation are not vowels", edge: true },
     ],
   },
   {
@@ -911,7 +903,7 @@ console.log(range(2,4));
     tier: 2,
     focus: ["reduce"],
     title: "Average",
-    prompt: "Write `average(numbers)`, returning the mean of the array. An empty array returns 0 rather than NaN.",
+    prompt: "Write `average(numbers)`, returning the arithmetic mean using JavaScript Number arithmetic without rounding the answer. Empty input returns 0. Input is a dense array of at most 10,000 finite numbers between -1,000,000 and 1,000,000; leave it unchanged, including when frozen. Small floating-point differences are accepted in fractional checks. Target: O(n) time, where n is the number of values and Number operations count as constant-time work.",
     starter: `const average = numbers => {
   
 };
@@ -925,11 +917,11 @@ console.log(average([2,4,6]));
   return /* total divided by how many numbers there are */;
 };`,
     hints: [
-      "A mean is a total divided by a count, so the only real decision here is what to hand back when the count is zero.",
+      "Separate the empty case from the arithmetic. What two quantities describe a mean, and how can you compute them without changing the observations?",
     ],
     approach: [
       "Sum the values with reduce, then divide by how many there are.",
-      "Guard the empty array before dividing, since dividing by a length of zero yields NaN.",
+      "Guard the empty array before dividing: its total and length are both zero, and 0 / 0 is NaN.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -950,7 +942,7 @@ console.log(average([2,4,6]));
     tier: 2,
     focus: ["filter", "strings"],
     title: "Short words",
-    prompt: "Write `shortWords(words)`, returning only the words with fewer than five characters. Four characters passes, five does not.",
+    prompt: "Write `shortWords(words)`, returning a new array of strings whose JavaScript length is less than five. Measure UTF-16 code units, as String.length does: two emoji such as '😀😀' occupy four units, while three occupy six. Preserve order, duplicate occurrences and empty strings. Input is a dense string array and may be frozen; leave it unchanged, and return a new array even for empty or all-matching input. Target: O(n) time, where n is the number of strings and each stored length read counts as constant-time work.",
     starter: `const shortWords = words => {
   
 };
@@ -963,11 +955,11 @@ console.log(shortWords(["cat","elephant"]));
     return /* true to keep this item */;
   });`,
     hints: [
-      "A keep-or-drop decision on each word using its length. Read the boundary carefully: four characters passes and five does not.",
+      "Make each keep-or-drop decision independently so equal words remain separate occurrences. Use the task's length unit; a visible emoji can occupy two UTF-16 units.",
     ],
     approach: [
       "Use filter, keeping a word only when its length passes the comparison.",
-      "The boundary matters: strictly fewer than five characters passes, so a four-letter word is kept and a five-letter word is not.",
+      "Compare the stored UTF-16 length with five. Empty strings qualify; four units qualify and five do not, regardless of how many symbols a person sees.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -998,7 +990,7 @@ console.log(shortWords(["cat","elephant"]));
     tier: 2,
     focus: ["objects"],
     title: "Object keys",
-    prompt: "Write `keys(object)`, returning an array of the object’s own key names in insertion order. An empty object gives an empty array.",
+    prompt: "Write `keys(object)`, returning a new array of its own enumerable string-keyed property names. Use JavaScript property order: array-index keys come first in ascending numeric order, followed by other strings in creation order. Ignore inherited, non-enumerable and symbol keys. Input is an ordinary object with data properties, possibly frozen or with a null prototype; leave it unchanged. Target: O(n) time under a unit-cost property-enumeration model, where n counts all own properties examined.",
     starter: `const keys = object => {
   
 };
@@ -1011,10 +1003,10 @@ console.log(keys({a:1,b:2}));
   return /* result */;
 };`,
     hints: [
-      "JavaScript hands you an object’s own key names as an array already — the question is which built-in returns the names rather than what is stored under them.",
+      "Consider three traits separately: is a property on this object, is it enumerable, and is its key a string? Numeric index keys also have a defined order.",
     ],
     approach: [
-      "Object.keys hands back the property names as an array.",
+      "Object.keys returns own enumerable string keys. Array-index names are ordered numerically; other string names keep creation order.",
       "Confirm an empty object gives an empty array rather than undefined.",
     ],
     verify: "tests",
@@ -1035,7 +1027,7 @@ console.log(keys({a:1,b:2}));
     tier: 2,
     focus: ["objects"],
     title: "Object values",
-    prompt: "Write `values(object)`, returning an array of the object’s values in insertion order. `null` is a value like any other; an empty object gives an empty array.",
+    prompt: "Write `values(object)`, returning a new array of values belonging to its own enumerable string-keyed properties. Use JavaScript property order: array-index keys ascending, then other string keys in creation order. Ignore inherited, non-enumerable and symbol-keyed properties. Keep every selected value, including null, undefined and false; retain original object/array references. Input is an ordinary object with data properties, possibly frozen or with a null prototype; leave it unchanged. Target: O(n) time under a unit-cost property-access model, where n counts all own properties examined.",
     starter: `const values = object => {
   
 };
@@ -1048,11 +1040,11 @@ console.log(values({a:1,b:2}));
   return /* result */;
 };`,
     hints: [
-      "The same family of built-ins as the previous challenge, but this time you want what is stored rather than what it is stored under.",
+      "Collect the values without converting or filtering them. If a selected value is an object, your result should refer to that same object.",
     ],
     approach: [
-      "Object.values hands back the property values as an array.",
-      "Remember null is a real value and must survive into the result.",
+      "Object.values reads own enumerable string-keyed properties, with array-index keys first in numeric order and other strings in creation order.",
+      "Keep null, undefined and other falsy values. This is a shallow collection: nested objects remain the original references.",
     ],
     verify: "tests",
     estimatedMinutes: 20,
@@ -1072,7 +1064,7 @@ console.log(values({a:1,b:2}));
     tier: 2,
     focus: ["spread", "objects"],
     title: "Activate user",
-    prompt: "Write `activate(user)`, returning a new object with the same properties plus `active: true`. The original object must not be changed, and an existing `active: false` is overridden.",
+    prompt: "Write `activate(user)`, returning a new object that shallow-copies the user's own enumerable properties, including string and symbol keys, and sets its own active property to true. Override any existing active value. Keep nested values by reference, leave the input unchanged and skip inherited/non-enumerable properties. Input has ordinary data properties and may be frozen or have a null prototype. An own '__proto__' data key must remain a data key without setting the result's prototype. Target: O(n) time under a unit-cost property-copy model, where n is the number of own properties examined.",
     starter: `const activate = user => {
   
 };
@@ -1085,7 +1077,7 @@ console.log(activate({name:"Sam"}));
   return /* result */;
 };`,
     hints: [
-      "Build a new object instead of assigning onto the one you were given, and put the flag after the copied properties so it wins when both are present.",
+      "There may be two versions of active when the input already has one. Which should win, and how can you preserve nested references without assigning into the input?",
     ],
     approach: [
       "Spread the original object into a new one rather than assigning to the original, so the input is left untouched.",
@@ -1156,7 +1148,7 @@ console.log(isPalindrome("level"));
     tier: 2,
     focus: ["for-of", "objects"],
     title: "Letter counts",
-    prompt: "Write `countLetters(text)`, returning an object mapping each character to how many times it appears — `countLetters(\"aba\")` gives `{ a: 2, b: 1 }`. An empty string gives an empty object.",
+    prompt: "Write `countLetters(text)`, returning a fresh object that counts every item produced by the JavaScript string iterator (`for...of`), including spaces, punctuation and uppercase characters. For example, `countLetters(\"aba\")` gives `{ a: 2, b: 1 }`. A surrogate pair such as 🦈 counts as one key, while combining marks are separate keys; do not normalize text or change case. Empty text gives an empty object. `text` is a primitive string. Target: O(n) time, where n is the number of UTF-16 code units, using average constant-time dictionary updates; update the accumulator instead of copying all prior counts on each step.",
     starter: `const countLetters = text => {
   
 };
@@ -1173,14 +1165,8 @@ console.log(countLetters("aba"));
 
   return counts;
 };`,
-    hints: [
-      "Walk the characters building an object up as you go, treating a character you have not seen yet as though its count were already zero.",
-    ],
-    approach: [
-      "Build an object as you walk the characters, using reduce or a loop.",
-      "For each letter, read the existing count or fall back to zero, then store one more.",
-      "The starting value is an empty object, which is also what an empty string returns.",
-    ],
+    hints: ["Walk the string with for...of to keep surrogate pairs together. Keep one counts object, and increment the entry for the current iterator item from zero when it is missing."],
+    approach: ["Create one empty counts object.", "Walk the original text with for...of, without normalization or case conversion. The iterator preserves surrogate pairs but splits combining sequences.", "Increment the count for the current item, starting from zero. Return the same accumulator after the loop; copying the growing dictionary at every character adds unnecessary repeated work."],
     verify: "tests",
     estimatedMinutes: 20,
     tests: [
@@ -1199,6 +1185,10 @@ console.log(countLetters("aba"));
         label: "repeats accumulate",
         edge: true,
       },
+      { call: "countLetters(\"🦈a🦈A !\")", expected: {"🦈": 2, "a": 1, "A": 1, " ": 1, "!": 1}, label: "surrogate pairs case spaces and punctuation", edge: true },
+      { call: "countLetters(\"é e\\u0301\")", expected: {"é": 1, " ": 1, "e": 1, "́": 1}, label: "combining mark stays a separate key", edge: true },
+      { call: "(() => {const a=countLetters(\"\"),b=countLetters(\"\");return a!==b&&Object.keys(a).length===0&&Object.keys(b).length===0;})()", expected: true, label: "fresh empty results", edge: true },
+      { call: "(() => {const text=Array.from({length:128},(_,i)=>String.fromCodePoint(1024+i)).join(\"\");const out=countLetters(text+text);return Object.keys(out).length===128&&[...text].every(c=>out[c]===2);})()", expected: true, label: "many distinct characters", edge: true },
     ],
   },
   {

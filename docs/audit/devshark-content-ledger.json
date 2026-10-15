@@ -232550,6 +232550,5181 @@
     "notes": "Read both empty and singleton semantics and each loop/generator bound. The reversed case has constant work; the linear target describes nonempty output growth under the stated append model. The large worker example is execution evidence, not a timing proof. Final English material and execution reread; same-session self-review only.",
     "pass": "second-reading"
    }
+  },
+  {
+   "id": "js-average",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 8,
+   "objective": "Compute an arithmetic mean with an empty-input identity, numeric result and bounded floating-point policy.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "0d77e91b5a333f57",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "c03e0d5df3182eef",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 4,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Number arithmetic and reduction remain supported.",
+    "practicalUtility": "Means are a concrete aggregation operation.",
+    "transferable": "Empty identities, precision and preserving observations transfer.",
+    "audienceFit": "Bounded finite inputs make the foundation exercise explicit.",
+    "riskOutcome": "Type and rounding checks prevent modest aggregation mistakes."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The original brief did not define the numeric domain, rounding or input preservation.",
+    "Cent-rounded results passed the original finite fixtures.",
+    "An intermediate new tolerance fixture coerced decimal string results; an executable counterexample prompted an explicit numeric guard."
+   ],
+   "rationale": "The task now supplies bounded finite data, no rounding, unchanged input and zero for empty input. Fractional fixtures check a numeric result within a small tolerance, accepting the independently written online-mean alternative while rejecting rounding and string-valued decimal results. The explanation names 0/0 specifically instead of claiming every division by zero is NaN. Frozen/mutable input and the 10,000-item bound are exercised.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+    "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-average",
+      "contentHash": "0d77e91b5a333f57",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "js-average",
+      "contentHash": "0d77e91b5a333f57",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "js-average",
+      "contentHash": "0d77e91b5a333f57",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "js-average",
+      "contentHash": "0d77e91b5a333f57",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "js-average",
+      "contentHash": "0d77e91b5a333f57",
+      "label": "wrong-nonnumeric-decimals",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "js-average",
+      "contentHash": "0d77e91b5a333f57",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "js-average",
+      "contentHash": "0d77e91b5a333f57",
+      "label": "wrong-rounded",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "js-average",
+      "contentHash": "0d77e91b5a333f57",
+      "label": "wrong-half",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 9
+     },
+     {
+      "id": "js-average",
+      "contentHash": "0d77e91b5a333f57",
+      "label": "wrong-mutating-sort",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 9
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b003; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number",
+     "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the numeric-domain limits, direct simple-value checks and typed tolerance wrappers. Reference sum/divide and the online mean agree on the supplied cases. The string-valued decimal counterexample passed the intermediate coercive tolerance and fails after the explicit typeof guard. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-short-words",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 7,
+   "objective": "Filter primitive strings by stored UTF-16 length while preserving order and occurrences.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "0255129b6e93cee0",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "ce093850fa6c38d3",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "String.length and filter remain supported.",
+    "practicalUtility": "Length-based selection is a practical collection operation.",
+    "transferable": "Code-unit versus visual-character reasoning transfers to text handling.",
+    "audienceFit": "The supplied UTF-16 rule fits a JavaScript length exercise.",
+    "riskOutcome": "Explicit units and multiplicity prevent modest text-selection mistakes."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The word characters did not say whether it meant UTF-16 units, code points or visible graphemes.",
+    "Code-point filtering and deduplication passed all ASCII-only fixtures.",
+    "Fresh-result and read-only input policies were previously implicit rather than clearly stated."
+   ],
+   "rationale": "The new contract deliberately uses String.length units, including an explicit two-unit emoji example. Unicode pairs, combining sequences, empty strings and duplicates distinguish the stated rule from code-point counting. Reference/filter, push loop, named-boundary helper and independent reduce pass. Fresh empty/all-matching arrays and unchanged frozen/mutable inputs are required explicitly; this is a clarified policy, not a claim that Unicode code-point filtering was unambiguously forbidden before.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter",
+    "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-short-words",
+      "contentHash": "0255129b6e93cee0",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "js-short-words",
+      "contentHash": "0255129b6e93cee0",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "js-short-words",
+      "contentHash": "0255129b6e93cee0",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "js-short-words",
+      "contentHash": "0255129b6e93cee0",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "js-short-words",
+      "contentHash": "0255129b6e93cee0",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "js-short-words",
+      "contentHash": "0255129b6e93cee0",
+      "label": "wrong-code-points",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "js-short-words",
+      "contentHash": "0255129b6e93cee0",
+      "label": "wrong-includes-five",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     },
+     {
+      "id": "js-short-words",
+      "contentHash": "0255129b6e93cee0",
+      "label": "wrong-deduplicates",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 5,
+      "hidden": 7
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b003; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/length",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter",
+     "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Individually counted the UTF-16 units in the supplied emoji and combining-sequence cases. Checked every existing example and all three revealed variants against the same unit. No claim is made that this measures visible grapheme count. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-object-keys",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 5,
+   "objective": "Enumerate own enumerable string keys in JavaScript order without depending on the object's prototype.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "c33ed24d3042f679",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "1d7a1bae40512f74",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object.keys and reflection are supported primitives.",
+    "practicalUtility": "Object metadata enumeration is a direct engineering task.",
+    "transferable": "Ownership, enumerability and key kinds transfer to object APIs.",
+    "audienceFit": "Explicit ordinary data objects keep the reflection lesson bounded.",
+    "riskOutcome": "Safe enumeration prevents real crashes on null/shadowed prototypes."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Insertion-order wording was false for array-index keys.",
+    "The junior solution called object.hasOwnProperty directly and failed null-prototype or shadowed-method records.",
+    "Non-enumerable/symbol exclusions and mutable input preservation lacked meaningful fixtures."
+   ],
+   "rationale": "The brief now states array-index ordering followed by other strings in creation order, filters own/enumerable/string traits and admits null prototypes. The junior enumerates Reflect.ownKeys with a borrowed propertyIsEnumerable check. Reference and entries-based senior stay valid. Numeric index boundaries, hidden/symbol keys, own __proto__/constructor fields, null prototypes and mutable/frozen inputs are checked.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-object-keys",
+      "contentHash": "c33ed24d3042f679",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 11
+     },
+     {
+      "id": "js-object-keys",
+      "contentHash": "c33ed24d3042f679",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 11
+     },
+     {
+      "id": "js-object-keys",
+      "contentHash": "c33ed24d3042f679",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 11
+     },
+     {
+      "id": "js-object-keys",
+      "contentHash": "c33ed24d3042f679",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 11
+     },
+     {
+      "id": "js-object-keys",
+      "contentHash": "c33ed24d3042f679",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 11
+     },
+     {
+      "id": "js-object-keys",
+      "contentHash": "c33ed24d3042f679",
+      "label": "wrong-inherited",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 11
+     },
+     {
+      "id": "js-object-keys",
+      "contentHash": "c33ed24d3042f679",
+      "label": "wrong-nonenumerable",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 11
+     },
+     {
+      "id": "js-object-keys",
+      "contentHash": "c33ed24d3042f679",
+      "label": "wrong-symbols",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 11
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b003; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Before repair the actual worker accepted all six boundary cases for the reference and senior but only five for junior. Read the integer-index, 01 and 4294967295 ordering cases against ordinary object ordering. Values are data properties, avoiding unpromised getter behavior. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-object-values",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 5,
+   "objective": "Collect own enumerable string-keyed values in property order without conversion or deep copying.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "896281698b41bb3e",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "4b40efece43268eb",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object.values and entries are supported primitives.",
+    "practicalUtility": "Extracting original record values is a direct data-processing task.",
+    "transferable": "Property selection and shallow reference identity generalize.",
+    "audienceFit": "Explicit data-property objects bound the enumeration lesson.",
+    "riskOutcome": "Preserving undefined, BigInt, symbols and references prevents substantive data loss."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Insertion-order wording was false for array-index properties and ownership filters were unclear.",
+    "The junior directly called hasOwnProperty and failed valid null/shadowed prototypes.",
+    "Deep cloning and inherited-value collection passed the original fixtures; the hint depended on a prior challenge."
+   ],
+   "rationale": "The revised task distinguishes symbol-valued data from symbol-keyed properties, preserves falsy/undefined/NaN/BigInt values and original nested references, and names JavaScript property order. The junior uses safe own-key enumeration. Direct identity/type fixtures reject JSON cloning and inherited values; original fields are checked on mutable and frozen records. The standalone hint replaces the previous-task reference.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/values",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+    "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-object-values",
+      "contentHash": "896281698b41bb3e",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 9
+     },
+     {
+      "id": "js-object-values",
+      "contentHash": "896281698b41bb3e",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 9
+     },
+     {
+      "id": "js-object-values",
+      "contentHash": "896281698b41bb3e",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 9
+     },
+     {
+      "id": "js-object-values",
+      "contentHash": "896281698b41bb3e",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 9
+     },
+     {
+      "id": "js-object-values",
+      "contentHash": "896281698b41bb3e",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 9
+     },
+     {
+      "id": "js-object-values",
+      "contentHash": "896281698b41bb3e",
+      "label": "wrong-inherited",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 9
+     },
+     {
+      "id": "js-object-values",
+      "contentHash": "896281698b41bb3e",
+      "label": "wrong-clones",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 9
+     },
+     {
+      "id": "js-object-values",
+      "contentHash": "896281698b41bb3e",
+      "label": "wrong-filters-values",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 9
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b003; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/values",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/keys",
+     "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "The original worker passed all five added boundary cases for the reference/senior but four for junior. The mixed-value identity check returns a Boolean so the test does not rely on serializing BigInt or symbol values through JSON. Read every property-selection and ordering case. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-activate-user",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run",
+    "learn"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 10,
+   "objective": "Shallow-copy own enumerable data safely, preserving references and overriding the active flag without mutating input.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "9ab650b6c5d5e60b",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "fa043ec7232a41ce",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Shallow object copying is supported modern JavaScript.",
+    "practicalUtility": "Immutable record updates are a concrete application operation.",
+    "transferable": "Ownership, overwrite order and shallow identity transfer.",
+    "audienceFit": "The own-enumerable data contract makes all variants teach one operation.",
+    "riskOutcome": "Avoiding proto setters and nested mutation prevents substantive correctness hazards."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The junior for-in copy included inherited fields, omitted symbols and mishandled own __proto__ data.",
+    "The Object.assign-to-plain-target senior invoked the inherited proto setter rather than preserving a data key.",
+    "Nested reference/mutation and fresh already-active results were insufficiently checked."
+   ],
+   "rationale": "The reference spread remains correct. Junior explicitly defines own enumerable string/symbol data properties; senior assigns into a null-prototype target with no inherited __proto__ setter. Tests preserve nested identity and state, exclude inherited/non-enumerable fields, keep symbol keys and own __proto__ data, and require a fresh already-active result. The independent fromEntries alternative passes; JSON cloning, mutation and plain-target assignment fail.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/Security/Attacks/Prototype_pollution",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign",
+    "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-activate-user",
+      "contentHash": "9ab650b6c5d5e60b",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "js-activate-user",
+      "contentHash": "9ab650b6c5d5e60b",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "js-activate-user",
+      "contentHash": "9ab650b6c5d5e60b",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "js-activate-user",
+      "contentHash": "9ab650b6c5d5e60b",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "js-activate-user",
+      "contentHash": "9ab650b6c5d5e60b",
+      "label": "wrong-mutates-nested",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "js-activate-user",
+      "contentHash": "9ab650b6c5d5e60b",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "js-activate-user",
+      "contentHash": "9ab650b6c5d5e60b",
+      "label": "wrong-mutates",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "js-activate-user",
+      "contentHash": "9ab650b6c5d5e60b",
+      "label": "wrong-clones",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     },
+     {
+      "id": "js-activate-user",
+      "contentHash": "9ab650b6c5d5e60b",
+      "label": "wrong-assign-plain-target",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 4,
+      "hidden": 7
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b003; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/Security/Attacks/Prototype_pollution",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/assign",
+     "run: 42/42 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 17 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "The original reference passed four boundary probes; junior passed one and senior three. A nested-mutating implementation passed an intermediate identity-only fixture, so the final fixture also reads nested state/key count. Null-prototype output is accepted under the value-copy contract. These sandbox solution probes are not evidence of a production-service exploit. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy4-header-and-footer",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "objective": "Frame a table with shallow, unflattened header and footer rows.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "c44638208560261f",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "c526f292dc506234",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "concat is a supported copying operation.",
+    "practicalUtility": "Adding table boundaries is a concrete collection transformation.",
+    "transferable": "Shallow identity and nested array boundaries transfer to UI data.",
+    "audienceFit": "A single-level composition fits the stated foundation exercise.",
+    "riskOutcome": "Explicit boundaries avoid modest flattening and aliasing mistakes."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Original tests accepted deep-cloned rows, despite the intended shallow composition.",
+    "The input domain and reference policy were not explicit.",
+    "The original hint supplied the wrapper nearly verbatim."
+   ],
+   "rationale": "The new ordinary-dense-array domain excludes custom concat behavior. Header, row and footer identity, duplicate rows, unchanged nested values and frozen input are exercised. The hint asks the learner to reason about one level of spreading. A spread-based independent alternative is accepted for behavior; the brief still teaches concat without pretending the grader enforces syntax.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy4-header-and-footer",
+      "contentHash": "c44638208560261f",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-header-and-footer",
+      "contentHash": "c44638208560261f",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-header-and-footer",
+      "contentHash": "c44638208560261f",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-header-and-footer",
+      "contentHash": "c44638208560261f",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-header-and-footer",
+      "contentHash": "c44638208560261f",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 6,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-header-and-footer",
+      "contentHash": "c44638208560261f",
+      "label": "wrong-flattens-footer",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-header-and-footer",
+      "contentHash": "c44638208560261f",
+      "label": "wrong-clones-rows",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-header-and-footer",
+      "contentHash": "c44638208560261f",
+      "label": "wrong-reorders",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 6,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b004; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the shallow-copy wording against nested row fixtures and all three revealed variants. The complexity counts copied row references, not cell contents. All final expected outcomes agree. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy3-add-to-playlist",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "objective": "Append either one title or a list without modifying either input or removing occurrences.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "62323fca98560ab2",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "27ea3a0723d9b91d",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 3,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "concat and Array.isArray remain current.",
+    "practicalUtility": "Appending playlist data is a realistic list operation.",
+    "transferable": "Input preservation and scalar/list normalization transfer.",
+    "audienceFit": "Primitive titles keep the beginner exercise focused.",
+    "riskOutcome": "Checking both sources avoids modest accidental data loss."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The original tests missed mutation of songs.",
+    "A deduplicating answer passed all old fixtures.",
+    "Empty titles, repeated titles and frozen sources were unspecified."
+   ],
+   "rationale": "The task now explicitly preserves duplicates and empty titles, both source arrays and a fresh result for empty input. Frozen and mutable songs are checked separately. The original hint is sound but basic and directly names the operation, so it is scored 3 rather than inflated. concat revealed variants and an independently authored spread normalization agree.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy3-add-to-playlist",
+      "contentHash": "62323fca98560ab2",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-add-to-playlist",
+      "contentHash": "62323fca98560ab2",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-add-to-playlist",
+      "contentHash": "62323fca98560ab2",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-add-to-playlist",
+      "contentHash": "62323fca98560ab2",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-add-to-playlist",
+      "contentHash": "62323fca98560ab2",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-add-to-playlist",
+      "contentHash": "62323fca98560ab2",
+      "label": "wrong-reuses-empty",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-add-to-playlist",
+      "contentHash": "62323fca98560ab2",
+      "label": "wrong-mutates-songs",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-add-to-playlist",
+      "contentHash": "62323fca98560ab2",
+      "label": "wrong-deduplicates",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b004; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/concat",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Reread scalar versus array songs, fresh-empty identity and two-input preservation. The total-title cost model includes the playlist and added songs; copying references does not inspect title contents. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy4-csv-line",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "objective": "Join restricted CSV-safe primitive cells while retaining missing positions.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "1c474df37eaee140",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "96c7ef092ecbe464",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Array.join conversion remains specified.",
+    "practicalUtility": "Delimited exports are common data preparation.",
+    "transferable": "Field domains and serialization boundaries transfer.",
+    "audienceFit": "Restricted primitive cells make join sufficient for this beginner task.",
+    "riskOutcome": "Distinguishing restricted joining from general CSV prevents malformed export assumptions."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Calling unrestricted join a CSV writer ignored required quoting for commas, quotes and line breaks.",
+    "The domain permitted ambiguity about symbols, nested arrays and objects.",
+    "A reverse-after-join implementation passed because input preservation was not checked."
+   ],
+   "rationale": "Keep the exercise small: explicitly restrict strings to CSV-safe cells and allow finite numbers, booleans, null and undefined. State that general quoting is outside scope, rather than introducing an unrelated parser. Tests preserve empty positions, false, zero, spaces and frozen input. Read-only handling is a newly explicit policy. The total text-plus-cell cost model avoids treating arbitrary string output as constant per cell.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join",
+    "https://www.rfc-editor.org/rfc/rfc4180",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy4-csv-line",
+      "contentHash": "1c474df37eaee140",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-csv-line",
+      "contentHash": "1c474df37eaee140",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-csv-line",
+      "contentHash": "1c474df37eaee140",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-csv-line",
+      "contentHash": "1c474df37eaee140",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-csv-line",
+      "contentHash": "1c474df37eaee140",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-csv-line",
+      "contentHash": "1c474df37eaee140",
+      "label": "wrong-filters-empty",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-csv-line",
+      "contentHash": "1c474df37eaee140",
+      "label": "wrong-stringifies-null",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-csv-line",
+      "contentHash": "1c474df37eaee140",
+      "label": "wrong-mutates",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b004; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join",
+     "https://www.rfc-editor.org/rfc/rfc4180",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the restricted domain and escaping limitation together. No general CSV compliance is claimed. The reduce alternative matches numeric, Boolean and missing-cell conversion in the allowed domain; join reference variants remain unchanged. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy4-last-few",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "objective": "Copy a bounded suffix with explicit zero and shallow-reference behavior.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "2b60bae277b7b708",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "0a37d93ffed2e238",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "slice remains the standard nondestructive range operation.",
+    "practicalUtility": "Showing recent entries is a practical suffix use.",
+    "transferable": "Zero, oversized requests and shallow copying transfer.",
+    "audienceFit": "Bounded nonnegative integer requests suit the foundation scope.",
+    "riskOutcome": "Fresh-result checks prevent modest aliasing mistakes."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Negative or fractional requested counts were not bounded.",
+    "An empty-input reuse and deep-copy answer escaped original checks.",
+    "The original hint nearly supplied both branches."
+   ],
+   "rationale": "The brief defines nonnegative integer counts including -0 and demands a fresh shallow array in every case. Frozen object references, empty identity, zero and the maximum request are checked. All revealed variants agree within the newly stated domain; the positive-start senior variant remains a valid behavioral alternative even though the lesson introduces negative slice indices. Worst-case cost distinguishes the input length from the same-named request parameter.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy4-last-few",
+      "contentHash": "2b60bae277b7b708",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-last-few",
+      "contentHash": "2b60bae277b7b708",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-last-few",
+      "contentHash": "2b60bae277b7b708",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-last-few",
+      "contentHash": "2b60bae277b7b708",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-last-few",
+      "contentHash": "2b60bae277b7b708",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-last-few",
+      "contentHash": "2b60bae277b7b708",
+      "label": "wrong-minus-zero",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-last-few",
+      "contentHash": "2b60bae277b7b708",
+      "label": "wrong-reuses-empty",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-last-few",
+      "contentHash": "2b60bae277b7b708",
+      "label": "wrong-clones",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b004; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read zero and -0 behavior, count bounds and output identity against the reference guard and senior start calculation. No support for negative counts or sparse/custom arrays is implied. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy2-page-of-results",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "objective": "Convert positive one-based page bounds to a fresh shallow range.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "5bd15e6602c390ca",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "90a92a0a17838361",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "slice and bounded index arithmetic remain current.",
+    "practicalUtility": "Pagination is a common application data operation.",
+    "transferable": "One-based to zero-based mapping and exclusive end bounds transfer.",
+    "audienceFit": "Explicit positive integer page inputs avoid unrelated validation work.",
+    "riskOutcome": "Identity and boundary checks prevent modest off-by-one and aliasing errors."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Invalid or imprecisely large page inputs were not ruled out.",
+    "Original checks missed returning the caller array for a whole-list page.",
+    "Deep-cloned object results passed and the hint supplied the start formula."
+   ],
+   "rationale": "Positive page and size bounds keep arithmetic exact. Fresh empty and whole-list results, preserved repeated object identities, frozen input and a far-out valid page are tested. The revised hint asks for the number of preceding full pages without giving the formula. Reference, junior, senior and independently authored filter variants agree; behavioral grading is not represented as syntax enforcement.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy2-page-of-results",
+      "contentHash": "5bd15e6602c390ca",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-page-of-results",
+      "contentHash": "5bd15e6602c390ca",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-page-of-results",
+      "contentHash": "5bd15e6602c390ca",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-page-of-results",
+      "contentHash": "5bd15e6602c390ca",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-page-of-results",
+      "contentHash": "5bd15e6602c390ca",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-page-of-results",
+      "contentHash": "5bd15e6602c390ca",
+      "label": "wrong-zero-based",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-page-of-results",
+      "contentHash": "5bd15e6602c390ca",
+      "label": "wrong-reuses-whole",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-page-of-results",
+      "contentHash": "5bd15e6602c390ca",
+      "label": "wrong-clones",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b004; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the positive bounds, one-based mapping, exclusive end and short final page together. The target is worst-case input-length work; smaller slice results may take less. Historical task IDs and access rules stay intact. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy4-recent-searches",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "objective": "Maintain a bounded newest-first history in the original array.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "a1017b79e2ecdd77",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "d6c743a4ca1fcc2a",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 3,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "unshift and pop remain standard mutable operations.",
+    "practicalUtility": "Recent-search histories are a concrete bounded list.",
+    "transferable": "Identity, capacity and repeated events transfer to state handling.",
+    "audienceFit": "A mutable string array and nonnegative integer cap fit this lesson.",
+    "riskOutcome": "The zero cap and repeated terms avoid modest history loss."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Negative or fractional maximum values were not excluded; a negative cap could leave the revealed pop loop running forever.",
+    "A deduplicating implementation passed the old distinct-only cases."
+   ],
+   "rationale": "The new contract bounds max to nonnegative integers and keeps duplicates and empty terms as distinct events. Identity is checked even for a zero cap; a longer history checks repeated removal. Existing revealed variants already satisfy this bounded domain. The hint remains direct operation guidance, so its quality is 3/5. A splice alternative is accepted for equivalent behavior rather than pretending to enforce exact syntax.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/pop",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy4-recent-searches",
+      "contentHash": "a1017b79e2ecdd77",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-recent-searches",
+      "contentHash": "a1017b79e2ecdd77",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-recent-searches",
+      "contentHash": "a1017b79e2ecdd77",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-recent-searches",
+      "contentHash": "a1017b79e2ecdd77",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-recent-searches",
+      "contentHash": "a1017b79e2ecdd77",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-recent-searches",
+      "contentHash": "a1017b79e2ecdd77",
+      "label": "wrong-copy-return",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-recent-searches",
+      "contentHash": "a1017b79e2ecdd77",
+      "label": "wrong-pop-once",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-recent-searches",
+      "contentHash": "a1017b79e2ecdd77",
+      "label": "wrong-deduplicates",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b005; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/unshift",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/pop",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Reread the mutable-input requirement, zero cap, duplicate ordering and repeated removal. O(n) includes the one front shift and at most the original length plus one removals; string contents are not copied character by character. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy3-list-in-words",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 4,
+   "objective": "Format a literal list using comma-space and a final conjunction without losing empty items.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "55d8e71379b1869c",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "89d3342db06925db",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "slice and join remain supported.",
+    "practicalUtility": "Formatting visible lists is routine product work.",
+    "transferable": "Preserving literal user text and short-list cases transfer.",
+    "audienceFit": "Primitive strings and one fixed punctuation convention suit this exercise.",
+    "riskOutcome": "Empty positions and literal punctuation prevent modest data loss."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Filtering empty strings passed every original fixture.",
+    "The string domain and exact punctuation convention were implicit.",
+    "The original hint directly supplied the main slice expression."
+   ],
+   "rationale": "Specify primitive strings, literal preservation and no final serial comma. Tests cover empty words, punctuation within words, spaces, repetitions and frozen arrays. The revised hint gives a decomposition without the full expression. The independently written reduce form agrees with the unchanged three revealed variants within the allowed domain; its structural estimate may be unknown without penalty.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy3-list-in-words",
+      "contentHash": "55d8e71379b1869c",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-list-in-words",
+      "contentHash": "55d8e71379b1869c",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-list-in-words",
+      "contentHash": "55d8e71379b1869c",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-list-in-words",
+      "contentHash": "55d8e71379b1869c",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-list-in-words",
+      "contentHash": "55d8e71379b1869c",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-list-in-words",
+      "contentHash": "55d8e71379b1869c",
+      "label": "wrong-oxford-comma",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-list-in-words",
+      "contentHash": "55d8e71379b1869c",
+      "label": "wrong-filters-empty",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-list-in-words",
+      "contentHash": "55d8e71379b1869c",
+      "label": "wrong-mutates-pop",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b005; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/join",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/slice",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read empty list, one empty string, empty interior positions and embedded commas as different cases. The complexity unit includes both item count and total text, with the stated linear slice/join model. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy2-keys-with-value",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 5,
+   "objective": "Select strictly matching enumerable keys while understanding inherited-key and shadowing semantics.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "bd7e167072fdd174",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "eb3a0aea6dde2624",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Modern for-in order and strict equality remain specified.",
+    "practicalUtility": "Inherited enumeration is less common in application dictionaries, so practical utility is one.",
+    "transferable": "Ownership, shadowing, identity and NaN distinctions transfer.",
+    "audienceFit": "The task explicitly teaches for-in rather than disguising it as own-key enumeration.",
+    "riskOutcome": "A revealed-answer disagreement could otherwise teach incorrect ownership behavior."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Reference and junior included inherited keys while senior silently required ownership.",
+    "Original tests could not distinguish Object.is from strict equality or own-only enumeration.",
+    "Input preservation, symbols and non-enumerable shadowing were unspecified."
+   ],
+   "rationale": "Retain the original for-in teaching contract and explicitly include inherited enumerable string keys. Correct the senior answer and explain that own-only filtering is a different task. Executing old variants against the new public fixtures gave 11/11 reference and junior but 9/11 senior. New cases include prototype shadowing, non-enumerable suppression, integer-key order, NaN, signed zero and reference equality. The cost model counts inspected property names and prototype objects.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy2-keys-with-value",
+      "contentHash": "bd7e167072fdd174",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 11,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-keys-with-value",
+      "contentHash": "bd7e167072fdd174",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 11,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-keys-with-value",
+      "contentHash": "bd7e167072fdd174",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 11,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-keys-with-value",
+      "contentHash": "bd7e167072fdd174",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 11,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-keys-with-value",
+      "contentHash": "bd7e167072fdd174",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 11,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-keys-with-value",
+      "contentHash": "bd7e167072fdd174",
+      "label": "wrong-own-only",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 11,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-keys-with-value",
+      "contentHash": "bd7e167072fdd174",
+      "label": "wrong-loose",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 11,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-keys-with-value",
+      "contentHash": "bd7e167072fdd174",
+      "label": "wrong-object-is",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 11,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b005; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Reread inherited-key examples against the explicit contract and separate own-key advice. Non-enumerable own x must hide inherited x; NaN must not match and both zero signs must. All revealed variants now agree. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy2-invert-object",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 5,
+   "objective": "Invert own enumerable string entries into a safe dictionary with a defined collision rule.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "cb2d63dde0e49478",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "3e8fb5427c18efc4",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object.hasOwn, null-prototype dictionaries and fromEntries are current.",
+    "practicalUtility": "Reverse lookup dictionaries have practical uses.",
+    "transferable": "Ownership, property-name conversion and collision order transfer.",
+    "audienceFit": "Primitive string or finite-number values keep conversion explicit.",
+    "riskOutcome": "Special-key handling prevents silent missing entries and inherited-data leakage."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Reference and junior disagreed with the own-only senior on inherited keys.",
+    "All old variants lost a __proto__ output key through an inherited setter.",
+    "The old hint supplied the complete assignment without teaching ownership or key collisions."
+   ],
+   "rationale": "Specify own enumerable string inputs, bounded conversion cost units and last-in-Object.keys-order collisions. Loop-based reference and junior use null-prototype dictionaries and ownership checks; senior fromEntries defines data keys directly. Old variants passed only 8/10, 8/10 and 9/10 new public cases. New fixtures exercise inherited exclusions, special names, numeric zero conversion, frozen/null-prototype inputs and fresh-empty results. This is a correctness finding in an exercise, not a claimed production exploit.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy2-invert-object",
+      "contentHash": "cb2d63dde0e49478",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-invert-object",
+      "contentHash": "cb2d63dde0e49478",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-invert-object",
+      "contentHash": "cb2d63dde0e49478",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-invert-object",
+      "contentHash": "cb2d63dde0e49478",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-invert-object",
+      "contentHash": "cb2d63dde0e49478",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-invert-object",
+      "contentHash": "cb2d63dde0e49478",
+      "label": "wrong-inherited",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-invert-object",
+      "contentHash": "cb2d63dde0e49478",
+      "label": "wrong-proto-setter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-invert-object",
+      "contentHash": "cb2d63dde0e49478",
+      "label": "wrong-first-wins",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b005; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read numeric-to-name conversion, last-wins order and __proto__ as an own data key against each revealed variant. Empty result identity is checked independently of JSON equality. The lesson introduces a dictionary without a prototype for a concrete reason. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy3-fill-defaults",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 5,
+   "objective": "Merge shallow own settings with defaults using presence rather than truthiness or prototype membership.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "4f9f8c591f5f9e16",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "4ccd06c64a57f20f",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Own-property checks and explicit dictionary objects remain current.",
+    "practicalUtility": "Configuration defaults are common application work.",
+    "transferable": "Missing versus undefined, shallow identity and ownership transfer.",
+    "audienceFit": "A string-keyed data-object scope avoids unrelated accessor behavior.",
+    "riskOutcome": "Inherited blockers and special names can silently discard requested defaults."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Using in on a normal result incorrectly blocked defaults such as toString or __proto__.",
+    "Reference and junior included inherited entries unlike senior.",
+    "Original tests did not preserve an explicitly undefined setting or nested identity.",
+    "The original hint recommended the problematic in check."
+   ],
+   "rationale": "Define only own enumerable string settings/defaults and preserve explicitly present undefined, null and falsy values. Null-prototype loop answers and fromEntries avoid inherited setters while keeping shallow references. Old answers scored 8/10, 8/10 and 9/10 against new public fixtures. New tests cover ordinary reserved-looking names, inherited/non-enumerable exclusion, frozen inputs and fresh results; the misleading hint and skeleton are replaced.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy3-fill-defaults",
+      "contentHash": "4f9f8c591f5f9e16",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-fill-defaults",
+      "contentHash": "4f9f8c591f5f9e16",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-fill-defaults",
+      "contentHash": "4f9f8c591f5f9e16",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-fill-defaults",
+      "contentHash": "4f9f8c591f5f9e16",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-fill-defaults",
+      "contentHash": "4f9f8c591f5f9e16",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-fill-defaults",
+      "contentHash": "4f9f8c591f5f9e16",
+      "label": "wrong-in-operator",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-fill-defaults",
+      "contentHash": "4f9f8c591f5f9e16",
+      "label": "wrong-undefined-fallback",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-fill-defaults",
+      "contentHash": "4f9f8c591f5f9e16",
+      "label": "wrong-mutates-defaults",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b005; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/create",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 32/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored O(n)/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Reread own-enumerable presence against undefined and hidden properties. A default key absent from copied settings must not be blocked by Object.prototype. The result keeps value references and leaves both frozen inputs unchanged; all revealed variants now match the same contract. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy2-own-keys-only",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 5,
+   "objective": "Enumerate own enumerable string names without trusting an instance ownership method.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "665bb80d0abd0aca",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "e10e22164d176b94",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Object.hasOwn and for-in remain specified.",
+    "practicalUtility": "Ownership filtering is useful when handling application dictionaries.",
+    "transferable": "Shadowing, property visibility and null prototypes transfer.",
+    "audienceFit": "The separate own-key lesson gives a clear contrast to inherited enumeration.",
+    "riskOutcome": "Borrowed checks avoid method-name collisions and accidental inherited data."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Non-enumerable keys and symbol keys were not explicitly excluded.",
+    "Calling a shadowed or absent instance hasOwnProperty method passed old ordinary-object cases.",
+    "Integer-key order and source preservation were untested."
+   ],
+   "rationale": "State own enumerable string scope and normal property ordering. Add frozen null-prototype input with an own hasOwnProperty key, hidden and symbol exclusions, shadowed hidden names and preservation. Existing reference and borrowed-method junior already meet this domain; Object.keys is accepted as a behavioral alternative. Prototype traversal is included in the target cost model.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+    "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy2-own-keys-only",
+      "contentHash": "665bb80d0abd0aca",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-own-keys-only",
+      "contentHash": "665bb80d0abd0aca",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-own-keys-only",
+      "contentHash": "665bb80d0abd0aca",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-own-keys-only",
+      "contentHash": "665bb80d0abd0aca",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-own-keys-only",
+      "contentHash": "665bb80d0abd0aca",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-own-keys-only",
+      "contentHash": "665bb80d0abd0aca",
+      "label": "wrong-all-property-names",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-own-keys-only",
+      "contentHash": "665bb80d0abd0aca",
+      "label": "wrong-method-call",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-own-keys-only",
+      "contentHash": "665bb80d0abd0aca",
+      "label": "wrong-inherited",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b006; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Object/hasOwn",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+     "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the ownership and enumerability requirements together: a non-enumerable own key is still omitted. Null-prototype and shadowed-method inputs require a static or borrowed ownership check; all final variants satisfy those fixtures. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy3-count-types",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 5,
+   "objective": "Aggregate exact JavaScript typeof labels over an explicitly inherited enumerable-key view.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "685a01e565bb2c24",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "b9697b7b385184f6",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "All eight typeof labels remain current.",
+    "practicalUtility": "Inherited-key diagnostics are useful but less common than own-value aggregation.",
+    "transferable": "Runtime type labels, shadowing and serialization loss transfer.",
+    "audienceFit": "The explicit for-in contract fits a language-semantics foundation exercise.",
+    "riskOutcome": "Fixing contradictory revealed answers avoids teaching the wrong ownership rule."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The senior silently excluded inherited keys although reference and junior included them.",
+    "Original fixtures omitted bigint, symbol-valued properties and NaN.",
+    "The old hint supplied the entire increment expression."
+   ],
+   "rationale": "Keep inherited enumeration explicit and consistent, distinguish symbol keys from symbol values, and count null/arrays under object as typeof does. New fixtures cover all eight labels, own shadowing, hidden/symbol-key exclusions and frozen null-prototype inputs. The revised hint explains initial counts without the full expression; the senior now follows the same contract.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+    "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy3-count-types",
+      "contentHash": "685a01e565bb2c24",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-count-types",
+      "contentHash": "685a01e565bb2c24",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-count-types",
+      "contentHash": "685a01e565bb2c24",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-count-types",
+      "contentHash": "685a01e565bb2c24",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-count-types",
+      "contentHash": "685a01e565bb2c24",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-count-types",
+      "contentHash": "685a01e565bb2c24",
+      "label": "wrong-own-only",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-count-types",
+      "contentHash": "685a01e565bb2c24",
+      "label": "wrong-json",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-count-types",
+      "contentHash": "685a01e565bb2c24",
+      "label": "wrong-null-type",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b006; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/typeof",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/for...in",
+     "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the eight-label example and inherited-key wording against all answers. No JSON normalization is valid because it drops undefined/functions and cannot serialize arbitrary bigint. Mutation remains forbidden; the target counts inspected names and prototype objects. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-letter-counts",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 5,
+   "objective": "Count string-iterator items with exact case and Unicode-unit semantics using one accumulator.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "dd55204d35045a2d",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "66f42296fde34a02",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "String iteration and dictionary accumulation remain current.",
+    "practicalUtility": "Frequency tables are a practical text aggregation.",
+    "transferable": "Code points versus code units, literal preservation and accumulator cost transfer.",
+    "audienceFit": "The prompt explains the Unicode model rather than assuming visual-character segmentation.",
+    "riskOutcome": "Unit and case checks prevent modest text-counting errors."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The original brief did not define characters as iterator items rather than UTF-16 units or graphemes.",
+    "Code-unit splitting and lowercase normalization passed old ASCII fixtures.",
+    "The primary revealed answer copied the growing accumulator on each character, contradicting the newly explicit linear update target."
+   ],
+   "rationale": "Define exact string iteration, keeping surrogate pairs together and combining marks separate without normalization or case changes. Add emoji, uppercase, punctuation, decomposed text, fresh-empty identity and many distinct characters. Replace the copy-on-each-step reference with an in-place accumulator update; junior and senior already update one accumulator. This cost review is structural reasoning, not a timing proof.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/Symbol.iterator",
+    "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-letter-counts",
+      "contentHash": "dd55204d35045a2d",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-letter-counts",
+      "contentHash": "dd55204d35045a2d",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-letter-counts",
+      "contentHash": "dd55204d35045a2d",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-letter-counts",
+      "contentHash": "dd55204d35045a2d",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-letter-counts",
+      "contentHash": "dd55204d35045a2d",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-letter-counts",
+      "contentHash": "dd55204d35045a2d",
+      "label": "wrong-code-units",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-letter-counts",
+      "contentHash": "dd55204d35045a2d",
+      "label": "wrong-lowercase",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-letter-counts",
+      "contentHash": "dd55204d35045a2d",
+      "label": "wrong-ascii-only",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b006; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/Symbol.iterator",
+     "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the combining-mark expected dictionary literally and the emoji as one key. The task counts every iterator item despite its historical Letter counts title. Accumulator mutation changes only a fresh local object, not learner input. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-count-vowels",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Count literal ASCII vowel occurrences consistently across code and puzzle variants.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "6e398e1c0a2dca01",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "6fb73b1848e12370",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "String iteration and explicit ASCII matching remain supported.",
+    "practicalUtility": "Vowel counting is mainly instructional, so practical utility is one.",
+    "transferable": "Character-set boundaries and Unicode case conversion transfer to validation.",
+    "audienceFit": "A fixed ten-character membership test fits the foundation scope.",
+    "riskOutcome": "A Unicode revealed-answer disagreement undermines correct grading and is now tested."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Lowercase-based reference/junior/puzzle counted dotted capital İ after conversion, while the regex senior did not.",
+    "The stated five vowels did not define accented or other Unicode input behavior.",
+    "Original fixtures could not catch per-letter uniqueness instead of occurrence counting."
+   ],
+   "rationale": "Specify literal ASCII lower/uppercase vowels and no normalization. Update reference, junior, skeleton, explanation and puzzle lines to test the original text against both cases. Preserve all five accepted puzzle orders; the real worker executes them. Dotted I, accented/full-width/mathematical letters, combining accents, repeats, emoji and y are explicit cases. The fixed set is constant-size in the linear cost model.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/Symbol.iterator",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase",
+    "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "puzzle-1",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "puzzle-2",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "puzzle-3",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "puzzle-4",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "puzzle-5",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "wrong-unicode-lowercase",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "wrong-unique",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-count-vowels",
+      "contentHash": "6e398e1c0a2dca01",
+      "label": "wrong-y",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b006; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/Symbol.iterator",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/String/toLowerCase",
+     "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the literal ASCII policy against İ and a followed by a combining accent: the former contributes zero and the latter contributes one. All revealed/puzzle variants now agree; no locale-sensitive vowel definition is implied. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy4-count-digits",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Count decimal digits of a safe nonnegative integer using a loop that runs for zero.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "dfb8a65bf2569699",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "85e64e2130fc3173",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "Safe integers, Math.floor and do-while remain current.",
+    "practicalUtility": "Digit counting is chiefly a loop lesson, so utility is one.",
+    "transferable": "Zero handling, bounded domains and floating boundary errors transfer.",
+    "audienceFit": "The safe-integer scope makes numeric iteration exact and finite.",
+    "riskOutcome": "Power-of-ten checks prevent modest off-by-one mistakes."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The whole-number domain lacked a finite safe-integer upper bound.",
+    "Original checks accepted a rounded-logarithm digit formula near untested boundaries.",
+    "A table of every old test input passed the finite old suite."
+   ],
+   "rationale": "Restrict the task to nonnegative safe integers and define numeric -0 as zero. Add the largest safe integer, values at and just below a large power of ten and an unseen ordinary input. The target is logarithmic in numeric magnitude for positive n, with zero constant; this differs from representation-length complexity and is stated explicitly. Original repeated-division variants and an independent decimal-string alternative pass; unknown structural estimates keep 25 XP.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/log10",
+    "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy4-count-digits",
+      "contentHash": "dfb8a65bf2569699",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-count-digits",
+      "contentHash": "dfb8a65bf2569699",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-count-digits",
+      "contentHash": "dfb8a65bf2569699",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-count-digits",
+      "contentHash": "dfb8a65bf2569699",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-count-digits",
+      "contentHash": "dfb8a65bf2569699",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-count-digits",
+      "contentHash": "dfb8a65bf2569699",
+      "label": "wrong-log-rounding",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-count-digits",
+      "contentHash": "dfb8a65bf2569699",
+      "label": "wrong-zero",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-count-digits",
+      "contentHash": "dfb8a65bf2569699",
+      "label": "wrong-memorized",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 4
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b006; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/log10",
+     "run: 45/45 selected final-hash QuickJS verdicts across five items (25 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 37/45 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Reread zero, -0, safe-integer endpoints and the numeric-magnitude cost model. The floating log formula is rejected by an actual boundary fixture; no timing benchmark is treated as proof of logarithmic behavior. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy2-all-tags",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Flatten post tag lists into a fresh ordered result while preserving both source levels.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "4b68c3fc9ddd0f35",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "46bb9fd9901b7178",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 3,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "map, flat and flatMap remain standard collection methods.",
+    "practicalUtility": "Collecting post tags is a concrete application transform.",
+    "transferable": "Nested input-size accounting, ordering and freshness transfer.",
+    "audienceFit": "Dense string tag lists keep the foundation task focused.",
+    "riskOutcome": "Read-only and duplicate rules prevent modest source-data loss."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Returning a sole post's tags array passed old fixtures.",
+    "Reversing tags after producing the correct result escaped the single-tag preservation fixture.",
+    "Empty tag strings and frozen nested input were not specified."
+   ],
+   "rationale": "State a fresh output for every shape and preserve posts, titles and nested tag lists. Frozen nested data, repeated and empty strings, single-source identity and multiple empty results are exercised. The linear target counts posts plus tag entries rather than post count alone. The unchanged direct map/flat hint is useful but basic, so it receives 3/5. Reference, junior, flatMap senior and a nested-loop alternative pass; the latter stays unknown without penalty when the estimator cannot relate nested sizes.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy2-all-tags",
+      "contentHash": "4b68c3fc9ddd0f35",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-all-tags",
+      "contentHash": "4b68c3fc9ddd0f35",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-all-tags",
+      "contentHash": "4b68c3fc9ddd0f35",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-all-tags",
+      "contentHash": "4b68c3fc9ddd0f35",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-all-tags",
+      "contentHash": "4b68c3fc9ddd0f35",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 7,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-all-tags",
+      "contentHash": "4b68c3fc9ddd0f35",
+      "label": "wrong-reuses-single",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-all-tags",
+      "contentHash": "4b68c3fc9ddd0f35",
+      "label": "wrong-mutates-after",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-all-tags",
+      "contentHash": "4b68c3fc9ddd0f35",
+      "label": "wrong-deduplicates",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 7,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b007; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read freshness separately from value equality for the one-post case. Frozen tags test both source levels. The cost model counts all tag entries and treats stored string references as constant-size copies. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy3-column-totals",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Aggregate rectangular grid columns into a new array with exact bounded integer sums.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "82ed32ddd0fa77d5",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "f396737e4c24688b",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Array indexing and nested loops remain current.",
+    "practicalUtility": "Column aggregation is useful for table data.",
+    "transferable": "Rectangular dimensions, zero-width grids and source preservation transfer.",
+    "audienceFit": "Bounded integer cells make sum behavior exact for this lesson.",
+    "riskOutcome": "Shape and identity checks prevent modest aggregation mistakes."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Freshness for a single row and read-only row behavior were not explicitly tested.",
+    "The numeric domain and zero-column grids were unspecified.",
+    "Single-row mutation after computing totals escaped the old two-row preservation fixture."
+   ],
+   "rationale": "Define a rectangular dense grid, bounded dimensions and integer values whose sums stay exact. Cover zero columns, a rectangular non-square shape, fresh frozen single-row output, unchanged single-row order and maximum-row sums. The target explicitly uses the larger dimension and explains r*c cell visits; it does not claim quadratic work in the total number of cells. All original revealed variants and an independent column reduce agree.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy3-column-totals",
+      "contentHash": "82ed32ddd0fa77d5",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-column-totals",
+      "contentHash": "82ed32ddd0fa77d5",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-column-totals",
+      "contentHash": "82ed32ddd0fa77d5",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-column-totals",
+      "contentHash": "82ed32ddd0fa77d5",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-column-totals",
+      "contentHash": "82ed32ddd0fa77d5",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-column-totals",
+      "contentHash": "82ed32ddd0fa77d5",
+      "label": "wrong-reuses-single-row",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-column-totals",
+      "contentHash": "82ed32ddd0fa77d5",
+      "label": "wrong-mutates-one-row",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-column-totals",
+      "contentHash": "82ed32ddd0fa77d5",
+      "label": "wrong-row-sums",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b007; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Number/MAX_SAFE_INTEGER",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the r-by-c explanation against the O(n²) maximum-dimension upper bound and zero-width case. The one-row array must be copied rather than returned or reordered. Every final candidate verdict agrees. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy4-place-totals",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Aggregate signed integers by index parity while returning independent totals.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "341623fa341ba83b",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "babe19170e1036ee",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 1,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 8,
+   "relevanceRationale": {
+    "presentDay": "forEach index callbacks remain supported.",
+    "practicalUtility": "Alternating-position sums are chiefly an instructional example.",
+    "transferable": "Callback argument order, grouping and pure input handling transfer.",
+    "audienceFit": "Exact bounded integer sums keep attention on position rather than numeric precision.",
+    "riskOutcome": "Freshness and source-order checks prevent modest state leakage."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Post-computation mutation passed because no input-preservation fixture existed.",
+    "A shared result object passed separate old calls.",
+    "The input's integer domain and sum bounds were not explicit."
+   ],
+   "rationale": "State dense bounded integers, read-only/frozen input and a fresh result per call. Signed order checks reject value-parity confusion and post-hoc reversal. Two calls in one fixture expose shared mutable output; the 10000-entry bound keeps sums exact. The hint now directs attention to callback arguments without supplying the parity expression. Original revealed variants and an independent reduce pass with the authored linear target.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy4-place-totals",
+      "contentHash": "341623fa341ba83b",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-place-totals",
+      "contentHash": "341623fa341ba83b",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-place-totals",
+      "contentHash": "341623fa341ba83b",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-place-totals",
+      "contentHash": "341623fa341ba83b",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-place-totals",
+      "contentHash": "341623fa341ba83b",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-place-totals",
+      "contentHash": "341623fa341ba83b",
+      "label": "wrong-mutates-after",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-place-totals",
+      "contentHash": "341623fa341ba83b",
+      "label": "wrong-reuses-result",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy4-place-totals",
+      "contentHash": "341623fa341ba83b",
+      "label": "wrong-value-parity",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b007; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Reread index parity against signed values: value parity is unrelated. Earlier returned totals must retain their values after the next call. The input is dense, so sparse-array callback differences are outside scope. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy3-every-combination",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Produce a complete size-major Cartesian product without trimming or removing repeated pairs.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "0f04a9f6bf241df5",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "afe8c78a7ef9477e",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Nested traversal and flatMap remain current.",
+    "practicalUtility": "Product option combinations are a practical pair-generation task.",
+    "transferable": "Output order, multiplicity and dimension-based cost transfer.",
+    "audienceFit": "Bounded string lengths make per-label work explicit.",
+    "riskOutcome": "Preserving literal values avoids modest display-data loss."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Deduplication, trimming and post-computation source mutation all passed old distinct nonempty fixtures.",
+    "String domains, label construction cost and result freshness were implicit."
+   ],
+   "rationale": "Specify dense bounded string lists, literal spaces/empties, multiplicity, size-major order, frozen input and fresh empty output. The exact count is the two-length product, bounded by n² for n equal to their maximum; bounded text length justifies constant work per pair. A reduce/concat trial was replaced by a fresh-array callback alternative to avoid repeated copying of a growing result. All three revealed variants and the final independent alternative pass the target/reward probe.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy3-every-combination",
+      "contentHash": "0f04a9f6bf241df5",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-every-combination",
+      "contentHash": "0f04a9f6bf241df5",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-every-combination",
+      "contentHash": "0f04a9f6bf241df5",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-every-combination",
+      "contentHash": "0f04a9f6bf241df5",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-every-combination",
+      "contentHash": "0f04a9f6bf241df5",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-every-combination",
+      "contentHash": "0f04a9f6bf241df5",
+      "label": "wrong-deduplicates",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-every-combination",
+      "contentHash": "0f04a9f6bf241df5",
+      "label": "wrong-trims",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-every-combination",
+      "contentHash": "0f04a9f6bf241df5",
+      "label": "wrong-mutates-after",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 10,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b007; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read each space-bearing expected label literally: preserve both original strings and insert one separator. Empty input returns a distinct array; repeated pairs remain repeated. The upper bound is in maximum input-list length, not total output characters. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy3-discount-in-place",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Mutate only existing item prices with exact bounded half-cent rounding and no return value.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "60f1739ce80b9555",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "c8f1171475b211b2",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "forEach, Number arithmetic and Math.round remain current.",
+    "practicalUtility": "Rounding integer-cent prices is a concrete transformation.",
+    "transferable": "Mutation boundaries, aliasing and arithmetic order transfer.",
+    "audienceFit": "Bounded integer cents and integer percentages define one assessable policy.",
+    "riskOutcome": "Half-cent revealed-answer errors can produce incorrect prices."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The junior pre-divided factor and senior 1-percent/100 form could round a half cent down incorrectly.",
+    "Replacing item objects instead of changing their prices passed old value-only cases.",
+    "Percent and price domains, retained references and frozen outer arrays were unspecified."
+   ],
+   "rationale": "Use distinct writable item objects, integer cents/percent bounds and the explicitly ordered Math.round(price*(100-percent)/100) formula. The product stays exact before division. An actual intermediate worker run rejected junior and senior on new half-cent fixtures while reference passed; both are corrected. Tests preserve item/metadata identities in a frozen outer array, other fields, full-discount boundary and undefined return. This is an educational pricing transformation, not a change to real billing.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy3-discount-in-place",
+      "contentHash": "60f1739ce80b9555",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-discount-in-place",
+      "contentHash": "60f1739ce80b9555",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-discount-in-place",
+      "contentHash": "60f1739ce80b9555",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-discount-in-place",
+      "contentHash": "60f1739ce80b9555",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-discount-in-place",
+      "contentHash": "60f1739ce80b9555",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-discount-in-place",
+      "contentHash": "60f1739ce80b9555",
+      "label": "wrong-replaces-objects",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-discount-in-place",
+      "contentHash": "60f1739ce80b9555",
+      "label": "wrong-floating-factor",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy3-discount-in-place",
+      "contentHash": "60f1739ce80b9555",
+      "label": "wrong-returns-array",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b007; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Math/round",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 30/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the 5-cent/90% and 25-cent/42% fixtures against each arithmetic sequence. Mutation is required for prices but forbidden for item replacement and other fields; the outer array can therefore be frozen. All final revealed forms preserve those boundaries. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy4-flatten-all",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Traverse a finite nested array structure into a fresh shallow leaf list.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "4634f0f0cbb9f38c",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "ad2ee0a23005a345",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "flat with Infinity is a current standard API.",
+    "practicalUtility": "Flattening nested collection data is a practical transformation.",
+    "transferable": "Traversal units, identity and cycle/depth domains transfer.",
+    "audienceFit": "Finite bounded ordinary arrays make the foundation exercise assessable.",
+    "riskOutcome": "Freshness and leaf identity checks prevent modest data loss."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The unqualified however-deep wording omitted finite depth and acyclic assumptions.",
+    "A six-level cutoff and JSON-cloned leaves passed old shallow fixtures.",
+    "The junior repeatedly flattened one level instead of following the intended all-level traversal."
+   ],
+   "rationale": "Define a finite dense acyclic domain and count visited entries/nodes by occurrence, including repeated branches. New cases exceed six levels, preserve frozen repeated object/null/undefined leaves and require fresh empty results. Junior now uses one flat call with Infinity rather than rescanning intermediate arrays. A separately authored iterator-stack traversal passes correctness and remains unknown without an XP penalty if its structural cost cannot be resolved. No timing proof or arbitrary-depth engine guarantee is claimed.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy4-flatten-all",
+      "contentHash": "4634f0f0cbb9f38c",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-flatten-all",
+      "contentHash": "4634f0f0cbb9f38c",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-flatten-all",
+      "contentHash": "4634f0f0cbb9f38c",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-flatten-all",
+      "contentHash": "4634f0f0cbb9f38c",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-flatten-all",
+      "contentHash": "4634f0f0cbb9f38c",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-flatten-all",
+      "contentHash": "4634f0f0cbb9f38c",
+      "label": "wrong-depth-six",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-flatten-all",
+      "contentHash": "4634f0f0cbb9f38c",
+      "label": "wrong-clones",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-flatten-all",
+      "contentHash": "4634f0f0cbb9f38c",
+      "label": "wrong-reuses-flat",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 4
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b008; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the finite bounds and repeated-branch rule against the object-identity fixture. Only nested arrays are traversed; objects remain leaf references. Flat and empty inputs must still produce independent arrays. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy2-find-in-grid",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Find the first strict-equality match in ragged rows without changing data.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "dfcae609c82de972",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "4d05a81b559144f8",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Array traversal, indexOf and strict equality remain current.",
+    "practicalUtility": "Locating data in grouped rows is a practical search.",
+    "transferable": "Ragged dimensions, equality and early-return reasoning transfer.",
+    "audienceFit": "Explicit constant-cost equality and dense rows keep the task focused.",
+    "riskOutcome": "First-match and source-preservation checks prevent modest search errors."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The original brief did not name strict equality for NaN, signed zero or references.",
+    "Object.is, coercive equality and mutation after finding a position passed old cases.",
+    "Output coordinate freshness and frozen rows were not checked."
+   ],
+   "rationale": "Specify strict matching and read-only ragged dense input. Add cross-type, NaN, zero-sign, reference-identity, frozen-row and coordinate-freshness checks. All three revealed variants already use strict semantics, including indexOf's NaN behavior. The linear worst-case model counts rows plus cells, not only nonempty cells. Early-exit guidance remains a reviewed algorithm choice; finite value checks do not prove absence of all unnecessary reads. Conservative estimates of nested/early-return code are not penalized.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy2-find-in-grid",
+      "contentHash": "dfcae609c82de972",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-find-in-grid",
+      "contentHash": "dfcae609c82de972",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-find-in-grid",
+      "contentHash": "dfcae609c82de972",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-find-in-grid",
+      "contentHash": "dfcae609c82de972",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-find-in-grid",
+      "contentHash": "dfcae609c82de972",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 12,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-find-in-grid",
+      "contentHash": "dfcae609c82de972",
+      "label": "wrong-object-is",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-find-in-grid",
+      "contentHash": "dfcae609c82de972",
+      "label": "wrong-mutates-after",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-find-in-grid",
+      "contentHash": "dfcae609c82de972",
+      "label": "wrong-loose",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 12,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b008; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Strict_equality",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/indexOf",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read first match in row-major order together with variable row lengths and strict identity. NaN returns null, while either zero sign finds the first zero. The new target uses actual total traversal size and explicitly assumed equality costs. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-debug-tally",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Repair Map accumulation while preserving literal keys and first-seen entry order.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "98ed378637576685",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "30d1175d83baa809",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 5,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "Map get/set and insertion order remain current.",
+    "practicalUtility": "Word-frequency accumulation is a concrete data task.",
+    "transferable": "Reading prior state, literal keys and Map identity transfer.",
+    "audienceFit": "The intentionally broken starter exposes one clear accumulation bug.",
+    "riskOutcome": "Case/order and source preservation avoid modest counting errors."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Sorting, lowercasing and input reversal escaped original one-letter fixtures.",
+    "Literal Unicode spelling, empty keys and output independence were unspecified."
+   ],
+   "rationale": "Keep the broken set-to-one starter and its diagnostic hint: it directs attention to previous state without providing the fix, meriting a 5/5 hint score. Bound string length for the expected-linear Map model. Tests cover first-seen ordering, case, empty/__proto__ keys, distinct normalized spellings, frozen words and independent results. Existing revealed variants already meet the clarified contract; an independently authored has/get alternative agrees.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-debug-tally",
+      "contentHash": "98ed378637576685",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-debug-tally",
+      "contentHash": "98ed378637576685",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-debug-tally",
+      "contentHash": "98ed378637576685",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-debug-tally",
+      "contentHash": "98ed378637576685",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-debug-tally",
+      "contentHash": "98ed378637576685",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-debug-tally",
+      "contentHash": "98ed378637576685",
+      "label": "wrong-sorts-keys",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-debug-tally",
+      "contentHash": "98ed378637576685",
+      "label": "wrong-case-folds",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-debug-tally",
+      "contentHash": "98ed378637576685",
+      "label": "wrong-mutates-after",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b008; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Map",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the debug prompt against its still-failing starter rather than replacing the exercise with a blank implementation. Map entry order follows first insertion, Unicode spellings stay distinct and prior returned Maps retain their counts. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy2-menu-items",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Flatten the fixed section/group hierarchy while preserving literal dish occurrences.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "8d3d81d0b37a2c02",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "15418f825c0733b1",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 3,
+    "explanation": 4
+   },
+   "qualityScore": 3,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 1
+   },
+   "relevanceScore": 9,
+   "relevanceRationale": {
+    "presentDay": "flat depth arguments remain current.",
+    "practicalUtility": "Section/group menu data is a concrete nested collection.",
+    "transferable": "Fixed-depth reasoning, multiplicity and source preservation transfer.",
+    "audienceFit": "Primitive dish strings keep the task within a beginner array lesson.",
+    "riskOutcome": "Freshness and unchanged nested groups prevent modest aliasing errors."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "Junior used two flat calls although the brief taught one call with the correct depth.",
+    "Filtering empty dish names, deduplicating and mutating groups after computation escaped old fixtures.",
+    "Freshness and frozen nested input were unspecified."
+   ],
+   "rationale": "State exactly three array levels ending in primitive strings and preserve empty/space/repeated names. Junior now supplies depth 2 in one call, consistent with reference/senior and the lesson. Frozen groups, a single-group freshness/order check and independent empty results exercise the clarified policies. The original bracket-counting hint remains sound but nearly gives the depth and is scored 3. A nested-loop alternative is behaviorally accepted; syntax usage is not claimed proven by value grading.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy2-menu-items",
+      "contentHash": "8d3d81d0b37a2c02",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-menu-items",
+      "contentHash": "8d3d81d0b37a2c02",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-menu-items",
+      "contentHash": "8d3d81d0b37a2c02",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-menu-items",
+      "contentHash": "8d3d81d0b37a2c02",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-menu-items",
+      "contentHash": "8d3d81d0b37a2c02",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-menu-items",
+      "contentHash": "8d3d81d0b37a2c02",
+      "label": "wrong-filter-empty",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-menu-items",
+      "contentHash": "8d3d81d0b37a2c02",
+      "label": "wrong-deduplicates",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     },
+     {
+      "id": "js-easy2-menu-items",
+      "contentHash": "8d3d81d0b37a2c02",
+      "label": "wrong-mutates-groups",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 8,
+      "hidden": 3
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b008; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/flat",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read the section/group/dish hierarchy and the exact depth-two call together. All leaf strings, including an empty one, remain entries; only empty arrays add nothing. Cost includes sections and groups even if they contain no dishes. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
+  },
+  {
+   "id": "js-easy4-every-page",
+   "kind": "coding-task",
+   "locale": "en",
+   "delivery": "active",
+   "surfaces": [
+    "coding",
+    "challenge-run"
+   ],
+   "category": "javascript",
+   "topic": "javascript",
+   "level": 6,
+   "objective": "Follow a synchronous finite page chain once in link order and collect shallow item references.",
+   "intendedLevel": "foundation",
+   "revision": 1,
+   "contentHash": "967c8f7143a4a98d",
+   "hashSchema": "task-hash:v2",
+   "previousHash": "f2289d97db25324e",
+   "previousHashSchema": "task-hash:v2",
+   "quality": {
+    "topicRelevance": 5,
+    "learningValue": 4,
+    "technicalCorrectness": 5,
+    "wording": 4,
+    "answerOptions": 4,
+    "hint": 4,
+    "explanation": 4
+   },
+   "qualityScore": 4,
+   "relevance": {
+    "presentDay": 2,
+    "practicalUtility": 2,
+    "transferable": 2,
+    "audienceFit": 2,
+    "riskOutcome": 2
+   },
+   "relevanceScore": 10,
+   "relevanceRationale": {
+    "presentDay": "Callback-driven traversal and bounded array append remain current.",
+    "practicalUtility": "Following pagination cursors is a practical collection pattern.",
+    "transferable": "Link order, termination, empty pages and ownership transfer.",
+    "audienceFit": "The explicitly synchronous lookup avoids conflating this exercise with fetch or promises.",
+    "riskOutcome": "Skipping empty pages or rewriting source items can lose real data."
+   },
+   "gates": {
+    "quality": true,
+    "relevance": true
+   },
+   "correctnessBlocker": null,
+   "decision": "rewrite",
+   "retireReason": null,
+   "defects": [
+    "The API wording did not clarify that getPage is synchronous and chain inputs are valid/finite.",
+    "Reusing one page's array, JSON cloning and mutation after copying passed old fixtures.",
+    "Decreasing page numbers, frozen page data and shallow reference rules were untested."
+   ],
+   "rationale": "Specify a finite acyclic positive-ID chain, exact once-per-link callback order and bounded item arrays that keep spread calls within a reasonable size. New cases traverse 1 to 7 to 3 through an empty middle page, preserve nested arrays/object identities in frozen pages, leave mutable page order unchanged and return fresh empty collections. The target counts pages plus entries and explicitly assumes constant-time lookup; it does not include real network latency. Existing revealed variants and an independent while traversal pass.",
+   "evidence": [
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/do...while",
+    "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push",
+    "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+    "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+    "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+   ],
+   "graderChecks": {
+    "cases": [
+     {
+      "id": "js-easy4-every-page",
+      "contentHash": "967c8f7143a4a98d",
+      "label": "reference",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-every-page",
+      "contentHash": "967c8f7143a4a98d",
+      "label": "junior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-every-page",
+      "contentHash": "967c8f7143a4a98d",
+      "label": "senior",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-every-page",
+      "contentHash": "967c8f7143a4a98d",
+      "label": "starter",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-every-page",
+      "contentHash": "967c8f7143a4a98d",
+      "label": "alternative",
+      "expected": "passed",
+      "verdict": "passed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-every-page",
+      "contentHash": "967c8f7143a4a98d",
+      "label": "wrong-reuses-one-page",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-every-page",
+      "contentHash": "967c8f7143a4a98d",
+      "label": "wrong-clones",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     },
+     {
+      "id": "js-easy4-every-page",
+      "contentHash": "967c8f7143a4a98d",
+      "label": "wrong-mutates-pages",
+      "expected": "failed",
+      "verdict": "failed",
+      "visible": 9,
+      "hidden": 4
+     }
+    ],
+    "notes": "Finite worker evidence, not proof over arbitrary learner programs or measured asymptotic time."
+   },
+   "cs": {
+    "hash": null,
+    "status": "not-served",
+    "notes": "English-only product; archived Czech unchanged and not approved for this revision."
+   },
+   "reviewer": {
+    "kind": "model",
+    "passes": [
+     "individual-item-review",
+     "executable-recheck",
+     "self-review-of-final-English"
+    ],
+    "run": "Codex session 2026-10-15, sequential five-item batch b008; no independent/human reader claim"
+   },
+   "reviewedAt": "2026-10-15",
+   "verification": {
+    "verdict": "accept",
+    "reader": "same model/session, separate final reading",
+    "problems": [],
+    "evidence": [
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/do...while",
+     "https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/push",
+     "run: 40/40 selected final-hash QuickJS verdicts across five items (20 valid, 5 starters, 15 wrong).",
+     "run: baseline matched 26/40 expectations; newly explicit policies are distinguished in the item rationale.",
+     "run: twenty selected authored-target/base-25-XP checks pass; uncertain complexity stays unknown and is not penalized."
+    ],
+    "notes": "Read null termination separately from an empty items array and a decreasing next ID. The callback is synchronous, each issued page is visited once and leaf arrays stay single referenced items. The structural estimate remains unknown without a reward penalty for callback-dependent traversal. Final English material and execution reread; same-session self-review only.",
+    "pass": "second-reading"
+   }
   }
  ]
 }

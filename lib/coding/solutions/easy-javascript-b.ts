@@ -171,34 +171,9 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 
   /* ── for...in ─────────────────────────────────────────────────────── */
   'js-easy3-fill-defaults': {
-    solution: `const withDefaults = (settings, defaults) => {
-  const result = { ...settings };
-  for (const key in defaults) {
-    // in asks whether the key exists, so false, 0 and "" are kept.
-    if (!(key in result)) result[key] = defaults[key];
-  }
-  return result;
-};`,
-    junior: `const withDefaults = (settings, defaults) => {
-  const result = {};
-  for (const key in settings) {
-    result[key] = settings[key];
-  }
-  for (const key in defaults) {
-    const alreadySet = key in result;
-    if (!alreadySet) {
-      result[key] = defaults[key];
-    }
-  }
-  return result;
-};`,
-    senior: `const withDefaults = (settings, defaults) => {
-  const result = { ...settings };
-  for (const key in defaults) {
-    if (Object.hasOwn(defaults, key) && !Object.hasOwn(result, key)) result[key] = defaults[key];
-  }
-  return result;
-};`,
+    solution: "const withDefaults = (settings, defaults) => {\n  const result = Object.create(null);\n  for (const key in settings) {\n    if (Object.hasOwn(settings, key)) result[key] = settings[key];\n  }\n  for (const key in defaults) {\n    if (Object.hasOwn(defaults, key) && !Object.hasOwn(result, key)) {\n      result[key] = defaults[key];\n    }\n  }\n  return result;\n};",
+    junior: "const withDefaults = (settings, defaults) => {\n  const result = Object.create(null);\n  for (const key in settings) {\n    const isOwnSetting = Object.hasOwn(settings, key);\n    if (isOwnSetting) result[key] = settings[key];\n  }\n  for (const key in defaults) {\n    const isOwnDefault = Object.hasOwn(defaults, key);\n    const alreadySet = Object.hasOwn(result, key);\n    if (isOwnDefault && !alreadySet) result[key] = defaults[key];\n  }\n  return result;\n};",
+    senior: "const withDefaults = (settings, defaults) => Object.fromEntries([...Object.entries(defaults), ...Object.entries(settings)]);",
     hiddenTests: [
       { call: 'withDefaults({ name: "" }, { name: "anon" })', expected: { name: '' } },
       { call: 'withDefaults({ a: null }, { a: 1, b: 2 })', expected: { a: null, b: 2 } },
@@ -227,15 +202,7 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
   }
   return counts;
 };`,
-    senior: `const countTypes = object => {
-  const counts = {};
-  for (const key in object) {
-    if (!Object.hasOwn(object, key)) continue;
-    const type = typeof object[key];
-    counts[type] = (counts[type] ?? 0) + 1;
-  }
-  return counts;
-};`,
+    senior: "const countTypes = object => {\n  const counts = {};\n  // Match the inherited-key semantics of for...in in this exercise.\n  for (const key in object) {\n    const type = typeof object[key];\n    counts[type] = (counts[type] ?? 0) + 1;\n  }\n  return counts;\n};",
     hiddenTests: [
       { call: 'countTypes({ a: 1, b: 2, c: 3 })', expected: { number: 3 } },
       { call: 'countTypes({ s: "", n: 0, b: false })', expected: { string: 1, number: 1, boolean: 1 } },
@@ -349,15 +316,14 @@ const isHexColour = text => HEX_COLOUR.test(text);`,
 };`,
     junior: `const applyDiscount = (items, percent) => {
   items.forEach(item => {
-    const keep = (100 - percent) / 100;
-    const newPrice = item.price * keep;
+    const numerator = item.price * (100 - percent);
+    const newPrice = numerator / 100;
     item.price = Math.round(newPrice);
   });
 };`,
     senior: `const applyDiscount = (items, percent) => {
-  const factor = 1 - percent / 100;
   items.forEach(item => {
-    item.price = Math.round(item.price * factor);
+    item.price = Math.round(item.price * (100 - percent) / 100);
   });
 };`,
     hiddenTests: [

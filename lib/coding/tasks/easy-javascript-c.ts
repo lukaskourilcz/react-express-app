@@ -66,7 +66,7 @@ console.log(undo(changes), changes);
     tier: 2,
     focus: ['unshift', 'pop'],
     title: 'Recent searches',
-    prompt: 'A search box shows the latest searches first and remembers at most `max` of them. Write `addSearch(recent, term, max)`, which puts `term` at the front of `recent` with `unshift`, then removes searches from the end with `pop` until no more than `max` are left. It changes `recent` in place and returns it. `addSearch(["css", "html"], "js", 2)` gives `["js", "css"]`.',
+    prompt: "A search box shows the latest searches first and remembers at most `max` of them. Write `addSearch(recent, term, max)`, which puts `term` at the front of `recent` with `unshift`, then removes searches from the end with `pop` until no more than `max` are left. It changes `recent` in place and returns it. `addSearch([\"css\", \"html\"], \"js\", 2)` gives `[\"js\", \"css\"]`. `recent` is a mutable dense array of primitive strings; `term` is a primitive string and `max` is an integer from 0 through 10000. Keep duplicates and empty terms as separate searches, preserving their order. The result must be the same array, including when max is zero. Target: O(n) time, where n is the original number of searches; moving or removing one stored reference takes constant time.",
     starter: `const addSearch = (recent, term, max) => {
 
 };
@@ -95,6 +95,10 @@ console.log(addSearch(["css", "html"], "js", 2));
       { call: '(() => { const recent = ["a", "b", "c"]; addSearch(recent, "d", 3); return recent; })()', expected: ['d', 'a', 'b'], label: 'the list changes in place' },
       { call: 'addSearch([], "first", 3)', expected: ['first'], label: 'the first search', edge: true },
       { call: 'addSearch(["a", "b"], "c", 0)', expected: [], label: 'a max of 0 keeps nothing', edge: true },
+      { call: "addSearch([\"a\",\"a\",\"\"],\"a\",4)", expected: ["a", "a", "a", ""], label: "duplicates and empty search terms", edge: true },
+      { call: "(() => { const recent=[\"a\",\"b\"]; const result=addSearch(recent,\"\",0); return result===recent&&recent.length===0; })()", expected: true, label: "zero limit preserves the array identity", edge: true },
+      { call: "(() => { const recent=Array.from({length:128},(_,i)=>String(i)); const result=addSearch(recent,\"new\",1); return result===recent&&recent.length===1&&recent[0]===\"new\"; })()", expected: true, label: "remove every excess search", edge: true },
+      { call: "addSearch([],\"\",10000)", expected: [""], label: "empty term is a search", edge: true },
     ],
   },
   {
@@ -143,7 +147,7 @@ console.log(readCommand(["add", "milk", "eggs"]));
     tier: 1,
     focus: ['concat'],
     title: 'Add a header and a footer',
-    prompt: 'A table is an array of rows. Write `framed(rows, header, footer)`, returning a new array with `header` first, then every row, then `footer`, using `concat`. `framed(["a", "b"], "Name", "End")` gives `["Name", "a", "b", "End"]`. A row, the header or the footer can itself be an array of cells, and each one stays a single item. `rows` is not changed.',
+    prompt: "A table is an array of rows. Write `framed(rows, header, footer)`, returning a new array with `header` first, then every row, then `footer`, using `concat`. `framed([\"a\", \"b\"], \"Name\", \"End\")` gives `[\"Name\", \"a\", \"b\", \"End\"]`. A row, the header or the footer can itself be an array of cells, and each one stays a single item. `rows` is not changed. Inputs are ordinary dense arrays and data values, without custom concat behavior. Keep the original row, header and footer references; this is a shallow copy. Do not change any input, including nested values; frozen inputs are valid. Target: O(n) time, where n is the number of rows; copying a reference takes constant time.",
     starter: `const framed = (rows, header, footer) => {
 
 };
@@ -154,7 +158,7 @@ console.log(framed(["a", "b"], "Name", "End"));
     skeleton: `const framed = (rows, header, footer) => {
   return [header].concat(/* the rows, then the footer as one item */);
 };`,
-    hints: ['`concat` adds the items of any array you pass it, one level deep, and adds anything else as it is. Wrap the footer in brackets, `[footer]`, so a footer that is itself an array still arrives as one item.'],
+    hints: ["`concat` adds an array argument one level deep. How can you pass an array-valued footer as one item? The new outer array should still refer to the original rows."],
     approach: [
       'Start from an array holding only the header: `[header]`.',
       'Call `concat` on it with `rows` and `[footer]`. The rows are added one by one; the wrapped footer is added as one item.',
@@ -167,6 +171,8 @@ console.log(framed(["a", "b"], "Name", "End"));
       { call: 'framed([], "Name", "End")', expected: ['Name', 'End'], label: 'no rows', edge: true },
       { call: 'framed([["Ada", 36], ["Lin", 29]], ["name", "age"], ["total", 65])', expected: [['name', 'age'], ['Ada', 36], ['Lin', 29], ['total', 65]], label: 'rows, header and footer that are arrays each stay one item', edge: true },
       { call: '(() => { const rows = ["x"]; framed(rows, "H", "F"); return rows; })()', expected: ['x'], label: 'rows is not changed', edge: true },
+      { call: "(() => { const row={id:1},h=[\"H\"],f=[\"F\"]; const rows=Object.freeze([row,row]); const out=framed(rows,h,f); return Array.isArray(out)&&out!==rows&&out.length===4&&out[0]===h&&out[1]===row&&out[2]===row&&out[3]===f&&row.id===1&&h.length===1&&f.length===1; })()", expected: true, label: "shallow references, duplicate rows and frozen input", edge: true },
+      { call: "(() => { const rows=[]; return framed(rows,0,false)!==rows; })()", expected: true, label: "fresh result for no rows", edge: true },
     ],
   },
   {
@@ -177,7 +183,7 @@ console.log(framed(["a", "b"], "Name", "End"));
     tier: 1,
     focus: ['join'],
     title: 'One line of CSV',
-    prompt: 'Write `toCsvLine(values)`, returning the values as one line of text with a comma between each pair, using `join`. `toCsvLine(["Ada", 36, "London"])` gives `"Ada,36,London"`. A missing value must leave an empty cell, and `join` already writes `null` and `undefined` as empty text: `toCsvLine(["Ada", null, "London"])` gives `"Ada,,London"`. No values give an empty string.',
+    prompt: "Write `toCsvLine(values)`, returning the values as one line of text with a comma between each pair, using `join`. `toCsvLine([\"Ada\", 36, \"London\"])` gives `\"Ada,36,London\"`. A missing value must leave an empty cell, and `join` already writes `null` and `undefined` as empty text: `toCsvLine([\"Ada\", null, \"London\"])` gives `\"Ada,,London\"`. No values give an empty string. This is a restricted CSV exercise: values are primitive strings without commas, double quotes, carriage returns or newlines, finite numbers, booleans, null or undefined, in a dense array. Quoting and escaping arbitrary CSV fields are outside this task. Do not change the input; frozen arrays are valid. Target: O(n) time, where n is the number of cells plus the total length of their text in UTF-16 code units, using a linear join implementation.",
     starter: `const toCsvLine = values => {
 
 };
@@ -191,6 +197,7 @@ console.log(toCsvLine(["Ada", null, "London"]));
 };`,
     hints: ['`join` turns every item into text and puts the separator between them. It writes `null` and `undefined` as nothing at all, where `"" + null` would give the word `"null"`.'],
     approach: [
+      "A plain join is sufficient only because these fields exclude CSV delimiter, quote and line-break characters. A general CSV writer would need quoting and escaping.",
       'Call `join` on the values.',
       'Pass `","` as the separator. Without an argument, `join` uses a comma too, but saying so makes the format clear.',
       'Return the text. An empty array joins to an empty string, so it needs no special case.',
@@ -203,6 +210,10 @@ console.log(toCsvLine(["Ada", null, "London"]));
       { call: 'toCsvLine(["Ada", null, "London"])', expected: 'Ada,,London', label: 'null is an empty cell', edge: true },
       { call: 'toCsvLine([undefined, "x"])', expected: ',x', label: 'undefined is an empty cell too', edge: true },
       { call: 'toCsvLine([])', expected: '', label: 'no values', edge: true },
+      { call: "(() => { const values=[\"left\",null,\"right\"]; const line=toCsvLine(values); return line===\"left,,right\"&&values.length===3&&values[0]===\"left\"&&values[1]===null&&values[2]===\"right\"; })()", expected: true, label: "joining preserves input order and missing cells", edge: true },
+      { call: "toCsvLine(Object.freeze([\"\",false,0,undefined,\"🦈\"]))", expected: ",false,0,,🦈", label: "frozen mixed cells", edge: true },
+      { call: "toCsvLine([null,undefined,\"\"])", expected: ",,", label: "three empty cells", edge: true },
+      { call: "toCsvLine([\"  Ada  \", -1.5, true])", expected: "  Ada  ,-1.5,true", label: "keep spaces and primitive conversion", edge: true },
     ],
   },
 
@@ -215,7 +226,7 @@ console.log(toCsvLine(["Ada", null, "London"]));
     tier: 1,
     focus: ['slice'],
     title: 'The last few',
-    prompt: 'Write `lastFew(items, n)`, returning a new array of the last `n` items, using `slice` with a negative start. `lastFew(["a", "b", "c", "d"], 2)` gives `["c", "d"]`. Asking for more items than there are gives them all. Watch one edge: an `n` of 0 must give `[]`, but `slice(-0)` is the same as `slice(0)` and copies the whole array.',
+    prompt: "Write `lastFew(items, n)`, returning a new array of the last `n` items, using `slice` with a negative start. `lastFew([\"a\", \"b\", \"c\", \"d\"], 2)` gives `[\"c\", \"d\"]`. Asking for more items than there are gives them all. Watch one edge: an `n` of 0 must give `[]`, but `slice(-0)` is the same as `slice(0)` and copies the whole array. `items` is an ordinary dense array and `n` is an integer from 0 through 10000 (including numeric -0). Always create a fresh outer array, even for empty input; preserve the selected item references, order and repeats. Do not change the input or nested values; frozen arrays are valid. Target: O(n) time in the worst case, where n in this complexity statement is the number of input items, distinct from the requested count parameter. Copying each reference takes constant time.",
     starter: `const lastFew = (items, n) => {
 
 };
@@ -227,7 +238,7 @@ console.log(lastFew(["a", "b", "c", "d"], 2));
   if (/* n is 0 */) return [];
   return items.slice(/* a negative start */);
 };`,
-    hints: ['A negative start counts back from the end: `slice(-2)` copies the last two items. `-0` is the same number as `0`, so `slice(-0)` copies everything.'],
+    hints: ["A negative start counts back from the end. Decide what zero should return before using that start; then think about how copying differs from reusing the original array."],
     approach: [
       'When `n` is 0, return `[]`.',
       'Otherwise call `items.slice(-n)`. A start further back than the first item starts at the first item.',
@@ -241,6 +252,10 @@ console.log(lastFew(["a", "b", "c", "d"], 2));
       { call: 'lastFew([1, 2], 5)', expected: [1, 2], label: 'more than there are gives them all', edge: true },
       { call: 'lastFew([1, 2, 3], 0)', expected: [], label: 'none asked for', edge: true },
       { call: '(() => { const items = [1, 2, 3]; lastFew(items, 2); return items; })()', expected: [1, 2, 3], label: 'items is not changed', edge: true },
+      { call: "(() => { const item={id:1}; const items=Object.freeze([0,item,item]); const out=lastFew(items,2); return out!==items&&out.length===2&&out[0]===item&&out[1]===item&&item.id===1; })()", expected: true, label: "shallow copy with repeated references", edge: true },
+      { call: "(() => { const items=[]; const out=lastFew(items,3); return Array.isArray(out)&&out!==items&&out.length===0; })()", expected: true, label: "fresh empty result", edge: true },
+      { call: "lastFew([1,2],-0)", expected: [], label: "numeric negative zero", edge: true },
+      { call: "lastFew([1,2],10000)", expected: [1, 2], label: "maximum requested count", edge: true },
     ],
   },
 
@@ -253,7 +268,7 @@ console.log(lastFew(["a", "b", "c", "d"], 2));
     tier: 1,
     focus: ['do-while'],
     title: 'Count the digits',
-    prompt: 'Write `countDigits(n)` for a whole number `n` of 0 or more, returning how many digits it has. Use a `do...while` loop: count one digit, divide `n` by 10 and round down with `Math.floor`, and repeat while `n` is still above 0. `countDigits(2026)` gives 4. The number 0 has one digit, and a `do...while` gets that right because its body always runs once.',
+    prompt: "Write `countDigits(n)` for a whole number `n` of 0 or more, returning how many digits it has. Use a `do...while` loop: count one digit, divide `n` by 10 and round down with `Math.floor`, and repeat while `n` is still above 0. `countDigits(2026)` gives 4. The number 0 has one digit, and a `do...while` gets that right because its body always runs once. The input is an integer from 0 through Number.MAX_SAFE_INTEGER (9007199254740991); numeric -0 also counts as zero. Negative, fractional and non-finite inputs are outside this task. Target: O(log n) time for positive n, where n is the numeric value, counting each division and rounding as constant time; zero takes O(1). Near powers of ten, floating-point logarithms may round to the wrong side of the boundary, so repeated integer division is a reliable approach.",
     starter: `const countDigits = n => {
 
 };
@@ -282,6 +297,11 @@ console.log(countDigits(2026), countDigits(0));
       { call: 'countDigits(123456789)', expected: 9 },
       { call: 'countDigits(0)', expected: 1, label: 'zero has one digit', edge: true },
       { call: 'countDigits(1000)', expected: 4, label: 'zeros at the end count', edge: true },
+      { call: "countDigits(999999999999999)", expected: 15, label: "just below a large power of ten", edge: true },
+      { call: "countDigits(1000000000000000)", expected: 16, label: "large power of ten", edge: true },
+      { call: "countDigits(Number.MAX_SAFE_INTEGER)", expected: 16, label: "largest safe integer", edge: true },
+      { call: "countDigits(-0)", expected: 1, label: "negative zero has one digit", edge: true },
+      { call: "countDigits(87654321)", expected: 8, label: "an unseen ordinary input", edge: true },
     ],
   },
   {
@@ -292,7 +312,7 @@ console.log(countDigits(2026), countDigits(0));
     tier: 2,
     focus: ['do-while', 'push'],
     title: 'Read every page',
-    prompt: 'An API returns results one page at a time. `getPage(number)` returns `{ items, next }`: the page’s items, and the number of the page after it, or `null` on the last page. Write `readAll(getPage)`, which starts at page 1, collects every item in order and returns them in one array. You only learn whether there is another page after reading one, so use a `do...while` loop that stops once `next` is `null`, and add each page’s items with `push`.',
+    prompt: "An API returns results one page at a time. `getPage(number)` returns `{ items, next }`: the page’s items, and the number of the page after it, or `null` on the last page. Write `readAll(getPage)`, which starts at page 1, collects every item in order and returns them in one array. You only learn whether there is another page after reading one, so use a `do...while` loop that stops once `next` is `null`, and add each page’s items with `push`. This callback is synchronous, not a network request: getPage always returns a valid ordinary data object. Page 1 exists, and following next forms a finite acyclic chain of positive integer page numbers ending in null; the next number may skip or decrease. There are at most 10000 pages and 10000 item entries overall, with at most 1000 items per page. Each items array is ordinary and dense; empty pages do not end the chain. Call getPage exactly once for each page in chain order and never for null. Return a fresh shallow array, preserving item references, repeats and nested array values; do not change page objects, their arrays or stored values, and accept frozen pages. Target: O(n) time, where n is the page count plus total item count, assuming constant-time getPage lookup and reference copying.",
     starter: `const readAll = getPage => {
 
 };
@@ -310,7 +330,7 @@ console.log(readAll(number => pages[number]));
   } while (/* there is a next page */);
   return items;
 };`,
-    hints: ['A `do...while` loop reads the first page before it checks anything, which is right here: page 1 always exists. `items.push(...page.items)` adds every item of the page, each as its own element.'],
+    hints: ["Read the first page before checking its next link. Keep collecting even when a page has no items, and follow the returned number exactly; page numbers need not increase."],
     approach: [
       'Keep an empty result array and a page number that starts at 1.',
       'In the `do` block, fetch the page, push its items onto the result, and set the page number to `page.next`.',
@@ -324,6 +344,10 @@ console.log(readAll(number => pages[number]));
       { call: '(() => { const asked = []; readAll(n => { asked.push(n); return { items: [n], next: n < 3 ? n + 1 : null }; }); return asked; })()', expected: [1, 2, 3], label: 'each page is asked for once, starting at 1' },
       { call: 'readAll(() => ({ items: [], next: null }))', expected: [], label: 'the first page is empty', edge: true },
       { call: 'readAll(n => ({ 1: { items: ["x"], next: 5 }, 5: { items: ["y"], next: null } })[n])', expected: ['x', 'y'], label: 'next can skip page numbers', edge: true },
+      { call: "(() => {const asked=[],pages={1:{items:[\"a\"],next:7},7:{items:[],next:3},3:{items:[\"b\"],next:null}};const out=readAll(n=>{asked.push(n);return pages[n];});return [out,asked];})()", expected: [["a", "b"], [1, 7, 3]], label: "empty middle page and decreasing next number", edge: true },
+      { call: "(() => {const value={id:1},nested=[1,2],items=Object.freeze([value,nested,value]),page=Object.freeze({items,next:null});const out=readAll(()=>page);return out!==items&&out.length===3&&out[0]===value&&out[1]===nested&&out[2]===value&&value.id===1&&nested.length===2;})()", expected: true, label: "frozen page shallow references and nested array leaf", edge: true },
+      { call: "(() => {const items=[\"b\",\"a\"],page={items,next:null};readAll(()=>page);return page.items===items&&items[0]===\"b\"&&items[1]===\"a\";})()", expected: true, label: "page items stay unchanged", edge: true },
+      { call: "(() => {const items=[],page={items,next:null};const first=readAll(()=>page),second=readAll(()=>page);return first!==items&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty collections", edge: true },
     ],
   },
 
@@ -336,7 +360,7 @@ console.log(readAll(number => pages[number]));
     tier: 1,
     focus: ['forEach'],
     title: 'Even places and odd places',
-    prompt: 'Write `placeTotals(numbers)`, returning `{ even, odd }`: the sum of the numbers at even positions (0, 2, 4 and so on) and the sum of those at odd positions (1, 3, 5 and so on). Use `forEach`, whose callback receives each number’s index as its second argument. `placeTotals([5, 1, 4, 2])` gives `{ even: 9, odd: 3 }`. The position decides, not whether the number is even. An empty array gives `{ even: 0, odd: 0 }`.',
+    prompt: "Write `placeTotals(numbers)`, returning `{ even, odd }`: the sum of the numbers at even positions (0, 2, 4 and so on) and the sum of those at odd positions (1, 3, 5 and so on). Use `forEach`, whose callback receives each number’s index as its second argument. `placeTotals([5, 1, 4, 2])` gives `{ even: 9, odd: 3 }`. The position decides, not whether the number is even. An empty array gives `{ even: 0, odd: 0 }`. The input is an ordinary dense array of at most 10000 integers between -1000000 and 1000000; each sum remains exactly representable as a Number. Do not change the array; frozen inputs are valid. Return a fresh totals object on every call. Target: O(n) time, where n is the number of array entries and addition/index arithmetic take constant time.",
     starter: `const placeTotals = numbers => {
 
 };
@@ -351,7 +375,7 @@ console.log(placeTotals([5, 1, 4, 2]));
   });
   return totals;
 };`,
-    hints: ['`forEach` calls your function with the value, then its index, then the whole array. `index % 2 === 0` is true at positions 0, 2, 4 and so on.'],
+    hints: ["Keep separate totals for the two index groups. The callback receives value before index; decide which of those two arguments should determine the group."],
     approach: [
       'Start with `{ even: 0, odd: 0 }`.',
       'Call `forEach` with a callback that takes `(number, index)`.',
@@ -365,6 +389,10 @@ console.log(placeTotals([5, 1, 4, 2]));
       { call: 'placeTotals([2, 3, 2, 3])', expected: { even: 4, odd: 6 }, label: 'the position decides, not the number' },
       { call: 'placeTotals([7])', expected: { even: 7, odd: 0 }, label: 'one number sits at position 0', edge: true },
       { call: 'placeTotals([])', expected: { even: 0, odd: 0 }, label: 'no numbers', edge: true },
+      { call: "(() => {const ns=[5,2,-7,3];const out=placeTotals(ns);return out.even===-2&&out.odd===5&&ns.length===4&&ns[0]===5&&ns[1]===2&&ns[2]===-7&&ns[3]===3;})()", expected: true, label: "preserve signed input order", edge: true },
+      { call: "placeTotals(Object.freeze([-1,0,2,-3,4]))", expected: {"even": 5, "odd": -3}, label: "frozen signed integers", edge: true },
+      { call: "(() => {const first=placeTotals([1]),second=placeTotals([2]);return first!==second&&first.even===1&&first.odd===0&&second.even===2;})()", expected: true, label: "independent results across calls", edge: true },
+      { call: "(() => {const out=placeTotals(Array(10000).fill(1000000));return out.even===5000000000&&out.odd===5000000000;})()", expected: true, label: "exact upper-bound sums", edge: true },
     ],
   },
 
@@ -500,7 +528,7 @@ console.log(isMirror([1, 2, 3], [3, 2, 1]));
     tier: 1,
     focus: ['flat'],
     title: 'Flatten every level',
-    prompt: 'Write `flattenAll(list)`, returning a new array with every level of nesting removed, however deep it goes. `flat()` removes one level; pass it `Infinity` to remove them all. `flattenAll([1, [2, [3, [4]]]])` gives `[1, 2, 3, 4]`. Empty inner arrays disappear, and `list` is not changed.',
+    prompt: "Write `flattenAll(list)`, returning a fresh array with all nested array levels removed in left-to-right order. `flattenAll([1, [2, [3, [4]]]])` gives `[1, 2, 3, 4]`. Use flat with an unbounded depth setting; empty nested arrays add nothing. Inputs are finite ordinary dense arrays, with no cyclic arrays, at most 100 nesting levels and at most 10000 visited array entries. If an array is referenced twice, visit that branch twice. Non-array values, including objects, null and undefined, stay as single values with their original references. Do not change any input array or nested value; frozen arrays are valid. Always return a new array, including for already flat or empty input. Target: O(n) time, where n counts visited array entries and array nodes by occurrence, assuming constant-time reference copying.",
     starter: `const flattenAll = list => {
 
 };
@@ -511,12 +539,8 @@ console.log(flattenAll([1, [2, [3, [4]]]]));
     skeleton: `const flattenAll = list => {
   return list.flat(/* a depth no nesting can exceed */);
 };`,
-    hints: ['`flat(depth)` removes `depth` levels of nesting and returns a new array. `Infinity` is a number, so `flat(Infinity)` keeps going until nothing is nested.'],
-    approach: [
-      'Call `flat` on the list.',
-      'Pass `Infinity` as the depth, so no level of nesting is left.',
-      'Return the new array. `flat` never changes the array it is called on.',
-    ],
+    hints: ["The depth argument controls how many nested array levels flat removes. Choose a value that does not stop at a fixed finite depth; remember that non-array objects are leaves, not structures to traverse."],
+    approach: ["Call flat on the original list with Infinity as its depth. This input domain is finite and acyclic, so all array branches eventually end.", "Return its fresh result; flat copies leaf references without traversing non-array objects. It preserves order and repeated occurrences.", "Avoid repeatedly flattening one level at a time: that can rescan a growing result for each nesting level. The single traversal target counts every visited array entry and node."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -525,6 +549,9 @@ console.log(flattenAll([1, [2, [3, [4]]]]));
       { call: 'flattenAll([1, 2, 3])', expected: [1, 2, 3], label: 'nothing to flatten', edge: true },
       { call: 'flattenAll([[], [[]]])', expected: [], label: 'empty arrays disappear', edge: true },
       { call: '(() => { const list = [1, [2]]; flattenAll(list); return list; })()', expected: [1, [2]], label: 'list is not changed', edge: true },
+      { call: "(() => {let list=[\"deep\"];for(let i=0;i<32;i++)list=[list];return flattenAll(list);})()", expected: ["deep"], label: "more than six nesting levels", edge: true },
+      { call: "(() => {const value={id:1},inner=Object.freeze([value,null,undefined]),list=Object.freeze([inner,inner]);const out=flattenAll(list);return out!==list&&out!==inner&&out.length===6&&out[0]===value&&out[1]===null&&out[2]===undefined&&out[3]===value&&value.id===1;})()", expected: true, label: "frozen repeated branches preserve non-array references", edge: true },
+      { call: "(() => {const list=[];const first=flattenAll(list),second=flattenAll(list);return first!==list&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty arrays", edge: true },
     ],
   },
   {

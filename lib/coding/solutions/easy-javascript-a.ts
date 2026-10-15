@@ -51,8 +51,8 @@ const allTags = posts => posts.flatMap(({ tags }) => tags);`,
   return menu.flat(2);
 };`,
     junior: `const menuItems = menu => {
-  const groups = menu.flat();
-  const dishes = groups.flat();
+  const depth = 2;
+  const dishes = menu.flat(depth);
   return dishes;
 };`,
     senior: `const menuItems = menu => menu.flat(2);`,
@@ -83,12 +83,7 @@ const allTags = posts => posts.flatMap(({ tags }) => tags);`,
   }
   return matching;
 };`,
-    senior: `const keysWithValue = (object, value) => {
-  const keys = [];
-  // for...in also walks inherited keys; the task is about the object's own.
-  for (const key in object) if (Object.hasOwn(object, key) && object[key] === value) keys.push(key);
-  return keys;
-};`,
+    senior: "const keysWithValue = (object, value) => {\n  const keys = [];\n  // This exercise includes inherited enumerable string keys.\n  for (const key in object) if (object[key] === value) keys.push(key);\n  return keys;\n};",
     hiddenTests: [
       { call: 'keysWithValue({ x: true, y: false, z: true }, true)', expected: ['x', 'z'] },
       { call: 'keysWithValue({ a: null, b: undefined }, null)', expected: ['a'] },
@@ -96,27 +91,9 @@ const allTags = posts => posts.flatMap(({ tags }) => tags);`,
     ],
   },
   'js-easy2-invert-object': {
-    solution: `const invert = object => {
-  const inverted = {};
-  for (const key in object) {
-    // The value becomes the key; a later key with the same value overwrites.
-    inverted[object[key]] = key;
-  }
-  return inverted;
-};`,
-    junior: `const invert = object => {
-  const result = {};
-  for (const key in object) {
-    const value = object[key];
-    result[value] = key;
-  }
-  return result;
-};`,
-    senior: `const invert = object => {
-  const inverted = {};
-  for (const key in object) if (Object.hasOwn(object, key)) inverted[object[key]] = key;
-  return inverted;
-};`,
+    solution: "const invert = object => {\n  // A null-prototype dictionary treats __proto__ as an ordinary key.\n  const inverted = Object.create(null);\n  for (const key in object) {\n    if (Object.hasOwn(object, key)) inverted[object[key]] = key;\n  }\n  return inverted;\n};",
+    junior: "const invert = object => {\n  const result = Object.create(null);\n  for (const key in object) {\n    if (!Object.hasOwn(object, key)) continue;\n    const value = object[key];\n    result[value] = key;\n  }\n  return result;\n};",
+    senior: "const invert = object => Object.fromEntries(Object.entries(object).map(([key, value]) => [value, key]));",
     hiddenTests: [
       { call: 'invert({ one: 1, two: 2 })', expected: { 1: 'one', 2: 'two' } },
       { call: 'invert({ k: "v" })', expected: { v: 'k' } },

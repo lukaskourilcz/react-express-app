@@ -180,7 +180,7 @@ console.log(parseQuery("page=2&sort=new"));
     tier: 1,
     focus: ['concat'],
     title: 'Add to a playlist',
-    prompt: 'Write `addSongs(playlist, songs)`, returning a new playlist with `songs` added at the end, using `concat`. `songs` can be an array of titles or a single title: `addSongs(["Intro"], ["Wave", "Tide"])` gives `["Intro", "Wave", "Tide"]`, and `addSongs(["Intro"], "Wave")` gives `["Intro", "Wave"]`. The original playlist is not changed.',
+    prompt: "Write `addSongs(playlist, songs)`, returning a new playlist with `songs` added at the end, using `concat`. `songs` can be an array of titles or a single title: `addSongs([\"Intro\"], [\"Wave\", \"Tide\"])` gives `[\"Intro\", \"Wave\", \"Tide\"]`, and `addSongs([\"Intro\"], \"Wave\")` gives `[\"Intro\", \"Wave\"]`. The original playlist is not changed. Both arrays are ordinary dense arrays of primitive string titles; empty titles and repeats are valid and keep their positions. Do not change either input; frozen arrays are valid. Return a fresh array even when nothing is added. Target: O(n) time, where n is the total number of titles in the playlist and songs (one for a single title); copying a title reference takes constant time.",
     starter: `const addSongs = (playlist, songs) => {
 
 };
@@ -204,6 +204,10 @@ console.log(addSongs(["Intro"], ["Wave", "Tide"]));
       { call: 'addSongs(["Intro"], "Wave")', expected: ['Intro', 'Wave'], label: 'a single title' },
       { call: 'addSongs([], [])', expected: [], label: 'nothing to add to nothing', edge: true },
       { call: '(() => { const list = ["Intro"]; addSongs(list, ["Wave"]); return list; })()', expected: ['Intro'], label: 'the original playlist is unchanged', edge: true },
+      { call: "addSongs([\"a\",\"a\",\"\"], [\"a\",\"\"])", expected: ["a", "a", "", "a", ""], label: "keep duplicates and empty titles", edge: true },
+      { call: "(() => { const list=Object.freeze([\"a\"]), songs=Object.freeze([\"b\"]); const out=addSongs(list,songs); return Array.isArray(out)&&out!==list&&out!==songs&&out.join(\"|\")===\"a|b\"&&list[0]===\"a\"&&songs[0]===\"b\"; })()", expected: true, label: "frozen source arrays", edge: true },
+      { call: "(() => { const songs=[\"b\",\"c\"]; addSongs([\"a\"],songs); return songs; })()", expected: ["b", "c"], label: "songs is unchanged", edge: true },
+      { call: "(() => { const list=[],songs=[]; const out=addSongs(list,songs); return out!==list&&out!==songs&&out.length===0; })()", expected: true, label: "fresh empty playlist", edge: true },
     ],
   },
   {
@@ -214,7 +218,7 @@ console.log(addSongs(["Intro"], ["Wave", "Tide"]));
     tier: 2,
     focus: ['join', 'slice'],
     title: 'A list in words',
-    prompt: 'Write `inWords(items)`, joining a list of words the way a sentence does: commas between the items, and `and` before the last one. Use `slice` and `join`. `inWords(["tea", "coffee", "juice"])` gives `"tea, coffee and juice"`, and `inWords(["salt", "pepper"])` gives `"salt and pepper"`. A single item comes back on its own, and an empty list gives an empty string. Leave `items` as it was.',
+    prompt: "Write `inWords(items)`, joining a list of words the way a sentence does: commas between the items, and `and` before the last one. Use `slice` and `join`. `inWords([\"tea\", \"coffee\", \"juice\"])` gives `\"tea, coffee and juice\"`, and `inWords([\"salt\", \"pepper\"])` gives `\"salt and pepper\"`. A single item comes back on its own, and an empty list gives an empty string. Leave `items` as it was. `items` is an ordinary dense array of primitive strings. Preserve each string exactly, including spaces, empty strings, punctuation and repetitions; do not filter, trim or parse it. Use no comma immediately before the final `and`. Frozen arrays are valid. Target: O(n) time, where n is the number of items plus their total UTF-16 length, assuming linear slice and join operations.",
     starter: `const inWords = items => {
 
 };
@@ -228,7 +232,7 @@ console.log(inWords(["tea", "coffee", "juice"]));
   const last = items[items.length - 1];
   return /* allButLast joined with ", ", then " and ", then last */;
 };`,
-    hints: ['`items.slice(0, -1)` copies every item except the last. `join(", ")` puts a comma and a space between the items and nothing after the final one.'],
+    hints: ["Separate the zero- and one-item cases from longer lists. For a longer list, join the prefix with comma-space and keep the last item for the final conjunction."],
     approach: [
       'Handle short lists first. With fewer than two items, `items.join("")` already gives `""` or the one item.',
       'Take every item but the last with `slice(0, -1)` and join them with `", "`.',
@@ -242,6 +246,10 @@ console.log(inWords(["tea", "coffee", "juice"]));
       { call: 'inWords(["a", "b", "c", "d"])', expected: 'a, b, c and d' },
       { call: 'inWords(["water"])', expected: 'water', label: 'one item comes back on its own', edge: true },
       { call: 'inWords([])', expected: '', label: 'no items', edge: true },
+      { call: "inWords([\"\",\"x\",\"\"])", expected: ", x and ", label: "preserve empty strings", edge: true },
+      { call: "inWords([\"a, b\",\"c and d\",\" e \"])", expected: "a, b, c and d and  e ", label: "literal punctuation and spaces", edge: true },
+      { call: "inWords(Object.freeze([\"a\",\"a\",\"a\"]))", expected: "a, a and a", label: "frozen repeated words", edge: true },
+      { call: "inWords([\"\"])", expected: "", label: "one empty string", edge: true },
     ],
   },
 
@@ -254,7 +262,7 @@ console.log(inWords(["tea", "coffee", "juice"]));
     tier: 1,
     focus: ['for-in', 'objects'],
     title: 'Fill in the defaults',
-    prompt: 'Write `withDefaults(settings, defaults)`, returning a new object with every key of `settings`, plus each key of `defaults` that `settings` does not have. Loop over `defaults` with `for…in`. `withDefaults({ theme: "dark" }, { theme: "light", size: 12 })` gives `{ theme: "dark", size: 12 }`. A setting of `false`, `0` or `""` is still a setting and is kept. Neither input is changed.',
+    prompt: "Write `withDefaults(settings, defaults)`, returning a fresh shallow dictionary of own enumerable string properties. Keep every such setting; copy a default only when settings has no own enumerable key with that name. Loop over defaults with `for...in`, ignoring inherited keys. `withDefaults({ theme: \"dark\" }, { theme: \"light\", size: 12 })` gives `{ theme: \"dark\", size: 12 }`. Existing false, 0, empty string, null and undefined values are all kept. Inputs are ordinary data objects with string keys and data values, without getters or proxies; inherited and non-enumerable keys are ignored, and null-prototype or frozen objects are valid. Keep original value references and do not change either input or nested values. All string names, including `__proto__` and `toString`, must work as own data keys; the result may have a null prototype. Target: O(n) time, where n counts property names and prototype objects inspected across both inputs; assume bounded-length names and average constant-time dictionary operations.",
     starter: `const withDefaults = (settings, defaults) => {
 
 };
@@ -262,21 +270,9 @@ console.log(inWords(["tea", "coffee", "juice"]));
 // Scratch pad. Change this and press Run.
 console.log(withDefaults({ theme: "dark" }, { theme: "light", size: 12 }));
 `,
-    skeleton: `const withDefaults = (settings, defaults) => {
-  const result = { ...settings };
-
-  for (const key in defaults) {
-    // copy defaults[key] across only when result does not have key yet
-  }
-
-  return result;
-};`,
-    hints: ['`key in result` is `true` whenever the key exists, whatever its value. Checking the value instead, as `result[key] || defaults[key]` does, would replace a `false` or a `0`.'],
-    approach: [
-      'Start from a copy of `settings`, so the original object never changes.',
-      'Loop over the keys of `defaults` with `for…in`.',
-      'When the copy does not have the key, copy the default across. Return the copy.',
-    ],
+    skeleton: "const withDefaults = (settings, defaults) => {\n  const result = Object.create(null);\n  // copy own enumerable settings\n  for (const key in defaults) {\n    // copy each own default only if result has no own key with that name\n  }\n  return result;\n};",
+    hints: ["A missing key differs from a key whose value is undefined or false. Check ownership instead of truthiness or the in operator; a dictionary without a prototype also handles names such as __proto__."],
+    approach: ["Create a null-prototype dictionary, then copy own enumerable string settings with their original value references.", "Visit defaults with for...in and ignore inherited keys with Object.hasOwn.", "Copy a default only if the result has no own key with that name. This preserves an explicitly stored undefined value and avoids inherited names blocking defaults. Return the new dictionary."],
     verify: 'tests',
     estimatedMinutes: 5,
     tests: [
@@ -285,6 +281,11 @@ console.log(withDefaults({ theme: "dark" }, { theme: "light", size: 12 }));
       { call: 'withDefaults({ sound: false, volume: 0 }, { sound: true, volume: 5 })', expected: { sound: false, volume: 0 }, label: 'false and 0 are kept', edge: true },
       { call: 'withDefaults({ extra: "x" }, {})', expected: { extra: 'x' }, label: 'a setting with no default stays', edge: true },
       { call: '(() => { const settings = { a: 1 }; withDefaults(settings, { b: 2 }); return settings; })()', expected: { a: 1 }, label: 'settings is not changed', edge: true },
+      { call: "(() => { const out=withDefaults({a:undefined,b:null,c:\"\"},{a:1,b:2,c:3});return Object.hasOwn(out,\"a\")&&out.a===undefined&&out.b===null&&out.c===\"\"; })()", expected: true, label: "own undefined null and empty settings remain", edge: true },
+      { call: "(() => { const out=withDefaults({},JSON.parse(\"{\\\"__proto__\\\":7,\\\"constructor\\\":8,\\\"toString\\\":9}\"));return Object.hasOwn(out,\"__proto__\")&&out.__proto__===7&&Object.hasOwn(out,\"constructor\")&&out.constructor===8&&Object.hasOwn(out,\"toString\")&&out.toString===9; })()", expected: true, label: "default names cannot be blocked by Object.prototype", edge: true },
+      { call: "(() => { const s=Object.create({inherited:1}),d=Object.create({inheritedDefault:2});s.a=3;d.b=4;Object.defineProperty(s,\"hidden\",{value:5});Object.defineProperty(d,\"secret\",{value:6});return withDefaults(s,d); })()", expected: {"a": 3, "b": 4}, label: "only own enumerable input keys", edge: true },
+      { call: "(() => { const item={id:1};const s=Object.freeze(Object.assign(Object.create(null),{a:item})),d=Object.freeze({b:item,a:0});const out=withDefaults(s,d);return out!==s&&out!==d&&out.a===item&&out.b===item&&item.id===1; })()", expected: true, label: "shallow identity and frozen inputs", edge: true },
+      { call: "(() => { const s={},d={};const out=withDefaults(s,d);return out!==s&&out!==d&&Object.keys(out).length===0; })()", expected: true, label: "fresh empty dictionary", edge: true },
     ],
   },
   {
@@ -295,7 +296,7 @@ console.log(withDefaults({ theme: "dark" }, { theme: "light", size: 12 }));
     tier: 2,
     focus: ['for-in', 'objects'],
     title: 'Count values by type',
-    prompt: 'Write `countTypes(object)`, returning an object that counts the values of `object` by what `typeof` says about them, visiting the keys with `for…in`. `countTypes({ a: 1, b: "x", c: 2 })` gives `{ number: 2, string: 1 }`. `typeof` answers `"object"` for arrays and for `null` too, so they count there. An empty object gives `{}`.',
+    prompt: "Write `countTypes(object)`, returning an object that counts the values of `object` by what `typeof` says about them, visiting the keys with `for…in`. `countTypes({ a: 1, b: \"x\", c: 2 })` gives `{ number: 2, string: 1 }`. `typeof` answers `\"object\"` for arrays and for `null` too, so they count there. An empty object gives `{}`. Deliberately include inherited enumerable string keys, as for...in does, with nearer properties shadowing the same inherited name. Exclude non-enumerable and symbol-keyed properties. Count exactly the eight JavaScript typeof labels; symbol-valued and bigint-valued properties count as symbol and bigint, and NaN counts as number. Inputs are ordinary data objects without getters or proxies, including frozen or null-prototype objects. Do not change input values or prototypes. Target: O(n) time, where n counts property names and prototype objects inspected, assuming constant-time typeof, indexing and count updates.",
     starter: `const countTypes = object => {
 
 };
@@ -313,12 +314,8 @@ console.log(countTypes({ a: 1, b: "x", c: 2 }));
 
   return counts;
 };`,
-    hints: ['`counts[type]` is `undefined` the first time a type turns up. `(counts[type] ?? 0) + 1` starts it at 1.'],
-    approach: [
-      'Create an empty object for the counts.',
-      'Loop over the keys with `for…in` and read the type of each value with `typeof object[key]`.',
-      'Use the type as a key in the counts and add one to it, starting from 0 when it is missing.',
-    ],
+    hints: ["Use typeof for the group name, even for null and arrays. When you see a group for the first time its count is missing; decide how to turn that missing count into the first occurrence."],
+    approach: ["Create an empty object for counts. A typeof label is always one of eight fixed strings.", "Visit enumerable string keys with for...in, including inherited keys in this exercise. Read typeof object[key] without JSON conversion or custom null/array labels.", "Increment the matching group from zero and return the counts. If an application needs own properties only, add an ownership check; that would change this task."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -327,6 +324,10 @@ console.log(countTypes({ a: 1, b: "x", c: 2 }));
       { call: 'countTypes({ f: () => 1, g: "x" })', expected: { function: 1, string: 1 } },
       { call: 'countTypes({ u: undefined })', expected: { undefined: 1 }, label: 'undefined is its own type', edge: true },
       { call: 'countTypes({})', expected: {}, label: 'an empty object', edge: true },
+      { call: "(() => {const o=Object.create({x:true,z:\"s\"});o.x=0;o.a=null;return countTypes(o);})()", expected: {"number": 1, "object": 1, "string": 1}, label: "inherited values and own shadowing", edge: true },
+      { call: "countTypes({a:Symbol(\"x\"),b:1n,c:NaN,d:()=>0,e:undefined,f:false,g:\"\",h:null})", expected: {"symbol": 1, "bigint": 1, "number": 1, "function": 1, "undefined": 1, "boolean": 1, "string": 1, "object": 1}, label: "all eight typeof labels", edge: true },
+      { call: "(() => {const o=Object.assign(Object.create(null),{a:1});Object.defineProperty(o,\"hidden\",{value:true});o[Symbol(\"s\")]=true;return countTypes(Object.freeze(o));})()", expected: {"number": 1}, label: "frozen null-prototype input excludes hidden and symbol keys", edge: true },
+      { call: "(() => {const o={a:1};countTypes(o);return o.a===1&&Object.keys(o).length===1;})()", expected: true, label: "do not alter values", edge: true },
     ],
   },
 
@@ -339,7 +340,7 @@ console.log(countTypes({ a: 1, b: "x", c: 2 }));
     tier: 1,
     focus: ['nested-loops'],
     title: 'Column totals',
-    prompt: 'A grid is an array of rows, and every row holds the same number of numbers. Write `columnTotals(grid)`, returning the total of each column, left to right. Use a loop over the columns with a loop over the rows inside it. `columnTotals([[1, 2], [3, 4]])` gives `[4, 6]`. An empty grid gives `[]`.',
+    prompt: "A grid is an array of rows, and every row holds the same number of numbers. Write `columnTotals(grid)`, returning the total of each column, left to right. Use a loop over the columns with a loop over the rows inside it. `columnTotals([[1, 2], [3, 4]])` gives `[4, 6]`. An empty grid gives `[]`. The grid and rows are ordinary dense arrays, with 0 to 100 rows and 0 to 100 columns. All entries are integers between -1000000 and 1000000, so sums remain exact Numbers. Empty rows, such as [[], []], give []. Return a fresh array even for a single row; do not change the grid or rows, and accept frozen input. Target: O(n²) time, where n is the larger of the row and column counts: the nested traversal visits r * c cells, at most n²; indexing and integer addition take constant time.",
     starter: `const columnTotals = grid => {
 
 };
@@ -363,6 +364,7 @@ console.log(columnTotals([[1, 2], [3, 4]]));
 };`,
     hints: ['The number of columns is the length of any row, so read it from `grid[0]`. The outer loop picks a column and the inner loop walks down it with `grid[row][column]`.'],
     approach: [
+      "For r rows and c columns the loop visits r * c entries. This is at most n² when n is the larger dimension, not evidence that every pair of nested loops is quadratic in total input cells.",
       'Return `[]` for an empty grid, since it has no first row to count columns from.',
       'Loop over the column indexes, from 0 up to the length of the first row.',
       'For each column, loop over every row and add `grid[row][column]` to a sum. Push the sum when the inner loop ends.',
@@ -375,6 +377,11 @@ console.log(columnTotals([[1, 2], [3, 4]]));
       { call: 'columnTotals([[1, 2, 3]])', expected: [1, 2, 3], label: 'one row', edge: true },
       { call: 'columnTotals([[-1, 1], [1, -1]])', expected: [0, 0], label: 'negative numbers', edge: true },
       { call: 'columnTotals([])', expected: [], label: 'an empty grid', edge: true },
+      { call: "columnTotals([[],[]])", expected: [], label: "zero columns", edge: true },
+      { call: "(() => {const row=Object.freeze([2,-3,4]);const grid=Object.freeze([row]);const out=columnTotals(grid);return out!==row&&out!==grid&&out.length===3&&out[0]===2&&out[1]===-3&&out[2]===4;})()", expected: true, label: "fresh single-row result and frozen input", edge: true },
+      { call: "(() => {const row=[3,1,2],grid=[row];columnTotals(grid);return grid[0]===row&&row[0]===3&&row[1]===1&&row[2]===2;})()", expected: true, label: "preserve single-row identity and order", edge: true },
+      { call: "columnTotals([[1,2,3],[4,5,6]])", expected: [5, 7, 9], label: "rectangular grid", edge: true },
+      { call: "(() => {const out=columnTotals(Array.from({length:100},()=>[1000000,-1000000]));return out.length===2&&out[0]===100000000&&out[1]===-100000000;})()", expected: true, label: "bounded exact sums", edge: true },
     ],
   },
   {
@@ -385,7 +392,7 @@ console.log(columnTotals([[1, 2], [3, 4]]));
     tier: 1,
     focus: ['nested-loops'],
     title: 'Every size in every colour',
-    prompt: 'Write `combinations(sizes, colours)`, returning one label for every size paired with every colour, written as `"size colour"`. Loop over the sizes, and inside that loop, over the colours. `combinations(["S", "M"], ["red", "blue"])` gives `["S red", "S blue", "M red", "M blue"]`. When either list is empty there are no combinations.',
+    prompt: "Write `combinations(sizes, colours)`, returning one label for every size paired with every colour, written as `\"size colour\"`. Loop over the sizes, and inside that loop, over the colours. `combinations([\"S\", \"M\"], [\"red\", \"blue\"])` gives `[\"S red\", \"S blue\", \"M red\", \"M blue\"]`. When either list is empty there are no combinations. Both inputs are ordinary dense arrays of at most 100 primitive strings each, with each string at most 128 UTF-16 code units. Empty strings, spaces and duplicates are valid: preserve them exactly and insert one extra space between the two strings. Keep size-first order and return a fresh array. Do not change either input; frozen arrays are valid. Target: O(n²) time, where n is the larger input length; there are sizes.length * colours.length labels, at most n², and the bounded label lengths make construction constant work per pair.",
     starter: `const combinations = (sizes, colours) => {
 
 };
@@ -406,6 +413,7 @@ console.log(combinations(["S", "M"], ["red", "blue"]));
 };`,
     hints: ['The inner loop runs all the way through on every turn of the outer loop, so each size meets every colour before the next size starts.'],
     approach: [
+      "The exact pair count is the product of the two lengths. Using n for the larger length gives the O(n²) upper bound even when the lists have different sizes.",
       'Start an empty array for the labels.',
       'Loop over the sizes, and inside that loop, loop over the colours.',
       'In the inner loop, push `size + " " + colour`. With an empty list one of the loops never runs its body, so the result stays empty.',
@@ -418,6 +426,11 @@ console.log(combinations(["S", "M"], ["red", "blue"]));
       { call: 'combinations(["S", "M", "L"], ["grey"])', expected: ['S grey', 'M grey', 'L grey'] },
       { call: 'combinations([], ["red"])', expected: [], label: 'no sizes', edge: true },
       { call: 'combinations(["S"], [])', expected: [], label: 'no colours', edge: true },
+      { call: "combinations([\"S\",\"S\"],[\"red\",\"red\"])", expected: ["S red", "S red", "S red", "S red"], label: "duplicate pairs remain", edge: true },
+      { call: "combinations([\"\",\" S \"],[\"\",\" blue \"])", expected: [" ", "  blue ", " S  ", " S   blue "], label: "preserve empty strings and spaces", edge: true },
+      { call: "(() => {const s=[\"M\",\"S\"],c=[\"red\",\"blue\"];const out=combinations(s,c);return out.length===4&&s[0]===\"M\"&&s[1]===\"S\"&&c[0]===\"red\"&&c[1]===\"blue\";})()", expected: true, label: "do not mutate either input", edge: true },
+      { call: "combinations(Object.freeze([\"M\"]),Object.freeze([\"black\",\"white\"]))", expected: ["M black", "M white"], label: "frozen inputs", edge: true },
+      { call: "(() => {const s=[],c=[];const out=combinations(s,c);return out!==s&&out!==c&&out.length===0;})()", expected: true, label: "fresh empty result", edge: true },
     ],
   },
 
@@ -468,7 +481,7 @@ console.log(pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }]));
     tier: 1,
     focus: ['forEach', 'objects'],
     title: 'Discount every item',
-    prompt: 'Each item is `{ name, price }`, with the price in cents. Write `applyDiscount(items, percent)`, which lowers every item’s price by `percent` per cent in place, using `forEach`, and returns nothing. Round each new price to a whole number of cents with `Math.round`. After `applyDiscount(items, 10)`, an item priced 200 costs 180. A discount of 0 leaves every price as it was.',
+    prompt: "Each item is `{ name, price }`, with the price in cents. Write `applyDiscount(items, percent)`, which lowers every item’s price by `percent` per cent in place, using `forEach`, and returns nothing. Round each new price to a whole number of cents with `Math.round`. After `applyDiscount(items, 10)`, an item priced 200 costs 180. A discount of 0 leaves every price as it was. `percent` is an integer from 0 through 100. `items` is an ordinary dense array of distinct mutable data objects with own writable integer prices from 0 through 1000000 cents; each also has a string name and may have other properties. Preserve array order and the same item objects, names and other values; only their prices change. The outer array may be frozen because its entries need no replacement. Calculate each price as Math.round(oldPrice * (100 - percent) / 100), multiplying before dividing; this bounded integer product avoids half-cent errors from an approximate precomputed factor. Target: O(n) time, where n is the number of items and bounded price arithmetic takes constant time.",
     starter: `const applyDiscount = (items, percent) => {
 
 };
@@ -485,6 +498,7 @@ console.log(basket);
 };`,
     hints: ['`forEach` calls your function once per item and returns `undefined`, so it suits work that changes things rather than work that builds a new array. Assign to `item.price` inside the callback.'],
     approach: [
+      "Keep the multiplication before division. Rewriting the formula as price * (1 - percent / 100) can land just below a half-cent boundary in binary floating point and round to the wrong cent.",
       'Call `forEach` on the items.',
       'In the callback, work out `item.price * (100 - percent) / 100`, round it with `Math.round`, and assign it back to `item.price`.',
       'Return nothing. The caller already holds the items and sees the new prices.',
@@ -497,6 +511,10 @@ console.log(basket);
       { call: '(() => { const items = [{ name: "pen", price: 120 }]; applyDiscount(items, 0); return items; })()', expected: [{ name: 'pen', price: 120 }], label: 'no discount', edge: true },
       { call: 'applyDiscount([{ name: "cup", price: 100 }], 20)', expected: undefined, label: 'it returns nothing', edge: true },
       { call: '(() => { const items = []; applyDiscount(items, 30); return items; })()', expected: [], label: 'an empty list', edge: true },
+      { call: "(() => {const items=[{name:\"half\",price:5},{name:\"quarter\",price:25}];applyDiscount(items,90);return items.map(i=>i.price);})()", expected: [1, 3], label: "half-cent arithmetic at ninety percent", edge: true },
+      { call: "(() => {const items=[{name:\"half\",price:25}];applyDiscount(items,42);return items[0].price;})()", expected: 15, label: "multiply before dividing at a half cent", edge: true },
+      { call: "(() => {const metadata={id:1},item={name:\"tea\",price:100,metadata},items=Object.freeze([item]);const returned=applyDiscount(items,25);return returned===undefined&&items[0]===item&&item.name===\"tea\"&&item.price===75&&item.metadata===metadata&&metadata.id===1;})()", expected: true, label: "preserve item references and other fields in a frozen array", edge: true },
+      { call: "(() => {const item={name:\"zero\",price:1000000};applyDiscount([item],100);return item.price;})()", expected: 0, label: "full discount at the price bound", edge: true },
     ],
   },
 
