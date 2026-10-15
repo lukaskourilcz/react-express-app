@@ -580,7 +580,7 @@ console.log(basketTotal(prices, ["tea", "cake", "tea"]));
     tier: 2,
     focus: ['two-pointer', 'while'],
     title: 'Trim blank lines',
-    prompt: 'Write `trimBlank(lines: readonly string[]): string[]`, returning the lines without the blank ones at the start and at the end. A blank line is empty or holds only spaces. Blank lines between two lines of text stay. Keep one index at each end, move each inward in a `while` loop for as long as it points at a blank line, then copy what lies between them with `slice`.',
+    prompt: "Write `trimBlank(lines: readonly string[]): string[]`, returning the lines without the blank ones at the start and at the end. A blank line is one whose JavaScript trim() result is empty, including tabs and other JavaScript whitespace. Blank lines between two lines of text stay. Keep one index at each end, move each inward in a `while` loop for as long as it points at a blank line, then copy what lies between them with `slice`. Domain: a dense readonly ordinary array of at most 1000 stable primitive strings, each at most 1000 UTF-16 units, possibly frozen, with no accessors/proxies. Use JavaScript trim only to classify boundary lines; preserve retained text exactly, including internal blank/whitespace lines and spaces around nonblank text. Return a fresh mutable outer array every call, including no trimming, all blank and empty input. Leave the original unchanged. Target: O(n) time and output space, where n is 1 + line count + total input UTF-16 units; the two indexes move inward rather than restarting scans.",
     starter: `const trimBlank = (lines: readonly string[]): string[] => {
 
 };
@@ -626,7 +626,7 @@ const trimBlank = (lines: readonly string[]): string[] => {
     tier: 2,
     focus: ['two-pointer', 'readonly'],
     title: 'Free on both calendars',
-    prompt: 'Two people list the days of the month they are free, each list sorted from low to high with no repeats. Write `freeBoth(mine: readonly number[], yours: readonly number[]): number[]`, returning the days on both lists, in order. Walk the two lists together with one index each. When the two days match, keep the day and move both indexes; otherwise move only the index that points at the smaller day.',
+    prompt: "Two people list the numbered days they are free, each list sorted from low to high with no repeats. Write `freeBoth(mine: readonly number[], yours: readonly number[]): number[]`, returning the days on both lists, in order. Walk the two lists together with one index each. When the two days match, keep the day and move both indexes; otherwise move only the index that points at the smaller day. Domain: dense readonly ordinary arrays of at most 1000 strictly increasing, unique positive integer day numbers from 1 through 1000000000, possibly frozen, with no accessors/proxies. These are numbered days, not restricted to one calendar month. No input validation, sorting or mutation is needed. Keep shared values in ascending order and return a fresh mutable array every call, including empty results and identical inputs. Target: O(n + m) time, where n is 1 + mine.length and m is 1 + yours.length under bounded numeric comparisons. The pointer boards use O(1) working state excluding output.",
     starter: `const freeBoth = (mine: readonly number[], yours: readonly number[]): number[] => {
 
 };

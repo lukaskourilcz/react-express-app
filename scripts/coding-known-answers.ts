@@ -59,7 +59,7 @@ export const KNOWN_WRONG_CODE: readonly KnownAnswer[] = [
   { id: 'js-path-logging-5', label: 'ranking by name with a bare sort()', replace: [['.sort((a, b) => b[1] - a[1])', '.sort()']] },
   { id: 'ts-path-generics-5', label: 'a comparator with no "less than" branch', replace: [['      if (left < right) return -1;\n', '']] },
   { id: 'ts-mh-apply-edits', label: 'reporting the last out-of-range edit', replace: [['edits.findIndex((edit) => !(Number.isInteger', 'edits.findLastIndex((edit) => !(Number.isInteger']] },
-  { id: 'ts-mh-pick-from-warehouses', label: "working on the caller's east counts", replace: [['east: { ...stock.east },', 'east: stock.east as Record<string, number>,']] },
+  { id: 'ts-mh-pick-from-warehouses', label: "working on the caller's east counts", replace: [['east: Object.assign(Object.create(null), stock.east),', 'east: stock.east as Partial<Record<string, number>>,']] },
   { id: 'ts-evolving-schema-2', label: 'taking any non-null non-array value for an object', replace: [["if(v===null||typeof v!=='object'||Array.isArray(v))", 'if(v===null||Array.isArray(v))']] },
   { id: 'alg-max-sum-subarray', label: 'accepting a fractional k', replace: [['!Number.isInteger(k) || k < 1', 'k < 1']] },
   { id: 'js-mh2-top-scores', label: 'taking the entry below an improving player off the board', replace: [['board.splice(old, 1);', 'board.splice(old, 2);']] },

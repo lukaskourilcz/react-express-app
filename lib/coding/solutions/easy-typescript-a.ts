@@ -429,21 +429,7 @@ const trimBlank = (lines: readonly string[]): string[] => {
   // slice copies, and end + 1 keeps the line at end.
   return lines.slice(start, end + 1);
 };`,
-    junior: `const trimBlank = (lines: readonly string[]): string[] => {
-  let start = 0;
-  while (start < lines.length && lines[start].trim() === "") {
-    start = start + 1;
-  }
-  let end = lines.length - 1;
-  while (end >= start && lines[end].trim() === "") {
-    end = end - 1;
-  }
-  const kept: string[] = [];
-  for (let i = start; i <= end; i++) {
-    kept.push(lines[i]);
-  }
-  return kept;
-};`,
+    junior: "const trimBlank = (lines: readonly string[]): string[] => {\n  let start = 0;\n  while (start < lines.length && lines[start].trim() === \"\") {\n    start = start + 1;\n  }\n  let end = lines.length - 1;\n  while (end >= start && lines[end].trim() === \"\") {\n    end = end - 1;\n  }\n  return lines.slice(start, end + 1);\n};",
     senior: `const trimBlank = (lines: readonly string[]): string[] => {
   const blank = (index: number): boolean => lines[index].trim() === "";
   let start = 0;
@@ -453,6 +439,10 @@ const trimBlank = (lines: readonly string[]): string[] => {
   return lines.slice(start, end);
 };`,
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['\\t','\\u00a0','\\ufeff','  x  ','\\t','\\u200b','\\r\\n']),a=trimBlank(input),b=trimBlank(input);a.pop();return [b,a!==b,input.length,input[3]];})()", expected: [["  x  ", "\t", "\u200b"], true, 7, "  x  "] },
+      { call: "(()=>{const input=Object.freeze(['x','y']),a=trimBlank(input),b=trimBlank(input),empty=Object.freeze([]),c=trimBlank(empty),d=trimBlank(empty);a.push('later');c.push('later');return [a!==input,a!==b,b,c!==empty,c!==d,d.length,input.length];})()", expected: [true, true, ["x", "y"], true, true, 0, 2] },
+      { call: "(()=>{const all=Object.freeze(Array(1000).fill('\\t ')),input=Object.freeze(['',...Array(998).fill('  x  '),' ']),out=trimBlank(input);return [trimBlank(all).length,out.length,out.every(line=>line==='  x  '),all.length,input.length];})()", expected: [0, 998, true, 1000, 1000] },
+
       { call: 'trimBlank(["", "", "a", "", "", "b", "", ""])', expected: ['a', '', '', 'b'] },
       { call: '(() => { const lines = ["", "a", ""]; trimBlank(lines); return lines; })()', expected: ['', 'a', ''] },
       { call: 'trimBlank(["x"])', expected: ['x'] },
@@ -508,6 +498,10 @@ const trimBlank = (lines: readonly string[]): string[] => {
   return both;
 };`,
     hiddenTests: [
+      { call: "(()=>{const mine=Object.freeze([1,7,35,1000000000]),yours=Object.freeze([2,7,1000000000]),a=freeBoth(mine,yours),b=freeBoth(mine,yours);a.push(99);return [b,a!==b,mine,yours];})()", expected: [[7, 1000000000], true, [1, 7, 35, 1000000000], [2, 7, 1000000000]] },
+      { call: "(()=>{const input=Object.freeze([1,2]),a=freeBoth(input,input),b=freeBoth(input,input),empty=Object.freeze([]),c=freeBoth(empty,input),d=freeBoth(input,empty);a.push(3);c.push(1);return [a!==input,a!==b,b,c!==empty,d!==empty,c!==d,d.length,input.length];})()", expected: [true, true, [1, 2], true, true, true, 0, 2] },
+      { call: "(()=>{const mine=Object.freeze(Array.from({length:1000},(_,i)=>i+1)),yours=Object.freeze(Array.from({length:1000},(_,i)=>2*(i+1))),out=freeBoth(mine,yours);return [out.length,out.every((day,i)=>day===2*(i+1)),mine.length,yours.length,freeBoth([999999999],[1000000000]).length];})()", expected: [500, true, 1000, 1000, 0] },
+
       { call: 'freeBoth([1, 2, 3, 4, 5, 6], [2, 4, 6, 8])', expected: [2, 4, 6] },
       { call: 'freeBoth([10, 20, 30], [5, 10, 15, 20, 25, 30, 35])', expected: [10, 20, 30] },
       { call: '(() => { const mine = [1, 2]; const yours = [2, 3]; freeBoth(mine, yours); return [mine, yours]; })()', expected: [[1, 2], [2, 3]] },

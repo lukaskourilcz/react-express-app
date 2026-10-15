@@ -427,34 +427,22 @@ const countStatus = (items: Status[], wanted: Status): number =>
     ],
   },
   "ts-freeze-a-copy": {
-    solution: `type Frozen<T> = { readonly [K in keyof T]: T[K] };
-
-const freezeCopy = <T extends object>(source: T): Frozen<T> => {
-  const copy = {} as { [K in keyof T]: T[K] };
-  for (const [key, value] of Object.entries(source)) copy[key as keyof T] = value;
-  return Object.freeze(copy);
-};`,
-    junior: `type Frozen<T> = { readonly [K in keyof T]: T[K] };
-
-const freezeCopy = <T extends object>(source: T): Frozen<T> => {
-  const copy = {} as { [K in keyof T]: T[K] };
-  const keys = Object.keys(source) as (keyof T)[];
-  for (const key of keys) {
-    const value = source[key];
-    copy[key] = value;
-  }
-  Object.freeze(copy);
-  return copy;
-};`,
-    senior: `type Frozen<T> = { readonly [K in keyof T]: T[K] };
-
-// A shallow spread copies the own enumerable keys, so the caller's object is never the one frozen.
-const freezeCopy = <T extends object>(source: T): Frozen<T> => Object.freeze({ ...source });`,
+    solution: "type Frozen<T> = { readonly [K in keyof T]: T[K] };\nconst freezeCopy = <T extends object>(source: T): Frozen<T> => {\n  const copy = {} as { -readonly [K in keyof T]: T[K] };\n  for (const key of Reflect.ownKeys(source)) {\n    // Stable data records guarantee a descriptor for every own key.\n    const descriptor = Object.getOwnPropertyDescriptor(source, key)!;\n    Object.defineProperty(copy, key, descriptor);\n  }\n  return Object.freeze(copy);\n};",
+    junior: "type Frozen<T> = { readonly [K in keyof T]: T[K] };\nconst freezeCopy = <T extends object>(source: T): Frozen<T> => {\n  const copy = {} as { -readonly [K in keyof T]: T[K] };\n  for (const key of Reflect.ownKeys(source)) {\n    const descriptor = Object.getOwnPropertyDescriptor(source, key)!;\n    Object.defineProperty(copy, key, descriptor);\n  }\n  Object.freeze(copy);\n  return copy;\n};",
+    senior: "type Frozen<T>={readonly [K in keyof T]:T[K]};const freezeCopy=<T extends object>(source:T):Frozen<T>=>{const copy={} as T;Object.defineProperties(copy,Object.getOwnPropertyDescriptors(source));return Object.freeze(copy);};",
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},source={a:1,[sym]:meta,['__proto__']:meta};Object.defineProperty(source,'hidden',{value:meta,enumerable:false,writable:true,configurable:true});const out=freezeCopy(source);return [Object.isFrozen(out),out!==source,out[sym]===meta,Object.hasOwn(out,'__proto__'),out.__proto__===meta,Object.getPrototypeOf(out)===Object.prototype,out.hidden===meta,Object.getOwnPropertyDescriptor(out,'hidden').enumerable,Reflect.ownKeys(out).length,Object.isFrozen(source),Object.isFrozen(meta)];})()", expected: [true, true, true, true, true, true, true, false, 4, false, false] },
+      { call: "(()=>{let calls=0;const fn=()=>{calls++;},nested={count:1},list=[1],source={nested,list,fn},a=freezeCopy(source),b=freezeCopy(source);a.nested.count=2;a.list.push(2);return [a!==b,a.nested===nested,a.list===list,a.fn===fn,source.nested.count,source.list.length,Object.isFrozen(nested),Object.isFrozen(list),Object.isFrozen(fn),calls,Reflect.set(a,'extra',1)];})()", expected: [true, true, true, true, 2, 2, false, false, false, 0, false] },
+      { call: "(()=>{const source=Object.freeze(Object.assign(Object.create(null),{a:1})),out=freezeCopy(source),a=freezeCopy({}),b=freezeCopy({});return [out.a,Object.getPrototypeOf(out)===Object.prototype,Object.isFrozen(out),a!==b,Object.isFrozen(a),Object.isFrozen(b),Object.isFrozen(source)];})()", expected: [1, true, true, true, true, true, true] },
+      { call: "(()=>{const marker={},source={};for(let i=0;i<1000;i++)Object.defineProperty(source,'p'+i,{value:marker,enumerable:i%2===0,writable:true,configurable:true});const out=freezeCopy(source);return [Reflect.ownKeys(out).length,Object.keys(out).length,Array.from({length:1000},(_,i)=>out['p'+i]===marker).every(Boolean),Object.isFrozen(out),Object.isFrozen(source),Object.isFrozen(marker)];})()", expected: [1000, 500, true, true, false, false] },
+
       { call: "Object.isFrozen(freezeCopy({}))", expected: true },
       { call: "freezeCopy({ x: 1, y: 2, z: 3 })", expected: { x: 1, y: 2, z: 3 } },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditKey=Symbol(); const __audit=freezeCopy({[__auditKey]:Symbol(),nested:{count:1}}); const __auditSymbol:symbol=__audit[__auditKey]; __audit.nested.count=2;"},
+      {"code": "const __auditReadonlyKey=Symbol(); const __auditReadonly=freezeCopy({[__auditReadonlyKey]:1}); __auditReadonly[__auditReadonlyKey]=2;", "rejects": true},
+
       { code: "const __b: string = freezeCopy({ a: 1, b: \"x\" }).b;" },
       { code: "freezeCopy({ a: 1 }).b;", rejects: true },
     ],

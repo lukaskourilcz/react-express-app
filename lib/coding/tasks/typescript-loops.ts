@@ -882,7 +882,7 @@ const scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> => {
     tier: 3,
     focus: ["readonly", "for-of", "objects"],
     title: "Freeze a copy",
-    prompt: "Declare a mapped type `Frozen<T>` that keeps every property of `T` with its type but marks it `readonly`, then write `freezeCopy<T extends object>(source: T): Frozen<T>` building a fresh object from `Object.entries` in a `for-of` loop and freezing it with `Object.freeze` before returning it. `freezeCopy({ a: 1 })` gives an object equal to `{ a: 1 }` that is not the same object, and assigning to its `a` is a compile error.",
+    prompt: "Declare a mapped type `Frozen<T>` that keeps every property of `T` with its type but marks it `readonly`, then write `freezeCopy<T extends object>(source: T): Frozen<T>` building a fresh object by copying own data-property descriptors in a `for-of` loop over `Reflect.ownKeys` and freezing it with `Object.freeze` before returning it. `freezeCopy({ a: 1 })` gives an object equal to `{ a: 1 }` that is not the same object, and assigning to its `a` is a compile error. Domain: stable ordinary or null-prototype data records with at most 1000 own properties, string or Symbol, including nonenumerable data fields; source may already be frozen. No accessors, proxies, arrays, callable sources, class instances or inherited declared data fields are involved. Copy every own key and exact opaque value, preserving its enumerability, including a literal __proto__ field. Return a fresh plain frozen outer object every call, including empty input, while leaving source descriptors/extensibility and nested values unchanged. This is shallow: do not clone, call or freeze nested objects, arrays or functions. Frozen<T> changes property writability, not the nested value type. Target: O(n) time and output space, where n is 1 + own property count with bounded key/descriptor operations; opaque contents are excluded.",
     starter: `type Frozen<T> = { readonly [K in keyof T]: T[K] };
 
 const freezeCopy = <T extends object>(source: T): Frozen<T> => {
@@ -892,25 +892,9 @@ const freezeCopy = <T extends object>(source: T): Frozen<T> => {
 // Scratch pad — change this and press Run.
 console.log(freezeCopy({ a: 1, b: "x" }));
 `,
-    skeleton: `type Frozen<T> = { readonly [K in keyof T]: T[K] };
-
-const freezeCopy = <T extends object>(source: T): Frozen<T> => {
-  const copy = {} as { [K in keyof T]: T[K] };
-
-  for (const [key, value] of Object.entries(source)) {
-    // store value under key as keyof T
-  }
-
-  return Object.freeze(copy);
-};`,
-    hints: [
-      "A mapped type walks keyof T and can put a modifier in front of every property it produces; the loop does the same job at runtime, one entry at a time.",
-    ],
-    approach: [
-      "Write the mapped type with readonly in front of the key expression and T[K] as the value type.",
-      "Create an empty object asserted to the mutable shape, and copy every entry from Object.entries into it inside a for-of loop.",
-      "Freeze the copy and return it; the mutable shape is assignable to the readonly one, so the return type checks.",
-    ],
+    skeleton: "type Frozen<T> = { readonly [K in keyof T]: T[K] };\nconst freezeCopy = <T extends object>(source: T): Frozen<T> => {\n  const copy = {} as { -readonly [K in keyof T]: T[K] };\n  for (const key of Reflect.ownKeys(source)) {\n    // get the stable own data descriptor and define it on copy\n  }\n  return Object.freeze(copy);\n};",
+    hints: ["The mapped readonly modifier is shallow. Reflect.ownKeys includes string and Symbol keys, even hidden ones; copy their data descriptors with Object.defineProperty so enumerability and a literal __proto__ key survive without invoking a setter. Freeze only the new outer object."],
+    approach: ["Declare Frozen<T> with readonly [K in keyof T] and T[K].", "Create a fresh plain object and copy each own data-property descriptor from Reflect.ownKeys without reading or changing nested contents.", "Freeze the outer copy and return it; nested references and their value types remain unchanged."],
     verify: "tests",
     estimatedMinutes: 9,
     tests: [

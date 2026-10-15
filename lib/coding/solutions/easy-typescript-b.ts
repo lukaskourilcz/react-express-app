@@ -663,35 +663,14 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
   }
   return runs.join(", ");
 };`,
-    junior: `const toRanges = (pages: readonly number[]): string => {
-  let text = "";
-  let start = 0;
-  while (start < pages.length) {
-    let end = start;
-    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) {
-      end = end + 1;
-    }
-    let run = String(pages[start]);
-    if (end > start) {
-      run = run + "-" + pages[end];
-    }
-    if (text !== "") {
-      text = text + ", ";
-    }
-    text = text + run;
-    start = end + 1;
-  }
-  return text;
-};`,
-    senior: `const toRanges = (pages: readonly number[]): string => {
-  const runs: string[] = [];
-  for (let start = 0, end = 0; start < pages.length; start = ++end) {
-    while (pages[end + 1] === pages[end] + 1) end++;
-    runs.push(start === end ? String(pages[start]) : \`\${pages[start]}-\${pages[end]}\`);
-  }
-  return runs.join(", ");
-};`,
+    junior: "const toRanges = (pages: readonly number[]): string => {\n  const runs: string[] = [];\n  let start = 0;\n  while (start < pages.length) {\n    let end = start;\n    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) end += 1;\n    let run = String(pages[start]);\n    if (end > start) run = run + \"-\" + pages[end];\n    runs.push(run);\n    start = end + 1;\n  }\n  return runs.join(\", \");\n};",
+    senior: "const toRanges = (pages: readonly number[]): string => {\n  const runs: string[] = [];\n  for (let start = 0, end = 0; start < pages.length; start = ++end) {\n    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) end++;\n    runs.push(start === end ? String(pages[start]) : `${pages[start]}-${pages[end]}`);\n  }\n  return runs.join(\", \");\n};",
     hiddenTests: [
+      { call: "(()=>{const input=[0,1,3,4],text=toRanges(input);return [text,input,input.length];})()", expected: ["0-1, 3-4", [0, 1, 3, 4], 4] },
+      { call: "(()=>{const input=Object.freeze([0,1,3,999999999,1000000000]),text=toRanges(input);return [text,input, toRanges(Object.freeze([0])),toRanges(Object.freeze([]))];})()", expected: ["0-1, 3, 999999999-1000000000", [0, 1, 3, 999999999, 1000000000], "0", ""] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),text=toRanges(input);return [text,input[0],input[999],input.length];})()", expected: ["0-999", 0, 999, 1000] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i*2)),text=toRanges(input);return [text.split(', ').length,text.startsWith('0, 2, '),text.endsWith(', 1998'),input.length];})()", expected: [1000, true, true, 1000] },
+
       { call: 'toRanges([9, 10, 12, 13, 14, 20])', expected: '9-10, 12-14, 20' },
       { call: 'toRanges([1, 2, 4])', expected: '1-2, 4' },
       { call: 'toRanges([100, 101])', expected: '100-101' },

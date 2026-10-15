@@ -360,182 +360,16 @@ const fillDays = (readings: readonly Reading[]): Reading[] => {
     ],
   },
   'ts-mh-pick-from-warehouses': {
-    solution: `type Warehouse = "north" | "south" | "east";
-const WAREHOUSES: readonly Warehouse[] = ["north", "south", "east"];
-
-type Stock = Readonly<Record<Warehouse, Readonly<Record<string, number>>>>;
-type OrderLine = readonly [sku: string, quantity: number];
-type PickItem = [warehouse: Warehouse, sku: string, quantity: number];
-type Allocation =
-  | { ok: true; picks: PickItem[] }
-  | { ok: false; short: Record<string, number> };
-
-const allocate = (order: readonly OrderLine[], stock: Stock): Allocation => {
-  // Check the whole order first, so nothing is picked for an order that cannot ship.
-  const wanted: Record<string, number> = {};
-  for (const [sku, quantity] of order) wanted[sku] = (wanted[sku] ?? 0) + quantity;
-  const short: Record<string, number> = {};
-  for (const sku of Object.keys(wanted)) {
-    const held = WAREHOUSES.reduce((sum, warehouse) => sum + (stock[warehouse][sku] ?? 0), 0);
-    if (held < wanted[sku]) short[sku] = wanted[sku] - held;
-  }
-  if (Object.keys(short).length > 0) return { ok: false, short };
-
-  // Our own counts: stock is Readonly, and the caller's copy must not change.
-  const left: Record<Warehouse, Record<string, number>> = {
-    north: { ...stock.north },
-    south: { ...stock.south },
-    east: { ...stock.east },
-  };
-  const picks: PickItem[] = [];
-  for (const [sku, quantity] of order) {
-    // find gives a Warehouse or undefined; the check below narrows it.
-    const whole = WAREHOUSES.find((warehouse) => (left[warehouse][sku] ?? 0) >= quantity);
-    if (whole !== undefined) {
-      picks.push([whole, sku, quantity]); // one parcel is cheaper than two
-      left[whole][sku] -= quantity;
-      continue;
-    }
-    // No single warehouse holds it: take what each has, in order.
-    let needed = quantity;
-    for (const warehouse of WAREHOUSES) {
-      const take = Math.min(needed, left[warehouse][sku] ?? 0);
-      if (take === 0) continue;
-      picks.push([warehouse, sku, take]);
-      left[warehouse][sku] -= take;
-      needed -= take;
-    }
-  }
-  return { ok: true, picks };
-};`,
-    junior: `type Warehouse = "north" | "south" | "east";
-const WAREHOUSES: readonly Warehouse[] = ["north", "south", "east"];
-
-type Stock = Readonly<Record<Warehouse, Readonly<Record<string, number>>>>;
-type OrderLine = readonly [sku: string, quantity: number];
-type PickItem = [warehouse: Warehouse, sku: string, quantity: number];
-type Allocation =
-  | { ok: true; picks: PickItem[] }
-  | { ok: false; short: Record<string, number> };
-
-const allocate = (order: readonly OrderLine[], stock: Stock): Allocation => {
-  const left: Record<Warehouse, Record<string, number>> = { north: {}, south: {}, east: {} };
-  for (const warehouse of WAREHOUSES) {
-    for (const sku of Object.keys(stock[warehouse])) {
-      left[warehouse][sku] = stock[warehouse][sku];
-    }
-  }
-
-  const countOf = (warehouse: Warehouse, sku: string): number => {
-    const count = left[warehouse][sku];
-    if (count === undefined) {
-      return 0;
-    }
-    return count;
-  };
-
-  const wanted: Record<string, number> = {};
-  for (const line of order) {
-    const sku = line[0];
-    const quantity = line[1];
-    if (wanted[sku] === undefined) {
-      wanted[sku] = 0;
-    }
-    wanted[sku] = wanted[sku] + quantity;
-  }
-
-  const short: Record<string, number> = {};
-  let anyShort = false;
-  for (const sku of Object.keys(wanted)) {
-    let held = 0;
-    for (const warehouse of WAREHOUSES) {
-      held = held + countOf(warehouse, sku);
-    }
-    if (held < wanted[sku]) {
-      short[sku] = wanted[sku] - held;
-      anyShort = true;
-    }
-  }
-  if (anyShort) {
-    return { ok: false, short: short };
-  }
-
-  const picks: PickItem[] = [];
-  for (const line of order) {
-    const sku = line[0];
-    const quantity = line[1];
-
-    let whole: Warehouse | undefined = undefined;
-    for (const warehouse of WAREHOUSES) {
-      if (whole === undefined && countOf(warehouse, sku) >= quantity) {
-        whole = warehouse;
-      }
-    }
-
-    if (whole !== undefined) {
-      picks.push([whole, sku, quantity]);
-      left[whole][sku] = countOf(whole, sku) - quantity;
-    } else {
-      let needed = quantity;
-      for (const warehouse of WAREHOUSES) {
-        const available = countOf(warehouse, sku);
-        let take = available;
-        if (needed < available) {
-          take = needed;
-        }
-        if (take > 0) {
-          picks.push([warehouse, sku, take]);
-          left[warehouse][sku] = available - take;
-          needed = needed - take;
-        }
-      }
-    }
-  }
-  return { ok: true, picks: picks };
-};`,
-    senior: `type Warehouse = "north" | "south" | "east";
-const WAREHOUSES: readonly Warehouse[] = ["north", "south", "east"];
-
-type Stock = Readonly<Record<Warehouse, Readonly<Record<string, number>>>>;
-type OrderLine = readonly [sku: string, quantity: number];
-type PickItem = [warehouse: Warehouse, sku: string, quantity: number];
-type Allocation =
-  | { ok: true; picks: PickItem[] }
-  | { ok: false; short: Record<string, number> };
-
-const sumBy = <T>(items: readonly T[], value: (item: T) => number): number =>
-  items.reduce((sum, item) => sum + value(item), 0);
-
-const allocate = (order: readonly OrderLine[], stock: Stock): Allocation => {
-  const left = new Map(WAREHOUSES.map((warehouse): [Warehouse, Map<string, number>] => [warehouse, new Map(Object.entries(stock[warehouse]))]));
-  const count = (warehouse: Warehouse, sku: string) => left.get(warehouse)?.get(sku) ?? 0;
-  const take = (warehouse: Warehouse, sku: string, quantity: number): PickItem => {
-    left.get(warehouse)?.set(sku, count(warehouse, sku) - quantity);
-    return [warehouse, sku, quantity];
-  };
-
-  const skus = [...new Set(order.map(([sku]) => sku))];
-  const shortfalls = skus
-    .map((sku): [string, number] => [
-      sku,
-      sumBy(order, ([s, q]) => (s === sku ? q : 0)) - sumBy(WAREHOUSES, (w) => count(w, sku)),
-    ])
-    .filter(([, missing]) => missing > 0);
-  if (shortfalls.length > 0) return { ok: false, short: Object.fromEntries(shortfalls) };
-
-  const picks = order.flatMap(([sku, quantity]): PickItem[] => {
-    const whole = WAREHOUSES.find((warehouse) => count(warehouse, sku) >= quantity);
-    if (whole) return [take(whole, sku, quantity)];
-    let needed = quantity;
-    return WAREHOUSES.flatMap((warehouse) => {
-      const amount = Math.min(needed, count(warehouse, sku));
-      needed -= amount;
-      return amount > 0 ? [take(warehouse, sku, amount)] : [];
-    });
-  });
-  return { ok: true, picks };
-};`,
+    solution: "type Warehouse = \"north\" | \"south\" | \"east\";\nconst WAREHOUSES: readonly Warehouse[] = [\"north\", \"south\", \"east\"];\n\ntype Stock = Readonly<Record<Warehouse, Readonly<Partial<Record<string, number>>>>>;\ntype OrderLine = readonly [sku: string, quantity: number];\ntype PickItem = [warehouse: Warehouse, sku: string, quantity: number];\ntype Allocation =\n  | { ok: true; picks: PickItem[] }\n  | { ok: false; short: Partial<Record<string, number>> };\n\nconst allocate = (order: readonly OrderLine[], stock: Stock): Allocation => {\n  // Local own-key dictionaries: missing and prototype-like skus are ordinary data.\n  const left: Record<Warehouse, Partial<Record<string, number>>> = {\n    north: Object.assign(Object.create(null), stock.north),\n    south: Object.assign(Object.create(null), stock.south),\n    east: Object.assign(Object.create(null), stock.east),\n  };\n  const wanted = Object.create(null) as Partial<Record<string, number>>;\n  for (const [sku, quantity] of order) wanted[sku] = (wanted[sku] ?? 0) + quantity;\n  const short = Object.create(null) as Partial<Record<string, number>>;\n  for (const sku of Object.keys(wanted)) {\n    const need = wanted[sku] ?? 0;\n    const held = WAREHOUSES.reduce((sum, warehouse) => sum + (left[warehouse][sku] ?? 0), 0);\n    if (held < need) short[sku] = need - held;\n  }\n  if (Object.keys(short).length > 0) return { ok: false, short };\n  const picks: PickItem[] = [];\n  for (const [sku, quantity] of order) {\n    const whole = WAREHOUSES.find((warehouse) => (left[warehouse][sku] ?? 0) >= quantity);\n    if (whole !== undefined) {\n      picks.push([whole, sku, quantity]);\n      left[whole][sku] = (left[whole][sku] ?? 0) - quantity;\n      continue;\n    }\n    let needed = quantity;\n    for (const warehouse of WAREHOUSES) {\n      const available = left[warehouse][sku] ?? 0;\n      const take = Math.min(needed, available);\n      if (take === 0) continue;\n      picks.push([warehouse, sku, take]);\n      left[warehouse][sku] = available - take;\n      needed -= take;\n    }\n  }\n  return { ok: true, picks };\n};",
+    junior: "type Warehouse = \"north\" | \"south\" | \"east\";\nconst WAREHOUSES: readonly Warehouse[] = [\"north\", \"south\", \"east\"];\n\ntype Stock = Readonly<Record<Warehouse, Readonly<Partial<Record<string, number>>>>>;\ntype OrderLine = readonly [sku: string, quantity: number];\ntype PickItem = [warehouse: Warehouse, sku: string, quantity: number];\ntype Allocation =\n  | { ok: true; picks: PickItem[] }\n  | { ok: false; short: Partial<Record<string, number>> };\n\nconst allocate = (order: readonly OrderLine[], stock: Stock): Allocation => {\n  const left: Record<Warehouse, Partial<Record<string, number>>> = {\n    north: Object.create(null), south: Object.create(null), east: Object.create(null),\n  };\n  for (const warehouse of WAREHOUSES) {\n    for (const [sku, count] of Object.entries(stock[warehouse])) left[warehouse][sku] = count ?? 0;\n  }\n  const wanted = Object.create(null) as Partial<Record<string, number>>;\n  for (const [sku, quantity] of order) wanted[sku] = (wanted[sku] ?? 0) + quantity;\n  const short = Object.create(null) as Partial<Record<string, number>>;\n  for (const sku of Object.keys(wanted)) {\n    let held = 0;\n    for (const warehouse of WAREHOUSES) held += left[warehouse][sku] ?? 0;\n    const need = wanted[sku] ?? 0;\n    if (held < need) short[sku] = need - held;\n  }\n  if (Object.keys(short).length !== 0) return { ok: false, short };\n  const picks: PickItem[] = [];\n  for (const [sku, quantity] of order) {\n    let whole: Warehouse | undefined;\n    for (const warehouse of WAREHOUSES) {\n      if ((left[warehouse][sku] ?? 0) >= quantity) { whole = warehouse; break; }\n    }\n    if (whole !== undefined) {\n      picks.push([whole, sku, quantity]);\n      left[whole][sku] = (left[whole][sku] ?? 0) - quantity;\n    } else {\n      let needed = quantity;\n      for (const warehouse of WAREHOUSES) {\n        const available = left[warehouse][sku] ?? 0;\n        const take = Math.min(needed, available);\n        if (take > 0) {\n          picks.push([warehouse, sku, take]);\n          left[warehouse][sku] = available - take;\n          needed -= take;\n        }\n      }\n    }\n  }\n  return { ok: true, picks };\n};",
+    senior: "type Warehouse = \"north\" | \"south\" | \"east\";\nconst WAREHOUSES: readonly Warehouse[] = [\"north\", \"south\", \"east\"];\n\ntype Stock = Readonly<Record<Warehouse, Readonly<Partial<Record<string, number>>>>>;\ntype OrderLine = readonly [sku: string, quantity: number];\ntype PickItem = [warehouse: Warehouse, sku: string, quantity: number];\ntype Allocation =\n  | { ok: true; picks: PickItem[] }\n  | { ok: false; short: Partial<Record<string, number>> };\n\nconst allocate = (order: readonly OrderLine[], stock: Stock): Allocation => {\n  const left = new Map<Warehouse, Map<string, number>>(WAREHOUSES.map((warehouse) => [\n    warehouse, new Map(Object.entries(stock[warehouse]).map(([sku, count]) => [sku, count ?? 0])),\n  ]));\n  const count = (warehouse: Warehouse, sku: string): number => left.get(warehouse)!.get(sku) ?? 0;\n  const demand = new Map<string, number>();\n  for (const [sku, quantity] of order) demand.set(sku, (demand.get(sku) ?? 0) + quantity);\n  const short = Object.create(null) as Partial<Record<string, number>>;\n  for (const [sku, need] of demand) {\n    const held = WAREHOUSES.reduce((sum, warehouse) => sum + count(warehouse, sku), 0);\n    if (held < need) short[sku] = need - held;\n  }\n  if (Object.keys(short).length) return { ok: false, short };\n  const take = (warehouse: Warehouse, sku: string, quantity: number): PickItem => {\n    left.get(warehouse)!.set(sku, count(warehouse, sku) - quantity);\n    return [warehouse, sku, quantity];\n  };\n  const picks: PickItem[] = [];\n  for (const [sku, quantity] of order) {\n    const whole = WAREHOUSES.find((warehouse) => count(warehouse, sku) >= quantity);\n    if (whole !== undefined) { picks.push(take(whole, sku, quantity)); continue; }\n    let needed = quantity;\n    for (const warehouse of WAREHOUSES) {\n      const amount = Math.min(needed, count(warehouse, sku));\n      if (amount > 0) { picks.push(take(warehouse, sku, amount)); needed -= amount; }\n    }\n  }\n  return { ok: true, picks };\n};",
     hiddenTests: [
+      { call: "(()=>{const stock=Object.freeze({north:Object.freeze({['__proto__']:1,constructor:0}),south:Object.freeze({}),east:Object.freeze({})}),out=allocate(Object.freeze([Object.freeze(['__proto__',2]),Object.freeze(['constructor',1]),Object.freeze(['tea',3])]),stock);if(out.ok)return false;return [Object.hasOwn(out.short,'__proto__'),out.short.__proto__,out.short.constructor,out.short.tea,out.short.toString===undefined,!Object.hasOwn(out,'picks'),stock.north.__proto__];})()", expected: [true, 1, 1, 3, true, true, 1] },
+      { call: "(()=>{const north=Object.freeze(Object.assign(Object.create({tea:99}),{other:undefined})),stock=Object.freeze({north,south:Object.freeze({tea:2}),east:Object.freeze({tea:1})}),order=Object.freeze([Object.freeze(['tea',2]),Object.freeze(['tea',1])]),out=allocate(order,stock);return [out,stock.south.tea,stock.east.tea,Reflect.ownKeys(north),WAREHOUSES];})()", expected: [{"ok": true, "picks": [["south", "tea", 2], ["east", "tea", 1]]}, 2, 1, ["other"], ["north", "south", "east"]] },
+      { call: "(()=>{const stock=Object.freeze({north:Object.freeze({x:1}),south:Object.freeze({x:1}),east:Object.freeze({x:1})}),order=Object.freeze([Object.freeze(['x',1]),Object.freeze(['x',1]),Object.freeze(['x',1])]),a=allocate(order,stock),b=allocate(order,stock);if(!a.ok||!b.ok)return false;a.picks[0][2]=99;a.picks.push(['north','later',1]);const empty=allocate([],stock),again=allocate([],stock);return [a!==b,a.picks!==b.picks,b.picks,b.picks[0]!==b.picks[1],empty!==again,empty.ok&&again.ok&&empty.picks!==again.picks,stock.north.x,stock.east.x];})()", expected: [true, true, [["north", "x", 1], ["south", "x", 1], ["east", "x", 1]], true, true, true, 1, 1] },
+      { call: "(()=>{const stock={north:{},south:{},east:{}},a=allocate([['',2]],stock),b=allocate([['',2]],stock);if(a.ok||b.ok)return false;a.short['']=99;return [a!==b,a.short!==b.short,b.short[''],Reflect.ownKeys(b.short),b.short.constructor===undefined,!Object.hasOwn(b,'picks')];})()", expected: [true, true, 2, [""], true, true] },
+      { call: "(()=>{const north=Object.freeze(Object.fromEntries(Array.from({length:1000},(_,i)=>['p'+i,1]))),stock=Object.freeze({north,south:Object.freeze({}),east:Object.freeze({})}),order=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze(['p'+i,1]))),out=allocate(order,stock);return [out.ok,out.ok&&out.picks.length,out.ok&&out.picks.every((pick,i)=>pick[0]==='north'&&pick[1]==='p'+i&&pick[2]===1),north.p0,north.p999,order.length];})()", expected: [true, 1000, true, 1, 1, 1000] },
+
       { call: 'allocate([["tea", 2], ["tea", 2]], { north: { tea: 3 }, south: {}, east: {} })', expected: { ok: false, short: { tea: 1 } } },
       { call: 'allocate([["a", 2], ["b", 1], ["c", 1]], { north: { a: 1 }, south: { c: 1 }, east: {} })', expected: { ok: false, short: { a: 1, b: 1 } } },
       { call: 'allocate([["tea", 3]], { north: { tea: 0 }, south: { tea: 2 }, east: { tea: 1 } })', expected: { ok: true, picks: [['south', 'tea', 2], ['east', 'tea', 1]] } },
@@ -545,6 +379,9 @@ const allocate = (order: readonly OrderLine[], stock: Stock): Allocation => {
       { call: '(() => { const stock = { north: {}, south: {}, east: { tea: 3 } }; allocate([["tea", 2]], stock); return stock; })()', expected: { north: {}, south: {}, east: { tea: 3 } } },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditStock:Stock={north:{tea:undefined},south:{},east:{}}; const __auditCount=(key:string):number|undefined=>__auditStock.north[key];"},
+      {"code": "const __auditReadonlyStock:Stock={north:{},south:{},east:{}}; __auditReadonlyStock.north[\"tea\"]=1;", "rejects": true},
+
       { code: 'const __place: Warehouse = "west";', rejects: true },
       { code: 'allocate([["tea", 1]], { north: {}, south: {}, east: {}, west: {} });', rejects: true },
     ],
