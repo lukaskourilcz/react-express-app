@@ -1,5 +1,34 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n005
+
+Reviewed the binary-search lesson and all four search questions. The lesson
+caches one midpoint read, names probes separately from comparisons, states
+finite ordered input, preserves at least one matching position with duplicates,
+and defines the half-open lower-bound interval. Sortedness can be validated
+at linear cost; unsorted input can silently miss rather than inevitably fail.
+Preparation costs are a model, not an exact timing or re-sorting guarantee.
+The four questions now use explicit interval/midpoint conventions, balanced
+options and qualified causes/costs; all correct indices stay unchanged.
+
+Five exact-hash records have individual manual scores and final English model
+readings. Authored proof matches the four-read trace, bounded invariants,
+duplicate midpoint, unsorted counterexample and preparation arithmetic. A
+virtual indexed input checks table counts through length one billion without
+allocating that array or claiming measured performance. A quoting typo found
+while compiling the draft was corrected before the final proof. Final native
+bindings/path contracts, API/script types, launch contracts, build, both
+production dependency audits (zero vulnerabilities), copy sweep and diff checks
+pass. Public catalogue light/dark probes each pass six widths, 360–1440px;
+authenticated lesson acceptance is not inferred. N004 grading-integrity and
+full local release checks also pass.
+
+Coverage is **85/263 native**, **178 remaining**, and **90/725 coding**,
+**635 remaining**. PR #394's exact 70803596 protected preview passes eleven
+general checks and five selected signed-out submissions; nineteen tasks are
+Premium-locked with 402. Its required SQL passes and verify is pending.
+No independent/human, arbitrary-program or authenticated acceptance is claimed.
+
 ## 15 October continuation — five-item native batch n004
 
 Reviewed the complete D06 exercise check, three coding activities and the D07
