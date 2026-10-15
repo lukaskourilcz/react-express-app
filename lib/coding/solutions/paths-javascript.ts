@@ -119,7 +119,7 @@ const MAP: Boards = {
   const groups = new Map();
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
-    const letters = word.split("");
+    const letters = [...word]; // iterate Unicode code points, like the reference key
     letters.sort();
     const key = letters.join("");
     if (!groups.has(key)) {
@@ -848,12 +848,187 @@ const LOOKUPS: Boards = {
 
 const HIDDEN: Record<string, Hidden> = {
   'js-path-map': [
-    [['[...countAll([0, 0, false])]', [[0, 2], [false, 1]]], ['countAll([true, true]).get(true)', 2]],
-    [['mostCommon([3, 1, 1, 3, 2])', 3], ['mostCommon([0, 0, 1])', 0]],
-    [['twoSum([0, 4, 0], 0)', [0, 2]], ['twoSum([1, 5, 9], 14)', [1, 2]], ['twoSum([2, 2, 2], 4)', [0, 1]]],
-    [['topK([5, 4, 4, 5, 3], 3)', [5, 4, 3]], ['topK(["b", "a", "a"], 2)', ['a', 'b']]],
-    [['groupAnagrams(["listen", "silent", "enlist", "google"])', [['listen', 'silent', 'enlist'], ['google']]], ['groupAnagrams(["", ""])', [['', '']]]],
-  ],
+    [
+        [
+            "[...countAll([0, 0, false])]",
+            [
+                [
+                    0,
+                    2
+                ],
+                [
+                    false,
+                    1
+                ]
+            ]
+        ],
+        [
+            "countAll([true, true]).get(true)",
+            2
+        ],
+        [
+            "(() => {const a=Object.freeze(Object.defineProperty({x:1},'unused',{get(){throw Error('inspect');}})),b=Object.freeze({x:1});const input=Object.freeze([a,b,a,NaN,NaN,-0,+0,undefined,null,1n,1,'1']);const m=countAll(input),keys=[...m.keys()];return m.size===9&&m.get(a)===2&&m.get(b)===1&&m.get(NaN)===2&&m.get(0)===2&&m.get(undefined)===1&&m.get(1n)===1&&m.get(1)===1&&m.get('1')===1&&keys[0]===a&&keys[1]===b&&Object.is(keys[3],+0);})()",
+            true
+        ],
+        [
+            "(() => {const a=countAll([]),b=countAll([]);a.set('x',1);return a!==b&&b.size===0;})()",
+            true
+        ],
+        [
+            "(() => {const a=countAll(Object.freeze(Array.from({length:1000},(_,i)=>i%20)));return a.size===20&&[...a.values()].every(n=>n===50);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "mostCommon([3, 1, 1, 3, 2])",
+            3
+        ],
+        [
+            "mostCommon([0, 0, 1])",
+            0
+        ],
+        [
+            "(() => {const a=Object.freeze({x:1}),b=Object.freeze({x:1});return mostCommon(Object.freeze([a,b,b,a]))===a&&Number.isNaN(mostCommon(Object.freeze([NaN,1,NaN])))&&mostCommon([undefined,undefined,1])===undefined&&Object.is(mostCommon([-0,+0]),+0);})()",
+            true
+        ],
+        [
+            "mostCommon(Object.freeze(Array.from({length:1000},(_,i)=>i%2)))",
+            0
+        ]
+    ],
+    [
+        [
+            "twoSum([0, 4, 0], 0)",
+            [
+                0,
+                2
+            ]
+        ],
+        [
+            "twoSum([1, 5, 9], 14)",
+            [
+                1,
+                2
+            ]
+        ],
+        [
+            "twoSum([2, 2, 2], 4)",
+            [
+                0,
+                1
+            ]
+        ],
+        [
+            "twoSum(Object.freeze([1,2,3,4]),5)",
+            [
+                1,
+                2
+            ]
+        ],
+        [
+            "[twoSum(Object.freeze([-1000000,1000000]),0),twoSum(Object.freeze([-0,+0]),0)]",
+            [
+                [
+                    0,
+                    1
+                ],
+                [
+                    0,
+                    1
+                ]
+            ]
+        ],
+        [
+            "twoSum(Object.freeze(Array.from({length:1000},(_,i)=>i*2)),-1)",
+            []
+        ]
+    ],
+    [
+        [
+            "topK([5, 4, 4, 5, 3], 3)",
+            [
+                5,
+                4,
+                3
+            ]
+        ],
+        [
+            "topK([\"b\", \"a\", \"a\"], 2)",
+            [
+                "a",
+                "b"
+            ]
+        ],
+        [
+            "(() => {const a=Object.freeze({x:1}),b=Object.freeze({x:1}),input=Object.freeze([a,NaN,b,NaN,b,a]);const out=topK(input,3);return out.length===3&&out[0]===a&&Number.isNaN(out[1])&&out[2]===b;})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze([1,2]);const a=topK(input,0),b=topK(input,0),c=topK(input,1000);return a!==b&&a.length===0&&c.length===2&&c[0]===1&&c[1]===2;})()",
+            true
+        ],
+        [
+            "(() => {const out=topK(Object.freeze(Array.from({length:1000},(_,i)=>i%20)),1000);return out.length===20&&out.every((x,i)=>x===i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "groupAnagrams([\"listen\", \"silent\", \"enlist\", \"google\"])",
+            [
+                [
+                    "listen",
+                    "silent",
+                    "enlist"
+                ],
+                [
+                    "google"
+                ]
+            ]
+        ],
+        [
+            "groupAnagrams([\"\", \"\"])",
+            [
+                [
+                    "",
+                    ""
+                ]
+            ]
+        ],
+        [
+            "(() => {const a=String.fromCodePoint(0x1f600,0x1f9e1),b=String.fromCodePoint(0x1f5e1,0x1fa00),reverse=[...a].reverse().join('');const out=groupAnagrams(Object.freeze([a,b,reverse]));return out.length===2&&out[0].length===2&&out[0][0]===a&&out[0][1]===reverse&&out[1][0]===b;})()",
+            true
+        ],
+        [
+            "groupAnagrams(Object.freeze(['a','A','a','é','e\\u0301','\\u0301e']))",
+            [
+                [
+                    "a",
+                    "a"
+                ],
+                [
+                    "A"
+                ],
+                [
+                    "é"
+                ],
+                [
+                    "é",
+                    "́e"
+                ]
+            ]
+        ],
+        [
+            "(() => {const input=Object.freeze(['ab','ba']);const a=groupAnagrams(input),b=groupAnagrams(input);return a!==b&&a[0]!==b[0]&&a[0].join(',')==='ab,ba';})()",
+            true
+        ],
+        [
+            "(() => {const word='x'.repeat(100);const out=groupAnagrams(Object.freeze(Array(500).fill(word)));return out.length===1&&out[0].length===500&&out[0].every(x=>x===word);})()",
+            true
+        ]
+    ]
+],
   'js-path-set': [
     [['unique([true, false, true])', [true, false]], ['unique([NaN, NaN]).length', 1]],
     [['common(["a", "b"], ["b", "a"])', ['a', 'b']], ['common([1, 2, 2, 3], [2, 2])', [2]]],

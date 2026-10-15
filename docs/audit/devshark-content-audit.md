@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b019
+
+Read all five cumulative Map stages: counts, most common, two sum, top K and
+anagrams, including every inherited requirement/check and all revealed boards.
+Define SameValueZero and opaque identity, canonical Map zero keys, immutable
+bounded inputs, exact integer pair arithmetic and first-seen/earliest-second
+index ties. Each current function has an applicable authored cost model.
+The anagram junior now iterates Unicode code points rather than splitting
+surrogate pairs. Case, combining marks and normalization policies are explicit.
+
+All 35 final-hash sandbox verdicts agree versus 25/35 before; twenty valid
+complexity analyses retain 25 XP. Five starters and ten wrong variants fail.
+New checks carry forward through later stages and cover opaque getters,
+NaN/undefined/BigInt/object keys, 1000 entries, competing valid pairs, fresh
+outputs and a Unicode surrogate-recombination collision. Anagrams also exercise
+500 words of 100 code points. No measured asymptotic or arbitrary source-style
+proof is claimed. Copy sweep, focused cumulative coding, API/script types,
+launch, build, 263 native bindings, both zero-vulnerability production dependency
+audits and diff checks pass. Reviews/final readings remain same-session model
+work, not independent/human verification.
+
+Current coding coverage is 125/725; 600 remain. Native coverage stays 263/263.
+B015–b019 remain local while frozen PR #401 completes required verification.
+
 ## 15 October continuation — five coding items b018
 
 Individually read JSON parsing, readable JSON, public-field serialization,
