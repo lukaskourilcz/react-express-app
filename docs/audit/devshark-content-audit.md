@@ -1,5 +1,31 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n031
+
+Reviewed both discovery lessons, their reading activities and the backend
+mapping bridge. Fixture timing does not predict savings; ambiguous email-domain
+matches require authorization. A mechanism can be a legitimate requirement,
+recipients have agency and small observations have limits. Baselines distinguish
+snapshot reproduction from later comparisons, include method limitations and
+a dated 2027 target. Reading remains self-reviewed.
+
+The mapping reference incorrectly accepted unknown non-string dates as null;
+the guard now distinguishes strings from other values. Nonnegative safe integer
+ids reject precision loss/overflow. Date validation is explicitly shape-only,
+email validation only the stipulated @ check. Canonical problem ordering is a
+contract, not proof that unsorted fixed ordering is nondeterministic. Seven real
+QuickJS/TypeScript verdicts pass, including a separately written alternative and
+old/date/id/order wrongs; two valid solutions retain base25 without false penalty.
+Baseline/stale-worker intermediate outputs are retained and distinguished from
+fresh final executions. Native bindings, paths, API/script types, launch, final
+build, both production dependency audits (zero vulnerabilities), copy and diff
+checks pass. Fixture assertions are not measured customer or live CRM evidence.
+
+Coverage is **210/263 native**, **53 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 is now exact-production verified at 46e0dd63 with
+all eleven general checks passing; shipped coverage is95 coding/170 native.
+N024–n031 remain local. The diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n030
 
 Reviewed four handoff questions and their check. Conditional UAT acceptance now

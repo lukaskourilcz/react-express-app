@@ -35,10 +35,11 @@ const mapAccount = (raw: RawAccount): MapResult => {
   const problems: string[] = [];
   const text = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
-  let id = 0;
-  if (typeof raw.account_id === 'number' && Number.isInteger(raw.account_id)) id = raw.account_id;
-  else if (/^\\d+$/.test(text(raw.account_id))) id = Number(text(raw.account_id));
-  else problems.push('account_id must be a whole number');
+  const rawId = raw.account_id;
+  const convertedId = typeof rawId === 'number' ? rawId
+    : typeof rawId === 'string' && /^\\d+$/.test(rawId.trim()) ? Number(rawId.trim()) : NaN;
+  const id = convertedId;
+  if (!Number.isSafeInteger(id) || id < 0) problems.push('account_id must be a whole number');
 
   const companyName = text(raw.company_name);
   if (companyName === '') problems.push('company_name must not be empty');
@@ -48,7 +49,7 @@ const mapAccount = (raw: RawAccount): MapResult => {
 
   const rawDate = raw.signed_up_at;
   let signedUpAt: string | null = null;
-  if (rawDate === undefined || rawDate === null || text(rawDate) === '') signedUpAt = null;
+  if (rawDate === undefined || rawDate === null || (typeof rawDate === 'string' && rawDate.trim() === '')) signedUpAt = null;
   else if (typeof rawDate === 'string' && /^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate.trim())) signedUpAt = rawDate.trim();
   else problems.push('signed_up_at must be YYYY-MM-DD');
 
@@ -61,6 +62,12 @@ const mapAccount = (raw: RawAccount): MapResult => {
   return { ok: true, record: { id, companyName, ownerEmail, signedUpAt, plan } };
 };`,
     hiddenTests: [
+      {"call": "[42, false, [], {}, NaN].map(value => mapAccount(__raw({ signed_up_at: value })))", "expected": [{"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}, {"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}, {"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}, {"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}, {"ok": false, "problems": ["signed_up_at must be YYYY-MM-DD"]}]},
+      {"call": "[-1, Infinity, 9007199254740992, '9007199254740993', '9'.repeat(400)].map(value => mapAccount(__raw({ account_id: value })))", "expected": [{"ok": false, "problems": ["account_id must be a whole number"]}, {"ok": false, "problems": ["account_id must be a whole number"]}, {"ok": false, "problems": ["account_id must be a whole number"]}, {"ok": false, "problems": ["account_id must be a whole number"]}, {"ok": false, "problems": ["account_id must be a whole number"]}]},
+      {"call": "[0, Number.MAX_SAFE_INTEGER, '0000', '9007199254740991'].map(value => { const r = mapAccount(__raw({ account_id: value })); return r.ok ? r.record.id : r.problems; })", "expected": [0, 9007199254740991, 0, 9007199254740991]},
+      {"call": "[undefined, null, '', '   '].map(value => { const r = mapAccount(__raw({ signed_up_at: value })); return r.ok ? r.record.signedUpAt : r.problems; })", "expected": [null, null, null, null]},
+      {"call": "(function(){const raw=Object.freeze(__raw({account_id:' 0 ',plan:' growth ',owner_email:' @ ',signed_up_at:' 2026-99-99 '})); const before=JSON.stringify(raw);const r=mapAccount(raw);return {r,unchanged:JSON.stringify(raw)===before};})()", "expected": {"r": {"ok": true, "record": {"id": 0, "companyName": "Brightpier Freight", "ownerEmail": "@", "signedUpAt": "2026-99-99", "plan": "growth"}}, "unchanged": true}},
+
       {
         call: 'mapAccount(__raw({ account_id: 4821.5 }))',
         expected: { ok: false, problems: ['account_id must be a whole number'] },
