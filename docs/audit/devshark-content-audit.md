@@ -1,5 +1,27 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n038
+
+Reviewed both AI-security lessons, reading activities and export-gate repair.
+Prompt defenses and structured metadata are distinguished from execution authority;
+allow-lists alone do not establish consent. Trace refusal ordering is corrected.
+The 25-id cap is enforced before the inert database recorder, with whole-call
+refusal and separately approved replacement rather than automatic truncation.
+Restore/purge and cumulative limits remain explicit implementation obligations.
+
+Six real sandbox verdicts agree, rejecting three previously accepted shortcuts
+that read ignored fields/text or send normalized rather than original stored
+contact identity. Frozen inputs, throwing ignored-field accessors and 1000-entry
+boundaries pass. Both valid O(n) implementations retain25XP. Native review
+bindings, paths, API/script types, launch, build, both production dependency
+audits (zero vulnerabilities), copy and diff checks pass. Editorial scores and
+final readings are individual same-session judgments, not execution results.
+
+Coverage is **245/263 native**, **18 remaining**, and **95/725 coding**,
+**630 remaining**. PR #400 freezes n032–n037 with SQL and eleven exact-preview
+general checks passing; required verify is pending. Shipped coverage remains
+95 coding/210 native through #399. Diagnostic parent still awaits #397.
+
 ## 15 October continuation — five-item native batch n037
 
 Reviewed both evaluation lessons, reading activities and metrics exercise.
