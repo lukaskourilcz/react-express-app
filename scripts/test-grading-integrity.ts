@@ -1,3 +1,5 @@
+import { checkQuickjsProvenance } from './quickjs-provenance-contract';
+import { checkSortParity } from './coding-sort-contract';
 import { checkCodingTaskRuntimePolicy } from './coding-task-runtime-contracts';
 import { createCodingSession as encodeCodingSession } from '../lib/coding/session';
 import assert from 'node:assert/strict';
@@ -31,8 +33,10 @@ import { buildSandboxWorker } from './build-sandbox-worker.mjs';
 
 // Every run below goes through the grader's worker thread, built fresh from
 // the sources under test, exactly as the deployment runs it.
+checkQuickjsProvenance();
 await buildSandboxWorker();
 await checkCodingTaskRuntimePolicy();
+await checkSortParity();
 
 const attacks = [
   ['replace comparison', 'globalThis.__deepEqual=()=>true; function answer(){return 0}'],

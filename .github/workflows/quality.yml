@@ -52,6 +52,19 @@ jobs:
             package-lock.json
             client/package-lock.json
       - run: npm ci && npm ci --prefix client
+      - name: Rebuild modified QuickJS runtime from pinned sources
+        env:
+          QUICKJS_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          if [[ -n "$QUICKJS_BASE_SHA" && "$QUICKJS_BASE_SHA" != "0000000000000000000000000000000000000000" ]]; then
+            [[ "$QUICKJS_BASE_SHA" =~ ^[a-f0-9]{40}$ ]] || exit 1
+            git fetch --no-tags --depth=1 origin "$QUICKJS_BASE_SHA"
+            if git diff --quiet "$QUICKJS_BASE_SHA" HEAD -- lib/coding/vendor lib/coding/quickjs-variant.ts scripts/rebuild-quickjs-sort.mjs package.json package-lock.json client/package-lock.json; then
+              echo "QuickJS inputs unchanged; required runtime integrity tests still run below."
+              exit 0
+            fi
+          fi
+          npm run check:quickjs-build
       - run: npm run typecheck:api && npm run typecheck:scripts && npm run typecheck:tooling --prefix client
       - run: npm run audit:native-reviews
       - run: npm run test:launch && npm run test:coding-auth && npm run test:grading-integrity && npm run test:path-authority && npm run test:react-authority && npm run test:coding && npm run test:paths && npm run test:billing && npm run test:fallbacks && npm run test:garden && npm run test:live-grading && npm run test:client

@@ -1,5 +1,5 @@
 import { newQuickJSWASMModuleFromVariant, type QuickJSHandle } from 'quickjs-emscripten';
-import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
+import variant from './quickjs-variant';
 import { types } from 'node:util';
 import type { Context } from 'node:vm';
 import { REACT_PROMISE_SOURCE } from './react-promise-source';

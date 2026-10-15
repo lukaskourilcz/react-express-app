@@ -16,7 +16,7 @@ import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { Worker } from 'node:worker_threads';
 import { newQuickJSWASMModuleFromVariant, shouldInterruptAfterDeadline, type QuickJSWASMModule, type QuickJSHandle } from 'quickjs-emscripten';
-import variant from '@jitl/quickjs-singlefile-cjs-release-sync';
+import variant from './quickjs-variant';
 import type { EvaluateResult } from '../../shared/coding-evaluate';
 import { LOG_LINE_CUT, LOG_OUTPUT_CUT, MAX_LOG_CHARS, MAX_LOG_LINE_CHARS, MAX_LOGS, PROBE_IS_INDEX_SOURCE, PROBE_LINE, TIMEOUT_MESSAGE, deepEqual, displayValue } from '../../shared/coding-evaluate';
 import { CONSOLE_SOURCE } from '../../shared/coding-console';

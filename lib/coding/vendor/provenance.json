@@ -1,0 +1,43 @@
+{
+  "schema": "devshark.quickjs-sort/v1",
+  "sdk": {
+    "repository": "https://github.com/justjake/quickjs-emscripten",
+    "commit": "df4efb9ef2cb25c417ecb57986da462d11b244ed",
+    "version": "0.32.0",
+    "declaredQuickjsCommit": "f1139494d18a2053630c5ed3384a42bb70db3c53",
+    "vendorSourceSha256": "4f15a9e33819635474a9e43aa523f42ea3a6b452bfd8467223fcfbf6e447cc43"
+  },
+  "compiler": {
+    "repository": "https://github.com/emscripten-core/emsdk",
+    "managerCommit": "8f685c26ee9f672081e61e22c6aa60fa972d00a9",
+    "version": "5.0.1",
+    "emscriptenCommit": "8c5f43157a3f069ade75876e23061330521eabde",
+    "release": "bf32ae8b61ac8efeb7eca01b54c8307f992724f7"
+  },
+  "build": {
+    "variant": "variant-quickjs-singlefile-cjs-release-sync",
+    "closure": 0,
+    "abiSdk": "0.32.0",
+    "note": "Upstream variant flags; Closure JavaScript postprocessing disabled for the temporary extraction factory. Runtime uses the published SDK loader and FFI via wasmModule."
+  },
+  "patch": {
+    "file": "sort-node24.patch",
+    "sha256": "7a3cb79256bffdc642bd3a1af8c8dacb946f5ede370be8e2d3d1685e3a5d108f"
+  },
+  "artifact": {
+    "file": "quickjs-node24.cjs",
+    "sha256": "e3772a79c640b51a33a7d5530795bded483af997d2e5ce38b46a659cdc2d890e",
+    "bytes": 670921,
+    "wasmSha256": "35bc942e1e49f6a68f0960f16fa68648b059c5577fec8b7d41f660d8a8535227",
+    "wasmBytes": 503122
+  },
+  "compatibility": {
+    "referenceNode": "v24.19.0",
+    "sortCases": 37,
+    "scope": "Observable sort writeback plus Node24 zero/singleton early return; no full ECMAScript conformance claim.",
+    "references": [
+      "https://tc39.es/ecma262/multipage/indexed-collections.html#sec-array.prototype.sort",
+      "https://github.com/nodejs/node/blob/v24.19.0/deps/v8/third_party/v8/builtins/array-sort.tq#L1436-L1456"
+    ]
+  }
+}
