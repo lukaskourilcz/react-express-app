@@ -28,8 +28,8 @@ commit, patch hash, data-module hash, decoded wasm hash and sizes. Redistributio
 notices are included. The checked-in rebuild script fetched a separate temporary
 source tree and produced byte-identical wasm/module output locally. It neither
 overwrites the checked-in artifact nor changes a system profile. Required CI
-repeats the build on runtime/build/dependency-input changes. Cross-platform
-reproducibility is pending the actual Linux CI result.
+repeats the build on runtime/build/dependency-input changes. The required Linux CI rebuild now also reproduces the reviewed bytes, in
+run38802106010.
 
 ## Executed local checks
 
@@ -56,9 +56,6 @@ control and reject the otherwise-correct solution requiring sorted frozen input
 to throw TypeError. Four observations, guest0XP/null progress, no fixture accounts.
 This independently demonstrates the deployed gap in both grading paths.
 
-## Remaining release acceptance
+## Completed release acceptance
 
-Required Linux rebuild/full checks, exact-head preview regression/control,
-guarded merge, then exact production regression/control and before/after live
-alias checks. Keep #422 open until those results exist. Content coverage remains
-395/725 in source,390/725 production-verified;330 coding reviews remain.
+PR#429 passed required run38802106010 at exact head45a4fbd5b6109bd374b17f3d2236a92f77b9c337 (verify28m26s; SQL40s), including Linux byte-identical pinned-source runtime rebuild, full coding catalogue, grading/Learn authority and browser/release gates. It merged at53b3967b9bc5b69733bb33818fd27286a366eb84 on15October2026 at20:56:56UTC. READY production dpl_2W9Cz1xU2JPDc3LvDRMSiCLURjso matches that merge; live devshark.app alias checks before and after probes point to it, without alias error. Exact preview and production each pass eleven general guest checks and four actual JavaScript-average/React-heading regression/control Submits for #422. Ordinary controls pass before/after; the two previously rejected correct frozen-sort guards now pass after the fix. Guest0XP/null progress; no authenticated payout claim. All five B073 changed tasks return402 and await dedicated authorized Premium acceptance. Local/CI evidence includes37 actual-worker/native sort cases, compiled React guest regression and pinned artifact/ABI hashes. The broad local9352ms React-negative timing failure and successful focused rerun remain recorded; fresh required full CI passed. B073 also has30/30 final-hash selected verdicts, twenty authored-target/base25 checks and80 fixture-backed light/dark probes. Verified production coverage is395/725 coding and263/263 native; ten later B074–B075 reviews are frozen separately in #430. This completes the bounded #422 engine/release acceptance, without universal JavaScript conformance, independent/human, real-device, dedicated Premium or whole-catalogue acceptance claims.
