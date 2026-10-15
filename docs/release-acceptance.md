@@ -3586,3 +3586,17 @@ The final 100-tick test fits the wait limit; scoped allocation/firing observatio
 removes cross-check cancellation hooks. Both failures are retained privately.
 Snapshot delivery, prototype-safe names, callback errors/arity and bounded
 1000-listener/10000-call cases use local fixtures. No live user-state writes.
+
+## Sorting and callback content batch b039 — 15 October 2026
+
+Five individual model reviews raise coverage to 225/725 coding, 500 remaining;
+native remains 263/263. All 30 current-hash QuickJS verdicts agree versus 25/30
+before. Twenty target/base-25-XP checks, copy sweep, focused coding including
+reversed hidden/native Run, API/script types, launch, build, native bindings,
+both production dependency audits (zero vulnerabilities) and diff checks pass.
+Opaque undefined sorting, own safe settings keys, exact callback values/errors,
+10000-item/key and 5000-line boundaries, 100 native-compatible timer callbacks
+and capture-time reminder values use local fixtures. No live user-state writes,
+no engine/schema/UI-policy change and no independent/human acceptance claim.
+The owner requested completing and shipping current work; further audit batches
+remain in #176/#391. B033–b039 form the next 35-review release cohort.

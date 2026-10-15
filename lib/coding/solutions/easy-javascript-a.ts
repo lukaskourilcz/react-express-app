@@ -444,19 +444,8 @@ const negate = test => function (...args) {
     ],
   },
   'js-easy2-sort-by-key': {
-    solution: `const sortBy = (list, pick) => {
-  // Copy first: sort changes the array it is called on.
-  return [...list].sort((a, b) => pick(a) - pick(b));
-};`,
-    junior: `const sortBy = (list, pick) => {
-  const copy = list.slice();
-  copy.sort((first, second) => {
-    const firstKey = pick(first);
-    const secondKey = pick(second);
-    return firstKey - secondKey;
-  });
-  return copy;
-};`,
+    solution: "const sortBy = (list, pick) => {\n  const entries = list.map((item, index) => ({ item, index, key: pick(item) }));\n  entries.sort((a, b) => a.key - b.key || a.index - b.index);\n  return entries.map(entry => entry.item);\n};",
+    junior: "const sortBy = (list, pick) => {\n  const decorated = list.map((item, index) => {\n    const key = pick(item);\n    return { item, key, index };\n  });\n  decorated.sort((first, second) => {\n    const byKey = first.key - second.key;\n    return byKey === 0 ? first.index - second.index : byKey;\n  });\n  return decorated.map(entry => entry.item);\n};",
     senior: `// pick runs once per item, not once per comparison.
 const sortBy = (list, pick) =>
   list
@@ -464,6 +453,10 @@ const sortBy = (list, pick) =>
     .sort((a, b) => a.key - b.key || a.index - b.index)
     .map(({ item }) => item);`,
     hiddenTests: [
+      { call: "(() => {const a=Object.freeze({}),b=Object.freeze([]),list=Object.freeze([a,undefined,b,NaN,-0]),seen=[];const key=new Map([[a,2],[undefined,-1],[b,2],[NaN,0],[-0,0]]);let arity=true;const x=sortBy(list,(...args)=>{arity=arity&&args.length===1;seen.push(args[0]);return key.get(args[0]);});return [x.length,x[0]===undefined,Number.isNaN(x[1]),Object.is(x[2],-0),x[3]===a,x[4]===b,seen.length,seen[0]===a,seen[1]===undefined,arity,x!==sortBy(list,x=>key.get(x)),list[0]===a,sortBy([],()=>0)!==sortBy([],()=>0)];})()", expected: [5, true, true, true, true, true, 5, true, true, true, true, true, true] },
+      { call: "(() => {const error=Object.freeze({}),list=Object.freeze([3,2,1]);let calls=0,same=false;try{sortBy(list,()=>{calls++;throw error;});}catch(e){same=e===error;}return [calls,same,list[0]];})()", expected: [1, true, 3] },
+      { call: "(() => {const list=Object.freeze(Array.from({length:10000},(_,i)=>Object.freeze({i,k:i%2}))),out=sortBy(list,x=>x.k);return [out.length,out[0]===list[0],out[4999]===list[9998],out[5000]===list[1],out[9999]===list[9999]];})()", expected: [10000, true, true, true, true] },
+
       { call: 'sortBy([], n => n)', expected: [] },
       { call: 'sortBy([-1, -5, 3], n => Math.abs(n))', expected: [-1, 3, -5] },
       { call: 'sortBy([{ t: "x", p: 5 }, { t: "y", p: -2 }], o => o.p).map(o => o.t)', expected: ['y', 'x'] },

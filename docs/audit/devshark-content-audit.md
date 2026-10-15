@@ -1,6 +1,33 @@
 # devShark content audit — the question bank
 
 
+## 15 October continuation — five coding items b039
+
+Read numeric-key sorting, LF line callbacks, settings changes, timeout countdown
+and reminder registration individually. Sorting now decorates opaque values
+before native sort, so undefined follows its picked key rather than its native
+special position; every key is collected once in original order. Settings writes
+guard own keys and define data properties, preserving the prototype even for
+__proto__. Reminder junior captures its title at registration, matching the
+other boards. All affected teaching material and final programs were reread.
+
+All 30 current-hash worker verdicts agree (20 valid, five starters, five wrongs)
+versus 25/30 baseline. Twenty authored-target/base-25-XP checks, copy sweep,
+focused coding including reversed hidden/native Run, API/script types, launch,
+build, 263 native bindings, both zero-vulnerability production dependency audits
+and diff checks pass. Cases include 10000 stable records/own keys, 5000 literal
+line callbacks, original identities/errors, NaN versus signed-zero comparison,
+100 native-compatible ticks, post-registration caller mutation and a future
+reminder after 999 skipped records. Supported larger timer counts are source-
+reviewed, with no maximum-count physical timing claim.
+
+Coverage is 225/725 coding, 500 remaining, and 263/263 native. B033–b039 add
+35 local reviews beyond the 190 coding records shipped by PR #405. At the
+owner's stop-current-work instruction, no next batch is started. Remaining
+individual reviews and bank/override/acceptance work remain under #176/#391.
+All reviews are same-session model work, not independent/human acceptance.
+
+
 ## 15 October continuation — five coding items b038
 
 Read the emitter, cancellable timer, bounded interval, error-first callback

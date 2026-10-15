@@ -659,7 +659,7 @@ safeDivide(1, 0, (error, value) => console.log(error && error.message, value));
     tier: 2,
     focus: ['higher-order', 'sort'],
     title: 'Sort by what a function picks',
-    prompt: 'Write `sortBy(list, pick)`, returning a new array sorted from smallest to largest by the number `pick(item)` returns for each item. `sortBy([{ name: "b", age: 30 }, { name: "a", age: 20 }], person => person.age)` puts the 20-year-old first. Items that pick the same number keep their original order, and `list` itself is not changed.',
+    prompt: "Write `sortBy(list, pick)`, returning a new array sorted from smallest to largest by the number `pick(item)` returns for each item. `sortBy([{ name: \"b\", age: 30 }, { name: \"a\", age: 20 }], person => person.age)` puts the 20-year-old first. Items that pick the same number keep their original order, and `list` itself is not changed. list is a read-only dense array of at most 10000 opaque values, including undefined, and may be frozen. Preserve original references/values and return a fresh array on every call, including empty input. Call pick exactly once per item in original input order with exactly that one argument before sorting, storing its finite Number key (between -1000000 and 1000000). pick is synchronous and does not mutate the list; propagate its original thrown value if it fails. Decorate values with their key/index, sort those records and unwrap: native sort puts raw undefined values last without calling the comparator, so sorting raw values would break this contract. Target: O(n log n) time under the usual stable comparison-sort cost model and O(n) wrapper/output space, where n is 2 + list.length, excluding pick work; JavaScript does not specify a universal native-sort time bound.",
     starter: `const sortBy = (list, pick) => {
 
 };
@@ -667,16 +667,9 @@ safeDivide(1, 0, (error, value) => console.log(error && error.message, value));
 // Scratch pad. Change this and press Run.
 console.log(sortBy(["ccc", "a", "bb"], word => word.length));
 `,
-    skeleton: `const sortBy = (list, pick) => {
-  const copy = /* a copy of list */;
-  return copy.sort((a, b) => /* compare what pick gives for a and b */);
-};`,
-    hints: ['`sort` takes a compare function that returns a negative number when `a` goes first. `pick(a) - pick(b)` does exactly that, and sorting a copy leaves `list` alone.'],
-    approach: [
-      'Copy the list first, because `sort` changes the array it is called on.',
-      'Sort the copy with a compare function that subtracts `pick(b)` from `pick(a)`, so smaller numbers come first.',
-      'The compare function works on numbers, so `10` sorts after `9`. JavaScript’s sort is stable, so ties keep their order.',
-    ],
+    skeleton: "const sortBy = (list, pick) => {\n  const decorated = list.map((item, index) => ({ item, index, key: /* pick this item once */ }));\n  decorated.sort((a, b) => /* compare numeric keys, then original indices */);\n  return decorated.map(entry => /* original item */);\n};",
+    hints: ["Cache each picked number on a wrapper record before sorting. Native sort moves raw undefined values to the end without calling its comparator; sorting wrapper records avoids that special case."],
+    approach: ["Map each original item to a record carrying that item, its picked numeric key and its original index.", "Sort those records by key, then index for ties.", "Map the records back to their original items. The input stays unchanged and every pick ran once before sorting."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
