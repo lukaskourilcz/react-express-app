@@ -27,28 +27,29 @@ export const ALGORITHM_PATHS: Record<string, Spec> = {
     starter: starter('Two pointers and windows', 'function pairWithSum(sorted, target)', 'pairWithSum([1, 2, 4, 7, 11], 9)'),
     focus: ['two-pointer', 'while'],
     prompts: [
-      en('Write `pairWithSum(sorted, target)`. `sorted` holds distinct numbers in ascending order. Return the indices `[i, j]` (i < j) of two values that add up to `target`, or `[]` when no pair does; if several pairs work, return the one with the smallest `i`. `pairWithSum([1, 2, 4, 7, 11], 9)` gives `[1, 3]`. Put one pointer at each end: when the sum is too small, move the left one right; when it is too big, move the right one left. Target: O(n) time and O(1) extra space.'),
-      en('Add `removeDuplicates(sorted)`. `sorted` is in ascending order and may repeat values. Compact it in place so its first `k` slots hold each value once, in order, and return `k`. After `const a = [1, 1, 2, 3, 3]`, `removeDuplicates(a)` returns `3` and `a.slice(0, 3)` is `[1, 2, 3]`. Keep a slow pointer at the next free slot and a fast one that reads ahead. Whatever stays after the first `k` slots does not matter. Target: O(n) time and O(1) extra space.'),
-      en('Add `isSubsequence(small, big)`: `true` when the characters of `small` appear in `big` in the same order, not necessarily next to each other. `isSubsequence("ace", "abcde")` is `true`; `isSubsequence("aec", "abcde")` is `false`. Walk `big` with one pointer and move a second pointer through `small` each time the characters match. The empty string is a subsequence of every string. Target: O(n).'),
-      en('Add `minWindowSum(numbers, target)`: the length of the shortest run of neighbouring numbers whose sum is at least `target`, or `0` when no run reaches it. All numbers are positive. `minWindowSum([2, 3, 1, 2, 4, 3], 7)` gives `2`, for `[4, 3]`. Grow a window by moving its right edge; while its sum reaches `target`, record its length and shrink it from the left. Target: O(n), because each edge only moves forward.'),
-      en('Add `longestOnes(bits, k)`: `bits` holds only 0s and 1s, and you may flip at most `k` zeros to ones. Return the length of the longest run of ones you can make. `longestOnes([1, 1, 0, 0, 1, 1, 1, 0, 1], 1)` gives `5`. Keep a window and the number of zeros inside it: move the right edge, and while the window holds more than `k` zeros, move the left edge. Target: O(n).'),
+      en("Write `pairWithSum(sorted, target)`. `sorted` holds distinct numbers in ascending order. Return the indices `[i, j]` (i < j) of two values that add up to `target`, or `[]` when no pair does; if several pairs work, return the one with the smallest `i`. `pairWithSum([1, 2, 4, 7, 11], 9)` gives `[1, 3]`. Put one pointer at each end: when the sum is too small, move the left one right; when it is too big, move the right one left. Target: O(n) time and O(1) extra space. Input is a dense ordinary array of at most 20,000 distinct primitive integers in [-1000000000000,1000000000000], strictly increasing numerically; zero signs compare equal. target is a primitive integer in [-2000000000000,2000000000000]. These bounds keep every pair sum exact. The input may be frozen and must keep all values/order, including source zero signs. n is sorted.length. Return a fresh index array on every call, including no-match results."),
+      en("Add `removeDuplicates(sorted)`. `sorted` is in ascending order and may repeat values. Compact it in place so its first `k` slots hold each value once, in order, and return `k`. After `const a = [1, 1, 2, 3, 3]`, `removeDuplicates(a)` returns `3` and `a.slice(0, 3)` is `[1, 2, 3]`. Keep a slow pointer at the next free slot and a fast one that reads ahead. Whatever stays after the first `k` slots does not matter. Target: O(n) time and O(1) extra space. Input is a mutable dense ordinary array of at most 20,000 primitive Number values sorted numerically in nondecreasing order. Fractions and infinities are valid; NaN is outside this task. Equality means ===, so both zero signs form one value; keep the first exact representative, including its zero sign. n is the original length. Return an integer k in 0..n and leave at least k slots containing the required prefix. Values after that prefix are irrelevant; trimming the array to k is valid too. No rounding or coercion."),
+      en("Add `isSubsequence(small, big)`: `true` when the characters of `small` appear in `big` in the same order, not necessarily next to each other. `isSubsequence(\"ace\", \"abcde\")` is `true`; `isSubsequence(\"aec\", \"abcde\")` is `false`. Walk `big` with one pointer and move a second pointer through `small` each time the characters match. The empty string is a subsequence of every string. Target: O(n) time and O(m) extra space, where n is small.length + big.length in UTF-16 code units and m is the number of code points in small. Both inputs are primitive strings of at most 20,000 UTF-16 code units each. Treat the values produced by a string's for...of iterator as characters: an emoji such as 😀 is one item. Do not split its surrogate pair. Lone surrogates are valid single items. Combining marks remain separate; compare exactly, with no normalization. A streaming iterator can also use O(1) extra space."),
+      en("Add `minWindowSum(numbers, target)`: the length of the shortest run of neighbouring numbers whose sum is at least `target`, or `0` when no run reaches it. All numbers are positive. `minWindowSum([2, 3, 1, 2, 4, 3], 7)` gives `2`, for `[4, 3]`. Grow a window by moving its right edge; while its sum reaches `target`, record its length and shrink it from the left. Target: O(n) time and O(1) extra space, because each edge only moves forward. Input is a dense ordinary array of at most 20,000 primitive positive integers in 1..1000000000. target is a primitive positive integer in 1..100000000000000; zero, negative and fractional inputs are outside this task. These bounds keep every subtotal and comparison exact. n is numbers.length. The array may be frozen and must remain unchanged. Only nonempty windows count; a target above the full sum gives 0."),
+      en("Add `longestOnes(bits, k)`: `bits` holds only 0s and 1s, and you may flip at most `k` zeros to ones. Return the length of the longest run of ones you can make. `longestOnes([1, 1, 0, 0, 1, 1, 1, 0, 1], 1)` gives `5`. Keep a window and the number of zeros inside it: move the right edge, and while the window holds more than `k` zeros, move the left edge. Target: O(n) time and O(1) extra space. Input is a dense ordinary array of at most 20,000 primitive 0 or 1 values; either zero sign counts as 0. k is a primitive integer in 0..1000000000000, including equivalent zero signs. A budget greater than the number of zeros is valid and permits the whole array. Flips are conceptual: preserve every input value/order and source zero sign. The array may be frozen. n is bits.length; return an integer length."),
     ],
     hints: [
       en('`let left = 0, right = sorted.length - 1; while (left < right) { ... }`. The array is sorted, so moving `left` right can only raise the sum and moving `right` left can only lower it.'),
       en('`let slow = 0;` then `for (let fast = 0; fast < sorted.length; fast++)`: when `sorted[fast]` differs from the last value you kept, write it to `sorted[slow]` and move `slow` on. `slow` is the answer.'),
-      en('`let i = 0; for (const char of big) if (i < small.length && char === small[i]) i++;`. At the end, `small` is a subsequence when `i === small.length`.'),
+      en("Use [...small] to keep the wanted code points, then iterate big with for...of. Compare the next wanted item, not small[i], which reads a UTF-16 code unit."),
       en('Keep `left`, a running `sum` and `best = Infinity`. After adding `numbers[right]`, loop `while (sum >= target)`: record `right - left + 1`, then subtract `numbers[left]` and move `left` on. Return `0` if `best` is still `Infinity`.'),
       en('The window is valid while it holds at most `k` zeros. Count a zero as it enters on the right; while the count is over `k`, move `left` on, and uncount a zero as it leaves. The answer is the widest valid window.'),
     ],
     approaches: [
-      [en('Start with `left` at 0 and `right` at the last index.'), en('While `left < right`, compare `sorted[left] + sorted[right]` with the target.'), en('Return the pair on a match; otherwise move the pointer that brings the sum closer. Return `[]` when they meet.')],
-      [en('Return 0 for an empty array.'), en('Keep `slow` at the next free slot; walk `fast` over every index.'), en('Copy each new value to `sorted[slow]`, move `slow` on, and return `slow` at the end.')],
-      [en('Keep `i`, the position in `small`.'), en('Walk `big`; move `i` on each time the character matches `small[i]`.'), en('Return whether `i` reached `small.length`.')],
-      [en('Keep `left`, `sum` and `best`.'), en('Add each number on the right; while the sum reaches the target, record the length and shrink from the left.'), en('Return `best`, or `0` if no window reached the target.')],
-      [en('Keep `left`, a zero count and `best`.'), en('Add each bit on the right; while there are more than `k` zeros, move the left edge on.'), en('Record the window width after every step and return the widest.')],
+      [en("Start with `left` at 0 and `right` at the last index."), en("While `left < right`, compare `sorted[left] + sorted[right]` with the target."), en("Return the pair on a match; otherwise move the pointer that brings the sum closer. Return `[]` when they meet.")],
+      [en("Return 0 for an empty array."), en("Keep `slow` at the next free slot; walk `fast` over every index."), en("Copy each new value to `sorted[slow]`, move `slow` on, and return `slow` at the end.")],
+      [en("Convert small to an array of code points and keep i at its next unmatched position."), en("Iterate big by code point; advance i when that item matches the next wanted item."), en("Return whether i reached the wanted array length. A streaming small iterator avoids storing the array.")],
+      [en("Keep `left`, `sum` and `best`."), en("Add each number on the right; while the sum reaches the target, record the length and shrink from the left."), en("Return `best`, or `0` if no window reached the target.")],
+      [en("Keep `left`, a zero count and `best`."), en("Add each bit on the right; while there are more than `k` zeros, move the left edge on."), en("Record the window width after every step and return the widest.")],
     ],
     tests: [
       [
+        check("pairWithSum([0,4294967296],0)", [], "pair sums do not wrap at 32 bits"),
         check('pairWithSum([1, 2, 4, 7, 11], 9)', [1, 3]),
         check('pairWithSum([1, 2, 4, 7, 11], 15)', [2, 4]),
         check('pairWithSum([1, 2, 3, 4, 5], 6)', [0, 4], 'several pairs: the smallest i wins'),
@@ -61,6 +62,7 @@ export const ALGORITHM_PATHS: Record<string, Spec> = {
         check('pairWithSum([0, 1, 2], 0)', [], 'a sum of zero needs two values', true),
       ],
       [
+        check("(() => {const values=[.25,.25,.5];const k=removeDuplicates(values);return [k,values.slice(0,k)];})()", [2, [0.25, 0.5]], "keep fractional representatives"),
         check('(() => { const a = [1, 1, 2, 3, 3]; const k = removeDuplicates(a); return [k, a.slice(0, k)]; })()', [3, [1, 2, 3]]),
         check('(() => { const a = [0, 0, 0, 1, 1, 2]; const k = removeDuplicates(a); return [k, a.slice(0, k)]; })()', [3, [0, 1, 2]]),
         check('(() => { const a = [-2, -2, 0, 5, 5, 5, 9]; const k = removeDuplicates(a); return [k, a.slice(0, k)]; })()', [4, [-2, 0, 5, 9]]),
@@ -71,6 +73,7 @@ export const ALGORITHM_PATHS: Record<string, Spec> = {
         check('removeDuplicates([])', 0, 'empty input', true),
       ],
       [
+        check("isSubsequence(\"😀\",\"x😀y\")", true, "an emoji is one code point"),
         check('isSubsequence("ace", "abcde")', true),
         check('isSubsequence("aec", "abcde")', false, 'order matters'),
         check('isSubsequence("abc", "abc")', true),
@@ -82,6 +85,7 @@ export const ALGORITHM_PATHS: Record<string, Spec> = {
         check('isSubsequence("Ab", "ab")', false, 'case matters', true),
       ],
       [
+        check("minWindowSum([1000000000,1000000000,1000000000],3000000000)", 3, "targets can exceed 32 bits"),
         check('minWindowSum([2, 3, 1, 2, 4, 3], 7)', 2),
         check('minWindowSum([1, 4, 4], 4)', 1, 'one number can be enough'),
         check('minWindowSum([1, 2, 3, 4, 5], 15)', 5, 'the whole array'),
@@ -93,6 +97,7 @@ export const ALGORITHM_PATHS: Record<string, Spec> = {
         check('minWindowSum([], 3)', 0, 'empty input', true),
       ],
       [
+        check("(() => {const bits=Object.freeze([0,1,0]);return longestOnes(bits,1);})()", 2, "flips leave the original unchanged"),
         check('longestOnes([1, 1, 0, 0, 1, 1, 1, 0, 1], 1)', 5),
         check('longestOnes([1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 0], 2)', 6),
         check('longestOnes([0, 1, 0, 1, 0], 1)', 3),
