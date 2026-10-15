@@ -23,6 +23,7 @@ const targetCost = (value: string): Cost | null => {
   return power ? { power: Number(power[1]), log: 0 } : null;
 };
 const scanMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'includes', 'indexOf', 'lastIndexOf', 'slice', 'split', 'join', 'reverse', 'toReversed', 'flat', 'flatMap', 'concat', 'replace', 'replaceAll', 'toLowerCase', 'toUpperCase', 'trim', 'substring', 'substr', 'shift', 'unshift', 'splice']);
+const rangeMethods = new Set(['slice', 'substring', 'substr']);
 const callbackMethods = new Set(['map', 'filter', 'reduce', 'reduceRight', 'forEach', 'some', 'every', 'find', 'findIndex', 'flatMap', 'sort', 'toSorted']);
 const scalarMethods = new Set(['push', 'pop', 'get', 'set', 'has', 'add', 'delete', 'charAt', 'charCodeAt', 'at', 'test', 'isArray', 'isInteger', 'isFinite', 'abs', 'floor', 'ceil', 'round', 'min', 'max', 'log2', 'sqrt']);
 
@@ -205,8 +206,25 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
         && numericLiteral(node.right) !== null && collectionKind(node.left) === 'input') return 'input';
       if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)) {
         const method = node.expression.name.text;
-        if (['slice', 'substring', 'substr'].includes(method) && node.arguments.length >= 2 && node.arguments.every(argument => numericLiteral(argument) !== null)) return 'fixed';
-        if (method === 'slice' && node.arguments.length === 1 && (numericLiteral(node.arguments[0]) ?? 0) < 0) return 'fixed';
+        if (rangeMethods.has(method)) {
+          // A range copy costs the copied width, not necessarily the whole
+          // receiver. Dynamic endpoints need flow/clamping analysis that this
+          // model does not provide (e.g. slice(i, i + 2) in a linear scan).
+          const endpoints = node.arguments.map(argument => {
+            const value = numericLiteral(argument);
+            return value !== null && Number.isSafeInteger(Math.trunc(value)) ? Math.trunc(value) : null;
+          });
+          if (endpoints.some(value => value === null)) return 'unknown';
+          if (endpoints.length >= 2) {
+            // slice(1, -1) can span input data; substring clamps negatives
+            // and substr's second argument is a length. Do not call every
+            // pair of literals a fixed window merely because both are known.
+            if (method === 'slice' && endpoints[0]! >= 0 && endpoints[1]! < 0) return 'unknown';
+            return 'fixed';
+          }
+          if (endpoints.length === 1 && ['slice', 'substr'].includes(method) && endpoints[0]! < 0) return 'fixed';
+          return collectionKind(node.expression.expression);
+        }
         if (scanMethods.has(method) || method === 'sort' || method === 'toSorted') return collectionKind(node.expression.expression);
         if (['Object', 'Array'].includes(node.expression.expression.getText(file)) && ['keys', 'values', 'entries', 'from'].includes(method)) return node.arguments[0] ? collectionKind(node.arguments[0]) : 'unknown';
       }
@@ -359,7 +377,7 @@ function inspectComplexity(task: Pick<CodingTask, 'track' | 'prompt' | 'tests'>,
           }
           else if (['toLowerCase', 'toUpperCase', 'trim'].includes(method) && ts.isElementAccessExpression(node.expression.expression)) { call = constant; }
           else if (scanMethods.has(method) || (receiver === 'Object' && ['keys', 'values', 'entries'].includes(method)) || method === 'from') {
-            const kind = ['slice', 'substring', 'substr'].includes(method) && collectionKind(node) === 'fixed' ? 'fixed'
+            const kind = rangeMethods.has(method) ? collectionKind(node)
               : receiver === 'Object' || (receiver === 'Array' && method === 'from') ? node.arguments[0] ? collectionKind(node.arguments[0]) : 'unknown' : collection;
             if (kind === 'unknown') uncertainty = 'A scan cannot be related to the input size.';
             call = kind === 'input' ? linear : constant; evidence.add('Collection/string scan');

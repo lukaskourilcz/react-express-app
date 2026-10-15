@@ -63,6 +63,37 @@ export function complexityContracts() {
   assert.equal(check('const solve = xs => xs.map(x => xs.slice(0,3).includes(x));').time, 'O(n)');
   assert.equal(check('const solve = xs => xs.map(x => xs.slice(-3).includes(x));').time, 'O(n)');
   assert.equal(check('const solve = xs => xs.split("").map(x => xs.substring(0,3).includes(x));').time, 'O(n)');
+  for (const code of [
+    'function solve(text) { let total=0; for(let i=0;i<text.length;i++) total+=text.slice(i,i+2).length; return total; }',
+    'function solve(text) { let total=0; for(let i=0;i<text.length;i++) total+=text.substring(i,i+2).length; return total; }',
+    'function solve(text) { let total=0; for(let i=0;i<text.length;i++) total+=text.substr(i,2).length; return total; }',
+    'function solve(text) { let i=text.length-1; const words=[]; while(i>=0) { const end=i+1; while(i>=0&&text[i]!==" ")i--; words.push(text.slice(i+1,end)); i--; } return words; }',
+    'const solve = xs => xs.map((x,i) => xs.slice(i,i+2));',
+    'const solve = xs => xs.map(x => xs.slice(1,-1));',
+    'const solve = xs => xs.map(x => xs.slice(0,1e999));',
+    'const solve = xs => xs.map(x => xs.slice(1e308));',
+    'function solve(xs,start,end) { return xs.map(x=>xs.slice(start,end)); }',
+  ]) {
+    const report = check(code);
+    assert.equal(report.time, null, 'unmodelled range widths have no whole-input or constant label');
+    assert.equal(report.assessment, 'unknown');
+    assert.equal(report.guidance.targetTime, 'O(n)');
+    assert.equal(codingPassXp(report), 25, 'uncertain range copying cannot reduce XP');
+  }
+  for (const expression of ['xs.slice(0,3)', 'xs.slice(-5,-1)', 'xs.slice(-3.5)', 'xs.substring(-5,3)', 'xs.substr(-3)', 'xs.substr(2,3)', 'xs.slice(0.5,-0.5)']) {
+    assert.equal(check(`const solve = xs => xs.map(x => ${expression});`).time, 'O(n)', expression + ': fixed normalized windows stay bounded');
+  }
+  for (const expression of ['xs.slice()', 'xs.slice(0)', 'xs.slice(1)', 'xs.slice(-0.5)', 'xs.substring(-3)', 'xs.substr(-0.5)']) {
+    const report = check(`const solve = xs => xs.map(x => ${expression});`);
+    assert.equal(report.time, 'O(n^2)', expression + ': whole copies/suffixes are not fixed windows');
+    assert.equal(codingPassXp(report), 15, 'reliable quadratic copying retains the lower reward');
+  }
+  const romanTask = codingTaskForHistory('alg-easy2-roman-numerals')!;
+  const tokenDecoder = 'const fromRoman=numeral=>{const values={I:1,V:5,X:10,L:50,C:100,D:500,M:1000,IV:4,IX:9,XL:40,XC:90,CD:400,CM:900};let total=0,index=0;while(index<numeral.length){const pair=numeral.slice(index,index+2);if(pair.length===2&&values[pair]!==undefined){total+=values[pair];index+=2;}else{total+=values[numeral[index]];index++;}}return total;};';
+  const romanRange = assessComplexity(romanTask, tokenDecoder);
+  assert.equal(romanRange.time, null, 'the actual Roman token decoder needs range review, not a quadratic label');
+  assert.equal(romanRange.guidance.targetTime, 'O(n)');
+  assert.equal(codingPassXp(romanRange), 25);
   assert.equal(check('function solve(xs) { for (let i=mystery(xs);i<xs.length;i++) {} return xs; }').assessment, 'unknown');
   assert.equal(check('const solve = xs => /[a-z]/.test(xs);').time, 'O(n)');
   assert.equal(check('function solve(xs) { let i=1; while(i<xs.length) i*=2; return i; }').time, 'O(log n)');
