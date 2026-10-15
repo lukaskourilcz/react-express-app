@@ -131,6 +131,16 @@ export function complexityContracts() {
       assert.equal(codingPassXp(scoped), 25, id + '/' + variant);
     }
   }
+  for (const [id, goal] of [['ts-pluck-all', 'O(n*m)'], ['ts-mh-print-table', 'O(n*m + L)']]) {
+    const authored = codingTaskForHistory(id)!;
+    for (const variant of ['solution', 'junior', 'senior'] as const) {
+      const scoped = assessComplexity(authored, solutionFor(id)![variant]!);
+      assert.equal(scoped.guidance.targetTime, goal, id + '/' + variant);
+      assert.equal(scoped.time, null, id + ': independent authored sizes must not collapse into n^2');
+      assert.equal(scoped.assessment, 'unknown');
+      assert.equal(codingPassXp(scoped), 25);
+    }
+  }
   const palindrome = codingTaskForHistory('alg-valid-palindrome')!;
   const report = assessComplexity(palindrome, solutionFor(palindrome.id)!.solution);
   assert.equal(report.guidance.targetTime, 'O(n)');

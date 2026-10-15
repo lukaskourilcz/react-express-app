@@ -28,7 +28,7 @@ export const EASY_TYPESCRIPT_B_TASKS: CodingTaskSource[] = [
     tier: 2,
     focus: ['utility-types', 'spread'],
     title: 'Save a new todo',
-    prompt: 'A todo app hands out ids itself, so a new todo arrives without one. `Todo` has an `id`, a `title` and a `done` flag. Declare `type NewTodo = Omit<Todo, "id">`, then write `addTodo(todos: readonly Todo[], draft: NewTodo): Todo[]`. It returns a new list with the draft added at the end under the next id: one more than the highest id in the list, or `1` when the list is empty. Build the new todo with spread and leave the list you were given as it is.',
+    prompt: "A todo app chooses the id for a new todo. `Todo` has an `id`, a `title` and a `done` flag. Declare `type NewTodo = Omit<Todo, \"id\">`, then write `addTodo(todos: readonly Todo[], draft: NewTodo): Todo[]`. It returns a new list with a new shallow copy of the draft added at the end under the next id: one more than the highest id in the list, or `1` when the list is empty. Build the new todo with spread and leave the list you were given as it is. Domain: a dense readonly ordinary list of at most 1000 stable Todo records, possibly frozen, with own integer ids from 1 through 1000000000, text titles and boolean done flags; duplicate ids are allowed. The stable ordinary/null-prototype draft has own title/done data fields and up to 100 extra own enumerable string/Symbol fields with opaque values; no accessors/proxies are involved. Preserve shallow draft metadata, including a literal own __proto__ field, but always set the calculated id after spreading the draft. Omit is a compile-time view, not a runtime sanitizer: a wider compatible variable can still contain an id, and that value must not win. Return a fresh mutable array with unchanged original Todo references followed by a fresh plain mutable todo; leave source order, records and draft unchanged. Target: O(n) time and output space, where n is 1 + existing todo count + copied draft-field count under bounded property-key operations, excluding opaque metadata contents.",
     starter: `interface Todo {
   id: number;
   title: string;
@@ -52,13 +52,13 @@ type NewTodo = Omit<Todo, "id">;
 
 const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
   // the next id: the highest id plus one, or 1 for an empty list
-  // a new array: every todo, then { id, ...draft }
+  // a new array: every todo, then { ...draft, id }
 };`,
-    hints: ['`Omit<Todo, "id">` is `Todo` without its `id`, so a caller cannot pick one. `Math.max(0, ...todos.map((todo) => todo.id))` is the highest id, or 0 for an empty list. The last todo is not always the one with the highest id.'],
+    hints: ['`Omit<Todo, "id">` is `Todo` without its `id`, so a fresh object literal cannot include one. Wider variables can still carry extra fields; set the calculated id last. `Math.max(0, ...todos.map((todo) => todo.id))` is the highest id, or 0 for an empty list. The last todo is not always the one with the highest id.'],
     approach: [
       'Declare `NewTodo` with `Omit`. The second type argument names the key to leave out.',
-      'Work out the next id: the highest id in the list plus one. Start from 0, so an empty list gives 1.',
-      'Return `[...todos, { id, ...draft }]`: a new array that ends with the new todo.',
+      'Work out the next id: the highest id in the list plus one. Start from 0; existing ids are positive, and an empty list then gives 1.',
+      'Return `[...todos, { ...draft, id }]`: a new array that ends with the new todo.',
     ],
     verify: 'tests',
     estimatedMinutes: 8,
@@ -71,7 +71,7 @@ const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
     typeTests: [
       { code: 'const __d: NewTodo = { title: "Plan", done: false };', label: 'a new todo has a title and a done flag' },
       { code: 'const __list: Todo[] = addTodo([], { title: "Plan", done: false });', label: 'gives back todos' },
-      { code: 'addTodo([], { id: 5, title: "Plan", done: false });', label: 'a new todo cannot bring its own id', rejects: true },
+      { code: 'addTodo([], { id: 5, title: "Plan", done: false });', label: 'a fresh todo literal leaves out id', rejects: true },
       { code: 'const __e: NewTodo = { title: "Plan" };', label: 'a new todo still needs its done flag', rejects: true },
     ],
   },

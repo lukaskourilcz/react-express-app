@@ -404,7 +404,7 @@ console.log(fillDays([["2026-03-01", 4], ["2026-03-04", 2]]));
     tier: 4,
     focus: ['keyof', 'generics', 'optional', 'strings'],
     title: 'Print a table',
-    prompt: 'A command-line tool prints its results as a text table. Write `printTable<T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string`. A `Column<T>` names a key of the row type, a header, and an optional `align`, `"left"` or `"right"`, that is left when it is missing. `Formats<T>` is a mapped type: for any key `K` of `T` it may hold a function that turns a `T[K]` into text, so a format for `price` receives a number when `price` is a number. A cell’s text is its format’s result when its key has one, and `String(value)` otherwise. Lay the table out like this. Each column is as wide as its longest text, header included. Pad every header and cell to that width with spaces, `padEnd` for left and `padStart` for right. Join the cells of a line with `" | "`. The second line is a rule: dashes as wide as each column, joined with `"-+-"`. One line per row follows, and the lines are joined with `"\\n"`. No line ends with a space, so trim the end of each line. A table with no rows is its header line and its rule.',
+    prompt: "A command-line tool prints its results as a text table. Write `printTable<T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string`. A `Column<T>` names a key of the row type, a header, and an optional `align`, `\"left\"` or `\"right\"`, that is left when it is missing. `Formats<T>` is a mapped type: for any key `K` of `T` it may hold a function that turns a `T[K]` into text, so a format for `price` receives a number when `price` is a number. A cell\u2019s text is its format\u2019s result when its key has one, and `String(value)` otherwise. Lay the table out like this. Each column is as wide as its longest text, header included. Pad every header and cell to that width with spaces, `padEnd` for left and `padStart` for right. Join the cells of a line with `\" | \"`. The second line is a rule: dashes as wide as each column, joined with `\"-+-\"`. One line per row follows, and the lines are joined with `\"\\n\"`. No line ends with a space, so trim the end of each line. A table with no rows is its header line and its rule. Domain: dense readonly ordinary arrays of at most 100 stable rows and 20 stable columns, possibly frozen, with no accessors/proxies. Property keys may be strings, numbers or symbols on bounded prototype chains. Only own entries of formats supply formatters; inherited entries are ignored, so constructor and toString remain ordinary column names. Each present formatter is synchronous, returns text and does not modify inputs; call it exactly once per displayed cell in row-major column order, with exactly that cell value as its sole argument, including repeated columns. Propagate its exact thrown value and stop later calls. Unformatted values have bounded primitive String conversion. Headers and resulting cell text have at most 200 UTF-16 units, no line breaks or tabs, and no whitespace other than ASCII spaces; widths count UTF-16 units, not visual display columns. Empty formatted text is valid. Preserve all inputs. Zero columns produce empty header/rule/body lines joined by newlines. Target: O(n*m + L) time and output space, where n is 1 + row count, m is 1 + column count, and L is the total UTF-16 size of the padded lines before trailing-space removal; formatter work is excluded.",
     starter: `interface Column<T> {
   key: keyof T;
   header: string;
@@ -426,7 +426,7 @@ console.log(printTable(
 `,
     skeleton: `const printTable = <T>(rows: readonly T[], columns: readonly Column<T>[], formats: Formats<T> = {}): string => {
   const cellText = <K extends keyof T>(row: T, key: K): string => {
-    const format = formats[key];
+    const format = Object.hasOwn(formats, key) ? formats[key] : undefined;
     // the format's text when there is one, String(row[key]) otherwise
   };
   const body = rows.map((row) => columns.map((column) => cellText(row, column.key)));
@@ -437,7 +437,7 @@ console.log(printTable(
   return [/* the header line, the rule, then one line per row */].join("\\n");
 };`,
     hints: [
-      'Read `formats[key]` with `key` typed as a type parameter `K extends keyof T`. The compiler then knows the format takes a `T[K]`, and `row[key]` is a `T[K]`, so the call type-checks. The format is optional, so check that it is there before you call it.',
+      'Read `formats[key]` with `key` typed as a type parameter `K extends keyof T`. The compiler then knows the format takes a `T[K]`, and `row[key]` is a `T[K]`, so the call type-checks. Only own formatter entries count. The format is optional, so check it before calling it, exactly once per displayed cell.',
       'Work out every cell’s text first, then the widths, then the padding: a formatted price can be wider than the number it came from. `Math.max(header.length, ...lengths)` handles a table with no rows too.',
     ],
     approach: [

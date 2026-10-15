@@ -372,23 +372,18 @@ const countStatus = (items: Status[], wanted: Status): number =>
   "ts-pluck-all": {
     solution: `const pluckAll = <T, K extends keyof T>(items: T[], keys: K[]): T[K][][] =>
   items.map(item => keys.map(key => item[key]));`,
-    junior: `const pluckAll = <T, K extends keyof T>(items: T[], keys: K[]): T[K][][] => {
-  const rows: T[K][][] = [];
-  for (const item of items) {
-    const row: T[K][] = [];
-    for (const key of keys) {
-      row.push(item[key]);
-    }
-    rows.push(row);
-  }
-  return rows;
-};`,
+    junior: "const pluckAll = <T, K extends keyof T>(items: T[], keys: K[]): T[K][][] => {\n  return items.map((item) => {\n    return keys.map((key) => {\n      const value = item[key];\n      return value;\n    });\n  });\n};",
     senior: `const pluckAll = <T, K extends keyof T>(items: T[], keys: K[]): T[K][][] => {
   // Naming the row builder keeps the nested map readable and states the T[K][] row type once.
   const row = (item: T): T[K][] => keys.map((key) => item[key]);
   return items.map(row);
 };`,
+    hiddenTypeTests: [{"code": "const __auditKey=Symbol(); const __auditItems: {value?:string; [__auditKey]:symbol}[]=[{[__auditKey]:Symbol()}]; const __auditMaybe:(string|undefined)[][]=pluckAll(__auditItems,[\"value\"]); const __auditSymbols:symbol[][]=pluckAll(__auditItems,[__auditKey]);"}],
     hiddenTests: [
+      { call: "(()=>{const key=Symbol('key'),meta={},arr=Object.freeze([1]),fn=()=>{throw 'opaque'},row=Object.freeze({[key]:meta,a:arr,b:fn}),input=Object.freeze([row,row]),keys=Object.freeze([key,'a',key,'b']),out=pluckAll(input,keys),again=pluckAll(input,keys);out[0].push(meta);return [again.length,again[0][0]===meta,again[0][1]===arr,again[0][2]===meta,again[0][3]===fn,out!==again,out[0]!==out[1],again[0]!==again[1],again[0].length,keys.length,input[0]===row];})()", expected: [2, true, true, true, true, true, true, true, 4, 4, true] },
+      { call: "(()=>{const marker={},input=Object.freeze([Object.freeze(Object.create({value:marker})),Object.freeze({})]),keys=Object.freeze(['value','value']),out=pluckAll(input,keys),empty=pluckAll(input,[]);empty[0].push(marker);return [out[0][0]===marker,out[0][1]===marker,out[1][0]===undefined,Object.hasOwn(out[1],0),out[1].length,empty[0]!==empty[1],empty[1].length,input.length];})()", expected: [true, true, true, true, 2, true, 0, 2] },
+      { call: "(()=>{const marker={},input=Object.freeze(Array.from({length:100},()=>Object.freeze([marker]))),keys=Object.freeze(Array(20).fill(0)),out=pluckAll(input,keys),a=pluckAll([],keys),b=pluckAll([],keys);a.push([]);return [out.length,out.every(row=>row.length===20&&row.every(value=>value===marker)),new Set(out).size,a!==b,b.length,input.length,keys.length];})()", expected: [100, true, 100, true, 0, 100, 20] },
+
       { call: "pluckAll([{ a: 1, b: 2, c: 3 }], [\"a\", \"c\"])", expected: [[1, 3]] },
       { call: "pluckAll([{ a: 1 }, { a: 2 }, { a: 3 }], [\"a\"])", expected: [[1], [2], [3]] },
     ],

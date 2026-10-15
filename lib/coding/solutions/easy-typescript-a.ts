@@ -47,7 +47,12 @@ const missingFields = (draft: Partial<Post>): string[] => {
 
 const missingFields = (draft: Partial<Post>): (keyof Post)[] =>
   (["title", "body", "tags"] as const).filter((field) => draft[field] === undefined);`,
+    hiddenTypeTests: [{"code": "missingFields({tags:null});", "rejects": true}],
     hiddenTests: [
+      { call: "(()=>{const tags=Object.freeze([]),draft=Object.freeze({title:undefined,body:'',tags}),a=missingFields(draft),b=missingFields(draft);a.push('body');return [b,Reflect.ownKeys(draft),draft.title===undefined,draft.tags===tags,tags.length,a!==b];})()", expected: [["title"], ["title", "body", "tags"], true, true, 0, true] },
+      { call: "(()=>{const inherited=Object.freeze(Object.create({title:'',body:'b',tags:[]})),empty=Object.freeze(Object.create(null)),a=missingFields(inherited),b=missingFields(inherited);a.push('title');return [b,missingFields(empty),a!==b,Reflect.ownKeys(empty).length,Reflect.ownKeys(inherited).length];})()", expected: [[], ["title", "body", "tags"], true, 0, 0] },
+      { call: "(()=>{const meta={valueOf(){throw 'opaque'}},draft={};for(let i=0;i<100;i++)draft['x'+i]=meta;Object.freeze(draft);return [missingFields(draft),Reflect.ownKeys(draft).length,draft.x99===meta];})()", expected: [["title", "body", "tags"], 100, true] },
+
       { call: 'missingFields({ tags: [] })', expected: ['title', 'body'] },
       { call: 'missingFields({ body: "" })', expected: ['title', 'tags'] },
       { call: 'missingFields({ title: "T", body: "B" })', expected: ['tags'] },
@@ -130,11 +135,15 @@ const WEEKEND: ReadonlySet<Day> = new Set<Day>(["sat", "sun"]);
 
 const isWeekday = (day: Day): day is Weekday => !WEEKEND.has(day);`,
     hiddenTests: [
+      { call: "(()=>{const days=Object.freeze(['mon','tue','wed','thu','fri','sat','sun']);return [days.map(day=>isWeekday(day)),days.map(day=>isWeekday(day)),days.every(day=>typeof isWeekday(day)==='boolean'),days.length];})()", expected: [[true, true, true, true, true, false, false], [true, true, true, true, true, false, false], true, 7] },
+
       { call: '["mon", "tue", "wed", "thu", "fri", "sat", "sun"].filter(isWeekday)', expected: ['mon', 'tue', 'wed', 'thu', 'fri'] },
       { call: 'isWeekday("tue")', expected: true },
       { call: 'isWeekday("thu")', expected: true },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditDays:Weekday[]=[\"mon\",\"tue\",\"wed\",\"thu\",\"fri\"]; const __auditNarrow=(day:Day)=>{if(isWeekday(day)){const yes:Weekday=day;return yes;}const no:\"sat\"|\"sun\"=day;return no;};"},
+
       { code: 'const __sat: Weekday = "sat";', label: 'Saturday is not a Weekday', rejects: true },
       { code: 'const __mon: Weekday = "mon";', label: 'Monday is a Weekday' },
     ],

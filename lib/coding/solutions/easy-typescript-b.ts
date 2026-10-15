@@ -8,63 +8,22 @@ import type { CodingSolution } from '../types';
 export const EASY_TYPESCRIPT_B_SOLUTIONS: Record<string, CodingSolution> = {
   /* ── utility types ────────────────────────────────────────────────── */
   'ts-easy3-save-a-new-todo': {
-    solution: `interface Todo {
-  id: number;
-  title: string;
-  done: boolean;
-}
-
-// The caller cannot pick an id: Omit takes it out of the type.
-type NewTodo = Omit<Todo, "id">;
-
-const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
-  // Starting from 0 means an empty list hands out id 1.
-  const id = Math.max(0, ...todos.map((todo) => todo.id)) + 1;
-  // A new array, so the list passed in keeps its length.
-  return [...todos, { id, ...draft }];
-};`,
-    junior: `interface Todo {
-  id: number;
-  title: string;
-  done: boolean;
-}
-
-type NewTodo = Omit<Todo, "id">;
-
-const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {
-  let highest = 0;
-  for (const todo of todos) {
-    if (todo.id > highest) {
-      highest = todo.id;
-    }
-  }
-  const todo: Todo = { id: highest + 1, title: draft.title, done: draft.done };
-  const next: Todo[] = [...todos];
-  next.push(todo);
-  return next;
-};`,
-    senior: `interface Todo {
-  id: number;
-  title: string;
-  done: boolean;
-}
-
-type NewTodo = Omit<Todo, "id">;
-
-const nextId = (todos: readonly Todo[]): number =>
-  todos.reduce((highest, todo) => Math.max(highest, todo.id), 0) + 1;
-
-const addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => [
-  ...todos,
-  { id: nextId(todos), ...draft },
-];`,
+    solution: "interface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\n// Omit removes id from the view; it does not strip wider objects at runtime.\ntype NewTodo = Omit<Todo, \"id\">;\n\nconst addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {\n  // Starting from 0 means an empty list hands out id 1.\n  const id = Math.max(0, ...todos.map((todo) => todo.id)) + 1;\n  // A new array, so the list passed in keeps its length.\n  return [...todos, { ...draft, id }];\n};",
+    junior: "interface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\ntype NewTodo = Omit<Todo, \"id\">;\n\nconst addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => {\n  let highest = 0;\n  for (const todo of todos) {\n    if (todo.id > highest) {\n      highest = todo.id;\n    }\n  }\n  const todo: Todo = { ...draft, id: highest + 1 };\n  const next: Todo[] = [...todos];\n  next.push(todo);\n  return next;\n};",
+    senior: "interface Todo {\n  id: number;\n  title: string;\n  done: boolean;\n}\n\ntype NewTodo = Omit<Todo, \"id\">;\n\nconst nextId = (todos: readonly Todo[]): number =>\n  todos.reduce((highest, todo) => Math.max(highest, todo.id), 0) + 1;\n\nconst addTodo = (todos: readonly Todo[], draft: NewTodo): Todo[] => [\n  ...todos,\n  { ...draft, id: nextId(todos) },\n];",
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},draft=Object.freeze({id:999,title:'',done:false,extra:meta,[sym]:meta,['__proto__']:meta}),old=Object.freeze({id:7,title:'old',done:true}),input=Object.freeze([old]),a=addTodo(input,draft),b=addTodo(input,draft);a[1].title='later';a.push(old);return [a!==input,a!==b,a[0]===old,b[0]===old,b[1]!==draft,b[1]!==a[1],b[1].id,b[1].extra===meta,b[1][sym]===meta,Object.hasOwn(b[1],'__proto__'),b[1].__proto__===meta,Object.getPrototypeOf(b[1])===Object.prototype,b[1].title,draft.id,input.length];})()", expected: [true, true, true, true, true, true, 8, true, true, true, true, true, "", 999, 1] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i%2?1:1000000000,title:String(i),done:false}))),draft=Object.freeze(Object.assign(Object.create(null),{title:'new',done:true})),out=addTodo(input,draft);return [out.length,out.slice(0,1000).every((todo,i)=>todo===input[i]),out[1000].id,input[0].id,Reflect.ownKeys(draft)];})()", expected: [1001, true, 1000000001, 1000000000, ["title", "done"]] },
+      { call: "(()=>{const meta={},draft={title:'new',done:false};for(let i=0;i<100;i++)draft['x'+i]=meta;Object.freeze(draft);const a=addTodo([],draft),b=addTodo([],draft);return [a!==b,a[0]!==b[0],a[0].id,Reflect.ownKeys(a[0]).length,Array.from({length:100},(_,i)=>a[0]['x'+i]===meta).every(Boolean),!Object.hasOwn(draft,'id')];})()", expected: [true, true, 1, 103, true, true] },
+
       { call: 'addTodo(Object.freeze([{ id: 2, title: "x", done: false }]), { title: "y", done: true })', expected: [{ id: 2, title: 'x', done: false }, { id: 3, title: 'y', done: true }] },
       { call: 'addTodo([{ id: 10, title: "a", done: false }, { id: 11, title: "b", done: false }, { id: 4, title: "c", done: false }], { title: "d", done: false })[3]', expected: { id: 12, title: 'd', done: false } },
       { call: '(() => { const draft = { title: "z", done: false }; addTodo([], draft); return draft; })()', expected: { title: 'z', done: false } },
       { call: 'addTodo([{ id: 1, title: "a", done: false }], { title: "a", done: false }).length', expected: 2 },
     ],
     hiddenTypeTests: [
+      {"code": "const __auditWide={id:999,title:\"x\",done:false}; const __auditDraft:NewTodo=__auditWide; const __auditSource:readonly Todo[]=[]; const __auditOut:Todo[]=addTodo(__auditSource,__auditDraft); __auditOut.push({id:1,title:\"y\",done:true});"},
+
       { code: 'const __n: NewTodo = { title: "a", done: false, id: 1 };', label: 'NewTodo has no id', rejects: true },
     ],
   },
