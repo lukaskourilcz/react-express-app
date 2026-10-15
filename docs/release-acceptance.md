@@ -3398,3 +3398,16 @@ authenticated acceptance remain separate.
 ## PR #402 exact production — 15 October 2026
 
 15 October: PR #402 passed required run38685241521 on exact95674b5e180ee5ca511fb6a4d8836d1e353d96b0 (verify30m37s; SQL42s), merged at8ea7ce7919140c4cad99f4082ee9264d5f20991f. READY production dpl_FYPZbZ64Crs8u8frbYcXG5KodXSH matches that merge, owns devshark.app and has no alias error. Eleven general guest checks pass at zero XP/null progress, with no Challenge/name/owner-state fixture. Shipped coding coverage is135/725; native remains263/263. This is not authenticated native/Premium or independent/human acceptance.
+
+## Edge/input content batch b026 — 15 October 2026
+
+Five individual model reviews raise coding coverage to160/725,565remaining;
+native remains263/263. Final-hash QuickJS results agree35/35 (20valid,
+5starters,10wrong) versus25/35before. Twenty target/base25XP and copy checks
+pass. Focused cumulative coding (including date probes in four non-UTC host
+zones), API/script types, launch, build, native bindings, both zero-vulnerability
+production dependency audits and diff checks pass. The final checks explicitly
+observe post-call price order and1.005without premature rounding. Exact READY
+PR #404 preview at3e8d209d passes11general guest checks; SQL41s passes, verify
+is pending. B026 is local and not part of that frozen PR. No real profile,
+billing transaction, progress, score or generated-name allocation is involved.

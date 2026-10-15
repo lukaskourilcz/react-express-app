@@ -1,5 +1,33 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b026
+
+Read all five cumulative edge/input stages and every inherited board and check.
+The order reducer now states unrounded bounded Number aggregation; profile
+fallbacks preserve empty strings and zero without adding defaults to the input.
+Stock text uses the full JavaScript trim-whitespace domain and distinguishes
+negative nonzero amounts from zero. Bill shares use bounded safe integer cents,
+with an explicit warning that summing converted euro Numbers need not be exact.
+The junior UTC-day formatter now pads years to four digits, including offset
+transitions into year0000 or9999, while output days retain first-appearance order.
+
+All35final-hash sandbox verdicts agree versus25/35before:20valid forms,
+five starters and ten wrongs. Twenty authored-target/base25XP checks and the
+zero-artifact copy sweep pass. A direct post-call order check was added after
+sorting an already-sorted frozen price fixture failed to distinguish mutation;
+the final wrong sorter is rejected. The1.005amount also exercises the no-rounding
+policy beyond a tiny floating-point difference. Earlier repair requirements,
+level numbers and intentionally broken future starter functions are preserved.
+
+Coverage is160/725coding,565remaining,263/263native. PR #404 freezes20reviews
+b022–b025 plus runtime fix #403 at3e8d209deab49e8c62f973fd47a8f38cdcb7b710.
+Its exact READY preview dpl_BrFkbkj82mHtC9mAWoc4JnF8GiHK passes eleven general
+guest checks, zero XP/null progress; required SQL41s passes and verify is pending.
+Focused cumulative coding (including four non-UTC host zones), API/script
+types, launch, build,263native bindings, both zero-vulnerability production
+dependency audits and diff checks pass. B026 remains local. Same-session manual model readings do not establish
+independent/human, whole-catalogue or authenticated production acceptance.
+
 ## 15 October continuation — five coding items b025
 
 Read all five cumulative tracing stages, their inherited fields and every board.
