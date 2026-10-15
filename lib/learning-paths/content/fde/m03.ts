@@ -492,7 +492,7 @@ export const FDE_M03: ModuleSource = {
       purpose: 'exercise',
       verification: 'machine_verified',
       title: 'Boundary checks',
-      summary: 'Four questions: where the tenant comes from, what a post-fetch filter has already leaked, what an expiring grant does to a job in flight, and which audit entry can be reconstructed.',
+      summary: 'Four boundary questions under explicit policies: active-tenant authority, scoped storage access, per-batch grants and useful audit attribution/correlation.',
       competencies: ['boundaries'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
@@ -500,37 +500,37 @@ export const FDE_M03: ModuleSource = {
         {
           id: 'fde-v1-m03-q1',
           prompt:
-            'Marlbrook’s assistant reads orders on behalf of a signed-in operator. The tool call arrives with arguments the model wrote. Where must the wrapper get the tenant id it queries with?',
+            'This run is bound by policy to the active tenant in a server-verified session; even membership in another tenant does not permit switching this run. The model supplies tool arguments. Which tenant source must the wrapper use while checking current permission?',
           options: [
-            'From the session the server verified at sign-in, which fixed the tenant before any of this request was read.',
+            'The server-verified active-tenant session, with current authorization checked for the operation.',
             'From the `tenantId` argument on the tool call, after checking that it names a tenant the store knows about.',
             'From the `X-Tenant-Id` header the client sends, after checking the operator belongs to that tenant.',
             'From the `tenantId` on the records themselves, once the query has returned them.',
           ],
           correct: 0,
           explanation:
-            'The tenant is a claim the server established when it verified the credential, and nothing later in the request may change it. The tool argument is written by the model from text it just read, so checking that it names a real tenant only proves the attacker picked an existing one. The header is written by the client; the membership check makes it better and still lets an operator who belongs to two tenants act as either one on a request where the session said which. Reading the tenant off the returned rows is the post-fetch filter, and by then the rows are already in your process.',
+            'Under this explicit fixed-tenant policy, use the server-verified active tenant and current authorization. A valid credential from sign-in alone does not guarantee every later operation remains permitted. The tool argument is written by the model from text it just read, so checking that it names a real tenant only proves the attacker picked an existing one. The header is written by the client; a membership-checked header can be valid in a different design that explicitly permits tenant selection, but it does not satisfy this run’s fixed-active-tenant policy. Reading the tenant off the returned rows is the post-fetch filter, and by then the rows are already in your process.',
           competencies: ['boundaries'],
         },
         {
           id: 'fde-v1-m03-q2',
           prompt:
-            'A colleague fetches every order in the store and filters by `tenantId` in the handler before returning. The filter itself has no bug, and the response contains only the caller’s own orders. Why is this still not a tenant boundary?',
+            'The policy requires tenant scope at the storage query. A handler instead fetches all tenants and correctly filters before returning only the caller’s rows. Why does this still violate that policy and least-data-access design?',
           options: [
             'A JavaScript comparison of two tenant ids can differ from the database’s collation, so the filter may keep a row the store would have excluded.',
-            'Both tenants’ rows are in the process before the filter runs, so a log line, an error report or a total computed on the full set carries them out, and one predicate is all that separates the two customers.',
+            'Unrelated tenants’ rows enter the handler before filtering, increasing exposure to later logging, error or aggregation mistakes.',
             'The extra rows make the request slow enough to time out under load, and a timed-out request returns the unfiltered set.',
             'The filter cannot see rows written since the query started, so the caller misses their own most recent orders.',
           ],
           correct: 1,
           explanation:
-            'The exposure happens before the filter, not in it: the fetch already pulled the other tenant into memory, into whatever logged a count, and into any crash report from those two lines. Collation is a real hazard in a different discussion and would produce a wrong result rather than this one. The latency claim is backwards — a fast leak is still a leak, and a timeout returns an error, not the raw set. The last option describes a staleness problem, which affects the scoped query in exactly the same way.',
+            'The broad fetch already violates the stated storage-scope policy by bringing unrelated rows into the handler. It expands the data exposed to later mistakes; it does not prove that every log or crash report actually contains those rows. Apply the authorized tenant at the query and use an appropriate independent database policy where supported. Collation is a real hazard in a different discussion and would produce a wrong result rather than this one. The latency claim is backwards — a fast leak is still a leak, and a timeout returns an error, not the raw set. Missing later writes is a consistency question, not the stated storage-scope defect; its behavior depends on the query and isolation model.',
           competencies: ['boundaries'],
         },
         {
           id: 'fde-v1-m03-q3',
           prompt:
-            'An export job writes 60 orders in three batches. The operator’s grant is valid when the job starts and expires between the second and third batch. What must the wrapper do?',
+            'Policy requires a currently valid grant before every batch and forbids self-extension. An export writes exactly 20 orders per successful batch. After two batches, the operator’s grant expires before batch three starts. What must the wrapper do?',
           options: [
             'Finish the run: the grant was checked and valid when the job started, and re-checking a permission mid-job makes long exports unreliable.',
             'Finish the run but flag the remaining rows for review, because an expiry ends future authorizations while a revocation ends current ones.',
@@ -539,27 +539,27 @@ export const FDE_M03: ModuleSource = {
           ],
           correct: 2,
           explanation:
-            'Authorization is decided at the point of use, so the check before batch three is the one that counts, and the audit needs the row count or nobody can tell later where the export stopped. Checking only at the start authorizes work of unbounded length, which is how a ten-minute grant funds a four-hour job. Expiry and revocation do not differ in when they take effect; they differ in how the news reaches you. Extending the grant is the wrapper granting itself permission, and the expiry is the one control the customer’s administrator actually holds.',
+            'The stated policy requires authorization again before batch three, when this grant is no longer valid. Stop before writing that batch and record the denial plus the 40 rows already written; denial does not undo completed external work. A start-only check does not meet this policy, and the wrapper cannot renew its own authority. Expiry and revocation have different mechanisms and propagation rules in different systems, so do not infer a universal in-flight rule beyond the contract given here.',
           competencies: ['boundaries'],
         },
         {
           id: 'fde-v1-m03-q4',
           prompt:
-            'Four candidate audit entries for the same read are below. Six months from now, someone who was not there has to say who did what, to whose data, under which permission, and what the system decided. Which entry supports that?',
+            'Which candidate best records who read which tenant’s orders, the authorization decision and policy/grant correlation, without copying complete customer rows into this audit entry?',
           context: {
             language: 'json',
             code:
               '[\n  { "entry": "A", "at": "2026-04-02T09:14:11Z", "message": "Operator exported orders" },\n\n  { "entry": "B", "at": "2026-04-02T09:14:11Z", "actor": "USR-31", "action": "orders.read",\n    "decision": "allow",\n    "records": [{ "id": "ORD-1001", "customer": "Halloway Depot", "total": 240.5 }] },\n\n  { "entry": "C", "at": "2026-04-02T09:14:11Z", "requestId": "req-9d2f41", "actor": "USR-31",\n    "onBehalfOfTenant": "TEN-4021", "action": "orders.read",\n    "targetIds": ["ORD-1001", "ORD-1005"],\n    "decision": "allow", "grantId": "GRT-77", "policyVersion": 4 },\n\n  { "entry": "D", "at": "09:14", "actor": "assistant", "action": "read", "decision": "allow" }\n]',
           },
           options: [
-            'C, because it names the person, the tenant they acted for, the ids touched, the decision, the grant and policy version behind it, and a request id to join against the trace.',
+            'C: actor, tenant, action/targets, decision, grant/policy and request correlation.',
             'B, because it stores the rows themselves, so a reviewer can see exactly which data left the system without trusting anything else.',
             'A, because a plain sentence is what a reviewer actually reads, and the UTC timestamp is enough to find the matching request in the logs.',
             'D, because it is the smallest entry that still records an actor, an action and a decision, and short entries are the ones teams keep writing.',
           ],
           correct: 0,
           explanation:
-            'C answers all four questions and points at the trace and the policy version, so the decision can be reproduced after the rules change. B copies the order rows into the log, which creates another copy of the data with its own retention problem, and it still never says which tenant or which grant. A has no actor, no tenant and no ids, so it is a sentence rather than a record. D records the software as the actor and a local time with no date or zone, which is exactly the entry that cannot be lined up with anything else six months later.',
+            'C records the requested attribution and correlation fields. Fully reproducing a past decision also needs the relevant historical policy/grant versions and decision inputs; a version number alone does not reconstruct them. B copies customer details and totals that are not needed for this entry’s stated purpose, while omitting tenant and grant attribution. Protect and retain audit evidence according to the actual policy; this question does not set a universal retention period. A has no actor, no tenant and no ids, so it is a sentence rather than a record. D records the software as the actor and a local time with no date or zone, which is exactly the entry that cannot be lined up with anything else six months later.',
           competencies: ['boundaries'],
         },
       ],

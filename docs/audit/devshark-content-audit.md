@@ -1,5 +1,33 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n023
+
+Reviewed all four boundary questions and their check. Fixed-active-tenant
+behavior is now an explicit run policy and current authorization is rechecked;
+a membership-authorized selector can be valid in a different architecture.
+Broad fetches violate the stated storage policy and increase exposure risk,
+without claiming every log or crash already leaked rows. The grant item names
+twenty-row batches and a current-grant check before each; it no longer invents
+universal expiry/revocation semantics. Audit entry C supports attribution and
+correlation, while historical reconstruction needs more than a version number.
+The parent summary matches those limits.
+
+Literal JSON fields, forty-row partial-work arithmetic, exercise thresholds and
+feedback checks pass. Other authorization conclusions are manual under the
+stated policies, not live RLS, grant, retention or export acceptance. Native
+bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Six public
+DSA catalogue probes per theme pass at 360–1440; they do not establish authenticated
+question/activity, keyboard, zoom or physical-device acceptance. Individual
+quality/relevance/final readings remain separate from execution.
+
+Coverage is **170/263 native**, **93 remaining**, and **95/725 coding**,
+**630 remaining**. PR #396 merged at 4b5b777c after exact-head required verify
+30m20s/SQL37s, and its exact READY production deployment with devshark.app passes
+eleven general checks. Source shipped coverage is 95 coding/125 native; no
+authenticated native activity acceptance is inferred. N015–n023 remain local.
+#397 still blocks acceptance of the FDE diagnostic parent.
+
 ## 15 October continuation — five-item native batch n022
 
 Reviewed all four integration questions and their check. Retry reasoning now
