@@ -1,5 +1,36 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — final five-item native batch n042
+
+All263native lesson/activity/question records now have current individual model
+reviews. This final five-item batch adds the three remaining records (diagnostic
+parent, evaluation and change request) and revises two existing discovery records
+for a date-complete2027target and working authorized evidence references. The two
+prior records are preserved in history; coverage increases by3, not5.
+
+The diagnostic uses the #397trusted per-item implementation and preserves complete
+review/optionality. Its twelve child hashes remain unchanged. Evaluation fixes
+fractional lower-median rounding, inherited prediction lookup, prototype-like
+slice keys and a false exact.02slice refusal caused by binary subtraction. Its
+policy, missing-versus-abstaining semantics and two cost axes are explicit.
+Change-request fixtures align ticket/viewer tenants; budget-first reads, shared
+restriction metadata, semantic-grounding limits and a sorting target are clear.
+Set membership removes quadratic citation scans.
+
+Fourteen real sandbox verdicts agree, exposing eight previously accepted wrong
+implementations. Four valid analyses retain25XP without false penalty. Boundary
+checks cover200cases×10candidates,1000citations, fractional metrics, exact.02and.6,
+frozen inputs and ignored getters. Native bindings now pass263/263; paths,
+API/script types, launch, build, both zero-vulnerability production dependency
+audits, copy and diff checks pass. Scores/final readings remain manual same-session
+judgments; no independent/human or full-catalogue acceptance is claimed.
+
+Coding coverage remains95/725, with630tasks remaining. PR #401 freezes n038–n041
+and #397 at e65d15fc with SQL38s and eleven exact-preview general checks passing;
+verify is pending. N042islocal. Shipped coverage remains95coding/240native via
+exact-production-verified #400 at9a7b1ab9. Bank/override/longest-option residual
+checks and remaining issue review still follow the coding audit.
+
 ## 15 October — diagnostic runtime follow-up (#397)
 
 Fixed the aggregate-score propagation discovered during audit. Trusted per-item

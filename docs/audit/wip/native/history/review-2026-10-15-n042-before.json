@@ -1,0 +1,146 @@
+[
+  {
+    "id": "fde-v1-m01-q3",
+    "kind": "native-check-question",
+    "path": "fde",
+    "module": "fde-v1-m01",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m01.ts",
+    "contentHash": "f6ccc46c21a1de01",
+    "previousHash": "12ee5b55fe396830",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Identify a prescribed processing mechanism while leaving capability, constraint and outcome implementations open.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": 4,
+      "hint": null,
+      "explanation": 5
+    },
+    "qualityScore": 4,
+    "notApplicable": {
+      "hint": "This record has no separate pre-answer hint."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Requirements discovery remains current.",
+      "practicalUtility": "Premature mechanisms can exclude simpler suitable designs.",
+      "transferable": "A design choice can later become a valid agreed requirement.",
+      "audienceFit": "Four differently framed lines fit the module's objective.",
+      "riskOutcome": "Removing invented equivalent behavior/cost prevents an unsupported shortcut claim."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "A summarization behavior can legitimately be a requirement, so ask which line prescribes a mechanism instead of claiming it cannot be a requirement. Replace the asserted account-timeline equivalence and fraction-of-cost claim with alternative possibilities that still need discovery. Keep human-approval constraint, source-checking capability and numeric outcome; replace the positional last-one reference with its 12-minute deadline.",
+    "evidence": [
+      "repo: lib/learning-paths/content/fde/m01.ts q3",
+      "run: check-native-2026-10-15-n021.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n021-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n021"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread all four lines and explanation. Summarizing before reading fixes a particular processing step; the other lines still leave their concrete implementation open. The answer does not imply mechanisms are never legitimate requirements or that a timeline automatically substitutes for a summary at a known cost. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/m01.ts q3",
+        "run: check-native-2026-10-15-n021.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n021-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  },
+  {
+    "id": "fde-v1-m01-checks",
+    "kind": "native-activity",
+    "path": "fde",
+    "module": "fde-v1-m01",
+    "locale": "en",
+    "source": "lib/learning-paths/content/fde/m01.ts",
+    "contentHash": "f9d1102b65b276f7",
+    "previousHash": "55f186e5a4807a18",
+    "gradingHash": null,
+    "hashSchema": "inventory English-only object SHA256/16; native-grading:v1 for activity grading",
+    "objective": "Apply the four bounded discovery distinctions with immediate exercise feedback.",
+    "intendedLevel": "intermediate",
+    "quality": {
+      "topicRelevance": 5,
+      "learningValue": 5,
+      "technicalCorrectness": 5,
+      "wording": 5,
+      "answerOptions": null,
+      "hint": null,
+      "explanation": null
+    },
+    "qualityScore": 5,
+    "notApplicable": {
+      "answerOptions": "This lesson/activity has no answer-option set; its prose, executable contract or linked reading is assessed directly.",
+      "hint": "This record has no separate pre-answer hint.",
+      "explanation": "No separate post-answer explanation exists; expository material is assessed under technical correctness, wording and learning value."
+    },
+    "relevance": {
+      "presentDay": 2,
+      "practicalUtility": 2,
+      "transferable": 2,
+      "audienceFit": 2,
+      "riskOutcome": 2
+    },
+    "relevanceScore": 10,
+    "relevanceRationale": {
+      "presentDay": "Discovery decisions remain current.",
+      "practicalUtility": "Observable work and explicit gates support useful scope.",
+      "transferable": "Measurement, mechanisms and permission are distinct evidence.",
+      "audienceFit": "Four questions match one foundation module.",
+      "riskOutcome": "Summary and exact threshold now match the corrected questions."
+    },
+    "gates": {
+      "quality": true,
+      "relevance": true
+    },
+    "decision": "rewrite",
+    "correctnessBlocker": null,
+    "rationale": "The four items have individual n020/n021 reviews. Update the parent summary from ambiguous solution-not-requirement and absence-stops-build claims to the actual observable-work, measured-value, prescribed-mechanism and explicit-policy objectives. Retain exercise purpose, discovery competency and 0.8 threshold.",
+    "evidence": [
+      "repo: lib/learning-paths/content/fde/m01.ts checks",
+      "repo: lib/learning-paths/grade.ts gradeCheck",
+      "run: check-native-2026-10-15-n021.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+      "run: native-n021-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+    ],
+    "reviewedAt": "2026-10-15",
+    "reviewer": {
+      "kind": "model",
+      "independent": false,
+      "run": "Codex session 2026-10-15; sequential five-item native batch n021"
+    },
+    "verification": {
+      "verdict": "accept",
+      "reader": "same model/session, separate final English reading",
+      "notes": "Reread the complete parent and all four corrected items. Four correct pass; any one miss is 75%, fails the 80% threshold and reveals exercise feedback. The source keys remain unchanged before attempt shuffling. This parent does not add four duplicate item reviews. No independent/human approval or full-catalogue acceptance is claimed.",
+      "evidence": [
+        "repo: lib/learning-paths/content/fde/m01.ts checks",
+        "repo: lib/learning-paths/grade.ts gradeCheck",
+        "run: check-native-2026-10-15-n021.ts; manually selected authored examples and policy assertions, not learner-code execution or editorial scoring.",
+        "run: native-n021-proof.json binds these five exact content/grading hashes. Node 24 V8 evidence is not authenticated activity acceptance."
+      ]
+    }
+  }
+]

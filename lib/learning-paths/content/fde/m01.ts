@@ -526,11 +526,11 @@ Agent:   "I did. That part is quick, it is in the knowledge base. What
             'The assistant must summarise the whole ticket thread before the agent reads it.',
             'No message reaches a customer without a person approving it.',
             'An agent must be able to check where a suggested answer came from.',
-            'Median time to first reply on tier-1 export tickets falls to 12 minutes by 31 March.',
+            'Median time to first reply on tier-1 export tickets falls to 12 minutes by 31 March 2027.',
           ],
           correct: 0,
           explanation:
-            'Summarising the thread before it is read prescribes a particular processing step. Clarify the underlying need, such as understanding a long thread quickly, before treating that proposal as fixed. A summary, highlighted events or a timeline may help, depending on the actual workflow; the question does not establish that they are equivalent or quantify their cost. A prescribed mechanism can become an agreed requirement, but it should be recognized as a design choice. The approval line is a constraint on the outcome and says nothing about how the approval is built. Checking where an answer came from is a capability the agent needs, satisfied by a citation, a link or a panel. The 12-minute deadline is the success condition: a number, a population and a date, with the implementation left open.',
+            'Summarising the thread before it is read prescribes a particular processing step. Clarify the underlying need, such as understanding a long thread quickly, before treating that proposal as fixed. A summary, highlighted events or a timeline may help, depending on the actual workflow; the question does not establish that they are equivalent or quantify their cost. A prescribed mechanism can become an agreed requirement, but it should be recognized as a design choice. The approval line is a constraint on the outcome and says nothing about how the approval is built. Checking where an answer came from is a capability the agent needs: an implemented citation, link or panel must actually resolve the relevant authorized evidence. Merely naming one of those controls does not satisfy it. The 12-minute deadline is the success condition: a number, a population and a date, with the implementation left open.',
           competencies: ['discovery'],
         },
         {
