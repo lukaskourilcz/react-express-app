@@ -34,22 +34,62 @@ const scalarMethods = new Set(['push', 'pop', 'get', 'set', 'has', 'add', 'delet
 function returnsDeferredWork(fn: ts.FunctionLikeDeclaration): boolean {
   if (!fn.body) return false;
   const bindings = new Map<string, ts.Node[]>();
+  const aliases = new Map<string, Set<string>>();
+  const containerWrites: [string, ts.Node][] = [];
   let visited = 0;
   let limited = false;
   const callable = (node: ts.Node): boolean => ts.isArrowFunction(node) || ts.isFunctionExpression(node)
     || ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)
     || ts.isGetAccessorDeclaration(node) || ts.isSetAccessorDeclaration(node)
     || ts.isClassExpression(node) || ts.isClassDeclaration(node);
-  const bind = (name: string, value: ts.Node) => bindings.set(name, [...(bindings.get(name) ?? []), value]);
+  const addValue = (name: string, value: ts.Node): void => {
+    const values = bindings.get(name);
+    if (values) values.push(value);
+    else bindings.set(name, [value]);
+  };
+  const bind = (name: string, value: ts.Node): void => {
+    addValue(name, value);
+    if (ts.isIdentifier(value)) {
+      for (const [left, right] of [[name, value.text], [value.text, name]]) {
+        const related = aliases.get(left) ?? new Set<string>();
+        related.add(right);
+        aliases.set(left, related);
+      }
+    }
+  };
   const collect = (node: ts.Node): void => {
     if (++visited > 12_000) { limited = true; return; }
     if ((ts.isFunctionDeclaration(node) || ts.isClassDeclaration(node)) && node.name) bind(node.name.text, node);
     if (callable(node)) return;
     if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) bind(node.name.text, node.initializer);
     if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken && ts.isIdentifier(node.left)) bind(node.left.text, node.right);
+    if (ts.isBinaryExpression(node) && node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+      && (ts.isPropertyAccessExpression(node.left) || ts.isElementAccessExpression(node.left))
+      && ts.isIdentifier(node.left.expression)) containerWrites.push([node.left.expression.text, node.right]);
+    if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression)
+      && ts.isIdentifier(node.expression.expression)
+      && ['push', 'unshift', 'splice', 'set', 'add'].includes(node.expression.name.text)) {
+      for (const value of node.arguments) containerWrites.push([node.expression.expression.text, value]);
+    }
     ts.forEachChild(node, collect);
   };
   collect(fn.body);
+  // Account for callables added after a container was created, including
+  // writes through a possible local alias. This over-approximates flow and
+  // therefore withholds a report rather than assuming construction is enough.
+  for (const [owner, value] of containerWrites) {
+    if (limited) break;
+    const pending = [owner];
+    const seen = new Set<string>();
+    while (pending.length) {
+      if (++visited > 12_000) { limited = true; break; }
+      const name = pending.pop()!;
+      if (seen.has(name)) continue;
+      seen.add(name);
+      addValue(name, value);
+      for (const alias of aliases.get(name) ?? []) pending.push(alias);
+    }
+  }
   const deferred = (node: ts.Node, seen = new Set<ts.Node>()): boolean => {
     if (++visited > 12_000) return true;
     if (seen.has(node)) return false;

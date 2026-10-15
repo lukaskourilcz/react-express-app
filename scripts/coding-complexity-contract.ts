@@ -96,6 +96,10 @@ export function complexityContracts() {
     'const solve = () => true ? (xs => xs.map(x => x)) : (xs => xs);',
     'const solve = () => { const work = xs => xs; return ({ work } as const); };',
     'function helper() { return xs => xs.map(x => x); } const solve = () => helper();',
+    'function solve() { const box = {}; box.work = xs => xs.map(x => x); return box; }',
+    'function solve() { const box = {}; const alias = box; alias.work = xs => xs.map(x => xs.map(y => x+y)); return box; }',
+    'function solve() { const list = []; list.push(xs => xs.map(x => x)); return list; }',
+
   ]) {
     const scoped = assessComplexity(factoryTask, code);
     assert.equal(scoped.time, null, code);

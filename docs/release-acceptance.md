@@ -3874,8 +3874,31 @@ Final focused complexity contracts, API/script types, complete updated
 grading/Learn integrity, launch, build, native 263 bindings, both production
 dependency audits (zero vulnerabilities) and diff checks pass. All 1004 emitted
 HTML/JS/CSS files are byte-identical before/after this server-only correction.
-It adds no unique content review. B044–b045 separately have a ten-route
-responsive sweep in progress; no result is claimed here before completion.
+It adds no unique content review. B044–b045 separately pass all 80 probes on their ten actual task routes
+at 320–1440 px, with zero issues and zero unprobed routes.
 No schema/RLS, activation, access, reward ordering, handler-count or dependency
 change. Existing twelve handlers and owner holds remain. Required PR checks,
 merge and exact production are pending; #410 remains open.
+
+## PR #409 exact production — 15 October 2026
+
+PR #409 passed required run 38717316234 at exact 57dff6387d0a3f6b521afe1c9483bcfe3148d604 (verify 30m05s; SQL 41s), merged at da47f1957a6a012b70a085e59e42f8ef5ab51168. READY production dpl_BAbKFtd8CPMbsnunkdDXyS7WtQ3J matches that merge, owns devshark.app and has no alias error. All eleven general guest checks pass with zero XP/null progress. Three actual served Run-worker contracts block a captured native Promise.all alias, accept manual aggregation under the restriction and retain native aggregation for another task. Those worker checks make no server submission. Shipped coverage is 245/725 coding and 263/263 native. This does not establish authenticated server-side Premium, physical-device, independent/human or complete-catalogue acceptance.
+
+The runtime #408 implementation is complete; its separate issue can close with this evidence. B044–b045 and scope correction #410 remain in the follow-up branch. The ten-task responsive sweep passes 80/80 probes, zero issues/unprobed, and the 410 server-only change keeps all 1004 emitted UI files byte-identical.
+
+## Scope correction: containers filled later — 15 October 2026
+
+A further regression reproduced O(1) when a factory first created an empty
+object and then assigned its callable member. Bounded possible-alias/container
+tracking now covers property/element writes and common container mutators too.
+Fourteen generic deferred source shapes, a 500-link alias chain and all nine
+actual limiter/curry/latest-only boards report unknown/25 XP; eager linear and
+reliably quadratic checks retain their 25/15 XP behavior. Dynamic flow still
+needs manual review and no universal interprocedural-analysis claim is made.
+
+Final focused contracts, API/script types, complete grading/Learn integrity,
+launch/build, native 263, both production dependency audits (zero vulnerabilities)
+and diff checks pass. All forty b044–b045 target/base-25-XP checks pass again
+against the final inspector. All 1004 emitted UI files remain byte-identical;
+the existing 80-probe ten-task matrix therefore still applies. No new unique
+review or live user-data action. #410 awaits checked release.
