@@ -44,12 +44,12 @@
     "lessonActivityQuestionRecords": 263,
     "editorialWaveComplete": false,
     "deliveryDependsOnDeploymentFlagsAndStorage": true,
-    "currentStagedModelReviewRecords": 45,
-    "recordsStillRequiringReview": 93,
-    "reviewEvidence": "125 native records shipped through PR #396 at 4b5b777cd0a7d0de55c998c3e8385a805b577973 after exact 758d1bbb passed required verify/sql run 38665436277 (verify 30m20s). Production dpl_53iTBLx23PzkgngidqaNJamoFnTQ is READY at that merge SHA with devshark.app and no alias error. Eleven general signed-out health/Big O/coding checks pass. This is partial source/release evidence, not authenticated native activity acceptance or activation. Five n010 target revisions add no unique coverage.",
-    "deployedModelReviewRecords": 125,
-    "currentModelReviewRecords": 170,
-    "stagedReviewEvidence": "15 October through n023: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
+    "currentStagedModelReviewRecords": 40,
+    "recordsStillRequiringReview": 53,
+    "reviewEvidence": "170 native records shipped through PR #398 at 46e0dd6372606e2a3912aa3395b1b60db9fc5112 after exact 5f0145fa passed required verify/sql run 38668758560 (verify 25m14s; SQL 38s). Production dpl_DTiUbPTR5PELasM5gYD1o4diEreK is READY at that merge SHA with devshark.app and no alias error. Eleven general public health/Big O/correct-and-wrong coding checks pass with guest zero XP/null progress. Partial source/release evidence is not authenticated native acceptance or activation; n010 revisions add no unique coverage.",
+    "deployedModelReviewRecords": 170,
+    "currentModelReviewRecords": 210,
+    "stagedReviewEvidence": "15 October through n031: individual five-item batches bind exact hashes, manual quality/relevance and final readings; not yet released."
   },
   "notDeliverable": {
     "retiredSectionQuestions": 319,

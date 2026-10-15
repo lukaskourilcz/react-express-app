@@ -531,63 +531,57 @@ export const FDE_M05: ModuleSource = {
       verification: 'machine_verified',
       title: 'Grounding decisions',
       summary:
-        'Four bounded decisions: which half of the pipeline failed, what a late access filter costs, what to do with a superseded article that outranks the current one, and which citation an operator can actually check.',
+        'Four grounding decisions under explicit contracts: shown synthesis failure, pre-ranking access and coverage, current-version eligibility, and resolvable citation provenance.',
       competencies: ['retrieval'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
       questions: [
         {
           id: 'fde-v1-m05-q1',
-          prompt:
-            'A Dunfold operator reports this answer as wrong: the depot van collects chilled returns, not the delivery carrier. The transcript below is what the assistant recorded. Which step failed?',
+          prompt: "The shown authorized current chunks are exactly what generation received. An operator confirms chilled returns use the depot van, not the delivery carrier. Which shown step produced the contradiction in this transcript?",
           context: {
             language: 'json',
             code: '{\n  "query": "Which carrier collects a chilled return from the Dunfold depot?",\n  "viewer": { "tenantId": "TEN-4021", "clearances": ["kb-general"] },\n  "retrieved": [\n    { "sourceId": "KB-204", "version": 1, "score": 0.88,\n      "text": "Chilled returns are collected by the depot van, booked through the portal." },\n    { "sourceId": "KB-118", "version": 3, "score": 0.72,\n      "text": "Chilled orders may be returned within 7 days of delivery." }\n  ],\n  "answer": "Chilled returns are collected by the original delivery carrier.",\n  "citations": [{ "sourceId": "KB-204", "version": 1 }]\n}',
           },
           options: [
-            'Generation. KB-204 carries the answer, it was retrieved at the top of the window, and the sentence produced contradicts the chunk it cites.',
+            "Generation: KB-204 says depot van, while the answer says original delivery carrier.",
             'Retrieval. The right article ranked first, but 0.88 was too low for the generator to rely on it.',
             'Retrieval. Two chunks are not enough context, so the window should be widened to five.',
             'Neither. The answer is a fair paraphrase of the two chunks read together.',
           ],
           correct: 0,
-          explanation:
-            'The test is mechanical: look for the correct answer in the retrieved set. It is there, in the first chunk, and the generated sentence says the opposite while citing that chunk. The repair lives after retrieval — instruct the model to answer only from the supplied text, and check that the claim appears in the chunk you are about to cite. A score is a similarity number the generator never consults, so 0.88 being “too low” describes nothing that happens in the pipeline; and the right text was already in the window, so re-ranking has nothing left to fix. Widening the window to five adds chunks that do not contain a different answer, spends context on them, and makes a contradiction more likely rather than less. Calling it a paraphrase requires the depot van and the original delivery carrier to be the same party, which is exactly the fact the operator disputed — and the citation makes it worse, because the operator who follows it finds the opposite of what the answer claimed.',
+          explanation: "KB-204 explicitly supplies depot van, but the generated answer contradicts it while citing that same version. The transcript therefore shows a grounding failure in generation/synthesis. Validate support for the claim against the authorized source and evaluate any prompt or verification change; an instruction alone is not a guarantee. A similarity score does not establish factual support. The relevant text was already supplied, so this example does not establish that adding chunks or changing ranking is the necessary repair. More context can help or hurt in other cases and must be evaluated, rather than assumed to make contradictions more likely.",
           competencies: ['retrieval'],
         },
         {
           id: 'fde-v1-m05-q2',
-          prompt:
-            'Marlbrook’s retriever scores every chunk in the index, takes the top five, and then drops the ones the viewer may not read. A Dunfold operator asks about return windows, and four of the top five belong to Kestrel Foods. What does that ordering cost?',
+          prompt: "Policy requires viewer access scope before chunk text enters ranking. This retriever instead loads all text, takes a global top five, then drops unauthorized chunks. Four of those five are forbidden to the viewer, and a relevant authorized article ranked sixth. What are the two problems?",
           options: [
-            'A permission problem and a recall problem at once: text this process had no right to was fetched and scored, and it consumed four of the five slots, so a Dunfold article ranked sixth was never a candidate.',
+            "It violates the pre-ranking access policy and lets forbidden chunks displace an authorized candidate.",
             'Latency only. The answer is the same either way, because the forbidden documents are removed before anything is generated.',
             'A permission problem only. Recall is unaffected, since ranking had already put the best matches at the top.',
             'Nothing, as long as the removal happens before the chunks reach the model. Filtering late is what keeps the ranker simple.',
           ],
           correct: 0,
-          explanation:
-            'The window is the whole budget, so a slot spent on a document the viewer cannot read is a slot the answer does not get. Filtering afterwards leaves this operator with one usable chunk out of five, and a thin answer or a refusal on a question the knowledge base answers. That is why “the answer is the same either way” is wrong: it is the same only when every top-ranked document happened to be permitted, which is the case that never gets reported. “Recall is unaffected” assumes best-match is measured over the whole index, but recall for this operator is measured over the documents this operator may read, and by that measure the ranker just spent 80% of the window outside it. The last option is the belief that produces the bug, and it also misses the first half: the forbidden text was already loaded, scored and held in memory, where a log line, an error message or a trace attribute can carry it into a place it does not belong.',
+          explanation: "The implementation violates the stated access boundary by loading unauthorized text into this viewer-ranking path. Late filtering also leaves one usable result and excludes the relevant authorized article at rank six; ranking within eligible content would not spend those slots on forbidden candidates. This can harm retrieval coverage even if the final response sometimes happens to be sufficient. Unnecessary text increases the surface for logging or error mistakes, but this transcript does not prove every such record leaks. A separately authorized shared ranking service may have another valid architecture; the question concerns the explicit policy given here.",
           competencies: ['retrieval'],
         },
         {
           id: 'fde-v1-m05-q3',
-          prompt:
-            'A question about the chilled return window retrieves KB-118 version 2 at 0.94, which says 14 days, and KB-118 version 3 at 0.67, which says 7 days. Version 3 replaced version 2 six weeks ago. What should the retrieval step do?',
+          prompt: "The query asks for the current chilled-return policy. KB-118 v3 is the authorized current policy, replacing v2 six weeks ago; policy excludes superseded versions from current answers and retains an access-controlled archive for historical citations. V2 scores 0.94 and says 14 days; v3 scores 0.67 and says 7. What must retrieval do?",
           options: [
-            'Drop version 2 before ranking. A superseded chunk is not a weaker candidate, it is not a candidate, and the answer is built from version 3 alone.',
+            "Exclude v2 from current-answer candidates before ranking and use the authorized current v3.",
             'Keep both and cite both, noting that version 2 is older, so the operator can decide which number applies.',
             'Subtract a staleness penalty from version 2’s score and let the ranking sort it out.',
             'Keep version 2 as the primary source: 0.94 against 0.67 means it matches the question far better.',
           ],
           correct: 0,
-          explanation:
-            'Eligibility and ranking are different questions, and eligibility is answered first. Version 2 was replaced, so it is out of the candidate set before any score is compared — while the row itself stays in the store, so a citation written before the replacement still resolves. Citing both produces an answer that states 7 days and 14 days, which states neither, and hands the operator the retrieval work you were meant to do; the “older” note is prose rather than a control, so any summary or truncation drops it and leaves two contradictory numbers. A staleness penalty is a number you tune, and a large enough score still wins it; it also mixes recency into relevance, after which you can no longer say why a document was used. The last option mistakes similarity for currency: the old text scores well precisely because it was written to answer this question, and that is why the score cannot be the thing that protects you.',
+          explanation: "The given current-answer eligibility policy excludes v2 independently of its similarity score. Keep the archive for authorized historical references, rather than deleting history or retrieving it as current policy. A historical question could legitimately need an old revision; this one explicitly asks for the current rule. A finite staleness penalty or an older-note in prose does not enforce this hard exclusion. Combining relevance and recency can be useful elsewhere, but cannot override the stated eligibility contract. The higher score describes similarity, not authority or current applicability.",
           competencies: ['retrieval'],
         },
         {
           id: 'fde-v1-m05-q4',
-          prompt: 'Four ways of citing the same sentence. Which one lets an operator confirm the claim without asking you?',
+          prompt: "An authorized operator can resolve immutable archived content by sourceId, version and chunkId. Which citation record supplies the stable locator and retrieval time needed to inspect the exact supporting passage after an article edit?",
           options: [
             '`{ "sourceId": "KB-118", "version": 3, "chunkId": "KB-118#c4", "retrievedAt": "2026-04-02T09:14:11Z" }`',
             '`"Source: the Dunfold chilled returns policy"`',
@@ -595,8 +589,7 @@ export const FDE_M05: ModuleSource = {
             '`{ "score": 0.91, "snippet": "Chilled orders may be returned within 7 days of delivery." }`',
           ],
           correct: 0,
-          explanation:
-            'The first names the article, the revision that was in the index, the part of it that was used and when it was read. The operator opens one chunk and either finds the sentence or does not, and either way the record survives a later edit. A title is a search: two policies can share one, and the operator guesses which. A bare URL resolves to whatever the page says today, so after an edit you cannot tell a wrong answer from a moved one — that is what the version field is for. The fourth option looks strongest because it shows the text, and it is the weakest of the four: nothing ties the snippet to a document that exists, so a generator that invents a plausible sentence produces a citation of exactly this shape, and the score beside it measures similarity rather than truth.',
+          explanation: "The sourceId/version/chunkId record locates the specific archived passage under the resolver assumed by the question, and retrievedAt records when it was used. The operator still has to inspect whether it supports the claim. Metadata alone neither preserves content nor proves truth: the system must retain authorized versions and validate citation ids against the actual retrieved source set. A title can be ambiguous; this unversioned URL may change; a detached snippet and similarity score do not establish provenance. Immutable versioned URLs or content-addressed references can also work in other citation designs.",
           competencies: ['retrieval'],
         },
       ],

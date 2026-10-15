@@ -452,68 +452,41 @@ export const FDE_M04: ModuleSource = {
       verification: 'machine_verified',
       title: 'Architecture and output decisions',
       summary:
-        'Four bounded decisions: which rung the constraints leave standing, what a schema constraint does not promise, what to do with a response that parses but is out of range, and when an agent’s latency is worth paying.',
+        'Four architecture decisions: measured routing constraints, structure versus meaning, an explicit confidence-domain check and evidence for bounded runtime planning.',
       competencies: ['ai-architecture'],
       estimatedMinutes: 15,
       passThreshold: 0.8,
       questions: [
         {
           id: 'fde-v1-m04-q1',
-          prompt:
-            'Marlbrook wants portal tickets routed while the customer is still on the confirmation screen: p95 under 300 ms, and the routing has to be explainable to an auditor. Every portal ticket carries a category the customer picked from four options, and on a 300-ticket hand-labelled sample a three-entry lookup table matched the operator’s final queue 268 times. The 32 misses were nearly all customers who picked “Other”. Which design do you build first?',
-          options: [
-            'The lookup table, with anything it cannot decide — including every “Other” — sent to the operator queue, and the miss rate measured again after a week.',
-            'One model call on every portal ticket, since a model reads the ticket body and the lookup table only reads a dropdown.',
-            'A workflow that calls the lookup table first and then always calls a model to double-check the table’s answer.',
-            'An agent with a knowledge-base tool, so tickets the table misroutes get investigated before anyone is disturbed.',
-          ],
+          prompt: "In this fixture, portal routing needs p95 below 300ms and an auditable decision. Of 300 held-out labelled tickets, a category lookup routed 268 correctly; the other 32 all selected Other. The lookup plus audit path measured p95 12ms; the candidate model call measured 800ms. Which design is the best first baseline, with unresolved cases sent to operators?",
+          options: ["Use the lookup for known categories, abstain on Other, and monitor outcomes by slice.", "Call the measured model on every portal ticket because it can read the body.", "Use the lookup, then always call the measured model to double-check it.", "Run a model-directed agent with a knowledge-base tool on every portal request."],
           correct: 0,
-          explanation:
-            'The constraints do the choosing here. A 300 ms p95 inside a live request leaves almost no room for a provider round trip plus a retry, and “explainable a year later” is free with a lookup table and extra work with anything else. The table already agrees with the operator on 268 of 300, and its errors concentrate in one bucket you can route to a person by name. Calling a model on every ticket spends money and latency on the 71% the dropdown already answered, and it introduces a confidently wrong answer where there was none. Double-checking the table with a model is the same cost with a worse failure mode: you now need a rule for which one wins when they disagree, and the model has no more information than the dropdown did. The agent fails the latency constraint outright, and investigating a misroute is work for the operator queue rather than for the request path. Any of the upper rungs could be right on the 29% of tickets that arrive as free-text email — a different constraint, and a different decision.',
+          explanation: "The measured lookup path fits the 300ms limit, and a recorded rule/table version can support auditability. It agreed on 268/300, about 89.3%, with all 32 remaining cases explicitly outside its covered categories. Route Other to operators and keep measuring quality, fallback volume and latency; a finite sample is not a guarantee on future tickets. The measured 800ms model call exceeds this request-path budget, whether used alone or after the lookup. The agent proposal has no evidence that it meets the budget or improves this covered task. Different measurements or a separate asynchronous workflow could lead to another design.",
           competencies: ['ai-architecture'],
         },
         {
           id: 'fde-v1-m04-q2',
-          prompt:
-            'Marlbrook’s provider can constrain a response to a JSON schema: `ticketId` and `category` are required strings, `category` is an enum of four values, `confidence` is a number. Assume the response finishes rather than hitting the token limit. What does that constraint still not give you?',
-          options: [
-            'That the decision is right. A response can satisfy every property and still name a ticket closed last week, call a bug report `billing`, and report 0.94 while doing it.',
-            'That `category` is one of the four values, since an enum is part of the schema.',
-            'That `confidence` arrives as a number rather than as the string `"0.82"`.',
-            'That both required properties are present in the response.',
-          ],
+          prompt: "A successful non-refusal response has been parsed and strictly validated against a schema: ticketId and category are required strings, category has four allowed values, and confidence is a required number. What does passing that validation still not establish?",
+          options: ["That the selected ticket/category is factually correct or the reported confidence is calibrated.", "That category belongs to the schema’s four allowed values.", "That confidence is present as a number rather than a numeric string.", "That the required ticketId and category properties are present."],
           correct: 0,
-          explanation:
-            'A schema constrains shape, and shape is not truth. Nothing in an enum stops the model from picking the wrong member of it, and nothing in a number type stops 0.94 from being confidently wrong about the ticket. The other three options are exactly what the constraint does buy you on a response that finishes — which is why the question fixes that assumption, and why your code still parses defensively: a response cut off at the token limit is not a partially valid object with a missing property, it is text that does not parse at all, and your boundary reports that as a parse failure rather than as a missing field. Checking values you were promised is cheap; skipping the check because the schema promised it is how a wrong queue name reaches the router.',
+          explanation: "Validation establishes the stated structure, not the meaning of its values. A valid category can still be wrong for the ticket, an id can name the wrong record, and a self-reported number is not proved calibrated by a number type. Required fields, types and enum membership are the structural checks assumed to have passed. Refusals, transport failures and incomplete/truncated output need separate handling. Some cut-off outputs fail JSON parsing; syntactic validity alone also does not make an incomplete response acceptable. Apply the relevant entity, authorization and business checks after structural validation.",
           competencies: ['ai-architecture'],
         },
         {
           id: 'fde-v1-m04-q3',
-          prompt:
-            'A triage response parses cleanly, names a real ticket and an allowed category, and reports `"confidence": 1.4`. Your accept threshold is 0.6. What should the boundary do?',
-          options: [
-            'Reject it with a stated reason, count the rejection, and take the fallback the policy defines: abstain to the operator, retry once, or use the deterministic rule.',
-            'Clamp the value to 1.0 and accept it, since the category is probably still right and 1.4 clearly means the model was sure.',
-            'Accept it as it stands, because 1.4 is above the 0.6 threshold and the threshold is what the check is for.',
-            'Retry the call until a response arrives with a confidence inside the range.',
-          ],
+          prompt: "The output contract requires finite confidence in [0,1] before applying an accept threshold of 0.6. A parsed response names a real ticket and an allowed category but reports confidence 1.4. What should the boundary do?",
+          options: ["Reject and count the contract violation, then use the policy’s bounded fallback.", "Clamp it to 1.0 and accept because the category is probably correct.", "Accept 1.4 because it exceeds the 0.6 threshold.", "Retry until confidence falls inside the range, without a limit."],
           correct: 0,
-          explanation:
-            'A confidence above 1 is evidence that this response did not come from the distribution your threshold was calibrated on, so every inference you would draw from the number is unsafe — including the inference that the category beside it is fine. Clamping to 1.0 does not repair that; it launders a broken response into the most confident answer your system can express, and it destroys the signal you would have used to notice a model change. Accepting it because it clears the threshold is the same mistake with fewer steps: the comparison is only meaningful for values inside the range the check defines. Retrying until the response is in range is unbounded work driven by a failure you have no reason to think is transient, and it burns the latency budget of a ticket that already spent it. Reject, name the reason from your fixed vocabulary so it can be counted, and let the policy decide what happens next.',
+          explanation: "1.4 violates the stated range, so the threshold comparison is not an authorization to accept it. Reject with a fixed reason such as confidence_out_of_range, count it and follow the approved fallback: for example abstain to an operator or make a bounded retry where policy permits. Silent clamping would convert invalid data into an apparently maximally confident result and hide the contract failure. The bad value does not by itself prove a particular distribution shift or calibration history. Even an in-range self-reported value needs separate evaluation before being treated as a calibrated probability. Unbounded retries provide neither a work limit nor a success guarantee.",
           competencies: ['ai-architecture'],
         },
         {
           id: 'fde-v1-m04-q4',
-          prompt: 'An agent loop adds seconds of latency and an unpredictable number of model calls per request. When is that worth paying for?',
-          options: [
-            'When the steps genuinely cannot be fixed in advance because each lookup depends on what the last one returned, the loop has a step budget, and a person approves anything that acts.',
-            'When the task has more than about five steps, so a loop is less code to maintain than a chain of calls.',
-            'When accuracy matters more than latency, because an agent re-checks its own work before answering.',
-            'When the model is capable enough that pinning it to a fixed workflow would waste what it can do.',
-          ],
+          prompt: "A model-directed agent adds latency and variable tool/model calls. Policy requires human approval before external writes. Which evidence best justifies it over a simpler deterministic or fixed-branch workflow?",
+          options: ["Measured benefit on open-ended runtime planning within hard budgets, with policy-required approval before writes.", "The task has more than five steps, so any loop is easier to maintain.", "Accuracy matters more than latency, so the same model checking itself guarantees correctness.", "The model is capable, so a fixed workflow would waste its potential."],
           correct: 0,
-          explanation:
-            'The agent buys you one thing: a sequence chosen at run time. That is worth its cost only when the sequence really is unknowable in advance, and only inside limits — a step budget so one ticket cannot consume the hour, and an approval step so a wrong decision does not act before a person sees it. Step count is not the test; a fifteen-step workflow you can draw on a whiteboard is a workflow, and writing it as a loop swaps a latency you can predict for one you cannot. An agent re-reading its own output is not a correctness mechanism, since the same model that was wrong is doing the checking, and more calls raise the chance that a wrong intermediate step is carried forward. The last option picks the design from the technology rather than from the constraint, which is how a system that had to answer in 300 ms ends up taking six seconds.',
+          explanation: "Use an agent when evaluated runtime choice of steps provides enough benefit to justify its allowed latency, cost and risk, with hard call/step limits and the approval policy enforced outside model output. A lookup depending on a previous result does not by itself require an agent: deterministic conditional workflows can do that too. Step count and model capability alone do not establish value. Self-checking can be an evaluated technique, but the same model reviewing its output is not independent proof or a correctness guarantee. More calls do not automatically improve or worsen quality; compare actual outcomes and failure paths. The human-approval requirement here is the stated external-write policy, not a universal rule for every tool read or low-risk operation.",
           competencies: ['ai-architecture'],
         },
       ],

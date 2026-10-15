@@ -1,5 +1,25 @@
 # Release acceptance matrix
 
+## Forty-five native reviews — 2026-10-15
+
+PR #398 merged at `46e0dd6372606e2a3912aa3395b1b60db9fc5112` after exact
+5f0145fa passed required run 38668758560 (verify 25m14s, SQL 38s). Production
+`dpl_DTiUbPTR5PELasM5gYD1o4diEreK` is READY at that merge SHA, owns
+devshark.app and has no alias error. Eleven general public health/Big O and
+correct/wrong coding checks pass with guest zero XP/null progress. No owner-
+progress, Challenge or name fixture was created. Authenticated native activity,
+Premium access and activation are not inferred.
+
+N015–n023 add forty-five individual native reviews, including the final four
+DSA activities and FDE diagnostic/incident/bridge/discovery/integration checks.
+Exact preview, real sandbox verdicts, Python/HTTPX synthetic examples and local
+release evidence are recorded in the merged review records. All 129 DSA records
+now have current individual model reviews. Shipped coverage is 95/725 coding
+and 170/263 native. Local coverage through n031 is 95/725 and 210/263, with
+630 coding and 53 native remaining. The FDE diagnostic parent awaits #397.
+Evidence: `/tmp/devshark-audit-2026-10-15/prod398-general.log`. Same-session
+model review is not independent/human approval or full-catalogue acceptance.
+
 ## Thirty native reviews and five existing targets — 2026-10-15
 
 PR #396 merged at `4b5b777cd0a7d0de55c998c3e8385a805b577973` after exact

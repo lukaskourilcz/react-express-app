@@ -1,5 +1,197 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n031
+
+Reviewed both discovery lessons, their reading activities and the backend
+mapping bridge. Fixture timing does not predict savings; ambiguous email-domain
+matches require authorization. A mechanism can be a legitimate requirement,
+recipients have agency and small observations have limits. Baselines distinguish
+snapshot reproduction from later comparisons, include method limitations and
+a dated 2027 target. Reading remains self-reviewed.
+
+The mapping reference incorrectly accepted unknown non-string dates as null;
+the guard now distinguishes strings from other values. Nonnegative safe integer
+ids reject precision loss/overflow. Date validation is explicitly shape-only,
+email validation only the stipulated @ check. Canonical problem ordering is a
+contract, not proof that unsorted fixed ordering is nondeterministic. Seven real
+QuickJS/TypeScript verdicts pass, including a separately written alternative and
+old/date/id/order wrongs; two valid solutions retain base25 without false penalty.
+Baseline/stale-worker intermediate outputs are retained and distinguished from
+fresh final executions. Native bindings, paths, API/script types, launch, final
+build, both production dependency audits (zero vulnerabilities), copy and diff
+checks pass. Fixture assertions are not measured customer or live CRM evidence.
+
+Coverage is **210/263 native**, **53 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 is now exact-production verified at 46e0dd63 with
+all eleven general checks passing; shipped coverage is95 coding/170 native.
+N024–n031 remain local. The diagnostic parent still awaits #397.
+
+## 15 October continuation — five-item native batch n030
+
+Reviewed four handoff questions and their check. Conditional UAT acceptance now
+requires explicit exception authority and preserves the missed timing result.
+A ten-case median is calculable without proving wider performance. The runbook
+item asks for its specific verification/escalation gap without dismissing useful
+diagrams or certifying overall readiness. Refund confirmation states the actual
+irreversible boundary, with no impossible undo promise. Repeated workarounds
+across one customer's sites support investigation, not cross-customer demand;
+individual requests are also legitimate product input.
+
+Mixed keys, immediate review and timing arithmetic pass. No rollout, refund,
+customer validation or actual handoff was executed. Native bindings, path
+contracts, API/script types, launch, build, both production dependency audits
+(zero vulnerabilities), copy and diff checks pass. Manual editorial scores and
+final readings remain separate from these checks.
+
+Coverage is **205/263 native**, **58 remaining**, and **95/725 coding**,
+**630 remaining**. N024–n030 are local. PR #398 is merged at 46e0dd63;
+its exact production deployment is READY on devshark.app, with general QA
+running. Release acceptance will record the actual outcome. Diagnostic parent
+still awaits #397.
+
+## 15 October continuation — five-item native batch n029
+
+Reviewed four incident questions and their check. Inclusive sequential timing
+now accounts for both search children: 26 ms remains outside them, not 70;
+the endpoint has 19 ms outside shown children. One trace does not prove root
+cause or each retry's duration. The tested bypass has explicit safety and
+retained evidence, requires recovery verification and can affect live diagnosis.
+Code-only rollback has explicit scope and does not reverse delivered emails,
+a dropped column or retained partner keys. Slice monitoring has an actual
+10% baseline, 40% observation and 20% threshold, without an earliest-alert claim.
+
+Arithmetic, mixed keys and immediate exercise review pass. No live incident,
+telemetry, deployment, partner transaction, email or alert was executed. Native
+bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Manual
+quality/relevance/final readings remain separate from execution.
+
+Coverage is **200/263 native**, **63 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 merged at 46e0dd63 after exact-head verify (25m14s),
+SQL and eleven preview checks passed; production verification is pending.
+N024–n029 remain local. Production-verified coverage remains 95 coding/125
+native through #396 until the new deployment is checked. Diagnostic parent
+still awaits #397.
+
+## 15 October continuation — five-item native batch n028
+
+Reviewed four security questions and their check against primary OWASP guidance.
+A valid order amount does not imply approval: the refund now has an explicit
+50 EUR consent boundary. A permitted quoted attack remains content in a
+summarizer without export authority. Fixed-tenant derivation is a stated API
+contract; strict mismatch rejection can also be secure. Deletion limits bound
+one call and recovery depends on a working permitted restore window; approval
+can reduce mistakes and repeated calls require cumulative controls.
+
+Mixed keys, exercise feedback and explicit premises pass the authored proof.
+No refund, model, export, tenant authorization or recovery was executed. Native
+bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Manual
+quality/relevance/final readings remain separate from execution.
+
+Coverage is **195/263 native**, **68 remaining**, and **95/725 coding**,
+**630 remaining**. N024–n028 are local while PR #398 remains frozen at
+5f0145fa pending verify, with SQL and eleven preview checks passing. Production
+coverage remains 95 coding/125 native through #396. Diagnostic parent awaits #397.
+
+## 15 October continuation — five-item native batch n027
+
+Reviewed the four evaluation questions and their check. Tuning leakage now
+requires fresh unexposed evaluation rather than subtracting known copied cases.
+The hypothetical 400-case batch separates 240 answers into 228 correct and 12
+wrong, with 160 abstentions. Slice changes are six gains minus three losses,
+not five gains. Conditional accuracy, coverage and correct-answer yield have
+explicit denominators. Abstaining more does not necessarily improve accuracy;
+small observed samples do not establish a production forecast or significance.
+
+Arithmetic, authored keys, exercise threshold and review checks pass. These
+illustrations run no model and establish no statistical uncertainty bound.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. Individual
+manual scores and final readings remain separate from execution.
+
+Coverage is **190/263 native**, **73 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 remains frozen at 5f0145fa pending verify; SQL and
+its eleven exact-preview general checks pass. N024–n027 are local. Production
+coverage remains 95 coding/125 native through PR #396. The FDE diagnostic
+parent still awaits #397.
+
+## 15 October continuation — five-item native batch n026
+
+Reviewed the four tool-boundary questions and their check. Argument-only schema
+behavior and financial approval are explicit scenario contracts rather than
+universal claims about every validator/read. Compatibility now uses documented
+mutually supported semantics, distinguishes modern MCP2026-07-28 per-request
+version errors from legacy initialization's SHOULD-disconnect rule, and does
+not guess a version. The refund case explicitly reserves no balance and has a
+full intervening refund; current conditions must be enforced with the effect,
+not merely re-read before another race. Prior consent does not supply funds.
+
+Primary versioned specifications, small enum/common-version/balance examples
+and exercise review agree. No MCP connection, schema infrastructure, grant,
+financial effect or atomic database operation is tested by those illustrations.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. All manual
+quality/relevance/final readings remain distinct from the runs.
+
+Coverage is **185/263 native**, **78 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 freezes n015–n023 at 5f0145fa with SQL/eleven exact-
+preview checks passing and verify pending. N024–n026 are local. Source shipped
+coverage remains95 coding/125 native through PR #396; #397 still blocks the FDE
+diagnostic parent.
+
+## 15 October continuation — five-item native batch n025
+
+Reviewed the four grounding questions and their check. The supplied authorized
+input makes the shown depot-van/carrier contradiction a synthesis failure,
+without inventing universal score/context repairs. Late filtering is judged
+against an explicit pre-ranking access policy and a relevant authorized sixth
+candidate, without claiming an inevitable external leak or bad answer. Current-
+policy eligibility is distinguished from similarity and authorized historical
+retrieval. Citation metadata enables inspection only with the stipulated retained
+version/chunk resolver and actual source support; it does not preserve content
+or prove truth by itself. Positional answer references are removed.
+
+The actual transcript/citation JSON, bounded candidate example and exercise
+threshold/review checks pass. No real retriever, archive access, generation,
+recall benchmark or index policy is exercised. Native bindings, path contracts,
+API/script types, launch, build, both production dependency audits (zero
+vulnerabilities), copy and diff checks pass. Individual manual scores and final
+readings remain distinct from execution.
+
+Coverage is **180/263 native**, **83 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 remains frozen at 5f0145fa with SQL and eleven exact-
+preview general checks passing; verify is pending. N024–n025 are local. Source
+shipped coverage is 95 coding/125 native through production-verified PR #396.
+The FDE diagnostic parent still awaits #397.
+
+## 15 October continuation — five-item native batch n024
+
+Reviewed four architecture/output questions and their check. Routing arithmetic
+is corrected from the invented 71/29 split to 268/300≈89.3%; the scenario now
+explicitly supplies hypothetical lookup/model latencies and unresolved Other
+cases instead of asserting universal provider performance. Structural validation
+requires confidence as well as ticket/category and assumes a successful parsed,
+validated response. It does not establish truth, authority or calibration, and
+truncation is not always syntactically invalid. An out-of-range value violates
+the explicit contract, without proving a distribution shift. Agent choice needs
+evaluated planning benefit, bounded cost and the stated write-approval policy;
+dependent steps alone do not require a model-directed loop.
+
+Actual local JSON Schema examples under jsonschema 4.23.0 verify required/type/
+enum checks and the difference between number-only and explicit [0,1] bounds.
+Arithmetic and exercise review pass. The latencies are authored fixture facts,
+not measurements performed here; no provider/model/agent or AI feature is added.
+Native bindings, path contracts, API/script types, launch, build, both production
+dependency audits (zero vulnerabilities), copy and diff checks pass. All manual
+quality/relevance/final readings remain separate from these executions.
+
+Coverage is **175/263 native**, **88 remaining**, and **95/725 coding**,
+**630 remaining**. PR #398 freezes n015–n023 at 5f0145fa; its exact READY preview
+passes eleven general checks, required SQL passes and verify is pending. N024 is
+local. Source shipped coverage remains 95 coding/125 native through PR #396.
+#397 still blocks the FDE diagnostic parent.
+
 ## 15 October continuation — five-item native batch n023
 
 Reviewed all four boundary questions and their check. Fixed-active-tenant

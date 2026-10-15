@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {LEARNING_PATHS} from '../../../../lib/learning-paths/catalog';
+import {nativeContentHash,nativeGradingHash} from '../../../../lib/learning-paths/audit';
+import {gradeCheck} from '../../../../lib/learning-paths/grade';
+const check=LEARNING_PATHS.find(p=>p.id==='fde')!.modules.find(m=>m.id==='fde-v1-m04')!.activities.find(a=>a.kind==='check')!;const questions=check.questions!;const keys=questions.map(q=>q.correct);assert.deepEqual(keys,[0,0,0,0]);assert.equal(gradeCheck(check,keys,keys).state,'verified_pass');for(let i=0;i<4;i++){const answers=[...keys];answers[i]=1;const result=gradeCheck(check,keys,answers);assert.equal(result.state,'needs_revision');assert.equal(result.keyWithheld,false);}
+assert.equal(268+32,300);assert.equal(Math.round(268/300*1000)/10,89.3);assert(12<300&&800>300);
+const schema=JSON.parse(readFileSync(process.argv[2],'utf8')) as {checkedRecords:number;records:{id:string;contentHash:string}[];jsonschemaVersion:string};assert.equal(schema.checkedRecords,2);for(const row of schema.records)assert.equal(nativeContentHash(questions.find(q=>q.id===row.id)!),row.contentHash);
+writeFileSync(process.argv[3],JSON.stringify({checkedRecords:5,records:[...questions.map(q=>({id:q.id,contentHash:nativeContentHash(q),gradingHash:null})),{id:check.id,contentHash:nativeContentHash(check),gradingHash:nativeGradingHash(check)}],jsonschemaVersion:schema.jsonschemaVersion,checks:['correct 268/300 arithmetic and explicit hypothetical latency comparison','actual stated JSON Schema examples; required confidence and separate numeric range','four-question exercise threshold/feedback','planning value, approval and self-check limitations are manual scenario readings; no model benchmark, provider call, production latency or calibrated confidence claim']},null,2),{mode:0o600});
+console.log('PASS five architecture bindings, corrected arithmetic and actual local schema examples');

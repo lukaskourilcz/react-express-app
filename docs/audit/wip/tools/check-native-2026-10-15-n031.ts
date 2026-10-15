@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {readFileSync,writeFileSync} from 'node:fs';
+import {LEARNING_PATHS} from '../../../../lib/learning-paths/catalog';
+import {nativeContentHash,nativeGradingHash} from '../../../../lib/learning-paths/audit';
+import {solutionFor} from '../../../../lib/learning-paths/solutions';
+import {assessComplexity} from '../../../../lib/coding/complexity';
+import {codingPassXp} from '../../../../shared/coding-complexity';
+const path=LEARNING_PATHS.find(p=>p.id==='fde')!;const module=path.modules.find(m=>m.id==='fde-v1-m01')!;const lessons=module.lessons;const reads=module.activities.filter(a=>a.kind==='lesson');assert.equal(lessons.length,2);assert.equal(reads.length,2);for(const read of reads){assert(lessons.some(l=>l.id===read.lessonId));assert.equal(read.verification,'self_reviewed');}
+const bridge=path.modules.flatMap(m=>m.activities).find(a=>a.id==='fde-v1-bridge-backend-mapping')!;
+const worker=JSON.parse(readFileSync(process.argv[2],'utf8'));assert.equal(worker.length,7);for(const r of worker){assert.equal(r.state,r.expected);assert.equal(r.contentHash,nativeContentHash(bridge));assert.equal(r.gradingHash,nativeGradingHash(bridge));}
+const manual=JSON.parse(readFileSync(process.argv[3],'utf8'));for(const source of [solutionFor(bridge.id)!.solution,manual[bridge.id].alternative]){const report=assessComplexity({track:bridge.code!.language,prompt:bridge.code!.prompt,tests:bridge.code!.tests},source);assert.equal(report.guidance.targetTime,'O(n)');assert.notEqual(report.assessment,'above-target');assert.equal(codingPassXp(report),25);}
+const trace=lessons[0].sections.find(s=>s.kind==='trace');assert(trace?.kind==='trace');assert.deepEqual(trace.trace.frames.map(f=>f.counter?.value),[0,1,6,11,15,16,18,19]);assert.equal((6-1)+(11-6),10);const baseline=lessons[1].sections.find(s=>s.kind==='code'&&s.language==='json');assert(baseline?.kind==='code');const data=JSON.parse(baseline.code);assert.equal(data.observations,412);assert.equal(data.median,19);assert.equal(data.p90,47);
+writeFileSync(process.argv[4],JSON.stringify({checkedRecords:5,records:[...lessons.map(l=>({id:l.id,contentHash:nativeContentHash(l),gradingHash:null})),...reads.map(a=>({id:a.id,contentHash:nativeContentHash(a),gradingHash:nativeGradingHash(a)})),{id:bridge.id,contentHash:nativeContentHash(bridge),gradingHash:nativeGradingHash(bridge)}],checks:['seven real QuickJS/TypeScript verdicts and two valid unpenalized complexity analyses','fixture trace arithmetic and baseline JSON parsing, not measured customer evidence','lesson link/self-review bindings; discovery and NIST/SRE distinctions manually reviewed; no live CRM, production activity or independent editorial review']},null,2),{mode:0o600});
+console.log('PASS five discovery/mapping records, seven sandbox verdicts and fixture consistency');
