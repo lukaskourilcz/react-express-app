@@ -757,7 +757,7 @@ console.log(retryDelays(100, 1000));
     tier: 2,
     focus: ['while', 'record'],
     title: 'Headers until the blank line',
-    prompt: 'An HTTP response starts with header lines such as `Content-Type: text/html`, then one blank line (`""`), then the body. Write `readHeaders(lines: readonly string[]): Record<string, string>`, reading from the top with a `while` loop until it reaches the blank line or runs out of lines. Split each header at its first `": "`: the name before it, in lower case, is the key, and everything after it is the value. Nothing after the blank line is read, even when it looks like a header.',
+    prompt: "A simplified header block has lines such as `Content-Type: text/html`, then one blank line (`\"\"`), then the body. Write `readHeaders(lines: readonly string[]): Partial<Record<string, string>>`, reading from the top with a `while` loop until it reaches the blank line or runs out of lines. Split each header at its first `\": \"`: the name before it, in lower case, is the key, and everything after it is the value. Nothing after the blank line is read, even when it looks like a header. This is the header-block exercise, not a complete HTTP message parser. Only names actually read have entries; a missing name reads as undefined. Domain: a dense readonly ordinary array of at most 1000 lines. Before the first exact empty string, every line is stable text of at most 1000 UTF-16 units with a nonempty ASCII token name, a first colon-space separator and a value that may be empty. Names are case-insensitive through lowercase conversion; repeated normalized names keep their last value. Preserve all value text, including later separators and leading/trailing spaces. Do not evaluate body elements after the first blank line; they may be getters. Prefix elements have no accessors/proxies, and the input may be frozen. Return a fresh mutable prototype-safe dictionary every call, with own keys exactly the read normalized names and undefined for absent keys, including Object member names. Target: O(n) time and output space, where n is 1 + processed prefix line count + its total UTF-16 length; the body is excluded.",
     starter: `const readHeaders = (lines) => {
 
 };
@@ -765,8 +765,8 @@ console.log(retryDelays(100, 1000));
 // Scratch pad. Change this and press Run.
 console.log(readHeaders(["Content-Type: text/html", "Content-Length: 12", "", "<p>Hi</p>"]));
 `,
-    skeleton: `const readHeaders = (lines: readonly string[]): Record<string, string> => {
-  const headers: Record<string, string> = {};
+    skeleton: `const readHeaders = (lines: readonly string[]): Partial<Record<string, string>> => {
+  const headers = Object.create(null) as Partial<Record<string, string>>;
   let i = 0;
   while (/* i is in range and lines[i] is not "" */) {
     const at = lines[i].indexOf(": ");
@@ -775,12 +775,8 @@ console.log(readHeaders(["Content-Type: text/html", "Content-Length: 12", "", "<
   }
   return headers;
 };`,
-    hints: ['`indexOf(": ")` finds only the first separator, so a value that holds its own `": "` stays whole. `slice(0, at)` is the name and `slice(at + 2)` the value. `split(": ")` would cut such a value in pieces.'],
-    approach: [
-      'Start an empty `Record<string, string>` and an index at 0.',
-      'Loop while the index is in range and the line there is not `""`.',
-      'Split the line at its first `": "`, store the lower-case name with its value, and move to the next line.',
-    ],
+    hints: ["Use indexOf(\": \") and slice around the first separator so all remaining value text survives. Splitting and rejoining can also preserve it, but a plain split that takes only the second piece loses later separators. Partial means a header may be absent; use a prototype-safe dictionary."],
+    approach: ["Create a fresh prototype-safe Partial<Record<string, string>> dictionary and start at index zero.", "While the index is in range and its line is not the exact empty string, split at the first colon-space separator.", "Store the lowercased name and unchanged value; later duplicates replace earlier values. Stop before evaluating body entries."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -790,11 +786,7 @@ console.log(readHeaders(["Content-Type: text/html", "Content-Length: 12", "", "<
       { call: 'readHeaders(["X-Note: see: below", ""])', expected: { 'x-note': 'see: below' }, label: 'a value keeps its own colons', edge: true },
       { call: 'readHeaders(["A: 1", "", "B: 2"])', expected: { a: '1' }, label: 'nothing after the blank line', edge: true },
     ],
-    typeTests: [
-      { code: 'const __h: Record<string, string> = readHeaders(["A: 1"]);', label: 'gives back a record of text' },
-      { code: 'const __v: string = readHeaders([])["host"];', label: 'every value is text' },
-      { code: 'readHeaders("A: 1");', label: 'the input is a list of lines', rejects: true },
-    ],
+    typeTests: [{"code": "const __h: Partial<Record<string, string>> = readHeaders([\"A: 1\"]);", "label": "observed headers hold text"}, {"code": "const __v: string | undefined = readHeaders([])[\"host\"];", "label": "a header lookup may be undefined"}, {"code": "readHeaders(\"A: 1\");", "label": "the input is a list of lines", "rejects": true}, {"code": "const __required:string=readHeaders([])[\"missing\"];", "rejects": true, "label": "an absent header may be missing"}],
   },
 
   /* ── destructuring ────────────────────────────────────────────────── */
@@ -806,7 +798,7 @@ console.log(readHeaders(["Content-Type: text/html", "Content-Length: 12", "", "<
     tier: 2,
     focus: ['destructuring', 'record'],
     title: 'Who reached the pass mark',
-    prompt: 'Exam results arrive as a `Record<string, number>` from each student’s name to their score. Write `passed(scores: Record<string, number>, mark: number): string[]`, returning the names of the students who scored `mark` or more, in the order the record lists them. Loop over `Object.entries(scores)` with `for...of`, and destructure each entry in the loop head into a name and a score.',
+    prompt: "Exam results arrive as a `Record<string, number>` from each student\u2019s name to their score. Write `passed(scores: Record<string, number>, mark: number): string[]`, returning the names of the students who scored `mark` or more, in the order the record lists them. Loop over `Object.entries(scores)` with `for...of`, and destructure each entry in the loop head into a name and a score. Domain: a stable ordinary or null-prototype scores object with at most 1000 own enumerable string keys, possibly frozen, with no accessors/proxies. Scores and mark are finite Numbers from -1000000000 through 1000000000, including fractions and signed zero. Use the ordinary >= comparison, without rounding or validation. Visit own enumerable string entries in Object.entries order, including numeric-key ordering; ignore inherited, nonenumerable and Symbol entries. Preserve exact key text, source values and source ownership. Return a fresh mutable array every call, including no matches and empty input. Target: O(n) time and output space, where n is 1 + own enumerable string-key count under bounded key/property operations.",
     starter: `const passed = (scores, mark) => {
 
 };
@@ -947,7 +939,7 @@ console.log(visited([[0, 0], [1, 0], [0, 0]]));
     tier: 2,
     focus: ['two-pointer', 'strings'],
     title: 'Pages as ranges',
-    prompt: 'A print dialog shows the pages you picked as ranges: `[1, 2, 3, 7, 8, 10]` reads `"1-3, 7-8, 10"`. Write `toRanges(pages: readonly number[]): string`. The pages are sorted, with no repeats. Keep two indexes: `start` on the first page of a run, and `end`, which moves forward while the next page is one more than the page at `end`. Write the run as `"start-end"`, or as one number when it holds a single page, then begin the next run after `end`. Join the runs with `", "`. No pages give `""`.',
+    prompt: "A print dialog shows the pages you picked as ranges: `[1, 2, 3, 7, 8, 10]` reads `\"1-3, 7-8, 10\"`. Write `toRanges(pages: readonly number[]): string`. The pages are sorted, with no repeats. Keep two indexes: `start` on the first page of a run, and `end`, which moves forward while the next page is one more than the page at `end`. Write the run as `\"start-end\"`, or as one number when it holds a single page, then begin the next run after `end`. Join the runs with `\", \"`. No pages give `\"\"`. Domain: a dense readonly ordinary array of at most 1000 strictly increasing, unique nonnegative integer page labels from 0 through 1000000000, possibly frozen, with no accessors/proxies. Zero is a valid label. Preserve input order/values, without sorting or other writes. Format labels as ordinary decimal text and include both endpoints even for a run of two labels; no extra separator is added. Target: O(n) time and output space, where n is 1 + page count with bounded digit formatting. Each index advances through its run once; collect runs and join them instead of repeatedly copying a growing result string.",
     starter: `const toRanges = (pages: readonly number[]): string => {
 
 };

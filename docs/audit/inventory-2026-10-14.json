@@ -26,13 +26,13 @@
     "issued": 725,
     "hiddenSystemDesign": 45,
     "editorialWaveComplete": false,
-    "executionEvidence": "PR #418 passed required run 38761067124 at exact head df419127d9416404423c90d11945dc5c92bda8fe (verify 31m00s; SQL 46s), then merged at c9052e7c418b59711903802c2cbb54689bfee28d on 15 October 2026 at 16:02:59 UTC. READY production dpl_9yEqw1w1bH2x8oKbwGDjCc4XreiW matches that merge, owns devshark.app and has no alias error. Both exact preview and production pass eleven general guest checks; all ten changed tasks return 402, with zero changed-task Submit verdicts, and remain explicitly unverified through dedicated Premium acceptance. All actual general guest submissions grant zero XP and return null progress. Local cohort evidence remains 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark responsive probes. Shipped model-review coverage is 320/725 coding and 263/263 native. No authenticated Premium, independent/human, physical-device or full-catalogue acceptance claim.",
-    "currentModelReviewedIssuedTasks": 340,
-    "issuedStillRequiringReview": 385,
-    "deployedModelReviewedIssuedTasks": 320,
-    "stagedModelReviewedIssuedTasks": 20,
-    "stagedExecutionEvidence": "15 October five-item commits through b062: 20 staged reviews; latest batch 30/30 final-hash worker verdicts and twenty no-false-penalty checks pass. Not yet released.",
-    "deployedExecutionEvidence": "PR #418 passed required run 38761067124 at exact head df419127d9416404423c90d11945dc5c92bda8fe (verify 31m00s; SQL 46s), then merged at c9052e7c418b59711903802c2cbb54689bfee28d on 15 October 2026 at 16:02:59 UTC. READY production dpl_9yEqw1w1bH2x8oKbwGDjCc4XreiW matches that merge, owns devshark.app and has no alias error. Both exact preview and production pass eleven general guest checks; all ten changed tasks return 402, with zero changed-task Submit verdicts, and remain explicitly unverified through dedicated Premium acceptance. All actual general guest submissions grant zero XP and return null progress. Local cohort evidence remains 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark responsive probes. Shipped model-review coverage is 320/725 coding and 263/263 native. No authenticated Premium, independent/human, physical-device or full-catalogue acceptance claim."
+    "executionEvidence": "PR #421 passed required run 38767971106 at exact head 9d7424c29d62cae54119db80612d1d0350a2b2ee (verify 31m03s; SQL 41s), then merged at e9b8a7347842e86a9612776503b8ad5ac68d3262 on 15 October 2026 at 16:53:23 UTC. READY production dpl_LmgwNLYhePSmxLXYgPhVMuQouZym matches that merge, owns devshark.app and has no alias error before/after probes. Exact preview and production each pass eleven general guest checks; all ten changed tasks return 402, with zero changed-task Submit verdicts. Dedicated authorized Premium acceptance remains outstanding. General guest submissions grant zero XP and return null progress. Local cohort evidence is 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark probes. Shipped model-review coverage is 340/725 coding and 263/263 native. No independent/human, physical-device, authenticated Premium or whole-catalogue acceptance claim.",
+    "currentModelReviewedIssuedTasks": 350,
+    "issuedStillRequiringReview": 375,
+    "deployedModelReviewedIssuedTasks": 340,
+    "stagedModelReviewedIssuedTasks": 10,
+    "stagedExecutionEvidence": "B063–B064 add ten source reviews beyond exact-production-verified PR #421. Required checks, preview, merge and production remain separate.",
+    "deployedExecutionEvidence": "PR #421 passed required run 38767971106 at exact head 9d7424c29d62cae54119db80612d1d0350a2b2ee (verify 31m03s; SQL 41s), then merged at e9b8a7347842e86a9612776503b8ad5ac68d3262 on 15 October 2026 at 16:53:23 UTC. READY production dpl_LmgwNLYhePSmxLXYgPhVMuQouZym matches that merge, owns devshark.app and has no alias error before/after probes. Exact preview and production each pass eleven general guest checks; all ten changed tasks return 402, with zero changed-task Submit verdicts. Dedicated authorized Premium acceptance remains outstanding. General guest submissions grant zero XP and return null progress. Local cohort evidence is 60/60 selected final-hash verdicts, forty authored-target/base-25-XP checks and 160 fixture-backed light/dark probes. Shipped model-review coverage is 340/725 coding and 263/263 native. No independent/human, physical-device, authenticated Premium or whole-catalogue acceptance claim."
   },
   "nativePaths": {
     "paths": 2,
@@ -58,7 +58,7 @@
     "legacyCoreQuestions": 795
   },
   "limits": [
-    "320 reviewed coding and 263 native records are deployed; 20 coding records are staged through b062. Override data was last read-only rechecked on 2026-10-15; see its dated reconciliation evidence.",
+    "340 coding and 263 native reviews are deployed; ten coding reviews are staged through B064. Overrides were last read-only rechecked on 2026-10-15; see dated evidence.",
     "No item-level coding or native-path review is manufactured from execution checks.",
     "Re-read production overrides before claiming any later live coverage."
   ]

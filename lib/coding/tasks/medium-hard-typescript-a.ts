@@ -259,7 +259,7 @@ console.log(checkForm({ email: "ada", age: 17 }, {
     tier: 3,
     focus: ['type-guards', 'literal-types', 'record', 'strings'],
     title: 'Release notes from commits',
-    prompt: 'Many teams write commit subjects in one shape, `type(scope): summary`, such as `feat(search): filter by date` or `fix: crash on an empty basket`. The shape is: the type, then optionally a scope in round brackets that is not empty, then a colon and a space, then a summary that is not empty. Write two functions. `isCommitType(value: string): value is CommitType` is a type guard, true only for the types listed in `COMMIT_TYPES`. `releaseNotes(subjects: readonly string[]): Notes` sorts the subjects into sections. `Notes` is a `Record` with one list per commit type plus `"other"`, and every list is there even when it is empty. A subject in the shape whose type passes the guard adds its note to that type’s list: the summary, with the scope and a colon in front when there is a scope, as in `"search: filter by date"`. Everything else, an unknown type like `chore` or text that is not in the shape at all, goes to `"other"` exactly as written. Keep the order the subjects came in.',
+    prompt: "Many teams write commit subjects in one shape, `type(scope): summary`, such as `feat(search): filter by date` or `fix: crash on an empty basket`. The shape is: the type, then optionally a scope in round brackets that is not empty, then a colon and a space, then a summary that is not empty. Write two functions. `isCommitType(value: string): value is CommitType` is a type guard, true only for the types listed in `COMMIT_TYPES`. `releaseNotes(subjects: readonly string[]): Notes` sorts the subjects into sections. `Notes` is a `Record` with one list per commit type plus `\"other\"`, and every list is there even when it is empty. A subject in the shape whose type passes the guard adds its note to that type\u2019s list: the summary, with the scope and a colon in front when there is a scope, as in `\"search: filter by date\"`. Everything else, an unknown type like `chore` or text that is not in the shape at all, goes to `\"other\"` exactly as written. Keep the order the subjects came in. Scope grammar for this simplified exercise: a scope contains one or more characters and no nested parentheses; colons, including colon-space text, are allowed inside it. Subjects are primitive strings with no CR/LF; there are at most 1000, each at most 1000 UTF-16 units. Use exact type text with no trimming/case changes. A nonempty summary may be only spaces or contain later colon-space separators; preserve it exactly. Unknown/malformed subjects stay whole in other. Return a fresh plain mutable Notes object with exactly its four own section keys and independent mutable arrays across sections/calls. Leave subjects and the fixed COMMIT_TYPES tuple unchanged. isCommitType accepts exactly the three listed literals and returns an actual boolean. This is the stated teaching grammar, not a complete Conventional Commits parser. Target: O(n) time and output space for releaseNotes, where n is 1 + subject count + total input UTF-16 length; isCommitType checks a fixed three-entry set in O(1) time.",
     starter: `const COMMIT_TYPES = ["feat", "fix", "docs"] as const;
 type CommitType = (typeof COMMIT_TYPES)[number];
 type Notes = Record<CommitType | "other", string[]>;
@@ -275,29 +275,9 @@ const releaseNotes = (subjects) => {
 // Scratch pad. Change this and press Run.
 console.log(releaseNotes(["feat(search): filter by date", "chore: bump deps"]));
 `,
-    skeleton: `const isCommitType = (value: string): value is CommitType =>
-  /* is value one of COMMIT_TYPES? */;
-
-const releaseNotes = (subjects: readonly string[]): Notes => {
-  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };
-  for (const subject of subjects) {
-    const colon = subject.indexOf(": ");
-    // no ": ", or nothing after it: other
-    // the text before it is the type, maybe followed by (scope)
-    // a known type: push the note into notes[type]; otherwise: other
-  }
-  return notes;
-};`,
-    hints: [
-      '`COMMIT_TYPES` is a readonly tuple of three literal types, so `COMMIT_TYPES.includes(value)` refuses a plain `string`. `COMMIT_TYPES.some((type) => type === value)` compares each one with the text. Inside `if (isCommitType(type))` the compiler knows `type` is a `CommitType`, which is what lets you write `notes[type]`.',
-      '`indexOf(": ")` finds the first colon followed by a space, so a summary may hold another one. When the text before it ends with `)`, the scope sits between the `(` and that last character.',
-    ],
-    approach: [
-      'Write the guard: return whether any entry of `COMMIT_TYPES` equals `value`, with the return type `value is CommitType`.',
-      'Build a fresh `Notes` object with four empty lists on every call.',
-      'For each subject, find `": "`. Split the text before it into a type and an optional scope, and check that neither the summary nor a bracketed scope is empty.',
-      'If the shape holds and the type passes `isCommitType`, push `scope ? scope + ": " + summary : summary` into that type’s list. Otherwise push the subject into `other`.',
-    ],
+    skeleton: "const COMMIT_TYPES = [\"feat\", \"fix\", \"docs\"] as const;\ntype CommitType = (typeof COMMIT_TYPES)[number];\ntype Notes = Record<CommitType | \"other\", string[]>;\n\nconst isCommitType = (value: string): value is CommitType => {\n  // exact membership in COMMIT_TYPES\n};\nconst releaseNotes = (subjects: readonly string[]): Notes => {\n  const notes: Notes = { feat: [], fix: [], docs: [], other: [] };\n  for (const subject of subjects) {\n    // find the type and optional scope; a scope may contain colon-space text\n    // require the summary separator after the closing parenthesis, when present\n    // push a recognized note, or preserve the whole malformed/unknown subject\n  }\n  return notes;\n};",
+    hints: ["`COMMIT_TYPES` is a readonly tuple of three literal types, so `COMMIT_TYPES.includes(value)` refuses a plain `string`. `COMMIT_TYPES.some((type) => type === value)` compares each one with the text. Inside `if (isCommitType(type))` the compiler knows `type` is a `CommitType`, which is what lets you write `notes[type]`.", "A scope can contain colon-space text. When a scope starts before the first separator, find its closing parenthesis and require colon-space immediately after it; the remainder is the complete summary. Otherwise use the first colon-space separator."],
+    approach: ["Write the exact three-type guard and create fresh independent section arrays.", "Identify the optional single pair of scope parentheses before the summary separator; reject empty or nested scopes and malformed separators.", "Keep the whole remaining nonempty summary, including spaces and later separators. A recognized type gets the note, otherwise keep the original subject in other."],
     verify: 'tests',
     estimatedMinutes: 20,
     tests: [
@@ -457,16 +437,16 @@ console.log(printTable(
     tier: 4,
     focus: ['record', 'tuples', 'narrowing', 'utility-types'],
     title: 'Pick an order from warehouses',
-    prompt: 'A shop keeps stock in three warehouses. `Stock` is a `Readonly` `Record` from each `Warehouse` to how many of each sku it holds, and a sku a warehouse does not list counts as 0. Write `allocate(order: readonly OrderLine[], stock: Stock): Allocation`, where an order line is a tuple `[sku, quantity]` and the result says where to pick each line. First check that the order can be filled at all: add up, for each sku, what the order asks for and what the three warehouses hold. When any sku is short, pick nothing and return `{ ok: false, short }`, where `short` maps every short sku to how many are missing. Otherwise go through the lines in order. When one warehouse holds the whole line, pick all of it there, from the first such warehouse in `WAREHOUSES` order: one parcel is cheaper than two. When none does, take what each warehouse holds, in `WAREHOUSES` order, until the line is complete, and skip a warehouse that has none. Each pick is a tuple `[warehouse, sku, quantity]`. Stock picked for one line is gone for the next, and a sku can appear on more than one line, so keep your own copy of the counts: `stock` itself never changes. `Allocation` is a union told apart by `ok`, so a caller reads `picks` only after checking it.',
+    prompt: "A shop keeps stock in three warehouses. `Stock` is a `Readonly` `Record` from each `Warehouse` to how many of each sku it holds, and a sku a warehouse does not list counts as 0. Write `allocate(order: readonly OrderLine[], stock: Stock): Allocation`, where an order line is a tuple `[sku, quantity]` and the result says where to pick each line. First check that the order can be filled at all: add up, for each sku, what the order asks for and what the three warehouses hold. When any sku is short, pick nothing and return `{ ok: false, short }`, where `short` maps every short sku to how many are missing. Otherwise go through the lines in order. When one warehouse holds the whole line, pick all of it there, from the first such warehouse in `WAREHOUSES` order: one parcel is cheaper than two. When none does, take what each warehouse holds, in `WAREHOUSES` order, until the line is complete, and skip a warehouse that has none. Each pick is a tuple `[warehouse, sku, quantity]`. Stock picked for one line is gone for the next, and a sku can appear on more than one line, so keep your own copy of the counts: `stock` itself never changes. `Allocation` is a union told apart by `ok`, so a caller reads `picks` only after checking it. Domain: a dense readonly order of at most 1000 stable tuples with exact string skus of at most 200 UTF-16 units and positive integer quantities from 1 through 1000000. Stock covers the three fixed warehouses; each inner lookup has at most 1000 own enumerable string entries with nonnegative integer counts through 1000000000, or undefined counting as 0. Inherited, nonenumerable and Symbol stock entries are ignored. Inputs may be frozen and have no accessors/proxies. Empty, case-sensitive, whitespace and prototype-like sku names are valid. The inner stock lookups and short result use Partial because unlisted skus are undefined. Preserve every source tuple, count and WAREHOUSES order without mutation. A short order returns all missing amounts before any picks, with no picks key. Success returns only ok/picks, with fresh mutable result, picks and pick tuples on every call; failure has a fresh mutable prototype-safe short dictionary with only short skus and undefined for absent names. Target: O(n) time and output space, where n is 1 + order-line count + total own enumerable stock-entry count under bounded average hash/property operations; the warehouse count is fixed at three.",
     starter: `type Warehouse = "north" | "south" | "east";
 const WAREHOUSES: readonly Warehouse[] = ["north", "south", "east"];
 
-type Stock = Readonly<Record<Warehouse, Readonly<Record<string, number>>>>;
+type Stock = Readonly<Record<Warehouse, Readonly<Partial<Record<string, number>>>>>;
 type OrderLine = readonly [sku: string, quantity: number];
 type PickItem = [warehouse: Warehouse, sku: string, quantity: number];
 type Allocation =
   | { ok: true; picks: PickItem[] }
-  | { ok: false; short: Record<string, number> };
+  | { ok: false; short: Partial<Record<string, number>> };
 
 const allocate = (order, stock) => {
 
@@ -479,10 +459,10 @@ console.log(allocate([["tea", 3]], { north: { tea: 2 }, south: { tea: 5 }, east:
   // 1. what the order asks for and what the warehouses hold, per sku
   // 2. any sku short: return { ok: false, short }
 
-  const left: Record<Warehouse, Record<string, number>> = {
-    north: { ...stock.north },
-    south: { ...stock.south },
-    east: { ...stock.east },
+  const left: Record<Warehouse, Partial<Record<string, number>>> = {
+    north: Object.assign(Object.create(null), stock.north),
+    south: Object.assign(Object.create(null), stock.south),
+    east: Object.assign(Object.create(null), stock.east),
   };
   const picks: PickItem[] = [];
   for (const [sku, quantity] of order) {
@@ -516,13 +496,7 @@ console.log(allocate([["tea", 3]], { north: { tea: 2 }, south: { tea: 5 }, east:
       { call: '(() => { const stock = { north: { tea: 2 }, south: {}, east: {} }; allocate([["tea", 2]], stock); return stock; })()', expected: { north: { tea: 2 }, south: {}, east: {} }, label: 'stock is not changed', edge: true },
       { call: 'allocate([], { north: {}, south: {}, east: {} })', expected: { ok: true, picks: [] }, label: 'an empty order', edge: true },
     ],
-    typeTests: [
-      { code: 'const __result = allocate([["tea", 2]], { north: { tea: 5 }, south: {}, east: {} }); if (__result.ok) { const __picks: [Warehouse, string, number][] = __result.picks; }', label: 'picks are there once ok is true' },
-      { code: 'const __other = allocate([], { north: {}, south: {}, east: {} }); if (!__other.ok) { const __short: Record<string, number> = __other.short; }', label: 'short is there once ok is false' },
-      { code: 'allocate([["tea", 2]], { north: {}, south: {}, east: {} }).picks;', label: 'check ok before reading picks', rejects: true },
-      { code: 'allocate([["tea", 2]], { north: {}, south: {} });', label: 'stock covers every warehouse', rejects: true },
-      { code: 'allocate([["tea", "2"]], { north: {}, south: {}, east: {} });', label: 'a quantity is a number', rejects: true },
-    ],
+    typeTests: [{"code": "const __result = allocate([[\"tea\", 2]], { north: { tea: 5 }, south: {}, east: {} }); if (__result.ok) { const __picks: [Warehouse, string, number][] = __result.picks; }", "label": "picks are there once ok is true"}, {"code": "const __other = allocate([], { north: {}, south: {}, east: {} }); if (!__other.ok) { const __short: Partial<Record<string, number>> = __other.short; }", "label": "short is there once ok is false"}, {"code": "allocate([[\"tea\", 2]], { north: {}, south: {}, east: {} }).picks;", "label": "check ok before reading picks", "rejects": true}, {"code": "allocate([[\"tea\", 2]], { north: {}, south: {} });", "label": "stock covers every warehouse", "rejects": true}, {"code": "allocate([[\"tea\", \"2\"]], { north: {}, south: {}, east: {} });", "label": "a quantity is a number", "rejects": true}, {"code": "const __audit=allocate([],{north:{},south:{},east:{}}); if(!__audit.ok){const __missing:number=__audit.short[\"absent\"];}", "rejects": true, "label": "a sku outside the shortfall may be missing"}],
   },
   {
     id: 'ts-mh-import-rows',

@@ -552,46 +552,16 @@ const sortTitles = (titles: readonly string[]): string[] => titles.toSorted(byLo
     ],
   },
   'ts-easy3-read-headers': {
-    solution: `const readHeaders = (lines: readonly string[]): Record<string, string> => {
-  const headers: Record<string, string> = {};
-  let i = 0;
-  // The blank line ends the headers; everything after it is the body.
-  while (i < lines.length && lines[i] !== "") {
-    const line = lines[i];
-    // Only the first ": " separates: a value may hold its own.
-    const at = line.indexOf(": ");
-    headers[line.slice(0, at).toLowerCase()] = line.slice(at + 2);
-    i++;
-  }
-  return headers;
-};`,
-    junior: `const readHeaders = (lines: readonly string[]): Record<string, string> => {
-  const headers: Record<string, string> = {};
-  let i = 0;
-  while (i < lines.length) {
-    const line = lines[i];
-    if (line === "") {
-      break;
-    }
-    const parts = line.split(": ");
-    const name = parts[0].toLowerCase();
-    const value = parts.slice(1).join(": ");
-    headers[name] = value;
-    i = i + 1;
-  }
-  return headers;
-};`,
-    senior: `const readHeaders = (lines: readonly string[]): Record<string, string> => {
-  const end = lines.indexOf("");
-  const block = end === -1 ? lines : lines.slice(0, end);
-  return Object.fromEntries(
-    block.map((line) => {
-      const at = line.indexOf(": ");
-      return [line.slice(0, at).toLowerCase(), line.slice(at + 2)];
-    }),
-  );
-};`,
+    solution: "const readHeaders = (lines: readonly string[]): Partial<Record<string, string>> => {\n  const headers = Object.create(null) as Partial<Record<string, string>>;\n  let i = 0;\n  while (i < lines.length && lines[i] !== \"\") {\n    const line = lines[i];\n    const at = line.indexOf(\": \");\n    headers[line.slice(0, at).toLowerCase()] = line.slice(at + 2);\n    i += 1;\n  }\n  return headers;\n};",
+    junior: "const readHeaders = (lines: readonly string[]): Partial<Record<string, string>> => {\n  const headers = Object.create(null) as Partial<Record<string, string>>;\n  let i = 0;\n  while (i < lines.length) {\n    const line = lines[i];\n    if (line === \"\") break;\n    const at = line.indexOf(\": \");\n    const name = line.slice(0, at).toLowerCase();\n    const value = line.slice(at + 2);\n    headers[name] = value;\n    i += 1;\n  }\n  return headers;\n};",
+    senior: "const readHeaders = (lines: readonly string[]): Partial<Record<string, string>> => {\n  const end = lines.indexOf(\"\");\n  const block = end === -1 ? lines : lines.slice(0, end);\n  return Object.assign(Object.create(null), Object.fromEntries(\n    block.map((line) => {\n      const at = line.indexOf(\": \");\n      return [line.slice(0, at).toLowerCase(), line.slice(at + 2)];\n    }),\n  ));\n};",
+    hiddenTypeTests: [{"code": "const __auditLookup=(key:string):string|undefined=>readHeaders([])[key]; const __auditInput:readonly string[]=[\"A: 1\"]; readHeaders(__auditInput);"}],
     hiddenTests: [
+      { call: "(()=>{const lines=Object.freeze(['__proto__: p','CONSTRUCTOR: c','Host: first','host:  last: value  ','Empty: ','']);const out=readHeaders(lines),none=readHeaders([]);return [Object.hasOwn(out,'__proto__'),out.__proto__,Object.hasOwn(out,'constructor'),out.constructor,out.host,out.empty,none.constructor===undefined,none.toString===undefined,Reflect.ownKeys(none).length];})()", expected: [true, "p", true, "c", " last: value  ", "", true, true, 0] },
+      { call: "(()=>{let reads=0;const lines=['A: 1',''];Object.defineProperty(lines,2,{get(){reads++;throw 'body'},enumerable:true});Object.freeze(lines);const a=readHeaders(lines),b=readHeaders(lines);a.a='changed';return [reads,a!==b,b.a,lines[0],lines.length];})()", expected: [0, true, "1", "A: 1", 3] },
+      { call: "(()=>{const a=readHeaders(Object.freeze([''])),b=readHeaders([]);a.new='later';return [a!==b,Reflect.ownKeys(b).length,readHeaders(['A: ','a: 0']).a];})()", expected: [true, 0, "0"] },
+      { call: "(()=>{const lines=Object.freeze(Array.from({length:1000},(_,i)=>'X-'+i+': '+i)),out=readHeaders(lines);return [Object.keys(out).length,out['x-999'],lines[0],lines.length];})()", expected: [1000, "999", "X-0: 0", 1000] },
+
       { call: 'readHeaders(["ACCEPT: */*", "User-Agent: shark/1.0", ""])', expected: { accept: '*/*', 'user-agent': 'shark/1.0' } },
       { call: 'readHeaders([])', expected: {} },
       { call: 'readHeaders(["Retry-After: 120", "", "", "X: y"])', expected: { 'retry-after': '120' } },
@@ -609,24 +579,17 @@ const sortTitles = (titles: readonly string[]): string[] => titles.toSorted(byLo
   }
   return names;
 };`,
-    junior: `const passed = (scores: Record<string, number>, mark: number): string[] => {
-  const names: string[] = [];
-  const entries = Object.entries(scores);
-  for (let i = 0; i < entries.length; i++) {
-    const entry = entries[i];
-    const name = entry[0];
-    const score = entry[1];
-    if (score >= mark) {
-      names.push(name);
-    }
-  }
-  return names;
-};`,
+    junior: "const passed = (scores: Record<string, number>, mark: number): string[] => {\n  const names: string[] = [];\n  for (const [name, score] of Object.entries(scores)) {\n    if (score >= mark) names.push(name);\n  }\n  return names;\n};",
     senior: `const passed = (scores: Readonly<Record<string, number>>, mark: number): string[] =>
   Object.entries(scores)
     .filter(([, score]) => score >= mark)
     .map(([name]) => name);`,
+    hiddenTypeTests: [{"code": "const __auditScores:Readonly<Record<string,number>>={a:1}; const __auditNames:string[]=passed(__auditScores,1);"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('ignore'),scores=Object.create({inherited:100});scores['10']=9;scores['2']=7;scores.z=3;scores.a=2;scores[sym]=100;Object.defineProperty(scores,'hidden',{value:100,enumerable:false});Object.freeze(scores);return [passed(scores,2),scores.z,Object.getOwnPropertySymbols(scores).length];})()", expected: [["2", "10", "z", "a"], 3, 1] },
+      { call: "(()=>{const scores=Object.freeze(Object.assign(Object.create(null),{' x ':-0,x:0.5,X:-0.25})),a=passed(scores,0),b=passed(scores,0);a.push('changed');const empty=passed({},0),again=passed({},0);empty.push('x');return [b,a!==b,empty!==again,again.length,Object.is(scores[' x '],-0)];})()", expected: [[" x ", "x"], true, true, 0, true] },
+      { call: "(()=>{const scores=Object.freeze(Object.fromEntries(Array.from({length:1000},(_,i)=>['p'+i,i-500]))),out=passed(scores,0);return [out.length,out[0],out[499],Object.keys(scores).length];})()", expected: [500, "p500", "p999", 1000] },
+
       { call: 'passed({ Zed: 99, Amy: 99, Kai: 0 }, 99)', expected: ['Zed', 'Amy'] },
       { call: 'passed({ Ada: 0 }, 0)', expected: ['Ada'] },
       { call: 'passed({ a: 51, b: 50, c: 49, d: 100 }, 50)', expected: ['a', 'b', 'd'] },
@@ -700,35 +663,14 @@ const orderLine = ({ id, customer: { name }, items }: Order): string => {
   }
   return runs.join(", ");
 };`,
-    junior: `const toRanges = (pages: readonly number[]): string => {
-  let text = "";
-  let start = 0;
-  while (start < pages.length) {
-    let end = start;
-    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) {
-      end = end + 1;
-    }
-    let run = String(pages[start]);
-    if (end > start) {
-      run = run + "-" + pages[end];
-    }
-    if (text !== "") {
-      text = text + ", ";
-    }
-    text = text + run;
-    start = end + 1;
-  }
-  return text;
-};`,
-    senior: `const toRanges = (pages: readonly number[]): string => {
-  const runs: string[] = [];
-  for (let start = 0, end = 0; start < pages.length; start = ++end) {
-    while (pages[end + 1] === pages[end] + 1) end++;
-    runs.push(start === end ? String(pages[start]) : \`\${pages[start]}-\${pages[end]}\`);
-  }
-  return runs.join(", ");
-};`,
+    junior: "const toRanges = (pages: readonly number[]): string => {\n  const runs: string[] = [];\n  let start = 0;\n  while (start < pages.length) {\n    let end = start;\n    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) end += 1;\n    let run = String(pages[start]);\n    if (end > start) run = run + \"-\" + pages[end];\n    runs.push(run);\n    start = end + 1;\n  }\n  return runs.join(\", \");\n};",
+    senior: "const toRanges = (pages: readonly number[]): string => {\n  const runs: string[] = [];\n  for (let start = 0, end = 0; start < pages.length; start = ++end) {\n    while (end + 1 < pages.length && pages[end + 1] === pages[end] + 1) end++;\n    runs.push(start === end ? String(pages[start]) : `${pages[start]}-${pages[end]}`);\n  }\n  return runs.join(\", \");\n};",
     hiddenTests: [
+      { call: "(()=>{const input=[0,1,3,4],text=toRanges(input);return [text,input,input.length];})()", expected: ["0-1, 3-4", [0, 1, 3, 4], 4] },
+      { call: "(()=>{const input=Object.freeze([0,1,3,999999999,1000000000]),text=toRanges(input);return [text,input, toRanges(Object.freeze([0])),toRanges(Object.freeze([]))];})()", expected: ["0-1, 3, 999999999-1000000000", [0, 1, 3, 999999999, 1000000000], "0", ""] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i)),text=toRanges(input);return [text,input[0],input[999],input.length];})()", expected: ["0-999", 0, 999, 1000] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>i*2)),text=toRanges(input);return [text.split(', ').length,text.startsWith('0, 2, '),text.endsWith(', 1998'),input.length];})()", expected: [1000, true, true, 1000] },
+
       { call: 'toRanges([9, 10, 12, 13, 14, 20])', expected: '9-10, 12-14, 20' },
       { call: 'toRanges([1, 2, 4])', expected: '1-2, 4' },
       { call: 'toRanges([100, 101])', expected: '100-101' },
