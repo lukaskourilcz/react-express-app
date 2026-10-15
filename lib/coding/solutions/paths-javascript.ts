@@ -669,41 +669,36 @@ const LOOKUPS: Boards = {
   return { added, removed, changed };
 }`,
     `function linksToGraph(links) {
-  const graph = {};
+  const graph = Object.create(null);
+  const seen = new Map();
   for (const [from, to] of links) {
-    if (!graph[from]) graph[from] = [];
-    // Each target once, in link order.
-    if (!graph[from].includes(to)) graph[from].push(to);
+    if (!seen.has(from)) { seen.set(from, new Set()); graph[from] = []; }
+    if (!seen.get(from).has(to)) {
+      seen.get(from).add(to);
+      graph[from].push(to);
+    }
   }
   return graph;
 }`,
     `function crawlOrder(links, start) {
-  const graph = linksToGraph(links);
-  const order = [];
-  const queue = [start];
-  // Mark a page when it is queued, so no page is queued twice.
+  const graph = linksToGraph(links), queue = [start], order = [];
   const visited = new Set([start]);
-  while (queue.length > 0) {
-    const page = queue.shift();
+  for (let head = 0; head < queue.length; head++) {
+    const page = queue[head];
     order.push(page);
     for (const next of graph[page] ?? []) {
-      if (!visited.has(next)) {
-        visited.add(next);
-        queue.push(next);
-      }
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
     }
   }
   return order;
 }`,
     `function crawlDepths(links, start) {
-  const graph = linksToGraph(links);
-  // depths doubles as the visited set: a page with a depth has been queued.
-  const depths = { [start]: 0 };
-  const queue = [start];
-  while (queue.length > 0) {
-    const page = queue.shift();
+  const graph = linksToGraph(links), depths = Object.create(null), queue = [start];
+  depths[start] = 0;
+  for (let head = 0; head < queue.length; head++) {
+    const page = queue[head];
     for (const next of graph[page] ?? []) {
-      if (!(next in depths)) {
+      if (!Object.hasOwn(depths, next)) {
         depths[next] = depths[page] + 1;
         queue.push(next);
       }
@@ -743,47 +738,41 @@ const LOOKUPS: Boards = {
   return { added: added, removed: removed, changed: changed };
 }`,
     `function linksToGraph(links) {
-  const graph = {};
+  const graph = Object.create(null);
+  const targetsBySource = new Map();
   for (let i = 0; i < links.length; i++) {
-    const from = links[i][0];
-    const to = links[i][1];
-    if (graph[from] === undefined) {
+    const from = links[i][0], to = links[i][1];
+    if (!targetsBySource.has(from)) {
+      targetsBySource.set(from, new Set());
       graph[from] = [];
     }
-    if (graph[from].indexOf(to) === -1) {
-      graph[from].push(to);
-    }
+    const seen = targetsBySource.get(from);
+    if (!seen.has(to)) { seen.add(to); graph[from].push(to); }
   }
   return graph;
 }`,
     `function crawlOrder(links, start) {
   const graph = linksToGraph(links);
-  const order = [];
-  const queue = [start];
-  const visited = new Set();
-  visited.add(start);
-  while (queue.length > 0) {
-    const page = queue.shift();
+  const queue = [start], order = [], visited = new Set([start]);
+  let head = 0;
+  while (head < queue.length) {
+    const page = queue[head];
+    head++;
     order.push(page);
-    const neighbours = graph[page] || [];
+    const neighbours = graph[page] ?? [];
     for (let i = 0; i < neighbours.length; i++) {
       const next = neighbours[i];
-      if (!visited.has(next)) {
-        visited.add(next);
-        queue.push(next);
-      }
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
     }
   }
   return order;
 }`,
     `function crawlDepths(links, start) {
-  const graph = linksToGraph(links);
-  const depths = {};
+  const graph = linksToGraph(links), depths = Object.create(null), queue = [start];
   depths[start] = 0;
-  const queue = [start];
-  while (queue.length > 0) {
-    const page = queue.shift();
-    const neighbours = graph[page] || [];
+  let head = 0;
+  while (head < queue.length) {
+    const page = queue[head++], neighbours = graph[page] ?? [];
     for (let i = 0; i < neighbours.length; i++) {
       const next = neighbours[i];
       if (depths[next] === undefined) {
@@ -808,20 +797,21 @@ const LOOKUPS: Boards = {
   };
 };`,
     `const linksToGraph = (links) => {
-  const graph = {};
+  const groups = new Map();
   for (const [from, to] of links) {
-    const targets = (graph[from] ??= []);
-    if (!targets.includes(to)) targets.push(to);
+    if (!groups.has(from)) groups.set(from, new Set());
+    groups.get(from).add(to);
   }
-  return graph;
+  return Object.fromEntries([...groups].map(([from, targets]) => [from, [...targets]]));
 };`,
     `const crawlOrder = (links, start) => {
-  const graph = linksToGraph(links);
-  const visited = new Set([start]);
-  for (const page of visited) {
-    for (const next of graph[page] ?? []) visited.add(next);
+  const graph = linksToGraph(links), queue = [start], visited = new Set([start]);
+  for (let head = 0; head < queue.length; head++) {
+    for (const next of graph[queue[head]] ?? []) {
+      if (!visited.has(next)) { visited.add(next); queue.push(next); }
+    }
   }
-  return [...visited];
+  return queue;
 };`,
     `const crawlDepths = (links, start) => {
   const graph = linksToGraph(links);
@@ -1419,13 +1409,139 @@ const HIDDEN: Record<string, Hidden> = {
     ]
 ],
   'js-path-lookups': [
-    [['indexById([{id: "a", n: 1}]).get("a").n', 1], ['indexById([{id: 1}, {id: 2}]).get(2).id', 2]],
-    // Two changed ids, listed in after order rather than before order.
-    [['diffCatalog([{id: "a", runs: 1}, {id: "b", runs: 1}], [{id: "b", runs: 1}, {id: "a", runs: 2}])', { added: [], removed: [], changed: ['a'] }], ['diffCatalog([{id: "a", runs: 1}, {id: "b", runs: 2}], [{id: "b", runs: 1}, {id: "a", runs: 2}])', { added: [], removed: [], changed: ['b', 'a'] }]],
-    [['linksToGraph([["a", "b"], ["a", "c"], ["a", "b"]]).a', ['b', 'c']], ['linksToGraph([["a", "a"]])', { a: ['a'] }]],
-    [['crawlOrder([["a", "a"]], "a")', ['a']], ['crawlOrder([["s", "b"], ["s", "a"], ["a", "c"], ["b", "c"]], "s")', ['s', 'b', 'a', 'c']]],
-    [['crawlDepths([["a", "a"]], "a")', { a: 0 }], ['crawlDepths([["s", "x"], ["x", "y"], ["y", "z"], ["s", "z"]], "s").z', 1]],
-  ],
+    [
+        [
+            "indexById([{id: \"a\", n: 1}]).get(\"a\").n",
+            1
+        ],
+        [
+            "indexById([{id: 1}, {id: 2}]).get(2).id",
+            2
+        ],
+        [
+            "(() => {const id=Object.freeze({x:1}),a=Object.freeze({id}),b=Object.freeze({id:1}),c=Object.freeze({id:'1'}),input=Object.freeze([a,b,c]);const x=indexById(input),y=indexById(input);return x!==y&&x.get(id)===a&&x.get(1)===b&&x.get('1')===c&&x.size===3;})()",
+            true
+        ],
+        [
+            "(() => {const input=Object.freeze(Array.from({length:1000},(_,id)=>Object.freeze({id})));const out=indexById(input);return out.size===1000&&input.every(r=>out.get(r.id)===r);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "diffCatalog([{id: \"a\", runs: 1}, {id: \"b\", runs: 1}], [{id: \"b\", runs: 1}, {id: \"a\", runs: 2}])",
+            {
+                "added": [],
+                "removed": [],
+                "changed": [
+                    "a"
+                ]
+            }
+        ],
+        [
+            "diffCatalog([{id: \"a\", runs: 1}, {id: \"b\", runs: 2}], [{id: \"b\", runs: 1}, {id: \"a\", runs: 2}])",
+            {
+                "added": [],
+                "removed": [],
+                "changed": [
+                    "b",
+                    "a"
+                ]
+            }
+        ],
+        [
+            "(() => {const a=Object.freeze({x:1}),b=Object.freeze({x:1});const before=Object.freeze([Object.freeze({id:a,runs:1}),Object.freeze({id:0,runs:1}),Object.freeze({id:'0',runs:5})]),after=Object.freeze([Object.freeze({id:b,runs:1}),Object.freeze({id:a,runs:0}),Object.freeze({id:'0',runs:5})]);const x=diffCatalog(before,after),y=diffCatalog(before,after);return x!==y&&x.added!==y.added&&x.removed!==y.removed&&x.changed!==y.changed&&x.added[0]===b&&x.removed[0]===0&&x.changed[0]===a&&x.added.length===1&&x.removed.length===1&&x.changed.length===1;})()",
+            true
+        ],
+        [
+            "(() => {const before=Object.freeze(Array.from({length:1000},(_,id)=>Object.freeze({id,runs:1}))),after=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({id:i+500,runs:0})));const x=diffCatalog(before,after);return x.added.length===500&&x.removed.length===500&&x.changed.length===500&&x.added[0]===1000&&x.removed[0]===0&&x.changed[0]===500&&x.changed[499]===999;})()",
+            true
+        ]
+    ],
+    [
+        [
+            "linksToGraph([[\"a\", \"b\"], [\"a\", \"c\"], [\"a\", \"b\"]]).a",
+            [
+                "b",
+                "c"
+            ]
+        ],
+        [
+            "linksToGraph([[\"a\", \"a\"]])",
+            {
+                "a": [
+                    "a"
+                ]
+            }
+        ],
+        [
+            "(() => {const links=Object.freeze([Object.freeze(['__proto__','constructor']),Object.freeze(['__proto__','constructor']),Object.freeze(['__proto__','']),Object.freeze(['constructor','toString'])]);const a=linksToGraph(links),b=linksToGraph(links);return a!==b&&Object.hasOwn(a,'__proto__')&&a.__proto__.join(',')==='constructor,'&&a.constructor[0]==='toString'&&a.__proto__!==b.__proto__&&!Object.hasOwn(a,'toString');})()",
+            true
+        ],
+        [
+            "(() => {const links=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze(['s','p'+i])));const a=linksToGraph(links);return a.s.length===2000&&a.s.every((p,i)=>p==='p'+i);})()",
+            true
+        ]
+    ],
+    [
+        [
+            "crawlOrder([[\"a\", \"a\"]], \"a\")",
+            [
+                "a"
+            ]
+        ],
+        [
+            "crawlOrder([[\"s\", \"b\"], [\"s\", \"a\"], [\"a\", \"c\"], [\"b\", \"c\"]], \"s\")",
+            [
+                "s",
+                "b",
+                "a",
+                "c"
+            ]
+        ],
+        [
+            "crawlOrder(Object.freeze([Object.freeze(['','__proto__']),Object.freeze(['__proto__','constructor']),Object.freeze(['constructor','toString']),Object.freeze(['toString',''])]),'')",
+            [
+                "",
+                "__proto__",
+                "constructor",
+                "toString"
+            ]
+        ],
+        [
+            "(() => {const links=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze(['s','p'+i])));const out=crawlOrder(links,'s');return out.length===2001&&out[0]==='s'&&out.slice(1).every((p,i)=>p==='p'+i)&&crawlOrder([],'')!==crawlOrder([],'');})()",
+            true
+        ]
+    ],
+    [
+        [
+            "crawlDepths([[\"a\", \"a\"]], \"a\")",
+            {
+                "a": 0
+            }
+        ],
+        [
+            "crawlDepths([[\"s\", \"x\"], [\"x\", \"y\"], [\"y\", \"z\"], [\"s\", \"z\"]], \"s\").z",
+            1
+        ],
+        [
+            "(() => {const links=Object.freeze([Object.freeze(['','__proto__']),Object.freeze(['__proto__','constructor']),Object.freeze(['constructor','toString']),Object.freeze(['toString',''])]);const a=crawlDepths(links,''),b=crawlDepths(links,'');return a!==b&&Object.hasOwn(a,'')&&a['']===0&&Object.hasOwn(a,'__proto__')&&a.__proto__===1&&a.constructor===2&&a.toString===3;})()",
+            true
+        ],
+        [
+            "Object.keys(crawlDepths([['s','10'],['s','2']],'s'))",
+            [
+                "2",
+                "10",
+                "s"
+            ]
+        ],
+        [
+            "(() => {const links=Object.freeze(Array.from({length:2000},(_,i)=>Object.freeze(['p'+i,'p'+(i+1)])));const out=crawlDepths(links,'p0');return Object.keys(out).length===2001&&out.p0===0&&out.p2000===2000;})()",
+            true
+        ]
+    ]
+],
 };
 
 export const JAVASCRIPT_PATH_SOLUTIONS: Record<string, CodingSolution> = Object.fromEntries([

@@ -1,5 +1,29 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five coding items b023
+
+Read all five cumulative lookup/graph stages and every inherited requirement,
+check and board. Indexes retain original opaque ids/records; catalogue diffs
+retain required order and changes to zero. Graph construction uses safe own
+buckets with per-source Sets rather than repeated linear membership scans.
+Revealed breadth-first queues advance a read index instead of shifting fronts;
+depth dictionaries handle all page names safely. Standard property enumeration
+replaces the impossible universal visit-order claim for numeric labels.
+
+All 35 final-hash sandbox verdicts agree versus25/35before; twenty valid
+complexity analyses retain25XP. Five starters and ten wrong variants fail.
+Checks cover frozen original references, mixed ids, two1000-record catalogues,
+reserved/empty page-label cycles,2000-edge wide/chain graphs and array-index
+key enumeration. Copy sweep, focused cumulative coding, API/script types,
+launch, build,263native bindings, both zero-vulnerability production dependency
+audits and diff checks pass. Model scores/final readings remain manual; finite
+execution is not an independent reader or an asymptotic proof.
+
+Current coding coverage is145/725;580remain. Native coverage is263/263.
+PR #402 remains frozen at95674b5e with SQL42s passing and verify pending.
+Its exact READY preview now passes all eleven guest checks, zero XP/null progress.
+B022–b023 remain local; shipped coverage remains100coding/263native.
+
 ## 15 October continuation — five coding items b022
 
 Read all five cumulative object/grouping stages and every inherited board,
