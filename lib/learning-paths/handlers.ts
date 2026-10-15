@@ -52,6 +52,7 @@ import {
   requestHash,
 } from './grade';
 import type { MergedActivity, MergedPath } from './types';
+import { activityDomainScores, diagnosticCompetencies, diagnosticEvidence } from './competencies';
 import {
   isLearningPathId,
   isBaseTrack,
@@ -255,7 +256,7 @@ function moduleProgressFor(path: MergedPath, rows: ProgressRow[]): ModuleProgres
           state: (value?.state as EvidenceState) ?? 'not_started',
           verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
           score: typeof value?.score === 'number' ? value.score : null,
-          ...(value?.domainScores ? { domainScores: value.domainScores } : {}),
+          ...(activityDomainScores(activity, value?.domainScores) ? { domainScores: activityDomainScores(activity, value?.domainScores)! } : {}),
           attempts: Number(value?.attempts ?? 0),
           updatedAt: value?.updatedAt ?? null,
         };
@@ -264,35 +265,15 @@ function moduleProgressFor(path: MergedPath, rows: ProgressRow[]): ModuleProgres
   });
 }
 
-/**
- * Per-competency results from the diagnostic, with an explicit not-assessed
- * state. An aggregate score is never turned into mastery: a competency the
- * learner did not answer for reports as not assessed, not as a zero.
- */
-function competencyResults(path: MergedPath, rows: ProgressRow[]): CompetencyResult[] {
-  const diagnosticId = path.diagnosticActivityId;
-  const recorded = diagnosticId
-    ? rows.map((row) => row.activity_states?.[diagnosticId]).find(Boolean)
-    : undefined;
-  const found = diagnosticId ? activityIn(path, diagnosticId) : null;
-  const questions = found?.activity.questions ?? [];
-  const score = typeof recorded?.score === 'number' ? recorded.score : null;
-
-  return path.competencies.map((competency) => {
-    const items = questions.filter((question) => question.competencies.includes(competency.id)).length;
-    if (!recorded || items === 0 || score === null) {
-      return { competencyId: competency.id, state: 'not_assessed', score: null, assessedItems: items };
-    }
-    // The diagnostic records one overall score; per-competency confidence is
-    // only as good as the number of items that touched the competency, so the
-    // state stays coarse and the item count travels with it.
-    return {
-      competencyId: competency.id,
-      state: score >= (found?.activity.passThreshold ?? 0.8) ? 'demonstrated' : 'gap',
-      score,
-      assessedItems: items,
-    };
-  });
+/** Read the latest accepted evidence so a weaker retake can inform recommendations
+ * without demoting a previously passed module/completion record. */
+async function loadDiagnosticEvidence(supabase: SupabaseClient, userId: string, enrollmentId: string, path: MergedPath): Promise<Record<string, number> | null> {
+  if (!path.diagnosticActivityId) return null;
+  const { data, error } = await withTimeout(supabase.from('learning_path_evidence')
+    .select('domain_scores').eq('enrollment_id', enrollmentId).eq('user_id', userId)
+    .eq('activity_id', path.diagnosticActivityId).order('revision', { ascending: false }).limit(1).maybeSingle());
+  if (error) throw Object.assign(new Error('db_error'), { supabase: error });
+  return data?.domain_scores ?? null;
 }
 
 function recommendedBridges(path: MergedPath, competencies: CompetencyResult[], baseTrack: BaseTrack | null): string[] {
@@ -524,7 +505,7 @@ export async function handlePathProgress(req: VercelRequest, res: VercelResponse
     const rows = await loadProgressRows(supabase, enrollmentId);
     const manifest = publicManifest(path);
     const states = stateMap(rows);
-    const competencies = competencyResults(path, rows);
+    const competencies = diagnosticCompetencies(path, await loadDiagnosticEvidence(supabase, userId, enrollmentId, path));
     const enrollment = toEnrollment(row);
     const body: PathProgressResponse = {
       enrollment,
@@ -910,6 +891,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
   let state: EvidenceState = 'in_progress';
   let score: number | null = null;
   let domainScores: Record<string, number> | null = null;
+  let diagnosticCounts: Record<string, number> | null = null;
   let failedDomains: string[] = [];
   let criteria: SubmitActivityResponse['criteria'] = [];
   let questions: SubmitActivityResponse['questions'] = null;
@@ -941,6 +923,9 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
       domainScores = graded.domainScores;
       failedDomains = graded.failedDomains;
       questions = graded.verdicts;
+      if (activity.id === path.diagnosticActivityId && activity.purpose === 'diagnostic') {
+        diagnosticCounts = diagnosticEvidence(activity, graded.verdicts);
+      }
       if (graded.failedDomains.length > 0) {
         feedback = [{
           en: 'Every area has to reach its own minimum as well as the overall score, so a strong area cannot cover an empty one. Revisit the areas listed above and try the check again.',
@@ -1069,7 +1054,7 @@ export async function handleActivitySubmit(req: VercelRequest, res: VercelRespon
     p_state: state,
     p_verification_kind: activity.verification,
     p_score: score,
-    p_domain_scores: domainScores,
+    p_domain_scores: diagnosticCounts ? { ...domainScores, ...diagnosticCounts } : domainScores,
     p_criteria: criteria.map((criterion) => ({ id: criterion.id, critical: criterion.critical, passed: criterion.passed })),
     p_artifact: artifact,
     p_module_complete: moduleWillComplete,
@@ -1160,7 +1145,7 @@ function projectModuleProgress(
           state: (value?.state as EvidenceState) ?? 'not_started',
           verification: (value?.verification as ModuleProgress['activities'][number]['verification']) ?? null,
           score: typeof value?.score === 'number' ? value.score : null,
-          ...(value?.domainScores ? { domainScores: value.domainScores } : {}),
+          ...(activityDomainScores(one, value?.domainScores) ? { domainScores: activityDomainScores(one, value?.domainScores)! } : {}),
           attempts: Number(value?.attempts ?? 0),
           updatedAt: value?.updatedAt ?? null,
         };

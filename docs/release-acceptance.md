@@ -1,5 +1,36 @@
 # Release acceptance matrix
 
+## 15 October — local diagnostic competency follow-up (#397)
+
+The diagnostic records trusted gradeCheck correct/item counts per competency in
+namespaced numeric JSON through the existing accepted-evidence RPC. Progress
+reads the latest accepted diagnostic revision with user/enrollment/activity scope,
+so a weaker retake can inform recommendations without demoting prior module
+completion. Multi-tag items contribute to each tagged area. Aggregate-only older
+results are not assessed until a retake; unknown areas have null scores/zero
+assessed items. Internal counts are omitted from public gated-domain labels.
+No schema, RLS, handler-count, reward or completion-rule change is required.
+
+A visible overview distinguishes demonstrated/gap/unassessed evidence and links
+back to the optional diagnostic only when access is available. Sixteen focused
+client contracts and the complete104file/1002test client suite pass. Full path
+and launch contracts, API/script types, production-shaped placeholder build,
+both production dependency audits (zero vulnerabilities) and diff checks pass.
+Tests cover10/12overall success with1/3integration, multi-tags, missing/malformed
+legacy data, unavailable evidence, persistence parameters, scoped latest-revision
+read, replay contract, bridge ordering and no new completion gate.
+
+Two isolated browser tests pass: light/dark at360,390,768,1024,1280,1440,200%text,
+focus/Shift-Tab/Tab and scoped Axe checks. Reviewed narrow dark/wide light report
+screenshots. Auth and wire data are entirely local fixtures, not authenticated
+production acceptance. A production read-only query of the exact filtered latest-
+revision shape succeeds with zero rows; no owner data, enrollment, evidence,
+progress, score or account fixture was written. Supabase order/maybeSingle docs
+and changelog were checked; the announced future legacy TLS cipher retirement
+requires no query/API change for this Node24 implementation. #397 remains open
+until the fix is merged; the last three native records still need individual
+review. This source follow-up is not in production PR #400.
+
 ## 15 October — PR #400 exact production
 
 PR #400 merges thirty individually reviewed FDE records (n032–n037) at

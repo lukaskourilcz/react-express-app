@@ -1,5 +1,20 @@
 # devShark content audit — the question bank
 
+## 15 October — diagnostic runtime follow-up (#397)
+
+Fixed the aggregate-score propagation discovered during audit. Trusted per-item
+correct/count evidence now drives actual per-competency results and bridge
+recommendations from the latest accepted attempt. Old aggregate-only data stays
+unassessed. Multi-tag, weaker-retake and replay/persistence cases are covered;
+module completion and diagnostic optionality remain unchanged. The UI now shows
+those distinct states and an access-aware diagnostic link. Full path/launch,
+API/script types,104client files/1002tests, placeholder build, both zero-vulnerability
+production audits and scoped browser reflow/zoom/keyboard/Axe checks pass. A
+production read-only query-shape check returned no rows; no account fixture or
+owner state was written. See release-acceptance for precise bounds. Coverage
+remains260/263 native and95/725 coding; this is a runtime fix, not three new
+editorial reviews. It is local and #397 is not yet closed.
+
 ## 15 October continuation — five-item native batch n041
 
 Reviewed the optional operator reducer, discovery/handoff artifacts, case-list

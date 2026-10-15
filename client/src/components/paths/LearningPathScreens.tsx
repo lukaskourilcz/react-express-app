@@ -254,6 +254,9 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
   // path, or a lapsed plan, keeps its outline and evidence without dead ends.
   const reachable = Boolean(enrollment) && open && !barred;
   const premiumMark = <span className="ss-premium-label">{t('premium.badge')}</span>;
+  const diagnosticModule = manifest.diagnosticActivityId
+    ? manifest.modules.find(module => module.activities.some(activity => activity.id === manifest.diagnosticActivityId))
+    : undefined;
 
   return (
     <div className="lp-page">
@@ -379,6 +382,34 @@ export function PathOverview({ pathId }: { pathId: LearningPathId }) {
             </>
           )}
           <p className="lp-completion__note">{t('paths.completionNote')}</p>
+        </section>
+      )}
+
+      {progress.data && diagnosticModule && progress.data.competencies.length > 0 && (
+        <section className="lp-card lp-section" aria-labelledby="path-diagnostic-title">
+          <h2 id="path-diagnostic-title">{t('paths.diagnosticTitle')}</h2>
+          <p className="lp-lead">{t('paths.diagnosticNote')}</p>
+          <ul className="lp-list">
+            {progress.data.competencies.map(result => {
+              const competency = manifest.competencies.find(one => one.id === result.competencyId);
+              if (!competency) return null;
+              return (
+                <li key={result.competencyId}>
+                  <strong>{loc(competency.title)}</strong>{' — '}
+                  {t(`paths.competency.${result.state}`)}
+                  {result.score !== null && result.assessedItems > 0 && (
+                    <> · {t('paths.diagnosticItems', { percent: Math.round(result.score * 100), count: result.assessedItems })}</>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="lp-note">{t('paths.diagnosticRetakeNote')}</p>
+          {reachable && manifest.diagnosticActivityId && (
+            <Link to={activityHref(pathId, diagnosticModule.id, manifest.diagnosticActivityId)}>
+              {t('paths.openDiagnostic')}
+            </Link>
+          )}
         </section>
       )}
 
