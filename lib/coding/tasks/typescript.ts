@@ -1112,7 +1112,7 @@ const applyPatch = (settings: Settings, patch: Partial<Settings>): Settings => {
     tier: 3,
     focus: ["utility-types", "destructuring"],
     title: "Hide the password",
-    prompt: "Declare an interface named `Account` with a numeric `id` and string `email` and `password`, then write `publicUser(account: Account): Omit<Account, \"password\">`, returning a copy with the password removed rather than blanked.",
+    prompt: "Declare an interface named `Account` with a numeric `id` and string `email` and `password`, then write `publicUser(account: Account): Omit<Account, \"password\">`, returning a copy with the password removed rather than blanked. Domain: a stable ordinary or null-prototype Account with own data fields and up to 100 extra own enumerable string/Symbol metadata fields, possibly frozen, with no accessors/proxies. Preserve every other own enumerable field and its exact opaque value, including a literal __proto__ field; inherited metadata is not copied. Remove the password key entirely, without mutating the source or blanking it. Return a fresh plain mutable object every call. This helper removes that single field; Omit itself changes only the static view. Target: O(n) time and output space, where n is 1 + source own enumerable field count under bounded property-key operations, excluding opaque value contents.",
     starter: `const publicUser = (account) => {
   
 };

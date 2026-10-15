@@ -503,19 +503,7 @@ const publicUser = (account: Account): Omit<Account, "password"> => {
   const {password, ...rest} = account;
   return rest;
 };`,
-    junior: `interface Account {
-  id: number;
-  email: string;
-  password: string;
-}
-
-const publicUser = (account: Account): Omit<Account, "password"> => {
-  const safe = {
-    id: account.id,
-    email: account.email,
-  };
-  return safe;
-};`,
+    junior: "interface Account {\n  id: number;\n  email: string;\n  password: string;\n}\n\nconst publicUser = (account: Account): Omit<Account, \"password\"> => {\n  const safe = { ...account };\n  delete (safe as Partial<Account>).password;\n  return safe;\n};",
     senior: `interface Account {
   id: number;
   email: string;
@@ -530,7 +518,12 @@ const omit = <T extends object, K extends keyof T>(source: T, key: K): Omit<T, K
 };
 
 const publicUser = (account: Account): Omit<Account, "password"> => omit(account, "password");`,
+    hiddenTypeTests: [{"code": "const __auditWide={id:1,email:\"e\",password:\"p\",extra:Symbol()}; const __auditOut:Omit<Account,\"password\">=publicUser(__auditWide); __auditOut.email=\"new\";"}],
     hiddenTests: [
+      { call: "(()=>{const sym=Symbol('meta'),meta={},account=Object.freeze({id:0,email:' ',password:'secret',extra:meta,[sym]:meta,['__proto__']:meta}),a=publicUser(account),b=publicUser(account);a.email='later';return [a!==account,a!==b,b.email,b.extra===meta,b[sym]===meta,Object.hasOwn(b,'__proto__'),b.__proto__===meta,Object.getPrototypeOf(b)===Object.prototype,!('password'in b),account.password];})()", expected: [true, true, " ", true, true, true, true, true, true, "secret"] },
+      { call: "(()=>{const account=Object.assign(Object.create({inherited:9}),{id:-1,email:'',password:''});Object.freeze(account);const out=publicUser(account),nil=Object.freeze(Object.assign(Object.create(null),{id:1,email:'e',password:'p'})),other=publicUser(nil);return [Reflect.ownKeys(out).sort(),!Object.hasOwn(out,'inherited'),!Object.hasOwn(out,'password'),other.id,other.email,Object.getPrototypeOf(other)===Object.prototype,account.password];})()", expected: [["email", "id"], true, true, 1, "e", true, ""] },
+      { call: "(()=>{const meta={},account={id:1,email:'e',password:'p'};for(let i=0;i<100;i++)account['x'+i]=meta;Object.freeze(account);const out=publicUser(account);return [Reflect.ownKeys(out).length,Array.from({length:100},(_,i)=>out['x'+i]===meta).every(Boolean),account.password];})()", expected: [102, true, "p"] },
+
       { call: "publicUser({id:5,email:\"lin@example.dev\",password:\"pw\"})", expected: { id: 5, email: "lin@example.dev" } },
       { call: "(() => { const account = {id:6,email:\"x@example.dev\",password:\"keep\"}; publicUser(account); return account; })()", expected: { id: 6, email: "x@example.dev", password: "keep" } },
       { call: "\"password\" in publicUser({id:7,email:\"y@example.dev\",password:\"z\"})", expected: false },

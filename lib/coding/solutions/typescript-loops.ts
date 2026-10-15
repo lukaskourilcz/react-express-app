@@ -409,44 +409,16 @@ const countStatus = (items: Status[], wanted: Status): number =>
     ],
   },
   "ts-score-by-player": {
-    solution: `interface Round {
-  player: string;
-  points: number;
-}
-
-const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
-  const totals: Record<string, number> = {};
-  for (const round of rounds) totals[round.player] = (totals[round.player] ?? 0) + round.points;
-  return totals;
-};`,
-    junior: `interface Round {
-  player: string;
-  points: number;
-}
-
-const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
-  const totals: Record<string, number> = {};
-  for (const round of rounds) {
-    const player = round.player;
-    if (totals[player] === undefined) {
-      totals[player] = round.points;
-    } else {
-      totals[player] = totals[player] + round.points;
-    }
-  }
-  return totals;
-};`,
-    senior: `interface Round {
-  player: string;
-  points: number;
-}
-
-const scoreByPlayer = (rounds: Round[]): Record<string, number> =>
-  rounds.reduce<Record<string, number>>((totals, { player, points }) => {
-    totals[player] = (totals[player] ?? 0) + points;
-    return totals;
-  }, {});`,
+    solution: "interface Round {\n  player: string;\n  points: number;\n}\n\nconst scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> => {\n  const totals = Object.create(null) as Partial<Record<string, number>>;\n  for (const round of rounds) totals[round.player] = (totals[round.player] ?? 0) + round.points;\n  return totals;\n};",
+    junior: "interface Round {\n  player: string;\n  points: number;\n}\n\nconst scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> => {\n  const totals = Object.create(null) as Partial<Record<string, number>>;\n  for (const round of rounds) {\n    const player = round.player;\n    const previous = totals[player];\n    const start = previous === undefined ? 0 : previous;\n    totals[player] = start + round.points;\n  }\n  return totals;\n};",
+    senior: "interface Round {\n  player: string;\n  points: number;\n}\n\nconst scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> =>\n  rounds.reduce<Partial<Record<string, number>>>((totals, { player, points }) => {\n    totals[player] = (totals[player] ?? 0) + points;\n    return totals;\n  }, Object.create(null) as Partial<Record<string, number>>);",
+    hiddenTypeTests: [{"code": "const __auditLookup=(key:string):number|undefined=>scoreByPlayer([])[key];"}],
     hiddenTests: [
+      { call: "(()=>{const input=Object.freeze(['constructor','__proto__','toString',''].map(player=>Object.freeze({player,points:1}))),out=scoreByPlayer(input),empty=scoreByPlayer([]);return [input.every(round=>Object.hasOwn(out,round.player)&&out[round.player]===1),Reflect.ownKeys(out).length,empty.constructor===undefined,empty.__proto__===undefined,empty.toString===undefined,Reflect.ownKeys(empty).length];})()", expected: [true, 4, true, true, true, 0] },
+      { call: "(()=>{const input=Object.freeze([Object.freeze({player:' x ',points:-0}),Object.freeze({player:'x',points:0.5}),Object.freeze({player:'x',points:-0.25}),Object.freeze({player:'X',points:2})]),a=scoreByPlayer(input),b=scoreByPlayer(input);a.x=99;return [Object.is(b[' x '],0),b.x,b.X,a!==b,input[1].points,input.length];})()", expected: [true, 0.25, 2, true, 0.5, 4] },
+      { call: "(()=>{const input=Object.freeze([{player:'p',points:1000000000},{player:'p',points:0.0000001},{player:'p',points:-1000000000}]),out=scoreByPlayer(input);let expected=0;for(const round of input)expected+=round.points;return [out.p===expected,Object.hasOwn(out,'p'),out.absent===undefined];})()", expected: [true, true, true] },
+      { call: "(()=>{const input=Object.freeze(Array.from({length:1000},(_,i)=>Object.freeze({player:'p'+i%10,points:1}))),out=scoreByPlayer(input);return [Object.keys(out).length,Object.values(out).every(total=>total===100),input.length,scoreByPlayer([])!==scoreByPlayer([])];})()", expected: [10, true, 1000, true] },
+
       {
         call: "scoreByPlayer([{ player: \"a\", points: 1 }, { player: \"b\", points: 2 }, { player: \"a\", points: 3 }, { player: \"b\", points: 4 }])",
         expected: { a: 4, b: 6 },

@@ -826,13 +826,13 @@ const applyPatches = (profile: Profile, patches: Partial<Profile>[]): Profile =>
     tier: 2,
     focus: ["record", "for-of", "objects"],
     title: "Score by player",
-    prompt: "Declare an interface named `Round` with a `player` string and a `points` number, then write `scoreByPlayer(rounds: Round[]): Record<string, number>` adding up the points of every player with a `for-of` loop. A player seen for the first time has no entry yet, so treat the missing value as 0. `scoreByPlayer([{ player: \"ada\", points: 3 }, { player: \"bo\", points: 1 }, { player: \"ada\", points: 2 }])` gives `{ ada: 5, bo: 1 }`.",
+    prompt: "Declare an interface named `Round` with a `player` string and a `points` number, then write `scoreByPlayer(rounds: Round[]): Partial<Record<string, number>>` adding up the points of every player with a `for-of` loop. A player seen for the first time has no entry yet, so treat the missing value as 0. `scoreByPlayer([{ player: \"ada\", points: 3 }, { player: \"bo\", points: 1 }, { player: \"ada\", points: 2 }])` gives `{ ada: 5, bo: 1 }`. Only observed players have entries; an unobserved name reads as undefined, which is why the result is Partial. Domain: a dense ordinary array of at most 1000 stable Round records, possibly frozen, with own player strings of at most 200 UTF-16 units and finite Number points from -1000000000 through 1000000000, with no accessors/proxies. Match player names exactly, including empty text, whitespace, case, Unicode and prototype-like names. For each player, add points in original input order starting from numeric 0; this also defines signed-zero and fractional Number results. Return a fresh mutable prototype-safe dictionary every call, with own keys exactly the observed names and undefined for unobserved names, including inherited Object member names. Leave records, order and opaque metadata unchanged. Target: O(n) time and output space, where n is 1 + round count under bounded average property/hash operations.",
     starter: `interface Round {
   player: string;
   points: number;
 }
 
-const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
+const scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> => {
 
 };
 
@@ -844,8 +844,8 @@ console.log(scoreByPlayer([{ player: "ada", points: 3 }, { player: "bo", points:
   points: number;
 }
 
-const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
-  const totals: Record<string, number> = {};
+const scoreByPlayer = (rounds: Round[]): Partial<Record<string, number>> => {
+  const totals = Object.create(null) as Partial<Record<string, number>>;
 
   for (const round of rounds) {
     // read the total so far, treating a missing one as 0, and store it plus the points
@@ -853,14 +853,8 @@ const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
 
   return totals;
 };`,
-    hints: [
-      "Reading a key that is not in a Record<string, number> yet gives undefined at runtime, so fall back to zero before adding.",
-    ],
-    approach: [
-      "Start an empty object typed as Record<string, number>.",
-      "Loop over the rounds with for-of, read the current total under the player's name, and treat a missing total as zero.",
-      "Store the total plus the round's points under that name and return the object.",
-    ],
+    hints: ["Partial marks unobserved players as missing. Use a dictionary with no inherited names, then read totals[player] and fall back to numeric zero before every addition."],
+    approach: ["Create a fresh prototype-safe dictionary typed Partial<Record<string, number>>.", "Loop over rounds in input order, read the previous total or zero, and add this round\u2019s points.", "Return the dictionary; only observed player names have own entries."],
     verify: "tests",
     estimatedMinutes: 7,
     tests: [
@@ -878,15 +872,7 @@ const scoreByPlayer = (rounds: Round[]): Record<string, number> => {
         edge: true,
       },
     ],
-    typeTests: [
-      {
-        code: "const __totals: Record<string, number> = scoreByPlayer([{ player: \"ada\", points: 1 }]);",
-        label: "gives back a lookup of numbers",
-      },
-      { code: "const __ada: number = scoreByPlayer([])[\"ada\"];", label: "any name can be looked up" },
-      { code: "scoreByPlayer([{ player: \"ada\" }]);", label: "a round needs its points", rejects: true },
-      { code: "const __names: Record<string, string> = scoreByPlayer([]);", label: "the values are numbers, not strings", rejects: true },
-    ],
+    typeTests: [{"code": "const __totals: Partial<Record<string, number>> = scoreByPlayer([{ player: \"ada\", points: 1 }]);", "label": "gives back a lookup of numbers"}, {"code": "const __ada: number | undefined = scoreByPlayer([])[\"ada\"];", "label": "any name can be looked up"}, {"code": "scoreByPlayer([{ player: \"ada\" }]);", "label": "a round needs its points", "rejects": true}, {"code": "const __names: Record<string, string> = scoreByPlayer([]);", "label": "the values are numbers, not strings", "rejects": true}, {"code": "const __required:number=scoreByPlayer([])[\"absent\"];", "rejects": true, "label": "an unobserved player may be missing"}],
   },
   {
     id: "ts-freeze-a-copy",
