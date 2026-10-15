@@ -640,14 +640,14 @@ const toArray = (node, values = []) => {
     const leftSquare = sorted[left] * sorted[left];
     const rightSquare = sorted[right] * sorted[right];
     if (leftSquare > rightSquare) {
-      result.unshift(leftSquare);
+      result.push(leftSquare);
       left = left + 1;
     } else {
-      result.unshift(rightSquare);
+      result.push(rightSquare);
       right = right - 1;
     }
   }
-  return result;
+  return result.reverse();
 };`,
     senior: `const sortedSquares = sorted => {
   const result = Array(sorted.length);

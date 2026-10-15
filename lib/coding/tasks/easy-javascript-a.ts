@@ -845,7 +845,7 @@ console.log(toArray({ value: 1, next: { value: 2, next: null } }));
     tier: 2,
     focus: ['nested-loops'],
     title: 'Every pair once',
-    prompt: 'Write `allPairs(list)`, returning every pair of items at two different positions as `[first, second]`, where `first` comes earlier in the list than `second`. Use a `for` loop nested inside another, with the inner loop starting one place after the outer one. `allPairs(["a", "b", "c"])` gives `[["a", "b"], ["a", "c"], ["b", "c"]]`. A list of fewer than two items gives no pairs.',
+    prompt: "Write `allPairs(list)`, returning every pair of items at two different positions as `[first, second]`, where `first` comes earlier in the list than `second`. Use a `for` loop nested inside another, with the inner loop starting one place after the outer one. `allPairs([\"a\", \"b\", \"c\"])` gives `[[\"a\", \"b\"], [\"a\", \"c\"], [\"b\", \"c\"]]`. A list of fewer than two items gives no pairs. `list` is an ordinary dense array of at most 200 data values. Preserve each original value reference, even when the same object or value appears at multiple positions. Enumerate pairs by increasing first index, then increasing second index. Return a fresh outer array and separate fresh two-item arrays; do not change the source or nested values, and accept frozen input. Target: O(n²) time, where n is the input length: the output contains n * (n - 1) / 2 pairs, each formed by copying two references.",
     starter: `const allPairs = list => {
 
 };
@@ -878,6 +878,10 @@ console.log(allPairs(["a", "b", "c"]));
       { call: 'allPairs([1, 1, 2])', expected: [[1, 1], [1, 2], [1, 2]], label: 'equal values at different positions still pair', edge: true },
       { call: 'allPairs([7])', expected: [], label: 'one item has no pair', edge: true },
       { call: 'allPairs([])', expected: [], label: 'an empty list', edge: true },
+      { call: "(() => {const item={id:1},list=Object.freeze([item,item,\"x\"]);const out=allPairs(list);return out!==list&&out.length===3&&out[0]!==out[1]&&out[1]!==out[2]&&out[0][0]===item&&out[0][1]===item&&out[1][0]===item&&out[1][1]===\"x\"&&item.id===1;})()", expected: true, label: "frozen duplicate object references and independent pairs", edge: true },
+      { call: "(() => {const list=[3,1,2];allPairs(list);return list;})()", expected: [3, 1, 2], label: "preserve source order", edge: true },
+      { call: "(() => {const list=[];const a=allPairs(list),b=allPairs(list);return a!==list&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty pair lists", edge: true },
+      { call: "allPairs(Array.from({length:200},(_,i)=>i)).length", expected: 19900, label: "bounded pair count", edge: true },
     ],
   },
   {
@@ -937,7 +941,7 @@ console.log(findInGrid([[1, 2], [3, 4]], 3));
     tier: 2,
     focus: ['two-pointer'],
     title: 'Squares in order',
-    prompt: 'Write `sortedSquares(sorted)`, where `sorted` holds numbers in ascending order, some possibly negative. Return a new array of their squares, also in ascending order, without calling `sort`. The biggest square sits at one of the two ends, so move a pointer in from each end, compare the two squares, and fill the result from the back. `sortedSquares([-4, -1, 0, 3])` gives `[0, 1, 9, 16]`.',
+    prompt: "Write `sortedSquares(sorted)`, where `sorted` holds numbers in ascending order, some possibly negative. Return a new array of their squares, also in ascending order, without calling `sort`. The biggest square sits at one of the two ends, so move a pointer in from each end, compare the two squares, and fill the result from the back. `sortedSquares([-4, -1, 0, 3])` gives `[0, 1, 9, 16]`. The input is an ordinary dense array of at most 10000 integers in nondecreasing order, each between -1000000 and 1000000. Squares remain exact Numbers. Keep duplicates, treat either zero sign numerically as zero and return a fresh array, including for empty input. Do not change the source; frozen arrays are valid. Target: O(n) time, where n is the input length and bounded square/index operations take constant time. Repeatedly inserting at the front shifts earlier results; append and reverse once, or fill allocated slots from the back.",
     starter: `const sortedSquares = sorted => {
 
 };
@@ -970,6 +974,10 @@ console.log(sortedSquares([-4, -1, 0, 3]));
       { call: 'sortedSquares([1, 2, 3])', expected: [1, 4, 9], label: 'no negatives', edge: true },
       { call: 'sortedSquares([-3, -2, -1])', expected: [1, 4, 9], label: 'only negatives', edge: true },
       { call: 'sortedSquares([])', expected: [], label: 'an empty list', edge: true },
+      { call: "sortedSquares(Object.freeze([-1000000,-2,-2,-0,0,3,1000000]))", expected: [0, 0, 4, 4, 9, 1000000000000, 1000000000000], label: "frozen input exact bounds duplicates and zeros", edge: true },
+      { call: "(() => {const input=[-4,-1,0,3];sortedSquares(input);return input;})()", expected: [-4, -1, 0, 3], label: "preserve longer input order", edge: true },
+      { call: "(() => {const input=[];const a=sortedSquares(input),b=sortedSquares(input);return a!==input&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty output", edge: true },
+      { call: "(() => {const out=sortedSquares(Array.from({length:128},(_,i)=>i-64));return out.length===128&&out[0]===0&&out[127]===4096&&out.every((value,index)=>index===0||out[index-1]<=value);})()", expected: true, label: "larger two-sided input", edge: true },
     ],
   },
   {
@@ -980,7 +988,7 @@ console.log(sortedSquares([-4, -1, 0, 3]));
     tier: 2,
     focus: ['two-pointer', 'strings'],
     title: 'Reverse only the vowels',
-    prompt: 'Write `reverseVowels(text)`, returning the text with its vowels (a, e, i, o and u, in either case) in reverse order and every other character where it was. Move one pointer in from each end, step past characters that are not vowels, and swap when both pointers rest on a vowel. `reverseVowels("hello")` gives `"holle"`.',
+    prompt: "Write `reverseVowels(text)`, returning the text with its vowels (a, e, i, o and u, in either case) in reverse order and every other character where it was. Move one pointer in from each end, step past characters that are not vowels, and swap when both pointers rest on a vowel. `reverseVowels(\"hello\")` gives `\"holle\"`. `text` is a primitive string. Only the literal ASCII letters aeiouAEIOU are vowels here; y, accented letters, dotted İ and other Unicode characters are not. Preserve every non-vowel UTF-16 unit and all original vowel cases; do not normalize or lowercase the text. For example, `reverseVowels(\"İaE\")` gives \"İEa\". Target: O(n) time, where n is the UTF-16 input length; fixed-set membership is constant-time and both pointers only move inward.",
     starter: `const reverseVowels = text => {
 
 };
@@ -1001,7 +1009,7 @@ console.log(reverseVowels("hello"));
 
   return chars.join("");
 };`,
-    hints: ['Strings cannot be changed in place, so split the text into an array of characters first. Swap inside the array and `join` it back at the end.'],
+    hints: ["Collect the text in a mutable array and use the fixed uppercase/lowercase ASCII vowel set. Each pointer skips non-vowels only inward, so even nested skipping loops visit each position a bounded number of times."],
     approach: [
       'Split the text into characters and set `left` to 0 and `right` to the last index.',
       'While `left` is below `right`, take one step each time round: if `left` sits on a non-vowel, move it forward; otherwise, if `right` sits on a non-vowel, move it back. A loop that only checks for a vowel would run off the end of a word with none.',
@@ -1015,6 +1023,11 @@ console.log(reverseVowels("hello"));
       { call: 'reverseVowels("Aa")', expected: 'aA', label: 'upper-case vowels count and keep their case', edge: true },
       { call: 'reverseVowels("rhythm")', expected: 'rhythm', label: 'no vowels', edge: true },
       { call: 'reverseVowels("")', expected: '', label: 'the empty string', edge: true },
+      { call: "reverseVowels(\"İaE\")", expected: "İEa", label: "only literal ASCII vowels move", edge: true },
+      { call: "reverseVowels(\"éaO🦈\")", expected: "éOa🦈", label: "accented letters and surrogate pairs stay intact", edge: true },
+      { call: "reverseVowels(\"a\\u0301E\")", expected: "Éa", label: "combining mark stays in place", edge: true },
+      { call: "reverseVowels(\"yY123🦈\")", expected: "yY123🦈", label: "no matching vowels", edge: true },
+      { call: "reverseVowels(\"ae\")", expected: "ea", label: "two adjacent vowels", edge: true },
     ],
   },
   {
@@ -1025,7 +1038,7 @@ console.log(reverseVowels("hello"));
     tier: 2,
     focus: ['two-pointer'],
     title: 'Outside in',
-    prompt: 'Write `outsideIn(list)`, returning a new array that takes the first item, then the last, then the second, then the second to last, and so on until the two ends meet. Keep one index at each end and move them towards each other. `outsideIn([1, 2, 3, 4, 5])` gives `[1, 5, 2, 4, 3]`: the middle item of an odd-length list appears once. The input is not changed.',
+    prompt: "Write `outsideIn(list)`, returning a new array that takes the first item, then the last, then the second, then the second to last, and so on until the two ends meet. Keep one index at each end and move them towards each other. `outsideIn([1, 2, 3, 4, 5])` gives `[1, 5, 2, 4, 3]`: the middle item of an odd-length list appears once. The input is not changed. The input is an ordinary dense array of data values. Keep the original value references and all repeated occurrences. Return a fresh outer array for every input, including an empty list. Do not change the input or nested values; frozen arrays are valid. Target: O(n) time, where n is the number of input items and copying one reference takes constant time.",
     starter: `const outsideIn = list => {
 
 };
@@ -1058,6 +1071,10 @@ console.log(outsideIn([1, 2, 3, 4, 5]));
       { call: 'outsideIn([9])', expected: [9], label: 'a single item appears once', edge: true },
       { call: 'outsideIn([])', expected: [], label: 'an empty list', edge: true },
       { call: '(() => { const list = [1, 2, 3]; outsideIn(list); return list; })()', expected: [1, 2, 3], label: 'the input is not changed', edge: true },
+      { call: "(() => {const item={id:1},list=Object.freeze([item,\"a\",item,\"b\"]);const out=outsideIn(list);return out!==list&&out.length===4&&out[0]===item&&out[1]===\"b\"&&out[2]===\"a\"&&out[3]===item&&item.id===1;})()", expected: true, label: "frozen source and repeated references", edge: true },
+      { call: "(() => {const list=[3,1,4,2];outsideIn(list);return list;})()", expected: [3, 1, 4, 2], label: "preserve longer source order", edge: true },
+      { call: "(() => {const list=[];const a=outsideIn(list),b=outsideIn(list);return a!==list&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty arrays", edge: true },
+      { call: "(() => {const out=outsideIn([null,undefined,false,0,\"\"]);return out.length===5&&out[0]===null&&out[1]===\"\"&&out[2]===undefined&&out[3]===0&&out[4]===false;})()", expected: true, label: "retain falsy and missing-value entries", edge: true },
     ],
   },
 

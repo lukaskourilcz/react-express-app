@@ -1,5 +1,178 @@
 # devShark content audit — the question bank
 
+## 15 October continuation — five-item native batch n002
+
+Reviewed the sixth entry question, its complete optional parent diagnostic,
+and both recursion lessons plus the unreachable-base-case question. The two
+entry records are retained; three recursion records are rewritten. Current
+native coverage is **70/263**, leaving **193**; coding remains **90/725**.
+Engine-dependent errors, finite acyclic lists, bounded Number arithmetic,
+per-call work and real stack/resource limits are now explicit. The question
+states the no-tail-call-elimination model, balances its options and identifies
+distractors by content after the copy sweep caught a shuffled-position reference.
+
+Five exact-hash records have manual scores and final model readings. Authored
+execution checks the nested value, diagnostic 5/6 versus 4/6 threshold and
+failure feedback, bounded sums, broken recursion in V8, the eight-state stack
+trace and exact factorial values against BigInt through 23. Native bindings,
+path contracts, API/script types, launch contracts, final build, both production
+dependency audits (zero vulnerabilities), final copy sweep and diff checks
+pass. Six public-catalogue probes in each theme pass over 360–1440px; this is
+not authenticated entry/lesson acceptance or a portable stack-depth proof.
+PR #393 is merged; its production is READY at 3c5d0abc with devshark.app,
+and selected production submission verification is in progress.
+
+## 15 October continuation — five-item native batch n001
+
+Individually reviewed the first five optional DSA entry questions. Four are
+retained; the indexing question now supplies a concrete array and distinguishes
+negative bracket properties from supported at(-1). Its key remains unique.
+The parent diagnostic and sixth question are outside this batch. Current
+native coverage is **65/263**, leaving **198**; coding is **90/725**, leaving
+**635**. Review records bind the exact English hashes and explicitly identify
+same-session model review, not independent/human approval.
+
+All five authored contexts execute with unique keyed outcomes. Supplementary
+checks cover mutation returns, a named negative array property, recursive
+return propagation and Map replacement/size. Native bindings, path contracts,
+API/script types, launch contracts, build, both production dependency audits
+(zero vulnerabilities), copy sweep and diff checks pass. The public DSA
+catalogue passes six widths in each theme; this does not exercise the
+signed-in entry activity. An initial probe used the nonexistent
+/learning-paths route and failed; it was corrected to the actual catalogue
+route, without weakening the probe.
+
+PR #393 merged at 3c5d0abc after required verify/sql run 38654051545 passed
+on c91873a6. Production verification of its thirty coding records is pending.
+No account data, entitlements, question IDs or archived Czech files changed.
+
+## 15 October continuation — five-item batch b012
+
+Reviewed last-dot filename suffixes, next workflow labels, all matching
+positions, sorted insertion indexes and the nonmutating removal debug task.
+Current coding coverage is **90/725**: forty deployed, fifty staged, **635
+remaining**; native stays **60/263**. PR #393 checks thirty records through
+b008; b009–b012 are local five-item batches. Its exact c91873a6 preview passes
+11 general and 20 selected signed-out submissions; 26 Premium tasks return
+402, outside authenticated acceptance. A paced retry completed the initial
+HTTP-429-limited task-open sweep without changing product limits.
+
+The baseline matched 26/40 expectations. New cases reject trimming filename
+suffixes, leading-dot rejection under the stated last-dot rule, mutable
+allow-lists, last-occurrence/falsy next labels, Object.is/structural matching,
+input mutation, rounded insertion positions and reused empty arrays. Filename
+matching explicitly concerns names, not file-content validation. NextStep
+keeps an empty destination label. PositionsOf explains why forward successive
+searches visit disjoint portions and remain linear. InsertAt reports a lower
+bound without changing the list and accepts a faster binary-search alternative.
+The removal starter stays deliberately broken; corrected variants retain
+NaN under strict equality and preserve distinct equal-looking objects.
+
+All **40/40 final-hash verdicts** agree (twenty valid, five starters, fifteen
+wrong), with twenty authored-target/base-25-XP checks and focused coding
+contracts. API types, launch contracts, registry/index generation, build,
+both production dependency audits (zero vulnerabilities), copy sweep and diff
+checks pass. The three longest rewritten routes pass eighteen light and
+eighteen dark probes over 360–1440px, with zero issues or unprobed routes.
+Individual scores and final model readings are in b012 JSONL; the next-step
+and removal diagnostic hints score 5/5. No independent/human or authenticated
+acceptance is claimed; IDs, access and archived Czech are preserved.
+
+## 15 October continuation — five-item batch b011
+
+Individually reviewed literal banned-string replacement, overdue detection,
+first threshold index, first free slot and nonblank form validation. Current
+coding coverage is **85/725**: forty deployed, forty-five staged, **640
+remaining**; native stays **60/263**. PR #393 checks thirty records through
+b008, with b009–b011 prepared locally in five-item commits.
+
+The baseline matched 28/40 expectations. New cases expose regex interpretation
+of literal bans, source mutation, rounded thresholds, midnight truthiness,
+three-slot cutoffs, inherited form fields and ASCII-space-only validation.
+The form junior now uses Object.values like the reference/senior, excluding
+inherited/hidden/symbol-keyed fields. Trim semantics explicitly include tabs,
+NBSP and BOM while zero-width space counts as content; validation never
+rewrites stored strings. Boolean booking/task flags and fixed valid date/time
+formats make every revealed variant's domain explicit. Overdue detection
+uses supplied today, and finding a free slot does not reserve it.
+
+All **40/40 final-hash worker verdicts** agree (twenty valid, five starters,
+fifteen wrong), plus twenty authored-target/base-25-XP checks and focused
+coding contracts. The includes/map teaching target explains its quadratic
+maximum-length model and allows the faster Set alternative. Other targets
+count actual scan/string input units and allow early exit.
+
+API types, launch contracts, registry/index generation, build, both production
+dependency audits (zero vulnerabilities), English copy sweep and diff checks
+pass. The three longest rewritten routes pass eighteen light and eighteen
+dark probes at 360–1440px with zero issues or unprobed routes. Individual
+scores and final model readings are in b011 JSONL. Independent/human and
+authenticated acceptance are not claimed; IDs, access and archived Czech are
+unchanged.
+
+## 15 October continuation — five-item batch b010
+
+Reviewed inclusive range expansion, index-distinct pairs, sorted squares,
+literal vowel reversal and outside-in ordering. Current coding coverage is
+**80/725**: forty deployed, forty staged, **645 remaining**; native remains
+**60/263**. PR #393 checks thirty staged reviews through b008; b009–b010 are
+local five-item commits.
+
+The baseline matched 30/40 expectations. New cases preserve overlapping
+range occurrences, original object references, frozen input and fresh empty
+results, and reject normalization of non-ASCII text. Range inputs/output are
+bounded and reversed endpoints explicitly add nothing. Pair generation
+explains its n*(n-1)/2 output cost. Squares use exact bounded integer products;
+the junior appends descending values and reverses once instead of repeatedly
+shifting a growing result with unshift. ASCII vowel membership and unchanged
+combining marks/surrogate pairs are explicit. Outside-in keeps falsy and
+undefined values using Boolean fixtures where JSON cannot encode them.
+
+All **40/40 final-hash worker verdicts** agree (twenty valid, five starters,
+fifteen wrong), plus twenty authored-target/base-25-XP checks and focused
+coding contracts. API types, launch contracts, registry/index generation,
+build, both production dependency audits (zero vulnerabilities), copy sweep
+and diff checks pass. The three longest rewritten routes pass eighteen light
+and eighteen dark probes at 360–1440px, with zero issues or unprobed routes.
+The b010 JSONL records individual scores, sources and final model self-reading;
+no independent/human approval or authenticated acceptance is claimed.
+Historical IDs, tier access and archived Czech stay intact.
+
+## 15 October continuation — five-item batch b009
+
+Individually reviewed grid differences, quantity expansion, indexed string
+subsequences, mirror arrays and date ordering. Current coding coverage is
+**75/725**: forty verified deployed, thirty-five staged, **650 remaining**;
+native stays **60/263**. PR #392 is merged at c7e8e7d and its exact production
+deployment dpl_AHXHkdxthYSGMAzLDeUpHkBgAJrY is READY with devshark.app.
+Required verify/sql run 38650942972 passed; eleven general and twenty-five
+selected signed-out server checks pass. Five Premium tasks return 402; this
+is not authenticated Premium acceptance. PR #393 checks the next thirty
+reviews through b008 while this batch is prepared locally.
+
+The baseline matched 27/40 expectations. New fixtures distinguish strict
+inequality from Object.is/JSON comparison, preserve input and output
+references, retain empty names and repeated posts, and bound expanded output.
+Grid cost uses maximum dimension with actual visited-cell work explained;
+pick-list cost includes produced entries. Mirror comparison explicitly uses
+strict identity. Newest-first sorting states fixed-width valid date inputs
+and a comparison-sort time model without claiming every engine guarantees it.
+
+The old subsequence senior mixed code points and UTF-16 brackets: it passed
+only 9/11 new public checks while reference and junior passed 11/11. It now
+uses the same indexed-unit model as the other answers. The prompt explicitly
+explains surrogate-unit subsequences, exact case and no normalization.
+
+Final-hash worker checks pass **40/40** (twenty valid, five starters, fifteen
+wrong), and twenty authored-target/base-25-XP checks pass. Focused coding
+contracts, API types, launch contracts, registry/index generation, build,
+both production dependency audits (zero vulnerabilities), English copy sweep
+and diff checks pass. Eighteen light and eighteen dark probes of the three
+longest rewritten routes at 360–1440px pass with zero issues or unprobed
+routes. The b009 JSONL records individual scores, sources and final model
+self-reading. Independent/human and authenticated production acceptance are
+not claimed; historical IDs, access and archived Czech remain unchanged.
+
 ## 15 October continuation — five-item batch b008
 
 Reviewed all-depth flattening, ragged-grid search, the Map tally debug task,

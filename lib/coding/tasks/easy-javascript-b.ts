@@ -443,7 +443,7 @@ console.log(combinations(["S", "M"], ["red", "blue"]));
     tier: 2,
     focus: ['flat'],
     title: 'One line per item picked',
-    prompt: 'An order is an array of `{ name, qty }` items. Write `pickList(order)`, returning one entry for each thing to pick from the shelf: `qty` copies of each name, in order. Use `flatMap`, which maps every item to an array and then flattens those arrays by one level. `pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }])` gives `["apple", "apple", "pear"]`. An item with a `qty` of 0 adds nothing.',
+    prompt: "An order is an array of `{ name, qty }` items. Write `pickList(order)`, returning one entry for each thing to pick from the shelf: `qty` copies of each name, in order. Use `flatMap`, which maps every item to an array and then flattens those arrays by one level. `pickList([{ name: \"apple\", qty: 2 }, { name: \"pear\", qty: 1 }])` gives `[\"apple\", \"apple\", \"pear\"]`. An item with a `qty` of 0 adds nothing. The order is an ordinary dense array of data objects with own primitive string names and integer quantities from 0 through 10000. The order has at most 10000 items, and its total quantity is at most 10000. Keep literal names, including empty strings, spaces and repeats. Do not change the order, quantities, names or other values; frozen input is valid. Always return a fresh array. Target: O(n) time, where n is the number of order records plus the sum of their quantities; copying a name reference takes constant time.",
     starter: `const pickList = order => {
 
 };
@@ -456,7 +456,7 @@ console.log(pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }]));
     // return an array holding item.qty copies of item.name
   });
 };`,
-    hints: ['`Array(3).fill("x")` gives `["x", "x", "x"]`. When the `flatMap` callback returns an empty array, that item leaves no trace in the result.'],
+    hints: ["Think of each order record as producing its own small list, including no entries for a zero quantity. flatMap joins those per-record lists without merging repeated names."],
     approach: [
       'Call `flatMap` on the order.',
       'For each item, return an array of `item.qty` copies of `item.name`, for example `Array(item.qty).fill(item.name)`.',
@@ -469,6 +469,11 @@ console.log(pickList([{ name: "apple", qty: 2 }, { name: "pear", qty: 1 }]));
       { call: 'pickList([{ name: "nail", qty: 3 }])', expected: ['nail', 'nail', 'nail'] },
       { call: 'pickList([{ name: "sold out", qty: 0 }, { name: "tape", qty: 1 }])', expected: ['tape'], label: 'a quantity of 0 adds nothing', edge: true },
       { call: 'pickList([])', expected: [], label: 'an empty order', edge: true },
+      { call: "pickList([{name:\"\",qty:2},{name:\" x \",qty:1},{name:\"\",qty:1}])", expected: ["", "", " x ", ""], label: "literal empty names and repeated records", edge: true },
+      { call: "pickList(Object.freeze([Object.freeze({name:\"x\",qty:0}),Object.freeze({name:\"y\",qty:2})]))", expected: ["y", "y"], label: "frozen records", edge: true },
+      { call: "(() => {const item={name:\"x\",qty:0,extra:1},order=[item];pickList(order);return order[0]===item&&item.name===\"x\"&&item.qty===0&&item.extra===1;})()", expected: true, label: "zero-quantity source records stay unchanged", edge: true },
+      { call: "(() => {const order=[];const first=pickList(order),second=pickList(order);return first!==order&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty lists", edge: true },
+      { call: "(() => {const out=pickList([{name:\"x\",qty:10000}]);return out.length===10000&&out.every(name=>name===\"x\");})()", expected: true, label: "bounded output-size work", edge: true },
     ],
   },
 
@@ -527,7 +532,7 @@ console.log(basket);
     tier: 2,
     focus: ['sort'],
     title: 'Newest first',
-    prompt: 'Each post is `{ title, date }`, where `date` is text such as `"2026-09-01"`. Dates written this way sort correctly as text. Write `newestFirst(posts)`, returning a new array with the latest date first, using `sort` with a compare function. Posts with the same date keep their original order, and `posts` itself is not changed.',
+    prompt: "Each post is `{ title, date }`, where `date` is text such as `\"2026-09-01\"`. Dates written this way sort correctly as text. Write `newestFirst(posts)`, returning a new array with the latest date first, using `sort` with a compare function. Posts with the same date keep their original order, and `posts` itself is not changed. Every date is a valid Gregorian calendar date in exactly ten-character YYYY-MM-DD form, with a four-digit year from 0001 through 9999 and zero-padded month/day; there are no times or offsets to parse. Posts are ordinary data objects in a dense array. Keep the original post and nested-value references, including repeated references; only the outer order changes. Do not modify any input, and accept frozen arrays/posts. Return a fresh array even when empty or already sorted. Target: O(n log n) time in the comparison-sort model, where n is the post count and fixed-length date comparison is constant-time; assume the chosen sort implementation meets that comparison bound.",
     starter: `const newestFirst = posts => {
 
 };
@@ -554,6 +559,9 @@ console.log(newestFirst([{ title: "A", date: "2026-01-05" }, { title: "B", date:
       { call: 'newestFirst([{ title: "x", date: "2026-05-01" }, { title: "y", date: "2026-05-01" }, { title: "z", date: "2026-06-01" }]).map(post => post.title)', expected: ['z', 'x', 'y'], label: 'posts on the same date keep their order', edge: true },
       { call: 'newestFirst([])', expected: [], label: 'no posts', edge: true },
       { call: '(() => { const posts = [{ title: "old", date: "2020-01-01" }, { title: "new", date: "2021-01-01" }]; newestFirst(posts); return posts.map(post => post.title); })()', expected: ['old', 'new'], label: 'the input keeps its order', edge: true },
+      { call: "(() => {const meta={id:1},early=Object.freeze({title:\"old\",date:\"0001-01-01\",meta}),late=Object.freeze({title:\"new\",date:\"9999-12-31\",meta}),posts=Object.freeze([early,late,late]);const out=newestFirst(posts);return out!==posts&&out.length===3&&out[0]===late&&out[1]===late&&out[2]===early&&out[0].meta===meta&&meta.id===1;})()", expected: true, label: "date bounds frozen posts and repeated identities", edge: true },
+      { call: "(() => {const posts=[];const first=newestFirst(posts),second=newestFirst(posts);return first!==posts&&first!==second&&first.length===0&&second.length===0;})()", expected: true, label: "fresh empty results", edge: true },
+      { call: "newestFirst([{title:\"leap\",date:\"2024-02-29\"},{title:\"march\",date:\"2024-03-01\"}]).map(p=>p.title)", expected: ["march", "leap"], label: "calendar boundary in fixed-width dates", edge: true },
     ],
   },
 
@@ -566,7 +574,7 @@ console.log(newestFirst([{ title: "A", date: "2026-01-05" }, { title: "B", date:
     tier: 1,
     focus: ['includes', 'map'],
     title: 'Hide the banned words',
-    prompt: 'Write `hideBanned(words, banned)`, returning a new array where every word that appears in `banned` is replaced by `"***"`. Check each word with `includes` inside `map`. `hideBanned(["you", "are", "silly"], ["silly"])` gives `["you", "are", "***"]`. The match is exact, so `"Silly"` is not the same word as `"silly"`.',
+    prompt: "Write `hideBanned(words, banned)`, returning a new array where every word that appears in `banned` is replaced by `\"***\"`. Check each word with `includes` inside `map`. `hideBanned([\"you\", \"are\", \"silly\"], [\"silly\"])` gives `[\"you\", \"are\", \"***\"]`. The match is exact, so `\"Silly\"` is not the same word as `\"silly\"`. Both inputs are ordinary dense arrays of primitive strings, each string at most 128 UTF-16 units. Empty strings, spaces, punctuation and duplicates are literal data; do not treat banned entries as regular expressions or normalize spelling. Keep every word position and return a fresh array even when no words are banned. Do not change either input; frozen arrays are valid. Target: O(n²) time for the includes-in-map approach, where n is the larger array length and bounded string comparison is constant-time; the membership scans can take words.length * banned.length comparisons. A Set-based solution can use less expected work and also meets this goal.",
     starter: `const hideBanned = (words, banned) => {
 
 };
@@ -577,7 +585,7 @@ console.log(hideBanned(["you", "are", "silly"], ["silly"]));
     skeleton: `const hideBanned = (words, banned) => {
   return words.map(word => /* "***" when banned includes word, otherwise word */);
 };`,
-    hints: ['`banned.includes(word)` is `true` when the word is on the banned list. A ternary in the `map` callback picks `"***"` or the word.'],
+    hints: ["The result needs one entry for every original word. Decide whether the entire string is a banned member, then choose the marker or the original string without changing either source list."],
     approach: [
       'Map over the words, because the result has one entry per word.',
       'For each word, ask `banned.includes(word)`.',
@@ -591,6 +599,11 @@ console.log(hideBanned(["you", "are", "silly"], ["silly"]));
       { call: 'hideBanned(["hello"], [])', expected: ['hello'], label: 'nothing banned', edge: true },
       { call: 'hideBanned(["Silly", "silly"], ["silly"])', expected: ['Silly', '***'], label: 'the match is exact', edge: true },
       { call: 'hideBanned([], ["x"])', expected: [], label: 'no words', edge: true },
+      { call: "hideBanned([\"a.*\",\"ax\",\"a\",\"\", \"é\",\"e\\u0301\"],[\"a.*\",\"\", \"é\"])", expected: ["***", "ax", "a", "***", "***", "é"], label: "literal punctuation empty strings and exact Unicode spelling", edge: true },
+      { call: "hideBanned(Object.freeze([\"z\",\"ok\",\"z\"]),Object.freeze([\"z\",\"a\",\".\"]))", expected: ["***", "ok", "***"], label: "frozen inputs and repeated matches", edge: true },
+      { call: "(() => {const words=[\"x\"],banned=[];const out=hideBanned(words,banned);return out!==words&&out.length===1&&out[0]===\"x\";})()", expected: true, label: "fresh result when nothing is banned", edge: true },
+      { call: "(() => {const banned=[\"z\",\"a\"],words=[\"z\"];hideBanned(words,banned);return banned[0]===\"z\"&&banned[1]===\"a\"&&words[0]===\"z\";})()", expected: true, label: "preserve both inputs", edge: true },
+      { call: "(() => {const words=[],banned=[];const out=hideBanned(words,banned);return out!==words&&out!==banned&&out.length===0;})()", expected: true, label: "fresh empty result", edge: true },
     ],
   },
   {
@@ -601,7 +614,7 @@ console.log(hideBanned(["you", "are", "silly"], ["silly"]));
     tier: 2,
     focus: ['indexOf', 'while'],
     title: 'Every position of a value',
-    prompt: 'Write `positionsOf(list, value)`, returning every index where `value` appears, in order. Use `indexOf` with its second argument, the index to start searching from, inside a `while` loop. `positionsOf(["a", "b", "a", "c", "a"], "a")` gives `[0, 2, 4]`. No match gives `[]`. Like `indexOf`, it compares strictly, so `"1"` is not `1`.',
+    prompt: "Write `positionsOf(list, value)`, returning every index where `value` appears, in order. Use `indexOf` with its second argument, the index to start searching from, inside a `while` loop. `positionsOf([\"a\", \"b\", \"a\", \"c\", \"a\"], \"a\")` gives `[0, 2, 4]`. No match gives `[]`. Like `indexOf`, it compares strictly, so `\"1\"` is not `1`. Inputs are an ordinary dense array of data values and any query value. Strict equality means NaN never matches, 0 and -0 both match, and objects match only by reference. Do not change the input or nested values; frozen arrays are valid. Return a fresh positions array on every call, including empty input and no match. Target: O(n) time, where n is the input length and equality is treated as constant-time: each new indexOf starts after the previous match, so the searches scan disjoint successive portions rather than restarting at zero.",
     starter: `const positionsOf = (list, value) => {
 
 };
@@ -634,6 +647,11 @@ console.log(positionsOf(["a", "b", "a", "c", "a"], "a"));
       { call: 'positionsOf([1, 2, 3], 4)', expected: [], label: 'no match', edge: true },
       { call: 'positionsOf([1, "1", 1], 1)', expected: [0, 2], label: 'the string "1" is not the number 1', edge: true },
       { call: 'positionsOf([], "x")', expected: [], label: 'an empty list', edge: true },
+      { call: "positionsOf([NaN,NaN],NaN)", expected: [], label: "NaN never matches", edge: true },
+      { call: "positionsOf([0,-0,1],-0)", expected: [0, 1], label: "both zero signs match", edge: true },
+      { call: "(() => {const value={id:1};return positionsOf(Object.freeze([value,{id:1},value]),value);})()", expected: [0, 2], label: "frozen reference equality", edge: true },
+      { call: "(() => {const list=[2,1,2];positionsOf(list,2);return list;})()", expected: [2, 1, 2], label: "preserve source order", edge: true },
+      { call: "(() => {const list=[];const a=positionsOf(list,1),b=positionsOf(list,1);return a!==list&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty positions", edge: true },
     ],
   },
   {
@@ -644,7 +662,7 @@ console.log(positionsOf(["a", "b", "a", "c", "a"], "a"));
     tier: 1,
     focus: ['findIndex'],
     title: 'The first reading over the limit',
-    prompt: 'Write `firstOverLimit(readings, limit)`, returning the index of the first reading greater than `limit`, using `findIndex`. `firstOverLimit([3, 8, 12, 15], 10)` gives 2. A reading equal to the limit is not over it, and when no reading is over the limit the answer is -1.',
+    prompt: "Write `firstOverLimit(readings, limit)`, returning the index of the first reading greater than `limit`, using `findIndex`. `firstOverLimit([3, 8, 12, 15], 10)` gives 2. A reading equal to the limit is not over it, and when no reading is over the limit the answer is -1. readings is an ordinary dense array of finite Numbers and limit is a finite Number; fractional and negative readings are valid. Compare the supplied numbers without rounding or coercion. Do not change the array; frozen inputs are valid. Target: O(n) time in the worst case, where n is the reading count and numeric comparison is constant-time; an early match can take less.",
     starter: `const firstOverLimit = (readings, limit) => {
 
 };
@@ -669,6 +687,10 @@ console.log(firstOverLimit([3, 8, 12, 15], 10));
       { call: 'firstOverLimit([10, 11], 10)', expected: 1, label: 'equal to the limit is not over it', edge: true },
       { call: 'firstOverLimit([1, 2], 5)', expected: -1, label: 'nothing over the limit', edge: true },
       { call: 'firstOverLimit([], 0)', expected: -1, label: 'no readings', edge: true },
+      { call: "firstOverLimit([0.01,0.06,0.2],0.05)", expected: 1, label: "fractional readings are not rounded", edge: true },
+      { call: "firstOverLimit(Object.freeze([-0.5,-0.1,0]),-0.2)", expected: 1, label: "frozen fractional negative readings", edge: true },
+      { call: "(() => {const readings=[3,1,7,9];const out=firstOverLimit(readings,5);return out===2&&readings[0]===3&&readings[1]===1&&readings[2]===7&&readings[3]===9;})()", expected: true, label: "preserve original index order", edge: true },
+      { call: "firstOverLimit([0,-0],0)", expected: -1, label: "neither zero sign is over zero", edge: true },
     ],
   },
   {
@@ -679,7 +701,7 @@ console.log(firstOverLimit([3, 8, 12, 15], 10));
     tier: 1,
     focus: ['every', 'objects'],
     title: 'Every field filled in',
-    prompt: 'A form is an object whose values are the strings someone typed. Write `isComplete(form)`, returning `true` when every value holds something other than spaces, using `Object.values` and `every`. `isComplete({ name: "Ada", email: "ada@example.com" })` gives `true`, and an empty email gives `false`. A value of only spaces counts as empty. `every` gives `true` for an empty list, so a form with no fields is complete.',
+    prompt: "A form is an object whose values are the strings someone typed. Write `isComplete(form)`, returning `true` when every value holds something other than spaces, using `Object.values` and `every`. `isComplete({ name: \"Ada\", email: \"ada@example.com\" })` gives `true`, and an empty email gives `false`. A value of only spaces counts as empty. `every` gives `true` for an empty list, so a form with no fields is complete. Consider only own enumerable string-keyed fields; inherited, non-enumerable and symbol-keyed properties are ignored. Those field values are primitive strings. Blank means empty after JavaScript trim, including its whitespace and line terminators such as tabs, non-breaking spaces and BOM; a zero-width space is not removed by trim and counts as content. Inputs are ordinary data objects without getters or proxies, including frozen and null-prototype objects. Do not trim or rewrite the stored values. Target: O(n) time, where n is the number of own properties inspected plus the total UTF-16 length of included field strings, assuming linear trimming and constant-time property access.",
     starter: `const isComplete = form => {
 
 };
@@ -690,7 +712,7 @@ console.log(isComplete({ name: "Ada", email: "" }));
     skeleton: `const isComplete = form => {
   return Object.values(form).every(/* a test for a value that is not blank */);
 };`,
-    hints: ['`value.trim()` removes the spaces at both ends, so a blank value becomes `""`. The test passes when what is left is not an empty string.'],
+    hints: ["Validate the own enumerable string values, not inherited properties. Use trim only to inspect whether content remains; keep the original stored strings unchanged."],
     approach: [
       'Get the values with `Object.values(form)`.',
       'Call `every` with a test that trims each value and checks it is not `""`.',
@@ -704,6 +726,12 @@ console.log(isComplete({ name: "Ada", email: "" }));
       { call: 'isComplete({ name: "   " })', expected: false, label: 'spaces alone count as empty', edge: true },
       { call: 'isComplete({ city: "  Brno " })', expected: true, label: 'spaces around a word are fine', edge: true },
       { call: 'isComplete({})', expected: true, label: 'a form with no fields is complete', edge: true },
+      { call: "isComplete(Object.create({inherited:\" \"}))", expected: true, label: "inherited fields do not count", edge: true },
+      { call: "(() => {const form={own:\"ok\"};Object.defineProperty(form,\"hidden\",{value:\" \"});form[Symbol(\"s\")]=\" \";return isComplete(form);})()", expected: true, label: "hidden and symbol fields are excluded", edge: true },
+      { call: "isComplete({a:\"\\t\\n\\u00a0\\ufeff\"})", expected: false, label: "JavaScript whitespace-only field", edge: true },
+      { call: "isComplete({a:\"\\u200b\"})", expected: true, label: "zero-width space is content under trim", edge: true },
+      { call: "isComplete(Object.freeze(Object.assign(Object.create(null),{name:\" Ada \"})))", expected: true, label: "frozen null-prototype form", edge: true },
+      { call: "(() => {const form={name:\" Ada \"};const out=isComplete(form);return out===true&&form.name===\" Ada \";})()", expected: true, label: "validation preserves stored text", edge: true },
     ],
   },
 

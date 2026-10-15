@@ -120,13 +120,13 @@ export const DSA_D06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A recursive function answers a problem by calling itself on a smaller version of the same problem. Two parts make that work. The base case answers an input directly, without asking again. The recursive case shrinks the input and hands it on. Lose either part and the function fails in a way a loop cannot.',
+            'A recursive function answers a problem by calling itself on a smaller version of the same problem. Two parts make that work. The base case answers an input directly, without asking again. The recursive case shrinks the input and hands it on. As with a loop, every accepted input must make progress toward a stopping condition. The examples below use ordinary calls that retain their waiting frames.',
         },
         {
           kind: 'code',
           language: 'javascript',
           code: 'const sumTo = n => {\n  if (n === 0) return 0;      // base case: answered without another call\n  return n + sumTo(n - 1);    // recursive case: a smaller n, handed on\n};',
-          caption: 'The two halves of every recursive function, marked.',
+          caption: 'The two halves, for a nonnegative integer n small enough for the engine stack and exact Number arithmetic.',
         },
         {
           kind: 'prose',
@@ -155,20 +155,20 @@ export const DSA_D06: ModuleSource = {
           caption: 'Four recursive shapes and how each one ends.',
           headers: ['Shape', 'What the code does', 'How it ends'],
           rows: [
-            ['No base case', 'Every call makes another call', 'Frames pile up until the engine throws a RangeError'],
+            ['No base case', 'Every call makes another call', 'Frames pile up until the engine reports stack exhaustion'],
             [
               'A base case the step jumps over',
               'Subtracting 2 from an odd n never lands on 0',
-              'The same RangeError, and only for the inputs that miss',
+              'The same stack-exhaustion failure for inputs that miss; large terminating inputs can also exhaust the stack',
             ],
             [
               'A recursive case that does not shrink',
               'The call passes on the input it was given, unchanged',
-              'The first call never returns; nothing about the argument is different',
+              'The input never approaches the base case; without tail-call elimination, frames accumulate until stack exhaustion',
             ],
             [
               'A reachable base case',
-              'Subtracting 1 from any whole n of 0 or more reaches 0',
+              'For the bounded nonnegative integers in this example, subtracting 1 reaches 0',
               'The deepest call returns first, and the answer travels back up',
             ],
           ],
@@ -187,7 +187,7 @@ export const DSA_D06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            '`head.next` is the list minus its first node, so the node count falls by exactly one per call and cannot stall. A list of n nodes therefore makes n calls that hold a node, plus one final call that receives `null` and returns 0: n + 1 calls in total, and that count is what the next lesson prices.',
+            'For a finite, acyclic list ending in null, `head.next` removes the first node from the remaining walk, so the count falls by one per call. A list of n nodes therefore makes n calls that hold a node, plus one final call that receives `null` and returns 0: n + 1 calls in total, and that count is what the next lesson prices.',
         },
         {
           kind: 'callout',
@@ -220,7 +220,7 @@ export const DSA_D06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'A recursion has two prices and they are read off two different counts. Time comes from the number of calls multiplied by the work inside one call. Space comes from how many calls are open at the deepest point. A loop usually collapses the second number to a constant while leaving the first alone, which is the whole reason the rewrite is worth knowing.',
+            'A recursion has two prices and they are read off two different counts. Time adds up the work in all calls; when each does constant work, counting calls is enough. Space comes from how many calls are open at the deepest point. A loop usually collapses the second number to a constant while leaving the first alone, which is the whole reason the rewrite is worth knowing.',
         },
         {
           kind: 'code',
@@ -313,14 +313,14 @@ export const DSA_D06: ModuleSource = {
             ['Time', 'O(n): n + 1 calls, constant work in each', 'O(n): one pass, constant work per node'],
             ['Auxiliary space', 'O(n): one open frame per node still waiting', 'O(1): a total and one reference'],
             ['Where the state lives', 'In the frames the engine is holding for you', 'In the two variables you declared'],
-            ['What limits the input', 'The engine stack, before the data runs out', 'The data, and nothing else'],
+            ['Resource limits', 'Available stack depth as well as data and running time', 'Available data memory and running time; no frame per node'],
           ],
         },
         {
           kind: 'callout',
           tone: 'warning',
           body:
-            'The stack limit is real and it is not a number to code against. It depends on the engine, on how large each frame is and on what was already on the stack when your function started, so the same recursion can survive on one runtime and throw on another. Depth in the low thousands is where the risk begins. Proper tail calls are in the language specification, but most engines never shipped them, so writing the call in tail position does not reliably save the frame.',
+            'The stack limit is real and it is not a number to code against. It depends on the engine, on how large each frame is and on what was already on the stack when your function started, so the same recursion can survive on one runtime and throw on another. There is no portable safe recursion-depth cutoff. Proper tail calls are in the language specification, but most engines never shipped them, so writing the call in tail position does not reliably save the frame.',
         },
         {
           kind: 'prose',
@@ -342,7 +342,7 @@ export const DSA_D06: ModuleSource = {
         {
           kind: 'prose',
           body:
-            'Choose by depth, not by taste. Recursion fits data that is itself recursive and shallow relative to its size: a balanced tree of a million nodes is about twenty frames deep, which no stack minds. A loop fits work whose depth would follow the length of the input, which is every list traversal in this path. Converting a list recursion into a loop costs two variables and buys back the whole stack.',
+            'Choose with the input shape and runtime in mind. A balanced binary tree with a million nodes needs only about twenty frames for a depth-first walk; a skewed tree can need a frame per node. Even shallow recursion uses stack space, so check the actual runtime rather than promising a universally safe depth. A loop fits work whose depth would follow the length of the input, which is every list traversal in this path. Converting a list recursion into a loop costs two variables and buys back the whole stack.',
         },
       ],
     },
@@ -383,20 +383,20 @@ export const DSA_D06: ModuleSource = {
       questions: [
         {
           id: 'dsa-v1-d06-q1',
-          prompt: '`countDown(10)` returns the string `\'done\'`. What does `countDown(7)` do, and why?',
+          prompt: 'In an engine without tail-call elimination, such as V8, `countDown(10)` returns `\'done\'`. What happens for `countDown(7)`?',
           context: {
             language: 'javascript',
             code: 'const countDown = n => {\n  if (n === 0) return \'done\';\n  return countDown(n - 2);\n};',
           },
           options: [
-            'It never reaches the base case: from an odd n the values run 7, 5, 3, 1, -1, -3 and skip 0 entirely, so calls keep being made until the engine throws a RangeError.',
-            'It returns `\'done\'`. The recursion stops at the first value that is no longer positive, and that value is treated as the base case.',
-            'It returns `undefined`. Once n goes below 0 there is no branch left to take, so the innermost call falls off the end of the function and hands back `undefined`.',
-            'It terminates with the wrong value: the base case is unreachable, so the last call returns the current n rather than the string.',
+            'It skips 0 and keeps making calls. Waiting frames accumulate until the engine reports stack exhaustion instead of returning a value.',
+            'It returns `\'done\'` at -1. The engine treats the first negative argument as the base case even though the guard checks equality to 0.',
+            'It returns `undefined` at -1. The negative input skips the recursive return statement and falls off the end of the function.',
+            'It returns the number -1. When the guard first fails for a negative argument, that argument becomes the return value of the call.',
           ],
           correct: 0,
           explanation:
-            'Subtracting 2 preserves the parity of n, so an odd starting value passes 1, then -1, and never equals 0. The base case exists and is still unreachable from half the inputs the function accepts. The second option invents a stopping rule the code does not have: only `n === 0` returns, and -1 is not 0. The third describes what would happen if the recursion ended, but nothing ends it, so no call ever falls off the end. The fourth assumes the deepest call returns something; there is no deepest call, only frames accumulating until the engine refuses another one.',
+            'Subtracting 2 preserves the parity of n, so an odd starting value passes 1, then -1, and never equals 0. The base case is unreachable for this odd starting value. Under the stated no-tail-call-elimination model, the growing stack eventually fails; in V8 this is a RangeError. The claim that it stops at -1 invents a rule the code does not have: only `n === 0` returns, and -1 is not 0. Returning undefined would require the recursion to end, but nothing ends it, so no call falls off the end. Returning -1 also assumes a call finishes successfully; there is no successful base-case return, only frames accumulating until the engine refuses another one.',
           competencies: ['recursion'],
         },
         {

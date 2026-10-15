@@ -405,7 +405,7 @@ console.log(placeTotals([5, 1, 4, 2]));
     tier: 2,
     focus: ['nested-loops'],
     title: 'Spot the differences',
-    prompt: 'Two grids have the same number of rows, and each row is the same length in both. Write `differences(a, b)`, returning the `[row, column]` position of every cell where the grids differ, compared with `!==`, row by row and left to right. Use one loop over the rows and a second loop inside it over that row’s columns. `differences([[1, 2], [3, 4]], [[1, 0], [3, 5]])` gives `[[0, 1], [1, 1]]`. Identical grids give `[]`.',
+    prompt: "Two grids have the same number of rows, and each row is the same length in both. Write `differences(a, b)`, returning the `[row, column]` position of every cell where the grids differ, compared with `!==`, row by row and left to right. Use one loop over the rows and a second loop inside it over that row’s columns. `differences([[1, 2], [3, 4]], [[1, 0], [3, 5]])` gives `[[0, 1], [1, 1]]`. Identical grids give `[]`. Both levels are ordinary dense arrays of data values. Rows may differ in length, but each corresponding pair of rows has the same length, with at most 100 rows and 100 cells per row. Use JavaScript strict inequality: NaN differs from NaN, 0 and -0 do not differ, and objects compare by reference. Treat comparison as constant-time for this exercise. Do not change either grid, its rows or stored values; frozen inputs are valid. Return a fresh outer list and a separate fresh coordinate pair for each difference. Target: O(n²) time, where n is the larger of the row count and the widest row length; each cell is compared once, so the actual work is proportional to rows plus visited cells and is bounded by this maximum-dimension model.",
     starter: `const differences = (a, b) => {
 
 };
@@ -436,6 +436,11 @@ console.log(differences([[1, 2], [3, 4]], [[1, 0], [3, 5]]));
       { call: 'differences([[1], [2], [3]], [[1], [9], [3]])', expected: [[1, 0]], label: 'one column' },
       { call: 'differences([["x", "o"], ["o", "x"]], [["x", "o"], ["o", "x"]])', expected: [], label: 'identical grids', edge: true },
       { call: 'differences([], [])', expected: [], label: 'empty grids', edge: true },
+      { call: "differences([[NaN,0,\"1\"]],[[NaN,-0,1]])", expected: [[0, 0], [0, 2]], label: "strict NaN zero and string semantics", edge: true },
+      { call: "(() => {const shared={id:1};return differences([[shared,{id:1}]],[[shared,{id:1}]]);})()", expected: [[0, 1]], label: "object reference comparison", edge: true },
+      { call: "differences([[],[1,2],[]],[[],[0,2],[]])", expected: [[1, 0]], label: "matching ragged row shapes", edge: true },
+      { call: "differences(Object.freeze([Object.freeze([1,2])]),Object.freeze([Object.freeze([0,2])]))", expected: [[0, 0]], label: "frozen grids", edge: true },
+      { call: "(() => {const a=[[1],[2]],b=[[3],[4]];const out=differences(a,b);return out!==a&&out!==b&&out[0]!==out[1]&&a[0][0]===1&&a[1][0]===2&&b[0][0]===3&&b[1][0]===4;})()", expected: true, label: "independent coordinates and unchanged sources", edge: true },
     ],
   },
 
@@ -448,7 +453,7 @@ console.log(differences([[1, 2], [3, 4]], [[1, 0], [3, 5]]));
     tier: 2,
     focus: ['two-pointer', 'strings'],
     title: 'Letters in the same order',
-    prompt: 'Write `inOrder(short, long)`, returning `true` when every character of `short` appears in `long` in the same order, though not necessarily side by side. `inOrder("ace", "abcde")` gives `true`, and `inOrder("aec", "abcde")` gives `false`. Keep one index in each string: move the `long` index on every step, and move the `short` index only when the two characters match. Each character of `long` can be used once. An empty `short` is always in order.',
+    prompt: "Write `inOrder(short, long)`, returning `true` when every character of `short` appears in `long` in the same order, though not necessarily side by side. `inOrder(\"ace\", \"abcde\")` gives `true`, and `inOrder(\"aec\", \"abcde\")` gives `false`. Keep one index in each string: move the `long` index on every step, and move the `short` index only when the two characters match. Each character of `long` can be used once. An empty `short` is always in order. Both inputs are primitive strings. This indexing exercise compares UTF-16 code units, the units used by string brackets and .length, rather than whole Unicode code points or visible graphemes. Case and spelling are exact; do not normalize or sort. A surrogate half can therefore match one indexed unit of a surrogate pair. Target: O(n) time, where n is the sum of the two UTF-16 string lengths and indexed comparison takes constant time.",
     starter: `const inOrder = (short, long) => {
 
 };
@@ -463,12 +468,8 @@ console.log(inOrder("ace", "abcde"), inOrder("aec", "abcde"));
   }
   return /* whether i reached the end of short */;
 };`,
-    hints: ['The two indexes move at different speeds. `j` visits every character of `long`; `i` only moves when it finds the character it is waiting for. If `i` reaches `short.length`, every character was found in order.'],
-    approach: [
-      'Start `i` at 0 for `short` and loop `j` over `long`.',
-      'When `short[i] === long[j]`, add 1 to `i`.',
-      'After the loop, return `i === short.length`.',
-    ],
+    hints: ["The short-string index records the next UTF-16 unit you still need. Move it only on a match, while the long-string index moves forward; using for...of on only one string would mix code points with indexed units."],
+    approach: ["Start i at zero for short and scan long by indexed UTF-16 units.", "When short[i] equals long[j], advance i. Advance j on every scanned unit; earlier long positions cannot be reused.", "Return whether i reached short.length. Keep the same unit model in every variant: for...of yields whole surrogate pairs, whereas brackets index individual code units."],
     verify: 'tests',
     estimatedMinutes: 10,
     tests: [
@@ -477,6 +478,12 @@ console.log(inOrder("ace", "abcde"), inOrder("aec", "abcde"));
       { call: 'inOrder("", "abc")', expected: true, label: 'an empty short string', edge: true },
       { call: 'inOrder("abc", "")', expected: false, label: 'an empty long string', edge: true },
       { call: 'inOrder("aa", "a")', expected: false, label: 'a character is used once', edge: true },
+      { call: "inOrder(\"🦈\",\"x🦈y\")", expected: true, label: "surrogate pairs can match as two indexed units", edge: true },
+      { call: "inOrder(\"\\ud83e\",\"🦈\")", expected: true, label: "the stated unit is a UTF-16 code unit", edge: true },
+      { call: "inOrder(\"🦈\",\"\\ud83ex\\udd88\")", expected: true, label: "subsequence units need not be adjacent", edge: true },
+      { call: "inOrder(\"A\",\"a\")", expected: false, label: "case is exact", edge: true },
+      { call: "inOrder(\"é\",\"e\\u0301\")", expected: false, label: "no normalization", edge: true },
+      { call: "inOrder(\"aba\",\"aaab\")", expected: false, label: "multiplicity and order both matter", edge: true },
     ],
   },
   {
@@ -487,7 +494,7 @@ console.log(inOrder("ace", "abcde"), inOrder("aec", "abcde"));
     tier: 2,
     focus: ['two-pointer'],
     title: 'Mirror images',
-    prompt: 'Write `isMirror(a, b)`, returning `true` when `b` holds the items of `a` in reverse order. Walk with two indexes: one moves forwards through `a` from the start, the other backwards through `b` from the end, and stop at the first pair that differs. Lists of different lengths are never mirrors. `isMirror([1, 2, 3], [3, 2, 1])` gives `true`. Neither list is changed.',
+    prompt: "Write `isMirror(a, b)`, returning `true` when `b` holds the items of `a` in reverse order. Walk with two indexes: one moves forwards through `a` from the start, the other backwards through `b` from the end, and stop at the first pair that differs. Lists of different lengths are never mirrors. `isMirror([1, 2, 3], [3, 2, 1])` gives `true`. Neither list is changed. Inputs are ordinary dense arrays of data values; frozen arrays are valid. Compare each pair with strict equality, so NaN never matches itself, 0 and -0 match, and distinct objects with the same fields still differ. Assume constant-time comparison for this exercise. Do not mutate either array or nested values. Target: O(n) time in the worst case, where n is the larger input length; differing lengths or an early mismatch can take less.",
     starter: `const isMirror = (a, b) => {
 
 };
@@ -516,6 +523,11 @@ console.log(isMirror([1, 2, 3], [3, 2, 1]));
       { call: 'isMirror([1, 2], [2, 1, 0])', expected: false, label: 'different lengths', edge: true },
       { call: 'isMirror([], [])', expected: true, label: 'two empty lists', edge: true },
       { call: '(() => { const a = [1, 2]; const b = [2, 1]; isMirror(a, b); return [a, b]; })()', expected: [[1, 2], [2, 1]], label: 'neither list is changed', edge: true },
+      { call: "isMirror([NaN],[NaN])", expected: false, label: "NaN does not match itself", edge: true },
+      { call: "isMirror([0],[-0])", expected: true, label: "both zero signs match", edge: true },
+      { call: "isMirror([{id:1}],[{id:1}])", expected: false, label: "distinct object references differ", edge: true },
+      { call: "(() => {const item={id:1};return isMirror(Object.freeze([item,\"x\"]),Object.freeze([\"x\",item]));})()", expected: true, label: "shared references and frozen arrays", edge: true },
+      { call: "(() => {const a=[1,2,3],b=[3,2,1];const out=isMirror(a,b);return out===true&&a[0]===1&&a[2]===3&&b[0]===3&&b[2]===1;})()", expected: true, label: "successful comparisons preserve longer arrays", edge: true },
     ],
   },
 
@@ -562,7 +574,7 @@ console.log(flattenAll([1, [2, [3, [4]]]]));
     tier: 2,
     focus: ['flat'],
     title: 'Expand the ranges',
-    prompt: 'A print dialog stores page ranges as `[from, to]` pairs, both ends included. Write `expand(ranges)`, returning every page number in one flat array, in the order given. Use `flatMap`: its callback turns each range into an array of numbers, and `flatMap` joins those arrays into one. `expand([[1, 3], [7, 8]])` gives `[1, 2, 3, 7, 8]`. A range whose two ends are equal is one page, and no ranges give `[]`.',
+    prompt: "A list stores inclusive integer ranges as [from, to] pairs. Write `expand(ranges)`, returning every integer in range order, using flatMap to join each range's numbers. `expand([[1, 3], [7, 8]])` gives `[1, 2, 3, 7, 8]`. Equal endpoints give one number; reversed endpoints add nothing. Keep repeated numbers from overlapping or repeated ranges. Inputs are ordinary dense arrays of two-integer pairs, with endpoints from -10000 through 10000, at most 10000 ranges and at most 10000 produced numbers overall. Do not change either input level; frozen arrays are valid. Return a fresh array even for empty input. Target: O(n) time, where n is the number of ranges plus the number of produced integers; integer increments and copies take constant time.",
     starter: `const expand = ranges => {
 
 };
@@ -590,6 +602,12 @@ console.log(expand([[1, 3], [7, 8]]));
       { call: 'expand([[10, 12], [2, 3]])', expected: [10, 11, 12, 2, 3], label: 'ranges keep the order given' },
       { call: 'expand([[4, 4]])', expected: [4], label: 'both ends equal', edge: true },
       { call: 'expand([])', expected: [], label: 'no ranges', edge: true },
+      { call: "expand([[2,3],[3,4],[2,2]])", expected: [2, 3, 3, 4, 2], label: "overlap and repeated values remain in range order", edge: true },
+      { call: "expand([[4,2],[-1,0],[0,0]])", expected: [-1, 0, 0], label: "reversed range adds nothing and zero is retained", edge: true },
+      { call: "expand(Object.freeze([Object.freeze([-2,1]),Object.freeze([5,5])]))", expected: [-2, -1, 0, 1, 5], label: "frozen ranges", edge: true },
+      { call: "(() => {const first=[3,4],second=[1,2],ranges=[first,second];expand(ranges);return ranges[0]===first&&ranges[1]===second&&first[0]===3&&first[1]===4&&second[0]===1&&second[1]===2;})()", expected: true, label: "preserve range order and pair data", edge: true },
+      { call: "(() => {const ranges=[];const a=expand(ranges),b=expand(ranges);return a!==ranges&&a!==b&&a.length===0&&b.length===0;})()", expected: true, label: "fresh empty results", edge: true },
+      { call: "(() => {const out=expand([[-5000,4999]]);return out.length===10000&&out.every((value,index)=>value===index-5000);})()", expected: true, label: "bounded output-sensitive expansion", edge: true },
     ],
   },
 
@@ -602,7 +620,7 @@ console.log(expand([[1, 3], [7, 8]]));
     tier: 1,
     focus: ['some'],
     title: 'Anything overdue?',
-    prompt: 'Each task is `{ title, due, done }`, with `due` as a date string such as `"2026-09-25"`. Write `hasOverdue(tasks, today)`, returning `true` when at least one task is not done and is due before `today`. Use `some`, which stops at the first task that passes. Date strings in this form compare correctly with `<`. A finished task is never overdue, a task due today is not overdue yet, and no tasks give `false`.',
+    prompt: "Each task is `{ title, due, done }`, with `due` as a date string such as `\"2026-09-25\"`. Write `hasOverdue(tasks, today)`, returning `true` when at least one task is not done and is due before `today`. Use `some`, which stops at the first task that passes. Date strings in this form compare correctly with `<`. A finished task is never overdue, a task due today is not overdue yet, and no tasks give `false`. tasks is an ordinary dense array of data objects with own Boolean done flags and valid ten-character YYYY-MM-DD due dates; today is another valid date in that same format, with four-digit years from 0001 through 9999. Use the supplied today value, not the current system clock. Do not change task order, fields or other values; frozen records and arrays are valid. Return a Boolean. Target: O(n) time in the worst case, where n is the task count and fixed-length date comparison is constant-time; an early overdue match can take less.",
     starter: `const hasOverdue = (tasks, today) => {
 
 };
@@ -627,6 +645,9 @@ console.log(hasOverdue([{ title: "tax", due: "2026-09-01", done: false }], "2026
       { call: 'hasOverdue([{ title: "tax", due: "2026-09-01", done: true }], "2026-09-25")', expected: false, label: 'a finished task is never overdue', edge: true },
       { call: 'hasOverdue([{ title: "call", due: "2026-09-25", done: false }], "2026-09-25")', expected: false, label: 'due today is not overdue yet', edge: true },
       { call: 'hasOverdue([], "2026-09-25")', expected: false, label: 'no tasks', edge: true },
+      { call: "hasOverdue(Object.freeze([Object.freeze({title:\"done\",due:\"0001-01-01\",done:true}),Object.freeze({title:\"open\",due:\"2024-02-29\",done:false})]),\"2024-03-01\")", expected: true, label: "frozen records and calendar boundary", edge: true },
+      { call: "hasOverdue([{title:\"future\",due:\"9999-12-31\",done:false}],\"0001-01-01\")", expected: false, label: "supplied comparison date and valid date bounds", edge: true },
+      { call: "(() => {const first={title:\"future\",due:\"2027-01-01\",done:false},second={title:\"late\",due:\"2020-01-01\",done:false},tasks=[first,second];const out=hasOverdue(tasks,\"2026-01-01\");return out===true&&tasks[0]===first&&tasks[1]===second&&first.done===false&&second.done===false;})()", expected: true, label: "preserve source order and flags", edge: true },
     ],
   },
   {
@@ -637,7 +658,7 @@ console.log(hasOverdue([{ title: "tax", due: "2026-09-01", done: false }], "2026
     tier: 1,
     focus: ['find'],
     title: 'The first free slot',
-    prompt: 'A booking page lists slots in time order as `{ time, booked }`. Write `firstFree(slots)`, returning the `time` of the first slot that is not booked, using `find`. `find` gives `undefined` when nothing matches; return `null` then, so the page can say it is fully booked.',
+    prompt: "A booking page lists slots in time order as `{ time, booked }`. Write `firstFree(slots)`, returning the `time` of the first slot that is not booked, using `find`. `find` gives `undefined` when nothing matches; return `null` then, so the page can say it is fully booked. slots is an ordinary dense array of data objects with own Boolean booked flags and valid 24-hour times in exactly HH:mm format, including 00:00. The supplied array is already in nondecreasing time order; choose its first unbooked entry without sorting or reserving it. Do not change any slot, other data or array order; frozen inputs are valid. Return a time string or null only when no entry is free. Target: O(n) time in the worst case, where n is the slot count and reading the fields takes constant time.",
     starter: `const firstFree = slots => {
 
 };
@@ -662,6 +683,9 @@ console.log(firstFree([{ time: "09:00", booked: true }, { time: "09:30", booked:
       { call: 'firstFree([{ time: "09:00", booked: false }])', expected: '09:00' },
       { call: 'firstFree([{ time: "09:00", booked: true }])', expected: null, label: 'fully booked', edge: true },
       { call: 'firstFree([])', expected: null, label: 'no slots', edge: true },
+      { call: "firstFree([{time:\"00:00\",booked:false},{time:\"00:30\",booked:false}])", expected: "00:00", label: "midnight is a valid time", edge: true },
+      { call: "firstFree(Object.freeze([Object.freeze({time:\"09:00\",booked:true}),Object.freeze({time:\"09:15\",booked:true}),Object.freeze({time:\"09:30\",booked:true}),Object.freeze({time:\"09:45\",booked:true}),Object.freeze({time:\"10:00\",booked:false})]))", expected: "10:00", label: "look beyond the first three slots in frozen input", edge: true },
+      { call: "(() => {const slot={time:\"23:59\",booked:false},slots=[slot];const out=firstFree(slots);return out===\"23:59\"&&slots[0]===slot&&slot.booked===false;})()", expected: true, label: "finding a slot does not book it", edge: true },
     ],
   },
   {
@@ -672,7 +696,7 @@ console.log(firstFree([{ time: "09:00", booked: true }, { time: "09:30", booked:
     tier: 1,
     focus: ['includes', 'strings'],
     title: 'Is this file type allowed?',
-    prompt: 'Write `isAllowed(fileName, allowed)`, where `allowed` is an array of lower-case extensions such as `["png", "jpg"]`. Take the text after the last dot of the file name, lower-case it, and check it with `includes`. `isAllowed("Photo.PNG", ["png", "jpg"])` gives `true`. A name with no dot has no extension and is never allowed.',
+    prompt: "Write `isAllowed(fileName, allowed)`, where `allowed` is an array of lower-case extensions such as `[\"png\", \"jpg\"]`. Take the text after the last dot of the file name, lower-case it, and check it with `includes`. `isAllowed(\"Photo.PNG\", [\"png\", \"jpg\"])` gives `true`. A name with no dot has no extension and is never allowed. This is a literal name-suffix exercise, not file-content inspection. fileName is a primitive string of at most 1024 UTF-16 units and is treated exactly as supplied, without trimming or path parsing. allowed is an ordinary dense array of nonempty lowercase ASCII letter/digit extensions, each at most 16 units. A leading-dot name such as .PNG has extension png under this last-dot rule; an empty name, a lone dot or a trailing dot is not allowed. Do not change allowed; frozen arrays are valid. Target: O(n) time, where n is the filename length plus allowed entry count, with bounded extension comparison and linear string scanning/lowercasing.",
     starter: `const isAllowed = (fileName, allowed) => {
 
 };
@@ -700,6 +724,13 @@ console.log(isAllowed("Photo.PNG", ["png", "jpg"]));
       { call: 'isAllowed("archive.tar.gz", ["gz"])', expected: true, label: 'only the part after the last dot counts' },
       { call: 'isAllowed("png", ["png"])', expected: false, label: 'no dot, no extension', edge: true },
       { call: 'isAllowed("image.jpg", [])', expected: false, label: 'nothing allowed', edge: true },
+      { call: "isAllowed(\".PNG\",[\"png\"])", expected: true, label: "a leading dot follows the stated suffix rule", edge: true },
+      { call: "isAllowed(\"name.png \",[\"png\"])", expected: false, label: "do not trim extension text", edge: true },
+      { call: "isAllowed(\"name.png\\n\",[\"png\"])", expected: false, label: "a trailing line break is literal data", edge: true },
+      { call: "isAllowed(\"name.\",[\"png\"])", expected: false, label: "no text after the last dot", edge: true },
+      { call: "isAllowed(\".\",[\"png\"])", expected: false, label: "a lone dot is not an allowed extension", edge: true },
+      { call: "isAllowed(\"a.JPG\",Object.freeze([\"png\",\"jpg\"]))", expected: true, label: "frozen allowed list", edge: true },
+      { call: "(() => {const allowed=[\"png\",\"jpg\"];const out=isAllowed(\"a.JPG\",allowed);return out===true&&allowed[0]===\"png\"&&allowed[1]===\"jpg\";})()", expected: true, label: "preserve allowed order", edge: true },
     ],
   },
   {
@@ -710,7 +741,7 @@ console.log(isAllowed("Photo.PNG", ["png", "jpg"]));
     tier: 1,
     focus: ['indexOf'],
     title: 'What comes next',
-    prompt: 'A checkout runs through fixed steps, such as `["cart", "address", "payment", "done"]`. Write `nextStep(steps, current)`, returning the step after `current`, using `indexOf` to find where `current` is. The last step has no next step, and neither does a name that is not in the list: return `null` for both.',
+    prompt: "A checkout runs through fixed steps, such as `[\"cart\", \"address\", \"payment\", \"done\"]`. Write `nextStep(steps, current)`, returning the step after `current`, using `indexOf` to find where `current` is. The last step has no next step, and neither does a name that is not in the list: return `null` for both. steps is an ordinary dense array of primitive strings, and current is a primitive string; each string is at most 128 UTF-16 units. Matching is exact and case-sensitive. When labels repeat, use the first occurrence as indexOf does. Empty strings are valid labels, so an empty next label must be returned as an empty string, not null. Do not change the input; frozen arrays are valid. Target: O(n) time in the worst case, where n is the number of steps and bounded string equality takes constant time.",
     starter: `const nextStep = (steps, current) => {
 
 };
@@ -737,6 +768,12 @@ console.log(nextStep(["cart", "address", "payment", "done"], "address"));
       { call: 'nextStep(["cart", "address", "payment", "done"], "done")', expected: null, label: 'the last step', edge: true },
       { call: 'nextStep(["cart", "address", "payment", "done"], "shipping")', expected: null, label: 'a step that is not in the list', edge: true },
       { call: 'nextStep([], "cart")', expected: null, label: 'no steps', edge: true },
+      { call: "nextStep([\"a\",\"b\",\"a\",\"c\"],\"a\")", expected: "b", label: "use the first repeated current label", edge: true },
+      { call: "nextStep([\"a\",\"\",\"b\"],\"a\")", expected: "", label: "empty destination is a real label", edge: true },
+      { call: "nextStep([\"\",\"b\"],\"\")", expected: "b", label: "empty current label can match", edge: true },
+      { call: "nextStep([\"cart\",\"done\"],\"Cart\")", expected: null, label: "exact case", edge: true },
+      { call: "nextStep(Object.freeze([\"a\",\"b\"]),\"a\")", expected: "b", label: "frozen input", edge: true },
+      { call: "(() => {const steps=[\"b\",\"a\",\"c\"];nextStep(steps,\"b\");return steps;})()", expected: ["b", "a", "c"], label: "preserve step order", edge: true },
     ],
   },
   {
@@ -747,7 +784,7 @@ console.log(nextStep(["cart", "address", "payment", "done"], "address"));
     tier: 2,
     focus: ['findIndex'],
     title: 'Where does it go?',
-    prompt: 'Write `insertAt(sorted, value)` for a list of numbers in ascending order, returning the index where `value` should go to keep the list sorted: the index of the first number that is greater than or equal to `value`. Use `findIndex`. When every number is smaller, `findIndex` gives -1, but the value belongs at the end, so return `sorted.length`. `insertAt([10, 20, 30], 25)` gives 2.',
+    prompt: "Write `insertAt(sorted, value)` for a list of numbers in ascending order, returning the index where `value` should go to keep the list sorted: the index of the first number that is greater than or equal to `value`. Use `findIndex`. When every number is smaller, `findIndex` gives -1, but the value belongs at the end, so return `sorted.length`. `insertAt([10, 20, 30], 25)` gives 2. sorted is an ordinary dense array of finite Numbers in nondecreasing order, and value is a finite Number. Fractional and negative values are valid; compare without rounding. For duplicates return the position before the first equal entry. This function only reports an index: do not insert, reorder or otherwise change the input, and accept frozen arrays. Target: O(n) time for the taught findIndex scan, where n is the input length and numeric comparison is constant-time; a faster correct search also meets the goal.",
     starter: `const insertAt = (sorted, value) => {
 
 };
@@ -773,6 +810,10 @@ console.log(insertAt([10, 20, 30], 25));
       { call: 'insertAt([10, 20, 30], 20)', expected: 1, label: 'an equal value goes before it' },
       { call: 'insertAt([10, 20, 30], 40)', expected: 3, label: 'after everything goes at the end', edge: true },
       { call: 'insertAt([], 7)', expected: 0, label: 'an empty list', edge: true },
+      { call: "insertAt([0.1,0.2,0.3],0.15)", expected: 1, label: "fractional lower bound without rounding", edge: true },
+      { call: "insertAt(Object.freeze([-2,-0,0,1]),0)", expected: 1, label: "frozen input and first equal zero", edge: true },
+      { call: "(() => {const input=[1,3,5];const out=insertAt(input,2);return out===1&&input.length===3&&input[0]===1&&input[1]===3&&input[2]===5;})()", expected: true, label: "report the position without inserting", edge: true },
+      { call: "insertAt([1,1,1,2],1)", expected: 0, label: "lower bound before all duplicates", edge: true },
     ],
   },
 
